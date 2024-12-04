@@ -17,7 +17,10 @@ const config: CapacitorConfig = {
   plugins: {
     CapacitorHttp: {
       enabled: false
-    }
+    },
+    FirebaseAuthentication: {
+      providers: []
+    },
   }
 };
 
