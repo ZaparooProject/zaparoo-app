@@ -3,6 +3,7 @@
 .env.*.local
 
 firebase.json
+GoogleService-Info.plist
 
 # Logs
 logs
