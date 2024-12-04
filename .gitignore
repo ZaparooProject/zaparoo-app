@@ -4,6 +4,7 @@
 
 firebase.json
 GoogleService-Info.plist
+google-services.json
 
 # Logs
 logs
