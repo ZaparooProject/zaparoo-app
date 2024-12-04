@@ -2,7 +2,7 @@
 .env.local
 .env.*.local
 
-./src/firebase.json
+firebase.json
 
 # Logs
 logs
