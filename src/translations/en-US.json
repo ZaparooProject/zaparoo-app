@@ -97,6 +97,15 @@
         "makeReadOnly": "Make tag read-only"
       }
     },
+    "online": {
+      "email": "Email",
+      "password": "Password",
+      "login": "Login",
+      "logout": "Logout",
+      "loginSuccess": "Login was successful",
+      "loginWrong": "Email or password was incorrect",
+      "loginFail": "Error during login"
+    },
     "settings": {
       "title": "Settings",
       "device": "Device address",
