@@ -47,6 +47,7 @@ export default function App() {
   useEffect(() => {
     FirebaseAuthentication.addListener("authStateChange", (change) => {
       setLoggedInUser(change.user);
+      FirebaseAuthentication.getIdToken();
     })
   }, [setLoggedInUser]);
 
