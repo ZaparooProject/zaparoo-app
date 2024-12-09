@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import toast, { Toaster } from "react-hot-toast";
-import { Capacitor } from '@capacitor/core';
+import { Capacitor } from "@capacitor/core";
 import { useStatusStore } from "./lib/store";
 import { DatabaseIcon, PlayIcon } from "./lib/images";
 import { usePrevious } from "@uidotdev/usehooks";
@@ -48,7 +48,7 @@ export default function App() {
     FirebaseAuthentication.addListener("authStateChange", (change) => {
       setLoggedInUser(change.user);
       FirebaseAuthentication.getIdToken();
-    })
+    });
   }, [setLoggedInUser]);
 
   useEffect(() => {

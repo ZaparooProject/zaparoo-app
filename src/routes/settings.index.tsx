@@ -214,7 +214,7 @@ function Settings() {
               className="w-full"
               icon={<ExternalIcon size="20" />}
               onClick={() =>
-                Browser.open({ url: "https://designer.tapto.wiki" })
+                Browser.open({ url: "https://design.zaparoo.org" })
               }
             />
           </div>
@@ -282,16 +282,18 @@ function Settings() {
               <Button
                 label={t("online.logout")}
                 onClick={() => {
-                  FirebaseAuthentication.signOut().then(() => {
-                    setLoggedInUser(null);
-                  }).catch((e) => {
-                    console.error(e);
-                  });
+                  FirebaseAuthentication.signOut()
+                    .then(() => {
+                      setLoggedInUser(null);
+                    })
+                    .catch((e) => {
+                      console.error(e);
+                    });
                 }}
                 className="w-full"
               />
             </div>
-            ) : (
+          ) : (
             <div className="flex flex-col gap-3">
               <TextInput
                 label={t("online.email")}

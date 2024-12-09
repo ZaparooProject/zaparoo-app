@@ -33,7 +33,7 @@ import { Purchases, PurchasesPackage } from "@revenuecat/purchases-capacitor";
 import { Preferences } from "@capacitor/preferences";
 import { PageFrame } from "../components/PageFrame";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
-import { checkLink } from "../lib/online.ts";
+import { checkLink, claimLink } from "../lib/online.ts";
 
 const writeToClipboard = async (s: string) => {
   await Clipboard.write({
@@ -46,11 +46,10 @@ const CopyButton = (props: { text: string }) => {
 
   return (
     <span
-      className="border pl-1 underline"
+      className="ml-1 rounded-full border px-1"
       onClick={() => {
         writeToClipboard(props.text).then(() => {
           setDisplay("Copied");
-          toast.success("Copied to clipboard.");
           setTimeout(() => {
             setDisplay("Copy");
           }, 3000);
@@ -119,6 +118,12 @@ function Index() {
       }
     });
   }, []);
+
+  const loggedInUser = useStatusStore((state) => state.loggedInUser);
+
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimId, setClaimId] = useState("");
 
   const { t } = useTranslation();
 
@@ -224,18 +229,41 @@ function Index() {
         }
 
         if (onlineId !== "") {
-          checkLink(onlineId).then((res) => {
-            toast.success("Zap!");
-            console.log(res);
-            let text = barcode.rawValue;
-            if (res.actions.length > 0) {
-              text = res.actions[0].value;
-            }
-            TTA.launch({
-              uid: barcode.rawValue,
-              text: text
-            });
+          toast.loading("Checking Zap Link...", {
+            id: "checkZapLink"
           });
+          checkLink(onlineId)
+            .then((res) => {
+              console.log(res);
+              if (!res.claimed) {
+                if (loggedInUser !== null) {
+                  toast.dismiss("checkZapLink");
+                  setClaimId(onlineId);
+                  setClaimOpen(true);
+                }
+                return;
+              } else {
+                toast.success("Zap!", {
+                  id: "checkZapLink"
+                });
+              }
+
+              let text = barcode.rawValue;
+              if (res.actions.length > 0) {
+                text = res.actions[0].value;
+              }
+              TTA.launch({
+                uid: barcode.rawValue,
+                text: text
+              });
+            })
+            .catch((e) => {
+              toast.error("Error checking Zap Link", {
+                id: "checkZapLink"
+              });
+              console.error(e);
+            });
+          return;
         } else {
           TTA.launch({
             uid: barcode.rawValue,
@@ -663,6 +691,49 @@ function Index() {
               ))}
           </div>
         )}
+      </SlideModal>
+
+      <SlideModal
+        isOpen={claimOpen}
+        close={() => setClaimOpen(false)}
+        title="Claim Zap Link"
+      >
+        <div className="flex flex-col justify-center gap-2 p-2">
+          <div className="pb-2">
+            This Zap Link has not been claimed. Add it to your Zaparoo Online
+            account?
+          </div>
+          <Button
+            label="Claim Zap Link"
+            disabled={claimLoading}
+            onClick={() => {
+              setClaimLoading(true);
+              claimLink(claimId)
+                .then((res) => {
+                  console.log(res);
+                  setClaimOpen(false);
+                  setClaimId("");
+                  if (res.claimed) {
+                    toast.success("Zap Link is yours!", {
+                      id: "claimZapLink"
+                    });
+                  } else {
+                    toast.error("Error claiming Zap Link", {
+                      id: "claimZapLink"
+                    });
+                  }
+                  setClaimLoading(false);
+                })
+                .catch((e) => {
+                  console.error(e);
+                  toast.error("Error claiming Zap Link", {
+                    id: "claimZapLink"
+                  });
+                  setClaimLoading(false);
+                });
+            }}
+          />
+        </div>
       </SlideModal>
     </>
   );
