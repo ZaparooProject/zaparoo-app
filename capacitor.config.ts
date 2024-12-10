@@ -6,21 +6,20 @@ const config: CapacitorConfig = {
   appName: "Zaparoo",
   backgroundColor: "#111928",
   server: {
+    // url: "http://10.0.0.228:8100",
     androidScheme: "http",
     cleartext: true
-    // REMOVE ME FOR RELEASE
-    // url: "http://10.0.0.228:8100"
   },
   android: {
     allowMixedContent: true
   },
   plugins: {
     CapacitorHttp: {
-      enabled: false
+      enabled: true
     },
     FirebaseAuthentication: {
       providers: []
-    },
+    }
   }
 };
 
