@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { TTA } from "../lib/api";
+import { TTA } from "../lib/coreApi.ts";
 import { Button } from "../components/wui/Button";
 import { ToggleSwitch } from "../components/wui/ToggleSwitch";
 import { useSwipeable } from "react-swipeable";

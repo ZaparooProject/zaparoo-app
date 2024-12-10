@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ClearIcon, CreateIcon, PlayIcon } from "../lib/images";
-import { TTA } from "../lib/api";
+import { TTA } from "../lib/coreApi.ts";
 import { Button } from "../components/wui/Button";
 import { useSwipeable } from "react-swipeable";
 import { useStatusStore } from "../lib/store";
@@ -89,7 +89,7 @@ function CustomText() {
                 onClick={() => {
                   TTA.launch({
                     uid: "",
-                    text: customText,
+                    text: customText
                   });
                 }}
                 variant="outline"

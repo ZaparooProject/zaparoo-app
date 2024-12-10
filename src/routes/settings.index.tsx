@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { getDeviceAddress, setDeviceAddress, TTA } from "../lib/api";
+import { getDeviceAddress, setDeviceAddress, TTA } from "../lib/coreApi.ts";
 import { CheckIcon, DatabaseIcon, ExternalIcon, NextIcon } from "../lib/images";
 import { Button } from "../components/wui/Button";
 import classNames from "classnames";

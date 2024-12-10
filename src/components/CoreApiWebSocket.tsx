@@ -1,6 +1,6 @@
 import { useStatusStore } from "../lib/store.ts";
 import useWebSocket, { ReadyState } from "react-use-websocket";
-import { getWsUrl, TTA } from "../lib/api.ts";
+import { getWsUrl, TTA } from "../lib/coreApi.ts";
 import { useEffect } from "react";
 import {
   IndexResponse,
@@ -10,16 +10,24 @@ import {
 } from "../lib/models.ts";
 import { useShallow } from "zustand/react/shallow";
 
-export function TapToWebSocket() {
-  const { connected, setConnected, setConnectionError, setPlaying, setGamesIndex, setLastToken } =
-    useStatusStore(useShallow((state) => ({
+export function CoreApiWebSocket() {
+  const {
+    connected,
+    setConnected,
+    setConnectionError,
+    setPlaying,
+    setGamesIndex,
+    setLastToken
+  } = useStatusStore(
+    useShallow((state) => ({
       connected: state.connected,
       setConnected: state.setConnected,
       setConnectionError: state.setConnectionError,
       setPlaying: state.setPlaying,
       setGamesIndex: state.setGamesIndex,
       setLastToken: state.setLastToken
-    })));
+    }))
+  );
 
   const { lastMessage, readyState, sendMessage } = useWebSocket(getWsUrl, {
     shouldReconnect: () => true,
@@ -29,7 +37,7 @@ export function TapToWebSocket() {
     share: true,
     heartbeat: true,
     onError: (e: WebSocketEventMap["error"]) => {
-      setConnectionError("Could not connect to server: "+getWsUrl());
+      setConnectionError("Could not connect to server: " + getWsUrl());
       console.log(e);
     }
   });

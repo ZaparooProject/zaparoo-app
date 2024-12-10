@@ -11,8 +11,9 @@ import { Button } from "./components/wui/Button";
 import classNames from "classnames";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { useTranslation } from "react-i18next";
-import { TapToWebSocket } from "./components/TapToWebSocket.tsx";
+import { CoreApiWebSocket } from "./components/CoreApiWebSocket.tsx";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
+import AppUrlListener from "./lib/deepLinks.tsx";
 
 const router = createRouter({ routeTree });
 
@@ -162,7 +163,8 @@ export default function App() {
 
   return (
     <>
-      <TapToWebSocket />
+      <AppUrlListener />
+      <CoreApiWebSocket />
       <Toaster
         position="top-center"
         toastOptions={{

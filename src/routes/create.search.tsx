@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { TTA } from "../lib/api";
+import { TTA } from "../lib/coreApi.ts";
 import {
   CreateIcon,
   NextIcon,
@@ -204,8 +204,8 @@ function Search() {
 
   useEffect(() => {
     TTA.status().then((s) => {
-      setGamesIndex(s.gamesIndex)
-    })
+      setGamesIndex(s.gamesIndex);
+    });
   }, [setGamesIndex]);
 
   const navigate = useNavigate();

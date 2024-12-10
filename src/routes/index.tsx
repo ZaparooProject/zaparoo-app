@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { cancelSession, readTag, sessionManager, Status } from "../lib/nfc";
-import { getDeviceAddress, TTA } from "../lib/api";
+import { getDeviceAddress, TTA } from "../lib/coreApi.ts";
 import { Clipboard } from "@capacitor/clipboard";
 import {
   CheckIcon,
@@ -33,7 +33,7 @@ import { Purchases, PurchasesPackage } from "@revenuecat/purchases-capacitor";
 import { Preferences } from "@capacitor/preferences";
 import { PageFrame } from "../components/PageFrame";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
-import { checkLink, claimLink } from "../lib/online.ts";
+import { checkLink, claimLink } from "../lib/onlineApi.ts";
 
 const writeToClipboard = async (s: string) => {
   await Clipboard.write({
