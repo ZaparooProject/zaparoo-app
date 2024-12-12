@@ -22,9 +22,11 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="go.tapto.life" />
-                <data android:scheme="https" android:host="zpr.au" />
-                <data android:scheme="https" android:host="zaparoo.app" />
+                <data android:scheme="https" />
+                <data android:scheme="http" />
+                <data android:host="go.tapto.life" />
+                <data android:host="zpr.au" />
+                <data android:host="zaparoo.app" />
             </intent-filter>
         </activity>
 

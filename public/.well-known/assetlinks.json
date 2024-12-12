@@ -1,10 +1,8 @@
 [{
   "relation": ["delegate_permission/common.handle_all_urls"],
   "target" : { "namespace": "android_app", "package_name": "dev.wizzo.tapto",
-               "sha256_cert_fingerprints": ["25:00:64:D3:EA:E8:19:02:40:77:EC:60:52:35:2A:CA:81:0F:C2:2C:C9:08:43:D3:CD:22:31:BA:2D:96:E3:17"] }
-},
-{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target" : { "namespace": "android_app", "package_name": "dev.wizzo.tapto",
-               "sha256_cert_fingerprints": ["22:8C:90:EB:72:36:18:BC:BB:6C:6C:BB:DC:D8:91:B5:C1:F4:3D:00:13:0E:9E:AC:7C:A5:A6:42:7D:55:D7:02"] }
+               "sha256_cert_fingerprints": [
+                   "25:00:64:D3:EA:E8:19:02:40:77:EC:60:52:35:2A:CA:81:0F:C2:2C:C9:08:43:D3:CD:22:31:BA:2D:96:E3:17",
+		   "22:8C:90:EB:72:36:18:BC:BB:6C:6C:BB:DC:D8:91:B5:C1:F4:3D:00:13:0E:9E:AC:7C:A5:A6:42:7D:55:D7:02"
+	       ] }
 }]
