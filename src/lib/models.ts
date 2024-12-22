@@ -114,22 +114,23 @@ export interface HistoryResponse {
 }
 
 export interface SettingsResponse {
-  connectionString: string;
-  allowCommands: boolean;
-  disableSounds: boolean;
-  probeDevice: boolean;
-  exitGame: boolean;
-  exitGameBlocklist: string[];
-  debug: boolean;
+  launchingActive: boolean;
+  debugLogging: boolean;
+  audioScanFeedback: boolean;
+  readersAutoDetect: boolean;
+  readersScanMode: "tap" | "hold";
+  readersScanExitDelay: number;
+  readersScanIgnoreSystems: string[];
 }
 
 export interface UpdateSettingsRequest {
-  connectionString?: string;
-  disableSounds?: boolean;
-  probeDevice?: boolean;
-  exitGame?: boolean;
-  exitGameBlocklist?: string[];
-  debug?: boolean;
+  launchingActive?: boolean;
+  debugLogging?: boolean;
+  audioScanFeedback?: boolean;
+  readersAutoDetect?: boolean;
+  readersScanMode?: "tap" | "hold";
+  readersScanExitDelay?: number;
+  readersScanIgnoreSystems?: string[];
 }
 
 export interface TokenResponse {

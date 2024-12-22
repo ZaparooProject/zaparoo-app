@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { TTA } from "../lib/coreApi.ts";
-import { Button } from "../components/wui/Button";
+import { CoreAPI } from "../lib/coreApi.ts";
 import { ToggleSwitch } from "../components/wui/ToggleSwitch";
 import { useSwipeable } from "react-swipeable";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -19,11 +18,12 @@ function Advanced() {
 
   const { data, refetch } = useQuery({
     queryKey: ["settings"],
-    queryFn: () => TTA.settings()
+    queryFn: () => CoreAPI.settings()
   });
 
   const update = useMutation({
-    mutationFn: (params: UpdateSettingsRequest) => TTA.settingsUpdate(params),
+    mutationFn: (params: UpdateSettingsRequest) =>
+      CoreAPI.settingsUpdate(params),
     onSuccess: () => refetch()
   });
 
@@ -43,8 +43,8 @@ function Advanced() {
         <div className="py-2">
           <ToggleSwitch
             label={t("settings.advanced.soundEffects")}
-            value={!data?.disableSounds}
-            setValue={(v) => update.mutate({ disableSounds: !v })}
+            value={data?.audioScanFeedback}
+            setValue={(v) => update.mutate({ audioScanFeedback: v })}
             disabled={!connected}
           />
         </div>
@@ -52,8 +52,8 @@ function Advanced() {
         <div className="py-2">
           <ToggleSwitch
             label={t("settings.advanced.autoDetect")}
-            value={data?.probeDevice}
-            setValue={(v) => update.mutate({ probeDevice: v })}
+            value={data?.readersAutoDetect}
+            setValue={(v) => update.mutate({ readersAutoDetect: v })}
             disabled={!connected}
           />
         </div>
@@ -61,37 +61,23 @@ function Advanced() {
         <div className="py-2">
           <ToggleSwitch
             label={t("settings.advanced.debug")}
-            value={data?.debug}
-            setValue={(v) => update.mutate({ debug: v })}
+            value={data?.debugLogging}
+            setValue={(v) => update.mutate({ debugLogging: v })}
             disabled={!connected}
           />
         </div>
 
         <div className="flex flex-col gap-4 pt-1.5">
           <TextInput
-            label={t("settings.advanced.nfcDriver")}
-            placeholder="pn532_uart:/dev/ttyUSB0"
-            value={data?.connectionString}
-            saveValue={(v) => update.mutate({ connectionString: v })}
-            disabled={!connected}
-          />
-
-          <TextInput
             label={t("settings.advanced.insertModeBlocklist")}
             placeholder="ao486,Gamate,X68000"
-            value={data?.exitGameBlocklist.join(",")}
+            value={data?.readersScanIgnoreSystems.join(",")}
             saveValue={(v: string) =>
-              update.mutate({ exitGameBlocklist: v.split(",") })
+              update.mutate({ readersScanIgnoreSystems: v.split(",") })
             }
             disabled={!connected}
           />
         </div>
-
-        <Button
-          label={t("settings.advanced.downloadLog")}
-          disabled={true}
-          className="my-5 w-full"
-        />
       </PageFrame>
     </div>
   );

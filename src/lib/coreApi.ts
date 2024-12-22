@@ -247,7 +247,7 @@ class CoreApi {
   }
 }
 
-export const TTA = new CoreApi();
+export const CoreAPI = new CoreApi();
 
 const addrKey = "deviceAddress";
 
@@ -263,5 +263,5 @@ export function setDeviceAddress(addr: string) {
 }
 
 export function getWsUrl() {
-  return "ws://" + getDeviceAddress() + ":7497/";
+  return "ws://" + getDeviceAddress() + ":7497/api/v1.0";
 }

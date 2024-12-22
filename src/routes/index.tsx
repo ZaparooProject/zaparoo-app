@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { cancelSession, readTag, sessionManager, Status } from "../lib/nfc";
-import { getDeviceAddress, TTA } from "../lib/coreApi.ts";
+import { getDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
 import { Clipboard } from "@capacitor/clipboard";
 import {
   CheckIcon,
@@ -129,7 +129,7 @@ function Index() {
 
   const history = useQuery({
     queryKey: ["history"],
-    queryFn: () => TTA.history()
+    queryFn: () => CoreAPI.history()
   });
 
   useEffect(() => {
@@ -169,7 +169,7 @@ function Index() {
             type: ""
           });
         } else if (result.info.tag && sessionManager.launchOnScan) {
-          TTA.launch({
+          CoreAPI.launch({
             uid: result.info.tag.uid,
             text: result.info.tag.text
           });
@@ -252,7 +252,7 @@ function Index() {
               if (res.actions.length > 0) {
                 text = res.actions[0].value;
               }
-              TTA.launch({
+              CoreAPI.launch({
                 uid: barcode.rawValue,
                 text: text
               });
@@ -265,7 +265,7 @@ function Index() {
             });
           return;
         } else {
-          TTA.launch({
+          CoreAPI.launch({
             uid: barcode.rawValue,
             text: barcode.rawValue
           });

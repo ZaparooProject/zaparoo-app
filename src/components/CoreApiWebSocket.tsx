@@ -1,6 +1,6 @@
 import { useStatusStore } from "../lib/store.ts";
 import useWebSocket, { ReadyState } from "react-use-websocket";
-import { getWsUrl, TTA } from "../lib/coreApi.ts";
+import { getWsUrl, CoreAPI } from "../lib/coreApi.ts";
 import { useEffect } from "react";
 import {
   IndexResponse,
@@ -42,7 +42,7 @@ export function CoreApiWebSocket() {
     }
   });
 
-  TTA.setSend(sendMessage);
+  CoreAPI.setSend(sendMessage);
 
   useEffect(() => {
     switch (readyState) {
@@ -87,7 +87,7 @@ export function CoreApiWebSocket() {
     };
 
     try {
-      const notification = TTA.processReceived(lastMessage);
+      const notification = CoreAPI.processReceived(lastMessage);
       if (notification) {
         switch (notification.method) {
           case Notification.MediaStarted:

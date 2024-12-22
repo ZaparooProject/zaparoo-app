@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { TTA } from "../lib/coreApi.ts";
+import { CoreAPI } from "../lib/coreApi.ts";
 import {
   CreateIcon,
   NextIcon,
@@ -171,7 +171,7 @@ function Search() {
 
   const search = useMutation({
     mutationFn: (sp: SearchParams) =>
-      TTA.mediaSearch({
+      CoreAPI.mediaSearch({
         query: sp.query,
         systems: sp.system == "all" ? [] : [sp.system]
       })
@@ -179,7 +179,7 @@ function Search() {
 
   const systems = useQuery({
     queryKey: ["systems"],
-    queryFn: () => TTA.systems()
+    queryFn: () => CoreAPI.systems()
   });
 
   const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
@@ -203,7 +203,7 @@ function Search() {
   }, [nfcWriter]);
 
   useEffect(() => {
-    TTA.status().then((s) => {
+    CoreAPI.status().then((s) => {
       setGamesIndex(s.gamesIndex);
     });
   }, [setGamesIndex]);
@@ -314,7 +314,7 @@ function Search() {
               disabled={!selectedResult || !connected}
               onClick={() => {
                 if (selectedResult) {
-                  TTA.launch({
+                  CoreAPI.launch({
                     uid: "",
                     text: selectedResult.path
                   });

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { getDeviceAddress, setDeviceAddress, TTA } from "../lib/coreApi.ts";
+import { getDeviceAddress, setDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
 import { CheckIcon, DatabaseIcon, ExternalIcon, NextIcon } from "../lib/images";
 import { Button } from "../components/wui/Button";
 import classNames from "classnames";
@@ -40,13 +40,14 @@ function Settings() {
 
   const settings = useQuery({
     queryKey: ["settings"],
-    queryFn: () => TTA.settings()
+    queryFn: () => CoreAPI.settings()
   });
 
   const { t } = useTranslation();
 
   const update = useMutation({
-    mutationFn: (params: UpdateSettingsRequest) => TTA.settingsUpdate(params),
+    mutationFn: (params: UpdateSettingsRequest) =>
+      CoreAPI.settingsUpdate(params),
     onSuccess: () => {
       settings.refetch();
     }
@@ -144,7 +145,8 @@ function Settings() {
                   "border-solid",
                   "border-bd-filled",
                   {
-                    "bg-button-pattern": !settings.data?.exitGame && connected
+                    "bg-button-pattern":
+                      settings.data?.readersScanMode === "tap" && connected
                   },
                   {
                     "bg-background": !connected,
@@ -152,9 +154,9 @@ function Settings() {
                     "text-foreground-disabled": !connected
                   }
                 )}
-                onClick={() => update.mutate({ exitGame: false })}
+                onClick={() => update.mutate({ readersScanMode: "tap" })}
               >
-                {!settings.data?.exitGame && connected && (
+                {settings.data?.readersScanMode === "tap" && connected && (
                   <CheckIcon size="28" />
                 )}
                 {t("settings.tapMode")}
@@ -177,7 +179,8 @@ function Settings() {
                   "border-solid",
                   "border-bd-filled",
                   {
-                    "bg-button-pattern": settings.data?.exitGame && connected
+                    "bg-button-pattern":
+                      settings.data?.readersScanMode === "hold" && connected
                   },
                   {
                     "bg-background": !connected,
@@ -185,15 +188,15 @@ function Settings() {
                     "text-foreground-disabled": !connected
                   }
                 )}
-                onClick={() => update.mutate({ exitGame: true })}
+                onClick={() => update.mutate({ readersScanMode: "hold" })}
               >
-                {settings.data?.exitGame && connected && (
+                {settings.data?.readersScanMode === "hold" && connected && (
                   <CheckIcon size="28" />
                 )}
                 {t("settings.insertMode")}
               </button>
             </div>
-            {settings.data?.exitGame && connected && (
+            {settings.data?.readersScanMode === "hold" && connected && (
               <p className="pt-1 text-sm">{t("settings.insertHelp")}</p>
             )}
           </div>
@@ -204,7 +207,7 @@ function Settings() {
               icon={<DatabaseIcon size="20" />}
               className="w-full"
               disabled={!connected || gamesIndex.indexing}
-              onClick={() => TTA.mediaIndex()}
+              onClick={() => CoreAPI.mediaIndex()}
             />
           </div>
 
