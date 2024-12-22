@@ -1,6 +1,6 @@
 import { useStatusStore } from "../lib/store.ts";
 import useWebSocket, { ReadyState } from "react-use-websocket";
-import { getWsUrl, TTA } from "../lib/api.ts";
+import { getWsUrl, TTA } from "../lib/coreApi.ts";
 import { useEffect } from "react";
 import {
   IndexResponse,
@@ -8,17 +8,26 @@ import {
   PlayingResponse,
   TokenResponse
 } from "../lib/models.ts";
+import { useShallow } from "zustand/react/shallow";
 
-export function TapToWebSocket() {
-  const { connected, setConnected, setConnectionError, setPlaying, setGamesIndex, setLastToken } =
-    useStatusStore((state) => ({
+export function CoreApiWebSocket() {
+  const {
+    connected,
+    setConnected,
+    setConnectionError,
+    setPlaying,
+    setGamesIndex,
+    setLastToken
+  } = useStatusStore(
+    useShallow((state) => ({
       connected: state.connected,
       setConnected: state.setConnected,
       setConnectionError: state.setConnectionError,
       setPlaying: state.setPlaying,
       setGamesIndex: state.setGamesIndex,
       setLastToken: state.setLastToken
-    }));
+    }))
+  );
 
   const { lastMessage, readyState, sendMessage } = useWebSocket(getWsUrl, {
     shouldReconnect: () => true,
@@ -28,7 +37,7 @@ export function TapToWebSocket() {
     share: true,
     heartbeat: true,
     onError: (e: WebSocketEventMap["error"]) => {
-      setConnectionError("Could not connect to server: "+getWsUrl());
+      setConnectionError("Could not connect to server: " + getWsUrl());
       console.log(e);
     }
   });
@@ -49,35 +58,34 @@ export function TapToWebSocket() {
         }
         break;
     }
-  }, [readyState, setConnected, connected]);
-
-  const mediaStarted = (params: PlayingResponse) => {
-    console.log("media.started", params);
-    setPlaying(params);
-  };
-
-  const mediaStopped = () => {
-    console.log("media.stopped");
-    setPlaying({
-      systemId: "",
-      systemName: "",
-      mediaPath: "",
-      mediaName: ""
-    });
-  };
-
-  const mediaIndexing = (params: IndexResponse) => {
-    console.log("mediaIndexing", params);
-    setGamesIndex(params);
-
-  };
-
-  const activeToken = (params: TokenResponse) => {
-    console.log("activeToken", params);
-    setLastToken(params);
-  };
+  }, [readyState, setConnected, connected, setConnectionError]);
 
   useEffect(() => {
+    const mediaStarted = (params: PlayingResponse) => {
+      console.log("media.started", params);
+      setPlaying(params);
+    };
+
+    const mediaStopped = () => {
+      console.log("media.stopped");
+      setPlaying({
+        systemId: "",
+        systemName: "",
+        mediaPath: "",
+        mediaName: ""
+      });
+    };
+
+    const mediaIndexing = (params: IndexResponse) => {
+      console.log("mediaIndexing", params);
+      setGamesIndex(params);
+    };
+
+    const activeToken = (params: TokenResponse) => {
+      console.log("activeToken", params);
+      setLastToken(params);
+    };
+
     try {
       const notification = TTA.processReceived(lastMessage);
       if (notification) {
@@ -99,7 +107,7 @@ export function TapToWebSocket() {
     } catch (e) {
       console.error("Error processing message: " + e);
     }
-  }, [lastMessage]);
+  }, [lastMessage, setGamesIndex, setLastToken, setPlaying]);
 
   return null;
 }

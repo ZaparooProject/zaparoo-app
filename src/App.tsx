@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
-
 import toast, { Toaster } from "react-hot-toast";
-
+import { Capacitor } from "@capacitor/core";
 import { useStatusStore } from "./lib/store";
 import { DatabaseIcon, PlayIcon } from "./lib/images";
 import { usePrevious } from "@uidotdev/usehooks";
@@ -12,7 +11,9 @@ import { Button } from "./components/wui/Button";
 import classNames from "classnames";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { useTranslation } from "react-i18next";
-import { TapToWebSocket } from "./components/TapToWebSocket.tsx";
+import { CoreApiWebSocket } from "./components/CoreApiWebSocket.tsx";
+import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
+import AppUrlListener from "./lib/deepLinks.tsx";
 
 const router = createRouter({ routeTree });
 
@@ -34,11 +35,22 @@ export default function App() {
   const prevGamesIndex = usePrevious(gamesIndex);
   const [hideGamesIndex, setHideGamesIndex] = useState(false);
 
+  const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
+
   const { t } = useTranslation();
 
   useEffect(() => {
-    setStatusBarStyleDark();
+    if (Capacitor.isNativePlatform()) {
+      setStatusBarStyleDark();
+    }
   }, []);
+
+  useEffect(() => {
+    FirebaseAuthentication.addListener("authStateChange", (change) => {
+      setLoggedInUser(change.user);
+      FirebaseAuthentication.getIdToken();
+    });
+  }, [setLoggedInUser]);
 
   useEffect(() => {
     if (gamesIndex.indexing && !hideGamesIndex) {
@@ -151,7 +163,8 @@ export default function App() {
 
   return (
     <>
-      <TapToWebSocket />
+      <AppUrlListener />
+      <CoreApiWebSocket />
       <Toaster
         position="top-center"
         toastOptions={{

@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "26THCW229W.dev.wizzo.tapto",
+        "paths": ["*"]
+      }
+    ]
+  }
+}

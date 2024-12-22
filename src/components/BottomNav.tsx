@@ -1,8 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ClearIcon, CreateIcon, ScanIcon, SettingsIcon } from "../lib/images";
-import { useStatusStore } from "../lib/store.ts";
-import { cancelCamera } from "../routes";
+import { CreateIcon, ScanIcon, SettingsIcon } from "../lib/images";
 
 function Button(props: { text: string; icon: JSX.Element; path: string }) {
   return (
@@ -25,8 +23,6 @@ function Button(props: { text: string; icon: JSX.Element; path: string }) {
 
 export function BottomNav() {
   const { t } = useTranslation();
-  const cameraOpen = useStatusStore((state) => state.cameraOpen);
-  const setCameraOpen = useStatusStore((state) => state.setCameraOpen);
 
   return (
     <div
@@ -38,41 +34,19 @@ export function BottomNav() {
         paddingLeft: "calc(2.25rem + env(safe-area-inset-left))"
       }}
     >
-      {cameraOpen ? (
-        <div className="mx-auto grid h-full max-w-lg grid-cols-1">
-          <div className="inline-flex flex-col items-center justify-center">
-            <div
-              className="text-bd-outline [&.active]:text-primary"
-              onClick={() => cancelCamera(() => setCameraOpen(false))}
-            >
-              <div className="flex justify-center drop-shadow">
-                <ClearIcon size="24" />
-              </div>
-              <div className="text-center leading-4 drop-shadow">
-                {t("nav.cancel")}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="mx-auto grid h-full max-w-lg grid-cols-3">
-          <Button
-            text={t("nav.index")}
-            icon={<ScanIcon size="24" />}
-            path="/"
-          />
-          <Button
-            text={t("nav.create")}
-            icon={<CreateIcon size="24" />}
-            path="/create"
-          />
-          <Button
-            text={t("nav.settings")}
-            icon={<SettingsIcon size="24" />}
-            path="/settings"
-          />
-        </div>
-      )}
+      <div className="mx-auto grid h-full max-w-lg grid-cols-3">
+        <Button text={t("nav.index")} icon={<ScanIcon size="24" />} path="/" />
+        <Button
+          text={t("nav.create")}
+          icon={<CreateIcon size="24" />}
+          path="/create"
+        />
+        <Button
+          text={t("nav.settings")}
+          icon={<SettingsIcon size="24" />}
+          path="/settings"
+        />
+      </div>
     </div>
   );
 }

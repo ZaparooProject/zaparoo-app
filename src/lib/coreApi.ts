@@ -6,7 +6,8 @@ import {
   Notification,
   SearchParams,
   SearchResultsResponse,
-  SettingsResponse, StatusResponse,
+  SettingsResponse,
+  StatusResponse,
   SystemsResponse,
   UpdateSettingsRequest,
   VersionResponse
@@ -48,7 +49,7 @@ interface ResponsePromise {
   reject: (reason: ApiError) => void;
 }
 
-class TapToApi {
+class CoreApi {
   private send: (msg: WebSocketMessage) => void;
   private readonly responsePool: { [key: string]: ResponsePromise };
 
@@ -246,7 +247,7 @@ class TapToApi {
   }
 }
 
-export const TTA = new TapToApi();
+export const TTA = new CoreApi();
 
 const addrKey = "deviceAddress";
 

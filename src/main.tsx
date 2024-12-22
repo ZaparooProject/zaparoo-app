@@ -10,6 +10,9 @@ import { LOG_LEVEL, Purchases } from "@revenuecat/purchases-capacitor";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 
+import { initializeApp } from "firebase/app";
+import firebaseConfig from "./firebase.json";
+
 const queryClient = new QueryClient();
 
 Preferences.get({ key: "apiUrl" }).then((res) => {
@@ -35,6 +38,8 @@ const onDeviceReady = async () => {
   }
 };
 document.addEventListener("deviceready", onDeviceReady, false);
+
+initializeApp(firebaseConfig);
 
 const rootElement = document.getElementById("app")!;
 if (!rootElement.innerHTML) {

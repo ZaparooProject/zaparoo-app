@@ -8,7 +8,7 @@ import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "../components/wui/Button";
-import { TTA } from "../lib/api.ts";
+import { TTA } from "../lib/coreApi.ts";
 
 export const Route = createFileRoute("/create/mappings")({
   component: Mappings
