@@ -366,11 +366,15 @@ function Index() {
           />
         </div>
 
-        <div className="mb-9 mt-8 text-center">
-          <div onClick={handleScanButton}>
-            <ScanSpinner status={scanStatus} spinning={scanSession} />
+        {Capacitor.isNativePlatform() ? (
+          <div className="mb-9 mt-8 text-center">
+            <div onClick={handleScanButton}>
+              <ScanSpinner status={scanStatus} spinning={scanSession} />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="mt-8"></div>
+        )}
 
         <div>
           {!connected && (
@@ -438,104 +442,108 @@ function Index() {
                 </div>
               </Card>
 
-              <div className="mb-3">
-                <div className="flex flex-row" role="group">
-                  <button
-                    type="button"
-                    className={classNames(
-                      "flex",
-                      "flex-row",
-                      "w-full",
-                      "rounded-s-full",
-                      "items-center",
-                      "justify-center",
-                      "py-1",
-                      "font-medium",
-                      "gap-1",
-                      "tracking-[0.1px]",
-                      "h-9",
-                      "border",
-                      "border-solid",
-                      "border-bd-filled",
-                      {
-                        "bg-button-pattern": !cameraMode
-                      }
-                    )}
-                    onClick={() => {
-                      Preferences.set({
-                        key: "cameraDefault",
-                        value: "false"
-                      });
-                      setCameraMode(false);
-                    }}
-                  >
-                    {!cameraMode && <CheckIcon size="28" />}
-                    {t("scan.nfcMode")}
-                  </button>
-                  <button
-                    type="button"
-                    className={classNames(
-                      "flex",
-                      "flex-row",
-                      "w-full",
-                      "rounded-e-full",
-                      "items-center",
-                      "justify-center",
-                      "py-1",
-                      "font-medium",
-                      "gap-1",
-                      "tracking-[0.1px]",
-                      "h-9",
-                      "border",
-                      "border-solid",
-                      "border-bd-filled",
-                      {
-                        "bg-button-pattern": cameraMode
-                      }
-                    )}
-                    onClick={() => {
-                      Preferences.set({
-                        key: "cameraDefault",
-                        value: "true"
-                      });
-                      setCameraMode(true);
-                    }}
-                  >
-                    {cameraMode && <CheckIcon size="28" />}
-                    {t("scan.cameraMode")}
-                  </button>
-                </div>
-              </div>
+              {Capacitor.isNativePlatform() && (
+                <>
+                  <div className="mb-3">
+                    <div className="flex flex-row" role="group">
+                      <button
+                        type="button"
+                        className={classNames(
+                          "flex",
+                          "flex-row",
+                          "w-full",
+                          "rounded-s-full",
+                          "items-center",
+                          "justify-center",
+                          "py-1",
+                          "font-medium",
+                          "gap-1",
+                          "tracking-[0.1px]",
+                          "h-9",
+                          "border",
+                          "border-solid",
+                          "border-bd-filled",
+                          {
+                            "bg-button-pattern": !cameraMode
+                          }
+                        )}
+                        onClick={() => {
+                          Preferences.set({
+                            key: "cameraDefault",
+                            value: "false"
+                          });
+                          setCameraMode(false);
+                        }}
+                      >
+                        {!cameraMode && <CheckIcon size="28" />}
+                        {t("scan.nfcMode")}
+                      </button>
+                      <button
+                        type="button"
+                        className={classNames(
+                          "flex",
+                          "flex-row",
+                          "w-full",
+                          "rounded-e-full",
+                          "items-center",
+                          "justify-center",
+                          "py-1",
+                          "font-medium",
+                          "gap-1",
+                          "tracking-[0.1px]",
+                          "h-9",
+                          "border",
+                          "border-solid",
+                          "border-bd-filled",
+                          {
+                            "bg-button-pattern": cameraMode
+                          }
+                        )}
+                        onClick={() => {
+                          Preferences.set({
+                            key: "cameraDefault",
+                            value: "true"
+                          });
+                          setCameraMode(true);
+                        }}
+                      >
+                        {cameraMode && <CheckIcon size="28" />}
+                        {t("scan.cameraMode")}
+                      </button>
+                    </div>
+                  </div>
 
-              <div className="flex flex-col gap-3">
-                <ToggleSwitch
-                  label={t("scan.continuous")}
-                  disabled={cameraMode}
-                  value={!cameraMode ? restartScan : false}
-                  setValue={(v) => {
-                    setRestartScan(v);
-                    Preferences.set({
-                      key: "restartScan",
-                      value: v.toString()
-                    });
-                  }}
-                />
-                <ToggleSwitch
-                  label={t("scan.launchOnScan")}
-                  value={launchOnScan}
-                  setValue={(v) => {
-                    if (launcherAccess) {
-                      setLaunchOnScan(v);
-                      Preferences.set({
-                        key: "launchOnScan",
-                        value: v.toString()
-                      });
-                    } else {
-                      setPurchaseLauncherOpen(true);
-                    }
-                  }}
-                />
-              </div>
+                  <div className="flex flex-col gap-3">
+                    <ToggleSwitch
+                      label={t("scan.continuous")}
+                      disabled={cameraMode}
+                      value={!cameraMode ? restartScan : false}
+                      setValue={(v) => {
+                        setRestartScan(v);
+                        Preferences.set({
+                          key: "restartScan",
+                          value: v.toString()
+                        });
+                      }}
+                    />
+                    <ToggleSwitch
+                      label={t("scan.launchOnScan")}
+                      value={launchOnScan}
+                      setValue={(v) => {
+                        if (launcherAccess) {
+                          setLaunchOnScan(v);
+                          Preferences.set({
+                            key: "launchOnScan",
+                            value: v.toString()
+                          });
+                        } else {
+                          setPurchaseLauncherOpen(true);
+                        }
+                      }}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="p-3 pt-6">
                 <div className="flex flex-row items-center justify-between">

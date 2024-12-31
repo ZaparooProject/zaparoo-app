@@ -71,8 +71,8 @@
         "gamesDbUpdate": "Media database must be updated before searching",
         "searchError": "Error searching for media",
         "noGamesFound": "No media found",
-        "gamesFound": "{{count}} media found",
-        "gamesFoundMax": "{{count}} media found (showing first {{max}})",
+        "gamesFound": "{{count}} found",
+        "gamesFoundMax": "{{count}} found (showing first {{max}})",
         "title": "Search for Game",
         "gameInput": "Name",
         "gameInputPlaceholder": "Enter media name",
@@ -81,7 +81,7 @@
         "systemLabel": "System:",
         "pathLabel": "Path:",
         "writeLabel": "Write to tag",
-        "playLabel": "Play"
+        "playLabel": "Preview"
       },
       "custom": {
         "title": "Custom Text",

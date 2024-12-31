@@ -110,7 +110,7 @@ function SearchResults(props: {
               })
             : t("create.search.gamesFound", { count: props.resp.total })}
         </p>
-        <div className="overflow-y-scroll">
+        <div>
           {props.resp.results.map((game, i) => (
             <div
               key={i}
@@ -263,6 +263,7 @@ function Search() {
               label={t("create.search.searchButton")}
               className="mt-2 w-full"
               icon={<SearchIcon size="20" />}
+              disabled={query === "" && querySystem === "all"}
               onClick={() => {
                 console.log(query, querySystem);
                 search.mutate({
