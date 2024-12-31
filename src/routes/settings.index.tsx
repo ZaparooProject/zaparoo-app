@@ -17,19 +17,19 @@ import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
 import { SlideModal } from "../components/SlideModal.tsx";
 import { UpdateSettingsRequest } from "../lib/models.ts";
-import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
+// import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 
 export const Route = createFileRoute("/settings/")({
   component: Settings
 });
 
-const signInWithEmailAndPassword = async (email: string, password: string) => {
-  const result = await FirebaseAuthentication.signInWithEmailAndPassword({
-    email: email,
-    password: password
-  });
-  return result.user;
-};
+// const signInWithEmailAndPassword = async (email: string, password: string) => {
+//   const result = await FirebaseAuthentication.signInWithEmailAndPassword({
+//     email: email,
+//     password: password
+//   });
+//   return result.user;
+// };
 
 function Settings() {
   const connected = useStatusStore((state) => state.connected);
@@ -58,11 +58,11 @@ function Settings() {
   const [launcherAccess, setLauncherAccess] = useState(false);
   const [purchaseLauncherOpen, setPurchaseLauncherOpen] = useState(false);
 
-  const [onlineUsername, setOnlineUsername] = useState("");
-  const [onlinePassword, setOnlinePassword] = useState("");
-  const [onlineLoggingIn, setOnlineLoggingIn] = useState(false);
-  const loggedInUser = useStatusStore((state) => state.loggedInUser);
-  const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
+  // const [onlineUsername, setOnlineUsername] = useState("");
+  // const [onlinePassword, setOnlinePassword] = useState("");
+  // const [onlineLoggingIn, setOnlineLoggingIn] = useState(false);
+  // const loggedInUser = useStatusStore((state) => state.loggedInUser);
+  // const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
@@ -280,63 +280,63 @@ function Settings() {
             }}
           />
 
-          {loggedInUser !== null ? (
-            <div className="flex flex-col gap-3">
-              <Button
-                label={t("online.logout")}
-                onClick={() => {
-                  FirebaseAuthentication.signOut()
-                    .then(() => {
-                      setLoggedInUser(null);
-                    })
-                    .catch((e) => {
-                      console.error(e);
-                    });
-                }}
-                className="w-full"
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <TextInput
-                label={t("online.email")}
-                placeholder="your@email.com"
-                value={onlineUsername}
-                setValue={setOnlineUsername}
-              />
-              <TextInput
-                label={t("online.password")}
-                placeholder=""
-                type="password"
-                value={onlinePassword}
-                setValue={setOnlinePassword}
-              />
-              <Button
-                label={t("online.login")}
-                onClick={() => {
-                  setOnlineLoggingIn(true);
-                  signInWithEmailAndPassword(onlineUsername, onlinePassword)
-                    .then((result) => {
-                      if (result) {
-                        toast.success(t("online.loginSuccess"));
-                      } else {
-                        toast.error(t("online.loginWrong"));
-                      }
-                      setLoggedInUser(result);
-                      setOnlineLoggingIn(false);
-                    })
-                    .catch((e) => {
-                      console.error(e);
-                      toast.error(t("online.loginFail"));
-                      setOnlineLoggingIn(false);
-                      setLoggedInUser(null);
-                    });
-                }}
-                disabled={!onlineUsername || !onlinePassword || onlineLoggingIn}
-                className="w-full"
-              />
-            </div>
-          )}
+          {/*{loggedInUser !== null ? (*/}
+          {/*  <div className="flex flex-col gap-3">*/}
+          {/*    <Button*/}
+          {/*      label={t("online.logout")}*/}
+          {/*      onClick={() => {*/}
+          {/*        FirebaseAuthentication.signOut()*/}
+          {/*          .then(() => {*/}
+          {/*            setLoggedInUser(null);*/}
+          {/*          })*/}
+          {/*          .catch((e) => {*/}
+          {/*            console.error(e);*/}
+          {/*          });*/}
+          {/*      }}*/}
+          {/*      className="w-full"*/}
+          {/*    />*/}
+          {/*  </div>*/}
+          {/*) : (*/}
+          {/*  <div className="flex flex-col gap-3">*/}
+          {/*    <TextInput*/}
+          {/*      label={t("online.email")}*/}
+          {/*      placeholder="your@email.com"*/}
+          {/*      value={onlineUsername}*/}
+          {/*      setValue={setOnlineUsername}*/}
+          {/*    />*/}
+          {/*    <TextInput*/}
+          {/*      label={t("online.password")}*/}
+          {/*      placeholder=""*/}
+          {/*      type="password"*/}
+          {/*      value={onlinePassword}*/}
+          {/*      setValue={setOnlinePassword}*/}
+          {/*    />*/}
+          {/*    <Button*/}
+          {/*      label={t("online.login")}*/}
+          {/*      onClick={() => {*/}
+          {/*        setOnlineLoggingIn(true);*/}
+          {/*        signInWithEmailAndPassword(onlineUsername, onlinePassword)*/}
+          {/*          .then((result) => {*/}
+          {/*            if (result) {*/}
+          {/*              toast.success(t("online.loginSuccess"));*/}
+          {/*            } else {*/}
+          {/*              toast.error(t("online.loginWrong"));*/}
+          {/*            }*/}
+          {/*            setLoggedInUser(result);*/}
+          {/*            setOnlineLoggingIn(false);*/}
+          {/*          })*/}
+          {/*          .catch((e) => {*/}
+          {/*            console.error(e);*/}
+          {/*            toast.error(t("online.loginFail"));*/}
+          {/*            setOnlineLoggingIn(false);*/}
+          {/*            setLoggedInUser(null);*/}
+          {/*          });*/}
+          {/*      }}*/}
+          {/*      disabled={!onlineUsername || !onlinePassword || onlineLoggingIn}*/}
+          {/*      className="w-full"*/}
+          {/*    />*/}
+          {/*  </div>*/}
+          {/*)}*/}
 
           <div className="flex flex-col">
             <label className="text-white">{t("settings.language")}</label>
