@@ -24,6 +24,7 @@ export function Button(props: ButtonProps) {
         "font-medium",
         "gap-2",
         "tracking-[0.1px]",
+        "cursor-pointer",
         {
           "w-10": !props.label && props.icon,
           "h-10": !props.label && props.icon,

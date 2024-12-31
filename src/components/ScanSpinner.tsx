@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 import { useTranslation } from "react-i18next";
+import { Capacitor } from "@capacitor/core";
 
 export const successColor = "#00FF29";
 export const errorColor = "#FF7E92";
@@ -77,7 +78,9 @@ export function ScanSpinner(props: {
     <div>
       <p className="text-3xl">
         {props.write
-          ? t("spinner.holdTag")
+          ? Capacitor.isNativePlatform()
+            ? t("spinner.holdTag")
+            : t("spinner.holdTagReader")
           : props.spinning
             ? t("spinner.scanning")
             : t("spinner.pressToScan")}

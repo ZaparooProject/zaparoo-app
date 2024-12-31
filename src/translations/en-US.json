@@ -16,6 +16,7 @@
       "nfcDisabledLabel": "NFC access disabled",
       "nfcDisabledSub": "Please enable NFC access in your device settings for NFC reading and writing features",
       "holdTag": "Hold tag to phone",
+      "holdTagReader": "Hold tag to reader",
       "scanning": "Scanning",
       "pressToScan": "Press to scan",
       "writeSuccess": "Tag written successfully",

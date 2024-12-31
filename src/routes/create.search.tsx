@@ -114,7 +114,7 @@ function SearchResults(props: {
           {props.resp.results.map((game, i) => (
             <div
               key={i}
-              className="flex flex-row items-center justify-between gap-1 p-1 py-3"
+              className="flex cursor-pointer flex-row items-center justify-between gap-1 p-1 py-3"
               style={{
                 borderBottom:
                   i === (props.resp ? props.resp.results.length : 0) - 1
