@@ -1,5 +1,7 @@
 {
   "translation": {
+    "copy": "Copy",
+    "copied": "Copied",
     "nav": {
       "cancel": "Cancel",
       "create": "Create",
@@ -109,12 +111,13 @@
     "settings": {
       "title": "Settings",
       "device": "Device address",
-      "modeLabel": "Reader mode",
+      "modeLabel": "Scan mode",
       "tapMode": "Tap",
-      "insertMode": "Insert",
+      "insertMode": "Hold",
       "insertHelp": "Exits the game when tag is removed. Requires a separate NFC reader.",
-      "updateDb": "Update games database",
+      "updateDb": "Update media database",
       "designer": "Zaparoo Designer",
+      "getApp": "Get the Zaparoo App",
       "language": "Language",
       "about": {
         "title": "About",

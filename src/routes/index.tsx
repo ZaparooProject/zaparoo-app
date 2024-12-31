@@ -42,16 +42,18 @@ const writeToClipboard = async (s: string) => {
 };
 
 const CopyButton = (props: { text: string }) => {
-  const [display, setDisplay] = useState("Copy");
+  const { t } = useTranslation();
+
+  const [display, setDisplay] = useState(t("copy"));
 
   return (
     <span
-      className="ml-1 rounded-full border px-1"
+      className="ml-1 cursor-pointer rounded-full border px-1"
       onClick={() => {
         writeToClipboard(props.text).then(() => {
-          setDisplay("Copied");
+          setDisplay(t("copied"));
           setTimeout(() => {
-            setDisplay("Copy");
+            setDisplay(t("copy"));
           }, 3000);
         });
       }}

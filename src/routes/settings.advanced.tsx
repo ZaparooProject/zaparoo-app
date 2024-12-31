@@ -4,7 +4,6 @@ import { ToggleSwitch } from "../components/wui/ToggleSwitch";
 import { useSwipeable } from "react-swipeable";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useStatusStore } from "../lib/store";
-import { TextInput } from "../components/wui/TextInput";
 import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
 import { UpdateSettingsRequest } from "../lib/models.ts";
@@ -67,17 +66,17 @@ function Advanced() {
           />
         </div>
 
-        <div className="flex flex-col gap-4 pt-1.5">
-          <TextInput
-            label={t("settings.advanced.insertModeBlocklist")}
-            placeholder="ao486,Gamate,X68000"
-            value={data?.readersScanIgnoreSystems.join(",")}
-            saveValue={(v: string) =>
-              update.mutate({ readersScanIgnoreSystems: v.split(",") })
-            }
-            disabled={!connected}
-          />
-        </div>
+        {/*<div className="flex flex-col gap-4 pt-1.5">*/}
+        {/*  <TextInput*/}
+        {/*    label={t("settings.advanced.insertModeBlocklist")}*/}
+        {/*    placeholder="ao486,Gamate,X68000"*/}
+        {/*    value={data?.readersScanIgnoreSystems.join(",")}*/}
+        {/*    saveValue={(v: string) =>*/}
+        {/*      update.mutate({ readersScanIgnoreSystems: v.split(",") })*/}
+        {/*    }*/}
+        {/*    disabled={!connected}*/}
+        {/*  />*/}
+        {/*</div>*/}
       </PageFrame>
     </div>
   );

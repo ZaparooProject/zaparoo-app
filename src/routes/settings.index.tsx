@@ -222,63 +222,78 @@ function Settings() {
             />
           </div>
 
-          <Button
-            label={t("scan.purchaseProAction")}
-            disabled={!launcherPackage || launcherAccess}
-            onClick={() => setPurchaseLauncherOpen(true)}
-          />
+          {!Capacitor.isNativePlatform() && (
+            <div>
+              <Button
+                label={t("settings.getApp")}
+                className="w-full"
+                icon={<ExternalIcon size="20" />}
+                onClick={() => Browser.open({ url: "https://zaparoo.app" })}
+              />
+            </div>
+          )}
 
-          <Button
-            label={t("settings.advanced.restorePurchases")}
-            className="w-full"
-            onClick={() => {
-              Purchases.restorePurchases()
-                .then(() => {
-                  Purchases.getCustomerInfo()
-                    .then((info) => {
-                      if (
-                        info.customerInfo.entitlements.active.tapto_launcher
-                      ) {
-                        Preferences.set({
-                          key: "launcherAccess",
-                          value: "true"
+          {Capacitor.isNativePlatform() && (
+            <div className="flex flex-col gap-5">
+              <Button
+                label={t("scan.purchaseProAction")}
+                disabled={!launcherPackage || launcherAccess}
+                onClick={() => setPurchaseLauncherOpen(true)}
+              />
+
+              <Button
+                label={t("settings.advanced.restorePurchases")}
+                className="w-full"
+                onClick={() => {
+                  Purchases.restorePurchases()
+                    .then(() => {
+                      Purchases.getCustomerInfo()
+                        .then((info) => {
+                          if (
+                            info.customerInfo.entitlements.active.tapto_launcher
+                          ) {
+                            Preferences.set({
+                              key: "launcherAccess",
+                              value: "true"
+                            });
+                          } else {
+                            Preferences.set({
+                              key: "launcherAccess",
+                              value: "false"
+                            });
+                            Preferences.set({
+                              key: "launchOnScan",
+                              value: "false"
+                            });
+                          }
+                          location.reload();
+                        })
+                        .catch((e) => {
+                          console.error("customer info error", e);
                         });
-                      } else {
-                        Preferences.set({
-                          key: "launcherAccess",
-                          value: "false"
-                        });
-                        Preferences.set({
-                          key: "launchOnScan",
-                          value: "false"
-                        });
-                      }
-                      location.reload();
+                      toast.success((to) => (
+                        <span
+                          className="flex flex-grow flex-col"
+                          onClick={() => toast.dismiss(to.id)}
+                        >
+                          {t("settings.advanced.restoreSuccess")}
+                        </span>
+                      ));
                     })
-                    .catch((e) => {
-                      console.error("customer info error", e);
+                    .catch(() => {
+                      toast.error((to) => (
+                        <span
+                          className="flex flex-grow flex-col"
+                          onClick={() => toast.dismiss(to.id)}
+                        >
+                          {t("settings.advanced.restoreFail")}
+                        </span>
+                      ));
                     });
-                  toast.success((to) => (
-                    <span
-                      className="flex flex-grow flex-col"
-                      onClick={() => toast.dismiss(to.id)}
-                    >
-                      {t("settings.advanced.restoreSuccess")}
-                    </span>
-                  ));
-                })
-                .catch(() => {
-                  toast.error((to) => (
-                    <span
-                      className="flex flex-grow flex-col"
-                      onClick={() => toast.dismiss(to.id)}
-                    >
-                      {t("settings.advanced.restoreFail")}
-                    </span>
-                  ));
-                });
-            }}
-          />
+                }}
+              />
+            </div>
+          )}
 
           {/*{loggedInUser !== null ? (*/}
           {/*  <div className="flex flex-col gap-3">*/}
