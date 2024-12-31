@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 import { CheckIcon, WarningIcon } from "./images";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
+import { CoreAPI } from "./coreApi.ts";
 
 interface WriteNfcHook {
   write: (action: WriteAction, text?: string) => void;
@@ -30,6 +31,24 @@ export enum WriteAction {
   MakeReadOnly = "makeReadOnly"
 }
 
+function coreWrite(text: string): Promise<Result> {
+  return new Promise((resolve, reject) => {
+    CoreAPI.write({ text })
+      .then(() => {
+        resolve({
+          status: Status.Success,
+          info: {
+            rawTag: null,
+            tag: null
+          }
+        });
+      })
+      .catch((e) => {
+        reject(e);
+      });
+  });
+}
+
 export function useNfcWriter(): WriteNfcHook {
   const [writing, setWriting] = useState(false);
   const [result, setResult] = useState<null | Result>(null);
@@ -38,7 +57,7 @@ export function useNfcWriter(): WriteNfcHook {
   const { t } = useTranslation();
 
   useEffect(() => {
-    () => {
+    return () => {
       cancelSession();
       setResult(null);
       setWriting(false);
@@ -57,7 +76,11 @@ export function useNfcWriter(): WriteNfcHook {
             return;
           }
 
-          actionFunc = () => writeTag(text);
+          if (Capacitor.isNativePlatform()) {
+            actionFunc = () => writeTag(text);
+          } else {
+            actionFunc = () => coreWrite(text);
+          }
           break;
         case WriteAction.Read:
           actionFunc = readRaw;

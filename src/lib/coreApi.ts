@@ -10,7 +10,8 @@ import {
   StatusResponse,
   SystemsResponse,
   UpdateSettingsRequest,
-  VersionResponse
+  VersionResponse,
+  WriteRequest
 } from "./models";
 import { Preferences } from "@capacitor/preferences";
 import { WebSocketMessage } from "react-use-websocket/dist/lib/types";
@@ -146,6 +147,16 @@ class CoreApi {
   launch(params: LaunchRequest): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       this.call(Method.Launch, params)
+        .then(() => {
+          resolve();
+        })
+        .catch(reject);
+    });
+  }
+
+  write(params: WriteRequest): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.ReadersWrite, params)
         .then(() => {
           resolve();
         })
