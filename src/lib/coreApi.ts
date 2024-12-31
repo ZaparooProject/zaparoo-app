@@ -15,6 +15,7 @@ import {
 import { Preferences } from "@capacitor/preferences";
 import { WebSocketMessage } from "react-use-websocket/dist/lib/types";
 import { v4 as uuidv4 } from "uuid";
+import { Capacitor } from "@capacitor/core";
 
 const RequestTimeout = 30 * 1000;
 
@@ -252,7 +253,12 @@ export const CoreAPI = new CoreApi();
 const addrKey = "deviceAddress";
 
 export function getDeviceAddress() {
-  return localStorage.getItem(addrKey) || "";
+  const addr = localStorage.getItem(addrKey) || "";
+  if (!Capacitor.isNativePlatform() && addr === "") {
+    return window.location.hostname;
+  } else {
+    return addr;
+  }
 }
 
 export function setDeviceAddress(addr: string) {
