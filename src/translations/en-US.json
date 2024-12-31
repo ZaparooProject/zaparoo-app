@@ -141,13 +141,15 @@
       },
       "help": {
         "title": "Help",
+        "main": "Zaparoo.org",
         "taptoWiki": "Zaparoo Wiki",
         "documentationLabel": "Documentation",
         "gettingStarted": "Getting started with Zaparoo",
         "softwareSetup": "Zaparoo software setup",
-        "commandReference": "TapScript reference",
+        "commandReference": "ZapScript reference",
         "communityLabel": "Community",
         "discord": "Join the Discord server",
+        "reddit": "Join the Subreddit",
         "technicalSupport": "Technical Support",
         "reportIssue": "Report an issue on GitHub",
         "emailLabel": "Support email:"

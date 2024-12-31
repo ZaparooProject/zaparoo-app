@@ -24,6 +24,15 @@ function Help() {
         back={() => navigate({ to: "/settings" })}
       >
         <div className="flex flex-col gap-4">
+          <Button
+            label={t("settings.help.main")}
+            variant="outline"
+            onClick={() =>
+              Browser.open({
+                url: "https://zaparoo.org/"
+              })
+            }
+          />
           <div className="flex flex-col gap-4">
             <h2 className="text-center text-lg font-semibold">
               {t("settings.help.documentationLabel")}
@@ -33,7 +42,7 @@ function Help() {
               variant="outline"
               onClick={() =>
                 Browser.open({
-                  url: "https://tapto.wiki/"
+                  url: "https://wiki.zaparoo.org/"
                 })
               }
             />
@@ -42,7 +51,7 @@ function Help() {
               variant="outline"
               onClick={() =>
                 Browser.open({
-                  url: "https://tapto.wiki/Getting_Started"
+                  url: "https://wiki.zaparoo.org/Getting_Started"
                 })
               }
             />
@@ -51,7 +60,7 @@ function Help() {
               variant="outline"
               onClick={() =>
                 Browser.open({
-                  url: "https://tapto.wiki/TapScript"
+                  url: "https://wiki.zaparoo.org/ZapScript"
                 })
               }
             />
@@ -66,7 +75,16 @@ function Help() {
               variant="outline"
               onClick={() =>
                 Browser.open({
-                  url: "https://wizzo.dev/discord"
+                  url: "https://zaparoo.org/discord"
+                })
+              }
+            />
+            <Button
+              label={t("settings.help.reddit")}
+              variant="outline"
+              onClick={() =>
+                Browser.open({
+                  url: "https://reddit.com/r/Zaparoo"
                 })
               }
             />
@@ -81,14 +99,14 @@ function Help() {
               variant="outline"
               onClick={() =>
                 Browser.open({
-                  url: "https://github.com/TapToCommunity/tapto/issues/new"
+                  url: "https://github.com/ZaparooProject/zaparoo-app/issues/new"
                 })
               }
             />
             <p className="text-center">
               {t("settings.help.emailLabel")}{" "}
-              <a className="underline" href="mailto:support@wizzo.dev">
-                support@wizzo.dev
+              <a className="underline" href="mailto:support@zaparoo.com">
+                support@zaparoo.com
               </a>
             </p>
           </div>
