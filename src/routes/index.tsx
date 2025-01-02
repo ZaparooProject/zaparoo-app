@@ -46,6 +46,10 @@ const CopyButton = (props: { text: string }) => {
 
   const [display, setDisplay] = useState(t("copy"));
 
+  if (location.protocol !== "https:") {
+    return <></>;
+  }
+
   return (
     <span
       className="ml-1 cursor-pointer rounded-full border px-1"
