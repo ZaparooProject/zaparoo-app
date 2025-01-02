@@ -26,9 +26,7 @@ jobs:
         run: npm install
       - name: Production build
         env:
-          VITE_VERSION: >-
-            ${{ github.ref_name.startsWith('v') && github.ref_name != 'v' 
-            ? github.ref_name.slice(1) : github.ref_name }}
+          VITE_VERSION: ${{ github.ref_name }}
           VITE_GOOGLE_STORE_API: ${{ secrets.VITE_GOOGLE_STORE_API }}
           VITE_APPLE_STORE_API: ${{ secrets.VITE_APPLE_STORE_API }}
         run: npm run build
