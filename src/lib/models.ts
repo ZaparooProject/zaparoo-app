@@ -1,7 +1,9 @@
 export enum Method {
   Launch = "launch",
   Stop = "stop",
+  Tokens = "tokens",
   History = "tokens.history",
+  Media = "media",
   MediaSearch = "media.search",
   MediaIndex = "media.index",
   Systems = "systems",
@@ -18,10 +20,10 @@ export enum Method {
 }
 
 export enum Notification {
-  ReadersConnected = "readers.connected",
-  ReadersDisconnected = "readers.disconnected",
-  TokensLaunching = "tokens.launching",
-  TokensActive = "tokens.active",
+  ReadersConnected = "readers.added",
+  ReadersDisconnected = "readers.removed",
+  TokensLaunching = "running",
+  TokensScanned = "tokens.added",
   MediaStarted = "media.started",
   MediaStopped = "media.stopped",
   MediaIndexing = "media.indexing"
@@ -137,16 +139,17 @@ export interface TokenResponse {
   type: string;
   uid: string;
   text: string;
+  data: string;
   scanTime: string;
 }
 
 export interface IndexResponse {
   exists: boolean;
   indexing: boolean;
-  totalSteps: number;
-  currentStep: number;
-  currentDesc: string;
-  totalFiles: number;
+  totalSteps?: number;
+  currentStep?: number;
+  currentStepDisplay?: string;
+  totalFiles?: number;
 }
 
 export interface PlayingResponse {
@@ -162,6 +165,12 @@ export enum ScanResult {
   Error
 }
 
-export interface StatusResponse {
-  gamesIndex: IndexResponse;
+export interface MediaResponse {
+  database: IndexResponse;
+  active: PlayingResponse[];
+}
+
+export interface TokensResponse {
+  active: TokenResponse[];
+  last?: TokenResponse;
 }

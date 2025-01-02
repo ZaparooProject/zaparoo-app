@@ -1,10 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  NextIcon,
-  PlayIcon,
-  SearchIcon,
-  TextIcon
-} from "../lib/images";
+import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "../lib/images";
 import { useStatusStore } from "../lib/store";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { Card } from "../components/wui/Card";
@@ -58,6 +53,7 @@ function Create() {
           </Link>
 
           <Card
+            className="cursor-pointer"
             disabled={playing.mediaPath === ""}
             onClick={() => {
               if (playing.mediaPath !== "") {

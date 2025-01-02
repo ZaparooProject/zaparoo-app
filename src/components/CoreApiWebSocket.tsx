@@ -39,6 +39,19 @@ export function CoreApiWebSocket() {
     onError: (e: WebSocketEventMap["error"]) => {
       setConnectionError("Could not connect to server: " + getWsUrl());
       console.log(e);
+    },
+    onOpen: () => {
+      CoreAPI.media().then((v) => {
+        setGamesIndex(v.database);
+        if (v.active.length > 0) {
+          setPlaying(v.active[0]);
+        }
+      });
+      CoreAPI.tokens().then((v) => {
+        if (v.last) {
+          setLastToken(v.last);
+        }
+      });
     }
   });
 
@@ -99,7 +112,7 @@ export function CoreApiWebSocket() {
           case Notification.MediaIndexing:
             mediaIndexing(notification.params as IndexResponse);
             break;
-          case Notification.TokensActive:
+          case Notification.TokensScanned:
             activeToken(notification.params as TokenResponse);
             break;
         }

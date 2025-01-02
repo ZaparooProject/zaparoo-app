@@ -203,8 +203,8 @@ function Search() {
   }, [nfcWriter]);
 
   useEffect(() => {
-    CoreAPI.status().then((s) => {
-      setGamesIndex(s.gamesIndex);
+    CoreAPI.media().then((s) => {
+      setGamesIndex(s.database);
     });
   }, [setGamesIndex]);
 

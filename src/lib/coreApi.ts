@@ -2,13 +2,14 @@ import {
   AllMappingsResponse,
   HistoryResponse,
   LaunchRequest,
+  MediaResponse,
   Method,
   Notification,
   SearchParams,
   SearchResultsResponse,
   SettingsResponse,
-  StatusResponse,
   SystemsResponse,
+  TokensResponse,
   UpdateSettingsRequest,
   VersionResponse,
   WriteRequest
@@ -245,12 +246,23 @@ class CoreApi {
     });
   }
 
-  // DEPRECATED
-  status(): Promise<StatusResponse> {
-    return new Promise<StatusResponse>((resolve, reject) => {
-      this.call(Method.Status)
+  media(): Promise<MediaResponse> {
+    return new Promise<MediaResponse>((resolve, reject) => {
+      this.call(Method.Media)
         .then((result) => {
-          const response = result as StatusResponse;
+          const response = result as MediaResponse;
+          console.debug(response);
+          resolve(response);
+        })
+        .catch(reject);
+    });
+  }
+
+  tokens(): Promise<TokensResponse> {
+    return new Promise<TokensResponse>((resolve, reject) => {
+      this.call(Method.Tokens)
+        .then((result) => {
+          const response = result as TokensResponse;
           console.debug(response);
           resolve(response);
         })
@@ -280,5 +292,5 @@ export function setDeviceAddress(addr: string) {
 }
 
 export function getWsUrl() {
-  return "ws://" + getDeviceAddress() + ":7497/api/v1.0";
+  return "ws://" + getDeviceAddress() + ":7497/api/v0.1";
 }

@@ -24,7 +24,7 @@ export function PageFrame(props: PageFrameProps) {
         <div className="mb-3 grid min-h-8 grid-cols-5 items-center justify-center gap-4">
           <div className="col-span-1 flex">
             {props.back && (
-              <div onClick={props.back}>
+              <div onClick={props.back} className="cursor-pointer">
                 <BackIcon size="24" />
               </div>
             )}

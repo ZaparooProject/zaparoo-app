@@ -32,7 +32,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
   connectionError: "",
   setConnectionError: (error) => set({ connectionError: error }),
 
-  lastToken: { type: "", uid: "", text: "", scanTime: "" },
+  lastToken: { type: "", uid: "", text: "", data: "", scanTime: "" },
   setLastToken: (token) => set({ lastToken: token }),
 
   gamesIndex: {
@@ -40,7 +40,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
     indexing: false,
     totalSteps: 0,
     currentStep: 0,
-    currentDesc: "",
+    currentStepDisplay: "",
     totalFiles: 0
   },
   setGamesIndex: (index) => set({ gamesIndex: index }),
@@ -57,5 +57,6 @@ export const useStatusStore = create<StatusState>()((set) => ({
   setCameraOpen: (cameraOpen) => set({ cameraOpen: cameraOpen }),
 
   loggedInUser: null,
-  setLoggedInUser: (loggedInUser: User | null) => set({ loggedInUser: loggedInUser }),
+  setLoggedInUser: (loggedInUser: User | null) =>
+    set({ loggedInUser: loggedInUser })
 }));

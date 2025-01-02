@@ -63,10 +63,10 @@ export default function App() {
             <div className="flex flex-grow flex-col pr-3">
               <div className="font-semibold">{t("toast.updateDbHeading")}</div>
               <div className="text-sm">
-                {gamesIndex.currentDesc
+                {gamesIndex.currentStepDisplay
                   ? gamesIndex.currentStep === gamesIndex.totalSteps
                     ? t("toast.writingDb")
-                    : gamesIndex.currentDesc
+                    : gamesIndex.currentStepDisplay
                   : t("toast.preparingDb")}
               </div>
               <div className="h-[10px] w-full rounded-full border border-solid border-bd-filled bg-background">
@@ -81,7 +81,10 @@ export default function App() {
                     }
                   )}
                   style={{
-                    width: `${((gamesIndex.currentStep / gamesIndex.totalSteps) * 100).toFixed(2)}%`
+                    width:
+                      gamesIndex.currentStep && gamesIndex.totalSteps
+                        ? `${((gamesIndex.currentStep / gamesIndex.totalSteps) * 100).toFixed(2)}%`
+                        : "100%"
                   }}
                 ></div>
               </div>
