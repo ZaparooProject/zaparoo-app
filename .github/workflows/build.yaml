@@ -22,6 +22,8 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+      - name: Authenticate NPM registry
+        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}\n@capawesome-team:registry=https://npm.pkg.github.com/" > ~/.npmrc
       - name: Install dependencies
         run: npm install
       - name: Production build
