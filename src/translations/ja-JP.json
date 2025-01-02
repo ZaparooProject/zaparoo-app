@@ -1,0 +1,161 @@
+{
+  "translation": {
+    "copy": "コピー",
+    "copied": "コピーした",
+    "nav": {
+      "cancel": "キャンセル",
+      "create": "作成",
+      "assign": "割り当てる",
+      "index": "スキャン",
+      "design": "デザイン",
+      "settings": "設定"
+    },
+    "spinner": {
+      "notSupportedLabel": "このデバイスはNFCに対応していません。",
+      "notSupportedSub": "このアプリでは、NFCの読み取りや書き込み機能を使用することはできません。",
+      "nfcDisabledLabel": "NFCアクセスが無効になっています。",
+      "nfcDisabledSub": "NFCの読み取りおよび書き込み機能を使用するために、デバイスの設定でNFCアクセスを有効にしてください。",
+      "holdTag": "電話でNFCタグをタップしてください。",
+      "holdTagReader": "リーダーでNFCタグを読み取ってください",
+      "scanning": "スキャン中",
+      "pressToScan": "スキャンするには画面をタッチしてください。",
+      "writeSuccess": "タグの書き込みが成功しました。",
+      "writeFailed": "タグの書き込みに失敗しました。"
+    },
+    "toast": {
+      "updateDbHeading": "メディアデータベースを更新中です。",
+      "preparingDb": "データベースを準備中です。",
+      "writingDb": "データベースをディスクに書き込んでいます。",
+      "hideLabel": "非表示",
+      "updatedDb": "ゲームデータベースが更新されました。",
+      "filesFound": "{{count}} 件のメディアが見つかりました。",
+      "nowPlayingHeading": "現在再生中"
+    },
+    "scan": {
+      "cameraMode": "カメラ",
+      "nfcMode": "NFC",
+      "scanError": "タグの読み取りエラー",
+      "noDevices": "Zaparooデバイスは見つかりませんでした。",
+      "continuous": " 連続スキャン",
+      "launchOnScan": "スキャン時に起動",
+      "connectedHeading": "接続済み",
+      "connectedSub": "IP: {{ip}}",
+      "nowPlayingHeading": "現在再生中",
+      "nowPlayingName": "名前: {{game}}",
+      "nowPlayingSystem": "システム: {{system}}",
+      "lastScannedHeading": "最後にスキャンした",
+      "lastScannedTime": "時間: {{time}}",
+      "lastScannedUid": "UID: {{uid}}",
+      "lastScannedText": "テキスト: {{text}}",
+      "historyTitle": "スキャン履歴",
+      "purchaseProTitle": "Zaparoo Pro",
+      "purchaseProP1": "Zaparoo Proは、{{price}}の一度限りの購入でアンロックでき、今後のZaparooの開発支援に役立ちます。",
+      "purchaseProP2": "Proには「スキャン時に起動」機能が含まれており、これによりあなたの電話がワイヤレスZaparooリーダーに変わります!今後のPro機能はすべて追加料金なしで含まれます。",
+      "purchaseProAction": "Zaparoo Proをアンロックする",
+      "completeIntro": "Zaparooを始めよう"
+    },
+    "create": {
+      "title": "新しいタグを作成する",
+      "searchGameHeading": "メディアを検索する",
+      "searchGameSub": "接続されたデバイス上で",
+      "currentGameHeading": "現在のメディア",
+      "currentGameSub": "'{{game}}'をタグに書き込む",
+      "currentGameSubFallback": "'現在再生中' をタグに書き込む",
+      "customHeading": "カスタムテキスト",
+      "customSub": "文字列をタグに書き込む",
+      "nfcHeading": "NFCユーティリティ",
+      "nfcSub": "NFCタグを読み取ってフォーマットする",
+      "mappingsHeading": "マッピング",
+      "mappingsSub": "コマンドにトークンを割り当てる",
+      "search": {
+        "searchButton": "検索",
+        "gamesDbUpdate": "検索する前にメディアデータベースを更新する必要があります。",
+        "searchError": "メディアの検索中にエラーが発生しました。",
+        "noGamesFound": "メディアが見つかりませんでした。",
+        "gamesFound": "{{count}} 件が見つかりました。",
+        "gamesFoundMax": "{{count}} 件が見つかりました。(showing first {{max}})",
+        "title": "ゲームを検索する",
+        "gameInput": "名前",
+        "gameInputPlaceholder": "メディア名を入力する",
+        "systemInput": "システム",
+        "allSystems": "すべてのシステム",
+        "systemLabel": "システム:",
+        "pathLabel": "パス:",
+        "writeLabel": "タグに書き込む",
+        "playLabel": "プレビュー "
+      },
+      "custom": {
+        "title": "カスタムテキスト",
+        "textPlaceholder": "タグのためにテキストを入力する",
+        "write": "タグに書き込む",
+        "run": "実行する",
+        "clear": "クリア",
+        "failMsg": "タグの実行に失敗しました"
+      },
+      "nfc": {
+        "title": "NFCユーティリティ",
+        "read": "タグデータを読み取る",
+        "format": "タグをフォーマットする",
+        "erase": "タグを消去する",
+        "makeReadOnly": "タグを読み取り専用にする"
+      }
+    },
+    "online": {
+      "email": "メール",
+      "password": "パスワード",
+      "login": "ログイン",
+      "logout": "ログアウト",
+      "loginSuccess": "ログインに成功しました",
+      "loginWrong": "メールアドレスまたはパスワードが間違っています",
+      "loginFail": "ログイン中にエラーが発生しました"
+    },
+    "settings": {
+      "title": "設定",
+      "device": "デバイスアドレス",
+      "modeLabel": "スキャンモード",
+      "tapMode": "タップ",
+      "insertMode": "保持する",
+      "insertHelp": "タグが取り外されるとメディアが終了します。別途NFCリーダーが必要です。",
+      "updateDb": "メディアデータベースを更新する",
+      "designer": "Zaparoo Designer",
+      "getApp": "Zaparooアプリを入手する",
+      "language": "言語",
+      "about": {
+        "title": "について",
+        "version": "バージョン: {{version}}",
+        "createdBy": "作成した",
+        "translationsBy": "翻訳した",
+        "contributors": "Zaparooの貢献者",
+        "wizzodev": "Wizzo.dev Patrons",
+        "joinPatreon": "Patreonに参加する"
+      },
+      "advanced": {
+        "title": "詳細設定",
+        "soundEffects": "スキャン時にサウンドエフェクトを再生する",
+        "autoDetect": "外部NFCリーダーを自動検出する",
+        "debug": "デバッグモード",
+        "nfcDriver": "NFCドライバー接続文字列",
+        "insertModeBlocklist": "挿入モードのコアブロックリスト",
+        "downloadLog": "Zaparooログファイルをダウンロードする",
+        "restorePurchases": "購入を復元する",
+        "restoreSuccess": "購入が復元されました",
+        "restoreFail": "購入の復元に失敗しました"
+      },
+      "help": {
+        "title": "助け",
+        "main": "Zaparoo.org",
+        "taptoWiki": "Zaparoo Wiki",
+        "documentationLabel": "文書",
+        "gettingStarted": "Zaparooの使い方を始める",
+        "softwareSetup": "Zaparooソフトウェアのセットアップ",
+        "commandReference": " ZapScriptのリファレンス",
+        "communityLabel": "コミュニティ",
+        "discord": "Discordサーバーに参加する",
+        "reddit": "Subredditに参加する",
+        "technicalSupport": "技術サポート",
+        "reportIssue": "GitHubで問題を報告する",
+        "emailLabel": "サポートメール:"
+      }
+    }
+  }
+}
