@@ -51,7 +51,7 @@ function Help() {
               variant="outline"
               onClick={() =>
                 Browser.open({
-                  url: "https://wiki.zaparoo.org/Getting_Started"
+                  url: "https://wiki.zaparoo.org/Getting_started"
                 })
               }
             />
