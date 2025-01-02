@@ -168,7 +168,8 @@ function Index() {
             uid: result.info.tag.uid,
             text: result.info.tag.text,
             scanTime: new Date().toISOString(),
-            type: ""
+            type: "",
+            data: ""
           });
         } else if (result.info.tag && sessionManager.launchOnScan) {
           CoreAPI.launch({
@@ -277,7 +278,8 @@ function Index() {
           type: "Barcode",
           uid: barcode.rawValue,
           text: barcode.rawValue,
-          scanTime: new Date().toISOString()
+          scanTime: new Date().toISOString(),
+          data: ""
         });
       });
       return;
