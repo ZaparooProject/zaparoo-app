@@ -33,7 +33,7 @@ export function ScanSpinner(props: {
     }
   }, []);
 
-  if (!nfcSupported) {
+  if (!nfcSupported && Capacitor.isNativePlatform()) {
     return (
       <Card className="mx-2 mb-2">
         <div className="flex flex-row items-center justify-between gap-3">
