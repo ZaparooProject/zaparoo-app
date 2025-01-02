@@ -186,7 +186,7 @@ function Index() {
 
         if (
           sessionManager.shouldRestart &&
-          result.status === Status.Cancelled
+          result.status !== Status.Cancelled
         ) {
           if (Capacitor.getPlatform() === "ios") {
             console.log("delaying restart for ios");
