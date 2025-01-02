@@ -2,6 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useSwipeable } from "react-swipeable";
 import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
+import { Browser } from "@capacitor/browser";
+import { Button } from "../components/wui/Button.tsx";
 
 export const Route = createFileRoute("/settings/about")({
   component: About
@@ -23,7 +25,7 @@ function About() {
       >
         <div className="flex flex-col gap-8">
           <div className="text-center">
-            <h2 className="text-2xl font-bold">Zaparoo</h2>
+            <h2 className="text-2xl font-bold">Zaparoo App</h2>
             <p>
               {t("settings.about.version", {
                 version: import.meta.env.VITE_VERSION
@@ -75,8 +77,18 @@ function About() {
               Alexander Facchini, Lu's Retro Source, Alexis Conrad, Patrick
               McCarron, Oyster_Source, Clinton Cronin, Tuxosaurus, EntirelyTom,
               the_remora, Retrosoft Studios, Casey McGinty, Biddle, Chris
-              Platts, RobF228
+              Platts, RobF228, Gentlemen's Pixel Club
             </div>
+
+            <Button
+              label={t("settings.about.joinPatreon")}
+              variant="outline"
+              onClick={() =>
+                Browser.open({
+                  url: "https://patreon.com/wizzo"
+                })
+              }
+            />
           </div>
 
           <div className="flex flex-col gap-2">
