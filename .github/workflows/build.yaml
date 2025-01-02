@@ -1,9 +1,9 @@
-name: Build Zaparoo web app
+name: Build and release web app
 
 on:
   push:
     tags:
-      - "*"
+      - "v*.*.*"
 
 concurrency:
   group: ${{ github.ref }}
@@ -26,23 +26,27 @@ jobs:
         run: echo -e "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}\n@capawesome-team:registry=https://npm.pkg.github.com/" > ~/.npmrc
       - name: Add Firebase credentials
         run: echo '${{ secrets.FIREBASE_CREDS }}' > ./src/firebase.json
+      - name: Write release version
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          echo Version: $VERSION
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VITE_VERSION=$VERSION" >> $GITHUB_ENV
       - name: Install dependencies
         run: npm install
       - name: Production build
         env:
-          VITE_VERSION: ${{ github.ref_name }}
           VITE_GOOGLE_STORE_API: ${{ secrets.VITE_GOOGLE_STORE_API }}
           VITE_APPLE_STORE_API: ${{ secrets.VITE_APPLE_STORE_API }}
         run: npm run build
-
       - name: Package release tarball
         if: startsWith(github.ref, 'refs/tags/')
-        run: tar czvf zaparoo-app_web.tar.gz -C ./dist .
+        run: tar czvf zaparoo_app-web-${VERSION}.tar.gz -C ./dist .
       - name: Create release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: zaparoo-app_web.tar.gz
+          files: zaparoo_app-web-*.tar.gz
           fail_on_unmatched_files: true
           make_latest: false
 
