@@ -1,0 +1,47 @@
+name: Build Zaparoo web app
+
+on:
+  push:
+    tags:
+      - "*"
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm install
+      - name: Production build
+        env:
+          VITE_VERSION: >-
+            ${{ github.ref_name.startsWith('v') && github.ref_name != 'v' 
+            ? github.ref_name.slice(1) : github.ref_name }}
+          VITE_GOOGLE_STORE_API: ${{ secrets.VITE_GOOGLE_STORE_API }}
+          VITE_APPLE_STORE_API: ${{ secrets.VITE_APPLE_STORE_API }}
+        run: npm run build
+
+      - name: Package release tarball
+        if: startsWith(github.ref, 'refs/tags/')
+        run: tar czvf zaparoo-app.tar.gz -C ./dist .
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: zaparoo-app.tar.gz
+          fail_on_unmatched_files: true
+
+permissions:
+  contents: write
