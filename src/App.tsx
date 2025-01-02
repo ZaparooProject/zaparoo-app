@@ -15,7 +15,10 @@ import { CoreApiWebSocket } from "./components/CoreApiWebSocket.tsx";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import AppUrlListener from "./lib/deepLinks.tsx";
 
-const router = createRouter({ routeTree });
+const router = createRouter({
+  routeTree,
+  basepath: Capacitor.isNativePlatform() ? "/" : "/app/"
+});
 
 declare module "@tanstack/react-router" {
   interface Register {
