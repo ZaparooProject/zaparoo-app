@@ -39,11 +39,12 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: tar czvf zaparoo-app.tar.gz -C ./dist .
       - name: Create release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: zaparoo-app.tar.gz
           fail_on_unmatched_files: true
+          make_latest: false
 
 permissions:
   contents: write
