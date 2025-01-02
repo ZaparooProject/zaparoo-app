@@ -24,6 +24,8 @@ jobs:
           cache: 'npm'
       - name: Authenticate NPM registry
         run: echo -e "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}\n@capawesome-team:registry=https://npm.pkg.github.com/" > ~/.npmrc
+      - name: Add Firebase credentials
+        run: echo '${{ secrets.FIREBASE_CREDS }}' > ./src/firebase.json
       - name: Install dependencies
         run: npm install
       - name: Production build
