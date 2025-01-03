@@ -7,6 +7,7 @@ import zh_CN from "./translations/zh-CN.json";
 import ko_KR from "./translations/ko-KR.json";
 import fr_FR from "./translations/fr-FR.json";
 import nl_NL from "./translations/nl-NL.json";
+import ja_JP from "./translations/ja-JP.json";
 
 const resources = {
   en: en_US,
@@ -20,6 +21,8 @@ const resources = {
   "ko-KR": ko_KR,
   nl: nl_NL,
   "nl-NL": nl_NL,
+  ja: ja_JP,
+  "ja-JP": ja_JP
 };
 
 i18n
@@ -28,7 +31,7 @@ i18n
   .init({
     resources,
     fallbackLng: "en-US",
-    debug: true,
+    // debug: true,
     interpolation: {
       escapeValue: false
     }
