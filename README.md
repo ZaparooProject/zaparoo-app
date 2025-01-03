@@ -54,6 +54,7 @@ All contributors to the app will be included here and in the About page of the a
 
 ### Translations
 
+- [Anime0t4ku](https://github.com/Anime0t4ku) - Japanese/日本語
 - [Phoenix](https://github.com/PhoenixFire61) - Dutch/Nederlands
 - Pink Melon - Korean/한국어
 - RetroCastle - Chinese (Simplified)/中文

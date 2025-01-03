@@ -57,6 +57,10 @@ function About() {
               <span>Dutch/Nederlands</span>
             </div>
             <div className="flex flex-row justify-between">
+              <span>Anime0t4ku</span>
+              <span>Japanese/日本語</span>
+            </div>
+            <div className="flex flex-row justify-between">
               <span>Pink Melon</span>
               <span>Korean/한국어</span>
             </div>
@@ -98,8 +102,8 @@ function About() {
 
             <div className="text-center">
               Aitor Gómez García, Andrea Bogazzi, Anime0t4ku, ArielAces,
-              BedroomNinja, EntirelyTom, Gaz, Ranny Snice, RetroCastle,
-              Sensorium, TheTrain, theypsilon, Tim Wilsie, V1605,
+              BedroomNinja, EntirelyTom, Gaz, Phoenix, Ranny Snice, RetroCastle,
+              Sensorium, Spice_King, TheTrain, theypsilon, Tim Wilsie, V1605,
               whatskenmaking, wizzo, Ziggurat
             </div>
           </div>
