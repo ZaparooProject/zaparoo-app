@@ -12,12 +12,14 @@ import classNames from "classnames";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { useTranslation } from "react-i18next";
 import { CoreApiWebSocket } from "./components/CoreApiWebSocket.tsx";
-import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import AppUrlListener from "./lib/deepLinks.tsx";
 
 const router = createRouter({
   routeTree,
-  basepath: Capacitor.isNativePlatform() ? "/" : "/app/"
+  basepath:
+    Capacitor.isNativePlatform() || location.hostname === "zaparoo.app"
+      ? "/"
+      : "/app/"
 });
 
 declare module "@tanstack/react-router" {
@@ -38,8 +40,6 @@ export default function App() {
   const prevGamesIndex = usePrevious(gamesIndex);
   const [hideGamesIndex, setHideGamesIndex] = useState(false);
 
-  const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
-
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -47,13 +47,6 @@ export default function App() {
       setStatusBarStyleDark();
     }
   }, []);
-
-  useEffect(() => {
-    FirebaseAuthentication.addListener("authStateChange", (change) => {
-      setLoggedInUser(change.user);
-      FirebaseAuthentication.getIdToken();
-    });
-  }, [setLoggedInUser]);
 
   useEffect(() => {
     if (gamesIndex.indexing && !hideGamesIndex) {

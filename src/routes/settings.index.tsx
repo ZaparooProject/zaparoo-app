@@ -17,19 +17,10 @@ import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
 import { SlideModal } from "../components/SlideModal.tsx";
 import { UpdateSettingsRequest } from "../lib/models.ts";
-// import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 
 export const Route = createFileRoute("/settings/")({
   component: Settings
 });
-
-// const signInWithEmailAndPassword = async (email: string, password: string) => {
-//   const result = await FirebaseAuthentication.signInWithEmailAndPassword({
-//     email: email,
-//     password: password
-//   });
-//   return result.user;
-// };
 
 function Settings() {
   const connected = useStatusStore((state) => state.connected);
