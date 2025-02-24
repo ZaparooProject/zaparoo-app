@@ -33,7 +33,6 @@ import { Purchases, PurchasesPackage } from "@revenuecat/purchases-capacitor";
 import { Preferences } from "@capacitor/preferences";
 import { PageFrame } from "../components/PageFrame";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
-import { claimLink } from "../lib/onlineApi.ts";
 
 const writeToClipboard = async (s: string) => {
   await Clipboard.write({
@@ -126,10 +125,6 @@ function Index() {
   }, []);
 
   // const loggedInUser = useStatusStore((state) => state.loggedInUser);
-
-  const [claimOpen, setClaimOpen] = useState(false);
-  const [claimLoading, setClaimLoading] = useState(false);
-  const [claimId, setClaimId] = useState("");
 
   const { t } = useTranslation();
 
@@ -707,49 +702,6 @@ function Index() {
               ))}
           </div>
         )}
-      </SlideModal>
-
-      <SlideModal
-        isOpen={claimOpen}
-        close={() => setClaimOpen(false)}
-        title="Claim Zap Link"
-      >
-        <div className="flex flex-col justify-center gap-2 p-2">
-          <div className="pb-2">
-            This Zap Link has not been claimed. Add it to your Zaparoo Online
-            account?
-          </div>
-          <Button
-            label="Claim Zap Link"
-            disabled={claimLoading}
-            onClick={() => {
-              setClaimLoading(true);
-              claimLink(claimId)
-                .then((res) => {
-                  console.log(res);
-                  setClaimOpen(false);
-                  setClaimId("");
-                  if (res.claimed) {
-                    toast.success("Zap Link is yours!", {
-                      id: "claimZapLink"
-                    });
-                  } else {
-                    toast.error("Error claiming Zap Link", {
-                      id: "claimZapLink"
-                    });
-                  }
-                  setClaimLoading(false);
-                })
-                .catch((e) => {
-                  console.error(e);
-                  toast.error("Error claiming Zap Link", {
-                    id: "claimZapLink"
-                  });
-                  setClaimLoading(false);
-                });
-            }}
-          />
-        </div>
       </SlideModal>
     </>
   );

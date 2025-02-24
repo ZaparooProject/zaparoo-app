@@ -13,6 +13,7 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 import { useTranslation } from "react-i18next";
 import { CoreApiWebSocket } from "./components/CoreApiWebSocket.tsx";
 import AppUrlListener from "./lib/deepLinks.tsx";
+import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 
 const router = createRouter({
   routeTree,
@@ -40,6 +41,8 @@ export default function App() {
   const prevGamesIndex = usePrevious(gamesIndex);
   const [hideGamesIndex, setHideGamesIndex] = useState(false);
 
+  const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
+
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -47,6 +50,13 @@ export default function App() {
       setStatusBarStyleDark();
     }
   }, []);
+
+  useEffect(() => {
+    FirebaseAuthentication.addListener("authStateChange", (change) => {
+      setLoggedInUser(change.user);
+      FirebaseAuthentication.getIdToken();
+    });
+  }, [setLoggedInUser]);
 
   useEffect(() => {
     if (gamesIndex.indexing && !hideGamesIndex) {

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { IndexResponse, PlayingResponse, TokenResponse } from "./models";
+import { User } from "@capacitor-firebase/authentication";
 
 interface StatusState {
   connected: boolean;
@@ -19,6 +20,9 @@ interface StatusState {
 
   cameraOpen: boolean;
   setCameraOpen: (cameraOpen: boolean) => void;
+
+  loggedInUser: User | null;
+  setLoggedInUser: (loggedInUser: User | null) => void;
 }
 
 export const useStatusStore = create<StatusState>()((set) => ({
@@ -50,5 +54,9 @@ export const useStatusStore = create<StatusState>()((set) => ({
   setPlaying: (playing) => set({ playing }),
 
   cameraOpen: false,
-  setCameraOpen: (cameraOpen) => set({ cameraOpen: cameraOpen })
+  setCameraOpen: (cameraOpen) => set({ cameraOpen: cameraOpen }),
+
+  loggedInUser: null,
+  setLoggedInUser: (loggedInUser: User | null) =>
+      set({ loggedInUser: loggedInUser })
 }));
