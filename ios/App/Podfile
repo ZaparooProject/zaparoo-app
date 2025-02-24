@@ -11,14 +11,15 @@ install! 'cocoapods', :disable_input_output_paths => true
 def capacitor_pods
   pod 'Capacitor', :path => '../../node_modules/.pnpm/@capacitor+ios@7.0.1_@capacitor+core@7.0.1/node_modules/@capacitor/ios'
   pod 'CapacitorCordova', :path => '../../node_modules/.pnpm/@capacitor+ios@7.0.1_@capacitor+core@7.0.1/node_modules/@capacitor/ios'
-  pod 'CapacitorCommunityKeepAwake', :path => '../../node_modules/.pnpm/@capacitor-community+keep-awake@5.0.1_@capacitor+core@7.0.1/node_modules/@capacitor-community/keep-awake'
+  pod 'CapacitorCommunityKeepAwake', :path => '../../node_modules/.pnpm/@capacitor-community+keep-awake@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor-community/keep-awake'
+  pod 'CapacitorFirebaseAuthentication', :path => '../../node_modules/.pnpm/@capacitor-firebase+authentication@7.0.0_@capacitor+core@7.0.1_firebase@11.3.1/node_modules/@capacitor-firebase/authentication'
   pod 'CapacitorMlkitBarcodeScanning', :path => '../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor-mlkit/barcode-scanning'
   pod 'CapacitorApp', :path => '../../node_modules/.pnpm/@capacitor+app@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor/app'
   pod 'CapacitorBrowser', :path => '../../node_modules/.pnpm/@capacitor+browser@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor/browser'
   pod 'CapacitorClipboard', :path => '../../node_modules/.pnpm/@capacitor+clipboard@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor/clipboard'
   pod 'CapacitorPreferences', :path => '../../node_modules/.pnpm/@capacitor+preferences@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor/preferences'
   pod 'CapacitorStatusBar', :path => '../../node_modules/.pnpm/@capacitor+status-bar@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor/status-bar'
-  pod 'CapawesomeTeamCapacitorNfc', :path => '../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@6.5.1_@capacitor+core@7.0.1/node_modules/@capawesome-team/capacitor-nfc'
+  pod 'CapawesomeTeamCapacitorNfc', :path => '../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.0.2_@capacitor+core@7.0.1/node_modules/@capawesome-team/capacitor-nfc'
   pod 'RevenuecatPurchasesCapacitor', :path => '../../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.0.2_@capacitor+core@7.0.1/node_modules/@revenuecat/purchases-capacitor'
 end
 

@@ -3,7 +3,10 @@ include ':capacitor-android'
 project(':capacitor-android').projectDir = new File('../node_modules/.pnpm/@capacitor+android@7.0.1_@capacitor+core@7.0.1/node_modules/@capacitor/android/capacitor')
 
 include ':capacitor-community-keep-awake'
-project(':capacitor-community-keep-awake').projectDir = new File('../node_modules/.pnpm/@capacitor-community+keep-awake@5.0.1_@capacitor+core@7.0.1/node_modules/@capacitor-community/keep-awake/android')
+project(':capacitor-community-keep-awake').projectDir = new File('../node_modules/.pnpm/@capacitor-community+keep-awake@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor-community/keep-awake/android')
+
+include ':capacitor-firebase-authentication'
+project(':capacitor-firebase-authentication').projectDir = new File('../node_modules/.pnpm/@capacitor-firebase+authentication@7.0.0_@capacitor+core@7.0.1_firebase@11.3.1/node_modules/@capacitor-firebase/authentication/android')
 
 include ':capacitor-mlkit-barcode-scanning'
 project(':capacitor-mlkit-barcode-scanning').projectDir = new File('../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor-mlkit/barcode-scanning/android')
@@ -24,7 +27,7 @@ include ':capacitor-status-bar'
 project(':capacitor-status-bar').projectDir = new File('../node_modules/.pnpm/@capacitor+status-bar@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor/status-bar/android')
 
 include ':capawesome-team-capacitor-nfc'
-project(':capawesome-team-capacitor-nfc').projectDir = new File('../node_modules/.pnpm/@capawesome-team+capacitor-nfc@6.5.1_@capacitor+core@7.0.1/node_modules/@capawesome-team/capacitor-nfc/android')
+project(':capawesome-team-capacitor-nfc').projectDir = new File('../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.0.2_@capacitor+core@7.0.1/node_modules/@capawesome-team/capacitor-nfc/android')
 
 include ':revenuecat-purchases-capacitor'
 project(':revenuecat-purchases-capacitor').projectDir = new File('../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.0.2_@capacitor+core@7.0.1/node_modules/@revenuecat/purchases-capacitor/android')
