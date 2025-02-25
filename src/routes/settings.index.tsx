@@ -26,6 +26,7 @@ function Settings() {
   const connected = useStatusStore((state) => state.connected);
   const connectionError = useStatusStore((state) => state.connectionError);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
+  const loggedInUser = useStatusStore((state) => state.loggedInUser);
 
   const [address, setAddress] = useState(getDeviceAddress());
 
@@ -48,12 +49,6 @@ function Settings() {
     useState<PurchasesPackage | null>(null);
   const [launcherAccess, setLauncherAccess] = useState(false);
   const [purchaseLauncherOpen, setPurchaseLauncherOpen] = useState(false);
-
-  // const [onlineUsername, setOnlineUsername] = useState("");
-  // const [onlinePassword, setOnlinePassword] = useState("");
-  // const [onlineLoggingIn, setOnlineLoggingIn] = useState(false);
-  // const loggedInUser = useStatusStore((state) => state.loggedInUser);
-  // const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
@@ -286,63 +281,28 @@ function Settings() {
             </div>
           )}
 
-          {/*{loggedInUser !== null ? (*/}
-          {/*  <div className="flex flex-col gap-3">*/}
-          {/*    <Button*/}
-          {/*      label={t("online.logout")}*/}
-          {/*      onClick={() => {*/}
-          {/*        FirebaseAuthentication.signOut()*/}
-          {/*          .then(() => {*/}
-          {/*            setLoggedInUser(null);*/}
-          {/*          })*/}
-          {/*          .catch((e) => {*/}
-          {/*            console.error(e);*/}
-          {/*          });*/}
-          {/*      }}*/}
-          {/*      className="w-full"*/}
-          {/*    />*/}
-          {/*  </div>*/}
-          {/*) : (*/}
-          {/*  <div className="flex flex-col gap-3">*/}
-          {/*    <TextInput*/}
-          {/*      label={t("online.email")}*/}
-          {/*      placeholder="your@email.com"*/}
-          {/*      value={onlineUsername}*/}
-          {/*      setValue={setOnlineUsername}*/}
-          {/*    />*/}
-          {/*    <TextInput*/}
-          {/*      label={t("online.password")}*/}
-          {/*      placeholder=""*/}
-          {/*      type="password"*/}
-          {/*      value={onlinePassword}*/}
-          {/*      setValue={setOnlinePassword}*/}
-          {/*    />*/}
-          {/*    <Button*/}
-          {/*      label={t("online.login")}*/}
-          {/*      onClick={() => {*/}
-          {/*        setOnlineLoggingIn(true);*/}
-          {/*        signInWithEmailAndPassword(onlineUsername, onlinePassword)*/}
-          {/*          .then((result) => {*/}
-          {/*            if (result) {*/}
-          {/*              toast.success(t("online.loginSuccess"));*/}
-          {/*            } else {*/}
-          {/*              toast.error(t("online.loginWrong"));*/}
-          {/*            }*/}
-          {/*            setLoggedInUser(result);*/}
-          {/*            setOnlineLoggingIn(false);*/}
-          {/*          })*/}
-          {/*          .catch((e) => {*/}
-          {/*            console.error(e);*/}
-          {/*            toast.error(t("online.loginFail"));*/}
-          {/*            setOnlineLoggingIn(false);*/}
-          {/*            setLoggedInUser(null);*/}
-          {/*          });*/}
-          {/*      }}*/}
-          {/*      disabled={!onlineUsername || !onlinePassword || onlineLoggingIn}*/}
-          {/*      className="w-full"*/}
-          {/*    />*/}
-          {/*  </div>*/}
-          {/*)}*/}
+          <div>
+            {loggedInUser !== null ? (
+              <div className="flex flex-col gap-3">
+                <Link to="/settings/online">
+                  <Button
+                    label={t("online.settingsManageButton")}
+                    className="w-full"
+                  />
+                </Link>
+                <span>
+                  {t("online.loggedInAs", { email: loggedInUser.email })}
+                </span>
+              </div>
+            ) : (
+              <Link to="/settings/online">
+                <Button
+                  label={t("online.settingsSignInButton")}
+                  className="w-full"
+                />
+              </Link>
+            )}
+          </div>
 
           <div className="flex flex-col">
             <label className="text-white">{t("settings.language")}</label>

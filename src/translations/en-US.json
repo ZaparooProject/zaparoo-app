@@ -8,7 +8,8 @@
       "assign": "Assign",
       "index": "Scan",
       "design": "Design",
-      "settings": "Settings"
+      "settings": "Settings",
+      "run": "Run"
     },
     "spinner": {
       "notSupportedLabel": "Device does not support NFC",
@@ -101,13 +102,17 @@
       }
     },
     "online": {
+      "title": "Zaparoo Online",
       "email": "Email",
       "password": "Password",
-      "login": "Login",
-      "logout": "Logout",
-      "loginSuccess": "Login was successful",
-      "loginWrong": "Email or password was incorrect",
-      "loginFail": "Error during login"
+      "login": "Sign in",
+      "logout": "Sign out",
+      "loginSuccess": "Sign in successful",
+      "loginWrong": "Invalid email or password",
+      "loginFail": "Error occurred while signing in",
+      "settingsManageButton": "Manage Zaparoo Online",
+      "settingsSignInButton": "Sign in to Zaparoo Online",
+      "loggedInAs": "Logged in: {{email}}"
     },
     "settings": {
       "title": "Settings",

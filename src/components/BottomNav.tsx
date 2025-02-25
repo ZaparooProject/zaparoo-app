@@ -1,10 +1,21 @@
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { CreateIcon, ScanIcon, SettingsIcon } from "../lib/images";
+import { NfcIcon, SettingsIcon, SquarePenIcon } from "lucide-react";
+import classNames from "classnames";
 
-function Button(props: { text: string; icon: JSX.Element; path: string }) {
+function Button(props: {
+  text: string;
+  icon: JSX.Element;
+  path: string;
+  className?: string;
+}) {
   return (
-    <div className="inline-flex flex-col items-center justify-center">
+    <div
+      className={classNames(
+        "inline-flex flex-col items-center justify-center",
+        props.className
+      )}
+    >
       <Link
         to={props.path}
         style={{
@@ -34,11 +45,12 @@ export function BottomNav() {
         paddingLeft: "calc(2.25rem + env(safe-area-inset-left))"
       }}
     >
-      <div className="mx-auto grid h-full max-w-lg grid-cols-3">
-        <Button text={t("nav.index")} icon={<ScanIcon size="24" />} path="/" />
+      <div className="mx-auto grid h-full max-w-lg grid-cols-3 gap-4">
+        <Button text={t("nav.index")} icon={<NfcIcon size="24" />} path="/" />
+        {/* <Button text={t("nav.run")} icon={<PlayIcon size="24" />} path="/run" /> */}
         <Button
           text={t("nav.create")}
-          icon={<CreateIcon size="24" />}
+          icon={<SquarePenIcon size="24" />}
           path="/create"
         />
         <Button

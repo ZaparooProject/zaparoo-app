@@ -15,6 +15,7 @@ import { Route as AssignImport } from './routes/assign'
 import { Route as IndexImport } from './routes/index'
 import { Route as SettingsIndexImport } from './routes/settings.index'
 import { Route as CreateIndexImport } from './routes/create.index'
+import { Route as SettingsOnlineImport } from './routes/settings.online'
 import { Route as SettingsHelpImport } from './routes/settings.help'
 import { Route as SettingsAdvancedImport } from './routes/settings.advanced'
 import { Route as SettingsAboutImport } from './routes/settings.about'
@@ -46,6 +47,12 @@ const SettingsIndexRoute = SettingsIndexImport.update({
 const CreateIndexRoute = CreateIndexImport.update({
   id: '/create/',
   path: '/create/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const SettingsOnlineRoute = SettingsOnlineImport.update({
+  id: '/settings/online',
+  path: '/settings/online',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -158,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsHelpImport
       parentRoute: typeof rootRoute
     }
+    '/settings/online': {
+      id: '/settings/online'
+      path: '/settings/online'
+      fullPath: '/settings/online'
+      preLoaderRoute: typeof SettingsOnlineImport
+      parentRoute: typeof rootRoute
+    }
     '/create/': {
       id: '/create/'
       path: '/create'
@@ -187,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
+  '/settings/online': typeof SettingsOnlineRoute
   '/create': typeof CreateIndexRoute
   '/settings': typeof SettingsIndexRoute
 }
@@ -201,6 +216,7 @@ export interface FileRoutesByTo {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
+  '/settings/online': typeof SettingsOnlineRoute
   '/create': typeof CreateIndexRoute
   '/settings': typeof SettingsIndexRoute
 }
@@ -216,6 +232,7 @@ export interface FileRoutesById {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
+  '/settings/online': typeof SettingsOnlineRoute
   '/create/': typeof CreateIndexRoute
   '/settings/': typeof SettingsIndexRoute
 }
@@ -232,6 +249,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/advanced'
     | '/settings/help'
+    | '/settings/online'
     | '/create'
     | '/settings'
   fileRoutesByTo: FileRoutesByTo
@@ -245,6 +263,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/advanced'
     | '/settings/help'
+    | '/settings/online'
     | '/create'
     | '/settings'
   id:
@@ -258,6 +277,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/advanced'
     | '/settings/help'
+    | '/settings/online'
     | '/create/'
     | '/settings/'
   fileRoutesById: FileRoutesById
@@ -273,6 +293,7 @@ export interface RootRouteChildren {
   SettingsAboutRoute: typeof SettingsAboutRoute
   SettingsAdvancedRoute: typeof SettingsAdvancedRoute
   SettingsHelpRoute: typeof SettingsHelpRoute
+  SettingsOnlineRoute: typeof SettingsOnlineRoute
   CreateIndexRoute: typeof CreateIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
@@ -287,6 +308,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsAdvancedRoute: SettingsAdvancedRoute,
   SettingsHelpRoute: SettingsHelpRoute,
+  SettingsOnlineRoute: SettingsOnlineRoute,
   CreateIndexRoute: CreateIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
@@ -310,6 +332,7 @@ export const routeTree = rootRoute
         "/settings/about",
         "/settings/advanced",
         "/settings/help",
+        "/settings/online",
         "/create/",
         "/settings/"
       ]
@@ -340,6 +363,9 @@ export const routeTree = rootRoute
     },
     "/settings/help": {
       "filePath": "settings.help.tsx"
+    },
+    "/settings/online": {
+      "filePath": "settings.online.tsx"
     },
     "/create/": {
       "filePath": "create.index.tsx"
