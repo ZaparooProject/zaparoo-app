@@ -223,55 +223,10 @@ function Index() {
 
         const barcode = res.barcodes[0];
 
-        // let onlineId = "";
-        // if (barcode.rawValue.startsWith("https://go.tapto.life/")) {
-        //   onlineId = barcode.rawValue.replace("https://go.tapto.life/", "");
-        // } else if (barcode.rawValue.startsWith("https://zpr.au/")) {
-        //   onlineId = barcode.rawValue.replace("https://zpr.au/", "");
-        // }
-
-        // if (onlineId !== "") {
-        //   toast.loading("Checking Zap Link...", {
-        //     id: "checkZapLink"
-        //   });
-        //   checkLink(onlineId)
-        //     .then((res) => {
-        //       console.log(res);
-        //       if (!res.claimed) {
-        //         if (loggedInUser !== null) {
-        //           toast.dismiss("checkZapLink");
-        //           setClaimId(onlineId);
-        //           setClaimOpen(true);
-        //         }
-        //         return;
-        //       } else {
-        //         toast.success("Zap!", {
-        //           id: "checkZapLink"
-        //         });
-        //       }
-        //
-        //       let text = barcode.rawValue;
-        //       if (res.actions.length > 0) {
-        //         text = res.actions[0].value;
-        //       }
-        //       CoreAPI.launch({
-        //         uid: barcode.rawValue,
-        //         text: text
-        //       });
-        //     })
-        //     .catch((e) => {
-        //       toast.error("Error checking Zap Link", {
-        //         id: "checkZapLink"
-        //       });
-        //       console.error(e);
-        //     });
-        //   return;
-        // } else {
         CoreAPI.launch({
           uid: barcode.rawValue,
           text: barcode.rawValue
         });
-        // }
 
         setLastToken({
           type: "Barcode",

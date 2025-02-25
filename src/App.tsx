@@ -16,6 +16,7 @@ import AppUrlListener from "./lib/deepLinks.tsx";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 
 const router = createRouter({
+  scrollRestoration: true,
   routeTree,
   basepath:
     Capacitor.isNativePlatform() || location.hostname === "zaparoo.app"
@@ -54,7 +55,9 @@ export default function App() {
   useEffect(() => {
     FirebaseAuthentication.addListener("authStateChange", (change) => {
       setLoggedInUser(change.user);
-      FirebaseAuthentication.getIdToken();
+      if (change.user) {
+        FirebaseAuthentication.getIdToken();
+      }
     });
   }, [setLoggedInUser]);
 

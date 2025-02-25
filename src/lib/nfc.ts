@@ -328,6 +328,9 @@ export async function makeReadOnly(): Promise<Result> {
 }
 
 export async function cancelSession() {
-  await Nfc.removeAllListeners();
-  await Nfc.stopScanSession();
+  const supported = await Nfc.isSupported();
+  if (supported.nfc) {
+    await Nfc.removeAllListeners();
+    await Nfc.stopScanSession();
+  }
 }

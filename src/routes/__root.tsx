@@ -1,9 +1,4 @@
-import {
-  createRootRoute,
-  Outlet,
-  ScrollRestoration,
-  useNavigate
-} from "@tanstack/react-router";
+import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
 
 import { BottomNav } from "../components/BottomNav";
 import { App } from "@capacitor/app";
@@ -50,7 +45,6 @@ export const Route = createRootRoute({
   component: () => (
     <>
       <BackHandler />
-      <ScrollRestoration />
       <main className="main-frame h-screen w-screen">
         <Outlet />
       </main>

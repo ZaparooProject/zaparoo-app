@@ -13,6 +13,17 @@ import { Preferences } from "@capacitor/preferences";
 import { initializeApp } from "firebase/app";
 import firebaseConfig from "./firebase.json";
 
+import * as Sentry from "@sentry/capacitor";
+import * as SentryReact from "@sentry/react";
+
+Sentry.init(
+  {
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    integrations: [Sentry.browserTracingIntegration()]
+  },
+  SentryReact.init
+);
+
 initializeApp(firebaseConfig);
 
 const queryClient = new QueryClient();

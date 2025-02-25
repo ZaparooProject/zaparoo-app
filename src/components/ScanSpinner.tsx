@@ -24,7 +24,7 @@ export function ScanSpinner(props: {
   useEffect(() => {
     if (import.meta.env.PROD) {
       Nfc.isSupported().then((available) => {
-        setNfcSupported(available.isSupported);
+        setNfcSupported(available.nfc);
       });
 
       Nfc.isEnabled().then((enabled) => {
