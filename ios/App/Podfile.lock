@@ -113,6 +113,10 @@ PODS:
   - RevenuecatPurchasesCapacitor (10.0.2):
     - Capacitor
     - PurchasesHybridCommon (= 13.17.1)
+  - Sentry/HybridSDK (8.36.0)
+  - SentryCapacitor (1.2.0):
+    - Capacitor
+    - Sentry/HybridSDK (= 8.36.0)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@7.0.1_@capacitor+core@7.0.1/node_modules/@capacitor/ios`)"
@@ -127,6 +131,7 @@ DEPENDENCIES:
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor/status-bar`)"
   - "CapawesomeTeamCapacitorNfc (from `../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.0.2_@capacitor+core@7.0.1/node_modules/@capawesome-team/capacitor-nfc`)"
   - "RevenuecatPurchasesCapacitor (from `../../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.0.2_@capacitor+core@7.0.1/node_modules/@revenuecat/purchases-capacitor`)"
+  - "SentryCapacitor (from `../../node_modules/.pnpm/@sentry+capacitor@1.2.0_@capacitor+core@7.0.1_@sentry+react@8.42.0_react@18.3.1_/node_modules/@sentry/capacitor`)"
 
 SPEC REPOS:
   trunk:
@@ -150,6 +155,7 @@ SPEC REPOS:
     - PurchasesHybridCommon
     - RecaptchaInterop
     - RevenueCat
+    - Sentry
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -176,19 +182,21 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.0.2_@capacitor+core@7.0.1/node_modules/@capawesome-team/capacitor-nfc"
   RevenuecatPurchasesCapacitor:
     :path: "../../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.0.2_@capacitor+core@7.0.1/node_modules/@revenuecat/purchases-capacitor"
+  SentryCapacitor:
+    :path: "../../node_modules/.pnpm/@sentry+capacitor@1.2.0_@capacitor+core@7.0.1_@sentry+react@8.42.0_react@18.3.1_/node_modules/@sentry/capacitor"
 
 SPEC CHECKSUMS:
-  Capacitor: de199cba6c8b20995428ad0b7cb0bc6ca625ffd4
-  CapacitorApp: 9cb31064a6c6bb2b1438583733a7bf45557fc1da
-  CapacitorBrowser: 55c21db47416dcc8fc3b623e18fd7d09acb26081
-  CapacitorClipboard: 007d79cd6c104002b274546d13873526ca20beb7
-  CapacitorCommunityKeepAwake: ae762ce29b53147d28cfcaae5273cd1db0c38fc4
+  Capacitor: 23fff43571a4d1e3ee7d67b5a3588c6e757c2913
+  CapacitorApp: 45cb7cbef4aa380b9236fd6980033eb5cde6fcd2
+  CapacitorBrowser: 352a66541b15ceadae1d703802b11979023705e3
+  CapacitorClipboard: 2afc5e21902233d7990978c8f41f023ddcee3e3d
+  CapacitorCommunityKeepAwake: 00dfd8fa3cca0df003c9a3e2cd7bee678aeec68b
   CapacitorCordova: 63d476958d5022d76f197031e8b7ea3519988c64
-  CapacitorFirebaseAuthentication: de12e87d5f163efbcd7e20e49e7d74a5482f9743
-  CapacitorMlkitBarcodeScanning: db64496b3e8f41be79e3ef81bfd1bb430adcb0ca
-  CapacitorPreferences: 8e4bef1f937fc991a19d7ea99330c36a62edd24b
-  CapacitorStatusBar: a8c4c83ed2e973bdafb979e80e4b00d027832cb7
-  CapawesomeTeamCapacitorNfc: 4db1dc2741d2be24f03d05c2d3d7f196e8a13699
+  CapacitorFirebaseAuthentication: 871cec2966a90d5e4dd9c64088d9faffeead3757
+  CapacitorMlkitBarcodeScanning: 06c21220bf207bdb146dddc2e8548f3f2686879f
+  CapacitorPreferences: e24a50a936f0e4f54a6b43be6121f923b4d91c27
+  CapacitorStatusBar: 438e90beeeefa8276b24e6c5991cb02dd13e51bf
+  CapawesomeTeamCapacitorNfc: d885e50d3273c7b771b18b5c24b25560e4c19029
   FirebaseAppCheckInterop: 7bf86d55a2b7e9bd91464120eba3e52e4b63b2e2
   FirebaseAuth: 77e25aa24f3e1c626c5babd3338551fc1669ee0e
   FirebaseAuthInterop: 651756e70d9a0b9160db39ead71fd5507dbb6c84
@@ -209,8 +217,10 @@ SPEC CHECKSUMS:
   PurchasesHybridCommon: 7ee74fefbad7fa42a74ff6e339af46fac3af4640
   RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
   RevenueCat: d38c56d5e1058f955ee7fce4ea7b18d126235e64
-  RevenuecatPurchasesCapacitor: 8e3d66fa0281276bd2aaf7f8a967faf19cdb2c26
+  RevenuecatPurchasesCapacitor: c2e002d8dcbe23905d77ddede83e1ed0f37215c0
+  Sentry: f8374b5415bc38dfb5645941b3ae31230fbeae57
+  SentryCapacitor: 8c9d5b901ab6e835e88743ff187fc00926d85dc5
 
-PODFILE CHECKSUM: 061285cb0a09584edd7f0edd5613674c7c07f526
+PODFILE CHECKSUM: f26775208fec33d0627b1aa3ae74d6fc47863023
 
 COCOAPODS: 1.16.2

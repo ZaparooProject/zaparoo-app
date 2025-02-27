@@ -10,6 +10,7 @@ import { Capacitor } from "@capacitor/core";
 
 export const successColor = "#00FF29";
 export const errorColor = "#FF7E92";
+export const primaryColor = "#3faeec";
 
 export function ScanSpinner(props: {
   status: ScanResult;
@@ -96,7 +97,7 @@ export function ScanSpinner(props: {
                 ? successColor
                 : props.status === ScanResult.Error
                   ? errorColor
-                  : "",
+                  : primaryColor,
             animation: props.spinning ? "spinner 20s infinite linear" : "none"
           }}
           className={classNames(
@@ -119,7 +120,7 @@ export function ScanSpinner(props: {
                   ? successColor
                   : props.status === ScanResult.Error
                     ? errorColor
-                    : "",
+                    : primaryColor,
               animation: props.spinning ? "spinner 30s infinite linear" : "none"
             }}
             className={classNames(
@@ -141,7 +142,7 @@ export function ScanSpinner(props: {
                     ? successColor
                     : props.status === ScanResult.Error
                       ? errorColor
-                      : "",
+                      : primaryColor,
                 animation: props.spinning
                   ? "spinner 40s infinite linear"
                   : "none"

@@ -290,9 +290,6 @@ function Settings() {
                     className="w-full"
                   />
                 </Link>
-                <span>
-                  {t("online.loggedInAs", { email: loggedInUser.email })}
-                </span>
               </div>
             ) : (
               <Link to="/settings/online">

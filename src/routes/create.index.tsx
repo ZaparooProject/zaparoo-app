@@ -8,6 +8,7 @@ import { WriteModal } from "../components/WriteModal";
 import { useEffect, useState } from "react";
 import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
+import { NfcIcon } from "lucide-react";
 
 export const Route = createFileRoute("/create/")({
   component: Create
@@ -95,16 +96,20 @@ function Create() {
             </Card>
           </Link>
 
-          {/*<Card disabled={true}>*/}
-          {/*  <div className="flex flex-row items-center gap-3">*/}
-          {/*    <Button icon={<NfcIcon size="24" />} />*/}
-          {/*    <div className="flex flex-grow flex-col">*/}
-          {/*      <span className="font-semibold">{t("create.nfcHeading")}</span>*/}
-          {/*      <span className="text-sm">{t("create.nfcSub")}</span>*/}
-          {/*    </div>*/}
-          {/*    <NextIcon size="20" />*/}
-          {/*  </div>*/}
-          {/*</Card>*/}
+          <Link to="/create/nfc">
+            <Card>
+              <div className="flex flex-row items-center gap-3">
+                <Button icon={<NfcIcon size="24" />} />
+                <div className="flex flex-grow flex-col">
+                  <span className="font-semibold">
+                    {t("create.nfcHeading")}
+                  </span>
+                  <span className="text-sm">{t("create.nfcSub")}</span>
+                </div>
+                <NextIcon size="20" />
+              </div>
+            </Card>
+          </Link>
 
           {/*<Card disabled={true}>*/}
           {/*  <div className="flex flex-row items-center gap-3">*/}

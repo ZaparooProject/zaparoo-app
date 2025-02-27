@@ -19,6 +19,7 @@ dependencies {
     implementation project(':capacitor-status-bar')
     implementation project(':capawesome-team-capacitor-nfc')
     implementation project(':revenuecat-purchases-capacitor')
+    implementation project(':sentry-capacitor')
 
 }
 

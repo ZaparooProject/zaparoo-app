@@ -21,7 +21,15 @@
       "scanning": "Scanning",
       "pressToScan": "Press to scan",
       "writeSuccess": "Tag written successfully",
-      "writeFailed": "Failed to write tag"
+      "writeFailed": "Failed to write tag",
+      "readSuccess": "Tag read successfully",
+      "readFailed": "Failed to read tag",
+      "formatSuccess": "Tag formatted successfully",
+      "formatFailed": "Failed to format tag",
+      "eraseSuccess": "Tag erased successfully",
+      "eraseFailed": "Failed to erase tag",
+      "makeReadOnlySuccess": "Tag set to read-only",
+      "makeReadOnlyFailed": "Failed to set tag to read-only"
     },
     "toast": {
       "updateDbHeading": "Updating media database",
@@ -98,7 +106,8 @@
         "read": "Read tag data",
         "format": "Format tag",
         "erase": "Erase tag",
-        "makeReadOnly": "Make tag read-only"
+        "makeReadOnly": "Make tag read-only",
+        "confirm": "Are you sure?"
       }
     },
     "online": {

@@ -15,6 +15,7 @@ import firebaseConfig from "./firebase.json";
 
 import * as Sentry from "@sentry/capacitor";
 import * as SentryReact from "@sentry/react";
+import { ThemeProvider } from "./components/theme-provider";
 
 Sentry.init(
   {
@@ -57,9 +58,11 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </ThemeProvider>
     </StrictMode>
   );
 }

@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
+import { Capacitor } from "@capacitor/core";
+import { EraserIcon, PencilOffIcon, ScanTextIcon } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/create/nfc")({
   component: NfcUtils
@@ -18,6 +21,10 @@ function NfcUtils() {
     setWriteOpen(false);
     nfcWriter.end();
   };
+
+  const [eraseConfirm, setEraseConfirm] = useState(false);
+  const [formatConfirm, setFormatConfirm] = useState(false);
+  const [makeReadOnlyConfirm, setMakeReadOnlyConfirm] = useState(false);
 
   const { t } = useTranslation();
 
@@ -35,7 +42,6 @@ function NfcUtils() {
   });
 
   // TODO: check nfc is enabled
-  // TODO: check for android for format
 
   return (
     <>
@@ -46,6 +52,7 @@ function NfcUtils() {
         >
           <div className="flex flex-col gap-3">
             <Button
+              icon={<ScanTextIcon size="20" />}
               label={t("create.nfc.read")}
               onClick={() => {
                 nfcWriter.write(WriteAction.Read);
@@ -53,12 +60,118 @@ function NfcUtils() {
               }}
             />
 
-            <Button disabled={true} label={t("create.nfc.format")} />
-            <Button disabled={true} label={t("create.nfc.erase")} />
-            <Button disabled={true} label={t("create.nfc.makeReadOnly")} />
+            <Button
+              icon={<EraserIcon size="20" />}
+              label={
+                eraseConfirm ? t("create.nfc.confirm") : t("create.nfc.erase")
+              }
+              onClick={() => {
+                if (eraseConfirm) {
+                  nfcWriter.write(WriteAction.Erase);
+                  setWriteOpen(true);
+                  setEraseConfirm(false);
+                } else {
+                  setEraseConfirm(true);
+                  setTimeout(() => {
+                    setEraseConfirm(false);
+                  }, 3000);
+                }
+              }}
+            />
+
+            {Capacitor.getPlatform() === "android" && (
+              <Button
+                label={
+                  formatConfirm
+                    ? t("create.nfc.confirm")
+                    : t("create.nfc.format")
+                }
+                onClick={() => {
+                  if (eraseConfirm) {
+                    nfcWriter.write(WriteAction.Format);
+                    setWriteOpen(true);
+                    setFormatConfirm(false);
+                  } else {
+                    setFormatConfirm(true);
+                    setTimeout(() => {
+                      setFormatConfirm(false);
+                    }, 3000);
+                  }
+                }}
+              />
+            )}
+
+            <Button
+              icon={<PencilOffIcon size="20" />}
+              label={
+                makeReadOnlyConfirm
+                  ? t("create.nfc.confirm")
+                  : t("create.nfc.makeReadOnly")
+              }
+              onClick={() => {
+                if (makeReadOnlyConfirm) {
+                  nfcWriter.write(WriteAction.MakeReadOnly);
+                  setWriteOpen(true);
+                  setMakeReadOnlyConfirm(false);
+                } else {
+                  setMakeReadOnlyConfirm(true);
+                  setTimeout(() => {
+                    setMakeReadOnlyConfirm(false);
+                  }, 3000);
+                }
+              }}
+            />
 
             {nfcWriter.result?.info?.rawTag && nfcWriter.result?.info?.tag && (
-              <div>{JSON.stringify(nfcWriter.result)}</div>
+              <div className="flex flex-col gap-3 pt-3">
+                <Label htmlFor="uid">UID</Label>
+                <div id="uid">{nfcWriter.result.info.tag.uid}</div>
+
+                <Label htmlFor="value">Value</Label>
+                <div id="value">{nfcWriter.result.info.tag.text}</div>
+
+                <Label htmlFor="writeable">Tag writeable</Label>
+                <div id="writeable">
+                  {nfcWriter.result.info.rawTag.isWritable ? "Yes" : "No"}
+                </div>
+
+                <Label htmlFor="maxSize">Max size</Label>
+                <div id="maxSize">{nfcWriter.result.info.rawTag.maxSize}</div>
+
+                <Label htmlFor="techList">Tech types</Label>
+                <div id="techList">
+                  {nfcWriter.result.info.rawTag.techTypes?.join(", ")}
+                </div>
+
+                <Label htmlFor="ndefRecords">NDEF records</Label>
+                <div id="ndefRecords">
+                  {nfcWriter.result.info.rawTag.message?.records?.length}
+                </div>
+
+                {nfcWriter.result.info.rawTag.message?.records?.map(
+                  (record, index) => (
+                    <div key={index}>
+                      <Label htmlFor={`record${index}`}>
+                        Record {index + 1}
+                      </Label>
+                      <div
+                        id={`record${index}`}
+                        style={{ overflowWrap: "anywhere" }}
+                      >
+                        TNF: {record.tnf}
+                        <br />
+                        Type:{" "}
+                        {record.type?.length && record.type[0].toString(16)}
+                        <br />
+                        Payload:{" "}
+                        {record.payload
+                          ?.map((byte) => byte.toString(16))
+                          .join("")}
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
             )}
           </div>
         </PageFrame>

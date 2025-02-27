@@ -68,6 +68,8 @@ export function useNfcWriter(): WriteNfcHook {
   return {
     write: (action: WriteAction, text?: string) => {
       let actionFunc = readRaw;
+      let toastSuccess = t("spinner.writeSuccess");
+      let toastFailed = t("spinner.writeFailed");
 
       switch (action) {
         case WriteAction.Write:
@@ -81,19 +83,34 @@ export function useNfcWriter(): WriteNfcHook {
           } else {
             actionFunc = () => coreWrite(text);
           }
+
+          toastSuccess = t("spinner.writeSuccess");
+          toastFailed = t("spinner.writeFailed");
+
           break;
         case WriteAction.Read:
           actionFunc = readRaw;
+          toastSuccess = t("spinner.readSuccess");
+          toastFailed = t("spinner.readFailed");
           break;
         case WriteAction.Format:
-          // TODO: check if android
+          if (Capacitor.getPlatform() !== "android") {
+            console.error("Format is only supported on Android");
+            return;
+          }
           actionFunc = formatTag;
+          toastSuccess = t("spinner.formatSuccess");
+          toastFailed = t("spinner.formatFailed");
           break;
         case WriteAction.Erase:
           actionFunc = eraseTag;
+          toastSuccess = t("spinner.eraseSuccess");
+          toastFailed = t("spinner.eraseFailed");
           break;
         case WriteAction.MakeReadOnly:
           actionFunc = makeReadOnly;
+          toastSuccess = t("spinner.makeReadOnlySuccess");
+          toastFailed = t("spinner.makeReadOnlyFailed");
           break;
       }
 
@@ -113,7 +130,7 @@ export function useNfcWriter(): WriteNfcHook {
                   className="flex flex-grow flex-col"
                   onClick={() => toast.dismiss(to.id)}
                 >
-                  <span>{t("spinner.writeSuccess")}</span>
+                  <span>{toastSuccess}</span>
                 </span>
               ),
               {
@@ -141,7 +158,7 @@ export function useNfcWriter(): WriteNfcHook {
                 className="flex flex-grow flex-col"
                 onClick={() => toast.dismiss(to.id)}
               >
-                <span>{t("spinner.writeFailed")}</span>
+                <span>{toastFailed}</span>
               </span>
             ),
             {

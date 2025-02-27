@@ -33,24 +33,26 @@ function About() {
         title={t("online.title")}
         back={() => navigate({ to: "/settings" })}
       >
-        <div className="flex flex-col gap-8"></div>
         {loggedInUser !== null ? (
           <div className="flex flex-col gap-3">
-            <Button
-              label={t("online.logout")}
-              onClick={() => {
-                FirebaseAuthentication.signOut()
-                  .then(() => {
-                    setLoggedInUser(null);
-                    setOnlineEmail("");
-                    setOnlinePassword("");
-                  })
-                  .catch((e) => {
-                    console.error(e);
-                  });
-              }}
-              className="w-full"
-            />
+            <span>{t("online.loggedInAs", { email: loggedInUser.email })}</span>
+            <div className="flex flex-col gap-3">
+              <Button
+                label={t("online.logout")}
+                onClick={() => {
+                  FirebaseAuthentication.signOut()
+                    .then(() => {
+                      setLoggedInUser(null);
+                      setOnlineEmail("");
+                      setOnlinePassword("");
+                    })
+                    .catch((e) => {
+                      console.error(e);
+                    });
+                }}
+                className="w-full"
+              />
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
