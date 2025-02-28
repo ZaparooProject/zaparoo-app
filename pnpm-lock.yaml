@@ -77,6 +77,9 @@ importers:
       axios:
         specifier: ^1.7.9
         version: 1.7.9
+      capacitor-plugin-safe-area:
+        specifier: ^4.0.0
+        version: 4.0.0(@capacitor/core@7.0.1)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1902,6 +1905,11 @@ packages:
 
   caniuse-lite@1.0.30001700:
     resolution: {integrity: sha512-2S6XIXwaE7K7erT8dY+kLQcpa5ms63XlRkMkReXjle+kf6c5g38vyMl+Z5y8dSxOFDhcFe+nxnn261PLxBSQsQ==}
+
+  capacitor-plugin-safe-area@4.0.0:
+    resolution: {integrity: sha512-5VHT4wG2TlwHtyy3zKrAjKwgJQgC3KeMfRW1bc8abTETLYNLxb85zvfpA0QFE59BxbtYHD57GvXKJuUPgEHl3g==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
 
   chalk@2.4.2:
     resolution: {integrity: sha512-Mti+f9lpJNcwF4tWV8/OrTTtF1gZi+f8FqlyAdouralcFWFQWF2+NgCHShjkCb+IFBLq9buZwE1xckQU4peSuQ==}
@@ -5905,6 +5913,10 @@ snapshots:
   camelcase@5.3.1: {}
 
   caniuse-lite@1.0.30001700: {}
+
+  capacitor-plugin-safe-area@4.0.0(@capacitor/core@7.0.1):
+    dependencies:
+      '@capacitor/core': 7.0.1
 
   chalk@2.4.2:
     dependencies:

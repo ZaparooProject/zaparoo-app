@@ -17,7 +17,7 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
 
   return (
     <div
-      className="z-30 flex h-screen w-screen items-center justify-center bg-background pb-[90px]"
+      className="z-30 flex h-screen w-screen items-center justify-center bg-[#111928] pb-[90px]"
       style={{ position: "fixed", left: 0, top: 0 }}
       {...swipeHandlers}
     >

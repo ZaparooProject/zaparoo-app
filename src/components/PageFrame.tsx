@@ -12,10 +12,8 @@ export function PageFrame(props: PageFrameProps) {
       className="w-dvh h-dvh overflow-y-auto"
       style={{
         paddingBottom:
-          "calc(1rem + 80px + env(safe-area-inset-top) + env(safe-area-inset-bottom))",
-        marginTop: "env(safe-area-inset-top)",
+          "calc(1.5rem + 80px + env(safe-area-inset-top) + env(safe-area-inset-bottom))",
         marginBottom: "env(safe-area-inset-bottom)",
-        paddingTop: "1rem",
         paddingRight: "calc(1rem + env(safe-area-inset-right))",
         paddingLeft: "calc(1rem + env(safe-area-inset-left))"
       }}

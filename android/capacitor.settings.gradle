@@ -34,3 +34,6 @@ project(':revenuecat-purchases-capacitor').projectDir = new File('../node_module
 
 include ':sentry-capacitor'
 project(':sentry-capacitor').projectDir = new File('../node_modules/.pnpm/@sentry+capacitor@1.2.0_@capacitor+core@7.0.1_@sentry+react@8.42.0_react@18.3.1_/node_modules/@sentry/capacitor/android')
+
+include ':capacitor-plugin-safe-area'
+project(':capacitor-plugin-safe-area').projectDir = new File('../node_modules/.pnpm/capacitor-plugin-safe-area@4.0.0_@capacitor+core@7.0.1/node_modules/capacitor-plugin-safe-area/android')
