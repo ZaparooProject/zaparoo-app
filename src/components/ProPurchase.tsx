@@ -1,11 +1,16 @@
 import { Preferences } from "@capacitor/preferences";
 import { t } from "i18next";
-import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
 import { Purchases, PurchasesPackage } from "@revenuecat/purchases-capacitor";
 import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import toast from "react-hot-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 
 export const RestorePuchasesButton = () => {
   return (
@@ -68,12 +73,14 @@ const ProPurchaseModal = (props: {
   setProAccess: (access: boolean) => void;
 }) => {
   return (
-    <SlideModal
-      isOpen={props.proPurchaseModalOpen}
-      close={() => props.setProPurchaseModalOpen(false)}
-      title={t("scan.purchaseProTitle")}
+    <Dialog
+      open={props.proPurchaseModalOpen}
+      onOpenChange={props.setProPurchaseModalOpen}
     >
-      <div className="flex flex-col justify-center gap-2 p-2">
+      <DialogContent className="max-w-[300px]">
+        <DialogHeader>
+          <DialogTitle>{t("scan.purchaseProTitle")}</DialogTitle>
+        </DialogHeader>
         <div>
           {t("scan.purchaseProP1", {
             price: props.purchasePackage
@@ -107,8 +114,8 @@ const ProPurchaseModal = (props: {
             }
           }}
         />
-      </div>
-    </SlideModal>
+      </DialogContent>
+    </Dialog>
   );
 };
 
