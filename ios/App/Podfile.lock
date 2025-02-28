@@ -26,7 +26,7 @@ PODS:
     - Capacitor
   - CapacitorStatusBar (7.0.0):
     - Capacitor
-  - CapawesomeTeamCapacitorNfc (7.0.2):
+  - CapawesomeTeamCapacitorNfc (7.0.1):
     - Capacitor
   - FirebaseAppCheckInterop (11.8.0)
   - FirebaseAuth (11.7.0):
@@ -132,7 +132,7 @@ DEPENDENCIES:
   - "CapacitorPluginSafeArea (from `../../node_modules/.pnpm/capacitor-plugin-safe-area@4.0.0_@capacitor+core@7.0.1/node_modules/capacitor-plugin-safe-area`)"
   - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor/preferences`)"
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor/status-bar`)"
-  - "CapawesomeTeamCapacitorNfc (from `../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.0.2_@capacitor+core@7.0.1/node_modules/@capawesome-team/capacitor-nfc`)"
+  - "CapawesomeTeamCapacitorNfc (from `../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.0.1_@capacitor+core@7.0.1/node_modules/@capawesome-team/capacitor-nfc`)"
   - "RevenuecatPurchasesCapacitor (from `../../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.0.2_@capacitor+core@7.0.1/node_modules/@revenuecat/purchases-capacitor`)"
   - "SentryCapacitor (from `../../node_modules/.pnpm/@sentry+capacitor@1.2.0_@capacitor+core@7.0.1_@sentry+react@8.42.0_react@18.3.1_/node_modules/@sentry/capacitor`)"
 
@@ -184,7 +184,7 @@ EXTERNAL SOURCES:
   CapacitorStatusBar:
     :path: "../../node_modules/.pnpm/@capacitor+status-bar@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor/status-bar"
   CapawesomeTeamCapacitorNfc:
-    :path: "../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.0.2_@capacitor+core@7.0.1/node_modules/@capawesome-team/capacitor-nfc"
+    :path: "../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.0.1_@capacitor+core@7.0.1/node_modules/@capawesome-team/capacitor-nfc"
   RevenuecatPurchasesCapacitor:
     :path: "../../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.0.2_@capacitor+core@7.0.1/node_modules/@revenuecat/purchases-capacitor"
   SentryCapacitor:
@@ -202,7 +202,7 @@ SPEC CHECKSUMS:
   CapacitorPluginSafeArea: af80830df43015a915e504a56318a3027d3fc806
   CapacitorPreferences: e24a50a936f0e4f54a6b43be6121f923b4d91c27
   CapacitorStatusBar: 438e90beeeefa8276b24e6c5991cb02dd13e51bf
-  CapawesomeTeamCapacitorNfc: d885e50d3273c7b771b18b5c24b25560e4c19029
+  CapawesomeTeamCapacitorNfc: 97c94dbd72e581927f869c25af68adf378de84a2
   FirebaseAppCheckInterop: 7bf86d55a2b7e9bd91464120eba3e52e4b63b2e2
   FirebaseAuth: 77e25aa24f3e1c626c5babd3338551fc1669ee0e
   FirebaseAuthInterop: 651756e70d9a0b9160db39ead71fd5507dbb6c84
@@ -227,6 +227,6 @@ SPEC CHECKSUMS:
   Sentry: f8374b5415bc38dfb5645941b3ae31230fbeae57
   SentryCapacitor: 8c9d5b901ab6e835e88743ff187fc00926d85dc5
 
-PODFILE CHECKSUM: b5690c7b76248d60663fb7e9f5cafc25fd769593
+PODFILE CHECKSUM: caaa07867f198d877ffb333e3c546477e99d51b1
 
 COCOAPODS: 1.16.2

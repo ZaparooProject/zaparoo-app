@@ -42,8 +42,8 @@ importers:
         specifier: ^7.0.0
         version: 7.0.0(@capacitor/core@7.0.1)
       '@capawesome-team/capacitor-nfc':
-        specifier: ^7.0.2
-        version: 7.0.2(@capacitor/core@7.0.1)
+        specifier: 7.0.1
+        version: 7.0.1(@capacitor/core@7.0.1)
       '@radix-ui/react-dialog':
         specifier: ^1.1.6
         version: 1.1.6(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -376,8 +376,8 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
-  '@capawesome-team/capacitor-nfc@7.0.2':
-    resolution: {integrity: sha512-OAz3BkMpn1gwFjdTEHfRS6ubOHkaXtwUiij6MxxrdhDQQfnq5AhiGHKUx1kNF9yi4POCGce1SpATcwUwUt6Enw==, tarball: https://npm.pkg.github.com/download/@capawesome-team/capacitor-nfc/7.0.2/5b38b8ea20db0ee253cf01407cd3c69150ef65b4}
+  '@capawesome-team/capacitor-nfc@7.0.1':
+    resolution: {integrity: sha512-9Pu3kmnHJuu2qvv4N8vESB6Wh2epV+D2cFmx8jdSXa64RUickpCvwmJYosHlc5TrtlXBEy3GiBeLYgwDINzXCg==, tarball: https://npm.pkg.github.com/download/@capawesome-team/capacitor-nfc/7.0.1/fa4496bf40ae9de196087f750c7329508966c7f1}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -4345,7 +4345,7 @@ snapshots:
     dependencies:
       '@capacitor/core': 7.0.1
 
-  '@capawesome-team/capacitor-nfc@7.0.2(@capacitor/core@7.0.1)':
+  '@capawesome-team/capacitor-nfc@7.0.1(@capacitor/core@7.0.1)':
     dependencies:
       '@capacitor/core': 7.0.1
 

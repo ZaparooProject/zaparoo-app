@@ -110,19 +110,6 @@ function Create() {
               </div>
             </Card>
           </Link>
-
-          {/*<Card disabled={true}>*/}
-          {/*  <div className="flex flex-row items-center gap-3">*/}
-          {/*    <Button icon={<NfcIcon size="24" />} />*/}
-          {/*    <div className="flex flex-grow flex-col">*/}
-          {/*      <span className="font-semibold">*/}
-          {/*        {t("create.mappingsHeading")}*/}
-          {/*      </span>*/}
-          {/*      <span className="text-sm">{t("create.mappingsSub")}</span>*/}
-          {/*    </div>*/}
-          {/*    <NextIcon size="20" />*/}
-          {/*  </div>*/}
-          {/*</Card>*/}
         </div>
       </PageFrame>
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />

@@ -121,7 +121,8 @@
       "loginFail": "Error occurred while signing in",
       "settingsManageButton": "Manage Zaparoo Online",
       "settingsSignInButton": "Sign in to Zaparoo Online",
-      "loggedInAs": "Logged in: {{email}}"
+      "loggedInAs": "Logged in: {{email}}",
+      "openDashboard": "Open Dashboard"
     },
     "settings": {
       "title": "Settings",

@@ -11,7 +11,6 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as AssignImport } from './routes/assign'
 import { Route as IndexImport } from './routes/index'
 import { Route as SettingsIndexImport } from './routes/settings.index'
 import { Route as CreateIndexImport } from './routes/create.index'
@@ -25,12 +24,6 @@ import { Route as CreateNfcImport } from './routes/create.nfc'
 import { Route as CreateMappingsImport } from './routes/create.mappings'
 
 // Create/Update Routes
-
-const AssignRoute = AssignImport.update({
-  id: '/assign',
-  path: '/assign',
-  getParentRoute: () => rootRoute,
-} as any)
 
 const IndexRoute = IndexImport.update({
   id: '/',
@@ -107,13 +100,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/assign': {
-      id: '/assign'
-      path: '/assign'
-      fullPath: '/assign'
-      preLoaderRoute: typeof AssignImport
       parentRoute: typeof rootRoute
     }
     '/create/mappings': {
@@ -193,7 +179,6 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/assign': typeof AssignRoute
   '/create/mappings': typeof CreateMappingsRoute
   '/create/nfc': typeof CreateNfcRoute
   '/create/search': typeof CreateSearchRoute
@@ -208,7 +193,6 @@ export interface FileRoutesByFullPath {
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/assign': typeof AssignRoute
   '/create/mappings': typeof CreateMappingsRoute
   '/create/nfc': typeof CreateNfcRoute
   '/create/search': typeof CreateSearchRoute
@@ -224,7 +208,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
-  '/assign': typeof AssignRoute
   '/create/mappings': typeof CreateMappingsRoute
   '/create/nfc': typeof CreateNfcRoute
   '/create/search': typeof CreateSearchRoute
@@ -241,7 +224,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/assign'
     | '/create/mappings'
     | '/create/nfc'
     | '/create/search'
@@ -255,7 +237,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/assign'
     | '/create/mappings'
     | '/create/nfc'
     | '/create/search'
@@ -269,7 +250,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/assign'
     | '/create/mappings'
     | '/create/nfc'
     | '/create/search'
@@ -285,7 +265,6 @@ export interface FileRouteTypes {
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AssignRoute: typeof AssignRoute
   CreateMappingsRoute: typeof CreateMappingsRoute
   CreateNfcRoute: typeof CreateNfcRoute
   CreateSearchRoute: typeof CreateSearchRoute
@@ -300,7 +279,6 @@ export interface RootRouteChildren {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AssignRoute: AssignRoute,
   CreateMappingsRoute: CreateMappingsRoute,
   CreateNfcRoute: CreateNfcRoute,
   CreateSearchRoute: CreateSearchRoute,
@@ -324,7 +302,6 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/assign",
         "/create/mappings",
         "/create/nfc",
         "/create/search",
@@ -339,9 +316,6 @@ export const routeTree = rootRoute
     },
     "/": {
       "filePath": "index.tsx"
-    },
-    "/assign": {
-      "filePath": "assign.tsx"
     },
     "/create/mappings": {
       "filePath": "create.mappings.tsx"
