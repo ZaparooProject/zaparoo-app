@@ -34,6 +34,7 @@ import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
 import { CopyButton } from "@/components/CopyButton.tsx";
 import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
+import { WriteModal } from "@/components/WriteModal.tsx";
 
 const initData = {
   restartScan: false,
@@ -58,6 +59,17 @@ const statusTimeout = 3000;
 function Index() {
   const { t } = useTranslation();
   const nfcWriter = useNfcWriter();
+  const [writeOpen, setWriteOpen] = useState(false);
+  const closeWriteModal = () => {
+    setWriteOpen(false);
+    nfcWriter.end();
+  };
+  useEffect(() => {
+    if (nfcWriter.status !== null) {
+      setWriteOpen(false);
+      nfcWriter.end();
+    }
+  }, [nfcWriter]);
   const { PurchaseModal, proPurchaseModalOpen, setProPurchaseModalOpen } =
     useProPurchase();
 
@@ -167,6 +179,7 @@ function Index() {
       })
       .catch(() => {
         setScanStatus(ScanResult.Error);
+        setScanSession(false);
         toast.error((to) => (
           <span
             className="flex flex-grow flex-col"
@@ -197,6 +210,7 @@ function Index() {
             return;
           }
 
+          setWriteOpen(true);
           nfcWriter.write(WriteAction.Write, writeValue);
           return;
         }
@@ -541,7 +555,7 @@ function Index() {
           </div>
         )}
       </SlideModal>
-
+      <WriteModal isOpen={writeOpen} close={closeWriteModal} />
       <PurchaseModal />
     </>
   );
