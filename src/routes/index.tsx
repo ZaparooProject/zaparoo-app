@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { cancelSession, readTag, sessionManager, Status } from "../lib/nfc";
 import { getDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
-import { Clipboard } from "@capacitor/clipboard";
 import {
   CheckIcon,
   DeviceIcon,
@@ -29,42 +28,12 @@ import { Card } from "../components/wui/Card";
 import { ToggleSwitch } from "../components/wui/ToggleSwitch";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { Purchases, PurchasesPackage } from "@revenuecat/purchases-capacitor";
 import { Preferences } from "@capacitor/preferences";
 import { PageFrame } from "../components/PageFrame";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
-
-const writeToClipboard = async (s: string) => {
-  await Clipboard.write({
-    string: s
-  });
-};
-
-const CopyButton = (props: { text: string }) => {
-  const { t } = useTranslation();
-
-  const [display, setDisplay] = useState(t("copy"));
-
-  if (location.protocol !== "https:") {
-    return <></>;
-  }
-
-  return (
-    <span
-      className="ml-1 cursor-pointer rounded-full border px-1"
-      onClick={() => {
-        writeToClipboard(props.text).then(() => {
-          setDisplay(t("copied"));
-          setTimeout(() => {
-            setDisplay(t("copy"));
-          }, 3000);
-        });
-      }}
-    >
-      {display}
-    </span>
-  );
-};
+import { CopyButton } from "@/components/CopyButton.tsx";
+import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook.tsx";
+import { useProPurchase } from "@/components/ProPurchase.tsx";
 
 const initData = {
   restartScan: false,
@@ -87,14 +56,17 @@ export const Route = createFileRoute("/")({
 const statusTimeout = 3000;
 
 function Index() {
+  const { t } = useTranslation();
+  const nfcWriter = useNfcWriter();
+  const { PurchaseModal, proPurchaseModalOpen, setProPurchaseModalOpen } =
+    useProPurchase();
+
   const connected = useStatusStore((state) => state.connected);
   const playing = useStatusStore((state) => state.playing);
-
   const lastToken = useStatusStore((state) => state.lastToken);
   const setLastToken = useStatusStore((state) => state.setLastToken);
 
   const [cameraMode, setCameraMode] = useState(initData.cameraDefault);
-
   const [historyOpen, setHistoryOpen] = useState(false);
   const [scanSession, setScanSession] = useState(false);
   const [scanStatus, setScanStatus] = useState<ScanResult>(ScanResult.Default);
@@ -109,13 +81,12 @@ function Index() {
     sessionManager.setLaunchOnScan(launchOnScan);
   }, [launchOnScan]);
 
-  const [purchaseLauncherOpen, setPurchaseLauncherOpen] = useState(false);
   const [launcherAccess, setLauncherAccess] = useState(false);
   useEffect(() => {
-    if (import.meta.env.DEV) {
-      setLauncherAccess(true);
-      return;
-    }
+    // if (import.meta.env.DEV) {
+    //   setLauncherAccess(true);
+    //   return;
+    // }
 
     Preferences.get({ key: "launcherAccess" }).then((result) => {
       if (result.value) {
@@ -123,10 +94,6 @@ function Index() {
       }
     });
   }, []);
-
-  // const loggedInUser = useStatusStore((state) => state.loggedInUser);
-
-  const { t } = useTranslation();
 
   const history = useQuery({
     queryKey: ["history"],
@@ -223,6 +190,17 @@ function Index() {
 
         const barcode = res.barcodes[0];
 
+        if (barcode.rawValue.startsWith("**write:")) {
+          const writeValue = barcode.rawValue.slice(8);
+
+          if (writeValue === "") {
+            return;
+          }
+
+          nfcWriter.write(WriteAction.Write, writeValue);
+          return;
+        }
+
         CoreAPI.launch({
           uid: barcode.rawValue,
           text: barcode.rawValue
@@ -248,58 +226,6 @@ function Index() {
     }
   };
 
-  const [launcherPackage, setLauncherPackage] =
-    useState<PurchasesPackage | null>(null);
-
-  useEffect(() => {
-    if (
-      Capacitor.getPlatform() !== "ios" &&
-      Capacitor.getPlatform() !== "android"
-    ) {
-      return;
-    }
-
-    Purchases.getOfferings()
-      .then((offerings) => {
-        if (
-          offerings.current &&
-          offerings.current.availablePackages.length > 0
-        ) {
-          setLauncherPackage(offerings.current.availablePackages[0]);
-        } else {
-          console.error("no launcher purchase package found");
-        }
-      })
-      .catch((e) => {
-        console.error("offerings error", e);
-      });
-
-    Purchases.getCustomerInfo()
-      .then((info) => {
-        if (info.customerInfo.entitlements.active.tapto_launcher) {
-          setLauncherAccess(true);
-          Preferences.set({
-            key: "launcherAccess",
-            value: "true"
-          });
-        } else {
-          setLauncherAccess(false);
-          Preferences.set({
-            key: "launcherAccess",
-            value: "false"
-          });
-          setLaunchOnScan(false);
-          Preferences.set({
-            key: "launchOnScan",
-            value: "false"
-          });
-        }
-      })
-      .catch((e) => {
-        console.error("customer info error", e);
-      });
-  }, [setLauncherAccess, setLaunchOnScan]);
-
   return (
     <>
       <PageFrame>
@@ -309,8 +235,8 @@ function Index() {
             icon={<HistoryIcon size="32" />}
             state={historyOpen}
             setState={(s) => {
-              if (!historyOpen && purchaseLauncherOpen) {
-                setPurchaseLauncherOpen(false);
+              if (!historyOpen && proPurchaseModalOpen) {
+                setProPurchaseModalOpen(false);
                 setTimeout(() => {
                   setHistoryOpen(s);
                 }, 150);
@@ -493,7 +419,7 @@ function Index() {
                             value: v.toString()
                           });
                         } else {
-                          setPurchaseLauncherOpen(true);
+                          setProPurchaseModalOpen(true);
                         }
                       }}
                     />
@@ -565,49 +491,6 @@ function Index() {
       </PageFrame>
 
       <SlideModal
-        isOpen={purchaseLauncherOpen}
-        close={() => setPurchaseLauncherOpen(false)}
-        title={t("scan.purchaseProTitle")}
-      >
-        <div className="flex flex-col justify-center gap-2 p-2">
-          <div>
-            {t("scan.purchaseProP1", {
-              price: launcherPackage
-                ? launcherPackage.product.priceString
-                : "$6.99 USD"
-            })}
-          </div>
-          <div className="pb-2">{t("scan.purchaseProP2")}</div>
-          <Button
-            label={t("scan.purchaseProAction")}
-            disabled={!launcherPackage}
-            onClick={() => {
-              if (launcherPackage) {
-                Purchases.purchasePackage({ aPackage: launcherPackage })
-                  .then((purchase) => {
-                    console.log("purchase success", purchase);
-                    setLauncherAccess(true);
-                    Preferences.set({
-                      key: "launcherAccess",
-                      value: "true"
-                    });
-                    setLaunchOnScan(true);
-                    Preferences.set({
-                      key: "launchOnScan",
-                      value: "true"
-                    });
-                    setPurchaseLauncherOpen(false);
-                  })
-                  .catch((e) => {
-                    console.error("purchase error", e);
-                  });
-              }
-            }}
-          />
-        </div>
-      </SlideModal>
-
-      <SlideModal
         isOpen={historyOpen}
         close={() => setHistoryOpen(false)}
         title={t("scan.historyTitle")}
@@ -658,6 +541,8 @@ function Index() {
           </div>
         )}
       </SlideModal>
+
+      <PurchaseModal />
     </>
   );
 }

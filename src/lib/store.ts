@@ -23,6 +23,9 @@ interface StatusState {
 
   loggedInUser: User | null;
   setLoggedInUser: (loggedInUser: User | null) => void;
+
+  nfcModalOpen: boolean;
+  setNfcModalOpen: (nfcModalOpen: boolean) => void;
 }
 
 export const useStatusStore = create<StatusState>()((set) => ({
@@ -58,5 +61,8 @@ export const useStatusStore = create<StatusState>()((set) => ({
 
   loggedInUser: null,
   setLoggedInUser: (loggedInUser: User | null) =>
-      set({ loggedInUser: loggedInUser })
+    set({ loggedInUser: loggedInUser }),
+
+  nfcModalOpen: false,
+  setNfcModalOpen: (nfcModalOpen) => set({ nfcModalOpen })
 }));

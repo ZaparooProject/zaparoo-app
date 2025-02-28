@@ -3,8 +3,11 @@ import { BackIcon } from "../lib/images";
 import { ScanResult } from "../lib/models";
 import { ScanSpinner } from "./ScanSpinner";
 
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useStatusStore } from "@/lib/store";
+
 export function WriteModal(props: { isOpen: boolean; close: () => void }) {
-  const swipHandlers = useSwipeable({
+  const swipeHandlers = useSwipeable({
     onSwipedRight: () => props.close()
   });
 
@@ -16,7 +19,7 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
     <div
       className="z-30 flex h-screen w-screen items-center justify-center bg-background pb-[90px]"
       style={{ position: "fixed", left: 0, top: 0 }}
-      {...swipHandlers}
+      {...swipeHandlers}
     >
       <div
         style={{
@@ -31,5 +34,18 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
       </div>
       <ScanSpinner spinning={true} status={ScanResult.Default} write />
     </div>
+  );
+}
+
+export function NFCModal() {
+  const nfcModalOpen = useStatusStore((state) => state.nfcModalOpen);
+  const setNfcModalOpen = useStatusStore((state) => state.setNfcModalOpen);
+
+  return (
+    <Dialog open={nfcModalOpen} onOpenChange={setNfcModalOpen}>
+      <DialogContent>
+        <ScanSpinner spinning={true} status={ScanResult.Default} write />
+      </DialogContent>
+    </Dialog>
   );
 }

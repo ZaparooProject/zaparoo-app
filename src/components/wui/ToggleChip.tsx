@@ -22,6 +22,7 @@ export function ToggleChip(props: ToggleChipProps) {
         "tracking-[0.1px]",
         "border",
         "border-solid",
+        "bg-background",
         {
           "w-10": !props.label && props.icon,
           "h-10": !props.label && props.icon,

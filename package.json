@@ -22,7 +22,9 @@
     "@capacitor/preferences": "^7.0.0",
     "@capacitor/status-bar": "^7.0.0",
     "@capawesome-team/capacitor-nfc": "^7.0.2",
+    "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-slot": "^1.1.2",
     "@revenuecat/purchases-capacitor": "^10.0.2",
     "@sentry/capacitor": "^1.2.0",
     "@sentry/react": "8.42.0",
@@ -47,6 +49,7 @@
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0",
+    "vaul": "^1.1.2",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

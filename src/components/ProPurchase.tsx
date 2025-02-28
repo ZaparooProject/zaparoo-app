@@ -1,0 +1,180 @@
+import { Preferences } from "@capacitor/preferences";
+import { t } from "i18next";
+import { SlideModal } from "./SlideModal";
+import { Button } from "./wui/Button";
+import { Purchases, PurchasesPackage } from "@revenuecat/purchases-capacitor";
+import { useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import toast from "react-hot-toast";
+
+export const RestorePuchasesButton = () => {
+  return (
+    <Button
+      label={t("settings.advanced.restorePurchases")}
+      className="w-full"
+      onClick={() => {
+        Purchases.restorePurchases()
+          .then(() => {
+            Purchases.getCustomerInfo()
+              .then((info) => {
+                if (info.customerInfo.entitlements.active.tapto_launcher) {
+                  Preferences.set({
+                    key: "launcherAccess",
+                    value: "true"
+                  });
+                } else {
+                  Preferences.set({
+                    key: "launcherAccess",
+                    value: "false"
+                  });
+                  Preferences.set({
+                    key: "launchOnScan",
+                    value: "false"
+                  });
+                }
+                location.reload();
+              })
+              .catch((e) => {
+                console.error("customer info error", e);
+              });
+            toast.success((to) => (
+              <span
+                className="flex flex-grow flex-col"
+                onClick={() => toast.dismiss(to.id)}
+              >
+                {t("settings.advanced.restoreSuccess")}
+              </span>
+            ));
+          })
+          .catch(() => {
+            toast.error((to) => (
+              <span
+                className="flex flex-grow flex-col"
+                onClick={() => toast.dismiss(to.id)}
+              >
+                {t("settings.advanced.restoreFail")}
+              </span>
+            ));
+          });
+      }}
+    />
+  );
+};
+
+const ProPurchaseModal = (props: {
+  proPurchaseModalOpen: boolean;
+  setProPurchaseModalOpen: (open: boolean) => void;
+  purchasePackage: PurchasesPackage | null;
+  setProAccess: (access: boolean) => void;
+}) => {
+  return (
+    <SlideModal
+      isOpen={props.proPurchaseModalOpen}
+      close={() => props.setProPurchaseModalOpen(false)}
+      title={t("scan.purchaseProTitle")}
+    >
+      <div className="flex flex-col justify-center gap-2 p-2">
+        <div>
+          {t("scan.purchaseProP1", {
+            price: props.purchasePackage
+              ? props.purchasePackage.product.priceString
+              : "$6.99 USD"
+          })}
+        </div>
+        <div className="pb-2">{t("scan.purchaseProP2")}</div>
+        <Button
+          label={t("scan.purchaseProAction")}
+          disabled={!props.purchasePackage}
+          onClick={() => {
+            if (props.purchasePackage) {
+              Purchases.purchasePackage({ aPackage: props.purchasePackage })
+                .then((purchase) => {
+                  console.log("purchase success", purchase);
+                  props.setProAccess(true);
+                  Preferences.set({
+                    key: "launcherAccess",
+                    value: "true"
+                  });
+                  Preferences.set({
+                    key: "launchOnScan",
+                    value: "true"
+                  });
+                  props.setProPurchaseModalOpen(false);
+                })
+                .catch((e) => {
+                  console.error("purchase error", e);
+                });
+            }
+          }}
+        />
+      </div>
+    </SlideModal>
+  );
+};
+
+export const useProPurchase = () => {
+  const [proAccess, setProAccess] = useState(false);
+  const [proPurchaseModalOpen, setProPurchaseModalOpen] = useState(false);
+  const [launcherPackage, setLauncherPackage] =
+    useState<PurchasesPackage | null>(null);
+
+  useEffect(() => {
+    if (Capacitor.getPlatform() === "web") {
+      console.log("web platform, skipping purchases");
+      return;
+    }
+
+    Purchases.getOfferings()
+      .then((offerings) => {
+        if (
+          offerings.current &&
+          offerings.current.availablePackages.length > 0
+        ) {
+          setLauncherPackage(offerings.current.availablePackages[0]);
+        } else {
+          console.error("no launcher purchase package found");
+        }
+      })
+      .catch((e) => {
+        console.error("offerings error", e);
+      });
+
+    Purchases.getCustomerInfo()
+      .then((info) => {
+        if (info.customerInfo.entitlements.active.tapto_launcher) {
+          setProAccess(true);
+          Preferences.set({
+            key: "launcherAccess",
+            value: "true"
+          });
+        } else {
+          setProAccess(false);
+          Preferences.set({
+            key: "launcherAccess",
+            value: "false"
+          });
+          Preferences.set({
+            key: "launchOnScan",
+            value: "false"
+          });
+        }
+      })
+      .catch((e) => {
+        console.error("customer info error", e);
+      });
+  }, [setProAccess]);
+
+  return {
+    proAccess,
+    PurchaseModal: () => (
+      <ProPurchaseModal
+        proPurchaseModalOpen={proPurchaseModalOpen}
+        setProPurchaseModalOpen={setProPurchaseModalOpen}
+        purchasePackage={launcherPackage}
+        setProAccess={setProAccess}
+      />
+    ),
+    proPurchaseModalOpen,
+    setProPurchaseModalOpen
+  };
+};
