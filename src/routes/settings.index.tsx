@@ -29,7 +29,7 @@ function Settings() {
   const connected = useStatusStore((state) => state.connected);
   const connectionError = useStatusStore((state) => state.connectionError);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  const loggedInUser = useStatusStore((state) => state.loggedInUser);
+  // const loggedInUser = useStatusStore((state) => state.loggedInUser);
 
   const [address, setAddress] = useState(getDeviceAddress());
 
@@ -187,7 +187,7 @@ function Settings() {
             </div>
           )}
 
-          <div>
+          {/* <div>
             {loggedInUser !== null ? (
               <div className="flex flex-col gap-3">
                 <Link to="/settings/online">
@@ -205,7 +205,7 @@ function Settings() {
                 />
               </Link>
             )}
-          </div>
+          </div> */}
 
           <div className="flex flex-col">
             <label className="text-white">{t("settings.language")}</label>
