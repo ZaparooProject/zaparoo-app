@@ -14,12 +14,7 @@ import { useTranslation } from "react-i18next";
 import { CoreApiWebSocket } from "./components/CoreApiWebSocket.tsx";
 import AppUrlListener from "./lib/deepLinks.tsx";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import {
-  initSafeArea,
-  safeAreaLeftPx,
-  safeAreaRightPx,
-  safeAreaTopPx
-} from "./lib/safeArea.ts";
+import { initSafeAreaInsets } from "./lib/safeArea.ts";
 
 const router = createRouter({
   scrollRestoration: true,
@@ -48,12 +43,11 @@ export default function App() {
   const [hideGamesIndex, setHideGamesIndex] = useState(false);
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
   const { t } = useTranslation();
-  const [envSetup, setEnvSetup] = useState(false);
+  const safeInsets = useStatusStore((state) => state.safeInsets);
+  const setSafeInsets = useStatusStore((state) => state.setSafeInsets);
 
   useEffect(() => {
-    initSafeArea().then(() => {
-      setEnvSetup(true);
-    });
+    initSafeAreaInsets(setSafeInsets);
     if (Capacitor.isNativePlatform()) {
       setStatusBarStyleDark();
     }
@@ -180,10 +174,6 @@ export default function App() {
     }
   }, [playing, t]);
 
-  if (!envSetup) {
-    return null;
-  }
-
   return (
     <>
       <AppUrlListener />
@@ -204,9 +194,9 @@ export default function App() {
           }
         }}
         containerStyle={{
-          top: `calc(${safeAreaTopPx} + 1rem)`,
-          left: safeAreaLeftPx,
-          right: safeAreaRightPx
+          top: `calc(${safeInsets.top} + 1rem)`,
+          left: safeInsets.left,
+          right: safeInsets.right
         }}
       />
       <div

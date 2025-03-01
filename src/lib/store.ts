@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { IndexResponse, PlayingResponse, TokenResponse } from "./models";
 import { User } from "@capacitor-firebase/authentication";
+import { defaultSafeAreaInsets, SafeAreaInsets } from "./safeArea";
 
 interface StatusState {
   connected: boolean;
@@ -26,6 +27,9 @@ interface StatusState {
 
   nfcModalOpen: boolean;
   setNfcModalOpen: (nfcModalOpen: boolean) => void;
+
+  safeInsets: SafeAreaInsets;
+  setSafeInsets: (insets: SafeAreaInsets) => void;
 }
 
 export const useStatusStore = create<StatusState>()((set) => ({
@@ -64,5 +68,8 @@ export const useStatusStore = create<StatusState>()((set) => ({
     set({ loggedInUser: loggedInUser }),
 
   nfcModalOpen: false,
-  setNfcModalOpen: (nfcModalOpen) => set({ nfcModalOpen })
+  setNfcModalOpen: (nfcModalOpen) => set({ nfcModalOpen }),
+
+  safeInsets: defaultSafeAreaInsets,
+  setSafeInsets: (insets) => set({ safeInsets: insets })
 }));

@@ -35,7 +35,6 @@ import { CopyButton } from "@/components/CopyButton.tsx";
 import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
-import { safeAreaBottomPx } from "@/lib/safeArea.ts";
 
 const initData = {
   restartScan: false,
@@ -83,6 +82,8 @@ function Index() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [scanSession, setScanSession] = useState(false);
   const [scanStatus, setScanStatus] = useState<ScanResult>(ScanResult.Default);
+
+  const safeInsets = useStatusStore((state) => state.safeInsets);
 
   const [restartScan, setRestartScan] = useState(initData.restartScan);
   useEffect(() => {
@@ -444,7 +445,7 @@ function Index() {
 
               <div className="p-3 pt-6">
                 <div className="flex flex-row items-center justify-between">
-                  <p className="text-gray-400 font-bold capitalize">
+                  <p className="font-bold capitalize text-gray-400">
                     {t("scan.nowPlayingHeading")}
                   </p>
                 </div>
@@ -466,7 +467,7 @@ function Index() {
           )}
           <div className="p-3">
             <div className="flex flex-row items-center justify-between">
-              <p className="text-gray-400 font-bold capitalize">
+              <p className="font-bold capitalize text-gray-400">
                 {t("scan.lastScannedHeading")}
               </p>
             </div>
@@ -511,7 +512,7 @@ function Index() {
         title={t("scan.historyTitle")}
       >
         {history.data && (
-          <div style={{ paddingBottom: safeAreaBottomPx }}>
+          <div style={{ paddingBottom: safeInsets.bottom }}>
             {history.data.entries &&
               history.data.entries.map((item, i) => (
                 <div

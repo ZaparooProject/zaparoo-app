@@ -2,11 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { NfcIcon, SettingsIcon, SquarePenIcon } from "lucide-react";
 import classNames from "classnames";
-import {
-  safeAreaBottomPx,
-  safeAreaLeftPx,
-  safeAreaRightPx
-} from "@/lib/safeArea";
+import { useStatusStore } from "@/lib/store";
 
 function Button(props: {
   text: string;
@@ -39,15 +35,16 @@ function Button(props: {
 
 export function BottomNav() {
   const { t } = useTranslation();
+  const safeInsets = useStatusStore((state) => state.safeInsets);
 
   return (
     <div
       className="border-t border-t-[#ffffff21] bg-[#111928bf] px-9 pb-1 backdrop-blur"
       style={{
-        height: `calc(80px + ${safeAreaBottomPx})`,
-        paddingBottom: safeAreaBottomPx,
-        paddingRight: `calc(2.25rem + ${safeAreaRightPx})`,
-        paddingLeft: `calc(2.25rem + ${safeAreaLeftPx})`
+        height: `calc(80px + ${safeInsets.top})`,
+        paddingBottom: safeInsets.bottom,
+        paddingRight: `calc(2.25rem + ${safeInsets.right})`,
+        paddingLeft: `calc(2.25rem + ${safeInsets.left})`
       }}
     >
       <div className="mx-auto grid h-full max-w-lg grid-cols-3 gap-4">

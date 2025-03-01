@@ -17,13 +17,20 @@ import * as Sentry from "@sentry/capacitor";
 import * as SentryReact from "@sentry/react";
 import { ThemeProvider } from "./components/theme-provider";
 
-Sentry.init(
-  {
-    dsn: import.meta.env.VITE_SENTRY_DSN,
-    integrations: [Sentry.browserTracingIntegration()]
-  },
-  SentryReact.init
-);
+if (import.meta.env.PROD) {
+  Sentry.init(
+    {
+      dsn: import.meta.env.VITE_SENTRY_DSN,
+      integrations: [
+        Sentry.browserTracingIntegration(),
+        SentryReact.captureConsoleIntegration({
+          levels: ["error"]
+        })
+      ]
+    },
+    SentryReact.init
+  );
+}
 
 initializeApp(firebaseConfig);
 

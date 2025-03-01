@@ -79,6 +79,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@sentry/capacitor",
+      "@sentry/cli",
       "esbuild",
       "protobufjs",
       "sharp"

@@ -9,7 +9,7 @@ import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { TextInput } from "../components/wui/TextInput.tsx";
 import toast from "react-hot-toast";
 import { Browser } from "@capacitor/browser";
-import { LayoutDashboardIcon } from "lucide-react";
+import { ExternalLinkIcon, LogInIcon, LogOutIcon } from "lucide-react";
 
 export const Route = createFileRoute("/settings/online")({
   component: About
@@ -39,7 +39,7 @@ function About() {
           <Button
             label={t("online.openDashboard")}
             className="w-full"
-            icon={<LayoutDashboardIcon size="20" />}
+            icon={<ExternalLinkIcon size="20" />}
             onClick={() =>
               Browser.open({ url: "https://zaparoo.com/dashboard" })
             }
@@ -53,6 +53,7 @@ function About() {
               <div className="flex flex-col gap-3">
                 <Button
                   label={t("online.logout")}
+                  icon={<LogOutIcon size="20" />}
                   onClick={() => {
                     FirebaseAuthentication.signOut()
                       .then(() => {
@@ -85,6 +86,7 @@ function About() {
               />
               <Button
                 label={t("online.login")}
+                icon={<LogInIcon size="20" />}
                 onClick={() => {
                   setOnlineLoggingIn(true);
                   FirebaseAuthentication.signInWithEmailAndPassword({

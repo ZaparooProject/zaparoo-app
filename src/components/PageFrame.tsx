@@ -1,9 +1,4 @@
-import {
-  safeAreaBottomPx,
-  safeAreaLeftPx,
-  safeAreaRightPx,
-  safeAreaTopPx
-} from "@/lib/safeArea";
+import { useStatusStore } from "@/lib/store";
 import { BackIcon } from "../lib/images";
 
 interface PageFrameProps {
@@ -13,16 +8,18 @@ interface PageFrameProps {
 }
 
 export function PageFrame(props: PageFrameProps) {
+  const safeInsets = useStatusStore((state) => state.safeInsets);
+
   return (
     <div
       className="w-dvh h-dvh overflow-y-auto"
       style={{
-        paddingBottom: `calc(1rem + 80px + ${safeAreaTopPx} + ${safeAreaBottomPx})`,
-        marginTop: safeAreaTopPx,
-        marginBottom: safeAreaBottomPx,
+        paddingBottom: `calc(1rem + 80px + ${safeInsets.top} + ${safeInsets.bottom})`,
+        marginTop: safeInsets.top,
+        marginBottom: safeInsets.bottom,
         paddingTop: "1rem",
-        paddingRight: `calc(1rem + ${safeAreaRightPx})`,
-        paddingLeft: `calc(1rem + ${safeAreaLeftPx})`
+        paddingRight: `calc(1rem + ${safeInsets.right})`,
+        paddingLeft: `calc(1rem + ${safeInsets.left})`
       }}
     >
       {props.title || props.back ? (
