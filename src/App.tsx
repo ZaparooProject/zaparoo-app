@@ -47,7 +47,7 @@ export default function App() {
   const setSafeInsets = useStatusStore((state) => state.setSafeInsets);
 
   useEffect(() => {
-    initSafeAreaInsets(setSafeInsets);
+    initSafeAreaInsets(setSafeInsets, true);
     if (Capacitor.isNativePlatform()) {
       setStatusBarStyleDark();
     }

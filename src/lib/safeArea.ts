@@ -1,5 +1,7 @@
 import { Capacitor } from "@capacitor/core";
 import { SafeArea } from "capacitor-plugin-safe-area";
+import { useStatusStore } from "./store";
+import { useEffect } from "react";
 
 export interface SafeAreaInsets {
   top: string;
@@ -23,7 +25,8 @@ const webInsets = {
 };
 
 export const initSafeAreaInsets = async (
-  setInsets: (insets: SafeAreaInsets) => void
+  setInsets: (insets: SafeAreaInsets) => void,
+  listen = true
 ) => {
   if (!Capacitor.isNativePlatform()) {
     setInsets(webInsets);
@@ -46,6 +49,10 @@ export const initSafeAreaInsets = async (
       right: `${insets.right}px`
     });
 
+    if (!listen) {
+      return;
+    }
+
     await SafeArea.addListener("safeAreaChanged", (data) => {
       setInsets({
         top: `${data.insets.top}px`,
@@ -57,4 +64,14 @@ export const initSafeAreaInsets = async (
   } catch (e) {
     console.error(e);
   }
+};
+
+export const SafeAreaHandler = () => {
+  const setSafeInsets = useStatusStore((state) => state.setSafeInsets);
+
+  useEffect(() => {
+    initSafeAreaInsets(setSafeInsets);
+  }, [setSafeInsets]);
+
+  return null;
 };

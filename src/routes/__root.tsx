@@ -2,6 +2,7 @@ import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { BottomNav } from "../components/BottomNav";
 import { App } from "@capacitor/app";
 import { useEffect } from "react";
+import { SafeAreaHandler } from "@/lib/safeArea";
 
 function BackHandler() {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ function BackHandler() {
 export const Route = createRootRoute({
   component: () => (
     <>
+      <SafeAreaHandler />
       <BackHandler />
       <main className="main-frame h-screen w-screen">
         <Outlet />
