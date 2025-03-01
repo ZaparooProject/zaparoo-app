@@ -50,8 +50,8 @@ export function CoreApiWebSocket() {
       Preferences.get({ key: "deviceHistory" }).then((v) => {
         if (v.value) {
           setDeviceHistory(JSON.parse(v.value));
-          addDeviceHistory(getDeviceAddress());
         }
+        addDeviceHistory(getDeviceAddress());
       });
       CoreAPI.media().then((v) => {
         setGamesIndex(v.database);
