@@ -7,7 +7,12 @@ import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { EraserIcon, PencilOffIcon, ScanTextIcon } from "lucide-react";
+import {
+  EraserIcon,
+  PencilOffIcon,
+  ScanTextIcon,
+  SquareAsteriskIcon
+} from "lucide-react";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/create/nfc")({
@@ -81,13 +86,14 @@ function NfcUtils() {
 
             {Capacitor.getPlatform() === "android" && (
               <Button
+                icon={<SquareAsteriskIcon size="20" />}
                 label={
                   formatConfirm
                     ? t("create.nfc.confirm")
                     : t("create.nfc.format")
                 }
                 onClick={() => {
-                  if (eraseConfirm) {
+                  if (formatConfirm) {
                     nfcWriter.write(WriteAction.Format);
                     setWriteOpen(true);
                     setFormatConfirm(false);
