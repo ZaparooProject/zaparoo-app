@@ -25,8 +25,8 @@ export default {
         "bd-input": "var(--color-border-input)",
         "btn-start": "var(--color-button-start)",
         "btn-end": "var(--color-button-end)",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        background: "hsl(var(--color-background))",
+        foreground: "hsl(var(--color-foreground))",
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))"

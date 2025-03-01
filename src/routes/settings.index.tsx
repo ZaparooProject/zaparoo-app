@@ -2,8 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { getDeviceAddress, setDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
 import { CheckIcon, DatabaseIcon, ExternalIcon, NextIcon } from "../lib/images";
 import { Button } from "../components/wui/Button";
+import { Button as SCNButton } from "@/components/ui/button";
 import classNames from "classnames";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { TextInput } from "../components/wui/TextInput";
 import { useStatusStore } from "../lib/store";
@@ -17,6 +18,15 @@ import {
   RestorePuchasesButton,
   useProPurchase
 } from "@/components/ProPurchase.tsx";
+import { Preferences } from "@capacitor/preferences";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog.tsx";
+import { ArrowLeftRightIcon, TrashIcon } from "lucide-react";
 
 export const Route = createFileRoute("/settings/")({
   component: Settings
@@ -30,8 +40,14 @@ function Settings() {
   const connectionError = useStatusStore((state) => state.connectionError);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   // const loggedInUser = useStatusStore((state) => state.loggedInUser);
+  const deviceHistory = useStatusStore((state) => state.deviceHistory);
+  const setDeviceHistory = useStatusStore((state) => state.setDeviceHistory);
+  const removeDeviceHistory = useStatusStore(
+    (state) => state.removeDeviceHistory
+  );
 
   const [address, setAddress] = useState(getDeviceAddress());
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const settings = useQuery({
     queryKey: ["settings"],
@@ -39,6 +55,14 @@ function Settings() {
   });
 
   const { t } = useTranslation();
+
+  useEffect(() => {
+    Preferences.get({ key: "deviceHistory" }).then((v) => {
+      if (v.value) {
+        setDeviceHistory(JSON.parse(v.value));
+      }
+    });
+  }, []);
 
   const update = useMutation({
     mutationFn: (params: UpdateSettingsRequest) =>
@@ -62,6 +86,49 @@ function Settings() {
               location.reload();
             }}
           />
+
+          {deviceHistory.length > 0 && (
+            <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  icon={<ArrowLeftRightIcon size="20" />}
+                  label={t("settings.deviceHistory")}
+                  className="w-full"
+                  onClick={() => setHistoryOpen(true)}
+                />
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t("settings.deviceHistory")}</DialogTitle>
+                </DialogHeader>
+                {deviceHistory
+                  .sort((a, b) => (a.address > b.address ? 1 : -1))
+                  .map((entry) => (
+                    <div className="flex flex-row items-center justify-between gap-3">
+                      <SCNButton
+                        className="w-full"
+                        key={entry.address}
+                        onClick={() => {
+                          setDeviceAddress(entry.address);
+                          location.reload();
+                        }}
+                        variant="outline"
+                      >
+                        {entry.address}
+                      </SCNButton>
+                      <SCNButton
+                        variant="ghost"
+                        size="icon"
+                        color="danger"
+                        onClick={() => removeDeviceHistory(entry.address)}
+                      >
+                        <TrashIcon size="20" />
+                      </SCNButton>
+                    </div>
+                  ))}
+              </DialogContent>
+            </Dialog>
+          )}
 
           {connectionError !== "" && (
             <div className="text-error">{connectionError}</div>

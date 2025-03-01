@@ -2,6 +2,11 @@ import { create } from "zustand";
 import { IndexResponse, PlayingResponse, TokenResponse } from "./models";
 import { User } from "@capacitor-firebase/authentication";
 import { defaultSafeAreaInsets, SafeAreaInsets } from "./safeArea";
+import { Preferences } from "@capacitor/preferences";
+
+export interface DeviceHistoryEntry {
+  address: string;
+}
 
 interface StatusState {
   connected: boolean;
@@ -30,6 +35,12 @@ interface StatusState {
 
   safeInsets: SafeAreaInsets;
   setSafeInsets: (insets: SafeAreaInsets) => void;
+
+  deviceHistory: DeviceHistoryEntry[];
+  setDeviceHistory: (history: DeviceHistoryEntry[]) => void;
+  addDeviceHistory: (address: string) => void;
+  removeDeviceHistory: (address: string) => void;
+  clearDeviceHistory: () => void;
 }
 
 export const useStatusStore = create<StatusState>()((set) => ({
@@ -71,5 +82,43 @@ export const useStatusStore = create<StatusState>()((set) => ({
   setNfcModalOpen: (nfcModalOpen) => set({ nfcModalOpen }),
 
   safeInsets: defaultSafeAreaInsets,
-  setSafeInsets: (insets) => set({ safeInsets: insets })
+  setSafeInsets: (insets) => set({ safeInsets: insets }),
+
+  deviceHistory: [],
+  setDeviceHistory: (history: DeviceHistoryEntry[]) =>
+    set({ deviceHistory: history }),
+  addDeviceHistory: (address) =>
+    set((state) => {
+      const devices = [
+        ...state.deviceHistory.filter((entry) => entry.address !== address),
+        { address }
+      ];
+      Preferences.set({
+        key: "deviceHistory",
+        value: JSON.stringify(devices)
+      });
+      return {
+        deviceHistory: devices
+      };
+    }),
+  removeDeviceHistory: (address) =>
+    set((state) => {
+      const devices = state.deviceHistory.filter(
+        (entry) => entry.address !== address
+      );
+      Preferences.set({
+        key: "deviceHistory",
+        value: JSON.stringify(devices)
+      });
+      return {
+        deviceHistory: devices
+      };
+    }),
+  clearDeviceHistory: () => {
+    Preferences.set({
+      key: "deviceHistory",
+      value: JSON.stringify([])
+    });
+    set({ deviceHistory: [] });
+  }
 }));

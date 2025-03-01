@@ -136,6 +136,7 @@
       "designer": "Zaparoo Designer",
       "getApp": "Get the Zaparoo App",
       "language": "Language",
+      "deviceHistory": "Change device",
       "about": {
         "title": "About",
         "version": "Version: {{version}}",

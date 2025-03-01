@@ -41,7 +41,8 @@ export function Button(props: ButtonProps) {
           "border-bd-filled": variant === "fill" && !props.disabled,
           "border-bd-outline": variant === "outline" && !props.disabled,
           "border-foreground-disabled": props.disabled,
-          "text-foreground-disabled": props.disabled
+          "text-foreground-disabled": props.disabled,
+          "text-[#fff]": !props.disabled
         },
         props.className
       )}

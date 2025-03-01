@@ -1,6 +1,6 @@
 import { useStatusStore } from "../lib/store.ts";
 import useWebSocket, { ReadyState } from "react-use-websocket";
-import { getWsUrl, CoreAPI } from "../lib/coreApi.ts";
+import { getWsUrl, CoreAPI, getDeviceAddress } from "../lib/coreApi.ts";
 import { useEffect } from "react";
 import {
   IndexResponse,
@@ -9,6 +9,7 @@ import {
   TokenResponse
 } from "../lib/models.ts";
 import { useShallow } from "zustand/react/shallow";
+import { Preferences } from "@capacitor/preferences";
 
 export function CoreApiWebSocket() {
   const {
@@ -17,7 +18,9 @@ export function CoreApiWebSocket() {
     setConnectionError,
     setPlaying,
     setGamesIndex,
-    setLastToken
+    setLastToken,
+    addDeviceHistory,
+    setDeviceHistory
   } = useStatusStore(
     useShallow((state) => ({
       connected: state.connected,
@@ -25,7 +28,9 @@ export function CoreApiWebSocket() {
       setConnectionError: state.setConnectionError,
       setPlaying: state.setPlaying,
       setGamesIndex: state.setGamesIndex,
-      setLastToken: state.setLastToken
+      setLastToken: state.setLastToken,
+      addDeviceHistory: state.addDeviceHistory,
+      setDeviceHistory: state.setDeviceHistory
     }))
   );
 
@@ -41,6 +46,13 @@ export function CoreApiWebSocket() {
       console.log(e);
     },
     onOpen: () => {
+      setConnectionError("");
+      Preferences.get({ key: "deviceHistory" }).then((v) => {
+        if (v.value) {
+          setDeviceHistory(JSON.parse(v.value));
+          addDeviceHistory(getDeviceAddress());
+        }
+      });
       CoreAPI.media().then((v) => {
         setGamesIndex(v.database);
         if (v.active.length > 0) {

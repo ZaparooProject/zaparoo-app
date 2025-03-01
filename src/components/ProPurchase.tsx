@@ -77,7 +77,7 @@ const ProPurchaseModal = (props: {
       open={props.proPurchaseModalOpen}
       onOpenChange={props.setProPurchaseModalOpen}
     >
-      <DialogContent className="max-w-[300px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("scan.purchaseProTitle")}</DialogTitle>
         </DialogHeader>
