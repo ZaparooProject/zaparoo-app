@@ -1,3 +1,4 @@
+import { safeAreaBottomPx, safeAreaTopPx } from "@/lib/safeArea";
 import classNames from "classnames";
 import { useSwipeable } from "react-swipeable";
 
@@ -35,8 +36,8 @@ export function SlideModal(props: {
         bottom: props.isOpen ? "0" : "-100vh",
         width: "100%",
         transition: "bottom 0.2s ease-in-out",
-        maxHeight: "calc(100vh - env(safe-area-inset-top) - 75px)",
-        paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))"
+        maxHeight: `calc(100vh - ${safeAreaTopPx} - 75px)`,
+        paddingBottom: `calc(0.75rem + ${safeAreaBottomPx})`
       }}
     >
       <div

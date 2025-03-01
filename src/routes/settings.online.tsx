@@ -110,6 +110,26 @@ function About() {
                 disabled={!onlineEmail || !onlinePassword || onlineLoggingIn}
                 className="w-full"
               />
+              <Button
+                label={t("online.loginGoogle")}
+                className="w-full"
+                onClick={() =>
+                  FirebaseAuthentication.signInWithGoogle()
+                    .then((result) => {
+                      if (result) {
+                        toast.success(t("online.loginSuccess"));
+                      } else {
+                        toast.error(t("online.loginWrong"));
+                      }
+                      setLoggedInUser(result.user);
+                    })
+                    .catch((e: Error) => {
+                      console.error(e);
+                      toast.error(t("online.loginWrong"));
+                      setLoggedInUser(null);
+                    })
+                }
+              />
             </div>
           )}
         </div>

@@ -35,6 +35,7 @@ import { CopyButton } from "@/components/CopyButton.tsx";
 import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
+import { safeAreaBottomPx } from "@/lib/safeArea.ts";
 
 const initData = {
   restartScan: false,
@@ -510,7 +511,7 @@ function Index() {
         title={t("scan.historyTitle")}
       >
         {history.data && (
-          <div style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+          <div style={{ paddingBottom: safeAreaBottomPx }}>
             {history.data.entries &&
               history.data.entries.map((item, i) => (
                 <div

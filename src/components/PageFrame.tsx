@@ -1,3 +1,9 @@
+import {
+  safeAreaBottomPx,
+  safeAreaLeftPx,
+  safeAreaRightPx,
+  safeAreaTopPx
+} from "@/lib/safeArea";
 import { BackIcon } from "../lib/images";
 
 interface PageFrameProps {
@@ -11,11 +17,12 @@ export function PageFrame(props: PageFrameProps) {
     <div
       className="w-dvh h-dvh overflow-y-auto"
       style={{
-        paddingBottom:
-          "calc(1.5rem + 80px + env(safe-area-inset-top) + env(safe-area-inset-bottom))",
-        marginBottom: "env(safe-area-inset-bottom)",
-        paddingRight: "calc(1rem + env(safe-area-inset-right))",
-        paddingLeft: "calc(1rem + env(safe-area-inset-left))"
+        paddingBottom: `calc(1rem + 80px + ${safeAreaTopPx} + ${safeAreaBottomPx})`,
+        marginTop: safeAreaTopPx,
+        marginBottom: safeAreaBottomPx,
+        paddingTop: "1rem",
+        paddingRight: `calc(1rem + ${safeAreaRightPx})`,
+        paddingLeft: `calc(1rem + ${safeAreaLeftPx})`
       }}
     >
       {props.title || props.back ? (
