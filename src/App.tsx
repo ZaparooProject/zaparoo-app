@@ -7,14 +7,14 @@ import { Capacitor } from "@capacitor/core";
 import { useStatusStore } from "./lib/store";
 import { DatabaseIcon, PlayIcon } from "./lib/images";
 import { usePrevious } from "@uidotdev/usehooks";
-import { Button } from "./components/wui/Button";
-import classNames from "classnames";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { useTranslation } from "react-i18next";
 import { CoreApiWebSocket } from "./components/CoreApiWebSocket.tsx";
 import AppUrlListener from "./lib/deepLinks.tsx";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { initSafeAreaInsets } from "./lib/safeArea.ts";
+import { MediaIndexingToast } from "./components/MediaIndexingToast.tsx";
+import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 
 const router = createRouter({
   scrollRestoration: true,
@@ -66,51 +66,7 @@ export default function App() {
     if (gamesIndex.indexing && !hideGamesIndex) {
       toast.loading(
         (to) => (
-          <div
-            className="flex flex-grow flex-row items-center justify-between"
-            onClick={() => toast.dismiss(to.id)}
-          >
-            <div className="flex flex-grow flex-col pr-3">
-              <div className="font-semibold">{t("toast.updateDbHeading")}</div>
-              <div className="text-sm">
-                {gamesIndex.currentStepDisplay
-                  ? gamesIndex.currentStep === gamesIndex.totalSteps
-                    ? t("toast.writingDb")
-                    : gamesIndex.currentStepDisplay
-                  : t("toast.preparingDb")}
-              </div>
-              <div className="h-[10px] w-full rounded-full border border-solid border-bd-filled bg-background">
-                <div
-                  className={classNames(
-                    "h-[8px] rounded-full border border-solid border-background bg-button-pattern",
-                    {
-                      hidden: gamesIndex.currentStep === 0,
-                      "animate-pulse":
-                        gamesIndex.currentStep === 0 ||
-                        gamesIndex.currentStep === gamesIndex.totalSteps
-                    }
-                  )}
-                  style={{
-                    width:
-                      gamesIndex.currentStep && gamesIndex.totalSteps
-                        ? `${((gamesIndex.currentStep / gamesIndex.totalSteps) * 100).toFixed(2)}%`
-                        : "100%"
-                  }}
-                ></div>
-              </div>
-            </div>
-            <div>
-              <Button
-                label={t("toast.hideLabel")}
-                variant="outline"
-                onClick={() => {
-                  setHideGamesIndex(true);
-                  toast.dismiss(to.id);
-                }}
-                className="h-full w-4 text-sm"
-              />
-            </div>
-          </div>
+          <MediaIndexingToast id={to.id} setHideToast={setHideGamesIndex} />
         ),
         {
           id: "indexing",
@@ -126,27 +82,14 @@ export default function App() {
     if (!gamesIndex.indexing && prevGamesIndex?.indexing) {
       toast.dismiss("indexing");
       setHideGamesIndex(false);
-      toast.success(
-        (to) => (
-          <div
-            className="flex flex-grow flex-col"
-            onClick={() => toast.dismiss(to.id)}
-          >
-            <div className="font-semibold">{t("toast.updatedDb")}</div>
-            <div className="text-sm">
-              {t("toast.filesFound", { count: gamesIndex.totalFiles })}
-            </div>
-          </div>
-        ),
-        {
-          id: "indexed",
-          icon: (
-            <span className="pl-1 pr-1 text-success">
-              <DatabaseIcon size="24" />
-            </span>
-          )
-        }
-      );
+      toast.success((to) => <MediaFinishedToast id={to.id} />, {
+        id: "indexed",
+        icon: (
+          <span className="pl-1 pr-1 text-success">
+            <DatabaseIcon size="24" />
+          </span>
+        )
+      });
     }
   }, [gamesIndex, prevGamesIndex, hideGamesIndex, t]);
 
