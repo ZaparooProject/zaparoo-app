@@ -97,11 +97,6 @@ function Index() {
 
   const [launcherAccess, setLauncherAccess] = useState(false);
   useEffect(() => {
-    // if (import.meta.env.DEV) {
-    //   setLauncherAccess(true);
-    //   return;
-    // }
-
     Preferences.get({ key: "launcherAccess" }).then((result) => {
       if (result.value) {
         setLauncherAccess(result.value === "true");
@@ -152,6 +147,20 @@ function Index() {
             data: ""
           });
         } else if (result.info.tag && sessionManager.launchOnScan) {
+          if (!launcherAccess) {
+            setProPurchaseModalOpen(true);
+            setLastToken({
+              uid: result.info.tag.uid,
+              text: result.info.tag.text,
+              scanTime: new Date().toISOString(),
+              type: "",
+              data: ""
+            });
+            cancelSession();
+            setScanSession(false);
+            return;
+          }
+
           CoreAPI.launch({
             uid: result.info.tag.uid,
             text: result.info.tag.text
@@ -217,11 +226,6 @@ function Index() {
           return;
         }
 
-        CoreAPI.launch({
-          uid: barcode.rawValue,
-          text: barcode.rawValue
-        });
-
         setLastToken({
           type: "Barcode",
           uid: barcode.rawValue,
@@ -229,6 +233,15 @@ function Index() {
           scanTime: new Date().toISOString(),
           data: ""
         });
+
+        if (!launcherAccess) {
+          setProPurchaseModalOpen(true);
+        } else {
+          CoreAPI.launch({
+            uid: barcode.rawValue,
+            text: barcode.rawValue
+          });
+        }
       });
       return;
     }
@@ -428,15 +441,11 @@ function Index() {
                       label={t("scan.launchOnScan")}
                       value={launchOnScan}
                       setValue={(v) => {
-                        if (launcherAccess) {
-                          setLaunchOnScan(v);
-                          Preferences.set({
-                            key: "launchOnScan",
-                            value: v.toString()
-                          });
-                        } else {
-                          setProPurchaseModalOpen(true);
-                        }
+                        setLaunchOnScan(v);
+                        Preferences.set({
+                          key: "launchOnScan",
+                          value: v.toString()
+                        });
                       }}
                     />
                   </div>
