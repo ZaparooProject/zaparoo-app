@@ -7,7 +7,7 @@ export function ToggleSwitch(props: {
   disabled?: boolean;
 }) {
   return (
-    <label className="text-foreground flex cursor-pointer select-none items-center justify-between">
+    <label className="flex cursor-pointer select-none items-center justify-between text-foreground">
       <span>{props.label}</span>
       <div className="relative">
         <input
@@ -43,7 +43,7 @@ export function ToggleSwitch(props: {
           className={classNames(
             "dot",
             "bg-bd-outline",
-            "peer-checked:bg-foreground",
+            "peer-checked:bg-white",
             "absolute",
             "left-1.5",
             "top-2",
