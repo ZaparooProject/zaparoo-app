@@ -1,5 +1,5 @@
 export enum Method {
-  Launch = "launch",
+  Run = "run",
   Stop = "stop",
   Tokens = "tokens",
   History = "tokens.history",

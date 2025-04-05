@@ -36,9 +36,16 @@ import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
 
+const zapUrls = [
+  "https://zpr.au",
+  "https://zaparoo.link",
+  "https://go.tapto.life"
+];
+const zapUrlRegex = new RegExp(`^(${zapUrls.join("|")})/.+$`);
+
 const initData = {
   restartScan: false,
-  launchOnScan: false,
+  launchOnScan: true,
   cameraDefault: false
 };
 
@@ -47,7 +54,7 @@ export const Route = createFileRoute("/")({
     initData.restartScan =
       (await Preferences.get({ key: "restartScan" })).value === "true";
     initData.launchOnScan =
-      (await Preferences.get({ key: "launchOnScan" })).value === "true";
+      (await Preferences.get({ key: "launchOnScan" })).value !== "false";
     initData.cameraDefault =
       (await Preferences.get({ key: "cameraDefault" })).value === "true";
   },
@@ -128,6 +135,33 @@ function Index() {
     };
   }, []);
 
+  const runToken = (uid: string, text: string): boolean => {
+    if (uid === "" && text === "") {
+      return false;
+    }
+
+    const token = {
+      uid: uid,
+      text: text,
+      scanTime: new Date().toISOString(),
+      type: "",
+      data: ""
+    };
+    setLastToken(token);
+
+    if (!connected || !sessionManager.launchOnScan) {
+      return true;
+    }
+
+    if (launcherAccess || text.match(zapUrlRegex)) {
+      CoreAPI.launch(token);
+      return true;
+    } else {
+      setProPurchaseModalOpen(true);
+      return false;
+    }
+  };
+
   const doScan = () => {
     setScanSession(true);
 
@@ -138,35 +172,13 @@ function Index() {
           setScanStatus(ScanResult.Default);
         }, statusTimeout);
 
-        if (result.info.tag && (!sessionManager.launchOnScan || !connected)) {
-          setLastToken({
-            uid: result.info.tag.uid,
-            text: result.info.tag.text,
-            scanTime: new Date().toISOString(),
-            type: "",
-            data: ""
-          });
-        } else if (result.info.tag && sessionManager.launchOnScan) {
-          if (!launcherAccess) {
-            setProPurchaseModalOpen(true);
-            setLastToken({
-              uid: result.info.tag.uid,
-              text: result.info.tag.text,
-              scanTime: new Date().toISOString(),
-              type: "",
-              data: ""
-            });
+        if (result.info.tag) {
+          const ok = runToken(result.info.tag.uid, result.info.tag.text);
+          if (!ok) {
             cancelSession();
             setScanSession(false);
             return;
           }
-
-          CoreAPI.launch({
-            uid: result.info.tag.uid,
-            text: result.info.tag.text
-          });
-        } else {
-          console.log("no tag found");
         }
 
         if (
@@ -226,22 +238,7 @@ function Index() {
           return;
         }
 
-        setLastToken({
-          type: "Barcode",
-          uid: barcode.rawValue,
-          text: barcode.rawValue,
-          scanTime: new Date().toISOString(),
-          data: ""
-        });
-
-        if (!launcherAccess) {
-          setProPurchaseModalOpen(true);
-        } else {
-          CoreAPI.launch({
-            uid: barcode.rawValue,
-            text: barcode.rawValue
-          });
-        }
+        runToken(barcode.rawValue, barcode.rawValue);
       });
       return;
     }

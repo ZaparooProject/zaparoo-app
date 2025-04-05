@@ -26,7 +26,7 @@ export const sessionManager = {
   setShouldRestart: (value: boolean) => {
     sessionManager.shouldRestart = value;
   },
-  launchOnScan: false,
+  launchOnScan: true,
   setLaunchOnScan: (value: boolean) => {
     sessionManager.launchOnScan = value;
   }
