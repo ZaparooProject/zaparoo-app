@@ -125,17 +125,17 @@ PODS:
   - nanopb/decode (3.30910.0)
   - nanopb/encode (3.30910.0)
   - PromisesObjC (2.4.0)
-  - PurchasesHybridCommon (13.17.1):
-    - RevenueCat (= 5.16.1)
+  - PurchasesHybridCommon (13.26.0):
+    - RevenueCat (= 5.20.0)
   - RecaptchaInterop (100.0.0)
-  - RevenueCat (5.16.1)
-  - RevenuecatPurchasesCapacitor (10.0.2):
+  - RevenueCat (5.20.0)
+  - RevenuecatPurchasesCapacitor (10.2.2):
     - Capacitor
-    - PurchasesHybridCommon (= 13.17.1)
-  - Sentry/HybridSDK (8.36.0)
-  - SentryCapacitor (1.2.0):
+    - PurchasesHybridCommon (= 13.26.0)
+  - Sentry/HybridSDK (8.48.0)
+  - SentryCapacitor (1.3.0):
     - Capacitor
-    - Sentry/HybridSDK (= 8.36.0)
+    - Sentry/HybridSDK (= 8.48.0)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@7.0.1_@capacitor+core@7.0.1/node_modules/@capacitor/ios`)"
@@ -151,8 +151,8 @@ DEPENDENCIES:
   - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor/preferences`)"
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@7.0.0_@capacitor+core@7.0.1/node_modules/@capacitor/status-bar`)"
   - "CapawesomeTeamCapacitorNfc (from `../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.0.1_@capacitor+core@7.0.1/node_modules/@capawesome-team/capacitor-nfc`)"
-  - "RevenuecatPurchasesCapacitor (from `../../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.0.2_@capacitor+core@7.0.1/node_modules/@revenuecat/purchases-capacitor`)"
-  - "SentryCapacitor (from `../../node_modules/.pnpm/@sentry+capacitor@1.2.0_@capacitor+core@7.0.1_@sentry+react@8.42.0_react@18.3.1_/node_modules/@sentry/capacitor`)"
+  - "RevenuecatPurchasesCapacitor (from `../../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.2.2_@capacitor+core@7.0.1/node_modules/@revenuecat/purchases-capacitor`)"
+  - "SentryCapacitor (from `../../node_modules/.pnpm/@sentry+capacitor@1.3.0_@capacitor+core@7.0.1_@sentry+react@8.42.0_react@18.3.1_/node_modules/@sentry/capacitor`)"
 
 SPEC REPOS:
   trunk:
@@ -207,9 +207,9 @@ EXTERNAL SOURCES:
   CapawesomeTeamCapacitorNfc:
     :path: "../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.0.1_@capacitor+core@7.0.1/node_modules/@capawesome-team/capacitor-nfc"
   RevenuecatPurchasesCapacitor:
-    :path: "../../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.0.2_@capacitor+core@7.0.1/node_modules/@revenuecat/purchases-capacitor"
+    :path: "../../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.2.2_@capacitor+core@7.0.1/node_modules/@revenuecat/purchases-capacitor"
   SentryCapacitor:
-    :path: "../../node_modules/.pnpm/@sentry+capacitor@1.2.0_@capacitor+core@7.0.1_@sentry+react@8.42.0_react@18.3.1_/node_modules/@sentry/capacitor"
+    :path: "../../node_modules/.pnpm/@sentry+capacitor@1.3.0_@capacitor+core@7.0.1_@sentry+react@8.42.0_react@18.3.1_/node_modules/@sentry/capacitor"
 
 SPEC CHECKSUMS:
   AppAuth: d4f13a8fe0baf391b2108511793e4b479691fb73
@@ -244,13 +244,13 @@ SPEC CHECKSUMS:
   MLKitVision: 45e79d68845a2de77e2dd4d7f07947f0ed157b0e
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
-  PurchasesHybridCommon: 7ee74fefbad7fa42a74ff6e339af46fac3af4640
+  PurchasesHybridCommon: fa166fc8b385cf80f581f923c91d8ccffe5dd7f8
   RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
-  RevenueCat: d38c56d5e1058f955ee7fce4ea7b18d126235e64
-  RevenuecatPurchasesCapacitor: c2e002d8dcbe23905d77ddede83e1ed0f37215c0
-  Sentry: f8374b5415bc38dfb5645941b3ae31230fbeae57
-  SentryCapacitor: 8c9d5b901ab6e835e88743ff187fc00926d85dc5
+  RevenueCat: e47ff90dfd271fde155a4befe48e8fc02e8281e4
+  RevenuecatPurchasesCapacitor: d8d6710d402b7a4abea86e11f6d6e7ad3c1c300a
+  Sentry: 1ca8405451040482877dcd344dfa3ef80b646631
+  SentryCapacitor: 62a4028e6ee46d50ee6d5108aa08eea2722a4638
 
-PODFILE CHECKSUM: 85162bad991c395246f05adc83a2c77c7dc53779
+PODFILE CHECKSUM: a2e42c6a9b66fcab929efcb070c565fad74212bd
 
 COCOAPODS: 1.16.2
