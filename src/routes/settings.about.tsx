@@ -76,12 +76,24 @@ function About() {
             </h3>
 
             <div className="text-center">
-              batty, birdybro, Jon, RetroRGB, Jose BG, Porkchop Express, Tony
-              Escobar, Mark DeRidder, Dan Doyle, Phil Felice, atrac17, Glenn,
-              Alexander Facchini, Lu's Retro Source, Alexis Conrad, Patrick
-              McCarron, Oyster_Source, Clinton Cronin, Tuxosaurus, EntirelyTom,
-              the_remora, Retrosoft Studios, Casey McGinty, Biddle, Chris
-              Platts, RobF228, Gentlemen's Pixel Club
+              Jon, <span style={{ color: "#F1C40D" }}>RetroRGB</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Jose BG</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Mark DeRidder</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Dan Doyle</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Phil Felice</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Glenn</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Alexander Facchini</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Lu's Retro Source</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Alexis Conrad</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Tony Shadwick</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Clinton Cronin</span>,{" "}
+              Tuxosaurus, <span style={{ color: "#F1C40D" }}>EntirelyTom</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>the_remora</span>,{" "}
+              <span style={{ color: "#E74C3C" }}>Retrosoft Studios</span>, Casey
+              McGinty, <span style={{ color: "#E91E63" }}>Biddle</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Chris Platts</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Gentlemen's Pixel Club</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>VolJoe</span>
             </div>
 
             <Button
@@ -93,19 +105,6 @@ function About() {
                 })
               }
             />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <h3 className="text-center text-lg font-bold">
-              {t("settings.about.contributors")}
-            </h3>
-
-            <div className="text-center">
-              Aitor Gómez García, Andrea Bogazzi, Anime0t4ku, ArielAces,
-              BedroomNinja, EntirelyTom, Gaz, Phoenix, Ranny Snice, RetroCastle,
-              Sensorium, Spice_King, TheTrain, theypsilon, Tim Wilsie, V1605,
-              whatskenmaking, wizzo, Ziggurat
-            </div>
           </div>
         </div>
       </PageFrame>
