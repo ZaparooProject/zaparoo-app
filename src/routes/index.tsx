@@ -34,6 +34,7 @@ import { CopyButton } from "@/components/CopyButton.tsx";
 import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
+import { Nfc } from "@capawesome-team/capacitor-nfc";
 
 const zapUrls = [
   "https://zpr.au",
@@ -158,8 +159,8 @@ function Index() {
 
   const runQueue = useStatusStore((state) => state.runQueue);
   const setRunQueue = useStatusStore((state) => state.setRunQueue);
-  //const writeQueue = useStatusStore((state) => state.writeQueue);
-  //const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
+  const writeQueue = useStatusStore((state) => state.writeQueue);
+  const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
 
   const [restartScan, setRestartScan] = useState(initData.restartScan);
   useEffect(() => {
@@ -219,6 +220,41 @@ function Index() {
     );
     setRunQueue("");
   }, [runQueue]);
+
+  useEffect(() => {
+    if (writeQueue === "") {
+      return;
+    }
+    Nfc.isSupported()
+      .then((result) => {
+        if (!result.nfc) {
+          toast.error((to) => (
+            <span
+              className="flex flex-grow flex-col"
+              onClick={() => toast.dismiss(to.id)}
+            >
+              {t("write.nfcNotSupported")}
+            </span>
+          ));
+          return;
+        } else {
+          console.log("writeQueue", writeQueue);
+          setWriteOpen(true);
+          nfcWriter.write(WriteAction.Write, writeQueue);
+          setWriteQueue("");
+        }
+      })
+      .catch((e) => {
+        toast.error((to) => (
+          <span
+            className="flex flex-grow flex-col"
+            onClick={() => toast.dismiss(to.id)}
+          >
+            {e.message}
+          </span>
+        ));
+      });
+  }, [writeQueue, nfcWriter, t]);
 
   const doScan = () => {
     setScanSession(true);
