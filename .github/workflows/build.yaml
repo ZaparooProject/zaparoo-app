@@ -17,6 +17,11 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 10
+          run_install: false
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -31,12 +36,12 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "VITE_VERSION=$VERSION" >> $GITHUB_ENV
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
       - name: Production build
         env:
           VITE_GOOGLE_STORE_API: ${{ secrets.VITE_GOOGLE_STORE_API }}
           VITE_APPLE_STORE_API: ${{ secrets.VITE_APPLE_STORE_API }}
-        run: npm run build
+        run: pnpm build
       - name: Package release tarball
         if: startsWith(github.ref, 'refs/tags/')
         run: tar czvf zaparoo_app-web-${VERSION}.tar.gz -C ./dist .
