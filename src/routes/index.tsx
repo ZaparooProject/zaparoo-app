@@ -14,7 +14,7 @@ import { useStatusStore } from "../lib/store";
 import { useQuery } from "@tanstack/react-query";
 import { KeepAwake } from "@capacitor-community/keep-awake";
 import toast from "react-hot-toast";
-import { ScanResult } from "../lib/models";
+import { ScanResult, TokenResponse } from "../lib/models";
 import {
   errorColor,
   ScanSpinner,
@@ -41,7 +41,72 @@ const zapUrls = [
   "https://zaparoo.link",
   "https://go.tapto.life"
 ];
-const zapUrlRegex = new RegExp(`^(${zapUrls.join("|")})/.+$`);
+
+const isZapUrl = (url: string) => {
+  return zapUrls.some((zapUrl) => url.toLowerCase().startsWith(zapUrl));
+};
+
+const runToken = async (
+  uid: string,
+  text: string,
+  launcherAccess: boolean,
+  connected: boolean,
+  setLastToken: (token: TokenResponse) => void,
+  setProPurchaseModalOpen: (open: boolean) => void
+): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if (uid === "" && text === "") {
+      return resolve(false);
+    }
+
+    const token = {
+      uid: uid,
+      text: text,
+      scanTime: new Date().toISOString(),
+      type: "",
+      data: ""
+    };
+    setLastToken(token);
+
+    if (!sessionManager.launchOnScan) {
+      return resolve(true);
+    }
+
+    const run = async () => {
+      if (launcherAccess || isZapUrl(text)) {
+        CoreAPI.launch(token)
+          .then(() => {
+            resolve(true);
+          })
+          .catch((e) => {
+            toast.error((to) => (
+              <span
+                className="flex flex-grow flex-col"
+                onClick={() => toast.dismiss(to.id)}
+              >
+                {e.message}
+              </span>
+            ));
+            console.error("launch error", e);
+            resolve(false);
+          });
+        return;
+      } else {
+        setProPurchaseModalOpen(true);
+        return resolve(false);
+      }
+    };
+
+    if (!connected) {
+      // try wait a little bit in case the app is cold starting
+      setTimeout(() => {
+        run();
+      }, 500);
+    } else {
+      run();
+    }
+  });
+};
 
 const initData = {
   restartScan: false,
@@ -92,6 +157,11 @@ function Index() {
 
   const safeInsets = useStatusStore((state) => state.safeInsets);
 
+  const runQueue = useStatusStore((state) => state.runQueue);
+  const setRunQueue = useStatusStore((state) => state.setRunQueue);
+  //const writeQueue = useStatusStore((state) => state.writeQueue);
+  //const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
+
   const [restartScan, setRestartScan] = useState(initData.restartScan);
   useEffect(() => {
     sessionManager.setShouldRestart(restartScan);
@@ -135,32 +205,21 @@ function Index() {
     };
   }, []);
 
-  const runToken = (uid: string, text: string): boolean => {
-    if (uid === "" && text === "") {
-      return false;
+  useEffect(() => {
+    if (runQueue === "") {
+      return;
     }
-
-    const token = {
-      uid: uid,
-      text: text,
-      scanTime: new Date().toISOString(),
-      type: "",
-      data: ""
-    };
-    setLastToken(token);
-
-    if (!connected || !sessionManager.launchOnScan) {
-      return true;
-    }
-
-    if (launcherAccess || text.match(zapUrlRegex)) {
-      CoreAPI.launch(token);
-      return true;
-    } else {
-      setProPurchaseModalOpen(true);
-      return false;
-    }
-  };
+    console.log("runQueue", runQueue);
+    runToken(
+      runQueue,
+      runQueue,
+      launcherAccess,
+      connected,
+      setLastToken,
+      setProPurchaseModalOpen
+    );
+    setRunQueue("");
+  }, [runQueue]);
 
   const doScan = () => {
     setScanSession(true);
@@ -173,7 +232,14 @@ function Index() {
         }, statusTimeout);
 
         if (result.info.tag) {
-          const ok = runToken(result.info.tag.uid, result.info.tag.text);
+          const ok = runToken(
+            result.info.tag.uid,
+            result.info.tag.text,
+            launcherAccess,
+            connected,
+            setLastToken,
+            setProPurchaseModalOpen
+          );
           if (!ok) {
             cancelSession();
             setScanSession(false);
@@ -238,7 +304,14 @@ function Index() {
           return;
         }
 
-        runToken(barcode.rawValue, barcode.rawValue);
+        runToken(
+          barcode.rawValue,
+          barcode.rawValue,
+          launcherAccess,
+          connected,
+          setLastToken,
+          setProPurchaseModalOpen
+        );
       });
       return;
     }

@@ -32,10 +32,6 @@ export const RestorePuchasesButton = () => {
                     key: "launcherAccess",
                     value: "false"
                   });
-                  Preferences.set({
-                    key: "launchOnScan",
-                    value: "false"
-                  });
                 }
                 location.reload();
               })
@@ -158,10 +154,6 @@ export const useProPurchase = () => {
           setProAccess(false);
           Preferences.set({
             key: "launcherAccess",
-            value: "false"
-          });
-          Preferences.set({
-            key: "launchOnScan",
             value: "false"
           });
         }
