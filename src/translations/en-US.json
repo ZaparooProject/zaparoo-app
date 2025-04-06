@@ -54,7 +54,7 @@
       "nowPlayingSystem": "System: {{system}}",
       "lastScannedHeading": "Last scanned",
       "lastScannedTime": "Time: {{time}}",
-      "lastScannedUid": "UID: {{uid}}",
+      "lastScannedUid": "ID: {{uid}}",
       "lastScannedText": "Value: {{text}}",
       "historyTitle": "Scan History",
       "purchaseProTitle": "Zaparoo Pro",

@@ -579,17 +579,19 @@ function Index() {
                       : new Date(lastToken.scanTime).toLocaleString()
                 })}
               </p>
-              <p style={{ wordBreak: "break-all" }}>
-                {t("scan.lastScannedUid", {
-                  uid:
-                    lastToken.uid === "" || lastToken.uid === "__api__"
-                      ? "-"
-                      : lastToken.uid
-                })}
-                {lastToken.uid !== "" && lastToken.uid !== "__api__" && (
-                  <CopyButton text={lastToken.uid} />
-                )}
-              </p>
+              {lastToken.uid !== lastToken.text && (
+                <p style={{ wordBreak: "break-all" }}>
+                  {t("scan.lastScannedUid", {
+                    uid:
+                      lastToken.uid === "" || lastToken.uid === "__api__"
+                        ? "-"
+                        : lastToken.uid
+                  })}
+                  {lastToken.uid !== "" && lastToken.uid !== "__api__" && (
+                    <CopyButton text={lastToken.uid} />
+                  )}
+                </p>
+              )}
               <p style={{ wordBreak: "break-all" }}>
                 {t("scan.lastScannedText", {
                   text: lastToken.text === "" ? "-" : lastToken.text
