@@ -41,7 +41,7 @@ export function BottomNav() {
     <div
       className="border-t border-t-[#ffffff21] bg-[#111928bf] px-9 pb-1 backdrop-blur"
       style={{
-        height: `calc(80px + ${safeInsets.top})`,
+        height: `calc(80px + ${safeInsets.bottom})`,
         paddingBottom: safeInsets.bottom,
         paddingRight: `calc(2.25rem + ${safeInsets.right})`,
         paddingLeft: `calc(2.25rem + ${safeInsets.left})`
