@@ -6,7 +6,6 @@ import {
   CheckIcon,
   DeviceIcon,
   HistoryIcon,
-  Logo,
   SettingsIcon,
   WarningIcon
 } from "../lib/images";
@@ -329,7 +328,9 @@ function Index() {
     <>
       <PageFrame>
         <div className="flex flex-row justify-between">
-          <Logo width="140px" />
+          <div>
+            <img src="/lockup.png" alt="Zaparoo logo" width="160px" />
+          </div>
           <ToggleChip
             icon={<HistoryIcon size="32" />}
             state={historyOpen}
@@ -521,30 +522,9 @@ function Index() {
                   </div>
                 </>
               )}
-
-              <div className="p-3 pt-6">
-                <div className="flex flex-row items-center justify-between">
-                  <p className="font-bold capitalize text-gray-400">
-                    {t("scan.nowPlayingHeading")}
-                  </p>
-                </div>
-                <div>
-                  <p>
-                    {t("scan.nowPlayingName", {
-                      game: playing.mediaName === "" ? "-" : playing.mediaName
-                    })}
-                  </p>
-                  <p>
-                    {t("scan.nowPlayingSystem", {
-                      system:
-                        playing.systemName === "" ? "-" : playing.systemName
-                    })}
-                  </p>
-                </div>
-              </div>
             </div>
           )}
-          <div className="p-3">
+          <div className="p-3 pt-6">
             <div className="flex flex-row items-center justify-between">
               <p className="font-bold capitalize text-gray-400">
                 {t("scan.lastScannedHeading")}
@@ -582,6 +562,28 @@ function Index() {
               </p>
             </div>
           </div>
+
+          {connected && (
+            <div className="p-3">
+              <div className="flex flex-row items-center justify-between">
+                <p className="font-bold capitalize text-gray-400">
+                  {t("scan.nowPlayingHeading")}
+                </p>
+              </div>
+              <div>
+                <p>
+                  {t("scan.nowPlayingName", {
+                    game: playing.mediaName === "" ? "-" : playing.mediaName
+                  })}
+                </p>
+                <p>
+                  {t("scan.nowPlayingSystem", {
+                    system: playing.systemName === "" ? "-" : playing.systemName
+                  })}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </PageFrame>
 
