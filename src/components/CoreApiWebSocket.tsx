@@ -1,7 +1,5 @@
 import { useStatusStore } from "../lib/store.ts";
-import useWebSocket, { ReadyState } from "react-use-websocket";
 import { getWsUrl, CoreAPI, getDeviceAddress } from "../lib/coreApi.ts";
-import { useEffect } from "react";
 import {
   IndexResponse,
   Notification,
@@ -10,10 +8,12 @@ import {
 } from "../lib/models.ts";
 import { useShallow } from "zustand/react/shallow";
 import { Preferences } from "@capacitor/preferences";
+import ReconnectingWebSocket from "reconnecting-websocket";
+
+let coreApiWs: ReconnectingWebSocket | null = null;
 
 export function CoreApiWebSocket() {
   const {
-    connected,
     setConnected,
     setConnectionError,
     setPlaying,
@@ -23,7 +23,6 @@ export function CoreApiWebSocket() {
     setDeviceHistory
   } = useStatusStore(
     useShallow((state) => ({
-      connected: state.connected,
       setConnected: state.setConnected,
       setConnectionError: state.setConnectionError,
       setPlaying: state.setPlaying,
@@ -34,58 +33,46 @@ export function CoreApiWebSocket() {
     }))
   );
 
-  const { lastMessage, readyState, sendMessage } = useWebSocket(getWsUrl, {
-    shouldReconnect: () => true,
-    retryOnError: true,
-    reconnectInterval: 250,
-    reconnectAttempts: Infinity,
-    share: true,
-    heartbeat: true,
-    onError: (e: WebSocketEventMap["error"]) => {
-      setConnectionError("Could not connect to server: " + getWsUrl());
-      console.log(e);
-    },
-    onOpen: () => {
-      setConnectionError("");
-      Preferences.get({ key: "deviceHistory" }).then((v) => {
-        if (v.value) {
-          setDeviceHistory(JSON.parse(v.value));
-        }
-        addDeviceHistory(getDeviceAddress());
-      });
-      CoreAPI.media().then((v) => {
-        setGamesIndex(v.database);
-        if (v.active.length > 0) {
-          setPlaying(v.active[0]);
-        }
-      });
-      CoreAPI.tokens().then((v) => {
-        if (v.last) {
-          setLastToken(v.last);
-        }
-      });
-    }
+  if (coreApiWs !== null) {
+    return null;
+  }
+
+  coreApiWs = new ReconnectingWebSocket(getWsUrl());
+
+  coreApiWs.addEventListener("error", (event) => {
+    setConnectionError("Could not connect to server: " + getWsUrl());
+    console.log(event);
   });
 
-  CoreAPI.setSend(sendMessage);
+  coreApiWs.addEventListener("open", () => {
+    setConnected(true);
+    setConnectionError("");
+    Preferences.get({ key: "deviceHistory" }).then((v) => {
+      if (v.value) {
+        setDeviceHistory(JSON.parse(v.value));
+      }
+      addDeviceHistory(getDeviceAddress());
+    });
+    CoreAPI.media().then((v) => {
+      setGamesIndex(v.database);
+      if (v.active.length > 0) {
+        setPlaying(v.active[0]);
+      }
+    });
+    CoreAPI.tokens().then((v) => {
+      if (v.last) {
+        setLastToken(v.last);
+      }
+    });
+  });
 
-  useEffect(() => {
-    switch (readyState) {
-      case ReadyState.OPEN:
-        if (!connected) {
-          setConnected(true);
-          setConnectionError("");
-        }
-        break;
-      case ReadyState.CLOSED:
-        if (connected) {
-          setConnected(false);
-        }
-        break;
-    }
-  }, [readyState, setConnected, connected, setConnectionError]);
+  coreApiWs.addEventListener("close", () => {
+    setConnected(false);
+  });
 
-  useEffect(() => {
+  coreApiWs.addEventListener("message", (event) => {
+    console.debug("message", event.data);
+
     const mediaStarted = (params: PlayingResponse) => {
       console.log("media.started", params);
       setPlaying(params);
@@ -112,7 +99,7 @@ export function CoreApiWebSocket() {
     };
 
     try {
-      const notification = CoreAPI.processReceived(lastMessage);
+      const notification = CoreAPI.processReceived(event);
       if (notification) {
         switch (notification.method) {
           case Notification.MediaStarted:
@@ -132,7 +119,9 @@ export function CoreApiWebSocket() {
     } catch (e) {
       console.error("Error processing message: " + e);
     }
-  }, [lastMessage, setGamesIndex, setLastToken, setPlaying]);
+  });
+
+  CoreAPI.setSend(coreApiWs.send.bind(coreApiWs));
 
   return null;
 }

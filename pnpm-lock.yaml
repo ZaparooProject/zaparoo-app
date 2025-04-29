@@ -116,9 +116,9 @@ importers:
       react-swipeable:
         specifier: ^7.0.2
         version: 7.0.2(react@18.3.1)
-      react-use-websocket:
-        specifier: ^4.13.0
-        version: 4.13.0
+      reconnecting-websocket:
+        specifier: ^4.4.0
+        version: 4.4.0
       tailwind-merge:
         specifier: ^3.0.2
         version: 3.0.2
@@ -3393,9 +3393,6 @@ packages:
     peerDependencies:
       react: ^16.8.3 || ^17 || ^18 || ^19.0.0 || ^19.0.0-rc
 
-  react-use-websocket@4.13.0:
-    resolution: {integrity: sha512-anMuVoV//g2N76Wxqvqjjo1X48r9Np3y1/gMl7arX84tAPXdy5R7sB5lO5hvCzQRYjqXwV8XMAiEBOUbyrZFrw==}
-
   react@18.3.1:
     resolution: {integrity: sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==}
     engines: {node: '>=0.10.0'}
@@ -3429,6 +3426,9 @@ packages:
   readdirp@3.6.0:
     resolution: {integrity: sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==}
     engines: {node: '>=8.10.0'}
+
+  reconnecting-websocket@4.4.0:
+    resolution: {integrity: sha512-D2E33ceRPga0NvTDhJmphEgJ7FUYF0v4lr1ki0csq06OdlxKfugGzN0dSkxM/NfqCxYELK4KcaTOUOjTV6Dcng==}
 
   redent@3.0.0:
     resolution: {integrity: sha512-6tDA8g98We0zd0GvVeMT9arEOnTw9qM03L9cJXaCjrip1OO764RDBLBfrB4cwzNGDj5OA5ioymC9GkizgWJDUg==}
@@ -7394,8 +7394,6 @@ snapshots:
     dependencies:
       react: 18.3.1
 
-  react-use-websocket@4.13.0: {}
-
   react@18.3.1:
     dependencies:
       loose-envify: 1.4.0
@@ -7447,6 +7445,8 @@ snapshots:
   readdirp@3.6.0:
     dependencies:
       picomatch: 2.3.1
+
+  reconnecting-websocket@4.4.0: {}
 
   redent@3.0.0:
     dependencies:

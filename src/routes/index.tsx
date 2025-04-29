@@ -223,9 +223,13 @@ function Index() {
       setLastToken,
       setProPurchaseModalOpen,
       runQueue.unsafe
-    ).catch((e) => {
-      console.error("runQueue error", e);
-    });
+    )
+      .then((success: boolean) => {
+        console.log("runQueue success", success);
+      })
+      .catch((e) => {
+        console.error("runQueue error", e);
+      });
     setRunQueue(null);
   }, [
     connected,
