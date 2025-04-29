@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   appName: "Zaparoo",
   backgroundColor: "#111928",
   server: {
-    url: "http://10.0.0.228:8100",
+    //url: "http://10.0.0.228:8100",
     androidScheme: "http",
     cleartext: true
   },
