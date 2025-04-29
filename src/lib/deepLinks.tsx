@@ -20,7 +20,7 @@ const AppUrlListener: React.FC = () => {
 
       if (path === "/run") {
         console.log("Run queue:", queryParams.v);
-        setRunQueue(queryParams.v);
+        setRunQueue({ value: queryParams.v, unsafe: true });
       } else if (path === "/write") {
         console.log("Write queue:", queryParams.v);
         setWriteQueue(queryParams.v);

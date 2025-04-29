@@ -15,8 +15,7 @@ export enum Method {
   MappingsUpdate = "mappings.update",
   Readers = "readers",
   ReadersWrite = "readers.write",
-  Version = "version",
-  Status = "status" // DEPRECATED
+  Version = "version"
 }
 
 export enum Notification {
@@ -37,6 +36,8 @@ export interface VersionResponse {
 export interface LaunchRequest {
   uid: string;
   text: string;
+  data?: string;
+  unsafe?: boolean;
 }
 
 export interface WriteRequest {

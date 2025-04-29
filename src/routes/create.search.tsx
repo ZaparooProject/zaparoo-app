@@ -315,7 +315,7 @@ function Search() {
               disabled={!selectedResult || !connected}
               onClick={() => {
                 if (selectedResult) {
-                  CoreAPI.launch({
+                  CoreAPI.run({
                     uid: "",
                     text: selectedResult.path
                   });

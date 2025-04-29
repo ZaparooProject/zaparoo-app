@@ -52,7 +52,8 @@ const runToken = async (
   launcherAccess: boolean,
   connected: boolean,
   setLastToken: (token: TokenResponse) => void,
-  setProPurchaseModalOpen: (open: boolean) => void
+  setProPurchaseModalOpen: (open: boolean) => void,
+  unsafe = false
 ): Promise<boolean> => {
   return new Promise((resolve) => {
     if (uid === "" && text === "") {
@@ -74,7 +75,11 @@ const runToken = async (
 
     const run = async () => {
       if (launcherAccess || isZapUrl(text)) {
-        CoreAPI.launch(token)
+        CoreAPI.run({
+          uid: uid,
+          text: text,
+          unsafe: unsafe
+        })
           .then(() => {
             resolve(true);
           })
@@ -206,20 +211,30 @@ function Index() {
   }, []);
 
   useEffect(() => {
-    if (runQueue === "") {
+    if (!runQueue) {
       return;
     }
-    console.log("runQueue", runQueue);
+    console.log("runQueue", runQueue.value);
     runToken(
-      runQueue,
-      runQueue,
+      runQueue.value,
+      runQueue.value,
       launcherAccess,
       connected,
       setLastToken,
-      setProPurchaseModalOpen
-    );
-    setRunQueue("");
-  }, [runQueue]);
+      setProPurchaseModalOpen,
+      runQueue.unsafe
+    ).catch((e) => {
+      console.error("runQueue error", e);
+    });
+    setRunQueue(null);
+  }, [
+    connected,
+    launcherAccess,
+    runQueue,
+    setLastToken,
+    setProPurchaseModalOpen,
+    setRunQueue
+  ]);
 
   useEffect(() => {
     if (writeQueue === "") {

@@ -145,7 +145,7 @@ class CoreApi {
     });
   }
 
-  launch(params: LaunchRequest): Promise<void> {
+  run(params: LaunchRequest): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       this.call(Method.Run, params)
         .then(() => {

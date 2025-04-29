@@ -42,8 +42,8 @@ interface StatusState {
   removeDeviceHistory: (address: string) => void;
   clearDeviceHistory: () => void;
 
-  runQueue: string;
-  setRunQueue: (runQueue: string) => void;
+  runQueue: { value: string; unsafe: boolean } | null;
+  setRunQueue: (runQueue: { value: string; unsafe: boolean } | null) => void;
 
   writeQueue: string;
   setWriteQueue: (writeQueue: string) => void;
@@ -127,7 +127,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
     });
     set({ deviceHistory: [] });
   },
-  runQueue: "",
+  runQueue: null,
   setRunQueue: (runQueue) => set({ runQueue }),
   writeQueue: "",
   setWriteQueue: (writeQueue) => set({ writeQueue })

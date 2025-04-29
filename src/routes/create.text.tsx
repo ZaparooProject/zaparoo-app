@@ -87,7 +87,7 @@ function CustomText() {
                 icon={<PlayIcon size="20" />}
                 label={t("create.custom.run")}
                 onClick={() => {
-                  CoreAPI.launch({
+                  CoreAPI.run({
                     uid: "",
                     text: customText
                   });
