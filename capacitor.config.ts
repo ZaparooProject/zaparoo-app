@@ -1,4 +1,8 @@
 import { CapacitorConfig } from "@capacitor/cli";
+import dotenv from "dotenv";
+import path from "path";
+
+dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const config: CapacitorConfig = {
   webDir: "dist",
@@ -6,7 +10,10 @@ const config: CapacitorConfig = {
   appName: "Zaparoo",
   backgroundColor: "#111928",
   server: {
-    //url: "http://10.0.0.228:8100",
+    url:
+      process.env.NODE_ENV === "development" && process.env.DEV_SERVER_IP
+        ? `http://${process.env.DEV_SERVER_IP}:8100`
+        : undefined,
     androidScheme: "http",
     cleartext: true
   },
