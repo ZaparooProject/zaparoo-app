@@ -8,9 +8,9 @@ import {
 } from "../lib/models.ts";
 import { useShallow } from "zustand/react/shallow";
 import { Preferences } from "@capacitor/preferences";
-import ReconnectingWebSocket from "reconnecting-websocket";
+import WebsocketHeartbeatJs from "websocket-heartbeat-js";
 
-let coreApiWs: ReconnectingWebSocket | null = null;
+let coreApiWs: WebsocketHeartbeatJs | null = null;
 
 export function CoreApiWebSocket() {
   const {
@@ -37,14 +37,18 @@ export function CoreApiWebSocket() {
     return null;
   }
 
-  coreApiWs = new ReconnectingWebSocket(getWsUrl());
-
-  coreApiWs.addEventListener("error", (event) => {
-    setConnectionError("Could not connect to server: " + getWsUrl());
-    console.log(event);
+  coreApiWs = new WebsocketHeartbeatJs({
+    url: getWsUrl(),
+    reconnectTimeout: 1000,
+    pingMsg: "ping"
   });
 
-  coreApiWs.addEventListener("open", () => {
+  coreApiWs.onerror = (e) => {
+    setConnectionError("Error communicating with server: " + getWsUrl());
+    console.log(e);
+  };
+
+  coreApiWs.onopen = () => {
     setConnected(true);
     setConnectionError("");
     Preferences.get({ key: "deviceHistory" }).then((v) => {
@@ -64,14 +68,14 @@ export function CoreApiWebSocket() {
         setLastToken(v.last);
       }
     });
-  });
+  };
 
-  coreApiWs.addEventListener("close", () => {
+  coreApiWs.onclose = () => {
     setConnected(false);
-  });
+  };
 
-  coreApiWs.addEventListener("message", (event) => {
-    console.debug("message", event.data);
+  coreApiWs.onmessage = (e) => {
+    console.debug("message", e.data);
 
     const mediaStarted = (params: PlayingResponse) => {
       console.log("media.started", params);
@@ -99,7 +103,7 @@ export function CoreApiWebSocket() {
     };
 
     try {
-      const notification = CoreAPI.processReceived(event);
+      const notification = CoreAPI.processReceived(e);
       if (notification) {
         switch (notification.method) {
           case Notification.MediaStarted:
@@ -119,7 +123,7 @@ export function CoreApiWebSocket() {
     } catch (e) {
       console.error("Error processing message: " + e);
     }
-  });
+  };
 
   CoreAPI.setSend(coreApiWs.send.bind(coreApiWs));
 

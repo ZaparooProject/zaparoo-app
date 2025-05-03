@@ -15,7 +15,6 @@ import {
   WriteRequest
 } from "./models";
 import { Preferences } from "@capacitor/preferences";
-import { WebSocketMessage } from "react-use-websocket/dist/lib/types";
 import { v4 as uuidv4 } from "uuid";
 import { Capacitor } from "@capacitor/core";
 
@@ -53,7 +52,7 @@ interface ResponsePromise {
 }
 
 class CoreApi {
-  private send: (msg: WebSocketMessage) => void;
+  private send: (msg: Parameters<WebSocket["send"]>[0]) => void;
   private readonly responsePool: { [key: string]: ResponsePromise };
 
   constructor() {
@@ -61,7 +60,7 @@ class CoreApi {
     this.responsePool = {};
   }
 
-  setSend(fn: (msg: WebSocketMessage) => void) {
+  setSend(fn: (msg: Parameters<WebSocket["send"]>[0]) => void) {
     this.send = fn;
   }
 

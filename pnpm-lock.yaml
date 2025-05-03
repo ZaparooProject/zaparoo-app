@@ -116,9 +116,6 @@ importers:
       react-swipeable:
         specifier: ^7.0.2
         version: 7.0.2(react@18.3.1)
-      reconnecting-websocket:
-        specifier: ^4.4.0
-        version: 4.4.0
       tailwind-merge:
         specifier: ^3.0.2
         version: 3.0.2
@@ -131,6 +128,9 @@ importers:
       vaul:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      websocket-heartbeat-js:
+        specifier: ^1.1.3
+        version: 1.1.3
       zustand:
         specifier: ^5.0.3
         version: 5.0.3(@types/react@18.3.18)(react@18.3.1)(use-sync-external-store@1.4.0(react@18.3.1))
@@ -3427,9 +3427,6 @@ packages:
     resolution: {integrity: sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==}
     engines: {node: '>=8.10.0'}
 
-  reconnecting-websocket@4.4.0:
-    resolution: {integrity: sha512-D2E33ceRPga0NvTDhJmphEgJ7FUYF0v4lr1ki0csq06OdlxKfugGzN0dSkxM/NfqCxYELK4KcaTOUOjTV6Dcng==}
-
   redent@3.0.0:
     resolution: {integrity: sha512-6tDA8g98We0zd0GvVeMT9arEOnTw9qM03L9cJXaCjrip1OO764RDBLBfrB4cwzNGDj5OA5ioymC9GkizgWJDUg==}
     engines: {node: '>=8'}
@@ -3955,6 +3952,9 @@ packages:
   websocket-extensions@0.1.4:
     resolution: {integrity: sha512-OqedPIGOfsDlo31UNwYbCFMSaO9m9G/0faIHj5/dZFDMFqPTcx6UwqyOy3COEaEOg/9VsGIpdqn62W5KhoKSpg==}
     engines: {node: '>=0.8.0'}
+
+  websocket-heartbeat-js@1.1.3:
+    resolution: {integrity: sha512-wiCMVsWK7KflVCC5f+rSTyzILDZX88A7BJfdJXt5THNDut7uUNP83r5AvdZ1El/8yOwGujC7K3iuxj96CT4gbQ==}
 
   whatwg-url@5.0.0:
     resolution: {integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==}
@@ -7446,8 +7446,6 @@ snapshots:
     dependencies:
       picomatch: 2.3.1
 
-  reconnecting-websocket@4.4.0: {}
-
   redent@3.0.0:
     dependencies:
       indent-string: 4.0.0
@@ -7971,6 +7969,8 @@ snapshots:
       websocket-extensions: 0.1.4
 
   websocket-extensions@0.1.4: {}
+
+  websocket-heartbeat-js@1.1.3: {}
 
   whatwg-url@5.0.0:
     dependencies:

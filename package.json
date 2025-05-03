@@ -46,11 +46,11 @@
     "react-hot-toast": "^2.5.2",
     "react-i18next": "^15.4.1",
     "react-swipeable": "^7.0.2",
-    "reconnecting-websocket": "^4.4.0",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0",
     "vaul": "^1.1.2",
+    "websocket-heartbeat-js": "^1.1.3",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
