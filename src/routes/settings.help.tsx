@@ -42,7 +42,7 @@ function Help() {
               variant="outline"
               onClick={() =>
                 Browser.open({
-                  url: "https://wiki.zaparoo.org/"
+                  url: "https://zaparoo.org/docs/"
                 })
               }
             />
@@ -51,7 +51,7 @@ function Help() {
               variant="outline"
               onClick={() =>
                 Browser.open({
-                  url: "https://wiki.zaparoo.org/Getting_started"
+                  url: "https://zaparoo.org/docs/getting-started/"
                 })
               }
             />
@@ -60,7 +60,7 @@ function Help() {
               variant="outline"
               onClick={() =>
                 Browser.open({
-                  url: "https://wiki.zaparoo.org/ZapScript"
+                  url: "https://zaparoo.org/docs/zapscript/"
                 })
               }
             />

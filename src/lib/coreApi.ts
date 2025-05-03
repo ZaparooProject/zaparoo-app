@@ -41,7 +41,7 @@ interface ApiResponse {
   error?: ApiError;
 }
 
-interface NotificationRequest {
+export interface NotificationRequest {
   method: Notification;
   params: unknown;
 }
@@ -90,46 +90,51 @@ class CoreApi {
     return promise;
   }
 
-  processReceived(msg: MessageEvent | null): NotificationRequest | void {
-    if (!msg) {
-      return;
-    } else if (msg.data == "pong") {
-      console.debug("Received pong");
-      return;
-    }
+  processReceived(msg: MessageEvent): Promise<NotificationRequest | null> {
+    return new Promise<NotificationRequest | null>((resolve, reject) => {
+      if (msg.data == "pong") {
+        resolve(null);
+        return;
+      }
 
-    let res: ApiResponse;
-    try {
-      res = JSON.parse(msg.data);
-    } catch {
-      console.error("Could not parse JSON: " + msg);
-      return;
-    }
+      let res: ApiResponse;
+      try {
+        res = JSON.parse(msg.data);
+      } catch {
+        console.error("Could not parse JSON: " + msg);
+        reject(new Error("Error parsing JSON response."));
+        return;
+      }
 
-    if (!res.jsonrpc || res.jsonrpc != "2.0") {
-      throw new Error("Not a valid JSON-RPC payload");
-    }
+      if (!res.jsonrpc || res.jsonrpc != "2.0") {
+        reject(new Error("Not a valid JSON-RPC payload."));
+        return;
+      }
 
-    if (!res.id) {
-      console.log("Received notification", res);
-      const req = res as ApiRequest;
-      return {
-        method: req.method as Notification,
-        params: req.params
-      };
-    }
+      if (!res.id) {
+        console.log("Received notification", res);
+        const req = res as ApiRequest;
+        resolve({
+          method: req.method as Notification,
+          params: req.params
+        });
+        return;
+      }
 
-    const promise = this.responsePool[res.id];
-    if (!promise) {
-      throw new Error("Response ID does not exist");
-    }
+      const promise = this.responsePool[res.id];
+      if (!promise) {
+        console.log("Response ID does not exist:", msg.data);
+        reject(null);
+        return;
+      }
 
-    if (res.error) {
-      promise.reject(res.error);
-      return;
-    }
+      if (res.error) {
+        reject(new Error(res.error.message));
+        return;
+      }
 
-    promise.resolve(res.result);
+      promise.resolve(res.result);
+    });
   }
 
   version(): Promise<VersionResponse> {

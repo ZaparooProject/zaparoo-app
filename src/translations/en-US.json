@@ -70,8 +70,8 @@
       "currentGameHeading": "Current media",
       "currentGameSub": "Write '{{game}}' to a tag",
       "currentGameSubFallback": "Write 'Now Playing' to a tag",
-      "customHeading": "Custom text",
-      "customSub": "Write a string to a tag",
+      "customHeading": "Custom ZapScript",
+      "customSub": "Write ZapScript to an NFC tag",
       "nfcHeading": "NFC utilities",
       "nfcSub": "Read and format NFC tags",
       "mappingsHeading": "Mappings",
@@ -94,12 +94,16 @@
         "playLabel": "Preview"
       },
       "custom": {
-        "title": "Custom Text",
-        "textPlaceholder": "Enter tag text",
+        "title": "Custom ZapScript",
+        "textPlaceholder": "Enter ZapScript",
         "write": "Write to tag",
         "run": "Run",
         "clear": "Clear",
-        "failMsg": "Failed to run tag"
+        "failMsg": "Failed to run ZapScript",
+        "characters": "{{count}} characters",
+        "paletteTitle": "Command Palette",
+        "searchMedia": "Search media",
+        "selectSystem": "Select system"
       },
       "nfc": {
         "title": "NFC Utilities",
@@ -161,7 +165,7 @@
       "help": {
         "title": "Help",
         "main": "Zaparoo.org",
-        "taptoWiki": "Zaparoo Wiki",
+        "taptoWiki": "Zaparoo Docs",
         "documentationLabel": "Documentation",
         "gettingStarted": "Getting started with Zaparoo",
         "softwareSetup": "Zaparoo software setup",

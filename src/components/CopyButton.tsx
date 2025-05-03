@@ -29,6 +29,7 @@ export const CopyButton = (props: { text: string }) => {
           }, 2000);
         });
       }}
+      style={{ whiteSpace: "nowrap" }}
     >
       {display}
     </span>

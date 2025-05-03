@@ -1,5 +1,10 @@
 import { useStatusStore } from "../lib/store.ts";
-import { getWsUrl, CoreAPI, getDeviceAddress } from "../lib/coreApi.ts";
+import {
+  getWsUrl,
+  CoreAPI,
+  getDeviceAddress,
+  NotificationRequest
+} from "../lib/coreApi.ts";
 import {
   IndexResponse,
   Notification,
@@ -9,6 +14,7 @@ import {
 import { useShallow } from "zustand/react/shallow";
 import { Preferences } from "@capacitor/preferences";
 import WebsocketHeartbeatJs from "websocket-heartbeat-js";
+import toast from "react-hot-toast";
 
 let coreApiWs: WebsocketHeartbeatJs | null = null;
 
@@ -102,27 +108,29 @@ export function CoreApiWebSocket() {
       setLastToken(params);
     };
 
-    try {
-      const notification = CoreAPI.processReceived(e);
-      if (notification) {
-        switch (notification.method) {
-          case Notification.MediaStarted:
-            mediaStarted(notification.params as PlayingResponse);
-            break;
-          case Notification.MediaStopped:
-            mediaStopped();
-            break;
-          case Notification.MediaIndexing:
-            mediaIndexing(notification.params as IndexResponse);
-            break;
-          case Notification.TokensScanned:
-            activeToken(notification.params as TokenResponse);
-            break;
+    CoreAPI.processReceived(e)
+      .then((v: NotificationRequest | null) => {
+        if (v !== null) {
+          switch (v.method) {
+            case Notification.MediaStarted:
+              mediaStarted(v.params as PlayingResponse);
+              break;
+            case Notification.MediaStopped:
+              mediaStopped();
+              break;
+            case Notification.MediaIndexing:
+              mediaIndexing(v.params as IndexResponse);
+              break;
+            case Notification.TokensScanned:
+              activeToken(v.params as TokenResponse);
+              break;
+          }
         }
-      }
-    } catch (e) {
-      console.error("Error processing message: " + e);
-    }
+      })
+      .catch((e) => {
+        console.error("Error processing message: " + e);
+        toast.error(e);
+      });
   };
 
   CoreAPI.setSend(coreApiWs.send.bind(coreApiWs));

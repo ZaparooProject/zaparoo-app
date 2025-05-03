@@ -26,7 +26,7 @@ const AppUrlListener: React.FC = () => {
         setWriteQueue(queryParams.v);
       }
     });
-  }, []);
+  }, [setRunQueue, setWriteQueue]);
 
   return null;
 };
