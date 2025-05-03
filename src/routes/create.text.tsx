@@ -11,6 +11,9 @@ import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
 import { Preferences } from "@capacitor/preferences";
 import { Browser } from "@capacitor/browser";
+import { useQuery } from "@tanstack/react-query";
+import { SlideModal } from "@/components/SlideModal.tsx";
+import { TextInput } from "@/components/wui/TextInput.tsx";
 
 const initData = {
   customText: ""
@@ -33,6 +36,14 @@ function CustomText() {
     setWriteOpen(false);
     nfcWriter.end();
   };
+  const safeInsets = useStatusStore((state) => state.safeInsets);
+  const [systemsOpen, setSystemsOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const systems = useQuery({
+    queryKey: ["systems"],
+    queryFn: () => CoreAPI.systems()
+  });
 
   const { t } = useTranslation();
 
@@ -183,10 +194,17 @@ function CustomText() {
                 <Button
                   label={t("create.custom.searchMedia")}
                   variant="outline"
+                  disabled={!connected}
+                  onClick={() => setSearchOpen(true)}
                 />
                 <Button
                   label={t("create.custom.selectSystem")}
                   variant="outline"
+                  disabled={!connected}
+                  onClick={() => {
+                    setSystemsOpen(true);
+                    systems.refetch();
+                  }}
                 />
 
                 <Button
@@ -311,7 +329,177 @@ function CustomText() {
           </div>
         </PageFrame>
       </div>
+      <SlideModal
+        isOpen={systemsOpen}
+        close={() => setSystemsOpen(false)}
+        title={t("create.custom.selectSystem")}
+      >
+        <div style={{ paddingBottom: safeInsets.bottom }}>
+          <div className="flex flex-col gap-2">
+            {systems.isLoading ? (
+              <div className="p-4 text-center">{t("common.loading")}</div>
+            ) : systems.error ? (
+              <div className="p-4 text-center text-error">
+                {t("common.error")}
+              </div>
+            ) : (
+              [...(systems.data?.systems ?? [])]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((system) => (
+                  <Button
+                    key={system.id}
+                    label={system.name}
+                    variant="outline"
+                    onClick={() => {
+                      insertTextAtCursor(`${system.id}`);
+                      setSystemsOpen(false);
+                    }}
+                  />
+                ))
+            )}
+          </div>
+        </div>
+      </SlideModal>
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
+      <MediaSearchModal
+        isOpen={searchOpen}
+        close={() => setSearchOpen(false)}
+        onSelect={(path) => {
+          insertTextAtCursor(path);
+        }}
+      />
     </>
+  );
+}
+
+function MediaSearchModal(props: {
+  isOpen: boolean;
+  close: () => void;
+  onSelect: (path: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [selectedSystem, setSelectedSystem] = useState<string>("all");
+  const connected = useStatusStore((state) => state.connected);
+
+  const systems = useQuery({
+    queryKey: ["systems"],
+    queryFn: () => CoreAPI.systems()
+  });
+
+  const gamesIndex = useStatusStore((state) => state.gamesIndex);
+
+  // Debounce the search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const searchResults = useQuery({
+    queryKey: ["mediaSearch", debouncedQuery, selectedSystem],
+    queryFn: () =>
+      CoreAPI.mediaSearch({
+        query: debouncedQuery,
+        systems: selectedSystem === "all" ? [] : [selectedSystem]
+      }),
+    enabled:
+      debouncedQuery.length >= 2 &&
+      connected &&
+      gamesIndex.exists &&
+      !gamesIndex.indexing
+  });
+
+  const safeInsets = useStatusStore((state) => state.safeInsets);
+
+  return (
+    <SlideModal
+      isOpen={props.isOpen}
+      close={props.close}
+      title={t("create.search.title")}
+    >
+      <div style={{ paddingBottom: safeInsets.bottom }}>
+        <div className="flex flex-col gap-4">
+          <TextInput
+            label={t("create.search.gameInput")}
+            placeholder={t("create.search.gameInputPlaceholder")}
+            value={query}
+            setValue={setQuery}
+            type="search"
+            disabled={!connected || !gamesIndex.exists || gamesIndex.indexing}
+            onKeyUp={(e) => {
+              if (e.key === "Enter" || e.keyCode === 13) {
+                e.currentTarget.blur();
+              }
+            }}
+          />
+
+          <div className="flex flex-col">
+            <label className="text-white">
+              {t("create.search.systemInput")}
+            </label>
+            <select
+              value={selectedSystem}
+              onChange={(e) => {
+                setSelectedSystem(e.target.value);
+                Preferences.set({ key: "searchSystem", value: e.target.value });
+              }}
+              disabled={!connected || !gamesIndex.exists || gamesIndex.indexing}
+              className="rounded-md border border-solid border-bd-input bg-background p-3 text-foreground disabled:border-foreground-disabled"
+            >
+              <option value="all">{t("create.search.allSystems")}</option>
+              {systems.isSuccess &&
+                systems.data.systems
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((system) => (
+                    <option key={system.id} value={system.id}>
+                      {system.name}
+                    </option>
+                  ))}
+            </select>
+          </div>
+
+          {/* Search Results */}
+          <div className="flex flex-col gap-2">
+            {searchResults.isLoading ? (
+              <div className="flex flex-col items-center justify-center pt-3">
+                <div className="text-primary">
+                  <div className="lds-facebook">
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                  </div>
+                </div>
+              </div>
+            ) : searchResults.error ? (
+              <p className="pt-2 text-center">
+                {t("create.search.searchError")}
+              </p>
+            ) : (
+              searchResults.data?.results.map((result) => (
+                <Button
+                  key={result.path}
+                  variant="outline"
+                  onClick={() => {
+                    props.onSelect(`${result.path}`);
+                    props.close();
+                  }}
+                  label={`${result.path}`}
+                />
+              ))
+            )}
+          </div>
+
+          {query.length >= 2 && searchResults.data?.results.length === 0 && (
+            <div className="text-center text-gray-400">
+              {t("create.search.noResults")}
+            </div>
+          )}
+        </div>
+      </div>
+    </SlideModal>
   );
 }

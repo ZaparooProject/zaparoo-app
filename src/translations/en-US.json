@@ -83,7 +83,7 @@
         "noGamesFound": "No media found",
         "gamesFound": "{{count}} found",
         "gamesFoundMax": "{{count}} found (showing first {{max}})",
-        "title": "Search for Game",
+        "title": "Search for Media",
         "gameInput": "Name",
         "gameInputPlaceholder": "Enter media name",
         "systemInput": "System",
