@@ -54,7 +54,7 @@ export function ZapScriptInput(props: {
 
   return (
     <div>
-      <div className="flex flex-col" style={{ marginTop: "1rem" }}>
+      <div className="flex flex-col">
         <textarea
           ref={textareaRef}
           className="rounded-b-none border border-solid border-bd-input bg-background p-3"

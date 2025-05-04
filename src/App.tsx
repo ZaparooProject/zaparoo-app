@@ -51,7 +51,7 @@ export default function App() {
     if (Capacitor.isNativePlatform()) {
       setStatusBarStyleDark();
     }
-  }, []);
+  }, [setSafeInsets]);
 
   useEffect(() => {
     FirebaseAuthentication.addListener("authStateChange", (change) => {

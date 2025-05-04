@@ -8,7 +8,7 @@ import { WriteModal } from "../components/WriteModal";
 import { useEffect, useState } from "react";
 import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
-import { NfcIcon } from "lucide-react";
+import { ListPlusIcon, NfcIcon } from "lucide-react";
 
 export const Route = createFileRoute("/create/")({
   component: Create
@@ -80,6 +80,21 @@ function Create() {
               </div>
             </div>
           </Card>
+
+          <Link to="/create/mappings">
+            <Card>
+              <div className="flex flex-row items-center gap-3">
+                <Button icon={<ListPlusIcon size="20" />} />
+                <div className="flex flex-grow flex-col">
+                  <span className="font-semibold">
+                    {t("create.mappingsHeading")}
+                  </span>
+                  <span className="text-sm">{t("create.mappingsSub")}</span>
+                </div>
+                <NextIcon size="20" />
+              </div>
+            </Card>
+          </Link>
 
           <Link to="/create/text">
             <Card>

@@ -273,7 +273,7 @@ function Index() {
           </span>
         ));
       });
-  }, [writeQueue, nfcWriter, t]);
+  }, [writeQueue, nfcWriter, t, setWriteQueue]);
 
   const doScan = () => {
     setScanSession(true);

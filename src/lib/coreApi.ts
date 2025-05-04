@@ -1,4 +1,5 @@
 import {
+  AddMappingRequest,
   AllMappingsResponse,
   HistoryResponse,
   LaunchRequest,
@@ -10,6 +11,7 @@ import {
   SettingsResponse,
   SystemsResponse,
   TokensResponse,
+  UpdateMappingRequest,
   UpdateSettingsRequest,
   VersionResponse,
   WriteRequest
@@ -245,6 +247,39 @@ class CoreApi {
           const response = result as AllMappingsResponse;
           console.debug(response);
           resolve(response);
+        })
+        .catch(reject);
+    });
+  }
+
+  newMapping(params: AddMappingRequest): Promise<void> {
+    console.debug("mappings new", params);
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MappingsNew, params)
+        .then(() => {
+          resolve();
+        })
+        .catch(reject);
+    });
+  }
+
+  updateMapping(params: UpdateMappingRequest): Promise<void> {
+    console.debug("mappings update", params);
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MappingsUpdate, params)
+        .then(() => {
+          resolve();
+        })
+        .catch(reject);
+    });
+  }
+
+  deleteMapping(params: { id: number }): Promise<void> {
+    console.debug("mappings delete", params);
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MappingsDelete, params)
+        .then(() => {
+          resolve();
         })
         .catch(reject);
     });

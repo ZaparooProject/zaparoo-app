@@ -1,4 +1,4 @@
-import { KeyboardEventHandler, useState } from "react";
+import { KeyboardEventHandler, useEffect, useState } from "react";
 import { SaveIcon } from "../../lib/images";
 import { Button } from "./Button";
 import classNames from "classnames";
@@ -18,6 +18,10 @@ export function TextInput(props: {
 }) {
   const [value, setValue] = useState(props.value);
   const [modified, setModified] = useState(false);
+
+  useEffect(() => {
+    setValue(props.value);
+  }, [props.value]);
 
   let type = props.type;
   if (!type) {

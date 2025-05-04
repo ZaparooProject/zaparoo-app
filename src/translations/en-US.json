@@ -77,8 +77,8 @@
       "customSub": "Write ZapScript to an NFC tag",
       "nfcHeading": "NFC utilities",
       "nfcSub": "Read and format NFC tags",
-      "mappingsHeading": "Mappings",
-      "mappingsSub": "Assign tokens to commands",
+      "mappingsHeading": "Add a mapping",
+      "mappingsSub": "For NFC toys and barcodes",
       "search": {
         "searchButton": "Search",
         "gamesDbUpdate": "Media database must be updated before searching",
@@ -118,6 +118,13 @@
         "erase": "Erase tag",
         "makeReadOnly": "Make tag read-only",
         "confirm": "Are you sure?"
+      },
+      "mappings": {
+        "title": "Add a Mapping",
+        "tokenId": "Token ID",
+        "saveMapping": "Save mapping",
+        "clearMapping": "Clear mapping",
+        "savedSuccess": "Mapping saved successfully"
       }
     },
     "online": {

@@ -15,6 +15,7 @@ import { useShallow } from "zustand/react/shallow";
 import { Preferences } from "@capacitor/preferences";
 import WebsocketHeartbeatJs from "websocket-heartbeat-js";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 let coreApiWs: WebsocketHeartbeatJs | null = null;
 
@@ -38,6 +39,8 @@ export function CoreApiWebSocket() {
       setDeviceHistory: state.setDeviceHistory
     }))
   );
+
+  const { t } = useTranslation();
 
   if (coreApiWs !== null) {
     return null;
@@ -129,7 +132,7 @@ export function CoreApiWebSocket() {
       })
       .catch((e) => {
         console.error("Error processing message: " + e);
-        toast.error(e);
+        toast.error(t("error", { msg: e.message }));
       });
   };
 

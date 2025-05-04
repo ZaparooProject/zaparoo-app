@@ -97,6 +97,7 @@ export interface AddMappingRequest {
 }
 
 export interface UpdateMappingRequest {
+  id: number;
   label?: string;
   enabled?: boolean;
   type?: MappingType;
