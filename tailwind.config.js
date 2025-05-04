@@ -17,7 +17,6 @@ export default {
       },
       colors: {
         "foreground-disabled": "var(--color-foreground-disabled)",
-        primary: "var(--color-primary)",
         success: "var(--color-success)",
         error: "var(--color-error)",
         "bd-filled": "var(--color-border-filled)",
@@ -25,8 +24,12 @@ export default {
         "bd-input": "var(--color-border-input)",
         "btn-start": "var(--color-button-start)",
         "btn-end": "var(--color-button-end)",
-        background: "hsl(var(--color-background))",
+        background: "hsl(var(--background))",
         foreground: "hsl(var(--color-foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))"
+        },
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))"
@@ -34,10 +37,6 @@ export default {
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))"
-        },
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))"
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",

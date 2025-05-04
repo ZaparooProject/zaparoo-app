@@ -2,6 +2,9 @@
   "translation": {
     "copy": "Copy",
     "copied": "Copied",
+    "backToTop": "Back to top",
+    "error": "Error: {{msg}}",
+    "loading": "Loading...",
     "nav": {
       "cancel": "Cancel",
       "create": "Create",
@@ -101,9 +104,12 @@
         "clear": "Clear",
         "failMsg": "Failed to run ZapScript",
         "characters": "{{count}} characters",
-        "paletteTitle": "Command Palette",
-        "searchMedia": "Search media",
-        "selectSystem": "Select system"
+        "searchMedia": "Media",
+        "commands": "Command",
+        "selectSystem": "System",
+        "zapscriptHelp": "Help",
+        "clearConfirmTitle": "Clear ZapScript?",
+        "commandPalette": "Command palette"
       },
       "nfc": {
         "title": "NFC Utilities",
@@ -169,7 +175,7 @@
         "documentationLabel": "Documentation",
         "gettingStarted": "Getting started with Zaparoo",
         "softwareSetup": "Zaparoo software setup",
-        "commandReference": "ZapScript reference",
+        "commandReference": "ZapScript help",
         "communityLabel": "Community",
         "discord": "Join the Discord server",
         "reddit": "Join the Subreddit",

@@ -14,6 +14,7 @@ export function TextInput(props: {
   autoFocus?: boolean;
   type?: string;
   onKeyUp?: KeyboardEventHandler<HTMLInputElement>;
+  ref?: React.RefObject<HTMLInputElement>;
 }) {
   const [value, setValue] = useState(props.value);
   const [modified, setModified] = useState(false);
@@ -28,6 +29,7 @@ export function TextInput(props: {
       {props.label && <span>{props.label}</span>}
       <div className="flex flex-row">
         <input
+          ref={props.ref}
           type={type}
           className={classNames(
             "bg-background",
