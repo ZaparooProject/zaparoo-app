@@ -113,27 +113,36 @@ const runToken = async (
   });
 };
 
-const initData = {
-  restartScan: false,
-  launchOnScan: true,
-  cameraDefault: false
-};
+interface LoaderData {
+  cameraDefault: boolean;
+  restartScan: boolean;
+  launchOnScan: boolean;
+}
 
 export const Route = createFileRoute("/")({
-  loader: async () => {
-    initData.restartScan =
+  loader: async (): Promise<LoaderData> => {
+    const restartScan =
       (await Preferences.get({ key: "restartScan" })).value === "true";
-    initData.launchOnScan =
+    const launchOnScan =
       (await Preferences.get({ key: "launchOnScan" })).value !== "false";
-    initData.cameraDefault =
+    const cameraDefault =
       (await Preferences.get({ key: "cameraDefault" })).value === "true";
+
+    return {
+      restartScan,
+      launchOnScan,
+      cameraDefault
+    };
   },
+  ssr: false,
   component: Index
 });
 
 const statusTimeout = 3000;
 
 function Index() {
+  const initData = Route.useLoaderData();
+
   const { t } = useTranslation();
   const nfcWriter = useNfcWriter();
   const [writeOpen, setWriteOpen] = useState(false);
@@ -156,6 +165,14 @@ function Index() {
   const setLastToken = useStatusStore((state) => state.setLastToken);
 
   const [cameraMode, setCameraMode] = useState(initData.cameraDefault);
+  useEffect(() => {
+    Preferences.get({ key: "cameraDefault" }).then((result) => {
+      if (result.value) {
+        setCameraMode(result.value === "true");
+      }
+    });
+  }, []);
+
   const [historyOpen, setHistoryOpen] = useState(false);
   const [scanSession, setScanSession] = useState(false);
   const [scanStatus, setScanStatus] = useState<ScanResult>(ScanResult.Default);
@@ -171,11 +188,25 @@ function Index() {
   useEffect(() => {
     sessionManager.setShouldRestart(restartScan);
   }, [restartScan]);
+  useEffect(() => {
+    Preferences.get({ key: "restartScan" }).then((result) => {
+      if (result.value) {
+        setRestartScan(result.value === "true");
+      }
+    });
+  }, []);
 
   const [launchOnScan, setLaunchOnScan] = useState(initData.launchOnScan);
   useEffect(() => {
     sessionManager.setLaunchOnScan(launchOnScan);
   }, [launchOnScan]);
+  useEffect(() => {
+    Preferences.get({ key: "launchOnScan" }).then((result) => {
+      if (result.value) {
+        setLaunchOnScan(result.value !== "false");
+      }
+    });
+  }, []);
 
   const [launcherAccess, setLauncherAccess] = useState(false);
   useEffect(() => {

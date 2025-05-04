@@ -51,7 +51,7 @@
       "continuous": "Continuous scanning",
       "launchOnScan": "Launch on scan",
       "connectedHeading": "Connected",
-      "connectedSub": "IP: {{ip}}",
+      "connectedSub": "Address: {{ip}}",
       "nowPlayingHeading": "Now playing",
       "nowPlayingName": "Name: {{game}}",
       "nowPlayingSystem": "System: {{system}}",
