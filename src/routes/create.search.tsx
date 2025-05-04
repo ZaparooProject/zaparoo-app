@@ -15,6 +15,7 @@ import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
 import { Preferences } from "@capacitor/preferences";
 import { SearchResults } from "@/components/SearchResults.tsx";
+import { CopyButton } from "@/components/CopyButton.tsx";
 
 const initData = {
   systemQuery: "all"
@@ -165,7 +166,10 @@ function Search() {
             {t("create.search.systemLabel")} {selectedResult?.system.name}
           </p>
           <p>
-            {t("create.search.pathLabel")} {selectedResult?.path}
+            {t("create.search.pathLabel")} {selectedResult?.path}{" "}
+            {selectedResult?.path !== "" && (
+              <CopyButton text={selectedResult?.path ?? ""} />
+            )}
           </p>
           <div className="flex flex-row gap-2 pt-1">
             <Button
