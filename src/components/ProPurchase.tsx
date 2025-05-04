@@ -104,7 +104,10 @@ const ProPurchaseModal = (props: {
                   });
                   props.setProPurchaseModalOpen(false);
                 })
-                .catch((e) => {
+                .catch((e: Error) => {
+                  if (e.message.includes("Purchase was cancelled")) {
+                    return;
+                  }
                   console.error("purchase error", e);
                 });
             }
