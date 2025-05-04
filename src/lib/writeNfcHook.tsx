@@ -147,7 +147,7 @@ export function useNfcWriter(): WriteNfcHook {
             setStatus(Status.Success);
           }
         })
-        .catch(() => {
+        .catch((e: Error) => {
           let showMs = 4000;
           if (Capacitor.getPlatform() === "ios") {
             showMs += 4000;
@@ -159,6 +159,7 @@ export function useNfcWriter(): WriteNfcHook {
                 onClick={() => toast.dismiss(to.id)}
               >
                 <span>{toastFailed}</span>
+                <span>{e.message}</span>
               </span>
             ),
             {

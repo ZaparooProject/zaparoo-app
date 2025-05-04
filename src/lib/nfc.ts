@@ -132,7 +132,6 @@ export async function writeTag(text: string): Promise<Result> {
           });
         },
         (error) => {
-          console.error("write error", error);
           Nfc.stopScanSession();
           reject(error);
         }
