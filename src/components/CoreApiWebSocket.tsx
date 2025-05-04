@@ -46,6 +46,11 @@ export function CoreApiWebSocket() {
     return null;
   }
 
+  if (getDeviceAddress() === "") {
+    setConnected(false);
+    return null;
+  }
+
   coreApiWs = new WebsocketHeartbeatJs({
     url: getWsUrl(),
     reconnectTimeout: 1000,

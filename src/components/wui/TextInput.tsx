@@ -71,7 +71,11 @@ export function TextInput(props: {
             icon={<SaveIcon size="20" />}
             className="h-12 w-12 rounded-s-lg pr-3"
             onClick={() => {
-              if (!props.saveValue || !value || props.disabled) {
+              if (
+                props.disabled ||
+                value === undefined ||
+                props.saveValue === undefined
+              ) {
                 return;
               }
 
