@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { cancelSession, readTag, sessionManager, Status } from "../lib/nfc";
 import { getDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
 import {
-  CheckIcon,
   DeviceIcon,
   HistoryIcon,
   SettingsIcon,
@@ -35,6 +34,7 @@ import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
+import { CameraIcon } from "lucide-react";
 
 const zapUrls = [
   "https://zpr.au",
@@ -114,7 +114,6 @@ const runToken = async (
 };
 
 interface LoaderData {
-  cameraDefault: boolean;
   restartScan: boolean;
   launchOnScan: boolean;
 }
@@ -125,13 +124,9 @@ export const Route = createFileRoute("/")({
       (await Preferences.get({ key: "restartScan" })).value === "true";
     const launchOnScan =
       (await Preferences.get({ key: "launchOnScan" })).value !== "false";
-    const cameraDefault =
-      (await Preferences.get({ key: "cameraDefault" })).value === "true";
-
     return {
       restartScan,
-      launchOnScan,
-      cameraDefault
+      launchOnScan
     };
   },
   ssr: false,
@@ -163,15 +158,6 @@ function Index() {
   const playing = useStatusStore((state) => state.playing);
   const lastToken = useStatusStore((state) => state.lastToken);
   const setLastToken = useStatusStore((state) => state.setLastToken);
-
-  const [cameraMode, setCameraMode] = useState(initData.cameraDefault);
-  useEffect(() => {
-    Preferences.get({ key: "cameraDefault" }).then((result) => {
-      if (result.value) {
-        setCameraMode(result.value === "true");
-      }
-    });
-  }, []);
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [scanSession, setScanSession] = useState(false);
@@ -369,38 +355,6 @@ function Index() {
   };
 
   const handleScanButton = async () => {
-    if (cameraMode) {
-      BarcodeScanner.scan().then((res) => {
-        if (res.barcodes.length < 1) {
-          return;
-        }
-
-        const barcode = res.barcodes[0];
-
-        if (barcode.rawValue.startsWith("**write:")) {
-          const writeValue = barcode.rawValue.slice(8);
-
-          if (writeValue === "") {
-            return;
-          }
-
-          setWriteOpen(true);
-          nfcWriter.write(WriteAction.Write, writeValue);
-          return;
-        }
-
-        runToken(
-          barcode.rawValue,
-          barcode.rawValue,
-          launcherAccess,
-          connected,
-          setLastToken,
-          setProPurchaseModalOpen
-        );
-      });
-      return;
-    }
-
     if (scanSession) {
       setScanSession(false);
       cancelSession();
@@ -408,6 +362,37 @@ function Index() {
       setScanStatus(ScanResult.Default);
       doScan();
     }
+  };
+
+  const handleCameraScan = async () => {
+    BarcodeScanner.scan().then((res) => {
+      if (res.barcodes.length < 1) {
+        return;
+      }
+
+      const barcode = res.barcodes[0];
+
+      if (barcode.rawValue.startsWith("**write:")) {
+        const writeValue = barcode.rawValue.slice(8);
+
+        if (writeValue === "") {
+          return;
+        }
+
+        setWriteOpen(true);
+        nfcWriter.write(WriteAction.Write, writeValue);
+        return;
+      }
+
+      runToken(
+        barcode.rawValue,
+        barcode.rawValue,
+        launcherAccess,
+        connected,
+        setLastToken,
+        setProPurchaseModalOpen
+      );
+    });
   };
 
   return (
@@ -481,7 +466,6 @@ function Index() {
               </div>
             </>
           )}
-
           {connected && (
             <div>
               <Card className="mb-4">
@@ -513,79 +497,19 @@ function Index() {
               {Capacitor.isNativePlatform() && (
                 <>
                   <div className="mb-3">
-                    <div className="flex flex-row" role="group">
-                      <button
-                        type="button"
-                        className={classNames(
-                          "flex",
-                          "flex-row",
-                          "w-full",
-                          "rounded-s-full",
-                          "items-center",
-                          "justify-center",
-                          "py-1",
-                          "font-medium",
-                          "gap-1",
-                          "tracking-[0.1px]",
-                          "h-9",
-                          "border",
-                          "border-solid",
-                          "border-bd-filled",
-                          {
-                            "bg-button-pattern": !cameraMode
-                          }
-                        )}
-                        onClick={() => {
-                          Preferences.set({
-                            key: "cameraDefault",
-                            value: "false"
-                          });
-                          setCameraMode(false);
-                        }}
-                      >
-                        {!cameraMode && <CheckIcon size="28" />}
-                        {t("scan.nfcMode")}
-                      </button>
-                      <button
-                        type="button"
-                        className={classNames(
-                          "flex",
-                          "flex-row",
-                          "w-full",
-                          "rounded-e-full",
-                          "items-center",
-                          "justify-center",
-                          "py-1",
-                          "font-medium",
-                          "gap-1",
-                          "tracking-[0.1px]",
-                          "h-9",
-                          "border",
-                          "border-solid",
-                          "border-bd-filled",
-                          {
-                            "bg-button-pattern": cameraMode
-                          }
-                        )}
-                        onClick={() => {
-                          Preferences.set({
-                            key: "cameraDefault",
-                            value: "true"
-                          });
-                          setCameraMode(true);
-                        }}
-                      >
-                        {cameraMode && <CheckIcon size="28" />}
-                        {t("scan.cameraMode")}
-                      </button>
-                    </div>
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={handleCameraScan}
+                      label={t("scan.cameraMode")}
+                      icon={<CameraIcon />}
+                    />
                   </div>
 
                   <div className="flex flex-col gap-3">
                     <ToggleSwitch
                       label={t("scan.continuous")}
-                      disabled={cameraMode}
-                      value={!cameraMode ? restartScan : false}
+                      value={restartScan}
                       setValue={(v) => {
                         setRestartScan(v);
                         Preferences.set({
