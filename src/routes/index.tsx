@@ -6,6 +6,7 @@ import {
   DeviceIcon,
   HistoryIcon,
   SettingsIcon,
+  StopIcon,
   WarningIcon
 } from "../lib/images";
 import { useStatusStore } from "../lib/store";
@@ -169,6 +170,7 @@ function Index() {
   const setRunQueue = useStatusStore((state) => state.setRunQueue);
   const writeQueue = useStatusStore((state) => state.writeQueue);
   const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
+  const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
 
   const [restartScan, setRestartScan] = useState(initData.restartScan);
   useEffect(() => {
@@ -581,6 +583,13 @@ function Index() {
                 <p className="font-bold capitalize text-gray-400">
                   {t("scan.nowPlayingHeading")}
                 </p>
+                <Button
+                  icon={<StopIcon size="24" />}
+                  variant="text"
+                  disabled={!playing.mediaName}
+                  onClick={() => setStopConfirmOpen(true)}
+                  className="flex items-center"
+                />
               </div>
               <div>
                 <p>
@@ -652,6 +661,36 @@ function Index() {
       </SlideModal>
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
       <PurchaseModal />
+      <SlideModal
+        isOpen={stopConfirmOpen}
+        close={() => setStopConfirmOpen(false)}
+        title={t("create.nfc.confirm")}
+      >
+        <div className="flex flex-col gap-4 p-4">
+          <p className="text-center">{t("stopPlaying")}</p>
+          <div className="flex flex-row justify-center gap-4">
+            <Button
+              label={t("nav.cancel")}
+              variant="outline"
+              onClick={() => setStopConfirmOpen(false)}
+            />
+            <Button
+              label={t("yes")}
+              onClick={() => {
+                runToken(
+                  "**launch.system:menu",
+                  "**launch.system:menu",
+                  launcherAccess,
+                  connected,
+                  setLastToken,
+                  setProPurchaseModalOpen
+                );
+                setStopConfirmOpen(false);
+              }}
+            />
+          </div>
+        </div>
+      </SlideModal>
     </>
   );
 }

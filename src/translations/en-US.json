@@ -5,6 +5,8 @@
     "backToTop": "Back to top",
     "error": "Error: {{msg}}",
     "loading": "Loading...",
+    "yes": "Yes",
+    "stopPlaying": "This will stop the playing media. You may lose any unsaved progress.",
     "nav": {
       "cancel": "Cancel",
       "create": "Create",
