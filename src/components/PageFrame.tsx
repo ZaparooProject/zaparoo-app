@@ -11,9 +11,9 @@ export function PageFrame(props: PageFrameProps) {
   const safeInsets = useStatusStore((state) => state.safeInsets);
 
   return (
-    <div className="w-dvh flex h-dvh flex-col">
+    <div className="flex h-full w-full flex-col">
       <div
-        className="sticky top-0 z-10 bg-background"
+        className="bg-background sticky top-0 z-10"
         style={{
           paddingTop: `calc(1rem + ${safeInsets.top})`,
           paddingRight: `calc(1rem + ${safeInsets.right})`,
@@ -32,7 +32,7 @@ export function PageFrame(props: PageFrameProps) {
             </div>
             <div className="col-span-3 flex items-center justify-center text-center">
               {props.title && (
-                <h1 className="text-xl text-foreground">{props.title}</h1>
+                <h1 className="text-foreground text-xl">{props.title}</h1>
               )}
             </div>
             <div className="col-span-1" />
