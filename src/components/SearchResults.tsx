@@ -23,7 +23,7 @@ export function SearchResults(props: {
           <div className="px-1.5 text-error">
             <WarningIcon size="24" />
           </div>
-          <div className="flex flex-grow flex-col">
+          <div className="flex grow flex-col">
             <span className="font-medium">
               {t("create.search.gamesDbUpdate")}
             </span>

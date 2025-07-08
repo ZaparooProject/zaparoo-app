@@ -19,7 +19,7 @@ export function ConnectionStatus({ connected }: ConnectionStatusProps) {
           <div className="px-1.5 text-error">
             <WarningIcon size="24" />
           </div>
-          <div className="flex flex-grow flex-col">
+          <div className="flex grow flex-col">
             <span className="font-semibold">{t("scan.noDevices")}</span>
           </div>
           <Link
@@ -41,7 +41,7 @@ export function ConnectionStatus({ connected }: ConnectionStatusProps) {
         <div className="px-1.5 text-success">
           <DeviceIcon size="24" />
         </div>
-        <div className="flex flex-grow flex-col">
+        <div className="flex grow flex-col">
           <span className="font-bold">{t("scan.connectedHeading")}</span>
           <span>
             {t("scan.connectedSub", {

@@ -153,7 +153,7 @@ function Index() {
         if (!result.nfc) {
           toast.error((to) => (
             <span
-              className="flex flex-grow flex-col"
+              className="flex grow flex-col"
               onClick={() => toast.dismiss(to.id)}
             >
               {t("write.nfcNotSupported")}
@@ -170,7 +170,7 @@ function Index() {
       .catch((e) => {
         toast.error((to) => (
           <span
-            className="flex flex-grow flex-col"
+            className="flex grow flex-col"
             onClick={() => toast.dismiss(to.id)}
           >
             {e.message}

@@ -40,7 +40,7 @@ export const RestorePuchasesButton = () => {
               });
             toast.success((to) => (
               <span
-                className="flex flex-grow flex-col"
+                className="flex grow flex-col"
                 onClick={() => toast.dismiss(to.id)}
               >
                 {t("settings.advanced.restoreSuccess")}
@@ -50,7 +50,7 @@ export const RestorePuchasesButton = () => {
           .catch(() => {
             toast.error((to) => (
               <span
-                className="flex flex-grow flex-col"
+                className="flex grow flex-col"
                 onClick={() => toast.dismiss(to.id)}
               >
                 {t("settings.advanced.restoreFail")}

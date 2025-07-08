@@ -42,7 +42,7 @@ function Create() {
             <Card disabled={!connected}>
               <div className="flex flex-row items-center gap-3">
                 <Button disabled={!connected} icon={<SearchIcon size="20" />} />
-                <div className="flex flex-grow flex-col">
+                <div className="flex grow flex-col">
                   <span className="font-semibold">
                     {t("create.searchGameHeading")}
                   </span>
@@ -68,7 +68,7 @@ function Create() {
                 icon={<PlayIcon size="26" />}
                 disabled={playing.mediaPath === "" && playing.mediaName === ""}
               />
-              <div className="flex flex-grow flex-col">
+              <div className="flex grow flex-col">
                 <span className="font-semibold">
                   {t("create.currentGameHeading")}
                 </span>
@@ -85,7 +85,7 @@ function Create() {
             <Card>
               <div className="flex flex-row items-center gap-3">
                 <Button icon={<ListPlusIcon size="20" />} />
-                <div className="flex flex-grow flex-col">
+                <div className="flex grow flex-col">
                   <span className="font-semibold">
                     {t("create.mappingsHeading")}
                   </span>
@@ -100,7 +100,7 @@ function Create() {
             <Card>
               <div className="flex flex-row items-center gap-3">
                 <Button icon={<TextIcon size="20" />} />
-                <div className="flex flex-grow flex-col">
+                <div className="flex grow flex-col">
                   <span className="font-semibold">
                     {t("create.customHeading")}
                   </span>
@@ -115,7 +115,7 @@ function Create() {
             <Card>
               <div className="flex flex-row items-center gap-3">
                 <Button icon={<NfcIcon size="24" />} />
-                <div className="flex flex-grow flex-col">
+                <div className="flex grow flex-col">
                   <span className="font-semibold">
                     {t("create.nfcHeading")}
                   </span>

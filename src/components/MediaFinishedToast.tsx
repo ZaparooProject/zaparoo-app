@@ -7,7 +7,7 @@ export const MediaFinishedToast = (props: { id: string }) => {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   return (
     <div
-      className="flex flex-grow flex-col"
+      className="flex grow flex-col"
       onClick={() => toast.dismiss(props.id)}
     >
       <div className="font-semibold">{t("toast.updatedDb")}</div>

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { debounce } from "lodash";
 
 interface BackToTopProps {
-  scrollContainerRef: RefObject<HTMLElement>;
+  scrollContainerRef: RefObject<HTMLElement | null>;
   threshold?: number;
 }
 
@@ -49,7 +49,7 @@ export function BackToTop({
 
   return (
     <div
-      className={`absolute bottom-4 right-4 transition-opacity duration-300 ${
+      className={`absolute right-4 bottom-4 transition-opacity duration-300 ${
         isVisible
           ? "pointer-events-auto opacity-100"
           : "pointer-events-none opacity-0"
@@ -62,7 +62,7 @@ export function BackToTop({
     >
       <button
         onClick={scrollToTop}
-        className="rounded-full bg-primary p-3 text-primary-foreground shadow-lg transition-transform hover:scale-105 hover:bg-primary/90 active:scale-95"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full p-3 shadow-lg transition-transform hover:scale-105 active:scale-95"
         aria-label={t("backToTop")}
       >
         <ChevronUp size={24} />

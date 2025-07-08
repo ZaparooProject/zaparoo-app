@@ -182,7 +182,7 @@ function Search() {
                   setWriteOpen(true);
                 }
               }}
-              className="flex-grow"
+              className="grow"
             />
             <Button
               label={t("create.search.playLabel")}

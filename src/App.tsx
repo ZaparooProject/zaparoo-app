@@ -98,7 +98,7 @@ export default function App() {
       toast.success(
         (to) => (
           <span
-            className="flex flex-grow flex-col"
+            className="flex grow flex-col"
             onClick={() => toast.dismiss(to.id)}
           >
             <span className="font-bold">{t("toast.nowPlayingHeading")}</span>

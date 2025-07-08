@@ -127,7 +127,7 @@ export function useNfcWriter(): WriteNfcHook {
             toast.success(
               (to) => (
                 <span
-                  className="flex flex-grow flex-col"
+                  className="flex grow flex-col"
                   onClick={() => toast.dismiss(to.id)}
                 >
                   <span>{toastSuccess}</span>
@@ -155,7 +155,7 @@ export function useNfcWriter(): WriteNfcHook {
           toast.error(
             (to) => (
               <span
-                className="flex flex-grow flex-col"
+                className="flex grow flex-col"
                 onClick={() => toast.dismiss(to.id)}
               >
                 <span>{toastFailed}</span>

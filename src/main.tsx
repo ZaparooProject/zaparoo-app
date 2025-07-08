@@ -13,24 +13,7 @@ import { Preferences } from "@capacitor/preferences";
 import { initializeApp } from "firebase/app";
 import firebaseConfig from "./firebase.json";
 
-import * as Sentry from "@sentry/capacitor";
-import * as SentryReact from "@sentry/react";
 import { ThemeProvider } from "./components/theme-provider";
-
-if (import.meta.env.PROD) {
-  Sentry.init(
-    {
-      dsn: import.meta.env.VITE_SENTRY_DSN,
-      integrations: [
-        Sentry.browserTracingIntegration(),
-        SentryReact.captureConsoleIntegration({
-          levels: ["error"]
-        })
-      ]
-    },
-    SentryReact.init
-  );
-}
 
 initializeApp(firebaseConfig);
 

@@ -1,8 +1,9 @@
 import classNames from "classnames";
+import { ReactElement } from "react";
 
 interface ToggleChipProps {
   label?: string;
-  icon?: JSX.Element;
+  icon?: ReactElement;
   state: boolean;
   setState: (state: boolean) => void;
   disabled?: boolean;

@@ -1,9 +1,10 @@
 import classNames from "classnames";
+import { ReactElement } from "react";
 
 export function Toast(props: {
-  icon: JSX.Element;
+  icon: ReactElement;
   iconColor?: string;
-  children: (JSX.Element | string)[] | JSX.Element | string;
+  children: (ReactElement | string)[] | ReactElement | string;
 }) {
   return (
     <div

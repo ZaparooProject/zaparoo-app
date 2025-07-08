@@ -3,10 +3,11 @@ import { useTranslation } from "react-i18next";
 import { NfcIcon, SettingsIcon, SquarePenIcon } from "lucide-react";
 import classNames from "classnames";
 import { useStatusStore } from "@/lib/store";
+import { ReactElement } from "react";
 
 function Button(props: {
   text: string;
-  icon: JSX.Element;
+  icon: ReactElement;
   path: string;
   className?: string;
 }) {

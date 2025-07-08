@@ -1,4 +1,3 @@
-import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { defineConfig, ServerOptions } from "vite";
 import react from "@vitejs/plugin-react";
 import { TanStackRouterVite } from "@tanstack/router-vite-plugin";
@@ -29,14 +28,7 @@ export default defineConfig(({ command, mode }) => {
         "@": path.resolve(__dirname, "./src")
       }
     },
-    plugins: [
-      react(),
-      TanStackRouterVite(),
-      sentryVitePlugin({
-        org: "zaparoo",
-        project: "zaparoo-app"
-      })
-    ],
+    plugins: [react(), TanStackRouterVite()],
     build: {
       sourcemap: true
     }

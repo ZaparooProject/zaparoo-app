@@ -8,174 +8,74 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings.index'
+import { Route as CreateIndexRouteImport } from './routes/create.index'
+import { Route as SettingsOnlineRouteImport } from './routes/settings.online'
+import { Route as SettingsHelpRouteImport } from './routes/settings.help'
+import { Route as SettingsAdvancedRouteImport } from './routes/settings.advanced'
+import { Route as SettingsAboutRouteImport } from './routes/settings.about'
+import { Route as CreateTextRouteImport } from './routes/create.text'
+import { Route as CreateSearchRouteImport } from './routes/create.search'
+import { Route as CreateNfcRouteImport } from './routes/create.nfc'
+import { Route as CreateMappingsRouteImport } from './routes/create.mappings'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as IndexImport } from './routes/index'
-import { Route as SettingsIndexImport } from './routes/settings.index'
-import { Route as CreateIndexImport } from './routes/create.index'
-import { Route as SettingsOnlineImport } from './routes/settings.online'
-import { Route as SettingsHelpImport } from './routes/settings.help'
-import { Route as SettingsAdvancedImport } from './routes/settings.advanced'
-import { Route as SettingsAboutImport } from './routes/settings.about'
-import { Route as CreateTextImport } from './routes/create.text'
-import { Route as CreateSearchImport } from './routes/create.search'
-import { Route as CreateNfcImport } from './routes/create.nfc'
-import { Route as CreateMappingsImport } from './routes/create.mappings'
-
-// Create/Update Routes
-
-const IndexRoute = IndexImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const SettingsIndexRoute = SettingsIndexImport.update({
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const CreateIndexRoute = CreateIndexImport.update({
+const CreateIndexRoute = CreateIndexRouteImport.update({
   id: '/create/',
   path: '/create/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const SettingsOnlineRoute = SettingsOnlineImport.update({
+const SettingsOnlineRoute = SettingsOnlineRouteImport.update({
   id: '/settings/online',
   path: '/settings/online',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const SettingsHelpRoute = SettingsHelpImport.update({
+const SettingsHelpRoute = SettingsHelpRouteImport.update({
   id: '/settings/help',
   path: '/settings/help',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const SettingsAdvancedRoute = SettingsAdvancedImport.update({
+const SettingsAdvancedRoute = SettingsAdvancedRouteImport.update({
   id: '/settings/advanced',
   path: '/settings/advanced',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const SettingsAboutRoute = SettingsAboutImport.update({
+const SettingsAboutRoute = SettingsAboutRouteImport.update({
   id: '/settings/about',
   path: '/settings/about',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const CreateTextRoute = CreateTextImport.update({
+const CreateTextRoute = CreateTextRouteImport.update({
   id: '/create/text',
   path: '/create/text',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const CreateSearchRoute = CreateSearchImport.update({
+const CreateSearchRoute = CreateSearchRouteImport.update({
   id: '/create/search',
   path: '/create/search',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const CreateNfcRoute = CreateNfcImport.update({
+const CreateNfcRoute = CreateNfcRouteImport.update({
   id: '/create/nfc',
   path: '/create/nfc',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const CreateMappingsRoute = CreateMappingsImport.update({
+const CreateMappingsRoute = CreateMappingsRouteImport.update({
   id: '/create/mappings',
   path: '/create/mappings',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-// Populate the FileRoutesByPath interface
-
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/create/mappings': {
-      id: '/create/mappings'
-      path: '/create/mappings'
-      fullPath: '/create/mappings'
-      preLoaderRoute: typeof CreateMappingsImport
-      parentRoute: typeof rootRoute
-    }
-    '/create/nfc': {
-      id: '/create/nfc'
-      path: '/create/nfc'
-      fullPath: '/create/nfc'
-      preLoaderRoute: typeof CreateNfcImport
-      parentRoute: typeof rootRoute
-    }
-    '/create/search': {
-      id: '/create/search'
-      path: '/create/search'
-      fullPath: '/create/search'
-      preLoaderRoute: typeof CreateSearchImport
-      parentRoute: typeof rootRoute
-    }
-    '/create/text': {
-      id: '/create/text'
-      path: '/create/text'
-      fullPath: '/create/text'
-      preLoaderRoute: typeof CreateTextImport
-      parentRoute: typeof rootRoute
-    }
-    '/settings/about': {
-      id: '/settings/about'
-      path: '/settings/about'
-      fullPath: '/settings/about'
-      preLoaderRoute: typeof SettingsAboutImport
-      parentRoute: typeof rootRoute
-    }
-    '/settings/advanced': {
-      id: '/settings/advanced'
-      path: '/settings/advanced'
-      fullPath: '/settings/advanced'
-      preLoaderRoute: typeof SettingsAdvancedImport
-      parentRoute: typeof rootRoute
-    }
-    '/settings/help': {
-      id: '/settings/help'
-      path: '/settings/help'
-      fullPath: '/settings/help'
-      preLoaderRoute: typeof SettingsHelpImport
-      parentRoute: typeof rootRoute
-    }
-    '/settings/online': {
-      id: '/settings/online'
-      path: '/settings/online'
-      fullPath: '/settings/online'
-      preLoaderRoute: typeof SettingsOnlineImport
-      parentRoute: typeof rootRoute
-    }
-    '/create/': {
-      id: '/create/'
-      path: '/create'
-      fullPath: '/create'
-      preLoaderRoute: typeof CreateIndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/settings/': {
-      id: '/settings/'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsIndexImport
-      parentRoute: typeof rootRoute
-    }
-  }
-}
-
-// Create and export the route tree
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -190,7 +90,6 @@ export interface FileRoutesByFullPath {
   '/create': typeof CreateIndexRoute
   '/settings': typeof SettingsIndexRoute
 }
-
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create/mappings': typeof CreateMappingsRoute
@@ -204,9 +103,8 @@ export interface FileRoutesByTo {
   '/create': typeof CreateIndexRoute
   '/settings': typeof SettingsIndexRoute
 }
-
 export interface FileRoutesById {
-  __root__: typeof rootRoute
+  __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/create/mappings': typeof CreateMappingsRoute
   '/create/nfc': typeof CreateNfcRoute
@@ -219,7 +117,6 @@ export interface FileRoutesById {
   '/create/': typeof CreateIndexRoute
   '/settings/': typeof SettingsIndexRoute
 }
-
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
@@ -262,7 +159,6 @@ export interface FileRouteTypes {
     | '/settings/'
   fileRoutesById: FileRoutesById
 }
-
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CreateMappingsRoute: typeof CreateMappingsRoute
@@ -275,6 +171,88 @@ export interface RootRouteChildren {
   SettingsOnlineRoute: typeof SettingsOnlineRoute
   CreateIndexRoute: typeof CreateIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
+}
+
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/': {
+      id: '/settings/'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create/': {
+      id: '/create/'
+      path: '/create'
+      fullPath: '/create'
+      preLoaderRoute: typeof CreateIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/online': {
+      id: '/settings/online'
+      path: '/settings/online'
+      fullPath: '/settings/online'
+      preLoaderRoute: typeof SettingsOnlineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/help': {
+      id: '/settings/help'
+      path: '/settings/help'
+      fullPath: '/settings/help'
+      preLoaderRoute: typeof SettingsHelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/advanced': {
+      id: '/settings/advanced'
+      path: '/settings/advanced'
+      fullPath: '/settings/advanced'
+      preLoaderRoute: typeof SettingsAdvancedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/about': {
+      id: '/settings/about'
+      path: '/settings/about'
+      fullPath: '/settings/about'
+      preLoaderRoute: typeof SettingsAboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create/text': {
+      id: '/create/text'
+      path: '/create/text'
+      fullPath: '/create/text'
+      preLoaderRoute: typeof CreateTextRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create/search': {
+      id: '/create/search'
+      path: '/create/search'
+      fullPath: '/create/search'
+      preLoaderRoute: typeof CreateSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create/nfc': {
+      id: '/create/nfc'
+      path: '/create/nfc'
+      fullPath: '/create/nfc'
+      preLoaderRoute: typeof CreateNfcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create/mappings': {
+      id: '/create/mappings'
+      path: '/create/mappings'
+      fullPath: '/create/mappings'
+      preLoaderRoute: typeof CreateMappingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+  }
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -290,63 +268,6 @@ const rootRouteChildren: RootRouteChildren = {
   CreateIndexRoute: CreateIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
-
-export const routeTree = rootRoute
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/",
-        "/create/mappings",
-        "/create/nfc",
-        "/create/search",
-        "/create/text",
-        "/settings/about",
-        "/settings/advanced",
-        "/settings/help",
-        "/settings/online",
-        "/create/",
-        "/settings/"
-      ]
-    },
-    "/": {
-      "filePath": "index.tsx"
-    },
-    "/create/mappings": {
-      "filePath": "create.mappings.tsx"
-    },
-    "/create/nfc": {
-      "filePath": "create.nfc.tsx"
-    },
-    "/create/search": {
-      "filePath": "create.search.tsx"
-    },
-    "/create/text": {
-      "filePath": "create.text.tsx"
-    },
-    "/settings/about": {
-      "filePath": "settings.about.tsx"
-    },
-    "/settings/advanced": {
-      "filePath": "settings.advanced.tsx"
-    },
-    "/settings/help": {
-      "filePath": "settings.help.tsx"
-    },
-    "/settings/online": {
-      "filePath": "settings.online.tsx"
-    },
-    "/create/": {
-      "filePath": "create.index.tsx"
-    },
-    "/settings/": {
-      "filePath": "settings.index.tsx"
-    }
-  }
-}
-ROUTE_MANIFEST_END */

@@ -58,7 +58,7 @@ const runToken = async (
           .catch((e) => {
             toast.error((to) => (
               <span
-                className="flex flex-grow flex-col"
+                className="flex grow flex-col"
                 onClick={() => toast.dismiss(to.id)}
               >
                 {e.message}
@@ -156,7 +156,7 @@ export function useScanOperations({
         setScanSession(false);
         toast.error((to) => (
           <span
-            className="flex flex-grow flex-col"
+            className="flex grow flex-col"
             onClick={() => toast.dismiss(to.id)}
           >
             {t("scan.scanError")}

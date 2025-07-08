@@ -108,7 +108,7 @@ export function ZapScriptInput(props: {
                     label={item.label}
                     variant="outline"
                     onClick={() => insertTextAtCursor(item.text)}
-                    className="flex-grow"
+                    className="grow"
                   />
                 ))}
                 <Button
@@ -122,14 +122,14 @@ export function ZapScriptInput(props: {
                   variant="outline"
                   disabled={props.value === "" || !connected}
                   label={t("create.custom.run")}
-                  className="flex-grow"
+                  className="grow"
                 />
                 <Button
                   icon={<EraserIcon size="20" />}
                   variant="outline"
                   disabled={props.value === ""}
                   onClick={() => setShowClearConfirm(true)}
-                  className="flex-grow"
+                  className="grow"
                 />
               </div>
               <div className="grid w-full grid-cols-2 gap-2">

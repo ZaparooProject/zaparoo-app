@@ -1,12 +1,12 @@
 import classNames from "classnames";
-import { useState } from "react";
+import { ReactElement, useState } from "react";
 
 interface ButtonProps {
   onClick?: () => void;
   label?: string;
   variant?: "fill" | "outline" | "text";
   size?: "default" | "sm" | "lg";
-  icon?: JSX.Element;
+  icon?: ReactElement;
   disabled?: boolean;
   className?: string;
   autoFocus?: boolean;
@@ -72,7 +72,7 @@ export function Button(props: ButtonProps) {
           "border-bd-outline": variant === "outline" && !props.disabled,
           "border-foreground-disabled": props.disabled,
           "text-foreground-disabled": props.disabled,
-          "text-[#fff]": !props.disabled,
+          "text-white": !props.disabled,
           "opacity-80": isPressed && !props.disabled
         },
         props.className

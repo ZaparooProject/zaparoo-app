@@ -12,10 +12,10 @@ export const MediaIndexingToast = (props: {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   return (
     <div
-      className="flex flex-grow flex-row items-center justify-between"
+      className="flex grow flex-row items-center justify-between"
       onClick={() => toast.dismiss(props.id)}
     >
-      <div className="flex flex-grow flex-col pr-3">
+      <div className="flex grow flex-col pr-3">
         <div className="font-semibold">{t("toast.updateDbHeading")}</div>
         <div className="text-sm">
           {gamesIndex.currentStepDisplay

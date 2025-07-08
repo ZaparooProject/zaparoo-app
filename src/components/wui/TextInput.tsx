@@ -14,7 +14,7 @@ export function TextInput(props: {
   autoFocus?: boolean;
   type?: string;
   onKeyUp?: KeyboardEventHandler<HTMLInputElement>;
-  ref?: React.RefObject<HTMLInputElement>;
+  ref?: React.RefObject<HTMLInputElement | null>;
 }) {
   const [value, setValue] = useState(props.value);
   const [modified, setModified] = useState(false);
@@ -38,7 +38,7 @@ export function TextInput(props: {
           className={classNames(
             "bg-background",
             "h-12",
-            "flex-grow",
+            "grow",
             "border",
             "border-solid",
             "p-2",

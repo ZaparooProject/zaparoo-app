@@ -41,7 +41,7 @@ export function ScanSpinner(props: {
           <div className="px-1.5 text-error">
             <WarningIcon size="24" />
           </div>
-          <div className="flex flex-grow flex-col text-left">
+          <div className="flex grow flex-col text-left">
             <span className="font-semibold">
               {t("spinner.notSupportedLabel")}
             </span>
@@ -59,7 +59,7 @@ export function ScanSpinner(props: {
           <div className="px-1.5 text-error">
             <WarningIcon size="24" />
           </div>
-          <div className="flex flex-grow flex-col text-left">
+          <div className="flex grow flex-col text-left">
             <span className="font-semibold">
               {t("spinner.nfcDisabledLabel")}
             </span>
