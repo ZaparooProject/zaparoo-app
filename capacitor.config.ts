@@ -10,7 +10,7 @@ const config: CapacitorConfig = {
   appName: "Zaparoo",
   backgroundColor: "#111928",
   server: {
-    url: `http://${process.env.DEV_SERVER_IP}:8100`,
+    // url: `http://${process.env.DEV_SERVER_IP}:8100`,
     // url:
     //   process.env.NODE_ENV === "development" && process.env.DEV_SERVER_IP
     //     ? `http://${process.env.DEV_SERVER_IP}:8100`

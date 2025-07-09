@@ -68,8 +68,8 @@
       "purchaseProAction": "Unlock Zaparoo Pro",
       "completeIntro": "Let's Zaparoo",
       "freeUsageTitle": "Daily Free Zaps",
-      "freeUsageExceeded": "No zaps left today. Unlock Pro for unlimited.",
-      "freeUsageRemaining": "{{remaining}} zaps left today."
+      "freeUsageExceeded": "None left today. Unlock Pro for unlimited.",
+      "freeUsageRemaining": "{{remaining}} left today."
     },
     "create": {
       "title": "Create a New Tag",
