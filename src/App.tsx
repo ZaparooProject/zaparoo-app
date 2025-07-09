@@ -15,10 +15,12 @@ import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { initSafeAreaInsets } from "./lib/safeArea.ts";
 import { MediaIndexingToast } from "./components/MediaIndexingToast.tsx";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
+import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 
 const router = createRouter({
   scrollRestoration: true,
   routeTree,
+  defaultErrorComponent: ErrorComponent,
   basepath:
     Capacitor.isNativePlatform() || location.hostname === "zaparoo.app"
       ? "/"
@@ -71,7 +73,7 @@ export default function App() {
         {
           id: "indexing",
           icon: (
-            <span className="pl-1 pr-1 text-primary">
+            <span className="text-primary pr-1 pl-1">
               <DatabaseIcon size="24" />
             </span>
           )
@@ -85,7 +87,7 @@ export default function App() {
       toast.success((to) => <MediaFinishedToast id={to.id} />, {
         id: "indexed",
         icon: (
-          <span className="pl-1 pr-1 text-success">
+          <span className="text-success pr-1 pl-1">
             <DatabaseIcon size="24" />
           </span>
         )
@@ -108,7 +110,7 @@ export default function App() {
         {
           id: "playingGame-" + playing.mediaName,
           icon: (
-            <span className="pr-1 text-success">
+            <span className="text-success pr-1">
               <PlayIcon size="24" />
             </span>
           )

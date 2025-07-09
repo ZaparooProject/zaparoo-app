@@ -3,6 +3,7 @@ import { BottomNav } from "../components/BottomNav";
 import { App } from "@capacitor/app";
 import { useEffect } from "react";
 import { SafeAreaHandler } from "@/lib/safeArea";
+import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 
 function BackHandler() {
   const navigate = useNavigate();
@@ -53,5 +54,6 @@ export const Route = createRootRoute({
         <BottomNav />
       </footer>
     </>
-  )
+  ),
+  errorComponent: ErrorComponent
 });
