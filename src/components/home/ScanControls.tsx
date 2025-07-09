@@ -25,7 +25,7 @@ export function ScanControls({
   return (
     <>
       {Capacitor.isNativePlatform() ? (
-        <div className="mb-9 mt-8 text-center">
+        <div className="mt-8 mb-9 text-center">
           <div onClick={onScanButton}>
             <ScanSpinner status={scanStatus} spinning={scanSession} />
           </div>
@@ -35,9 +35,8 @@ export function ScanControls({
       )}
 
       {connected && Capacitor.isNativePlatform() && (
-        <div className="mb-3">
+        <div className="mb-4 flex justify-center">
           <Button
-            className="w-full"
             variant="outline"
             onClick={onCameraScan}
             label={t("scan.cameraMode")}

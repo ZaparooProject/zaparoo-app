@@ -24,13 +24,15 @@ export function ScanSpinner(props: {
 
   useEffect(() => {
     if (import.meta.env.PROD) {
-      Nfc.isSupported().then((available) => {
+      Nfc.isAvailable().then((available) => {
         setNfcSupported(available.nfc);
       });
 
-      Nfc.isEnabled().then((enabled) => {
-        setNfcEnabled(enabled.isEnabled);
-      });
+      if (Capacitor.getPlatform() === "android") {
+        Nfc.isEnabled().then((enabled) => {
+          setNfcEnabled(enabled.isEnabled);
+        });
+      }
     }
   }, []);
 
@@ -38,7 +40,7 @@ export function ScanSpinner(props: {
     return (
       <Card className="mx-2 mb-2">
         <div className="flex flex-row items-center justify-between gap-3">
-          <div className="px-1.5 text-error">
+          <div className="text-error px-1.5">
             <WarningIcon size="24" />
           </div>
           <div className="flex grow flex-col text-left">
@@ -56,7 +58,7 @@ export function ScanSpinner(props: {
     return (
       <Card className="mx-2 mb-5">
         <div className="flex flex-row items-center justify-between gap-3">
-          <div className="px-1.5 text-error">
+          <div className="text-error px-1.5">
             <WarningIcon size="24" />
           </div>
           <div className="flex grow flex-col text-left">
@@ -160,7 +162,7 @@ export function ScanSpinner(props: {
               )}
             >
               <div
-                className="h-7 w-7 rounded-full bg-bd-outline"
+                className="bg-bd-outline h-7 w-7 rounded-full"
                 style={{
                   display: props.spinning ? "none" : "block",
                   opacity: 0,

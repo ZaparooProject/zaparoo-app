@@ -6,15 +6,12 @@ import { HistoryIcon } from "../lib/images";
 import { useStatusStore } from "../lib/store";
 import { useQuery } from "@tanstack/react-query";
 import { KeepAwake } from "@capacitor-community/keep-awake";
-import toast from "react-hot-toast";
 import { ToggleChip } from "../components/wui/ToggleChip";
-import { useTranslation } from "react-i18next";
 import { Preferences } from "@capacitor/preferences";
 import { PageFrame } from "../components/PageFrame";
-import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook.tsx";
+import { useNfcWriter } from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
-import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { ConnectionStatus } from "../components/home/ConnectionStatus";
 import { ScanControls } from "../components/home/ScanControls";
 import { ScanSettings } from "../components/home/ScanSettings";
@@ -24,7 +21,8 @@ import { HistoryModal } from "../components/home/HistoryModal";
 import { StopConfirmModal } from "../components/home/StopConfirmModal";
 import { useScanOperations } from "../hooks/useScanOperations";
 import { useAppSettings } from "../hooks/useAppSettings";
-
+import { useWriteQueueProcessor } from "@/hooks/useWriteQueueProcessor.tsx";
+import { useRunQueueProcessor } from "@/hooks/useRunQueueProcessor.tsx";
 
 interface LoaderData {
   restartScan: boolean;
@@ -49,7 +47,6 @@ export const Route = createFileRoute("/")({
 function Index() {
   const initData = Route.useLoaderData();
 
-  const { t } = useTranslation();
   const nfcWriter = useNfcWriter();
   const [writeOpen, setWriteOpen] = useState(false);
   const closeWriteModal = () => {
@@ -73,19 +70,40 @@ function Index() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const safeInsets = useStatusStore((state) => state.safeInsets);
 
-  const runQueue = useStatusStore((state) => state.runQueue);
-  const setRunQueue = useStatusStore((state) => state.setRunQueue);
-  const writeQueue = useStatusStore((state) => state.writeQueue);
-  const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
 
-  const { restartScan, setRestartScan, launchOnScan, setLaunchOnScan, launcherAccess } = useAppSettings({ initData });
+  const {
+    restartScan,
+    setRestartScan,
+    launchOnScan,
+    setLaunchOnScan,
+    launcherAccess
+  } = useAppSettings({ initData });
 
-  const { scanSession, scanStatus, handleScanButton, handleCameraScan, handleStopConfirm, runToken } = useScanOperations({
+  const {
+    scanSession,
+    scanStatus,
+    handleScanButton,
+    handleCameraScan,
+    handleStopConfirm,
+    runToken
+  } = useScanOperations({
     connected,
     launcherAccess,
     setLastToken,
     setProPurchaseModalOpen,
+    setWriteOpen
+  });
+
+  useRunQueueProcessor({
+    launcherAccess,
+    setLastToken,
+    setProPurchaseModalOpen,
+    runToken
+  });
+
+  useWriteQueueProcessor({
+    nfcWriter,
     setWriteOpen
   });
 
@@ -112,72 +130,6 @@ function Index() {
       cancelSession();
     };
   }, []);
-
-  useEffect(() => {
-    if (!runQueue) {
-      return;
-    }
-    console.log("runQueue", runQueue.value);
-    runToken(
-      runQueue.value,
-      runQueue.value,
-      launcherAccess,
-      connected,
-      setLastToken,
-      setProPurchaseModalOpen,
-      runQueue.unsafe
-    )
-      .then((success: boolean) => {
-        console.log("runQueue success", success);
-      })
-      .catch((e) => {
-        console.error("runQueue error", e);
-      });
-    setRunQueue(null);
-  }, [
-    connected,
-    launcherAccess,
-    runQueue,
-    setLastToken,
-    setProPurchaseModalOpen,
-    setRunQueue,
-    runToken
-  ]);
-
-  useEffect(() => {
-    if (writeQueue === "") {
-      return;
-    }
-    Nfc.isSupported()
-      .then((result) => {
-        if (!result.nfc) {
-          toast.error((to) => (
-            <span
-              className="flex grow flex-col"
-              onClick={() => toast.dismiss(to.id)}
-            >
-              {t("write.nfcNotSupported")}
-            </span>
-          ));
-          return;
-        } else {
-          console.log("writeQueue", writeQueue);
-          setWriteOpen(true);
-          nfcWriter.write(WriteAction.Write, writeQueue);
-          setWriteQueue("");
-        }
-      })
-      .catch((e) => {
-        toast.error((to) => (
-          <span
-            className="flex grow flex-col"
-            onClick={() => toast.dismiss(to.id)}
-          >
-            {e.message}
-          </span>
-        ));
-      });
-  }, [writeQueue, nfcWriter, t, setWriteQueue]);
 
   return (
     <>
@@ -213,7 +165,7 @@ function Index() {
 
         <div>
           <ConnectionStatus connected={connected} />
-          
+
           <ScanSettings
             connected={connected}
             restartScan={restartScan}
@@ -221,11 +173,8 @@ function Index() {
             launchOnScan={launchOnScan}
             setLaunchOnScan={setLaunchOnScan}
           />
-          
-          <LastScannedInfo
-            lastToken={lastToken}
-            scanStatus={scanStatus}
-          />
+
+          <LastScannedInfo lastToken={lastToken} scanStatus={scanStatus} />
 
           {connected && (
             <NowPlayingInfo
