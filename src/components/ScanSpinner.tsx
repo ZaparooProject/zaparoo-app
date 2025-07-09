@@ -162,14 +162,17 @@ export function ScanSpinner(props: {
               )}
             >
               <div
-                className="bg-bd-outline h-7 w-7 rounded-full"
+                className="h-7 w-7 rounded-full"
                 style={{
                   display: props.spinning ? "none" : "block",
+                  backgroundColor: "var(--color-border-outline)",
                   opacity: 0,
                   filter: "blur(2px)",
                   animation: !props.spinning
                     ? "attention 5s infinite linear"
-                    : "none"
+                    : "none",
+                  transformOrigin: "center",
+                  willChange: "opacity, transform"
                 }}
               ></div>
             </div>

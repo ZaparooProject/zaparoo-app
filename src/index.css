@@ -216,18 +216,23 @@
     40%,
     100% {
       opacity: 0;
+      transform: scale(1);
     }
     50% {
       opacity: 0.8;
+      transform: scale(1.1);
     }
     55% {
       opacity: 0;
+      transform: scale(1);
     }
     65% {
       opacity: 0.8;
+      transform: scale(1.1);
     }
     70% {
       opacity: 0;
+      transform: scale(1);
     }
   }
 
@@ -266,6 +271,11 @@
   .border-bd-input { border-color: var(--color-border-input); }
 
   /* Backgrounds */
+  .bg-bd-filled { background-color: var(--color-border-filled); }
+  .bg-bd-outline { background-color: var(--color-border-outline); }
+  .bg-bd-input { background-color: var(--color-border-input); }
+
+  /* Gradients */
   .bg-button-pattern {
     background-image: radial-gradient(164.29% 190% at center top, #3FAEEC 0%, #4E4AF2 100%);
   }
