@@ -46,6 +46,11 @@ function Settings() {
     (state) => state.removeDeviceHistory
   );
 
+  const version = useQuery({
+    queryKey: ["version"],
+    queryFn: () => CoreAPI.version()
+  });
+
   const [address, setAddress] = useState(getDeviceAddress());
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -62,7 +67,7 @@ function Settings() {
         setDeviceHistory(JSON.parse(v.value));
       }
     });
-  }, []);
+  }, [setDeviceHistory]);
 
   const update = useMutation({
     mutationFn: (params: UpdateSettingsRequest) =>
@@ -86,6 +91,13 @@ function Settings() {
               location.reload();
             }}
           />
+
+          {version.isSuccess && (
+            <div className="flex flex-row items-center justify-between gap-2">
+              <div>Platform: {version.data.platform}</div>
+              <div>Version: {version.data.version}</div>
+            </div>
+          )}
 
           {deviceHistory.length > 0 && (
             <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
@@ -277,7 +289,7 @@ function Settings() {
           <div className="flex flex-col">
             <label className="text-white">{t("settings.language")}</label>
             <select
-              className="rounded-md border border-solid border-bd-input bg-background p-3 text-foreground"
+              className="border-bd-input bg-background text-foreground rounded-md border border-solid p-3"
               value={i18n.languages[0]}
               onChange={(e) => i18n.changeLanguage(e.target.value)}
             >
