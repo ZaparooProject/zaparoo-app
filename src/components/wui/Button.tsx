@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { ReactElement, useState, memo } from "react";
+import { ReactElement, useState, memo, useRef } from "react";
 
 interface ButtonProps {
   onClick?: () => void;
@@ -16,6 +16,8 @@ export const Button = memo(function Button(props: ButtonProps) {
   const variant = props.variant || "fill";
   const size = props.size || "default";
   const [isPressed, setIsPressed] = useState(false);
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+  const hasMoved = useRef(false);
 
   return (
     <button
@@ -31,7 +33,7 @@ export const Button = memo(function Button(props: ButtonProps) {
         "transition-all",
         "duration-100",
         "active:scale-95",
-        "touch-none",
+        "touch-manipulation",
         // Size variants
         {
           // Small size
@@ -79,10 +81,44 @@ export const Button = memo(function Button(props: ButtonProps) {
       )}
       disabled={props.disabled}
       autoFocus={props.autoFocus}
-      onClick={() => !props.disabled && props.onClick && props.onClick()}
-      onTouchStart={() => setIsPressed(true)}
-      onTouchEnd={() => setIsPressed(false)}
-      onTouchCancel={() => setIsPressed(false)}
+      onClick={() => {
+        // Only trigger click if this wasn't a scroll gesture
+        if (!hasMoved.current && !props.disabled && props.onClick) {
+          props.onClick();
+        }
+      }}
+      onTouchStart={(e) => {
+        const touch = e.touches[0];
+        touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+        hasMoved.current = false;
+        setIsPressed(true);
+      }}
+      onTouchMove={(e) => {
+        if (touchStartPos.current) {
+          const touch = e.touches[0];
+          const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
+          const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
+          
+          // If moved more than 10px, consider it a scroll gesture
+          if (deltaX > 10 || deltaY > 10) {
+            hasMoved.current = true;
+            setIsPressed(false);
+          }
+        }
+      }}
+      onTouchEnd={() => {
+        setIsPressed(false);
+        // Reset after a short delay to allow click to process
+        setTimeout(() => {
+          hasMoved.current = false;
+          touchStartPos.current = null;
+        }, 100);
+      }}
+      onTouchCancel={() => {
+        setIsPressed(false);
+        hasMoved.current = false;
+        touchStartPos.current = null;
+      }}
       onMouseDown={() => setIsPressed(true)}
       onMouseUp={() => setIsPressed(false)}
       onMouseLeave={() => setIsPressed(false)}

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useSwipeable } from "react-swipeable";
+import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { PageFrame } from "../components/PageFrame.tsx";
 import { useTranslation } from "react-i18next";
 import { useStatusStore } from "../lib/store.ts";
@@ -17,8 +17,9 @@ export const Route = createFileRoute("/settings/online")({
 
 function About() {
   const navigate = useNavigate();
-  const swipeHandlers = useSwipeable({
-    onSwipedRight: () => navigate({ to: "/settings" })
+  const swipeHandlers = useSmartSwipe({
+    onSwipeRight: () => navigate({ to: "/settings" }),
+    preventScrollOnSwipe: false
   });
 
   const { t } = useTranslation();
@@ -30,7 +31,7 @@ function About() {
   const [onlineLoggingIn, setOnlineLoggingIn] = useState(false);
 
   return (
-    <div {...swipeHandlers}>
+    <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
       <PageFrame
         title={t("online.title")}
         back={() => navigate({ to: "/settings" })}

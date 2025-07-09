@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CreateIcon } from "../lib/images";
 import { Button } from "../components/wui/Button";
-import { useSwipeable } from "react-swipeable";
+import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { WriteModal } from "../components/WriteModal";
 import { useEffect, useState } from "react";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
@@ -44,13 +44,14 @@ function CustomText() {
   }, [customText]);
 
   const navigate = useNavigate();
-  const swipeHandlers = useSwipeable({
-    onSwipedRight: () => navigate({ to: "/create" })
+  const swipeHandlers = useSmartSwipe({
+    onSwipeRight: () => navigate({ to: "/create" }),
+    preventScrollOnSwipe: false
   });
 
   return (
     <>
-      <div {...swipeHandlers}>
+      <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
         <PageFrame
           title={t("create.custom.title")}
           back={() => navigate({ to: "/create" })}

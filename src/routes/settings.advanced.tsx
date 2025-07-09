@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { ToggleSwitch } from "../components/wui/ToggleSwitch";
-import { useSwipeable } from "react-swipeable";
+import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useStatusStore } from "../lib/store";
 import { PageFrame } from "../components/PageFrame";
@@ -29,12 +29,13 @@ function Advanced() {
   const { t } = useTranslation();
 
   const navigate = useNavigate();
-  const swipeHandlers = useSwipeable({
-    onSwipedRight: () => navigate({ to: "/settings" })
+  const swipeHandlers = useSmartSwipe({
+    onSwipeRight: () => navigate({ to: "/settings" }),
+    preventScrollOnSwipe: false
   });
 
   return (
-    <div {...swipeHandlers}>
+    <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
       <PageFrame
         title={t("settings.advanced.title")}
         back={() => navigate({ to: "/settings" })}

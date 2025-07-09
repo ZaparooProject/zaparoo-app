@@ -1,13 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { CreateIcon, PlayIcon, SearchIcon } from "../lib/images";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { SearchResultGame } from "../lib/models";
 import { SlideModal } from "../components/SlideModal";
 import { Button } from "../components/wui/Button";
-import { useSwipeable } from "react-swipeable";
+import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { useStatusStore } from "../lib/store";
 import { TextInput } from "../components/wui/TextInput";
 import { WriteModal } from "../components/WriteModal";
@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { Preferences } from "@capacitor/preferences";
 import { SearchResults } from "@/components/SearchResults.tsx";
 import { CopyButton } from "@/components/CopyButton.tsx";
+import { BackToTop } from "@/components/BackToTop.tsx";
 
 const initData = {
   systemQuery: "all"
@@ -41,6 +42,8 @@ function Search() {
 
   const [querySystem, setQuerySystem] = useState(initData.systemQuery);
   const [query, setQuery] = useState("");
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const search = useMutation({
     mutationFn: (sp: SearchParams) =>
@@ -82,16 +85,18 @@ function Search() {
   }, [setGamesIndex]);
 
   const navigate = useNavigate();
-  const swipeHandlers = useSwipeable({
-    onSwipedRight: () => navigate({ to: "/create" })
+  const swipeHandlers = useSmartSwipe({
+    onSwipeRight: () => navigate({ to: "/create" }),
+    preventScrollOnSwipe: false
   });
 
   return (
     <>
-      <div {...swipeHandlers}>
+      <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
         <PageFrame
           title={t("create.search.title")}
           back={() => navigate({ to: "/create" })}
+          scrollRef={scrollContainerRef}
         >
           <TextInput
             label={t("create.search.gameInput")}
@@ -119,7 +124,7 @@ function Search() {
                 Preferences.set({ key: "searchSystem", value: e.target.value });
               }}
               disabled={!connected || !gamesIndex.exists || gamesIndex.indexing}
-              className="rounded-md border border-solid border-bd-input bg-background p-3 text-foreground disabled:border-foreground-disabled"
+              className="border-bd-input bg-background text-foreground disabled:border-foreground-disabled rounded-md border border-solid p-3"
             >
               <option value="all">{t("create.search.allSystems")}</option>
               {systems.isSuccess &&
@@ -201,6 +206,11 @@ function Search() {
           </div>
         </div>
       </SlideModal>
+      <BackToTop
+        scrollContainerRef={scrollContainerRef}
+        threshold={200}
+        paddingBottom="5em"
+      />
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
     </>
   );

@@ -1,10 +1,12 @@
 import { useStatusStore } from "@/lib/store";
 import { BackIcon } from "../lib/images";
+import { RefObject } from "react";
 
 interface PageFrameProps {
   children: React.ReactNode;
   title?: string;
   back?: () => void;
+  scrollRef?: RefObject<HTMLDivElement | null>;
 }
 
 export function PageFrame(props: PageFrameProps) {
@@ -40,6 +42,7 @@ export function PageFrame(props: PageFrameProps) {
         )}
       </div>
       <div
+        ref={props.scrollRef}
         className="flex-1 overflow-y-auto"
         style={{
           paddingRight: `calc(1rem + ${safeInsets.right})`,

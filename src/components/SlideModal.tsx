@@ -1,5 +1,5 @@
 import { useStatusStore } from "@/lib/store.ts";
-import { useSwipeable } from "react-swipeable";
+import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import classNames from "classnames";
 
 export function SlideModal(props: {
@@ -9,9 +9,11 @@ export function SlideModal(props: {
   children: React.ReactNode;
   className?: string;
 }) {
-  const swipeHandlers = useSwipeable({
-    preventScrollOnSwipe: true,
-    onSwipedDown: () => props.close()
+  const swipeHandlers = useSmartSwipe({
+    onSwipeDown: props.close,
+    preventScrollOnSwipe: false,
+    swipeThreshold: 50,
+    velocityThreshold: 0.3
   });
 
   const safeInsets = useStatusStore((state) => state.safeInsets);

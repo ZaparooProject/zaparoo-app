@@ -1,4 +1,4 @@
-import { useSwipeable } from "react-swipeable";
+import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { BackIcon } from "../lib/images";
 import { ScanResult } from "../lib/models";
 import { ScanSpinner } from "./ScanSpinner";
@@ -7,8 +7,9 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useStatusStore } from "@/lib/store";
 
 export function WriteModal(props: { isOpen: boolean; close: () => void }) {
-  const swipeHandlers = useSwipeable({
-    onSwipedRight: () => props.close()
+  const swipeHandlers = useSmartSwipe({
+    onSwipeRight: () => props.close(),
+    preventScrollOnSwipe: false
   });
 
   if (!props.isOpen) {

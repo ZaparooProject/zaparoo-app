@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useSwipeable } from "react-swipeable";
+import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { WriteModal } from "../components/WriteModal";
 import { useEffect, useState } from "react";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
@@ -46,8 +46,9 @@ function Mappings() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const swipeHandlers = useSwipeable({
-    onSwipedRight: () => navigate({ to: "/create" })
+  const swipeHandlers = useSmartSwipe({
+    onSwipeRight: () => navigate({ to: "/create" }),
+    preventScrollOnSwipe: false
   });
 
   const mappings = useQuery({
@@ -117,7 +118,7 @@ function Mappings() {
 
   return (
     <>
-      <div {...swipeHandlers}>
+      <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
         <PageFrame
           title={t("create.mappings.title")}
           back={() => navigate({ to: "/create" })}

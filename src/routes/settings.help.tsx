@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Button } from "../components/wui/Button";
-import { useSwipeable } from "react-swipeable";
+import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { Browser } from "@capacitor/browser";
 import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
@@ -11,14 +11,15 @@ export const Route = createFileRoute("/settings/help")({
 
 function Help() {
   const navigate = useNavigate();
-  const swipeHandlers = useSwipeable({
-    onSwipedRight: () => navigate({ to: "/settings" })
+  const swipeHandlers = useSmartSwipe({
+    onSwipeRight: () => navigate({ to: "/settings" }),
+    preventScrollOnSwipe: false
   });
 
   const { t } = useTranslation();
 
   return (
-    <div {...swipeHandlers}>
+    <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
       <PageFrame
         title={t("settings.help.title")}
         back={() => navigate({ to: "/settings" })}
