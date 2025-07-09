@@ -4,12 +4,13 @@ import { getDeviceAddress } from "../../lib/coreApi";
 import { DeviceIcon, SettingsIcon, WarningIcon } from "../../lib/images";
 import { Button } from "../wui/Button";
 import { Card } from "../wui/Card";
+import { memo } from "react";
 
 interface ConnectionStatusProps {
   connected: boolean;
 }
 
-export function ConnectionStatus({ connected }: ConnectionStatusProps) {
+export const ConnectionStatus = memo(function ConnectionStatus({ connected }: ConnectionStatusProps) {
   const { t } = useTranslation();
 
   if (!connected) {
@@ -60,4 +61,4 @@ export function ConnectionStatus({ connected }: ConnectionStatusProps) {
       </div>
     </Card>
   );
-}
+});

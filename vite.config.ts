@@ -30,7 +30,17 @@ export default defineConfig(({ command, mode }) => {
     },
     plugins: [react(), TanStackRouterVite()],
     build: {
-      sourcemap: true
+      sourcemap: true,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            router: ['@tanstack/react-router'],
+            ui: ['react-i18next', 'react-hot-toast', 'classnames'],
+            capacitor: ['@capacitor/core', '@capacitor/preferences', '@capacitor-community/keep-awake']
+          }
+        }
+      }
     }
   };
 });

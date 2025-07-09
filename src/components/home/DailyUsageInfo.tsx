@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import { getUsageStats } from "@/lib/dailyUsage.ts";
 import { Card } from "../wui/Card";
 import { useTranslation } from "react-i18next";
@@ -11,7 +11,7 @@ interface DailyUsageInfoProps {
   lastToken: TokenResponse;
 }
 
-export function DailyUsageInfo({
+export const DailyUsageInfo = memo(function DailyUsageInfo({
   launcherAccess,
   connected,
   openProModal,
@@ -84,4 +84,4 @@ export function DailyUsageInfo({
       </div>
     </Card>
   );
-}
+});

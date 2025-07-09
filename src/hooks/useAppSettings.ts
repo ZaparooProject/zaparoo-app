@@ -23,27 +23,29 @@ export function useAppSettings({ initData }: UseAppSettingsProps) {
   }, [launchOnScan]);
 
   useEffect(() => {
-    Preferences.get({ key: "restartScan" }).then((result) => {
-      if (result.value) {
-        setRestartScan(result.value === "true");
+    let isMounted = true;
+    
+    Promise.all([
+      Preferences.get({ key: "restartScan" }),
+      Preferences.get({ key: "launchOnScan" }),
+      Preferences.get({ key: "launcherAccess" })
+    ]).then(([restartResult, launchResult, accessResult]) => {
+      if (!isMounted) return;
+      
+      if (restartResult.value) {
+        setRestartScan(restartResult.value === "true");
+      }
+      if (launchResult.value) {
+        setLaunchOnScan(launchResult.value !== "false");
+      }
+      if (accessResult.value) {
+        setLauncherAccess(accessResult.value === "true");
       }
     });
-  }, []);
-
-  useEffect(() => {
-    Preferences.get({ key: "launchOnScan" }).then((result) => {
-      if (result.value) {
-        setLaunchOnScan(result.value !== "false");
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    Preferences.get({ key: "launcherAccess" }).then((result) => {
-      if (result.value) {
-        setLauncherAccess(result.value === "true");
-      }
-    });
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return {

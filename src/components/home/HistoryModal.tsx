@@ -3,6 +3,7 @@ import classNames from "classnames";
 import { SlideModal } from "../SlideModal";
 import { CopyButton } from "../CopyButton";
 import { errorColor } from "../ScanSpinner";
+import { memo } from "react";
 
 interface HistoryEntry {
   uid: string;
@@ -22,7 +23,7 @@ interface HistoryModalProps {
   safeInsetsBottom: string;
 }
 
-export function HistoryModal({ isOpen, onClose, historyData, safeInsetsBottom }: HistoryModalProps) {
+export const HistoryModal = memo(function HistoryModal({ isOpen, onClose, historyData, safeInsetsBottom }: HistoryModalProps) {
   const { t } = useTranslation();
 
   return (
@@ -78,4 +79,4 @@ export function HistoryModal({ isOpen, onClose, historyData, safeInsetsBottom }:
       )}
     </SlideModal>
   );
-}
+});

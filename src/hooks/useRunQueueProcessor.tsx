@@ -101,7 +101,7 @@ export function useRunQueueProcessor({
 
   // Listen for URL opens and process directly
   useEffect(() => {
-    App.addListener("appUrlOpen", (event) => {
+    const listener = App.addListener("appUrlOpen", (event) => {
       const url = new URL(event.url);
       const path = url.pathname;
 
@@ -119,6 +119,10 @@ export function useRunQueueProcessor({
         }
       }
     });
+    
+    return () => {
+      listener.then((l) => l.remove());
+    };
   }, [processQueue]);
 
   useEffect(() => {

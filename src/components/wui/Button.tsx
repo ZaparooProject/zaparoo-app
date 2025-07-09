@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { ReactElement, useState } from "react";
+import { ReactElement, useState, memo } from "react";
 
 interface ButtonProps {
   onClick?: () => void;
@@ -12,7 +12,7 @@ interface ButtonProps {
   autoFocus?: boolean;
 }
 
-export function Button(props: ButtonProps) {
+export const Button = memo(function Button(props: ButtonProps) {
   const variant = props.variant || "fill";
   const size = props.size || "default";
   const [isPressed, setIsPressed] = useState(false);
@@ -91,4 +91,4 @@ export function Button(props: ButtonProps) {
       {props.label}
     </button>
   );
-}
+});

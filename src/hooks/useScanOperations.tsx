@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
@@ -147,7 +147,7 @@ export function useScanOperations({
 
   const statusTimeout = 3000;
 
-  const doScan = () => {
+  const doScan = useCallback(() => {
     setScanSession(true);
 
     readTag()
@@ -207,9 +207,9 @@ export function useScanOperations({
           setScanStatus(ScanResult.Default);
         }, statusTimeout);
       });
-  };
+  }, [connected, launcherAccess, setLastToken, setProPurchaseModalOpen, statusTimeout, t]);
 
-  const handleScanButton = async () => {
+  const handleScanButton = useCallback(async () => {
     if (scanSession) {
       setScanSession(false);
       cancelSession();
@@ -217,9 +217,9 @@ export function useScanOperations({
       setScanStatus(ScanResult.Default);
       doScan();
     }
-  };
+  }, [scanSession, doScan]);
 
-  const handleCameraScan = async () => {
+  const handleCameraScan = useCallback(async () => {
     BarcodeScanner.scan().then((res) => {
       if (res.barcodes.length < 1) {
         return;
@@ -248,9 +248,9 @@ export function useScanOperations({
         setProPurchaseModalOpen
       );
     });
-  };
+  }, [connected, launcherAccess, setLastToken, setProPurchaseModalOpen, setWriteOpen, nfcWriter]);
 
-  const handleStopConfirm = () => {
+  const handleStopConfirm = useCallback(() => {
     runToken(
       "**launch.system:menu",
       "**launch.system:menu",
@@ -261,14 +261,14 @@ export function useScanOperations({
       false,
       true
     );
-  };
+  }, [connected, launcherAccess, setLastToken, setProPurchaseModalOpen]);
 
-  return {
+  return useMemo(() => ({
     scanSession,
     scanStatus,
     handleScanButton,
     handleCameraScan,
     handleStopConfirm,
     runToken
-  };
+  }), [scanSession, scanStatus, handleScanButton, handleCameraScan, handleStopConfirm]);
 }

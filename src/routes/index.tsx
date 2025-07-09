@@ -23,6 +23,7 @@ import { useScanOperations } from "../hooks/useScanOperations";
 import { useAppSettings } from "../hooks/useAppSettings";
 import { useWriteQueueProcessor } from "@/hooks/useWriteQueueProcessor.tsx";
 import { useRunQueueProcessor } from "@/hooks/useRunQueueProcessor.tsx";
+
 import logoImage from "../../public/lockup.png";
 
 interface LoaderData {
@@ -104,7 +105,8 @@ function Index() {
 
   const history = useQuery({
     queryKey: ["history"],
-    queryFn: () => CoreAPI.history()
+    queryFn: () => CoreAPI.history(),
+    enabled: historyOpen
   });
 
   useEffect(() => {

@@ -38,51 +38,56 @@ export function useWriteQueueProcessor({
     const maxRetries = 10;
     const retryInterval = 500;
     let retryCount = 0;
+    let timeoutId: NodeJS.Timeout;
 
-    setTimeout(() => {
-      const checkNfcAndWrite = () => {
-        Promise.all([Nfc.isAvailable()])
-          .then(([availableResult]) => {
-            if (!availableResult.nfc) {
-              toast.error((to) => (
-                <span
-                  className="flex grow flex-col"
-                  onClick={() => toast.dismiss(to.id)}
-                >
-                  {t("write.nfcNotSupported")}
-                </span>
-              ));
-              isProcessingRef.current = false;
-              return;
-            }
-
-            console.log("Processing NFC write:", currentWriteValue);
-            setWriteOpen(true);
-            nfcWriter.write(WriteAction.Write, currentWriteValue);
+    const checkNfcAndWrite = () => {
+      Promise.all([Nfc.isAvailable()])
+        .then(([availableResult]) => {
+          if (!availableResult.nfc) {
+            toast.error((to) => (
+              <span
+                className="flex grow flex-col"
+                onClick={() => toast.dismiss(to.id)}
+              >
+                {t("write.nfcNotSupported")}
+              </span>
+            ));
             isProcessingRef.current = false;
-          })
-          .catch((e) => {
-            if (retryCount < maxRetries) {
-              retryCount++;
-              console.log(
-                `NFC not ready, retrying (${retryCount}/${maxRetries})...`
-              );
-              setTimeout(checkNfcAndWrite, retryInterval);
-            } else {
-              toast.error((to) => (
-                <span
-                  className="flex grow flex-col"
-                  onClick={() => toast.dismiss(to.id)}
-                >
-                  {e.message}
-                </span>
-              ));
-              isProcessingRef.current = false;
-            }
-          });
-      };
+            return;
+          }
 
-      checkNfcAndWrite();
-    }, 1000);
+          console.log("Processing NFC write:", currentWriteValue);
+          setWriteOpen(true);
+          nfcWriter.write(WriteAction.Write, currentWriteValue);
+          isProcessingRef.current = false;
+        })
+        .catch((e) => {
+          if (retryCount < maxRetries) {
+            retryCount++;
+            console.log(
+              `NFC not ready, retrying (${retryCount}/${maxRetries})...`
+            );
+            timeoutId = setTimeout(checkNfcAndWrite, retryInterval);
+          } else {
+            toast.error((to) => (
+              <span
+                className="flex grow flex-col"
+                onClick={() => toast.dismiss(to.id)}
+              >
+                {e.message}
+              </span>
+            ));
+            isProcessingRef.current = false;
+          }
+        });
+    };
+
+    timeoutId = setTimeout(checkNfcAndWrite, 1000);
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [writeQueue, nfcWriter, t, setWriteQueue, setWriteOpen]);
 }
