@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { CameraIcon } from "lucide-react";
+import { QrCodeIcon } from "lucide-react";
 import { ScanSpinner } from "../ScanSpinner";
 import { Button } from "../wui/Button";
 import { ScanResult } from "../../lib/models";
@@ -37,10 +37,10 @@ export function ScanControls({
       {connected && Capacitor.isNativePlatform() && (
         <div className="mb-4 flex justify-center">
           <Button
-            variant="outline"
+            variant="text"
             onClick={onCameraScan}
             label={t("scan.cameraMode")}
-            icon={<CameraIcon />}
+            icon={<QrCodeIcon />}
           />
         </div>
       )}

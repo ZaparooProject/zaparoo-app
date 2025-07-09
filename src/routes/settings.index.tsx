@@ -27,12 +27,31 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog.tsx";
 import { ArrowLeftRightIcon, TrashIcon } from "lucide-react";
+import { ScanSettings } from "@/components/home/ScanSettings.tsx";
+import { useAppSettings } from "@/hooks/useAppSettings.ts";
+
+interface LoaderData {
+  restartScan: boolean;
+  launchOnScan: boolean;
+}
 
 export const Route = createFileRoute("/settings/")({
+  loader: async (): Promise<LoaderData> => {
+    const restartScan =
+      (await Preferences.get({ key: "restartScan" })).value === "true";
+    const launchOnScan =
+      (await Preferences.get({ key: "launchOnScan" })).value !== "false";
+    return {
+      restartScan,
+      launchOnScan
+    };
+  },
   component: Settings
 });
 
 function Settings() {
+  const initData = Route.useLoaderData();
+
   const { PurchaseModal, setProPurchaseModalOpen, proAccess } =
     useProPurchase();
 
@@ -76,6 +95,9 @@ function Settings() {
       settings.refetch();
     }
   });
+
+  const { restartScan, setRestartScan, launchOnScan, setLaunchOnScan } =
+    useAppSettings({ initData });
 
   return (
     <>
@@ -145,6 +167,14 @@ function Settings() {
           {connectionError !== "" && (
             <div className="text-error">{connectionError}</div>
           )}
+
+          <ScanSettings
+            connected={connected}
+            restartScan={restartScan}
+            setRestartScan={setRestartScan}
+            launchOnScan={launchOnScan}
+            setLaunchOnScan={setLaunchOnScan}
+          />
 
           <div>
             <span>{t("settings.modeLabel")}</span>

@@ -9,13 +9,16 @@ interface LastScannedInfoProps {
   scanStatus: ScanResult;
 }
 
-export function LastScannedInfo({ lastToken, scanStatus }: LastScannedInfoProps) {
+export function LastScannedInfo({
+  lastToken,
+  scanStatus
+}: LastScannedInfoProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="p-3 pt-6">
+    <div className="p-3">
       <div className="flex flex-row items-center justify-between">
-        <p className="font-bold capitalize text-gray-400">
+        <p className="font-bold text-gray-400 capitalize">
           {t("scan.lastScannedHeading")}
         </p>
       </div>

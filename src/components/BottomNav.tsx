@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { NfcIcon, SettingsIcon, SquarePenIcon } from "lucide-react";
+import { SettingsIcon, SquarePenIcon, ZapIcon } from "lucide-react";
 import classNames from "classnames";
 import { useStatusStore } from "@/lib/store";
 import { ReactElement } from "react";
@@ -49,7 +49,7 @@ export function BottomNav() {
       }}
     >
       <div className="mx-auto grid h-full max-w-lg grid-cols-3 gap-4">
-        <Button text={t("nav.index")} icon={<NfcIcon size="24" />} path="/" />
+        <Button text={t("nav.index")} icon={<ZapIcon size="24" />} path="/" />
         {/* <Button text={t("nav.run")} icon={<PlayIcon size="24" />} path="/run" /> */}
         <Button
           text={t("nav.create")}

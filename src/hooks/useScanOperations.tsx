@@ -7,6 +7,7 @@ import { cancelSession, readTag, sessionManager, Status } from "../lib/nfc";
 import { CoreAPI } from "../lib/coreApi";
 import { ScanResult, TokenResponse } from "../lib/models";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
+import { canUseRunToken, incrementRunTokenUsage } from "../lib/dailyUsage";
 
 const zapUrls = [
   "https://zpr.au",
@@ -25,7 +26,8 @@ const runToken = async (
   connected: boolean,
   setLastToken: (token: TokenResponse) => void,
   setProPurchaseModalOpen: (open: boolean) => void,
-  unsafe = false
+  unsafe = false,
+  override = false
 ): Promise<boolean> => {
   return new Promise((resolve) => {
     if (uid === "" && text === "") {
@@ -46,7 +48,19 @@ const runToken = async (
     }
 
     const run = async () => {
-      if (launcherAccess || isZapUrl(text)) {
+      if (launcherAccess || isZapUrl(text) || override) {
+        if (!launcherAccess && !isZapUrl(text) && !override) {
+          const usageCheck = await canUseRunToken(launcherAccess);
+          if (!usageCheck.canUse) {
+            setProPurchaseModalOpen(true);
+            return resolve(false);
+          }
+        }
+
+        if (!isZapUrl(text) && !override) {
+          await incrementRunTokenUsage(launcherAccess);
+        }
+
         CoreAPI.run({
           uid: uid,
           text: text,
@@ -69,8 +83,35 @@ const runToken = async (
           });
         return;
       } else {
-        setProPurchaseModalOpen(true);
-        return resolve(false);
+        const usageCheck = await canUseRunToken(launcherAccess);
+        if (usageCheck.canUse) {
+          await incrementRunTokenUsage(launcherAccess);
+
+          CoreAPI.run({
+            uid: uid,
+            text: text,
+            unsafe: unsafe
+          })
+            .then(() => {
+              resolve(true);
+            })
+            .catch((e) => {
+              toast.error((to) => (
+                <span
+                  className="flex grow flex-col"
+                  onClick={() => toast.dismiss(to.id)}
+                >
+                  {e.message}
+                </span>
+              ));
+              console.error("launch error", e);
+              resolve(false);
+            });
+          return;
+        } else {
+          setProPurchaseModalOpen(true);
+          return resolve(false);
+        }
       }
     };
 
@@ -216,7 +257,9 @@ export function useScanOperations({
       launcherAccess,
       connected,
       setLastToken,
-      setProPurchaseModalOpen
+      setProPurchaseModalOpen,
+      false,
+      true
     );
   };
 

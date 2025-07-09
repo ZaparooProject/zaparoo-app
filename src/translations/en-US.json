@@ -11,7 +11,7 @@
       "cancel": "Cancel",
       "create": "Create",
       "assign": "Assign",
-      "index": "Scan",
+      "index": "Zap",
       "design": "Design",
       "settings": "Settings",
       "run": "Run"
@@ -24,7 +24,7 @@
       "holdTag": "Hold tag to phone",
       "holdTagReader": "Hold tag to reader",
       "scanning": "Scanning",
-      "pressToScan": "Press to scan",
+      "pressToScan": "Press to zap",
       "writeSuccess": "Tag written successfully",
       "writeFailed": "Failed to write tag",
       "readSuccess": "Tag read successfully",
@@ -46,7 +46,7 @@
       "nowPlayingHeading": "Now playing"
     },
     "scan": {
-      "cameraMode": "Camera",
+      "cameraMode": "QR/Barcode",
       "nfcMode": "NFC",
       "scanError": "Error scanning tag",
       "noDevices": "No Zaparoo Devices Found",
@@ -66,7 +66,10 @@
       "purchaseProP1": "Zaparoo Pro can be unlocked with a one-time purchase of {{price}}, which will help support future development of Zaparoo.",
       "purchaseProP2": "Pro includes the Launch on scan feature, which turns your phone into a wireless Zaparoo reader! All future Pro features will be included at no extra cost.",
       "purchaseProAction": "Unlock Zaparoo Pro",
-      "completeIntro": "Let's Zaparoo"
+      "completeIntro": "Let's Zaparoo",
+      "freeUsageTitle": "Daily Free Zaps",
+      "freeUsageExceeded": "No zaps left today. Unlock Pro for unlimited.",
+      "freeUsageRemaining": "{{remaining}} zaps left today."
     },
     "create": {
       "title": "Create a New Tag",

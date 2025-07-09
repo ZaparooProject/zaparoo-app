@@ -14,15 +14,16 @@ import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
 import { ConnectionStatus } from "../components/home/ConnectionStatus";
 import { ScanControls } from "../components/home/ScanControls";
-import { ScanSettings } from "../components/home/ScanSettings";
 import { LastScannedInfo } from "../components/home/LastScannedInfo";
 import { NowPlayingInfo } from "../components/home/NowPlayingInfo";
 import { HistoryModal } from "../components/home/HistoryModal";
 import { StopConfirmModal } from "../components/home/StopConfirmModal";
+import { DailyUsageInfo } from "../components/home/DailyUsageInfo";
 import { useScanOperations } from "../hooks/useScanOperations";
 import { useAppSettings } from "../hooks/useAppSettings";
 import { useWriteQueueProcessor } from "@/hooks/useWriteQueueProcessor.tsx";
 import { useRunQueueProcessor } from "@/hooks/useRunQueueProcessor.tsx";
+import logoImage from "../../public/lockup.png";
 
 interface LoaderData {
   restartScan: boolean;
@@ -72,13 +73,7 @@ function Index() {
 
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
 
-  const {
-    restartScan,
-    setRestartScan,
-    launchOnScan,
-    setLaunchOnScan,
-    launcherAccess
-  } = useAppSettings({ initData });
+  const { launcherAccess } = useAppSettings({ initData });
 
   const {
     scanSession,
@@ -136,7 +131,7 @@ function Index() {
       <PageFrame>
         <div className="flex flex-row justify-between">
           <div>
-            <img src="/lockup.png" alt="Zaparoo logo" width="160px" />
+            <img src={logoImage} alt="Zaparoo logo" width="160px" />
           </div>
           <ToggleChip
             icon={<HistoryIcon size="32" />}
@@ -166,12 +161,10 @@ function Index() {
         <div>
           <ConnectionStatus connected={connected} />
 
-          <ScanSettings
+          <DailyUsageInfo
+            launcherAccess={launcherAccess}
             connected={connected}
-            restartScan={restartScan}
-            setRestartScan={setRestartScan}
-            launchOnScan={launchOnScan}
-            setLaunchOnScan={setLaunchOnScan}
+            openProModal={() => setProPurchaseModalOpen(true)}
           />
 
           <LastScannedInfo lastToken={lastToken} scanStatus={scanStatus} />
