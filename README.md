@@ -59,6 +59,7 @@ All contributors to the app will be included here and in the About page of the a
 - Pink Melon - Korean/한국어
 - RetroCastle - Chinese (Simplified)/中文
 - Seexelas - French/Français
+- Ze Conehead - German/Deutsch
 
 ## Trademarks
 
