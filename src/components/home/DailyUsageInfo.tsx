@@ -2,17 +2,20 @@ import { useEffect, useState } from "react";
 import { getUsageStats } from "@/lib/dailyUsage.ts";
 import { Card } from "../wui/Card";
 import { useTranslation } from "react-i18next";
+import { TokenResponse } from "@/lib/models";
 
 interface DailyUsageInfoProps {
   launcherAccess: boolean;
   connected: boolean;
   openProModal: () => void;
+  lastToken: TokenResponse;
 }
 
 export function DailyUsageInfo({
   launcherAccess,
   connected,
-  openProModal
+  openProModal,
+  lastToken
 }: DailyUsageInfoProps) {
   const [usageStats, setUsageStats] = useState<{
     used: number;
@@ -28,7 +31,7 @@ export function DailyUsageInfo({
     } else {
       setUsageStats(null);
     }
-  }, [launcherAccess, connected]);
+  }, [launcherAccess, connected, lastToken]);
 
   if (launcherAccess || !connected || !usageStats) {
     return null;

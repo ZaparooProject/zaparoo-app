@@ -165,6 +165,7 @@ function Index() {
             launcherAccess={launcherAccess}
             connected={connected}
             openProModal={() => setProPurchaseModalOpen(true)}
+            lastToken={lastToken}
           />
 
           <LastScannedInfo lastToken={lastToken} scanStatus={scanStatus} />
