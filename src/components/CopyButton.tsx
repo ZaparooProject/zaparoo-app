@@ -20,7 +20,7 @@ export const CopyButton = (props: { text: string }) => {
 
   return (
     <span
-      className="ml-1 cursor-pointer rounded-full border border-bd-outline bg-button-pattern px-1 text-xs text-white"
+      className="ml-1 cursor-pointer px-1 text-xs font-semibold text-white underline"
       onClick={() => {
         writeToClipboard(props.text).then(() => {
           setDisplay(t("copied"));
