@@ -1,0 +1,18 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 40%
+        threshold: 5%
+    patch:
+      default:
+        target: 70%
+
+ignore:
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/test-utils/**"
+  - "**/__tests__/**"
+  - "**/__mocks__/**"
+  - "vite.config.ts"
+  - "vitest.config.ts"
