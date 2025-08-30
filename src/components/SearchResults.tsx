@@ -1,9 +1,9 @@
+import { useTranslation } from "react-i18next";
+import { Link } from "@tanstack/react-router";
 import { SearchResultGame, SearchResultsResponse } from "@/lib/models.ts";
 import { useStatusStore } from "@/lib/store.ts";
-import { useTranslation } from "react-i18next";
 import { Card } from "@/components/wui/Card.tsx";
 import { NextIcon, SettingsIcon, WarningIcon } from "@/lib/images.tsx";
-import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/wui/Button.tsx";
 
 export function SearchResults(props: {
@@ -81,35 +81,48 @@ export function SearchResults(props: {
             : t("create.search.gamesFound", { count: props.resp.total })}
         </p>
         <div>
-          {props.resp.results.map((game, i) => (
-            <div
-              key={i}
-              className="flex cursor-pointer flex-row items-center justify-between gap-1 p-1 py-3"
-              style={{
-                borderBottom:
-                  i === (props.resp ? props.resp.results.length : 0) - 1
-                    ? ""
-                    : "1px solid rgba(255,255,255,0.6)"
-              }}
-              onClick={(e) => {
-                e.preventDefault();
-                if (
-                  props.selectedResult &&
-                  props.selectedResult.path === game.path
-                ) {
-                  props.setSelectedResult(null);
-                } else if (
-                  props.selectedResult &&
-                  props.selectedResult.path !== game.path
-                ) {
-                  props.setSelectedResult(null);
-                  setTimeout(() => {
-                    props.setSelectedResult(game);
-                  }, 150);
-                } else {
+          {props.resp.results.map((game, i) => {
+            const handleGameSelect = () => {
+              if (
+                props.selectedResult &&
+                props.selectedResult.path === game.path
+              ) {
+                props.setSelectedResult(null);
+              } else if (
+                props.selectedResult &&
+                props.selectedResult.path !== game.path
+              ) {
+                props.setSelectedResult(null);
+                setTimeout(() => {
                   props.setSelectedResult(game);
-                }
-              }}
+                }, 150);
+              } else {
+                props.setSelectedResult(game);
+              }
+            };
+
+            return (
+              <div
+                key={i}
+                className="flex cursor-pointer flex-row items-center justify-between gap-1 p-1 py-3"
+                style={{
+                  borderBottom:
+                    i === (props.resp ? props.resp.results.length : 0) - 1
+                      ? ""
+                      : "1px solid rgba(255,255,255,0.6)"
+                }}
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleGameSelect();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleGameSelect();
+                  }
+                }}
             >
               <div className="flex flex-col">
                 <p className="font-semibold">{game.name}</p>
@@ -119,7 +132,8 @@ export function SearchResults(props: {
                 <NextIcon size="20" />
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </>
     );

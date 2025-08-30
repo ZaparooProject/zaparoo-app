@@ -1,17 +1,17 @@
 import { useTranslation } from "react-i18next";
 import { useRef, useState } from "react";
-import { useStatusStore } from "@/lib/store.ts";
 import { useQuery } from "@tanstack/react-query";
+import { Browser } from "@capacitor/browser";
+import { EraserIcon, HelpCircleIcon, PlusIcon } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useStatusStore } from "@/lib/store.ts";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import { Button } from "@/components/wui/Button.tsx";
-import { Browser } from "@capacitor/browser";
 import { MediaSearchModal } from "@/components/MediaSearchModal.tsx";
 import { CommandsModal } from "@/components/CommandsModal.tsx";
 import { SystemsSearchModal } from "@/components/SystemsSearchModal.tsx";
 import { PlayIcon } from "@/lib/images.tsx";
-import { EraserIcon, HelpCircleIcon, PlusIcon } from "lucide-react";
 import { ConfirmClearModal } from "@/components/ConfirmClearModal.tsx";
-import { ChevronDown, ChevronUp } from "lucide-react";
 
 export function ZapScriptInput(props: {
   value: string;

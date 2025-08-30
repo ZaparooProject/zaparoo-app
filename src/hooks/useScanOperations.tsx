@@ -74,6 +74,9 @@ const runToken = async (
               <span
                 className="flex grow flex-col"
                 onClick={() => toast.dismiss(to.id)}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toast.dismiss(to.id)}
+                role="button"
+                tabIndex={0}
               >
                 {e.message}
               </span>
@@ -100,6 +103,9 @@ const runToken = async (
                 <span
                   className="flex grow flex-col"
                   onClick={() => toast.dismiss(to.id)}
+                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toast.dismiss(to.id)}
+                  role="button"
+                  tabIndex={0}
                 >
                   {e.message}
                 </span>
@@ -196,6 +202,7 @@ export function useScanOperations({
         setScanStatus(ScanResult.Error);
         setScanSession(false);
         toast.error((to) => (
+          // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
           <span
             className="flex grow flex-col"
             onClick={() => toast.dismiss(to.id)}

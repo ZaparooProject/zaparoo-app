@@ -1,12 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
-import { useStatusStore } from "@/lib/store.ts";
 import { useQuery } from "@tanstack/react-query";
+import { Preferences } from "@capacitor/preferences";
+import { useDebounce } from "use-debounce";
+import { useStatusStore } from "@/lib/store.ts";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { TextInput } from "@/components/wui/TextInput.tsx";
-import { Preferences } from "@capacitor/preferences";
-import { useDebounce } from "use-debounce";
 import { SearchResults } from "@/components/SearchResults.tsx";
 import { SearchResultGame } from "@/lib/models.ts";
 import { BackToTop } from "@/components/BackToTop.tsx";

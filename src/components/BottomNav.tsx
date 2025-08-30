@@ -2,8 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { SettingsIcon, SquarePenIcon, ZapIcon } from "lucide-react";
 import classNames from "classnames";
-import { useStatusStore } from "@/lib/store";
 import { ReactElement } from "react";
+import { useStatusStore } from "@/lib/store";
 
 function Button(props: {
   text: string;

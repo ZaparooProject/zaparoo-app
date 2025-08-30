@@ -1,24 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { getDeviceAddress, setDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
-import { CheckIcon, DatabaseIcon, ExternalIcon, NextIcon } from "../lib/images";
-import { Button } from "../components/wui/Button";
-import { Button as SCNButton } from "@/components/ui/button";
 import classNames from "classnames";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { TextInput } from "../components/wui/TextInput";
-import { useStatusStore } from "../lib/store";
 import { Browser } from "@capacitor/browser";
-import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
-import i18n from "../i18n";
 import { Capacitor } from "@capacitor/core";
-import { UpdateSettingsRequest } from "../lib/models.ts";
+import { Preferences } from "@capacitor/preferences";
+import { ArrowLeftRightIcon, TrashIcon } from "lucide-react";
 import {
   RestorePuchasesButton,
   useProPurchase
 } from "@/components/ProPurchase.tsx";
-import { Preferences } from "@capacitor/preferences";
 import {
   Dialog,
   DialogContent,
@@ -26,9 +18,17 @@ import {
   DialogTitle,
   DialogTrigger
 } from "@/components/ui/dialog.tsx";
-import { ArrowLeftRightIcon, TrashIcon } from "lucide-react";
+import { Button as SCNButton } from "@/components/ui/button";
 import { ScanSettings } from "@/components/home/ScanSettings.tsx";
 import { useAppSettings } from "@/hooks/useAppSettings.ts";
+import { UpdateSettingsRequest } from "../lib/models.ts";
+import i18n from "../i18n";
+import { PageFrame } from "../components/PageFrame";
+import { useStatusStore } from "../lib/store";
+import { TextInput } from "../components/wui/TextInput";
+import { Button } from "../components/wui/Button";
+import { CheckIcon, DatabaseIcon, ExternalIcon, NextIcon } from "../lib/images";
+import { getDeviceAddress, setDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
 
 interface LoaderData {
   restartScan: boolean;
@@ -138,7 +138,7 @@ function Settings() {
                 {deviceHistory
                   .sort((a, b) => (a.address > b.address ? 1 : -1))
                   .map((entry) => (
-                    <div className="flex flex-row items-center justify-between gap-3">
+                    <div key={entry.address} className="flex flex-row items-center justify-between gap-3">
                       <SCNButton
                         className="w-full"
                         key={entry.address}

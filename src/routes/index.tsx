@@ -1,17 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { KeepAwake } from "@capacitor-community/keep-awake";
+import { Preferences } from "@capacitor/preferences";
+import { useNfcWriter } from "@/lib/writeNfcHook.tsx";
+import { useProPurchase } from "@/components/ProPurchase.tsx";
+import { WriteModal } from "@/components/WriteModal.tsx";
+import { useWriteQueueProcessor } from "@/hooks/useWriteQueueProcessor.tsx";
+import { useRunQueueProcessor } from "@/hooks/useRunQueueProcessor.tsx";
 import { cancelSession } from "../lib/nfc";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { HistoryIcon } from "../lib/images";
 import { useStatusStore } from "../lib/store";
-import { useQuery } from "@tanstack/react-query";
-import { KeepAwake } from "@capacitor-community/keep-awake";
 import { ToggleChip } from "../components/wui/ToggleChip";
-import { Preferences } from "@capacitor/preferences";
 import { PageFrame } from "../components/PageFrame";
-import { useNfcWriter } from "@/lib/writeNfcHook.tsx";
-import { useProPurchase } from "@/components/ProPurchase.tsx";
-import { WriteModal } from "@/components/WriteModal.tsx";
 import { ConnectionStatus } from "../components/home/ConnectionStatus";
 import { ScanControls } from "../components/home/ScanControls";
 import { LastScannedInfo } from "../components/home/LastScannedInfo";
@@ -21,9 +23,6 @@ import { StopConfirmModal } from "../components/home/StopConfirmModal";
 import { DailyUsageInfo } from "../components/home/DailyUsageInfo";
 import { useScanOperations } from "../hooks/useScanOperations";
 import { useAppSettings } from "../hooks/useAppSettings";
-import { useWriteQueueProcessor } from "@/hooks/useWriteQueueProcessor.tsx";
-import { useRunQueueProcessor } from "@/hooks/useRunQueueProcessor.tsx";
-
 import logoImage from "../../public/lockup.png";
 
 interface LoaderData {

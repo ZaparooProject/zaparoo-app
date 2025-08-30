@@ -1,21 +1,21 @@
-import { useStatusStore } from "../lib/store.ts";
-import {
-  getWsUrl,
-  CoreAPI,
-  getDeviceAddress,
-  NotificationRequest
-} from "../lib/coreApi.ts";
+import { useShallow } from "zustand/react/shallow";
+import { Preferences } from "@capacitor/preferences";
+import WebsocketHeartbeatJs from "websocket-heartbeat-js";
+import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 import {
   IndexResponse,
   Notification,
   PlayingResponse,
   TokenResponse
 } from "../lib/models.ts";
-import { useShallow } from "zustand/react/shallow";
-import { Preferences } from "@capacitor/preferences";
-import WebsocketHeartbeatJs from "websocket-heartbeat-js";
-import toast from "react-hot-toast";
-import { useTranslation } from "react-i18next";
+import {
+  getWsUrl,
+  CoreAPI,
+  getDeviceAddress,
+  NotificationRequest
+} from "../lib/coreApi.ts";
+import { useStatusStore } from "../lib/store.ts";
 
 let coreApiWs: WebsocketHeartbeatJs | null = null;
 

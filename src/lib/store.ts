@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import { IndexResponse, PlayingResponse, TokenResponse } from "./models";
 import { User } from "@capacitor-firebase/authentication";
-import { defaultSafeAreaInsets, SafeAreaInsets } from "./safeArea";
 import { Preferences } from "@capacitor/preferences";
+import { IndexResponse, PlayingResponse, TokenResponse } from "./models";
+import { defaultSafeAreaInsets, SafeAreaInsets } from "./safeArea";
 
 export interface DeviceHistoryEntry {
   address: string;

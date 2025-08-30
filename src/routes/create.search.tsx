@@ -1,6 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Preferences } from "@capacitor/preferences";
+import { SearchResults } from "@/components/SearchResults.tsx";
+import { CopyButton } from "@/components/CopyButton.tsx";
+import { BackToTop } from "@/components/BackToTop.tsx";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { CreateIcon, PlayIcon, SearchIcon } from "../lib/images";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
@@ -12,11 +17,6 @@ import { useStatusStore } from "../lib/store";
 import { TextInput } from "../components/wui/TextInput";
 import { WriteModal } from "../components/WriteModal";
 import { PageFrame } from "../components/PageFrame";
-import { useTranslation } from "react-i18next";
-import { Preferences } from "@capacitor/preferences";
-import { SearchResults } from "@/components/SearchResults.tsx";
-import { CopyButton } from "@/components/CopyButton.tsx";
-import { BackToTop } from "@/components/BackToTop.tsx";
 
 const initData = {
   systemQuery: "all"

@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Browser } from "@capacitor/browser";
+import { useTranslation } from "react-i18next";
 import { Button } from "../components/wui/Button";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { Browser } from "@capacitor/browser";
 import { PageFrame } from "../components/PageFrame";
-import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/settings/help")({
   component: Help

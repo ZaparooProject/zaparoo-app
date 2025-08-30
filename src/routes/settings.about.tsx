@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
 import { Browser } from "@capacitor/browser";
+import { PageFrame } from "../components/PageFrame";
 import { Button } from "../components/wui/Button.tsx";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 
@@ -88,7 +88,7 @@ function About() {
               <span style={{ color: "#F1C40D" }}>Phil Felice</span>,{" "}
               <span style={{ color: "#F1C40D" }}>Glenn</span>,{" "}
               <span style={{ color: "#F1C40D" }}>Alexander Facchini</span>,{" "}
-              <span style={{ color: "#F1C40D" }}>Lu's Retro Source</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Lu&apos;s Retro Source</span>,{" "}
               <span style={{ color: "#F1C40D" }}>Alexis Conrad</span>,{" "}
               <span style={{ color: "#F1C40D" }}>Tony Shadwick</span>,{" "}
               <span style={{ color: "#F1C40D" }}>Clinton Cronin</span>,{" "}
@@ -97,7 +97,7 @@ function About() {
               <span style={{ color: "#E74C3C" }}>Retrosoft Studios</span>, Casey
               McGinty, <span style={{ color: "#E91E63" }}>Biddle</span>,{" "}
               <span style={{ color: "#F1C40D" }}>Chris Platts</span>,{" "}
-              <span style={{ color: "#F1C40D" }}>Gentlemen's Pixel Club</span>,{" "}
+              <span style={{ color: "#F1C40D" }}>Gentlemen&apos;s Pixel Club</span>,{" "}
               <span style={{ color: "#F1C40D" }}>VolJoe</span>,{" "}
               <span style={{ color: "#F1C40D" }}>Shijuro</span>,{" "}
               <span style={{ color: "#F1C40D" }}>Tim Sullivan</span>,{" "}

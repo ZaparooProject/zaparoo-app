@@ -1,15 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { PageFrame } from "../components/PageFrame.tsx";
 import { useTranslation } from "react-i18next";
-import { useStatusStore } from "../lib/store.ts";
 import { useState } from "react";
-import { Button } from "../components/wui/Button.tsx";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import { TextInput } from "../components/wui/TextInput.tsx";
 import toast from "react-hot-toast";
 import { Browser } from "@capacitor/browser";
 import { ExternalLinkIcon, LogInIcon, LogOutIcon } from "lucide-react";
+import { TextInput } from "../components/wui/TextInput.tsx";
+import { Button } from "../components/wui/Button.tsx";
+import { useStatusStore } from "../lib/store.ts";
+import { PageFrame } from "../components/PageFrame.tsx";
+import { useSmartSwipe } from "../hooks/useSmartSwipe";
 
 export const Route = createFileRoute("/settings/online")({
   component: About

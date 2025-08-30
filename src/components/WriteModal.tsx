@@ -1,10 +1,10 @@
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useStatusStore } from "@/lib/store";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { BackIcon } from "../lib/images";
 import { ScanResult } from "../lib/models";
 import { ScanSpinner } from "./ScanSpinner";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useStatusStore } from "@/lib/store";
 
 export function WriteModal(props: { isOpen: boolean; close: () => void }) {
   const swipeHandlers = useSmartSwipe({
@@ -29,7 +29,13 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
           left: "18px"
         }}
       >
-        <div className="flex flex-row gap-2" onClick={() => props.close()}>
+        <div
+          className="flex flex-row gap-2"
+          onClick={() => props.close()}
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && props.close()}
+          role="button"
+          tabIndex={0}
+        >
           <BackIcon size="24" />
         </div>
       </div>

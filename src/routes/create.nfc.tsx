@@ -1,10 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Button } from "../components/wui/Button";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { WriteModal } from "../components/WriteModal";
 import { useEffect, useState } from "react";
-import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import {
@@ -14,6 +9,11 @@ import {
   SquareAsteriskIcon
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { Button } from "../components/wui/Button";
+import { useSmartSwipe } from "../hooks/useSmartSwipe";
+import { WriteModal } from "../components/WriteModal";
+import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
+import { PageFrame } from "../components/PageFrame";
 
 export const Route = createFileRoute("/create/nfc")({
   component: NfcUtils

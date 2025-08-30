@@ -1,18 +1,14 @@
 import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
-
 import "./i18n";
 import "./index.css";
-
-import App from "./App";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LOG_LEVEL, Purchases } from "@revenuecat/purchases-capacitor";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
-
 import { initializeApp } from "firebase/app";
+import App from "./App";
 import firebaseConfig from "./firebase.json";
-
 import { ThemeProvider } from "./components/theme-provider";
 
 initializeApp(firebaseConfig);

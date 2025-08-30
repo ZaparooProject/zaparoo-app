@@ -9,7 +9,6 @@ interface ButtonProps {
   icon?: ReactElement;
   disabled?: boolean;
   className?: string;
-  autoFocus?: boolean;
 }
 
 export const Button = memo(function Button(props: ButtonProps) {
@@ -80,7 +79,6 @@ export const Button = memo(function Button(props: ButtonProps) {
         props.className
       )}
       disabled={props.disabled}
-      autoFocus={props.autoFocus}
       onClick={() => {
         // Only trigger click if this wasn't a scroll gesture
         if (!hasMoved.current && !props.disabled && props.onClick) {

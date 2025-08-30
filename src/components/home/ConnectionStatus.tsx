@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { memo } from "react";
 import { getDeviceAddress } from "../../lib/coreApi";
 import { DeviceIcon, SettingsIcon, WarningIcon } from "../../lib/images";
 import { Button } from "../wui/Button";
 import { Card } from "../wui/Card";
-import { memo } from "react";
 
 interface ConnectionStatusProps {
   connected: boolean;

@@ -1,8 +1,8 @@
 import { useEffect, useState, memo } from "react";
-import { getUsageStats } from "@/lib/dailyUsage.ts";
-import { Card } from "../wui/Card";
 import { useTranslation } from "react-i18next";
+import { getUsageStats } from "@/lib/dailyUsage.ts";
 import { TokenResponse } from "@/lib/models";
+import { Card } from "../wui/Card";
 
 interface DailyUsageInfoProps {
   launcherAccess: boolean;

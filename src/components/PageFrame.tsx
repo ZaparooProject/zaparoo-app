@@ -1,9 +1,9 @@
+import { RefObject, ReactNode } from "react";
 import { useStatusStore } from "@/lib/store";
 import { BackIcon } from "../lib/images";
-import { RefObject } from "react";
 
 interface PageFrameProps {
-  children: React.ReactNode;
+  children: ReactNode;
   title?: string;
   back?: () => void;
   scrollRef?: RefObject<HTMLDivElement | null>;
@@ -27,9 +27,9 @@ export function PageFrame(props: PageFrameProps) {
           <div className="grid min-h-8 grid-cols-5 items-center justify-center gap-4">
             <div className="col-span-1 flex">
               {props.back && (
-                <div onClick={props.back} className="cursor-pointer">
+                <button onClick={props.back} className="cursor-pointer">
                   <BackIcon size="24" />
-                </div>
+                </button>
               )}
             </div>
             <div className="col-span-3 flex items-center justify-center text-center">

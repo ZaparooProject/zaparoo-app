@@ -1,7 +1,7 @@
 import { Capacitor } from "@capacitor/core";
 import { SafeArea } from "capacitor-plugin-safe-area";
-import { useStatusStore } from "./store";
 import { useEffect } from "react";
+import { useStatusStore } from "./store";
 
 export interface SafeAreaInsets {
   top: string;

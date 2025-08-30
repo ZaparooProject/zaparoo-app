@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "../../../test-utils";
+import { render, screen, fireEvent } from "../../../test-utils";
 import { WriteModal } from "../../../components/WriteModal";
 
 // Mock useSmartSwipe
@@ -36,6 +36,18 @@ describe("WriteModal", () => {
     expect(backDiv).toBeInTheDocument();
     
     backDiv?.click();
+    
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls close when Enter key is pressed on back button", () => {
+    const mockClose = vi.fn();
+    render(<WriteModal isOpen={true} close={mockClose} />);
+    
+    const backButton = screen.getByRole('button');
+    expect(backButton).toBeInTheDocument();
+    
+    fireEvent.keyDown(backButton, { key: 'Enter' });
     
     expect(mockClose).toHaveBeenCalledTimes(1);
   });

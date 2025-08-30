@@ -26,7 +26,12 @@ export function ScanControls({
     <>
       {Capacitor.isNativePlatform() ? (
         <div className="mt-8 mb-9 text-center">
-          <div onClick={onScanButton}>
+          <div
+            onClick={onScanButton}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onScanButton()}
+            role="button"
+            tabIndex={0}
+          >
             <ScanSpinner status={scanStatus} spinning={scanSession} />
           </div>
         </div>

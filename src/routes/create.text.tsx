@@ -1,14 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Preferences } from "@capacitor/preferences";
+import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
 import { CreateIcon } from "../lib/images";
 import { Button } from "../components/wui/Button";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { WriteModal } from "../components/WriteModal";
-import { useEffect, useState } from "react";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { PageFrame } from "../components/PageFrame";
-import { useTranslation } from "react-i18next";
-import { Preferences } from "@capacitor/preferences";
-import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
 
 const initData = {
   customText: ""
