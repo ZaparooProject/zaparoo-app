@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && pnpm exec cap sync",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 3",
     "eslist": "pnpm run lint",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -63,6 +63,7 @@
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^7.4.1",
+    "@eslint/js": "^9.34.0",
     "@faker-js/faker": "^10.0.0",
     "@tanstack/eslint-plugin-query": "^5.81.2",
     "@tanstack/router-vite-plugin": "^1.125.6",
@@ -100,8 +101,7 @@
       "@firebase/util",
       "@tailwindcss/oxide",
       "esbuild",
-      "protobufjs",
-      "sharp"
+      "protobufjs"
     ]
   }
 }

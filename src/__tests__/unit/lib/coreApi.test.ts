@@ -12,18 +12,19 @@ describe("CoreAPI", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    // Clear any pending promises/timeouts
+    vi.clearAllTimers();
   });
 
   it("should initialize with default send function", () => {
     expect(CoreAPI).toBeDefined();
   });
 
-  it("should send JSON-RPC requests with correct format", async () => {
+  it("should send JSON-RPC requests with correct format", () => {
     // Start a version call (but don't await to avoid timeout)
-    CoreAPI.version();
-    
-    // Process any pending timers
-    await vi.runAllTimersAsync();
+    CoreAPI.version().catch(() => {
+      // Ignore timeout errors to prevent unhandled rejections
+    });
     
     // Verify the request was sent with correct format
     expect(mockSend).toHaveBeenCalledOnce();
@@ -38,9 +39,10 @@ describe("CoreAPI", () => {
   it("should timeout requests after 30 seconds", async () => {
     const promise = CoreAPI.version();
     
-    // Advance time by 30 seconds
+    // Advance time by 30 seconds to trigger timeout
     vi.advanceTimersByTime(30000);
     
+    // The promise should reject with timeout error
     await expect(promise).rejects.toThrow("Request timeout");
   });
 });
