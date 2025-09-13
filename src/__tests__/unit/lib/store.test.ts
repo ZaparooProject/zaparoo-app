@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useStatusStore } from "../../../lib/store";
+import { useStatusStore, ConnectionState } from "../../../lib/store";
 
 describe("StatusStore", () => {
   beforeEach(() => {
@@ -7,6 +7,8 @@ describe("StatusStore", () => {
     useStatusStore.setState({
       connected: false,
       connectionError: "",
+      connectionState: ConnectionState.IDLE,
+      lastConnectionTime: null,
       deviceHistory: []
     });
   });
@@ -51,5 +53,47 @@ describe("StatusStore", () => {
     // Clear all devices
     clearDeviceHistory();
     expect(useStatusStore.getState().deviceHistory).toEqual([]);
+  });
+
+  describe("ConnectionState", () => {
+    it("should have ConnectionState enum values", () => {
+      expect(ConnectionState.IDLE).toBe("IDLE");
+      expect(ConnectionState.CONNECTING).toBe("CONNECTING");
+      expect(ConnectionState.CONNECTED).toBe("CONNECTED");
+      expect(ConnectionState.RECONNECTING).toBe("RECONNECTING");
+      expect(ConnectionState.ERROR).toBe("ERROR");
+      expect(ConnectionState.DISCONNECTED).toBe("DISCONNECTED");
+    });
+
+    it("should set connection state", () => {
+      const { setConnectionState } = useStatusStore.getState();
+      setConnectionState(ConnectionState.CONNECTING);
+      
+      expect(useStatusStore.getState().connectionState).toBe(ConnectionState.CONNECTING);
+    });
+
+    it("should set last connection time", () => {
+      const { setLastConnectionTime } = useStatusStore.getState();
+      const now = Date.now();
+      setLastConnectionTime(now);
+      
+      expect(useStatusStore.getState().lastConnectionTime).toBe(now);
+    });
+
+    it("should provide backward compatible connected getter", () => {
+      const { setConnectionState } = useStatusStore.getState();
+      
+      setConnectionState(ConnectionState.CONNECTED);
+      expect(useStatusStore.getState().connected).toBe(true);
+      
+      setConnectionState(ConnectionState.CONNECTING);
+      expect(useStatusStore.getState().connected).toBe(false);
+      
+      setConnectionState(ConnectionState.DISCONNECTED);
+      expect(useStatusStore.getState().connected).toBe(false);
+      
+      setConnectionState(ConnectionState.ERROR);
+      expect(useStatusStore.getState().connected).toBe(false);
+    });
   });
 });

@@ -15,6 +15,7 @@ import AppUrlListener from "./lib/deepLinks.tsx";
 import { initSafeAreaInsets } from "./lib/safeArea.ts";
 import { MediaIndexingToast } from "./components/MediaIndexingToast.tsx";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
+import { useDataCache } from "./hooks/useDataCache";
 
 const router = createRouter({
   scrollRestoration: true,
@@ -38,6 +39,9 @@ const setStatusBarStyleDark = async () => {
 };
 
 export default function App() {
+  // Initialize data cache early in app lifecycle
+  useDataCache();
+  
   const playing = useStatusStore((state) => state.playing);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const prevGamesIndex = usePrevious(gamesIndex);

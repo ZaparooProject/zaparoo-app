@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '../../../test-utils';
+import { render, screen, fireEvent, act } from '../../../test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CopyButton } from '../../../components/CopyButton';
 import { Capacitor } from '@capacitor/core';
@@ -27,11 +27,14 @@ describe('CopyButton', () => {
     (Capacitor.isNativePlatform as any).mockReturnValue(true);
   });
 
-  it('should handle Enter key press', () => {
+  it('should handle Enter key press', async () => {
     render(<CopyButton text="test text" />);
     
     const button = screen.getByRole('button');
-    fireEvent.keyDown(button, { key: 'Enter' });
+    
+    await act(async () => {
+      fireEvent.keyDown(button, { key: 'Enter' });
+    });
     
     expect(button).toBeInTheDocument();
   });

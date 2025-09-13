@@ -36,8 +36,8 @@ describe("ScanControls", () => {
     
     render(<ScanControls {...mockProps} />);
     
-    const spinnerContainer = screen.getByRole("button");
-    expect(spinnerContainer).toBeInTheDocument();
+    const spinnerText = screen.getByText(/spinner\.pressToScan/);
+    expect(spinnerText).toBeInTheDocument();
   });
 
   it("calls onScanButton when scan area is clicked", () => {

@@ -2,7 +2,23 @@ import { create } from "zustand";
 import { User } from "@capacitor-firebase/authentication";
 import { Preferences } from "@capacitor/preferences";
 import { IndexResponse, PlayingResponse, TokenResponse } from "./models";
-import { defaultSafeAreaInsets, SafeAreaInsets } from "./safeArea";
+import { SafeAreaInsets } from "./safeArea";
+
+const defaultSafeAreaInsets: SafeAreaInsets = {
+  top: "0px",
+  bottom: "0px", 
+  left: "0px",
+  right: "0px"
+};
+
+export enum ConnectionState {
+  IDLE = "IDLE",
+  CONNECTING = "CONNECTING", 
+  CONNECTED = "CONNECTED",
+  RECONNECTING = "RECONNECTING",
+  ERROR = "ERROR",
+  DISCONNECTED = "DISCONNECTED"
+}
 
 export interface DeviceHistoryEntry {
   address: string;
@@ -12,8 +28,17 @@ interface StatusState {
   connected: boolean;
   setConnected: (status: boolean) => void;
 
+  connectionState: ConnectionState;
+  setConnectionState: (state: ConnectionState) => void;
+
+  lastConnectionTime: number | null;
+  setLastConnectionTime: (time: number | null) => void;
+
   connectionError: string;
   setConnectionError: (error: string) => void;
+
+  retryCount: number;
+  retryConnection: () => void;
 
   lastToken: TokenResponse;
   setLastToken: (token: TokenResponse) => void;
@@ -53,8 +78,20 @@ export const useStatusStore = create<StatusState>()((set) => ({
   connected: false,
   setConnected: (status) => set({ connected: status }),
 
+  connectionState: ConnectionState.IDLE,
+  setConnectionState: (state) => set({ 
+    connectionState: state,
+    connected: state === ConnectionState.CONNECTED
+  }),
+
+  lastConnectionTime: null,
+  setLastConnectionTime: (time) => set({ lastConnectionTime: time }),
+
   connectionError: "",
   setConnectionError: (error) => set({ connectionError: error }),
+
+  retryCount: 0,
+  retryConnection: () => set((state) => ({ retryCount: state.retryCount + 1 })),
 
   lastToken: { type: "", uid: "", text: "", data: "", scanTime: "" },
   setLastToken: (token) => set({ lastToken: token }),
