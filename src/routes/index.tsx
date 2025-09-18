@@ -20,7 +20,6 @@ import { LastScannedInfo } from "../components/home/LastScannedInfo";
 import { NowPlayingInfo } from "../components/home/NowPlayingInfo";
 import { HistoryModal } from "../components/home/HistoryModal";
 import { StopConfirmModal } from "../components/home/StopConfirmModal";
-import { DailyUsageInfo } from "../components/home/DailyUsageInfo";
 import { useScanOperations } from "../hooks/useScanOperations";
 import { useAppSettings } from "../hooks/useAppSettings";
 import logoImage from "../../public/lockup.png";
@@ -162,12 +161,6 @@ function Index() {
         <div>
           <ConnectionStatus connected={connected} />
 
-          <DailyUsageInfo
-            launcherAccess={launcherAccess}
-            connected={connected}
-            openProModal={() => setProPurchaseModalOpen(true)}
-            lastToken={lastToken}
-          />
 
           <LastScannedInfo lastToken={lastToken} scanStatus={scanStatus} />
 

@@ -7,7 +7,6 @@ import { cancelSession, readTag, sessionManager, Status } from "../lib/nfc";
 import { CoreAPI } from "../lib/coreApi";
 import { ScanResult, TokenResponse } from "../lib/models";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { canUseRunToken, incrementRunTokenUsage } from "../lib/dailyUsage";
 
 const zapUrls = [
   "https://zpr.au",
@@ -48,19 +47,8 @@ const runToken = async (
     }
 
     const run = async () => {
+      // Only allow launch for Pro users, Zap URLs, or override
       if (launcherAccess || isZapUrl(text) || override) {
-        if (!launcherAccess && !isZapUrl(text) && !override) {
-          const usageCheck = await canUseRunToken(launcherAccess);
-          if (!usageCheck.canUse) {
-            setProPurchaseModalOpen(true);
-            return resolve(false);
-          }
-        }
-
-        if (!isZapUrl(text) && !override) {
-          await incrementRunTokenUsage(launcherAccess);
-        }
-
         CoreAPI.run({
           uid: uid,
           text: text,
@@ -86,38 +74,9 @@ const runToken = async (
           });
         return;
       } else {
-        const usageCheck = await canUseRunToken(launcherAccess);
-        if (usageCheck.canUse) {
-          await incrementRunTokenUsage(launcherAccess);
-
-          CoreAPI.run({
-            uid: uid,
-            text: text,
-            unsafe: unsafe
-          })
-            .then(() => {
-              resolve(true);
-            })
-            .catch((e) => {
-              toast.error((to) => (
-                <span
-                  className="flex grow flex-col"
-                  onClick={() => toast.dismiss(to.id)}
-                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toast.dismiss(to.id)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  {e.message}
-                </span>
-              ));
-              console.error("launch error", e);
-              resolve(false);
-            });
-          return;
-        } else {
-          setProPurchaseModalOpen(true);
-          return resolve(false);
-        }
+        // Non-Pro users without Zap URL should see Pro purchase modal
+        setProPurchaseModalOpen(true);
+        return resolve(false);
       }
     };
 

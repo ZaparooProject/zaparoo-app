@@ -5,7 +5,6 @@ import { useScanOperations } from "../../../hooks/useScanOperations";
 vi.mock("../../../lib/nfc");
 vi.mock("../../../lib/coreApi");
 vi.mock("../../../lib/writeNfcHook");
-vi.mock("../../../lib/dailyUsage");
 vi.mock("@capacitor-mlkit/barcode-scanning");
 vi.mock("react-hot-toast");
 vi.mock("react-i18next", () => ({

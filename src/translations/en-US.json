@@ -66,10 +66,7 @@
       "purchaseProP1": "Zaparoo Pro can be unlocked with a one-time purchase of {{price}}, which will help support future development of Zaparoo.",
       "purchaseProP2": "Pro includes the Launch on scan feature, which turns your phone into a wireless Zaparoo reader! All future Pro features will be included at no extra cost.",
       "purchaseProAction": "Unlock Zaparoo Pro",
-      "completeIntro": "Let's Zaparoo",
-      "freeUsageTitle": "Daily Free Zaps",
-      "freeUsageExceeded": "None left today. Unlock Pro for unlimited.",
-      "freeUsageRemaining": "{{remaining}} left today."
+      "completeIntro": "Let's Zaparoo"
     },
     "create": {
       "title": "Create a New Tag",
