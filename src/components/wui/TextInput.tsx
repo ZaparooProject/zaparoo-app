@@ -1,7 +1,7 @@
-import { KeyboardEventHandler, useEffect, useState } from "react";
+import React, { KeyboardEventHandler, useEffect, useState } from "react";
+import classNames from "classnames";
 import { SaveIcon } from "../../lib/images";
 import { Button } from "./Button";
-import classNames from "classnames";
 
 export function TextInput(props: {
   label?: string;
@@ -11,7 +11,6 @@ export function TextInput(props: {
   disabled?: boolean;
   className?: string;
   saveValue?: (value: string) => void;
-  autoFocus?: boolean;
   type?: string;
   onKeyUp?: KeyboardEventHandler<HTMLInputElement>;
   ref?: React.RefObject<HTMLInputElement | null>;
@@ -54,7 +53,6 @@ export function TextInput(props: {
           disabled={props.disabled}
           placeholder={props.placeholder}
           value={value}
-          autoFocus={props.autoFocus}
           onChange={(e) => {
             setValue(e.target.value);
             setModified(true);

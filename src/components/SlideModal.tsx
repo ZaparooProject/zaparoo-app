@@ -1,12 +1,13 @@
+import { ReactNode } from "react";
+import classNames from "classnames";
 import { useStatusStore } from "@/lib/store.ts";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
-import classNames from "classnames";
 
 export function SlideModal(props: {
   isOpen: boolean;
   close: () => void;
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   const swipeHandlers = useSmartSwipe({
@@ -25,6 +26,10 @@ export function SlideModal(props: {
         <div
           className="fixed inset-0 z-40 bg-transparent"
           onClick={props.close}
+          onKeyDown={(e) => e.key === 'Escape' && props.close()}
+          role="button"
+          tabIndex={0}
+          aria-label="Close modal"
         />
       )}
 
@@ -62,6 +67,10 @@ export function SlideModal(props: {
         >
           <div
             onClick={props.close}
+            onKeyDown={(e) => e.key === 'Enter' && props.close()}
+            role="button"
+            tabIndex={0}
+            aria-label="Drag to close"
             className="h-[5px] w-[80px] rounded-full bg-[#00E0FF]"
           ></div>
         </div>

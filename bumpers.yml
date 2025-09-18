@@ -1,0 +1,41 @@
+rules:
+    - match: ' /tmp'
+      send: Use a "tmp" directory in the project root instead.
+    - match: 'go test '
+      send: |
+        Use "just test" instead for TDD integration:
+        - just test
+        - just test-unit
+        - just test-integration
+        - just test-e2e
+        These commands have *exactly* the same arguments as "go test" and
+        actually pass args straight through to the official commands. No
+        special syntax required. They still MUST include paths like ./... and ./internal/example/...
+    - match: ^(gci|go vet|goimports|gofumpt|go *fmt|golangci-lint)
+      send: Use "just lint fix" instead to resolve lint/formatting issues.
+    - match: git commit --no-verify|LEFTHOOK=0
+      send: Pre-commit hooks must not be skipped.
+    - match: fieldalignment
+      send: Fix field alignment issues by adding names to struct fields and running "just lint fix".
+    - match: find\s+.*-exec\s+(rm(\s+-\w+)*|sed\s+-i|>\s*\S+)\s+
+      send: Don't use dangerous exec in find commands.
+    - match: BUMPERS_SKIP=1
+      send: Bumpers should not be skipped.
+    - match: ^bumpers\.yml^
+      tool: Read|Edit|Grep
+      send: Bumpers configuration file should not be accessed.
+    - match: cat.*EOF.*>\s*[^\s]
+      send: Use Write tool instead of cat heredoc redirection to create files.
+commands:
+    - name: test
+      send: Run "just test" to run all tests and fix ALL failing tests if any.
+    - name: lint
+      send: Run "just lint fix" and fix ALL linting issues if any.
+    - name: check
+      send: Run "just lint fix" and "just test" and fix ALL issues if any.
+    - name: commit
+      send: Commit ALL modified files.
+    - name: logs
+      send: Read log file in ~/.local/share/bumpers/bumpers.log
+session:
+    - add: 'Today''s date is: {{.Today}}'

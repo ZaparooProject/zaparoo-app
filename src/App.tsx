@@ -1,21 +1,21 @@
 import { useEffect, useState } from "react";
-
 import { createRouter, RouterProvider } from "@tanstack/react-router";
-import { routeTree } from "./routeTree.gen";
 import toast, { Toaster } from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
-import { useStatusStore } from "./lib/store";
-import { DatabaseIcon, PlayIcon } from "./lib/images";
 import { usePrevious } from "@uidotdev/usehooks";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { useTranslation } from "react-i18next";
+import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
+import { ErrorComponent } from "@/components/ErrorComponent.tsx";
+import { routeTree } from "./routeTree.gen";
+import { useStatusStore } from "./lib/store";
+import { DatabaseIcon, PlayIcon } from "./lib/images";
 import { CoreApiWebSocket } from "./components/CoreApiWebSocket.tsx";
 import AppUrlListener from "./lib/deepLinks.tsx";
-import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { initSafeAreaInsets } from "./lib/safeArea.ts";
 import { MediaIndexingToast } from "./components/MediaIndexingToast.tsx";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
-import { ErrorComponent } from "@/components/ErrorComponent.tsx";
+import { useDataCache } from "./hooks/useDataCache";
 
 const router = createRouter({
   scrollRestoration: true,
@@ -39,6 +39,9 @@ const setStatusBarStyleDark = async () => {
 };
 
 export default function App() {
+  // Initialize data cache early in app lifecycle
+  useDataCache();
+  
   const playing = useStatusStore((state) => state.playing);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const prevGamesIndex = usePrevious(gamesIndex);
@@ -102,6 +105,9 @@ export default function App() {
           <span
             className="flex grow flex-col"
             onClick={() => toast.dismiss(to.id)}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toast.dismiss(to.id)}
+            role="button"
+            tabIndex={0}
           >
             <span className="font-bold">{t("toast.nowPlayingHeading")}</span>
             <span>{playing.mediaName}</span>

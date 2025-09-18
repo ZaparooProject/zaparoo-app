@@ -1,6 +1,5 @@
 import { Preferences } from "@capacitor/preferences";
 import { t } from "i18next";
-import { Button } from "./wui/Button";
 import { Purchases, PurchasesPackage } from "@revenuecat/purchases-capacitor";
 import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
@@ -11,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { Button } from "./wui/Button";
 
 export const RestorePuchasesButton = () => {
   return (
@@ -42,6 +42,9 @@ export const RestorePuchasesButton = () => {
               <span
                 className="flex grow flex-col"
                 onClick={() => toast.dismiss(to.id)}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toast.dismiss(to.id)}
+                role="button"
+                tabIndex={0}
               >
                 {t("settings.advanced.restoreSuccess")}
               </span>
@@ -52,6 +55,9 @@ export const RestorePuchasesButton = () => {
               <span
                 className="flex grow flex-col"
                 onClick={() => toast.dismiss(to.id)}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toast.dismiss(to.id)}
+                role="button"
+                tabIndex={0}
               >
                 {t("settings.advanced.restoreFail")}
               </span>
@@ -118,6 +124,7 @@ const ProPurchaseModal = (props: {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useProPurchase = () => {
   const [proAccess, setProAccess] = useState(false);
   const [proPurchaseModalOpen, setProPurchaseModalOpen] = useState(false);

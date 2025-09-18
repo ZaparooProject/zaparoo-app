@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { useStatusStore } from "../lib/store";
-import { TokenResponse } from "@/lib/models.ts";
 import { App } from "@capacitor/app";
+import { TokenResponse } from "@/lib/models.ts";
+import { useStatusStore } from "../lib/store";
 
 interface UseRunQueueProcessorProps {
   launcherAccess: boolean;

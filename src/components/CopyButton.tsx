@@ -29,6 +29,19 @@ export const CopyButton = (props: { text: string }) => {
           }, 2000);
         });
       }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          writeToClipboard(props.text).then(() => {
+            setDisplay(t("copied"));
+            setTimeout(() => {
+              setDisplay(t("copy"));
+            }, 2000);
+          });
+        }
+      }}
+      role="button"
+      tabIndex={0}
       style={{ whiteSpace: "nowrap" }}
     >
       {display}

@@ -1,7 +1,7 @@
-import { useStatusStore } from "@/lib/store";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
+import { useStatusStore } from "@/lib/store";
 import { Button } from "./wui/Button";
 
 export const MediaIndexingToast = (props: {
@@ -12,8 +12,16 @@ export const MediaIndexingToast = (props: {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   return (
     <div
-      className="flex grow flex-row items-center justify-between"
+      className="flex grow flex-row items-center justify-between cursor-pointer"
       onClick={() => toast.dismiss(props.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toast.dismiss(props.id);
+        }
+      }}
+      role="button"
+      tabIndex={0}
     >
       <div className="flex grow flex-col pr-3">
         <div className="font-semibold">{t("toast.updateDbHeading")}</div>

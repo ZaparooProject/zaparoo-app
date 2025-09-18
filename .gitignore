@@ -30,3 +30,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.claude/
+CLAUDE.md
+
+coverage/
+
+.tanstack/
+docs/plans/

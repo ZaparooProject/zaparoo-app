@@ -1,4 +1,8 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
+import { Capacitor } from "@capacitor/core";
+import { CheckIcon, WarningIcon } from "./images";
 import {
   cancelSession,
   eraseTag,
@@ -9,10 +13,6 @@ import {
   Result,
   Status
 } from "./nfc";
-import toast from "react-hot-toast";
-import { CheckIcon, WarningIcon } from "./images";
-import { useTranslation } from "react-i18next";
-import { Capacitor } from "@capacitor/core";
 import { CoreAPI } from "./coreApi.ts";
 
 interface WriteNfcHook {
@@ -126,6 +126,7 @@ export function useNfcWriter(): WriteNfcHook {
             }
             toast.success(
               (to) => (
+                // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
                 <span
                   className="flex grow flex-col"
                   onClick={() => toast.dismiss(to.id)}
@@ -154,6 +155,7 @@ export function useNfcWriter(): WriteNfcHook {
           }
           toast.error(
             (to) => (
+              // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
               <span
                 className="flex grow flex-col"
                 onClick={() => toast.dismiss(to.id)}

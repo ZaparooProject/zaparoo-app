@@ -1,9 +1,9 @@
 import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { BottomNav } from "../components/BottomNav";
 import { App } from "@capacitor/app";
 import { useEffect } from "react";
 import { SafeAreaHandler } from "@/lib/safeArea";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
+import { BottomNav } from "../components/BottomNav";
 
 function BackHandler() {
   const navigate = useNavigate();

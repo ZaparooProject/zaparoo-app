@@ -1,21 +1,21 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { WriteModal } from "../components/WriteModal";
 import { useEffect, useState } from "react";
-import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { PageFrame } from "../components/PageFrame";
 import { useTranslation } from "react-i18next";
-import { Button } from "../components/wui/Button";
-import { TextInput } from "@/components/wui/TextInput.tsx";
 import { ArrowDownIcon, CameraIcon, NfcIcon, SaveIcon } from "lucide-react";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
+import { useQuery } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import { TextInput } from "@/components/wui/TextInput.tsx";
 import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
 import { ClearIcon } from "@/lib/images.tsx";
-import { useQuery } from "@tanstack/react-query";
 import { CoreAPI } from "@/lib/coreApi.ts";
-import toast from "react-hot-toast";
 import { useStatusStore } from "@/lib/store.ts";
 import { MappingResponse } from "@/lib/models.ts";
+import { Button } from "../components/wui/Button";
+import { PageFrame } from "../components/PageFrame";
+import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
+import { WriteModal } from "../components/WriteModal";
+import { useSmartSwipe } from "../hooks/useSmartSwipe";
 
 export const Route = createFileRoute("/create/mappings")({
   component: Mappings

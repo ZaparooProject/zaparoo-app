@@ -1,11 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { ToggleSwitch } from "../components/wui/ToggleSwitch";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { useMutation, useQuery } from "@tanstack/react-query";
 import { useStatusStore } from "../lib/store";
 import { PageFrame } from "../components/PageFrame";
-import { useTranslation } from "react-i18next";
 import { UpdateSettingsRequest } from "../lib/models.ts";
 
 export const Route = createFileRoute("/settings/advanced")({

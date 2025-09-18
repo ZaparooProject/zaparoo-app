@@ -1,12 +1,12 @@
 import classNames from "classnames";
-import { ScanResult } from "../lib/models";
-import { DownIcon, SettingsIcon, WarningIcon } from "../lib/images";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { useEffect, useState } from "react";
-import { Card } from "./wui/Card";
-import { Button } from "./wui/Button";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
+import { ScanResult } from "../lib/models";
+import { DownIcon, SettingsIcon, WarningIcon } from "../lib/images";
+import { Card } from "./wui/Card";
+import { Button } from "./wui/Button";
 
 export const successColor = "#00FF29";
 export const errorColor = "#FF7E92";

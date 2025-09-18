@@ -1,3 +1,6 @@
+import { Preferences } from "@capacitor/preferences";
+import { v4 as uuidv4 } from "uuid";
+import { Capacitor } from "@capacitor/core";
 import {
   AddMappingRequest,
   AllMappingsResponse,
@@ -16,9 +19,6 @@ import {
   VersionResponse,
   WriteRequest
 } from "./models";
-import { Preferences } from "@capacitor/preferences";
-import { v4 as uuidv4 } from "uuid";
-import { Capacitor } from "@capacitor/core";
 
 const RequestTimeout = 30 * 1000;
 

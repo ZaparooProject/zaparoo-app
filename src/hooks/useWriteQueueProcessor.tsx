@@ -2,9 +2,9 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
-import { useStatusStore } from "../lib/store";
 import { WriteAction } from "@/lib/writeNfcHook";
 import { Status } from "@/lib/nfc.ts";
+import { useStatusStore } from "../lib/store";
 
 interface UseWriteQueueProcessorProps {
   nfcWriter: {
@@ -38,7 +38,7 @@ export function useWriteQueueProcessor({
     const maxRetries = 10;
     const retryInterval = 500;
     let retryCount = 0;
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout>;
 
     const checkNfcAndWrite = () => {
       Promise.all([Nfc.isAvailable()])
@@ -46,8 +46,16 @@ export function useWriteQueueProcessor({
           if (!availableResult.nfc) {
             toast.error((to) => (
               <span
-                className="flex grow flex-col"
+                className="flex grow flex-col cursor-pointer"
                 onClick={() => toast.dismiss(to.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toast.dismiss(to.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
               >
                 {t("write.nfcNotSupported")}
               </span>
@@ -71,8 +79,16 @@ export function useWriteQueueProcessor({
           } else {
             toast.error((to) => (
               <span
-                className="flex grow flex-col"
+                className="flex grow flex-col cursor-pointer"
                 onClick={() => toast.dismiss(to.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toast.dismiss(to.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
               >
                 {e.message}
               </span>

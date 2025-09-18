@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
+import { memo } from "react";
 import { SlideModal } from "../SlideModal";
 import { CopyButton } from "../CopyButton";
 import { errorColor } from "../ScanSpinner";
-import { memo } from "react";
 
 interface HistoryEntry {
   uid: string;

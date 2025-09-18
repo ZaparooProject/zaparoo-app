@@ -1,11 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { useStatusStore } from "@/lib/store.ts";
 import { useQuery } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { useStatusStore } from "@/lib/store.ts";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 import { TextInput } from "@/components/wui/TextInput.tsx";
-import { useRef, useState } from "react";
 
 export function SystemsSearchModal(props: {
   isOpen: boolean;
