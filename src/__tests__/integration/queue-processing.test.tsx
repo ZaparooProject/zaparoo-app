@@ -1,25 +1,17 @@
-import { render, screen, waitFor } from '../../test-utils';
-import { vi } from 'vitest';
-
-// Mock queue processor hooks
-vi.mock('@/hooks/useRunQueueProcessor', () => ({
-  useRunQueueProcessor: () => ({
-    isProcessing: false,
-    queue: [],
-    processQueue: vi.fn()
-  })
-}));
-
-vi.mock('@/hooks/useWriteQueueProcessor', () => ({
-  useWriteQueueProcessor: () => ({
-    isProcessing: false,
-    queue: [],
-    processQueue: vi.fn()
-  })
-}));
+import { describe, it, expect, beforeEach } from 'vitest';
+import { useStatusStore } from '../../lib/store';
 
 describe('Queue Processing Integration', () => {
-  it('should handle empty queue state', () => {
-    expect(true).toBe(true);
+  beforeEach(() => {
+    // Reset store to initial state
+    useStatusStore.getState().setRunQueue(null);
+    useStatusStore.getState().setWriteQueue("");
+  });
+
+  it('should initialize queues in empty state', () => {
+    const state = useStatusStore.getState();
+
+    expect(state.runQueue).toBeNull();
+    expect(state.writeQueue).toBe("");
   });
 });

@@ -46,6 +46,24 @@ vi.mock("../lib/store", () => ({
   }
 }));
 
+// Test helper factory for creating mock store state
+const createMockStoreState = (overrides = {}) => ({
+  retryCount: 0,
+  setConnected: vi.fn(),
+  setConnectionState: vi.fn(),
+  setConnectionError: vi.fn(),
+  setPlaying: vi.fn(),
+  setGamesIndex: vi.fn(),
+  setLastToken: vi.fn(),
+  runQueue: null,
+  setRunQueue: vi.fn(),
+  writeQueue: "",
+  setWriteQueue: vi.fn(),
+  addDeviceHistory: vi.fn(),
+  setDeviceHistory: vi.fn(),
+  ...overrides
+});
+
 describe("CoreApiWebSocket", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -62,27 +80,18 @@ describe("CoreApiWebSocket", () => {
   it("should use setConnectionState instead of setConnected for connection errors", () => {
     const mockSetConnectionState = vi.fn();
     const mockSetConnectionError = vi.fn();
-    
+
+    const mockState = createMockStoreState({
+      setConnectionState: mockSetConnectionState,
+      setConnectionError: mockSetConnectionError
+    });
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(useStatusStore).mockImplementation((selector: any) =>
-      selector({
-        retryCount: 0,
-        setConnected: vi.fn(),
-        setConnectionState: mockSetConnectionState,
-        setConnectionError: mockSetConnectionError,
-        setPlaying: vi.fn(),
-        setGamesIndex: vi.fn(),
-        setLastToken: vi.fn(),
-        runQueue: null,
-        setRunQueue: vi.fn(),
-        writeQueue: "",
-        setWriteQueue: vi.fn(),
-        addDeviceHistory: vi.fn(),
-        setDeviceHistory: vi.fn()
-      })
+      selector(mockState)
     );
 
-    
+
     render(<CoreApiWebSocket />);
 
     expect(mockSetConnectionState).toHaveBeenCalledWith(ConnectionState.ERROR);
@@ -128,24 +137,13 @@ describe("CoreApiWebSocket", () => {
     mockGetWsUrl.mockReturnValue("ws://192.168.1.100:7497/api");
 
     const mockSetConnectionState = vi.fn();
+    const mockState = createMockStoreState({
+      setConnectionState: mockSetConnectionState
+    });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(useStatusStore).mockImplementation((selector: any) =>
-      selector({
-        retryCount: 0,
-        setConnected: vi.fn(),
-        setConnectionState: mockSetConnectionState,
-        setConnectionError: vi.fn(),
-        setPlaying: vi.fn(),
-        setGamesIndex: vi.fn(),
-        setLastToken: vi.fn(),
-        runQueue: null,
-        setRunQueue: vi.fn(),
-        writeQueue: "",
-        setWriteQueue: vi.fn(),
-        addDeviceHistory: vi.fn(),
-        setDeviceHistory: vi.fn()
-      })
+      selector(mockState)
     );
 
     render(<CoreApiWebSocket />);
@@ -158,5 +156,26 @@ describe("CoreApiWebSocket", () => {
     // When websocket-heartbeat-js calls onclose, it should set RECONNECTING state
     // because the library will automatically attempt to reconnect
     expect(mockSetConnectionState).toHaveBeenCalledWith(ConnectionState.RECONNECTING);
+  });
+
+  it("should set CONNECTING state when WebSocket connection is initiated", () => {
+    // Mock valid device address and WebSocket URL
+    mockGetDeviceAddress.mockReturnValue("192.168.1.100");
+    mockGetWsUrl.mockReturnValue("ws://192.168.1.100:7497/api");
+
+    const mockSetConnectionState = vi.fn();
+    const mockState = createMockStoreState({
+      setConnectionState: mockSetConnectionState
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useStatusStore).mockImplementation((selector: any) =>
+      selector(mockState)
+    );
+
+    render(<CoreApiWebSocket />);
+
+    // Should call setConnectionState with CONNECTING when initiating connection
+    expect(mockSetConnectionState).toHaveBeenCalledWith(ConnectionState.CONNECTING);
   });
 });

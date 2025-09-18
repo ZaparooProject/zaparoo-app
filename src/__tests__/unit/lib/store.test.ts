@@ -55,6 +55,19 @@ describe("StatusStore", () => {
     expect(useStatusStore.getState().deviceHistory).toEqual([]);
   });
 
+  it("should handle queue states correctly", () => {
+    const { setRunQueue, setWriteQueue } = useStatusStore.getState();
+
+    // Test run queue
+    const runQueueItem = { value: "test-uid", unsafe: false };
+    setRunQueue(runQueueItem);
+    expect(useStatusStore.getState().runQueue).toEqual(runQueueItem);
+
+    // Test write queue
+    setWriteQueue("test-write-data");
+    expect(useStatusStore.getState().writeQueue).toBe("test-write-data");
+  });
+
   describe("ConnectionState", () => {
     it("should have ConnectionState enum values", () => {
       expect(ConnectionState.IDLE).toBe("IDLE");

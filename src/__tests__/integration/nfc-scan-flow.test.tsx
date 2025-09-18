@@ -1,5 +1,5 @@
-import { render, screen } from '../../test-utils';
-import { vi } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { sessionManager } from '../../lib/nfc';
 
 // Mock NFC plugin
 vi.mock('@capawesome-team/capacitor-nfc', () => ({
@@ -11,7 +11,13 @@ vi.mock('@capawesome-team/capacitor-nfc', () => ({
 }));
 
 describe('NFC Scan Flow Integration', () => {
-  it('should handle scan session lifecycle', () => {
-    expect(true).toBe(true);
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should initialize session manager with default settings', () => {
+    // Test that sessionManager is properly initialized with default values
+    expect(sessionManager.launchOnScan).toBeDefined();
+    expect(typeof sessionManager.launchOnScan).toBe('boolean');
   });
 });
