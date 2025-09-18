@@ -24,6 +24,9 @@ jobs:
           node-version: '18'
           cache: 'pnpm'
 
+      - name: Authenticate NPM registry
+        run: echo -e "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}\n@capawesome-team:registry=https://npm.pkg.github.com/" > ~/.npmrc
+
       - name: Install dependencies
         run: pnpm install
 
