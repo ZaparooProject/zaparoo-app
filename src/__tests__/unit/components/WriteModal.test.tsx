@@ -45,12 +45,49 @@ describe("WriteModal", () => {
   it("calls close when Enter key is pressed on back button", () => {
     const mockClose = vi.fn();
     render(<WriteModal isOpen={true} close={mockClose} />);
-    
+
     const backButton = screen.getByRole('button');
     expect(backButton).toBeInTheDocument();
-    
+
     fireEvent.keyDown(backButton, { key: 'Enter' });
-    
+
     expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls close when Space key is pressed on back button", () => {
+    const mockClose = vi.fn();
+    render(<WriteModal isOpen={true} close={mockClose} />);
+
+    const backButton = screen.getByRole('button');
+    expect(backButton).toBeInTheDocument();
+
+    fireEvent.keyDown(backButton, { key: ' ' });
+
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call close for other keys on back button", () => {
+    const mockClose = vi.fn();
+    render(<WriteModal isOpen={true} close={mockClose} />);
+
+    const backButton = screen.getByRole('button');
+    expect(backButton).toBeInTheDocument();
+
+    fireEvent.keyDown(backButton, { key: 'Escape' });
+
+    expect(mockClose).not.toHaveBeenCalled();
+  });
+
+  it("renders spinner with correct layout structure", () => {
+    const { container } = render(<WriteModal isOpen={true} close={vi.fn()} />);
+
+    // Check for the new layout structure with centered spinner
+    const centerContainer = container.querySelector('.flex.flex-col.items-center.gap-4');
+    expect(centerContainer).toBeInTheDocument();
+
+    // Ensure ScanSpinner is within the centered container
+    const spinner = centerContainer?.querySelector('[data-testid="scan-spinner"], .scan-spinner') ||
+                   screen.queryByText(/spinner\.holdTag/);
+    expect(spinner).toBeTruthy();
   });
 });
