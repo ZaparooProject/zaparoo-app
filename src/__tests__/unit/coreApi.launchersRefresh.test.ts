@@ -33,4 +33,21 @@ describe("CoreAPI - launchersRefresh method", () => {
     expect(sentData.id).toBeDefined();
     expect(sentData.timestamp).toBeDefined();
   });
+
+  it("should handle errors in launchersRefresh method", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    // Mock CoreAPI.call to reject
+    const originalCall = CoreAPI.call;
+    CoreAPI.call = vi.fn().mockRejectedValue(new Error("Test error"));
+
+    expect((CoreAPI as any).launchersRefresh).toBeDefined();
+
+    await expect((CoreAPI as any).launchersRefresh()).rejects.toThrow("Test error");
+    expect(consoleSpy).toHaveBeenCalledWith("Launchers refresh API call failed:", expect.any(Error));
+
+    // Restore
+    CoreAPI.call = originalCall;
+    consoleSpy.mockRestore();
+  });
 });

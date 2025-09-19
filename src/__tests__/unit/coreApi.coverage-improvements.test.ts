@@ -94,18 +94,23 @@ describe("CoreAPI Coverage Improvements", () => {
       consoleLogSpy.mockRestore();
     });
 
-    it("should handle error in getWsUrl by testing string concatenation", () => {
-      // Test the error path in getWsUrl by ensuring we're testing the actual functionality
-      // The main getWsUrl error path happens during string concatenation with getDeviceAddress result
+    it("should handle error in getWsUrl and return empty string", () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-      // Make localStorage return empty but not throw, then simulate what would happen
-      mockLocalStorage.getItem.mockReturnValue("");
+      // Mock String.prototype.lastIndexOf to throw an error during URL construction
+      const originalLastIndexOf = String.prototype.lastIndexOf;
+      String.prototype.lastIndexOf = vi.fn(() => {
+        throw new Error("String operation error");
+      });
 
       const result = getWsUrl();
 
-      // When getDeviceAddress returns test-hostname (from window.location.hostname fallback)
-      // getWsUrl should construct the URL properly
-      expect(result).toBe("ws://test-hostname:7497/api/v0.1");
+      expect(result).toBe("");
+      expect(consoleSpy).toHaveBeenCalledWith("Error getting WebSocket URL:", expect.any(Error));
+
+      // Restore mocks
+      String.prototype.lastIndexOf = originalLastIndexOf;
+      consoleSpy.mockRestore();
     });
   });
 
