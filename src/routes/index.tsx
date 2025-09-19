@@ -22,7 +22,7 @@ import { HistoryModal } from "../components/home/HistoryModal";
 import { StopConfirmModal } from "../components/home/StopConfirmModal";
 import { useScanOperations } from "../hooks/useScanOperations";
 import { useAppSettings } from "../hooks/useAppSettings";
-import logoImage from "../../public/lockup.png";
+const logoImage = "/lockup.png";
 
 interface LoaderData {
   restartScan: boolean;
