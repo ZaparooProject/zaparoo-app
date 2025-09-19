@@ -5,16 +5,23 @@ export enum Method {
   History = "tokens.history",
   Media = "media",
   MediaSearch = "media.search",
-  MediaIndex = "media.index",
+  MediaGenerate = "media.generate",
+  MediaActive = "media.active",
+  MediaActiveUpdate = "media.active.update",
   Systems = "systems",
   Settings = "settings",
   SettingsUpdate = "settings.update",
+  SettingsReload = "settings.reload",
+  SettingsLogsDownload = "settings.logs.download",
+  LaunchersRefresh = "launchers.refresh",
   Mappings = "mappings",
   MappingsNew = "mappings.new",
   MappingsDelete = "mappings.delete",
   MappingsUpdate = "mappings.update",
+  MappingsReload = "mappings.reload",
   Readers = "readers",
   ReadersWrite = "readers.write",
+  ReadersWriteCancel = "readers.write.cancel",
   Version = "version"
 }
 
@@ -23,6 +30,7 @@ export enum Notification {
   ReadersDisconnected = "readers.removed",
   TokensLaunching = "running",
   TokensScanned = "tokens.added",
+  TokensRemoved = "tokens.removed",
   MediaStarted = "media.started",
   MediaStopped = "media.stopped",
   MediaIndexing = "media.indexing"
@@ -34,8 +42,9 @@ export interface VersionResponse {
 }
 
 export interface LaunchRequest {
-  uid: string;
-  text: string;
+  type?: string;
+  uid?: string;
+  text?: string;
   data?: string;
   unsafe?: boolean;
 }
@@ -47,6 +56,7 @@ export interface WriteRequest {
 export interface SearchParams {
   query: string;
   systems: string[];
+  maxResults?: number;
 }
 
 export interface SearchResultGame {
@@ -108,8 +118,10 @@ export interface UpdateMappingRequest {
 
 export interface HistoryResponseEntry {
   time: string;
+  type: string;
   uid: string;
   text: string;
+  data: string;
   success: boolean;
 }
 
@@ -118,23 +130,23 @@ export interface HistoryResponse {
 }
 
 export interface SettingsResponse {
-  launchingActive: boolean;
+  runZapScript: boolean;
   debugLogging: boolean;
   audioScanFeedback: boolean;
   readersAutoDetect: boolean;
-  readersScanMode: "tap" | "hold";
+  readersScanMode: "tap" | "hold" | "insert";
   readersScanExitDelay: number;
   readersScanIgnoreSystems: string[];
 }
 
 export interface UpdateSettingsRequest {
-  launchingActive?: boolean;
   debugLogging?: boolean;
   audioScanFeedback?: boolean;
   readersAutoDetect?: boolean;
-  readersScanMode?: "tap" | "hold";
+  readersScanMode?: "tap" | "hold" | "insert";
   readersScanExitDelay?: number;
   readersScanIgnoreSystems?: string[];
+  runZapScript?: boolean;
 }
 
 export interface TokenResponse {
@@ -159,6 +171,8 @@ export interface PlayingResponse {
   systemName: string;
   mediaName: string;
   mediaPath: string;
+  started?: string;
+  launcherId?: string;
 }
 
 export enum ScanResult {
@@ -175,4 +189,27 @@ export interface MediaResponse {
 export interface TokensResponse {
   active: TokenResponse[];
   last?: TokenResponse;
+}
+
+export interface LogDownloadResponse {
+  filename: string;
+  content: string;
+  size: number;
+}
+
+export interface ReaderInfo {
+  id: string;
+  info: string;
+  capabilities: string[];
+  connected: boolean;
+}
+
+export interface ReadersResponse {
+  readers: ReaderInfo[];
+}
+
+export interface MediaActiveUpdateRequest {
+  systemId: string;
+  mediaPath: string;
+  mediaName: string;
 }

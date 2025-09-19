@@ -6,9 +6,12 @@ import {
   AllMappingsResponse,
   HistoryResponse,
   LaunchRequest,
+  LogDownloadResponse,
+  MediaActiveUpdateRequest,
   MediaResponse,
   Method,
   Notification,
+  ReadersResponse,
   SearchParams,
   SearchResultsResponse,
   SettingsResponse,
@@ -229,6 +232,7 @@ class CoreApi {
     });
   }
 
+
   run(params: LaunchRequest): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       this.call(Method.Run, params)
@@ -303,18 +307,20 @@ class CoreApi {
     });
   }
 
-  mediaIndex(): Promise<void> {
+
+  mediaGenerate(params?: { systems?: string[] }): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      this.call(Method.MediaIndex)
+      this.call(Method.MediaGenerate, params)
         .then(() => {
           resolve();
         })
         .catch((error) => {
-          console.error("Media index API call failed:", error);
+          console.error("Media generate API call failed:", error);
           reject(error);
         });
     });
   }
+
 
   systems(): Promise<SystemsResponse> {
     return new Promise<SystemsResponse>((resolve, reject) => {
@@ -444,6 +450,19 @@ class CoreApi {
     });
   }
 
+  mappingsReload(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MappingsReload)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          console.error("Mappings reload API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
   media(): Promise<MediaResponse> {
     return new Promise<MediaResponse>((resolve, reject) => {
       this.call(Method.Media)
@@ -490,6 +509,103 @@ class CoreApi {
           reject(error);
         });
     });
+  }
+
+  stop(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.Stop)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          console.error("Stop API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  mediaActive(): Promise<MediaResponse["active"]> {
+    return new Promise<MediaResponse["active"]>((resolve, reject) => {
+      this.call(Method.MediaActive)
+        .then((result) => {
+          resolve(result as MediaResponse["active"]);
+        })
+        .catch((error) => {
+          console.error("Media active API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  mediaActiveUpdate(params: MediaActiveUpdateRequest): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MediaActiveUpdate, params)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          console.error("Media active update API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+
+  settingsReload(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.SettingsReload)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          console.error("Settings reload API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  readers(): Promise<ReadersResponse> {
+    return new Promise<ReadersResponse>((resolve, reject) => {
+      this.call(Method.Readers)
+        .then((result) => {
+          resolve(result as ReadersResponse);
+        })
+        .catch((error) => {
+          console.error("Readers API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+
+  readersWriteCancel(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.ReadersWriteCancel)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          console.error("Readers write cancel API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  launchersRefresh(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.LaunchersRefresh)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          console.error("Launchers refresh API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  settingsLogsDownload(): Promise<LogDownloadResponse> {
+    return this.call(Method.SettingsLogsDownload) as Promise<LogDownloadResponse>;
   }
 }
 

@@ -259,7 +259,7 @@ function Settings() {
               icon={<DatabaseIcon size="20" />}
               className="w-full"
               disabled={!connected || gamesIndex.indexing}
-              onClick={() => CoreAPI.mediaIndex()}
+              onClick={() => CoreAPI.mediaGenerate()}
             />
           </div>
 
