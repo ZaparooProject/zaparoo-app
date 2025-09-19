@@ -1,12 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { Capacitor } from "@capacitor/core";
+import { useEffect, useState } from "react";
+import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { ToggleSwitch } from "../components/wui/ToggleSwitch";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { useStatusStore } from "../lib/store";
 import { PageFrame } from "../components/PageFrame";
 import { UpdateSettingsRequest } from "../lib/models.ts";
+import { useAppSettings } from "../hooks/useAppSettings";
 
 export const Route = createFileRoute("/settings/advanced")({
   component: Advanced
@@ -14,6 +18,20 @@ export const Route = createFileRoute("/settings/advanced")({
 
 function Advanced() {
   const connected = useStatusStore((state) => state.connected);
+  const [hasLocalNFC, setHasLocalNFC] = useState(false);
+
+  const { preferRemoteWriter, setPreferRemoteWriter } = useAppSettings({
+    initData: { restartScan: false, launchOnScan: true }
+  });
+
+  useEffect(() => {
+    // Check if local NFC is available on native platforms
+    if (Capacitor.isNativePlatform()) {
+      Nfc.isAvailable()
+        .then((result) => setHasLocalNFC(result.nfc))
+        .catch(() => setHasLocalNFC(false));
+    }
+  }, []);
 
   const { data, refetch } = useQuery({
     queryKey: ["settings"],
@@ -66,6 +84,16 @@ function Advanced() {
             disabled={!connected}
           />
         </div>
+
+        {Capacitor.isNativePlatform() && hasLocalNFC && (
+          <div className="py-2">
+            <ToggleSwitch
+              label={t("settings.advanced.preferRemoteWriter")}
+              value={preferRemoteWriter}
+              setValue={setPreferRemoteWriter}
+            />
+          </div>
+        )}
 
         {/*<div className="flex flex-col gap-4 pt-1.5">*/}
         {/*  <TextInput*/}

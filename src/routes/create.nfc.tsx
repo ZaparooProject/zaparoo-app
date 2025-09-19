@@ -22,9 +22,9 @@ export const Route = createFileRoute("/create/nfc")({
 function NfcUtils() {
   const nfcWriter = useNfcWriter();
   const [writeOpen, setWriteOpen] = useState(false);
-  const closeWriteModal = () => {
+  const closeWriteModal = async () => {
     setWriteOpen(false);
-    nfcWriter.end();
+    await nfcWriter.end();
   };
 
   const [eraseConfirm, setEraseConfirm] = useState(false);
@@ -37,7 +37,6 @@ function NfcUtils() {
     if (nfcWriter.status !== null) {
       console.log(JSON.stringify(nfcWriter.result?.info.rawTag));
       setWriteOpen(false);
-      nfcWriter.end();
     }
   }, [nfcWriter]);
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
 import { CoreAPI } from '../../lib/coreApi';
-import type { SearchParams, HistoryResponseEntry, PlayingResponse } from '../../lib/models';
+import type { SearchParams, HistoryResponseEntry } from '../../lib/models';
 
 describe('CoreAPI Improved Types', () => {
   let mockSend: Mock;

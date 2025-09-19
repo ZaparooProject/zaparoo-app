@@ -26,16 +26,15 @@ function CustomText() {
   const [customText, setCustomText] = useState(initData.customText);
   const nfcWriter = useNfcWriter();
   const [writeOpen, setWriteOpen] = useState(false);
-  const closeWriteModal = () => {
+  const closeWriteModal = async () => {
     setWriteOpen(false);
-    nfcWriter.end();
+    await nfcWriter.end();
   };
   const { t } = useTranslation();
 
   useEffect(() => {
     if (nfcWriter.status !== null) {
       setWriteOpen(false);
-      nfcWriter.end();
     }
   }, [nfcWriter]);
 

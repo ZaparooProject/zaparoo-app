@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CoreAPI } from "../../lib/coreApi";
-import { Method, Notification } from "../../lib/models";
+import { Method } from "../../lib/models";
 
 const mockSend = vi.fn();
 

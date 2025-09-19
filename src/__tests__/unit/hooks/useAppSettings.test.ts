@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { useAppSettings } from "../../../hooks/useAppSettings";
 import { Preferences } from "@capacitor/preferences";
-import { sessionManager } from "../../../lib/nfc";
+// sessionManager is mocked in nfc mock
 
 vi.mock("@capacitor/preferences", () => import("../../../__mocks__/@capacitor/preferences"));
 vi.mock("../../../lib/nfc");

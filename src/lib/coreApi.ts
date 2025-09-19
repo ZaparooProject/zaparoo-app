@@ -59,6 +59,7 @@ interface ResponsePromise {
 class CoreApi {
   private send: (msg: Parameters<WebSocket["send"]>[0]) => void;
   private readonly responsePool: { [key: string]: ResponsePromise };
+  private pendingWriteId: string | null = null;
 
   constructor() {
     this.send = () => console.warn("WebSocket send is not initialized");
@@ -134,6 +135,68 @@ class CoreApi {
           `API call error: ${e instanceof Error ? e.message : String(e)}`
         )
       );
+    }
+  }
+
+  callWithTracking(method: Method, params?: unknown): { id: string; promise: Promise<unknown> } {
+    try {
+      const id = uuidv4();
+      const req: ApiRequest = {
+        jsonrpc: "2.0",
+        id,
+        timestamp: Date.now(),
+        method,
+        params
+      };
+
+      const payload = JSON.stringify(req);
+      console.debug("Sending tracked request", payload);
+
+      const promise = new Promise<unknown>((resolve, reject) => {
+        this.responsePool[id] = { resolve, reject };
+      });
+
+      // Add timeout handling with rejection
+      setTimeout(() => {
+        if (this.responsePool[id]) {
+          this.responsePool[id].reject(new Error("Request timeout"));
+          delete this.responsePool[id];
+        }
+      }, RequestTimeout);
+
+      console.debug(payload);
+
+      // Add safe send
+      try {
+        this.send(payload);
+      } catch (e) {
+        console.error("Failed to send tracked request:", e);
+        delete this.responsePool[id];
+        throw new Error(
+          `Failed to send request: ${e instanceof Error ? e.message : String(e)}`
+        );
+      }
+
+      return { id, promise };
+    } catch (e) {
+      console.error("Error in tracked API call:", e);
+      throw new Error(
+        `API call error: ${e instanceof Error ? e.message : String(e)}`
+      );
+    }
+  }
+
+  cancelWrite(): void {
+    if (this.pendingWriteId && this.responsePool[this.pendingWriteId]) {
+      console.debug("Cancelling write request:", this.pendingWriteId);
+      this.responsePool[this.pendingWriteId].reject(new Error("Write operation cancelled"));
+      delete this.responsePool[this.pendingWriteId];
+      this.pendingWriteId = null;
+
+      // Also send the cancel command to the API
+      this.readersWriteCancel().catch((error) => {
+        console.error("Failed to send write cancel command:", error);
+      });
     }
   }
 
@@ -248,11 +311,16 @@ class CoreApi {
 
   write(params: WriteRequest): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      this.call(Method.ReadersWrite, params)
+      const writeResult = this.callWithTracking(Method.ReadersWrite, params);
+      this.pendingWriteId = writeResult.id;
+
+      writeResult.promise
         .then(() => {
+          this.pendingWriteId = null;
           resolve();
         })
         .catch((error) => {
+          this.pendingWriteId = null;
           console.error("Write API call failed:", error);
           reject(error);
         });
@@ -575,6 +643,21 @@ class CoreApi {
           reject(error);
         });
     });
+  }
+
+  async hasWriteCapableReader(): Promise<boolean> {
+    try {
+      const response = await this.readers();
+      return response.readers.some(reader =>
+        reader.connected &&
+        reader.capabilities.some(capability =>
+          capability.toLowerCase().includes('write')
+        )
+      );
+    } catch (error) {
+      console.error("Failed to check write capable readers:", error);
+      return false;
+    }
   }
 
 

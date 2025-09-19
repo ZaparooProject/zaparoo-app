@@ -45,6 +45,10 @@
       "filesFound": "{{count}} media found",
       "nowPlayingHeading": "Now playing"
     },
+    "write": {
+      "noWriteMethodAvailable": "No NFC writing capability available",
+      "nfcNotSupported": "NFC is not supported on this device"
+    },
     "scan": {
       "cameraMode": "QR/Barcode",
       "nfcMode": "NFC",
@@ -175,7 +179,8 @@
         "downloadLog": "Download Zaparoo log file",
         "restorePurchases": "Restore purchases",
         "restoreSuccess": "Purchases have been restored",
-        "restoreFail": "Failed to restore purchases"
+        "restoreFail": "Failed to restore purchases",
+        "preferRemoteWriter": "Prefer connected reader for writing"
       },
       "help": {
         "title": "Help",

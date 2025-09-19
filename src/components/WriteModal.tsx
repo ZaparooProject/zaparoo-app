@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useStatusStore } from "@/lib/store";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
@@ -5,12 +6,14 @@ import { BackIcon } from "../lib/images";
 import { ScanResult } from "../lib/models";
 import { ScanSpinner } from "./ScanSpinner";
 
-
 export function WriteModal(props: { isOpen: boolean; close: () => void }) {
+  const { t } = useTranslation();
+
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: () => props.close(),
     preventScrollOnSwipe: false
   });
+
 
   if (!props.isOpen) {
     return null;
@@ -32,14 +35,18 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
         <div
           className="flex flex-row gap-2"
           onClick={() => props.close()}
-          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && props.close()}
+          onKeyDown={(e) =>
+            (e.key === "Enter" || e.key === " ") && props.close()
+          }
           role="button"
           tabIndex={0}
         >
           <BackIcon size="24" />
         </div>
       </div>
-      <ScanSpinner spinning={true} status={ScanResult.Default} write />
+      <div className="flex flex-col items-center gap-4">
+        <ScanSpinner spinning={true} status={ScanResult.Default} write />
+      </div>
     </div>
   );
 }

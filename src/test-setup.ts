@@ -50,6 +50,6 @@ Object.defineProperty(navigator, "platform", {
 
 // WebSocket mock for happy-dom environment
 global.WebSocket = class MockWebSocket {
-  constructor(url: string) {}
+  constructor(_url: string) {}
   close() {}
 } as any;

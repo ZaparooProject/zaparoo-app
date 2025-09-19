@@ -64,9 +64,9 @@ function Search() {
 
   const nfcWriter = useNfcWriter();
   const [writeOpen, setWriteOpen] = useState(false);
-  const closeWriteModal = () => {
+  const closeWriteModal = async () => {
     setWriteOpen(false);
-    nfcWriter.end();
+    await nfcWriter.end();
   };
 
   const { t } = useTranslation();
@@ -74,7 +74,6 @@ function Search() {
   useEffect(() => {
     if (nfcWriter.status !== null) {
       setWriteOpen(false);
-      nfcWriter.end();
     }
   }, [nfcWriter]);
 

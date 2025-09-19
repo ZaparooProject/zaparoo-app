@@ -59,7 +59,6 @@ function Mappings() {
   useEffect(() => {
     if (nfcWriter.status !== null) {
       setWriteOpen(false);
-      nfcWriter.end();
 
       if (nfcWriter.result?.info.tag?.uid) {
         const uid = nfcWriter.result.info.tag.uid;
@@ -74,9 +73,9 @@ function Mappings() {
     }
   }, [nfcWriter.result, nfcWriter, mappings.data]);
 
-  const closeWriteModal = () => {
+  const closeWriteModal = async () => {
     setWriteOpen(false);
-    nfcWriter.end();
+    await nfcWriter.end();
   };
 
   const saveMapping = () => {
