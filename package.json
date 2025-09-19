@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && pnpm exec cap sync",
+    "build": "tsc --noEmit -p tsconfig.build.json && vite build && pnpm exec cap sync",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 3",
     "eslist": "pnpm run lint",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "test:ui": "vitest --ui"

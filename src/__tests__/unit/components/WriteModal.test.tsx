@@ -35,7 +35,9 @@ describe("WriteModal", () => {
     const backDiv = container.querySelector('.flex.flex-row.gap-2');
     expect(backDiv).toBeInTheDocument();
     
-    backDiv?.click();
+    if (backDiv) {
+      fireEvent.click(backDiv);
+    }
     
     expect(mockClose).toHaveBeenCalledTimes(1);
   });

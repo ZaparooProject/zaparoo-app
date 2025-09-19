@@ -3,22 +3,12 @@ import {
   VersionResponse,
   LaunchRequest,
   WriteRequest,
-  SearchParams,
-  SearchResultGame,
   System,
-  SystemsResponse,
   MappingResponse,
-  AddMappingRequest,
-  UpdateMappingRequest,
-  HistoryResponseEntry,
-  HistoryResponse,
-  SettingsResponse,
-  UpdateSettingsRequest,
   TokenResponse,
   IndexResponse,
   PlayingResponse,
   MediaResponse,
-  TokensResponse,
   MappingType
 } from "../lib/models";
 

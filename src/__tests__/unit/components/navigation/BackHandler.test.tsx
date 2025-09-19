@@ -30,7 +30,7 @@ vi.mock('@/components/BottomNav', () => ({
 
 describe('Root Route Navigation', () => {
   it('should render navigation layout components', () => {
-    const Component = Route.component as React.ComponentType;
+    const Component = (Route as any).component as React.ComponentType;
     const { getByTestId } = render(<Component />);
     
     expect(getByTestId('safe-area-handler')).toBeInTheDocument();

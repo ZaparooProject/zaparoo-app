@@ -640,7 +640,25 @@ export function setDeviceAddress(addr: string) {
 
 export function getWsUrl() {
   try {
-    return "ws://" + getDeviceAddress() + ":7497/api/v0.1";
+    const address = getDeviceAddress();
+
+    // Parse host and port from address
+    let host = address;
+    let port = "7497"; // default port
+
+    // Check if address contains a port (format: host:port)
+    // For IPv6 addresses, we need to be more careful about colons
+    const lastColonIndex = address.lastIndexOf(':');
+    if (lastColonIndex > 0 && lastColonIndex < address.length - 1) {
+      const potentialPort = address.substring(lastColonIndex + 1);
+      // Validate that what follows the colon is a valid port number
+      if (/^\d+$/.test(potentialPort) && parseInt(potentialPort) > 0 && parseInt(potentialPort) <= 65535) {
+        host = address.substring(0, lastColonIndex);
+        port = potentialPort;
+      }
+    }
+
+    return `ws://${host}:${port}/api/v0.1`;
   } catch (e) {
     console.error("Error getting WebSocket URL:", e);
     return "";

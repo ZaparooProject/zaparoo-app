@@ -25,7 +25,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"],
-  "exclude": ["src/__tests__", "src/__mocks__", "src/test-utils", "src/test-setup.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
