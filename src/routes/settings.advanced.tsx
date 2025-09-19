@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { useEffect, useState } from "react";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
+import { Preferences } from "@capacitor/preferences";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { ToggleSwitch } from "../components/wui/ToggleSwitch";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
@@ -12,17 +13,39 @@ import { PageFrame } from "../components/PageFrame";
 import { UpdateSettingsRequest } from "../lib/models.ts";
 import { useAppSettings } from "../hooks/useAppSettings";
 
+interface LoaderData {
+  restartScan: boolean;
+  launchOnScan: boolean;
+  launcherAccess: boolean;
+  preferRemoteWriter: boolean;
+}
+
 export const Route = createFileRoute("/settings/advanced")({
+  loader: async (): Promise<LoaderData> => {
+    const [restartResult, launchResult, accessResult, remoteWriterResult] =
+      await Promise.all([
+        Preferences.get({ key: "restartScan" }),
+        Preferences.get({ key: "launchOnScan" }),
+        Preferences.get({ key: "launcherAccess" }),
+        Preferences.get({ key: "preferRemoteWriter" }),
+      ]);
+
+    return {
+      restartScan: restartResult.value === "true",
+      launchOnScan: launchResult.value !== "false",
+      launcherAccess: accessResult.value === "true",
+      preferRemoteWriter: remoteWriterResult.value === "true",
+    };
+  },
   component: Advanced
 });
 
 function Advanced() {
+  const initData = Route.useLoaderData();
   const connected = useStatusStore((state) => state.connected);
   const [hasLocalNFC, setHasLocalNFC] = useState(false);
 
-  const { preferRemoteWriter, setPreferRemoteWriter } = useAppSettings({
-    initData: { restartScan: false, launchOnScan: true }
-  });
+  const { preferRemoteWriter, setPreferRemoteWriter } = useAppSettings({ initData });
 
   useEffect(() => {
     // Check if local NFC is available on native platforms

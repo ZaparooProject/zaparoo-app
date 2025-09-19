@@ -33,17 +33,25 @@ import { getDeviceAddress, setDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
 interface LoaderData {
   restartScan: boolean;
   launchOnScan: boolean;
+  launcherAccess: boolean;
+  preferRemoteWriter: boolean;
 }
 
 export const Route = createFileRoute("/settings/")({
   loader: async (): Promise<LoaderData> => {
-    const restartScan =
-      (await Preferences.get({ key: "restartScan" })).value === "true";
-    const launchOnScan =
-      (await Preferences.get({ key: "launchOnScan" })).value !== "false";
+    const [restartResult, launchResult, accessResult, remoteWriterResult] =
+      await Promise.all([
+        Preferences.get({ key: "restartScan" }),
+        Preferences.get({ key: "launchOnScan" }),
+        Preferences.get({ key: "launcherAccess" }),
+        Preferences.get({ key: "preferRemoteWriter" }),
+      ]);
+
     return {
-      restartScan,
-      launchOnScan
+      restartScan: restartResult.value === "true",
+      launchOnScan: launchResult.value !== "false",
+      launcherAccess: accessResult.value === "true",
+      preferRemoteWriter: remoteWriterResult.value === "true",
     };
   },
   component: Settings
@@ -53,7 +61,7 @@ function Settings() {
   const initData = Route.useLoaderData();
 
   const { PurchaseModal, setProPurchaseModalOpen, proAccess } =
-    useProPurchase();
+    useProPurchase(initData.launcherAccess);
 
   const connected = useStatusStore((state) => state.connected);
   const connectionError = useStatusStore((state) => state.connectionError);
