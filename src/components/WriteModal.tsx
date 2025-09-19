@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useStatusStore } from "@/lib/store";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
@@ -7,7 +6,6 @@ import { ScanResult } from "../lib/models";
 import { ScanSpinner } from "./ScanSpinner";
 
 export function WriteModal(props: { isOpen: boolean; close: () => void }) {
-  const { t } = useTranslation();
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: () => props.close(),
