@@ -72,6 +72,12 @@ interface StatusState {
 
   writeQueue: string;
   setWriteQueue: (writeQueue: string) => void;
+
+  // Grace period for connection state changes
+  pendingDisconnection: boolean;
+  gracePeriodTimer?: ReturnType<typeof setTimeout>;
+  setConnectionStateWithGracePeriod: (state: ConnectionState) => void;
+  clearGracePeriod: () => void;
 }
 
 export const useStatusStore = create<StatusState>()((set) => ({
@@ -167,5 +173,73 @@ export const useStatusStore = create<StatusState>()((set) => ({
   runQueue: null,
   setRunQueue: (runQueue) => set({ runQueue }),
   writeQueue: "",
-  setWriteQueue: (writeQueue) => set({ writeQueue })
+  setWriteQueue: (writeQueue) => set({ writeQueue }),
+
+  // Grace period state and methods
+  pendingDisconnection: false,
+
+  setConnectionStateWithGracePeriod: (state) => {
+    const currentState = useStatusStore.getState();
+    const GRACE_PERIOD_MS = 2000; // 2 second grace period
+
+    // Immediate state changes that bypass grace period
+    if (state === ConnectionState.CONNECTED ||
+        state === ConnectionState.ERROR ||
+        state === ConnectionState.CONNECTING) {
+      // Clear any pending disconnection
+      if (currentState.gracePeriodTimer) {
+        clearTimeout(currentState.gracePeriodTimer);
+      }
+      set({
+        connectionState: state,
+        connected: state === ConnectionState.CONNECTED,
+        pendingDisconnection: false,
+        gracePeriodTimer: undefined
+      });
+      return;
+    }
+
+    // Only apply grace period for disconnection states when currently connected
+    if ((state === ConnectionState.RECONNECTING || state === ConnectionState.DISCONNECTED) &&
+        currentState.connectionState === ConnectionState.CONNECTED) {
+
+      // Clear any existing timer
+      if (currentState.gracePeriodTimer) {
+        clearTimeout(currentState.gracePeriodTimer);
+      }
+
+      // Set pending disconnection but don't change UI state yet
+      const timer = setTimeout(() => {
+        set({
+          connectionState: state,
+          connected: false,
+          pendingDisconnection: false,
+          gracePeriodTimer: undefined
+        });
+      }, GRACE_PERIOD_MS);
+
+      set({
+        pendingDisconnection: true,
+        gracePeriodTimer: timer
+      });
+    } else {
+      // Immediate change for other cases (e.g., not previously connected)
+      set({
+        connectionState: state,
+        connected: false, // These states are never connected
+        pendingDisconnection: false
+      });
+    }
+  },
+
+  clearGracePeriod: () => {
+    const currentState = useStatusStore.getState();
+    if (currentState.gracePeriodTimer) {
+      clearTimeout(currentState.gracePeriodTimer);
+    }
+    set({
+      pendingDisconnection: false,
+      gracePeriodTimer: undefined
+    });
+  }
 }));

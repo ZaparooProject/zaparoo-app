@@ -51,6 +51,8 @@ const createMockStoreState = (overrides = {}) => ({
   retryCount: 0,
   setConnected: vi.fn(),
   setConnectionState: vi.fn(),
+  setConnectionStateWithGracePeriod: vi.fn(),
+  clearGracePeriod: vi.fn(),
   setConnectionError: vi.fn(),
   setPlaying: vi.fn(),
   setGamesIndex: vi.fn(),
@@ -136,9 +138,9 @@ describe("CoreApiWebSocket", () => {
     mockGetDeviceAddress.mockReturnValue("192.168.1.100");
     mockGetWsUrl.mockReturnValue("ws://192.168.1.100:7497/api");
 
-    const mockSetConnectionState = vi.fn();
+    const mockSetConnectionStateWithGracePeriod = vi.fn();
     const mockState = createMockStoreState({
-      setConnectionState: mockSetConnectionState
+      setConnectionStateWithGracePeriod: mockSetConnectionStateWithGracePeriod
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -153,9 +155,8 @@ describe("CoreApiWebSocket", () => {
       mockWebSocket.onclose();
     }
 
-    // When websocket-heartbeat-js calls onclose, it should set RECONNECTING state
-    // because the library will automatically attempt to reconnect
-    expect(mockSetConnectionState).toHaveBeenCalledWith(ConnectionState.RECONNECTING);
+    // When websocket-heartbeat-js calls onclose, it should use grace period for RECONNECTING state
+    expect(mockSetConnectionStateWithGracePeriod).toHaveBeenCalledWith(ConnectionState.RECONNECTING);
   });
 
   it("should set CONNECTING state when WebSocket connection is initiated", () => {

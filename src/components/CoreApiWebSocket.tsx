@@ -23,6 +23,8 @@ export function CoreApiWebSocket() {
 
   const {
     setConnectionState,
+    setConnectionStateWithGracePeriod,
+    clearGracePeriod,
     setConnectionError,
     setPlaying,
     setGamesIndex,
@@ -32,6 +34,8 @@ export function CoreApiWebSocket() {
   } = useStatusStore(
     useShallow((state) => ({
       setConnectionState: state.setConnectionState,
+      setConnectionStateWithGracePeriod: state.setConnectionStateWithGracePeriod,
+      clearGracePeriod: state.clearGracePeriod,
       setConnectionError: state.setConnectionError,
       setPlaying: state.setPlaying,
       setGamesIndex: state.setGamesIndex,
@@ -93,7 +97,8 @@ export function CoreApiWebSocket() {
     };
 
     ws.onopen = () => {
-      setConnectionState(ConnectionState.CONNECTED);
+      clearGracePeriod();
+      setConnectionStateWithGracePeriod(ConnectionState.CONNECTED);
       setConnectionError("");
 
       // Load device history
@@ -150,7 +155,7 @@ export function CoreApiWebSocket() {
     };
 
     ws.onclose = () => {
-      setConnectionState(ConnectionState.RECONNECTING);
+      setConnectionStateWithGracePeriod(ConnectionState.RECONNECTING);
     };
 
     ws.onmessage = (e) => {
@@ -243,9 +248,10 @@ export function CoreApiWebSocket() {
       console.log("CoreApiWebSocket cleanup: closing WebSocket");
       ws.close();
       coreApiWsRef.current = null;
+      clearGracePeriod();
       setConnectionState(ConnectionState.DISCONNECTED);
     };
-  }, [deviceAddress, wsUrl, setConnectionState, setConnectionError, setPlaying, setGamesIndex, setLastToken, addDeviceHistory, setDeviceHistory, t]);
+  }, [deviceAddress, wsUrl, setConnectionState, setConnectionStateWithGracePeriod, clearGracePeriod, setConnectionError, setPlaying, setGamesIndex, setLastToken, addDeviceHistory, setDeviceHistory, t]);
 
   return null;
 }
