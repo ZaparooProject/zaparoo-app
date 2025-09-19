@@ -4,7 +4,6 @@ import { useNfcWriter, WriteAction, WriteMethod } from "../../../lib/writeNfcHoo
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { CoreAPI } from "../../../lib/coreApi";
-import toast from "react-hot-toast";
 
 // Mock all dependencies
 vi.mock("@capacitor/core", () => ({
