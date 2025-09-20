@@ -59,7 +59,7 @@ export function BackToTop({
           : "pointer-events-none opacity-0"
       }`}
       style={{
-        zIndex: 50,
+        zIndex: 30,
         transform: "translateZ(0)",
         willChange: "opacity",
         paddingRight: `calc(1rem + ${safeInsets.right})`,
