@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CoreAPI } from "../../../lib/coreApi";
+import { Method } from "../../../lib/models";
 
 const mockSend = vi.fn();
 
@@ -13,7 +14,7 @@ describe("CoreAPI AbortSignal Handling", () => {
     it("should return cancelled result when signal is already aborted", async () => {
       const abortedSignal = { aborted: true };
 
-      const result = await CoreAPI.call("test.method", {}, abortedSignal as AbortSignal);
+      const result = await CoreAPI.call(Method.Media, {}, abortedSignal as AbortSignal);
 
       expect(result).toEqual({ cancelled: true });
       expect(mockSend).not.toHaveBeenCalled();
@@ -23,7 +24,7 @@ describe("CoreAPI AbortSignal Handling", () => {
       const abortController = new AbortController();
 
       // Start the request
-      const promise = CoreAPI.call("test.method", {}, abortController.signal);
+      const promise = CoreAPI.call(Method.Media, {}, abortController.signal);
 
       // Abort the signal before response
       abortController.abort();
@@ -37,7 +38,7 @@ describe("CoreAPI AbortSignal Handling", () => {
       const abortController = new AbortController();
 
       // Start the request
-      const promise = CoreAPI.call("test.method", {}, abortController.signal);
+      const promise = CoreAPI.call(Method.Media, {}, abortController.signal);
 
       // Abort immediately
       abortController.abort();
@@ -54,7 +55,7 @@ describe("CoreAPI AbortSignal Handling", () => {
       const addEventListenerSpy = vi.spyOn(abortController.signal, 'addEventListener');
 
       // Start a request with abort signal
-      const promise = CoreAPI.call("test.method", {}, abortController.signal);
+      const promise = CoreAPI.call(Method.Media, {}, abortController.signal);
 
       // Verify addEventListener was called
       expect(addEventListenerSpy).toHaveBeenCalledWith('abort', expect.any(Function), { once: true });
@@ -73,7 +74,7 @@ describe("CoreAPI AbortSignal Handling", () => {
     it("should return cancelled result when signal is already aborted", async () => {
       const abortedSignal = { aborted: true };
 
-      const { promise } = CoreAPI.callWithTracking("test.method", {}, abortedSignal as AbortSignal);
+      const { promise } = CoreAPI.callWithTracking(Method.Media, {}, abortedSignal as AbortSignal);
       const result = await promise;
 
       expect(result).toEqual({ cancelled: true });
@@ -84,7 +85,7 @@ describe("CoreAPI AbortSignal Handling", () => {
       const abortController = new AbortController();
 
       // Start the tracked request
-      const { id, promise } = CoreAPI.callWithTracking("test.method", {}, abortController.signal);
+      const { id, promise } = CoreAPI.callWithTracking(Method.Media, {}, abortController.signal);
 
       // Abort the signal before response
       abortController.abort();
@@ -101,7 +102,7 @@ describe("CoreAPI AbortSignal Handling", () => {
       const abortController = new AbortController();
 
       // Start the request
-      const promise = CoreAPI.call("test.method", {}, abortController.signal);
+      const promise = CoreAPI.call(Method.Media, {}, abortController.signal);
 
       // Abort the request
       abortController.abort();
@@ -119,7 +120,7 @@ describe("CoreAPI AbortSignal Handling", () => {
       const abortController = new AbortController();
 
       // Start the request
-      const promise = CoreAPI.call("test.method", {}, abortController.signal);
+      const promise = CoreAPI.call(Method.Media, {}, abortController.signal);
 
       // Abort just before timeout (but after some time)
       setTimeout(() => {

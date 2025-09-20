@@ -57,9 +57,10 @@ export function MediaSearchModal(props: {
       }),
     enabled:
       debouncedQuery.length >= 2 &&
-      connected &&
       gamesIndex.exists &&
-      !gamesIndex.indexing
+      !gamesIndex.indexing,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
   });
 
   useEffect(() => {

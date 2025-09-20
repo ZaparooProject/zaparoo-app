@@ -1,6 +1,7 @@
 import { Preferences } from "@capacitor/preferences";
 import { v4 as uuidv4 } from "uuid";
 import { Capacitor } from "@capacitor/core";
+import { WebSocketManager } from "./websocketManager.ts";
 import {
   AddMappingRequest,
   AllMappingsResponse,
@@ -58,16 +59,53 @@ interface ResponsePromise {
   abortController?: AbortController;
 }
 
+interface QueuedRequest {
+  req: ApiRequest;
+  promiseHandlers: {
+    resolve: (value: unknown) => void;
+    reject: (reason: ApiError | Error) => void;
+  };
+  signal?: AbortSignal;
+}
+
 class CoreApi {
   private send: (msg: Parameters<WebSocket["send"]>[0]) => void;
   private readonly responsePool: { [key: string]: ResponsePromise };
   private pendingWriteId: string | null = null;
+  private wsManager: WebSocketManager | null = null;
+  private requestQueue: QueuedRequest[] = [];
 
   constructor() {
     this.send = () => console.warn("WebSocket send is not initialized");
     this.responsePool = {};
   }
 
+  setWsInstance(wsManager: WebSocketManager) {
+    if (!wsManager || typeof wsManager.send !== "function") {
+      console.error("Invalid WebSocketManager instance provided to CoreAPI");
+      this.wsManager = null;
+      this.send = () =>
+        console.warn("WebSocket send is not properly initialized");
+      return;
+    }
+
+    this.wsManager = wsManager;
+    this.send = (msg) => {
+      try {
+        wsManager.send(String(msg));
+      } catch (e) {
+        console.error("Error in WebSocket send:", e);
+        throw new Error(
+          `WebSocket send error: ${e instanceof Error ? e.message : String(e)}`
+        );
+      }
+    };
+
+    // Immediately try to flush the queue when a new instance is set
+    this.flushQueue();
+  }
+
+  // Backward compatibility method for tests
   setSend(fn: (msg: Parameters<WebSocket["send"]>[0]) => void) {
     if (typeof fn !== "function") {
       console.error("Invalid send function provided to CoreAPI");
@@ -88,6 +126,56 @@ class CoreApi {
     };
   }
 
+  // Method to flush queue - can be called externally
+  flushQueue() {
+    if (this.wsManager?.isConnected && this.requestQueue.length > 0) {
+      console.log(`Flushing ${this.requestQueue.length} queued requests.`);
+      const requestsToProcess = [...this.requestQueue];
+      this.requestQueue = []; // Clear the queue
+
+      requestsToProcess.forEach(queued => {
+        const { req, promiseHandlers, signal } = queued;
+        const { resolve, reject } = promiseHandlers;
+
+        // Re-initialize promise handling for the now-sent request
+        this.responsePool[req.id] = { resolve, reject };
+
+        const timeoutId = setTimeout(() => {
+          if (this.responsePool[req.id]) {
+            this.responsePool[req.id].reject(new Error("Request timeout (after queueing and sending)"));
+            delete this.responsePool[req.id];
+          }
+        }, RequestTimeout);
+        this.responsePool[req.id].timeoutId = timeoutId;
+
+        if (signal) {
+          const abortHandler = () => {
+            if (this.responsePool[req.id]) {
+              if (this.responsePool[req.id].timeoutId) {
+                clearTimeout(this.responsePool[req.id].timeoutId);
+              }
+              this.responsePool[req.id].resolve({ cancelled: true });
+              delete this.responsePool[req.id];
+            }
+          };
+          signal.addEventListener('abort', abortHandler, { once: true });
+        }
+
+        try {
+          this.send(JSON.stringify(req));
+        } catch (e) {
+          console.error("Failed to send queued request during flush:", e);
+          // If send fails even during flush, reject the original promise
+          if (this.responsePool[req.id]) {
+            clearTimeout(this.responsePool[req.id].timeoutId!);
+            this.responsePool[req.id].reject(new Error(`Failed to send queued request: ${e instanceof Error ? e.message : String(e)}`));
+            delete this.responsePool[req.id];
+          }
+        }
+      });
+    }
+  }
+
   call(method: Method, params?: unknown, signal?: AbortSignal): Promise<unknown> {
     try {
       const id = uuidv4();
@@ -99,62 +187,68 @@ class CoreApi {
         params
       };
 
-      const payload = JSON.stringify(req);
-      console.debug("Sending request", payload);
-
       // Check if already aborted
       if (signal?.aborted) {
         return Promise.resolve({ cancelled: true });
       }
 
-      const promise = new Promise<unknown>((resolve, reject) => {
-        this.responsePool[id] = { resolve, reject };
-      });
+      // Check WebSocket state
+      if (this.wsManager?.isConnected) {
+        // Connection is open, send immediately
+        const payload = JSON.stringify(req);
+        console.debug("Sending request", payload);
 
-      // Add timeout handling with rejection
-      const timeoutId = setTimeout(() => {
-        if (this.responsePool[id]) {
-          this.responsePool[id].reject(new Error("Request timeout"));
-          delete this.responsePool[id];
-        }
-      }, RequestTimeout);
+        const promise = new Promise<unknown>((resolve, reject) => {
+          this.responsePool[id] = { resolve, reject };
+        });
 
-      // Store the timeout ID so it can be cleared if needed
-      this.responsePool[id].timeoutId = timeoutId;
-
-      // Add abort signal handling
-      if (signal) {
-        const abortHandler = () => {
+        // Add timeout handling with rejection
+        const timeoutId = setTimeout(() => {
           if (this.responsePool[id]) {
-            // Clear timeout and resolve with cancelled status
-            if (this.responsePool[id].timeoutId) {
-              clearTimeout(this.responsePool[id].timeoutId);
-            }
-            this.responsePool[id].resolve({ cancelled: true });
+            this.responsePool[id].reject(new Error("Request timeout"));
             delete this.responsePool[id];
           }
-        };
+        }, RequestTimeout);
+        this.responsePool[id].timeoutId = timeoutId;
 
-        signal.addEventListener('abort', abortHandler, { once: true });
-        this.responsePool[id].abortController = new AbortController();
+        // Add abort signal handling
+        if (signal) {
+          const abortHandler = () => {
+            if (this.responsePool[id]) {
+              if (this.responsePool[id].timeoutId) {
+                clearTimeout(this.responsePool[id].timeoutId);
+              }
+              this.responsePool[id].resolve({ cancelled: true });
+              delete this.responsePool[id];
+            }
+          };
+          signal.addEventListener('abort', abortHandler, { once: true });
+        }
+
+        try {
+          this.send(payload);
+        } catch (e) {
+          console.error("Failed to send request:", e);
+          delete this.responsePool[id];
+          return Promise.reject(
+            new Error(
+              `Failed to send request: ${e instanceof Error ? e.message : String(e)}`
+            )
+          );
+        }
+        return promise;
+      } else {
+        // Connection not open, queue the request
+        console.debug(`Queueing request ${req.method} (ID: ${id}). Current state: ${this.wsManager?.currentState}`);
+        const promise = new Promise<unknown>((resolve, reject) => {
+          this.requestQueue.push({
+            req,
+            promiseHandlers: { resolve, reject },
+            signal,
+          });
+        });
+        return promise;
       }
-
-      console.debug(payload);
-
-      // Add safe send
-      try {
-        this.send(payload);
-      } catch (e) {
-        console.error("Failed to send request:", e);
-        delete this.responsePool[id];
-        return Promise.reject(
-          new Error(
-            `Failed to send request: ${e instanceof Error ? e.message : String(e)}`
-          )
-        );
-      }
-
-      return promise;
     } catch (e) {
       console.error("Error in API call:", e);
       return Promise.reject(
