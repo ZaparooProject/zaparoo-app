@@ -12,6 +12,7 @@ import { useStatusStore } from "../lib/store";
 import { PageFrame } from "../components/PageFrame";
 import { UpdateSettingsRequest } from "../lib/models.ts";
 import { useAppSettings } from "../hooks/useAppSettings";
+import { BackIcon } from "../lib/images";
 
 interface LoaderData {
   restartScan: boolean;
@@ -78,8 +79,14 @@ function Advanced() {
   return (
     <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
       <PageFrame
-        title={t("settings.advanced.title")}
-        back={() => navigate({ to: "/settings" })}
+        headerLeft={
+          <button onClick={() => navigate({ to: "/settings" })} className="cursor-pointer">
+            <BackIcon size="24" />
+          </button>
+        }
+        headerCenter={
+          <h1 className="text-foreground text-xl">{t("settings.advanced.title")}</h1>
+        }
       >
         <div className="py-2">
           <ToggleSwitch

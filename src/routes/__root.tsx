@@ -1,6 +1,6 @@
 import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { App } from "@capacitor/app";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { SafeAreaHandler } from "@/lib/safeArea";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { BottomNav } from "../components/BottomNav";
@@ -47,10 +47,13 @@ export const Route = createRootRoute({
     <>
       <SafeAreaHandler />
       <BackHandler />
-      <main className="main-frame h-screen w-screen">
+      <main className="main-frame h-screen w-screen pb-bottom-nav">
         <Outlet />
       </main>
-      <footer className="fixed bottom-0 left-0 z-30 w-lvw">
+      <footer
+        className="fixed bottom-0 left-0 z-30 w-lvw"
+        style={{ '--bottom-nav-height': '80px' } as React.CSSProperties}
+      >
         <BottomNav />
       </footer>
     </>
