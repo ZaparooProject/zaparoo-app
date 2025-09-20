@@ -95,7 +95,7 @@ function Create() {
             </Card>
           </Link>
 
-          <Link to="/create/text">
+          <Link to="/create/custom">
             <Card>
               <div className="flex flex-row items-center gap-3">
                 <Button icon={<TextIcon size="20" />} />

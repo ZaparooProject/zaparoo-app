@@ -1,10 +1,10 @@
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useStatusStore } from "@/lib/store";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { ScanResult } from "../lib/models";
 import { ScanSpinner } from "./ScanSpinner";
 import { Button } from "./wui/Button";
-import { useTranslation } from "react-i18next";
 
 export function WriteModal(props: { isOpen: boolean; close: () => void }) {
   const { t } = useTranslation();

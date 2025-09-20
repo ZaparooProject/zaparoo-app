@@ -9,6 +9,7 @@ import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
 import { useWriteQueueProcessor } from "@/hooks/useWriteQueueProcessor.tsx";
 import { useRunQueueProcessor } from "@/hooks/useRunQueueProcessor.tsx";
+import logoImage from "@/assets/lockup.png";
 import { cancelSession } from "../lib/nfc";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { HistoryIcon } from "../lib/images";
@@ -23,7 +24,6 @@ import { HistoryModal } from "../components/home/HistoryModal";
 import { StopConfirmModal } from "../components/home/StopConfirmModal";
 import { useScanOperations } from "../hooks/useScanOperations";
 import { useAppSettings } from "../hooks/useAppSettings";
-import logoImage from "@/assets/lockup.png";
 
 interface LoaderData {
   restartScan: boolean;

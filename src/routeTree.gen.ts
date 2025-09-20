@@ -20,6 +20,7 @@ import { Route as CreateTextRouteImport } from './routes/create.text'
 import { Route as CreateSearchRouteImport } from './routes/create.search'
 import { Route as CreateNfcRouteImport } from './routes/create.nfc'
 import { Route as CreateMappingsRouteImport } from './routes/create.mappings'
+import { Route as CreateCustomRouteImport } from './routes/create.custom'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,9 +77,15 @@ const CreateMappingsRoute = CreateMappingsRouteImport.update({
   path: '/create/mappings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreateCustomRoute = CreateCustomRouteImport.update({
+  id: '/create/custom',
+  path: '/create/custom',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/create/custom': typeof CreateCustomRoute
   '/create/mappings': typeof CreateMappingsRoute
   '/create/nfc': typeof CreateNfcRoute
   '/create/search': typeof CreateSearchRoute
@@ -92,6 +99,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/create/custom': typeof CreateCustomRoute
   '/create/mappings': typeof CreateMappingsRoute
   '/create/nfc': typeof CreateNfcRoute
   '/create/search': typeof CreateSearchRoute
@@ -106,6 +114,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/create/custom': typeof CreateCustomRoute
   '/create/mappings': typeof CreateMappingsRoute
   '/create/nfc': typeof CreateNfcRoute
   '/create/search': typeof CreateSearchRoute
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/create/custom'
     | '/create/mappings'
     | '/create/nfc'
     | '/create/search'
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/create/custom'
     | '/create/mappings'
     | '/create/nfc'
     | '/create/search'
@@ -147,6 +158,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/create/custom'
     | '/create/mappings'
     | '/create/nfc'
     | '/create/search'
@@ -161,6 +173,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CreateCustomRoute: typeof CreateCustomRoute
   CreateMappingsRoute: typeof CreateMappingsRoute
   CreateNfcRoute: typeof CreateNfcRoute
   CreateSearchRoute: typeof CreateSearchRoute
@@ -252,11 +265,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreateMappingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/create/custom': {
+      id: '/create/custom'
+      path: '/create/custom'
+      fullPath: '/create/custom'
+      preLoaderRoute: typeof CreateCustomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CreateCustomRoute: CreateCustomRoute,
   CreateMappingsRoute: CreateMappingsRoute,
   CreateNfcRoute: CreateNfcRoute,
   CreateSearchRoute: CreateSearchRoute,
