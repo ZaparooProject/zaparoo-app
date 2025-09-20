@@ -122,12 +122,17 @@ function Settings() {
             }}
           />
 
-          {version.isSuccess && (
-            <div className="flex flex-row items-center justify-between gap-2">
-              <div>Platform: {version.data.platform}</div>
-              <div>Version: {version.data.version}</div>
-            </div>
-          )}
+          <div className="flex flex-row items-center justify-between gap-2 min-h-[1.5rem]">
+            {version.isSuccess && (
+              <>
+                <div>Platform: {version.data.platform}</div>
+                <div>Version: {version.data.version}</div>
+              </>
+            )}
+            {connectionError !== "" && (
+              <div className="text-error w-full">{connectionError}</div>
+            )}
+          </div>
 
           {deviceHistory.length > 0 && (
             <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
@@ -170,10 +175,6 @@ function Settings() {
                   ))}
               </DialogContent>
             </Dialog>
-          )}
-
-          {connectionError !== "" && (
-            <div className="text-error">{connectionError}</div>
           )}
 
           <ScanSettings
