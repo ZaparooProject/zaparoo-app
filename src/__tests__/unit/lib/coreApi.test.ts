@@ -37,6 +37,8 @@ describe("CoreAPI", () => {
   beforeEach(() => {
     mockSend = vi.fn();
     CoreAPI.setSend(mockSend);
+    // Mock WebSocket connection as connected so requests are sent immediately
+    CoreAPI.setWsInstance({ isConnected: true, send: mockSend } as any);
     vi.useFakeTimers();
 
     // Clear mocks

@@ -349,6 +349,13 @@ function Settings() {
             </div>
           </Link>
 
+          <Link to="/settings/logs">
+            <div className="flex flex-row items-center justify-between">
+              <p>{t("settings.logs.title")}</p>
+              <NextIcon size="20" />
+            </div>
+          </Link>
+
           <Link to="/settings/help">
             <div className="flex flex-row items-center justify-between">
               <p>{t("settings.help.title")}</p>

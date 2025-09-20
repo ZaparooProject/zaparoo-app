@@ -270,6 +270,8 @@ export function CoreApiWebSocket() {
       console.log("CoreApiWebSocket cleanup: destroying WebSocket manager");
       wsManager.destroy();
       wsManagerRef.current = null;
+      clearGracePeriod();
+      setConnectionState(ConnectionState.DISCONNECTED);
     };
   }, [
     deviceAddress,

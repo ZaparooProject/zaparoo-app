@@ -182,6 +182,22 @@
         "restoreFail": "Failed to restore purchases",
         "preferRemoteWriter": "Prefer connected reader for writing"
       },
+      "logs": {
+        "title": "Logs",
+        "refresh": "Refresh",
+        "filters": "Filters",
+        "download": "Download",
+        "copy": "Copy to Clipboard",
+        "filename": "Filename",
+        "fileSize": "File Size",
+        "searchPlaceholder": "Filter logs",
+        "levelFilters": "Log Levels",
+        "totalEntries": "Total entries",
+        "filteredEntries": "Showing",
+        "noEntriesFound": "No log entries match your filters",
+        "fetchError": "Failed to fetch logs",
+        "notConnected": "Connect to a Zaparoo device to access logs"
+      },
       "help": {
         "title": "Help",
         "main": "Zaparoo.org",

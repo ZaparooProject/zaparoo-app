@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CoreAPI, getDeviceAddress, setDeviceAddress, getWsUrl } from "../../lib/coreApi";
+
+const mockSend = vi.fn();
 import { Preferences } from "@capacitor/preferences";
 
 // Mock localStorage
@@ -38,6 +40,9 @@ describe("CoreAPI Coverage Improvements", () => {
       value: { hostname: "test-hostname" },
       writable: true,
     });
+
+    // Mock WebSocket connection as connected so requests are sent immediately
+    CoreAPI.setWsInstance({ isConnected: true, send: mockSend } as any);
   });
 
   afterEach(() => {

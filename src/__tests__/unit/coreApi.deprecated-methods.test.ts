@@ -8,6 +8,8 @@ describe("CoreAPI - Deprecated Methods Removal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     CoreAPI.setSend(mockSend);
+    // Mock WebSocket connection as connected so requests are sent immediately
+    CoreAPI.setWsInstance({ isConnected: true, send: mockSend } as any);
   });
 
   it("should NOT have deprecated MediaIndex method", () => {

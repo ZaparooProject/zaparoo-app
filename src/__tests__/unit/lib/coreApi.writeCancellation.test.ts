@@ -19,6 +19,8 @@ describe("CoreAPI Write Cancellation", () => {
     originalSend = CoreAPI.setSend;
     const mockSend = vi.fn();
     CoreAPI.setSend(mockSend);
+    // Mock WebSocket connection as connected so requests are sent immediately
+    CoreAPI.setWsInstance({ isConnected: true, send: mockSend } as any);
   });
 
   afterEach(() => {

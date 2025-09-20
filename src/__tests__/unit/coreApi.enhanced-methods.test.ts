@@ -26,6 +26,8 @@ describe("CoreAPI - Enhanced Methods", () => {
     vi.clearAllMocks();
     // Set up the send function
     CoreAPI.setSend(mockSend);
+    // Mock WebSocket connection as connected so requests are sent immediately
+    CoreAPI.setWsInstance({ isConnected: true, send: mockSend } as any);
   });
 
   describe("hasWriteCapableReader", () => {

@@ -4,10 +4,18 @@ import { Method } from "../../lib/models";
 
 const mockSend = vi.fn();
 
+// Mock WebSocket manager to simulate connected state
+const mockWsManager = {
+  isConnected: true,
+  currentState: "connected",
+  send: mockSend
+};
+
 describe("CoreAPI - settingsReload method", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     CoreAPI.setSend(mockSend);
+    CoreAPI.setWsInstance(mockWsManager as any);
   });
 
   it("should have SettingsReload enum value", () => {

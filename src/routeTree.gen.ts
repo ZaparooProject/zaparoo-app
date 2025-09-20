@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as CreateIndexRouteImport } from './routes/create.index'
 import { Route as SettingsOnlineRouteImport } from './routes/settings.online'
+import { Route as SettingsLogsRouteImport } from './routes/settings.logs'
 import { Route as SettingsHelpRouteImport } from './routes/settings.help'
 import { Route as SettingsAdvancedRouteImport } from './routes/settings.advanced'
 import { Route as SettingsAboutRouteImport } from './routes/settings.about'
@@ -40,6 +41,11 @@ const CreateIndexRoute = CreateIndexRouteImport.update({
 const SettingsOnlineRoute = SettingsOnlineRouteImport.update({
   id: '/settings/online',
   path: '/settings/online',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsLogsRoute = SettingsLogsRouteImport.update({
+  id: '/settings/logs',
+  path: '/settings/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsHelpRoute = SettingsHelpRouteImport.update({
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
+  '/settings/logs': typeof SettingsLogsRoute
   '/settings/online': typeof SettingsOnlineRoute
   '/create': typeof CreateIndexRoute
   '/settings': typeof SettingsIndexRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
+  '/settings/logs': typeof SettingsLogsRoute
   '/settings/online': typeof SettingsOnlineRoute
   '/create': typeof CreateIndexRoute
   '/settings': typeof SettingsIndexRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
+  '/settings/logs': typeof SettingsLogsRoute
   '/settings/online': typeof SettingsOnlineRoute
   '/create/': typeof CreateIndexRoute
   '/settings/': typeof SettingsIndexRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/advanced'
     | '/settings/help'
+    | '/settings/logs'
     | '/settings/online'
     | '/create'
     | '/settings'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/advanced'
     | '/settings/help'
+    | '/settings/logs'
     | '/settings/online'
     | '/create'
     | '/settings'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/advanced'
     | '/settings/help'
+    | '/settings/logs'
     | '/settings/online'
     | '/create/'
     | '/settings/'
@@ -181,6 +193,7 @@ export interface RootRouteChildren {
   SettingsAboutRoute: typeof SettingsAboutRoute
   SettingsAdvancedRoute: typeof SettingsAdvancedRoute
   SettingsHelpRoute: typeof SettingsHelpRoute
+  SettingsLogsRoute: typeof SettingsLogsRoute
   SettingsOnlineRoute: typeof SettingsOnlineRoute
   CreateIndexRoute: typeof CreateIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
@@ -214,6 +227,13 @@ declare module '@tanstack/react-router' {
       path: '/settings/online'
       fullPath: '/settings/online'
       preLoaderRoute: typeof SettingsOnlineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/logs': {
+      id: '/settings/logs'
+      path: '/settings/logs'
+      fullPath: '/settings/logs'
+      preLoaderRoute: typeof SettingsLogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/help': {
@@ -285,6 +305,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsAdvancedRoute: SettingsAdvancedRoute,
   SettingsHelpRoute: SettingsHelpRoute,
+  SettingsLogsRoute: SettingsLogsRoute,
   SettingsOnlineRoute: SettingsOnlineRoute,
   CreateIndexRoute: CreateIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,

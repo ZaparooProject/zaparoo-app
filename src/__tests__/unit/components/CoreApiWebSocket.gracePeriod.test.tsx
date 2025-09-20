@@ -23,14 +23,47 @@ vi.mock("websocket-heartbeat-js", () => ({
   default: vi.fn().mockImplementation(() => mockWebSocket)
 }));
 
+// Mock WebSocketManager
+const mockWebSocketManager = {
+  connect: vi.fn(),
+  destroy: vi.fn(),
+  send: vi.fn(),
+  callbacks: {} as import("../../../lib/websocketManager").WebSocketManagerCallbacks
+};
+
+vi.mock("../../../lib/websocketManager", () => ({
+  WebSocketManager: vi.fn().mockImplementation((_, callbacks) => {
+    // Store callbacks for testing
+    mockWebSocketManager.callbacks = callbacks;
+
+    // Update connect mock to trigger onStateChange
+    mockWebSocketManager.connect.mockImplementation(() => {
+      if (callbacks.onStateChange) {
+        callbacks.onStateChange("CONNECTING");
+      }
+    });
+
+    return mockWebSocketManager;
+  }),
+  WebSocketState: {
+    CONNECTING: "CONNECTING",
+    CONNECTED: "CONNECTED",
+    RECONNECTING: "RECONNECTING",
+    ERROR: "ERROR",
+    DISCONNECTED: "DISCONNECTED"
+  }
+}));
+
 vi.mock("../../../lib/coreApi", () => ({
   getDeviceAddress: mockGetDeviceAddress,
   getWsUrl: mockGetWsUrl,
   CoreAPI: {
     setSend: vi.fn(),
+    setWsInstance: vi.fn(),
+    flushQueue: vi.fn(),
+    processReceived: vi.fn().mockResolvedValue(null),
     media: vi.fn().mockResolvedValue({ database: {}, active: [] }),
-    tokens: vi.fn().mockResolvedValue({ last: null }),
-    processReceived: vi.fn().mockResolvedValue(null)
+    tokens: vi.fn().mockResolvedValue({ last: null })
   }
 }));
 
@@ -119,8 +152,10 @@ describe("CoreApiWebSocket Grace Period", () => {
 
     render(<CoreApiWebSocket />);
 
-    // Simulate WebSocket close event
-    mockWebSocket.onclose();
+    // Simulate WebSocket close event via WebSocketManager callback
+    if (mockWebSocketManager.callbacks && mockWebSocketManager.callbacks.onClose) {
+      mockWebSocketManager.callbacks.onClose();
+    }
 
     expect(mockSetConnectionStateWithGracePeriod).toHaveBeenCalledWith(ConnectionState.RECONNECTING);
     expect(mockClearGracePeriod).not.toHaveBeenCalled();
@@ -143,8 +178,10 @@ describe("CoreApiWebSocket Grace Period", () => {
 
     render(<CoreApiWebSocket />);
 
-    // Simulate WebSocket open event
-    mockWebSocket.onopen();
+    // Simulate WebSocket open event via WebSocketManager callback
+    if (mockWebSocketManager.callbacks && mockWebSocketManager.callbacks.onOpen) {
+      mockWebSocketManager.callbacks.onOpen();
+    }
 
     expect(mockClearGracePeriod).toHaveBeenCalled();
     expect(mockSetConnectionStateWithGracePeriod).toHaveBeenCalledWith(ConnectionState.CONNECTED);
@@ -166,9 +203,11 @@ describe("CoreApiWebSocket Grace Period", () => {
 
     render(<CoreApiWebSocket />);
 
-    // Simulate WebSocket error event
+    // Simulate WebSocket error event via WebSocketManager callback
     const errorEvent = new Event("error");
-    mockWebSocket.onerror(errorEvent);
+    if (mockWebSocketManager.callbacks && mockWebSocketManager.callbacks.onError) {
+      mockWebSocketManager.callbacks.onError(errorEvent);
+    }
 
     expect(mockSetConnectionState).toHaveBeenCalledWith(ConnectionState.ERROR);
     expect(mockSetConnectionError).toHaveBeenCalledWith(

@@ -7,6 +7,8 @@ describe("CoreAPI - readers method", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     CoreAPI.setSend(mockSend);
+    // Mock WebSocket connection as connected so requests are sent immediately
+    CoreAPI.setWsInstance({ isConnected: true, send: mockSend } as any);
   });
 
   it("should call readers method and return reader info", async () => {

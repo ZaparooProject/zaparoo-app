@@ -4,10 +4,19 @@ import { LaunchRequest } from "../../lib/models";
 
 const mockSend = vi.fn();
 
+// Mock WebSocket manager to simulate connected state
+const mockWsManager = {
+  isConnected: true,
+  currentState: "connected",
+  send: mockSend
+};
+
 describe("CoreAPI - Launch Parameter Flexibility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     CoreAPI.setSend(mockSend);
+    // Set up the WebSocket manager to simulate connection
+    CoreAPI.setWsInstance(mockWsManager as any);
   });
 
   it("should allow launching with only text parameter", () => {

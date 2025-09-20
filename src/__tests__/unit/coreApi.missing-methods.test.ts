@@ -3,10 +3,18 @@ import { CoreAPI } from "../../lib/coreApi";
 
 describe("CoreAPI Missing Methods", () => {
   let mockSend: ReturnType<typeof vi.fn>;
+  let mockWsManager: any;
 
   beforeEach(() => {
     mockSend = vi.fn();
+    // Mock WebSocket manager to simulate connected state
+    mockWsManager = {
+      isConnected: true,
+      currentState: "connected",
+      send: mockSend
+    };
     CoreAPI.setSend(mockSend);
+    CoreAPI.setWsInstance(mockWsManager);
     vi.useFakeTimers();
     vi.clearAllMocks();
   });
