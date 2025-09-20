@@ -4,6 +4,7 @@ import { useNfcWriter, WriteAction, WriteMethod } from "../../../lib/writeNfcHoo
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { CoreAPI } from "../../../lib/coreApi";
+import { Status } from "../../../lib/nfc";
 
 // Mock all dependencies
 vi.mock("@capacitor/core", () => ({
@@ -19,14 +20,18 @@ vi.mock("@capawesome-team/capacitor-nfc", () => ({
   }
 }));
 
-vi.mock("../../../lib/coreApi", () => ({
-  CoreAPI: {
-    write: vi.fn(),
-    hasWriteCapableReader: vi.fn(),
-    cancelWrite: vi.fn(),
-    readersWriteCancel: vi.fn()
-  }
-}));
+vi.mock("../../../lib/coreApi", async (importOriginal) => {
+  const actual = await importOriginal() as any;
+  return {
+    ...actual,
+    CoreAPI: {
+      write: vi.fn(),
+      hasWriteCapableReader: vi.fn(),
+      cancelWrite: vi.fn(),
+      readersWriteCancel: vi.fn()
+    }
+  };
+});
 
 vi.mock("../../../lib/nfc", () => ({
   writeTag: vi.fn(),
@@ -92,7 +97,7 @@ describe("useNfcWriter - Enhanced Functionality", () => {
         await result.current.write(WriteAction.Write, "test-content");
       });
 
-      expect(CoreAPI.write).toHaveBeenCalledWith({ text: "test-content" });
+      expect(CoreAPI.write).toHaveBeenCalledWith({ text: "test-content" }, expect.any(Object));
     });
 
     it("should auto-detect and prefer local NFC on native platform", async () => {
@@ -121,7 +126,7 @@ describe("useNfcWriter - Enhanced Functionality", () => {
         await result.current.write(WriteAction.Write, "test-content");
       });
 
-      expect(CoreAPI.write).toHaveBeenCalledWith({ text: "test-content" });
+      expect(CoreAPI.write).toHaveBeenCalledWith({ text: "test-content" }, expect.any(Object));
     });
 
     it("should prefer remote when user preference set", async () => {
@@ -133,7 +138,7 @@ describe("useNfcWriter - Enhanced Functionality", () => {
         await result.current.write(WriteAction.Write, "test-content");
       });
 
-      expect(CoreAPI.write).toHaveBeenCalledWith({ text: "test-content" });
+      expect(CoreAPI.write).toHaveBeenCalledWith({ text: "test-content" }, expect.any(Object));
       expect(CoreAPI.hasWriteCapableReader).toHaveBeenCalled();
     });
   });
@@ -205,7 +210,7 @@ describe("useNfcWriter - Enhanced Functionality", () => {
 
       // The hook should properly handle the error and set status
       await waitFor(() => {
-        expect(result.current.status).toBe("error");
+        expect(result.current.status).toBe(Status.Error);
       }, { timeout: 3000 });
     });
 
@@ -293,7 +298,7 @@ describe("useNfcWriter - Enhanced Functionality", () => {
         await result.current.write(WriteAction.Write, "test-content");
       });
 
-      expect(CoreAPI.write).toHaveBeenCalledWith({ text: "test-content" });
+      expect(CoreAPI.write).toHaveBeenCalledWith({ text: "test-content" }, expect.any(Object));
     });
 
     it("should check NFC availability on native platforms", async () => {

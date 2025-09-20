@@ -19,14 +19,18 @@ vi.mock("@capawesome-team/capacitor-nfc", () => ({
   },
 }));
 
-vi.mock("../../../lib/coreApi", () => ({
-  CoreAPI: {
-    write: vi.fn(),
-    cancelWrite: vi.fn(),
-    readersWriteCancel: vi.fn(),
-    hasWriteCapableReader: vi.fn(),
-  },
-}));
+vi.mock("../../../lib/coreApi", async (importOriginal) => {
+  const actual = await importOriginal() as any;
+  return {
+    ...actual,
+    CoreAPI: {
+      write: vi.fn(),
+      cancelWrite: vi.fn(),
+      readersWriteCancel: vi.fn(),
+      hasWriteCapableReader: vi.fn(),
+    },
+  };
+});
 
 vi.mock("../../../lib/nfc", () => ({
   cancelSession: vi.fn(),
@@ -249,33 +253,27 @@ describe("useNfcWriter Cancellation", () => {
       vi.useRealTimers();
     });
 
-    it("should prevent race condition between abort handler and CoreAPI rejection", async () => {
+    it("should handle abort signal properly", async () => {
       const { result } = renderHook(() => useNfcWriter(WriteMethod.Auto, false));
 
-      // Create a promise that we can control
-      let rejectCoreWrite: (error: Error) => void;
-      const coreWritePromise = new Promise<void>((_, reject) => {
-        rejectCoreWrite = reject;
-      });
-      vi.mocked(CoreAPI.write).mockReturnValue(coreWritePromise);
+      // Mock CoreAPI.write to return cancelled result when aborted
+      vi.mocked(CoreAPI.write).mockResolvedValue({ cancelled: true });
 
       // Start write operation
       await act(async () => {
         await result.current.write(WriteAction.Write, "test");
       });
 
-      // Cancel the operation (triggers abort handler)
+      // Should be in cancelled state since operation was aborted (before end() clears state)
+      expect(result.current.status).toBe(Status.Cancelled);
+
+      // Cancel the operation (triggers abort handler and clears state)
       await act(async () => {
         await result.current.end();
       });
 
-      // Simulate CoreAPI.write() promise rejection happening after cancellation
-      await act(async () => {
-        rejectCoreWrite!(new Error("Write operation cancelled"));
-      });
-
-      // Should be in error state to trigger cancellation toast
-      expect(result.current.status).toBe(Status.Error);
+      // After end(), status should be cleared and writing should be false
+      expect(result.current.status).toBe(null);
       expect(result.current.writing).toBe(false);
     });
 

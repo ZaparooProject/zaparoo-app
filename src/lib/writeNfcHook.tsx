@@ -39,48 +39,40 @@ export enum WriteAction {
 }
 
 function coreWrite(text: string, signal?: AbortSignal): Promise<Result> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      resolve({
-        status: Status.Cancelled,
-        info: {
-          rawTag: null,
-          tag: null
-        }
-      });
-      return;
-    }
+  if (signal?.aborted) {
+    return Promise.resolve({
+      status: Status.Cancelled,
+      info: {
+        rawTag: null,
+        tag: null
+      }
+    });
+  }
 
-    let wasAborted = false;
-
-    const abortHandler = () => {
-      wasAborted = true;
-      reject(new Error("Write operation cancelled"));
-    };
-
-    signal?.addEventListener('abort', abortHandler);
-
-    CoreAPI.write({ text })
-      .then(() => {
-        signal?.removeEventListener('abort', abortHandler);
-        if (!wasAborted) {
-          resolve({
-            status: Status.Success,
-            info: {
-              rawTag: null,
-              tag: null
-            }
-          });
-        }
-      })
-      .catch((e) => {
-        signal?.removeEventListener('abort', abortHandler);
-        // Only reject if not aborted - abort handler already rejected it
-        if (!wasAborted) {
-          reject(e);
-        }
-      });
-  });
+  return CoreAPI.write({ text }, signal)
+    .then((result) => {
+      // Check if the result indicates cancellation
+      if (result && typeof result === 'object' && 'cancelled' in result) {
+        return {
+          status: Status.Cancelled,
+          info: {
+            rawTag: null,
+            tag: null
+          }
+        };
+      } else {
+        return {
+          status: Status.Success,
+          info: {
+            rawTag: null,
+            tag: null
+          }
+        };
+      }
+    })
+    .catch((e) => {
+      throw e;
+    });
 }
 
 async function determineWriteMethod(preferredMethod: WriteMethod, preferRemoteWriter: boolean): Promise<WriteMethod> {

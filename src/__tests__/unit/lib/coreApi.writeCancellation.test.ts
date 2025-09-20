@@ -47,8 +47,9 @@ describe("CoreAPI Write Cancellation", () => {
       // Cancel the write
       CoreAPI.cancelWrite();
 
-      // The promise should reject with cancellation error
-      await expect(writePromise).rejects.toThrow("Write operation cancelled");
+      // The promise should resolve with cancelled status
+      const result = await writePromise;
+      expect(result).toEqual({ cancelled: true });
     });
 
     it("should handle multiple write operations", async () => {
@@ -62,14 +63,16 @@ describe("CoreAPI Write Cancellation", () => {
       CoreAPI.cancelWrite();
 
       // First should be cancelled
-      await expect(writePromise1).rejects.toThrow("Write operation cancelled");
+      const result1 = await writePromise1;
+      expect(result1).toEqual({ cancelled: true });
 
       // Start second write
       const writePromise2 = CoreAPI.write({ text: "test2" });
 
       // Cancel second write
       CoreAPI.cancelWrite();
-      await expect(writePromise2).rejects.toThrow("Write operation cancelled");
+      const result2 = await writePromise2;
+      expect(result2).toEqual({ cancelled: true });
 
       // Should have sent 4 requests: write1, write1-cancel, write2, write2-cancel
       expect(mockSend).toHaveBeenCalledTimes(4);
@@ -95,7 +98,8 @@ describe("CoreAPI Write Cancellation", () => {
       CoreAPI.cancelWrite();
 
       // Wait for the promise to resolve with cancellation
-      await expect(writePromise).rejects.toThrow("Write operation cancelled");
+      const result = await writePromise;
+      expect(result).toEqual({ cancelled: true });
 
       // Should not throw since the write was already completed/cancelled
       expect(() => CoreAPI.cancelWrite()).not.toThrow();
@@ -115,7 +119,8 @@ describe("CoreAPI Write Cancellation", () => {
       CoreAPI.cancelWrite();
 
       // Wait for the promise to be cancelled
-      await expect(writePromise).rejects.toThrow("Write operation cancelled");
+      const result = await writePromise;
+      expect(result).toEqual({ cancelled: true });
 
       // Should send a cancel command
       expect(mockSend).toHaveBeenCalledTimes(1);
@@ -143,7 +148,8 @@ describe("CoreAPI Write Cancellation", () => {
       vi.advanceTimersByTime(31000);
 
       // Should reject with cancellation, not timeout
-      await expect(writePromise).rejects.toThrow("Write operation cancelled");
+      const result = await writePromise;
+      expect(result).toEqual({ cancelled: true });
 
       vi.useRealTimers();
     });
@@ -184,7 +190,8 @@ describe("CoreAPI Write Cancellation", () => {
       expect(() => CoreAPI.cancelWrite()).not.toThrow();
 
       // Wait for the promise to be cancelled
-      await expect(writePromise).rejects.toThrow("Write operation cancelled");
+      const result = await writePromise;
+      expect(result).toEqual({ cancelled: true });
     });
 
     it("should handle readersWriteCancel API failures gracefully", async () => {
@@ -201,7 +208,8 @@ describe("CoreAPI Write Cancellation", () => {
       CoreAPI.cancelWrite();
 
       // The write promise should still be cancelled even if readersWriteCancel fails
-      await expect(writePromise).rejects.toThrow("Write operation cancelled");
+      const result = await writePromise;
+      expect(result).toEqual({ cancelled: true });
 
       consoleErrorSpy.mockRestore();
     });

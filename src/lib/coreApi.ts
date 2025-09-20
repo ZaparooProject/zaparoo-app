@@ -54,6 +54,8 @@ export interface NotificationRequest {
 interface ResponsePromise {
   resolve: (value: unknown) => void;
   reject: (reason: ApiError | Error) => void;
+  timeoutId?: ReturnType<typeof setTimeout>;
+  abortController?: AbortController;
 }
 
 class CoreApi {
@@ -86,7 +88,7 @@ class CoreApi {
     };
   }
 
-  call(method: Method, params?: unknown): Promise<unknown> {
+  call(method: Method, params?: unknown, signal?: AbortSignal): Promise<unknown> {
     try {
       const id = uuidv4();
       const req: ApiRequest = {
@@ -100,17 +102,42 @@ class CoreApi {
       const payload = JSON.stringify(req);
       console.debug("Sending request", payload);
 
+      // Check if already aborted
+      if (signal?.aborted) {
+        return Promise.resolve({ cancelled: true });
+      }
+
       const promise = new Promise<unknown>((resolve, reject) => {
         this.responsePool[id] = { resolve, reject };
       });
 
       // Add timeout handling with rejection
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         if (this.responsePool[id]) {
           this.responsePool[id].reject(new Error("Request timeout"));
           delete this.responsePool[id];
         }
       }, RequestTimeout);
+
+      // Store the timeout ID so it can be cleared if needed
+      this.responsePool[id].timeoutId = timeoutId;
+
+      // Add abort signal handling
+      if (signal) {
+        const abortHandler = () => {
+          if (this.responsePool[id]) {
+            // Clear timeout and resolve with cancelled status
+            if (this.responsePool[id].timeoutId) {
+              clearTimeout(this.responsePool[id].timeoutId);
+            }
+            this.responsePool[id].resolve({ cancelled: true });
+            delete this.responsePool[id];
+          }
+        };
+
+        signal.addEventListener('abort', abortHandler, { once: true });
+        this.responsePool[id].abortController = new AbortController();
+      }
 
       console.debug(payload);
 
@@ -138,7 +165,7 @@ class CoreApi {
     }
   }
 
-  callWithTracking(method: Method, params?: unknown): { id: string; promise: Promise<unknown> } {
+  callWithTracking(method: Method, params?: unknown, signal?: AbortSignal): { id: string; promise: Promise<unknown> } {
     try {
       const id = uuidv4();
       const req: ApiRequest = {
@@ -152,17 +179,42 @@ class CoreApi {
       const payload = JSON.stringify(req);
       console.debug("Sending tracked request", payload);
 
+      // Check if already aborted
+      if (signal?.aborted) {
+        return { id, promise: Promise.resolve({ cancelled: true }) };
+      }
+
       const promise = new Promise<unknown>((resolve, reject) => {
         this.responsePool[id] = { resolve, reject };
       });
 
       // Add timeout handling with rejection
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         if (this.responsePool[id]) {
           this.responsePool[id].reject(new Error("Request timeout"));
           delete this.responsePool[id];
         }
       }, RequestTimeout);
+
+      // Store the timeout ID so it can be cleared if needed
+      this.responsePool[id].timeoutId = timeoutId;
+
+      // Add abort signal handling
+      if (signal) {
+        const abortHandler = () => {
+          if (this.responsePool[id]) {
+            // Clear timeout and resolve with cancelled status
+            if (this.responsePool[id].timeoutId) {
+              clearTimeout(this.responsePool[id].timeoutId);
+            }
+            this.responsePool[id].resolve({ cancelled: true });
+            delete this.responsePool[id];
+          }
+        };
+
+        signal.addEventListener('abort', abortHandler, { once: true });
+        this.responsePool[id].abortController = new AbortController();
+      }
 
       console.debug(payload);
 
@@ -189,7 +241,14 @@ class CoreApi {
   cancelWrite(): void {
     if (this.pendingWriteId && this.responsePool[this.pendingWriteId]) {
       console.debug("Cancelling write request:", this.pendingWriteId);
-      this.responsePool[this.pendingWriteId].reject(new Error("Write operation cancelled"));
+
+      // Clear the timeout to prevent it from firing
+      if (this.responsePool[this.pendingWriteId].timeoutId) {
+        clearTimeout(this.responsePool[this.pendingWriteId].timeoutId);
+      }
+
+      // Resolve with cancelled status instead of rejecting
+      this.responsePool[this.pendingWriteId].resolve({ cancelled: true });
       delete this.responsePool[this.pendingWriteId];
       this.pendingWriteId = null;
 
@@ -252,14 +311,29 @@ class CoreApi {
           return;
         }
 
+        // Clear timeout since we received a response
+        if (promise.timeoutId) {
+          clearTimeout(promise.timeoutId);
+        }
+
         if (res.error) {
           promise.reject(new Error(res.error.message));
           delete this.responsePool[res.id];
+
+          // Clear pendingWriteId if this error response is for the pending write
+          if (res.id === this.pendingWriteId) {
+            this.pendingWriteId = null;
+          }
           return;
         }
 
         promise.resolve(res.result);
         delete this.responsePool[res.id];
+
+        // Clear pendingWriteId if this response is for the pending write
+        if (res.id === this.pendingWriteId) {
+          this.pendingWriteId = null;
+        }
       } catch (e) {
         console.error("Unexpected error processing message:", e);
         reject(
@@ -309,18 +383,30 @@ class CoreApi {
     });
   }
 
-  write(params: WriteRequest): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      const writeResult = this.callWithTracking(Method.ReadersWrite, params);
+  write(params: WriteRequest, signal?: AbortSignal): Promise<void | { cancelled: true }> {
+    return new Promise<void | { cancelled: true }>((resolve, reject) => {
+      const writeResult = this.callWithTracking(Method.ReadersWrite, params, signal);
       this.pendingWriteId = writeResult.id;
 
       writeResult.promise
-        .then(() => {
-          this.pendingWriteId = null;
-          resolve();
+        .then((result) => {
+          // Clear pendingWriteId since the operation completed (success or cancellation)
+          if (this.pendingWriteId === writeResult.id) {
+            this.pendingWriteId = null;
+          }
+
+          // Check if the result indicates cancellation
+          if (result && typeof result === 'object' && 'cancelled' in result) {
+            resolve(result as { cancelled: true });
+          } else {
+            resolve();
+          }
         })
         .catch((error) => {
-          this.pendingWriteId = null;
+          // Clear pendingWriteId since the operation failed
+          if (this.pendingWriteId === writeResult.id) {
+            this.pendingWriteId = null;
+          }
           console.error("Write API call failed:", error);
           reject(error);
         });

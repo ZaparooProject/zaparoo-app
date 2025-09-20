@@ -131,32 +131,32 @@ describe("CoreAPI - Enhanced Methods", () => {
     it("should cancel pending write request", async () => {
       // Simulate pending write by directly setting up the response pool
       const mockId = "test-write-id";
-      const mockReject = vi.fn();
+      const mockResolve = vi.fn();
 
       // Access private property for testing
       (CoreAPI as any).pendingWriteId = mockId;
       (CoreAPI as any).responsePool[mockId] = {
-        resolve: vi.fn(),
-        reject: mockReject
+        resolve: mockResolve,
+        reject: vi.fn()
       };
 
       vi.spyOn(CoreAPI, 'readersWriteCancel').mockResolvedValue();
 
       CoreAPI.cancelWrite();
 
-      expect(mockReject).toHaveBeenCalledWith(new Error("Write operation cancelled"));
+      expect(mockResolve).toHaveBeenCalledWith({ cancelled: true });
       expect((CoreAPI as any).pendingWriteId).toBeNull();
       expect(CoreAPI.readersWriteCancel).toHaveBeenCalled();
     });
 
     it("should handle readersWriteCancel API failures", async () => {
       const mockId = "test-write-id";
-      const mockReject = vi.fn();
+      const mockResolve = vi.fn();
 
       (CoreAPI as any).pendingWriteId = mockId;
       (CoreAPI as any).responsePool[mockId] = {
-        resolve: vi.fn(),
-        reject: mockReject
+        resolve: mockResolve,
+        reject: vi.fn()
       };
 
       vi.spyOn(CoreAPI, 'readersWriteCancel').mockRejectedValue(new Error("Cancel failed"));
@@ -164,7 +164,7 @@ describe("CoreAPI - Enhanced Methods", () => {
 
       CoreAPI.cancelWrite();
 
-      expect(mockReject).toHaveBeenCalledWith(new Error("Write operation cancelled"));
+      expect(mockResolve).toHaveBeenCalledWith({ cancelled: true });
       expect((CoreAPI as any).pendingWriteId).toBeNull();
 
       // Wait for async operation
