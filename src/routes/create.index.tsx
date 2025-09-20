@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Capacitor } from "@capacitor/core";
+import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { ListPlusIcon, NfcIcon } from "lucide-react";
 import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "../lib/images";
 import { useStatusStore } from "../lib/store";
@@ -18,6 +20,7 @@ function Create() {
   const connected = useStatusStore((state) => state.connected);
   const playing = useStatusStore((state) => state.playing);
 
+  const [nfcAvailable, setNfcAvailable] = useState(false);
   const nfcWriter = useNfcWriter();
   const [writeOpen, setWriteOpen] = useState(false);
   const closeWriteModal = async () => {
@@ -32,6 +35,24 @@ function Create() {
       setWriteOpen(false);
     }
   }, [nfcWriter]);
+
+  useEffect(() => {
+    const checkNfcAvailability = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const result = await Nfc.isAvailable();
+          setNfcAvailable(result.nfc);
+        } catch (error) {
+          console.log("NFC availability check failed:", error);
+          setNfcAvailable(false);
+        }
+      } else {
+        setNfcAvailable(false);
+      }
+    };
+
+    checkNfcAvailability();
+  }, []);
 
   return (
     <>
@@ -54,7 +75,7 @@ function Create() {
 
           <Card
             className="cursor-pointer"
-            disabled={playing.mediaPath === ""}
+            disabled={!connected || playing.mediaPath === ""}
             onClick={() => {
               if (playing.mediaPath !== "") {
                 nfcWriter.write(WriteAction.Write, playing.mediaPath);
@@ -80,8 +101,8 @@ function Create() {
             </div>
           </Card>
 
-          <Link to="/create/mappings">
-            <Card>
+          <Link to="/create/mappings" disabled={!connected}>
+            <Card disabled={!connected}>
               <div className="flex flex-row items-center gap-3">
                 <Button icon={<ListPlusIcon size="20" />} />
                 <div className="flex grow flex-col">
@@ -110,8 +131,8 @@ function Create() {
             </Card>
           </Link>
 
-          <Link to="/create/nfc">
-            <Card>
+          <Link to="/create/nfc" disabled={!Capacitor.isNativePlatform() || !nfcAvailable}>
+            <Card disabled={!Capacitor.isNativePlatform() || !nfcAvailable}>
               <div className="flex flex-row items-center gap-3">
                 <Button icon={<NfcIcon size="24" />} />
                 <div className="flex grow flex-col">
