@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, RefObject } from "react";
 import classNames from "classnames";
 import { X } from "lucide-react";
 import { useStatusStore } from "@/lib/store.ts";
@@ -10,6 +10,7 @@ export function SlideModal(props: {
   title: string;
   children: ReactNode;
   className?: string;
+  scrollRef?: RefObject<HTMLDivElement | null>;
 }) {
   const swipeHandlers = useSmartSwipe({
     onSwipeDown: props.close,
@@ -47,6 +48,8 @@ export function SlideModal(props: {
           "w-full",
           "max-w-none", // Mobile: full width
           "sm:max-w-2xl", // Desktop: responsive width (672px)
+          "flex",
+          "flex-col",
           "rounded-tl-md",
           "rounded-tr-md",
           "border",
@@ -91,10 +94,8 @@ export function SlideModal(props: {
           </button>
         </div>
         <div
-          style={{
-            maxHeight: "80vh",
-            overflowY: "auto"
-          }}
+          ref={props.scrollRef}
+          className="flex-1 overflow-y-auto"
         >
           {props.children}
         </div>

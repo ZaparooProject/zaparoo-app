@@ -2,7 +2,7 @@ import { RefObject, ReactNode } from "react";
 import { BackIcon } from "../lib/images";
 import { ResponsiveContainer } from "./ResponsiveContainer";
 
-interface PageFrameProps {
+interface PageFrameProps extends React.HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   /** Full custom header that replaces the default header structure */
   header?: ReactNode;
@@ -20,37 +20,53 @@ interface PageFrameProps {
 }
 
 export function PageFrame(props: PageFrameProps) {
+  // Destructure known props and collect the rest
+  const {
+    children,
+    header,
+    headerLeft,
+    headerCenter,
+    headerRight,
+    title,
+    back,
+    scrollRef,
+    className,
+    ...restProps
+  } = props;
 
   // Support backwards compatibility with deprecated props
-  const headerLeft = props.headerLeft || (props.back && (
-    <button onClick={props.back} className="cursor-pointer">
+  const finalHeaderLeft = headerLeft || (back && (
+    <button onClick={back} className="cursor-pointer">
       <BackIcon size="24" />
     </button>
   ));
 
-  const headerCenter = props.headerCenter || (props.title && (
-    <h1 className="text-foreground text-xl">{props.title}</h1>
+  const finalHeaderCenter = headerCenter || (title && (
+    <h1 className="text-foreground text-xl">{title}</h1>
   ));
 
-  const hasHeaderContent = props.header || headerLeft || headerCenter || props.headerRight;
+  const hasHeaderContent = header || finalHeaderLeft || finalHeaderCenter || headerRight;
 
   return (
-    <div className="flex h-full w-full flex-col">
+    <div
+      className={`flex h-full w-full flex-col ${className || ''}`}
+      {...restProps}
+    >
       {hasHeaderContent && (
         <div className="bg-background sticky top-0 z-10 pt-safe-top-4 p-4 pr-safe-right-4 pl-safe-left-4">
           <ResponsiveContainer>
-            {props.header ? (
-              props.header
+            {header ? (
+              header
             ) : (
               <div className="grid min-h-8 grid-cols-5 items-center justify-center gap-4">
                 <div className="col-span-1 flex">
-                  {headerLeft}
+                  {finalHeaderLeft}
                 </div>
                 <div className="col-span-3 flex items-center justify-center text-center">
-                  {headerCenter}
+                  {finalHeaderCenter}
                 </div>
                 <div className="col-span-1 flex justify-end">
-                  {props.headerRight}
+                  {headerRight}
                 </div>
               </div>
             )}
@@ -58,11 +74,11 @@ export function PageFrame(props: PageFrameProps) {
         </div>
       )}
       <div
-        ref={props.scrollRef}
+        ref={scrollRef}
         className={`flex-1 overflow-y-auto ${hasHeaderContent ? 'px-4 pb-4' : 'p-4'} pr-safe-right-4 pl-safe-left-4 pb-safe-bottom-4`}
       >
         <ResponsiveContainer>
-          {props.children}
+          {children}
         </ResponsiveContainer>
       </div>
     </div>
