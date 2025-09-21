@@ -37,7 +37,6 @@ export function MediaSearchModal(props: {
     null
   );
   const connected = useStatusStore((state) => state.connected);
-  const safeInsets = useStatusStore((state) => state.safeInsets);
   const { close, onSelect } = props;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -82,7 +81,6 @@ export function MediaSearchModal(props: {
           ref={scrollContainerRef}
           className="flex h-[75vh] flex-col overflow-y-auto"
           style={{
-            paddingBottom: safeInsets.bottom,
             WebkitOverflowScrolling: "touch",
             scrollBehavior: "smooth",
             touchAction: "pan-y",

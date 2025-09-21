@@ -198,6 +198,7 @@ export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, prefer
       setWriting(true);
       actionFunc()
         .then((result) => {
+          setWriting(false);
           if (result.status === Status.Cancelled) {
             setStatus(Status.Cancelled);
           } else {
@@ -230,6 +231,7 @@ export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, prefer
           }
         })
         .catch((e: Error) => {
+          setWriting(false);
           let showMs = 4000;
           if (Capacitor.getPlatform() === "ios") {
             showMs += 4000;

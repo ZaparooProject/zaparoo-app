@@ -151,7 +151,13 @@
         },
         "tools": {
           "dangerousOperations": "Dangerous Operations",
-          "platformInfo": "Platform Information"
+          "platformInfo": "Platform Information",
+          "formatDescription": "Formats the tag to NDEF standard, removing all data",
+          "formatWarning": "This will permanently delete all data on the tag",
+          "eraseDescription": "Removes all NDEF data from the tag",
+          "eraseWarning": "This will delete all content but keep the tag structure",
+          "makeReadOnlyDescription": "Permanently locks the tag to prevent future writes",
+          "makeReadOnlyWarning": "This action cannot be undone - the tag will become read-only forever"
         }
       },
       "mappings": {

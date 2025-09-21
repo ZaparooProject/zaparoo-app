@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next";
-import { useStatusStore } from "@/lib/store.ts";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 
@@ -9,7 +8,6 @@ export function CommandsModal(props: {
   onSelect: (command: string) => void;
 }) {
   const { t } = useTranslation();
-  const safeInsets = useStatusStore((state) => state.safeInsets);
 
   const commands = [
     { label: "launch.system", command: "**launch.system:" },
@@ -61,8 +59,7 @@ export function CommandsModal(props: {
       close={props.close}
       title={t("create.custom.commands")}
     >
-      <div style={{ paddingBottom: safeInsets.bottom }}>
-        <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
           {Object.entries(categories).map(([category, commandLabels]) => (
             <div key={category} className="flex flex-col gap-2">
               <h3 className="text-lg font-semibold capitalize">{category}</h3>
@@ -84,7 +81,6 @@ export function CommandsModal(props: {
               </div>
             </div>
           ))}
-        </div>
       </div>
     </SlideModal>
   );

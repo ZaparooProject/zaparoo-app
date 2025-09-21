@@ -20,10 +20,9 @@ interface HistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   historyData: HistoryData | undefined;
-  safeInsetsBottom: string;
 }
 
-export const HistoryModal = memo(function HistoryModal({ isOpen, onClose, historyData, safeInsetsBottom }: HistoryModalProps) {
+export const HistoryModal = memo(function HistoryModal({ isOpen, onClose, historyData }: HistoryModalProps) {
   const { t } = useTranslation();
 
   return (
@@ -33,7 +32,7 @@ export const HistoryModal = memo(function HistoryModal({ isOpen, onClose, histor
       title={t("scan.historyTitle")}
     >
       {historyData && (
-        <div style={{ paddingBottom: safeInsetsBottom }}>
+        <div>
           {historyData.entries &&
             historyData.entries.map((item, i) => (
               <div

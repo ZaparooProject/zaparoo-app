@@ -62,8 +62,7 @@ export function SlideModal(props: {
         style={{
           bottom: props.isOpen ? "0" : "-100vh",
           transition: "bottom 0.2s ease-in-out",
-          maxHeight: `calc(100vh - ${safeInsets.top} - 75px)`,
-          paddingBottom: `calc(0.75rem + ${safeInsets.bottom})`
+          maxHeight: `calc(100vh - ${safeInsets.top} - 75px)`
         }}
       >
         <div

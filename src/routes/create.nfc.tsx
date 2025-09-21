@@ -11,7 +11,12 @@ import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { WriteModal } from "../components/WriteModal";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { PageFrame } from "../components/PageFrame";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent
+} from "../components/ui/tabs";
 import { ReadTab } from "../components/nfc/ReadTab";
 import { ToolsTab } from "../components/nfc/ToolsTab";
 
@@ -36,6 +41,9 @@ function NfcUtils() {
       console.log(JSON.stringify(nfcWriter.result?.info.rawTag));
       setWriteOpen(false);
 
+      // Clean up the nfcWriter state after operation completes
+      nfcWriter.end();
+
       // Switch to read tab after operation to show results
       if (nfcWriter.result?.info?.tag || nfcWriter.result?.info?.rawTag) {
         setActiveTab("read");
@@ -59,15 +67,18 @@ function NfcUtils() {
     setWriteOpen(true);
   };
 
-
   return (
     <>
-      <div {...swipeHandlers} className="h-full w-full flex flex-col">
+      <div {...swipeHandlers} className="flex h-full w-full flex-col">
         <PageFrame
           title={t("create.nfc.title")}
           back={() => navigate({ to: "/create" })}
         >
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="flex h-full flex-col"
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="read">Read</TabsTrigger>
               <TabsTrigger value="tools">Tools</TabsTrigger>
@@ -76,7 +87,6 @@ function NfcUtils() {
               <ReadTab
                 result={nfcWriter.result}
                 onScan={handleScan}
-                isScanning={nfcWriter.writing}
               />
             </TabsContent>
             <TabsContent value="tools" className="flex-1 overflow-y-auto">

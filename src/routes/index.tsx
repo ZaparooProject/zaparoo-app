@@ -80,8 +80,6 @@ function Index() {
   const setLastToken = useStatusStore((state) => state.setLastToken);
 
   const [historyOpen, setHistoryOpen] = useState(false);
-  const safeInsets = useStatusStore((state) => state.safeInsets);
-
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
 
   const {
@@ -187,7 +185,6 @@ function Index() {
         isOpen={historyOpen}
         onClose={() => setHistoryOpen(false)}
         historyData={history.data}
-        safeInsetsBottom={safeInsets.bottom}
       />
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
       <PurchaseModal />
