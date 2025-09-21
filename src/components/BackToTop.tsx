@@ -2,22 +2,18 @@ import { useEffect, useState, RefObject } from "react";
 import { ChevronUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { debounce } from "lodash";
-import { useStatusStore } from "@/lib/store.ts";
 
 interface BackToTopProps {
   scrollContainerRef: RefObject<HTMLElement | null>;
   threshold?: number;
-  paddingBottom?: string;
 }
 
 export function BackToTop({
   scrollContainerRef,
-  threshold = 300,
-  paddingBottom = "0"
+  threshold = 300
 }: BackToTopProps) {
   const [isVisible, setIsVisible] = useState(false);
   const { t } = useTranslation();
-  const safeInsets = useStatusStore((state) => state.safeInsets);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -53,7 +49,7 @@ export function BackToTop({
 
   return (
     <div
-      className={`absolute right-4 bottom-4 transition-opacity duration-300 ${
+      className={`absolute right-4 transition-opacity duration-300 ${
         isVisible
           ? "pointer-events-auto opacity-100"
           : "pointer-events-none opacity-0"
@@ -62,8 +58,7 @@ export function BackToTop({
         zIndex: 30,
         transform: "translateZ(0)",
         willChange: "opacity",
-        paddingRight: `calc(1rem + ${safeInsets.right})`,
-        paddingBottom: `calc(1rem + ${safeInsets.bottom} + ${paddingBottom})`
+        bottom: `calc(1rem + 80px)`
       }}
     >
       <button

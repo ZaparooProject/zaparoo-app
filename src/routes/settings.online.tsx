@@ -31,11 +31,11 @@ function About() {
   const [onlineLoggingIn, setOnlineLoggingIn] = useState(false);
 
   return (
-    <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
-      <PageFrame
-        title={t("online.title")}
-        back={() => navigate({ to: "/settings" })}
-      >
+    <PageFrame
+      {...swipeHandlers}
+      title={t("online.title")}
+      back={() => navigate({ to: "/settings" })}
+    >
         <div className="flex flex-col gap-3">
           <Button
             label={t("online.openDashboard")}
@@ -137,6 +137,5 @@ function About() {
           )}
         </div>
       </PageFrame>
-    </div>
   );
 }

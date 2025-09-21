@@ -60,11 +60,11 @@ function CustomText() {
 
   return (
     <>
-      <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
-        <PageFrame
-          title={t("create.custom.title")}
-          back={() => navigate({ to: "/create" })}
-        >
+      <PageFrame
+        {...swipeHandlers}
+        title={t("create.custom.title")}
+        back={() => navigate({ to: "/create" })}
+      >
           <div className="flex flex-col gap-3">
             <ZapScriptInput
               value={customText}
@@ -86,7 +86,6 @@ function CustomText() {
             />
           </div>
         </PageFrame>
-      </div>
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
     </>
   );

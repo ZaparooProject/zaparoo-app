@@ -44,19 +44,19 @@ function BackHandler() {
 
 export const Route = createRootRoute({
   component: () => (
-    <>
+    <div className="flex flex-col h-screen w-screen">
       <SafeAreaHandler />
       <BackHandler />
-      <main className="main-frame h-screen w-screen pb-bottom-nav">
+      <main className="flex-1 min-h-0">
         <Outlet />
       </main>
       <footer
-        className="fixed bottom-0 left-0 z-30 w-lvw"
-        style={{ '--bottom-nav-height': '80px' } as React.CSSProperties}
+        className="flex-shrink-0 z-30"
+        style={{ '--bottom-nav-height': 'calc(80px + env(safe-area-inset-bottom, 0px))' } as React.CSSProperties}
       >
         <BottomNav />
       </footer>
-    </>
+    </div>
   ),
   errorComponent: ErrorComponent
 });

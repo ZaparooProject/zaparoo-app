@@ -1,5 +1,5 @@
 import { Capacitor } from "@capacitor/core";
-import { SafeArea } from "capacitor-plugin-safe-area";
+import { EdgeToEdge } from "@capawesome/capacitor-android-edge-to-edge-support";
 import { useEffect } from "react";
 import { useStatusStore } from "./store";
 
@@ -17,74 +17,70 @@ export const defaultSafeAreaInsets: SafeAreaInsets = {
   right: "0px"
 };
 
-const webInsets = {
-  top: "env(safe-area-inset-top, 0px)",
-  bottom: "env(safe-area-inset-bottom, 0px)",
-  left: "env(safe-area-inset-left, 0px)",
-  right: "env(safe-area-inset-right, 0px)"
-};
-
-const setCSSCustomProperties = (insets: SafeAreaInsets) => {
-  const root = document.documentElement;
-  root.style.setProperty('--safe-area-top', insets.top);
-  root.style.setProperty('--safe-area-bottom', insets.bottom);
-  root.style.setProperty('--safe-area-left', insets.left);
-  root.style.setProperty('--safe-area-right', insets.right);
-};
-
-export const initSafeAreaInsets = async (
-  setInsets: (insets: SafeAreaInsets) => void,
-  listen = true
-) => {
-  if (!Capacitor.isNativePlatform()) {
-    setInsets(webInsets);
-    setCSSCustomProperties(webInsets);
-  }
-
-  if (Capacitor.getPlatform() === "android") {
-    try {
-      await SafeArea.setImmersiveNavigationBar();
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  try {
-    const { insets } = await SafeArea.getSafeAreaInsets();
-    const safeAreaInsets = {
-      top: `${insets.top}px`,
-      bottom: `${insets.bottom}px`,
-      left: `${insets.left}px`,
-      right: `${insets.right}px`
-    };
-
-    setInsets(safeAreaInsets);
-    setCSSCustomProperties(safeAreaInsets);
-
-    if (!listen) {
-      return;
-    }
-
-    await SafeArea.addListener("safeAreaChanged", (data) => {
-      const updatedInsets = {
-        top: `${data.insets.top}px`,
-        bottom: `${data.insets.bottom}px`,
-        left: `${data.insets.left}px`,
-        right: `${data.insets.right}px`
-      };
-      setInsets(updatedInsets);
-      setCSSCustomProperties(updatedInsets);
-    });
-  } catch (e) {
-    console.error(e);
-  }
-};
+// The @capawesome/capacitor-android-edge-to-edge-support plugin handles edge-to-edge
+// and applies proper insets. This handler synchronizes with the store.
 
 export const SafeAreaHandler = () => {
   const setSafeInsets = useStatusStore((state) => state.setSafeInsets);
 
   useEffect(() => {
-    initSafeAreaInsets(setSafeInsets);
+    const initializeSafeArea = async () => {
+      // For web platforms, use env() values directly
+      if (!Capacitor.isNativePlatform()) {
+        const webInsets = {
+          top: "env(safe-area-inset-top, 0px)",
+          bottom: "env(safe-area-inset-bottom, 0px)",
+          left: "env(safe-area-inset-left, 0px)",
+          right: "env(safe-area-inset-right, 0px)"
+        };
+        setSafeInsets(webInsets);
+        return;
+      }
+
+      // For Android, enable edge-to-edge and get insets
+      if (Capacitor.getPlatform() === 'android') {
+        try {
+          await EdgeToEdge.enable();
+          const insets = await EdgeToEdge.getInsets();
+          setSafeInsets({
+            top: `${insets.top}px`,
+            bottom: `${insets.bottom}px`,
+            left: `${insets.left}px`,
+            right: `${insets.right}px`
+          });
+        } catch (error) {
+          console.warn('EdgeToEdge plugin not available:', error);
+          // Fallback to env() values
+          setSafeInsets({
+            top: "env(safe-area-inset-top, 0px)",
+            bottom: "env(safe-area-inset-bottom, 0px)",
+            left: "env(safe-area-inset-left, 0px)",
+            right: "env(safe-area-inset-right, 0px)"
+          });
+        }
+      } else {
+        // For iOS, use env() values
+        setSafeInsets({
+          top: "env(safe-area-inset-top, 0px)",
+          bottom: "env(safe-area-inset-bottom, 0px)",
+          left: "env(safe-area-inset-left, 0px)",
+          right: "env(safe-area-inset-right, 0px)"
+        });
+      }
+    };
+
+    initializeSafeArea();
+
+    // Listen for orientation changes
+    const handleOrientationChange = () => {
+      setTimeout(initializeSafeArea, 200);
+    };
+
+    window.addEventListener('orientationchange', handleOrientationChange);
+
+    return () => {
+      window.removeEventListener('orientationchange', handleOrientationChange);
+    };
   }, [setSafeInsets]);
 
   return null;

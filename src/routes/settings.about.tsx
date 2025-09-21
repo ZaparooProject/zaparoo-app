@@ -19,11 +19,11 @@ function About() {
   });
 
   return (
-    <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
-      <PageFrame
-        title={t("settings.about.title")}
-        back={() => navigate({ to: "/settings" })}
-      >
+    <PageFrame
+      {...swipeHandlers}
+      title={t("settings.about.title")}
+      back={() => navigate({ to: "/settings" })}
+    >
         <div className="flex flex-col gap-8">
           <div className="text-center">
             <h2 className="text-2xl font-bold">Zaparoo App</h2>
@@ -116,6 +116,5 @@ function About() {
           </div>
         </div>
       </PageFrame>
-    </div>
   );
 }

@@ -100,12 +100,12 @@ function Search() {
 
   return (
     <>
-      <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
-        <PageFrame
-          title={t("create.search.title")}
-          back={() => navigate({ to: "/create" })}
-          scrollRef={scrollContainerRef}
-        >
+      <PageFrame
+        {...swipeHandlers}
+        title={t("create.search.title")}
+        back={() => navigate({ to: "/create" })}
+        scrollRef={scrollContainerRef}
+      >
           <TextInput
             label={t("create.search.gameInput")}
             placeholder={t("create.search.gameInputPlaceholder")}
@@ -167,7 +167,6 @@ function Search() {
             selectedResult={selectedResult}
           />
         </PageFrame>
-      </div>
       <SlideModal
         isOpen={selectedResult !== null && !writeOpen}
         close={() => setSelectedResult(null)}
@@ -216,7 +215,6 @@ function Search() {
       <BackToTop
         scrollContainerRef={scrollContainerRef}
         threshold={200}
-        paddingBottom="5em"
       />
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
     </>

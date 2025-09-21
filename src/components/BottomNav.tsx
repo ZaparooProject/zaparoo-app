@@ -41,15 +41,14 @@ export function BottomNav() {
 
   return (
     <div
-      className="border-t border-t-[#ffffff21] bg-[#111928bf] pb-1 backdrop-blur"
+      className="border-t border-t-[#ffffff21] bg-[#111928bf] backdrop-blur"
       style={{
-        height: `calc(80px + ${safeInsets.bottom})`,
-        paddingBottom: safeInsets.bottom
+        height: '80px'
       }}
     >
       <ResponsiveContainer maxWidth="nav" className="h-full">
         <div
-          className="mx-auto grid h-full max-w-lg grid-cols-3 gap-4 px-9"
+          className="mx-auto grid h-full max-w-lg grid-cols-3 gap-4 px-9 items-center"
           style={{
             paddingRight: `calc(2.25rem + ${safeInsets.right})`,
             paddingLeft: `calc(2.25rem + ${safeInsets.left})`
