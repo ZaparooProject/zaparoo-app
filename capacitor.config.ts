@@ -28,6 +28,9 @@ const config: CapacitorConfig = {
     FirebaseAuthentication: {
       skipNativeAuth: false,
       providers: ["google.com"]
+    },
+    EdgeToEdge: {
+      backgroundColor: '#111928'
     }
   }
 };

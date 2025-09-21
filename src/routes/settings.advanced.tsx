@@ -77,17 +77,17 @@ function Advanced() {
   });
 
   return (
-    <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
-      <PageFrame
-        headerLeft={
-          <button onClick={() => navigate({ to: "/settings" })} className="cursor-pointer">
-            <BackIcon size="24" />
-          </button>
-        }
-        headerCenter={
-          <h1 className="text-foreground text-xl">{t("settings.advanced.title")}</h1>
-        }
-      >
+    <PageFrame
+      {...swipeHandlers}
+      headerLeft={
+        <button onClick={() => navigate({ to: "/settings" })} className="cursor-pointer">
+          <BackIcon size="24" />
+        </button>
+      }
+      headerCenter={
+        <h1 className="text-foreground text-xl">{t("settings.advanced.title")}</h1>
+      }
+    >
         <div className="py-2">
           <ToggleSwitch
             label={t("settings.advanced.soundEffects")}
@@ -137,6 +137,5 @@ function Advanced() {
         {/*  />*/}
         {/*</div>*/}
       </PageFrame>
-    </div>
   );
 }

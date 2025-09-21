@@ -123,7 +123,36 @@
         "format": "Format tag",
         "erase": "Erase tag",
         "makeReadOnly": "Make tag read-only",
-        "confirm": "Are you sure?"
+        "confirm": "Are you sure?",
+        "tabs": {
+          "read": "Read",
+          "write": "Write",
+          "tools": "Tools",
+          "history": "History"
+        },
+        "write": {
+          "templates": {
+            "text": "Text",
+            "url": "URL",
+            "wifi": "WiFi",
+            "contact": "Contact",
+            "custom": "Custom"
+          },
+          "writeToTag": "Write to Tag",
+          "preview": "Preview",
+          "estimatedSize": "Estimated size"
+        },
+        "history": {
+          "title": "NFC History",
+          "empty": "No History",
+          "clearAll": "Clear All",
+          "writeAgain": "Write Again",
+          "remove": "Remove"
+        },
+        "tools": {
+          "dangerousOperations": "Dangerous Operations",
+          "platformInfo": "Platform Information"
+        }
       },
       "mappings": {
         "title": "Add a Mapping",

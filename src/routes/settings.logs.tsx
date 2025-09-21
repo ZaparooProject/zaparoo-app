@@ -172,8 +172,8 @@ function Logs() {
 
   return (
     <>
-      <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
-        <PageFrame
+      <PageFrame
+        {...swipeHandlers}
         headerLeft={
           <button onClick={() => navigate({ to: "/settings" })} className="cursor-pointer">
             <BackIcon size="24" />
@@ -264,7 +264,7 @@ function Logs() {
 
           {/* Log Entries */}
           {logsQuery.data && (
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
               <div>
                 {filteredEntries.map((entry, index) => (
                   <div
@@ -287,14 +287,14 @@ function Logs() {
                         {formatTimestamp(entry.time)}
                       </span>
                     </div>
-                    <div className="text-foreground whitespace-pre-wrap break-words font-mono text-sm">
+                    <div className="text-foreground whitespace-pre-wrap break-all font-mono text-sm">
                       {entry.message}
                     </div>
                     {/* Additional fields */}
                     {Object.entries(entry).filter(([key]) =>
                       !['level', 'time', 'caller', 'message', '_index'].includes(key)
                     ).map(([key, value]) => (
-                      <div key={key} className="mt-1 text-foreground-muted text-sm font-sans">
+                      <div key={key} className="mt-1 text-foreground-muted text-sm font-sans break-all">
                         <span className="font-medium">{key}:</span> {JSON.stringify(value)}
                       </div>
                     ))}
@@ -317,11 +317,9 @@ function Logs() {
           )}
         </div>
       </PageFrame>
-      </div>
       <BackToTop
         scrollContainerRef={scrollContainerRef}
         threshold={200}
-        paddingBottom="5em"
       />
     </>
   );

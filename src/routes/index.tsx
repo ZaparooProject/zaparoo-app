@@ -39,14 +39,14 @@ export const Route = createFileRoute("/")({
         Preferences.get({ key: "restartScan" }),
         Preferences.get({ key: "launchOnScan" }),
         Preferences.get({ key: "launcherAccess" }),
-        Preferences.get({ key: "preferRemoteWriter" }),
+        Preferences.get({ key: "preferRemoteWriter" })
       ]);
 
     return {
       restartScan: restartResult.value === "true",
       launchOnScan: launchResult.value !== "false",
       launcherAccess: accessResult.value === "true",
-      preferRemoteWriter: remoteWriterResult.value === "true",
+      preferRemoteWriter: remoteWriterResult.value === "true"
     };
   },
   ssr: false,

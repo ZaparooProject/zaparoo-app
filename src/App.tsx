@@ -3,7 +3,6 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 import toast, { Toaster } from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
 import { usePrevious } from "@uidotdev/usehooks";
-import { StatusBar, Style } from "@capacitor/status-bar";
 import { useTranslation } from "react-i18next";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
@@ -12,7 +11,6 @@ import { useStatusStore } from "./lib/store";
 import { DatabaseIcon, PlayIcon } from "./lib/images";
 import { CoreApiWebSocket } from "./components/CoreApiWebSocket.tsx";
 import AppUrlListener from "./lib/deepLinks.tsx";
-import { initSafeAreaInsets } from "./lib/safeArea.ts";
 import { MediaIndexingToast } from "./components/MediaIndexingToast.tsx";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { useDataCache } from "./hooks/useDataCache";
@@ -33,30 +31,18 @@ declare module "@tanstack/react-router" {
   }
 }
 
-const setStatusBarStyleDark = async () => {
-  await StatusBar.setStyle({ style: Style.Dark });
-  await StatusBar.show();
-};
 
 export default function App() {
   // Initialize data cache early in app lifecycle
   useDataCache();
-  
+
   const playing = useStatusStore((state) => state.playing);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const prevGamesIndex = usePrevious(gamesIndex);
   const [hideGamesIndex, setHideGamesIndex] = useState(false);
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
   const { t } = useTranslation();
-  const safeInsets = useStatusStore((state) => state.safeInsets);
-  const setSafeInsets = useStatusStore((state) => state.setSafeInsets);
 
-  useEffect(() => {
-    initSafeAreaInsets(setSafeInsets, true);
-    if (Capacitor.isNativePlatform()) {
-      setStatusBarStyleDark();
-    }
-  }, [setSafeInsets]);
 
   useEffect(() => {
     FirebaseAuthentication.addListener("authStateChange", (change) => {
@@ -105,7 +91,9 @@ export default function App() {
           <span
             className="flex grow flex-col"
             onClick={() => toast.dismiss(to.id)}
-            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toast.dismiss(to.id)}
+            onKeyDown={(e) =>
+              (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
+            }
             role="button"
             tabIndex={0}
           >
@@ -145,9 +133,9 @@ export default function App() {
           }
         }}
         containerStyle={{
-          top: `calc(${safeInsets.top} + 1rem)`,
-          left: safeInsets.left,
-          right: safeInsets.right
+          top: "calc(env(safe-area-inset-top, 0px) + 1rem)",
+          left: "env(safe-area-inset-left, 0px)",
+          right: "env(safe-area-inset-right, 0px)"
         }}
       />
       <div
