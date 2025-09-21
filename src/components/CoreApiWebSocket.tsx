@@ -121,7 +121,7 @@ export function CoreApiWebSocket() {
         reconnectInterval: 1000,
         maxReconnectAttempts: Infinity,
         reconnectBackoffMultiplier: 1.5,
-        maxReconnectInterval: 30000,
+        maxReconnectInterval: 2000,
         pingMessage: "ping"
       },
       {

@@ -1,4 +1,4 @@
-import { RefObject, ReactNode } from "react";
+import React, { RefObject, ReactNode } from "react";
 import { BackIcon } from "../lib/images";
 import { ResponsiveContainer } from "./ResponsiveContainer";
 

@@ -140,6 +140,9 @@ describe("CoreAPI Write Cancellation", () => {
       const mockSend = vi.fn();
       CoreAPI.setSend(mockSend);
 
+      // Mock readersWriteCancel to prevent actual network calls
+      const mockReadersWriteCancel = vi.spyOn(CoreAPI, 'readersWriteCancel').mockResolvedValue();
+
       // Start write operation
       const writePromise = CoreAPI.write({ text: "test" });
 
@@ -153,14 +156,19 @@ describe("CoreAPI Write Cancellation", () => {
       const result = await writePromise;
       expect(result).toEqual({ cancelled: true });
 
+      mockReadersWriteCancel.mockRestore();
       vi.useRealTimers();
     });
 
     it("should still timeout if not cancelled", async () => {
       vi.useFakeTimers();
 
+      // Mock send function to simulate no response (which causes timeout)
       const mockSend = vi.fn();
       CoreAPI.setSend(mockSend);
+
+      // Mock readersWriteCancel to prevent issues during cleanup
+      const mockReadersWriteCancel = vi.spyOn(CoreAPI, 'readersWriteCancel').mockResolvedValue();
 
       // Start write operation
       const writePromise = CoreAPI.write({ text: "test" });
@@ -171,6 +179,7 @@ describe("CoreAPI Write Cancellation", () => {
       // Should reject with timeout
       await expect(writePromise).rejects.toThrow("Request timeout");
 
+      mockReadersWriteCancel.mockRestore();
       vi.useRealTimers();
     });
   });
