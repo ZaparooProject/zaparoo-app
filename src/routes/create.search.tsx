@@ -116,6 +116,12 @@ function Search() {
             onKeyUp={(e) => {
               if (e.key === "Enter" || e.keyCode === 13) {
                 e.currentTarget.blur();
+                if (!(!connected || !gamesIndex.exists || gamesIndex.indexing || (query === "" && querySystem === "all"))) {
+                  search.mutate({
+                    query: query,
+                    system: querySystem
+                  });
+                }
               }
             }}
           />
@@ -148,7 +154,7 @@ function Search() {
               label={t("create.search.searchButton")}
               className="mt-2 w-full"
               icon={<SearchIcon size="20" />}
-              disabled={query === "" && querySystem === "all"}
+              disabled={!connected || !gamesIndex.exists || gamesIndex.indexing || (query === "" && querySystem === "all")}
               onClick={() => {
                 console.log(query, querySystem);
                 search.mutate({
