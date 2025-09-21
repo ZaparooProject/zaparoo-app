@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useStatusStore } from "@/lib/store";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
+import { useBackButtonHandler } from "../hooks/useBackButtonHandler";
 import { ScanResult } from "../lib/models";
 import { ScanSpinner } from "./ScanSpinner";
 import { Button } from "./wui/Button";
@@ -14,6 +15,19 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
     preventScrollOnSwipe: false
   });
 
+  // Handle Android back button
+  useBackButtonHandler(
+    'write-modal',
+    () => {
+      if (props.isOpen) {
+        props.close();
+        return true; // Consume the event
+      }
+      return false; // Let other handlers process it
+    },
+    100, // High priority
+    props.isOpen // Only active when modal is open
+  );
 
   if (!props.isOpen) {
     return null;

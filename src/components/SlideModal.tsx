@@ -3,6 +3,7 @@ import classNames from "classnames";
 import { X } from "lucide-react";
 import { useStatusStore } from "@/lib/store.ts";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
+import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 
 export function SlideModal(props: {
   isOpen: boolean;
@@ -18,6 +19,20 @@ export function SlideModal(props: {
     swipeThreshold: 50,
     velocityThreshold: 0.3
   });
+
+  // Handle Android back button
+  useBackButtonHandler(
+    'slide-modal',
+    () => {
+      if (props.isOpen) {
+        props.close();
+        return true; // Consume the event
+      }
+      return false; // Let other handlers process it
+    },
+    100, // High priority
+    props.isOpen // Only active when modal is open
+  );
 
   const safeInsets = useStatusStore((state) => state.safeInsets);
 

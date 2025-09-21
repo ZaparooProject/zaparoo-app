@@ -1,18 +1,20 @@
 import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { App } from "@capacitor/app";
-import React, { useEffect } from "react";
+import React from "react";
 import { SafeAreaHandler } from "@/lib/safeArea";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { BottomNav } from "../components/BottomNav";
+import { useBackButtonHandler } from "../hooks/useBackButtonHandler";
 
 function BackHandler() {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    App.addListener("backButton", () => {
+  useBackButtonHandler(
+    'navigation',
+    () => {
       if (location.pathname === "/") {
         App.exitApp();
-        return;
+        return true;
       }
 
       if (
@@ -20,24 +22,23 @@ function BackHandler() {
         location.pathname === "/settings"
       ) {
         navigate({ to: "/" });
-        return;
+        return true;
       }
 
       if (location.pathname.startsWith("/create")) {
         navigate({ to: "/create" });
-        return;
+        return true;
       }
 
       if (location.pathname.startsWith("/settings")) {
         navigate({ to: "/settings" });
-        return;
+        return true;
       }
-    });
 
-    return () => {
-      App.removeAllListeners();
-    };
-  }, [navigate]);
+      return false;
+    },
+    0 // Lowest priority - fallback navigation
+  );
 
   return null;
 }

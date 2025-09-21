@@ -79,7 +79,7 @@ const ProPurchaseModal = (props: {
       open={props.proPurchaseModalOpen}
       onOpenChange={props.setProPurchaseModalOpen}
     >
-      <DialogContent>
+      <DialogContent onOpenChange={props.setProPurchaseModalOpen}>
         <DialogHeader>
           <DialogTitle>{t("scan.purchaseProTitle")}</DialogTitle>
         </DialogHeader>
