@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import toast, { Toaster } from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
@@ -11,7 +11,6 @@ import { useStatusStore } from "./lib/store";
 import { DatabaseIcon, PlayIcon } from "./lib/images";
 import { CoreApiWebSocket } from "./components/CoreApiWebSocket.tsx";
 import AppUrlListener from "./lib/deepLinks.tsx";
-import { MediaIndexingToast } from "./components/MediaIndexingToast.tsx";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { useDataCache } from "./hooks/useDataCache";
 
@@ -39,7 +38,6 @@ export default function App() {
   const playing = useStatusStore((state) => state.playing);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const prevGamesIndex = usePrevious(gamesIndex);
-  const [hideGamesIndex, setHideGamesIndex] = useState(false);
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
   const { t } = useTranslation();
 
@@ -54,25 +52,8 @@ export default function App() {
   }, [setLoggedInUser]);
 
   useEffect(() => {
-    if (gamesIndex.indexing && !hideGamesIndex) {
-      toast.loading(
-        (to) => (
-          <MediaIndexingToast id={to.id} setHideToast={setHideGamesIndex} />
-        ),
-        {
-          id: "indexing",
-          icon: (
-            <span className="text-primary pr-1 pl-1">
-              <DatabaseIcon size="24" />
-            </span>
-          )
-        }
-      );
-    }
-
+    // Only show completion toast, progress is now shown in MediaDatabaseCard
     if (!gamesIndex.indexing && prevGamesIndex?.indexing) {
-      toast.dismiss("indexing");
-      setHideGamesIndex(false);
       toast.success((to) => <MediaFinishedToast id={to.id} />, {
         id: "indexed",
         icon: (
@@ -82,7 +63,7 @@ export default function App() {
         )
       });
     }
-  }, [gamesIndex, prevGamesIndex, hideGamesIndex, t]);
+  }, [gamesIndex, prevGamesIndex, t]);
 
   useEffect(() => {
     if (playing.mediaName !== "") {

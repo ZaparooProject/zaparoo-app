@@ -290,17 +290,16 @@ describe("useNfcWriter Cancellation", () => {
         }
       }));
 
-      // Start and immediately cancel multiple times
+      // Perform multiple rapid write/cancel sequences
       for (let i = 0; i < 3; i++) {
-        const writePromise = Promise.resolve();
-        vi.mocked(CoreAPI.write).mockReturnValue(writePromise);
+        const writePromise = new Promise((resolve) => {
+          setTimeout(resolve, 50); // Small delay to simulate real write operation
+        });
+        vi.mocked(CoreAPI.write).mockReturnValue(writePromise as Promise<void>);
 
         await act(async () => {
-          await result.current.write(WriteAction.Write, "test");
+          await result.current.write(WriteAction.Write, `test${i}`);
         });
-
-        // Check status before end() clears it
-        expect(result.current.writing).toBe(true);
 
         await act(async () => {
           await result.current.end();

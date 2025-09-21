@@ -27,8 +27,9 @@ import { PageFrame } from "../components/PageFrame";
 import { useStatusStore } from "../lib/store";
 import { TextInput } from "../components/wui/TextInput";
 import { Button } from "../components/wui/Button";
-import { CheckIcon, DatabaseIcon, ExternalIcon, NextIcon } from "../lib/images";
+import { CheckIcon, ExternalIcon, NextIcon } from "../lib/images";
 import { getDeviceAddress, setDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
+import { MediaDatabaseCard } from "../components/MediaDatabaseCard";
 
 interface LoaderData {
   restartScan: boolean;
@@ -65,7 +66,6 @@ function Settings() {
 
   const connected = useStatusStore((state) => state.connected);
   const connectionError = useStatusStore((state) => state.connectionError);
-  const gamesIndex = useStatusStore((state) => state.gamesIndex);
   // const loggedInUser = useStatusStore((state) => state.loggedInUser);
   const deviceHistory = useStatusStore((state) => state.deviceHistory);
   const setDeviceHistory = useStatusStore((state) => state.setDeviceHistory);
@@ -262,15 +262,7 @@ function Settings() {
             )}
           </div>
 
-          <div>
-            <Button
-              label={t("settings.updateDb")}
-              icon={<DatabaseIcon size="20" />}
-              className="w-full"
-              disabled={!connected || gamesIndex.indexing}
-              onClick={() => CoreAPI.mediaGenerate()}
-            />
-          </div>
+          <MediaDatabaseCard />
 
           <div>
             <Button
