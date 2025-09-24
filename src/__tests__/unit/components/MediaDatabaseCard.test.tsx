@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '../../../test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MediaDatabaseCard } from '../../../components/MediaDatabaseCard';
+import { CoreAPI } from '../../../lib/coreApi';
 
 // Mock dependencies
 vi.mock('../../../lib/coreApi', () => ({
@@ -21,12 +22,12 @@ vi.mock('react-i18next', () => ({
   })
 }));
 
-// Mock React Query
+// Mock @tanstack/react-query only when needed for specific tests
 vi.mock('@tanstack/react-query', async (importOriginal) => {
   const actual = await importOriginal() as any;
   return {
     ...actual,
-    useQuery: vi.fn()
+    useQuery: vi.fn(actual.useQuery) // Default to actual implementation
   };
 });
 
@@ -48,7 +49,7 @@ vi.mock('../../../lib/store', () => ({
 }));
 
 describe('MediaDatabaseCard', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
     // Reset mock store state
     mockStore.connected = true;
@@ -61,15 +62,10 @@ describe('MediaDatabaseCard', () => {
       currentStepDisplay: ''
     };
 
-    // Default useQuery mock - database exists and ready
-    const { useQuery } = await import('@tanstack/react-query');
-    vi.mocked(useQuery).mockReturnValue({
-      data: {
-        database: { exists: true, indexing: false },
-        active: []
-      },
-      isLoading: false,
-      error: null
+    // Default mock - database exists and ready
+    vi.mocked(CoreAPI.media).mockResolvedValue({
+      database: { exists: true, indexing: false },
+      active: []
     });
   });
 
@@ -110,45 +106,45 @@ describe('MediaDatabaseCard', () => {
     expect(CoreAPI.mediaGenerate).toHaveBeenCalledOnce();
   });
 
-  it('should show ready status when database exists (no file count)', () => {
+  it('should show ready status when database exists (no file count)', async () => {
     render(<MediaDatabaseCard />);
 
-    expect(screen.getByText('settings.updateDb.status.ready')).toBeInTheDocument();
+    // Wait for the query to resolve
+    expect(await screen.findByText('settings.updateDb.status.ready')).toBeInTheDocument();
   });
 
-  it('should not show file count in card status', () => {
+  it('should not show file count in card status', async () => {
     // File count should never appear in the card, only in toast
     mockStore.gamesIndex.totalFiles = 250;
 
     render(<MediaDatabaseCard />);
 
     expect(screen.queryByText('250 media found')).not.toBeInTheDocument();
-    expect(screen.getByText('settings.updateDb.status.ready')).toBeInTheDocument();
+    // Wait for the query to resolve
+    expect(await screen.findByText('settings.updateDb.status.ready')).toBeInTheDocument();
   });
 
   it('should show error message when database does not exist', async () => {
-    const { useQuery } = await import('@tanstack/react-query');
-    vi.mocked(useQuery).mockReturnValue({
-      data: {
-        database: { exists: false, indexing: false },
-        active: []
-      },
-      isLoading: false,
-      error: null
+    vi.mocked(CoreAPI.media).mockResolvedValue({
+      database: { exists: false, indexing: false },
+      active: []
     });
 
     render(<MediaDatabaseCard />);
 
-    expect(screen.getByText('create.search.gamesDbUpdate')).toBeInTheDocument();
+    // Wait for the query to resolve
+    expect(await screen.findByText('create.search.gamesDbUpdate')).toBeInTheDocument();
   });
 
   it('should show checking status when loading', async () => {
+    // For this test, we need to mock useQuery to control loading state
+    // Use a partial mock with type assertion
     const { useQuery } = await import('@tanstack/react-query');
     vi.mocked(useQuery).mockReturnValue({
       data: undefined,
       isLoading: true,
-      error: null
-    });
+      // Only mock what the component actually uses
+    } as any);
 
     render(<MediaDatabaseCard />);
 
