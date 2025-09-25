@@ -73,7 +73,7 @@ vi.mock("@/components/wui/TextInput", () => ({
 }));
 
 vi.mock("@/components/SearchResults", () => ({
-  SearchResults: ({ resp, selectedResult, setSelectedResult }: any) => (
+  SearchResults: ({ resp, setSelectedResult }: any) => (
     <div data-testid="search-results">
       {resp?.results?.map((result: any, index: number) => (
         <button
