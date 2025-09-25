@@ -78,6 +78,7 @@ interface StatusState {
   gracePeriodTimer?: ReturnType<typeof setTimeout>;
   setConnectionStateWithGracePeriod: (state: ConnectionState) => void;
   clearGracePeriod: () => void;
+  resetConnectionState: () => void;
 }
 
 export const useStatusStore = create<StatusState>()((set) => ({
@@ -240,6 +241,44 @@ export const useStatusStore = create<StatusState>()((set) => ({
     set({
       pendingDisconnection: false,
       gracePeriodTimer: undefined
+    });
+  },
+
+  resetConnectionState: () => {
+    const currentState = useStatusStore.getState();
+
+    // Clear any existing grace period timer
+    if (currentState.gracePeriodTimer) {
+      clearTimeout(currentState.gracePeriodTimer);
+    }
+
+    // Reset all connection-related state
+    set({
+      connected: false,
+      connectionState: ConnectionState.IDLE,
+      lastConnectionTime: null,
+      connectionError: "",
+      retryCount: 0,
+      pendingDisconnection: false,
+      gracePeriodTimer: undefined,
+      runQueue: null,
+      writeQueue: "",
+      // Reset media-related state that will be refetched on reconnect
+      lastToken: { type: "", uid: "", text: "", data: "", scanTime: "" },
+      gamesIndex: {
+        exists: true,
+        indexing: false,
+        totalSteps: 0,
+        currentStep: 0,
+        currentStepDisplay: "",
+        totalFiles: 0
+      },
+      playing: {
+        systemId: "",
+        systemName: "",
+        mediaName: "",
+        mediaPath: ""
+      }
     });
   }
 }));

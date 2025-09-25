@@ -109,4 +109,113 @@ describe("StatusStore", () => {
       expect(useStatusStore.getState().connected).toBe(false);
     });
   });
+
+  describe("resetConnectionState", () => {
+    it("should reset all connection-related state to default values", () => {
+      const store = useStatusStore.getState();
+
+      // Set up some state first
+      store.setConnected(true);
+      store.setConnectionState(ConnectionState.CONNECTED);
+      store.setConnectionError("Some error");
+      store.setLastConnectionTime(Date.now());
+      store.setRunQueue({ value: "test-uid", unsafe: true });
+      store.setWriteQueue("test-write-data");
+      store.setLastToken({
+        type: "nfc",
+        uid: "test-uid",
+        text: "test-text",
+        data: "test-data",
+        scanTime: "2024-01-01T00:00:00Z"
+      });
+      store.setGamesIndex({
+        exists: false,
+        indexing: true,
+        totalSteps: 10,
+        currentStep: 5,
+        currentStepDisplay: "Processing...",
+        totalFiles: 100
+      });
+      store.setPlaying({
+        systemId: "test-system",
+        systemName: "Test System",
+        mediaName: "Test Game",
+        mediaPath: "/path/to/game"
+      });
+
+      // Reset the state
+      store.resetConnectionState();
+
+      // Verify all connection-related state is reset
+      const resetState = useStatusStore.getState();
+      expect(resetState.connected).toBe(false);
+      expect(resetState.connectionState).toBe(ConnectionState.IDLE);
+      expect(resetState.lastConnectionTime).toBe(null);
+      expect(resetState.connectionError).toBe("");
+      expect(resetState.retryCount).toBe(0);
+      expect(resetState.pendingDisconnection).toBe(false);
+      expect(resetState.gracePeriodTimer).toBeUndefined();
+      expect(resetState.runQueue).toBe(null);
+      expect(resetState.writeQueue).toBe("");
+
+      // Verify media-related state is reset
+      expect(resetState.lastToken).toEqual({
+        type: "",
+        uid: "",
+        text: "",
+        data: "",
+        scanTime: ""
+      });
+      expect(resetState.gamesIndex).toEqual({
+        exists: true,
+        indexing: false,
+        totalSteps: 0,
+        currentStep: 0,
+        currentStepDisplay: "",
+        totalFiles: 0
+      });
+      expect(resetState.playing).toEqual({
+        systemId: "",
+        systemName: "",
+        mediaName: "",
+        mediaPath: ""
+      });
+    });
+
+    it("should clear grace period timer if one exists", () => {
+      const store = useStatusStore.getState();
+
+      // Simulate a grace period timer being set
+      const mockTimer = setTimeout(() => {}, 1000);
+      useStatusStore.setState({ gracePeriodTimer: mockTimer });
+
+      // Reset connection state
+      store.resetConnectionState();
+
+      // Verify timer is cleared
+      const state = useStatusStore.getState();
+      expect(state.gracePeriodTimer).toBeUndefined();
+      expect(state.pendingDisconnection).toBe(false);
+    });
+
+    it("should not affect non-connection-related state", () => {
+      const store = useStatusStore.getState();
+
+      // Set some non-connection state
+      store.setCameraOpen(true);
+      store.setNfcModalOpen(true);
+      store.addDeviceHistory("192.168.1.100");
+      store.setLoggedInUser({ uid: "test-user" } as any);
+
+      // Reset connection state
+      store.resetConnectionState();
+
+      // Verify non-connection state is preserved
+      const state = useStatusStore.getState();
+      expect(state.cameraOpen).toBe(true);
+      expect(state.nfcModalOpen).toBe(true);
+      expect(state.deviceHistory).toEqual([{ address: "192.168.1.100" }]);
+      expect(state.loggedInUser).toEqual({ uid: "test-user" });
+    });
+  });
 });

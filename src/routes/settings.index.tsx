@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import classNames from "classnames";
 import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
@@ -72,6 +72,7 @@ function Settings() {
   const removeDeviceHistory = useStatusStore(
     (state) => state.removeDeviceHistory
   );
+  const resetConnectionState = useStatusStore((state) => state.resetConnectionState);
 
   const version = useQuery({
     queryKey: ["version"],
@@ -80,6 +81,8 @@ function Settings() {
 
   const [address, setAddress] = useState(getDeviceAddress());
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  const queryClient = useQueryClient();
 
   const settings = useQuery({
     queryKey: ["settings"],
@@ -107,6 +110,23 @@ function Settings() {
   const { restartScan, setRestartScan, launchOnScan, setLaunchOnScan } =
     useAppSettings({ initData });
 
+  const handleDeviceAddressChange = (newAddress: string) => {
+    // Set the new device address
+    setDeviceAddress(newAddress);
+
+    // Reset the connection state
+    resetConnectionState();
+
+    // Reset CoreAPI state
+    CoreAPI.reset();
+
+    // Clear React Query cache for all queries that depend on the device
+    queryClient.invalidateQueries();
+
+    // Update local address state (this will trigger CoreApiWebSocket remount via key prop)
+    setAddress(newAddress);
+  };
+
   return (
     <>
       <PageFrame title={t("settings.title")}>
@@ -116,10 +136,7 @@ function Settings() {
             placeholder="192.168.1.23"
             value={address}
             setValue={setAddress}
-            saveValue={(v) => {
-              setDeviceAddress(v);
-              location.reload();
-            }}
+            saveValue={handleDeviceAddressChange}
           />
 
           <div className="flex flex-row items-center justify-between gap-2 min-h-[1.5rem]">
@@ -156,8 +173,8 @@ function Settings() {
                         className="w-full"
                         key={entry.address}
                         onClick={() => {
-                          setDeviceAddress(entry.address);
-                          location.reload();
+                          handleDeviceAddressChange(entry.address);
+                          setHistoryOpen(false);
                         }}
                         variant="outline"
                       >

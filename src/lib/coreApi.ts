@@ -176,6 +176,38 @@ class CoreApi {
     }
   }
 
+  // Method to reset all internal state - useful when reconnecting to a different device
+  reset() {
+    console.log("Resetting CoreAPI state");
+
+    // Clear all pending response promises with cancellation
+    Object.keys(this.responsePool).forEach(id => {
+      const responsePromise = this.responsePool[id];
+      if (responsePromise.timeoutId) {
+        clearTimeout(responsePromise.timeoutId);
+      }
+      responsePromise.resolve({ cancelled: true });
+    });
+
+    // Clear response pool contents
+    Object.keys(this.responsePool).forEach(id => {
+      delete this.responsePool[id];
+    });
+
+    // Clear request queue
+    this.requestQueue.forEach(queued => {
+      queued.promiseHandlers.resolve({ cancelled: true });
+    });
+    this.requestQueue = [];
+
+    // Clear pending write ID
+    this.pendingWriteId = null;
+
+    // Reset WebSocket manager (will be set by new connection)
+    this.wsManager = null;
+    this.send = () => console.warn("WebSocket send is not initialized");
+  }
+
   call(method: Method, params?: unknown, signal?: AbortSignal): Promise<unknown> {
     try {
       const id = uuidv4();

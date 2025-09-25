@@ -13,6 +13,7 @@ import { CoreApiWebSocket } from "./components/CoreApiWebSocket.tsx";
 import AppUrlListener from "./lib/deepLinks.tsx";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { useDataCache } from "./hooks/useDataCache";
+import { getDeviceAddress } from "./lib/coreApi";
 
 const router = createRouter({
   scrollRestoration: true,
@@ -97,7 +98,7 @@ export default function App() {
   return (
     <>
       <AppUrlListener />
-      <CoreApiWebSocket />
+      <CoreApiWebSocket key={getDeviceAddress()} />
       <Toaster
         position="top-center"
         toastOptions={{
