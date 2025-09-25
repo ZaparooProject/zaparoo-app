@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import classNames from "classnames";
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
@@ -15,13 +14,12 @@ import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button as SCNButton } from "@/components/ui/button";
 import { ScanSettings } from "@/components/home/ScanSettings.tsx";
 import { useAppSettings } from "@/hooks/useAppSettings.ts";
-import { UpdateSettingsRequest } from "../lib/models.ts";
 import i18n from "../i18n";
 import { PageFrame } from "../components/PageFrame";
 import { useStatusStore } from "../lib/store";
 import { TextInput } from "../components/wui/TextInput";
 import { Button } from "../components/wui/Button";
-import { CheckIcon, ExternalIcon, NextIcon } from "../lib/images";
+import { ExternalIcon, NextIcon } from "../lib/images";
 import { getDeviceAddress, setDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
 import { MediaDatabaseCard } from "../components/MediaDatabaseCard";
 
@@ -78,11 +76,6 @@ function Settings() {
 
   const queryClient = useQueryClient();
 
-  const settings = useQuery({
-    queryKey: ["settings"],
-    queryFn: () => CoreAPI.settings()
-  });
-
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -92,14 +85,6 @@ function Settings() {
       }
     });
   }, [setDeviceHistory]);
-
-  const update = useMutation({
-    mutationFn: (params: UpdateSettingsRequest) =>
-      CoreAPI.settingsUpdate(params),
-    onSuccess: () => {
-      settings.refetch();
-    }
-  });
 
   const { restartScan, setRestartScan, launchOnScan, setLaunchOnScan } =
     useAppSettings({ initData });
@@ -195,83 +180,6 @@ function Settings() {
             launchOnScan={launchOnScan}
             setLaunchOnScan={setLaunchOnScan}
           />
-
-          <div>
-            <span>{t("settings.modeLabel")}</span>
-            <div className="flex flex-row" role="group">
-              <button
-                type="button"
-                className={classNames(
-                  "flex",
-                  "flex-row",
-                  "w-full",
-                  "rounded-s-full",
-                  "items-center",
-                  "justify-center",
-                  "py-1",
-                  "font-medium",
-                  "gap-1",
-                  "tracking-[0.1px]",
-                  "h-9",
-                  "border",
-                  "border-solid",
-                  "border-bd-filled",
-                  {
-                    "bg-button-pattern":
-                      settings.data?.readersScanMode === "tap" && connected
-                  },
-                  {
-                    "bg-background": !connected,
-                    "border-foreground-disabled": !connected,
-                    "text-foreground-disabled": !connected
-                  }
-                )}
-                onClick={() => update.mutate({ readersScanMode: "tap" })}
-              >
-                {settings.data?.readersScanMode === "tap" && connected && (
-                  <CheckIcon size="28" />
-                )}
-                {t("settings.tapMode")}
-              </button>
-              <button
-                type="button"
-                className={classNames(
-                  "flex",
-                  "flex-row",
-                  "w-full",
-                  "rounded-e-full",
-                  "items-center",
-                  "justify-center",
-                  "py-1",
-                  "font-medium",
-                  "gap-1",
-                  "tracking-[0.1px]",
-                  "h-9",
-                  "border",
-                  "border-solid",
-                  "border-bd-filled",
-                  {
-                    "bg-button-pattern":
-                      settings.data?.readersScanMode === "hold" && connected
-                  },
-                  {
-                    "bg-background": !connected,
-                    "border-foreground-disabled": !connected,
-                    "text-foreground-disabled": !connected
-                  }
-                )}
-                onClick={() => update.mutate({ readersScanMode: "hold" })}
-              >
-                {settings.data?.readersScanMode === "hold" && connected && (
-                  <CheckIcon size="28" />
-                )}
-                {t("settings.insertMode")}
-              </button>
-            </div>
-            {settings.data?.readersScanMode === "hold" && connected && (
-              <p className="pt-1 text-sm">{t("settings.insertHelp")}</p>
-            )}
-          </div>
 
           <MediaDatabaseCard />
 

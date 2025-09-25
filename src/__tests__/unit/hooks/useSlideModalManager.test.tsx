@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, renderHook } from "../../../test-utils";
-import { SlideModalProvider, useSlideModalManager } from "../../../hooks/useSlideModalManager";
+import { useSlideModalManager } from "../../../hooks/useSlideModalManager";
+import { SlideModalProvider } from "../../../components/SlideModalProvider";
 
 describe("useSlideModalManager", () => {
   it("should throw error when used outside provider", () => {

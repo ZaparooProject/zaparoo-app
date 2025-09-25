@@ -5,6 +5,7 @@ import { Capacitor } from "@capacitor/core";
 import { useEffect, useState } from "react";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { Preferences } from "@capacitor/preferences";
+import classNames from "classnames";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { ToggleSwitch } from "../components/wui/ToggleSwitch";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
@@ -12,7 +13,7 @@ import { useStatusStore } from "../lib/store";
 import { PageFrame } from "../components/PageFrame";
 import { UpdateSettingsRequest } from "../lib/models.ts";
 import { useAppSettings } from "../hooks/useAppSettings";
-import { BackIcon } from "../lib/images";
+import { BackIcon, CheckIcon } from "../lib/images";
 
 interface LoaderData {
   restartScan: boolean;
@@ -124,6 +125,83 @@ function Advanced() {
             />
           </div>
         )}
+
+        <div className="py-2">
+          <span>{t("settings.modeLabel")}</span>
+          <div className="flex flex-row mt-2" role="group">
+            <button
+              type="button"
+              className={classNames(
+                "flex",
+                "flex-row",
+                "w-full",
+                "rounded-s-full",
+                "items-center",
+                "justify-center",
+                "py-1",
+                "font-medium",
+                "gap-1",
+                "tracking-[0.1px]",
+                "h-9",
+                "border",
+                "border-solid",
+                "border-bd-filled",
+                {
+                  "bg-button-pattern":
+                    data?.readersScanMode === "tap" && connected
+                },
+                {
+                  "bg-background": !connected,
+                  "border-foreground-disabled": !connected,
+                  "text-foreground-disabled": !connected
+                }
+              )}
+              onClick={() => update.mutate({ readersScanMode: "tap" })}
+            >
+              {data?.readersScanMode === "tap" && connected && (
+                <CheckIcon size="28" />
+              )}
+              {t("settings.tapMode")}
+            </button>
+            <button
+              type="button"
+              className={classNames(
+                "flex",
+                "flex-row",
+                "w-full",
+                "rounded-e-full",
+                "items-center",
+                "justify-center",
+                "py-1",
+                "font-medium",
+                "gap-1",
+                "tracking-[0.1px]",
+                "h-9",
+                "border",
+                "border-solid",
+                "border-bd-filled",
+                {
+                  "bg-button-pattern":
+                    data?.readersScanMode === "hold" && connected
+                },
+                {
+                  "bg-background": !connected,
+                  "border-foreground-disabled": !connected,
+                  "text-foreground-disabled": !connected
+                }
+              )}
+              onClick={() => update.mutate({ readersScanMode: "hold" })}
+            >
+              {data?.readersScanMode === "hold" && connected && (
+                <CheckIcon size="28" />
+              )}
+              {t("settings.insertMode")}
+            </button>
+          </div>
+          {data?.readersScanMode === "hold" && connected && (
+            <p className="pt-1 text-sm">{t("settings.insertHelp")}</p>
+          )}
+        </div>
 
         {/*<div className="flex flex-col gap-4 pt-1.5">*/}
         {/*  <TextInput*/}

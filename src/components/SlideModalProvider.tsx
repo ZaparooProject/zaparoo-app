@@ -1,20 +1,5 @@
-import { createContext, useContext, useRef, useCallback, ReactNode } from "react";
-
-interface SlideModalManager {
-  registerModal: (id: string, closeFunction: () => void) => void;
-  unregisterModal: (id: string) => void;
-  closeAllExcept: (exceptId: string) => void;
-}
-
-const SlideModalContext = createContext<SlideModalManager | null>(null);
-
-export const useSlideModalManager = (): SlideModalManager => {
-  const context = useContext(SlideModalContext);
-  if (!context) {
-    throw new Error("useSlideModalManager must be used within a SlideModalProvider");
-  }
-  return context;
-};
+import { useRef, useCallback, ReactNode } from "react";
+import { SlideModalContext, SlideModalManager } from "../hooks/useSlideModalManager";
 
 export const SlideModalProvider = ({ children }: { children: ReactNode }) => {
   const modals = useRef<Map<string, () => void>>(new Map());
