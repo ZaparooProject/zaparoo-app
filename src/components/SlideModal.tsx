@@ -1,9 +1,10 @@
-import { ReactNode, RefObject } from "react";
+import { ReactNode, RefObject, useEffect, useId } from "react";
 import classNames from "classnames";
 import { X } from "lucide-react";
 import { useStatusStore } from "@/lib/store.ts";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
+import { useSlideModalManager } from "@/hooks/useSlideModalManager";
 
 export function SlideModal(props: {
   isOpen: boolean;
@@ -13,6 +14,9 @@ export function SlideModal(props: {
   className?: string;
   scrollRef?: RefObject<HTMLDivElement | null>;
 }) {
+  const modalId = useId();
+  const modalManager = useSlideModalManager();
+
   const swipeHandlers = useSmartSwipe({
     onSwipeDown: props.close,
     preventScrollOnSwipe: false,
@@ -33,6 +37,25 @@ export function SlideModal(props: {
     100, // High priority
     props.isOpen // Only active when modal is open
   );
+
+  // Register/unregister modal with manager and handle auto-close
+  useEffect(() => {
+    if (props.isOpen) {
+      // Close any other open modals before opening this one
+      modalManager.closeAllExcept(modalId);
+
+      // Register this modal
+      modalManager.registerModal(modalId, props.close);
+
+      // Cleanup function to unregister when modal closes
+      return () => {
+        modalManager.unregisterModal(modalId);
+      };
+    } else {
+      // Unregister when modal closes
+      modalManager.unregisterModal(modalId);
+    }
+  }, [props.isOpen, modalId, modalManager, props.close]);
 
   const safeInsets = useStatusStore((state) => state.safeInsets);
 

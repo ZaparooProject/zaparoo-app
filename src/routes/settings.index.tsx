@@ -11,13 +11,7 @@ import {
   RestorePuchasesButton,
   useProPurchase
 } from "@/components/ProPurchase.tsx";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "@/components/ui/dialog.tsx";
+import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button as SCNButton } from "@/components/ui/button";
 import { ScanSettings } from "@/components/home/ScanSettings.tsx";
 import { useAppSettings } from "@/hooks/useAppSettings.ts";
@@ -152,46 +146,46 @@ function Settings() {
           </div>
 
           {deviceHistory.length > 0 && (
-            <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  icon={<ArrowLeftRightIcon size="20" />}
-                  label={t("settings.deviceHistory")}
-                  className="w-full"
-                  onClick={() => setHistoryOpen(true)}
-                />
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t("settings.deviceHistory")}</DialogTitle>
-                </DialogHeader>
-                {deviceHistory
-                  .sort((a, b) => (a.address > b.address ? 1 : -1))
-                  .map((entry) => (
-                    <div key={entry.address} className="flex flex-row items-center justify-between gap-3">
-                      <SCNButton
-                        className="w-full"
-                        key={entry.address}
-                        onClick={() => {
-                          handleDeviceAddressChange(entry.address);
-                          setHistoryOpen(false);
-                        }}
-                        variant="outline"
-                      >
-                        {entry.address}
-                      </SCNButton>
-                      <SCNButton
-                        variant="ghost"
-                        size="icon"
-                        color="danger"
-                        onClick={() => removeDeviceHistory(entry.address)}
-                      >
-                        <TrashIcon size="20" />
-                      </SCNButton>
-                    </div>
-                  ))}
-              </DialogContent>
-            </Dialog>
+            <>
+              <Button
+                icon={<ArrowLeftRightIcon size="20" />}
+                label={t("settings.deviceHistory")}
+                className="w-full"
+                onClick={() => setHistoryOpen(true)}
+              />
+              <SlideModal
+                isOpen={historyOpen}
+                close={() => setHistoryOpen(false)}
+                title={t("settings.deviceHistory")}
+              >
+                <div className="flex flex-col gap-3 pt-2">
+                  {deviceHistory
+                    .sort((a, b) => (a.address > b.address ? 1 : -1))
+                    .map((entry) => (
+                      <div key={entry.address} className="flex flex-row items-center justify-between gap-3">
+                        <SCNButton
+                          className="w-full"
+                          onClick={() => {
+                            handleDeviceAddressChange(entry.address);
+                            setHistoryOpen(false);
+                          }}
+                          variant="outline"
+                        >
+                          {entry.address}
+                        </SCNButton>
+                        <SCNButton
+                          variant="ghost"
+                          size="icon"
+                          color="danger"
+                          onClick={() => removeDeviceHistory(entry.address)}
+                        >
+                          <TrashIcon size="20" />
+                        </SCNButton>
+                      </div>
+                    ))}
+                </div>
+              </SlideModal>
+            </>
           )}
 
           <ScanSettings

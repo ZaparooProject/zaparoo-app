@@ -14,6 +14,7 @@ import AppUrlListener from "./lib/deepLinks.tsx";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { useDataCache } from "./hooks/useDataCache";
 import { getDeviceAddress } from "./lib/coreApi";
+import { SlideModalProvider } from "./hooks/useSlideModalManager";
 
 const router = createRouter({
   scrollRestoration: true,
@@ -127,7 +128,9 @@ export default function App() {
           color: "var(--color-foreground)"
         }}
       >
-        <RouterProvider router={router} />
+        <SlideModalProvider>
+          <RouterProvider router={router} />
+        </SlideModalProvider>
       </div>
     </>
   );

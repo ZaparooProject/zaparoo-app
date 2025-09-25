@@ -7,6 +7,15 @@ vi.mock("../../../hooks/useSmartSwipe", () => ({
   useSmartSwipe: vi.fn(() => ({}))
 }));
 
+// Mock useSlideModalManager
+vi.mock("../../../hooks/useSlideModalManager", () => ({
+  useSlideModalManager: vi.fn(() => ({
+    registerModal: vi.fn(),
+    unregisterModal: vi.fn(),
+    closeAllExcept: vi.fn()
+  }))
+}));
+
 // Mock store
 vi.mock("../../../lib/store", () => ({
   useStatusStore: vi.fn(() => ({
