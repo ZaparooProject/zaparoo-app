@@ -165,19 +165,39 @@ describe('useProPurchase', () => {
     } as any);
   });
 
-  it('should initialize with default values', () => {
+  it('should initialize with default values', async () => {
+    // Mock console.error to suppress expected "no launcher purchase package found" message
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     const { result } = renderHook(() => useProPurchase());
 
     expect(result.current.proAccess).toBe(false);
     expect(result.current.proPurchaseModalOpen).toBe(false);
     expect(typeof result.current.setProPurchaseModalOpen).toBe('function');
     expect(typeof result.current.PurchaseModal).toBe('function');
+
+    // Wait for any async effects to complete
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalled();
+    });
+
+    consoleErrorSpy.mockRestore();
   });
 
-  it('should initialize with custom initial pro access', () => {
+  it('should initialize with custom initial pro access', async () => {
+    // Mock console.error to suppress expected "no launcher purchase package found" message
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     const { result } = renderHook(() => useProPurchase(true));
 
     expect(result.current.proAccess).toBe(true);
+
+    // Wait for any async effects to complete
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalled();
+    });
+
+    consoleErrorSpy.mockRestore();
   });
 
   it('should skip initialization on web platform', async () => {
@@ -239,7 +259,10 @@ describe('useProPurchase', () => {
     });
   });
 
-  it('should render PurchaseModal component', () => {
+  it('should render PurchaseModal component', async () => {
+    // Mock console.error to suppress expected "no launcher purchase package found" message
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     const { result } = renderHook(() => useProPurchase());
 
     const PurchaseModalComponent = result.current.PurchaseModal;
@@ -247,10 +270,25 @@ describe('useProPurchase', () => {
 
     // Modal should not be visible initially
     expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
+
+    // Wait for any async effects to complete
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalled();
+    });
+
+    consoleErrorSpy.mockRestore();
   });
 
-  it('should open purchase modal', () => {
+  it('should open purchase modal', async () => {
+    // Mock console.error to suppress expected "no launcher purchase package found" message
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     const { result } = renderHook(() => useProPurchase());
+
+    // Wait for initial effects to complete
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalled();
+    });
 
     act(() => {
       result.current.setProPurchaseModalOpen(true);
@@ -261,5 +299,7 @@ describe('useProPurchase', () => {
 
     expect(screen.getByTestId('dialog')).toBeInTheDocument();
     expect(screen.getByText('scan.purchaseProTitle')).toBeInTheDocument();
+
+    consoleErrorSpy.mockRestore();
   });
 });

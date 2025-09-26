@@ -232,6 +232,9 @@ describe("useNfcWriter - Enhanced Functionality", () => {
     });
 
     it("should not process write without text content", async () => {
+      // Mock console.log to suppress expected "No text provided to write" message
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
       const { result } = renderHook(() => useNfcWriter());
 
       await act(async () => {
@@ -239,6 +242,8 @@ describe("useNfcWriter - Enhanced Functionality", () => {
       });
 
       expect(CoreAPI.write).not.toHaveBeenCalled();
+
+      consoleLogSpy.mockRestore();
     });
   });
 

@@ -196,6 +196,8 @@ describe("CoreAPI Write Cancellation", () => {
       const writePromise = CoreAPI.write({ text: "test" });
 
       // Make subsequent send calls fail (for the cancel command)
+      // Clear the first call and set up the second call to fail
+      mockSend.mockClear();
       mockSend.mockImplementationOnce(() => {
         throw new Error("WebSocket send failed");
       });
@@ -217,8 +219,13 @@ describe("CoreAPI Write Cancellation", () => {
       // Start write operation
       const writePromise = CoreAPI.write({ text: "test" });
 
-      // Mock console.error to verify error logging
+      // Mock console.error to suppress expected error output
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      // Mock readersWriteCancel to throw an error
+      const mockReadersWriteCancel = vi.spyOn(CoreAPI, 'readersWriteCancel').mockRejectedValue(
+        new Error("Failed to send request: WebSocket send error: WebSocket send failed")
+      );
 
       // Cancel the write (this will call readersWriteCancel internally)
       CoreAPI.cancelWrite();
@@ -227,6 +234,7 @@ describe("CoreAPI Write Cancellation", () => {
       const result = await writePromise;
       expect(result).toEqual({ cancelled: true });
 
+      mockReadersWriteCancel.mockRestore();
       consoleErrorSpy.mockRestore();
     });
   });

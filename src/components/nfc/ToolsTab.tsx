@@ -64,7 +64,9 @@ export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
   );
 
   const handleToolClick = (action: WriteAction) => {
-    onToolAction(action);
+    if (typeof onToolAction === 'function') {
+      onToolAction(action);
+    }
   };
 
   return (

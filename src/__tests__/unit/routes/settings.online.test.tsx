@@ -359,6 +359,9 @@ describe("Settings Online Route", () => {
   it("should handle failed email/password login", async () => {
     const { FirebaseAuthentication } = await import("@capacitor-firebase/authentication");
 
+    // Mock console.error to suppress expected error output
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     // Mock failed login
     vi.mocked(FirebaseAuthentication.signInWithEmailAndPassword).mockRejectedValueOnce(
       new Error("Invalid credentials")
@@ -407,6 +410,8 @@ describe("Settings Online Route", () => {
       expect(toast.error).toHaveBeenCalledWith("Login failed!");
       expect(mockSetLoggedInUser).toHaveBeenCalledWith(null);
     });
+
+    consoleErrorSpy.mockRestore();
   });
 
   it("should handle successful Google login", async () => {
