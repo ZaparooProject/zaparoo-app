@@ -55,7 +55,8 @@ export default function App() {
 
   useEffect(() => {
     // Only show completion toast, progress is now shown in MediaDatabaseCard
-    if (!gamesIndex.indexing && prevGamesIndex?.indexing) {
+    // Skip toast if totalFiles is 0 (indicates cancellation)
+    if (!gamesIndex.indexing && prevGamesIndex?.indexing && (gamesIndex.totalFiles ?? 0) > 0) {
       toast.success((to) => <MediaFinishedToast id={to.id} />, {
         id: "indexed",
         icon: (

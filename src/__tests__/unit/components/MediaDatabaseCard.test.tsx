@@ -7,6 +7,7 @@ import { CoreAPI } from '../../../lib/coreApi';
 vi.mock('../../../lib/coreApi', () => ({
   CoreAPI: {
     mediaGenerate: vi.fn(),
+    mediaGenerateCancel: vi.fn(),
     media: vi.fn()
   }
 }));
@@ -91,8 +92,9 @@ describe('MediaDatabaseCard', () => {
 
     render(<MediaDatabaseCard />);
 
-    const button = screen.getByRole('button', { name: /settings\.updateDb/i });
-    expect(button).toBeDisabled();
+    const buttons = screen.getAllByRole('button', { name: /settings\.updateDb/i });
+    const updateButton = buttons[0]; // The main update button is first
+    expect(updateButton).toBeDisabled();
   });
 
   it('should call CoreAPI.mediaGenerate when button is clicked', async () => {
@@ -231,4 +233,37 @@ describe('MediaDatabaseCard', () => {
     const pulsingElements = container.querySelectorAll('.animate-pulse');
     expect(pulsingElements.length).toBeGreaterThan(0);
   });
+
+  it('should show cancel button when indexing', () => {
+    mockStore.gamesIndex.indexing = true;
+
+    render(<MediaDatabaseCard />);
+
+    const cancelButton = screen.getByRole('button', { name: /settings\.updateDb\.cancel/i });
+    expect(cancelButton).toBeInTheDocument();
+    expect(cancelButton).not.toBeDisabled();
+  });
+
+  it('should call CoreAPI.mediaGenerateCancel when cancel button is clicked', async () => {
+    mockStore.gamesIndex.indexing = true;
+    const { CoreAPI } = await import('../../../lib/coreApi');
+
+    render(<MediaDatabaseCard />);
+
+    const cancelButton = screen.getByRole('button', { name: /settings\.updateDb\.cancel/i });
+    fireEvent.click(cancelButton);
+
+    expect(CoreAPI.mediaGenerateCancel).toHaveBeenCalledOnce();
+  });
+
+  it('should not show cancel button when not indexing', () => {
+    mockStore.gamesIndex.indexing = false;
+
+    render(<MediaDatabaseCard />);
+
+    const cancelButton = screen.queryByRole('button', { name: /settings\.updateDb\.cancel/i });
+    expect(cancelButton).not.toBeInTheDocument();
+  });
+
+  // TODO: Add tests for optimization progress and total media count when query mocking is fixed
 });

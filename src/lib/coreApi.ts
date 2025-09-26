@@ -601,6 +601,18 @@ class CoreApi {
     });
   }
 
+  mediaGenerateCancel(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MediaGenerateCancel)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          console.error("Media generate cancel API call failed:", error);
+          reject(error);
+        });
+    });
+  }
 
   systems(): Promise<SystemsResponse> {
     return new Promise<SystemsResponse>((resolve, reject) => {

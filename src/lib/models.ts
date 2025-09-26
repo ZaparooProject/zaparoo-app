@@ -6,6 +6,7 @@ export enum Method {
   Media = "media",
   MediaSearch = "media.search",
   MediaGenerate = "media.generate",
+  MediaGenerateCancel = "media.generate.cancel",
   MediaActive = "media.active",
   MediaActiveUpdate = "media.active.update",
   Systems = "systems",
@@ -160,10 +161,12 @@ export interface TokenResponse {
 export interface IndexResponse {
   exists: boolean;
   indexing: boolean;
+  optimizing?: boolean;
   totalSteps?: number;
   currentStep?: number;
   currentStepDisplay?: string;
   totalFiles?: number;
+  totalMedia?: number;
 }
 
 export interface PlayingResponse {
