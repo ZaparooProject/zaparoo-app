@@ -156,12 +156,18 @@ describe("CoreAPI - Comprehensive API Validation", () => {
 
   describe("Error Handling", () => {
     it("should handle timeout errors", async () => {
+      vi.useFakeTimers();
+
       const promise = CoreAPI.version();
 
       // Fast-forward time to trigger timeout
       vi.advanceTimersByTime(30000);
 
       await expect(promise).rejects.toThrow("Request timeout");
+
+      // Clean up any remaining timers
+      vi.clearAllTimers();
+      vi.useRealTimers();
     });
   });
 

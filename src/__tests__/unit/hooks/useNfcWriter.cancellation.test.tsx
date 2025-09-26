@@ -4,6 +4,10 @@ import { useNfcWriter, WriteAction, WriteMethod } from "../../../lib/writeNfcHoo
 import { CoreAPI } from "../../../lib/coreApi";
 import { Capacitor } from "@capacitor/core";
 import { Status } from "../../../lib/nfc";
+import { setupMockAbortController } from "../../../test-utils/mocks";
+
+// Setup mock AbortController for the test environment
+setupMockAbortController();
 
 // Mock dependencies
 vi.mock("@capacitor/core", () => ({

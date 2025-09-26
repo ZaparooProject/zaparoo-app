@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CoreAPI } from "../../../lib/coreApi";
 import { Method } from "../../../lib/models";
+import { setupMockAbortController } from "../../../test-utils/mocks";
 
 const mockSend = vi.fn();
+
+// Setup mock AbortController for the test environment
+setupMockAbortController();
 
 describe("CoreAPI AbortSignal Handling", () => {
   beforeEach(() => {

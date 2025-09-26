@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
 import { useWriteQueueProcessor } from "../../../hooks/useWriteQueueProcessor";
 import { useStatusStore } from "../../../lib/store";
 import { Status } from "../../../lib/nfc";
@@ -55,6 +55,7 @@ describe("useWriteQueueProcessor", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
 
     mockNfcWriter = {
       write: vi.fn().mockResolvedValue(undefined),
@@ -80,6 +81,10 @@ describe("useWriteQueueProcessor", () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     vi.mocked(Nfc.isAvailable).mockResolvedValue({ nfc: true, hce: false });
     vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(false);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("should be importable without errors", () => {
@@ -115,17 +120,16 @@ describe("useWriteQueueProcessor", () => {
       setWriteOpen: mockSetWriteOpen
     }));
 
-    await waitFor(() => {
-      expect(mockSetWriteQueue).toHaveBeenCalledWith("");
-    }, { timeout: 3000 });
+    // Skip the 1000ms initial delay and flush async operations
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+      await vi.runAllTimersAsync();
+    });
 
-    await waitFor(() => {
-      expect(mockSetWriteOpen).toHaveBeenCalledWith(true);
-    }, { timeout: 3000 });
-
-    await waitFor(() => {
-      expect(mockNfcWriter.write).toHaveBeenCalledWith("write", "test-write-content");
-    }, { timeout: 3000 });
+    // Now assertions should work immediately
+    expect(mockSetWriteQueue).toHaveBeenCalledWith("");
+    expect(mockSetWriteOpen).toHaveBeenCalledWith(true);
+    expect(mockNfcWriter.write).toHaveBeenCalledWith("write", "test-write-content");
   });
 
   it("should check remote writers when NFC unavailable", async () => {
@@ -147,13 +151,15 @@ describe("useWriteQueueProcessor", () => {
       setWriteOpen: mockSetWriteOpen
     }));
 
-    await waitFor(() => {
-      expect(CoreAPI.hasWriteCapableReader).toHaveBeenCalled();
-    }, { timeout: 3000 });
+    // Skip the 1000ms initial delay and flush async operations
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+      await vi.runAllTimersAsync();
+    });
 
-    await waitFor(() => {
-      expect(mockNfcWriter.write).toHaveBeenCalledWith("write", "test-content");
-    }, { timeout: 3000 });
+    // Now assertions should work immediately
+    expect(CoreAPI.hasWriteCapableReader).toHaveBeenCalled();
+    expect(mockNfcWriter.write).toHaveBeenCalledWith("write", "test-content");
   });
 
   it("should show error when no write methods available", async () => {
@@ -175,9 +181,14 @@ describe("useWriteQueueProcessor", () => {
       setWriteOpen: mockSetWriteOpen
     }));
 
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalled();
-    }, { timeout: 3000 });
+    // Skip the 1000ms initial delay and flush async operations
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+      await vi.runAllTimersAsync();
+    });
+
+    // Now assertions should work immediately
+    expect(toast.error).toHaveBeenCalled();
 
     expect(mockNfcWriter.write).not.toHaveBeenCalled();
   });
@@ -201,13 +212,15 @@ describe("useWriteQueueProcessor", () => {
       setWriteOpen: mockSetWriteOpen
     }));
 
-    await waitFor(() => {
-      expect(CoreAPI.hasWriteCapableReader).toHaveBeenCalled();
-    }, { timeout: 3000 });
+    // Skip the 1000ms initial delay and flush async operations
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+      await vi.runAllTimersAsync();
+    });
 
-    await waitFor(() => {
-      expect(mockNfcWriter.write).toHaveBeenCalledWith("write", "web-content");
-    }, { timeout: 3000 });
+    // Now assertions should work immediately
+    expect(CoreAPI.hasWriteCapableReader).toHaveBeenCalled();
+    expect(mockNfcWriter.write).toHaveBeenCalledWith("write", "web-content");
   });
 
   it("should not call end() if no active write operation", async () => {
@@ -229,9 +242,14 @@ describe("useWriteQueueProcessor", () => {
       setWriteOpen: mockSetWriteOpen
     }));
 
-    await waitFor(() => {
-      expect(mockNfcWriter.end).not.toHaveBeenCalled();
+    // Skip the 1000ms initial delay and flush async operations
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+      await vi.runAllTimersAsync();
     });
+
+    // Now assertions should work immediately
+    expect(mockNfcWriter.end).not.toHaveBeenCalled();
   });
 
   it("should return reset function", () => {

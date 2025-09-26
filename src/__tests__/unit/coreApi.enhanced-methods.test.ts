@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CoreAPI } from "../../lib/coreApi";
 import { getWsUrl } from "../../lib/coreApi";
 
@@ -202,9 +202,14 @@ describe("CoreAPI - Enhanced Methods", () => {
         throw new Error("Send failed");
       });
 
+      // Mock console.error to prevent test output pollution
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
       expect(() => {
         CoreAPI.callWithTracking("version" as any);
       }).toThrow("API call error: Failed to send request: WebSocket send error: Send failed");
+
+      consoleErrorSpy.mockRestore();
     });
 
     it("should include timeout handling", () => {
@@ -269,9 +274,48 @@ describe("CoreAPI - Enhanced Methods", () => {
 });
 
 describe("getWsUrl - Enhanced URL parsing", () => {
+  let originalLocalStorage: Storage;
+  let originalLocation: Location;
+
   beforeEach(() => {
-    // Clear any stored device address
-    localStorage.clear();
+    // Store original values
+    originalLocalStorage = window.localStorage;
+    originalLocation = window.location;
+
+    // Create fresh localStorage mock for each test
+    const localStorageMock = {
+      getItem: vi.fn((key: string) => localStorageMock._store[key] || null),
+      setItem: vi.fn((key: string, value: string) => {
+        localStorageMock._store[key] = value;
+      }),
+      clear: vi.fn(() => {
+        localStorageMock._store = {};
+      }),
+      _store: {} as { [key: string]: string }
+    };
+
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+      configurable: true
+    });
+
+    // Clear the mock store
+    localStorageMock.clear();
+  });
+
+  afterEach(() => {
+    // Restore original values
+    Object.defineProperty(window, 'localStorage', {
+      value: originalLocalStorage,
+      writable: true,
+      configurable: true
+    });
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+      configurable: true
+    });
   });
 
   it("should parse host and port from device address", () => {

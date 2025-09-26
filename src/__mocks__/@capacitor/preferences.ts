@@ -1,3 +1,5 @@
+import { vi } from "vitest";
+
 export const Preferences = {
   get: vi.fn().mockResolvedValue({ value: null }),
   set: vi.fn().mockResolvedValue(undefined),

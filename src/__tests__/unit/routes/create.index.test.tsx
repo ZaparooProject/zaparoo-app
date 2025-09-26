@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import { render, screen, fireEvent } from "../../../test-utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
@@ -31,11 +31,7 @@ vi.mock("../../../lib/writeNfcHook", () => ({
   }
 }));
 
-vi.mock("@capacitor/core", () => ({
-  Capacitor: {
-    isNativePlatform: vi.fn(() => true)
-  }
-}));
+vi.mock("@capacitor/core");
 
 vi.mock("@capawesome-team/capacitor-nfc", () => ({
   Nfc: {
@@ -87,6 +83,9 @@ describe("Create Index Route", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    queryClient.clear();
+    queryClient.getQueryCache().clear();
+    queryClient.getMutationCache().clear();
   });
 
   it("should render the create page with all navigation cards", async () => {
@@ -162,9 +161,9 @@ describe("Create Index Route", () => {
 
     render(<NFCAvailabilityComponent />);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("nfc-status")).toHaveTextContent("NFC Available");
-    });
+    // Use findBy instead of waitFor for cleaner async element waiting
+    const nfcStatus = await screen.findByTestId("nfc-status");
+    expect(nfcStatus).toHaveTextContent("NFC Available");
   });
 
   it("should handle NFC unavailability gracefully", async () => {
@@ -205,9 +204,9 @@ describe("Create Index Route", () => {
 
     render(<NFCErrorHandlingComponent />);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("nfc-status")).toHaveTextContent("NFC Not Available");
-    });
+    // Use findBy instead of waitFor for cleaner async element waiting
+    const nfcStatus = await screen.findByTestId("nfc-status");
+    expect(nfcStatus).toHaveTextContent("NFC Not Available");
   });
 
   it("should handle non-native platform NFC detection", async () => {
@@ -418,9 +417,8 @@ describe("Create Index Route", () => {
     render(<WriteModalComponent />);
 
     // Modal should close automatically when status changes
-    await waitFor(() => {
-      expect(screen.getByTestId("write-modal-closed")).toBeInTheDocument();
-    });
+    // Use findBy for better async element waiting
+    await screen.findByTestId("write-modal-closed");
   });
 
   it("should handle connection-dependent card states", async () => {
@@ -542,4 +540,236 @@ describe("Create Index Route", () => {
     expect(mockT).toHaveBeenCalledWith("create.currentGameSub", { game: "Super Mario World" });
     expect(screen.getByTestId("current-game-text")).toHaveTextContent("Write Super Mario World to a token");
   });
+
+  // Additional error handling and edge case tests
+  it("should handle rapid navigation attempts", async () => {
+    const mockNavigate = vi.fn();
+
+    // Component that might trigger rapid navigation
+    const RapidNavigationComponent = () => {
+      const navigate = mockNavigate;
+
+      const handleNavigation = (path: string) => {
+        navigate({ to: path });
+      };
+
+      return (
+        <div>
+          <button
+            data-testid="nav-nfc"
+            onClick={() => handleNavigation("/create/nfc")}
+          >
+            NFC
+          </button>
+          <button
+            data-testid="nav-search"
+            onClick={() => handleNavigation("/create/search")}
+          >
+            Search
+          </button>
+          <button
+            data-testid="nav-custom"
+            onClick={() => handleNavigation("/create/custom")}
+          >
+            Custom
+          </button>
+        </div>
+      );
+    };
+
+    render(<RapidNavigationComponent />);
+
+    const nfcBtn = screen.getByTestId("nav-nfc");
+    const searchBtn = screen.getByTestId("nav-search");
+    const customBtn = screen.getByTestId("nav-custom");
+
+    // Simulate rapid clicks
+    fireEvent.click(nfcBtn);
+    fireEvent.click(searchBtn);
+    fireEvent.click(customBtn);
+    fireEvent.click(nfcBtn);
+
+    expect(mockNavigate).toHaveBeenCalledTimes(4);
+    expect(mockNavigate).toHaveBeenNthCalledWith(1, { to: "/create/nfc" });
+    expect(mockNavigate).toHaveBeenNthCalledWith(2, { to: "/create/search" });
+    expect(mockNavigate).toHaveBeenNthCalledWith(3, { to: "/create/custom" });
+    expect(mockNavigate).toHaveBeenNthCalledWith(4, { to: "/create/nfc" });
+  });
+
+  it("should handle memory cleanup on unmount", async () => {
+    const { useNfcWriter } = await import("../../../lib/writeNfcHook");
+    const mockEnd = vi.fn();
+    vi.mocked(useNfcWriter).mockReturnValue({
+      status: null,
+      write: vi.fn(),
+      end: mockEnd,
+      writing: false,
+      result: null
+    });
+
+    const CleanupComponent = () => {
+      const nfcWriter = useNfcWriter();
+
+      React.useEffect(() => {
+        return () => {
+          // Cleanup function
+          nfcWriter.end();
+        };
+      }, [nfcWriter]);
+
+      return <div data-testid="cleanup-component">Test Component</div>;
+    };
+
+    const { unmount } = render(<CleanupComponent />);
+
+    expect(screen.getByTestId("cleanup-component")).toBeInTheDocument();
+
+    // Unmount component to trigger cleanup
+    unmount();
+
+    expect(mockEnd).toHaveBeenCalled();
+  });
+
+  it("should handle corrupted game data gracefully", async () => {
+    const { useStatusStore } = await import("../../../lib/store");
+    vi.mocked(useStatusStore).mockImplementation((selector: any) => {
+      const mockState = {
+        connected: true,
+        playing: {
+          systemId: null, // Corrupted data
+          mediaName: "", // Empty name
+          mediaPath: undefined, // Undefined path
+          systemName: null
+        }
+      };
+      return selector(mockState);
+    });
+
+    const CorruptedDataComponent = () => {
+      const playing = useStatusStore((state: any) => state.playing);
+
+      const isValidGame = playing?.mediaName && playing?.mediaPath;
+
+      return (
+        <div>
+          <div data-testid="game-valid">{isValidGame ? "Valid" : "Invalid"}</div>
+          <div data-testid="media-name">{playing?.mediaName || "No name"}</div>
+          <div data-testid="media-path">{playing?.mediaPath || "No path"}</div>
+          <button
+            data-testid="write-btn"
+            disabled={!isValidGame}
+          >
+            Write Game
+          </button>
+        </div>
+      );
+    };
+
+    render(<CorruptedDataComponent />);
+
+    expect(screen.getByTestId("game-valid")).toHaveTextContent("Invalid");
+    expect(screen.getByTestId("media-name")).toHaveTextContent("No name");
+    expect(screen.getByTestId("media-path")).toHaveTextContent("No path");
+    expect(screen.getByTestId("write-btn")).toBeDisabled();
+  });
+
+  it("should handle write operation timeout", async () => {
+    const { useNfcWriter } = await import("../../../lib/writeNfcHook");
+    const mockWrite = vi.fn().mockImplementation(() =>
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Write timeout")), 50)
+      )
+    );
+
+    vi.mocked(useNfcWriter).mockReturnValue({
+      status: null,
+      write: mockWrite,
+      end: vi.fn(),
+      writing: true,
+      result: null
+    });
+
+    const TimeoutComponent = () => {
+      const nfcWriter = useNfcWriter();
+      const [error, setError] = React.useState<string | null>(null);
+      const [isWriting, setIsWriting] = React.useState(false);
+
+      const handleWrite = async () => {
+        setIsWriting(true);
+        setError(null);
+        try {
+          await nfcWriter.write({ content: "test-content" } as any);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Unknown error");
+        } finally {
+          setIsWriting(false);
+        }
+      };
+
+      return (
+        <div>
+          <button
+            data-testid="write-btn"
+            onClick={handleWrite}
+            disabled={isWriting}
+          >
+            {isWriting ? "Writing..." : "Write"}
+          </button>
+          {error && <div data-testid="error">{error}</div>}
+        </div>
+      );
+    };
+
+    render(<TimeoutComponent />);
+
+    fireEvent.click(screen.getByTestId("write-btn"));
+
+    // Use findBy for better async waiting, then check content
+    const errorElement = await screen.findByTestId("error");
+    expect(errorElement).toHaveTextContent("Write timeout");
+  });
+
+  it("should handle simultaneous modal operations", async () => {
+    const SimultaneousModalComponent = () => {
+      const [writeOpen, setWriteOpen] = React.useState(false);
+      const [customOpen, setCustomOpen] = React.useState(false);
+      const [searchOpen, setSearchOpen] = React.useState(false);
+
+      return (
+        <div>
+          <button data-testid="open-write" onClick={() => setWriteOpen(true)}>
+            Open Write
+          </button>
+          <button data-testid="open-custom" onClick={() => setCustomOpen(true)}>
+            Open Custom
+          </button>
+          <button data-testid="open-search" onClick={() => setSearchOpen(true)}>
+            Open Search
+          </button>
+
+          {writeOpen && <div data-testid="write-modal">Write Modal</div>}
+          {customOpen && <div data-testid="custom-modal">Custom Modal</div>}
+          {searchOpen && <div data-testid="search-modal">Search Modal</div>}
+
+          <div data-testid="modal-count">
+            {[writeOpen, customOpen, searchOpen].filter(Boolean).length}
+          </div>
+        </div>
+      );
+    };
+
+    render(<SimultaneousModalComponent />);
+
+    // Open multiple modals simultaneously
+    fireEvent.click(screen.getByTestId("open-write"));
+    fireEvent.click(screen.getByTestId("open-custom"));
+    fireEvent.click(screen.getByTestId("open-search"));
+
+    expect(screen.getByTestId("modal-count")).toHaveTextContent("3");
+    expect(screen.getByTestId("write-modal")).toBeInTheDocument();
+    expect(screen.getByTestId("custom-modal")).toBeInTheDocument();
+    expect(screen.getByTestId("search-modal")).toBeInTheDocument();
+  });
+
+  // Removed problematic test that was causing infinite loops due to React.useState in mockImplementation
 });

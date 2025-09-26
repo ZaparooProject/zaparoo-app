@@ -7,12 +7,7 @@ import { CoreAPI } from "../../../lib/coreApi";
 import { Status } from "../../../lib/nfc";
 
 // Mock all dependencies
-vi.mock("@capacitor/core", () => ({
-  Capacitor: {
-    isNativePlatform: vi.fn(),
-    getPlatform: vi.fn(() => "web")
-  }
-}));
+vi.mock("@capacitor/core");
 
 vi.mock("@capawesome-team/capacitor-nfc", () => ({
   Nfc: {
@@ -211,7 +206,7 @@ describe("useNfcWriter - Enhanced Functionality", () => {
       // The hook should properly handle the error and set status
       await waitFor(() => {
         expect(result.current.status).toBe(Status.Error);
-      }, { timeout: 3000 });
+      });
     });
 
     it("should handle abort signal during remote write", async () => {

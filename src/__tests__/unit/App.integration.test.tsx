@@ -3,6 +3,18 @@ import { vi, beforeEach, describe, it, expect } from "vitest";
 import App from "@/App";
 import "@/test-setup";
 
+// Mock window.location for i18n
+Object.defineProperty(window, 'location', {
+  value: {
+    hostname: 'localhost',
+    search: '',
+    hash: '',
+    pathname: '/'
+  },
+  writable: true,
+  configurable: true
+});
+
 // Mock all the hooks and dependencies
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-router")>();

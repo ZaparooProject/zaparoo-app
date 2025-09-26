@@ -4,11 +4,7 @@ import { Capacitor } from "@capacitor/core";
 import { Notification, SettingsResponse, Method, UpdateSettingsRequest } from "../../../lib/models";
 
 // Mock Capacitor
-vi.mock("@capacitor/core", () => ({
-  Capacitor: {
-    isNativePlatform: vi.fn().mockReturnValue(false),
-  },
-}));
+vi.mock("@capacitor/core");
 
 // Mock localStorage
 const localStorageMock = {
@@ -73,6 +69,8 @@ describe("CoreAPI", () => {
   });
 
   it("should timeout requests after 30 seconds", async () => {
+    vi.useFakeTimers();
+
     const promise = CoreAPI.version();
 
     // Advance time by 30 seconds to trigger timeout
@@ -80,6 +78,10 @@ describe("CoreAPI", () => {
 
     // The promise should reject with timeout error
     await expect(promise).rejects.toThrow("Request timeout");
+
+    // Clean up any remaining timers
+    vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
   it("should return stored address from localStorage when available", () => {
