@@ -19,6 +19,35 @@ const mockWebSocket = {
   close: vi.fn()
 };
 
+// Mock WebSocketManager
+const mockWebSocketManager = {
+  connect: vi.fn(),
+  destroy: vi.fn(),
+  send: vi.fn(),
+  callbacks: {} as import("../lib/websocketManager").WebSocketManagerCallbacks
+};
+
+vi.mock("../lib/websocketManager", () => ({
+  WebSocketManager: vi.fn().mockImplementation((_, callbacks) => {
+    // Store callbacks for testing
+    mockWebSocketManager.callbacks = callbacks;
+    // Auto-trigger state changes when connect is called
+    mockWebSocketManager.connect.mockImplementation(() => {
+      if (callbacks.onStateChange) {
+        callbacks.onStateChange("CONNECTING");
+      }
+    });
+    return mockWebSocketManager;
+  }),
+  WebSocketState: {
+    CONNECTING: "CONNECTING",
+    CONNECTED: "CONNECTED",
+    RECONNECTING: "RECONNECTING",
+    ERROR: "ERROR",
+    DISCONNECTED: "DISCONNECTED"
+  }
+}));
+
 vi.mock("websocket-heartbeat-js", () => ({
   default: vi.fn().mockImplementation(() => mockWebSocket)
 }));
@@ -28,9 +57,33 @@ vi.mock("../lib/coreApi", () => ({
   getWsUrl: mockGetWsUrl,
   CoreAPI: {
     setSend: vi.fn(),
+    setWsInstance: vi.fn(),
+    flushQueue: vi.fn(),
+    processReceived: vi.fn().mockResolvedValue(null),
     media: vi.fn().mockResolvedValue({ database: {}, active: [] }),
     tokens: vi.fn().mockResolvedValue({ last: null })
   }
+}));
+
+// Mock Capacitor Preferences
+vi.mock("@capacitor/preferences", () => ({
+  Preferences: {
+    get: vi.fn().mockResolvedValue({ value: null })
+  }
+}));
+
+// Mock react-hot-toast
+vi.mock("react-hot-toast", () => ({
+  default: {
+    error: vi.fn()
+  }
+}));
+
+// Mock react-i18next
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { msg?: string }) => options?.msg || key
+  })
 }));
 
 // Mock the store
@@ -51,6 +104,8 @@ const createMockStoreState = (overrides = {}) => ({
   retryCount: 0,
   setConnected: vi.fn(),
   setConnectionState: vi.fn(),
+  setConnectionStateWithGracePeriod: vi.fn(),
+  clearGracePeriod: vi.fn(),
   setConnectionError: vi.fn(),
   setPlaying: vi.fn(),
   setGamesIndex: vi.fn(),
@@ -136,9 +191,9 @@ describe("CoreApiWebSocket", () => {
     mockGetDeviceAddress.mockReturnValue("192.168.1.100");
     mockGetWsUrl.mockReturnValue("ws://192.168.1.100:7497/api");
 
-    const mockSetConnectionState = vi.fn();
+    const mockSetConnectionStateWithGracePeriod = vi.fn();
     const mockState = createMockStoreState({
-      setConnectionState: mockSetConnectionState
+      setConnectionStateWithGracePeriod: mockSetConnectionStateWithGracePeriod
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -148,14 +203,13 @@ describe("CoreApiWebSocket", () => {
 
     render(<CoreApiWebSocket />);
 
-    // Simulate WebSocket close event
-    if (mockWebSocket.onclose) {
-      mockWebSocket.onclose();
+    // Simulate WebSocket close event via callbacks
+    if (mockWebSocketManager.callbacks && mockWebSocketManager.callbacks.onClose) {
+      mockWebSocketManager.callbacks.onClose();
     }
 
-    // When websocket-heartbeat-js calls onclose, it should set RECONNECTING state
-    // because the library will automatically attempt to reconnect
-    expect(mockSetConnectionState).toHaveBeenCalledWith(ConnectionState.RECONNECTING);
+    // When WebSocketManager calls onClose, it should use grace period for RECONNECTING state
+    expect(mockSetConnectionStateWithGracePeriod).toHaveBeenCalledWith(ConnectionState.RECONNECTING);
   });
 
   it("should set CONNECTING state when WebSocket connection is initiated", () => {

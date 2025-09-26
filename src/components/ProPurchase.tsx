@@ -79,7 +79,7 @@ const ProPurchaseModal = (props: {
       open={props.proPurchaseModalOpen}
       onOpenChange={props.setProPurchaseModalOpen}
     >
-      <DialogContent>
+      <DialogContent onOpenChange={props.setProPurchaseModalOpen}>
         <DialogHeader>
           <DialogTitle>{t("scan.purchaseProTitle")}</DialogTitle>
         </DialogHeader>
@@ -125,8 +125,8 @@ const ProPurchaseModal = (props: {
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const useProPurchase = () => {
-  const [proAccess, setProAccess] = useState(false);
+export const useProPurchase = (initialProAccess: boolean = false) => {
+  const [proAccess, setProAccess] = useState(initialProAccess);
   const [proPurchaseModalOpen, setProPurchaseModalOpen] = useState(false);
   const [launcherPackage, setLauncherPackage] =
     useState<PurchasesPackage | null>(null);

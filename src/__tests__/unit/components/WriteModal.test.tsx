@@ -35,20 +35,65 @@ describe("WriteModal", () => {
     const backDiv = container.querySelector('.flex.flex-row.gap-2');
     expect(backDiv).toBeInTheDocument();
     
-    backDiv?.click();
+    if (backDiv) {
+      fireEvent.click(backDiv);
+    }
     
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 
-  it("calls close when Enter key is pressed on back button", () => {
+  it("calls close when Enter key is pressed on spinner", () => {
     const mockClose = vi.fn();
-    render(<WriteModal isOpen={true} close={mockClose} />);
-    
-    const backButton = screen.getByRole('button');
-    expect(backButton).toBeInTheDocument();
-    
-    fireEvent.keyDown(backButton, { key: 'Enter' });
-    
+    const { container } = render(<WriteModal isOpen={true} close={mockClose} />);
+
+    // The keyboard handler is on the div with role="button" that contains the spinner
+    const spinnerButton = container.querySelector('[role="button"][tabindex="0"]');
+    expect(spinnerButton).toBeInTheDocument();
+
+    fireEvent.keyDown(spinnerButton!, { key: 'Enter' });
+
     expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls close when Space key is pressed on spinner", () => {
+    const mockClose = vi.fn();
+    const { container } = render(<WriteModal isOpen={true} close={mockClose} />);
+
+    // The keyboard handler is on the div with role="button" that contains the spinner
+    const spinnerButton = container.querySelector('[role="button"][tabindex="0"]');
+    expect(spinnerButton).toBeInTheDocument();
+
+    fireEvent.keyDown(spinnerButton!, { key: ' ' });
+
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call close for other keys on spinner", () => {
+    const mockClose = vi.fn();
+    const { container } = render(<WriteModal isOpen={true} close={mockClose} />);
+
+    // The keyboard handler is on the div with role="button" that contains the spinner
+    const spinnerButton = container.querySelector('[role="button"][tabindex="0"]');
+    expect(spinnerButton).toBeInTheDocument();
+
+    fireEvent.keyDown(spinnerButton!, { key: 'Escape' });
+
+    expect(mockClose).not.toHaveBeenCalled();
+  });
+
+  it("renders spinner with correct layout structure", () => {
+    const { container } = render(<WriteModal isOpen={true} close={vi.fn()} />);
+
+    // Check for the main modal container
+    const modalContainer = container.querySelector('.z-30.flex.h-screen.w-screen');
+    expect(modalContainer).toBeInTheDocument();
+
+    // Check for spinner text which is definitely present in the output
+    const spinnerText = screen.getByText('spinner.holdTagReader');
+    expect(spinnerText).toBeInTheDocument();
+
+    // Check for cancel button which is also present
+    const cancelButton = screen.getByText('nav.cancel');
+    expect(cancelButton).toBeInTheDocument();
   });
 });

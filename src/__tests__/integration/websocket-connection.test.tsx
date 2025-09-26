@@ -1,5 +1,4 @@
-import { render } from '../../test-utils';
-import { vi } from 'vitest';
+// Integration test for WebSocket connection
 
 describe('WebSocket Connection Flow Integration', () => {
   it('should establish connection successfully', () => {

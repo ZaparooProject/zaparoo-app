@@ -1,18 +1,20 @@
 import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { App } from "@capacitor/app";
-import { useEffect } from "react";
+import React from "react";
 import { SafeAreaHandler } from "@/lib/safeArea";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { BottomNav } from "../components/BottomNav";
+import { useBackButtonHandler } from "../hooks/useBackButtonHandler";
 
 function BackHandler() {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    App.addListener("backButton", () => {
+  useBackButtonHandler(
+    'navigation',
+    () => {
       if (location.pathname === "/") {
         App.exitApp();
-        return;
+        return true;
       }
 
       if (
@@ -20,40 +22,42 @@ function BackHandler() {
         location.pathname === "/settings"
       ) {
         navigate({ to: "/" });
-        return;
+        return true;
       }
 
       if (location.pathname.startsWith("/create")) {
         navigate({ to: "/create" });
-        return;
+        return true;
       }
 
       if (location.pathname.startsWith("/settings")) {
         navigate({ to: "/settings" });
-        return;
+        return true;
       }
-    });
 
-    return () => {
-      App.removeAllListeners();
-    };
-  }, [navigate]);
+      return false;
+    },
+    0 // Lowest priority - fallback navigation
+  );
 
   return null;
 }
 
 export const Route = createRootRoute({
   component: () => (
-    <>
+    <div className="flex flex-col h-screen w-screen">
       <SafeAreaHandler />
       <BackHandler />
-      <main className="main-frame h-screen w-screen">
+      <main className="flex-1 min-h-0">
         <Outlet />
       </main>
-      <footer className="fixed bottom-0 left-0 z-30 w-lvw">
+      <footer
+        className="flex-shrink-0 z-30"
+        style={{ '--bottom-nav-height': 'calc(80px + env(safe-area-inset-bottom, 0px))' } as React.CSSProperties}
+      >
         <BottomNav />
       </footer>
-    </>
+    </div>
   ),
   errorComponent: ErrorComponent
 });

@@ -4,6 +4,7 @@ import { SettingsIcon, SquarePenIcon, ZapIcon } from "lucide-react";
 import classNames from "classnames";
 import { ReactElement } from "react";
 import { useStatusStore } from "@/lib/store";
+import { ResponsiveContainer } from "./ResponsiveContainer";
 
 function Button(props: {
   text: string;
@@ -40,28 +41,33 @@ export function BottomNav() {
 
   return (
     <div
-      className="border-t border-t-[#ffffff21] bg-[#111928bf] px-9 pb-1 backdrop-blur"
+      className="border-t border-t-[#ffffff21] bg-[#111928bf] backdrop-blur"
       style={{
-        height: `calc(80px + ${safeInsets.bottom})`,
-        paddingBottom: safeInsets.bottom,
-        paddingRight: `calc(2.25rem + ${safeInsets.right})`,
-        paddingLeft: `calc(2.25rem + ${safeInsets.left})`
+        height: '80px'
       }}
     >
-      <div className="mx-auto grid h-full max-w-lg grid-cols-3 gap-4">
-        <Button text={t("nav.index")} icon={<ZapIcon size="24" />} path="/" />
-        {/* <Button text={t("nav.run")} icon={<PlayIcon size="24" />} path="/run" /> */}
-        <Button
-          text={t("nav.create")}
-          icon={<SquarePenIcon size="24" />}
-          path="/create"
-        />
-        <Button
-          text={t("nav.settings")}
-          icon={<SettingsIcon size="24" />}
-          path="/settings"
-        />
-      </div>
+      <ResponsiveContainer maxWidth="nav" className="h-full">
+        <div
+          className="mx-auto grid h-full max-w-lg grid-cols-3 gap-4 px-9 items-center"
+          style={{
+            paddingRight: `calc(2.25rem + ${safeInsets.right})`,
+            paddingLeft: `calc(2.25rem + ${safeInsets.left})`
+          }}
+        >
+          <Button text={t("nav.index")} icon={<ZapIcon size="24" />} path="/" />
+          {/* <Button text={t("nav.run")} icon={<PlayIcon size="24" />} path="/run" /> */}
+          <Button
+            text={t("nav.create")}
+            icon={<SquarePenIcon size="24" />}
+            path="/create"
+          />
+          <Button
+            text={t("nav.settings")}
+            icon={<SettingsIcon size="24" />}
+            path="/settings"
+          />
+        </div>
+      </ResponsiveContainer>
     </div>
   );
 }

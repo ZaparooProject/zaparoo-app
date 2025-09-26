@@ -5,7 +5,7 @@ import { Button } from '../../../../components/wui/Button';
 describe('Button', () => {
   it('should not have autoFocus prop in interface', () => {
     // This test ensures the Button interface doesn't include autoFocus
-    const button = render(<Button label="Test button" />);
+    render(<Button label="Test button" />);
     const buttonElement = screen.getByRole('button', { name: 'Test button' });
     
     // AutoFocus should not be a supported prop

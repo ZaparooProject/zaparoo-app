@@ -19,11 +19,11 @@ function Help() {
   const { t } = useTranslation();
 
   return (
-    <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
-      <PageFrame
-        title={t("settings.help.title")}
-        back={() => navigate({ to: "/settings" })}
-      >
+    <PageFrame
+      {...swipeHandlers}
+      title={t("settings.help.title")}
+      back={() => navigate({ to: "/settings" })}
+    >
         <div className="flex flex-col gap-4">
           <Button
             label={t("settings.help.main")}
@@ -113,6 +113,5 @@ function Help() {
           </div>
         </div>
       </PageFrame>
-    </div>
   );
 }

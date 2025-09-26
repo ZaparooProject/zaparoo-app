@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { useStatusStore } from "@/lib/store.ts";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button } from "@/components/wui/Button.tsx";
@@ -13,7 +12,6 @@ export function SystemsSearchModal(props: {
   onSelect: (systemId: string) => void;
 }) {
   const { t } = useTranslation();
-  const safeInsets = useStatusStore((state) => state.safeInsets);
   const containerRef = useRef<HTMLDivElement>(null);
   const [filterText, setFilterText] = useState("");
 
@@ -45,8 +43,9 @@ export function SystemsSearchModal(props: {
       isOpen={props.isOpen}
       close={props.close}
       title={t("create.custom.selectSystem")}
+      scrollRef={containerRef}
     >
-      <div className="flex h-[75vh] flex-col overflow-y-auto">
+      <div className="flex flex-col">
         <div className="sticky top-0 z-20 bg-[#111928] px-1 pb-2 pt-2">
           <TextInput
             placeholder={t("create.search.systemInput")}
@@ -57,16 +56,7 @@ export function SystemsSearchModal(props: {
           />
         </div>
 
-        <div
-          ref={containerRef}
-          className="flex-1 overflow-y-auto overscroll-contain px-4"
-          style={{
-            WebkitOverflowScrolling: "touch",
-            scrollBehavior: "smooth",
-            touchAction: "pan-y",
-            paddingBottom: safeInsets.bottom
-          }}
-        >
+        <div className="flex-1 px-4">
           {systems.isLoading ? (
             <div className="flex h-full items-center justify-center">
               <span>{t("loading")}</span>

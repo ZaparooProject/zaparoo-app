@@ -59,7 +59,6 @@ function Mappings() {
   useEffect(() => {
     if (nfcWriter.status !== null) {
       setWriteOpen(false);
-      nfcWriter.end();
 
       if (nfcWriter.result?.info.tag?.uid) {
         const uid = nfcWriter.result.info.tag.uid;
@@ -74,9 +73,9 @@ function Mappings() {
     }
   }, [nfcWriter.result, nfcWriter, mappings.data]);
 
-  const closeWriteModal = () => {
+  const closeWriteModal = async () => {
     setWriteOpen(false);
-    nfcWriter.end();
+    await nfcWriter.end();
   };
 
   const saveMapping = () => {
@@ -118,11 +117,11 @@ function Mappings() {
 
   return (
     <>
-      <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
-        <PageFrame
-          title={t("create.mappings.title")}
-          back={() => navigate({ to: "/create" })}
-        >
+      <PageFrame
+        {...swipeHandlers}
+        title={t("create.mappings.title")}
+        back={() => navigate({ to: "/create" })}
+      >
           <div className="flex flex-col gap-3">
             <div>
               <TextInput
@@ -217,7 +216,6 @@ function Mappings() {
             />
           </div>
         </PageFrame>
-      </div>
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
     </>
   );

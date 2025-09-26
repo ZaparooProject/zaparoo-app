@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import classNames from "classnames";
 import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
@@ -11,39 +10,41 @@ import {
   RestorePuchasesButton,
   useProPurchase
 } from "@/components/ProPurchase.tsx";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "@/components/ui/dialog.tsx";
+import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button as SCNButton } from "@/components/ui/button";
 import { ScanSettings } from "@/components/home/ScanSettings.tsx";
 import { useAppSettings } from "@/hooks/useAppSettings.ts";
-import { UpdateSettingsRequest } from "../lib/models.ts";
 import i18n from "../i18n";
 import { PageFrame } from "../components/PageFrame";
 import { useStatusStore } from "../lib/store";
 import { TextInput } from "../components/wui/TextInput";
 import { Button } from "../components/wui/Button";
-import { CheckIcon, DatabaseIcon, ExternalIcon, NextIcon } from "../lib/images";
+import { ExternalIcon, NextIcon } from "../lib/images";
 import { getDeviceAddress, setDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
+import { MediaDatabaseCard } from "../components/MediaDatabaseCard";
 
 interface LoaderData {
   restartScan: boolean;
   launchOnScan: boolean;
+  launcherAccess: boolean;
+  preferRemoteWriter: boolean;
 }
 
 export const Route = createFileRoute("/settings/")({
   loader: async (): Promise<LoaderData> => {
-    const restartScan =
-      (await Preferences.get({ key: "restartScan" })).value === "true";
-    const launchOnScan =
-      (await Preferences.get({ key: "launchOnScan" })).value !== "false";
+    const [restartResult, launchResult, accessResult, remoteWriterResult] =
+      await Promise.all([
+        Preferences.get({ key: "restartScan" }),
+        Preferences.get({ key: "launchOnScan" }),
+        Preferences.get({ key: "launcherAccess" }),
+        Preferences.get({ key: "preferRemoteWriter" }),
+      ]);
+
     return {
-      restartScan,
-      launchOnScan
+      restartScan: restartResult.value === "true",
+      launchOnScan: launchResult.value !== "false",
+      launcherAccess: accessResult.value === "true",
+      preferRemoteWriter: remoteWriterResult.value === "true",
     };
   },
   component: Settings
@@ -53,17 +54,17 @@ function Settings() {
   const initData = Route.useLoaderData();
 
   const { PurchaseModal, setProPurchaseModalOpen, proAccess } =
-    useProPurchase();
+    useProPurchase(initData.launcherAccess);
 
   const connected = useStatusStore((state) => state.connected);
   const connectionError = useStatusStore((state) => state.connectionError);
-  const gamesIndex = useStatusStore((state) => state.gamesIndex);
   // const loggedInUser = useStatusStore((state) => state.loggedInUser);
   const deviceHistory = useStatusStore((state) => state.deviceHistory);
   const setDeviceHistory = useStatusStore((state) => state.setDeviceHistory);
   const removeDeviceHistory = useStatusStore(
     (state) => state.removeDeviceHistory
   );
+  const resetConnectionState = useStatusStore((state) => state.resetConnectionState);
 
   const version = useQuery({
     queryKey: ["version"],
@@ -73,10 +74,7 @@ function Settings() {
   const [address, setAddress] = useState(getDeviceAddress());
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  const settings = useQuery({
-    queryKey: ["settings"],
-    queryFn: () => CoreAPI.settings()
-  });
+  const queryClient = useQueryClient();
 
   const { t } = useTranslation();
 
@@ -88,16 +86,25 @@ function Settings() {
     });
   }, [setDeviceHistory]);
 
-  const update = useMutation({
-    mutationFn: (params: UpdateSettingsRequest) =>
-      CoreAPI.settingsUpdate(params),
-    onSuccess: () => {
-      settings.refetch();
-    }
-  });
-
   const { restartScan, setRestartScan, launchOnScan, setLaunchOnScan } =
     useAppSettings({ initData });
+
+  const handleDeviceAddressChange = (newAddress: string) => {
+    // Set the new device address
+    setDeviceAddress(newAddress);
+
+    // Reset the connection state
+    resetConnectionState();
+
+    // Reset CoreAPI state
+    CoreAPI.reset();
+
+    // Clear React Query cache for all queries that depend on the device
+    queryClient.invalidateQueries();
+
+    // Update local address state (this will trigger CoreApiWebSocket remount via key prop)
+    setAddress(newAddress);
+  };
 
   return (
     <>
@@ -108,64 +115,62 @@ function Settings() {
             placeholder="192.168.1.23"
             value={address}
             setValue={setAddress}
-            saveValue={(v) => {
-              setDeviceAddress(v);
-              location.reload();
-            }}
+            saveValue={handleDeviceAddressChange}
           />
 
-          {version.isSuccess && (
-            <div className="flex flex-row items-center justify-between gap-2">
-              <div>Platform: {version.data.platform}</div>
-              <div>Version: {version.data.version}</div>
-            </div>
-          )}
+          <div className="flex flex-row items-center justify-between gap-2 min-h-[1.5rem]">
+            {version.isSuccess && (
+              <>
+                <div>Platform: {version.data.platform}</div>
+                <div>Version: {version.data.version}</div>
+              </>
+            )}
+            {connectionError !== "" && (
+              <div className="text-error w-full">{connectionError}</div>
+            )}
+          </div>
 
           {deviceHistory.length > 0 && (
-            <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  icon={<ArrowLeftRightIcon size="20" />}
-                  label={t("settings.deviceHistory")}
-                  className="w-full"
-                  onClick={() => setHistoryOpen(true)}
-                />
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t("settings.deviceHistory")}</DialogTitle>
-                </DialogHeader>
-                {deviceHistory
-                  .sort((a, b) => (a.address > b.address ? 1 : -1))
-                  .map((entry) => (
-                    <div key={entry.address} className="flex flex-row items-center justify-between gap-3">
-                      <SCNButton
-                        className="w-full"
-                        key={entry.address}
-                        onClick={() => {
-                          setDeviceAddress(entry.address);
-                          location.reload();
-                        }}
-                        variant="outline"
-                      >
-                        {entry.address}
-                      </SCNButton>
-                      <SCNButton
-                        variant="ghost"
-                        size="icon"
-                        color="danger"
-                        onClick={() => removeDeviceHistory(entry.address)}
-                      >
-                        <TrashIcon size="20" />
-                      </SCNButton>
-                    </div>
-                  ))}
-              </DialogContent>
-            </Dialog>
-          )}
-
-          {connectionError !== "" && (
-            <div className="text-error">{connectionError}</div>
+            <>
+              <Button
+                icon={<ArrowLeftRightIcon size="20" />}
+                label={t("settings.deviceHistory")}
+                className="w-full"
+                onClick={() => setHistoryOpen(true)}
+              />
+              <SlideModal
+                isOpen={historyOpen}
+                close={() => setHistoryOpen(false)}
+                title={t("settings.deviceHistory")}
+              >
+                <div className="flex flex-col gap-3 pt-2">
+                  {deviceHistory
+                    .sort((a, b) => (a.address > b.address ? 1 : -1))
+                    .map((entry) => (
+                      <div key={entry.address} className="flex flex-row items-center justify-between gap-3">
+                        <SCNButton
+                          className="w-full"
+                          onClick={() => {
+                            handleDeviceAddressChange(entry.address);
+                            setHistoryOpen(false);
+                          }}
+                          variant="outline"
+                        >
+                          {entry.address}
+                        </SCNButton>
+                        <SCNButton
+                          variant="ghost"
+                          size="icon"
+                          color="danger"
+                          onClick={() => removeDeviceHistory(entry.address)}
+                        >
+                          <TrashIcon size="20" />
+                        </SCNButton>
+                      </div>
+                    ))}
+                </div>
+              </SlideModal>
+            </>
           )}
 
           <ScanSettings
@@ -176,92 +181,7 @@ function Settings() {
             setLaunchOnScan={setLaunchOnScan}
           />
 
-          <div>
-            <span>{t("settings.modeLabel")}</span>
-            <div className="flex flex-row" role="group">
-              <button
-                type="button"
-                className={classNames(
-                  "flex",
-                  "flex-row",
-                  "w-full",
-                  "rounded-s-full",
-                  "items-center",
-                  "justify-center",
-                  "py-1",
-                  "font-medium",
-                  "gap-1",
-                  "tracking-[0.1px]",
-                  "h-9",
-                  "border",
-                  "border-solid",
-                  "border-bd-filled",
-                  {
-                    "bg-button-pattern":
-                      settings.data?.readersScanMode === "tap" && connected
-                  },
-                  {
-                    "bg-background": !connected,
-                    "border-foreground-disabled": !connected,
-                    "text-foreground-disabled": !connected
-                  }
-                )}
-                onClick={() => update.mutate({ readersScanMode: "tap" })}
-              >
-                {settings.data?.readersScanMode === "tap" && connected && (
-                  <CheckIcon size="28" />
-                )}
-                {t("settings.tapMode")}
-              </button>
-              <button
-                type="button"
-                className={classNames(
-                  "flex",
-                  "flex-row",
-                  "w-full",
-                  "rounded-e-full",
-                  "items-center",
-                  "justify-center",
-                  "py-1",
-                  "font-medium",
-                  "gap-1",
-                  "tracking-[0.1px]",
-                  "h-9",
-                  "border",
-                  "border-solid",
-                  "border-bd-filled",
-                  {
-                    "bg-button-pattern":
-                      settings.data?.readersScanMode === "hold" && connected
-                  },
-                  {
-                    "bg-background": !connected,
-                    "border-foreground-disabled": !connected,
-                    "text-foreground-disabled": !connected
-                  }
-                )}
-                onClick={() => update.mutate({ readersScanMode: "hold" })}
-              >
-                {settings.data?.readersScanMode === "hold" && connected && (
-                  <CheckIcon size="28" />
-                )}
-                {t("settings.insertMode")}
-              </button>
-            </div>
-            {settings.data?.readersScanMode === "hold" && connected && (
-              <p className="pt-1 text-sm">{t("settings.insertHelp")}</p>
-            )}
-          </div>
-
-          <div>
-            <Button
-              label={t("settings.updateDb")}
-              icon={<DatabaseIcon size="20" />}
-              className="w-full"
-              disabled={!connected || gamesIndex.indexing}
-              onClick={() => CoreAPI.mediaIndex()}
-            />
-          </div>
+          <MediaDatabaseCard />
 
           <div>
             <Button
@@ -337,6 +257,13 @@ function Settings() {
           <Link to="/settings/advanced">
             <div className="flex flex-row items-center justify-between">
               <p>{t("settings.advanced.title")}</p>
+              <NextIcon size="20" />
+            </div>
+          </Link>
+
+          <Link to="/settings/logs">
+            <div className="flex flex-row items-center justify-between">
+              <p>{t("settings.logs.title")}</p>
               <NextIcon size="20" />
             </div>
           </Link>

@@ -37,7 +37,6 @@ export function MediaSearchModal(props: {
     null
   );
   const connected = useStatusStore((state) => state.connected);
-  const safeInsets = useStatusStore((state) => state.safeInsets);
   const { close, onSelect } = props;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -57,9 +56,10 @@ export function MediaSearchModal(props: {
       }),
     enabled:
       debouncedQuery.length >= 2 &&
-      connected &&
       gamesIndex.exists &&
-      !gamesIndex.indexing
+      !gamesIndex.indexing,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
   });
 
   useEffect(() => {
@@ -75,20 +75,10 @@ export function MediaSearchModal(props: {
       isOpen={props.isOpen}
       close={props.close}
       title={t("create.search.title")}
+      scrollRef={scrollContainerRef}
     >
       <div className="relative">
-        <div
-          ref={scrollContainerRef}
-          className="flex h-[75vh] flex-col overflow-y-auto"
-          style={{
-            paddingBottom: safeInsets.bottom,
-            WebkitOverflowScrolling: "touch",
-            scrollBehavior: "smooth",
-            touchAction: "pan-y",
-            overscrollBehavior: "auto"
-          }}
-        >
-          <div className="flex flex-col gap-1 p-1">
+        <div className="flex flex-col gap-1 p-1">
             <TextInput
               ref={inputRef}
               label={t("create.search.gameInput")}
@@ -142,10 +132,9 @@ export function MediaSearchModal(props: {
             selectedResult={selectedResult}
             setSelectedResult={setSelectedResult}
           />
-
-          <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
         </div>
-      </div>
+
+        <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
     </SlideModal>
   );
 }

@@ -1,7 +1,6 @@
 import React from "react";
 import { render, RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryRouter, RouterProvider } from "@tanstack/react-router";
 
 // Create a test query client
 const createTestQueryClient = () =>

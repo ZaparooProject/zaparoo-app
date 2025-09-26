@@ -45,6 +45,10 @@
       "filesFound": "{{count}} media found",
       "nowPlayingHeading": "Now playing"
     },
+    "write": {
+      "noWriteMethodAvailable": "No NFC writing capability available",
+      "nfcNotSupported": "NFC is not supported on this device"
+    },
     "scan": {
       "cameraMode": "QR/Barcode",
       "nfcMode": "NFC",
@@ -119,7 +123,42 @@
         "format": "Format tag",
         "erase": "Erase tag",
         "makeReadOnly": "Make tag read-only",
-        "confirm": "Are you sure?"
+        "confirm": "Are you sure?",
+        "tabs": {
+          "read": "Read",
+          "write": "Write",
+          "tools": "Tools",
+          "history": "History"
+        },
+        "write": {
+          "templates": {
+            "text": "Text",
+            "url": "URL",
+            "wifi": "WiFi",
+            "contact": "Contact",
+            "custom": "Custom"
+          },
+          "writeToTag": "Write to Tag",
+          "preview": "Preview",
+          "estimatedSize": "Estimated size"
+        },
+        "history": {
+          "title": "NFC History",
+          "empty": "No History",
+          "clearAll": "Clear All",
+          "writeAgain": "Write Again",
+          "remove": "Remove"
+        },
+        "tools": {
+          "dangerousOperations": "Dangerous Operations",
+          "platformInfo": "Platform Information",
+          "formatDescription": "Formats the tag to NDEF standard, removing all data",
+          "formatWarning": "This will permanently delete all data on the tag",
+          "eraseDescription": "Removes all NDEF data from the tag",
+          "eraseWarning": "This will delete all content but keep the tag structure",
+          "makeReadOnlyDescription": "Permanently locks the tag to prevent future writes",
+          "makeReadOnlyWarning": "This action cannot be undone - the tag will become read-only forever"
+        }
       },
       "mappings": {
         "title": "Add a Mapping",
@@ -152,6 +191,9 @@
       "insertMode": "Hold",
       "insertHelp": "Exits the media when tag is removed. Requires a separate NFC reader.",
       "updateDb": "Update media database",
+      "updateDb.status.ready": "Database is ready",
+      "updateDb.status.noConnection": "Not connected",
+      "updateDb.status.checking": "Checking database status...",
       "designer": "Zaparoo Designer",
       "getApp": "Get the Zaparoo App",
       "language": "Language",
@@ -175,7 +217,24 @@
         "downloadLog": "Download Zaparoo log file",
         "restorePurchases": "Restore purchases",
         "restoreSuccess": "Purchases have been restored",
-        "restoreFail": "Failed to restore purchases"
+        "restoreFail": "Failed to restore purchases",
+        "preferRemoteWriter": "Prefer connected reader for writing"
+      },
+      "logs": {
+        "title": "Logs",
+        "refresh": "Refresh",
+        "filters": "Filters",
+        "download": "Download",
+        "copy": "Copy to Clipboard",
+        "filename": "Filename",
+        "fileSize": "File Size",
+        "searchPlaceholder": "Filter logs",
+        "levelFilters": "Log Levels",
+        "totalEntries": "Total entries",
+        "filteredEntries": "Showing",
+        "noEntriesFound": "No log entries match your filters",
+        "fetchError": "Failed to fetch logs",
+        "notConnected": "Connect to a Zaparoo device to access logs"
       },
       "help": {
         "title": "Help",

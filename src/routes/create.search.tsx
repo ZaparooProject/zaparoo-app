@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Preferences } from "@capacitor/preferences";
@@ -9,7 +9,7 @@ import { BackToTop } from "@/components/BackToTop.tsx";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { CreateIcon, PlayIcon, SearchIcon } from "../lib/images";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { SearchResultGame } from "../lib/models";
+import { SearchResultGame, SystemsResponse } from "../lib/models";
 import { SlideModal } from "../components/SlideModal";
 import { Button } from "../components/wui/Button";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
@@ -18,17 +18,29 @@ import { TextInput } from "../components/wui/TextInput";
 import { WriteModal } from "../components/WriteModal";
 import { PageFrame } from "../components/PageFrame";
 
-const initData = {
-  systemQuery: "all"
-};
 
 export const Route = createFileRoute("/create/search")({
-  loader: async () => {
-    initData.systemQuery =
-      (await Preferences.get({ key: "searchSystem" })).value || "all";
+  loader: async (): Promise<LoaderData> => {
+    const [systemPreference, systemsResponse] = await Promise.all([
+      Preferences.get({ key: "searchSystem" }),
+      CoreAPI.systems()
+    ]);
+
+    return {
+      systemQuery: systemPreference.value || "all",
+      systems: systemsResponse
+    };
   },
+  // Disable caching to ensure fresh preference is always read
+  staleTime: 0,
+  gcTime: 0,
   component: Search
 });
+
+interface LoaderData {
+  systemQuery: string;
+  systems: SystemsResponse;
+}
 
 interface SearchParams {
   query: string;
@@ -36,11 +48,12 @@ interface SearchParams {
 }
 
 function Search() {
+  const loaderData = Route.useLoaderData();
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const setGamesIndex = useStatusStore((state) => state.setGamesIndex);
   const connected = useStatusStore((state) => state.connected);
 
-  const [querySystem, setQuerySystem] = useState(initData.systemQuery);
+  const [querySystem, setQuerySystem] = useState(loaderData.systemQuery);
   const [query, setQuery] = useState("");
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -53,10 +66,6 @@ function Search() {
       })
   });
 
-  const systems = useQuery({
-    queryKey: ["systems"],
-    queryFn: () => CoreAPI.systems()
-  });
 
   const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
     null
@@ -64,9 +73,9 @@ function Search() {
 
   const nfcWriter = useNfcWriter();
   const [writeOpen, setWriteOpen] = useState(false);
-  const closeWriteModal = () => {
+  const closeWriteModal = async () => {
     setWriteOpen(false);
-    nfcWriter.end();
+    await nfcWriter.end();
   };
 
   const { t } = useTranslation();
@@ -74,7 +83,6 @@ function Search() {
   useEffect(() => {
     if (nfcWriter.status !== null) {
       setWriteOpen(false);
-      nfcWriter.end();
     }
   }, [nfcWriter]);
 
@@ -92,12 +100,12 @@ function Search() {
 
   return (
     <>
-      <div {...swipeHandlers} className="h-full w-full overflow-y-auto">
-        <PageFrame
-          title={t("create.search.title")}
-          back={() => navigate({ to: "/create" })}
-          scrollRef={scrollContainerRef}
-        >
+      <PageFrame
+        {...swipeHandlers}
+        title={t("create.search.title")}
+        back={() => navigate({ to: "/create" })}
+        scrollRef={scrollContainerRef}
+      >
           <TextInput
             label={t("create.search.gameInput")}
             placeholder={t("create.search.gameInputPlaceholder")}
@@ -108,6 +116,12 @@ function Search() {
             onKeyUp={(e) => {
               if (e.key === "Enter" || e.keyCode === 13) {
                 e.currentTarget.blur();
+                if (!(!connected || !gamesIndex.exists || gamesIndex.indexing || (query === "" && querySystem === "all"))) {
+                  search.mutate({
+                    query: query,
+                    system: querySystem
+                  });
+                }
               }
             }}
           />
@@ -118,30 +132,29 @@ function Search() {
             </label>
             <select
               value={querySystem}
-              onChange={(e) => {
+              onChange={async (e) => {
                 setSelectedResult(null);
                 setQuerySystem(e.target.value);
-                Preferences.set({ key: "searchSystem", value: e.target.value });
+                await Preferences.set({ key: "searchSystem", value: e.target.value });
               }}
               disabled={!connected || !gamesIndex.exists || gamesIndex.indexing}
               className="border-bd-input bg-background text-foreground disabled:border-foreground-disabled rounded-md border border-solid p-3"
             >
               <option value="all">{t("create.search.allSystems")}</option>
-              {systems.isSuccess &&
-                systems.data.systems
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((system, i) => (
-                    <option key={i} value={system.id}>
-                      {system.name}
-                    </option>
-                  ))}
+              {loaderData.systems.systems
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((system, i) => (
+                  <option key={i} value={system.id}>
+                    {system.name}
+                  </option>
+                ))}
             </select>
 
             <Button
               label={t("create.search.searchButton")}
               className="mt-2 w-full"
               icon={<SearchIcon size="20" />}
-              disabled={query === "" && querySystem === "all"}
+              disabled={!connected || !gamesIndex.exists || gamesIndex.indexing || (query === "" && querySystem === "all")}
               onClick={() => {
                 console.log(query, querySystem);
                 search.mutate({
@@ -160,7 +173,6 @@ function Search() {
             selectedResult={selectedResult}
           />
         </PageFrame>
-      </div>
       <SlideModal
         isOpen={selectedResult !== null && !writeOpen}
         close={() => setSelectedResult(null)}
@@ -209,7 +221,6 @@ function Search() {
       <BackToTop
         scrollContainerRef={scrollContainerRef}
         threshold={200}
-        paddingBottom="5em"
       />
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
     </>

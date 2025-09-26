@@ -1,16 +1,33 @@
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useStatusStore } from "@/lib/store";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { BackIcon } from "../lib/images";
+import { useBackButtonHandler } from "../hooks/useBackButtonHandler";
 import { ScanResult } from "../lib/models";
 import { ScanSpinner } from "./ScanSpinner";
-
+import { Button } from "./wui/Button";
 
 export function WriteModal(props: { isOpen: boolean; close: () => void }) {
+  const { t } = useTranslation();
+
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: () => props.close(),
     preventScrollOnSwipe: false
   });
+
+  // Handle Android back button
+  useBackButtonHandler(
+    'write-modal',
+    () => {
+      if (props.isOpen) {
+        props.close();
+        return true; // Consume the event
+      }
+      return false; // Let other handlers process it
+    },
+    100, // High priority
+    props.isOpen // Only active when modal is open
+  );
 
   if (!props.isOpen) {
     return null;
@@ -22,24 +39,23 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
       style={{ position: "fixed", left: 0, top: 0 }}
       {...swipeHandlers}
     >
-      <div
-        style={{
-          position: "fixed",
-          top: "22px",
-          left: "18px"
-        }}
-      >
+      <div className="flex flex-col items-center gap-8">
         <div
-          className="flex flex-row gap-2"
           onClick={() => props.close()}
-          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && props.close()}
+          onKeyDown={(e) =>
+            (e.key === "Enter" || e.key === " ") && props.close()
+          }
           role="button"
           tabIndex={0}
         >
-          <BackIcon size="24" />
+          <ScanSpinner spinning={true} status={ScanResult.Default} write />
         </div>
+        <Button
+          variant="outline"
+          onClick={() => props.close()}
+          label={t("nav.cancel")}
+        />
       </div>
-      <ScanSpinner spinning={true} status={ScanResult.Default} write />
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { render } from '../../test-utils';
 import { vi } from 'vitest';
 
 // Mock Preferences for settings persistence testing

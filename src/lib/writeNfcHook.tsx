@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
+import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { CheckIcon, WarningIcon } from "./images";
 import {
   cancelSession,
@@ -16,11 +17,17 @@ import {
 import { CoreAPI } from "./coreApi.ts";
 
 interface WriteNfcHook {
-  write: (action: WriteAction, text?: string) => void;
-  end: () => void;
+  write: (action: WriteAction, text?: string) => Promise<void>;
+  end: () => Promise<void>;
   writing: boolean;
   result: null | Result;
   status: null | Status;
+}
+
+export enum WriteMethod {
+  Auto = "auto",
+  LocalNFC = "local",
+  RemoteReader = "remote"
 }
 
 export enum WriteAction {
@@ -31,28 +38,84 @@ export enum WriteAction {
   MakeReadOnly = "makeReadOnly"
 }
 
-function coreWrite(text: string): Promise<Result> {
-  return new Promise((resolve, reject) => {
-    CoreAPI.write({ text })
-      .then(() => {
-        resolve({
+function coreWrite(text: string, signal?: AbortSignal): Promise<Result> {
+  if (signal?.aborted) {
+    return Promise.resolve({
+      status: Status.Cancelled,
+      info: {
+        rawTag: null,
+        tag: null
+      }
+    });
+  }
+
+  return CoreAPI.write({ text }, signal)
+    .then((result) => {
+      // Check if the result indicates cancellation
+      if (result && typeof result === 'object' && 'cancelled' in result) {
+        return {
+          status: Status.Cancelled,
+          info: {
+            rawTag: null,
+            tag: null
+          }
+        };
+      } else {
+        return {
           status: Status.Success,
           info: {
             rawTag: null,
             tag: null
           }
-        });
-      })
-      .catch((e) => {
-        reject(e);
-      });
-  });
+        };
+      }
+    })
+    .catch((e) => {
+      throw e;
+    });
 }
 
-export function useNfcWriter(): WriteNfcHook {
+async function determineWriteMethod(preferredMethod: WriteMethod, preferRemoteWriter: boolean): Promise<WriteMethod> {
+  if (preferredMethod !== WriteMethod.Auto) {
+    return preferredMethod;
+  }
+
+  // Auto-detection logic based on user preference and capabilities
+  const isNativePlatform = Capacitor.isNativePlatform();
+  const hasRemoteWriter = await CoreAPI.hasWriteCapableReader();
+
+  // If user prefers remote writer and it's available, use it
+  if (preferRemoteWriter && hasRemoteWriter) {
+    return WriteMethod.RemoteReader;
+  }
+
+  // If on native platform and has NFC, use local (unless user prefers remote)
+  if (isNativePlatform) {
+    try {
+      const nfcAvailable = await Nfc.isAvailable();
+      if (nfcAvailable.nfc) {
+        return WriteMethod.LocalNFC;
+      }
+    } catch (error) {
+      console.log("NFC availability check failed:", error);
+    }
+  }
+
+  // Fallback to remote reader if available
+  if (hasRemoteWriter) {
+    return WriteMethod.RemoteReader;
+  }
+
+  // Default fallback (will likely fail, but maintains existing behavior)
+  return isNativePlatform ? WriteMethod.LocalNFC : WriteMethod.RemoteReader;
+}
+
+export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, preferRemoteWriter: boolean = false): WriteNfcHook {
   const [writing, setWriting] = useState(false);
   const [result, setResult] = useState<null | Result>(null);
   const [status, setStatus] = useState<null | Status>(null);
+  const [currentWriteMethod, setCurrentWriteMethod] = useState<WriteMethod | null>(null);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const { t } = useTranslation();
 
@@ -66,28 +129,46 @@ export function useNfcWriter(): WriteNfcHook {
   }, []);
 
   return {
-    write: (action: WriteAction, text?: string) => {
+    write: async (action: WriteAction, text?: string) => {
+      // Clear any previous state before starting a new write operation
+      setStatus(null);
+      setResult(null);
+      setWriting(false);
+
+      // Clean up any existing AbortController before creating new one
+      if (abortController && !abortController.signal.aborted) {
+        abortController.abort();
+      }
+
+      // Create new AbortController for this write operation
+      const controller = new AbortController();
+      setAbortController(controller);
+
       let actionFunc = readRaw;
       let toastSuccess = t("spinner.writeSuccess");
       let toastFailed = t("spinner.writeFailed");
 
       switch (action) {
-        case WriteAction.Write:
+        case WriteAction.Write: {
           if (!text) {
             console.error("No text provided to write");
             return;
           }
 
-          if (Capacitor.isNativePlatform()) {
+          const selectedWriteMethod = await determineWriteMethod(writeMethod, preferRemoteWriter);
+          setCurrentWriteMethod(selectedWriteMethod);
+
+          if (selectedWriteMethod === WriteMethod.LocalNFC) {
             actionFunc = () => writeTag(text);
           } else {
-            actionFunc = () => coreWrite(text);
+            actionFunc = () => coreWrite(text, controller.signal);
           }
 
           toastSuccess = t("spinner.writeSuccess");
           toastFailed = t("spinner.writeFailed");
 
           break;
+        }
         case WriteAction.Read:
           actionFunc = readRaw;
           toastSuccess = t("spinner.readSuccess");
@@ -117,6 +198,7 @@ export function useNfcWriter(): WriteNfcHook {
       setWriting(true);
       actionFunc()
         .then((result) => {
+          setWriting(false);
           if (result.status === Status.Cancelled) {
             setStatus(Status.Cancelled);
           } else {
@@ -149,6 +231,7 @@ export function useNfcWriter(): WriteNfcHook {
           }
         })
         .catch((e: Error) => {
+          setWriting(false);
           let showMs = 4000;
           if (Capacitor.getPlatform() === "ios") {
             showMs += 4000;
@@ -165,7 +248,6 @@ export function useNfcWriter(): WriteNfcHook {
               </span>
             ),
             {
-              id: "writeFailed",
               icon: (
                 <span className="pr-1 text-error">
                   <WarningIcon size="24" />
@@ -177,9 +259,34 @@ export function useNfcWriter(): WriteNfcHook {
           setStatus(Status.Error);
         });
     },
-    end: () => {
-      cancelSession();
+    end: async () => {
+      // Cancel pending write requests FIRST while pendingWriteId is still valid
+      if (currentWriteMethod !== null) {
+        CoreAPI.cancelWrite();
+
+        // Then cancel based on the current write method being used
+        if (currentWriteMethod === WriteMethod.RemoteReader) {
+          // CoreAPI.cancelWrite() already calls readersWriteCancel(), but we can add extra safety
+          try {
+            await CoreAPI.readersWriteCancel();
+          } catch (error) {
+            console.error("Failed to cancel remote write:", error);
+          }
+        } else {
+          // For local NFC or when method is unknown, use the existing cancellation
+          await cancelSession();
+        }
+      }
+
+      // Abort promise operations AFTER cancelling API requests
+      if (abortController && !abortController.signal.aborted) {
+        abortController.abort();
+      }
+
+      setCurrentWriteMethod(null);
+      setAbortController(null);
       setStatus(null);
+      setWriting(false);
     },
     writing,
     result,

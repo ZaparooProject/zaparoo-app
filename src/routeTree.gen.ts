@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as CreateIndexRouteImport } from './routes/create.index'
 import { Route as SettingsOnlineRouteImport } from './routes/settings.online'
+import { Route as SettingsLogsRouteImport } from './routes/settings.logs'
 import { Route as SettingsHelpRouteImport } from './routes/settings.help'
 import { Route as SettingsAdvancedRouteImport } from './routes/settings.advanced'
 import { Route as SettingsAboutRouteImport } from './routes/settings.about'
@@ -20,6 +21,7 @@ import { Route as CreateTextRouteImport } from './routes/create.text'
 import { Route as CreateSearchRouteImport } from './routes/create.search'
 import { Route as CreateNfcRouteImport } from './routes/create.nfc'
 import { Route as CreateMappingsRouteImport } from './routes/create.mappings'
+import { Route as CreateCustomRouteImport } from './routes/create.custom'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -39,6 +41,11 @@ const CreateIndexRoute = CreateIndexRouteImport.update({
 const SettingsOnlineRoute = SettingsOnlineRouteImport.update({
   id: '/settings/online',
   path: '/settings/online',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsLogsRoute = SettingsLogsRouteImport.update({
+  id: '/settings/logs',
+  path: '/settings/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsHelpRoute = SettingsHelpRouteImport.update({
@@ -76,9 +83,15 @@ const CreateMappingsRoute = CreateMappingsRouteImport.update({
   path: '/create/mappings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreateCustomRoute = CreateCustomRouteImport.update({
+  id: '/create/custom',
+  path: '/create/custom',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/create/custom': typeof CreateCustomRoute
   '/create/mappings': typeof CreateMappingsRoute
   '/create/nfc': typeof CreateNfcRoute
   '/create/search': typeof CreateSearchRoute
@@ -86,12 +99,14 @@ export interface FileRoutesByFullPath {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
+  '/settings/logs': typeof SettingsLogsRoute
   '/settings/online': typeof SettingsOnlineRoute
   '/create': typeof CreateIndexRoute
   '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/create/custom': typeof CreateCustomRoute
   '/create/mappings': typeof CreateMappingsRoute
   '/create/nfc': typeof CreateNfcRoute
   '/create/search': typeof CreateSearchRoute
@@ -99,6 +114,7 @@ export interface FileRoutesByTo {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
+  '/settings/logs': typeof SettingsLogsRoute
   '/settings/online': typeof SettingsOnlineRoute
   '/create': typeof CreateIndexRoute
   '/settings': typeof SettingsIndexRoute
@@ -106,6 +122,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/create/custom': typeof CreateCustomRoute
   '/create/mappings': typeof CreateMappingsRoute
   '/create/nfc': typeof CreateNfcRoute
   '/create/search': typeof CreateSearchRoute
@@ -113,6 +130,7 @@ export interface FileRoutesById {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
+  '/settings/logs': typeof SettingsLogsRoute
   '/settings/online': typeof SettingsOnlineRoute
   '/create/': typeof CreateIndexRoute
   '/settings/': typeof SettingsIndexRoute
@@ -121,6 +139,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/create/custom'
     | '/create/mappings'
     | '/create/nfc'
     | '/create/search'
@@ -128,12 +147,14 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/advanced'
     | '/settings/help'
+    | '/settings/logs'
     | '/settings/online'
     | '/create'
     | '/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/create/custom'
     | '/create/mappings'
     | '/create/nfc'
     | '/create/search'
@@ -141,12 +162,14 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/advanced'
     | '/settings/help'
+    | '/settings/logs'
     | '/settings/online'
     | '/create'
     | '/settings'
   id:
     | '__root__'
     | '/'
+    | '/create/custom'
     | '/create/mappings'
     | '/create/nfc'
     | '/create/search'
@@ -154,6 +177,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/advanced'
     | '/settings/help'
+    | '/settings/logs'
     | '/settings/online'
     | '/create/'
     | '/settings/'
@@ -161,6 +185,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CreateCustomRoute: typeof CreateCustomRoute
   CreateMappingsRoute: typeof CreateMappingsRoute
   CreateNfcRoute: typeof CreateNfcRoute
   CreateSearchRoute: typeof CreateSearchRoute
@@ -168,6 +193,7 @@ export interface RootRouteChildren {
   SettingsAboutRoute: typeof SettingsAboutRoute
   SettingsAdvancedRoute: typeof SettingsAdvancedRoute
   SettingsHelpRoute: typeof SettingsHelpRoute
+  SettingsLogsRoute: typeof SettingsLogsRoute
   SettingsOnlineRoute: typeof SettingsOnlineRoute
   CreateIndexRoute: typeof CreateIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
@@ -201,6 +227,13 @@ declare module '@tanstack/react-router' {
       path: '/settings/online'
       fullPath: '/settings/online'
       preLoaderRoute: typeof SettingsOnlineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/logs': {
+      id: '/settings/logs'
+      path: '/settings/logs'
+      fullPath: '/settings/logs'
+      preLoaderRoute: typeof SettingsLogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/help': {
@@ -252,11 +285,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreateMappingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/create/custom': {
+      id: '/create/custom'
+      path: '/create/custom'
+      fullPath: '/create/custom'
+      preLoaderRoute: typeof CreateCustomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CreateCustomRoute: CreateCustomRoute,
   CreateMappingsRoute: CreateMappingsRoute,
   CreateNfcRoute: CreateNfcRoute,
   CreateSearchRoute: CreateSearchRoute,
@@ -264,6 +305,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsAdvancedRoute: SettingsAdvancedRoute,
   SettingsHelpRoute: SettingsHelpRoute,
+  SettingsLogsRoute: SettingsLogsRoute,
   SettingsOnlineRoute: SettingsOnlineRoute,
   CreateIndexRoute: CreateIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,

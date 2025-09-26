@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { useAppSettings } from "../../../hooks/useAppSettings";
 import { Preferences } from "@capacitor/preferences";
-import { sessionManager } from "../../../lib/nfc";
+// sessionManager is mocked in nfc mock
 
 vi.mock("@capacitor/preferences", () => import("../../../__mocks__/@capacitor/preferences"));
 vi.mock("../../../lib/nfc");
@@ -13,8 +13,8 @@ describe("useAppSettings", () => {
   });
 
   it("should initialize with provided initData", () => {
-    const initData = { restartScan: true, launchOnScan: false };
-    
+    const initData = { restartScan: true, launchOnScan: false, launcherAccess: false, preferRemoteWriter: false };
+
     const { result } = renderHook(() => useAppSettings({ initData }));
     
     expect(result.current.restartScan).toBe(true);
@@ -22,27 +22,71 @@ describe("useAppSettings", () => {
     expect(result.current.launcherAccess).toBe(false);
   });
 
-  it("should load settings from Preferences and update state", async () => {
-    // Mock preferences to return specific values
-    vi.mocked(Preferences.get)
-      .mockImplementation(({ key }) => {
-        const values: Record<string, string> = {
-          restartScan: "false",
-          launchOnScan: "true", 
-          launcherAccess: "true"
-        };
-        return Promise.resolve({ value: values[key] });
-      });
+  it("should initialize with all provided initData values", async () => {
+    const initData = {
+      restartScan: true,
+      launchOnScan: false,
+      launcherAccess: true,
+      preferRemoteWriter: true
+    };
 
-    const initData = { restartScan: true, launchOnScan: false };
-    
     const { result } = renderHook(() => useAppSettings({ initData }));
 
-    // Wait for preferences to load
-    await waitFor(() => {
-      expect(result.current.restartScan).toBe(false);
-      expect(result.current.launchOnScan).toBe(true);
-      expect(result.current.launcherAccess).toBe(true);
+    // Values should be initialized from initData, not loaded asynchronously
+    expect(result.current.restartScan).toBe(true);
+    expect(result.current.launchOnScan).toBe(false);
+    expect(result.current.launcherAccess).toBe(true);
+    expect(result.current.preferRemoteWriter).toBe(true);
+  });
+
+  it("should persist restartScan setting when changed", async () => {
+    const initData = { restartScan: false, launchOnScan: true, launcherAccess: false, preferRemoteWriter: false };
+
+    const { result } = renderHook(() => useAppSettings({ initData }));
+
+    // Change the setting
+    act(() => {
+      result.current.setRestartScan(true);
+    });
+
+    expect(result.current.restartScan).toBe(true);
+    expect(Preferences.set).toHaveBeenCalledWith({
+      key: "restartScan",
+      value: "true"
+    });
+  });
+
+  it("should persist launchOnScan setting when changed", async () => {
+    const initData = { restartScan: false, launchOnScan: true, launcherAccess: false, preferRemoteWriter: false };
+
+    const { result } = renderHook(() => useAppSettings({ initData }));
+
+    // Change the setting
+    act(() => {
+      result.current.setLaunchOnScan(false);
+    });
+
+    expect(result.current.launchOnScan).toBe(false);
+    expect(Preferences.set).toHaveBeenCalledWith({
+      key: "launchOnScan",
+      value: "false"
+    });
+  });
+
+  it("should persist preferRemoteWriter setting when changed", async () => {
+    const initData = { restartScan: false, launchOnScan: true, launcherAccess: false, preferRemoteWriter: false };
+
+    const { result } = renderHook(() => useAppSettings({ initData }));
+
+    // Change the setting
+    act(() => {
+      result.current.setPreferRemoteWriter(true);
+    });
+
+    expect(result.current.preferRemoteWriter).toBe(true);
+    expect(Preferences.set).toHaveBeenCalledWith({
+      key: "preferRemoteWriter",
+      value: "true"
     });
   });
 });

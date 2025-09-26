@@ -7,6 +7,15 @@ vi.mock("../../../hooks/useSmartSwipe", () => ({
   useSmartSwipe: vi.fn(() => ({}))
 }));
 
+// Mock useSlideModalManager
+vi.mock("../../../hooks/useSlideModalManager", () => ({
+  useSlideModalManager: vi.fn(() => ({
+    registerModal: vi.fn(),
+    unregisterModal: vi.fn(),
+    closeAllExcept: vi.fn()
+  }))
+}));
+
 // Mock store
 vi.mock("../../../lib/store", () => ({
   useStatusStore: vi.fn(() => ({
@@ -32,11 +41,14 @@ describe("SlideModal", () => {
 
   it("closes modal when Escape key is pressed on overlay", () => {
     const closeMock = vi.fn();
-    render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
-    
-    const overlay = screen.getByRole("button", { name: "Close modal" });
-    fireEvent.keyDown(overlay, { key: "Escape" });
-    
+    const { container } = render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
+
+    // Target the overlay div specifically (it has the bg-black/50 class)
+    const overlay = container.querySelector('.fixed.inset-0[aria-label="Close modal"]');
+    expect(overlay).toBeInTheDocument();
+
+    fireEvent.keyDown(overlay!, { key: "Escape" });
+
     expect(closeMock).toHaveBeenCalled();
   });
 
