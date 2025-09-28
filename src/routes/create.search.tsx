@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Preferences } from "@capacitor/preferences";
+import classNames from "classnames";
 import { SearchResults } from "@/components/SearchResults.tsx";
 import { CopyButton } from "@/components/CopyButton.tsx";
 import { BackToTop } from "@/components/BackToTop.tsx";
@@ -17,6 +18,7 @@ import { useStatusStore } from "../lib/store";
 import { TextInput } from "../components/wui/TextInput";
 import { WriteModal } from "../components/WriteModal";
 import { PageFrame } from "../components/PageFrame";
+import { SystemSelector, SystemSelectorTrigger } from "../components/SystemSelector";
 
 
 export const Route = createFileRoute("/create/search")({
@@ -55,6 +57,7 @@ function Search() {
 
   const [querySystem, setQuerySystem] = useState(loaderData.systemQuery);
   const [query, setQuery] = useState("");
+  const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -98,6 +101,14 @@ function Search() {
     preventScrollOnSwipe: false
   });
 
+  // Handle system selection from selector
+  const handleSystemSelect = async (systems: string[]) => {
+    const selectedSystem = systems.length === 1 ? systems[0] : "all";
+    setQuerySystem(selectedSystem);
+    setSelectedResult(null);
+    await Preferences.set({ key: "searchSystem", value: selectedSystem });
+  };
+
   return (
     <>
       <PageFrame
@@ -130,26 +141,19 @@ function Search() {
             <label className="text-white">
               {t("create.search.systemInput")}
             </label>
-            <select
-              value={querySystem}
-              onChange={async (e) => {
-                setSelectedResult(null);
-                setQuerySystem(e.target.value);
-                await Preferences.set({ key: "searchSystem", value: e.target.value });
-              }}
-              disabled={!connected || !gamesIndex.exists || gamesIndex.indexing}
-              className="border-bd-input bg-background text-foreground disabled:border-foreground-disabled rounded-md border border-solid p-3"
-            >
-              <option value="all">{t("create.search.allSystems")}</option>
-              {loaderData.systems.systems
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((system, i) => (
-                  <option key={i} value={system.id}>
-                    {system.name}
-                  </option>
-                ))}
-            </select>
+            <SystemSelectorTrigger
+              selectedSystems={querySystem === "all" ? [] : [querySystem]}
+              systemsData={loaderData.systems}
+              placeholder={t("create.search.allSystems")}
+              mode="single"
+              onClick={() => setSystemSelectorOpen(true)}
+              className={classNames({
+                "opacity-50": !connected || !gamesIndex.exists || gamesIndex.indexing
+              })}
+            />
+          </div>
 
+          <div>
             <Button
               label={t("create.search.searchButton")}
               className="mt-2 w-full"
@@ -173,6 +177,7 @@ function Search() {
             selectedResult={selectedResult}
           />
         </PageFrame>
+
       <SlideModal
         isOpen={selectedResult !== null && !writeOpen}
         close={() => setSelectedResult(null)}
@@ -223,6 +228,15 @@ function Search() {
         threshold={200}
       />
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
+      <SystemSelector
+        isOpen={systemSelectorOpen}
+        onClose={() => setSystemSelectorOpen(false)}
+        onSelect={handleSystemSelect}
+        selectedSystems={querySystem === "all" ? [] : [querySystem]}
+        mode="single"
+        title={t("create.search.selectSystem")}
+        includeAllOption={false}
+      />
     </>
   );
 }

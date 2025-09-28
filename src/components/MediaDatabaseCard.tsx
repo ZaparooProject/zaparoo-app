@@ -7,6 +7,8 @@ import { CoreAPI } from "@/lib/coreApi";
 import { DatabaseIcon } from "@/lib/images";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
+import { SystemSelector, SystemSelectorTrigger } from "./SystemSelector";
+import { LoadingSpinner } from "./ui/loading-spinner";
 
 export function MediaDatabaseCard() {
   const { t } = useTranslation();
@@ -14,6 +16,8 @@ export function MediaDatabaseCard() {
   const connected = useStatusStore((state) => state.connected);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
+  const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
 
   // Reset cancelling state when indexing stops
   useEffect(() => {
@@ -31,8 +35,21 @@ export function MediaDatabaseCard() {
     retry: false
   });
 
+  // Fetch systems data for selector
+  const { data: systemsData } = useQuery({
+    queryKey: ["systems"],
+    queryFn: () => CoreAPI.systems(),
+    enabled: connected,
+  });
+
   const handleUpdateDatabase = () => {
-    CoreAPI.mediaGenerate();
+    // If no systems selected or all systems selected, pass undefined (all systems)
+    const systemsToUpdate = selectedSystems.length === 0 ||
+      (systemsData?.systems && selectedSystems.length === systemsData.systems.length)
+      ? undefined
+      : selectedSystems;
+
+    CoreAPI.mediaGenerate(systemsToUpdate ? { systems: systemsToUpdate } : undefined);
   };
 
   const handleCancelUpdate = async () => {
@@ -49,17 +66,23 @@ export function MediaDatabaseCard() {
   };
 
   const renderStatus = () => {
+    // Check if indexing from either gamesIndex or media database
+    const isIndexing = gamesIndex.indexing || mediaStatus?.database?.indexing;
+
     // Show progress when indexing
     if (gamesIndex.indexing) {
       return (
         <div className="mt-3 space-y-3">
           <div className="space-y-2">
-            <div className="text-sm">
-              {gamesIndex.currentStepDisplay
-                ? gamesIndex.currentStep === gamesIndex.totalSteps
-                  ? t("toast.writingDb")
-                  : gamesIndex.currentStepDisplay
-                : t("toast.preparingDb")}
+            <div className="text-sm flex items-center justify-between">
+              <span>
+                {gamesIndex.currentStepDisplay
+                  ? gamesIndex.currentStep === gamesIndex.totalSteps
+                    ? t("toast.writingDb")
+                    : gamesIndex.currentStepDisplay
+                  : t("toast.preparingDb")}
+              </span>
+              {isIndexing && <LoadingSpinner size={16} className="text-muted-foreground" />}
             </div>
             <div className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid">
               <div
@@ -118,9 +141,9 @@ export function MediaDatabaseCard() {
     if (isOptimizing) {
       return (
         <div className="mt-3 space-y-2">
-          <div className="text-sm">
-            {mediaStatus?.database?.currentStepDisplay ||
-              t("settings.updateDb.status.optimizing")}
+          <div className="text-sm flex items-center justify-between">
+            <span>{t("settings.updateDb.status.optimizing")}</span>
+            {(isIndexing || isOptimizing) && <LoadingSpinner size={16} className="text-muted-foreground" />}
           </div>
           <div className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid">
             <div
@@ -166,18 +189,39 @@ export function MediaDatabaseCard() {
   };
 
   return (
-    <Card>
-      <div className="space-y-3">
-        <Button
-          label={t("settings.updateDb")}
-          icon={<DatabaseIcon size="20" />}
-          className="w-full"
-          disabled={!connected || gamesIndex.indexing}
-          onClick={handleUpdateDatabase}
-        />
+    <>
+      <Card>
+        <div className="space-y-3">
+          {/* System selector for choosing which systems to update */}
+          <SystemSelectorTrigger
+            selectedSystems={selectedSystems}
+            systemsData={systemsData}
+            placeholder={t("settings.updateDb.allSystems")}
+            mode="multi"
+            onClick={() => setSystemSelectorOpen(true)}
+          />
 
-        {renderStatus()}
-      </div>
-    </Card>
+          <Button
+            label={t("settings.updateDb")}
+            icon={<DatabaseIcon size="20" />}
+            className="w-full"
+            disabled={!connected || gamesIndex.indexing}
+            onClick={handleUpdateDatabase}
+          />
+
+          {renderStatus()}
+        </div>
+      </Card>
+
+      <SystemSelector
+        isOpen={systemSelectorOpen}
+        onClose={() => setSystemSelectorOpen(false)}
+        onSelect={setSelectedSystems}
+        selectedSystems={selectedSystems}
+        mode="multi"
+        title={t("settings.updateDb.selectSystemsTitle")}
+        includeAllOption={true}
+      />
+    </>
   );
 }

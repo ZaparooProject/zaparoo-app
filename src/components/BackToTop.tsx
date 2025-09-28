@@ -6,11 +6,13 @@ import { debounce } from "lodash";
 interface BackToTopProps {
   scrollContainerRef: RefObject<HTMLElement | null>;
   threshold?: number;
+  bottomOffset?: string;
 }
 
 export function BackToTop({
   scrollContainerRef,
-  threshold = 300
+  threshold = 300,
+  bottomOffset = "calc(1rem + 80px)"
 }: BackToTopProps) {
   const [isVisible, setIsVisible] = useState(false);
   const { t } = useTranslation();
@@ -49,7 +51,7 @@ export function BackToTop({
 
   return (
     <div
-      className={`absolute right-4 transition-opacity duration-300 ${
+      className={`fixed right-4 transition-opacity duration-300 ${
         isVisible
           ? "pointer-events-auto opacity-100"
           : "pointer-events-none opacity-0"
@@ -58,10 +60,11 @@ export function BackToTop({
         zIndex: 30,
         transform: "translateZ(0)",
         willChange: "opacity",
-        bottom: `calc(1rem + 80px)`
+        bottom: bottomOffset
       }}
     >
       <button
+        type="button"
         onClick={scrollToTop}
         className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full p-3 shadow-lg transition-transform hover:scale-105 active:scale-95"
         aria-label={t("backToTop")}

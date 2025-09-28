@@ -37,6 +37,7 @@
     "@tailwindcss/vite": "^4.1.11",
     "@tanstack/react-query": "^5.81.5",
     "@tanstack/react-router": "^1.125.6",
+    "@tanstack/react-virtual": "^3.13.12",
     "@uidotdev/usehooks": "^2.4.1",
     "axios": "1.10.0",
     "class-variance-authority": "^0.7.1",
