@@ -77,20 +77,29 @@ vi.mock("@/components/wui/TextInput", () => ({
   ),
 }));
 
-vi.mock("@/components/SearchResults", () => ({
-  SearchResults: ({ resp, setSelectedResult }: any) => (
-    <div data-testid="search-results">
-      {resp?.results?.map((result: any, index: number) => (
+vi.mock("@/components/VirtualSearchResults", () => ({
+  VirtualSearchResults: ({ query: _query, systems: _systems, selectedResult: _selectedResult, setSelectedResult, hasSearched }: any) => {
+    if (!hasSearched) {
+      return (
+        <div className="text-center text-white/60 mt-6">
+          <p className="text-lg mb-2">create.search.startSearching</p>
+          <p className="text-sm">create.search.startSearchingHint</p>
+        </div>
+      );
+    }
+
+    return (
+      <div data-testid="search-results">
         <button
-          key={index}
-          data-testid={`result-${index}`}
-          onClick={() => setSelectedResult?.(result)}
+          key={0}
+          data-testid="result-0"
+          onClick={() => setSelectedResult?.({ path: "/games/mario.sfc", name: "Super Mario World" })}
         >
-          {result.name}
+          Super Mario World
         </button>
-      ))}
-    </div>
-  ),
+      </div>
+    );
+  },
 }));
 
 vi.mock("@/components/BackToTop", () => ({
@@ -144,10 +153,21 @@ describe("MediaSearchModal", () => {
     expect(searchInput).toHaveAttribute("placeholder", "create.search.gameInputPlaceholder");
   });
 
-  it("should render search results component", () => {
+  it("should render search results component", async () => {
     renderComponent();
 
-    expect(screen.getByTestId("search-results")).toBeInTheDocument();
+    // Enter search query
+    const searchInput = screen.getByTestId("search-input");
+    fireEvent.change(searchInput, { target: { value: "mario" } });
+
+    // Click search button to trigger search
+    const searchButton = screen.getByRole("button", { name: /create.search.searchButton/i });
+    fireEvent.click(searchButton);
+
+    // Wait for search results to appear
+    await waitFor(() => {
+      expect(screen.getByTestId("search-results")).toBeInTheDocument();
+    });
   });
 
   it("should render back to top component", () => {
@@ -173,6 +193,10 @@ describe("MediaSearchModal", () => {
     // Enter search query to trigger search
     const searchInput = screen.getByTestId("search-input");
     fireEvent.change(searchInput, { target: { value: "mario" } });
+
+    // Click search button to trigger search
+    const searchButton = screen.getByRole("button", { name: /create.search.searchButton/i });
+    fireEvent.click(searchButton);
 
     // Wait for search results to load and contain results
     await waitFor(() => {

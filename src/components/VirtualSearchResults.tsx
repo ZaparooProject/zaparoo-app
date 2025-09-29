@@ -88,7 +88,8 @@ export function VirtualSearchResults({
 
   // Fetch next page when approaching the end
   useEffect(() => {
-    const [lastItem] = [...virtualizer.getVirtualItems()].reverse();
+    const virtualItems = virtualizer.getVirtualItems();
+    const [lastItem] = [...virtualItems].reverse();
 
     if (!lastItem) return;
 
@@ -104,7 +105,7 @@ export function VirtualSearchResults({
     fetchNextPage,
     totalCount,
     isFetchingNextPage,
-    virtualizer.getVirtualItems()
+    virtualizer
   ]);
 
   // Screen reader announcement for search results

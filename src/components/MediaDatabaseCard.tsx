@@ -65,39 +65,67 @@ export function MediaDatabaseCard() {
     }
   };
 
-  const renderStatus = () => {
-    // Check if indexing from either gamesIndex or media database
-    const isIndexing = gamesIndex.indexing || mediaStatus?.database?.indexing;
+  // Check various states from both store and API
+  const isOptimizing = gamesIndex.optimizing || mediaStatus?.database?.optimizing;
+  const isIndexing = gamesIndex.indexing || mediaStatus?.database?.indexing;
 
-    // Show progress when indexing
-    if (gamesIndex.indexing) {
+  const renderStatus = () => {
+
+    // Check optimization status first - this takes priority
+    if (isOptimizing) {
+      return (
+        <div className="mt-3 space-y-2">
+          <div className="text-sm flex items-center justify-between">
+            <span>{t("settings.updateDb.status.optimizing")}</span>
+            {/* No spinner for optimizing - only throbbing bar */}
+          </div>
+          <div className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid">
+            <div
+              className="border-background bg-button-pattern h-[8px] animate-pulse rounded-full border border-solid"
+              style={{ width: "100%" }}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // Show progress when indexing (either from store or API)
+    if (isIndexing) {
+      // Prefer gamesIndex data if available (has detailed progress), otherwise use generic preparing state
+      const hasDetailedProgress = gamesIndex.indexing && gamesIndex.totalSteps && gamesIndex.totalSteps > 0;
+
       return (
         <div className="mt-3 space-y-3">
           <div className="space-y-2">
             <div className="text-sm flex items-center justify-between">
               <span>
-                {gamesIndex.currentStepDisplay
+                {hasDetailedProgress && gamesIndex.currentStepDisplay
                   ? gamesIndex.currentStep === gamesIndex.totalSteps
                     ? t("toast.writingDb")
                     : gamesIndex.currentStepDisplay
                   : t("toast.preparingDb")}
               </span>
-              {isIndexing && <LoadingSpinner size={16} className="text-muted-foreground" />}
+              {/* Only show spinner for system-specific steps (not preparing/writing) */}
+              {isIndexing && hasDetailedProgress && gamesIndex.currentStepDisplay &&
+               gamesIndex.currentStep !== gamesIndex.totalSteps && (
+                <LoadingSpinner size={16} className="text-muted-foreground" />
+              )}
             </div>
             <div className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid">
               <div
                 className={classNames(
                   "border-background bg-button-pattern h-[8px] rounded-full border border-solid",
                   {
-                    hidden: gamesIndex.currentStep === 0,
+                    hidden: hasDetailedProgress && gamesIndex.currentStep === 0,
                     "animate-pulse":
+                      !hasDetailedProgress ||
                       gamesIndex.currentStep === 0 ||
                       gamesIndex.currentStep === gamesIndex.totalSteps
                   }
                 )}
                 style={{
                   width:
-                    gamesIndex.currentStep && gamesIndex.totalSteps
+                    hasDetailedProgress && gamesIndex.currentStep && gamesIndex.totalSteps
                       ? `${((gamesIndex.currentStep / gamesIndex.totalSteps) * 100).toFixed(2)}%`
                       : "100%"
                 }}
@@ -135,25 +163,6 @@ export function MediaDatabaseCard() {
 
     // Use real database status from API
     const databaseExists = mediaStatus?.database?.exists ?? false;
-
-    // Check optimization status first - this takes priority over database existence
-    const isOptimizing = mediaStatus?.database?.optimizing ?? false;
-    if (isOptimizing) {
-      return (
-        <div className="mt-3 space-y-2">
-          <div className="text-sm flex items-center justify-between">
-            <span>{t("settings.updateDb.status.optimizing")}</span>
-            {(isIndexing || isOptimizing) && <LoadingSpinner size={16} className="text-muted-foreground" />}
-          </div>
-          <div className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid">
-            <div
-              className="border-background bg-button-pattern h-[8px] animate-pulse rounded-full border border-solid"
-              style={{ width: "100%" }}
-            />
-          </div>
-        </div>
-      );
-    }
 
     if (!databaseExists && !gamesIndex.indexing && !isOptimizing) {
       return (
@@ -205,7 +214,7 @@ export function MediaDatabaseCard() {
             label={t("settings.updateDb")}
             icon={<DatabaseIcon size="20" />}
             className="w-full"
-            disabled={!connected || gamesIndex.indexing}
+            disabled={!connected || isIndexing || isOptimizing}
             onClick={handleUpdateDatabase}
           />
 

@@ -169,6 +169,7 @@ describe("StatusStore", () => {
       expect(resetState.gamesIndex).toEqual({
         exists: true,
         indexing: false,
+        optimizing: false,
         totalSteps: 0,
         currentStep: 0,
         currentStepDisplay: "",

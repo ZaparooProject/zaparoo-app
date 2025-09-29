@@ -12,6 +12,7 @@ interface SmartTabsReturn<T extends HTMLElement = HTMLElement> {
     ref: React.RefObject<T | null>;
     onMouseDown: (e: React.MouseEvent) => void;
     onScroll?: (e: React.UIEvent<T>) => void;
+    onWheel?: (e: React.WheelEvent<T>) => void;
     style: React.CSSProperties;
     className: string;
   };
@@ -22,6 +23,7 @@ interface SmartTabsReturn<T extends HTMLElement = HTMLElement> {
  * - Detects overflow and enables drag-to-scroll when needed
  * - Centers tabs when they fit within the container
  * - Provides scroll change callbacks for gradient indicators
+ * - Supports horizontal scrolling with mouse wheel and shift+scroll
  */
 export function useSmartTabs<T extends HTMLElement = HTMLElement>({
   onScrollChange
@@ -49,6 +51,19 @@ export function useSmartTabs<T extends HTMLElement = HTMLElement>({
     const element = e.currentTarget;
     onScrollChange(element.scrollLeft, hasOverflow);
   }, [onScrollChange, hasOverflow]);
+
+  // Handle wheel events for horizontal scrolling
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLElement>) => {
+    if (!hasOverflow) return;
+
+    // Only handle horizontal scrolling or shift+vertical scroll
+    if (e.deltaX !== 0 || e.shiftKey) {
+      e.preventDefault();
+      const element = e.currentTarget;
+      const scrollAmount = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+      element.scrollLeft += scrollAmount;
+    }
+  }, [hasOverflow]);
 
   // Set up resize observer to detect overflow changes
   useEffect(() => {
@@ -98,6 +113,7 @@ export function useSmartTabs<T extends HTMLElement = HTMLElement>({
   const tabsProps = {
     ...dragProps,
     onScroll: onScrollChange ? handleScroll : undefined,
+    onWheel: handleWheel,
     className: getClassName()
   };
 

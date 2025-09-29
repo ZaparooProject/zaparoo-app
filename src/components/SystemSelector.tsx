@@ -145,7 +145,11 @@ export function SystemSelector({
       if (gamesIndex.indexing) return;
 
       if (mode === "single") {
-        onSelect([systemId]);
+        if (systemId === "all") {
+          onSelect([]);
+        } else {
+          onSelect([systemId]);
+        }
         onClose();
       } else {
         const newSelection = selectedSystems.includes(systemId)
@@ -307,17 +311,55 @@ export function SystemSelector({
                 </span>
               </div>
             ) : (
-              <div ref={scrollContainerRef} className="h-full overflow-auto">
-                <div
-                  style={{
-                    height: `${virtualizer.getTotalSize()}px`,
-                    width: "100%",
-                    position: "relative"
-                  }}
-                >
-                  {virtualizer.getVirtualItems().map((virtualItem) => {
-                    const system = filteredSystems[virtualItem.index];
-                    const isSelected = selectedSystems.includes(system.id);
+              <div className="flex flex-col h-full">
+                {/* Add "All Systems" option for single mode */}
+                {mode === "single" && selectedCategory === "all" && !debouncedSearchQuery.trim() && (
+                  <div className="pb-2">
+                    <button
+                      className={classNames(
+                        "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
+                        "rounded-lg focus:outline-none",
+                        {
+                          "bg-white/10": selectedSystems.length === 0,
+                          "hover:bg-white/10 focus:bg-white/10": !gamesIndex.indexing,
+                          "opacity-50 cursor-not-allowed": gamesIndex.indexing
+                        }
+                      )}
+                      onClick={() => handleSystemSelect("all")}
+                      disabled={gamesIndex.indexing}
+                      type="button"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className={classNames(
+                            "border-input h-5 w-5 rounded-full border-2",
+                            {
+                              "bg-primary border-primary": selectedSystems.length === 0
+                            }
+                          )}
+                        >
+                          {selectedSystems.length === 0 && (
+                            <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
+                          )}
+                        </div>
+                        <span className="text-foreground font-medium">
+                          {t("systemSelector.allSystems")}
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                )}
+                <div ref={scrollContainerRef} className="flex-1 overflow-auto">
+                  <div
+                    style={{
+                      height: `${virtualizer.getTotalSize()}px`,
+                      width: "100%",
+                      position: "relative"
+                    }}
+                  >
+                    {virtualizer.getVirtualItems().map((virtualItem) => {
+                      const system = filteredSystems[virtualItem.index];
+                      const isSelected = selectedSystems.includes(system.id);
 
                     return (
                       <div
@@ -379,8 +421,9 @@ export function SystemSelector({
                           </div>
                         </button>
                       </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}
@@ -423,7 +466,7 @@ export function SystemSelectorTrigger({
     if (!systemsData?.systems) return placeholder;
 
     if (selectedSystems.length === 0) {
-      return placeholder;
+      return mode === "single" ? t("systemSelector.allSystems") : placeholder;
     }
 
     if (selectedSystems.length === systemsData.systems.length) {

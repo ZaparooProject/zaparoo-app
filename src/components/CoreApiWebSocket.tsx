@@ -3,6 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import { Preferences } from "@capacitor/preferences";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import { WebSocketManager, WebSocketState } from "../lib/websocketManager.ts";
 import {
   IndexResponse,
@@ -19,6 +20,8 @@ import {
 import { useStatusStore, ConnectionState } from "../lib/store.ts";
 
 export function CoreApiWebSocket() {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const wsManagerRef = useRef<WebSocketManager | null>(null);
 
   const {
@@ -44,8 +47,6 @@ export function CoreApiWebSocket() {
       setDeviceHistory: state.setDeviceHistory
     }))
   );
-
-  const { t } = useTranslation();
 
   // Get WebSocket URL and device address outside useEffect for early exit
   const deviceAddress = getDeviceAddress();
@@ -97,7 +98,24 @@ export function CoreApiWebSocket() {
     const mediaIndexing = (params: IndexResponse) => {
       try {
         console.log("mediaIndexing", params);
+
+        // Get current state before updating
+        const currentState = useStatusStore.getState().gamesIndex;
+
+        // Update the store with new state
         setGamesIndex(params);
+
+        // Check for state transitions that require media query invalidation
+        const transitionedFromIndexingToOptimizing =
+          currentState.indexing && !params.indexing && params.optimizing;
+        const transitionedFromOptimizingToComplete =
+          currentState.optimizing && !params.optimizing && !params.indexing;
+
+        // Invalidate media query on important transitions to refresh UI status
+        if (transitionedFromIndexingToOptimizing || transitionedFromOptimizingToComplete) {
+          console.log("State transition detected, invalidating media query");
+          queryClient.invalidateQueries({ queryKey: ["media"] });
+        }
       } catch (err) {
         console.error("Error processing mediaIndexing notification:", err);
       }
@@ -285,6 +303,7 @@ export function CoreApiWebSocket() {
     setGamesIndex,
     setLastToken,
     setPlaying,
+    queryClient,
     t
   ]); // Dependencies: re-create WebSocket if address or URL changes
 

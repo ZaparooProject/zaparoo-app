@@ -39,6 +39,7 @@ export function TagSelector({
 }: TagSelectorProps) {
   const { t } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const slideModalScrollRef = useRef<HTMLDivElement>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all");
@@ -64,10 +65,11 @@ export function TagSelector({
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
 
   // Fetch tags data
-  const { data: tagsData, isLoading } = useQuery({
+  const { data: tagsData, isLoading, isError } = useQuery({
     queryKey: ["tags", systems],
     queryFn: () => CoreAPI.mediaTags(systems.length > 0 ? systems : undefined),
-    enabled: isOpen // Only fetch when modal is open
+    enabled: isOpen, // Only fetch when modal is open
+    retry: false // Don't retry on error for backwards compatibility
   });
 
   // Process and filter tags
@@ -207,7 +209,7 @@ export function TagSelector({
       close={onClose}
       title={title || t("tagSelector.title")}
       footer={footer}
-      scrollRef={scrollContainerRef}
+      scrollRef={slideModalScrollRef}
       fixedHeight="90vh"
     >
       <div className="flex min-h-0 flex-col">
@@ -256,7 +258,7 @@ export function TagSelector({
                 {...tabsProps}
               >
                 <TabsTrigger value="all">
-                  {t("tagSelector.allTypes")}
+                  {t("tagSelector.all", { defaultValue: "All" })}
                 </TabsTrigger>
                 {types.map((type) => (
                   <TabsTrigger key={type} value={type}>
@@ -284,6 +286,12 @@ export function TagSelector({
               <div className="flex h-32 items-center justify-center">
                 <span className="text-muted-foreground">{t("loading")}</span>
               </div>
+            ) : isError ? (
+              <div className="flex h-32 items-center justify-center">
+                <span className="text-muted-foreground">
+                  {t("tagSelector.unavailable", { defaultValue: "Tags unavailable" })}
+                </span>
+              </div>
             ) : filteredTags.length === 0 ? (
               <div className="flex h-32 items-center justify-center">
                 <span className="text-muted-foreground">
@@ -293,7 +301,7 @@ export function TagSelector({
                 </span>
               </div>
             ) : (
-              <div ref={scrollContainerRef} className="h-full overflow-auto">
+              <div ref={scrollContainerRef} className="h-full">
                 <div
                   style={{
                     height: `${virtualizer.getTotalSize()}px`,
@@ -365,7 +373,7 @@ export function TagSelector({
 
         {/* Scroll to top button */}
         <BackToTop
-          scrollContainerRef={scrollContainerRef}
+          scrollContainerRef={slideModalScrollRef}
           threshold={200}
           bottomOffset="calc(1rem + 100px)"
         />
@@ -379,12 +387,14 @@ export function TagSelectorTrigger({
   selectedTags,
   placeholder = "Select tags",
   className,
-  onClick
+  onClick,
+  disabled = false
 }: {
   selectedTags: string[];
   placeholder?: string;
   className?: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -406,8 +416,8 @@ export function TagSelectorTrigger({
   }, [selectedTags, placeholder, t]);
 
   const handleClick = () => {
-    // Don't open selector while indexing
-    if (gamesIndex.indexing) return;
+    // Don't open selector while indexing or if disabled
+    if (gamesIndex.indexing || disabled) return;
     onClick();
   };
 
@@ -417,13 +427,13 @@ export function TagSelectorTrigger({
       className={classNames(
         "border-input text-foreground flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus:ring-2 focus:ring-white/20 focus:outline-none",
         {
-          "hover:bg-white/10": !gamesIndex.indexing,
-          "opacity-50 cursor-not-allowed": gamesIndex.indexing
+          "hover:bg-white/10": !gamesIndex.indexing && !disabled,
+          "opacity-50 cursor-not-allowed": gamesIndex.indexing || disabled
         },
         className
       )}
       style={{ backgroundColor: "var(--color-background)" }}
-      disabled={gamesIndex.indexing}
+      disabled={gamesIndex.indexing || disabled}
       type="button"
     >
       <span

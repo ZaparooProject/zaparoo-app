@@ -41,30 +41,37 @@ describe("Create Search Route Loader", () => {
       ]
     };
 
-    mockPreferencesGet.mockResolvedValue({ value: "snes" });
+    mockPreferencesGet
+      .mockResolvedValueOnce({ value: "snes" })      // searchSystem
+      .mockResolvedValueOnce({ value: '[]' });       // searchTags (empty array)
     mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
 
     const result = await Route.options?.loader?.({} as any);
 
     expect(result).toEqual({
       systemQuery: "snes",
+      tagQuery: [],
       systems: mockSystemsResponse
     });
 
     expect(mockPreferencesGet).toHaveBeenCalledWith({ key: "searchSystem" });
+    expect(mockPreferencesGet).toHaveBeenCalledWith({ key: "searchTags" });
     expect(mockCoreApiSystems).toHaveBeenCalledWith();
   });
 
   it("should use default 'all' when no search system preference exists", async () => {
     const mockSystemsResponse = { systems: [] };
 
-    mockPreferencesGet.mockResolvedValue({ value: null });
+    mockPreferencesGet
+      .mockResolvedValueOnce({ value: null })        // searchSystem
+      .mockResolvedValueOnce({ value: null });       // searchTags
     mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
 
     const result = await Route.options?.loader?.({} as any);
 
     expect(result).toEqual({
       systemQuery: "all",
+      tagQuery: [],
       systems: mockSystemsResponse
     });
   });
@@ -72,13 +79,16 @@ describe("Create Search Route Loader", () => {
   it("should use default 'all' when search system preference is undefined", async () => {
     const mockSystemsResponse = { systems: [] };
 
-    mockPreferencesGet.mockResolvedValue({ value: undefined });
+    mockPreferencesGet
+      .mockResolvedValueOnce({ value: undefined })   // searchSystem
+      .mockResolvedValueOnce({ value: undefined });  // searchTags
     mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
 
     const result = await Route.options?.loader?.({} as any);
 
     expect(result).toEqual({
       systemQuery: "all",
+      tagQuery: [],
       systems: mockSystemsResponse
     });
   });
@@ -86,13 +96,16 @@ describe("Create Search Route Loader", () => {
   it("should handle empty string preference", async () => {
     const mockSystemsResponse = { systems: [] };
 
-    mockPreferencesGet.mockResolvedValue({ value: "" });
+    mockPreferencesGet
+      .mockResolvedValueOnce({ value: "" })          // searchSystem
+      .mockResolvedValueOnce({ value: "" });         // searchTags
     mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
 
     const result = await Route.options?.loader?.({} as any);
 
     expect(result).toEqual({
       systemQuery: "all", // empty string should default to "all"
+      tagQuery: [],
       systems: mockSystemsResponse
     });
   });
@@ -108,7 +121,9 @@ describe("Create Search Route Loader", () => {
   });
 
   it("should handle CoreAPI systems failure", async () => {
-    mockPreferencesGet.mockResolvedValue({ value: "snes" });
+    mockPreferencesGet
+      .mockResolvedValueOnce({ value: "snes" })      // searchSystem
+      .mockResolvedValueOnce({ value: '[]' });       // searchTags
     mockCoreApiSystems.mockRejectedValue(new Error("Core API unavailable"));
 
     await expect(Route.options?.loader?.({} as any)).rejects.toThrow("Core API unavailable");
@@ -123,13 +138,16 @@ describe("Create Search Route Loader", () => {
   });
 
   it("should handle malformed systems response", async () => {
-    mockPreferencesGet.mockResolvedValue({ value: "snes" });
+    mockPreferencesGet
+      .mockResolvedValueOnce({ value: "snes" })      // searchSystem
+      .mockResolvedValueOnce({ value: '[]' });       // searchTags
     mockCoreApiSystems.mockResolvedValue(null);
 
     const result = await Route.options?.loader?.({} as any);
 
     expect(result).toEqual({
       systemQuery: "snes",
+      tagQuery: [],
       systems: null
     });
   });
@@ -138,26 +156,34 @@ describe("Create Search Route Loader", () => {
     const mockSystemsResponse = { systems: [] };
 
     // Test with a custom system ID
-    mockPreferencesGet.mockResolvedValue({ value: "custom-system-123" });
+    mockPreferencesGet
+      .mockResolvedValueOnce({ value: "custom-system-123" }) // searchSystem
+      .mockResolvedValueOnce({ value: '["action", "rpg"]' });  // searchTags (JSON array)
     mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
 
     const result = await Route.options?.loader?.({} as any);
 
     expect(result).toEqual({
       systemQuery: "custom-system-123",
+      tagQuery: ["action", "rpg"],
       systems: mockSystemsResponse
     });
   });
 
   it("should execute both API calls in parallel", async () => {
-    const preferencesPromise = new Promise(resolve =>
+    const systemPreferencesPromise = new Promise(resolve =>
       setTimeout(() => resolve({ value: "snes" }), 10)
+    );
+    const tagPreferencesPromise = new Promise(resolve =>
+      setTimeout(() => resolve({ value: '[]' }), 5)
     );
     const systemsPromise = new Promise(resolve =>
       setTimeout(() => resolve({ systems: [] }), 10)
     );
 
-    mockPreferencesGet.mockReturnValue(preferencesPromise);
+    mockPreferencesGet
+      .mockReturnValueOnce(systemPreferencesPromise)
+      .mockReturnValueOnce(tagPreferencesPromise);
     mockCoreApiSystems.mockReturnValue(systemsPromise);
 
     const startTime = Date.now();
@@ -175,17 +201,22 @@ describe("Create Search Route Loader", () => {
     }));
     const mockSystemsResponse = { systems: largeSystems };
 
-    mockPreferencesGet.mockResolvedValue({ value: "system-50" });
+    mockPreferencesGet
+      .mockResolvedValueOnce({ value: "system-50" })  // searchSystem
+      .mockResolvedValueOnce({ value: '[]' });        // searchTags
     mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
 
     const result = await Route.options?.loader?.({} as any);
 
     expect(result.systems.systems).toHaveLength(100);
     expect(result.systemQuery).toBe("system-50");
+    expect(result.tagQuery).toEqual([]);
   });
 
   it("should handle CoreAPI timeout", async () => {
-    mockPreferencesGet.mockResolvedValue({ value: "snes" });
+    mockPreferencesGet
+      .mockResolvedValueOnce({ value: "snes" })      // searchSystem
+      .mockResolvedValueOnce({ value: '[]' });       // searchTags
 
     // Simulate a timeout
     mockCoreApiSystems.mockImplementation(() =>

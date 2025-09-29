@@ -106,6 +106,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
   gamesIndex: {
     exists: true,
     indexing: false,
+    optimizing: false,
     totalSteps: 0,
     currentStep: 0,
     currentStepDisplay: "",
@@ -268,6 +269,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
       gamesIndex: {
         exists: true,
         indexing: false,
+        optimizing: false,
         totalSteps: 0,
         currentStep: 0,
         currentStepDisplay: "",

@@ -73,9 +73,12 @@ describe('MediaDatabaseCard', () => {
   it('should render update button when not indexing', () => {
     render(<MediaDatabaseCard />);
 
-    const button = screen.getByRole('button', { name: /settings\.updateDb/i });
-    expect(button).toBeInTheDocument();
-    expect(button).not.toBeDisabled();
+    // Get all buttons with the updateDb text and find the one that's the main update button (not the system selector)
+    const buttons = screen.getAllByRole('button', { name: /settings\.updateDb/i });
+    const updateButton = buttons.find(button => !button.textContent?.includes('settings.updateDb.allSystems'));
+
+    expect(updateButton).toBeInTheDocument();
+    expect(updateButton).not.toBeDisabled();
   });
 
   it('should disable button when not connected', () => {
@@ -83,8 +86,9 @@ describe('MediaDatabaseCard', () => {
 
     render(<MediaDatabaseCard />);
 
-    const button = screen.getByRole('button', { name: /settings\.updateDb/i });
-    expect(button).toBeDisabled();
+    const buttons = screen.getAllByRole('button', { name: /settings\.updateDb/i });
+    const updateButton = buttons.find(button => !button.textContent?.includes('settings.updateDb.allSystems'));
+    expect(updateButton).toBeDisabled();
   });
 
   it('should disable button when indexing', () => {
@@ -93,7 +97,7 @@ describe('MediaDatabaseCard', () => {
     render(<MediaDatabaseCard />);
 
     const buttons = screen.getAllByRole('button', { name: /settings\.updateDb/i });
-    const updateButton = buttons[0]; // The main update button is first
+    const updateButton = buttons.find(button => !button.textContent?.includes('settings.updateDb.allSystems'));
     expect(updateButton).toBeDisabled();
   });
 
@@ -102,8 +106,9 @@ describe('MediaDatabaseCard', () => {
 
     render(<MediaDatabaseCard />);
 
-    const button = screen.getByRole('button', { name: /settings\.updateDb/i });
-    fireEvent.click(button);
+    const buttons = screen.getAllByRole('button', { name: /settings\.updateDb/i });
+    const updateButton = buttons.find(button => !button.textContent?.includes('settings.updateDb.allSystems'));
+    fireEvent.click(updateButton!);
 
     expect(CoreAPI.mediaGenerate).toHaveBeenCalledOnce();
   });
@@ -135,7 +140,7 @@ describe('MediaDatabaseCard', () => {
     render(<MediaDatabaseCard />);
 
     // Wait for the query to resolve
-    expect(await screen.findByText('create.search.gamesDbUpdate')).toBeInTheDocument();
+    expect(await screen.findByText('No database found')).toBeInTheDocument();
   });
 
   it('should show checking status when loading', async () => {

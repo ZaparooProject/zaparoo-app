@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useStatusStore, ConnectionState } from "../../../lib/store";
 import { CoreApiWebSocket } from "../../../components/CoreApiWebSocket";
 
@@ -121,6 +122,18 @@ const createMockStoreState = (overrides = {}) => ({
   ...overrides
 });
 
+// Helper to render CoreApiWebSocket with QueryClient
+const renderWithQueryClient = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <CoreApiWebSocket />
+    </QueryClientProvider>
+  );
+};
+
 describe("CoreApiWebSocket Grace Period", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -150,7 +163,7 @@ describe("CoreApiWebSocket Grace Period", () => {
       selector(mockState)
     );
 
-    render(<CoreApiWebSocket />);
+    renderWithQueryClient();
 
     // Simulate WebSocket close event via WebSocketManager callback
     if (mockWebSocketManager.callbacks && mockWebSocketManager.callbacks.onClose) {
@@ -176,7 +189,7 @@ describe("CoreApiWebSocket Grace Period", () => {
       selector(mockState)
     );
 
-    render(<CoreApiWebSocket />);
+    renderWithQueryClient();
 
     // Simulate WebSocket open event via WebSocketManager callback
     if (mockWebSocketManager.callbacks && mockWebSocketManager.callbacks.onOpen) {
@@ -201,7 +214,7 @@ describe("CoreApiWebSocket Grace Period", () => {
       selector(mockState)
     );
 
-    render(<CoreApiWebSocket />);
+    renderWithQueryClient();
 
     // Simulate WebSocket error event via WebSocketManager callback
     const errorEvent = new Event("error");
@@ -228,7 +241,7 @@ describe("CoreApiWebSocket Grace Period", () => {
       selector(mockState)
     );
 
-    const { unmount } = render(<CoreApiWebSocket />);
+    const { unmount } = renderWithQueryClient();
 
     unmount();
 
@@ -247,7 +260,7 @@ describe("CoreApiWebSocket Grace Period", () => {
       selector(mockState)
     );
 
-    render(<CoreApiWebSocket />);
+    renderWithQueryClient();
 
     expect(mockSetConnectionState).toHaveBeenCalledWith(ConnectionState.CONNECTING);
   });
@@ -268,7 +281,7 @@ describe("CoreApiWebSocket Grace Period", () => {
       selector(mockState)
     );
 
-    render(<CoreApiWebSocket />);
+    renderWithQueryClient();
 
     expect(mockSetConnectionState).toHaveBeenCalledWith(ConnectionState.ERROR);
     expect(mockSetConnectionError).toHaveBeenCalledWith("No device address configured");

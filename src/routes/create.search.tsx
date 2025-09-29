@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
 import classNames from "classnames";
 import { VirtualSearchResults } from "@/components/VirtualSearchResults.tsx";
@@ -128,6 +129,15 @@ function Search() {
     });
   }, [setGamesIndex]);
 
+  // Check if tags API is available for backwards compatibility
+  const { isError: tagsApiError } = useQuery({
+    queryKey: ["tagsAvailable"],
+    queryFn: () => CoreAPI.mediaTags([]),
+    retry: false,
+    staleTime: 60000, // Cache for 1 minute
+    enabled: connected // Only check when connected
+  });
+
   const navigate = useNavigate();
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: () => navigate({ to: "/create" }),
@@ -217,6 +227,7 @@ function Search() {
                 selectedTags={queryTags}
                 placeholder={t("create.search.allTags")}
                 onClick={() => setTagSelectorOpen(true)}
+                disabled={tagsApiError}
                 className={classNames({
                   "opacity-50":
                     !connected || !gamesIndex.exists || gamesIndex.indexing

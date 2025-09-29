@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import React from "react";
 import { render, screen, fireEvent } from "../../../test-utils";
 import { SlideModal } from "../../../components/SlideModal";
 
@@ -13,7 +14,10 @@ vi.mock("../../../hooks/useSlideModalManager", () => ({
     registerModal: vi.fn(),
     unregisterModal: vi.fn(),
     closeAllExcept: vi.fn()
-  }))
+  })),
+  SlideModalContext: {
+    Provider: ({ children }: { children: React.ReactNode }) => children
+  }
 }));
 
 // Mock store

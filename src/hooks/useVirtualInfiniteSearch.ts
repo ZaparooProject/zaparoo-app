@@ -62,7 +62,7 @@ export function useVirtualInfiniteSearch({
   const totalCount = useMemo(() => {
     if (!searchQuery.data?.pages) return 0;
     return allItems.length;
-  }, [allItems.length]);
+  }, [allItems.length, searchQuery.data?.pages]);
 
   // Get loading states
   const isLoading = searchQuery.isLoading;
