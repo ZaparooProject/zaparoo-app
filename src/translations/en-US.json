@@ -244,7 +244,7 @@
         "copy": "Copy to Clipboard",
         "filename": "Filename",
         "fileSize": "File Size",
-        "searchPlaceholder": "Filter logs",
+        "searchPlaceholder": "Filter logs...",
         "levelFilters": "Log Levels",
         "totalEntries": "Total entries",
         "filteredEntries": "Showing",

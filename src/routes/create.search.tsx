@@ -9,7 +9,11 @@ import { BackToTop } from "@/components/BackToTop.tsx";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { CreateIcon, PlayIcon, SearchIcon } from "../lib/images";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { SearchResultGame, SearchResultsResponse, SystemsResponse } from "../lib/models";
+import {
+  SearchResultGame,
+  SearchResultsResponse,
+  SystemsResponse
+} from "../lib/models";
 import { SlideModal } from "../components/SlideModal";
 import { Button } from "../components/wui/Button";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
@@ -17,17 +21,20 @@ import { useStatusStore } from "../lib/store";
 import { TextInput } from "../components/wui/TextInput";
 import { WriteModal } from "../components/WriteModal";
 import { PageFrame } from "../components/PageFrame";
-import { SystemSelector, SystemSelectorTrigger } from "../components/SystemSelector";
+import {
+  SystemSelector,
+  SystemSelectorTrigger
+} from "../components/SystemSelector";
 import { TagSelector, TagSelectorTrigger } from "../components/TagSelector";
-
 
 export const Route = createFileRoute("/create/search")({
   loader: async (): Promise<LoaderData> => {
-    const [systemPreference, tagPreference, systemsResponse] = await Promise.all([
-      Preferences.get({ key: "searchSystem" }),
-      Preferences.get({ key: "searchTags" }),
-      CoreAPI.systems()
-    ]);
+    const [systemPreference, tagPreference, systemsResponse] =
+      await Promise.all([
+        Preferences.get({ key: "searchSystem" }),
+        Preferences.get({ key: "searchTags" }),
+        CoreAPI.systems()
+      ]);
 
     let savedTags: string[] = [];
     try {
@@ -55,7 +62,6 @@ interface LoaderData {
   tagQuery: string[];
   systems: SystemsResponse;
 }
-
 
 function Search() {
   const loaderData = Route.useLoaderData();
@@ -110,9 +116,9 @@ function Search() {
   };
 
   // State for search results
-  const [searchResults, setSearchResults] = useState<SearchResultsResponse | null>(null);
+  const [searchResults, setSearchResults] =
+    useState<SearchResultsResponse | null>(null);
   const [searchError, setSearchError] = useState<Error | null>(null);
-
 
   const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
     null
@@ -120,7 +126,8 @@ function Search() {
 
   // Check if search has valid parameters
   const canSearch = connected && gamesIndex.exists && !gamesIndex.indexing;
-  const hasSearchParameters = query.trim() !== "" || querySystem !== "all" || queryTags.length > 0;
+  const hasSearchParameters =
+    query.trim() !== "" || querySystem !== "all" || queryTags.length > 0;
 
   const nfcWriter = useNfcWriter();
   const [writeOpen, setWriteOpen] = useState(false);
@@ -190,7 +197,11 @@ function Search() {
         back={() => navigate({ to: "/create" })}
         scrollRef={scrollContainerRef}
       >
-        <div role="search" aria-label={t("create.search.title")}>
+        <div
+          role="search"
+          aria-label={t("create.search.title")}
+          className="space-y-3"
+        >
           <TextInput
             label={t("create.search.gameInput")}
             placeholder={t("create.search.gameInputPlaceholder")}
@@ -209,9 +220,9 @@ function Search() {
             }}
           />
 
-          <div className="flex flex-col gap-4 md:flex-row md:gap-3">
+          <div className="flex flex-col gap-3 md:flex-row">
             <div className="flex flex-col md:flex-1">
-              <label className="text-white">
+              <label className="mb-1 text-white">
                 {t("create.search.systemInput")}
               </label>
               <SystemSelectorTrigger
@@ -221,13 +232,14 @@ function Search() {
                 mode="single"
                 onClick={() => setSystemSelectorOpen(true)}
                 className={classNames({
-                  "opacity-50": !connected || !gamesIndex.exists || gamesIndex.indexing
+                  "opacity-50":
+                    !connected || !gamesIndex.exists || gamesIndex.indexing
                 })}
               />
             </div>
 
             <div className="flex flex-col md:flex-1">
-              <label className="text-white">
+              <label className="mb-1 text-white">
                 {t("create.search.tagsInput")}
               </label>
               <TagSelectorTrigger
@@ -235,21 +247,20 @@ function Search() {
                 placeholder={t("create.search.allTags")}
                 onClick={() => setTagSelectorOpen(true)}
                 className={classNames({
-                  "opacity-50": !connected || !gamesIndex.exists || gamesIndex.indexing
+                  "opacity-50":
+                    !connected || !gamesIndex.exists || gamesIndex.indexing
                 })}
               />
             </div>
           </div>
 
-          <div className="pt-4">
-            <Button
-              label={t("create.search.searchButton")}
-              icon={<SearchIcon size="20" />}
-              onClick={performSearch}
-              disabled={!canSearch || !hasSearchParameters || isSearching}
-              className="w-full"
-            />
-          </div>
+          <Button
+            label={t("create.search.searchButton")}
+            icon={<SearchIcon size="20" />}
+            onClick={performSearch}
+            disabled={!canSearch || !hasSearchParameters || isSearching}
+            className="w-full"
+          />
 
           <SearchResults
             loading={isSearching}
@@ -264,7 +275,7 @@ function Search() {
             onClearFilters={handleClearFilters}
           />
         </div>
-        </PageFrame>
+      </PageFrame>
 
       <SlideModal
         isOpen={selectedResult !== null && !writeOpen}
@@ -311,10 +322,7 @@ function Search() {
           </div>
         </div>
       </SlideModal>
-      <BackToTop
-        scrollContainerRef={scrollContainerRef}
-        threshold={200}
-      />
+      <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
       <SystemSelector
         isOpen={systemSelectorOpen}

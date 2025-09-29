@@ -30,7 +30,7 @@ export function TextInput(props: {
 
   return (
     <div className={props.className}>
-      {props.label && <span>{props.label}</span>}
+      {props.label && <span className="mb-1 block">{props.label}</span>}
       <div className="flex flex-row">
         <div className="relative flex-grow">
           <input
