@@ -9,6 +9,7 @@ export enum Method {
   MediaGenerateCancel = "media.generate.cancel",
   MediaActive = "media.active",
   MediaActiveUpdate = "media.active.update",
+  MediaTags = "media.tags",
   Systems = "systems",
   Settings = "settings",
   SettingsUpdate = "settings.update",
@@ -58,12 +59,19 @@ export interface SearchParams {
   query: string;
   systems: string[];
   maxResults?: number;
+  tags?: string[];
+}
+
+export interface TagInfo {
+  tag: string;
+  type: string;
 }
 
 export interface SearchResultGame {
   system: System;
   name: string;
   path: string;
+  tags: TagInfo[];
 }
 
 export interface SearchResultsResponse {
@@ -79,6 +87,10 @@ export interface System {
 
 export interface SystemsResponse {
   systems: System[];
+}
+
+export interface MediaTagsResponse {
+  tags: TagInfo[];
 }
 
 export type MappingType = "uid" | "text" | "data";

@@ -90,18 +90,28 @@
         "gamesDbUpdate": "Media database must be updated before searching",
         "searchError": "Error searching for media",
         "noGamesFound": "No media found",
-        "gamesFound": "{{count}} found",
-        "gamesFoundMax": "{{count}} found (showing first {{max}})",
         "title": "Search for Media",
         "gameInput": "Name",
         "gameInputPlaceholder": "Enter media name",
         "systemInput": "System",
         "allSystems": "All systems",
+        "tagsInput": "Tags",
+        "allTags": "All tags",
         "systemLabel": "System:",
         "pathLabel": "Path:",
         "writeLabel": "Write to tag",
         "playLabel": "Preview",
-        "selectSystem": "Select System"
+        "selectSystem": "Select System",
+        "selectTags": "Select Tags",
+        "loading": "Loading...",
+        "startSearching": "Ready to search",
+        "startSearchingHint": "Enter a game name or select filters to start searching",
+        "noResultsFound": "No results found for \"{{query}}\"",
+        "noResultsFoundSimple": "No results found",
+        "tryRemovingFiltersOnly": "Try removing filters to see more results",
+        "tryDifferentSearch": "Try removing filters or searching with different terms",
+        "tryDifferentTerms": "Try different search terms or check your spelling",
+        "clearFilters": "Clear filters"
       },
       "custom": {
         "title": "Custom ZapScript",
@@ -269,6 +279,26 @@
       "multipleSelected": "{{count}} systems selected",
       "clearAll": "Clear all",
       "apply": "Apply"
+    },
+    "tagSelector": {
+      "title": "Select Tags",
+      "searchPlaceholder": "Search tags...",
+      "allTypes": "All types",
+      "noResults": "No tags found",
+      "noTags": "No tags available",
+      "selectedCount": "{{count}} tags selected",
+      "multipleSelected": "{{count}} tags selected",
+      "clearAll": "Clear all",
+      "apply": "Apply",
+      "type": {
+        "genre": "Genre",
+        "year": "Year",
+        "series": "Series",
+        "publisher": "Publisher",
+        "developer": "Developer",
+        "platform": "Platform",
+        "category": "Category"
+      }
     }
   }
 }

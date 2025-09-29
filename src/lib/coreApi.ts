@@ -10,6 +10,7 @@ import {
   LogDownloadResponse,
   MediaActiveUpdateRequest,
   MediaResponse,
+  MediaTagsResponse,
   Method,
   Notification,
   ReadersResponse,
@@ -563,9 +564,9 @@ class CoreApi {
     });
   }
 
-  mediaSearch(params: SearchParams): Promise<SearchResultsResponse> {
+  mediaSearch(params: SearchParams, signal?: AbortSignal): Promise<SearchResultsResponse> {
     return new Promise<SearchResultsResponse>((resolve, reject) => {
-      this.call(Method.MediaSearch, params)
+      this.call(Method.MediaSearch, params, signal)
         .then((result) => {
           try {
             const response = result as SearchResultsResponse;
@@ -582,6 +583,31 @@ class CoreApi {
         })
         .catch((error) => {
           console.error("Media search API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  mediaTags(systems?: string[]): Promise<MediaTagsResponse> {
+    return new Promise<MediaTagsResponse>((resolve, reject) => {
+      const params = systems ? { systems } : {};
+      this.call(Method.MediaTags, params)
+        .then((result) => {
+          try {
+            const response = result as MediaTagsResponse;
+            console.debug(response);
+            resolve(response);
+          } catch (e) {
+            console.error("Error processing media tags response:", e);
+            reject(
+              new Error(
+                `Failed to process media tags response: ${e instanceof Error ? e.message : String(e)}`
+              )
+            );
+          }
+        })
+        .catch((error) => {
+          console.error("Media tags API call failed:", error);
           reject(error);
         });
     });
