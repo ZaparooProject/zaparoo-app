@@ -112,7 +112,11 @@
         "tryDifferentSearch": "Try removing filters or searching with different terms",
         "tryDifferentTerms": "Try different search terms or check your spelling",
         "clearFilters": "Clear filters",
-        "tryAgain": "Try again"
+        "tryAgain": "Try again",
+        "recentSearches": "Recent Searches",
+        "noRecentSearches": "No recent searches yet",
+        "noRecentSearchesHint": "Start searching to build your search history",
+        "clearHistory": "Clear History"
       },
       "custom": {
         "title": "Custom ZapScript",

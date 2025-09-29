@@ -8,7 +8,7 @@ import { VirtualSearchResults } from "@/components/VirtualSearchResults.tsx";
 import { CopyButton } from "@/components/CopyButton.tsx";
 import { BackToTop } from "@/components/BackToTop.tsx";
 import { CoreAPI } from "../lib/coreApi.ts";
-import { CreateIcon, PlayIcon, SearchIcon } from "../lib/images";
+import { CreateIcon, PlayIcon, SearchIcon, HistoryIcon } from "../lib/images";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import {
   SearchResultGame,
@@ -16,6 +16,7 @@ import {
 } from "../lib/models";
 import { SlideModal } from "../components/SlideModal";
 import { Button } from "../components/wui/Button";
+import { HeaderButton } from "../components/wui/HeaderButton";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { useStatusStore } from "../lib/store";
 import { TextInput } from "../components/wui/TextInput";
@@ -26,6 +27,8 @@ import {
   SystemSelectorTrigger
 } from "../components/SystemSelector";
 import { TagSelector, TagSelectorTrigger } from "../components/TagSelector";
+import { useRecentSearches } from "../hooks/useRecentSearches";
+import { RecentSearchesModal } from "../components/RecentSearchesModal";
 
 export const Route = createFileRoute("/create/search")({
   loader: async (): Promise<LoaderData> => {
@@ -74,6 +77,7 @@ function Search() {
   const [query, setQuery] = useState("");
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
   const [tagSelectorOpen, setTagSelectorOpen] = useState(false);
+  const [recentSearchesOpen, setRecentSearchesOpen] = useState(false);
 
   // State for tracking actual searched parameters and results
   const [searchParams, setSearchParams] = useState<{
@@ -85,6 +89,14 @@ function Search() {
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Recent searches hook
+  const {
+    recentSearches,
+    addRecentSearch,
+    clearRecentSearches,
+    getSearchDisplayText
+  } = useRecentSearches();
+
   // Manual search function
   const performSearch = async () => {
     if (!connected || !gamesIndex.exists || gamesIndex.indexing) {
@@ -93,6 +105,13 @@ function Search() {
 
     setIsSearching(true);
     setSearchParams({
+      query: query,
+      system: querySystem,
+      tags: queryTags
+    });
+
+    // Add to recent searches
+    await addRecentSearch({
       query: query,
       system: querySystem,
       tags: queryTags
@@ -170,6 +189,30 @@ function Search() {
     ]);
   };
 
+  // Handle selecting a recent search to prefill the form and execute search
+  const handleRecentSearchSelect = async (recentSearch: typeof recentSearches[0]) => {
+    setQuery(recentSearch.query);
+    setQuerySystem(recentSearch.system);
+    setQueryTags(recentSearch.tags);
+    setSelectedResult(null);
+
+    // Save preferences to match the selected search
+    await Promise.all([
+      Preferences.set({ key: "searchSystem", value: recentSearch.system }),
+      Preferences.set({ key: "searchTags", value: JSON.stringify(recentSearch.tags) })
+    ]);
+
+    // Automatically execute the search
+    if (connected && gamesIndex.exists && !gamesIndex.indexing) {
+      setIsSearching(true);
+      setSearchParams({
+        query: recentSearch.query,
+        system: recentSearch.system,
+        tags: recentSearch.tags
+      });
+    }
+  };
+
   return (
     <>
       <PageFrame
@@ -177,6 +220,16 @@ function Search() {
         title={t("create.search.title")}
         back={() => navigate({ to: "/create" })}
         scrollRef={scrollContainerRef}
+        headerRight={
+          <HeaderButton
+            onClick={() => setRecentSearchesOpen(true)}
+            disabled={recentSearches.length === 0}
+            active={recentSearchesOpen}
+            icon={<HistoryIcon size="24" />}
+            title={t("create.search.recentSearches")}
+            aria-label={t("create.search.recentSearches")}
+          />
+        }
       >
         <div
           role="search"
@@ -324,6 +377,14 @@ function Search() {
         selectedTags={queryTags}
         systems={querySystem === "all" ? [] : [querySystem]}
         title={t("create.search.selectTags")}
+      />
+      <RecentSearchesModal
+        isOpen={recentSearchesOpen}
+        onClose={() => setRecentSearchesOpen(false)}
+        recentSearches={recentSearches}
+        onSearchSelect={handleRecentSearchSelect}
+        onClearHistory={clearRecentSearches}
+        getSearchDisplayText={getSearchDisplayText}
       />
     </>
   );

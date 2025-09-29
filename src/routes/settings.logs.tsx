@@ -10,6 +10,7 @@ import { useStatusStore } from "../lib/store";
 import { PageFrame } from "../components/PageFrame";
 import { TextInput } from "../components/wui/TextInput";
 import { BackIcon } from "../lib/images";
+import { HeaderButton } from "../components/wui/HeaderButton";
 
 interface LogEntry {
   level: string;
@@ -175,9 +176,10 @@ function Logs() {
       <PageFrame
         {...swipeHandlers}
         headerLeft={
-          <button onClick={() => navigate({ to: "/settings" })} className="cursor-pointer">
-            <BackIcon size="24" />
-          </button>
+          <HeaderButton
+            onClick={() => navigate({ to: "/settings" })}
+            icon={<BackIcon size="24" />}
+          />
         }
         headerCenter={
           <h1 className="text-foreground text-xl">{t("settings.logs.title")}</h1>
@@ -186,30 +188,24 @@ function Logs() {
           <div className="flex gap-2">
             {logsQuery.data && (
               <>
-                <button
+                <HeaderButton
                   onClick={copyToClipboard}
-                  className="cursor-pointer"
+                  icon={<Copy size="20" />}
                   title={t("settings.logs.copy")}
-                >
-                  <Copy size="20" />
-                </button>
-                <button
+                />
+                <HeaderButton
                   onClick={downloadFile}
-                  className="cursor-pointer"
+                  icon={<Download size="20" />}
                   title={t("settings.logs.download")}
-                >
-                  <Download size="20" />
-                </button>
+                />
               </>
             )}
-            <button
+            <HeaderButton
               onClick={() => logsQuery.refetch()}
               disabled={!connected || logsQuery.isLoading}
-              className="cursor-pointer disabled:opacity-50"
+              icon={<RefreshCw size="20" />}
               title={logsQuery.isLoading ? t("loading") : t("settings.logs.refresh")}
-            >
-              <RefreshCw size="20" />
-            </button>
+            />
           </div>
         }
         scrollRef={scrollContainerRef}
