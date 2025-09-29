@@ -165,7 +165,7 @@ export function VirtualSearchResults({
 
   if (isError) {
     return (
-      <div className="text-center mt-6">
+      <div className="flex flex-col items-center mt-6">
         <p className="text-white mb-3">{t("create.search.searchError")}</p>
         <Button
           label={t("create.search.tryAgain")}

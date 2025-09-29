@@ -118,15 +118,15 @@ function Settings() {
             saveValue={handleDeviceAddressChange}
           />
 
-          <div className="flex flex-row items-center justify-between gap-2 min-h-[1.5rem]">
+          <div className="flex flex-col gap-1 min-h-[1.5rem]">
             {version.isSuccess && (
-              <>
+              <div className="flex flex-row items-center justify-between gap-2">
                 <div>Platform: {version.data.platform}</div>
                 <div>Version: {version.data.version}</div>
-              </>
+              </div>
             )}
             {connectionError !== "" && (
-              <div className="text-error w-full">{connectionError}</div>
+              <div className="text-error">{connectionError}</div>
             )}
           </div>
 

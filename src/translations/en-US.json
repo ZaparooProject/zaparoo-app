@@ -96,7 +96,7 @@
         "systemInput": "System",
         "allSystems": "All systems",
         "tagsInput": "Tags",
-        "allTags": "All tags",
+        "allTags": "Any tags",
         "systemLabel": "System:",
         "pathLabel": "Path:",
         "writeLabel": "Write to tag",
@@ -283,7 +283,7 @@
     },
     "tagSelector": {
       "title": "Select Tags",
-      "searchPlaceholder": "Search tags...",
+      "searchPlaceholder": "Filter tags...",
       "allTypes": "All types",
       "noResults": "No tags found",
       "noTags": "No tags available",

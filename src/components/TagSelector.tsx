@@ -2,17 +2,21 @@ import { useState, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Search, Check, X } from "lucide-react";
+import { Search, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
-import { useSmartTabs } from "@/hooks/useSmartTabs";
 import { TagInfo } from "@/lib/models";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
 import { BackToTop } from "./BackToTop";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent
+} from "./ui/accordion";
 
 interface TagSelectorProps {
   isOpen: boolean;
@@ -27,7 +31,7 @@ interface GroupedTags {
   [type: string]: TagInfo[];
 }
 
-const ITEM_HEIGHT = 56; // Height of each tag item in pixels
+const ITEM_HEIGHT = 64; // Height of each tag item in pixels (increased for spacing)
 
 export function TagSelector({
   isOpen,
@@ -42,40 +46,29 @@ export function TagSelector({
   const slideModalScrollRef = useRef<HTMLDivElement>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedType, setSelectedType] = useState("all");
   const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
-  const [showLeftGradient, setShowLeftGradient] = useState(false);
-  const [showRightGradient, setShowRightGradient] = useState(true);
-
-  // Smart tabs hook for overflow detection and drag scrolling
-  const { hasOverflow, tabsProps } = useSmartTabs<HTMLDivElement>({
-    onScrollChange: (scrollLeft, overflow) => {
-      if (!overflow) return;
-
-      const container = tabsProps.ref.current;
-      if (!container) return;
-
-      const { scrollWidth, clientWidth } = container;
-      setShowLeftGradient(scrollLeft > 0);
-      setShowRightGradient(scrollLeft < scrollWidth - clientWidth - 1);
-    }
-  });
+  const [expandedSections, setExpandedSections] = useState<string[]>([]);
+  const [allExpanded, setAllExpanded] = useState(false);
 
   // Get indexing state to disable selector when indexing is in progress
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
 
   // Fetch tags data
-  const { data: tagsData, isLoading, isError } = useQuery({
+  const {
+    data: tagsData,
+    isLoading,
+    isError
+  } = useQuery({
     queryKey: ["tags", systems],
     queryFn: () => CoreAPI.mediaTags(systems.length > 0 ? systems : undefined),
     enabled: isOpen, // Only fetch when modal is open
     retry: false // Don't retry on error for backwards compatibility
   });
 
-  // Process and filter tags
-  const { filteredTags, types } = useMemo(() => {
+  // Process and group tags
+  const { groupedTags, types, allTags } = useMemo(() => {
     if (!tagsData?.tags) {
-      return { filteredTags: [], types: [] };
+      return { groupedTags: {}, types: [], allTags: [] };
     }
 
     const tags = tagsData.tags;
@@ -107,30 +100,40 @@ export function TagSelector({
       return a.localeCompare(b);
     });
 
-    // Filter tags based on search and type
-    let filtered: TagInfo[] = [];
+    // Sort tags within each group
+    Object.keys(grouped).forEach((type) => {
+      grouped[type].sort((a, b) => a.tag.localeCompare(b.tag));
+    });
 
-    if (selectedType === "all") {
-      filtered = tags;
-    } else {
-      filtered = grouped[selectedType] || [];
-    }
+    // Apply search filter if needed
+    let filteredGrouped = grouped;
+    let filteredAllTags = tags;
 
-    // Apply search filter
     if (debouncedSearchQuery.trim()) {
       const query = debouncedSearchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (tag) =>
-          tag.tag.toLowerCase().includes(query) ||
-          tag.type.toLowerCase().includes(query)
-      );
+      filteredGrouped = {};
+      filteredAllTags = [];
+
+      Object.keys(grouped).forEach((type) => {
+        const filteredTags = grouped[type].filter(
+          (tag) =>
+            tag.tag.toLowerCase().includes(query) ||
+            tag.type.toLowerCase().includes(query)
+        );
+
+        if (filteredTags.length > 0) {
+          filteredGrouped[type] = filteredTags;
+          filteredAllTags.push(...filteredTags);
+        }
+      });
     }
 
-    // Sort filtered tags by tag name
-    filtered.sort((a, b) => a.tag.localeCompare(b.tag));
-
-    return { filteredTags: filtered, types };
-  }, [tagsData, debouncedSearchQuery, selectedType]);
+    return {
+      groupedTags: filteredGrouped,
+      types: types.filter((type) => filteredGrouped[type]?.length > 0),
+      allTags: filteredAllTags
+    };
+  }, [tagsData, debouncedSearchQuery]);
 
   // Handle tag selection
   const handleTagSelect = useCallback(
@@ -158,9 +161,29 @@ export function TagSelector({
     onClose();
   }, [onClose]);
 
-  // Set up virtualizer
+  // Handle expand/collapse all
+  const handleExpandCollapseAll = useCallback(() => {
+    if (allExpanded) {
+      setExpandedSections([]);
+      setAllExpanded(false);
+    } else {
+      setExpandedSections(types);
+      setAllExpanded(true);
+    }
+  }, [allExpanded, types]);
+
+  // Handle accordion expand change
+  const handleAccordionChange = useCallback(
+    (expanded: string[]) => {
+      setExpandedSections(expanded);
+      setAllExpanded(expanded.length === types.length);
+    },
+    [types.length]
+  );
+
+  // Set up virtualizer for all tags (used when search is active)
   const virtualizer = useVirtualizer({
-    count: filteredTags.length,
+    count: allTags.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: () => ITEM_HEIGHT,
     overscan: 5
@@ -180,13 +203,11 @@ export function TagSelector({
         {selectedTags.length > 0 && (
           <button
             onClick={handleClearAll}
-            className={classNames(
-              "text-sm underline",
-              {
-                "text-muted-foreground hover:text-foreground": !gamesIndex.indexing,
-                "text-muted-foreground/50 cursor-not-allowed": gamesIndex.indexing
-              }
-            )}
+            className={classNames("text-sm underline", {
+              "text-muted-foreground hover:text-foreground":
+                !gamesIndex.indexing,
+              "text-muted-foreground/50 cursor-not-allowed": gamesIndex.indexing
+            })}
             disabled={gamesIndex.indexing}
             type="button"
           >
@@ -214,9 +235,9 @@ export function TagSelector({
     >
       <div className="flex min-h-0 flex-col">
         {/* Header with search */}
-        <div className="space-y-4 p-2 pt-3">
+        <div className="p-2 pt-3">
           {/* Search bar */}
-          <div className="relative">
+          <div className="relative mb-3">
             <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <input
               type="text"
@@ -235,141 +256,213 @@ export function TagSelector({
               </button>
             )}
           </div>
+
+          {/* Expand/Collapse all button */}
+          {types.length > 0 && !debouncedSearchQuery && (
+            <button
+              onClick={handleExpandCollapseAll}
+              className="text-muted-foreground hover:text-foreground flex items-center gap-2 px-3 py-1 text-sm transition-colors"
+              type="button"
+            >
+              {allExpanded ? (
+                <>
+                  <ChevronUp className="h-4 w-4" />
+                  {t("tagSelector.collapseAll", {
+                    defaultValue: "Collapse all"
+                  })}
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-4 w-4" />
+                  {t("tagSelector.expandAll", { defaultValue: "Expand all" })}
+                </>
+              )}
+            </button>
+          )}
         </div>
 
-        {/* Type tabs using shadcn tabs */}
-        <Tabs
-          value={selectedType}
-          onValueChange={setSelectedType}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <div className="relative">
-            {/* Left gradient - only show when scrolled and overflowing */}
-            {hasOverflow && (
-              <div
-                className={`pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-8 bg-gradient-to-r from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
-                  showLeftGradient ? "opacity-100" : "opacity-0"
-                }`}
-              />
-            )}
-
-            <div className="px-2 py-2">
-              <TabsList
-                {...tabsProps}
-              >
-                <TabsTrigger value="all">
-                  {t("tagSelector.all", { defaultValue: "All" })}
-                </TabsTrigger>
-                {types.map((type) => (
-                  <TabsTrigger key={type} value={type}>
-                    {t(`tagSelector.type.${type}`, { defaultValue: type })}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+        {/* Content area */}
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {isLoading ? (
+            <div className="flex h-32 items-center justify-center">
+              <span className="text-muted-foreground">{t("loading")}</span>
             </div>
-
-            {/* Right gradient - only show when more content and overflowing */}
-            {hasOverflow && (
+          ) : isError ? (
+            <div className="flex h-32 items-center justify-center">
+              <span className="text-muted-foreground">
+                {t("tagSelector.unavailable", {
+                  defaultValue: "Tags unavailable"
+                })}
+              </span>
+            </div>
+          ) : allTags.length === 0 ? (
+            <div className="flex h-32 items-center justify-center">
+              <span className="text-muted-foreground">
+                {debouncedSearchQuery
+                  ? t("tagSelector.noResults")
+                  : t("tagSelector.noTags")}
+              </span>
+            </div>
+          ) : debouncedSearchQuery ? (
+            // Search results - show virtualized list of all matching tags
+            <div ref={scrollContainerRef} className="h-full px-2 pb-4">
               <div
-                className={`pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-gradient-to-l from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
-                  showRightGradient ? "opacity-100" : "opacity-0"
-                }`}
-              />
-            )}
-          </div>
+                style={{
+                  height: `${virtualizer.getTotalSize()}px`,
+                  width: "100%",
+                  position: "relative"
+                }}
+              >
+                {virtualizer.getVirtualItems().map((virtualItem) => {
+                  const tag = allTags[virtualItem.index];
+                  const isSelected = selectedTags.includes(tag.tag);
 
-          <TabsContent
-            value={selectedType}
-            className="min-h-0 flex-1 overflow-hidden"
-          >
-            {isLoading ? (
-              <div className="flex h-32 items-center justify-center">
-                <span className="text-muted-foreground">{t("loading")}</span>
-              </div>
-            ) : isError ? (
-              <div className="flex h-32 items-center justify-center">
-                <span className="text-muted-foreground">
-                  {t("tagSelector.unavailable", { defaultValue: "Tags unavailable" })}
-                </span>
-              </div>
-            ) : filteredTags.length === 0 ? (
-              <div className="flex h-32 items-center justify-center">
-                <span className="text-muted-foreground">
-                  {debouncedSearchQuery
-                    ? t("tagSelector.noResults")
-                    : t("tagSelector.noTags")}
-                </span>
-              </div>
-            ) : (
-              <div ref={scrollContainerRef} className="h-full">
-                <div
-                  style={{
-                    height: `${virtualizer.getTotalSize()}px`,
-                    width: "100%",
-                    position: "relative"
-                  }}
-                >
-                  {virtualizer.getVirtualItems().map((virtualItem) => {
-                    const tag = filteredTags[virtualItem.index];
-                    const isSelected = selectedTags.includes(tag.tag);
-
-                    return (
-                      <div
-                        key={virtualItem.key}
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: `${virtualItem.size}px`,
-                          transform: `translateY(${virtualItem.start}px)`
-                        }}
+                  return (
+                    <div
+                      key={virtualItem.key}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: `${virtualItem.size}px`,
+                        transform: `translateY(${virtualItem.start}px)`,
+                        padding: "2px 8px"
+                      }}
+                    >
+                      <button
+                        className={classNames(
+                          "flex h-full w-full items-center justify-between px-4 py-3 text-left transition-colors",
+                          "rounded-lg focus:outline-none",
+                          {
+                            "bg-white/10": isSelected,
+                            "hover:bg-white/10 focus:bg-white/10":
+                              !gamesIndex.indexing,
+                            "cursor-not-allowed opacity-50": gamesIndex.indexing
+                          }
+                        )}
+                        onClick={() => handleTagSelect(tag.tag)}
+                        disabled={gamesIndex.indexing}
+                        type="button"
                       >
-                        <button
-                          className={classNames(
-                            "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                            "rounded-lg focus:outline-none",
-                            {
-                              "bg-white/10": isSelected,
-                              "hover:bg-white/10 focus:bg-white/10": !gamesIndex.indexing,
-                              "opacity-50 cursor-not-allowed": gamesIndex.indexing
-                            }
-                          )}
-                          onClick={() => handleTagSelect(tag.tag)}
-                          disabled={gamesIndex.indexing}
-                          type="button"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div
-                              className={classNames(
-                                "border-input flex h-5 w-5 items-center justify-center rounded border-2",
-                                {
-                                  "bg-primary border-primary": isSelected
-                                }
-                              )}
-                            >
-                              {isSelected && (
-                                <Check className="h-3 w-3 text-white" />
-                              )}
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-foreground font-medium">
-                                {tag.tag}
-                              </span>
-                              <span className="text-muted-foreground text-xs">
-                                {t(`tagSelector.type.${tag.type}`, { defaultValue: tag.type })}
-                              </span>
-                            </div>
+                        <div className="flex items-center space-x-3">
+                          <div
+                            className={classNames(
+                              "border-input flex h-5 w-5 items-center justify-center rounded border-2",
+                              {
+                                "bg-primary border-primary": isSelected
+                              }
+                            )}
+                          >
+                            {isSelected && (
+                              <Check className="h-3 w-3 text-white" />
+                            )}
                           </div>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                          <div className="flex flex-col">
+                            <span className="text-foreground font-medium">
+                              {tag.tag}
+                            </span>
+                            <span className="text-muted-foreground text-xs">
+                              {t(`tagSelector.type.${tag.type}`, {
+                                defaultValue: tag.type
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
-            )}
-          </TabsContent>
-        </Tabs>
+            </div>
+          ) : (
+            // Accordion view for organized categories
+            <div className="h-full overflow-auto px-2 pb-4">
+              <Accordion
+                type="multiple"
+                value={expandedSections}
+                onValueChange={handleAccordionChange}
+                className="space-y-2"
+              >
+                {types.map((type) => {
+                  const tagsInType = groupedTags[type] || [];
+                  const selectedInType = tagsInType.filter((tag) =>
+                    selectedTags.includes(tag.tag)
+                  ).length;
+
+                  return (
+                    <AccordionItem
+                      key={type}
+                      value={type}
+                      className="overflow-hidden rounded-lg border border-white/20"
+                    >
+                      <AccordionTrigger className="bg-wui-card px-4 py-3 hover:bg-white/5 hover:no-underline">
+                        <div className="flex w-full items-center justify-between">
+                          <span>
+                            {t(`tagSelector.type.${type}`, {
+                              defaultValue: type
+                            })}{" "}
+                            ({tagsInType.length})
+                          </span>
+                          {selectedInType > 0 && (
+                            <span className="bg-primary text-primary-foreground mr-2 rounded-full px-2 py-0.5 text-xs font-medium">
+                              {selectedInType}
+                            </span>
+                          )}
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-3">
+                        <div className="space-y-1">
+                          {tagsInType.map((tag) => {
+                            const isSelected = selectedTags.includes(tag.tag);
+
+                            return (
+                              <button
+                                key={tag.tag}
+                                className={classNames(
+                                  "flex w-full items-center justify-between px-3 py-2 text-left transition-colors",
+                                  "rounded-md focus:outline-none",
+                                  {
+                                    "bg-white/10": isSelected,
+                                    "hover:bg-white/5 focus:bg-white/5":
+                                      !gamesIndex.indexing,
+                                    "cursor-not-allowed opacity-50":
+                                      gamesIndex.indexing
+                                  }
+                                )}
+                                onClick={() => handleTagSelect(tag.tag)}
+                                disabled={gamesIndex.indexing}
+                                type="button"
+                              >
+                                <div className="flex items-center space-x-3">
+                                  <div
+                                    className={classNames(
+                                      "border-input flex h-4 w-4 items-center justify-center rounded border-2",
+                                      {
+                                        "bg-primary border-primary": isSelected
+                                      }
+                                    )}
+                                  >
+                                    {isSelected && (
+                                      <Check className="h-2.5 w-2.5 text-white" />
+                                    )}
+                                  </div>
+                                  <span className="text-foreground text-sm font-medium">
+                                    {tag.tag}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            </div>
+          )}
+        </div>
 
         {/* Scroll to top button */}
         <BackToTop
@@ -428,7 +521,7 @@ export function TagSelectorTrigger({
         "border-input text-foreground flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus:ring-2 focus:ring-white/20 focus:outline-none",
         {
           "hover:bg-white/10": !gamesIndex.indexing && !disabled,
-          "opacity-50 cursor-not-allowed": gamesIndex.indexing || disabled
+          "cursor-not-allowed opacity-50": gamesIndex.indexing || disabled
         },
         className
       )}
