@@ -64,7 +64,7 @@ export function SearchResults(props: {
   // Show initial state when no search has been performed
   if (!props.hasSearched && !props.resp) {
     return (
-      <div className="pt-6 text-center text-white/60">
+      <div className="text-center text-white/60">
         <p className="text-lg mb-2">{t("create.search.startSearching")}</p>
         <p className="text-sm">{t("create.search.startSearchingHint")}</p>
       </div>
@@ -74,7 +74,7 @@ export function SearchResults(props: {
   // Show loading spinner when searching
   if (props.loading) {
     return (
-      <div className="flex items-center gap-2 pt-6 justify-center text-white/60">
+      <div className="flex items-center gap-2 justify-center text-white/60">
         <LoadingSpinner size={16} className="text-primary" />
         <span>{t("create.search.loading")}</span>
       </div>
@@ -82,7 +82,7 @@ export function SearchResults(props: {
   }
 
   if (props.error) {
-    return <p className="pt-2 text-center">{t("create.search.searchError")}</p>;
+    return <p className="text-center">{t("create.search.searchError")}</p>;
   }
 
   if (!props.resp) {
@@ -114,7 +114,7 @@ export function SearchResults(props: {
     }
 
     return (
-      <div className="pt-4 text-center">
+      <div className="text-center">
         <p className="text-white mb-3">{mainMessage}</p>
         {suggestionMessage && (
           <p className="text-sm text-white/70 mb-3">
@@ -143,7 +143,7 @@ export function SearchResults(props: {
         </div>
 
         {/* Results list */}
-        <div className="pt-3">
+        <div>
           {props.resp.results.map((game, i) => {
             const handleGameSelect = () => {
               if (

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -7,6 +7,7 @@ import { useDebounce } from "use-debounce";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
+import { useSmartTabs } from "@/hooks/useSmartTabs";
 import { TagInfo } from "@/lib/models";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
@@ -38,13 +39,26 @@ export function TagSelector({
 }: TagSelectorProps) {
   const { t } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const tabsListRef = useRef<HTMLDivElement>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
   const [showLeftGradient, setShowLeftGradient] = useState(false);
   const [showRightGradient, setShowRightGradient] = useState(true);
+
+  // Smart tabs hook for overflow detection and drag scrolling
+  const { hasOverflow, tabsProps } = useSmartTabs<HTMLDivElement>({
+    onScrollChange: (scrollLeft, overflow) => {
+      if (!overflow) return;
+
+      const container = tabsProps.ref.current;
+      if (!container) return;
+
+      const { scrollWidth, clientWidth } = container;
+      setShowLeftGradient(scrollLeft > 0);
+      setShowRightGradient(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  });
 
   // Get indexing state to disable selector when indexing is in progress
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
@@ -142,20 +156,6 @@ export function TagSelector({
     onClose();
   }, [onClose]);
 
-  // Handle tabs scroll for gradient visibility
-  const handleTabsScroll = useCallback(() => {
-    const container = tabsListRef.current;
-    if (!container) return;
-
-    const { scrollLeft, scrollWidth, clientWidth } = container;
-
-    // Show left gradient if scrolled from start
-    setShowLeftGradient(scrollLeft > 0);
-
-    // Show right gradient if not at end
-    setShowRightGradient(scrollLeft < scrollWidth - clientWidth - 1);
-  }, []);
-
   // Set up virtualizer
   const virtualizer = useVirtualizer({
     count: filteredTags.length,
@@ -163,16 +163,6 @@ export function TagSelector({
     estimateSize: () => ITEM_HEIGHT,
     overscan: 5
   });
-
-  // Set up tabs scroll listener for gradient visibility
-  useEffect(() => {
-    handleTabsScroll(); // Check initial state
-    const container = tabsListRef.current;
-    if (container) {
-      container.addEventListener("scroll", handleTabsScroll, { passive: true });
-      return () => container.removeEventListener("scroll", handleTabsScroll);
-    }
-  }, [handleTabsScroll, types]); // Re-check when types change
 
   // Footer for multi-select mode
   const footer = (
@@ -252,17 +242,18 @@ export function TagSelector({
           className="flex min-h-0 flex-1 flex-col"
         >
           <div className="relative">
-            {/* Left gradient - only show when scrolled */}
-            <div
-              className={`pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-8 bg-gradient-to-r from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
-                showLeftGradient ? "opacity-100" : "opacity-0"
-              }`}
-            />
+            {/* Left gradient - only show when scrolled and overflowing */}
+            {hasOverflow && (
+              <div
+                className={`pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-8 bg-gradient-to-r from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
+                  showLeftGradient ? "opacity-100" : "opacity-0"
+                }`}
+              />
+            )}
 
             <div className="px-2 py-2">
               <TabsList
-                ref={tabsListRef}
-                className="flex w-full justify-start overflow-x-auto scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                {...tabsProps}
               >
                 <TabsTrigger value="all">
                   {t("tagSelector.allTypes")}
@@ -275,12 +266,14 @@ export function TagSelector({
               </TabsList>
             </div>
 
-            {/* Right gradient - only show when more content */}
-            <div
-              className={`pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-gradient-to-l from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
-                showRightGradient ? "opacity-100" : "opacity-0"
-              }`}
-            />
+            {/* Right gradient - only show when more content and overflowing */}
+            {hasOverflow && (
+              <div
+                className={`pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-gradient-to-l from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
+                  showRightGradient ? "opacity-100" : "opacity-0"
+                }`}
+              />
+            )}
           </div>
 
           <TabsContent

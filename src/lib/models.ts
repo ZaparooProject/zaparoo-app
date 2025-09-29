@@ -60,6 +60,7 @@ export interface SearchParams {
   systems: string[];
   maxResults?: number;
   tags?: string[];
+  cursor?: string;
 }
 
 export interface TagInfo {
@@ -74,9 +75,16 @@ export interface SearchResultGame {
   tags: TagInfo[];
 }
 
+export interface Pagination {
+  nextCursor: string | null;
+  hasNextPage: boolean;
+  pageSize: number;
+}
+
 export interface SearchResultsResponse {
   results: SearchResultGame[];
   total: number;
+  pagination?: Pagination;
 }
 
 export interface System {

@@ -2,14 +2,15 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
-import { useDebounce } from "use-debounce";
 import { useStatusStore } from "@/lib/store.ts";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { TextInput } from "@/components/wui/TextInput.tsx";
-import { SearchResults } from "@/components/SearchResults.tsx";
+import { Button } from "@/components/wui/Button.tsx";
+import { VirtualSearchResults } from "@/components/VirtualSearchResults.tsx";
 import { SearchResultGame } from "@/lib/models.ts";
 import { BackToTop } from "@/components/BackToTop.tsx";
+import { SearchIcon } from "@/lib/images.tsx";
 
 export function MediaSearchModal(props: {
   isOpen: boolean;
@@ -31,11 +32,12 @@ export function MediaSearchModal(props: {
 
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
-  const [debouncedQuery] = useDebounce(query, 750);
   const [selectedSystem, setSelectedSystem] = useState<string>("all");
   const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
     null
   );
+  const [hasSearched, setHasSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const connected = useStatusStore((state) => state.connected);
   const { close, onSelect } = props;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -47,20 +49,15 @@ export function MediaSearchModal(props: {
 
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
 
-  const searchResults = useQuery({
-    queryKey: ["mediaSearch", debouncedQuery, selectedSystem],
-    queryFn: () =>
-      CoreAPI.mediaSearch({
-        query: debouncedQuery,
-        systems: selectedSystem === "all" ? [] : [selectedSystem]
-      }),
-    enabled:
-      debouncedQuery.length >= 2 &&
-      gamesIndex.exists &&
-      !gamesIndex.indexing,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
-  });
+  // Manual search function
+  const performSearch = () => {
+    if (!connected || !gamesIndex.exists || gamesIndex.indexing || query.trim().length < 2) {
+      return;
+    }
+
+    setIsSearching(true);
+    setHasSearched(true);
+  };
 
   useEffect(() => {
     if (selectedResult) {
@@ -90,6 +87,7 @@ export function MediaSearchModal(props: {
               onKeyUp={(e) => {
                 if (e.key === "Enter" || e.keyCode === 13) {
                   e.currentTarget.blur();
+                  performSearch();
                 }
               }}
             />
@@ -123,14 +121,24 @@ export function MediaSearchModal(props: {
                     ))}
               </select>
             </div>
+
+            <Button
+              label={t("create.search.searchButton")}
+              icon={<SearchIcon size="20" />}
+              onClick={performSearch}
+              disabled={!connected || !gamesIndex.exists || gamesIndex.indexing || query.trim().length < 2 || isSearching}
+              className="w-full"
+            />
           </div>
 
-          <SearchResults
-            loading={searchResults.isLoading}
-            error={searchResults.isError}
-            resp={searchResults.isSuccess ? searchResults.data : null}
+          <VirtualSearchResults
+            query={hasSearched ? query : ""}
+            systems={hasSearched ? (selectedSystem === "all" ? [] : [selectedSystem]) : []}
             selectedResult={selectedResult}
             setSelectedResult={setSelectedResult}
+            hasSearched={hasSearched}
+            isSearching={isSearching}
+            onSearchComplete={() => setIsSearching(false)}
           />
         </div>
 

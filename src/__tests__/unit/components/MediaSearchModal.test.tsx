@@ -45,6 +45,11 @@ vi.mock("@/lib/coreApi", () => ({
         { path: "/games/mario.sfc", name: "Super Mario World", systemName: "Super Nintendo" },
       ],
       total: 1,
+      pagination: {
+        nextCursor: null,
+        hasNextPage: false,
+        pageSize: 1,
+      },
     }),
   },
 }));

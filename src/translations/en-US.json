@@ -111,7 +111,8 @@
         "tryRemovingFiltersOnly": "Try removing filters to see more results",
         "tryDifferentSearch": "Try removing filters or searching with different terms",
         "tryDifferentTerms": "Try different search terms or check your spelling",
-        "clearFilters": "Clear filters"
+        "clearFilters": "Clear filters",
+        "tryAgain": "Try again"
       },
       "custom": {
         "title": "Custom ZapScript",

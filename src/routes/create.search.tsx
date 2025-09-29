@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Preferences } from "@capacitor/preferences";
 import classNames from "classnames";
-import { SearchResults } from "@/components/SearchResults.tsx";
+import { VirtualSearchResults } from "@/components/VirtualSearchResults.tsx";
 import { CopyButton } from "@/components/CopyButton.tsx";
 import { BackToTop } from "@/components/BackToTop.tsx";
 import { CoreAPI } from "../lib/coreApi.ts";
@@ -11,7 +11,6 @@ import { CreateIcon, PlayIcon, SearchIcon } from "../lib/images";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import {
   SearchResultGame,
-  SearchResultsResponse,
   SystemsResponse
 } from "../lib/models";
 import { SlideModal } from "../components/SlideModal";
@@ -75,7 +74,7 @@ function Search() {
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
   const [tagSelectorOpen, setTagSelectorOpen] = useState(false);
 
-  // State for tracking actual searched parameters
+  // State for tracking actual searched parameters and results
   const [searchParams, setSearchParams] = useState<{
     query: string;
     system: string;
@@ -97,28 +96,7 @@ function Search() {
       system: querySystem,
       tags: queryTags
     });
-
-    try {
-      const result = await CoreAPI.mediaSearch({
-        query: query,
-        systems: querySystem === "all" ? [] : [querySystem],
-        tags: queryTags
-      });
-      setSearchResults(result);
-      setSearchError(null);
-    } catch (error) {
-      console.error("Search error:", error);
-      setSearchError(error instanceof Error ? error : new Error(String(error)));
-      setSearchResults(null);
-    } finally {
-      setIsSearching(false);
-    }
   };
-
-  // State for search results
-  const [searchResults, setSearchResults] =
-    useState<SearchResultsResponse | null>(null);
-  const [searchError, setSearchError] = useState<Error | null>(null);
 
   const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
     null
@@ -161,8 +139,6 @@ function Search() {
     const selectedSystem = systems.length === 1 ? systems[0] : "all";
     setQuerySystem(selectedSystem);
     setSelectedResult(null);
-    // Clear search params to indicate filters have changed
-    setSearchParams(null);
     await Preferences.set({ key: "searchSystem", value: selectedSystem });
   };
 
@@ -170,8 +146,6 @@ function Search() {
   const handleTagSelect = async (tags: string[]) => {
     setQueryTags(tags);
     setSelectedResult(null);
-    // Clear search params to indicate filters have changed
-    setSearchParams(null);
     await Preferences.set({ key: "searchTags", value: JSON.stringify(tags) });
   };
 
@@ -180,9 +154,6 @@ function Search() {
     setQuerySystem("all");
     setQueryTags([]);
     setSelectedResult(null);
-    setSearchParams(null);
-    setSearchResults(null);
-    setSearchError(null);
     await Promise.all([
       Preferences.set({ key: "searchSystem", value: "all" }),
       Preferences.set({ key: "searchTags", value: JSON.stringify([]) })
@@ -261,20 +232,22 @@ function Search() {
             disabled={!canSearch || !hasSearchParameters || isSearching}
             className="w-full"
           />
-
-          <SearchResults
-            loading={isSearching}
-            error={!!searchError}
-            resp={searchResults}
-            setSelectedResult={setSelectedResult}
-            selectedResult={selectedResult}
-            hasSearched={searchParams !== null}
-            searchQuery={searchParams?.query || ""}
-            searchSystem={searchParams?.system || "all"}
-            searchTags={searchParams?.tags || []}
-            onClearFilters={handleClearFilters}
-          />
         </div>
+
+        <VirtualSearchResults
+          query={searchParams?.query || ""}
+          systems={searchParams ? (searchParams.system === "all" ? [] : [searchParams.system]) : []}
+          tags={searchParams?.tags || []}
+          selectedResult={selectedResult}
+          setSelectedResult={setSelectedResult}
+          hasSearched={searchParams !== null}
+          searchSystem={searchParams?.system || "all"}
+          searchTags={searchParams?.tags || []}
+          onClearFilters={handleClearFilters}
+          isSearching={isSearching}
+          onSearchComplete={() => setIsSearching(false)}
+          scrollContainerRef={scrollContainerRef}
+        />
       </PageFrame>
 
       <SlideModal
