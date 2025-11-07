@@ -10,12 +10,15 @@ import { CopyButton } from "@/components/CopyButton.tsx";
 import { BackToTop } from "@/components/BackToTop.tsx";
 import { TagBadge } from "@/components/TagBadge.tsx";
 import { CoreAPI } from "../lib/coreApi.ts";
-import { CreateIcon, PlayIcon, SearchIcon, HistoryIcon, DeviceIcon } from "../lib/images";
-import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import {
-  SearchResultGame,
-  SystemsResponse
-} from "../lib/models";
+  CreateIcon,
+  PlayIcon,
+  SearchIcon,
+  HistoryIcon,
+  DeviceIcon
+} from "../lib/images";
+import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
+import { SearchResultGame, SystemsResponse } from "../lib/models";
 import { SlideModal } from "../components/SlideModal";
 import { Button } from "../components/wui/Button";
 import { HeaderButton } from "../components/wui/HeaderButton";
@@ -123,7 +126,7 @@ function Search() {
   const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
     null
   );
-  const [writeMode, setWriteMode] = useState<'path' | 'zapScript'>('zapScript');
+  const [writeMode, setWriteMode] = useState<"path" | "zapScript">("zapScript");
 
   // Check if search has valid parameters
   const canSearch = connected && gamesIndex.exists && !gamesIndex.indexing;
@@ -152,7 +155,7 @@ function Search() {
   // Set default write mode when selected result changes
   useEffect(() => {
     if (selectedResult) {
-      setWriteMode(selectedResult.zapScript ? 'zapScript' : 'path');
+      setWriteMode(selectedResult.zapScript ? "zapScript" : "path");
     }
   }, [selectedResult]);
 
@@ -198,7 +201,9 @@ function Search() {
   };
 
   // Handle selecting a recent search to prefill the form and execute search
-  const handleRecentSearchSelect = async (recentSearch: typeof recentSearches[0]) => {
+  const handleRecentSearchSelect = async (
+    recentSearch: (typeof recentSearches)[0]
+  ) => {
     setQuery(recentSearch.query);
     setQuerySystem(recentSearch.system);
     setQueryTags(recentSearch.tags);
@@ -207,7 +212,10 @@ function Search() {
     // Save preferences to match the selected search
     await Promise.all([
       Preferences.set({ key: "searchSystem", value: recentSearch.system }),
-      Preferences.set({ key: "searchTags", value: JSON.stringify(recentSearch.tags) })
+      Preferences.set({
+        key: "searchTags",
+        value: JSON.stringify(recentSearch.tags)
+      })
     ]);
 
     // Automatically execute the search
@@ -308,7 +316,13 @@ function Search() {
 
         <VirtualSearchResults
           query={searchParams?.query || ""}
-          systems={searchParams ? (searchParams.system === "all" ? [] : [searchParams.system]) : []}
+          systems={
+            searchParams
+              ? searchParams.system === "all"
+                ? []
+                : [searchParams.system]
+              : []
+          }
           tags={searchParams?.tags || []}
           selectedResult={selectedResult}
           setSelectedResult={setSelectedResult}
@@ -330,20 +344,26 @@ function Search() {
         <div className="flex flex-col gap-4 pt-2">
           {/* Primary Info */}
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
               <div className="flex items-center gap-2 sm:min-w-[100px]">
                 <DeviceIcon size="16" />
-                <span className="text-sm text-white/60">{t("create.search.systemLabel")}</span>
+                <span className="text-sm text-white/60">
+                  {t("create.search.systemLabel")}
+                </span>
               </div>
-              <span className="font-medium flex-1">{selectedResult?.system.name}</span>
+              <span className="flex-1 font-medium">
+                {selectedResult?.system.name}
+              </span>
             </div>
             {selectedResult?.tags && selectedResult.tags.length > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
                 <div className="flex items-center gap-2 sm:min-w-[100px]">
                   <Tag size={16} className="text-white/60" />
-                  <span className="text-sm text-white/60">{t("create.search.tagsLabel")}</span>
+                  <span className="text-sm text-white/60">
+                    {t("create.search.tagsLabel")}
+                  </span>
                 </div>
-                <div className="flex-1 flex flex-wrap gap-1.5">
+                <div className="flex flex-1 flex-wrap gap-1.5">
                   {selectedResult.tags.map((tag, tagIndex) => (
                     <TagBadge key={tagIndex} type={tag.type} tag={tag.tag} />
                   ))}
@@ -363,27 +383,30 @@ function Search() {
                 id="write-mode-path"
                 name="write-mode"
                 value="path"
-                checked={writeMode === 'path'}
-                onChange={() => setWriteMode('path')}
+                checked={writeMode === "path"}
+                onChange={() => setWriteMode("path")}
                 className="sr-only"
               />
               <label
                 htmlFor="write-mode-path"
                 className={classNames(
-                  "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border transition-all duration-200 cursor-pointer",
+                  "flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
                   {
-                    "bg-white/10 border-white/30": writeMode === 'path',
-                    "bg-white/5 border-white/10 hover:bg-white/[0.07]": writeMode !== 'path'
+                    "border-white/30 bg-white/10": writeMode === "path",
+                    "border-white/10 bg-white/5 hover:bg-white/[0.07]":
+                      writeMode !== "path"
                   }
                 )}
               >
-                <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
                   <div className="flex items-center gap-2 sm:min-w-[100px]">
-                    <Folder size={16} className="text-white/60 flex-shrink-0" />
-                    <span className="text-sm text-white/60">{t("create.search.pathLabel")}</span>
+                    <Folder size={16} className="flex-shrink-0 text-white/60" />
+                    <span className="text-sm text-white/60">
+                      {t("create.search.pathLabel")}
+                    </span>
                   </div>
-                  <div className="flex-1 flex items-start gap-2 min-w-0">
-                    <code className="font-mono text-white/90 break-all flex-1 text-left">
+                  <div className="flex min-w-0 flex-1 items-start gap-2">
+                    <code className="flex-1 text-left font-mono text-sm break-all text-white/90">
                       {selectedResult?.path}
                     </code>
                     {selectedResult?.path && (
@@ -393,14 +416,14 @@ function Search() {
                 </div>
                 <div
                   className={classNames(
-                    "h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all",
+                    "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
                     {
-                      "border-white bg-white": writeMode === 'path',
-                      "border-white/30": writeMode !== 'path'
+                      "border-white bg-white": writeMode === "path",
+                      "border-white/30": writeMode !== "path"
                     }
                   )}
                 >
-                  {writeMode === 'path' && (
+                  {writeMode === "path" && (
                     <div className="bg-background h-2 w-2 rounded-full" />
                   )}
                 </div>
@@ -415,27 +438,33 @@ function Search() {
                   id="write-mode-zapscript"
                   name="write-mode"
                   value="zapScript"
-                  checked={writeMode === 'zapScript'}
-                  onChange={() => setWriteMode('zapScript')}
+                  checked={writeMode === "zapScript"}
+                  onChange={() => setWriteMode("zapScript")}
                   className="sr-only"
                 />
                 <label
                   htmlFor="write-mode-zapscript"
                   className={classNames(
-                    "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border transition-all duration-200 cursor-pointer",
+                    "flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
                     {
-                      "bg-white/10 border-white/30": writeMode === 'zapScript',
-                      "bg-white/5 border-white/10 hover:bg-white/[0.07]": writeMode !== 'zapScript'
+                      "border-white/30 bg-white/10": writeMode === "zapScript",
+                      "border-white/10 bg-white/5 hover:bg-white/[0.07]":
+                        writeMode !== "zapScript"
                     }
                   )}
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                  <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
                     <div className="flex items-center gap-2 sm:min-w-[100px]">
-                      <FileCode size={16} className="text-white/60 flex-shrink-0" />
-                      <span className="text-sm text-white/60">{t("create.search.zapscriptLabel")}</span>
+                      <FileCode
+                        size={16}
+                        className="flex-shrink-0 text-white/60"
+                      />
+                      <span className="text-sm text-white/60">
+                        {t("create.search.zapscriptLabel")}
+                      </span>
                     </div>
-                    <div className="flex-1 flex items-start gap-2 min-w-0">
-                      <code className="font-mono text-white/90 break-all flex-1 text-left">
+                    <div className="flex min-w-0 flex-1 items-start gap-2">
+                      <code className="flex-1 text-left font-mono text-sm break-words text-white/90">
                         {selectedResult.zapScript}
                       </code>
                       <CopyButton text={selectedResult.zapScript} />
@@ -443,14 +472,14 @@ function Search() {
                   </div>
                   <div
                     className={classNames(
-                      "h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all",
+                      "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
                       {
-                        "border-white bg-white": writeMode === 'zapScript',
-                        "border-white/30": writeMode !== 'zapScript'
+                        "border-white bg-white": writeMode === "zapScript",
+                        "border-white/30": writeMode !== "zapScript"
                       }
                     )}
                   >
-                    {writeMode === 'zapScript' && (
+                    {writeMode === "zapScript" && (
                       <div className="bg-background h-2 w-2 rounded-full" />
                     )}
                   </div>
@@ -467,9 +496,10 @@ function Search() {
               disabled={!selectedResult}
               onClick={() => {
                 if (selectedResult) {
-                  const textToWrite = writeMode === 'zapScript' && selectedResult.zapScript
-                    ? selectedResult.zapScript
-                    : selectedResult.path;
+                  const textToWrite =
+                    writeMode === "zapScript" && selectedResult.zapScript
+                      ? selectedResult.zapScript
+                      : selectedResult.path;
                   nfcWriter.write(WriteAction.Write, textToWrite);
                   setWriteOpen(true);
                 }
@@ -483,9 +513,10 @@ function Search() {
               disabled={!selectedResult || !connected}
               onClick={() => {
                 if (selectedResult) {
-                  const textToRun = writeMode === 'zapScript' && selectedResult.zapScript
-                    ? selectedResult.zapScript
-                    : selectedResult.path;
+                  const textToRun =
+                    writeMode === "zapScript" && selectedResult.zapScript
+                      ? selectedResult.zapScript
+                      : selectedResult.path;
                   CoreAPI.run({
                     uid: "",
                     text: textToRun
