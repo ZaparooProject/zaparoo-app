@@ -270,5 +270,45 @@ describe('MediaDatabaseCard', () => {
     expect(cancelButton).not.toBeInTheDocument();
   });
 
+  it('should keep cancel button in "Cancelling..." state after API call completes (regression test)', async () => {
+    // REGRESSION TEST: This test prevents re-introducing a bug where the cancel button
+    // immediately reverts to "Cancel" state after the API call completes, even though
+    // the actual cancellation is still happening in the background on zaparoo-core.
+    //
+    // The bug was caused by a `finally` block that reset `isCancelling` state immediately
+    // after the API call. The correct behavior is to keep the button in "Cancelling..."
+    // state until a WebSocket notification confirms that indexing has stopped.
+
+    mockStore.gamesIndex.indexing = true;
+    const { CoreAPI } = await import('../../../lib/coreApi');
+
+    // Mock the cancel API to resolve successfully
+    vi.mocked(CoreAPI.mediaGenerateCancel).mockResolvedValue(undefined);
+
+    render(<MediaDatabaseCard />);
+
+    // Find and click the cancel button
+    const cancelButton = screen.getByRole('button', { name: /settings\.updateDb\.cancel/i });
+    fireEvent.click(cancelButton);
+
+    // Wait for the API call to complete
+    await vi.waitFor(() => {
+      expect(CoreAPI.mediaGenerateCancel).toHaveBeenCalledOnce();
+    });
+
+    // CRITICAL ASSERTION: After the API call completes, the button should STILL
+    // be in the "Cancelling..." state (disabled with "cancelling" text),
+    // NOT reverted back to "Cancel" state.
+    //
+    // This is because the actual cancellation is happening in the background,
+    // and we need to wait for the WebSocket notification (indexing: false) to confirm.
+    const buttonAfterApiCall = screen.getByRole('button', { name: /cancelling/i });
+    expect(buttonAfterApiCall).toBeInTheDocument();
+    expect(buttonAfterApiCall).toBeDisabled();
+
+    // Verify it's NOT showing the normal "Cancel" text
+    expect(screen.queryByRole('button', { name: /^settings\.updateDb\.cancel$/i })).not.toBeInTheDocument();
+  });
+
   // TODO: Add tests for optimization progress and total media count when query mocking is fixed
 });

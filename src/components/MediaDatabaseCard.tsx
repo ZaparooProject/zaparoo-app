@@ -56,11 +56,12 @@ export function MediaDatabaseCard() {
     setIsCancelling(true);
     try {
       await CoreAPI.mediaGenerateCancel();
-      // Invalidate media query to get fresh database status after cancellation
+      // Note: Don't reset isCancelling here - let the useEffect handle it
+      // when the indexing status updates from the WebSocket notification
       queryClient.invalidateQueries({ queryKey: ["media"] });
     } catch (error) {
       console.error("Failed to cancel media generation:", error);
-    } finally {
+      // Only reset on error, since cancellation request failed
       setIsCancelling(false);
     }
   };
@@ -133,7 +134,7 @@ export function MediaDatabaseCard() {
             </div>
           </div>
           <Button
-            label={isCancelling ? t("loading") : t("settings.updateDb.cancel")}
+            label={isCancelling ? t("cancelling") : t("settings.updateDb.cancel")}
             variant="outline"
             className="w-full"
             disabled={!connected || isCancelling}
