@@ -87,25 +87,26 @@ export function VirtualSearchResults({
   });
 
   // Fetch next page when approaching the end
+  const virtualItems = virtualizer.getVirtualItems();
+
   useEffect(() => {
-    const virtualItems = virtualizer.getVirtualItems();
     const [lastItem] = [...virtualItems].reverse();
 
     if (!lastItem) return;
 
     if (
-      lastItem.index >= totalCount - 1 &&
+      lastItem.index >= totalCount - 5 &&
       hasNextPage &&
       !isFetchingNextPage
     ) {
       fetchNextPage();
     }
   }, [
+    virtualItems,
     hasNextPage,
     fetchNextPage,
     totalCount,
-    isFetchingNextPage,
-    virtualizer
+    isFetchingNextPage
   ]);
 
   // Screen reader announcement for search results
@@ -237,7 +238,7 @@ export function VirtualSearchResults({
         }}
         data-testid="search-results"
       >
-          {virtualizer.getVirtualItems().map((virtualItem) => {
+          {virtualItems.map((virtualItem) => {
             const isLoading = virtualItem.index >= totalCount;
             const game = allItems[virtualItem.index];
 
