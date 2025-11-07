@@ -15,7 +15,7 @@ import { Button } from "./wui/Button";
 export const RestorePuchasesButton = () => {
   return (
     <Button
-      label={t("settings.advanced.restorePurchases")}
+      label={t("settings.app.restorePurchases")}
       className="w-full"
       onClick={() => {
         Purchases.restorePurchases()
@@ -46,7 +46,7 @@ export const RestorePuchasesButton = () => {
                 role="button"
                 tabIndex={0}
               >
-                {t("settings.advanced.restoreSuccess")}
+                {t("settings.app.restoreSuccess")}
               </span>
             ));
           })
@@ -59,7 +59,7 @@ export const RestorePuchasesButton = () => {
                 role="button"
                 tabIndex={0}
               >
-                {t("settings.advanced.restoreFail")}
+                {t("settings.app.restoreFail")}
               </span>
             ));
           });

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Preferences } from "@capacitor/preferences";
 import toast from "react-hot-toast";
@@ -23,6 +23,8 @@ export function CoreApiWebSocket() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const wsManagerRef = useRef<WebSocketManager | null>(null);
+  const [deviceAddress, setDeviceAddress] = useState(getDeviceAddress());
+  const [wsUrl, setWsUrl] = useState(getWsUrl());
 
   const {
     setConnectionState,
@@ -48,9 +50,46 @@ export function CoreApiWebSocket() {
     }))
   );
 
-  // Get WebSocket URL and device address outside useEffect for early exit
-  const deviceAddress = getDeviceAddress();
-  const wsUrl = getWsUrl();
+  // Retry logic to handle hot reload scenarios where localStorage might be temporarily unavailable
+  useEffect(() => {
+    let attempts = 0;
+    const maxAttempts = 5;
+    const checkInterval = 100; // ms
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const checkAddress = () => {
+      attempts++;
+      const addr = getDeviceAddress();
+      const url = getWsUrl();
+
+      // Update state if values changed
+      if (addr !== deviceAddress) {
+        setDeviceAddress(addr);
+      }
+
+      if (url !== wsUrl) {
+        setWsUrl(url);
+      }
+
+      // Continue checking if we still don't have a valid address/URL and haven't exceeded max attempts
+      const stillEmpty = addr === "" || url === "";
+      if (stillEmpty && attempts < maxAttempts) {
+        timer = setTimeout(checkAddress, checkInterval);
+      }
+    };
+
+    // Only start retry logic if we don't have an address yet
+    // This prevents unnecessary retries when address is already available
+    if (deviceAddress === "" || wsUrl === "") {
+      checkAddress();
+    }
+
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, []); // Run once on mount
 
   useEffect(() => {
     // Early exit checks

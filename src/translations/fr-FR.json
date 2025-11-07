@@ -98,14 +98,15 @@
         "contributors": "Contributeurs Zaparoo",
         "wizzodev": "Wizzo.dev Patrons"
       },
-      "advanced": {
+      "core": {
         "title": "Réglages avancées",
         "soundEffects": "Jouer un son lors du scan",
         "autoDetect": "Détection auto. du lecteur externe NFC",
         "debug": "Mode débug",
         "nfcDriver": "Code de connection pour le driver NFC",
-        "insertModeBlocklist": "Insert mode core blocklist",
-        "downloadLog": "Télécharger les logs de Zaparoo",
+        "insertModeBlocklist": "Insert mode core blocklist"
+      },
+      "app": {
         "restorePurchases": "Restaurer les achats",
         "restoreSuccess": "Achats restaurés",
         "restoreFail": "Echec lors de la restauration des achats"

@@ -12,8 +12,6 @@ import {
 } from "@/components/ProPurchase.tsx";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button as SCNButton } from "@/components/ui/button";
-import { ScanSettings } from "@/components/home/ScanSettings.tsx";
-import { useAppSettings } from "@/hooks/useAppSettings.ts";
 import i18n from "../i18n";
 import { PageFrame } from "../components/PageFrame";
 import { useStatusStore } from "../lib/store";
@@ -24,27 +22,15 @@ import { getDeviceAddress, setDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
 import { MediaDatabaseCard } from "../components/MediaDatabaseCard";
 
 interface LoaderData {
-  restartScan: boolean;
-  launchOnScan: boolean;
   launcherAccess: boolean;
-  preferRemoteWriter: boolean;
 }
 
 export const Route = createFileRoute("/settings/")({
   loader: async (): Promise<LoaderData> => {
-    const [restartResult, launchResult, accessResult, remoteWriterResult] =
-      await Promise.all([
-        Preferences.get({ key: "restartScan" }),
-        Preferences.get({ key: "launchOnScan" }),
-        Preferences.get({ key: "launcherAccess" }),
-        Preferences.get({ key: "preferRemoteWriter" }),
-      ]);
+    const accessResult = await Preferences.get({ key: "launcherAccess" });
 
     return {
-      restartScan: restartResult.value === "true",
-      launchOnScan: launchResult.value !== "false",
       launcherAccess: accessResult.value === "true",
-      preferRemoteWriter: remoteWriterResult.value === "true",
     };
   },
   component: Settings
@@ -56,7 +42,6 @@ function Settings() {
   const { PurchaseModal, setProPurchaseModalOpen, proAccess } =
     useProPurchase(initData.launcherAccess);
 
-  const connected = useStatusStore((state) => state.connected);
   const connectionError = useStatusStore((state) => state.connectionError);
   // const loggedInUser = useStatusStore((state) => state.loggedInUser);
   const deviceHistory = useStatusStore((state) => state.deviceHistory);
@@ -85,9 +70,6 @@ function Settings() {
       }
     });
   }, [setDeviceHistory]);
-
-  const { restartScan, setRestartScan, launchOnScan, setLaunchOnScan } =
-    useAppSettings({ initData });
 
   const handleDeviceAddressChange = (newAddress: string) => {
     // Set the new device address
@@ -173,14 +155,6 @@ function Settings() {
             </>
           )}
 
-          <ScanSettings
-            connected={connected}
-            restartScan={restartScan}
-            setRestartScan={setRestartScan}
-            launchOnScan={launchOnScan}
-            setLaunchOnScan={setLaunchOnScan}
-          />
-
           <MediaDatabaseCard />
 
           <div>
@@ -254,9 +228,16 @@ function Settings() {
             </select>
           </div>
 
-          <Link to="/settings/advanced">
+          <Link to="/settings/app">
             <div className="flex flex-row items-center justify-between">
-              <p>{t("settings.advanced.title")}</p>
+              <p>{t("settings.app.title")}</p>
+              <NextIcon size="20" />
+            </div>
+          </Link>
+
+          <Link to="/settings/core">
+            <div className="flex flex-row items-center justify-between">
+              <p>{t("settings.core.title")}</p>
               <NextIcon size="20" />
             </div>
           </Link>

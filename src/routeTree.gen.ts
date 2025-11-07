@@ -15,7 +15,8 @@ import { Route as CreateIndexRouteImport } from './routes/create.index'
 import { Route as SettingsOnlineRouteImport } from './routes/settings.online'
 import { Route as SettingsLogsRouteImport } from './routes/settings.logs'
 import { Route as SettingsHelpRouteImport } from './routes/settings.help'
-import { Route as SettingsAdvancedRouteImport } from './routes/settings.advanced'
+import { Route as SettingsCoreRouteImport } from './routes/settings.core'
+import { Route as SettingsAppRouteImport } from './routes/settings.app'
 import { Route as SettingsAboutRouteImport } from './routes/settings.about'
 import { Route as CreateTextRouteImport } from './routes/create.text'
 import { Route as CreateSearchRouteImport } from './routes/create.search'
@@ -53,9 +54,14 @@ const SettingsHelpRoute = SettingsHelpRouteImport.update({
   path: '/settings/help',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsAdvancedRoute = SettingsAdvancedRouteImport.update({
-  id: '/settings/advanced',
-  path: '/settings/advanced',
+const SettingsCoreRoute = SettingsCoreRouteImport.update({
+  id: '/settings/core',
+  path: '/settings/core',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsAppRoute = SettingsAppRouteImport.update({
+  id: '/settings/app',
+  path: '/settings/app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsAboutRoute = SettingsAboutRouteImport.update({
@@ -97,7 +103,8 @@ export interface FileRoutesByFullPath {
   '/create/search': typeof CreateSearchRoute
   '/create/text': typeof CreateTextRoute
   '/settings/about': typeof SettingsAboutRoute
-  '/settings/advanced': typeof SettingsAdvancedRoute
+  '/settings/app': typeof SettingsAppRoute
+  '/settings/core': typeof SettingsCoreRoute
   '/settings/help': typeof SettingsHelpRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/online': typeof SettingsOnlineRoute
@@ -112,7 +119,8 @@ export interface FileRoutesByTo {
   '/create/search': typeof CreateSearchRoute
   '/create/text': typeof CreateTextRoute
   '/settings/about': typeof SettingsAboutRoute
-  '/settings/advanced': typeof SettingsAdvancedRoute
+  '/settings/app': typeof SettingsAppRoute
+  '/settings/core': typeof SettingsCoreRoute
   '/settings/help': typeof SettingsHelpRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/online': typeof SettingsOnlineRoute
@@ -128,7 +136,8 @@ export interface FileRoutesById {
   '/create/search': typeof CreateSearchRoute
   '/create/text': typeof CreateTextRoute
   '/settings/about': typeof SettingsAboutRoute
-  '/settings/advanced': typeof SettingsAdvancedRoute
+  '/settings/app': typeof SettingsAppRoute
+  '/settings/core': typeof SettingsCoreRoute
   '/settings/help': typeof SettingsHelpRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/online': typeof SettingsOnlineRoute
@@ -145,7 +154,8 @@ export interface FileRouteTypes {
     | '/create/search'
     | '/create/text'
     | '/settings/about'
-    | '/settings/advanced'
+    | '/settings/app'
+    | '/settings/core'
     | '/settings/help'
     | '/settings/logs'
     | '/settings/online'
@@ -160,7 +170,8 @@ export interface FileRouteTypes {
     | '/create/search'
     | '/create/text'
     | '/settings/about'
-    | '/settings/advanced'
+    | '/settings/app'
+    | '/settings/core'
     | '/settings/help'
     | '/settings/logs'
     | '/settings/online'
@@ -175,7 +186,8 @@ export interface FileRouteTypes {
     | '/create/search'
     | '/create/text'
     | '/settings/about'
-    | '/settings/advanced'
+    | '/settings/app'
+    | '/settings/core'
     | '/settings/help'
     | '/settings/logs'
     | '/settings/online'
@@ -191,7 +203,8 @@ export interface RootRouteChildren {
   CreateSearchRoute: typeof CreateSearchRoute
   CreateTextRoute: typeof CreateTextRoute
   SettingsAboutRoute: typeof SettingsAboutRoute
-  SettingsAdvancedRoute: typeof SettingsAdvancedRoute
+  SettingsAppRoute: typeof SettingsAppRoute
+  SettingsCoreRoute: typeof SettingsCoreRoute
   SettingsHelpRoute: typeof SettingsHelpRoute
   SettingsLogsRoute: typeof SettingsLogsRoute
   SettingsOnlineRoute: typeof SettingsOnlineRoute
@@ -243,11 +256,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsHelpRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings/advanced': {
-      id: '/settings/advanced'
-      path: '/settings/advanced'
-      fullPath: '/settings/advanced'
-      preLoaderRoute: typeof SettingsAdvancedRouteImport
+    '/settings/core': {
+      id: '/settings/core'
+      path: '/settings/core'
+      fullPath: '/settings/core'
+      preLoaderRoute: typeof SettingsCoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/app': {
+      id: '/settings/app'
+      path: '/settings/app'
+      fullPath: '/settings/app'
+      preLoaderRoute: typeof SettingsAppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/about': {
@@ -303,7 +323,8 @@ const rootRouteChildren: RootRouteChildren = {
   CreateSearchRoute: CreateSearchRoute,
   CreateTextRoute: CreateTextRoute,
   SettingsAboutRoute: SettingsAboutRoute,
-  SettingsAdvancedRoute: SettingsAdvancedRoute,
+  SettingsAppRoute: SettingsAppRoute,
+  SettingsCoreRoute: SettingsCoreRoute,
   SettingsHelpRoute: SettingsHelpRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsOnlineRoute: SettingsOnlineRoute,

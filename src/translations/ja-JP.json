@@ -129,14 +129,15 @@
         "wizzodev": "Wizzo.dev Patrons",
         "joinPatreon": "Patreonに参加する"
       },
-      "advanced": {
+      "core": {
         "title": "詳細設定",
         "soundEffects": "スキャン時にサウンドエフェクトを再生する",
         "autoDetect": "外部NFCリーダーを自動検出する",
         "debug": "デバッグモード",
         "nfcDriver": "NFCドライバー接続文字列",
-        "insertModeBlocklist": "挿入モードのコアブロックリスト",
-        "downloadLog": "Zaparooログファイルをダウンロードする",
+        "insertModeBlocklist": "挿入モードのコアブロックリスト"
+      },
+      "app": {
         "restorePurchases": "購入を復元する",
         "restoreSuccess": "購入が復元されました",
         "restoreFail": "購入の復元に失敗しました"
