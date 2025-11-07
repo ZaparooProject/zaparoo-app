@@ -124,8 +124,6 @@ function Search() {
 
   // Check if search has valid parameters
   const canSearch = connected && gamesIndex.exists && !gamesIndex.indexing;
-  const hasSearchParameters =
-    query.trim() !== "" || querySystem !== "all" || queryTags.length > 0;
 
   const nfcWriter = useNfcWriter();
   const [writeOpen, setWriteOpen] = useState(false);
@@ -247,7 +245,7 @@ function Search() {
             onKeyUp={(e) => {
               if (e.key === "Enter" || e.keyCode === 13) {
                 e.currentTarget.blur();
-                if (canSearch && hasSearchParameters) {
+                if (canSearch) {
                   performSearch();
                 }
               }
@@ -293,7 +291,7 @@ function Search() {
             label={t("create.search.searchButton")}
             icon={<SearchIcon size="20" />}
             onClick={performSearch}
-            disabled={!canSearch || !hasSearchParameters || isSearching}
+            disabled={!canSearch || isSearching}
             className="w-full"
           />
         </div>
