@@ -9,6 +9,7 @@ import { NextIcon, SettingsIcon, WarningIcon } from "@/lib/images.tsx";
 import { LoadingSpinner } from "@/components/ui/loading-spinner.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 import { useVirtualInfiniteSearch } from "@/hooks/useVirtualInfiniteSearch";
+import { TagList } from "@/components/TagList.tsx";
 
 
 export interface VirtualSearchResultsProps {
@@ -334,23 +335,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
       <div className="flex flex-col">
         <p className="font-semibold">{game.name}</p>
         <p className="text-sm">{game.system.name}</p>
-        {game.tags && game.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {game.tags.slice(0, 4).map((tag, tagIndex) => (
-              <span
-                key={tagIndex}
-                className="inline-block px-2 py-0.5 text-xs rounded-full bg-white/20 text-white/80"
-              >
-                {tag.type}:{tag.tag}
-              </span>
-            ))}
-            {game.tags.length > 4 && (
-              <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-white/10 text-white/60">
-                +{game.tags.length - 4}
-              </span>
-            )}
-          </div>
-        )}
+        <TagList tags={game.tags} maxMobile={2} maxDesktop={4} />
       </div>
       <div>
         <NextIcon size="20" />

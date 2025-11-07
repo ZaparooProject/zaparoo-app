@@ -72,6 +72,7 @@ export interface SearchResultGame {
   system: System;
   name: string;
   path: string;
+  zapScript?: string;
   tags: TagInfo[];
 }
 
@@ -90,7 +91,9 @@ export interface SearchResultsResponse {
 export interface System {
   id: string;
   name: string;
-  category: string;
+  category?: string;
+  releaseDate?: string;
+  manufacturer?: string;
 }
 
 export interface SystemsResponse {

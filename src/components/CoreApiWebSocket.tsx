@@ -105,15 +105,15 @@ export function CoreApiWebSocket() {
         // Update the store with new state
         setGamesIndex(params);
 
-        // Check for state transitions that require media query invalidation
-        const transitionedFromIndexingToOptimizing =
-          currentState.indexing && !params.indexing && params.optimizing;
-        const transitionedFromOptimizingToComplete =
-          currentState.optimizing && !params.optimizing && !params.indexing;
+        // Check for any meaningful state changes that require media query invalidation
+        const indexingStateChanged = currentState.indexing !== params.indexing;
+        const optimizingStateChanged = currentState.optimizing !== params.optimizing;
+        const existsStateChanged = currentState.exists !== params.exists;
+        const totalMediaChanged = currentState.totalMedia !== params.totalMedia;
 
-        // Invalidate media query on important transitions to refresh UI status
-        if (transitionedFromIndexingToOptimizing || transitionedFromOptimizingToComplete) {
-          console.log("State transition detected, invalidating media query");
+        // Invalidate media query on any significant state change to keep UI in sync
+        if (indexingStateChanged || optimizingStateChanged || existsStateChanged || totalMediaChanged) {
+          console.log("Database state changed, invalidating media query");
           queryClient.invalidateQueries({ queryKey: ["media"] });
         }
       } catch (err) {

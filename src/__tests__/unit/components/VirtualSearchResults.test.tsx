@@ -101,7 +101,21 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
       },
     });
 
-    renderComponent();
+    const defaultProps = {
+      query: "test",
+      systems: [],
+      tags: [],
+      selectedResult: null,
+      setSelectedResult: vi.fn(),
+      hasSearched: true,
+      scrollContainerRef: { current: document.createElement("div") },
+    };
+
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <VirtualSearchResults {...defaultProps} />
+      </QueryClientProvider>
+    );
 
     // Wait for initial data to load
     await waitFor(() => {
@@ -129,7 +143,11 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
     });
 
     // Re-render to trigger the effect with new virtualItems
-    renderComponent();
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <VirtualSearchResults {...defaultProps} />
+      </QueryClientProvider>
+    );
 
     // Wait for second page to be fetched
     await waitFor(
@@ -161,7 +179,21 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
       },
     });
 
-    renderComponent();
+    const defaultProps = {
+      query: "test",
+      systems: [],
+      tags: [],
+      selectedResult: null,
+      setSelectedResult: vi.fn(),
+      hasSearched: true,
+      scrollContainerRef: { current: document.createElement("div") },
+    };
+
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <VirtualSearchResults {...defaultProps} />
+      </QueryClientProvider>
+    );
 
     await waitFor(() => {
       expect(mediaSearchSpy).toHaveBeenCalledTimes(1);
@@ -174,7 +206,11 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
       { index: 52, key: 52, start: 5200, size: 100 },
     ]);
 
-    renderComponent();
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <VirtualSearchResults {...defaultProps} />
+      </QueryClientProvider>
+    );
 
     // Wait a bit to ensure no additional calls are made
     await new Promise((resolve) => setTimeout(resolve, 100));

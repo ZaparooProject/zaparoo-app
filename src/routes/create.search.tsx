@@ -4,11 +4,13 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
 import classNames from "classnames";
+import { Folder, FileCode, Tag } from "lucide-react";
 import { VirtualSearchResults } from "@/components/VirtualSearchResults.tsx";
 import { CopyButton } from "@/components/CopyButton.tsx";
 import { BackToTop } from "@/components/BackToTop.tsx";
+import { TagBadge } from "@/components/TagBadge.tsx";
 import { CoreAPI } from "../lib/coreApi.ts";
-import { CreateIcon, PlayIcon, SearchIcon, HistoryIcon } from "../lib/images";
+import { CreateIcon, PlayIcon, SearchIcon, HistoryIcon, DeviceIcon } from "../lib/images";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import {
   SearchResultGame,
@@ -121,6 +123,7 @@ function Search() {
   const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
     null
   );
+  const [writeMode, setWriteMode] = useState<'path' | 'zapScript'>('zapScript');
 
   // Check if search has valid parameters
   const canSearch = connected && gamesIndex.exists && !gamesIndex.indexing;
@@ -145,6 +148,13 @@ function Search() {
       setGamesIndex(s.database);
     });
   }, [setGamesIndex]);
+
+  // Set default write mode when selected result changes
+  useEffect(() => {
+    if (selectedResult) {
+      setWriteMode(selectedResult.zapScript ? 'zapScript' : 'path');
+    }
+  }, [selectedResult]);
 
   // Check if tags API is available for backwards compatibility
   const { isError: tagsApiError } = useQuery({
@@ -317,24 +327,150 @@ function Search() {
         close={() => setSelectedResult(null)}
         title={selectedResult?.name || "Game Details"}
       >
-        <div className="flex flex-col gap-3 pt-2">
-          <p>
-            {t("create.search.systemLabel")} {selectedResult?.system.name}
-          </p>
-          <p>
-            {t("create.search.pathLabel")} {selectedResult?.path}{" "}
-            {selectedResult?.path !== "" && (
-              <CopyButton text={selectedResult?.path ?? ""} />
+        <div className="flex flex-col gap-4 pt-2">
+          {/* Primary Info */}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 sm:min-w-[100px]">
+                <DeviceIcon size="16" />
+                <span className="text-sm text-white/60">{t("create.search.systemLabel")}</span>
+              </div>
+              <span className="font-medium flex-1">{selectedResult?.system.name}</span>
+            </div>
+            {selectedResult?.tags && selectedResult.tags.length > 0 && (
+              <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3">
+                <div className="flex items-center gap-2 sm:min-w-[100px]">
+                  <Tag size={16} className="text-white/60" />
+                  <span className="text-sm text-white/60">{t("create.search.tagsLabel")}</span>
+                </div>
+                <div className="flex-1 flex flex-wrap gap-1.5">
+                  {selectedResult.tags.map((tag, tagIndex) => (
+                    <TagBadge key={tagIndex} type={tag.type} tag={tag.tag} />
+                  ))}
+                </div>
+              </div>
             )}
-          </p>
-          <div className="flex flex-row gap-2 pt-1">
+          </div>
+
+          {/* Technical Details - Selectable Options */}
+          <fieldset className="space-y-2">
+            <legend className="sr-only">Select value to write to tag</legend>
+
+            {/* Path Option */}
+            <div>
+              <input
+                type="radio"
+                id="write-mode-path"
+                name="write-mode"
+                value="path"
+                checked={writeMode === 'path'}
+                onChange={() => setWriteMode('path')}
+                className="sr-only"
+              />
+              <label
+                htmlFor="write-mode-path"
+                className={classNames(
+                  "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border transition-all duration-200 cursor-pointer",
+                  {
+                    "bg-white/10 border-white/30": writeMode === 'path',
+                    "bg-white/5 border-white/10 hover:bg-white/[0.07]": writeMode !== 'path'
+                  }
+                )}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 sm:min-w-[100px]">
+                    <Folder size={16} className="text-white/60 flex-shrink-0" />
+                    <span className="text-sm text-white/60">{t("create.search.pathLabel")}</span>
+                  </div>
+                  <div className="flex-1 flex items-start gap-2 min-w-0">
+                    <code className="font-mono text-white/90 break-all flex-1 text-left">
+                      {selectedResult?.path}
+                    </code>
+                    {selectedResult?.path && (
+                      <CopyButton text={selectedResult.path} />
+                    )}
+                  </div>
+                </div>
+                <div
+                  className={classNames(
+                    "h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all",
+                    {
+                      "border-white bg-white": writeMode === 'path',
+                      "border-white/30": writeMode !== 'path'
+                    }
+                  )}
+                >
+                  {writeMode === 'path' && (
+                    <div className="bg-background h-2 w-2 rounded-full" />
+                  )}
+                </div>
+              </label>
+            </div>
+
+            {/* ZapScript Option */}
+            {selectedResult?.zapScript && (
+              <div>
+                <input
+                  type="radio"
+                  id="write-mode-zapscript"
+                  name="write-mode"
+                  value="zapScript"
+                  checked={writeMode === 'zapScript'}
+                  onChange={() => setWriteMode('zapScript')}
+                  className="sr-only"
+                />
+                <label
+                  htmlFor="write-mode-zapscript"
+                  className={classNames(
+                    "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border transition-all duration-200 cursor-pointer",
+                    {
+                      "bg-white/10 border-white/30": writeMode === 'zapScript',
+                      "bg-white/5 border-white/10 hover:bg-white/[0.07]": writeMode !== 'zapScript'
+                    }
+                  )}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 sm:min-w-[100px]">
+                      <FileCode size={16} className="text-white/60 flex-shrink-0" />
+                      <span className="text-sm text-white/60">{t("create.search.zapscriptLabel")}</span>
+                    </div>
+                    <div className="flex-1 flex items-start gap-2 min-w-0">
+                      <code className="font-mono text-white/90 break-all flex-1 text-left">
+                        {selectedResult.zapScript}
+                      </code>
+                      <CopyButton text={selectedResult.zapScript} />
+                    </div>
+                  </div>
+                  <div
+                    className={classNames(
+                      "h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all",
+                      {
+                        "border-white bg-white": writeMode === 'zapScript',
+                        "border-white/30": writeMode !== 'zapScript'
+                      }
+                    )}
+                  >
+                    {writeMode === 'zapScript' && (
+                      <div className="bg-background h-2 w-2 rounded-full" />
+                    )}
+                  </div>
+                </label>
+              </div>
+            )}
+          </fieldset>
+
+          {/* Actions */}
+          <div className="flex flex-row gap-2 pt-2">
             <Button
               label={t("create.search.writeLabel")}
               icon={<CreateIcon size="20" />}
               disabled={!selectedResult}
               onClick={() => {
                 if (selectedResult) {
-                  nfcWriter.write(WriteAction.Write, selectedResult.path);
+                  const textToWrite = writeMode === 'zapScript' && selectedResult.zapScript
+                    ? selectedResult.zapScript
+                    : selectedResult.path;
+                  nfcWriter.write(WriteAction.Write, textToWrite);
                   setWriteOpen(true);
                 }
               }}
@@ -347,9 +483,12 @@ function Search() {
               disabled={!selectedResult || !connected}
               onClick={() => {
                 if (selectedResult) {
+                  const textToRun = writeMode === 'zapScript' && selectedResult.zapScript
+                    ? selectedResult.zapScript
+                    : selectedResult.path;
                   CoreAPI.run({
                     uid: "",
-                    text: selectedResult.path
+                    text: textToRun
                   });
                 }
               }}

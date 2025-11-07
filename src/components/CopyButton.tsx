@@ -21,7 +21,8 @@ export const CopyButton = (props: { text: string }) => {
   return (
     <span
       className="ml-1 cursor-pointer px-1 text-xs font-semibold text-white underline"
-      onClick={() => {
+      onClick={(e) => {
+        e.stopPropagation();
         writeToClipboard(props.text).then(() => {
           setDisplay(t("copied"));
           setTimeout(() => {
@@ -32,6 +33,7 @@ export const CopyButton = (props: { text: string }) => {
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
+          e.stopPropagation();
           writeToClipboard(props.text).then(() => {
             setDisplay(t("copied"));
             setTimeout(() => {
