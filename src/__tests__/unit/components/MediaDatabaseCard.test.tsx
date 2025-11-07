@@ -16,7 +16,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: any) => {
       if (key === 'toast.filesFound' && options?.count) {
-        return `${options.count} media found`;
+        return `${options.count} items scanned`;
       }
       return key;
     }
@@ -126,7 +126,7 @@ describe('MediaDatabaseCard', () => {
 
     render(<MediaDatabaseCard />);
 
-    expect(screen.queryByText('250 media found')).not.toBeInTheDocument();
+    expect(screen.queryByText('250 items scanned')).not.toBeInTheDocument();
     // Wait for the query to resolve
     expect(await screen.findByText('settings.updateDb.status.ready')).toBeInTheDocument();
   });

@@ -43,7 +43,7 @@
       "writingDb": "Writing database to disk",
       "hideLabel": "Hide",
       "updatedDb": "Games database updated",
-      "filesFound": "{{count}} media found",
+      "filesFound": "{{count}} items scanned",
       "nowPlayingHeading": "Now playing"
     },
     "write": {
@@ -214,7 +214,7 @@
       "updateDb.cancel": "Cancel",
       "updateDb.status.ready": "Database is ready",
       "updateDb.status.optimizing": "Optimizing database",
-      "updateDb.status.mediaCount": "Database ready: {{formattedCount}} media files",
+      "updateDb.status.mediaCount": "Database ready: {{formattedCount}} media titles",
       "updateDb.status.noConnection": "Not connected",
       "updateDb.status.checking": "Checking database status...",
       "updateDb.selectSystemsTitle": "Select Systems to Update",
