@@ -51,7 +51,7 @@ export function BackToTop({
 
   return (
     <div
-      className={`fixed right-4 transition-opacity duration-300 ${
+      className={`fixed right-4 sm:right-8 transition-opacity duration-300 ${
         isVisible
           ? "pointer-events-auto opacity-100"
           : "pointer-events-none opacity-0"

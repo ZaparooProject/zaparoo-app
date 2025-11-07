@@ -125,7 +125,7 @@ export function SlideModal(props: {
             className="h-[5px] w-[80px] rounded-full bg-[#00E0FF]"
           ></div>
         </div>
-        <div className="relative">
+        <div className="relative sm:pt-2">
           <p className="text-center text-lg">{props.title}</p>
           {/* Desktop close button */}
           <button

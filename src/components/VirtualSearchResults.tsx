@@ -341,7 +341,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
                 key={tagIndex}
                 className="inline-block px-2 py-0.5 text-xs rounded-full bg-white/20 text-white/80"
               >
-                {tag.tag}
+                {tag.type}:{tag.tag}
               </span>
             ))}
             {game.tags.length > 4 && (

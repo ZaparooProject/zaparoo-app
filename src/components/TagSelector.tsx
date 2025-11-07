@@ -137,13 +137,15 @@ export function TagSelector({
 
   // Handle tag selection
   const handleTagSelect = useCallback(
-    (tag: string) => {
+    (tag: TagInfo) => {
       // Don't allow selection while indexing
       if (gamesIndex.indexing) return;
 
-      const newSelection = selectedTags.includes(tag)
-        ? selectedTags.filter((t) => t !== tag)
-        : [...selectedTags, tag];
+      // Format tag as "<type>:<value>" for the API
+      const formattedTag = `${tag.type}:${tag.tag}`;
+      const newSelection = selectedTags.includes(formattedTag)
+        ? selectedTags.filter((t) => t !== formattedTag)
+        : [...selectedTags, formattedTag];
       onSelect(newSelection);
     },
     [selectedTags, onSelect, gamesIndex.indexing]
@@ -315,7 +317,8 @@ export function TagSelector({
               >
                 {virtualizer.getVirtualItems().map((virtualItem) => {
                   const tag = allTags[virtualItem.index];
-                  const isSelected = selectedTags.includes(tag.tag);
+                  const formattedTag = `${tag.type}:${tag.tag}`;
+                  const isSelected = selectedTags.includes(formattedTag);
 
                   return (
                     <div
@@ -341,7 +344,7 @@ export function TagSelector({
                             "cursor-not-allowed opacity-50": gamesIndex.indexing
                           }
                         )}
-                        onClick={() => handleTagSelect(tag.tag)}
+                        onClick={() => handleTagSelect(tag)}
                         disabled={gamesIndex.indexing}
                         type="button"
                       >
@@ -386,9 +389,10 @@ export function TagSelector({
               >
                 {types.map((type) => {
                   const tagsInType = groupedTags[type] || [];
-                  const selectedInType = tagsInType.filter((tag) =>
-                    selectedTags.includes(tag.tag)
-                  ).length;
+                  const selectedInType = tagsInType.filter((tag) => {
+                    const formattedTag = `${tag.type}:${tag.tag}`;
+                    return selectedTags.includes(formattedTag);
+                  }).length;
 
                   return (
                     <AccordionItem
@@ -414,7 +418,9 @@ export function TagSelector({
                       <AccordionContent className="px-4 pb-3">
                         <div className="space-y-1">
                           {tagsInType.map((tag) => {
-                            const isSelected = selectedTags.includes(tag.tag);
+                            const formattedTag = `${tag.type}:${tag.tag}`;
+                            const isSelected =
+                              selectedTags.includes(formattedTag);
 
                             return (
                               <button
@@ -430,7 +436,7 @@ export function TagSelector({
                                       gamesIndex.indexing
                                   }
                                 )}
-                                onClick={() => handleTagSelect(tag.tag)}
+                                onClick={() => handleTagSelect(tag)}
                                 disabled={gamesIndex.indexing}
                                 type="button"
                               >
@@ -499,6 +505,7 @@ export function TagSelectorTrigger({
       return placeholder;
     }
 
+    // Show full canonical "type:value" format
     if (selectedTags.length <= 3) {
       return selectedTags.join(", ");
     }
