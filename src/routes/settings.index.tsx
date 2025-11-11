@@ -228,12 +228,14 @@ function Settings() {
             </select>
           </div>
 
-          <Link to="/settings/app">
-            <div className="flex flex-row items-center justify-between">
-              <p>{t("settings.app.title")}</p>
-              <NextIcon size="20" />
-            </div>
-          </Link>
+          {Capacitor.isNativePlatform() && (
+            <Link to="/settings/app">
+              <div className="flex flex-row items-center justify-between">
+                <p>{t("settings.app.title")}</p>
+                <NextIcon size="20" />
+              </div>
+            </Link>
+          )}
 
           <Link to="/settings/core">
             <div className="flex flex-row items-center justify-between">
