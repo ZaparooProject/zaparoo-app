@@ -30,7 +30,7 @@ const config: CapacitorConfig = {
       providers: ["google.com"]
     },
     EdgeToEdge: {
-      backgroundColor: '#111928'
+      backgroundColor: "#111928"
     }
   }
 };

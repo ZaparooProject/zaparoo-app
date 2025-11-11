@@ -28,8 +28,6 @@ export function CoreApiWebSocket() {
 
   const {
     setConnectionState,
-    setConnectionStateWithGracePeriod,
-    clearGracePeriod,
     setConnectionError,
     setPlaying,
     setGamesIndex,
@@ -39,8 +37,6 @@ export function CoreApiWebSocket() {
   } = useStatusStore(
     useShallow((state) => ({
       setConnectionState: state.setConnectionState,
-      setConnectionStateWithGracePeriod: state.setConnectionStateWithGracePeriod,
-      clearGracePeriod: state.clearGracePeriod,
       setConnectionError: state.setConnectionError,
       setPlaying: state.setPlaying,
       setGamesIndex: state.setGamesIndex,
@@ -183,8 +179,7 @@ export function CoreApiWebSocket() {
       },
       {
         onOpen: () => {
-          clearGracePeriod();
-          setConnectionStateWithGracePeriod(ConnectionState.CONNECTED);
+          setConnectionState(ConnectionState.CONNECTED);
           setConnectionError("");
 
           // Flush any queued requests
@@ -243,7 +238,7 @@ export function CoreApiWebSocket() {
             });
         },
         onClose: () => {
-          setConnectionStateWithGracePeriod(ConnectionState.RECONNECTING);
+          setConnectionState(ConnectionState.RECONNECTING);
         },
         onError: (error) => {
           const errorMsg = "Error communicating with server: " + wsUrl;
@@ -301,7 +296,7 @@ export function CoreApiWebSocket() {
               // This is handled in onOpen callback
               break;
             case WebSocketState.RECONNECTING:
-              setConnectionStateWithGracePeriod(ConnectionState.RECONNECTING);
+              setConnectionState(ConnectionState.RECONNECTING);
               break;
             case WebSocketState.ERROR:
               setConnectionState(ConnectionState.ERROR);
@@ -327,17 +322,14 @@ export function CoreApiWebSocket() {
       console.log("CoreApiWebSocket cleanup: destroying WebSocket manager");
       wsManager.destroy();
       wsManagerRef.current = null;
-      clearGracePeriod();
       setConnectionState(ConnectionState.DISCONNECTED);
     };
   }, [
     deviceAddress,
     wsUrl,
     addDeviceHistory,
-    clearGracePeriod,
     setConnectionError,
     setConnectionState,
-    setConnectionStateWithGracePeriod,
     setDeviceHistory,
     setGamesIndex,
     setLastToken,

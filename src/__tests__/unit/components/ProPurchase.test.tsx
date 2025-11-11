@@ -91,7 +91,7 @@ describe('RestorePuchasesButton', () => {
 
     const button = screen.getByTestId('button');
     expect(button).toBeInTheDocument();
-    expect(button).toHaveTextContent('settings.advanced.restorePurchases');
+    expect(button).toHaveTextContent('settings.app.restorePurchases');
   });
 
   it('should handle successful restore with active entitlement', async () => {

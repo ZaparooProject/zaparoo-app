@@ -1,10 +1,10 @@
 export enum WebSocketState {
-  IDLE = 'idle',
-  CONNECTING = 'connecting',
-  CONNECTED = 'connected',
-  RECONNECTING = 'reconnecting',
-  DISCONNECTED = 'disconnected',
-  ERROR = 'error'
+  IDLE = "idle",
+  CONNECTING = "connecting",
+  CONNECTED = "connected",
+  RECONNECTING = "reconnecting",
+  DISCONNECTED = "disconnected",
+  ERROR = "error"
 }
 
 export interface WebSocketManagerConfig {
@@ -36,8 +36,13 @@ export class WebSocketManager {
   private pongTimer?: ReturnType<typeof setTimeout>;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
   private isDestroyed = false;
+  private messageQueue: string[] = [];
+  private readonly MAX_QUEUE_SIZE = 100;
 
-  constructor(config: WebSocketManagerConfig, callbacks: WebSocketManagerCallbacks = {}) {
+  constructor(
+    config: WebSocketManagerConfig,
+    callbacks: WebSocketManagerCallbacks = {}
+  ) {
     this.config = {
       url: config.url,
       pingInterval: config.pingInterval ?? 15000,
@@ -46,18 +51,21 @@ export class WebSocketManager {
       maxReconnectAttempts: config.maxReconnectAttempts ?? Infinity,
       reconnectBackoffMultiplier: config.reconnectBackoffMultiplier ?? 1.5,
       maxReconnectInterval: config.maxReconnectInterval ?? 30000,
-      pingMessage: config.pingMessage ?? 'ping'
+      pingMessage: config.pingMessage ?? "ping"
     };
     this.callbacks = callbacks;
   }
 
   connect(): void {
     if (this.isDestroyed) {
-      console.warn('Cannot connect: WebSocketManager has been destroyed');
+      console.warn("Cannot connect: WebSocketManager has been destroyed");
       return;
     }
 
-    if (this.state === WebSocketState.CONNECTING || this.state === WebSocketState.CONNECTED) {
+    if (
+      this.state === WebSocketState.CONNECTING ||
+      this.state === WebSocketState.CONNECTED
+    ) {
       return;
     }
 
@@ -76,12 +84,52 @@ export class WebSocketManager {
     this.setState(WebSocketState.IDLE);
   }
 
-  send(data: string): void {
+  send(data: string, options?: { queue?: boolean }): void {
+    const shouldQueue = options?.queue ?? true;
+
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(data);
+    } else if (shouldQueue) {
+      // Check if queue is at capacity
+      if (this.messageQueue.length >= this.MAX_QUEUE_SIZE) {
+        console.warn(
+          `Message queue full (${this.MAX_QUEUE_SIZE} messages). Discarding oldest message.`
+        );
+        this.messageQueue.shift(); // Remove oldest message
+      }
+      // Queue the message for sending once reconnected
+      console.debug("WebSocket not open, queuing message");
+      this.messageQueue.push(data);
     } else {
-      throw new Error(`Cannot send message: WebSocket is not open (state: ${this.ws?.readyState})`);
+      throw new Error(
+        `Cannot send message: WebSocket is not open (state: ${this.ws?.readyState})`
+      );
     }
+  }
+
+  private flushMessageQueue(): void {
+    if (this.messageQueue.length === 0) {
+      return;
+    }
+
+    console.debug(`Flushing ${this.messageQueue.length} queued messages`);
+    const messages = [...this.messageQueue];
+    this.messageQueue = [];
+
+    messages.forEach((message) => {
+      try {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          this.ws.send(message);
+        } else {
+          // If connection closed during flush, re-queue remaining messages
+          this.messageQueue.push(message);
+        }
+      } catch (error) {
+        console.error("Failed to send queued message:", error);
+        // Re-queue failed message
+        this.messageQueue.push(message);
+      }
+    });
   }
 
   get readyState(): number | undefined {
@@ -93,7 +141,10 @@ export class WebSocketManager {
   }
 
   get isConnected(): boolean {
-    return this.state === WebSocketState.CONNECTED && this.ws?.readyState === WebSocket.OPEN;
+    return (
+      this.state === WebSocketState.CONNECTED &&
+      this.ws?.readyState === WebSocket.OPEN
+    );
   }
 
   private createWebSocket(): void {
@@ -101,7 +152,7 @@ export class WebSocketManager {
       this.ws = new WebSocket(this.config.url);
       this.setupEventHandlers();
     } catch (error) {
-      console.error('Failed to create WebSocket:', error);
+      console.error("Failed to create WebSocket:", error);
       this.handleConnectionError();
     }
   }
@@ -110,22 +161,23 @@ export class WebSocketManager {
     if (!this.ws) return;
 
     this.ws.onopen = () => {
-      console.debug('WebSocket connected');
+      console.debug("WebSocket connected");
       this.reconnectAttempts = 0;
       this.setState(WebSocketState.CONNECTED);
       this.startHeartbeat();
+      this.flushMessageQueue();
       this.callbacks.onOpen?.();
     };
 
     this.ws.onclose = () => {
-      console.debug('WebSocket closed');
+      console.debug("WebSocket closed");
       this.stopHeartbeat();
       this.callbacks.onClose?.();
       this.handleDisconnection();
     };
 
     this.ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error("WebSocket error:", error);
       this.callbacks.onError?.(error);
       this.handleConnectionError();
     };
@@ -135,7 +187,7 @@ export class WebSocketManager {
       this.resetHeartbeat();
 
       // Handle pong messages
-      if (event.data === 'pong') {
+      if (event.data === "pong") {
         this.clearPongTimeout();
         return;
       }
@@ -167,17 +219,31 @@ export class WebSocketManager {
   }
 
   private scheduleReconnect(): void {
-    if (this.isDestroyed || this.reconnectAttempts >= this.config.maxReconnectAttempts) {
+    if (
+      this.isDestroyed ||
+      this.reconnectAttempts >= this.config.maxReconnectAttempts
+    ) {
       this.setState(WebSocketState.DISCONNECTED);
       return;
     }
 
-    // Calculate backoff delay
+    // Calculate backoff delay with jitter
     const baseDelay = this.config.reconnectInterval;
-    const backoffDelay = baseDelay * Math.pow(this.config.reconnectBackoffMultiplier, this.reconnectAttempts);
-    const delay = Math.min(backoffDelay, this.config.maxReconnectInterval);
+    const backoffDelay =
+      baseDelay *
+      Math.pow(this.config.reconnectBackoffMultiplier, this.reconnectAttempts);
+    const cappedDelay = Math.min(
+      backoffDelay,
+      this.config.maxReconnectInterval
+    );
 
-    console.debug(`Scheduling reconnect attempt ${this.reconnectAttempts + 1} in ${delay}ms`);
+    // Add random jitter (0-50% of the delay) to prevent synchronized reconnection attempts
+    const jitter = Math.random() * cappedDelay * 0.5;
+    const delay = Math.floor(cappedDelay + jitter);
+
+    console.debug(
+      `Scheduling reconnect attempt ${this.reconnectAttempts + 1} in ${delay}ms (base: ${cappedDelay}ms + jitter: ${Math.floor(jitter)}ms)`
+    );
 
     this.reconnectTimer = setTimeout(() => {
       if (this.isDestroyed) return;
@@ -196,7 +262,7 @@ export class WebSocketManager {
           this.ws.send(this.config.pingMessage);
           this.startPongTimeout();
         } catch (error) {
-          console.error('Failed to send ping:', error);
+          console.error("Failed to send ping:", error);
           this.handleConnectionError();
         }
       }
@@ -223,7 +289,7 @@ export class WebSocketManager {
   private startPongTimeout(): void {
     this.clearPongTimeout();
     this.pongTimer = setTimeout(() => {
-      console.warn('Pong timeout - closing connection');
+      console.warn("Pong timeout - closing connection");
       this.ws?.close();
     }, this.config.pongTimeout);
   }
@@ -250,7 +316,10 @@ export class WebSocketManager {
       this.ws.onerror = null;
       this.ws.onmessage = null;
 
-      if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+      if (
+        this.ws.readyState === WebSocket.OPEN ||
+        this.ws.readyState === WebSocket.CONNECTING
+      ) {
         this.ws.close();
       }
       this.ws = null;
