@@ -81,15 +81,6 @@ export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
                 {tool.description}
               </p>
 
-              {tool.dangerous && (
-                <div className="flex items-start gap-2 mb-4">
-                  <AlertTriangleIcon size={16} className="text-red-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-red-600 font-medium">
-                    {tool.warning}
-                  </p>
-                </div>
-              )}
-
               <Button
                 onClick={() => handleToolClick(tool.action)}
                 disabled={isProcessing}
@@ -98,6 +89,15 @@ export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
                 variant="outline"
                 className="w-full"
               />
+
+              {tool.dangerous && (
+                <div className="flex items-start gap-2 mt-3">
+                  <AlertTriangleIcon size={16} className="text-red-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-600 font-medium">
+                    {tool.warning}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         );

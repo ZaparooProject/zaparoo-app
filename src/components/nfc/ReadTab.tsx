@@ -4,13 +4,12 @@ import {
   EyeIcon,
   EyeOffIcon,
   ShareIcon,
-  WifiIcon,
-  GlobeIcon,
-  MessageCircleIcon,
-  FileTextIcon,
   NfcIcon
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
+import { Clipboard } from "@capacitor/clipboard";
+import { Share } from "@capacitor/share";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/wui/Button";
 import { Result } from "@/lib/nfc";
@@ -21,44 +20,36 @@ interface ReadTabProps {
 }
 
 export function ReadTab({ result, onScan }: ReadTabProps) {
+  const { t } = useTranslation();
   const [showRawData, setShowRawData] = useState(false);
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
-      await navigator.clipboard.writeText(text);
-      toast.success(`${label} copied to clipboard`);
+      await Clipboard.write({ string: text });
+      toast.success(t("create.nfc.readTab.copiedToClipboard", { label }));
     } catch {
-      toast.error("Failed to copy to clipboard");
+      toast.error(t("create.nfc.readTab.copyFailed"));
     }
   };
 
   const shareTagData = async () => {
     if (!result?.info?.tag) return;
 
-    const shareData = {
-      title: "NFC Tag Data",
-      text: `UID: ${result.info.tag.uid}\nText: ${result.info.tag.text}`
-    };
+    const shareText = t("create.nfc.readTab.shareText", {
+      uid: result.info.tag.uid,
+      text: result.info.tag.text
+    });
 
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch {
-        copyToClipboard(shareData.text, "Tag data");
-      }
-    } else {
-      copyToClipboard(shareData.text, "Tag data");
+    try {
+      await Share.share({
+        title: t("create.nfc.readTab.shareTitle"),
+        text: shareText,
+        dialogTitle: t("create.nfc.readTab.shareTitle")
+      });
+    } catch {
+      // Fallback to copy if share fails or is cancelled
+      copyToClipboard(shareText, t("create.nfc.readTab.tagData"));
     }
-  };
-
-  const getContentTypeIcon = (text: string) => {
-    if (text.startsWith("http"))
-      return <GlobeIcon size={16} className="text-blue-500" />;
-    if (text.startsWith("wifi:"))
-      return <WifiIcon size={16} className="text-green-500" />;
-    if (text.includes("@"))
-      return <MessageCircleIcon size={16} className="text-purple-500" />;
-    return <FileTextIcon size={16} className="text-gray-500" />;
   };
 
   const { tag, rawTag } = result?.info || { tag: null, rawTag: null };
@@ -69,28 +60,27 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
       <Button
         onClick={onScan}
         icon={<NfcIcon size={16} />}
-        label="Scan tag"
+        label={t("create.nfc.readTab.scanTag")}
         className="w-full"
       />
 
       {/* Basic Information Card */}
       <div className="bg-background-secondary/50 space-y-4 rounded-2xl p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Tag Information</h3>
+          <h3 className="text-lg font-semibold">{t("create.nfc.readTab.tagInformation")}</h3>
           {tag && (
             <Button
               icon={<ShareIcon size={16} />}
               onClick={shareTagData}
               size="sm"
               variant="outline"
-              className="!px-3"
             />
           )}
         </div>
 
         <div className="space-y-4">
           <div>
-            <Label htmlFor="uid">UID</Label>
+            <Label htmlFor="uid">{t("create.nfc.readTab.uid")}</Label>
             <div className="mt-1 flex items-center gap-2">
               <code className="bg-background/50 flex-1 rounded-lg px-3 py-2 font-mono text-sm">
                 {tag?.uid || "-"}
@@ -98,37 +88,20 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
               {tag?.uid && (
                 <Button
                   icon={<CopyIcon size={16} />}
-                  onClick={() => copyToClipboard(tag.uid, "UID")}
+                  onClick={() => copyToClipboard(tag.uid, t("create.nfc.readTab.uid"))}
                   size="sm"
                   variant="outline"
-                  className="!px-3"
                 />
               )}
             </div>
           </div>
 
           <div>
-            <Label htmlFor="content">Content</Label>
+            <Label htmlFor="content">{t("create.nfc.readTab.content")}</Label>
             <div className="mt-1 flex items-start gap-2">
               <div className="bg-background/50 flex-1 rounded-lg px-3 py-2">
                 {tag?.text ? (
-                  <>
-                    <div className="mb-2 flex items-center gap-2">
-                      {getContentTypeIcon(tag.text)}
-                      <span className="text-foreground-secondary text-xs">
-                        {tag.text.startsWith("http") && "URL"}
-                        {tag.text.startsWith("wifi:") && "WiFi Credentials"}
-                        {tag.text.includes("@") &&
-                          !tag.text.startsWith("http") &&
-                          "Email"}
-                        {!tag.text.startsWith("http") &&
-                          !tag.text.startsWith("wifi:") &&
-                          !tag.text.includes("@") &&
-                          "Text"}
-                      </span>
-                    </div>
-                    <div className="text-sm break-all">{tag.text}</div>
-                  </>
+                  <div className="text-sm break-all">{tag.text}</div>
                 ) : (
                   <div className="text-foreground-secondary text-sm">-</div>
                 )}
@@ -136,10 +109,9 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
               {tag?.text && (
                 <Button
                   icon={<CopyIcon size={16} />}
-                  onClick={() => copyToClipboard(tag.text, "Content")}
+                  onClick={() => copyToClipboard(tag.text, t("create.nfc.readTab.content"))}
                   size="sm"
                   variant="outline"
-                  className="!px-3"
                 />
               )}
             </div>
@@ -149,11 +121,11 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
 
       {/* Technical Details Card */}
       <div className="bg-background-secondary/50 space-y-4 rounded-2xl p-4">
-        <h3 className="text-lg font-semibold">Technical Details</h3>
+        <h3 className="text-lg font-semibold">{t("create.nfc.readTab.technicalDetails")}</h3>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label>Writable</Label>
+            <Label>{t("create.nfc.readTab.writable")}</Label>
             <div className="mt-1 text-sm">
               {rawTag?.isWritable !== undefined ? (
                 <span
@@ -163,7 +135,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
                       : "bg-red-100 text-red-800"
                   }`}
                 >
-                  {rawTag.isWritable ? "Yes" : "No"}
+                  {rawTag.isWritable ? t("create.nfc.readTab.yes") : t("create.nfc.readTab.no")}
                 </span>
               ) : (
                 <span className="text-foreground-secondary">-</span>
@@ -172,14 +144,14 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
           </div>
 
           <div>
-            <Label>Max Size</Label>
+            <Label>{t("create.nfc.readTab.maxSize")}</Label>
             <div className="mt-1 font-mono text-sm">
-              {rawTag?.maxSize ? `${rawTag.maxSize} bytes` : "-"}
+              {rawTag?.maxSize ? `${rawTag.maxSize} ${t("create.nfc.readTab.bytes")}` : "-"}
             </div>
           </div>
 
           <div>
-            <Label>Can Make Read-Only</Label>
+            <Label>{t("create.nfc.readTab.canMakeReadOnly")}</Label>
             <div className="mt-1 text-sm">
               {rawTag?.canMakeReadOnly !== undefined ? (
                 <span
@@ -189,7 +161,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
                       : "bg-red-100 text-red-800"
                   }`}
                 >
-                  {rawTag.canMakeReadOnly ? "Yes" : "No"}
+                  {rawTag.canMakeReadOnly ? t("create.nfc.readTab.yes") : t("create.nfc.readTab.no")}
                 </span>
               ) : (
                 <span className="text-foreground-secondary">-</span>
@@ -198,7 +170,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
           </div>
 
           <div>
-            <Label>Manufacturer Code</Label>
+            <Label>{t("create.nfc.readTab.manufacturerCode")}</Label>
             <div className="mt-1 font-mono text-sm">
               {rawTag?.manufacturerCode !== undefined
                 ? rawTag.manufacturerCode
@@ -207,7 +179,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
           </div>
 
           <div className="col-span-2">
-            <Label>Technology Types</Label>
+            <Label>{t("create.nfc.readTab.technologyTypes")}</Label>
             <div className="mt-1 flex flex-wrap gap-1">
               {rawTag?.techTypes ? (
                 rawTag.techTypes.map((tech, index) => (
@@ -226,28 +198,28 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
         </div>
 
         <div>
-          <Label>NDEF Records ({rawTag?.message?.records?.length || 0})</Label>
+          <Label>{t("create.nfc.readTab.ndefRecords", { count: rawTag?.message?.records?.length || 0 })}</Label>
           {rawTag?.message?.records && rawTag.message.records.length > 0 ? (
             <>
               <div className="mt-1 space-y-2">
                 {rawTag.message.records.map((record, index) => (
                   <div key={index} className="bg-background/50 rounded-lg p-3">
                     <div className="mb-2 text-sm font-medium">
-                      Record {index + 1}
+                      {t("create.nfc.readTab.record", { index: index + 1 })}
                     </div>
                     <div className="space-y-1 text-xs">
                       <div>
-                        <span className="font-medium">TNF:</span> {record.tnf}
+                        <span className="font-medium">{t("create.nfc.readTab.tnf")}</span> {record.tnf}
                       </div>
                       {record.type && record.type.length > 0 && (
                         <div>
-                          <span className="font-medium">Type:</span>{" "}
+                          <span className="font-medium">{t("create.nfc.readTab.type")}</span>{" "}
                           {record.type[0].toString(16)}
                         </div>
                       )}
                       {record.payload && (
                         <div>
-                          <span className="font-medium">Payload:</span>
+                          <span className="font-medium">{t("create.nfc.readTab.payload")}</span>
                           <div className="mt-1 font-mono text-xs break-all">
                             {showRawData
                               ? record.payload
@@ -269,7 +241,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
                 icon={
                   showRawData ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />
                 }
-                label={showRawData ? "Hide Hex" : "Show Hex"}
+                label={showRawData ? t("create.nfc.readTab.hideHex") : t("create.nfc.readTab.showHex")}
                 onClick={() => setShowRawData(!showRawData)}
                 size="sm"
                 variant="outline"
@@ -284,12 +256,12 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
 
       {/* Low-Level Tag Data Card */}
       <div className="bg-background-secondary/50 space-y-4 rounded-2xl p-4">
-        <h3 className="text-lg font-semibold">Low-Level Tag Data</h3>
+        <h3 className="text-lg font-semibold">{t("create.nfc.readTab.lowLevelTagData")}</h3>
 
         <div className="space-y-4">
           {/* Tag ID */}
           <div>
-            <Label>Tag ID (UID)</Label>
+            <Label>{t("create.nfc.readTab.tagId")}</Label>
             <div className="mt-1 flex items-center gap-2">
               <code className="bg-background/50 flex-1 rounded-lg px-3 py-2 font-mono text-sm">
                 {rawTag?.id
@@ -310,12 +282,11 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
                       rawTag
                         .id!.map((byte) => byte.toString(16).padStart(2, "0"))
                         .join(""),
-                      "Tag ID"
+                      t("create.nfc.readTab.tagId")
                     )
                   }
                   size="sm"
                   variant="outline"
-                  className="!px-3"
                 />
               )}
             </div>
@@ -323,7 +294,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
 
           {/* ATQA bytes (Android NFC-A) */}
           <div>
-            <Label>ATQA/SENS_RES (NFC-A)</Label>
+            <Label>{t("create.nfc.readTab.atqa")}</Label>
             <div className="bg-background/50 mt-1 rounded-lg px-3 py-2 font-mono text-sm">
               {rawTag?.atqa
                 ? showRawData
@@ -337,7 +308,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
 
           {/* SAK bytes (Android NFC-A) */}
           <div>
-            <Label>SAK/SEL_RES (NFC-A)</Label>
+            <Label>{t("create.nfc.readTab.sak")}</Label>
             <div className="bg-background/50 mt-1 rounded-lg px-3 py-2 font-mono text-sm">
               {rawTag?.sak
                 ? showRawData
@@ -351,7 +322,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
 
           {/* Application Data (NFC-B) */}
           <div>
-            <Label>Application Data (NFC-B)</Label>
+            <Label>{t("create.nfc.readTab.applicationData")}</Label>
             <div className="bg-background/50 mt-1 rounded-lg px-3 py-2 font-mono text-sm">
               {rawTag?.applicationData
                 ? showRawData
@@ -365,7 +336,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
 
           {/* Historical Bytes (ISO-DEP) */}
           <div>
-            <Label>Historical Bytes (ISO-DEP)</Label>
+            <Label>{t("create.nfc.readTab.historicalBytes")}</Label>
             <div className="bg-background/50 mt-1 rounded-lg px-3 py-2 font-mono text-sm">
               {rawTag?.historicalBytes
                 ? showRawData
@@ -379,7 +350,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
 
           {/* Manufacturer bytes (NFC-F) */}
           <div>
-            <Label>Manufacturer (NFC-F)</Label>
+            <Label>{t("create.nfc.readTab.manufacturer")}</Label>
             <div className="bg-background/50 mt-1 rounded-lg px-3 py-2 font-mono text-sm">
               {rawTag?.manufacturer
                 ? showRawData
@@ -393,7 +364,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
 
           {/* System Code (NFC-F) */}
           <div>
-            <Label>System Code (NFC-F)</Label>
+            <Label>{t("create.nfc.readTab.systemCode")}</Label>
             <div className="bg-background/50 mt-1 rounded-lg px-3 py-2 font-mono text-sm">
               {rawTag?.systemCode
                 ? showRawData

@@ -18,6 +18,7 @@ def capacitor_pods
   pod 'CapacitorBrowser', :path => '../../node_modules/.pnpm/@capacitor+browser@7.0.1_@capacitor+core@7.4.1/node_modules/@capacitor/browser'
   pod 'CapacitorClipboard', :path => '../../node_modules/.pnpm/@capacitor+clipboard@7.0.1_@capacitor+core@7.4.1/node_modules/@capacitor/clipboard'
   pod 'CapacitorPreferences', :path => '../../node_modules/.pnpm/@capacitor+preferences@7.0.1_@capacitor+core@7.4.1/node_modules/@capacitor/preferences'
+  pod 'CapacitorShare', :path => '../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.1/node_modules/@capacitor/share'
   pod 'CapacitorStatusBar', :path => '../../node_modules/.pnpm/@capacitor+status-bar@7.0.1_@capacitor+core@7.4.1/node_modules/@capacitor/status-bar'
   pod 'CapawesomeTeamCapacitorNfc', :path => '../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.2.0_@capacitor+core@7.4.1/node_modules/@capawesome-team/capacitor-nfc'
   pod 'RevenuecatPurchasesCapacitor', :path => '../../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.3.7_@capacitor+core@7.4.1/node_modules/@revenuecat/purchases-capacitor'
