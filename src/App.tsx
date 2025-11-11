@@ -15,6 +15,9 @@ import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { useDataCache } from "./hooks/useDataCache";
 import { getDeviceAddress } from "./lib/coreApi";
 import { SlideModalProvider } from "./components/SlideModalProvider";
+import { usePreferencesStore } from "./lib/preferencesStore";
+import { useProAccessCheck } from "./hooks/useProAccessCheck";
+import { useNfcAvailabilityCheck } from "./hooks/useNfcAvailabilityCheck";
 
 const router = createRouter({
   scrollRestoration: true,
@@ -32,17 +35,28 @@ declare module "@tanstack/react-router" {
   }
 }
 
-
 export default function App() {
+  // Wait for preferences to hydrate before rendering to prevent layout shifts
+  const hasHydrated = usePreferencesStore((state) => state._hasHydrated);
+  const proAccessHydrated = usePreferencesStore(
+    (state) => state._proAccessHydrated
+  );
+  const nfcAvailabilityHydrated = usePreferencesStore(
+    (state) => state._nfcAvailabilityHydrated
+  );
+
   // Initialize data cache early in app lifecycle
   useDataCache();
+  // Check Pro access status once at app startup
+  useProAccessCheck();
+  // Check NFC availability once at app startup
+  useNfcAvailabilityCheck();
 
   const playing = useStatusStore((state) => state.playing);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const prevGamesIndex = usePrevious(gamesIndex);
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
   const { t } = useTranslation();
-
 
   useEffect(() => {
     FirebaseAuthentication.addListener("authStateChange", (change) => {
@@ -56,7 +70,11 @@ export default function App() {
   useEffect(() => {
     // Only show completion toast, progress is now shown in MediaDatabaseCard
     // Skip toast if totalFiles is 0 (indicates cancellation)
-    if (!gamesIndex.indexing && prevGamesIndex?.indexing && (gamesIndex.totalFiles ?? 0) > 0) {
+    if (
+      !gamesIndex.indexing &&
+      prevGamesIndex?.indexing &&
+      (gamesIndex.totalFiles ?? 0) > 0
+    ) {
       toast.success((to) => <MediaFinishedToast id={to.id} />, {
         id: "indexed",
         icon: (
@@ -96,6 +114,11 @@ export default function App() {
       );
     }
   }, [playing, t]);
+
+  // Block rendering until preferences, Pro access, and NFC availability are hydrated to prevent layout shifts
+  if (!hasHydrated || !proAccessHydrated || !nfcAvailabilityHydrated) {
+    return null; // Keep splash screen visible
+  }
 
   return (
     <>

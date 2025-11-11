@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { Preferences } from "@capacitor/preferences";
 import { ToggleSwitch } from "../wui/ToggleSwitch";
 
 interface ScanSettingsProps {
@@ -20,29 +19,13 @@ export function ScanSettings({
 }: ScanSettingsProps) {
   const { t } = useTranslation();
 
-  const handleRestartScanToggle = (v: boolean) => {
-    setRestartScan(v);
-    Preferences.set({
-      key: "restartScan",
-      value: v.toString()
-    });
-  };
-
-  const handleLaunchOnScanToggle = (v: boolean) => {
-    setLaunchOnScan(v);
-    Preferences.set({
-      key: "launchOnScan",
-      value: v.toString()
-    });
-  };
-
   if (!connected) {
     return (
       <div className="mb-3 flex flex-col">
         <ToggleSwitch
           label={t("scan.continuous")}
           value={restartScan}
-          setValue={handleRestartScanToggle}
+          setValue={setRestartScan}
         />
       </div>
     );
@@ -57,12 +40,12 @@ export function ScanSettings({
       <ToggleSwitch
         label={t("scan.continuous")}
         value={restartScan}
-        setValue={handleRestartScanToggle}
+        setValue={setRestartScan}
       />
       <ToggleSwitch
         label={t("scan.launchOnScan")}
         value={launchOnScan}
-        setValue={handleLaunchOnScanToggle}
+        setValue={setLaunchOnScan}
       />
     </div>
   );

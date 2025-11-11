@@ -1,15 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { useEffect, useState } from "react";
-import { Nfc } from "@capawesome-team/capacitor-nfc";
-import { Preferences } from "@capacitor/preferences";
+import { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import classNames from "classnames";
 import { ToggleSwitch } from "../components/wui/ToggleSwitch";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { useStatusStore } from "../lib/store";
 import { PageFrame } from "../components/PageFrame";
-import { useAppSettings } from "../hooks/useAppSettings";
+import {
+  usePreferencesStore,
+  selectAppSettings,
+  selectShakeSettings
+} from "../lib/preferencesStore";
 import { BackIcon, CheckIcon } from "../lib/images";
 import { ScanSettings } from "../components/home/ScanSettings.tsx";
 import { SystemsSearchModal } from "../components/SystemsSearchModal";
@@ -28,61 +31,47 @@ interface LoaderData {
 }
 
 export const Route = createFileRoute("/settings/app")({
-  loader: async (): Promise<LoaderData> => {
-    const [
-      restartResult,
-      launchResult,
-      accessResult,
-      remoteWriterResult,
-      shakeEnabledResult,
-      shakeModeResult,
-      shakeZapscriptResult
-    ] = await Promise.all([
-      Preferences.get({ key: "restartScan" }),
-      Preferences.get({ key: "launchOnScan" }),
-      Preferences.get({ key: "launcherAccess" }),
-      Preferences.get({ key: "preferRemoteWriter" }),
-      Preferences.get({ key: "shakeEnabled" }),
-      Preferences.get({ key: "shakeMode" }),
-      Preferences.get({ key: "shakeZapscript" })
-    ]);
-
+  loader: (): LoaderData => {
+    const state = usePreferencesStore.getState();
     return {
-      restartScan: restartResult.value === "true",
-      launchOnScan: launchResult.value !== "false",
-      launcherAccess: accessResult.value === "true",
-      preferRemoteWriter: remoteWriterResult.value === "true",
-      shakeEnabled: shakeEnabledResult.value === "true",
-      shakeMode: (shakeModeResult.value as "random" | "custom") || "random",
-      shakeZapscript: shakeZapscriptResult.value || ""
+      restartScan: state.restartScan,
+      launchOnScan: state.launchOnScan,
+      launcherAccess: state.launcherAccess,
+      preferRemoteWriter: state.preferRemoteWriter,
+      shakeEnabled: state.shakeEnabled,
+      shakeMode: state.shakeMode,
+      shakeZapscript: state.shakeZapscript
     };
   },
-  staleTime: 0,
-  gcTime: 0,
   component: AppSettings
 });
 
 function AppSettings() {
   const initData = Route.useLoaderData();
   const connected = useStatusStore((state) => state.connected);
-  const [hasLocalNFC, setHasLocalNFC] = useState(false);
   const [systemPickerOpen, setSystemPickerOpen] = useState(false);
+  const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
 
+  // Get app settings from store (useShallow prevents infinite re-renders)
   const {
-    preferRemoteWriter,
-    setPreferRemoteWriter,
     restartScan,
-    setRestartScan,
     launchOnScan,
+    launcherAccess,
+    preferRemoteWriter,
+    setRestartScan,
     setLaunchOnScan,
+    setPreferRemoteWriter
+  } = usePreferencesStore(useShallow(selectAppSettings));
+
+  // Get shake settings from store (useShallow prevents infinite re-renders)
+  const {
     shakeEnabled,
-    setShakeEnabled,
     shakeMode,
-    setShakeMode,
     shakeZapscript,
-    setShakeZapscript,
-    launcherAccess
-  } = useAppSettings({ initData });
+    setShakeEnabled,
+    setShakeMode,
+    setShakeZapscript
+  } = usePreferencesStore(useShallow(selectShakeSettings));
 
   // Extract system name from zapscript for display
   const getSystemFromZapscript = () => {
@@ -100,15 +89,6 @@ function AppSettings() {
   const { PurchaseModal, setProPurchaseModalOpen } = useProPurchase(
     initData.launcherAccess
   );
-
-  useEffect(() => {
-    // Check if local NFC is available on native platforms
-    if (Capacitor.isNativePlatform()) {
-      Nfc.isAvailable()
-        .then((result) => setHasLocalNFC(result.nfc))
-        .catch(() => setHasLocalNFC(false));
-    }
-  }, []);
 
   const { t } = useTranslation();
 
@@ -142,7 +122,7 @@ function AppSettings() {
           setLaunchOnScan={setLaunchOnScan}
         />
 
-        {Capacitor.isNativePlatform() && hasLocalNFC && (
+        {Capacitor.isNativePlatform() && nfcAvailable && (
           <ToggleSwitch
             label={t("settings.app.preferRemoteWriter")}
             value={preferRemoteWriter}

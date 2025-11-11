@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
-import { Capacitor } from "@capacitor/core";
-import { Preferences } from "@capacitor/preferences";
-import { CapacitorShake } from "@capgo/capacitor-shake";
-import { useStatusStore } from "../lib/store";
 import type { PluginListenerHandle } from "@capacitor/core";
+import { Capacitor } from "@capacitor/core";
+import { CapacitorShake } from "@capgo/capacitor-shake";
+import { usePreferencesStore } from "../lib/preferencesStore";
+import { useStatusStore } from "../lib/store";
 
 interface UseShakeDetectionProps {
   shakeEnabled: boolean;
@@ -40,15 +40,15 @@ export function useShakeDetection({
 
           // Debounce: ignore shakes that happen too quickly
           if (now - lastShakeTimeRef.current < DEBOUNCE_MS) {
-            console.log("Shake detected but debounced (too soon after last shake)");
+            console.log(
+              "Shake detected but debounced (too soon after last shake)"
+            );
             return;
           }
 
           lastShakeTimeRef.current = now;
 
-          // Read the current zapscript from Preferences
-          const result = await Preferences.get({ key: "shakeZapscript" });
-          const zapscript = result.value || "";
+          const zapscript = usePreferencesStore.getState().shakeZapscript;
 
           if (!zapscript) {
             console.log("Shake detected, but no zapscript configured");

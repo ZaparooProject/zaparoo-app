@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { KeepAwake } from "@capacitor-community/keep-awake";
-import { Preferences } from "@capacitor/preferences";
 import { useNfcWriter, WriteMethod } from "@/lib/writeNfcHook.tsx";
 import { Status } from "@/lib/nfc.ts";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
@@ -23,7 +22,7 @@ import { NowPlayingInfo } from "../components/home/NowPlayingInfo";
 import { HistoryModal } from "../components/home/HistoryModal";
 import { StopConfirmModal } from "../components/home/StopConfirmModal";
 import { useScanOperations } from "../hooks/useScanOperations";
-import { useAppSettings } from "../hooks/useAppSettings";
+import { usePreferencesStore } from "../lib/preferencesStore";
 import { useShakeDetection } from "../hooks/useShakeDetection";
 
 interface LoaderData {
@@ -37,26 +36,16 @@ interface LoaderData {
 }
 
 export const Route = createFileRoute("/")({
-  loader: async (): Promise<LoaderData> => {
-    const [restartResult, launchResult, accessResult, remoteWriterResult, shakeEnabledResult, shakeModeResult, shakeZapscriptResult] =
-      await Promise.all([
-        Preferences.get({ key: "restartScan" }),
-        Preferences.get({ key: "launchOnScan" }),
-        Preferences.get({ key: "launcherAccess" }),
-        Preferences.get({ key: "preferRemoteWriter" }),
-        Preferences.get({ key: "shakeEnabled" }),
-        Preferences.get({ key: "shakeMode" }),
-        Preferences.get({ key: "shakeZapscript" })
-      ]);
-
+  loader: (): LoaderData => {
+    const state = usePreferencesStore.getState();
     return {
-      restartScan: restartResult.value === "true",
-      launchOnScan: launchResult.value !== "false",
-      launcherAccess: accessResult.value === "true",
-      preferRemoteWriter: remoteWriterResult.value === "true",
-      shakeEnabled: shakeEnabledResult.value === "true",
-      shakeMode: (shakeModeResult.value as "random" | "custom") || "random",
-      shakeZapscript: shakeZapscriptResult.value || ""
+      restartScan: state.restartScan,
+      launchOnScan: state.launchOnScan,
+      launcherAccess: state.launcherAccess,
+      preferRemoteWriter: state.preferRemoteWriter,
+      shakeEnabled: state.shakeEnabled,
+      shakeMode: state.shakeMode,
+      shakeZapscript: state.shakeZapscript
     };
   },
   ssr: false,
@@ -65,8 +54,11 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const initData = Route.useLoaderData();
-
-  const { launcherAccess, preferRemoteWriter, shakeEnabled } = useAppSettings({ initData });
+  const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
+  const preferRemoteWriter = usePreferencesStore(
+    (state) => state.preferRemoteWriter
+  );
+  const shakeEnabled = usePreferencesStore((state) => state.shakeEnabled);
 
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   const [writeOpen, setWriteOpen] = useState(false);

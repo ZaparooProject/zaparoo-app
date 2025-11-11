@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { ScanResult } from "../lib/models";
 import { DownIcon, SettingsIcon, WarningIcon } from "../lib/images";
+import { usePreferencesStore } from "../lib/preferencesStore";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 
@@ -17,22 +18,17 @@ export function ScanSpinner(props: {
   spinning?: boolean;
   write?: boolean;
 }) {
-  const [nfcSupported, setNfcSupported] = useState(true);
+  const nfcSupported = usePreferencesStore((state) => state.nfcAvailable);
   const [nfcEnabled, setNfcEnabled] = useState(true);
 
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (import.meta.env.PROD) {
-      Nfc.isAvailable().then((available) => {
-        setNfcSupported(available.nfc);
+    // Only check if NFC is enabled on Android
+    if (import.meta.env.PROD && Capacitor.getPlatform() === "android") {
+      Nfc.isEnabled().then((enabled) => {
+        setNfcEnabled(enabled.isEnabled);
       });
-
-      if (Capacitor.getPlatform() === "android") {
-        Nfc.isEnabled().then((enabled) => {
-          setNfcEnabled(enabled.isEnabled);
-        });
-      }
     }
   }, []);
 

@@ -15,6 +15,7 @@ import { Button as SCNButton } from "@/components/ui/button";
 import i18n from "../i18n";
 import { PageFrame } from "../components/PageFrame";
 import { useStatusStore } from "../lib/store";
+import { usePreferencesStore } from "../lib/preferencesStore";
 import { TextInput } from "../components/wui/TextInput";
 import { Button } from "../components/wui/Button";
 import { ExternalIcon, NextIcon } from "../lib/images";
@@ -26,11 +27,10 @@ interface LoaderData {
 }
 
 export const Route = createFileRoute("/settings/")({
-  loader: async (): Promise<LoaderData> => {
-    const accessResult = await Preferences.get({ key: "launcherAccess" });
-
+  loader: (): LoaderData => {
+    const state = usePreferencesStore.getState();
     return {
-      launcherAccess: accessResult.value === "true",
+      launcherAccess: state.launcherAccess
     };
   },
   component: Settings
@@ -39,8 +39,9 @@ export const Route = createFileRoute("/settings/")({
 function Settings() {
   const initData = Route.useLoaderData();
 
-  const { PurchaseModal, setProPurchaseModalOpen, proAccess } =
-    useProPurchase(initData.launcherAccess);
+  const { PurchaseModal, setProPurchaseModalOpen, proAccess } = useProPurchase(
+    initData.launcherAccess
+  );
 
   const connectionError = useStatusStore((state) => state.connectionError);
   // const loggedInUser = useStatusStore((state) => state.loggedInUser);
@@ -49,7 +50,9 @@ function Settings() {
   const removeDeviceHistory = useStatusStore(
     (state) => state.removeDeviceHistory
   );
-  const resetConnectionState = useStatusStore((state) => state.resetConnectionState);
+  const resetConnectionState = useStatusStore(
+    (state) => state.resetConnectionState
+  );
 
   const version = useQuery({
     queryKey: ["version"],
@@ -72,19 +75,10 @@ function Settings() {
   }, [setDeviceHistory]);
 
   const handleDeviceAddressChange = (newAddress: string) => {
-    // Set the new device address
     setDeviceAddress(newAddress);
-
-    // Reset the connection state
     resetConnectionState();
-
-    // Reset CoreAPI state
     CoreAPI.reset();
-
-    // Clear React Query cache for all queries that depend on the device
     queryClient.invalidateQueries();
-
-    // Update local address state (this will trigger CoreApiWebSocket remount via key prop)
     setAddress(newAddress);
   };
 
@@ -100,7 +94,7 @@ function Settings() {
             saveValue={handleDeviceAddressChange}
           />
 
-          <div className="flex flex-col gap-1 min-h-[1.5rem]">
+          <div className="flex min-h-[1.5rem] flex-col gap-1">
             {version.isSuccess && (
               <div className="flex flex-row items-center justify-between gap-2">
                 <div>Platform: {version.data.platform}</div>
@@ -129,7 +123,10 @@ function Settings() {
                   {deviceHistory
                     .sort((a, b) => (a.address > b.address ? 1 : -1))
                     .map((entry) => (
-                      <div key={entry.address} className="flex flex-row items-center justify-between gap-3">
+                      <div
+                        key={entry.address}
+                        className="flex flex-row items-center justify-between gap-3"
+                      >
                         <SCNButton
                           className="w-full"
                           onClick={() => {

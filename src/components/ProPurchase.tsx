@@ -1,4 +1,3 @@
-import { Preferences } from "@capacitor/preferences";
 import { t } from "i18next";
 import { Purchases, PurchasesPackage } from "@revenuecat/purchases-capacitor";
 import { useEffect, useState } from "react";
@@ -10,9 +9,12 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { usePreferencesStore } from "../lib/preferencesStore";
 import { Button } from "./wui/Button";
 
 export const RestorePuchasesButton = () => {
+  const setLauncherAccess = usePreferencesStore.getState().setLauncherAccess;
+
   return (
     <Button
       label={t("settings.app.restorePurchases")}
@@ -23,15 +25,9 @@ export const RestorePuchasesButton = () => {
             Purchases.getCustomerInfo()
               .then((info) => {
                 if (info.customerInfo.entitlements.active.tapto_launcher) {
-                  Preferences.set({
-                    key: "launcherAccess",
-                    value: "true"
-                  });
+                  setLauncherAccess(true);
                 } else {
-                  Preferences.set({
-                    key: "launcherAccess",
-                    value: "false"
-                  });
+                  setLauncherAccess(false);
                 }
                 location.reload();
               })
@@ -42,7 +38,9 @@ export const RestorePuchasesButton = () => {
               <span
                 className="flex grow flex-col"
                 onClick={() => toast.dismiss(to.id)}
-                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toast.dismiss(to.id)}
+                onKeyDown={(e) =>
+                  (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
+                }
                 role="button"
                 tabIndex={0}
               >
@@ -55,7 +53,9 @@ export const RestorePuchasesButton = () => {
               <span
                 className="flex grow flex-col"
                 onClick={() => toast.dismiss(to.id)}
-                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toast.dismiss(to.id)}
+                onKeyDown={(e) =>
+                  (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
+                }
                 role="button"
                 tabIndex={0}
               >
@@ -100,14 +100,8 @@ const ProPurchaseModal = (props: {
                 .then((purchase) => {
                   console.log("purchase success", purchase);
                   props.setProAccess(true);
-                  Preferences.set({
-                    key: "launcherAccess",
-                    value: "true"
-                  });
-                  Preferences.set({
-                    key: "launchOnScan",
-                    value: "true"
-                  });
+                  usePreferencesStore.getState().setLauncherAccess(true);
+                  usePreferencesStore.getState().setLaunchOnScan(true);
                   props.setProPurchaseModalOpen(false);
                 })
                 .catch((e: Error) => {
@@ -137,6 +131,7 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
       return;
     }
 
+    // Fetch offerings for purchase flow UI
     Purchases.getOfferings()
       .then((offerings) => {
         if (
@@ -152,20 +147,25 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
         console.error("offerings error", e);
       });
 
+    // Skip customer info check if already hydrated in App.tsx
+    const proAccessHydrated = usePreferencesStore.getState()._proAccessHydrated;
+    if (proAccessHydrated) {
+      // Use cached value from preferences store
+      const cachedLauncherAccess =
+        usePreferencesStore.getState().launcherAccess;
+      setProAccess(cachedLauncherAccess);
+      return;
+    }
+
+    // Fallback if not hydrated yet (shouldn't happen normally)
     Purchases.getCustomerInfo()
       .then((info) => {
         if (info.customerInfo.entitlements.active.tapto_launcher) {
           setProAccess(true);
-          Preferences.set({
-            key: "launcherAccess",
-            value: "true"
-          });
+          usePreferencesStore.getState().setLauncherAccess(true);
         } else {
           setProAccess(false);
-          Preferences.set({
-            key: "launcherAccess",
-            value: "false"
-          });
+          usePreferencesStore.getState().setLauncherAccess(false);
         }
       })
       .catch((e) => {

@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { ListPlusIcon, NfcIcon } from "lucide-react";
 import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "../lib/images";
 import { useStatusStore } from "../lib/store";
@@ -11,6 +10,7 @@ import { Card } from "../components/wui/Card";
 import { Button } from "../components/wui/Button";
 import { WriteModal } from "../components/WriteModal";
 import { PageFrame } from "../components/PageFrame";
+import { usePreferencesStore } from "../lib/preferencesStore";
 
 export const Route = createFileRoute("/create/")({
   component: Create
@@ -19,8 +19,7 @@ export const Route = createFileRoute("/create/")({
 function Create() {
   const connected = useStatusStore((state) => state.connected);
   const playing = useStatusStore((state) => state.playing);
-
-  const [nfcAvailable, setNfcAvailable] = useState(false);
+  const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
   const nfcWriter = useNfcWriter();
   const [writeOpen, setWriteOpen] = useState(false);
   const closeWriteModal = async () => {
@@ -35,24 +34,6 @@ function Create() {
       setWriteOpen(false);
     }
   }, [nfcWriter]);
-
-  useEffect(() => {
-    const checkNfcAvailability = async () => {
-      if (Capacitor.isNativePlatform()) {
-        try {
-          const result = await Nfc.isAvailable();
-          setNfcAvailable(result.nfc);
-        } catch (error) {
-          console.log("NFC availability check failed:", error);
-          setNfcAvailable(false);
-        }
-      } else {
-        setNfcAvailable(false);
-      }
-    };
-
-    checkNfcAvailability();
-  }, []);
 
   return (
     <>
@@ -131,7 +112,10 @@ function Create() {
             </Card>
           </Link>
 
-          <Link to="/create/nfc" disabled={!Capacitor.isNativePlatform() || !nfcAvailable}>
+          <Link
+            to="/create/nfc"
+            disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
+          >
             <Card disabled={!Capacitor.isNativePlatform() || !nfcAvailable}>
               <div className="flex flex-row items-center gap-3">
                 <Button icon={<NfcIcon size="24" />} />
