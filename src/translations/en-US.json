@@ -261,7 +261,9 @@
         "filteredEntries": "Showing",
         "noEntriesFound": "No log entries match your filters",
         "fetchError": "Failed to fetch logs",
-        "notConnected": "Connect to a Zaparoo device to access logs"
+        "notConnected": "Connect to a Zaparoo device to access logs",
+        "showMore": "Show more",
+        "showLess": "Show less"
       },
       "help": {
         "title": "Help",
