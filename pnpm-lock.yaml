@@ -50,6 +50,9 @@ importers:
       '@capawesome/capacitor-android-edge-to-edge-support':
         specifier: ^7.2.3
         version: 7.2.3(@capacitor/core@7.4.1)
+      '@capgo/capacitor-shake':
+        specifier: ^7.2.14
+        version: 7.2.14(@capacitor/core@7.4.1)
       '@radix-ui/react-accordion':
         specifier: ^1.2.12
         version: 1.2.12(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -535,6 +538,11 @@ packages:
 
   '@capawesome/capacitor-android-edge-to-edge-support@7.2.3':
     resolution: {integrity: sha512-WtwXeU5Clg13t3SO6JvtIfJlpO+E48tHC+vNmC519zcS6GV9URl705UOvwOOvEyh6GFxAi2dHi8lj8iqIOYCdA==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
+
+  '@capgo/capacitor-shake@7.2.14':
+    resolution: {integrity: sha512-9d/mr7+DVVqZO2d03q4WzFQivLSuT+ZFpN4Fhn58uZzc6JNA+pBoglexXXMMDFEhzsmwr0K2VnfCmq7tuGDgrw==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -5697,6 +5705,10 @@ snapshots:
       '@capacitor/core': 7.4.1
 
   '@capawesome/capacitor-android-edge-to-edge-support@7.2.3(@capacitor/core@7.4.1)':
+    dependencies:
+      '@capacitor/core': 7.4.1
+
+  '@capgo/capacitor-shake@7.2.14(@capacitor/core@7.4.1)':
     dependencies:
       '@capacitor/core': 7.4.1
 

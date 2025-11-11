@@ -24,29 +24,39 @@ import { HistoryModal } from "../components/home/HistoryModal";
 import { StopConfirmModal } from "../components/home/StopConfirmModal";
 import { useScanOperations } from "../hooks/useScanOperations";
 import { useAppSettings } from "../hooks/useAppSettings";
+import { useShakeDetection } from "../hooks/useShakeDetection";
 
 interface LoaderData {
   restartScan: boolean;
   launchOnScan: boolean;
   launcherAccess: boolean;
   preferRemoteWriter: boolean;
+  shakeEnabled: boolean;
+  shakeMode: "random" | "custom";
+  shakeZapscript: string;
 }
 
 export const Route = createFileRoute("/")({
   loader: async (): Promise<LoaderData> => {
-    const [restartResult, launchResult, accessResult, remoteWriterResult] =
+    const [restartResult, launchResult, accessResult, remoteWriterResult, shakeEnabledResult, shakeModeResult, shakeZapscriptResult] =
       await Promise.all([
         Preferences.get({ key: "restartScan" }),
         Preferences.get({ key: "launchOnScan" }),
         Preferences.get({ key: "launcherAccess" }),
-        Preferences.get({ key: "preferRemoteWriter" })
+        Preferences.get({ key: "preferRemoteWriter" }),
+        Preferences.get({ key: "shakeEnabled" }),
+        Preferences.get({ key: "shakeMode" }),
+        Preferences.get({ key: "shakeZapscript" })
       ]);
 
     return {
       restartScan: restartResult.value === "true",
       launchOnScan: launchResult.value !== "false",
       launcherAccess: accessResult.value === "true",
-      preferRemoteWriter: remoteWriterResult.value === "true"
+      preferRemoteWriter: remoteWriterResult.value === "true",
+      shakeEnabled: shakeEnabledResult.value === "true",
+      shakeMode: (shakeModeResult.value as "random" | "custom") || "random",
+      shakeZapscript: shakeZapscriptResult.value || ""
     };
   },
   ssr: false,
@@ -56,7 +66,7 @@ export const Route = createFileRoute("/")({
 function Index() {
   const initData = Route.useLoaderData();
 
-  const { launcherAccess, preferRemoteWriter } = useAppSettings({ initData });
+  const { launcherAccess, preferRemoteWriter, shakeEnabled } = useAppSettings({ initData });
 
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   const [writeOpen, setWriteOpen] = useState(false);
@@ -107,6 +117,12 @@ function Index() {
   const { reset: resetWriteQueue } = useWriteQueueProcessor({
     nfcWriter,
     setWriteOpen
+  });
+
+  useShakeDetection({
+    shakeEnabled,
+    launcherAccess,
+    connected
   });
 
   const history = useQuery({

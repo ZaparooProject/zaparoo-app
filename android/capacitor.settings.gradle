@@ -35,5 +35,8 @@ project(':capawesome-team-capacitor-nfc').projectDir = new File('../node_modules
 include ':capawesome-capacitor-android-edge-to-edge-support'
 project(':capawesome-capacitor-android-edge-to-edge-support').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-android-edge-to-edge-support@7.2.3_@capacitor+core@7.4.1/node_modules/@capawesome/capacitor-android-edge-to-edge-support/android')
 
+include ':capgo-capacitor-shake'
+project(':capgo-capacitor-shake').projectDir = new File('../node_modules/.pnpm/@capgo+capacitor-shake@7.2.14_@capacitor+core@7.4.1/node_modules/@capgo/capacitor-shake/android')
+
 include ':revenuecat-purchases-capacitor'
 project(':revenuecat-purchases-capacitor').projectDir = new File('../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.3.7_@capacitor+core@7.4.1/node_modules/@revenuecat/purchases-capacitor/android')

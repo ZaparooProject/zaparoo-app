@@ -280,7 +280,13 @@
         "preferRemoteWriter": "Prefer connected reader for writing",
         "restorePurchases": "Restore purchases",
         "restoreSuccess": "Purchases have been restored",
-        "restoreFail": "Failed to restore purchases"
+        "restoreFail": "Failed to restore purchases",
+        "shakeToLaunch": "Shake to launch",
+        "proFeature": "Pro",
+        "shakeRandomMedia": "Random Media",
+        "shakeCustom": "Custom",
+        "shakeSelectSystem": "Select system",
+        "shakeZapscript": "Zapscript to launch"
       },
       "logs": {
         "title": "Logs",

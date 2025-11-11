@@ -13,10 +13,10 @@ describe("useAppSettings", () => {
   });
 
   it("should initialize with provided initData", () => {
-    const initData = { restartScan: true, launchOnScan: false, launcherAccess: false, preferRemoteWriter: false };
+    const initData = { restartScan: true, launchOnScan: false, launcherAccess: false, preferRemoteWriter: false, shakeEnabled: false, shakeMode: "random" as const, shakeZapscript: "" };
 
     const { result } = renderHook(() => useAppSettings({ initData }));
-    
+
     expect(result.current.restartScan).toBe(true);
     expect(result.current.launchOnScan).toBe(false);
     expect(result.current.launcherAccess).toBe(false);
@@ -27,7 +27,10 @@ describe("useAppSettings", () => {
       restartScan: true,
       launchOnScan: false,
       launcherAccess: true,
-      preferRemoteWriter: true
+      preferRemoteWriter: true,
+      shakeEnabled: false,
+      shakeMode: "random" as const,
+      shakeZapscript: ""
     };
 
     const { result } = renderHook(() => useAppSettings({ initData }));
@@ -40,7 +43,7 @@ describe("useAppSettings", () => {
   });
 
   it("should persist restartScan setting when changed", async () => {
-    const initData = { restartScan: false, launchOnScan: true, launcherAccess: false, preferRemoteWriter: false };
+    const initData = { restartScan: false, launchOnScan: true, launcherAccess: false, preferRemoteWriter: false, shakeEnabled: false, shakeMode: "random" as const, shakeZapscript: "" };
 
     const { result } = renderHook(() => useAppSettings({ initData }));
 
@@ -57,7 +60,7 @@ describe("useAppSettings", () => {
   });
 
   it("should persist launchOnScan setting when changed", async () => {
-    const initData = { restartScan: false, launchOnScan: true, launcherAccess: false, preferRemoteWriter: false };
+    const initData = { restartScan: false, launchOnScan: true, launcherAccess: false, preferRemoteWriter: false, shakeEnabled: false, shakeMode: "random" as const, shakeZapscript: "" };
 
     const { result } = renderHook(() => useAppSettings({ initData }));
 
@@ -74,7 +77,7 @@ describe("useAppSettings", () => {
   });
 
   it("should persist preferRemoteWriter setting when changed", async () => {
-    const initData = { restartScan: false, launchOnScan: true, launcherAccess: false, preferRemoteWriter: false };
+    const initData = { restartScan: false, launchOnScan: true, launcherAccess: false, preferRemoteWriter: false, shakeEnabled: false, shakeMode: "random" as const, shakeZapscript: "" };
 
     const { result } = renderHook(() => useAppSettings({ initData }));
 

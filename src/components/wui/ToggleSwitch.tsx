@@ -1,13 +1,25 @@
 import classNames from "classnames";
+import React from "react";
 
 export function ToggleSwitch(props: {
-  label: string;
+  label: string | React.ReactNode;
   value: boolean | undefined;
   setValue: (value: boolean) => void;
   disabled?: boolean;
+  onDisabledClick?: () => void;
 }) {
+  const handleClick = (e: React.MouseEvent) => {
+    if (props.disabled && props.onDisabledClick) {
+      e.preventDefault();
+      props.onDisabledClick();
+    }
+  };
+
   return (
-    <label className="flex cursor-pointer select-none items-center justify-between text-foreground">
+    <label
+      className="flex cursor-pointer select-none items-center justify-between text-foreground"
+      onClick={handleClick}
+    >
       <span>{props.label}</span>
       <div className="relative">
         <input
