@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "cross-env NODE_ENV=development vite",
     "build": "tsc --noEmit -p tsconfig.build.json && vite build && pnpm exec cap sync",
+    "build:server": "tsc --noEmit -p tsconfig.build.json && vite build && cross-env NODE_ENV=development cap sync",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 3",
     "eslist": "pnpm run lint",
     "preview": "vite preview",
@@ -83,6 +85,7 @@
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
     "autoprefixer": "^10.4.21",
+    "cross-env": "^10.1.0",
     "eslint": "^9.34.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import-x": "^4.16.1",
