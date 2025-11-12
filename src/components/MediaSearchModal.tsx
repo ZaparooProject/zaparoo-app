@@ -168,6 +168,7 @@ export function MediaSearchModal(props: {
         mode="single"
         title={t("create.search.selectSystem")}
         includeAllOption={false}
+        defaultSelection="all"
       />
     </>
   );

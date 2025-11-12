@@ -537,6 +537,7 @@ function Search() {
         mode="single"
         title={t("create.search.selectSystem")}
         includeAllOption={false}
+        defaultSelection="all"
       />
       <TagSelector
         isOpen={tagSelectorOpen}

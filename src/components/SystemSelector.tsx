@@ -27,6 +27,7 @@ interface SystemSelectorProps {
   mode: "single" | "multi" | "insert";
   title?: string;
   includeAllOption?: boolean;
+  defaultSelection?: string; // When selectedSystems is empty, what should be shown as selected (e.g., "all" or undefined for nothing)
 }
 
 interface GroupedSystems {
@@ -42,7 +43,8 @@ export function SystemSelector({
   selectedSystems,
   mode,
   title,
-  includeAllOption = false
+  includeAllOption = false,
+  defaultSelection
 }: SystemSelectorProps) {
   const { t } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -320,7 +322,7 @@ export function SystemSelector({
                         "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
                         "rounded-lg focus:outline-none",
                         {
-                          "bg-white/10": selectedSystems.length === 0,
+                          "bg-white/10": defaultSelection === "all" && selectedSystems.length === 0,
                           "hover:bg-white/10 focus:bg-white/10": !gamesIndex.indexing,
                           "opacity-50 cursor-not-allowed": gamesIndex.indexing
                         }
@@ -335,11 +337,11 @@ export function SystemSelector({
                             className={classNames(
                               "border-input h-5 w-5 rounded-full border-2",
                               {
-                                "bg-primary border-primary": selectedSystems.length === 0
+                                "bg-primary border-primary": defaultSelection === "all" && selectedSystems.length === 0
                               }
                             )}
                           >
-                            {selectedSystems.length === 0 && (
+                            {defaultSelection === "all" && selectedSystems.length === 0 && (
                               <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
                             )}
                           </div>
