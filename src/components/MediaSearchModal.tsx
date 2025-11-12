@@ -1,10 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
 import classNames from "classnames";
 import { useStatusStore } from "@/lib/store.ts";
-import { CoreAPI } from "@/lib/coreApi.ts";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { Button } from "@/components/wui/Button.tsx";
@@ -12,10 +10,7 @@ import { VirtualSearchResults } from "@/components/VirtualSearchResults.tsx";
 import { SearchResultGame } from "@/lib/models.ts";
 import { BackToTop } from "@/components/BackToTop.tsx";
 import { SearchIcon } from "@/lib/images.tsx";
-import {
-  SystemSelector,
-  SystemSelectorTrigger
-} from "@/components/SystemSelector.tsx";
+import { SimpleSystemSelect } from "@/components/SimpleSystemSelect.tsx";
 
 export function MediaSearchModal(props: {
   isOpen: boolean;
@@ -27,20 +22,19 @@ export function MediaSearchModal(props: {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [selectedSystem, setSelectedSystem] = useState<string>("all");
-  const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
   const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
     null
   );
-  const [hasSearched, setHasSearched] = useState(false);
+
+  // State for tracking actual searched parameters
+  const [searchParams, setSearchParams] = useState<{
+    query: string;
+    system: string;
+  } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const connected = useStatusStore((state) => state.connected);
   const { close, onSelect } = props;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  const systems = useQuery({
-    queryKey: ["systems"],
-    queryFn: () => CoreAPI.systems()
-  });
 
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
 
@@ -49,21 +43,22 @@ export function MediaSearchModal(props: {
     if (
       !connected ||
       !gamesIndex.exists ||
-      gamesIndex.indexing ||
-      query.trim().length < 2
+      gamesIndex.indexing
     ) {
       return;
     }
 
     setIsSearching(true);
-    setHasSearched(true);
+    setSearchParams({
+      query: query,
+      system: selectedSystem
+    });
   };
 
   // Handle system selection
-  const handleSystemSelect = async (systemsArray: string[]) => {
-    const newSystem = systemsArray.length === 1 ? systemsArray[0] : "all";
-    setSelectedSystem(newSystem);
-    await Preferences.set({ key: "searchSystem", value: newSystem });
+  const handleSystemSelect = async (systemId: string) => {
+    setSelectedSystem(systemId);
+    await Preferences.set({ key: "searchSystem", value: systemId });
   };
 
   useEffect(() => {
@@ -110,14 +105,10 @@ export function MediaSearchModal(props: {
               <label className="mb-1 text-white">
                 {t("create.search.systemInput")}
               </label>
-              <SystemSelectorTrigger
-                selectedSystems={
-                  selectedSystem === "all" ? [] : [selectedSystem]
-                }
-                systemsData={systems.data}
-                placeholder={t("create.search.allSystems")}
-                mode="single"
-                onClick={() => setSystemSelectorOpen(true)}
+              <SimpleSystemSelect
+                value={selectedSystem}
+                onSelect={handleSystemSelect}
+                includeAllOption={true}
                 className={classNames({
                   "opacity-50": !canSearch
                 })}
@@ -128,24 +119,24 @@ export function MediaSearchModal(props: {
               label={t("create.search.searchButton")}
               icon={<SearchIcon size="20" />}
               onClick={performSearch}
-              disabled={!canSearch || query.trim().length < 2 || isSearching}
+              disabled={!canSearch || isSearching}
               className="w-full"
             />
           </div>
 
           <div className="min-h-0 flex-1">
             <VirtualSearchResults
-              query={hasSearched ? query : ""}
+              query={searchParams?.query || ""}
               systems={
-                hasSearched
-                  ? selectedSystem === "all"
+                searchParams
+                  ? searchParams.system === "all"
                     ? []
-                    : [selectedSystem]
+                    : [searchParams.system]
                   : []
               }
               selectedResult={selectedResult}
               setSelectedResult={setSelectedResult}
-              hasSearched={hasSearched}
+              hasSearched={searchParams !== null}
               isSearching={isSearching}
               onSearchComplete={() => setIsSearching(false)}
               scrollContainerRef={scrollContainerRef}
@@ -159,17 +150,6 @@ export function MediaSearchModal(props: {
           bottomOffset="1rem"
         />
       </SlideModal>
-
-      <SystemSelector
-        isOpen={systemSelectorOpen}
-        onClose={() => setSystemSelectorOpen(false)}
-        onSelect={handleSystemSelect}
-        selectedSystems={selectedSystem === "all" ? [] : [selectedSystem]}
-        mode="single"
-        title={t("create.search.selectSystem")}
-        includeAllOption={false}
-        defaultSelection="all"
-      />
     </>
   );
 }
