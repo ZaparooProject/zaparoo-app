@@ -46,11 +46,20 @@
     <uses-permission android:name="android.permission.NFC" />
     <!-- The minimum SDK version that your application can support. -->
     <uses-sdk android:minSdkVersion="10" />
-    <!-- (Optional) This will ensure that your app appears in Google Play only for devices with NFC hardware. -->
-    <uses-feature android:name="android.hardware.nfc" android:required="true" />
+    <!-- NFC is optional - app can function without it using remote reader. -->
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
 
     <!-- To get access to the camera. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Camera features are optional - app can function without them. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
     <!-- To get access to the flashlight. -->
     <uses-permission android:name="android.permission.FLASHLIGHT" />
+    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+
+    <!-- To get access to the accelerometer for shake detection. -->
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
 </manifest>

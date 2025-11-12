@@ -51,6 +51,7 @@ function AppSettings() {
   const connected = useStatusStore((state) => state.connected);
   const [systemPickerOpen, setSystemPickerOpen] = useState(false);
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
+  const accelerometerAvailable = usePreferencesStore((state) => state.accelerometerAvailable);
 
   // Get app settings from store (useShallow prevents infinite re-renders)
   const {
@@ -130,7 +131,7 @@ function AppSettings() {
           />
         )}
 
-        {Capacitor.isNativePlatform() && (
+        {Capacitor.isNativePlatform() && accelerometerAvailable && (
           <ToggleSwitch
             label={
               <>
@@ -154,7 +155,7 @@ function AppSettings() {
           />
         )}
 
-        {Capacitor.isNativePlatform() && shakeEnabled && launcherAccess && (
+        {Capacitor.isNativePlatform() && accelerometerAvailable && shakeEnabled && launcherAccess && (
           <>
             <div>
               <div className="flex flex-row" role="group">

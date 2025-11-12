@@ -57,6 +57,22 @@ export interface PreferencesState {
   // NFC availability hydration tracking (internal, not persisted)
   _nfcAvailabilityHydrated: boolean;
   setNfcAvailabilityHydrated: (state: boolean) => void;
+
+  // Camera availability (cached, not persisted - checked on each app start)
+  cameraAvailable: boolean;
+  setCameraAvailable: (value: boolean) => void;
+
+  // Camera availability hydration tracking (internal, not persisted)
+  _cameraAvailabilityHydrated: boolean;
+  setCameraAvailabilityHydrated: (state: boolean) => void;
+
+  // Accelerometer availability (cached, not persisted - checked on each app start)
+  accelerometerAvailable: boolean;
+  setAccelerometerAvailable: (value: boolean) => void;
+
+  // Accelerometer availability hydration tracking (internal, not persisted)
+  _accelerometerAvailabilityHydrated: boolean;
+  setAccelerometerAvailabilityHydrated: (state: boolean) => void;
 }
 
 // Preferences actions interface
@@ -84,6 +100,14 @@ const DEFAULT_PREFERENCES: Omit<
   | "setNfcAvailable"
   | "_nfcAvailabilityHydrated"
   | "setNfcAvailabilityHydrated"
+  | "cameraAvailable"
+  | "setCameraAvailable"
+  | "_cameraAvailabilityHydrated"
+  | "setCameraAvailabilityHydrated"
+  | "accelerometerAvailable"
+  | "setAccelerometerAvailable"
+  | "_accelerometerAvailabilityHydrated"
+  | "setAccelerometerAvailabilityHydrated"
 > = {
   restartScan: false,
   launchOnScan: true, // Default to true (matches current behavior)
@@ -117,6 +141,24 @@ export const usePreferencesStore = create<PreferencesStore>()(
       _nfcAvailabilityHydrated: false,
       setNfcAvailabilityHydrated: (state) =>
         set({ _nfcAvailabilityHydrated: state }),
+
+      // Camera availability (not persisted, checked on app start)
+      cameraAvailable: false,
+      setCameraAvailable: (value) => set({ cameraAvailable: value }),
+
+      // Camera availability hydration tracking
+      _cameraAvailabilityHydrated: false,
+      setCameraAvailabilityHydrated: (state) =>
+        set({ _cameraAvailabilityHydrated: state }),
+
+      // Accelerometer availability (not persisted, checked on app start)
+      accelerometerAvailable: false,
+      setAccelerometerAvailable: (value) => set({ accelerometerAvailable: value }),
+
+      // Accelerometer availability hydration tracking
+      _accelerometerAvailabilityHydrated: false,
+      setAccelerometerAvailabilityHydrated: (state) =>
+        set({ _accelerometerAvailabilityHydrated: state }),
 
       // Actions - automatically persisted by middleware
       setRestartScan: (value) => {
@@ -174,7 +216,11 @@ export const usePreferencesStore = create<PreferencesStore>()(
           _hasHydrated: currentState._hasHydrated,
           _proAccessHydrated: currentState._proAccessHydrated,
           nfcAvailable: currentState.nfcAvailable,
-          _nfcAvailabilityHydrated: currentState._nfcAvailabilityHydrated
+          _nfcAvailabilityHydrated: currentState._nfcAvailabilityHydrated,
+          cameraAvailable: currentState.cameraAvailable,
+          _cameraAvailabilityHydrated: currentState._cameraAvailabilityHydrated,
+          accelerometerAvailable: currentState.accelerometerAvailable,
+          _accelerometerAvailabilityHydrated: currentState._accelerometerAvailabilityHydrated
         };
       }
     }

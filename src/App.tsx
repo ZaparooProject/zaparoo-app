@@ -18,6 +18,8 @@ import { SlideModalProvider } from "./components/SlideModalProvider";
 import { usePreferencesStore } from "./lib/preferencesStore";
 import { useProAccessCheck } from "./hooks/useProAccessCheck";
 import { useNfcAvailabilityCheck } from "./hooks/useNfcAvailabilityCheck";
+import { useCameraAvailabilityCheck } from "./hooks/useCameraAvailabilityCheck";
+import { useAccelerometerAvailabilityCheck } from "./hooks/useAccelerometerAvailabilityCheck";
 import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
 import { useShakeDetection } from "./hooks/useShakeDetection";
@@ -64,13 +66,21 @@ export default function App() {
   const nfcAvailabilityHydrated = usePreferencesStore(
     (state) => state._nfcAvailabilityHydrated
   );
+  const cameraAvailabilityHydrated = usePreferencesStore(
+    (state) => state._cameraAvailabilityHydrated
+  );
+  const accelerometerAvailabilityHydrated = usePreferencesStore(
+    (state) => state._accelerometerAvailabilityHydrated
+  );
 
   // Initialize data cache early in app lifecycle
   useDataCache();
   // Check Pro access status once at app startup
   useProAccessCheck();
-  // Check NFC availability once at app startup
+  // Check hardware availability once at app startup
   useNfcAvailabilityCheck();
+  useCameraAvailabilityCheck();
+  useAccelerometerAvailabilityCheck();
 
   const playing = useStatusStore((state) => state.playing);
   const prevPlaying = usePrevious(playing);
@@ -141,8 +151,8 @@ export default function App() {
     }
   }, [playing, prevPlaying, t]);
 
-  // Block rendering until preferences, Pro access, and NFC availability are hydrated to prevent layout shifts
-  if (!hasHydrated || !proAccessHydrated || !nfcAvailabilityHydrated) {
+  // Block rendering until preferences, Pro access, and hardware availability are hydrated to prevent layout shifts
+  if (!hasHydrated || !proAccessHydrated || !nfcAvailabilityHydrated || !cameraAvailabilityHydrated || !accelerometerAvailabilityHydrated) {
     return null; // Keep splash screen visible
   }
 
