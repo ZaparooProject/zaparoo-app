@@ -1,7 +1,7 @@
 import { useEffect, useState, RefObject } from "react";
 import { ChevronUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { debounce } from "lodash";
+import { useDebouncedCallback } from "use-debounce";
 
 interface BackToTopProps {
   scrollContainerRef: RefObject<HTMLElement | null>;
@@ -17,19 +17,22 @@ export function BackToTop({
   const [isVisible, setIsVisible] = useState(false);
   const { t } = useTranslation();
 
-  useEffect(() => {
+  const toggleVisibility = useDebouncedCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const toggleVisibility = debounce(() => {
-      // Only update visibility when not at the top (prevents interference during bounce)
-      const scrollTop = container.scrollTop;
-      if (scrollTop <= 0) {
-        setIsVisible(false);
-      } else {
-        setIsVisible(scrollTop > threshold);
-      }
-    }, 10);
+    // Only update visibility when not at the top (prevents interference during bounce)
+    const scrollTop = container.scrollTop;
+    if (scrollTop <= 0) {
+      setIsVisible(false);
+    } else {
+      setIsVisible(scrollTop > threshold);
+    }
+  }, 10);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
 
     setIsVisible(container.scrollTop > threshold);
 
@@ -38,7 +41,7 @@ export function BackToTop({
       toggleVisibility.cancel();
       container.removeEventListener("scroll", toggleVisibility);
     };
-  }, [scrollContainerRef, threshold]);
+  }, [scrollContainerRef, threshold, toggleVisibility]);
 
   const scrollToTop = () => {
     if (scrollContainerRef.current) {

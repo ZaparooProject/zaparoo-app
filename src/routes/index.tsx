@@ -6,7 +6,7 @@ import { useNfcWriter, WriteMethod } from "@/lib/writeNfcHook.tsx";
 import { Status } from "@/lib/nfc.ts";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
-import logoImage from "@/assets/lockup.png";
+import logoImage from "@/assets/lockup.webp";
 import { cancelSession } from "../lib/nfc";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { HistoryIcon } from "../lib/images";
