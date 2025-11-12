@@ -16,6 +16,7 @@ export interface WebSocketManagerConfig {
   reconnectBackoffMultiplier?: number;
   maxReconnectInterval?: number;
   pingMessage?: string;
+  connectionTimeout?: number;
 }
 
 export interface WebSocketManagerCallbacks {
@@ -35,6 +36,7 @@ export class WebSocketManager {
   private pingTimer?: ReturnType<typeof setInterval>;
   private pongTimer?: ReturnType<typeof setTimeout>;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
+  private connectionTimer?: ReturnType<typeof setTimeout>;
   private isDestroyed = false;
   private messageQueue: string[] = [];
   private readonly MAX_QUEUE_SIZE = 100;
@@ -51,7 +53,8 @@ export class WebSocketManager {
       maxReconnectAttempts: config.maxReconnectAttempts ?? Infinity,
       reconnectBackoffMultiplier: config.reconnectBackoffMultiplier ?? 1.5,
       maxReconnectInterval: config.maxReconnectInterval ?? 30000,
-      pingMessage: config.pingMessage ?? "ping"
+      pingMessage: config.pingMessage ?? "ping",
+      connectionTimeout: config.connectionTimeout ?? 10000
     };
     this.callbacks = callbacks;
   }
@@ -71,6 +74,46 @@ export class WebSocketManager {
 
     this.setState(WebSocketState.CONNECTING);
     this.createWebSocket();
+  }
+
+  /**
+   * Immediately reconnect without exponential backoff
+   * Used when app resumes from background
+   */
+  immediateReconnect(): void {
+    if (this.isDestroyed) {
+      console.warn("Cannot reconnect: WebSocketManager has been destroyed");
+      return;
+    }
+
+    // If already connected, do nothing
+    if (this.state === WebSocketState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
+      console.log("Already connected, skipping immediate reconnect");
+      return;
+    }
+
+    console.log("Immediate reconnect triggered");
+
+    // Clear any pending reconnection timer
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
+    }
+
+    // Reset reconnect attempts to get immediate connection
+    this.reconnectAttempts = 0;
+
+    // Close existing connection if any
+    this.cleanup();
+
+    // Add a delay to allow:
+    // 1. Old socket to fully close (ws.close() is async)
+    // 2. Mobile network stack to be ready after app resume (iOS/Android)
+    // 3. Android WebView JavaScript execution to fully resume
+    setTimeout(() => {
+      if (this.isDestroyed) return;
+      this.connect();
+    }, 1500); // 1.5 seconds - gives WebView time to fully wake up
   }
 
   disconnect(): void {
@@ -151,6 +194,7 @@ export class WebSocketManager {
     try {
       this.ws = new WebSocket(this.config.url);
       this.setupEventHandlers();
+      this.startConnectionTimeout();
     } catch (error) {
       console.error("Failed to create WebSocket:", error);
       this.handleConnectionError();
@@ -162,6 +206,7 @@ export class WebSocketManager {
 
     this.ws.onopen = () => {
       console.debug("WebSocket connected");
+      this.clearConnectionTimeout();
       this.reconnectAttempts = 0;
       this.setState(WebSocketState.CONNECTED);
       this.startHeartbeat();
@@ -171,6 +216,7 @@ export class WebSocketManager {
 
     this.ws.onclose = () => {
       console.debug("WebSocket closed");
+      this.clearConnectionTimeout();
       this.stopHeartbeat();
       this.callbacks.onClose?.();
       this.handleDisconnection();
@@ -178,6 +224,7 @@ export class WebSocketManager {
 
     this.ws.onerror = (error) => {
       console.error("WebSocket error:", error);
+      this.clearConnectionTimeout();
       this.callbacks.onError?.(error);
       this.handleConnectionError();
     };
@@ -301,8 +348,27 @@ export class WebSocketManager {
     }
   }
 
+  private startConnectionTimeout(): void {
+    this.clearConnectionTimeout();
+    this.connectionTimer = setTimeout(() => {
+      console.warn(`Connection timeout after ${this.config.connectionTimeout}ms - closing connection`);
+      // Close the WebSocket to trigger reconnection logic
+      if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+        this.ws.close();
+      }
+    }, this.config.connectionTimeout);
+  }
+
+  private clearConnectionTimeout(): void {
+    if (this.connectionTimer) {
+      clearTimeout(this.connectionTimer);
+      this.connectionTimer = undefined;
+    }
+  }
+
   private cleanup(): void {
     this.stopHeartbeat();
+    this.clearConnectionTimeout();
 
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Preferences } from "@capacitor/preferences";
+import { App } from "@capacitor/app";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -23,6 +24,9 @@ export function CoreApiWebSocket() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const wsManagerRef = useRef<WebSocketManager | null>(null);
+  const optimisticTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isResumingRef = useRef(false);
   const [deviceAddress, setDeviceAddress] = useState(getDeviceAddress());
   const [wsUrl, setWsUrl] = useState(getWsUrl());
 
@@ -88,6 +92,78 @@ export function CoreApiWebSocket() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run once on mount - deviceAddress/wsUrl are intentionally omitted as this bootstraps their initial values
 
+  // Shared function to check and apply optimistic connection state
+  const applyOptimisticState = useCallback(async (
+    timeoutRef: { current: ReturnType<typeof setTimeout> | null },
+    logPrefix: string = ""
+  ) => {
+    try {
+      const [lastStateResult, lastTimestampResult] = await Promise.all([
+        Preferences.get({ key: "lastConnectionState" }),
+        Preferences.get({ key: "lastConnectionTimestamp" })
+      ]);
+
+      const lastState = lastStateResult.value;
+      const lastTimestamp = lastTimestampResult.value;
+
+      // Only be optimistic if:
+      // 1. Device address exists
+      // 2. Last state was CONNECTED
+      // 3. Last connection was within 10 minutes
+      const TEN_MINUTES = 10 * 60 * 1000;
+      const now = Date.now();
+
+      if (
+        lastState === WebSocketState.CONNECTED &&
+        lastTimestamp &&
+        now - parseInt(lastTimestamp) < TEN_MINUTES
+      ) {
+        console.log(`${logPrefix}Showing optimistic connected state`);
+        setConnectionState(ConnectionState.CONNECTED);
+        setConnectionError("");
+
+        // Clear any existing timeout
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+
+        // Set a timeout to show real state if connection fails
+        timeoutRef.current = setTimeout(() => {
+          if (wsManagerRef.current) {
+            const actualState = wsManagerRef.current.currentState;
+            // If still not actually connected after 5 seconds, show real state
+            if (actualState !== WebSocketState.CONNECTED) {
+              console.log(`${logPrefix}Optimistic timeout: showing real connection state`);
+              switch (actualState) {
+                case WebSocketState.CONNECTING:
+                  setConnectionState(ConnectionState.CONNECTING);
+                  break;
+                case WebSocketState.RECONNECTING:
+                  setConnectionState(ConnectionState.RECONNECTING);
+                  break;
+                case WebSocketState.ERROR:
+                  setConnectionState(ConnectionState.ERROR);
+                  break;
+                case WebSocketState.DISCONNECTED:
+                  setConnectionState(ConnectionState.DISCONNECTED);
+                  break;
+              }
+            }
+          }
+          timeoutRef.current = null;
+        }, 5000); // 5 second timeout
+
+        return true; // Optimistic state applied
+      } else {
+        console.log(`${logPrefix}Not showing optimistic state - conditions not met`);
+        return false; // Not optimistic
+      }
+    } catch (error) {
+      console.error(`${logPrefix}Error checking optimistic state:`, error);
+      return false;
+    }
+  }, [setConnectionState, setConnectionError]);
+
   useEffect(() => {
     // Early exit checks
     if (deviceAddress === "") {
@@ -106,6 +182,13 @@ export function CoreApiWebSocket() {
       wsManagerRef.current.destroy();
       wsManagerRef.current = null;
     }
+
+    // Check if we should show optimistic connected state
+    applyOptimisticState(optimisticTimeoutRef).then((isOptimistic) => {
+      if (!isOptimistic) {
+        setConnectionState(ConnectionState.CONNECTING);
+      }
+    });
 
     // Helper functions for message processing
     const mediaStarted = (params: PlayingResponse) => {
@@ -176,10 +259,12 @@ export function CoreApiWebSocket() {
         maxReconnectAttempts: Infinity,
         reconnectBackoffMultiplier: 1.5,
         maxReconnectInterval: 2000,
-        pingMessage: "ping"
+        pingMessage: "ping",
+        connectionTimeout: 10000
       },
       {
         onOpen: () => {
+          isResumingRef.current = false; // Reset resume flag
           setConnectionState(ConnectionState.CONNECTED);
           setConnectionError("");
 
@@ -291,18 +376,25 @@ export function CoreApiWebSocket() {
           // Map WebSocketState to ConnectionState
           switch (state) {
             case WebSocketState.CONNECTING:
-              setConnectionState(ConnectionState.CONNECTING);
+              // Don't show intermediate connecting state on app resume
+              if (!isResumingRef.current) {
+                setConnectionState(ConnectionState.CONNECTING);
+              }
               break;
             case WebSocketState.CONNECTED:
+              isResumingRef.current = false;
               // This is handled in onOpen callback
               break;
             case WebSocketState.RECONNECTING:
+              isResumingRef.current = false;
               setConnectionState(ConnectionState.RECONNECTING);
               break;
             case WebSocketState.ERROR:
+              isResumingRef.current = false;
               setConnectionState(ConnectionState.ERROR);
               break;
             case WebSocketState.DISCONNECTED:
+              isResumingRef.current = false;
               setConnectionState(ConnectionState.DISCONNECTED);
               break;
           }
@@ -321,6 +413,13 @@ export function CoreApiWebSocket() {
     // Cleanup function: close WebSocket on component unmount or dependency change
     return () => {
       console.log("CoreApiWebSocket cleanup: destroying WebSocket manager");
+
+      // Clear optimistic timeout if active
+      if (optimisticTimeoutRef.current) {
+        clearTimeout(optimisticTimeoutRef.current);
+        optimisticTimeoutRef.current = null;
+      }
+
       wsManager.destroy();
       wsManagerRef.current = null;
       setConnectionState(ConnectionState.DISCONNECTED);
@@ -336,8 +435,72 @@ export function CoreApiWebSocket() {
     setLastToken,
     setPlaying,
     queryClient,
-    t
+    t,
+    applyOptimisticState
   ]); // Dependencies: re-create WebSocket if address or URL changes
+
+  // App lifecycle listeners for handling pause/resume
+  useEffect(() => {
+    let resumeListener: Awaited<ReturnType<typeof App.addListener>> | null = null;
+    let pauseListener: Awaited<ReturnType<typeof App.addListener>> | null = null;
+
+    const setupListeners = async () => {
+      // Handle app resume - trigger immediate reconnection with optimistic state
+      resumeListener = await App.addListener("resume", async () => {
+        console.log("App resumed, triggering immediate reconnection");
+
+        // Only attempt reconnection if we have a valid device address
+        if (!deviceAddress || !wsManagerRef.current) {
+          return;
+        }
+
+        // Set flag to prevent UI flicker during reconnection
+        isResumingRef.current = true;
+
+        // Apply optimistic state using shared function
+        await applyOptimisticState(resumeTimeoutRef, "App resume: ");
+
+        // Trigger immediate reconnection
+        wsManagerRef.current.immediateReconnect();
+      });
+
+      // Handle app pause - persist connection state
+      pauseListener = await App.addListener("pause", async () => {
+        console.log("App paused");
+
+        if (wsManagerRef.current) {
+          const currentState = wsManagerRef.current.currentState;
+          const timestamp = Date.now();
+
+          // Persist connection state for optimistic UI on resume
+          await Preferences.set({
+            key: "lastConnectionState",
+            value: currentState
+          });
+          await Preferences.set({
+            key: "lastConnectionTimestamp",
+            value: timestamp.toString()
+          });
+
+          console.log(`Persisted connection state: ${currentState} at ${timestamp}`);
+        }
+      });
+    };
+
+    setupListeners();
+
+    // Cleanup listeners on unmount
+    return () => {
+      // Clear resume timeout if active
+      if (resumeTimeoutRef.current) {
+        clearTimeout(resumeTimeoutRef.current);
+        resumeTimeoutRef.current = null;
+      }
+
+      resumeListener?.remove();
+      pauseListener?.remove();
+    };
+  }, [deviceAddress, setConnectionState, setConnectionError, applyOptimisticState]); // Re-setup listeners if device address changes
 
   return null;
 }
