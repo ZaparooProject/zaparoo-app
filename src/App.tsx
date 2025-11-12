@@ -73,6 +73,7 @@ export default function App() {
   useNfcAvailabilityCheck();
 
   const playing = useStatusStore((state) => state.playing);
+  const prevPlaying = usePrevious(playing);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const prevGamesIndex = usePrevious(gamesIndex);
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
@@ -107,7 +108,12 @@ export default function App() {
   }, [gamesIndex, prevGamesIndex, t]);
 
   useEffect(() => {
-    if (playing.mediaName !== "") {
+    // Only show toast when a new game actually starts (mediaName changes)
+    // This prevents duplicate toasts for the same game and handles debouncing naturally
+    if (
+      playing.mediaName !== "" &&
+      playing.mediaName !== prevPlaying?.mediaName
+    ) {
       toast.success(
         (to) => (
           <span
@@ -124,7 +130,7 @@ export default function App() {
           </span>
         ),
         {
-          id: "playingGame-" + playing.mediaName,
+          id: "playingGame-" + Date.now(),
           icon: (
             <span className="text-success pr-1">
               <PlayIcon size="24" />
@@ -133,7 +139,7 @@ export default function App() {
         }
       );
     }
-  }, [playing, t]);
+  }, [playing, prevPlaying, t]);
 
   // Block rendering until preferences, Pro access, and NFC availability are hydrated to prevent layout shifts
   if (!hasHydrated || !proAccessHydrated || !nfcAvailabilityHydrated) {
