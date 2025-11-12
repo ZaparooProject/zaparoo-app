@@ -24,7 +24,7 @@ interface SystemSelectorProps {
   onClose: () => void;
   onSelect: (systems: string[]) => void;
   selectedSystems: string[];
-  mode: "single" | "multi";
+  mode: "single" | "multi" | "insert";
   title?: string;
   includeAllOption?: boolean;
 }
@@ -144,7 +144,7 @@ export function SystemSelector({
       // Don't allow selection while indexing
       if (gamesIndex.indexing) return;
 
-      if (mode === "single") {
+      if (mode === "single" || mode === "insert") {
         if (systemId === "all") {
           onSelect([]);
         } else {
@@ -312,8 +312,8 @@ export function SystemSelector({
               </div>
             ) : (
               <div className="flex flex-col h-full">
-                {/* Add "All Systems" option for single mode */}
-                {mode === "single" && selectedCategory === "all" && !debouncedSearchQuery.trim() && (
+                {/* Add "All Systems" option for single/insert mode */}
+                {(mode === "single" || mode === "insert") && includeAllOption && selectedCategory === "all" && !debouncedSearchQuery.trim() && (
                   <div className="pb-2">
                     <button
                       className={classNames(
@@ -330,18 +330,20 @@ export function SystemSelector({
                       type="button"
                     >
                       <div className="flex items-center space-x-3">
-                        <div
-                          className={classNames(
-                            "border-input h-5 w-5 rounded-full border-2",
-                            {
-                              "bg-primary border-primary": selectedSystems.length === 0
-                            }
-                          )}
-                        >
-                          {selectedSystems.length === 0 && (
-                            <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
-                          )}
-                        </div>
+                        {mode !== "insert" && (
+                          <div
+                            className={classNames(
+                              "border-input h-5 w-5 rounded-full border-2",
+                              {
+                                "bg-primary border-primary": selectedSystems.length === 0
+                              }
+                            )}
+                          >
+                            {selectedSystems.length === 0 && (
+                              <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
+                            )}
+                          </div>
+                        )}
                         <span className="text-foreground font-medium">
                           {t("systemSelector.allSystems")}
                         </span>
@@ -388,7 +390,7 @@ export function SystemSelector({
                           type="button"
                         >
                           <div className="flex items-center space-x-3">
-                            {mode === "multi" ? (
+                            {mode === "insert" ? null : mode === "multi" ? (
                               <div
                                 className={classNames(
                                   "border-input flex h-5 w-5 items-center justify-center rounded border-2",
@@ -434,7 +436,7 @@ export function SystemSelector({
         <BackToTop
           scrollContainerRef={slideModalScrollRef}
           threshold={200}
-          bottomOffset={mode === "single" ? "1rem" : "calc(1rem + 100px)"}
+          bottomOffset={mode === "single" || mode === "insert" ? "1rem" : "calc(1rem + 100px)"}
         />
       </div>
     </SlideModal>
@@ -453,7 +455,7 @@ export function SystemSelectorTrigger({
   selectedSystems: string[];
   systemsData?: { systems: System[] };
   placeholder?: string;
-  mode?: "single" | "multi";
+  mode?: "single" | "multi" | "insert";
   className?: string;
   onClick: () => void;
 }) {
@@ -466,14 +468,14 @@ export function SystemSelectorTrigger({
     if (!systemsData?.systems) return placeholder;
 
     if (selectedSystems.length === 0) {
-      return mode === "single" ? t("systemSelector.allSystems") : placeholder;
+      return mode === "single" || mode === "insert" ? t("systemSelector.allSystems") : placeholder;
     }
 
     if (selectedSystems.length === systemsData.systems.length) {
       return t("systemSelector.allSystems");
     }
 
-    if (mode === "single" && selectedSystems.length === 1) {
+    if ((mode === "single" || mode === "insert") && selectedSystems.length === 1) {
       const system = systemsData.systems.find(
         (s) => s.id === selectedSystems[0]
       );

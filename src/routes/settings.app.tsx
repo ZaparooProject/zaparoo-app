@@ -15,7 +15,7 @@ import {
 } from "../lib/preferencesStore";
 import { BackIcon, CheckIcon } from "../lib/images";
 import { ScanSettings } from "../components/home/ScanSettings.tsx";
-import { SystemsSearchModal } from "../components/SystemsSearchModal";
+import { SystemSelector } from "../components/SystemSelector";
 import { Button } from "../components/wui/Button";
 import { useProPurchase } from "../components/ProPurchase";
 import { ZapScriptInput } from "../components/ZapScriptInput";
@@ -230,7 +230,11 @@ function AppSettings() {
               <div>
                 <div className="flex items-center justify-between gap-2">
                   {shakeSystem ? (
-                    <span className="text-foreground">{shakeSystem}</span>
+                    <span className="text-foreground">
+                      {shakeSystem === "all"
+                        ? t("systemSelector.allSystems")
+                        : shakeSystem}
+                    </span>
                   ) : (
                     <span className="text-foreground">-</span>
                   )}
@@ -259,13 +263,18 @@ function AppSettings() {
         )}
       </div>
 
-      <SystemsSearchModal
+      <SystemSelector
         isOpen={systemPickerOpen}
-        close={() => setSystemPickerOpen(false)}
-        onSelect={(systemId) => {
-          setShakeZapscript(`**launch.random:${systemId}`);
-          setSystemPickerOpen(false);
+        onClose={() => setSystemPickerOpen(false)}
+        onSelect={(systems) => {
+          // If "all" is selected (systems array is empty or contains "all")
+          const selectedSystem = systems.length === 0 ? "all" : systems[0];
+          setShakeZapscript(`**launch.random:${selectedSystem}`);
         }}
+        selectedSystems={shakeSystem ? [shakeSystem] : []}
+        mode="single"
+        title={t("settings.app.shakeSelectSystem")}
+        includeAllOption={true}
       />
 
       <PurchaseModal />

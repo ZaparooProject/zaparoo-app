@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MediaSearchModal } from "@/components/MediaSearchModal";
@@ -93,7 +93,11 @@ vi.mock("@/components/VirtualSearchResults", () => ({
         <button
           key={0}
           data-testid="result-0"
-          onClick={() => setSelectedResult?.({ path: "/games/mario.sfc", name: "Super Mario World" })}
+          onClick={() => setSelectedResult?.({
+            path: "/games/mario.sfc",
+            name: "Super Mario World",
+            zapScript: "**launch:/games/mario.sfc"
+          })}
         >
           Super Mario World
         </button>
@@ -105,6 +109,19 @@ vi.mock("@/components/VirtualSearchResults", () => ({
 vi.mock("@/components/BackToTop", () => ({
   BackToTop: () => (
     <div data-testid="back-to-top" />
+  ),
+}));
+
+vi.mock("@/components/SystemSelector", () => ({
+  SystemSelector: ({ isOpen }: any) =>
+    isOpen ? <div data-testid="system-selector-modal" /> : null,
+  SystemSelectorTrigger: ({ selectedSystems, placeholder, onClick }: any) => (
+    <button
+      data-testid="system-selector-trigger"
+      onClick={onClick}
+    >
+      {selectedSystems.length > 0 ? selectedSystems[0] : placeholder}
+    </button>
   ),
 }));
 
@@ -207,7 +224,7 @@ describe("MediaSearchModal", () => {
     const resultButton = screen.getByTestId("result-0");
     fireEvent.click(resultButton);
 
-    expect(mockOnSelect).toHaveBeenCalledWith("/games/mario.sfc");
+    expect(mockOnSelect).toHaveBeenCalledWith("**launch:/games/mario.sfc");
   });
 
   it("should not render when closed", () => {
@@ -215,21 +232,5 @@ describe("MediaSearchModal", () => {
 
     const modal = screen.getByTestId("slide-modal");
     expect(modal).toHaveAttribute("data-open", "false");
-  });
-
-  it("should focus input when modal opens", async () => {
-    const focusSpy = vi.fn();
-
-    // Mock the input ref focus method
-    vi.spyOn(HTMLElement.prototype, 'focus').mockImplementation(focusSpy);
-
-    renderComponent({ isOpen: true });
-
-    // Use act to properly handle React state updates and async operations
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 350));
-    });
-
-    expect(focusSpy).toHaveBeenCalled();
   });
 });

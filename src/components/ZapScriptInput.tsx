@@ -9,7 +9,7 @@ import { CoreAPI } from "@/lib/coreApi.ts";
 import { Button } from "@/components/wui/Button.tsx";
 import { MediaSearchModal } from "@/components/MediaSearchModal.tsx";
 import { CommandsModal } from "@/components/CommandsModal.tsx";
-import { SystemsSearchModal } from "@/components/SystemsSearchModal.tsx";
+import { SystemSelector } from "@/components/SystemSelector.tsx";
 import { PlayIcon } from "@/lib/images.tsx";
 import { ConfirmClearModal } from "@/components/ConfirmClearModal.tsx";
 
@@ -183,12 +183,18 @@ export function ZapScriptInput(props: {
           props.setValue("");
         }}
       />
-      <SystemsSearchModal
+      <SystemSelector
         isOpen={systemsOpen}
-        close={() => setSystemsOpen(false)}
-        onSelect={(systemId) => {
-          insertTextAtCursor(systemId);
+        onClose={() => setSystemsOpen(false)}
+        onSelect={(systems) => {
+          if (systems.length > 0) {
+            insertTextAtCursor(systems[0]);
+          }
         }}
+        selectedSystems={[]}
+        mode="insert"
+        title={t("create.custom.selectSystem")}
+        includeAllOption={false}
       />
       <MediaSearchModal
         isOpen={searchOpen}
