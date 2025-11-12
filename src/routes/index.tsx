@@ -68,7 +68,7 @@ function Index() {
     if (nfcWriter.status === Status.Success) {
       setWriteOpen(false);
     }
-  }, [nfcWriter.status]);
+  }, [nfcWriter.status, setWriteOpen]);
   const { PurchaseModal, proPurchaseModalOpen, setProPurchaseModalOpen } =
     useProPurchase(initData.launcherAccess);
 

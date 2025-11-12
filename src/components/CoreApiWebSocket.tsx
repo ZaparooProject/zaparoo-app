@@ -85,7 +85,8 @@ export function CoreApiWebSocket() {
         clearTimeout(timer);
       }
     };
-  }, []); // Run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount - deviceAddress/wsUrl are intentionally omitted as this bootstraps their initial values
 
   useEffect(() => {
     // Early exit checks

@@ -8,17 +8,32 @@ export function ToggleSwitch(props: {
   disabled?: boolean;
   onDisabledClick?: () => void;
 }) {
-  const handleClick = (e: React.MouseEvent) => {
-    if (props.disabled && props.onDisabledClick) {
-      e.preventDefault();
-      props.onDisabledClick();
-    }
-  };
+  const hasDisabledClickHandler = props.disabled && props.onDisabledClick;
+
+  const handleClick = hasDisabledClickHandler
+    ? (e: React.MouseEvent) => {
+        e.preventDefault();
+        props.onDisabledClick!();
+      }
+    : undefined;
+
+  const handleKeyDown = hasDisabledClickHandler
+    ? (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          props.onDisabledClick!();
+        }
+      }
+    : undefined;
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <label
       className="flex cursor-pointer select-none items-center justify-between text-foreground"
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role={hasDisabledClickHandler ? "button" : undefined}
+      tabIndex={hasDisabledClickHandler ? 0 : undefined}
     >
       <span>{props.label}</span>
       <div className="relative">

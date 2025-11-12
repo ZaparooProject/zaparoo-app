@@ -70,7 +70,6 @@ export function useRunQueueProcessor() {
     },
     [
       launcherAccess,
-      runToken,
       setLastToken,
       setProPurchaseModalOpen,
       setRunQueue,
@@ -86,7 +85,6 @@ export function useRunQueueProcessor() {
     setLastToken,
     setProPurchaseModalOpen,
     setRunQueue,
-    runToken,
     t,
     processQueue
   ]);
