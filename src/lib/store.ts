@@ -58,6 +58,12 @@ interface StatusState {
   nfcModalOpen: boolean;
   setNfcModalOpen: (nfcModalOpen: boolean) => void;
 
+  proPurchaseModalOpen: boolean;
+  setProPurchaseModalOpen: (proPurchaseModalOpen: boolean) => void;
+
+  writeOpen: boolean;
+  setWriteOpen: (writeOpen: boolean) => void;
+
   safeInsets: SafeAreaInsets;
   setSafeInsets: (insets: SafeAreaInsets) => void;
 
@@ -126,6 +132,12 @@ export const useStatusStore = create<StatusState>()((set) => ({
 
   nfcModalOpen: false,
   setNfcModalOpen: (nfcModalOpen) => set({ nfcModalOpen }),
+
+  proPurchaseModalOpen: false,
+  setProPurchaseModalOpen: (proPurchaseModalOpen) => set({ proPurchaseModalOpen }),
+
+  writeOpen: false,
+  setWriteOpen: (writeOpen) => set({ writeOpen }),
 
   safeInsets: defaultSafeAreaInsets,
   setSafeInsets: (insets) => set({ safeInsets: insets }),

@@ -10,6 +10,7 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { usePreferencesStore } from "../lib/preferencesStore";
+import { useStatusStore } from "../lib/store";
 import { Button } from "./wui/Button";
 
 export const RestorePuchasesButton = () => {
@@ -121,7 +122,8 @@ const ProPurchaseModal = (props: {
 // eslint-disable-next-line react-refresh/only-export-components
 export const useProPurchase = (initialProAccess: boolean = false) => {
   const [proAccess, setProAccess] = useState(initialProAccess);
-  const [proPurchaseModalOpen, setProPurchaseModalOpen] = useState(false);
+  const proPurchaseModalOpen = useStatusStore((state) => state.proPurchaseModalOpen);
+  const setProPurchaseModalOpen = useStatusStore((state) => state.setProPurchaseModalOpen);
   const [launcherPackage, setLauncherPackage] =
     useState<PurchasesPackage | null>(null);
 

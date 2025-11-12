@@ -18,6 +18,26 @@ import { SlideModalProvider } from "./components/SlideModalProvider";
 import { usePreferencesStore } from "./lib/preferencesStore";
 import { useProAccessCheck } from "./hooks/useProAccessCheck";
 import { useNfcAvailabilityCheck } from "./hooks/useNfcAvailabilityCheck";
+import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
+import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
+import { useShakeDetection } from "./hooks/useShakeDetection";
+
+// Component to initialize queue processors after preferences hydrate
+// This ensures sessionManager.launchOnScan is set correctly before processing
+function QueueProcessors() {
+  const shakeEnabled = usePreferencesStore((state) => state.shakeEnabled);
+  const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
+  const connected = useStatusStore((state) => state.connected);
+
+  useRunQueueProcessor();
+  useWriteQueueProcessor();
+  useShakeDetection({
+    shakeEnabled,
+    launcherAccess,
+    connected
+  });
+  return null;
+}
 
 const router = createRouter({
   scrollRestoration: true,
@@ -124,6 +144,7 @@ export default function App() {
     <>
       <AppUrlListener />
       <CoreApiWebSocket key={getDeviceAddress()} />
+      <QueueProcessors />
       <Toaster
         position="top-center"
         toastOptions={{

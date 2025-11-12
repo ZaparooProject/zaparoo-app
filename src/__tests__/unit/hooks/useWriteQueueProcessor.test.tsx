@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useWriteQueueProcessor } from "../../../hooks/useWriteQueueProcessor";
 import { useStatusStore } from "../../../lib/store";
+import { usePreferencesStore } from "../../../lib/preferencesStore";
+import { useNfcWriter } from "../../../lib/writeNfcHook";
 import { Status } from "../../../lib/nfc";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
@@ -11,6 +13,16 @@ import toast from "react-hot-toast";
 // Mock all dependencies
 vi.mock("../../../lib/store", () => ({
   useStatusStore: vi.fn()
+}));
+
+vi.mock("../../../lib/preferencesStore", () => ({
+  usePreferencesStore: vi.fn()
+}));
+
+vi.mock("../../../lib/writeNfcHook", () => ({
+  useNfcWriter: vi.fn(),
+  WriteMethod: { Auto: "auto" },
+  WriteAction: { Write: "write" }
 }));
 
 vi.mock("@capacitor/core", () => ({
@@ -49,6 +61,8 @@ describe("useWriteQueueProcessor", () => {
     write: ReturnType<typeof vi.fn>;
     end: ReturnType<typeof vi.fn>;
     status: Status | null;
+    writing: boolean;
+    result: any;
   };
   let mockSetWriteOpen: ReturnType<typeof vi.fn>;
   let mockSetWriteQueue: ReturnType<typeof vi.fn>;
@@ -60,21 +74,38 @@ describe("useWriteQueueProcessor", () => {
     mockNfcWriter = {
       write: vi.fn().mockResolvedValue(undefined),
       end: vi.fn().mockResolvedValue(undefined),
-      status: null
+      status: null,
+      writing: false,
+      result: null
     };
 
     mockSetWriteOpen = vi.fn();
     mockSetWriteQueue = vi.fn();
 
-    // Mock the store with empty queue initially
-    vi.mocked(useStatusStore).mockImplementation((selector: any) => {
+    // Mock useNfcWriter to return the mock writer
+    vi.mocked(useNfcWriter).mockReturnValue(mockNfcWriter);
+
+    // Mock the preferences store
+    vi.mocked(usePreferencesStore).mockImplementation((selector: any) => {
       if (typeof selector === 'function') {
         return selector({
-          writeQueue: "",
-          setWriteQueue: mockSetWriteQueue
+          preferRemoteWriter: false
         });
       }
-      return mockSetWriteQueue;
+      return false;
+    });
+
+    // Mock the status store with empty queue initially
+    vi.mocked(useStatusStore).mockImplementation((selector: any) => {
+      const mockState = {
+        writeQueue: "",
+        setWriteQueue: mockSetWriteQueue,
+        setWriteOpen: mockSetWriteOpen
+      };
+      if (typeof selector === 'function') {
+        return selector(mockState);
+      }
+      return mockState;
     });
 
     // Reset default mock behaviors
@@ -92,10 +123,7 @@ describe("useWriteQueueProcessor", () => {
   });
 
   it("should not process when queue is empty", () => {
-    renderHook(() => useWriteQueueProcessor({
-      nfcWriter: mockNfcWriter,
-      setWriteOpen: mockSetWriteOpen
-    }));
+    renderHook(() => useWriteQueueProcessor());
 
     // Should not call any NFC writer methods when queue is empty
     expect(mockNfcWriter.write).not.toHaveBeenCalled();
@@ -106,19 +134,18 @@ describe("useWriteQueueProcessor", () => {
   it("should process write queue when NFC is available on native platform", async () => {
     // Setup: queue has content
     vi.mocked(useStatusStore).mockImplementation((selector: any) => {
+      const mockState = {
+        writeQueue: "test-write-content",
+        setWriteQueue: mockSetWriteQueue,
+        setWriteOpen: mockSetWriteOpen
+      };
       if (typeof selector === 'function') {
-        return selector({
-          writeQueue: "test-write-content",
-          setWriteQueue: mockSetWriteQueue
-        });
+        return selector(mockState);
       }
-      return mockSetWriteQueue;
+      return mockState;
     });
 
-    renderHook(() => useWriteQueueProcessor({
-      nfcWriter: mockNfcWriter,
-      setWriteOpen: mockSetWriteOpen
-    }));
+    renderHook(() => useWriteQueueProcessor());
 
     // Skip the 1000ms initial delay and flush async operations
     await act(async () => {
@@ -137,19 +164,18 @@ describe("useWriteQueueProcessor", () => {
     vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
 
     vi.mocked(useStatusStore).mockImplementation((selector: any) => {
+      const mockState = {
+        writeQueue: "test-content",
+        setWriteQueue: mockSetWriteQueue,
+        setWriteOpen: mockSetWriteOpen
+      };
       if (typeof selector === 'function') {
-        return selector({
-          writeQueue: "test-content",
-          setWriteQueue: mockSetWriteQueue
-        });
+        return selector(mockState);
       }
-      return mockSetWriteQueue;
+      return mockState;
     });
 
-    renderHook(() => useWriteQueueProcessor({
-      nfcWriter: mockNfcWriter,
-      setWriteOpen: mockSetWriteOpen
-    }));
+    renderHook(() => useWriteQueueProcessor());
 
     // Skip the 1000ms initial delay and flush async operations
     await act(async () => {
@@ -176,10 +202,7 @@ describe("useWriteQueueProcessor", () => {
       return mockSetWriteQueue;
     });
 
-    renderHook(() => useWriteQueueProcessor({
-      nfcWriter: mockNfcWriter,
-      setWriteOpen: mockSetWriteOpen
-    }));
+    renderHook(() => useWriteQueueProcessor());
 
     // Skip the 1000ms initial delay and flush async operations
     await act(async () => {
@@ -198,19 +221,18 @@ describe("useWriteQueueProcessor", () => {
     vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
 
     vi.mocked(useStatusStore).mockImplementation((selector: any) => {
+      const mockState = {
+        writeQueue: "web-content",
+        setWriteQueue: mockSetWriteQueue,
+        setWriteOpen: mockSetWriteOpen
+      };
       if (typeof selector === 'function') {
-        return selector({
-          writeQueue: "web-content",
-          setWriteQueue: mockSetWriteQueue
-        });
+        return selector(mockState);
       }
-      return mockSetWriteQueue;
+      return mockState;
     });
 
-    renderHook(() => useWriteQueueProcessor({
-      nfcWriter: mockNfcWriter,
-      setWriteOpen: mockSetWriteOpen
-    }));
+    renderHook(() => useWriteQueueProcessor());
 
     // Skip the 1000ms initial delay and flush async operations
     await act(async () => {
@@ -237,10 +259,7 @@ describe("useWriteQueueProcessor", () => {
       return mockSetWriteQueue;
     });
 
-    renderHook(() => useWriteQueueProcessor({
-      nfcWriter: mockNfcWriter,
-      setWriteOpen: mockSetWriteOpen
-    }));
+    renderHook(() => useWriteQueueProcessor());
 
     // Skip the 1000ms initial delay and flush async operations
     await act(async () => {
@@ -253,10 +272,7 @@ describe("useWriteQueueProcessor", () => {
   });
 
   it("should return reset function", () => {
-    const { result } = renderHook(() => useWriteQueueProcessor({
-      nfcWriter: mockNfcWriter,
-      setWriteOpen: mockSetWriteOpen
-    }));
+    const { result } = renderHook(() => useWriteQueueProcessor());
 
     expect(result.current.reset).toBeInstanceOf(Function);
   });

@@ -6,8 +6,6 @@ import { useNfcWriter, WriteMethod } from "@/lib/writeNfcHook.tsx";
 import { Status } from "@/lib/nfc.ts";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
-import { useWriteQueueProcessor } from "@/hooks/useWriteQueueProcessor.tsx";
-import { useRunQueueProcessor } from "@/hooks/useRunQueueProcessor.tsx";
 import logoImage from "@/assets/lockup.png";
 import { cancelSession } from "../lib/nfc";
 import { CoreAPI } from "../lib/coreApi.ts";
@@ -23,14 +21,12 @@ import { HistoryModal } from "../components/home/HistoryModal";
 import { StopConfirmModal } from "../components/home/StopConfirmModal";
 import { useScanOperations } from "../hooks/useScanOperations";
 import { usePreferencesStore } from "../lib/preferencesStore";
-import { useShakeDetection } from "../hooks/useShakeDetection";
 
 interface LoaderData {
   restartScan: boolean;
   launchOnScan: boolean;
   launcherAccess: boolean;
   preferRemoteWriter: boolean;
-  shakeEnabled: boolean;
   shakeMode: "random" | "custom";
   shakeZapscript: string;
 }
@@ -43,7 +39,6 @@ export const Route = createFileRoute("/")({
       launchOnScan: state.launchOnScan,
       launcherAccess: state.launcherAccess,
       preferRemoteWriter: state.preferRemoteWriter,
-      shakeEnabled: state.shakeEnabled,
       shakeMode: state.shakeMode,
       shakeZapscript: state.shakeZapscript
     };
@@ -58,14 +53,15 @@ function Index() {
   const preferRemoteWriter = usePreferencesStore(
     (state) => state.preferRemoteWriter
   );
-  const shakeEnabled = usePreferencesStore((state) => state.shakeEnabled);
 
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
-  const [writeOpen, setWriteOpen] = useState(false);
+  const writeOpen = useStatusStore((state) => state.writeOpen);
+  const setWriteOpen = useStatusStore((state) => state.setWriteOpen);
+  const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
   const closeWriteModal = async () => {
     setWriteOpen(false);
     await nfcWriter.end();
-    resetWriteQueue();
+    setWriteQueue("");
   };
   useEffect(() => {
     // Only auto-close on successful write completion
@@ -89,32 +85,13 @@ function Index() {
     scanStatus,
     handleScanButton,
     handleCameraScan,
-    handleStopConfirm,
-    runToken
+    handleStopConfirm
   } = useScanOperations({
     connected,
     launcherAccess,
     setLastToken,
     setProPurchaseModalOpen,
     setWriteOpen
-  });
-
-  useRunQueueProcessor({
-    launcherAccess,
-    setLastToken,
-    setProPurchaseModalOpen,
-    runToken
-  });
-
-  const { reset: resetWriteQueue } = useWriteQueueProcessor({
-    nfcWriter,
-    setWriteOpen
-  });
-
-  useShakeDetection({
-    shakeEnabled,
-    launcherAccess,
-    connected
   });
 
   const history = useQuery({
