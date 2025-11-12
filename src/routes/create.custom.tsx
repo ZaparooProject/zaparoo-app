@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Preferences } from "@capacitor/preferences";
+import { useShallow } from "zustand/react/shallow";
 import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
 import { CreateIcon } from "../lib/images";
 import { Button } from "../components/wui/Button";
@@ -9,28 +9,16 @@ import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { WriteModal } from "../components/WriteModal";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { PageFrame } from "../components/PageFrame";
-
-interface LoaderData {
-  customText: string;
-}
+import { usePreferencesStore, selectCustomText } from "../lib/preferencesStore";
 
 export const Route = createFileRoute("/create/custom")({
-  loader: async (): Promise<LoaderData> => {
-    const customTextPreference = await Preferences.get({ key: "customText" });
-
-    return {
-      customText: customTextPreference.value || ""
-    };
-  },
-  // Disable caching to ensure fresh preference is always read
-  staleTime: 0,
-  gcTime: 0,
   component: CustomText
 });
 
 function CustomText() {
-  const loaderData = Route.useLoaderData();
-  const [customText, setCustomText] = useState(loaderData.customText);
+  const { customText, setCustomText } = usePreferencesStore(
+    useShallow(selectCustomText)
+  );
   const nfcWriter = useNfcWriter();
   const [writeOpen, setWriteOpen] = useState(false);
   const closeWriteModal = async () => {
@@ -44,13 +32,6 @@ function CustomText() {
       setWriteOpen(false);
     }
   }, [nfcWriter]);
-
-  useEffect(() => {
-    const savePreference = async () => {
-      await Preferences.set({ key: "customText", value: customText });
-    };
-    savePreference();
-  }, [customText]);
 
   const navigate = useNavigate();
   const swipeHandlers = useSmartSwipe({

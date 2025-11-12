@@ -39,6 +39,9 @@ export interface PreferencesState {
   shakeMode: "random" | "custom";
   shakeZapscript: string;
 
+  // Custom zapscript page text (separate from shake zapscript)
+  customText: string;
+
   // Hydration tracking (internal, not persisted)
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
@@ -65,6 +68,7 @@ export interface PreferencesActions {
   setShakeEnabled: (value: boolean) => void;
   setShakeMode: (value: "random" | "custom") => void;
   setShakeZapscript: (value: string) => void;
+  setCustomText: (value: string) => void;
 }
 
 export type PreferencesStore = PreferencesState & PreferencesActions;
@@ -87,7 +91,8 @@ const DEFAULT_PREFERENCES: Omit<
   preferRemoteWriter: false,
   shakeEnabled: false,
   shakeMode: "random",
-  shakeZapscript: ""
+  shakeZapscript: "",
+  customText: ""
 };
 
 export const usePreferencesStore = create<PreferencesStore>()(
@@ -129,7 +134,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
         // Clear zapscript when mode changes
         set({ shakeMode: value, shakeZapscript: "" });
       },
-      setShakeZapscript: (value) => set({ shakeZapscript: value })
+      setShakeZapscript: (value) => set({ shakeZapscript: value }),
+      setCustomText: (value) => set({ customText: value })
     }),
     {
       name: "app-preferences",
@@ -143,7 +149,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
         preferRemoteWriter: state.preferRemoteWriter,
         shakeEnabled: state.shakeEnabled,
         shakeMode: state.shakeMode,
-        shakeZapscript: state.shakeZapscript
+        shakeZapscript: state.shakeZapscript,
+        customText: state.customText
       }),
 
       // Callback when hydration completes
@@ -193,4 +200,9 @@ export const selectShakeSettings = (state: PreferencesStore) => ({
   setShakeEnabled: state.setShakeEnabled,
   setShakeMode: state.setShakeMode,
   setShakeZapscript: state.setShakeZapscript
+});
+
+export const selectCustomText = (state: PreferencesStore) => ({
+  customText: state.customText,
+  setCustomText: state.setCustomText
 });
