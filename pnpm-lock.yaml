@@ -45,8 +45,8 @@ importers:
         specifier: ^7.0.1
         version: 7.0.1(@capacitor/core@7.4.1)
       '@capawesome-team/capacitor-nfc':
-        specifier: 7.2.0
-        version: 7.2.0(@capacitor/core@7.4.1)
+        specifier: 7.3.0
+        version: 7.3.0(@capacitor/core@7.4.1)
       '@capawesome/capacitor-android-edge-to-edge-support':
         specifier: ^7.2.3
         version: 7.2.3(@capacitor/core@7.4.1)
@@ -531,8 +531,8 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
-  '@capawesome-team/capacitor-nfc@7.2.0':
-    resolution: {integrity: sha512-I8fCz/bX3dz3C69l4chzFaBTjddbDudCaxssegcq13cPaVh35c5KBgieY3us9TjfQ74uGN/mONxzCJZod1BYtg==, tarball: https://npm.pkg.github.com/download/@capawesome-team/capacitor-nfc/7.2.0/5aca8e942d29a4ba1a32351b4c374c0bbfc233fc}
+  '@capawesome-team/capacitor-nfc@7.3.0':
+    resolution: {integrity: sha512-JdiGf7mzKm6HHKOrL3No3aoCyv4LCZjCZB8ECCtxKf+Jhn1Zs/DMCjzVXYikQN4CF3qFWJyUYm7+KKOPQHIVsQ==, tarball: https://npm.pkg.github.com/download/@capawesome-team/capacitor-nfc/7.3.0/58d8ceeb088cb31db9da2981c1a404ada866d1e7}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -5744,7 +5744,7 @@ snapshots:
     dependencies:
       '@capacitor/core': 7.4.1
 
-  '@capawesome-team/capacitor-nfc@7.2.0(@capacitor/core@7.4.1)':
+  '@capawesome-team/capacitor-nfc@7.3.0(@capacitor/core@7.4.1)':
     dependencies:
       '@capacitor/core': 7.4.1
 

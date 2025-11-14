@@ -30,7 +30,7 @@
     "@capacitor/preferences": "^7.0.1",
     "@capacitor/share": "^7.0.2",
     "@capacitor/status-bar": "^7.0.1",
-    "@capawesome-team/capacitor-nfc": "7.2.0",
+    "@capawesome-team/capacitor-nfc": "7.3.0",
     "@capawesome/capacitor-android-edge-to-edge-support": "^7.2.3",
     "@capgo/capacitor-shake": "^7.2.14",
     "@radix-ui/react-accordion": "^1.2.12",
