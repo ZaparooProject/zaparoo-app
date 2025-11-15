@@ -7,6 +7,7 @@ interface ToggleChipProps {
   state: boolean;
   setState: (state: boolean) => void;
   disabled?: boolean;
+  compact?: boolean;
 }
 
 export function ToggleChip(props: ToggleChipProps) {
@@ -28,7 +29,8 @@ export function ToggleChip(props: ToggleChipProps) {
           "w-10": !props.label && props.icon,
           "h-10": !props.label && props.icon,
           "px-1.5": !props.label && props.icon,
-          "px-6": props.label || !props.icon,
+          "px-4": props.compact && (props.label || !props.icon),
+          "px-6": !props.compact && (props.label || !props.icon),
           "rounded-full": !props.label && props.icon,
           "rounded-[8px]": props.label || !props.icon
         },

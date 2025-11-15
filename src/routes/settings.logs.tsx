@@ -247,26 +247,30 @@ function Logs() {
 
             {/* Filters and Entry Count */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-4">
-              <div className="flex flex-row gap-2 flex-wrap">
+              <div className="flex flex-row gap-1.5 flex-wrap">
                 <ToggleChip
                   label="Debug"
                   state={levelFilters.debug}
                   setState={(state) => setLevelFilters(prev => ({ ...prev, debug: state }))}
+                  compact
                 />
                 <ToggleChip
                   label="Info"
                   state={levelFilters.info}
                   setState={(state) => setLevelFilters(prev => ({ ...prev, info: state }))}
+                  compact
                 />
                 <ToggleChip
                   label="Warn"
                   state={levelFilters.warn}
                   setState={(state) => setLevelFilters(prev => ({ ...prev, warn: state }))}
+                  compact
                 />
                 <ToggleChip
                   label="Error"
                   state={levelFilters.error}
                   setState={(state) => setLevelFilters(prev => ({ ...prev, error: state }))}
+                  compact
                 />
               </div>
               {logsQuery.data && logEntries.length > 0 && (
