@@ -93,6 +93,11 @@ function Settings() {
               value={address}
               setValue={setAddress}
               saveValue={handleDeviceAddressChange}
+              onKeyUp={(e) => {
+                if (e.key === "Enter" && address !== getDeviceAddress()) {
+                  handleDeviceAddressChange(address);
+                }
+              }}
             />
           </div>
 

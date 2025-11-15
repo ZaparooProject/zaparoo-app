@@ -37,21 +37,41 @@ describe('TextInput', () => {
   it('renders save button when saveValue prop is provided', async () => {
     const mockSaveValue = vi.fn();
     const user = userEvent.setup();
-    
+
     render(
-      <TextInput 
+      <TextInput
         value="initial"
         saveValue={mockSaveValue}
       />
     );
-    
+
     const input = screen.getByDisplayValue('initial');
     await user.clear(input);
     await user.type(input, 'modified text');
-    
+
     const saveButton = screen.getByRole('button');
     await user.click(saveButton);
-    
+
     expect(mockSaveValue).toHaveBeenCalledWith('modified text');
+  });
+
+  it('calls onKeyUp handler when Enter key is pressed', async () => {
+    const mockOnKeyUp = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <TextInput
+        value=""
+        onKeyUp={mockOnKeyUp}
+        placeholder="Enter text"
+      />
+    );
+
+    const input = screen.getByPlaceholderText('Enter text');
+    await user.type(input, 'test{Enter}');
+
+    expect(mockOnKeyUp).toHaveBeenCalled();
+    const lastCall = mockOnKeyUp.mock.calls[mockOnKeyUp.mock.calls.length - 1][0];
+    expect(lastCall.key).toBe('Enter');
   });
 });
