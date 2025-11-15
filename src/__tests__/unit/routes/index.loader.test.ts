@@ -35,16 +35,17 @@ describe("Index Route Loader", () => {
       shakeEnabled: false,
       shakeMode: "random",
       shakeZapscript: "",
+      tourCompleted: false,
     });
 
     const result = Route.options?.loader?.();
 
+    // Loader only returns specific fields, not all store state
     expect(result).toEqual({
       restartScan: false,
       launchOnScan: true,
       launcherAccess: false,
       preferRemoteWriter: false,
-      shakeEnabled: false,
       shakeMode: "random",
       shakeZapscript: "",
     });
@@ -61,16 +62,17 @@ describe("Index Route Loader", () => {
       shakeEnabled: true,
       shakeMode: "custom",
       shakeZapscript: "**launch.system:snes",
+      tourCompleted: true,
     });
 
     const result = Route.options?.loader?.();
 
+    // Loader only returns specific fields, not all store state
     expect(result).toEqual({
       restartScan: true,
       launchOnScan: true,
       launcherAccess: true,
       preferRemoteWriter: true,
-      shakeEnabled: true,
       shakeMode: "custom",
       shakeZapscript: "**launch.system:snes",
     });
@@ -85,16 +87,17 @@ describe("Index Route Loader", () => {
       shakeEnabled: false,
       shakeMode: "random",
       shakeZapscript: "",
+      tourCompleted: false,
     });
 
     const result = Route.options?.loader?.();
 
+    // Loader only returns specific fields, not all store state
     expect(result).toEqual({
       restartScan: false,
       launchOnScan: false,
       launcherAccess: false,
       preferRemoteWriter: false,
-      shakeEnabled: false,
       shakeMode: "random",
       shakeZapscript: "",
     });
@@ -109,16 +112,17 @@ describe("Index Route Loader", () => {
       shakeEnabled: true,
       shakeMode: "custom",
       shakeZapscript: "**some.command",
+      tourCompleted: true,
     });
 
     const result = Route.options?.loader?.();
 
+    // Loader only returns specific fields, not all store state
     expect(result).toEqual({
       restartScan: true,
       launchOnScan: false,
       launcherAccess: true,
       preferRemoteWriter: false,
-      shakeEnabled: true,
       shakeMode: "custom",
       shakeZapscript: "**some.command",
     });
@@ -133,6 +137,7 @@ describe("Index Route Loader", () => {
       shakeEnabled: false,
       shakeMode: "random",
       shakeZapscript: "",
+      tourCompleted: false,
     });
 
     const result = Route.options?.loader?.();
@@ -151,6 +156,7 @@ describe("Index Route Loader", () => {
       shakeEnabled: false,
       shakeMode: "random",
       shakeZapscript: "",
+      tourCompleted: false,
     });
 
     Route.options?.loader?.();

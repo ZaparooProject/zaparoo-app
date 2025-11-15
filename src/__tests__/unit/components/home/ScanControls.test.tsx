@@ -18,6 +18,13 @@ vi.mock("react-i18next", () => ({
   })
 }));
 
+// Mock preferences store
+vi.mock("../../../../lib/preferencesStore", () => ({
+  usePreferencesStore: vi.fn(() => ({
+    cameraAvailable: true
+  }))
+}));
+
 describe("ScanControls", () => {
   const mockProps = {
     scanSession: false,

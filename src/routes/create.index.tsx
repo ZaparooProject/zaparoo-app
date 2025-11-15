@@ -39,7 +39,7 @@ function Create() {
     <>
       <PageFrame title={t("create.title")}>
         <div className="flex flex-col gap-3">
-          <Link to="/create/search" disabled={!connected}>
+          <Link to="/create/search" disabled={!connected} data-tour="create-search">
             <Card disabled={!connected}>
               <div className="flex flex-row items-center gap-3">
                 <Button disabled={!connected} icon={<SearchIcon size="20" />} />

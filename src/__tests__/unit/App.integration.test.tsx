@@ -65,13 +65,35 @@ vi.mock("@capacitor-firebase/authentication", () => ({
   },
 }));
 
-vi.mock("@/lib/store", () => ({
-  useStatusStore: vi.fn(() => ({
+vi.mock("@/lib/store", () => {
+  const mockState = {
     connectionState: "CONNECTED",
     gamesIndex: { exists: true, indexing: false },
     mediaActiveUpdate: null,
-  })),
-}));
+    runQueue: null,
+    setRunQueue: vi.fn(),
+    writeQueue: null,
+    setWriteQueue: vi.fn(),
+    setLastToken: vi.fn(),
+    setProPurchaseModalOpen: vi.fn(),
+    connected: true,
+    playing: { mediaName: "", systemId: "", mediaPath: "" },
+  };
+
+  const useStatusStore: any = vi.fn((selector) => {
+    if (typeof selector === 'function') {
+      return selector(mockState);
+    }
+    return mockState;
+  });
+
+  // Add getState method for direct access
+  useStatusStore.getState = () => mockState;
+
+  return {
+    useStatusStore,
+  };
+});
 
 vi.mock("@/hooks/useDataCache", () => ({
   useDataCache: vi.fn(() => ({})),

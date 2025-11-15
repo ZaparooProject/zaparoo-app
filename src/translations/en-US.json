@@ -393,6 +393,36 @@
         "video": "Video",
         "year": "Year"
       }
+    },
+    "tour": {
+      "stepIndicator": "{{current}}/{{total}}",
+      "welcome": {
+        "title": "Welcome to Zaparoo!",
+        "text": "Let's get you set up. This tour will show you how to connect to your device, scan your library, and create your first token."
+      },
+      "deviceAddress": {
+        "title": "Connect Your Device",
+        "text": "Enter your Zaparoo Core device IP address here. You can find this on your device's display or in your router settings."
+      },
+      "mediaDatabase": {
+        "title": "Update Media Library",
+        "text": "After connecting, use this button to scan and index your media library. We use this for searching and launching."
+      },
+      "createCards": {
+        "title": "Search for Media",
+        "text": "Once that's done, use the search to find media from your library. When you find something, tap it to write it to a token."
+      },
+      "complete": {
+        "title": "You're All Set!",
+        "text": "That's it! Once you've made your first token, launch it from this screen or using a reader connected to your device."
+      },
+      "buttons": {
+        "skip": "Skip Tour",
+        "getStarted": "Get Started",
+        "back": "Back",
+        "next": "Next",
+        "finish": "Finish"
+      }
     }
   }
 }

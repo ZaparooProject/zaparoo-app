@@ -42,6 +42,9 @@ export interface PreferencesState {
   // Custom zapscript page text (separate from shake zapscript)
   customText: string;
 
+  // Tour completion tracking
+  tourCompleted: boolean;
+
   // Hydration tracking (internal, not persisted)
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
@@ -85,6 +88,7 @@ export interface PreferencesActions {
   setShakeMode: (value: "random" | "custom") => void;
   setShakeZapscript: (value: string) => void;
   setCustomText: (value: string) => void;
+  setTourCompleted: (value: boolean) => void;
 }
 
 export type PreferencesStore = PreferencesState & PreferencesActions;
@@ -116,7 +120,8 @@ const DEFAULT_PREFERENCES: Omit<
   shakeEnabled: false,
   shakeMode: "random",
   shakeZapscript: "",
-  customText: ""
+  customText: "",
+  tourCompleted: false
 };
 
 export const usePreferencesStore = create<PreferencesStore>()(
@@ -177,7 +182,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
         set({ shakeMode: value, shakeZapscript: "" });
       },
       setShakeZapscript: (value) => set({ shakeZapscript: value }),
-      setCustomText: (value) => set({ customText: value })
+      setCustomText: (value) => set({ customText: value }),
+      setTourCompleted: (value) => set({ tourCompleted: value })
     }),
     {
       name: "app-preferences",
@@ -192,7 +198,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
         shakeEnabled: state.shakeEnabled,
         shakeMode: state.shakeMode,
         shakeZapscript: state.shakeZapscript,
-        customText: state.customText
+        customText: state.customText,
+        tourCompleted: state.tourCompleted
       }),
 
       // Callback when hydration completes

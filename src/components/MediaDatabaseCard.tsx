@@ -211,13 +211,15 @@ export function MediaDatabaseCard() {
             onClick={() => setSystemSelectorOpen(true)}
           />
 
-          <Button
-            label={t("settings.updateDb")}
-            icon={<DatabaseIcon size="20" />}
-            className="w-full"
-            disabled={!connected || isIndexing || isOptimizing}
-            onClick={handleUpdateDatabase}
-          />
+          <div data-tour="update-database">
+            <Button
+              label={t("settings.updateDb")}
+              icon={<DatabaseIcon size="20" />}
+              className="w-full"
+              disabled={!connected || isIndexing || isOptimizing}
+              onClick={handleUpdateDatabase}
+            />
+          </div>
 
           {renderStatus()}
         </div>

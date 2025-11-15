@@ -257,8 +257,8 @@ describe("Settings Index Route", () => {
       const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
       const settingsSource = readFileSync(settingsPath, "utf-8");
 
-      // Should use resetConnectionState from the store
-      expect(settingsSource).toMatch(/const resetConnectionState = useStatusStore\(\(state\) => state\.resetConnectionState\)/);
+      // Should use resetConnectionState from the store (handle multi-line formatting)
+      expect(settingsSource).toMatch(/const resetConnectionState = useStatusStore\(\s*\(state\) => state\.resetConnectionState\s*\)/);
     });
 
     it("should have proper function sequence in handleDeviceAddressChange", () => {

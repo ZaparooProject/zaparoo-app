@@ -104,25 +104,11 @@ describe("Create Custom Route", () => {
     vi.restoreAllMocks();
   });
 
-  it("should load custom text preference from loader", async () => {
+  it("should not have a loader (uses store directly)", async () => {
     const { Route } = await import("../../../routes/create.custom");
-    const loaderData = await Route.options.loader!({} as any);
 
-    expect(loaderData).toEqual({
-      customText: "test custom text"
-    });
-  });
-
-  it("should handle empty custom text preference", async () => {
-    const { Preferences } = await import("@capacitor/preferences");
-    vi.mocked(Preferences.get).mockResolvedValueOnce({ value: null });
-
-    const { Route } = await import("../../../routes/create.custom");
-    const loaderData = await Route.options.loader!({} as any);
-
-    expect(loaderData).toEqual({
-      customText: ""
-    });
+    // Route should not have a loader since it uses usePreferencesStore directly
+    expect(Route.options.loader).toBeUndefined();
   });
 
   it("should render custom text page with all components", async () => {

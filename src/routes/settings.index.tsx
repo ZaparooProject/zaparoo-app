@@ -86,13 +86,15 @@ function Settings() {
     <>
       <PageFrame title={t("settings.title")}>
         <div className="flex flex-col gap-5">
-          <TextInput
-            label={t("settings.device")}
-            placeholder="192.168.1.23"
-            value={address}
-            setValue={setAddress}
-            saveValue={handleDeviceAddressChange}
-          />
+          <div data-tour="device-address">
+            <TextInput
+              label={t("settings.device")}
+              placeholder="192.168.1.23"
+              value={address}
+              setValue={setAddress}
+              saveValue={handleDeviceAddressChange}
+            />
+          </div>
 
           <div className="flex min-h-[1.5rem] flex-col gap-1">
             {version.isSuccess && (
