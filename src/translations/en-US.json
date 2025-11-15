@@ -51,7 +51,7 @@
       "nfcNotSupported": "NFC is not supported on this device"
     },
     "scan": {
-      "cameraMode": "QR/Barcode",
+      "cameraMode": "Camera",
       "nfcMode": "NFC",
       "scanError": "Error scanning tag",
       "noDevices": "No Zaparoo Devices Found",

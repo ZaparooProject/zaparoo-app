@@ -85,7 +85,7 @@ function Create() {
           <Link to="/create/mappings" disabled={!connected}>
             <Card disabled={!connected}>
               <div className="flex flex-row items-center gap-3">
-                <Button icon={<ListPlusIcon size="20" />} />
+                <Button icon={<ListPlusIcon size="20" />} disabled={!connected} />
                 <div className="flex grow flex-col">
                   <span className="font-semibold">
                     {t("create.mappingsHeading")}
@@ -118,7 +118,10 @@ function Create() {
           >
             <Card disabled={!Capacitor.isNativePlatform() || !nfcAvailable}>
               <div className="flex flex-row items-center gap-3">
-                <Button icon={<NfcIcon size="24" />} />
+                <Button
+                  icon={<NfcIcon size="24" />}
+                  disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
+                />
                 <div className="flex grow flex-col">
                   <span className="font-semibold">
                     {t("create.nfcHeading")}
