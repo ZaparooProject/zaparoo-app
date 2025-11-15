@@ -18,8 +18,7 @@ export const ConnectionStatus = memo(function ConnectionStatus({ connected, conn
 
   // Support both old boolean prop and new connectionState prop
   const isConnected = connectionState ? connectionState === ConnectionState.CONNECTED : connected;
-  const isConnecting = connectionState === ConnectionState.CONNECTING;
-  const isReconnecting = connectionState === ConnectionState.RECONNECTING;
+  const isConnecting = connectionState === ConnectionState.CONNECTING || connectionState === ConnectionState.RECONNECTING;
   const isError = connectionState === ConnectionState.ERROR;
 
   if (isConnecting) {
@@ -31,29 +30,6 @@ export const ConnectionStatus = memo(function ConnectionStatus({ connected, conn
           </div>
           <div className="flex grow flex-col">
             <span className="font-semibold">{t("scan.connecting")}</span>
-          </div>
-          <Link
-            to="/settings"
-            search={{
-              focus: "address"
-            }}
-          >
-            <Button icon={<SettingsIcon size="24" />} variant="text" />
-          </Link>
-        </div>
-      </Card>
-    );
-  }
-
-  if (isReconnecting) {
-    return (
-      <Card className="mb-5">
-        <div className="flex flex-row items-center justify-between gap-3">
-          <div className="px-1.5 text-warning">
-            <DeviceIcon size="24" />
-          </div>
-          <div className="flex grow flex-col">
-            <span className="font-semibold">{t("scan.reconnecting")}</span>
           </div>
           <Link
             to="/settings"

@@ -25,7 +25,7 @@
       "holdTag": "Hold tag to phone",
       "holdTagReader": "Hold tag to reader",
       "scanning": "Scanning",
-      "pressToScan": "Press to zap",
+      "pressToScan": "Press to scan",
       "writeSuccess": "Tag written successfully",
       "writeFailed": "Failed to write tag",
       "readSuccess": "Tag read successfully",

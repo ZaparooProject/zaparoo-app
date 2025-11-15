@@ -54,8 +54,8 @@ describe("ConnectionStatus", () => {
 
   it("renders reconnecting state with loading indicator", () => {
     render(<ConnectionStatus connectionState={ConnectionState.RECONNECTING} />);
-    
-    expect(screen.getByText("scan.reconnecting")).toBeInTheDocument();
+
+    expect(screen.getByText("scan.connecting")).toBeInTheDocument();
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
