@@ -10,11 +10,10 @@ const config: CapacitorConfig = {
   appName: "Zaparoo",
   backgroundColor: "#111928",
   server: {
-    // url: `http://${process.env.DEV_SERVER_IP}:8100`,
-    // url:
-    //   process.env.NODE_ENV === "development" && process.env.DEV_SERVER_IP
-    //     ? `http://${process.env.DEV_SERVER_IP}:8100`
-    //     : undefined,
+    url:
+      process.env.NODE_ENV === "development" && process.env.DEV_SERVER_IP
+        ? `http://${process.env.DEV_SERVER_IP}:8100`
+        : undefined,
     androidScheme: "http",
     cleartext: true
   },
@@ -30,7 +29,7 @@ const config: CapacitorConfig = {
       providers: ["google.com"]
     },
     EdgeToEdge: {
-      backgroundColor: '#111928'
+      backgroundColor: "#111928"
     }
   }
 };

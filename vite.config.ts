@@ -1,6 +1,7 @@
 import { defineConfig, ServerOptions } from "vite";
 import react from "@vitejs/plugin-react";
 import { TanStackRouterVite } from "@tanstack/router-vite-plugin";
+import { visualizer } from "rollup-plugin-visualizer";
 import path from "path";
 import dotenv from "dotenv";
 
@@ -20,6 +21,19 @@ export default defineConfig(({ command, mode }) => {
     };
   }
 
+  const plugins = [react(), TanStackRouterVite()];
+
+  if (mode === "analyze") {
+    plugins.push(
+      visualizer({
+        open: true,
+        filename: "dist/stats.html",
+        gzipSize: true,
+        brotliSize: true
+      })
+    );
+  }
+
   return {
     base: "./",
     server,
@@ -28,19 +42,45 @@ export default defineConfig(({ command, mode }) => {
         "@": path.resolve(__dirname, "./src")
       }
     },
-    plugins: [react(), TanStackRouterVite()],
+    plugins,
     build: {
-      sourcemap: true,
+      sourcemap: false,
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          drop_console: true,
+          drop_debugger: true,
+          pure_funcs: ['console.log', 'console.info', 'console.debug']
+        }
+      },
       rollupOptions: {
         output: {
-          manualChunks: {
-            vendor: ['react', 'react-dom'],
-            router: ['@tanstack/react-router'],
-            ui: ['react-i18next', 'react-hot-toast', 'classnames'],
-            capacitor: ['@capacitor/core', '@capacitor/preferences', '@capacitor-community/keep-awake']
+          manualChunks: (id) => {
+            if (id.includes('node_modules')) {
+              if (id.includes('react') || id.includes('react-dom')) {
+                return 'vendor';
+              }
+              if (id.includes('@tanstack/react-router')) {
+                return 'router';
+              }
+              if (id.includes('firebase')) {
+                return 'firebase';
+              }
+              if (id.includes('i18next')) {
+                return 'i18n';
+              }
+              if (id.includes('lucide')) {
+                return 'icons';
+              }
+              if (id.includes('@capacitor')) {
+                return 'capacitor';
+              }
+              return 'vendor-other';
+            }
           }
         }
-      }
+      },
+      chunkSizeWarningLimit: 500
     }
   };
 });

@@ -115,14 +115,15 @@
         "contributors": "Zaparoo-bijdragers",
         "wizzodev": "Wizzo.dev Patrons"
       },
-      "advanced": {
+      "core": {
         "title": "Geavanceerde instellingen",
         "soundEffects": "Geluidseffecten afspelen bij scannen",
         "autoDetect": "Automatisch externe NFC-lezer detecteren",
         "debug": "Debug-modus",
         "nfcDriver": "NFC-driver verbindingsreeks",
-        "insertModeBlocklist": "Insert-modus core-blocklist",
-        "downloadLog": "Download Zaparoo-logbestand",
+        "insertModeBlocklist": "Insert-modus core-blocklist"
+      },
+      "app": {
         "restorePurchases": "Aankopen herstellen",
         "restoreSuccess": "Aankopen zijn hersteld",
         "restoreFail": "Aankopen herstellen mislukt"

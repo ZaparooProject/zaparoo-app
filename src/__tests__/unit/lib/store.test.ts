@@ -153,8 +153,6 @@ describe("StatusStore", () => {
       expect(resetState.lastConnectionTime).toBe(null);
       expect(resetState.connectionError).toBe("");
       expect(resetState.retryCount).toBe(0);
-      expect(resetState.pendingDisconnection).toBe(false);
-      expect(resetState.gracePeriodTimer).toBeUndefined();
       expect(resetState.runQueue).toBe(null);
       expect(resetState.writeQueue).toBe("");
 
@@ -169,6 +167,7 @@ describe("StatusStore", () => {
       expect(resetState.gamesIndex).toEqual({
         exists: true,
         indexing: false,
+        optimizing: false,
         totalSteps: 0,
         currentStep: 0,
         currentStepDisplay: "",
@@ -180,22 +179,6 @@ describe("StatusStore", () => {
         mediaName: "",
         mediaPath: ""
       });
-    });
-
-    it("should clear grace period timer if one exists", () => {
-      const store = useStatusStore.getState();
-
-      // Simulate a grace period timer being set
-      const mockTimer = setTimeout(() => {}, 1000);
-      useStatusStore.setState({ gracePeriodTimer: mockTimer });
-
-      // Reset connection state
-      store.resetConnectionState();
-
-      // Verify timer is cleared
-      const state = useStatusStore.getState();
-      expect(state.gracePeriodTimer).toBeUndefined();
-      expect(state.pendingDisconnection).toBe(false);
     });
 
     it("should not affect non-connection-related state", () => {

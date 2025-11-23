@@ -1,38 +1,19 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { App } from "@capacitor/app";
-import { TokenResponse } from "@/lib/models.ts";
 import { useStatusStore } from "../lib/store";
+import { usePreferencesStore } from "../lib/preferencesStore";
+import { runToken } from "../lib/tokenOperations.tsx";
 
-interface UseRunQueueProcessorProps {
-  launcherAccess: boolean;
-  setLastToken: (token: TokenResponse) => void;
-  setProPurchaseModalOpen: (open: boolean) => void;
-  runToken: (
-    uid: string,
-    text: string,
-    launcherAccess: boolean,
-    connected: boolean,
-    setLastToken: (token: TokenResponse) => void,
-    setProPurchaseModalOpen: (open: boolean) => void,
-    unsafe?: boolean
-  ) => Promise<boolean>;
-}
-
-export function useRunQueueProcessor({
-  launcherAccess,
-  setLastToken,
-  setProPurchaseModalOpen,
-  runToken
-}: UseRunQueueProcessorProps) {
+export function useRunQueueProcessor() {
   const { t } = useTranslation();
   const runQueue = useStatusStore((state) => state.runQueue);
   const setRunQueue = useStatusStore((state) => state.setRunQueue);
+  const setLastToken = useStatusStore((state) => state.setLastToken);
+  const setProPurchaseModalOpen = useStatusStore((state) => state.setProPurchaseModalOpen);
+  const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
   const getConnected = () => useStatusStore.getState().connected;
   const isProcessingRef = useRef(false);
-
-  const lastProcessedRef = useRef(0);
 
   const processQueue = useCallback(
     (queueData: { value: string; unsafe: boolean } | null) => {
@@ -45,8 +26,6 @@ export function useRunQueueProcessor({
       const currentRunValue = { ...queueData };
 
       setRunQueue(null);
-
-      lastProcessedRef.current = Date.now();
 
       const maxRetries = 10;
       const retryInterval = 500;
@@ -91,39 +70,12 @@ export function useRunQueueProcessor({
     },
     [
       launcherAccess,
-      runToken,
       setLastToken,
       setProPurchaseModalOpen,
       setRunQueue,
       t
     ]
   );
-
-  // Listen for URL opens and process directly
-  useEffect(() => {
-    const listener = App.addListener("appUrlOpen", (event) => {
-      const url = new URL(event.url);
-      const path = url.pathname;
-
-      if (path === "/run") {
-        const params = new URLSearchParams(url.search);
-        const value = params.get("v");
-
-        if (value) {
-          // Check if we've processed this recently (debounce)
-          const now = Date.now();
-          if (now - lastProcessedRef.current > 1000) {
-            console.log("URL listener processing run:", value);
-            processQueue({ value, unsafe: true });
-          }
-        }
-      }
-    });
-    
-    return () => {
-      listener.then((l) => l.remove());
-    };
-  }, [processQueue]);
 
   useEffect(() => {
     processQueue(runQueue);
@@ -133,7 +85,6 @@ export function useRunQueueProcessor({
     setLastToken,
     setProPurchaseModalOpen,
     setRunQueue,
-    runToken,
     t,
     processQueue
   ]);

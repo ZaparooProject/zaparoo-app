@@ -91,7 +91,7 @@ describe('RestorePuchasesButton', () => {
 
     const button = screen.getByTestId('button');
     expect(button).toBeInTheDocument();
-    expect(button).toHaveTextContent('settings.advanced.restorePurchases');
+    expect(button).toHaveTextContent('settings.app.restorePurchases');
   });
 
   it('should handle successful restore with active entitlement', async () => {
@@ -120,10 +120,12 @@ describe('RestorePuchasesButton', () => {
     });
 
     const { Preferences } = await import('@capacitor/preferences');
-    expect(Preferences.set).toHaveBeenCalledWith({
-      key: 'launcherAccess',
-      value: 'true'
-    });
+    // Preferences.set is now called with app-preferences key and full state
+    expect(Preferences.set).toHaveBeenCalled();
+    const setCall = vi.mocked(Preferences.set).mock.calls[0][0];
+    expect(setCall.key).toBe('app-preferences');
+    const state = JSON.parse(setCall.value);
+    expect(state.state.launcherAccess).toBe(true);
 
     expect(window.location.reload).toHaveBeenCalled();
   });
@@ -253,10 +255,12 @@ describe('useProPurchase', () => {
     });
 
     const { Preferences } = await import('@capacitor/preferences');
-    expect(Preferences.set).toHaveBeenCalledWith({
-      key: 'launcherAccess',
-      value: 'true'
-    });
+    // Preferences.set is now called with app-preferences key and full state
+    expect(Preferences.set).toHaveBeenCalled();
+    const setCall = vi.mocked(Preferences.set).mock.calls[0][0];
+    expect(setCall.key).toBe('app-preferences');
+    const state = JSON.parse(setCall.value);
+    expect(state.state.launcherAccess).toBe(true);
   });
 
   it('should render PurchaseModal component', async () => {

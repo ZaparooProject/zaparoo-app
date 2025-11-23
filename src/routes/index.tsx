@@ -2,14 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { KeepAwake } from "@capacitor-community/keep-awake";
-import { Preferences } from "@capacitor/preferences";
 import { useNfcWriter, WriteMethod } from "@/lib/writeNfcHook.tsx";
 import { Status } from "@/lib/nfc.ts";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
-import { useWriteQueueProcessor } from "@/hooks/useWriteQueueProcessor.tsx";
-import { useRunQueueProcessor } from "@/hooks/useRunQueueProcessor.tsx";
-import logoImage from "@/assets/lockup.png";
+import logoImage from "@/assets/lockup.webp";
 import { cancelSession } from "../lib/nfc";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { HistoryIcon } from "../lib/images";
@@ -23,30 +20,27 @@ import { NowPlayingInfo } from "../components/home/NowPlayingInfo";
 import { HistoryModal } from "../components/home/HistoryModal";
 import { StopConfirmModal } from "../components/home/StopConfirmModal";
 import { useScanOperations } from "../hooks/useScanOperations";
-import { useAppSettings } from "../hooks/useAppSettings";
+import { usePreferencesStore } from "../lib/preferencesStore";
 
 interface LoaderData {
   restartScan: boolean;
   launchOnScan: boolean;
   launcherAccess: boolean;
   preferRemoteWriter: boolean;
+  shakeMode: "random" | "custom";
+  shakeZapscript: string;
 }
 
 export const Route = createFileRoute("/")({
-  loader: async (): Promise<LoaderData> => {
-    const [restartResult, launchResult, accessResult, remoteWriterResult] =
-      await Promise.all([
-        Preferences.get({ key: "restartScan" }),
-        Preferences.get({ key: "launchOnScan" }),
-        Preferences.get({ key: "launcherAccess" }),
-        Preferences.get({ key: "preferRemoteWriter" })
-      ]);
-
+  loader: (): LoaderData => {
+    const state = usePreferencesStore.getState();
     return {
-      restartScan: restartResult.value === "true",
-      launchOnScan: launchResult.value !== "false",
-      launcherAccess: accessResult.value === "true",
-      preferRemoteWriter: remoteWriterResult.value === "true"
+      restartScan: state.restartScan,
+      launchOnScan: state.launchOnScan,
+      launcherAccess: state.launcherAccess,
+      preferRemoteWriter: state.preferRemoteWriter,
+      shakeMode: state.shakeMode,
+      shakeZapscript: state.shakeZapscript
     };
   },
   ssr: false,
@@ -55,26 +49,31 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const initData = Route.useLoaderData();
-
-  const { launcherAccess, preferRemoteWriter } = useAppSettings({ initData });
+  const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
+  const preferRemoteWriter = usePreferencesStore(
+    (state) => state.preferRemoteWriter
+  );
 
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
-  const [writeOpen, setWriteOpen] = useState(false);
+  const writeOpen = useStatusStore((state) => state.writeOpen);
+  const setWriteOpen = useStatusStore((state) => state.setWriteOpen);
+  const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
   const closeWriteModal = async () => {
     setWriteOpen(false);
     await nfcWriter.end();
-    resetWriteQueue();
+    setWriteQueue("");
   };
   useEffect(() => {
     // Only auto-close on successful write completion
     if (nfcWriter.status === Status.Success) {
       setWriteOpen(false);
     }
-  }, [nfcWriter.status]);
+  }, [nfcWriter.status, setWriteOpen]);
   const { PurchaseModal, proPurchaseModalOpen, setProPurchaseModalOpen } =
     useProPurchase(initData.launcherAccess);
 
   const connected = useStatusStore((state) => state.connected);
+  const connectionState = useStatusStore((state) => state.connectionState);
   const playing = useStatusStore((state) => state.playing);
   const lastToken = useStatusStore((state) => state.lastToken);
   const setLastToken = useStatusStore((state) => state.setLastToken);
@@ -87,25 +86,12 @@ function Index() {
     scanStatus,
     handleScanButton,
     handleCameraScan,
-    handleStopConfirm,
-    runToken
+    handleStopConfirm
   } = useScanOperations({
     connected,
     launcherAccess,
     setLastToken,
     setProPurchaseModalOpen,
-    setWriteOpen
-  });
-
-  useRunQueueProcessor({
-    launcherAccess,
-    setLastToken,
-    setProPurchaseModalOpen,
-    runToken
-  });
-
-  const { reset: resetWriteQueue } = useWriteQueueProcessor({
-    nfcWriter,
     setWriteOpen
   });
 
@@ -167,7 +153,7 @@ function Index() {
         />
 
         <div>
-          <ConnectionStatus connected={connected} />
+          <ConnectionStatus connected={connected} connectionState={connectionState} />
 
           <LastScannedInfo lastToken={lastToken} scanStatus={scanStatus} />
 

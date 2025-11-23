@@ -4,6 +4,7 @@ import React from "react";
 import { SafeAreaHandler } from "@/lib/safeArea";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { BottomNav } from "../components/BottomNav";
+import { TourInitializer } from "../components/TourInitializer";
 import { useBackButtonHandler } from "../hooks/useBackButtonHandler";
 
 function BackHandler() {
@@ -48,6 +49,7 @@ export const Route = createRootRoute({
     <div className="flex flex-col h-screen w-screen">
       <SafeAreaHandler />
       <BackHandler />
+      <TourInitializer />
       <main className="flex-1 min-h-0">
         <Outlet />
       </main>

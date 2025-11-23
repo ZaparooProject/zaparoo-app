@@ -258,7 +258,15 @@ describe("Route Interactions - Integration Tests", () => {
         { id: "2", name: "Sonic", system: "Genesis", path: "/games/sonic.bin" }
       ];
 
-      mockCoreAPI.mediaSearch.mockResolvedValue({ results: searchResults });
+      mockCoreAPI.mediaSearch.mockResolvedValue({
+        results: searchResults,
+        total: searchResults.length,
+        pagination: {
+          nextCursor: null,
+          hasNextPage: false,
+          pageSize: searchResults.length,
+        }
+      });
 
       const SearchToWriteFlow = () => {
         const [results, setResults] = React.useState<any[]>([]);

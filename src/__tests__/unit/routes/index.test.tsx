@@ -68,6 +68,20 @@ vi.mock("../../../lib/store", () => ({
   })
 }));
 
+vi.mock("../../../lib/preferencesStore", () => ({
+  usePreferencesStore: {
+    getState: vi.fn(() => ({
+      restartScan: true,
+      launchOnScan: true,
+      launcherAccess: true,
+      preferRemoteWriter: true,
+      shakeEnabled: true,
+      shakeMode: "random" as const,
+      shakeZapscript: ""
+    }))
+  }
+}));
+
 // Mock Capacitor
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
@@ -242,7 +256,9 @@ describe("Index Route (Home Page)", () => {
       restartScan: true, // based on mock
       launchOnScan: true,
       launcherAccess: true,
-      preferRemoteWriter: true
+      preferRemoteWriter: true,
+      shakeMode: "random",
+      shakeZapscript: ""
     });
   });
 

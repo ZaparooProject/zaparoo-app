@@ -1,0 +1,284 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
+import { Capacitor } from "@capacitor/core";
+import { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
+import classNames from "classnames";
+import { ToggleSwitch } from "../components/wui/ToggleSwitch";
+import { useSmartSwipe } from "../hooks/useSmartSwipe";
+import { useStatusStore } from "../lib/store";
+import { PageFrame } from "../components/PageFrame";
+import {
+  usePreferencesStore,
+  selectAppSettings,
+  selectShakeSettings
+} from "../lib/preferencesStore";
+import { BackIcon, CheckIcon } from "../lib/images";
+import { ScanSettings } from "../components/home/ScanSettings.tsx";
+import { SystemSelector } from "../components/SystemSelector";
+import { Button } from "../components/wui/Button";
+import { useProPurchase } from "../components/ProPurchase";
+import { ZapScriptInput } from "../components/ZapScriptInput";
+
+interface LoaderData {
+  restartScan: boolean;
+  launchOnScan: boolean;
+  launcherAccess: boolean;
+  preferRemoteWriter: boolean;
+  shakeEnabled: boolean;
+  shakeMode: "random" | "custom";
+  shakeZapscript: string;
+}
+
+export const Route = createFileRoute("/settings/app")({
+  loader: (): LoaderData => {
+    const state = usePreferencesStore.getState();
+    return {
+      restartScan: state.restartScan,
+      launchOnScan: state.launchOnScan,
+      launcherAccess: state.launcherAccess,
+      preferRemoteWriter: state.preferRemoteWriter,
+      shakeEnabled: state.shakeEnabled,
+      shakeMode: state.shakeMode,
+      shakeZapscript: state.shakeZapscript
+    };
+  },
+  component: AppSettings
+});
+
+function AppSettings() {
+  const initData = Route.useLoaderData();
+  const connected = useStatusStore((state) => state.connected);
+  const [systemPickerOpen, setSystemPickerOpen] = useState(false);
+  const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
+  const accelerometerAvailable = usePreferencesStore((state) => state.accelerometerAvailable);
+
+  // Get app settings from store (useShallow prevents infinite re-renders)
+  const {
+    restartScan,
+    launchOnScan,
+    launcherAccess,
+    preferRemoteWriter,
+    setRestartScan,
+    setLaunchOnScan,
+    setPreferRemoteWriter
+  } = usePreferencesStore(useShallow(selectAppSettings));
+
+  // Get shake settings from store (useShallow prevents infinite re-renders)
+  const {
+    shakeEnabled,
+    shakeMode,
+    shakeZapscript,
+    setShakeEnabled,
+    setShakeMode,
+    setShakeZapscript
+  } = usePreferencesStore(useShallow(selectShakeSettings));
+
+  // Extract system name from zapscript for display
+  const getSystemFromZapscript = () => {
+    if (
+      shakeMode === "random" &&
+      shakeZapscript.startsWith("**launch.random:")
+    ) {
+      return shakeZapscript.replace("**launch.random:", "");
+    }
+    return "";
+  };
+
+  const shakeSystem = getSystemFromZapscript();
+
+  const { PurchaseModal, setProPurchaseModalOpen } = useProPurchase(
+    initData.launcherAccess
+  );
+
+  const { t } = useTranslation();
+
+  const navigate = useNavigate();
+  const swipeHandlers = useSmartSwipe({
+    onSwipeRight: () => navigate({ to: "/settings" }),
+    preventScrollOnSwipe: false
+  });
+
+  return (
+    <PageFrame
+      {...swipeHandlers}
+      headerLeft={
+        <button
+          onClick={() => navigate({ to: "/settings" })}
+          className="cursor-pointer"
+        >
+          <BackIcon size="24" />
+        </button>
+      }
+      headerCenter={
+        <h1 className="text-foreground text-xl">{t("settings.app.title")}</h1>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        <ScanSettings
+          connected={connected}
+          restartScan={restartScan}
+          setRestartScan={setRestartScan}
+          launchOnScan={launchOnScan}
+          setLaunchOnScan={setLaunchOnScan}
+        />
+
+        {Capacitor.isNativePlatform() && nfcAvailable && (
+          <ToggleSwitch
+            label={t("settings.app.preferRemoteWriter")}
+            value={preferRemoteWriter}
+            setValue={setPreferRemoteWriter}
+          />
+        )}
+
+        {Capacitor.isNativePlatform() && accelerometerAvailable && (
+          <ToggleSwitch
+            label={
+              <>
+                {t("settings.app.shakeToLaunch")}
+                {!launcherAccess && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ({t("settings.app.proFeature")})
+                  </span>
+                )}
+              </>
+            }
+            value={shakeEnabled}
+            setValue={setShakeEnabled}
+            disabled={!launcherAccess || !connected}
+            onDisabledClick={() => {
+              if (!launcherAccess) {
+                setProPurchaseModalOpen(true);
+              }
+            }}
+          />
+        )}
+
+        {Capacitor.isNativePlatform() && accelerometerAvailable && shakeEnabled && launcherAccess && (
+          <>
+            <div>
+              <div className="flex flex-row" role="group">
+                <button
+                  type="button"
+                  className={classNames(
+                    "flex",
+                    "flex-row",
+                    "w-full",
+                    "rounded-s-full",
+                    "items-center",
+                    "justify-center",
+                    "py-1",
+                    "font-medium",
+                    "gap-1",
+                    "tracking-[0.1px]",
+                    "h-9",
+                    "border",
+                    "border-solid",
+                    "border-bd-filled",
+                    {
+                      "bg-button-pattern": shakeMode === "random" && connected,
+                      "bg-background": shakeMode !== "random" || !connected,
+                      "border-foreground-disabled": !connected,
+                      "text-foreground-disabled": !connected
+                    }
+                  )}
+                  onClick={() => setShakeMode("random")}
+                  disabled={!connected}
+                >
+                  {shakeMode === "random" && connected && (
+                    <CheckIcon size="28" />
+                  )}
+                  {t("settings.app.shakeRandomMedia")}
+                </button>
+
+                <button
+                  type="button"
+                  className={classNames(
+                    "flex",
+                    "flex-row",
+                    "w-full",
+                    "rounded-e-full",
+                    "items-center",
+                    "justify-center",
+                    "py-1",
+                    "font-medium",
+                    "gap-1",
+                    "tracking-[0.1px]",
+                    "h-9",
+                    "border",
+                    "border-solid",
+                    "border-bd-filled",
+                    {
+                      "bg-button-pattern": shakeMode === "custom" && connected,
+                      "bg-background": shakeMode !== "custom" || !connected,
+                      "border-foreground-disabled": !connected,
+                      "text-foreground-disabled": !connected
+                    }
+                  )}
+                  onClick={() => setShakeMode("custom")}
+                  disabled={!connected}
+                >
+                  {shakeMode === "custom" && connected && (
+                    <CheckIcon size="28" />
+                  )}
+                  {t("settings.app.shakeCustom")}
+                </button>
+              </div>
+            </div>
+
+            {shakeMode === "random" && (
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  {shakeSystem ? (
+                    <span className="text-foreground">
+                      {shakeSystem === "all"
+                        ? t("systemSelector.allSystems")
+                        : shakeSystem}
+                    </span>
+                  ) : (
+                    <span className="text-foreground">-</span>
+                  )}
+                  <Button
+                    label={t("settings.app.shakeSelectSystem")}
+                    onClick={() => setSystemPickerOpen(true)}
+                    variant="outline"
+                    size="sm"
+                    disabled={!connected}
+                  />
+                </div>
+              </div>
+            )}
+
+            {shakeMode === "custom" && (
+              <div>
+                <ZapScriptInput
+                  value={shakeZapscript}
+                  setValue={setShakeZapscript}
+                  showPalette={false}
+                  rows={2}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <SystemSelector
+        isOpen={systemPickerOpen}
+        onClose={() => setSystemPickerOpen(false)}
+        onSelect={(systems) => {
+          // If "all" is selected (systems array is empty or contains "all")
+          const selectedSystem = systems.length === 0 ? "all" : systems[0];
+          setShakeZapscript(`**launch.random:${selectedSystem}`);
+        }}
+        selectedSystems={shakeSystem ? [shakeSystem] : []}
+        mode="single"
+        title={t("settings.app.shakeSelectSystem")}
+        includeAllOption={true}
+      />
+
+      <PurchaseModal />
+    </PageFrame>
+  );
+}

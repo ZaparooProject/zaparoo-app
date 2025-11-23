@@ -10,8 +10,12 @@ import {
   LogDownloadResponse,
   MediaActiveUpdateRequest,
   MediaResponse,
+  MediaTagsResponse,
   Method,
   Notification,
+  PlaytimeLimitsConfig,
+  PlaytimeLimitsUpdateRequest,
+  PlaytimeStatus,
   ReadersResponse,
   SearchParams,
   SearchResultsResponse,
@@ -563,9 +567,9 @@ class CoreApi {
     });
   }
 
-  mediaSearch(params: SearchParams): Promise<SearchResultsResponse> {
+  mediaSearch(params: SearchParams, signal?: AbortSignal): Promise<SearchResultsResponse> {
     return new Promise<SearchResultsResponse>((resolve, reject) => {
-      this.call(Method.MediaSearch, params)
+      this.call(Method.MediaSearch, params, signal)
         .then((result) => {
           try {
             const response = result as SearchResultsResponse;
@@ -587,6 +591,31 @@ class CoreApi {
     });
   }
 
+  mediaTags(systems?: string[]): Promise<MediaTagsResponse> {
+    return new Promise<MediaTagsResponse>((resolve, reject) => {
+      const params = systems ? { systems } : {};
+      this.call(Method.MediaTags, params)
+        .then((result) => {
+          try {
+            const response = result as MediaTagsResponse;
+            console.debug(response);
+            resolve(response);
+          } catch (e) {
+            console.error("Error processing media tags response:", e);
+            reject(
+              new Error(
+                `Failed to process media tags response: ${e instanceof Error ? e.message : String(e)}`
+              )
+            );
+          }
+        })
+        .catch((error) => {
+          console.error("Media tags API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
 
   mediaGenerate(params?: { systems?: string[] }): Promise<void> {
     return new Promise<void>((resolve, reject) => {
@@ -601,6 +630,18 @@ class CoreApi {
     });
   }
 
+  mediaGenerateCancel(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MediaGenerateCancel)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          console.error("Media generate cancel API call failed:", error);
+          reject(error);
+        });
+    });
+  }
 
   systems(): Promise<SystemsResponse> {
     return new Promise<SystemsResponse>((resolve, reject) => {
@@ -901,6 +942,68 @@ class CoreApi {
 
   settingsLogsDownload(): Promise<LogDownloadResponse> {
     return this.call(Method.SettingsLogsDownload) as Promise<LogDownloadResponse>;
+  }
+
+  playtime(): Promise<PlaytimeStatus> {
+    return new Promise<PlaytimeStatus>((resolve, reject) => {
+      this.call(Method.Playtime)
+        .then((result) => {
+          try {
+            const response = result as PlaytimeStatus;
+            console.debug(response);
+            resolve(response);
+          } catch (e) {
+            console.error("Error processing playtime response:", e);
+            reject(
+              new Error(
+                `Failed to process playtime response: ${e instanceof Error ? e.message : String(e)}`
+              )
+            );
+          }
+        })
+        .catch((error) => {
+          console.error("Playtime API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  playtimeLimits(): Promise<PlaytimeLimitsConfig> {
+    return new Promise<PlaytimeLimitsConfig>((resolve, reject) => {
+      this.call(Method.PlaytimeLimits)
+        .then((result) => {
+          try {
+            const response = result as PlaytimeLimitsConfig;
+            console.debug(response);
+            resolve(response);
+          } catch (e) {
+            console.error("Error processing playtime limits response:", e);
+            reject(
+              new Error(
+                `Failed to process playtime limits response: ${e instanceof Error ? e.message : String(e)}`
+              )
+            );
+          }
+        })
+        .catch((error) => {
+          console.error("Playtime limits API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  playtimeLimitsUpdate(params: PlaytimeLimitsUpdateRequest): Promise<void> {
+    console.debug("playtime limits update", params);
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.PlaytimeLimitsUpdate, params)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          console.error("Playtime limits update API call failed:", error);
+          reject(error);
+        });
+    });
   }
 }
 

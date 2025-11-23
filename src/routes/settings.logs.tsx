@@ -10,6 +10,8 @@ import { useStatusStore } from "../lib/store";
 import { PageFrame } from "../components/PageFrame";
 import { TextInput } from "../components/wui/TextInput";
 import { BackIcon } from "../lib/images";
+import { HeaderButton } from "../components/wui/HeaderButton";
+import { ToggleChip } from "../components/wui/ToggleChip";
 
 interface LogEntry {
   level: string;
@@ -35,6 +37,8 @@ function Logs() {
     warn: true,
     error: true
   });
+  const [expandedEntries, setExpandedEntries] = useState<Set<number>>(new Set());
+  const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: () => navigate({ to: "/settings" }),
@@ -163,11 +167,31 @@ function Logs() {
     }
   };
 
-  const toggleLevelFilter = (level: keyof typeof levelFilters) => {
-    setLevelFilters(prev => ({
-      ...prev,
-      [level]: !prev[level]
-    }));
+  const MESSAGE_TRUNCATE_LENGTH = 200;
+
+  const toggleExpandEntry = (index: number) => {
+    setExpandedEntries(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleExpandField = (entryIndex: number, fieldKey: string) => {
+    const fieldId = `${entryIndex}_${fieldKey}`;
+    setExpandedFields(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(fieldId)) {
+        newSet.delete(fieldId);
+      } else {
+        newSet.add(fieldId);
+      }
+      return newSet;
+    });
   };
 
   return (
@@ -175,9 +199,10 @@ function Logs() {
       <PageFrame
         {...swipeHandlers}
         headerLeft={
-          <button onClick={() => navigate({ to: "/settings" })} className="cursor-pointer">
-            <BackIcon size="24" />
-          </button>
+          <HeaderButton
+            onClick={() => navigate({ to: "/settings" })}
+            icon={<BackIcon size="24" />}
+          />
         }
         headerCenter={
           <h1 className="text-foreground text-xl">{t("settings.logs.title")}</h1>
@@ -186,30 +211,24 @@ function Logs() {
           <div className="flex gap-2">
             {logsQuery.data && (
               <>
-                <button
+                <HeaderButton
                   onClick={copyToClipboard}
-                  className="cursor-pointer"
+                  icon={<Copy size="20" />}
                   title={t("settings.logs.copy")}
-                >
-                  <Copy size="20" />
-                </button>
-                <button
+                />
+                <HeaderButton
                   onClick={downloadFile}
-                  className="cursor-pointer"
+                  icon={<Download size="20" />}
                   title={t("settings.logs.download")}
-                >
-                  <Download size="20" />
-                </button>
+                />
               </>
             )}
-            <button
+            <HeaderButton
               onClick={() => logsQuery.refetch()}
               disabled={!connected || logsQuery.isLoading}
-              className="cursor-pointer disabled:opacity-50"
+              icon={<RefreshCw size="20" />}
               title={logsQuery.isLoading ? t("loading") : t("settings.logs.refresh")}
-            >
-              <RefreshCw size="20" />
-            </button>
+            />
           </div>
         }
         scrollRef={scrollContainerRef}
@@ -228,20 +247,31 @@ function Logs() {
 
             {/* Filters and Entry Count */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-4">
-              <div className="flex flex-row gap-2 flex-wrap">
-                {Object.entries(levelFilters).map(([level, enabled]) => (
-                  <button
-                    key={level}
-                    onClick={() => toggleLevelFilter(level as keyof typeof levelFilters)}
-                    className={`px-3 py-2 rounded-full text-sm font-medium border transition-colors ${
-                      enabled
-                        ? getLevelColor(level)
-                        : 'text-foreground-muted bg-transparent border-foreground-muted'
-                    }`}
-                  >
-                    {level.charAt(0).toUpperCase() + level.slice(1)}
-                  </button>
-                ))}
+              <div className="flex flex-row gap-1.5 flex-wrap">
+                <ToggleChip
+                  label="Debug"
+                  state={levelFilters.debug}
+                  setState={(state) => setLevelFilters(prev => ({ ...prev, debug: state }))}
+                  compact
+                />
+                <ToggleChip
+                  label="Info"
+                  state={levelFilters.info}
+                  setState={(state) => setLevelFilters(prev => ({ ...prev, info: state }))}
+                  compact
+                />
+                <ToggleChip
+                  label="Warn"
+                  state={levelFilters.warn}
+                  setState={(state) => setLevelFilters(prev => ({ ...prev, warn: state }))}
+                  compact
+                />
+                <ToggleChip
+                  label="Error"
+                  state={levelFilters.error}
+                  setState={(state) => setLevelFilters(prev => ({ ...prev, error: state }))}
+                  compact
+                />
               </div>
               {logsQuery.data && logEntries.length > 0 && (
                 <div className="text-sm text-foreground-muted sm:whitespace-nowrap">
@@ -288,16 +318,58 @@ function Logs() {
                       </span>
                     </div>
                     <div className="text-foreground whitespace-pre-wrap break-all font-mono text-sm">
-                      {entry.message}
+                      {entry.message && entry.message.length > MESSAGE_TRUNCATE_LENGTH ? (
+                        <>
+                          {expandedEntries.has(entry._index)
+                            ? entry.message
+                            : `${entry.message.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
+                          <button
+                            onClick={() => toggleExpandEntry(entry._index)}
+                            className="ml-2 text-foreground-muted hover:text-foreground font-sans text-sm underline cursor-pointer"
+                            type="button"
+                          >
+                            {expandedEntries.has(entry._index)
+                              ? t("settings.logs.showLess")
+                              : t("settings.logs.showMore")}
+                          </button>
+                        </>
+                      ) : (
+                        entry.message
+                      )}
                     </div>
                     {/* Additional fields */}
                     {Object.entries(entry).filter(([key]) =>
                       !['level', 'time', 'caller', 'message', '_index'].includes(key)
-                    ).map(([key, value]) => (
-                      <div key={key} className="mt-1 text-foreground-muted text-sm font-sans break-all">
-                        <span className="font-medium">{key}:</span> {JSON.stringify(value)}
-                      </div>
-                    ))}
+                    ).map(([key, value]) => {
+                      const fieldId = `${entry._index}_${key}`;
+                      const valueStr = JSON.stringify(value);
+                      const isExpanded = expandedFields.has(fieldId);
+                      const needsTruncation = valueStr.length > MESSAGE_TRUNCATE_LENGTH;
+
+                      return (
+                        <div key={key} className="mt-1 text-foreground-muted text-sm font-sans break-all">
+                          <span className="font-medium">{key}:</span>{" "}
+                          {needsTruncation ? (
+                            <>
+                              {isExpanded
+                                ? valueStr
+                                : `${valueStr.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
+                              <button
+                                onClick={() => toggleExpandField(entry._index, key)}
+                                className="ml-2 text-foreground-muted hover:text-foreground font-sans text-sm underline cursor-pointer"
+                                type="button"
+                              >
+                                {isExpanded
+                                  ? t("settings.logs.showLess")
+                                  : t("settings.logs.showMore")}
+                              </button>
+                            </>
+                          ) : (
+                            valueStr
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
               </div>

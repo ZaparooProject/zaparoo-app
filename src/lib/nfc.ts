@@ -4,6 +4,7 @@ import {
   NfcTagScannedEvent,
   NfcUtils
 } from "@capawesome-team/capacitor-nfc";
+import type { PluginListenerHandle } from "@capacitor/core";
 
 export enum Status {
   Success,
@@ -42,6 +43,80 @@ const createNdefTextRecord = (text: string) => {
   const { record } = utils.createNdefTextRecord({ text });
   return record;
 };
+
+/**
+ * Helper function to manage NFC scan session lifecycle with proper listener cleanup.
+ * This ensures all listeners are removed after the operation completes, preventing memory leaks.
+ */
+async function withNfcSession<T>(
+  handler: (event: NfcTagScannedEvent) => Promise<T>
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    let listeners: PluginListenerHandle[] = [];
+
+    const cleanup = async () => {
+      // Remove all listeners
+      await Promise.all(listeners.map(listener => listener.remove()));
+      listeners = [];
+    };
+
+    const handleSuccess = async (result: T) => {
+      await cleanup();
+      resolve(result);
+    };
+
+    const handleError = async (error: unknown) => {
+      await cleanup();
+      reject(error);
+    };
+
+    const setupAndStartScan = async () => {
+      try {
+        // Register all listeners and store their handles before starting the scan session.
+        // This prevents a race condition where native events could fire before listener handles
+        // are stored, which would cause cleanup() to fail and reintroduce the memory leak.
+        const nfcTagScannedHandle = await Nfc.addListener("nfcTagScanned", async (event) => {
+          try {
+            const result = await handler(event);
+            Nfc.stopScanSession();
+            await handleSuccess(result);
+          } catch (error) {
+            console.error("NFC operation error:", error, { stack: error instanceof Error ? error.stack : undefined });
+            Nfc.stopScanSession();
+            await handleError(error);
+          }
+        });
+
+        const scanCanceledHandle = await Nfc.addListener("scanSessionCanceled", async () => {
+          Nfc.stopScanSession();
+          await handleError(new Error("NFC scan session was cancelled by user"));
+        });
+
+        const scanErrorHandle = await Nfc.addListener("scanSessionError", async (err) => {
+          console.error("NFC scan session error:", err, {
+            message: err.message,
+            stack: err instanceof Error ? err.stack : undefined,
+            fullError: JSON.stringify(err, null, 2)
+          });
+          Nfc.stopScanSession();
+          await handleError(err);
+        });
+
+        // Store all listener handles for cleanup
+        listeners.push(nfcTagScannedHandle, scanCanceledHandle, scanErrorHandle);
+
+        // Now it's safe to start the scan session
+        await Nfc.startScanSession();
+      } catch (setupError) {
+        // If setup fails (e.g., NFC not enabled), clean up and reject
+        await cleanup();
+        reject(setupError);
+      }
+    };
+
+    setupAndStartScan();
+  });
+}
 
 export function int2hex(v: number[]): string {
   let hexId = "";
@@ -82,254 +157,176 @@ function readNfcEvent(event: NfcTagScannedEvent): Tag | null {
 }
 
 export async function readTag(): Promise<Result> {
-  return new Promise((resolve, reject) => {
-    Nfc.addListener("nfcTagScanned", async (event) => {
-      Nfc.stopScanSession();
-      resolve({
+  try {
+    return await withNfcSession<Result>(async (event) => {
+      return {
         status: Status.Success,
         info: {
           rawTag: event.nfcTag,
           tag: readNfcEvent(event)
         }
-      });
+      };
     });
-
-    Nfc.addListener("scanSessionCanceled", async () => {
-      Nfc.stopScanSession();
-      resolve({
+  } catch (error) {
+    // Handle cancellation as a successful result with Cancelled status
+    // NOTE: This relies on error message string matching, which is fragile.
+    // If the native layer changes error messages, cancellations may be treated as exceptions.
+    if (error instanceof Error && error.message.includes("cancelled")) {
+      return {
         status: Status.Cancelled,
         info: {
           rawTag: null,
           tag: null
         }
-      });
-    });
-
-    Nfc.addListener("scanSessionError", async (err) => {
-      Nfc.stopScanSession();
-      reject(err);
-    });
-
-    Nfc.startScanSession();
-  });
+      };
+    }
+    throw error;
+  }
 }
 
 export async function writeTag(text: string): Promise<Result> {
-  return new Promise((resolve, reject) => {
-    const record = createNdefTextRecord(text);
+  const record = createNdefTextRecord(text);
 
-    Nfc.addListener("nfcTagScanned", async (event) => {
-      await Nfc.write({ message: { records: [record] } }).then(
-        () => {
-          console.log("write success");
-          Nfc.stopScanSession();
-          resolve({
-            status: Status.Success,
-            info: {
-              rawTag: event.nfcTag,
-              tag: readNfcEvent(event)
-            }
-          });
-        },
-        (error) => {
-          Nfc.stopScanSession();
-          reject(error);
-        }
-      );
-    });
-
-    Nfc.addListener("scanSessionCanceled", async () => {
-      Nfc.stopScanSession();
-      resolve({
-        status: Status.Cancelled,
-        info: {
-          rawTag: null,
-          tag: null
-        }
-      });
-    });
-
-    Nfc.addListener("scanSessionError", async (err) => {
-      console.log("write error", err);
-      Nfc.stopScanSession();
-      reject(err);
-    });
-
-    Nfc.startScanSession();
-  });
-}
-
-export async function formatTag(): Promise<Result> {
-  return new Promise((resolve, reject) => {
-    Nfc.addListener("nfcTagScanned", async (event) => {
-      await Nfc.format().then(
-        () => {
-          console.log("format success");
-          Nfc.stopScanSession();
-          resolve({
-            status: Status.Success,
-            info: {
-              rawTag: event.nfcTag,
-              tag: readNfcEvent(event)
-            }
-          });
-        },
-        (error) => {
-          console.error("format error", error);
-          Nfc.stopScanSession();
-          reject(error);
-        }
-      );
-    });
-
-    Nfc.addListener("scanSessionCanceled", async () => {
-      Nfc.stopScanSession();
-      resolve({
-        status: Status.Cancelled,
-        info: {
-          rawTag: null,
-          tag: null
-        }
-      });
-    });
-
-    Nfc.addListener("scanSessionError", async (err) => {
-      console.log("write error", err);
-      Nfc.stopScanSession();
-      reject(err);
-    });
-
-    Nfc.startScanSession();
-  });
-}
-
-export async function eraseTag(): Promise<Result> {
-  return new Promise((resolve, reject) => {
-    Nfc.addListener("nfcTagScanned", async (event) => {
-      await Nfc.erase().then(
-        () => {
-          console.log("erase success");
-          Nfc.stopScanSession();
-          resolve({
-            status: Status.Success,
-            info: {
-              rawTag: event.nfcTag,
-              tag: readNfcEvent(event)
-            }
-          });
-        },
-        (error) => {
-          console.error("erase error", error);
-          Nfc.stopScanSession();
-          reject(error);
-        }
-      );
-    });
-
-    Nfc.addListener("scanSessionCanceled", async () => {
-      Nfc.stopScanSession();
-      resolve({
-        status: Status.Cancelled,
-        info: {
-          rawTag: null,
-          tag: null
-        }
-      });
-    });
-
-    Nfc.addListener("scanSessionError", async (err) => {
-      console.log("write error", err);
-      Nfc.stopScanSession();
-      reject(err);
-    });
-
-    Nfc.startScanSession();
-  });
-}
-
-export async function readRaw(): Promise<Result> {
-  return new Promise((resolve, reject) => {
-    Nfc.addListener("nfcTagScanned", async (event) => {
-      console.log("read raw success");
-      Nfc.stopScanSession();
-      resolve({
+  try {
+    return await withNfcSession<Result>(async (event) => {
+      await Nfc.write({ message: { records: [record] } });
+      console.log("write success");
+      return {
         status: Status.Success,
         info: {
           rawTag: event.nfcTag,
           tag: readNfcEvent(event)
         }
-      });
+      };
     });
-
-    Nfc.addListener("scanSessionCanceled", async () => {
-      Nfc.stopScanSession();
-      resolve({
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("cancelled")) {
+      return {
         status: Status.Cancelled,
         info: {
           rawTag: null,
           tag: null
         }
-      });
-    });
+      };
+    }
+    throw error;
+  }
+}
 
-    Nfc.addListener("scanSessionError", async (err) => {
-      console.log("write error", err);
-      Nfc.stopScanSession();
-      reject(err);
+export async function formatTag(): Promise<Result> {
+  try {
+    return await withNfcSession<Result>(async (event) => {
+      await Nfc.format();
+      console.log("format success");
+      return {
+        status: Status.Success,
+        info: {
+          rawTag: event.nfcTag,
+          tag: readNfcEvent(event)
+        }
+      };
     });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("cancelled")) {
+      return {
+        status: Status.Cancelled,
+        info: {
+          rawTag: null,
+          tag: null
+        }
+      };
+    }
+    throw error;
+  }
+}
 
-    Nfc.startScanSession();
-  });
+export async function eraseTag(): Promise<Result> {
+  try {
+    return await withNfcSession<Result>(async (event) => {
+      await Nfc.erase();
+      console.log("erase success");
+      return {
+        status: Status.Success,
+        info: {
+          rawTag: event.nfcTag,
+          tag: readNfcEvent(event)
+        }
+      };
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("cancelled")) {
+      return {
+        status: Status.Cancelled,
+        info: {
+          rawTag: null,
+          tag: null
+        }
+      };
+    }
+    throw error;
+  }
+}
+
+export async function readRaw(): Promise<Result> {
+  try {
+    return await withNfcSession<Result>(async (event) => {
+      console.log("read raw success");
+      return {
+        status: Status.Success,
+        info: {
+          rawTag: event.nfcTag,
+          tag: readNfcEvent(event)
+        }
+      };
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("cancelled")) {
+      return {
+        status: Status.Cancelled,
+        info: {
+          rawTag: null,
+          tag: null
+        }
+      };
+    }
+    throw error;
+  }
 }
 
 export async function makeReadOnly(): Promise<Result> {
-  return new Promise((resolve, reject) => {
-    Nfc.addListener("nfcTagScanned", async (event) => {
-      await Nfc.makeReadOnly().then(
-        () => {
-          console.log("make read only success");
-          Nfc.stopScanSession();
-          resolve({
-            status: Status.Success,
-            info: {
-              rawTag: event.nfcTag,
-              tag: readNfcEvent(event)
-            }
-          });
-        },
-        (error) => {
-          console.error("make read only error", error);
-          Nfc.stopScanSession();
-          reject(error);
+  try {
+    return await withNfcSession<Result>(async (event) => {
+      await Nfc.makeReadOnly();
+      console.log("make read only success");
+      return {
+        status: Status.Success,
+        info: {
+          rawTag: event.nfcTag,
+          tag: readNfcEvent(event)
         }
-      );
+      };
     });
-
-    Nfc.addListener("scanSessionCanceled", async () => {
-      Nfc.stopScanSession();
-      resolve({
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("cancelled")) {
+      return {
         status: Status.Cancelled,
         info: {
           rawTag: null,
           tag: null
         }
-      });
-    });
-
-    Nfc.addListener("scanSessionError", async (err) => {
-      console.log("write error", err);
-      Nfc.stopScanSession();
-      reject(err);
-    });
-
-    Nfc.startScanSession();
-  });
+      };
+    }
+    throw error;
+  }
 }
 
 export async function cancelSession() {
   const supported = await Nfc.isSupported();
   if (supported.nfc) {
-    await Nfc.removeAllListeners();
+    // Just stop the session - this triggers scanSessionCanceled event which
+    // withNfcSession handles properly by cleaning up its own listeners.
+    // Do NOT call removeAllListeners() as it would globally remove ALL NFC listeners,
+    // breaking encapsulation and potentially affecting other code.
     await Nfc.stopScanSession();
   }
 }

@@ -279,8 +279,13 @@ describe('WebSocketManager', () => {
       expect(mockWs.send).toHaveBeenCalledWith('test message');
     });
 
-    it('should throw error when not connected', () => {
-      expect(() => manager.send('test message')).toThrow(/Cannot send message: WebSocket is not open/);
+    it('should queue message when not connected (default behavior)', () => {
+      // Should not throw when queuing is enabled (default)
+      expect(() => manager.send('test message')).not.toThrow();
+    });
+
+    it('should throw error when not connected and queuing disabled', () => {
+      expect(() => manager.send('test message', { queue: false })).toThrow(/Cannot send message: WebSocket is not open/);
     });
   });
 

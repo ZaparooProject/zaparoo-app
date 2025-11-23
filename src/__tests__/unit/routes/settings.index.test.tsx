@@ -184,7 +184,8 @@ describe("Settings Index Route", () => {
     expect(settingsSource).toMatch(/TextInput/);
     expect(settingsSource).toMatch(/settings\.device/);
     expect(settingsSource).toMatch(/settings\.designer/);
-    expect(settingsSource).toMatch(/settings\.advanced\.title/);
+    expect(settingsSource).toMatch(/settings\.app\.title/);
+    expect(settingsSource).toMatch(/settings\.core\.title/);
     expect(settingsSource).toMatch(/settings\.logs\.title/);
     expect(settingsSource).toMatch(/settings\.help\.title/);
     expect(settingsSource).toMatch(/settings\.about\.title/);
@@ -201,8 +202,8 @@ describe("Settings Index Route", () => {
     // Should have the main flex column container
     expect(settingsSource).toMatch(/className="flex flex-col gap-5"/);
 
-    // ScanSettings component should still be present
-    expect(settingsSource).toMatch(/<ScanSettings/);
+    // MediaDatabaseCard component should be present
+    expect(settingsSource).toMatch(/<MediaDatabaseCard/);
   });
 
   describe("Device Address Change Flow", () => {
@@ -256,8 +257,8 @@ describe("Settings Index Route", () => {
       const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
       const settingsSource = readFileSync(settingsPath, "utf-8");
 
-      // Should use resetConnectionState from the store
-      expect(settingsSource).toMatch(/const resetConnectionState = useStatusStore\(\(state\) => state\.resetConnectionState\)/);
+      // Should use resetConnectionState from the store (handle multi-line formatting)
+      expect(settingsSource).toMatch(/const resetConnectionState = useStatusStore\(\s*\(state\) => state\.resetConnectionState\s*\)/);
     });
 
     it("should have proper function sequence in handleDeviceAddressChange", () => {

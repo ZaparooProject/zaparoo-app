@@ -23,14 +23,20 @@ project(':capacitor-clipboard').projectDir = new File('../node_modules/.pnpm/@ca
 include ':capacitor-preferences'
 project(':capacitor-preferences').projectDir = new File('../node_modules/.pnpm/@capacitor+preferences@7.0.1_@capacitor+core@7.4.1/node_modules/@capacitor/preferences/android')
 
+include ':capacitor-share'
+project(':capacitor-share').projectDir = new File('../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.1/node_modules/@capacitor/share/android')
+
 include ':capacitor-status-bar'
 project(':capacitor-status-bar').projectDir = new File('../node_modules/.pnpm/@capacitor+status-bar@7.0.1_@capacitor+core@7.4.1/node_modules/@capacitor/status-bar/android')
 
 include ':capawesome-team-capacitor-nfc'
-project(':capawesome-team-capacitor-nfc').projectDir = new File('../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.2.0_@capacitor+core@7.4.1/node_modules/@capawesome-team/capacitor-nfc/android')
+project(':capawesome-team-capacitor-nfc').projectDir = new File('../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.3.0_@capacitor+core@7.4.1/node_modules/@capawesome-team/capacitor-nfc/android')
 
 include ':capawesome-capacitor-android-edge-to-edge-support'
 project(':capawesome-capacitor-android-edge-to-edge-support').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-android-edge-to-edge-support@7.2.3_@capacitor+core@7.4.1/node_modules/@capawesome/capacitor-android-edge-to-edge-support/android')
+
+include ':capgo-capacitor-shake'
+project(':capgo-capacitor-shake').projectDir = new File('../node_modules/.pnpm/@capgo+capacitor-shake@7.2.14_@capacitor+core@7.4.1/node_modules/@capgo/capacitor-shake/android')
 
 include ':revenuecat-purchases-capacitor'
 project(':revenuecat-purchases-capacitor').projectDir = new File('../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.3.7_@capacitor+core@7.4.1/node_modules/@revenuecat/purchases-capacitor/android')

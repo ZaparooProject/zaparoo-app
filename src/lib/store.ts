@@ -58,6 +58,12 @@ interface StatusState {
   nfcModalOpen: boolean;
   setNfcModalOpen: (nfcModalOpen: boolean) => void;
 
+  proPurchaseModalOpen: boolean;
+  setProPurchaseModalOpen: (proPurchaseModalOpen: boolean) => void;
+
+  writeOpen: boolean;
+  setWriteOpen: (writeOpen: boolean) => void;
+
   safeInsets: SafeAreaInsets;
   setSafeInsets: (insets: SafeAreaInsets) => void;
 
@@ -73,11 +79,6 @@ interface StatusState {
   writeQueue: string;
   setWriteQueue: (writeQueue: string) => void;
 
-  // Grace period for connection state changes
-  pendingDisconnection: boolean;
-  gracePeriodTimer?: ReturnType<typeof setTimeout>;
-  setConnectionStateWithGracePeriod: (state: ConnectionState) => void;
-  clearGracePeriod: () => void;
   resetConnectionState: () => void;
 }
 
@@ -106,6 +107,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
   gamesIndex: {
     exists: true,
     indexing: false,
+    optimizing: false,
     totalSteps: 0,
     currentStep: 0,
     currentStepDisplay: "",
@@ -130,6 +132,12 @@ export const useStatusStore = create<StatusState>()((set) => ({
 
   nfcModalOpen: false,
   setNfcModalOpen: (nfcModalOpen) => set({ nfcModalOpen }),
+
+  proPurchaseModalOpen: false,
+  setProPurchaseModalOpen: (proPurchaseModalOpen) => set({ proPurchaseModalOpen }),
+
+  writeOpen: false,
+  setWriteOpen: (writeOpen) => set({ writeOpen }),
 
   safeInsets: defaultSafeAreaInsets,
   setSafeInsets: (insets) => set({ safeInsets: insets }),
@@ -176,82 +184,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
   writeQueue: "",
   setWriteQueue: (writeQueue) => set({ writeQueue }),
 
-  // Grace period state and methods
-  pendingDisconnection: false,
-
-  setConnectionStateWithGracePeriod: (state) => {
-    const currentState = useStatusStore.getState();
-    const GRACE_PERIOD_MS = 2000; // 2 second grace period
-
-    // Immediate state changes that bypass grace period
-    if (state === ConnectionState.CONNECTED ||
-        state === ConnectionState.ERROR ||
-        state === ConnectionState.CONNECTING) {
-      // Clear any pending disconnection
-      if (currentState.gracePeriodTimer) {
-        clearTimeout(currentState.gracePeriodTimer);
-      }
-      set({
-        connectionState: state,
-        connected: state === ConnectionState.CONNECTED,
-        pendingDisconnection: false,
-        gracePeriodTimer: undefined
-      });
-      return;
-    }
-
-    // Only apply grace period for disconnection states when currently connected
-    if ((state === ConnectionState.RECONNECTING || state === ConnectionState.DISCONNECTED) &&
-        currentState.connectionState === ConnectionState.CONNECTED) {
-
-      // Clear any existing timer
-      if (currentState.gracePeriodTimer) {
-        clearTimeout(currentState.gracePeriodTimer);
-      }
-
-      // Set pending disconnection but don't change UI state yet
-      const timer = setTimeout(() => {
-        set({
-          connectionState: state,
-          connected: false,
-          pendingDisconnection: false,
-          gracePeriodTimer: undefined
-        });
-      }, GRACE_PERIOD_MS);
-
-      set({
-        pendingDisconnection: true,
-        gracePeriodTimer: timer
-      });
-    } else {
-      // Immediate change for other cases (e.g., not previously connected)
-      set({
-        connectionState: state,
-        connected: false, // These states are never connected
-        pendingDisconnection: false
-      });
-    }
-  },
-
-  clearGracePeriod: () => {
-    const currentState = useStatusStore.getState();
-    if (currentState.gracePeriodTimer) {
-      clearTimeout(currentState.gracePeriodTimer);
-    }
-    set({
-      pendingDisconnection: false,
-      gracePeriodTimer: undefined
-    });
-  },
-
   resetConnectionState: () => {
-    const currentState = useStatusStore.getState();
-
-    // Clear any existing grace period timer
-    if (currentState.gracePeriodTimer) {
-      clearTimeout(currentState.gracePeriodTimer);
-    }
-
     // Reset all connection-related state
     set({
       connected: false,
@@ -259,8 +192,6 @@ export const useStatusStore = create<StatusState>()((set) => ({
       lastConnectionTime: null,
       connectionError: "",
       retryCount: 0,
-      pendingDisconnection: false,
-      gracePeriodTimer: undefined,
       runQueue: null,
       writeQueue: "",
       // Reset media-related state that will be refetched on reconnect
@@ -268,6 +199,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
       gamesIndex: {
         exists: true,
         indexing: false,
+        optimizing: false,
         totalSteps: 0,
         currentStep: 0,
         currentStepDisplay: "",

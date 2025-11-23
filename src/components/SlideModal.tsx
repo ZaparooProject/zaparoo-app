@@ -13,6 +13,8 @@ export function SlideModal(props: {
   children: ReactNode;
   className?: string;
   scrollRef?: RefObject<HTMLDivElement | null>;
+  footer?: ReactNode;
+  fixedHeight?: string;
 }) {
   const modalId = useId();
   const modalManager = useSlideModalManager();
@@ -26,7 +28,7 @@ export function SlideModal(props: {
 
   // Handle Android back button
   useBackButtonHandler(
-    'slide-modal',
+    "slide-modal",
     () => {
       if (props.isOpen) {
         props.close();
@@ -69,7 +71,7 @@ export function SlideModal(props: {
           pointerEvents: props.isOpen ? "auto" : "none"
         }}
         onClick={props.close}
-        onKeyDown={(e) => e.key === 'Escape' && props.close()}
+        onKeyDown={(e) => e.key === "Escape" && props.close()}
         role="button"
         tabIndex={0}
         aria-label="Close modal"
@@ -103,7 +105,9 @@ export function SlideModal(props: {
         style={{
           bottom: props.isOpen ? "0" : "-100vh",
           transition: "bottom 0.2s ease-in-out",
-          maxHeight: `calc(100vh - ${safeInsets.top} - 75px)`
+          ...(props.fixedHeight
+            ? { height: props.fixedHeight }
+            : { maxHeight: `calc(100vh - ${safeInsets.top} - 75px)` })
         }}
       >
         <div
@@ -113,30 +117,33 @@ export function SlideModal(props: {
         >
           <div
             onClick={props.close}
-            onKeyDown={(e) => e.key === 'Enter' && props.close()}
+            onKeyDown={(e) => e.key === "Enter" && props.close()}
             role="button"
             tabIndex={0}
             aria-label="Drag to close"
             className="h-[5px] w-[80px] rounded-full bg-[#00E0FF]"
           ></div>
         </div>
-        <div className="relative">
+        <div className="relative sm:pb-2">
           <p className="text-center text-lg">{props.title}</p>
           {/* Desktop close button */}
           <button
             onClick={props.close}
-            className="absolute right-0 top-0 hidden sm:flex items-center justify-center w-8 h-8 rounded-md opacity-70 transition-opacity hover:opacity-100 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="hidden h-8 w-8 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-white/10 hover:opacity-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none sm:flex"
             aria-label="Close modal"
+            style={{
+              position: "absolute",
+              top: "-5px",
+              right: "0"
+            }}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div
-          ref={props.scrollRef}
-          className="flex-1 overflow-y-auto"
-        >
+        <div ref={props.scrollRef} className="flex-1 overflow-y-auto">
           {props.children}
         </div>
+        {props.footer && <div className="flex-shrink-0">{props.footer}</div>}
       </div>
     </>
   );

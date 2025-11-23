@@ -11,6 +11,7 @@ function Button(props: {
   icon: ReactElement;
   path: string;
   className?: string;
+  "data-tour"?: string;
 }) {
   return (
     <div
@@ -18,13 +19,14 @@ function Button(props: {
         "inline-flex flex-col items-center justify-center",
         props.className
       )}
+      data-tour={props["data-tour"]}
     >
       <Link
         to={props.path}
         style={{
           transition: "color 0.3s, filter 0.3s"
         }}
-        className="text-bd-outline [&.active]:text-[#3faeec]"
+        className="text-bd-outline [&.active]:text-[#3faeec] [&.active]:drop-shadow-[0_0_5px_#3faeec]"
       >
         <div>
           <div className="flex justify-center drop-shadow">{props.icon}</div>
@@ -60,11 +62,13 @@ export function BottomNav() {
             text={t("nav.create")}
             icon={<SquarePenIcon size="24" />}
             path="/create"
+            data-tour="nav-create"
           />
           <Button
             text={t("nav.settings")}
             icon={<SettingsIcon size="24" />}
             path="/settings"
+            data-tour="nav-settings"
           />
         </div>
       </ResponsiveContainer>

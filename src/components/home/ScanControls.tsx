@@ -4,6 +4,7 @@ import { QrCodeIcon } from "lucide-react";
 import { ScanSpinner } from "../ScanSpinner";
 import { Button } from "../wui/Button";
 import { ScanResult } from "../../lib/models";
+import { usePreferencesStore } from "../../lib/preferencesStore";
 
 interface ScanControlsProps {
   scanSession: boolean;
@@ -21,6 +22,7 @@ export function ScanControls({
   onCameraScan
 }: ScanControlsProps) {
   const { t } = useTranslation();
+  const cameraAvailable = usePreferencesStore((state) => state.cameraAvailable);
 
   return (
     <>
@@ -39,7 +41,7 @@ export function ScanControls({
         <div className="mt-8"></div>
       )}
 
-      {connected && Capacitor.isNativePlatform() && (
+      {connected && Capacitor.isNativePlatform() && cameraAvailable && (
         <div className="mb-4 flex justify-center">
           <Button
             variant="text"

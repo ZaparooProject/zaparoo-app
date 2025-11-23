@@ -430,4 +430,214 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Shepherd.js Tour Custom Styling - Complete custom theme without default CSS */
+
+  /* Main tour element wrapper */
+  .shepherd-element {
+    position: absolute;
+    z-index: 9999;
+  }
+
+  /* Modal overlay backdrop - full screen */
+  .shepherd-modal-overlay-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9998;
+    pointer-events: none;
+  }
+
+  .shepherd-modal-overlay-container.shepherd-modal-is-visible {
+    opacity: 1;
+    transition: opacity 0.3s;
+  }
+
+  /* SVG overlay element - also needs to be full screen */
+  .shepherd-modal-overlay-container svg {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    pointer-events: auto;
+  }
+
+  /* SVG mask path styling */
+  .shepherd-modal-overlay-container path {
+    fill: rgba(0, 0, 0, 0.5);
+    pointer-events: auto;
+  }
+
+  /* Step element - remove any white backgrounds */
+  .zaparoo-tour-step {
+    background: transparent;
+  }
+
+  /* Content container - matches shadcn Dialog */
+  .zaparoo-tour-step .shepherd-content {
+    background: hsl(210 22% 15%); /* --card */
+    border: 1px solid hsl(0 0% 100% / 13%); /* --border */
+    border-radius: 0.75rem; /* rounded-xl */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* drop-shadow-2xl */
+    color: hsl(0 0% 100%);
+    font-family: 'Open Sans', sans-serif;
+    min-width: 280px;
+    max-width: 300px;
+    padding: 0;
+    margin: 0;
+    overflow: hidden; /* Clip content to rounded corners */
+  }
+
+  /* Header section */
+  .zaparoo-tour-step .shepherd-header {
+    background: transparent;
+    padding: 1.5rem 1.5rem 0 1.5rem;
+    position: relative;
+  }
+
+  /* Title text */
+  .zaparoo-tour-step .shepherd-title {
+    color: hsl(0 0% 100%);
+    font-size: 1.125rem; /* text-lg */
+    font-weight: 600;
+    line-height: 1;
+    margin: 0;
+    padding-right: 2rem; /* Space for close button */
+  }
+
+  /* Body text */
+  .zaparoo-tour-step .shepherd-text {
+    color: hsl(215 32% 73%); /* --muted-foreground */
+    font-size: 0.875rem; /* text-sm */
+    line-height: 1.5;
+    padding: 1rem 1.5rem;
+    margin: 0;
+  }
+
+  /* Close button */
+  .zaparoo-tour-step .shepherd-cancel-icon {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: hsl(0 0% 100%);
+    opacity: 0.7;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s;
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  .zaparoo-tour-step .shepherd-cancel-icon:hover {
+    opacity: 1;
+  }
+
+  /* Footer section */
+  .zaparoo-tour-step .shepherd-footer {
+    background: transparent;
+    padding: 0 1.5rem 1.5rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Primary button - matches wui Button fill variant */
+  .zaparoo-tour-step .shepherd-button {
+    background-image: radial-gradient(164.29% 190% at center top, #34c8e8 0%, #4e4af2 100%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+    color: hsl(0 0% 100%);
+    cursor: pointer;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.375rem 1.5rem;
+    height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.1s, transform 0.1s;
+    touch-action: manipulation;
+    white-space: nowrap;
+  }
+
+  .zaparoo-tour-step .shepherd-button:active {
+    transform: scale(0.95);
+  }
+
+  /* Secondary button - matches wui Button outline variant */
+  .zaparoo-tour-step .shepherd-button.shepherd-button-secondary {
+    background: transparent;
+    background-image: none;
+    border: 1px solid hsl(0 0% 100% / 13%);
+    color: hsl(0 0% 100%);
+  }
+
+  /* Arrow pointer */
+  .zaparoo-tour-step .shepherd-arrow {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+  }
+
+  .zaparoo-tour-step .shepherd-arrow::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: hsl(210 22% 15%); /* --card */
+    border: 1px solid hsl(0 0% 100% / 13%); /* --border */
+    transform: rotate(45deg);
+  }
+
+  /* Arrow positioning */
+  .zaparoo-tour-step[data-popper-placement^='top'] .shepherd-arrow {
+    bottom: -8px;
+  }
+
+  .zaparoo-tour-step[data-popper-placement^='top'] .shepherd-arrow::before {
+    border-top: none;
+    border-left: none;
+  }
+
+  .zaparoo-tour-step[data-popper-placement^='bottom'] .shepherd-arrow {
+    top: -8px;
+  }
+
+  .zaparoo-tour-step[data-popper-placement^='bottom'] .shepherd-arrow::before {
+    border-bottom: none;
+    border-right: none;
+  }
+
+  .zaparoo-tour-step[data-popper-placement^='left'] .shepherd-arrow {
+    right: -8px;
+  }
+
+  .zaparoo-tour-step[data-popper-placement^='left'] .shepherd-arrow::before {
+    border-left: none;
+    border-bottom: none;
+  }
+
+  .zaparoo-tour-step[data-popper-placement^='right'] .shepherd-arrow {
+    left: -8px;
+  }
+
+  .zaparoo-tour-step[data-popper-placement^='right'] .shepherd-arrow::before {
+    border-right: none;
+    border-top: none;
+  }
 }

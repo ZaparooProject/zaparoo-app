@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MediaSearchModal } from "@/components/MediaSearchModal";
@@ -45,6 +45,11 @@ vi.mock("@/lib/coreApi", () => ({
         { path: "/games/mario.sfc", name: "Super Mario World", systemName: "Super Nintendo" },
       ],
       total: 1,
+      pagination: {
+        nextCursor: null,
+        hasNextPage: false,
+        pageSize: 1,
+      },
     }),
   },
 }));
@@ -72,25 +77,51 @@ vi.mock("@/components/wui/TextInput", () => ({
   ),
 }));
 
-vi.mock("@/components/SearchResults", () => ({
-  SearchResults: ({ resp, setSelectedResult }: any) => (
-    <div data-testid="search-results">
-      {resp?.results?.map((result: any, index: number) => (
+vi.mock("@/components/VirtualSearchResults", () => ({
+  VirtualSearchResults: ({ query: _query, systems: _systems, selectedResult: _selectedResult, setSelectedResult, hasSearched }: any) => {
+    if (!hasSearched) {
+      return (
+        <div className="text-center text-white/60 mt-6">
+          <p className="text-lg mb-2">create.search.startSearching</p>
+          <p className="text-sm">create.search.startSearchingHint</p>
+        </div>
+      );
+    }
+
+    return (
+      <div data-testid="search-results">
         <button
-          key={index}
-          data-testid={`result-${index}`}
-          onClick={() => setSelectedResult?.(result)}
+          key={0}
+          data-testid="result-0"
+          onClick={() => setSelectedResult?.({
+            path: "/games/mario.sfc",
+            name: "Super Mario World",
+            zapScript: "**launch:/games/mario.sfc"
+          })}
         >
-          {result.name}
+          Super Mario World
         </button>
-      ))}
-    </div>
-  ),
+      </div>
+    );
+  },
 }));
 
 vi.mock("@/components/BackToTop", () => ({
   BackToTop: () => (
     <div data-testid="back-to-top" />
+  ),
+}));
+
+vi.mock("@/components/SystemSelector", () => ({
+  SystemSelector: ({ isOpen }: any) =>
+    isOpen ? <div data-testid="system-selector-modal" /> : null,
+  SystemSelectorTrigger: ({ selectedSystems, placeholder, onClick }: any) => (
+    <button
+      data-testid="system-selector-trigger"
+      onClick={onClick}
+    >
+      {selectedSystems.length > 0 ? selectedSystems[0] : placeholder}
+    </button>
   ),
 }));
 
@@ -139,10 +170,21 @@ describe("MediaSearchModal", () => {
     expect(searchInput).toHaveAttribute("placeholder", "create.search.gameInputPlaceholder");
   });
 
-  it("should render search results component", () => {
+  it("should render search results component", async () => {
     renderComponent();
 
-    expect(screen.getByTestId("search-results")).toBeInTheDocument();
+    // Enter search query
+    const searchInput = screen.getByTestId("search-input");
+    fireEvent.change(searchInput, { target: { value: "mario" } });
+
+    // Click search button to trigger search
+    const searchButton = screen.getByRole("button", { name: /create.search.searchButton/i });
+    fireEvent.click(searchButton);
+
+    // Wait for search results to appear
+    await waitFor(() => {
+      expect(screen.getByTestId("search-results")).toBeInTheDocument();
+    });
   });
 
   it("should render back to top component", () => {
@@ -169,6 +211,10 @@ describe("MediaSearchModal", () => {
     const searchInput = screen.getByTestId("search-input");
     fireEvent.change(searchInput, { target: { value: "mario" } });
 
+    // Click search button to trigger search
+    const searchButton = screen.getByRole("button", { name: /create.search.searchButton/i });
+    fireEvent.click(searchButton);
+
     // Wait for search results to load and contain results
     await waitFor(() => {
       expect(screen.getByTestId("result-0")).toBeInTheDocument();
@@ -178,7 +224,7 @@ describe("MediaSearchModal", () => {
     const resultButton = screen.getByTestId("result-0");
     fireEvent.click(resultButton);
 
-    expect(mockOnSelect).toHaveBeenCalledWith("/games/mario.sfc");
+    expect(mockOnSelect).toHaveBeenCalledWith("**launch:/games/mario.sfc");
   });
 
   it("should not render when closed", () => {
@@ -186,21 +232,5 @@ describe("MediaSearchModal", () => {
 
     const modal = screen.getByTestId("slide-modal");
     expect(modal).toHaveAttribute("data-open", "false");
-  });
-
-  it("should focus input when modal opens", async () => {
-    const focusSpy = vi.fn();
-
-    // Mock the input ref focus method
-    vi.spyOn(HTMLElement.prototype, 'focus').mockImplementation(focusSpy);
-
-    renderComponent({ isOpen: true });
-
-    // Use act to properly handle React state updates and async operations
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 350));
-    });
-
-    expect(focusSpy).toHaveBeenCalled();
   });
 });

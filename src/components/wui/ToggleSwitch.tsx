@@ -1,13 +1,40 @@
 import classNames from "classnames";
+import React from "react";
 
 export function ToggleSwitch(props: {
-  label: string;
+  label: string | React.ReactNode;
   value: boolean | undefined;
   setValue: (value: boolean) => void;
   disabled?: boolean;
+  onDisabledClick?: () => void;
 }) {
+  const hasDisabledClickHandler = props.disabled && props.onDisabledClick;
+
+  const handleClick = hasDisabledClickHandler
+    ? (e: React.MouseEvent) => {
+        e.preventDefault();
+        props.onDisabledClick!();
+      }
+    : undefined;
+
+  const handleKeyDown = hasDisabledClickHandler
+    ? (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          props.onDisabledClick!();
+        }
+      }
+    : undefined;
+
   return (
-    <label className="flex cursor-pointer select-none items-center justify-between text-foreground">
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+    <label
+      className="flex cursor-pointer select-none items-center justify-between text-foreground"
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role={hasDisabledClickHandler ? "button" : undefined}
+      tabIndex={hasDisabledClickHandler ? 0 : undefined}
+    >
       <span>{props.label}</span>
       <div className="relative">
         <input

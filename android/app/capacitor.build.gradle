@@ -16,9 +16,11 @@ dependencies {
     implementation project(':capacitor-browser')
     implementation project(':capacitor-clipboard')
     implementation project(':capacitor-preferences')
+    implementation project(':capacitor-share')
     implementation project(':capacitor-status-bar')
     implementation project(':capawesome-team-capacitor-nfc')
     implementation project(':capawesome-capacitor-android-edge-to-edge-support')
+    implementation project(':capgo-capacitor-shake')
     implementation project(':revenuecat-purchases-capacitor')
 
 }

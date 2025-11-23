@@ -1,33 +1,38 @@
 import { useEffect, useState, RefObject } from "react";
 import { ChevronUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { debounce } from "lodash";
+import { useDebouncedCallback } from "use-debounce";
 
 interface BackToTopProps {
   scrollContainerRef: RefObject<HTMLElement | null>;
   threshold?: number;
+  bottomOffset?: string;
 }
 
 export function BackToTop({
   scrollContainerRef,
-  threshold = 300
+  threshold = 300,
+  bottomOffset = "calc(1rem + 80px)"
 }: BackToTopProps) {
   const [isVisible, setIsVisible] = useState(false);
   const { t } = useTranslation();
 
-  useEffect(() => {
+  const toggleVisibility = useDebouncedCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const toggleVisibility = debounce(() => {
-      // Only update visibility when not at the top (prevents interference during bounce)
-      const scrollTop = container.scrollTop;
-      if (scrollTop <= 0) {
-        setIsVisible(false);
-      } else {
-        setIsVisible(scrollTop > threshold);
-      }
-    }, 10);
+    // Only update visibility when not at the top (prevents interference during bounce)
+    const scrollTop = container.scrollTop;
+    if (scrollTop <= 0) {
+      setIsVisible(false);
+    } else {
+      setIsVisible(scrollTop > threshold);
+    }
+  }, 10);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
 
     setIsVisible(container.scrollTop > threshold);
 
@@ -36,7 +41,7 @@ export function BackToTop({
       toggleVisibility.cancel();
       container.removeEventListener("scroll", toggleVisibility);
     };
-  }, [scrollContainerRef, threshold]);
+  }, [scrollContainerRef, threshold, toggleVisibility]);
 
   const scrollToTop = () => {
     if (scrollContainerRef.current) {
@@ -49,7 +54,7 @@ export function BackToTop({
 
   return (
     <div
-      className={`absolute right-4 transition-opacity duration-300 ${
+      className={`fixed right-4 sm:right-8 transition-opacity duration-300 ${
         isVisible
           ? "pointer-events-auto opacity-100"
           : "pointer-events-none opacity-0"
@@ -58,10 +63,11 @@ export function BackToTop({
         zIndex: 30,
         transform: "translateZ(0)",
         willChange: "opacity",
-        bottom: `calc(1rem + 80px)`
+        bottom: bottomOffset
       }}
     >
       <button
+        type="button"
         onClick={scrollToTop}
         className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full p-3 shadow-lg transition-transform hover:scale-105 active:scale-95"
         aria-label={t("backToTop")}

@@ -8,6 +8,9 @@ interface UseAppSettingsProps {
     launchOnScan: boolean;
     launcherAccess: boolean;
     preferRemoteWriter: boolean;
+    shakeEnabled: boolean;
+    shakeMode: "random" | "custom";
+    shakeZapscript: string;
   };
 }
 
@@ -15,6 +18,9 @@ export function useAppSettings({ initData }: UseAppSettingsProps) {
   const [restartScan, setRestartScan] = useState(initData.restartScan);
   const [launchOnScan, setLaunchOnScan] = useState(initData.launchOnScan);
   const [preferRemoteWriter, setPreferRemoteWriter] = useState(initData.preferRemoteWriter);
+  const [shakeEnabled, setShakeEnabled] = useState(initData.shakeEnabled);
+  const [shakeMode, setShakeMode] = useState(initData.shakeMode);
+  const [shakeZapscript, setShakeZapscript] = useState(initData.shakeZapscript);
 
   // launcherAccess is read-only, just use the init value
   const launcherAccess = initData.launcherAccess;
@@ -43,6 +49,24 @@ export function useAppSettings({ initData }: UseAppSettingsProps) {
     Preferences.set({ key: "preferRemoteWriter", value: value.toString() });
   };
 
+  const handleSetShakeEnabled = (value: boolean) => {
+    setShakeEnabled(value);
+    Preferences.set({ key: "shakeEnabled", value: value.toString() });
+  };
+
+  const handleSetShakeMode = (value: "random" | "custom") => {
+    setShakeMode(value);
+    Preferences.set({ key: "shakeMode", value });
+    // Clear zapscript when mode changes
+    setShakeZapscript("");
+    Preferences.set({ key: "shakeZapscript", value: "" });
+  };
+
+  const handleSetShakeZapscript = (value: string) => {
+    setShakeZapscript(value);
+    Preferences.set({ key: "shakeZapscript", value });
+  };
+
   return {
     restartScan,
     setRestartScan: handleSetRestartScan,
@@ -50,6 +74,12 @@ export function useAppSettings({ initData }: UseAppSettingsProps) {
     setLaunchOnScan: handleSetLaunchOnScan,
     launcherAccess,
     preferRemoteWriter,
-    setPreferRemoteWriter: handleSetPreferRemoteWriter
+    setPreferRemoteWriter: handleSetPreferRemoteWriter,
+    shakeEnabled,
+    setShakeEnabled: handleSetShakeEnabled,
+    shakeMode,
+    setShakeMode: handleSetShakeMode,
+    shakeZapscript,
+    setShakeZapscript: handleSetShakeZapscript
   };
 }

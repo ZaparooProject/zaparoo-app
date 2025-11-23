@@ -15,6 +15,31 @@ import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { useDataCache } from "./hooks/useDataCache";
 import { getDeviceAddress } from "./lib/coreApi";
 import { SlideModalProvider } from "./components/SlideModalProvider";
+import { usePreferencesStore } from "./lib/preferencesStore";
+import { useProAccessCheck } from "./hooks/useProAccessCheck";
+import { useNfcAvailabilityCheck } from "./hooks/useNfcAvailabilityCheck";
+import { useCameraAvailabilityCheck } from "./hooks/useCameraAvailabilityCheck";
+import { useAccelerometerAvailabilityCheck } from "./hooks/useAccelerometerAvailabilityCheck";
+import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
+import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
+import { useShakeDetection } from "./hooks/useShakeDetection";
+
+// Component to initialize queue processors after preferences hydrate
+// This ensures sessionManager.launchOnScan is set correctly before processing
+function QueueProcessors() {
+  const shakeEnabled = usePreferencesStore((state) => state.shakeEnabled);
+  const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
+  const connected = useStatusStore((state) => state.connected);
+
+  useRunQueueProcessor();
+  useWriteQueueProcessor();
+  useShakeDetection({
+    shakeEnabled,
+    launcherAccess,
+    connected
+  });
+  return null;
+}
 
 const router = createRouter({
   scrollRestoration: true,
@@ -32,17 +57,37 @@ declare module "@tanstack/react-router" {
   }
 }
 
-
 export default function App() {
+  // Wait for preferences to hydrate before rendering to prevent layout shifts
+  const hasHydrated = usePreferencesStore((state) => state._hasHydrated);
+  const proAccessHydrated = usePreferencesStore(
+    (state) => state._proAccessHydrated
+  );
+  const nfcAvailabilityHydrated = usePreferencesStore(
+    (state) => state._nfcAvailabilityHydrated
+  );
+  const cameraAvailabilityHydrated = usePreferencesStore(
+    (state) => state._cameraAvailabilityHydrated
+  );
+  const accelerometerAvailabilityHydrated = usePreferencesStore(
+    (state) => state._accelerometerAvailabilityHydrated
+  );
+
   // Initialize data cache early in app lifecycle
   useDataCache();
+  // Check Pro access status once at app startup
+  useProAccessCheck();
+  // Check hardware availability once at app startup
+  useNfcAvailabilityCheck();
+  useCameraAvailabilityCheck();
+  useAccelerometerAvailabilityCheck();
 
   const playing = useStatusStore((state) => state.playing);
+  const prevPlaying = usePrevious(playing);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const prevGamesIndex = usePrevious(gamesIndex);
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
   const { t } = useTranslation();
-
 
   useEffect(() => {
     FirebaseAuthentication.addListener("authStateChange", (change) => {
@@ -55,7 +100,12 @@ export default function App() {
 
   useEffect(() => {
     // Only show completion toast, progress is now shown in MediaDatabaseCard
-    if (!gamesIndex.indexing && prevGamesIndex?.indexing) {
+    // Skip toast if totalFiles is 0 (indicates cancellation)
+    if (
+      !gamesIndex.indexing &&
+      prevGamesIndex?.indexing &&
+      (gamesIndex.totalFiles ?? 0) > 0
+    ) {
       toast.success((to) => <MediaFinishedToast id={to.id} />, {
         id: "indexed",
         icon: (
@@ -68,7 +118,12 @@ export default function App() {
   }, [gamesIndex, prevGamesIndex, t]);
 
   useEffect(() => {
-    if (playing.mediaName !== "") {
+    // Only show toast when a new game actually starts (mediaName changes)
+    // This prevents duplicate toasts for the same game and handles debouncing naturally
+    if (
+      playing.mediaName !== "" &&
+      playing.mediaName !== prevPlaying?.mediaName
+    ) {
       toast.success(
         (to) => (
           <span
@@ -85,7 +140,7 @@ export default function App() {
           </span>
         ),
         {
-          id: "playingGame-" + playing.mediaName,
+          id: "playingGame-" + Date.now(),
           icon: (
             <span className="text-success pr-1">
               <PlayIcon size="24" />
@@ -94,12 +149,18 @@ export default function App() {
         }
       );
     }
-  }, [playing, t]);
+  }, [playing, prevPlaying, t]);
+
+  // Block rendering until preferences, Pro access, and hardware availability are hydrated to prevent layout shifts
+  if (!hasHydrated || !proAccessHydrated || !nfcAvailabilityHydrated || !cameraAvailabilityHydrated || !accelerometerAvailabilityHydrated) {
+    return null; // Keep splash screen visible
+  }
 
   return (
     <>
       <AppUrlListener />
       <CoreApiWebSocket key={getDeviceAddress()} />
+      <QueueProcessors />
       <Toaster
         position="top-center"
         toastOptions={{

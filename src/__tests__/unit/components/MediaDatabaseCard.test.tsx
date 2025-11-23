@@ -7,6 +7,7 @@ import { CoreAPI } from '../../../lib/coreApi';
 vi.mock('../../../lib/coreApi', () => ({
   CoreAPI: {
     mediaGenerate: vi.fn(),
+    mediaGenerateCancel: vi.fn(),
     media: vi.fn()
   }
 }));
@@ -15,7 +16,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: any) => {
       if (key === 'toast.filesFound' && options?.count) {
-        return `${options.count} media found`;
+        return `${options.count} items scanned`;
       }
       return key;
     }
@@ -72,9 +73,12 @@ describe('MediaDatabaseCard', () => {
   it('should render update button when not indexing', () => {
     render(<MediaDatabaseCard />);
 
-    const button = screen.getByRole('button', { name: /settings\.updateDb/i });
-    expect(button).toBeInTheDocument();
-    expect(button).not.toBeDisabled();
+    // Get all buttons with the updateDb text and find the one that's the main update button (not the system selector)
+    const buttons = screen.getAllByRole('button', { name: /settings\.updateDb/i });
+    const updateButton = buttons.find(button => !button.textContent?.includes('settings.updateDb.allSystems'));
+
+    expect(updateButton).toBeInTheDocument();
+    expect(updateButton).not.toBeDisabled();
   });
 
   it('should disable button when not connected', () => {
@@ -82,8 +86,9 @@ describe('MediaDatabaseCard', () => {
 
     render(<MediaDatabaseCard />);
 
-    const button = screen.getByRole('button', { name: /settings\.updateDb/i });
-    expect(button).toBeDisabled();
+    const buttons = screen.getAllByRole('button', { name: /settings\.updateDb/i });
+    const updateButton = buttons.find(button => !button.textContent?.includes('settings.updateDb.allSystems'));
+    expect(updateButton).toBeDisabled();
   });
 
   it('should disable button when indexing', () => {
@@ -91,8 +96,9 @@ describe('MediaDatabaseCard', () => {
 
     render(<MediaDatabaseCard />);
 
-    const button = screen.getByRole('button', { name: /settings\.updateDb/i });
-    expect(button).toBeDisabled();
+    const buttons = screen.getAllByRole('button', { name: /settings\.updateDb/i });
+    const updateButton = buttons.find(button => !button.textContent?.includes('settings.updateDb.allSystems'));
+    expect(updateButton).toBeDisabled();
   });
 
   it('should call CoreAPI.mediaGenerate when button is clicked', async () => {
@@ -100,8 +106,9 @@ describe('MediaDatabaseCard', () => {
 
     render(<MediaDatabaseCard />);
 
-    const button = screen.getByRole('button', { name: /settings\.updateDb/i });
-    fireEvent.click(button);
+    const buttons = screen.getAllByRole('button', { name: /settings\.updateDb/i });
+    const updateButton = buttons.find(button => !button.textContent?.includes('settings.updateDb.allSystems'));
+    fireEvent.click(updateButton!);
 
     expect(CoreAPI.mediaGenerate).toHaveBeenCalledOnce();
   });
@@ -119,7 +126,7 @@ describe('MediaDatabaseCard', () => {
 
     render(<MediaDatabaseCard />);
 
-    expect(screen.queryByText('250 media found')).not.toBeInTheDocument();
+    expect(screen.queryByText('250 items scanned')).not.toBeInTheDocument();
     // Wait for the query to resolve
     expect(await screen.findByText('settings.updateDb.status.ready')).toBeInTheDocument();
   });
@@ -133,7 +140,7 @@ describe('MediaDatabaseCard', () => {
     render(<MediaDatabaseCard />);
 
     // Wait for the query to resolve
-    expect(await screen.findByText('create.search.gamesDbUpdate')).toBeInTheDocument();
+    expect(await screen.findByText('No database found')).toBeInTheDocument();
   });
 
   it('should show checking status when loading', async () => {
@@ -231,4 +238,77 @@ describe('MediaDatabaseCard', () => {
     const pulsingElements = container.querySelectorAll('.animate-pulse');
     expect(pulsingElements.length).toBeGreaterThan(0);
   });
+
+  it('should show cancel button when indexing', () => {
+    mockStore.gamesIndex.indexing = true;
+
+    render(<MediaDatabaseCard />);
+
+    const cancelButton = screen.getByRole('button', { name: /settings\.updateDb\.cancel/i });
+    expect(cancelButton).toBeInTheDocument();
+    expect(cancelButton).not.toBeDisabled();
+  });
+
+  it('should call CoreAPI.mediaGenerateCancel when cancel button is clicked', async () => {
+    mockStore.gamesIndex.indexing = true;
+    const { CoreAPI } = await import('../../../lib/coreApi');
+
+    render(<MediaDatabaseCard />);
+
+    const cancelButton = screen.getByRole('button', { name: /settings\.updateDb\.cancel/i });
+    fireEvent.click(cancelButton);
+
+    expect(CoreAPI.mediaGenerateCancel).toHaveBeenCalledOnce();
+  });
+
+  it('should not show cancel button when not indexing', () => {
+    mockStore.gamesIndex.indexing = false;
+
+    render(<MediaDatabaseCard />);
+
+    const cancelButton = screen.queryByRole('button', { name: /settings\.updateDb\.cancel/i });
+    expect(cancelButton).not.toBeInTheDocument();
+  });
+
+  it('should keep cancel button in "Cancelling..." state after API call completes (regression test)', async () => {
+    // REGRESSION TEST: This test prevents re-introducing a bug where the cancel button
+    // immediately reverts to "Cancel" state after the API call completes, even though
+    // the actual cancellation is still happening in the background on zaparoo-core.
+    //
+    // The bug was caused by a `finally` block that reset `isCancelling` state immediately
+    // after the API call. The correct behavior is to keep the button in "Cancelling..."
+    // state until a WebSocket notification confirms that indexing has stopped.
+
+    mockStore.gamesIndex.indexing = true;
+    const { CoreAPI } = await import('../../../lib/coreApi');
+
+    // Mock the cancel API to resolve successfully
+    vi.mocked(CoreAPI.mediaGenerateCancel).mockResolvedValue(undefined);
+
+    render(<MediaDatabaseCard />);
+
+    // Find and click the cancel button
+    const cancelButton = screen.getByRole('button', { name: /settings\.updateDb\.cancel/i });
+    fireEvent.click(cancelButton);
+
+    // Wait for the API call to complete
+    await vi.waitFor(() => {
+      expect(CoreAPI.mediaGenerateCancel).toHaveBeenCalledOnce();
+    });
+
+    // CRITICAL ASSERTION: After the API call completes, the button should STILL
+    // be in the "Cancelling..." state (disabled with "cancelling" text),
+    // NOT reverted back to "Cancel" state.
+    //
+    // This is because the actual cancellation is happening in the background,
+    // and we need to wait for the WebSocket notification (indexing: false) to confirm.
+    const buttonAfterApiCall = screen.getByRole('button', { name: /cancelling/i });
+    expect(buttonAfterApiCall).toBeInTheDocument();
+    expect(buttonAfterApiCall).toBeDisabled();
+
+    // Verify it's NOT showing the normal "Cancel" text
+    expect(screen.queryByRole('button', { name: /^settings\.updateDb\.cancel$/i })).not.toBeInTheDocument();
+  });
+
+  // TODO: Add tests for optimization progress and total media count when query mocking is fixed
 });

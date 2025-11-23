@@ -3,31 +3,22 @@ import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
-import { WriteAction } from "@/lib/writeNfcHook";
-import { Status } from "@/lib/nfc.ts";
+import { WriteAction, useNfcWriter, WriteMethod } from "@/lib/writeNfcHook";
 import { useStatusStore } from "../lib/store";
+import { usePreferencesStore } from "../lib/preferencesStore";
 import { CoreAPI } from "../lib/coreApi";
-
-interface UseWriteQueueProcessorProps {
-  nfcWriter: {
-    write: (action: WriteAction, content: string) => Promise<void>;
-    end: () => Promise<void>;
-    status: Status | null;
-  };
-  setWriteOpen: (open: boolean) => void;
-}
 
 interface UseWriteQueueProcessorReturn {
   reset: () => void;
 }
 
-export function useWriteQueueProcessor({
-  nfcWriter,
-  setWriteOpen
-}: UseWriteQueueProcessorProps): UseWriteQueueProcessorReturn {
+export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
   const { t } = useTranslation();
   const writeQueue = useStatusStore((state) => state.writeQueue);
   const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
+  const setWriteOpen = useStatusStore((state) => state.setWriteOpen);
+  const preferRemoteWriter = usePreferencesStore((state) => state.preferRemoteWriter);
+  const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
 
   const isProcessingRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -1,6 +1,6 @@
 import React, { KeyboardEventHandler, useEffect, useState } from "react";
 import classNames from "classnames";
-import { SaveIcon } from "../../lib/images";
+import { SaveIcon, ClearIcon } from "../../lib/images";
 import { Button } from "./Button";
 
 export function TextInput(props: {
@@ -11,6 +11,7 @@ export function TextInput(props: {
   disabled?: boolean;
   className?: string;
   saveValue?: (value: string) => void;
+  clearable?: boolean;
   type?: string;
   onKeyUp?: KeyboardEventHandler<HTMLInputElement>;
   ref?: React.RefObject<HTMLInputElement | null>;
@@ -29,40 +30,60 @@ export function TextInput(props: {
 
   return (
     <div className={props.className}>
-      {props.label && <span>{props.label}</span>}
+      {props.label && <span className="mb-1 block">{props.label}</span>}
       <div className="flex flex-row">
-        <input
-          ref={props.ref}
-          type={type}
-          className={classNames(
-            "bg-background",
-            "h-12",
-            "grow",
-            "border",
-            "border-solid",
-            "p-2",
-            "px-3",
-            "rounded-none",
-            "disabled:border-foreground-disabled",
-            {
-              "border-bd-input": !props.disabled,
-              "border-foreground-disabled": props.disabled,
-              "text-foreground-disabled": props.disabled
-            }
-          )}
-          disabled={props.disabled}
-          placeholder={props.placeholder}
-          value={value}
-          onChange={(e) => {
-            setValue(e.target.value);
-            setModified(true);
+        <div className="relative flex-grow">
+          <input
+            ref={props.ref}
+            type={type}
+            className={classNames(
+              "bg-background",
+              "h-12",
+              "w-full",
+              "border",
+              "border-solid",
+              "p-2",
+              "px-3",
+              "disabled:border-foreground-disabled",
+              {
+                "border-bd-input": !props.disabled,
+                "border-foreground-disabled": props.disabled,
+                "text-foreground-disabled": props.disabled,
+                "pr-10": props.clearable && value && value.length > 0 && !props.disabled,
+                "rounded-md": !props.saveValue,
+                "rounded-s-md": props.saveValue
+              }
+            )}
+            disabled={props.disabled}
+            placeholder={props.placeholder}
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setModified(true);
 
-            if (props.setValue) {
-              props.setValue(e.target.value);
-            }
-          }}
-          onKeyUp={props.onKeyUp}
-        />
+              if (props.setValue) {
+                props.setValue(e.target.value);
+              }
+            }}
+            onKeyUp={props.onKeyUp}
+          />
+          {props.clearable && value && value.length > 0 && !props.disabled && (
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-white transition-colors rounded"
+              onClick={() => {
+                setValue("");
+                setModified(true);
+                if (props.setValue) {
+                  props.setValue("");
+                }
+              }}
+              aria-label="Clear search"
+            >
+              <ClearIcon size="16" />
+            </button>
+          )}
+        </div>
         {props.saveValue && (
           <Button
             disabled={!modified || props.disabled}

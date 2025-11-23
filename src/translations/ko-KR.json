@@ -98,14 +98,15 @@
         "contributors": "탭토에 기여한",
         "wizzodev": "wizzo.dev Patrons"
       },
-      "advanced": {
+      "core": {
         "title": "고급 설정",
         "soundEffects": "스캔시 소리 효과",
         "autoDetect": "외부 NFC 리더 자동 감지",
         "debug": "개발자모드",
         "nfcDriver": "NFC 드라이버 연결 문자열",
-        "insertModeBlocklist": "인서트 모드 코어 차단 목록",
-        "downloadLog": "탭토 로그 파일 다운로드",
+        "insertModeBlocklist": "인서트 모드 코어 차단 목록"
+      },
+      "app": {
         "restorePurchases": "구매 복구",
         "restoreSuccess": "구매를 복구했습니다.",
         "restoreFail": "구매에 실패했습니다."

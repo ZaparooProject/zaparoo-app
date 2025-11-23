@@ -97,14 +97,15 @@
         "translationsBy": "翻译于",
         "contributors": "Zaparoo开发者"
       },
-      "advanced": {
+      "core": {
         "title": "高级设置",
         "soundEffects": "扫描音效",
         "autoDetect": "自动选择外部读卡器",
         "debug": "除错模式",
         "nfcDriver": "NFC设备连接模式",
-        "insertModeBlocklist": "插入模式核心列表",
-        "downloadLog": "下载Zaparoo log文件",
+        "insertModeBlocklist": "插入模式核心列表"
+      },
+      "app": {
         "restorePurchases": "恢复购买权限",
         "restoreSuccess": "购买权限已被恢复",
         "restoreFail": "购买权限恢复失败"

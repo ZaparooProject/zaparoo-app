@@ -163,14 +163,15 @@
         "wizzodev": "Wizzo.dev Patrons",
         "joinPatreon": "Werde Patreon"
       },
-      "advanced": {
+      "core": {
         "title": "Erweiterte Einstellungen",
         "soundEffects": "Soundeffekte beim Scannen abspielen",
         "autoDetect": "Externes NFC-Lesegerät automatisch erkennen",
         "debug": "Debug-Modus",
         "nfcDriver": "NFC-Treiber-Verbindungszeichenfolge",
-        "insertModeBlocklist": "Insert-Modus-Core-Blockliste",
-        "downloadLog": "Zaparoo-Protokolldatei herunterladen",
+        "insertModeBlocklist": "Insert-Modus-Core-Blockliste"
+      },
+      "app": {
         "restorePurchases": "Käufe wiederherstellen",
         "restoreSuccess": "Käufe wurden wiederhergestellt",
         "restoreFail": "Käufe konnten nicht wiederhergestellt werden"

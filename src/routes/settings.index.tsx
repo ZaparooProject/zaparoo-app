@@ -12,11 +12,10 @@ import {
 } from "@/components/ProPurchase.tsx";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button as SCNButton } from "@/components/ui/button";
-import { ScanSettings } from "@/components/home/ScanSettings.tsx";
-import { useAppSettings } from "@/hooks/useAppSettings.ts";
 import i18n from "../i18n";
 import { PageFrame } from "../components/PageFrame";
 import { useStatusStore } from "../lib/store";
+import { usePreferencesStore } from "../lib/preferencesStore";
 import { TextInput } from "../components/wui/TextInput";
 import { Button } from "../components/wui/Button";
 import { ExternalIcon, NextIcon } from "../lib/images";
@@ -24,27 +23,14 @@ import { getDeviceAddress, setDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
 import { MediaDatabaseCard } from "../components/MediaDatabaseCard";
 
 interface LoaderData {
-  restartScan: boolean;
-  launchOnScan: boolean;
   launcherAccess: boolean;
-  preferRemoteWriter: boolean;
 }
 
 export const Route = createFileRoute("/settings/")({
-  loader: async (): Promise<LoaderData> => {
-    const [restartResult, launchResult, accessResult, remoteWriterResult] =
-      await Promise.all([
-        Preferences.get({ key: "restartScan" }),
-        Preferences.get({ key: "launchOnScan" }),
-        Preferences.get({ key: "launcherAccess" }),
-        Preferences.get({ key: "preferRemoteWriter" }),
-      ]);
-
+  loader: (): LoaderData => {
+    const state = usePreferencesStore.getState();
     return {
-      restartScan: restartResult.value === "true",
-      launchOnScan: launchResult.value !== "false",
-      launcherAccess: accessResult.value === "true",
-      preferRemoteWriter: remoteWriterResult.value === "true",
+      launcherAccess: state.launcherAccess
     };
   },
   component: Settings
@@ -53,10 +39,10 @@ export const Route = createFileRoute("/settings/")({
 function Settings() {
   const initData = Route.useLoaderData();
 
-  const { PurchaseModal, setProPurchaseModalOpen, proAccess } =
-    useProPurchase(initData.launcherAccess);
+  const { PurchaseModal, setProPurchaseModalOpen, proAccess } = useProPurchase(
+    initData.launcherAccess
+  );
 
-  const connected = useStatusStore((state) => state.connected);
   const connectionError = useStatusStore((state) => state.connectionError);
   // const loggedInUser = useStatusStore((state) => state.loggedInUser);
   const deviceHistory = useStatusStore((state) => state.deviceHistory);
@@ -64,7 +50,9 @@ function Settings() {
   const removeDeviceHistory = useStatusStore(
     (state) => state.removeDeviceHistory
   );
-  const resetConnectionState = useStatusStore((state) => state.resetConnectionState);
+  const resetConnectionState = useStatusStore(
+    (state) => state.resetConnectionState
+  );
 
   const version = useQuery({
     queryKey: ["version"],
@@ -86,23 +74,11 @@ function Settings() {
     });
   }, [setDeviceHistory]);
 
-  const { restartScan, setRestartScan, launchOnScan, setLaunchOnScan } =
-    useAppSettings({ initData });
-
   const handleDeviceAddressChange = (newAddress: string) => {
-    // Set the new device address
     setDeviceAddress(newAddress);
-
-    // Reset the connection state
     resetConnectionState();
-
-    // Reset CoreAPI state
     CoreAPI.reset();
-
-    // Clear React Query cache for all queries that depend on the device
     queryClient.invalidateQueries();
-
-    // Update local address state (this will trigger CoreApiWebSocket remount via key prop)
     setAddress(newAddress);
   };
 
@@ -110,23 +86,30 @@ function Settings() {
     <>
       <PageFrame title={t("settings.title")}>
         <div className="flex flex-col gap-5">
-          <TextInput
-            label={t("settings.device")}
-            placeholder="192.168.1.23"
-            value={address}
-            setValue={setAddress}
-            saveValue={handleDeviceAddressChange}
-          />
+          <div data-tour="device-address">
+            <TextInput
+              label={t("settings.device")}
+              placeholder="192.168.1.23"
+              value={address}
+              setValue={setAddress}
+              saveValue={handleDeviceAddressChange}
+              onKeyUp={(e) => {
+                if (e.key === "Enter" && address !== getDeviceAddress()) {
+                  handleDeviceAddressChange(address);
+                }
+              }}
+            />
+          </div>
 
-          <div className="flex flex-row items-center justify-between gap-2 min-h-[1.5rem]">
+          <div className="flex min-h-[1.5rem] flex-col gap-1">
             {version.isSuccess && (
-              <>
+              <div className="flex flex-row items-center justify-between gap-2">
                 <div>Platform: {version.data.platform}</div>
                 <div>Version: {version.data.version}</div>
-              </>
+              </div>
             )}
             {connectionError !== "" && (
-              <div className="text-error w-full">{connectionError}</div>
+              <div className="text-error">{connectionError}</div>
             )}
           </div>
 
@@ -147,7 +130,10 @@ function Settings() {
                   {deviceHistory
                     .sort((a, b) => (a.address > b.address ? 1 : -1))
                     .map((entry) => (
-                      <div key={entry.address} className="flex flex-row items-center justify-between gap-3">
+                      <div
+                        key={entry.address}
+                        className="flex flex-row items-center justify-between gap-3"
+                      >
                         <SCNButton
                           className="w-full"
                           onClick={() => {
@@ -172,14 +158,6 @@ function Settings() {
               </SlideModal>
             </>
           )}
-
-          <ScanSettings
-            connected={connected}
-            restartScan={restartScan}
-            setRestartScan={setRestartScan}
-            launchOnScan={launchOnScan}
-            setLaunchOnScan={setLaunchOnScan}
-          />
 
           <MediaDatabaseCard />
 
@@ -254,9 +232,18 @@ function Settings() {
             </select>
           </div>
 
-          <Link to="/settings/advanced">
+          {Capacitor.isNativePlatform() && (
+            <Link to="/settings/app">
+              <div className="flex flex-row items-center justify-between">
+                <p>{t("settings.app.title")}</p>
+                <NextIcon size="20" />
+              </div>
+            </Link>
+          )}
+
+          <Link to="/settings/core">
             <div className="flex flex-row items-center justify-between">
-              <p>{t("settings.advanced.title")}</p>
+              <p>{t("settings.core.title")}</p>
               <NextIcon size="20" />
             </div>
           </Link>

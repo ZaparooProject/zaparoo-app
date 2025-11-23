@@ -4,7 +4,9 @@ import { SearchResultGame, SearchResultsResponse } from "@/lib/models.ts";
 import { useStatusStore } from "@/lib/store.ts";
 import { Card } from "@/components/wui/Card.tsx";
 import { NextIcon, SettingsIcon, WarningIcon } from "@/lib/images.tsx";
+import { LoadingSpinner } from "@/components/ui/loading-spinner.tsx";
 import { Button } from "@/components/wui/Button.tsx";
+import { TagList } from "@/components/TagList.tsx";
 
 export function SearchResults(props: {
   loading: boolean;
@@ -12,9 +14,27 @@ export function SearchResults(props: {
   resp: SearchResultsResponse | null;
   selectedResult: SearchResultGame | null;
   setSelectedResult: (game: SearchResultGame | null) => void;
+  hasSearched?: boolean;
+  searchQuery?: string;
+  searchSystem?: string;
+  searchTags?: string[];
+  onClearFilters?: () => void;
 }) {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const { t } = useTranslation();
+
+  // Screen reader announcement for search results
+  const getAriaLiveMessage = () => {
+    if (props.loading) return t("create.search.loading");
+    if (props.error) return t("create.search.searchError");
+    if (props.resp?.results) {
+      const count = props.resp.results.length;
+      return count === 0
+        ? t("create.search.noResultsFoundSimple")
+        : `${count} ${count === 1 ? 'result' : 'results'} found`;
+    }
+    return "";
+  };
 
   if (!gamesIndex.exists) {
     return (
@@ -41,45 +61,89 @@ export function SearchResults(props: {
     );
   }
 
+
+  // Show initial state when no search has been performed
+  if (!props.hasSearched && !props.resp) {
+    return (
+      <div className="text-center text-white/60">
+        <p className="text-lg mb-2">{t("create.search.startSearching")}</p>
+        <p className="text-sm">{t("create.search.startSearchingHint")}</p>
+      </div>
+    );
+  }
+
+  // Show loading spinner when searching
   if (props.loading) {
     return (
-      <div className="flex flex-col items-center justify-center pt-3">
-        <div className="text-primary">
-          <div className="lds-facebook">
-            <div></div>
-            <div></div>
-            <div></div>
-          </div>
-        </div>
+      <div className="flex items-center gap-2 justify-center text-white/60">
+        <LoadingSpinner size={16} className="text-primary" />
+        <span>{t("create.search.loading")}</span>
       </div>
     );
   }
 
   if (props.error) {
-    return <p className="pt-2 text-center">{t("create.search.searchError")}</p>;
+    return <p className="text-center">{t("create.search.searchError")}</p>;
   }
 
   if (!props.resp) {
     return <></>;
   }
 
-  if (props.resp.total === 0) {
+  // Enhanced empty state with helpful suggestions
+  if (props.resp.results.length === 0) {
+    const hasActiveFilters = props.searchSystem !== "all" || (props.searchTags && props.searchTags.length > 0);
+    const hasQuery = props.searchQuery && props.searchQuery.trim().length > 0;
+
+    let mainMessage: string;
+    let suggestionMessage: string;
+
+    if (!hasQuery) {
+      // No search query - just show simple message
+      mainMessage = t("create.search.noResultsFoundSimple");
+      suggestionMessage = hasActiveFilters
+        ? t("create.search.tryRemovingFiltersOnly")
+        : "";
+    } else {
+      // Has search query
+      mainMessage = t("create.search.noResultsFound", { query: props.searchQuery });
+      if (hasActiveFilters) {
+        suggestionMessage = t("create.search.tryDifferentSearch");
+      } else {
+        suggestionMessage = t("create.search.tryDifferentTerms");
+      }
+    }
+
     return (
-      <p className="pt-2 text-center">{t("create.search.noGamesFound")}</p>
+      <div className="text-center">
+        <p className="text-white mb-3">{mainMessage}</p>
+        {suggestionMessage && (
+          <p className="text-sm text-white/70 mb-3">
+            {suggestionMessage}
+          </p>
+        )}
+        {hasActiveFilters && props.onClearFilters && (
+          <div className="flex justify-center mt-2">
+            <Button
+              label={t("create.search.clearFilters")}
+              onClick={props.onClearFilters}
+              variant="outline"
+            />
+          </div>
+        )}
+      </div>
     );
   }
 
-  if (props.resp.total > 0) {
+  if (props.resp.results.length > 0) {
     return (
       <>
-        <p className="pt-2 text-center">
-          {props.resp.total > props.resp.results.length
-            ? t("create.search.gamesFoundMax", {
-                count: props.resp.total,
-                max: props.resp.results.length
-              })
-            : t("create.search.gamesFound", { count: props.resp.total })}
-        </p>
+        {/* Screen reader announcements */}
+        <div aria-live="polite" aria-atomic="true" className="sr-only">
+          {getAriaLiveMessage()}
+        </div>
+
+        {/* Results list */}
         <div>
           {props.resp.results.map((game, i) => {
             const handleGameSelect = () => {
@@ -127,6 +191,7 @@ export function SearchResults(props: {
               <div className="flex flex-col">
                 <p className="font-semibold">{game.name}</p>
                 <p className="text-sm">{game.system.name}</p>
+                <TagList tags={game.tags} maxMobile={2} maxDesktop={4} />
               </div>
               <div>
                 <NextIcon size="20" />
