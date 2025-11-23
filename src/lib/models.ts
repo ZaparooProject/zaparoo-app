@@ -24,7 +24,10 @@ export enum Method {
   Readers = "readers",
   ReadersWrite = "readers.write",
   ReadersWriteCancel = "readers.write.cancel",
-  Version = "version"
+  Version = "version",
+  Playtime = "playtime",
+  PlaytimeLimits = "settings.playtime.limits",
+  PlaytimeLimitsUpdate = "settings.playtime.limits.update"
 }
 
 export enum Notification {
@@ -35,7 +38,9 @@ export enum Notification {
   TokensRemoved = "tokens.removed",
   MediaStarted = "media.started",
   MediaStopped = "media.stopped",
-  MediaIndexing = "media.indexing"
+  MediaIndexing = "media.indexing",
+  PlaytimeLimitWarning = "playtime.limit.warning",
+  PlaytimeLimitReached = "playtime.limit.reached"
 }
 
 export interface VersionResponse {
@@ -238,4 +243,44 @@ export interface MediaActiveUpdateRequest {
   systemId: string;
   mediaPath: string;
   mediaName: string;
+}
+
+export interface PlaytimeLimitsConfig {
+  enabled: boolean;
+  daily: string;
+  session: string;
+  sessionReset: string;
+  warnings: string[];
+  retention: number;
+}
+
+export interface PlaytimeStatus {
+  state: "reset" | "active" | "cooldown";
+  sessionActive: boolean;
+  sessionStarted: string;
+  sessionDuration: string;
+  sessionCumulativeTime: string;
+  sessionRemaining: string;
+  cooldownRemaining?: string;
+  dailyUsageToday: string;
+  dailyRemaining: string;
+  limitsEnabled: boolean;
+}
+
+export interface PlaytimeLimitsUpdateRequest {
+  enabled?: boolean;
+  daily?: string;
+  session?: string;
+  sessionReset?: string;
+  warnings?: string[];
+  retention?: number;
+}
+
+export interface PlaytimeLimitWarningParams {
+  remaining: string;
+  type: "daily" | "session";
+}
+
+export interface PlaytimeLimitReachedParams {
+  reason: "daily" | "session";
 }

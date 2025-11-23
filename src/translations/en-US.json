@@ -277,7 +277,29 @@
         "autoDetect": "Auto-detect external NFC reader",
         "debug": "Debug mode",
         "nfcDriver": "NFC driver connection string",
-        "insertModeBlocklist": "Insert mode core blocklist"
+        "insertModeBlocklist": "Insert mode core blocklist",
+        "playtime": {
+          "title": "Playtime Limits",
+          "enabled": "Enable playtime limits",
+          "dailyLimit": "Daily limit",
+          "sessionLimit": "Session limit",
+          "sessionReset": "Session reset timeout",
+          "hours": "Hours",
+          "minutes": "Minutes",
+          "neverReset": "Never reset (0 = keeps session active until daily limit)",
+          "currentSession": "Current Session",
+          "dailyUsage": "Daily Usage",
+          "stateReset": "Reset",
+          "stateActive": "Active",
+          "stateCooldown": "Cooldown",
+          "sessionDuration": "Duration",
+          "sessionRemaining": "Remaining",
+          "dailyUsageToday": "Used today",
+          "dailyRemaining": "Remaining",
+          "cooldownRemaining": "Cooldown ends in",
+          "warningToast": "{{remaining}} remaining until {{type}} limit",
+          "reachedToast": "{{type}} limit reached"
+        }
       },
       "app": {
         "title": "App Settings",

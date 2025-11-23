@@ -10,6 +10,8 @@ import {
   IndexResponse,
   Notification,
   PlayingResponse,
+  PlaytimeLimitReachedParams,
+  PlaytimeLimitWarningParams,
   TokenResponse
 } from "../lib/models.ts";
 import {
@@ -19,6 +21,7 @@ import {
   NotificationRequest
 } from "../lib/coreApi.ts";
 import { useStatusStore, ConnectionState } from "../lib/store.ts";
+import { formatDurationDisplay } from "../lib/utils.ts";
 
 export function CoreApiWebSocket() {
   const { t } = useTranslation();
@@ -358,6 +361,35 @@ export function CoreApiWebSocket() {
                     case Notification.TokensScanned:
                       activeToken(v.params as TokenResponse);
                       break;
+                    case Notification.PlaytimeLimitWarning: {
+                      const warningParams = v.params as PlaytimeLimitWarningParams;
+                      const remainingTime = formatDurationDisplay(warningParams.remaining);
+                      const limitType = warningParams.type === "daily" ? t("settings.core.playtime.dailyLimit") : t("settings.core.playtime.sessionLimit");
+                      toast(
+                        t("settings.core.playtime.warningToast", {
+                          remaining: remainingTime,
+                          type: limitType
+                        }),
+                        {
+                          icon: "⏰",
+                          duration: 5000
+                        }
+                      );
+                      break;
+                    }
+                    case Notification.PlaytimeLimitReached: {
+                      const reachedParams = v.params as PlaytimeLimitReachedParams;
+                      const limitType = reachedParams.reason === "daily" ? t("settings.core.playtime.dailyLimit") : t("settings.core.playtime.sessionLimit");
+                      toast.error(
+                        t("settings.core.playtime.reachedToast", {
+                          type: limitType
+                        }),
+                        {
+                          duration: 6000
+                        }
+                      );
+                      break;
+                    }
                     default:
                       console.warn("Unknown notification method:", v.method);
                   }
