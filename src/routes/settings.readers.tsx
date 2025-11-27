@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { useState } from "react";
@@ -14,11 +15,12 @@ import {
   selectShakeSettings
 } from "../lib/preferencesStore";
 import { BackIcon, CheckIcon } from "../lib/images";
-import { ScanSettings } from "../components/home/ScanSettings.tsx";
 import { SystemSelector } from "../components/SystemSelector";
 import { Button } from "../components/wui/Button";
 import { useProPurchase } from "../components/ProPurchase";
 import { ZapScriptInput } from "../components/ZapScriptInput";
+import { CoreAPI } from "../lib/coreApi.ts";
+import { UpdateSettingsRequest } from "../lib/models.ts";
 
 interface LoaderData {
   restartScan: boolean;
@@ -30,7 +32,7 @@ interface LoaderData {
   shakeZapscript: string;
 }
 
-export const Route = createFileRoute("/settings/app")({
+export const Route = createFileRoute("/settings/readers")({
   loader: (): LoaderData => {
     const state = usePreferencesStore.getState();
     return {
@@ -43,17 +45,29 @@ export const Route = createFileRoute("/settings/app")({
       shakeZapscript: state.shakeZapscript
     };
   },
-  component: AppSettings
+  component: ReadersSettings
 });
 
-function AppSettings() {
+function ReadersSettings() {
   const initData = Route.useLoaderData();
   const connected = useStatusStore((state) => state.connected);
   const [systemPickerOpen, setSystemPickerOpen] = useState(false);
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
   const accelerometerAvailable = usePreferencesStore((state) => state.accelerometerAvailable);
 
-  // Get app settings from store (useShallow prevents infinite re-renders)
+  // Core settings query
+  const { data: coreSettings, refetch, isPending } = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => CoreAPI.settings()
+  });
+
+  const updateCoreSetting = useMutation({
+    mutationFn: (params: UpdateSettingsRequest) =>
+      CoreAPI.settingsUpdate(params),
+    onSuccess: () => refetch()
+  });
+
+  // Get app settings from store
   const {
     restartScan,
     launchOnScan,
@@ -64,7 +78,7 @@ function AppSettings() {
     setPreferRemoteWriter
   } = usePreferencesStore(useShallow(selectAppSettings));
 
-  // Get shake settings from store (useShallow prevents infinite re-renders)
+  // Get shake settings from store
   const {
     shakeEnabled,
     shakeMode,
@@ -99,6 +113,11 @@ function AppSettings() {
     preventScrollOnSwipe: false
   });
 
+  // Show blank page while loading to prevent flicker
+  if (isPending) {
+    return null;
+  }
+
   return (
     <PageFrame
       {...swipeHandlers}
@@ -111,31 +130,135 @@ function AppSettings() {
         </button>
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">{t("settings.app.title")}</h1>
+        <h1 className="text-foreground text-xl">{t("settings.readers.title")}</h1>
       }
     >
       <div className="flex flex-col gap-3">
-        <ScanSettings
-          connected={connected}
-          restartScan={restartScan}
-          setRestartScan={setRestartScan}
-          launchOnScan={launchOnScan}
-          setLaunchOnScan={setLaunchOnScan}
+        {/* Sound Effects - from Core */}
+        <ToggleSwitch
+          label={t("settings.readers.soundEffects")}
+          value={coreSettings?.audioScanFeedback ?? false}
+          setValue={(v) => updateCoreSetting.mutate({ audioScanFeedback: v })}
+          disabled={!connected}
         />
 
+        {/* Auto Detect - from Core */}
+        <ToggleSwitch
+          label={t("settings.readers.autoDetect")}
+          value={coreSettings?.readersAutoDetect ?? false}
+          setValue={(v) => updateCoreSetting.mutate({ readersAutoDetect: v })}
+          disabled={!connected}
+        />
+
+        {/* Scan Mode - from Core */}
+        <div className="py-2">
+          <span>{t("settings.readers.scanMode")}</span>
+          <div className="flex flex-row mt-2" role="group">
+            <button
+              type="button"
+              className={classNames(
+                "flex",
+                "flex-row",
+                "w-full",
+                "rounded-s-full",
+                "items-center",
+                "justify-center",
+                "py-1",
+                "font-medium",
+                "gap-1",
+                "tracking-[0.1px]",
+                "h-9",
+                "border",
+                "border-solid",
+                "border-bd-filled",
+                {
+                  "bg-button-pattern":
+                    coreSettings?.readersScanMode === "tap" && connected
+                },
+                {
+                  "bg-background": !connected,
+                  "border-foreground-disabled": !connected,
+                  "text-foreground-disabled": !connected
+                }
+              )}
+              onClick={() => updateCoreSetting.mutate({ readersScanMode: "tap" })}
+            >
+              {coreSettings?.readersScanMode === "tap" && connected && (
+                <CheckIcon size="28" />
+              )}
+              {t("settings.tapMode")}
+            </button>
+            <button
+              type="button"
+              className={classNames(
+                "flex",
+                "flex-row",
+                "w-full",
+                "rounded-e-full",
+                "items-center",
+                "justify-center",
+                "py-1",
+                "font-medium",
+                "gap-1",
+                "tracking-[0.1px]",
+                "h-9",
+                "border",
+                "border-solid",
+                "border-bd-filled",
+                {
+                  "bg-button-pattern":
+                    coreSettings?.readersScanMode === "hold" && connected
+                },
+                {
+                  "bg-background": !connected,
+                  "border-foreground-disabled": !connected,
+                  "text-foreground-disabled": !connected
+                }
+              )}
+              onClick={() => updateCoreSetting.mutate({ readersScanMode: "hold" })}
+            >
+              {coreSettings?.readersScanMode === "hold" && connected && (
+                <CheckIcon size="28" />
+              )}
+              {t("settings.insertMode")}
+            </button>
+          </div>
+          {coreSettings?.readersScanMode === "hold" && connected && (
+            <p className="pt-1 text-sm">{t("settings.insertHelp")}</p>
+          )}
+        </div>
+
+        {/* Continuous Scan - from App (always shown) */}
+        <ToggleSwitch
+          label={t("settings.readers.continuousScan")}
+          value={restartScan}
+          setValue={setRestartScan}
+        />
+
+        {/* Launch On Scan - from App (native only) */}
+        {Capacitor.isNativePlatform() && connected && (
+          <ToggleSwitch
+            label={t("settings.readers.launchOnScan")}
+            value={launchOnScan}
+            setValue={setLaunchOnScan}
+          />
+        )}
+
+        {/* Prefer Remote Writer - from App (native + NFC) */}
         {Capacitor.isNativePlatform() && nfcAvailable && (
           <ToggleSwitch
-            label={t("settings.app.preferRemoteWriter")}
+            label={t("settings.readers.preferRemoteWriter")}
             value={preferRemoteWriter}
             setValue={setPreferRemoteWriter}
           />
         )}
 
+        {/* Shake to Launch - from App (native + accelerometer, Pro feature) */}
         {Capacitor.isNativePlatform() && accelerometerAvailable && (
           <ToggleSwitch
             label={
               <>
-                {t("settings.app.shakeToLaunch")}
+                {t("settings.readers.shakeToLaunch")}
                 {!launcherAccess && (
                   <span className="text-muted-foreground">
                     {" "}
@@ -268,7 +391,6 @@ function AppSettings() {
         isOpen={systemPickerOpen}
         onClose={() => setSystemPickerOpen(false)}
         onSelect={(systems) => {
-          // If "all" is selected (systems array is empty or contains "all")
           const selectedSystem = systems.length === 0 ? "all" : systems[0];
           setShakeZapscript(`**launch.random:${selectedSystem}`);
         }}

@@ -184,9 +184,9 @@ describe("Settings Index Route", () => {
     expect(settingsSource).toMatch(/TextInput/);
     expect(settingsSource).toMatch(/settings\.device/);
     expect(settingsSource).toMatch(/settings\.designer/);
-    expect(settingsSource).toMatch(/settings\.app\.title/);
-    expect(settingsSource).toMatch(/settings\.core\.title/);
-    expect(settingsSource).toMatch(/settings\.logs\.title/);
+    expect(settingsSource).toMatch(/settings\.readers\.title/);
+    expect(settingsSource).toMatch(/settings\.playtime\.title/);
+    expect(settingsSource).toMatch(/settings\.advanced\.title/);
     expect(settingsSource).toMatch(/settings\.help\.title/);
     expect(settingsSource).toMatch(/settings\.about\.title/);
   });

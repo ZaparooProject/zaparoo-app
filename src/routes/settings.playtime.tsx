@@ -8,29 +8,16 @@ import { ToggleSwitch } from "../components/wui/ToggleSwitch";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { useStatusStore } from "../lib/store";
 import { PageFrame } from "../components/PageFrame";
-import { UpdateSettingsRequest } from "../lib/models.ts";
-import { BackIcon, CheckIcon } from "../lib/images";
+import { BackIcon } from "../lib/images";
 import { TextInput } from "../components/wui/TextInput";
 import { formatDuration, formatDurationDisplay, parseDuration } from "../lib/utils";
 
-export const Route = createFileRoute("/settings/core")({
-  component: CoreSettings
+export const Route = createFileRoute("/settings/playtime")({
+  component: PlaytimeSettings
 });
 
-function CoreSettings() {
+function PlaytimeSettings() {
   const connected = useStatusStore((state) => state.connected);
-
-  const { data, refetch } = useQuery({
-    queryKey: ["settings"],
-    queryFn: () => CoreAPI.settings()
-  });
-
-  const update = useMutation({
-    mutationFn: (params: UpdateSettingsRequest) =>
-      CoreAPI.settingsUpdate(params),
-    onSuccess: () => refetch()
-  });
-
   const { t } = useTranslation();
 
   const navigate = useNavigate();
@@ -38,143 +25,6 @@ function CoreSettings() {
     onSwipeRight: () => navigate({ to: "/settings" }),
     preventScrollOnSwipe: false
   });
-
-  return (
-    <PageFrame
-      {...swipeHandlers}
-      headerLeft={
-        <button onClick={() => navigate({ to: "/settings" })} className="cursor-pointer">
-          <BackIcon size="24" />
-        </button>
-      }
-      headerCenter={
-        <h1 className="text-foreground text-xl">{t("settings.core.title")}</h1>
-      }
-    >
-        <div className="py-2">
-          <ToggleSwitch
-            label={t("settings.core.soundEffects")}
-            value={data?.audioScanFeedback ?? false}
-            setValue={(v) => update.mutate({ audioScanFeedback: v })}
-            disabled={!connected}
-          />
-        </div>
-
-        <div className="py-2">
-          <ToggleSwitch
-            label={t("settings.core.autoDetect")}
-            value={data?.readersAutoDetect ?? false}
-            setValue={(v) => update.mutate({ readersAutoDetect: v })}
-            disabled={!connected}
-          />
-        </div>
-
-        <div className="py-2">
-          <ToggleSwitch
-            label={t("settings.core.debug")}
-            value={data?.debugLogging ?? false}
-            setValue={(v) => update.mutate({ debugLogging: v })}
-            disabled={!connected}
-          />
-        </div>
-
-        <div className="py-2">
-          <span>{t("settings.modeLabel")}</span>
-          <div className="flex flex-row mt-2" role="group">
-            <button
-              type="button"
-              className={classNames(
-                "flex",
-                "flex-row",
-                "w-full",
-                "rounded-s-full",
-                "items-center",
-                "justify-center",
-                "py-1",
-                "font-medium",
-                "gap-1",
-                "tracking-[0.1px]",
-                "h-9",
-                "border",
-                "border-solid",
-                "border-bd-filled",
-                {
-                  "bg-button-pattern":
-                    data?.readersScanMode === "tap" && connected
-                },
-                {
-                  "bg-background": !connected,
-                  "border-foreground-disabled": !connected,
-                  "text-foreground-disabled": !connected
-                }
-              )}
-              onClick={() => update.mutate({ readersScanMode: "tap" })}
-            >
-              {data?.readersScanMode === "tap" && connected && (
-                <CheckIcon size="28" />
-              )}
-              {t("settings.tapMode")}
-            </button>
-            <button
-              type="button"
-              className={classNames(
-                "flex",
-                "flex-row",
-                "w-full",
-                "rounded-e-full",
-                "items-center",
-                "justify-center",
-                "py-1",
-                "font-medium",
-                "gap-1",
-                "tracking-[0.1px]",
-                "h-9",
-                "border",
-                "border-solid",
-                "border-bd-filled",
-                {
-                  "bg-button-pattern":
-                    data?.readersScanMode === "hold" && connected
-                },
-                {
-                  "bg-background": !connected,
-                  "border-foreground-disabled": !connected,
-                  "text-foreground-disabled": !connected
-                }
-              )}
-              onClick={() => update.mutate({ readersScanMode: "hold" })}
-            >
-              {data?.readersScanMode === "hold" && connected && (
-                <CheckIcon size="28" />
-              )}
-              {t("settings.insertMode")}
-            </button>
-          </div>
-          {data?.readersScanMode === "hold" && connected && (
-            <p className="pt-1 text-sm">{t("settings.insertHelp")}</p>
-          )}
-        </div>
-
-        {/*<div className="flex flex-col gap-4 pt-1.5">*/}
-        {/*  <TextInput*/}
-        {/*    label={t("settings.core.insertModeBlocklist")}*/}
-        {/*    placeholder="ao486,Gamate,X68000"*/}
-        {/*    value={data?.readersScanIgnoreSystems.join(",")}*/}
-        {/*    saveValue={(v: string) =>*/}
-        {/*      update.mutate({ readersScanIgnoreSystems: v.split(",") })*/}
-        {/*    }*/}
-        {/*    disabled={!connected}*/}
-        {/*  />*/}
-        {/*</div>*/}
-
-        {/* Playtime Limits Section */}
-        <PlaytimeLimitsSection connected={connected} />
-      </PageFrame>
-  );
-}
-
-function PlaytimeLimitsSection({ connected }: { connected: boolean }) {
-  const { t } = useTranslation();
 
   // Local state for form inputs
   const [dailyHours, setDailyHours] = useState("0");
@@ -189,7 +39,7 @@ function PlaytimeLimitsSection({ connected }: { connected: boolean }) {
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Fetch playtime limits configuration
-  const { data: limitsConfig, refetch: refetchLimits } = useQuery({
+  const { data: limitsConfig, refetch: refetchLimits, isPending } = useQuery({
     queryKey: ["playtime", "limits"],
     queryFn: () => CoreAPI.playtimeLimits(),
     enabled: connected,
@@ -201,7 +51,7 @@ function PlaytimeLimitsSection({ connected }: { connected: boolean }) {
     queryKey: ["playtime", "status"],
     queryFn: () => CoreAPI.playtime(),
     enabled: connected && limitsConfig?.enabled === true,
-    refetchInterval: limitsConfig?.enabled ? 30000 : false // Refresh every 30s when enabled
+    refetchInterval: limitsConfig?.enabled ? 30000 : false
   });
 
   // Update mutation
@@ -301,10 +151,6 @@ function PlaytimeLimitsSection({ connected }: { connected: boolean }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetMinutes]);
 
-  if (!connected) {
-    return null;
-  }
-
   const handleEnabledToggle = (enabled: boolean) => {
     updateMutation.mutate({ enabled });
   };
@@ -333,21 +179,36 @@ function PlaytimeLimitsSection({ connected }: { connected: boolean }) {
     }
   };
 
+  // Show blank page while loading to prevent flicker
+  if (isPending) {
+    return null;
+  }
+
   return (
-    <div className="flex flex-col gap-3 mt-6">
-      <h2 className="text-lg font-semibold">{t("settings.core.playtime.title")}</h2>
+    <PageFrame
+      {...swipeHandlers}
+      headerLeft={
+        <button onClick={() => navigate({ to: "/settings" })} className="cursor-pointer">
+          <BackIcon size="24" />
+        </button>
+      }
+      headerCenter={
+        <h1 className="text-foreground text-xl">{t("settings.playtime.title")}</h1>
+      }
+    >
+      {!connected ? (
+        <p className="text-muted-foreground">{t("settings.logs.notConnected")}</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <ToggleSwitch
+            label={t("settings.core.playtime.enabled")}
+            value={limitsConfig?.enabled ?? false}
+            setValue={handleEnabledToggle}
+            disabled={!connected}
+          />
 
-      <ToggleSwitch
-        label={t("settings.core.playtime.enabled")}
-        value={limitsConfig?.enabled ?? false}
-        setValue={handleEnabledToggle}
-        disabled={!connected}
-      />
-
-      {limitsConfig?.enabled && (
-        <>
-          {/* Status Display */}
-          {playtimeStatus && (
+          {/* Status Display - only shown when enabled and has data */}
+          {limitsConfig?.enabled && playtimeStatus && (
             <div className="flex flex-col gap-2 p-3 rounded-lg bg-background-secondary border border-bd-filled">
               {/* Session Status */}
               <div className="flex flex-col gap-2">
@@ -391,11 +252,13 @@ function PlaytimeLimitsSection({ connected }: { connected: boolean }) {
             </div>
           )}
 
-          {/* Configuration Inputs */}
+          {/* Configuration Inputs - always visible, disabled when feature is off */}
           <div className="flex flex-col gap-3">
             {/* Daily Limit */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">{t("settings.core.playtime.dailyLimit")}</label>
+              <label className={classNames("text-sm font-medium", { "text-muted-foreground": !limitsConfig?.enabled })}>
+                {t("settings.core.playtime.dailyLimit")}
+              </label>
               <div className="flex gap-2">
                 <TextInput
                   type="number"
@@ -403,7 +266,7 @@ function PlaytimeLimitsSection({ connected }: { connected: boolean }) {
                   value={dailyHours}
                   setValue={setDailyHours}
                   label={t("settings.core.playtime.hours")}
-                  disabled={!connected}
+                  disabled={!connected || !limitsConfig?.enabled}
                 />
                 <TextInput
                   type="number"
@@ -411,14 +274,16 @@ function PlaytimeLimitsSection({ connected }: { connected: boolean }) {
                   value={dailyMinutes}
                   setValue={setDailyMinutes}
                   label={t("settings.core.playtime.minutes")}
-                  disabled={!connected}
+                  disabled={!connected || !limitsConfig?.enabled}
                 />
               </div>
             </div>
 
             {/* Session Limit */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">{t("settings.core.playtime.sessionLimit")}</label>
+              <label className={classNames("text-sm font-medium", { "text-muted-foreground": !limitsConfig?.enabled })}>
+                {t("settings.core.playtime.sessionLimit")}
+              </label>
               <div className="flex gap-2">
                 <TextInput
                   type="number"
@@ -426,7 +291,7 @@ function PlaytimeLimitsSection({ connected }: { connected: boolean }) {
                   value={sessionHours}
                   setValue={setSessionHours}
                   label={t("settings.core.playtime.hours")}
-                  disabled={!connected}
+                  disabled={!connected || !limitsConfig?.enabled}
                 />
                 <TextInput
                   type="number"
@@ -434,29 +299,31 @@ function PlaytimeLimitsSection({ connected }: { connected: boolean }) {
                   value={sessionMinutes}
                   setValue={setSessionMinutes}
                   label={t("settings.core.playtime.minutes")}
-                  disabled={!connected}
+                  disabled={!connected || !limitsConfig?.enabled}
                 />
               </div>
             </div>
 
             {/* Session Reset Timeout */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">{t("settings.core.playtime.sessionReset")}</label>
+              <label className={classNames("text-sm font-medium", { "text-muted-foreground": !limitsConfig?.enabled })}>
+                {t("settings.core.playtime.sessionReset")}
+              </label>
               <TextInput
                 type="number"
                 placeholder="0"
                 value={resetMinutes}
                 setValue={setResetMinutes}
                 label={t("settings.core.playtime.minutes")}
-                disabled={!connected}
+                disabled={!connected || !limitsConfig?.enabled}
               />
               <span className="text-xs text-muted-foreground">
                 {t("settings.core.playtime.neverReset")}
               </span>
             </div>
           </div>
-        </>
+        </div>
       )}
-    </div>
+    </PageFrame>
   );
 }

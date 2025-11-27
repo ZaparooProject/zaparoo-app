@@ -271,6 +271,24 @@
         "wizzodev": "Wizzo.dev Patrons",
         "joinPatreon": "Join the Patreon"
       },
+      "readers": {
+        "title": "Readers",
+        "soundEffects": "Play sound effects on scan",
+        "autoDetect": "Auto-detect external NFC reader",
+        "scanMode": "Scan mode",
+        "continuousScan": "Continuous scanning",
+        "launchOnScan": "Launch on scan",
+        "preferRemoteWriter": "Prefer connected reader for writing",
+        "shakeToLaunch": "Shake to launch"
+      },
+      "playtime": {
+        "title": "Playtime"
+      },
+      "advanced": {
+        "title": "Advanced",
+        "debugLogging": "Debug logging",
+        "viewLogs": "View logs"
+      },
       "core": {
         "title": "Core Settings",
         "soundEffects": "Play sounds effects on scan",

@@ -54,7 +54,7 @@ function Settings() {
     (state) => state.resetConnectionState
   );
 
-  const version = useQuery({
+  const { data: version, isSuccess: versionSuccess, isPending: versionPending } = useQuery({
     queryKey: ["version"],
     queryFn: () => CoreAPI.version()
   });
@@ -82,6 +82,11 @@ function Settings() {
     setAddress(newAddress);
   };
 
+  // Show blank page while loading to prevent flicker
+  if (versionPending) {
+    return null;
+  }
+
   return (
     <>
       <PageFrame title={t("settings.title")}>
@@ -102,10 +107,10 @@ function Settings() {
           </div>
 
           <div className="flex min-h-[1.5rem] flex-col gap-1">
-            {version.isSuccess && (
+            {versionSuccess && version && (
               <div className="flex flex-row items-center justify-between gap-2">
-                <div>Platform: {version.data.platform}</div>
-                <div>Version: {version.data.version}</div>
+                <div>Platform: {version.platform}</div>
+                <div>Version: {version.version}</div>
               </div>
             )}
             {connectionError !== "" && (
@@ -232,25 +237,23 @@ function Settings() {
             </select>
           </div>
 
-          {Capacitor.isNativePlatform() && (
-            <Link to="/settings/app">
-              <div className="flex flex-row items-center justify-between">
-                <p>{t("settings.app.title")}</p>
-                <NextIcon size="20" />
-              </div>
-            </Link>
-          )}
-
-          <Link to="/settings/core">
+          <Link to="/settings/readers">
             <div className="flex flex-row items-center justify-between">
-              <p>{t("settings.core.title")}</p>
+              <p>{t("settings.readers.title")}</p>
               <NextIcon size="20" />
             </div>
           </Link>
 
-          <Link to="/settings/logs">
+          <Link to="/settings/playtime">
             <div className="flex flex-row items-center justify-between">
-              <p>{t("settings.logs.title")}</p>
+              <p>{t("settings.playtime.title")}</p>
+              <NextIcon size="20" />
+            </div>
+          </Link>
+
+          <Link to="/settings/advanced">
+            <div className="flex flex-row items-center justify-between">
+              <p>{t("settings.advanced.title")}</p>
               <NextIcon size="20" />
             </div>
           </Link>

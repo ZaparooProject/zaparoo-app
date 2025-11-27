@@ -49,8 +49,7 @@ function Logs() {
     queryKey: ["logs"],
     queryFn: () => CoreAPI.settingsLogsDownload(),
     enabled: connected,
-    refetchOnWindowFocus: false,
-    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: false
   });
 
   // Parse JSONL content into structured log entries
@@ -193,6 +192,11 @@ function Logs() {
       return newSet;
     });
   };
+
+  // Show blank page while loading to prevent flicker
+  if (logsQuery.isPending) {
+    return null;
+  }
 
   return (
     <>

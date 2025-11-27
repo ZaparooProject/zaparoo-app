@@ -13,7 +13,13 @@ import { ThemeProvider } from "./components/theme-provider";
 
 initializeApp(firebaseConfig);
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30000 // 30 seconds - prevents refetch flicker on navigation
+    }
+  }
+});
 
 Preferences.get({ key: "apiUrl" }).then((res) => {
   if (res.value && localStorage.getItem("apiUrl") === null) {

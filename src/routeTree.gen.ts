@@ -12,11 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as CreateIndexRouteImport } from './routes/create.index'
+import { Route as SettingsReadersRouteImport } from './routes/settings.readers'
+import { Route as SettingsPlaytimeRouteImport } from './routes/settings.playtime'
 import { Route as SettingsOnlineRouteImport } from './routes/settings.online'
 import { Route as SettingsLogsRouteImport } from './routes/settings.logs'
 import { Route as SettingsHelpRouteImport } from './routes/settings.help'
-import { Route as SettingsCoreRouteImport } from './routes/settings.core'
-import { Route as SettingsAppRouteImport } from './routes/settings.app'
+import { Route as SettingsAdvancedRouteImport } from './routes/settings.advanced'
 import { Route as SettingsAboutRouteImport } from './routes/settings.about'
 import { Route as CreateTextRouteImport } from './routes/create.text'
 import { Route as CreateSearchRouteImport } from './routes/create.search'
@@ -39,6 +40,16 @@ const CreateIndexRoute = CreateIndexRouteImport.update({
   path: '/create/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsReadersRoute = SettingsReadersRouteImport.update({
+  id: '/settings/readers',
+  path: '/settings/readers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsPlaytimeRoute = SettingsPlaytimeRouteImport.update({
+  id: '/settings/playtime',
+  path: '/settings/playtime',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsOnlineRoute = SettingsOnlineRouteImport.update({
   id: '/settings/online',
   path: '/settings/online',
@@ -54,14 +65,9 @@ const SettingsHelpRoute = SettingsHelpRouteImport.update({
   path: '/settings/help',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsCoreRoute = SettingsCoreRouteImport.update({
-  id: '/settings/core',
-  path: '/settings/core',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsAppRoute = SettingsAppRouteImport.update({
-  id: '/settings/app',
-  path: '/settings/app',
+const SettingsAdvancedRoute = SettingsAdvancedRouteImport.update({
+  id: '/settings/advanced',
+  path: '/settings/advanced',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsAboutRoute = SettingsAboutRouteImport.update({
@@ -103,11 +109,12 @@ export interface FileRoutesByFullPath {
   '/create/search': typeof CreateSearchRoute
   '/create/text': typeof CreateTextRoute
   '/settings/about': typeof SettingsAboutRoute
-  '/settings/app': typeof SettingsAppRoute
-  '/settings/core': typeof SettingsCoreRoute
+  '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/online': typeof SettingsOnlineRoute
+  '/settings/playtime': typeof SettingsPlaytimeRoute
+  '/settings/readers': typeof SettingsReadersRoute
   '/create': typeof CreateIndexRoute
   '/settings': typeof SettingsIndexRoute
 }
@@ -119,11 +126,12 @@ export interface FileRoutesByTo {
   '/create/search': typeof CreateSearchRoute
   '/create/text': typeof CreateTextRoute
   '/settings/about': typeof SettingsAboutRoute
-  '/settings/app': typeof SettingsAppRoute
-  '/settings/core': typeof SettingsCoreRoute
+  '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/online': typeof SettingsOnlineRoute
+  '/settings/playtime': typeof SettingsPlaytimeRoute
+  '/settings/readers': typeof SettingsReadersRoute
   '/create': typeof CreateIndexRoute
   '/settings': typeof SettingsIndexRoute
 }
@@ -136,11 +144,12 @@ export interface FileRoutesById {
   '/create/search': typeof CreateSearchRoute
   '/create/text': typeof CreateTextRoute
   '/settings/about': typeof SettingsAboutRoute
-  '/settings/app': typeof SettingsAppRoute
-  '/settings/core': typeof SettingsCoreRoute
+  '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/online': typeof SettingsOnlineRoute
+  '/settings/playtime': typeof SettingsPlaytimeRoute
+  '/settings/readers': typeof SettingsReadersRoute
   '/create/': typeof CreateIndexRoute
   '/settings/': typeof SettingsIndexRoute
 }
@@ -154,11 +163,12 @@ export interface FileRouteTypes {
     | '/create/search'
     | '/create/text'
     | '/settings/about'
-    | '/settings/app'
-    | '/settings/core'
+    | '/settings/advanced'
     | '/settings/help'
     | '/settings/logs'
     | '/settings/online'
+    | '/settings/playtime'
+    | '/settings/readers'
     | '/create'
     | '/settings'
   fileRoutesByTo: FileRoutesByTo
@@ -170,11 +180,12 @@ export interface FileRouteTypes {
     | '/create/search'
     | '/create/text'
     | '/settings/about'
-    | '/settings/app'
-    | '/settings/core'
+    | '/settings/advanced'
     | '/settings/help'
     | '/settings/logs'
     | '/settings/online'
+    | '/settings/playtime'
+    | '/settings/readers'
     | '/create'
     | '/settings'
   id:
@@ -186,11 +197,12 @@ export interface FileRouteTypes {
     | '/create/search'
     | '/create/text'
     | '/settings/about'
-    | '/settings/app'
-    | '/settings/core'
+    | '/settings/advanced'
     | '/settings/help'
     | '/settings/logs'
     | '/settings/online'
+    | '/settings/playtime'
+    | '/settings/readers'
     | '/create/'
     | '/settings/'
   fileRoutesById: FileRoutesById
@@ -203,11 +215,12 @@ export interface RootRouteChildren {
   CreateSearchRoute: typeof CreateSearchRoute
   CreateTextRoute: typeof CreateTextRoute
   SettingsAboutRoute: typeof SettingsAboutRoute
-  SettingsAppRoute: typeof SettingsAppRoute
-  SettingsCoreRoute: typeof SettingsCoreRoute
+  SettingsAdvancedRoute: typeof SettingsAdvancedRoute
   SettingsHelpRoute: typeof SettingsHelpRoute
   SettingsLogsRoute: typeof SettingsLogsRoute
   SettingsOnlineRoute: typeof SettingsOnlineRoute
+  SettingsPlaytimeRoute: typeof SettingsPlaytimeRoute
+  SettingsReadersRoute: typeof SettingsReadersRoute
   CreateIndexRoute: typeof CreateIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
@@ -235,6 +248,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreateIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/readers': {
+      id: '/settings/readers'
+      path: '/settings/readers'
+      fullPath: '/settings/readers'
+      preLoaderRoute: typeof SettingsReadersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/playtime': {
+      id: '/settings/playtime'
+      path: '/settings/playtime'
+      fullPath: '/settings/playtime'
+      preLoaderRoute: typeof SettingsPlaytimeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/online': {
       id: '/settings/online'
       path: '/settings/online'
@@ -256,18 +283,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsHelpRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings/core': {
-      id: '/settings/core'
-      path: '/settings/core'
-      fullPath: '/settings/core'
-      preLoaderRoute: typeof SettingsCoreRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/app': {
-      id: '/settings/app'
-      path: '/settings/app'
-      fullPath: '/settings/app'
-      preLoaderRoute: typeof SettingsAppRouteImport
+    '/settings/advanced': {
+      id: '/settings/advanced'
+      path: '/settings/advanced'
+      fullPath: '/settings/advanced'
+      preLoaderRoute: typeof SettingsAdvancedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/about': {
@@ -323,11 +343,12 @@ const rootRouteChildren: RootRouteChildren = {
   CreateSearchRoute: CreateSearchRoute,
   CreateTextRoute: CreateTextRoute,
   SettingsAboutRoute: SettingsAboutRoute,
-  SettingsAppRoute: SettingsAppRoute,
-  SettingsCoreRoute: SettingsCoreRoute,
+  SettingsAdvancedRoute: SettingsAdvancedRoute,
   SettingsHelpRoute: SettingsHelpRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsOnlineRoute: SettingsOnlineRoute,
+  SettingsPlaytimeRoute: SettingsPlaytimeRoute,
+  SettingsReadersRoute: SettingsReadersRoute,
   CreateIndexRoute: CreateIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
