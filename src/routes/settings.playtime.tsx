@@ -44,7 +44,8 @@ function PlaytimeSettings() {
     queryKey: ["playtime", "limits"],
     queryFn: () => CoreAPI.playtimeLimits(),
     enabled: connected,
-    refetchInterval: false
+    refetchOnMount: "always",
+    refetchInterval: 30000
   });
 
   // Fetch playtime status (for display)
@@ -52,7 +53,8 @@ function PlaytimeSettings() {
     queryKey: ["playtime", "status"],
     queryFn: () => CoreAPI.playtime(),
     enabled: connected && limitsConfig?.enabled === true,
-    refetchInterval: limitsConfig?.enabled ? 30000 : false
+    refetchOnMount: "always",
+    refetchInterval: 30000
   });
 
   // Update mutation
