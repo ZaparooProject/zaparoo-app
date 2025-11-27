@@ -193,13 +193,15 @@ describe("useWriteQueueProcessor", () => {
     vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(false);
 
     vi.mocked(useStatusStore).mockImplementation((selector: any) => {
+      const mockState = {
+        writeQueue: "test-content",
+        setWriteQueue: mockSetWriteQueue,
+        setWriteOpen: mockSetWriteOpen
+      };
       if (typeof selector === 'function') {
-        return selector({
-          writeQueue: "test-content",
-          setWriteQueue: mockSetWriteQueue
-        });
+        return selector(mockState);
       }
-      return mockSetWriteQueue;
+      return mockState;
     });
 
     renderHook(() => useWriteQueueProcessor());
@@ -250,13 +252,15 @@ describe("useWriteQueueProcessor", () => {
     mockNfcWriter.status = null;
 
     vi.mocked(useStatusStore).mockImplementation((selector: any) => {
+      const mockState = {
+        writeQueue: "test-content",
+        setWriteQueue: mockSetWriteQueue,
+        setWriteOpen: mockSetWriteOpen
+      };
       if (typeof selector === 'function') {
-        return selector({
-          writeQueue: "test-content",
-          setWriteQueue: mockSetWriteQueue
-        });
+        return selector(mockState);
       }
-      return mockSetWriteQueue;
+      return mockState;
     });
 
     renderHook(() => useWriteQueueProcessor());

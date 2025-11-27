@@ -234,7 +234,21 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
       },
     });
 
-    renderComponent();
+    const defaultProps = {
+      query: "test",
+      systems: [],
+      tags: [],
+      selectedResult: null,
+      setSelectedResult: vi.fn(),
+      hasSearched: true,
+      scrollContainerRef: { current: document.createElement("div") },
+    };
+
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <VirtualSearchResults {...defaultProps} />
+      </QueryClientProvider>
+    );
 
     await waitFor(() => {
       expect(mediaSearchSpy).toHaveBeenCalledTimes(1);
@@ -246,7 +260,12 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
       { index: 49, key: 49, start: 4900, size: 100 },
     ]);
 
-    renderComponent();
+    // Use rerender instead of creating a new render
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <VirtualSearchResults {...defaultProps} />
+      </QueryClientProvider>
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
