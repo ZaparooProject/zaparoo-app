@@ -22,11 +22,12 @@ export function ScanControls({
   onCameraScan
 }: ScanControlsProps) {
   const { t } = useTranslation();
+  const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
   const cameraAvailable = usePreferencesStore((state) => state.cameraAvailable);
 
   return (
     <>
-      {Capacitor.isNativePlatform() ? (
+      {Capacitor.isNativePlatform() && nfcAvailable ? (
         <div className="mt-8 mb-9 text-center">
           <div
             onClick={onScanButton}

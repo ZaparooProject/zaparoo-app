@@ -32,22 +32,9 @@ export function ScanSpinner(props: {
     }
   }, []);
 
+  // NFC not supported - return null to let parent handle graceful degradation
   if (!nfcSupported && Capacitor.isNativePlatform()) {
-    return (
-      <Card className="mx-2 mb-2">
-        <div className="flex flex-row items-center justify-between gap-3">
-          <div className="text-error px-1.5">
-            <WarningIcon size="24" />
-          </div>
-          <div className="flex grow flex-col text-left">
-            <span className="font-semibold">
-              {t("spinner.notSupportedLabel")}
-            </span>
-            <span className="text-sm">{t("spinner.notSupportedSub")}</span>
-          </div>
-        </div>
-      </Card>
-    );
+    return null;
   }
 
   if (!nfcEnabled) {
