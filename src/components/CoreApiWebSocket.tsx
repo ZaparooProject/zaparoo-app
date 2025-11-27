@@ -5,6 +5,7 @@ import { App } from "@capacitor/app";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
+import { Clock, AlertTriangle } from "lucide-react";
 import { WebSocketManager, WebSocketState } from "../lib/websocketManager.ts";
 import {
   IndexResponse,
@@ -364,14 +365,26 @@ export function CoreApiWebSocket() {
                     case Notification.PlaytimeLimitWarning: {
                       const warningParams = v.params as PlaytimeLimitWarningParams;
                       const remainingTime = formatDurationDisplay(warningParams.remaining);
-                      const limitType = warningParams.type === "daily" ? t("settings.core.playtime.dailyLimit") : t("settings.core.playtime.sessionLimit");
                       toast(
-                        t("settings.core.playtime.warningToast", {
-                          remaining: remainingTime,
-                          type: limitType
-                        }),
+                        (to) => (
+                          <span
+                            className="flex grow flex-col"
+                            onClick={() => toast.dismiss(to.id)}
+                            onKeyUp={(e) => (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            {t("settings.core.playtime.warningToast", {
+                              remaining: remainingTime
+                            })}
+                          </span>
+                        ),
                         {
-                          icon: "⏰",
+                          icon: (
+                            <span className="text-warning pl-1 pr-1">
+                              <Clock size={20} />
+                            </span>
+                          ),
                           duration: 5000
                         }
                       );
@@ -380,11 +393,26 @@ export function CoreApiWebSocket() {
                     case Notification.PlaytimeLimitReached: {
                       const reachedParams = v.params as PlaytimeLimitReachedParams;
                       const limitType = reachedParams.reason === "daily" ? t("settings.core.playtime.dailyLimit") : t("settings.core.playtime.sessionLimit");
-                      toast.error(
-                        t("settings.core.playtime.reachedToast", {
-                          type: limitType
-                        }),
+                      toast(
+                        (to) => (
+                          <span
+                            className="flex grow flex-col"
+                            onClick={() => toast.dismiss(to.id)}
+                            onKeyUp={(e) => (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            {t("settings.core.playtime.reachedToast", {
+                              type: limitType
+                            })}
+                          </span>
+                        ),
                         {
+                          icon: (
+                            <span className="text-error pl-1 pr-1">
+                              <AlertTriangle size={20} />
+                            </span>
+                          ),
                           duration: 6000
                         }
                       );

@@ -257,13 +257,13 @@ export interface PlaytimeLimitsConfig {
 export interface PlaytimeStatus {
   state: "reset" | "active" | "cooldown";
   sessionActive: boolean;
-  sessionStarted: string;
-  sessionDuration: string;
-  sessionCumulativeTime: string;
-  sessionRemaining: string;
+  sessionStarted?: string;
+  sessionDuration?: string;
+  sessionCumulativeTime?: string;
+  sessionRemaining?: string;
   cooldownRemaining?: string;
-  dailyUsageToday: string;
-  dailyRemaining: string;
+  dailyUsageToday?: string;
+  dailyRemaining?: string;
   limitsEnabled: boolean;
 }
 
@@ -277,8 +277,8 @@ export interface PlaytimeLimitsUpdateRequest {
 }
 
 export interface PlaytimeLimitWarningParams {
+  interval: string;
   remaining: string;
-  type: "daily" | "session";
 }
 
 export interface PlaytimeLimitReachedParams {

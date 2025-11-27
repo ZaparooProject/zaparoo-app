@@ -198,7 +198,9 @@ function PlaytimeSettings() {
       }
     >
       {!connected ? (
-        <p className="text-muted-foreground">{t("settings.logs.notConnected")}</p>
+        <div className="text-muted-foreground py-8 text-center text-sm">
+          {t("notConnected")}
+        </div>
       ) : (
         <div className="flex flex-col gap-3">
           <ToggleSwitch

@@ -68,9 +68,14 @@ export function formatDuration({ hours, minutes }: { hours: number; minutes: num
 /**
  * Format Go duration string for human-readable display
  * Examples: "4h" => "4h", "1h30m" => "1h 30m", "45m" => "45m", "90s" => "2m"
+ * Returns "-" for undefined/null values to indicate unavailable data
  */
-export function formatDurationDisplay(duration: string): string {
-  if (!duration || duration === "0") {
+export function formatDurationDisplay(duration: string | undefined | null): string {
+  if (duration === undefined || duration === null) {
+    return "-";
+  }
+
+  if (duration === "0" || duration === "0s" || duration === "") {
     return "0m";
   }
 

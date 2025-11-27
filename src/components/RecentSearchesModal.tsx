@@ -43,7 +43,7 @@ export function RecentSearchesModal({
     >
       <div className="flex flex-col gap-3 pt-2">
         {recentSearches.length === 0 ? (
-          <div className="text-center text-foreground-muted py-8">
+          <div className="text-center text-muted-foreground py-8">
             <p>{t("create.search.noRecentSearches")}</p>
             <p className="text-sm mt-2">{t("create.search.noRecentSearchesHint")}</p>
           </div>
@@ -62,7 +62,7 @@ export function RecentSearchesModal({
                       <span className="font-semibold text-sm">
                         {getSearchDisplayText(search)}
                       </span>
-                      <span className="text-xs text-foreground-muted">
+                      <span className="text-xs text-muted-foreground">
                         {new Date(search.timestamp).toLocaleString()}
                       </span>
                     </div>

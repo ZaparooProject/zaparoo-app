@@ -6,6 +6,7 @@
     "error": "Error: {{msg}}",
     "loading": "Loading...",
     "cancelling": "Cancelling...",
+    "notConnected": "Not connected to device",
     "yes": "Yes",
     "stopPlaying": "This will stop the playing media. You may lose any unsaved progress.",
     "nav": {
@@ -315,8 +316,8 @@
           "dailyUsageToday": "Used today",
           "dailyRemaining": "Remaining",
           "cooldownRemaining": "Cooldown ends in",
-          "warningToast": "{{remaining}} remaining until {{type}} limit",
-          "reachedToast": "{{type}} limit reached"
+          "warningToast": "{{remaining}} of playtime remaining",
+          "reachedToast": "{{type}} reached"
         }
       },
       "app": {

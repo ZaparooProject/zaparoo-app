@@ -283,7 +283,7 @@ function Logs() {
                 />
               </div>
               {logsQuery.data && logEntries.length > 0 && (
-                <div className="text-foreground-muted text-sm sm:whitespace-nowrap">
+                <div className="text-muted-foreground text-sm sm:whitespace-nowrap">
                   {searchTerm || Object.values(levelFilters).some((v) => !v) ? (
                     <>
                       Showing {filteredEntries.length} of {logEntries.length}{" "}
@@ -325,7 +325,7 @@ function Logs() {
                         {entry.level.charAt(0).toUpperCase() +
                           entry.level.slice(1)}
                       </span>
-                      <span className="text-foreground-muted text-xs">
+                      <span className="text-muted-foreground text-xs">
                         {formatTimestamp(entry.time)}
                       </span>
                     </div>
@@ -338,7 +338,7 @@ function Logs() {
                             : `${entry.message.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
                           <button
                             onClick={() => toggleExpandEntry(entry._index)}
-                            className="text-foreground-muted hover:text-foreground ml-2 cursor-pointer font-sans text-sm underline"
+                            className="text-muted-foreground hover:text-foreground ml-2 cursor-pointer font-sans text-sm underline"
                             type="button"
                           >
                             {expandedEntries.has(entry._index)
@@ -372,7 +372,7 @@ function Logs() {
                         return (
                           <div
                             key={key}
-                            className="text-foreground-muted mt-1 font-sans text-sm break-all"
+                            className="text-muted-foreground mt-1 font-sans text-sm break-all"
                           >
                             <span className="font-medium">{key}:</span>{" "}
                             {needsTruncation ? (
@@ -384,7 +384,7 @@ function Logs() {
                                   onClick={() =>
                                     toggleExpandField(entry._index, key)
                                   }
-                                  className="text-foreground-muted hover:text-foreground ml-2 cursor-pointer font-sans text-sm underline"
+                                  className="text-muted-foreground hover:text-foreground ml-2 cursor-pointer font-sans text-sm underline"
                                   type="button"
                                 >
                                   {isExpanded
@@ -405,13 +405,13 @@ function Logs() {
           )}
 
           {!connected && (
-            <div className="text-foreground-muted py-8 text-center text-sm">
-              {t("settings.logs.notConnected")}
+            <div className="text-muted-foreground py-8 text-center text-sm">
+              {t("notConnected")}
             </div>
           )}
 
           {connected && logsQuery.data && filteredEntries.length === 0 && (
-            <div className="text-foreground-muted py-8 text-center text-sm">
+            <div className="text-muted-foreground py-8 text-center text-sm">
               {t("settings.logs.noEntriesFound")}
             </div>
           )}
