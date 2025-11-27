@@ -18,6 +18,7 @@ import { BackIcon, CheckIcon } from "../lib/images";
 import { SystemSelector } from "../components/SystemSelector";
 import { Button } from "../components/wui/Button";
 import { useProPurchase } from "../components/ProPurchase";
+import { ProBadge } from "../components/ProBadge";
 import { ZapScriptInput } from "../components/ZapScriptInput";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { UpdateSettingsRequest } from "../lib/models.ts";
@@ -135,22 +136,6 @@ function ReadersSettings() {
       }
     >
       <div className="flex flex-col gap-3">
-        {/* Sound Effects - from Core */}
-        <ToggleSwitch
-          label={t("settings.readers.soundEffects")}
-          value={coreSettings?.audioScanFeedback ?? false}
-          setValue={(v) => updateCoreSetting.mutate({ audioScanFeedback: v })}
-          disabled={!connected}
-        />
-
-        {/* Auto Detect - from Core */}
-        <ToggleSwitch
-          label={t("settings.readers.autoDetect")}
-          value={coreSettings?.readersAutoDetect ?? false}
-          setValue={(v) => updateCoreSetting.mutate({ readersAutoDetect: v })}
-          disabled={!connected}
-        />
-
         {/* Scan Mode - from Core */}
         <div className="py-2">
           <span>{t("settings.readers.scanMode")}</span>
@@ -236,12 +221,19 @@ function ReadersSettings() {
           setValue={setRestartScan}
         />
 
-        {/* Launch On Scan - from App (native only) */}
+        {/* Launch On Scan - from App (native only, Pro feature) */}
         {Capacitor.isNativePlatform() && connected && (
           <ToggleSwitch
-            label={t("settings.readers.launchOnScan")}
-            value={launchOnScan}
+            label={
+              <>
+                {t("settings.readers.launchOnScan")}
+                {!launcherAccess && <ProBadge />}
+              </>
+            }
+            value={launcherAccess && launchOnScan}
             setValue={setLaunchOnScan}
+            disabled={!launcherAccess}
+            onDisabledClick={() => setProPurchaseModalOpen(true)}
           />
         )}
 
@@ -260,12 +252,7 @@ function ReadersSettings() {
             label={
               <>
                 {t("settings.readers.shakeToLaunch")}
-                {!launcherAccess && (
-                  <span className="text-muted-foreground">
-                    {" "}
-                    ({t("settings.app.proFeature")})
-                  </span>
-                )}
+                {!launcherAccess && <ProBadge />}
               </>
             }
             value={shakeEnabled}
@@ -386,6 +373,22 @@ function ReadersSettings() {
             )}
           </>
         )}
+
+        {/* Sound Effects - from Core */}
+        <ToggleSwitch
+          label={t("settings.readers.soundEffects")}
+          value={coreSettings?.audioScanFeedback ?? false}
+          setValue={(v) => updateCoreSetting.mutate({ audioScanFeedback: v })}
+          disabled={!connected}
+        />
+
+        {/* Auto Detect - from Core */}
+        <ToggleSwitch
+          label={t("settings.readers.autoDetect")}
+          value={coreSettings?.readersAutoDetect ?? false}
+          setValue={(v) => updateCoreSetting.mutate({ readersAutoDetect: v })}
+          disabled={!connected}
+        />
       </div>
 
       <SystemSelector

@@ -5,7 +5,7 @@ import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
-import { ArrowLeftRightIcon, TrashIcon } from "lucide-react";
+import { ArrowLeftRightIcon, TrashIcon, Check } from "lucide-react";
 import {
   RestorePuchasesButton,
   useProPurchase
@@ -54,7 +54,7 @@ function Settings() {
     (state) => state.resetConnectionState
   );
 
-  const { data: version, isSuccess: versionSuccess, isPending: versionPending } = useQuery({
+  const { data: version, isSuccess: versionSuccess } = useQuery({
     queryKey: ["version"],
     queryFn: () => CoreAPI.version()
   });
@@ -81,11 +81,6 @@ function Settings() {
     queryClient.invalidateQueries();
     setAddress(newAddress);
   };
-
-  // Show blank page while loading to prevent flicker
-  if (versionPending) {
-    return null;
-  }
 
   return (
     <>
@@ -190,11 +185,18 @@ function Settings() {
 
           {Capacitor.isNativePlatform() && (
             <div className="flex flex-col gap-5">
-              <Button
-                label={t("scan.purchaseProAction")}
-                disabled={proAccess}
-                onClick={() => setProPurchaseModalOpen(true)}
-              />
+              {proAccess ? (
+                <Button
+                  label={t("settings.app.proActive")}
+                  icon={<Check size={20} />}
+                  disabled
+                />
+              ) : (
+                <Button
+                  label={t("scan.purchaseProAction")}
+                  onClick={() => setProPurchaseModalOpen(true)}
+                />
+              )}
               <RestorePuchasesButton />
             </div>
           )}

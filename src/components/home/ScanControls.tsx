@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { QrCodeIcon } from "lucide-react";
+import { Camera } from "lucide-react";
 import { ScanSpinner } from "../ScanSpinner";
 import { Button } from "../wui/Button";
 import { ScanResult } from "../../lib/models";
@@ -48,7 +48,7 @@ export function ScanControls({
             variant="text"
             onClick={onCameraScan}
             label={t("scan.cameraMode")}
-            icon={<QrCodeIcon />}
+            icon={<Camera size={20} />}
           />
         </div>
       )}
