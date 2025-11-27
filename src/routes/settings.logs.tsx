@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useMemo, useRef } from "react";
@@ -27,7 +27,8 @@ export const Route = createFileRoute("/settings/logs")({
 
 function Logs() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const router = useRouter();
+  const goBack = () => router.history.back();
   const connected = useStatusStore((state) => state.connected);
   const [searchTerm, setSearchTerm] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -37,11 +38,13 @@ function Logs() {
     warn: true,
     error: true
   });
-  const [expandedEntries, setExpandedEntries] = useState<Set<number>>(new Set());
+  const [expandedEntries, setExpandedEntries] = useState<Set<number>>(
+    new Set()
+  );
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
 
   const swipeHandlers = useSmartSwipe({
-    onSwipeRight: () => navigate({ to: "/settings" }),
+    onSwipeRight: goBack,
     preventScrollOnSwipe: false
   });
 
@@ -58,7 +61,7 @@ function Logs() {
 
     try {
       const decodedContent = atob(logsQuery.data.content);
-      const lines = decodedContent.split('\n').filter(line => line.trim());
+      const lines = decodedContent.split("\n").filter((line) => line.trim());
 
       return lines.map((line, index) => {
         try {
@@ -81,7 +84,7 @@ function Logs() {
 
   // Filter and sort log entries
   const filteredEntries = useMemo(() => {
-    const filtered = logEntries.filter(entry => {
+    const filtered = logEntries.filter((entry) => {
       // Level filter
       const levelKey = entry.level.toLowerCase() as keyof typeof levelFilters;
       if (!levelFilters[levelKey] && levelFilters[levelKey] !== undefined) {
@@ -140,7 +143,6 @@ function Logs() {
     }
   };
 
-
   const formatTimestamp = (timeStr: string) => {
     try {
       const date = new Date(timeStr);
@@ -152,24 +154,24 @@ function Logs() {
 
   const getLevelColor = (level: string) => {
     switch (level.toLowerCase()) {
-      case 'error':
-        return 'text-red-500 bg-red-50 border-red-200';
-      case 'warn':
-      case 'warning':
-        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'info':
-        return 'text-blue-500 bg-blue-50 border-blue-200';
-      case 'debug':
-        return 'text-gray-500 bg-gray-50 border-gray-200';
+      case "error":
+        return "text-red-500 bg-red-50 border-red-200";
+      case "warn":
+      case "warning":
+        return "text-yellow-600 bg-yellow-50 border-yellow-200";
+      case "info":
+        return "text-blue-500 bg-blue-50 border-blue-200";
+      case "debug":
+        return "text-gray-500 bg-gray-50 border-gray-200";
       default:
-        return 'text-gray-600 bg-gray-50 border-gray-200';
+        return "text-gray-600 bg-gray-50 border-gray-200";
     }
   };
 
   const MESSAGE_TRUNCATE_LENGTH = 200;
 
   const toggleExpandEntry = (index: number) => {
-    setExpandedEntries(prev => {
+    setExpandedEntries((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(index)) {
         newSet.delete(index);
@@ -182,7 +184,7 @@ function Logs() {
 
   const toggleExpandField = (entryIndex: number, fieldKey: string) => {
     const fieldId = `${entryIndex}_${fieldKey}`;
-    setExpandedFields(prev => {
+    setExpandedFields((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(fieldId)) {
         newSet.delete(fieldId);
@@ -193,23 +195,17 @@ function Logs() {
     });
   };
 
-  // Show blank page while loading to prevent flicker
-  if (logsQuery.isPending) {
-    return null;
-  }
-
   return (
     <>
       <PageFrame
         {...swipeHandlers}
         headerLeft={
-          <HeaderButton
-            onClick={() => navigate({ to: "/settings" })}
-            icon={<BackIcon size="24" />}
-          />
+          <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
         }
         headerCenter={
-          <h1 className="text-foreground text-xl">{t("settings.logs.title")}</h1>
+          <h1 className="text-foreground text-xl">
+            {t("settings.logs.title")}
+          </h1>
         }
         headerRight={
           <div className="flex gap-2">
@@ -231,16 +227,17 @@ function Logs() {
               onClick={() => logsQuery.refetch()}
               disabled={!connected || logsQuery.isLoading}
               icon={<RefreshCw size="20" />}
-              title={logsQuery.isLoading ? t("loading") : t("settings.logs.refresh")}
+              title={
+                logsQuery.isLoading ? t("loading") : t("settings.logs.refresh")
+              }
             />
           </div>
         }
         scrollRef={scrollContainerRef}
       >
-        <div className="flex flex-col gap-3 h-full">
+        <div className="flex h-full flex-col gap-3">
           {/* Control Bar */}
           <div className="flex flex-col gap-3">
-
             {/* Search */}
             <TextInput
               label=""
@@ -250,37 +247,48 @@ function Logs() {
             />
 
             {/* Filters and Entry Count */}
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-4">
-              <div className="flex flex-row gap-1.5 flex-wrap">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <div className="flex flex-row flex-wrap gap-1.5">
                 <ToggleChip
                   label="Debug"
                   state={levelFilters.debug}
-                  setState={(state) => setLevelFilters(prev => ({ ...prev, debug: state }))}
+                  setState={(state) =>
+                    setLevelFilters((prev) => ({ ...prev, debug: state }))
+                  }
                   compact
                 />
                 <ToggleChip
                   label="Info"
                   state={levelFilters.info}
-                  setState={(state) => setLevelFilters(prev => ({ ...prev, info: state }))}
+                  setState={(state) =>
+                    setLevelFilters((prev) => ({ ...prev, info: state }))
+                  }
                   compact
                 />
                 <ToggleChip
                   label="Warn"
                   state={levelFilters.warn}
-                  setState={(state) => setLevelFilters(prev => ({ ...prev, warn: state }))}
+                  setState={(state) =>
+                    setLevelFilters((prev) => ({ ...prev, warn: state }))
+                  }
                   compact
                 />
                 <ToggleChip
                   label="Error"
                   state={levelFilters.error}
-                  setState={(state) => setLevelFilters(prev => ({ ...prev, error: state }))}
+                  setState={(state) =>
+                    setLevelFilters((prev) => ({ ...prev, error: state }))
+                  }
                   compact
                 />
               </div>
               {logsQuery.data && logEntries.length > 0 && (
-                <div className="text-sm text-foreground-muted sm:whitespace-nowrap">
-                  {searchTerm || Object.values(levelFilters).some(v => !v) ? (
-                    <>Showing {filteredEntries.length} of {logEntries.length} entries</>
+                <div className="text-foreground-muted text-sm sm:whitespace-nowrap">
+                  {searchTerm || Object.values(levelFilters).some((v) => !v) ? (
+                    <>
+                      Showing {filteredEntries.length} of {logEntries.length}{" "}
+                      entries
+                    </>
                   ) : (
                     <>{logEntries.length} entries</>
                   )}
@@ -288,9 +296,8 @@ function Logs() {
               )}
             </div>
 
-
             {logsQuery.isError && (
-              <p className="text-sm text-error">
+              <p className="text-error text-sm">
                 {t("settings.logs.fetchError")}
               </p>
             )}
@@ -298,12 +305,12 @@ function Logs() {
 
           {/* Log Entries */}
           {logsQuery.data && (
-            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+            <div className="flex-1 overflow-x-hidden overflow-y-auto">
               <div>
                 {filteredEntries.map((entry, index) => (
                   <div
                     key={entry._index}
-                    className="p-3 text-xs font-mono"
+                    className="p-3 font-mono text-xs"
                     style={{
                       borderBottom:
                         index === filteredEntries.length - 1
@@ -311,25 +318,27 @@ function Logs() {
                           : "1px solid rgba(255,255,255,0.6)"
                     }}
                   >
-                    <div className="flex flex-row items-center gap-2 mb-2 font-sans">
+                    <div className="mb-2 flex flex-row items-center gap-2 font-sans">
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${getLevelColor(entry.level)}`}
+                        className={`rounded-full px-2 py-1 text-xs font-medium ${getLevelColor(entry.level)}`}
                       >
-                        {entry.level.charAt(0).toUpperCase() + entry.level.slice(1)}
+                        {entry.level.charAt(0).toUpperCase() +
+                          entry.level.slice(1)}
                       </span>
                       <span className="text-foreground-muted text-xs">
                         {formatTimestamp(entry.time)}
                       </span>
                     </div>
-                    <div className="text-foreground whitespace-pre-wrap break-all font-mono text-sm">
-                      {entry.message && entry.message.length > MESSAGE_TRUNCATE_LENGTH ? (
+                    <div className="text-foreground font-mono text-sm break-all whitespace-pre-wrap">
+                      {entry.message &&
+                      entry.message.length > MESSAGE_TRUNCATE_LENGTH ? (
                         <>
                           {expandedEntries.has(entry._index)
                             ? entry.message
                             : `${entry.message.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
                           <button
                             onClick={() => toggleExpandEntry(entry._index)}
-                            className="ml-2 text-foreground-muted hover:text-foreground font-sans text-sm underline cursor-pointer"
+                            className="text-foreground-muted hover:text-foreground ml-2 cursor-pointer font-sans text-sm underline"
                             type="button"
                           >
                             {expandedEntries.has(entry._index)
@@ -342,38 +351,53 @@ function Logs() {
                       )}
                     </div>
                     {/* Additional fields */}
-                    {Object.entries(entry).filter(([key]) =>
-                      !['level', 'time', 'caller', 'message', '_index'].includes(key)
-                    ).map(([key, value]) => {
-                      const fieldId = `${entry._index}_${key}`;
-                      const valueStr = JSON.stringify(value);
-                      const isExpanded = expandedFields.has(fieldId);
-                      const needsTruncation = valueStr.length > MESSAGE_TRUNCATE_LENGTH;
+                    {Object.entries(entry)
+                      .filter(
+                        ([key]) =>
+                          ![
+                            "level",
+                            "time",
+                            "caller",
+                            "message",
+                            "_index"
+                          ].includes(key)
+                      )
+                      .map(([key, value]) => {
+                        const fieldId = `${entry._index}_${key}`;
+                        const valueStr = JSON.stringify(value);
+                        const isExpanded = expandedFields.has(fieldId);
+                        const needsTruncation =
+                          valueStr.length > MESSAGE_TRUNCATE_LENGTH;
 
-                      return (
-                        <div key={key} className="mt-1 text-foreground-muted text-sm font-sans break-all">
-                          <span className="font-medium">{key}:</span>{" "}
-                          {needsTruncation ? (
-                            <>
-                              {isExpanded
-                                ? valueStr
-                                : `${valueStr.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
-                              <button
-                                onClick={() => toggleExpandField(entry._index, key)}
-                                className="ml-2 text-foreground-muted hover:text-foreground font-sans text-sm underline cursor-pointer"
-                                type="button"
-                              >
+                        return (
+                          <div
+                            key={key}
+                            className="text-foreground-muted mt-1 font-sans text-sm break-all"
+                          >
+                            <span className="font-medium">{key}:</span>{" "}
+                            {needsTruncation ? (
+                              <>
                                 {isExpanded
-                                  ? t("settings.logs.showLess")
-                                  : t("settings.logs.showMore")}
-                              </button>
-                            </>
-                          ) : (
-                            valueStr
-                          )}
-                        </div>
-                      );
-                    })}
+                                  ? valueStr
+                                  : `${valueStr.slice(0, MESSAGE_TRUNCATE_LENGTH)}...`}
+                                <button
+                                  onClick={() =>
+                                    toggleExpandField(entry._index, key)
+                                  }
+                                  className="text-foreground-muted hover:text-foreground ml-2 cursor-pointer font-sans text-sm underline"
+                                  type="button"
+                                >
+                                  {isExpanded
+                                    ? t("settings.logs.showLess")
+                                    : t("settings.logs.showMore")}
+                                </button>
+                              </>
+                            ) : (
+                              valueStr
+                            )}
+                          </div>
+                        );
+                      })}
                   </div>
                 ))}
               </div>
@@ -381,22 +405,19 @@ function Logs() {
           )}
 
           {!connected && (
-            <div className="text-center text-sm text-foreground-muted py-8">
+            <div className="text-foreground-muted py-8 text-center text-sm">
               {t("settings.logs.notConnected")}
             </div>
           )}
 
           {connected && logsQuery.data && filteredEntries.length === 0 && (
-            <div className="text-center text-sm text-foreground-muted py-8">
+            <div className="text-foreground-muted py-8 text-center text-sm">
               {t("settings.logs.noEntriesFound")}
             </div>
           )}
         </div>
       </PageFrame>
-      <BackToTop
-        scrollContainerRef={scrollContainerRef}
-        threshold={200}
-      />
+      <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
     </>
   );
 }

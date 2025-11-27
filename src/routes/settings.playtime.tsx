@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useEffect, useRef } from "react";
@@ -20,9 +20,10 @@ function PlaytimeSettings() {
   const connected = useStatusStore((state) => state.connected);
   const { t } = useTranslation();
 
-  const navigate = useNavigate();
+  const router = useRouter();
+  const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
-    onSwipeRight: () => navigate({ to: "/settings" }),
+    onSwipeRight: goBack,
     preventScrollOnSwipe: false
   });
 
@@ -188,7 +189,7 @@ function PlaytimeSettings() {
     <PageFrame
       {...swipeHandlers}
       headerLeft={
-        <button onClick={() => navigate({ to: "/settings" })} className="cursor-pointer">
+        <button onClick={goBack} className="cursor-pointer">
           <BackIcon size="24" />
         </button>
       }

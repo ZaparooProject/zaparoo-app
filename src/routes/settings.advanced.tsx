@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { CoreAPI } from "../lib/coreApi.ts";
@@ -29,9 +29,10 @@ function AdvancedSettings() {
 
   const { t } = useTranslation();
 
-  const navigate = useNavigate();
+  const router = useRouter();
+  const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
-    onSwipeRight: () => navigate({ to: "/settings" }),
+    onSwipeRight: goBack,
     preventScrollOnSwipe: false
   });
 
@@ -44,7 +45,7 @@ function AdvancedSettings() {
     <PageFrame
       {...swipeHandlers}
       headerLeft={
-        <button onClick={() => navigate({ to: "/settings" })} className="cursor-pointer">
+        <button onClick={goBack} className="cursor-pointer">
           <BackIcon size="24" />
         </button>
       }

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
@@ -33,9 +33,10 @@ function CustomText() {
     }
   }, [nfcWriter]);
 
-  const navigate = useNavigate();
+  const router = useRouter();
+  const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
-    onSwipeRight: () => navigate({ to: "/create" }),
+    onSwipeRight: goBack,
     preventScrollOnSwipe: false
   });
 
@@ -44,7 +45,7 @@ function CustomText() {
       <PageFrame
         {...swipeHandlers}
         title={t("create.custom.title")}
-        back={() => navigate({ to: "/create" })}
+        back={goBack}
       >
           <div className="flex flex-col gap-3">
             <ZapScriptInput

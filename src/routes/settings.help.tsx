@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import { Button } from "../components/wui/Button";
@@ -10,9 +10,10 @@ export const Route = createFileRoute("/settings/help")({
 });
 
 function Help() {
-  const navigate = useNavigate();
+  const router = useRouter();
+  const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
-    onSwipeRight: () => navigate({ to: "/settings" }),
+    onSwipeRight: goBack,
     preventScrollOnSwipe: false
   });
 
@@ -22,7 +23,7 @@ function Help() {
     <PageFrame
       {...swipeHandlers}
       title={t("settings.help.title")}
-      back={() => navigate({ to: "/settings" })}
+      back={goBack}
     >
         <div className="flex flex-col gap-4">
           <Button

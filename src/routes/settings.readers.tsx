@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
@@ -107,9 +107,10 @@ function ReadersSettings() {
 
   const { t } = useTranslation();
 
-  const navigate = useNavigate();
+  const router = useRouter();
+  const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
-    onSwipeRight: () => navigate({ to: "/settings" }),
+    onSwipeRight: goBack,
     preventScrollOnSwipe: false
   });
 
@@ -123,7 +124,7 @@ function ReadersSettings() {
       {...swipeHandlers}
       headerLeft={
         <button
-          onClick={() => navigate({ to: "/settings" })}
+          onClick={goBack}
           className="cursor-pointer"
         >
           <BackIcon size="24" />

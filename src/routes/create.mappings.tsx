@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowDownIcon, CameraIcon, NfcIcon, SaveIcon } from "lucide-react";
@@ -44,10 +44,11 @@ function Mappings() {
   const [tokenId, setTokenId] = useState<string>("");
   const [script, setScript] = useState<string>("");
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const router = useRouter();
+  const goBack = () => router.history.back();
 
   const swipeHandlers = useSmartSwipe({
-    onSwipeRight: () => navigate({ to: "/create" }),
+    onSwipeRight: goBack,
     preventScrollOnSwipe: false
   });
 
@@ -120,7 +121,7 @@ function Mappings() {
       <PageFrame
         {...swipeHandlers}
         title={t("create.mappings.title")}
-        back={() => navigate({ to: "/create" })}
+        back={goBack}
       >
           <div className="flex flex-col gap-3">
             <div>

@@ -114,7 +114,7 @@ const DEFAULT_PREFERENCES: Omit<
   | "setAccelerometerAvailabilityHydrated"
 > = {
   restartScan: false,
-  launchOnScan: true, // Default to true (matches current behavior)
+  launchOnScan: false, // Pro feature - default to false
   launcherAccess: false,
   preferRemoteWriter: false,
   shakeEnabled: false,

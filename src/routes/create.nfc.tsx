@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 // import {
@@ -51,9 +51,10 @@ function NfcUtils() {
     }
   }, [nfcWriter]);
 
-  const navigate = useNavigate();
+  const router = useRouter();
+  const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
-    onSwipeRight: () => navigate({ to: "/create" }),
+    onSwipeRight: goBack,
     preventScrollOnSwipe: false
   });
 
@@ -72,7 +73,7 @@ function NfcUtils() {
       <div {...swipeHandlers} className="flex h-full w-full flex-col">
         <PageFrame
           title={t("create.nfc.title")}
-          back={() => navigate({ to: "/create" })}
+          back={goBack}
         >
           <Tabs
             value={activeTab}

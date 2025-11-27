@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
@@ -168,9 +168,10 @@ function Search() {
     enabled: connected // Only check when connected
   });
 
-  const navigate = useNavigate();
+  const router = useRouter();
+  const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
-    onSwipeRight: () => navigate({ to: "/create" }),
+    onSwipeRight: goBack,
     preventScrollOnSwipe: false
   });
 
@@ -234,7 +235,7 @@ function Search() {
       <PageFrame
         {...swipeHandlers}
         title={t("create.search.title")}
-        back={() => navigate({ to: "/create" })}
+        back={goBack}
         scrollRef={scrollContainerRef}
         headerRight={
           <HeaderButton

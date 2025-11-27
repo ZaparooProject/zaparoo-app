@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Browser } from "@capacitor/browser";
 import { PageFrame } from "../components/PageFrame";
@@ -10,11 +10,12 @@ export const Route = createFileRoute("/settings/about")({
 });
 
 function About() {
-  const navigate = useNavigate();
+  const router = useRouter();
+  const goBack = () => router.history.back();
   const { t } = useTranslation();
 
   const swipeHandlers = useSmartSwipe({
-    onSwipeRight: () => navigate({ to: "/settings" }),
+    onSwipeRight: goBack,
     preventScrollOnSwipe: false
   });
 
@@ -22,7 +23,7 @@ function About() {
     <PageFrame
       {...swipeHandlers}
       title={t("settings.about.title")}
-      back={() => navigate({ to: "/settings" })}
+      back={goBack}
     >
         <div className="flex flex-col gap-8">
           <div className="text-center">
