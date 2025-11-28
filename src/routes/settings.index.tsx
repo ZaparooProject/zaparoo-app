@@ -6,10 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { ArrowLeftRightIcon, TrashIcon, Check } from "lucide-react";
-import {
-  RestorePuchasesButton,
-  useProPurchase
-} from "@/components/ProPurchase.tsx";
+import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button as SCNButton } from "@/components/ui/button";
 import i18n from "../i18n";
@@ -197,7 +194,6 @@ function Settings() {
                   onClick={() => setProPurchaseModalOpen(true)}
                 />
               )}
-              <RestorePuchasesButton />
             </div>
           )}
 

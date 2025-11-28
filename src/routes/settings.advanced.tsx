@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { Capacitor } from "@capacitor/core";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { ToggleSwitch } from "../components/wui/ToggleSwitch";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
@@ -8,6 +9,7 @@ import { useStatusStore } from "../lib/store";
 import { PageFrame } from "../components/PageFrame";
 import { UpdateSettingsRequest } from "../lib/models.ts";
 import { BackIcon, NextIcon } from "../lib/images";
+import { RestorePuchasesButton } from "../components/ProPurchase";
 
 export const Route = createFileRoute("/settings/advanced")({
   component: AdvancedSettings
@@ -67,6 +69,8 @@ function AdvancedSettings() {
             <NextIcon size="20" />
           </div>
         </Link>
+
+        {Capacitor.isNativePlatform() && <RestorePuchasesButton />}
       </div>
     </PageFrame>
   );
