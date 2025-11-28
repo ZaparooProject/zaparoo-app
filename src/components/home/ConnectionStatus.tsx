@@ -18,42 +18,46 @@ export const ConnectionStatus = memo(function ConnectionStatus({ connected, conn
 
   // Support both old boolean prop and new connectionState prop
   const isConnected = connectionState ? connectionState === ConnectionState.CONNECTED : connected;
-  const isConnecting = connectionState === ConnectionState.CONNECTING || connectionState === ConnectionState.RECONNECTING;
+  const isConnecting = connectionState === ConnectionState.CONNECTING;
+  const isReconnecting = connectionState === ConnectionState.RECONNECTING;
   const isError = connectionState === ConnectionState.ERROR;
 
-  if (isConnecting) {
-    return (
-      <Card className="mb-5">
-        <div className="flex flex-row items-center justify-between gap-3">
-          <div className="px-1.5 text-warning">
-            <DeviceIcon size="24" />
-          </div>
-          <div className="flex grow flex-col">
-            <span className="font-semibold">{t("scan.connecting")}</span>
-          </div>
-          <Link
-            to="/settings"
-            search={{
-              focus: "address"
-            }}
-          >
-            <Button icon={<SettingsIcon size="24" />} variant="text" />
-          </Link>
-        </div>
-      </Card>
-    );
-  }
+  // Determine icon, color, and content based on state
+  const showWarningIcon = isError || (!isConnected && !isConnecting && !isReconnecting);
+  const iconColor = isConnected
+    ? "text-success"
+    : isReconnecting
+      ? "text-muted-foreground"
+      : isConnecting
+        ? "text-warning"
+        : "text-error";
 
-  if (isError) {
-    return (
-      <Card className="mb-5">
-        <div className="flex flex-row items-center justify-between gap-3">
-          <div className="px-1.5 text-error">
-            <WarningIcon size="24" />
-          </div>
-          <div className="flex grow flex-col">
-            <span className="font-semibold">{t("scan.connectionError")}</span>
-            <button 
+  const titleText = isConnected
+    ? t("scan.connectedHeading")
+    : isReconnecting
+      ? t("scan.reconnecting")
+      : isConnecting
+        ? t("scan.connecting")
+        : isError
+          ? t("scan.connectionError")
+          : t("scan.noDevices");
+
+  const titleClass = isConnected
+    ? "font-bold"
+    : isReconnecting
+      ? "text-muted-foreground"
+      : "font-semibold";
+
+  return (
+    <Card className="mb-4">
+      <div className="flex flex-row items-center justify-between gap-3">
+        <div className={`px-1.5 ${iconColor}`}>
+          {showWarningIcon ? <WarningIcon size="24" /> : <DeviceIcon size="24" />}
+        </div>
+        <div className="flex grow flex-col">
+          <span className={titleClass}>{titleText}</span>
+          {isError ? (
+            <button
               className="text-left text-sm text-primary underline"
               onClick={() => {
                 onRetry?.();
@@ -61,56 +65,13 @@ export const ConnectionStatus = memo(function ConnectionStatus({ connected, conn
             >
               {t("scan.retry")}
             </button>
-          </div>
-          <Link
-            to="/settings"
-            search={{
-              focus: "address"
-            }}
-          >
-            <Button icon={<SettingsIcon size="24" />} variant="text" />
-          </Link>
-        </div>
-      </Card>
-    );
-  }
-
-  if (!isConnected) {
-    return (
-      <Card className="mb-5">
-        <div className="flex flex-row items-center justify-between gap-3">
-          <div className="px-1.5 text-error">
-            <WarningIcon size="24" />
-          </div>
-          <div className="flex grow flex-col">
-            <span className="font-semibold">{t("scan.noDevices")}</span>
-          </div>
-          <Link
-            to="/settings"
-            search={{
-              focus: "address"
-            }}
-          >
-            <Button icon={<SettingsIcon size="24" />} variant="text" />
-          </Link>
-        </div>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="mb-4">
-      <div className="flex flex-row items-center justify-between gap-3">
-        <div className="px-1.5 text-success">
-          <DeviceIcon size="24" />
-        </div>
-        <div className="flex grow flex-col">
-          <span className="font-bold">{t("scan.connectedHeading")}</span>
-          <span>
-            {t("scan.connectedSub", {
-              ip: getDeviceAddress()
-            })}
-          </span>
+          ) : (
+            <span className={isReconnecting ? "text-muted-foreground" : undefined}>
+              {t("scan.connectedSub", {
+                ip: getDeviceAddress()
+              })}
+            </span>
+          )}
         </div>
         <Link
           to="/settings"

@@ -87,9 +87,10 @@ export const useStatusStore = create<StatusState>()((set) => ({
   setConnected: (status) => set({ connected: status }),
 
   connectionState: ConnectionState.IDLE,
-  setConnectionState: (state) => set({ 
+  setConnectionState: (state) => set({
     connectionState: state,
-    connected: state === ConnectionState.CONNECTED
+    // Treat RECONNECTING as "connected enough" to show cached data and enable UI
+    connected: state === ConnectionState.CONNECTED || state === ConnectionState.RECONNECTING
   }),
 
   lastConnectionTime: null,

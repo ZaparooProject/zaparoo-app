@@ -122,8 +122,8 @@ export function CoreApiWebSocket() {
         lastTimestamp &&
         now - parseInt(lastTimestamp) < TEN_MINUTES
       ) {
-        console.log(`${logPrefix}Showing optimistic connected state`);
-        setConnectionState(ConnectionState.CONNECTED);
+        console.log(`${logPrefix}Showing optimistic reconnecting state`);
+        setConnectionState(ConnectionState.RECONNECTING);
         setConnectionError("");
 
         // Clear any existing timeout
@@ -446,7 +446,8 @@ export function CoreApiWebSocket() {
               // This is handled in onOpen callback
               break;
             case WebSocketState.RECONNECTING:
-              isResumingRef.current = false;
+              // Don't reset isResumingRef here - it would allow the subsequent
+              // CONNECTING state to show a flicker. Only reset on CONNECTED/ERROR.
               setConnectionState(ConnectionState.RECONNECTING);
               break;
             case WebSocketState.ERROR:
@@ -517,10 +518,10 @@ export function CoreApiWebSocket() {
         // Set flag to prevent UI flicker during reconnection
         isResumingRef.current = true;
 
-        // Apply optimistic state using shared function
-        await applyOptimisticState(resumeTimeoutRef, "App resume: ");
+        // Apply optimistic state in parallel with reconnection (don't block on disk I/O)
+        applyOptimisticState(resumeTimeoutRef, "App resume: ");
 
-        // Trigger immediate reconnection
+        // Trigger immediate reconnection without waiting for optimistic check
         wsManagerRef.current.immediateReconnect();
       });
 
