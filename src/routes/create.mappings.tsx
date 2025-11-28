@@ -7,7 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
-import { ClearIcon } from "@/lib/images.tsx";
+import { BackIcon, ClearIcon } from "@/lib/images.tsx";
+import { HeaderButton } from "@/components/wui/HeaderButton.tsx";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import { useStatusStore } from "@/lib/store.ts";
 import { MappingResponse } from "@/lib/models.ts";
@@ -120,8 +121,12 @@ function Mappings() {
     <>
       <PageFrame
         {...swipeHandlers}
-        title={t("create.mappings.title")}
-        back={goBack}
+        headerLeft={
+          <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+        }
+        headerCenter={
+          <h1 className="text-foreground text-xl">{t("create.mappings.title")}</h1>
+        }
       >
           <div className="flex flex-col gap-3">
             <div>

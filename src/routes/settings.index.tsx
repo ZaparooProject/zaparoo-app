@@ -81,7 +81,11 @@ function Settings() {
 
   return (
     <>
-      <PageFrame title={t("settings.title")}>
+      <PageFrame
+        headerCenter={
+          <h1 className="text-foreground text-xl">{t("settings.title")}</h1>
+        }
+      >
         <div className="flex flex-col gap-5">
           <div data-tour="device-address">
             <TextInput

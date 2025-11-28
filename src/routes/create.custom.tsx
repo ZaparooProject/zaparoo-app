@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
-import { CreateIcon } from "../lib/images";
+import { BackIcon, CreateIcon } from "../lib/images";
+import { HeaderButton } from "../components/wui/HeaderButton";
 import { Button } from "../components/wui/Button";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { WriteModal } from "../components/WriteModal";
@@ -44,8 +45,12 @@ function CustomText() {
     <>
       <PageFrame
         {...swipeHandlers}
-        title={t("create.custom.title")}
-        back={goBack}
+        headerLeft={
+          <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+        }
+        headerCenter={
+          <h1 className="text-foreground text-xl">{t("create.custom.title")}</h1>
+        }
       >
           <div className="flex flex-col gap-3">
             <ZapScriptInput

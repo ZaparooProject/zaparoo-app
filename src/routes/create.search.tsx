@@ -11,6 +11,7 @@ import { BackToTop } from "@/components/BackToTop.tsx";
 import { TagBadge } from "@/components/TagBadge.tsx";
 import { CoreAPI } from "../lib/coreApi.ts";
 import {
+  BackIcon,
   CreateIcon,
   PlayIcon,
   SearchIcon,
@@ -234,8 +235,12 @@ function Search() {
     <>
       <PageFrame
         {...swipeHandlers}
-        title={t("create.search.title")}
-        back={goBack}
+        headerLeft={
+          <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+        }
+        headerCenter={
+          <h1 className="text-foreground text-xl">{t("create.search.title")}</h1>
+        }
         scrollRef={scrollContainerRef}
         headerRight={
           <HeaderButton

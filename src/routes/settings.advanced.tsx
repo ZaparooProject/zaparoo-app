@@ -9,6 +9,7 @@ import { useStatusStore } from "../lib/store";
 import { PageFrame } from "../components/PageFrame";
 import { UpdateSettingsRequest } from "../lib/models.ts";
 import { BackIcon, NextIcon } from "../lib/images";
+import { HeaderButton } from "../components/wui/HeaderButton";
 import { RestorePuchasesButton } from "../components/ProPurchase";
 
 export const Route = createFileRoute("/settings/advanced")({
@@ -47,9 +48,7 @@ function AdvancedSettings() {
     <PageFrame
       {...swipeHandlers}
       headerLeft={
-        <button onClick={goBack} className="cursor-pointer">
-          <BackIcon size="24" />
-        </button>
+        <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
       }
       headerCenter={
         <h1 className="text-foreground text-xl">{t("settings.advanced.title")}</h1>

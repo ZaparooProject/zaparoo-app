@@ -11,6 +11,8 @@ import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { WriteModal } from "../components/WriteModal";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { PageFrame } from "../components/PageFrame";
+import { HeaderButton } from "../components/wui/HeaderButton";
+import { BackIcon } from "../lib/images";
 import {
   Tabs,
   TabsList,
@@ -72,8 +74,12 @@ function NfcUtils() {
     <>
       <div {...swipeHandlers} className="flex h-full w-full flex-col">
         <PageFrame
-          title={t("create.nfc.title")}
-          back={goBack}
+          headerLeft={
+            <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+          }
+          headerCenter={
+            <h1 className="text-foreground text-xl">{t("create.nfc.title")}</h1>
+          }
         >
           <Tabs
             value={activeTab}

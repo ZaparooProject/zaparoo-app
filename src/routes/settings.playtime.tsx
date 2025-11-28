@@ -9,6 +9,7 @@ import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { useStatusStore } from "../lib/store";
 import { PageFrame } from "../components/PageFrame";
 import { BackIcon } from "../lib/images";
+import { HeaderButton } from "../components/wui/HeaderButton";
 import { TextInput } from "../components/wui/TextInput";
 import { formatDuration, formatDurationDisplay, parseDuration } from "../lib/utils";
 
@@ -191,9 +192,7 @@ function PlaytimeSettings() {
     <PageFrame
       {...swipeHandlers}
       headerLeft={
-        <button onClick={goBack} className="cursor-pointer">
-          <BackIcon size="24" />
-        </button>
+        <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
       }
       headerCenter={
         <h1 className="text-foreground text-xl">{t("settings.playtime.title")}</h1>

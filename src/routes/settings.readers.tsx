@@ -15,6 +15,7 @@ import {
   selectShakeSettings
 } from "../lib/preferencesStore";
 import { BackIcon, CheckIcon } from "../lib/images";
+import { HeaderButton } from "../components/wui/HeaderButton";
 import { SystemSelector } from "../components/SystemSelector";
 import { Button } from "../components/wui/Button";
 import { useProPurchase } from "../components/ProPurchase";
@@ -124,12 +125,7 @@ function ReadersSettings() {
     <PageFrame
       {...swipeHandlers}
       headerLeft={
-        <button
-          onClick={goBack}
-          className="cursor-pointer"
-        >
-          <BackIcon size="24" />
-        </button>
+        <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
       }
       headerCenter={
         <h1 className="text-foreground text-xl">{t("settings.readers.title")}</h1>

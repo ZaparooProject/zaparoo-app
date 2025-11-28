@@ -2,7 +2,9 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Browser } from "@capacitor/browser";
 import { PageFrame } from "../components/PageFrame";
+import { HeaderButton } from "../components/wui/HeaderButton";
 import { Button } from "../components/wui/Button.tsx";
+import { BackIcon } from "../lib/images";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 
 export const Route = createFileRoute("/settings/about")({
@@ -22,8 +24,12 @@ function About() {
   return (
     <PageFrame
       {...swipeHandlers}
-      title={t("settings.about.title")}
-      back={goBack}
+      headerLeft={
+        <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+      }
+      headerCenter={
+        <h1 className="text-foreground text-xl">{t("settings.about.title")}</h1>
+      }
     >
         <div className="flex flex-col gap-8">
           <div className="text-center">

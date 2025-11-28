@@ -1,14 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { PageFrame } from '@/components/PageFrame';
 import { useRef } from 'react';
-
-// Mock BackIcon
-vi.mock('@/lib/images', () => ({
-  BackIcon: ({ size }: { size: string }) => (
-    <div data-testid="back-icon" data-size={size}>←</div>
-  )
-}));
 
 // Mock ResponsiveContainer
 vi.mock('@/components/ResponsiveContainer', () => ({
@@ -77,76 +69,17 @@ describe('PageFrame', () => {
     expect(screen.getByText('Right')).toBeInTheDocument();
   });
 
-  it('should support deprecated title prop', () => {
+  it('should render headerCenter with title styling', () => {
     render(
-      <PageFrame title="Test Title">
+      <PageFrame
+        headerCenter={<h1 className="text-foreground text-xl">Test Title</h1>}
+      >
         <div>Test content</div>
       </PageFrame>
     );
 
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     expect(screen.getByText('Test Title')).toBeInTheDocument();
-  });
-
-  it('should support deprecated back prop', () => {
-    const mockBack = vi.fn();
-
-    render(
-      <PageFrame back={mockBack}>
-        <div>Test content</div>
-      </PageFrame>
-    );
-
-    const backButton = screen.getByRole('button');
-    expect(backButton).toBeInTheDocument();
-    expect(screen.getByTestId('back-icon')).toBeInTheDocument();
-
-    fireEvent.click(backButton);
-    expect(mockBack).toHaveBeenCalledTimes(1);
-  });
-
-  it('should combine deprecated title and back props', () => {
-    const mockBack = vi.fn();
-
-    render(
-      <PageFrame title="Test Title" back={mockBack}>
-        <div>Test content</div>
-      </PageFrame>
-    );
-
-    expect(screen.getByText('Test Title')).toBeInTheDocument();
-    const backButton = screen.getByRole('button');
-    expect(backButton).toBeInTheDocument();
-
-    fireEvent.click(backButton);
-    expect(mockBack).toHaveBeenCalledTimes(1);
-  });
-
-  it('should prioritize new props over deprecated ones', () => {
-    const mockBack = vi.fn();
-    const headerLeft = <div data-testid="new-header-left">New Left</div>;
-    const headerCenter = <div data-testid="new-header-center">New Center</div>;
-
-    render(
-      <PageFrame
-        title="Deprecated Title"
-        back={mockBack}
-        headerLeft={headerLeft}
-        headerCenter={headerCenter}
-      >
-        <div>Test content</div>
-      </PageFrame>
-    );
-
-    // Should use new props, not deprecated ones
-    expect(screen.getByTestId('new-header-left')).toBeInTheDocument();
-    expect(screen.getByTestId('new-header-center')).toBeInTheDocument();
-    expect(screen.getByText('New Left')).toBeInTheDocument();
-    expect(screen.getByText('New Center')).toBeInTheDocument();
-
-    // Should not render deprecated title or back button
-    expect(screen.queryByText('Deprecated Title')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('back-icon')).not.toBeInTheDocument();
   });
 
   it('should apply custom className', () => {
@@ -219,7 +152,9 @@ describe('PageFrame', () => {
 
   it('should apply correct classes when header is present', () => {
     const { container } = render(
-      <PageFrame title="Test Title">
+      <PageFrame
+        headerCenter={<h1 className="text-foreground text-xl">Test Title</h1>}
+      >
         <div>Test content</div>
       </PageFrame>
     );
@@ -237,19 +172,6 @@ describe('PageFrame', () => {
 
     const scrollContainer = container.querySelector('.flex-1.overflow-y-auto');
     expect(scrollContainer).toHaveClass('p-4');
-  });
-
-  it('should render BackIcon with correct size', () => {
-    const mockBack = vi.fn();
-
-    render(
-      <PageFrame back={mockBack}>
-        <div>Test content</div>
-      </PageFrame>
-    );
-
-    const backIcon = screen.getByTestId('back-icon');
-    expect(backIcon).toHaveAttribute('data-size', '24');
   });
 
   it('should handle empty header components gracefully', () => {

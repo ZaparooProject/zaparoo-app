@@ -45,6 +45,14 @@ export interface PreferencesState {
   // Tour completion tracking
   tourCompleted: boolean;
 
+  // Log viewer settings
+  logLevelFilters: {
+    debug: boolean;
+    info: boolean;
+    warn: boolean;
+    error: boolean;
+  };
+
   // Hydration tracking (internal, not persisted)
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
@@ -89,6 +97,7 @@ export interface PreferencesActions {
   setShakeZapscript: (value: string) => void;
   setCustomText: (value: string) => void;
   setTourCompleted: (value: boolean) => void;
+  setLogLevelFilters: (filters: PreferencesState["logLevelFilters"]) => void;
 }
 
 export type PreferencesStore = PreferencesState & PreferencesActions;
@@ -121,7 +130,13 @@ const DEFAULT_PREFERENCES: Omit<
   shakeMode: "random",
   shakeZapscript: "",
   customText: "",
-  tourCompleted: false
+  tourCompleted: false,
+  logLevelFilters: {
+    debug: true,
+    info: true,
+    warn: true,
+    error: true
+  }
 };
 
 export const usePreferencesStore = create<PreferencesStore>()(
@@ -183,7 +198,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
       },
       setShakeZapscript: (value) => set({ shakeZapscript: value }),
       setCustomText: (value) => set({ customText: value }),
-      setTourCompleted: (value) => set({ tourCompleted: value })
+      setTourCompleted: (value) => set({ tourCompleted: value }),
+      setLogLevelFilters: (filters) => set({ logLevelFilters: filters })
     }),
     {
       name: "app-preferences",
@@ -199,7 +215,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
         shakeMode: state.shakeMode,
         shakeZapscript: state.shakeZapscript,
         customText: state.customText,
-        tourCompleted: state.tourCompleted
+        tourCompleted: state.tourCompleted,
+        logLevelFilters: state.logLevelFilters
       }),
 
       // Callback when hydration completes

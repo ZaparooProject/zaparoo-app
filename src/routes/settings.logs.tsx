@@ -7,6 +7,7 @@ import { BackToTop } from "../components/BackToTop";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { useStatusStore } from "../lib/store";
+import { usePreferencesStore } from "../lib/preferencesStore";
 import { PageFrame } from "../components/PageFrame";
 import { TextInput } from "../components/wui/TextInput";
 import { BackIcon } from "../lib/images";
@@ -32,12 +33,8 @@ function Logs() {
   const connected = useStatusStore((state) => state.connected);
   const [searchTerm, setSearchTerm] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [levelFilters, setLevelFilters] = useState({
-    debug: true,
-    info: true,
-    warn: true,
-    error: true
-  });
+  const levelFilters = usePreferencesStore((s) => s.logLevelFilters);
+  const setLogLevelFilters = usePreferencesStore((s) => s.setLogLevelFilters);
   const [expandedEntries, setExpandedEntries] = useState<Set<number>>(
     new Set()
   );
@@ -253,7 +250,7 @@ function Logs() {
                   label="Debug"
                   state={levelFilters.debug}
                   setState={(state) =>
-                    setLevelFilters((prev) => ({ ...prev, debug: state }))
+                    setLogLevelFilters({ ...levelFilters, debug: state })
                   }
                   compact
                 />
@@ -261,7 +258,7 @@ function Logs() {
                   label="Info"
                   state={levelFilters.info}
                   setState={(state) =>
-                    setLevelFilters((prev) => ({ ...prev, info: state }))
+                    setLogLevelFilters({ ...levelFilters, info: state })
                   }
                   compact
                 />
@@ -269,7 +266,7 @@ function Logs() {
                   label="Warn"
                   state={levelFilters.warn}
                   setState={(state) =>
-                    setLevelFilters((prev) => ({ ...prev, warn: state }))
+                    setLogLevelFilters({ ...levelFilters, warn: state })
                   }
                   compact
                 />
@@ -277,7 +274,7 @@ function Logs() {
                   label="Error"
                   state={levelFilters.error}
                   setState={(state) =>
-                    setLevelFilters((prev) => ({ ...prev, error: state }))
+                    setLogLevelFilters({ ...levelFilters, error: state })
                   }
                   compact
                 />

@@ -37,7 +37,11 @@ function Create() {
 
   return (
     <>
-      <PageFrame title={t("create.title")}>
+      <PageFrame
+        headerCenter={
+          <h1 className="text-foreground text-xl">{t("create.title")}</h1>
+        }
+      >
         <div className="flex flex-col gap-3">
           <Link to="/create/search" disabled={!connected} data-tour="create-search">
             <Card disabled={!connected}>

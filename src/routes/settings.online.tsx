@@ -9,7 +9,9 @@ import { TextInput } from "../components/wui/TextInput.tsx";
 import { Button } from "../components/wui/Button.tsx";
 import { useStatusStore } from "../lib/store.ts";
 import { PageFrame } from "../components/PageFrame.tsx";
+import { HeaderButton } from "../components/wui/HeaderButton";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
+import { BackIcon } from "../lib/images";
 
 export const Route = createFileRoute("/settings/online")({
   component: About
@@ -34,8 +36,12 @@ function About() {
   return (
     <PageFrame
       {...swipeHandlers}
-      title={t("online.title")}
-      back={goBack}
+      headerLeft={
+        <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+      }
+      headerCenter={
+        <h1 className="text-foreground text-xl">{t("online.title")}</h1>
+      }
     >
         <div className="flex flex-col gap-3">
           <Button
