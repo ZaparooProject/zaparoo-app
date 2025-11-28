@@ -28,6 +28,10 @@ interface StatusState {
   connected: boolean;
   setConnected: (status: boolean) => void;
 
+  // Target device address - triggers WebSocket reconnection when changed
+  targetDeviceAddress: string;
+  setTargetDeviceAddress: (address: string) => void;
+
   connectionState: ConnectionState;
   setConnectionState: (state: ConnectionState) => void;
 
@@ -85,6 +89,9 @@ interface StatusState {
 export const useStatusStore = create<StatusState>()((set) => ({
   connected: false,
   setConnected: (status) => set({ connected: status }),
+
+  targetDeviceAddress: "", // Initialized empty, will be set by CoreApiWebSocket on mount
+  setTargetDeviceAddress: (address) => set({ targetDeviceAddress: address }),
 
   connectionState: ConnectionState.IDLE,
   setConnectionState: (state) => set({

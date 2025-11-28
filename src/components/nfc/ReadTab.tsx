@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Share } from "@capacitor/share";
+import toast from "react-hot-toast";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/wui/Button";
 import { CopyButton } from "@/components/CopyButton";
@@ -36,7 +37,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
         dialogTitle: t("create.nfc.readTab.shareTitle")
       });
     } catch {
-      // Share cancelled or failed - no action needed
+      toast.error(t("shareFailed"));
     }
   };
 

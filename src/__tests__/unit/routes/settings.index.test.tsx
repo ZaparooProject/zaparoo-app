@@ -196,8 +196,10 @@ describe("Settings Index Route", () => {
     const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
     const settingsSource = readFileSync(settingsPath, "utf-8");
 
-    // PageFrame should still be the main wrapper
-    expect(settingsSource).toMatch(/<PageFrame.*title.*settings\.title/);
+    // PageFrame should still be the main wrapper with headerCenter
+    expect(settingsSource).toMatch(/<PageFrame/);
+    expect(settingsSource).toMatch(/headerCenter/);
+    expect(settingsSource).toMatch(/settings\.title/);
 
     // Should have the main flex column container
     expect(settingsSource).toMatch(/className="flex flex-col gap-5"/);

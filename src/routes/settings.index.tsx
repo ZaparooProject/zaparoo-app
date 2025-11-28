@@ -50,6 +50,9 @@ function Settings() {
   const resetConnectionState = useStatusStore(
     (state) => state.resetConnectionState
   );
+  const setTargetDeviceAddress = useStatusStore(
+    (state) => state.setTargetDeviceAddress
+  );
 
   const { data: version, isSuccess: versionSuccess } = useQuery({
     queryKey: ["version"],
@@ -74,6 +77,7 @@ function Settings() {
   const handleDeviceAddressChange = (newAddress: string) => {
     setDeviceAddress(newAddress);
     resetConnectionState();
+    setTargetDeviceAddress(newAddress); // Update store to trigger WebSocket reconnection
     CoreAPI.reset();
     queryClient.invalidateQueries();
     setAddress(newAddress);

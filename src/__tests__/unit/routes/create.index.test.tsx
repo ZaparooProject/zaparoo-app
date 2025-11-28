@@ -297,6 +297,8 @@ describe("Create Index Route", () => {
       const mockState = {
         connected: true,
         setConnected: vi.fn(),
+        targetDeviceAddress: '192.168.1.1',
+        setTargetDeviceAddress: vi.fn(),
         connectionState: 'CONNECTED' as any,
         setConnectionState: vi.fn(),
         lastConnectionTime: null,
@@ -433,6 +435,8 @@ describe("Create Index Route", () => {
       const mockState = {
         connected: false,
         setConnected: vi.fn(),
+        targetDeviceAddress: '192.168.1.1',
+        setTargetDeviceAddress: vi.fn(),
         connectionState: 'DISCONNECTED' as any,
         setConnectionState: vi.fn(),
         lastConnectionTime: null,

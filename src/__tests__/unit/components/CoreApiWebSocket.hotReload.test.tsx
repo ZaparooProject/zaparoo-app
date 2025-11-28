@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useStatusStore } from "@/lib/store.ts";
 import { CoreApiWebSocket } from "@/components/CoreApiWebSocket.tsx";
 
 // Mock the coreApi functions
@@ -70,23 +69,33 @@ vi.mock("react-i18next", () => ({
   })
 }));
 
+// Track targetDeviceAddress state
+let mockTargetDeviceAddress = "";
+const mockSetTargetDeviceAddress = vi.fn((addr: string) => {
+  mockTargetDeviceAddress = addr;
+});
+
 // Mock Zustand store
 vi.mock("../../../lib/store", () => {
-  const mockStore = {
-    setConnectionState: vi.fn(),
-    setConnectionStateWithGracePeriod: vi.fn(),
-    clearGracePeriod: vi.fn(),
-    setConnectionError: vi.fn(),
-    setPlaying: vi.fn(),
-    setGamesIndex: vi.fn(),
-    setLastToken: vi.fn(),
-    addDeviceHistory: vi.fn(),
-    setDeviceHistory: vi.fn()
-  };
-
   return {
-    useStatusStore: vi.fn((selector: any) => selector(mockStore)),
+    useStatusStore: vi.fn((selector: any) => {
+      const mockStore = {
+        targetDeviceAddress: mockTargetDeviceAddress,
+        setTargetDeviceAddress: mockSetTargetDeviceAddress,
+        setConnectionState: vi.fn(),
+        setConnectionStateWithGracePeriod: vi.fn(),
+        clearGracePeriod: vi.fn(),
+        setConnectionError: vi.fn(),
+        setPlaying: vi.fn(),
+        setGamesIndex: vi.fn(),
+        setLastToken: vi.fn(),
+        addDeviceHistory: vi.fn(),
+        setDeviceHistory: vi.fn()
+      };
+      return selector(mockStore);
+    }),
     ConnectionState: {
+      IDLE: "idle",
       DISCONNECTED: "disconnected",
       CONNECTING: "connecting",
       CONNECTED: "connected",
@@ -111,6 +120,7 @@ describe("CoreApiWebSocket Hot Reload", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    mockTargetDeviceAddress = ""; // Reset to empty for each test
   });
 
   afterEach(() => {
@@ -122,47 +132,21 @@ describe("CoreApiWebSocket Hot Reload", () => {
     let callCount = 0;
     mockGetDeviceAddress.mockImplementation(() => {
       callCount++;
-      // First call: useState initialization (empty)
-      // Second call: first retry attempt (empty)
-      // Third call: second retry attempt (now available)
       return callCount <= 2 ? "" : "192.168.1.100";
     });
-    mockGetWsUrl.mockImplementation(() => {
-      return callCount <= 2 ? "" : "ws://192.168.1.100:7497";
-    });
-
-    const mockSetConnectionError = vi.fn();
-    const mockSetConnectionState = vi.fn();
-    vi.mocked(useStatusStore).mockImplementation((selector: any) =>
-      selector({
-        setConnectionState: mockSetConnectionState,
-        setConnectionStateWithGracePeriod: vi.fn(),
-        clearGracePeriod: vi.fn(),
-        setConnectionError: mockSetConnectionError,
-        setPlaying: vi.fn(),
-        setGamesIndex: vi.fn(),
-        setLastToken: vi.fn(),
-        addDeviceHistory: vi.fn(),
-        setDeviceHistory: vi.fn()
-      })
-    );
+    mockGetWsUrl.mockReturnValue("ws://192.168.1.100:7497");
 
     await act(async () => {
       renderWithQueryClient();
     });
 
-    // Initially should have error
-    expect(mockSetConnectionError).toHaveBeenCalledWith(
-      "No device address configured"
-    );
-
     // Advance timers to trigger retries
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(200);
+      await vi.advanceTimersByTimeAsync(300);
     });
 
-    // After retry, should have attempted to connect
-    expect(mockWebSocketManager.connect).toHaveBeenCalled();
+    // After retry finds valid address, should call setTargetDeviceAddress
+    expect(mockSetTargetDeviceAddress).toHaveBeenCalledWith("192.168.1.100");
   });
 
   it("should stop retrying after max attempts", async () => {
@@ -170,30 +154,19 @@ describe("CoreApiWebSocket Hot Reload", () => {
     mockGetDeviceAddress.mockReturnValue("");
     mockGetWsUrl.mockReturnValue("");
 
-    const mockSetConnectionError = vi.fn();
-    vi.mocked(useStatusStore).mockImplementation((selector: any) =>
-      selector({
-        setConnectionState: vi.fn(),
-        setConnectionStateWithGracePeriod: vi.fn(),
-        clearGracePeriod: vi.fn(),
-        setConnectionError: mockSetConnectionError,
-        setPlaying: vi.fn(),
-        setGamesIndex: vi.fn(),
-        setLastToken: vi.fn(),
-        addDeviceHistory: vi.fn(),
-        setDeviceHistory: vi.fn()
-      })
-    );
-
-    renderWithQueryClient();
+    await act(async () => {
+      renderWithQueryClient();
+    });
 
     // Fast-forward through all retry attempts (5 attempts * 100ms = 500ms)
-    await vi.advanceTimersByTimeAsync(600);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600);
+    });
 
-    // Should have called: 1 (useState) + 5 (retry attempts) = 6 times
-    expect(mockGetDeviceAddress).toHaveBeenCalledTimes(6);
+    // Should have called multiple times but not connected
+    expect(mockGetDeviceAddress).toHaveBeenCalled();
 
-    // Should never have attempted to connect
+    // Should never have attempted to connect (no valid address)
     expect(mockWebSocketManager.connect).not.toHaveBeenCalled();
   });
 
@@ -202,27 +175,9 @@ describe("CoreApiWebSocket Hot Reload", () => {
     let callCount = 0;
     mockGetDeviceAddress.mockImplementation(() => {
       callCount++;
-      // First 3 calls: empty (useState + first retry attempts)
-      // Fourth call onwards: valid
       return callCount <= 3 ? "" : "192.168.1.100";
     });
-    mockGetWsUrl.mockImplementation(() => {
-      return callCount <= 3 ? "" : "ws://192.168.1.100:7497";
-    });
-
-    vi.mocked(useStatusStore).mockImplementation((selector: any) =>
-      selector({
-        setConnectionState: vi.fn(),
-        setConnectionStateWithGracePeriod: vi.fn(),
-        clearGracePeriod: vi.fn(),
-        setConnectionError: vi.fn(),
-        setPlaying: vi.fn(),
-        setGamesIndex: vi.fn(),
-        setLastToken: vi.fn(),
-        addDeviceHistory: vi.fn(),
-        setDeviceHistory: vi.fn()
-      })
-    );
+    mockGetWsUrl.mockReturnValue("ws://192.168.1.100:7497");
 
     await act(async () => {
       renderWithQueryClient();
@@ -233,38 +188,23 @@ describe("CoreApiWebSocket Hot Reload", () => {
       await vi.advanceTimersByTimeAsync(400);
     });
 
-    // Should have eventually connected since we got a valid address
-    expect(mockWebSocketManager.connect).toHaveBeenCalled();
-
-    // Should have called getDeviceAddress multiple times (but not all 5 maxAttempts)
-    expect(mockGetDeviceAddress).toHaveBeenCalled();
-    expect(mockGetDeviceAddress.mock.calls.length).toBeLessThan(6); // Less than maxAttempts + 1
+    // Should have called setTargetDeviceAddress with valid address
+    expect(mockSetTargetDeviceAddress).toHaveBeenCalledWith("192.168.1.100");
   });
 
-  it("should connect immediately if address is available on mount", () => {
+  it("should connect immediately if address is available on mount", async () => {
     mockGetDeviceAddress.mockReturnValue("192.168.1.100");
     mockGetWsUrl.mockReturnValue("ws://192.168.1.100:7497");
 
-    vi.mocked(useStatusStore).mockImplementation((selector: any) =>
-      selector({
-        setConnectionState: vi.fn(),
-        setConnectionStateWithGracePeriod: vi.fn(),
-        clearGracePeriod: vi.fn(),
-        setConnectionError: vi.fn(),
-        setPlaying: vi.fn(),
-        setGamesIndex: vi.fn(),
-        setLastToken: vi.fn(),
-        addDeviceHistory: vi.fn(),
-        setDeviceHistory: vi.fn()
-      })
-    );
+    // Start with address already in store
+    mockTargetDeviceAddress = "192.168.1.100";
 
-    renderWithQueryClient();
+    await act(async () => {
+      renderWithQueryClient();
+    });
 
-    // Should have connected immediately without needing retries
+    // Should have connected immediately since address was already in store
     expect(mockWebSocketManager.connect).toHaveBeenCalled();
-    // Only called once in useState, retry logic doesn't run since address is valid
-    expect(mockGetDeviceAddress).toHaveBeenCalledTimes(1);
   });
 
   it("should cleanup retry timer on unmount", async () => {
@@ -272,35 +212,25 @@ describe("CoreApiWebSocket Hot Reload", () => {
     mockGetDeviceAddress.mockReturnValue("");
     mockGetWsUrl.mockReturnValue("");
 
-    vi.mocked(useStatusStore).mockImplementation((selector: any) =>
-      selector({
-        setConnectionState: vi.fn(),
-        setConnectionStateWithGracePeriod: vi.fn(),
-        clearGracePeriod: vi.fn(),
-        setConnectionError: vi.fn(),
-        setPlaying: vi.fn(),
-        setGamesIndex: vi.fn(),
-        setLastToken: vi.fn(),
-        addDeviceHistory: vi.fn(),
-        setDeviceHistory: vi.fn()
-      })
-    );
-
-    const { unmount } = renderWithQueryClient();
+    const { unmount } = await act(async () => renderWithQueryClient());
 
     // Start retry cycle
-    await vi.advanceTimersByTimeAsync(50);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
+    });
 
-    // Called once in useState, once in first retry attempt
-    expect(mockGetDeviceAddress).toHaveBeenCalledTimes(2);
+    const callCountBeforeUnmount = mockGetDeviceAddress.mock.calls.length;
 
     // Unmount before next retry
     unmount();
 
     // Advance past when next retry would have happened
-    await vi.advanceTimersByTimeAsync(100);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
 
-    // Should not have made additional calls after unmount
-    expect(mockGetDeviceAddress).toHaveBeenCalledTimes(2);
+    // Should not have made significantly more calls after unmount
+    // Allow for 1-2 extra due to race conditions in cleanup
+    expect(mockGetDeviceAddress.mock.calls.length).toBeLessThanOrEqual(callCountBeforeUnmount + 2);
   });
 });

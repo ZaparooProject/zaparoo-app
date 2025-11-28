@@ -170,7 +170,8 @@ describe('MediaDatabaseCard', () => {
 
     const { container } = render(<MediaDatabaseCard />);
 
-    expect(screen.getByText('Scanning games directory')).toBeInTheDocument();
+    // Text appears both in visible UI and aria-live announcement region
+    expect(screen.getAllByText('Scanning games directory').length).toBeGreaterThan(0);
 
     // Check for progress bar by finding the styled div
     const progressBars = container.querySelectorAll('[style*="width: 50.00%"]');
@@ -189,7 +190,8 @@ describe('MediaDatabaseCard', () => {
 
     render(<MediaDatabaseCard />);
 
-    expect(screen.getByText('toast.preparingDb')).toBeInTheDocument();
+    // Text appears both in visible UI and aria-live announcement region
+    expect(screen.getAllByText('toast.preparingDb').length).toBeGreaterThan(0);
   });
 
   it('should show writing message when on final step', () => {
@@ -204,7 +206,8 @@ describe('MediaDatabaseCard', () => {
 
     render(<MediaDatabaseCard />);
 
-    expect(screen.getByText('toast.writingDb')).toBeInTheDocument();
+    // Text appears both in visible UI and aria-live announcement region
+    expect(screen.getAllByText('toast.writingDb').length).toBeGreaterThan(0);
   });
 
   it('should hide progress bar when currentStep is 0', () => {

@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ReadTab } from '@/components/nfc/ReadTab';
 import { Status } from '@/lib/nfc';
+import { Share } from '@capacitor/share';
+import toast from 'react-hot-toast';
 
 // Mock toast
 vi.mock('react-hot-toast', () => ({
@@ -20,12 +22,12 @@ Object.defineProperty(navigator, 'clipboard', {
   writable: true,
 });
 
-// Mock share API
-const mockShare = vi.fn(() => Promise.resolve());
-Object.defineProperty(navigator, 'share', {
-  value: mockShare,
-  writable: true,
-});
+// Mock @capacitor/share
+vi.mock('@capacitor/share', () => ({
+  Share: {
+    share: vi.fn(() => Promise.resolve()),
+  },
+}));
 
 describe('ReadTab', () => {
   const mockOnScan = vi.fn();
@@ -222,18 +224,17 @@ describe('ReadTab', () => {
 
       render(<ReadTab result={mockResult} onScan={mockOnScan} />);
 
-      // Find share button by looking for the small outline variant button in header
+      // Find share button - it's the one with outline in class name (small button next to title)
       const buttons = screen.getAllByRole('button');
       const shareButton = buttons.find(btn =>
-        btn.className.includes('outline')
+        btn.className.includes('bd-outline')
       );
 
       expect(shareButton).toBeDefined();
 
       if (shareButton) {
-        fireEvent.click(shareButton);
-        await new Promise(resolve => setTimeout(resolve, 0)); // Allow async to complete
-        expect(mockShare).toHaveBeenCalledWith(
+        await fireEvent.click(shareButton);
+        expect(Share.share).toHaveBeenCalledWith(
           expect.objectContaining({
             title: "create.nfc.readTab.shareTitle",
             text: expect.any(String)
@@ -242,8 +243,8 @@ describe('ReadTab', () => {
       }
     });
 
-    it('should fallback to clipboard when share fails', async () => {
-      mockShare.mockRejectedValueOnce(new Error('Share failed'));
+    it('should show error toast when share fails', async () => {
+      vi.mocked(Share.share).mockRejectedValueOnce(new Error('Share cancelled'));
 
       const mockResult = {
         status: Status.Success,
@@ -258,60 +259,21 @@ describe('ReadTab', () => {
 
       render(<ReadTab result={mockResult} onScan={mockOnScan} />);
 
-      // Find share button by class names
+      // Find share button - it's the one with outline in class name (small button next to title)
       const buttons = screen.getAllByRole('button');
       const shareButton = buttons.find(btn =>
-        btn.className.includes('outline')
+        btn.className.includes('bd-outline')
       );
 
       expect(shareButton).toBeDefined();
 
       if (shareButton) {
-        fireEvent.click(shareButton);
-        await new Promise(resolve => setTimeout(resolve, 0)); // Allow async to complete
-        expect(mockWriteText).toHaveBeenCalledWith(expect.any(String));
+        await fireEvent.click(shareButton);
+        // Should show error toast
+        expect(toast.error).toHaveBeenCalledWith('shareFailed');
+        // Should NOT fallback to clipboard
+        expect(mockWriteText).not.toHaveBeenCalled();
       }
-    });
-
-    it('should fallback to clipboard when share is not available', async () => {
-      // Remove share API temporarily
-      Object.defineProperty(navigator, 'share', {
-        value: undefined,
-        writable: true,
-      });
-
-      const mockResult = {
-        status: Status.Success,
-        info: {
-          tag: {
-            uid: '04:12:34:56',
-            text: 'Test message'
-          },
-          rawTag: null
-        }
-      };
-
-      render(<ReadTab result={mockResult} onScan={mockOnScan} />);
-
-      // Find share button by class names
-      const buttons = screen.getAllByRole('button');
-      const shareButton = buttons.find(btn =>
-        btn.className.includes('outline')
-      );
-
-      expect(shareButton).toBeDefined();
-
-      if (shareButton) {
-        fireEvent.click(shareButton);
-        await new Promise(resolve => setTimeout(resolve, 0)); // Allow async to complete
-        expect(mockWriteText).toHaveBeenCalledWith(expect.any(String));
-      }
-
-      // Restore share API
-      Object.defineProperty(navigator, 'share', {
-        value: mockShare,
-        writable: true,
-      });
     });
   });
 

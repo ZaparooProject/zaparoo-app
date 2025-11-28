@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Preferences } from "@capacitor/preferences";
 import { App } from "@capacitor/app";
@@ -32,10 +32,10 @@ export function CoreApiWebSocket() {
   const optimisticTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isResumingRef = useRef(false);
-  const [deviceAddress, setDeviceAddress] = useState(getDeviceAddress());
-  const [wsUrl, setWsUrl] = useState(getWsUrl());
 
   const {
+    targetDeviceAddress,
+    setTargetDeviceAddress,
     setConnectionState,
     setConnectionError,
     setPlaying,
@@ -45,6 +45,8 @@ export function CoreApiWebSocket() {
     setDeviceHistory
   } = useStatusStore(
     useShallow((state) => ({
+      targetDeviceAddress: state.targetDeviceAddress,
+      setTargetDeviceAddress: state.setTargetDeviceAddress,
       setConnectionState: state.setConnectionState,
       setConnectionError: state.setConnectionError,
       setPlaying: state.setPlaying,
@@ -55,8 +57,14 @@ export function CoreApiWebSocket() {
     }))
   );
 
-  // Retry logic to handle hot reload scenarios where localStorage might be temporarily unavailable
+  // Derive WebSocket URL from device address
+  const wsUrl = targetDeviceAddress ? getWsUrl() : "";
+
+  // Initialize device address from localStorage on mount, with retry for hot reload scenarios
   useEffect(() => {
+    // If already have an address, skip
+    if (targetDeviceAddress !== "") return;
+
     let attempts = 0;
     const maxAttempts = 5;
     const checkInterval = 100; // ms
@@ -65,37 +73,27 @@ export function CoreApiWebSocket() {
     const checkAddress = () => {
       attempts++;
       const addr = getDeviceAddress();
-      const url = getWsUrl();
 
-      // Update state if values changed
-      if (addr !== deviceAddress) {
-        setDeviceAddress(addr);
+      // Update store if we found an address
+      if (addr !== "") {
+        setTargetDeviceAddress(addr);
+        return;
       }
 
-      if (url !== wsUrl) {
-        setWsUrl(url);
-      }
-
-      // Continue checking if we still don't have a valid address/URL and haven't exceeded max attempts
-      const stillEmpty = addr === "" || url === "";
-      if (stillEmpty && attempts < maxAttempts) {
+      // Continue checking if we still don't have a valid address and haven't exceeded max attempts
+      if (attempts < maxAttempts) {
         timer = setTimeout(checkAddress, checkInterval);
       }
     };
 
-    // Only start retry logic if we don't have an address yet
-    // This prevents unnecessary retries when address is already available
-    if (deviceAddress === "" || wsUrl === "") {
-      checkAddress();
-    }
+    checkAddress();
 
     return () => {
       if (timer) {
         clearTimeout(timer);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount - deviceAddress/wsUrl are intentionally omitted as this bootstraps their initial values
+  }, [targetDeviceAddress, setTargetDeviceAddress]);
 
   // Shared function to check and apply optimistic connection state
   const applyOptimisticState = useCallback(async (
@@ -171,7 +169,7 @@ export function CoreApiWebSocket() {
 
   useEffect(() => {
     // Early exit checks
-    if (deviceAddress === "") {
+    if (targetDeviceAddress === "") {
       setConnectionState(ConnectionState.ERROR);
       setConnectionError("No device address configured");
       return;
@@ -487,7 +485,7 @@ export function CoreApiWebSocket() {
       setConnectionState(ConnectionState.DISCONNECTED);
     };
   }, [
-    deviceAddress,
+    targetDeviceAddress,
     wsUrl,
     addDeviceHistory,
     setConnectionError,
@@ -512,7 +510,7 @@ export function CoreApiWebSocket() {
         logger.log("App resumed, triggering immediate reconnection");
 
         // Only attempt reconnection if we have a valid device address
-        if (!deviceAddress || !wsManagerRef.current) {
+        if (!targetDeviceAddress || !wsManagerRef.current) {
           return;
         }
 
@@ -562,7 +560,7 @@ export function CoreApiWebSocket() {
       resumeListener?.remove();
       pauseListener?.remove();
     };
-  }, [deviceAddress, setConnectionState, setConnectionError, applyOptimisticState]); // Re-setup listeners if device address changes
+  }, [targetDeviceAddress, setConnectionState, setConnectionError, applyOptimisticState]); // Re-setup listeners if device address changes
 
   return null;
 }
