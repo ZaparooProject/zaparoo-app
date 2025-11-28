@@ -42,7 +42,8 @@ export function BottomNav() {
   const safeInsets = useStatusStore((state) => state.safeInsets);
 
   return (
-    <div
+    <nav
+      aria-label={t("nav.mainNavigation")}
       className="border-t border-t-[#ffffff21] bg-[#111928bf] backdrop-blur"
       style={{
         height: '80px'
@@ -72,6 +73,6 @@ export function BottomNav() {
           />
         </div>
       </ResponsiveContainer>
-    </div>
+    </nav>
   );
 }

@@ -16,7 +16,8 @@
       "index": "Zap",
       "design": "Design",
       "settings": "Settings",
-      "run": "Run"
+      "run": "Run",
+      "mainNavigation": "Main navigation"
     },
     "spinner": {
       "notSupportedLabel": "Device does not support NFC",
@@ -76,7 +77,10 @@
       "purchaseProP1": "Zaparoo Pro can be unlocked with a one-time purchase of {{price}}, which will help support future development of Zaparoo.",
       "purchaseProP2": "Pro includes the Launch on scan feature, which turns your phone into a wireless Zaparoo reader! All future Pro features will be included at no extra cost.",
       "purchaseProAction": "Unlock Zaparoo Pro",
-      "completeIntro": "Let's Zaparoo"
+      "completeIntro": "Let's Zaparoo",
+      "statusScanning": "Scanning for NFC tag",
+      "statusSuccess": "Tag scanned successfully",
+      "statusError": "Tag scan failed"
     },
     "create": {
       "title": "Create a New Tag",

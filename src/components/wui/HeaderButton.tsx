@@ -34,12 +34,12 @@ export const HeaderButton = memo(function HeaderButton(props: HeaderButtonProps)
         {
           // Active state (when modal is open, etc.)
           "text-[#00E0FF]": props.active && !props.disabled,
-          // Normal state
-          "opacity-70 hover:opacity-100": !props.active && !props.disabled,
-          // Disabled state
-          "opacity-50 cursor-not-allowed": props.disabled,
+          // Normal state - using explicit colors instead of opacity for better contrast
+          "text-gray-300 hover:text-white": !props.active && !props.disabled,
+          // Disabled state - using explicit gray that meets WCAG contrast
+          "text-gray-500 cursor-not-allowed": props.disabled,
           // Pressed state
-          "opacity-80": isPressed && !props.disabled
+          "text-gray-400": isPressed && !props.disabled
         },
         props.className
       )}

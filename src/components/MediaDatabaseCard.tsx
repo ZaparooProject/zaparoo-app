@@ -198,8 +198,28 @@ export function MediaDatabaseCard() {
     return null;
   };
 
+  // Get status text for screen reader announcement
+  const getStatusText = (): string => {
+    if (isOptimizing) return t("settings.updateDb.status.optimizing");
+    if (isIndexing) {
+      const hasDetailedProgress = gamesIndex.indexing && gamesIndex.totalSteps && gamesIndex.totalSteps > 0;
+      if (hasDetailedProgress && gamesIndex.currentStepDisplay) {
+        return gamesIndex.currentStep === gamesIndex.totalSteps
+          ? t("toast.writingDb")
+          : gamesIndex.currentStepDisplay;
+      }
+      return t("toast.preparingDb");
+    }
+    return "";
+  };
+
   return (
     <>
+      {/* Screen reader announcement for database update progress */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {getStatusText()}
+      </div>
+
       <Card>
         <div className="space-y-3">
           {/* System selector for choosing which systems to update */}

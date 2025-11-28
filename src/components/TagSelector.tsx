@@ -428,7 +428,7 @@ export function TagSelector({
                               <button
                                 key={tag.tag}
                                 className={classNames(
-                                  "flex w-full items-center justify-between px-3 py-2 text-left transition-colors",
+                                  "flex w-full items-center justify-between px-3 py-3 text-left transition-colors",
                                   "rounded-md focus:outline-none",
                                   {
                                     "bg-white/10": isSelected,
@@ -445,14 +445,14 @@ export function TagSelector({
                                 <div className="flex items-center space-x-3">
                                   <div
                                     className={classNames(
-                                      "border-input flex h-4 w-4 items-center justify-center rounded border-2",
+                                      "border-input flex h-5 w-5 items-center justify-center rounded border-2",
                                       {
                                         "bg-primary border-primary": isSelected
                                       }
                                     )}
                                   >
                                     {isSelected && (
-                                      <Check className="h-2.5 w-2.5 text-white" />
+                                      <Check className="h-3 w-3 text-white" />
                                     )}
                                   </div>
                                   <span className="text-foreground text-sm font-medium">

@@ -1,4 +1,4 @@
-import React, { KeyboardEventHandler, useEffect, useState } from "react";
+import React, { KeyboardEventHandler, useEffect, useState, useId } from "react";
 import classNames from "classnames";
 import { SaveIcon, ClearIcon } from "../../lib/images";
 import { Button } from "./Button";
@@ -15,7 +15,10 @@ export function TextInput(props: {
   type?: string;
   onKeyUp?: KeyboardEventHandler<HTMLInputElement>;
   ref?: React.RefObject<HTMLInputElement | null>;
+  /** Error message to display below the input */
+  error?: string;
 }) {
+  const errorId = useId();
   const [value, setValue] = useState(props.value);
   const [modified, setModified] = useState(false);
 
@@ -36,6 +39,8 @@ export function TextInput(props: {
           <input
             ref={props.ref}
             type={type}
+            aria-invalid={!!props.error}
+            aria-describedby={props.error ? errorId : undefined}
             className={classNames(
               "bg-background",
               "h-12",
@@ -46,7 +51,8 @@ export function TextInput(props: {
               "px-3",
               "disabled:border-foreground-disabled",
               {
-                "border-bd-input": !props.disabled,
+                "border-bd-input": !props.disabled && !props.error,
+                "border-red-500": props.error,
                 "border-foreground-disabled": props.disabled,
                 "text-foreground-disabled": props.disabled,
                 "pr-10": props.clearable && value && value.length > 0 && !props.disabled,
@@ -104,6 +110,11 @@ export function TextInput(props: {
           />
         )}
       </div>
+      {props.error && (
+        <p id={errorId} className="mt-1 text-sm text-red-500" role="alert">
+          {props.error}
+        </p>
+      )}
     </div>
   );
 }

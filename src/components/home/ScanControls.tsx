@@ -6,6 +6,24 @@ import { Button } from "../wui/Button";
 import { ScanResult } from "../../lib/models";
 import { usePreferencesStore } from "../../lib/preferencesStore";
 
+/** Get screen reader announcement for current scan state */
+function getScanStatusAnnouncement(
+  scanSession: boolean,
+  scanStatus: ScanResult,
+  t: (key: string) => string
+): string {
+  if (scanSession) {
+    return t("scan.statusScanning");
+  }
+  if (scanStatus === ScanResult.Success) {
+    return t("scan.statusSuccess");
+  }
+  if (scanStatus === ScanResult.Error) {
+    return t("scan.statusError");
+  }
+  return "";
+}
+
 interface ScanControlsProps {
   scanSession: boolean;
   scanStatus: ScanResult;
@@ -25,8 +43,15 @@ export function ScanControls({
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
   const cameraAvailable = usePreferencesStore((state) => state.cameraAvailable);
 
+  const statusAnnouncement = getScanStatusAnnouncement(scanSession, scanStatus, t);
+
   return (
     <>
+      {/* Screen reader announcement for scan status changes */}
+      <div aria-live="assertive" aria-atomic="true" className="sr-only">
+        {statusAnnouncement}
+      </div>
+
       {Capacitor.isNativePlatform() && nfcAvailable ? (
         <div className="mt-8 mb-9 text-center">
           <div

@@ -1,10 +1,11 @@
-import { ReactNode, RefObject, useEffect, useId } from "react";
+import { ReactNode, RefObject, useEffect, useId, useRef } from "react";
 import classNames from "classnames";
 import { X } from "lucide-react";
 import { useStatusStore } from "@/lib/store.ts";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { useSlideModalManager } from "@/hooks/useSlideModalManager";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export function SlideModal(props: {
   isOpen: boolean;
@@ -18,6 +19,15 @@ export function SlideModal(props: {
 }) {
   const modalId = useId();
   const modalManager = useSlideModalManager();
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Trap focus within modal when open
+  useFocusTrap({
+    isActive: props.isOpen,
+    containerRef: modalRef,
+    restoreFocus: true,
+    autoFocus: true
+  });
 
   const swipeHandlers = useSmartSwipe({
     onSwipeDown: props.close,
@@ -79,6 +89,10 @@ export function SlideModal(props: {
 
       {/* Modal */}
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${modalId}-title`}
         className={classNames(
           "fixed",
           "z-50",
@@ -125,7 +139,7 @@ export function SlideModal(props: {
           ></div>
         </div>
         <div className="relative sm:pb-2">
-          <p className="text-center text-lg">{props.title}</p>
+          <p id={`${modalId}-title`} className="text-center text-lg">{props.title}</p>
           {/* Desktop close button */}
           <button
             onClick={props.close}

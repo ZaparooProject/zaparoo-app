@@ -35,7 +35,7 @@ export function PageFrame(props: PageFrameProps) {
       {...restProps}
     >
       {hasHeaderContent && (
-        <div className="bg-background sticky top-0 z-10 pt-safe-top-4 p-4 pr-safe-right-4 pl-safe-left-4">
+        <header className="bg-background sticky top-0 z-10 pt-safe-top-4 p-4 pr-safe-right-4 pl-safe-left-4">
           <ResponsiveContainer>
             {header ? (
               header
@@ -53,7 +53,7 @@ export function PageFrame(props: PageFrameProps) {
               </div>
             )}
           </ResponsiveContainer>
-        </div>
+        </header>
       )}
       <div
         ref={scrollRef}
