@@ -29,7 +29,8 @@ export function Card(props: {
         "border-[rgba(255,255,255,0.13)]",
         {
           "text-foreground-disabled": props.disabled,
-          "bg-card-pattern": !props.disabled
+          "bg-card-pattern": !props.disabled,
+          "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background": isClickable
         },
         props.className
       )}

@@ -26,7 +26,7 @@ function Button(props: {
         style={{
           transition: "color 0.3s, filter 0.3s"
         }}
-        className="text-bd-outline [&.active]:text-[#3faeec] [&.active]:drop-shadow-[0_0_5px_#3faeec]"
+        className="rounded-lg text-bd-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 [&.active]:text-[#3faeec] [&.active]:drop-shadow-[0_0_5px_#3faeec]"
       >
         <div>
           <div className="flex justify-center drop-shadow">{props.icon}</div>

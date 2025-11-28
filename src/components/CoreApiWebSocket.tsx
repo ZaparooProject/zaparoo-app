@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Clock, AlertTriangle } from "lucide-react";
 import { WebSocketManager, WebSocketState } from "../lib/websocketManager.ts";
+import { logger } from "../lib/logger.ts";
 import {
   IndexResponse,
   Notification,
@@ -122,7 +123,7 @@ export function CoreApiWebSocket() {
         lastTimestamp &&
         now - parseInt(lastTimestamp) < TEN_MINUTES
       ) {
-        console.log(`${logPrefix}Showing optimistic reconnecting state`);
+        logger.log(`${logPrefix}Showing optimistic reconnecting state`);
         setConnectionState(ConnectionState.RECONNECTING);
         setConnectionError("");
 
@@ -137,7 +138,7 @@ export function CoreApiWebSocket() {
             const actualState = wsManagerRef.current.currentState;
             // If still not actually connected after 5 seconds, show real state
             if (actualState !== WebSocketState.CONNECTED) {
-              console.log(`${logPrefix}Optimistic timeout: showing real connection state`);
+              logger.log(`${logPrefix}Optimistic timeout: showing real connection state`);
               switch (actualState) {
                 case WebSocketState.CONNECTING:
                   setConnectionState(ConnectionState.CONNECTING);
@@ -159,11 +160,11 @@ export function CoreApiWebSocket() {
 
         return true; // Optimistic state applied
       } else {
-        console.log(`${logPrefix}Not showing optimistic state - conditions not met`);
+        logger.log(`${logPrefix}Not showing optimistic state - conditions not met`);
         return false; // Not optimistic
       }
     } catch (error) {
-      console.error(`${logPrefix}Error checking optimistic state:`, error);
+      logger.error(`${logPrefix}Error checking optimistic state:`, error);
       return false;
     }
   }, [setConnectionState, setConnectionError]);
@@ -197,16 +198,16 @@ export function CoreApiWebSocket() {
     // Helper functions for message processing
     const mediaStarted = (params: PlayingResponse) => {
       try {
-        console.log("media.started", params);
+        logger.log("media.started", params);
         setPlaying(params);
       } catch (err) {
-        console.error("Error processing media.started notification:", err);
+        logger.error("Error processing media.started notification:", err);
       }
     };
 
     const mediaStopped = () => {
       try {
-        console.log("media.stopped");
+        logger.log("media.stopped");
         setPlaying({
           systemId: "",
           systemName: "",
@@ -214,13 +215,13 @@ export function CoreApiWebSocket() {
           mediaName: ""
         });
       } catch (err) {
-        console.error("Error processing media.stopped notification:", err);
+        logger.error("Error processing media.stopped notification:", err);
       }
     };
 
     const mediaIndexing = (params: IndexResponse) => {
       try {
-        console.log("mediaIndexing", params);
+        logger.log("mediaIndexing", params);
 
         // Get current state before updating
         const currentState = useStatusStore.getState().gamesIndex;
@@ -236,20 +237,20 @@ export function CoreApiWebSocket() {
 
         // Invalidate media query on any significant state change to keep UI in sync
         if (indexingStateChanged || optimizingStateChanged || existsStateChanged || totalMediaChanged) {
-          console.log("Database state changed, invalidating media query");
+          logger.log("Database state changed, invalidating media query");
           queryClient.invalidateQueries({ queryKey: ["media"] });
         }
       } catch (err) {
-        console.error("Error processing mediaIndexing notification:", err);
+        logger.error("Error processing mediaIndexing notification:", err);
       }
     };
 
     const activeToken = (params: TokenResponse) => {
       try {
-        console.log("activeToken", params);
+        logger.log("activeToken", params);
         setLastToken(params);
       } catch (err) {
-        console.error("Error processing activeToken notification:", err);
+        logger.error("Error processing activeToken notification:", err);
       }
     };
 
@@ -284,12 +285,12 @@ export function CoreApiWebSocket() {
                 }
                 addDeviceHistory(getDeviceAddress());
               } catch (e) {
-                console.error("Error processing device history:", e);
+                logger.error("Error processing device history:", e);
                 toast.error(t("error", { msg: "Failed to load device history" }));
               }
             })
             .catch((e) => {
-              console.error("Failed to get device history:", e);
+              logger.error("Failed to get device history:", e);
             });
 
           // Get media information
@@ -301,12 +302,12 @@ export function CoreApiWebSocket() {
                   setPlaying(v.active[0]);
                 }
               } catch (e) {
-                console.error("Error processing media data:", e);
+                logger.error("Error processing media data:", e);
                 toast.error(t("error", { msg: "Failed to process media data" }));
               }
             })
             .catch((e) => {
-              console.error("Failed to get media information:", e);
+              logger.error("Failed to get media information:", e);
               toast.error(t("error", { msg: "Failed to fetch media" }));
             });
 
@@ -318,12 +319,12 @@ export function CoreApiWebSocket() {
                   setLastToken(v.last);
                 }
               } catch (e) {
-                console.error("Error processing tokens data:", e);
+                logger.error("Error processing tokens data:", e);
                 toast.error(t("error", { msg: "Failed to process tokens data" }));
               }
             })
             .catch((e) => {
-              console.error("Failed to get tokens information:", e);
+              logger.error("Failed to get tokens information:", e);
               toast.error(t("error", { msg: "Failed to fetch tokens" }));
             });
         },
@@ -334,14 +335,14 @@ export function CoreApiWebSocket() {
           const errorMsg = "Error communicating with server: " + wsUrl;
           setConnectionError(errorMsg);
           setConnectionState(ConnectionState.ERROR);
-          console.error(errorMsg, error);
+          logger.error(errorMsg, error);
         },
         onMessage: (e) => {
-          console.debug("message", e.data);
+          logger.debug("message", e.data);
 
           // Process the received message
           if (!e || !e.data) {
-            console.error("Received empty message event");
+            logger.error("Received empty message event");
             return;
           }
 
@@ -419,16 +420,16 @@ export function CoreApiWebSocket() {
                       break;
                     }
                     default:
-                      console.warn("Unknown notification method:", v.method);
+                      logger.warn("Unknown notification method:", v.method);
                   }
                 } catch (err) {
-                  console.error("Error processing notification:", err);
+                  logger.error("Error processing notification:", err);
                   toast.error(t("error", { msg: "Error processing notification" }));
                 }
               }
             })
             .catch((e) => {
-              console.error("Error processing message:", e);
+              logger.error("Error processing message:", e);
               toast.error(t("error", { msg: e?.message || "Unknown error" }));
             });
         },
@@ -473,7 +474,7 @@ export function CoreApiWebSocket() {
 
     // Cleanup function: close WebSocket on component unmount or dependency change
     return () => {
-      console.log("CoreApiWebSocket cleanup: destroying WebSocket manager");
+      logger.log("CoreApiWebSocket cleanup: destroying WebSocket manager");
 
       // Clear optimistic timeout if active
       if (optimisticTimeoutRef.current) {
@@ -508,7 +509,7 @@ export function CoreApiWebSocket() {
     const setupListeners = async () => {
       // Handle app resume - trigger immediate reconnection with optimistic state
       resumeListener = await App.addListener("resume", async () => {
-        console.log("App resumed, triggering immediate reconnection");
+        logger.log("App resumed, triggering immediate reconnection");
 
         // Only attempt reconnection if we have a valid device address
         if (!deviceAddress || !wsManagerRef.current) {
@@ -527,7 +528,7 @@ export function CoreApiWebSocket() {
 
       // Handle app pause - persist connection state
       pauseListener = await App.addListener("pause", async () => {
-        console.log("App paused");
+        logger.log("App paused");
 
         if (wsManagerRef.current) {
           const currentState = wsManagerRef.current.currentState;
@@ -543,7 +544,7 @@ export function CoreApiWebSocket() {
             value: timestamp.toString()
           });
 
-          console.log(`Persisted connection state: ${currentState} at ${timestamp}`);
+          logger.log(`Persisted connection state: ${currentState} at ${timestamp}`);
         }
       });
     };

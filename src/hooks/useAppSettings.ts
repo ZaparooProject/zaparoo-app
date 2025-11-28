@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Preferences } from "@capacitor/preferences";
 import { sessionManager } from "../lib/nfc";
+import { logger } from "../lib/logger";
 
 interface UseAppSettingsProps {
   initData: {
@@ -36,35 +37,42 @@ export function useAppSettings({ initData }: UseAppSettingsProps) {
 
   const handleSetRestartScan = (value: boolean) => {
     setRestartScan(value);
-    Preferences.set({ key: "restartScan", value: value.toString() });
+    Preferences.set({ key: "restartScan", value: value.toString() })
+      .catch((e) => logger.error("Failed to save restartScan preference:", e));
   };
 
   const handleSetLaunchOnScan = (value: boolean) => {
     setLaunchOnScan(value);
-    Preferences.set({ key: "launchOnScan", value: value.toString() });
+    Preferences.set({ key: "launchOnScan", value: value.toString() })
+      .catch((e) => logger.error("Failed to save launchOnScan preference:", e));
   };
 
   const handleSetPreferRemoteWriter = (value: boolean) => {
     setPreferRemoteWriter(value);
-    Preferences.set({ key: "preferRemoteWriter", value: value.toString() });
+    Preferences.set({ key: "preferRemoteWriter", value: value.toString() })
+      .catch((e) => logger.error("Failed to save preferRemoteWriter preference:", e));
   };
 
   const handleSetShakeEnabled = (value: boolean) => {
     setShakeEnabled(value);
-    Preferences.set({ key: "shakeEnabled", value: value.toString() });
+    Preferences.set({ key: "shakeEnabled", value: value.toString() })
+      .catch((e) => logger.error("Failed to save shakeEnabled preference:", e));
   };
 
   const handleSetShakeMode = (value: "random" | "custom") => {
     setShakeMode(value);
-    Preferences.set({ key: "shakeMode", value });
+    Preferences.set({ key: "shakeMode", value })
+      .catch((e) => logger.error("Failed to save shakeMode preference:", e));
     // Clear zapscript when mode changes
     setShakeZapscript("");
-    Preferences.set({ key: "shakeZapscript", value: "" });
+    Preferences.set({ key: "shakeZapscript", value: "" })
+      .catch((e) => logger.error("Failed to save shakeZapscript preference:", e));
   };
 
   const handleSetShakeZapscript = (value: string) => {
     setShakeZapscript(value);
-    Preferences.set({ key: "shakeZapscript", value });
+    Preferences.set({ key: "shakeZapscript", value })
+      .catch((e) => logger.error("Failed to save shakeZapscript preference:", e));
   };
 
   return {

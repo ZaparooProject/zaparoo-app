@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { logger } from "../lib/logger";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useStatusStore } from "../lib/store";
 import { Button } from "./wui/Button";
@@ -33,7 +34,7 @@ export const RestorePuchasesButton = () => {
                 location.reload();
               })
               .catch((e) => {
-                console.error("customer info error", e);
+                logger.error("customer info error", e);
               });
             toast.success((to) => (
               <span
@@ -99,7 +100,7 @@ const ProPurchaseModal = (props: {
             if (props.purchasePackage) {
               Purchases.purchasePackage({ aPackage: props.purchasePackage })
                 .then((purchase) => {
-                  console.log("purchase success", purchase);
+                  logger.log("purchase success", purchase);
                   props.setProAccess(true);
                   usePreferencesStore.getState().setLauncherAccess(true);
                   usePreferencesStore.getState().setLaunchOnScan(true);
@@ -109,7 +110,7 @@ const ProPurchaseModal = (props: {
                   if (e.message.includes("Purchase was cancelled")) {
                     return;
                   }
-                  console.error("purchase error", e);
+                  logger.error("purchase error", e);
                 });
             }
           }}
@@ -129,7 +130,7 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
 
   useEffect(() => {
     if (Capacitor.getPlatform() === "web") {
-      console.log("web platform, skipping purchases");
+      logger.log("web platform, skipping purchases");
       return;
     }
 
@@ -142,11 +143,12 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
         ) {
           setLauncherPackage(offerings.current.availablePackages[0]);
         } else {
-          console.error("no launcher purchase package found");
+          logger.error("no launcher purchase package found");
         }
       })
       .catch((e) => {
-        console.error("offerings error", e);
+        logger.error("offerings error", e);
+        toast.error(t("settings.app.offeringsError"));
       });
 
     // Skip customer info check if already hydrated in App.tsx
@@ -171,7 +173,7 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
         }
       })
       .catch((e) => {
-        console.error("customer info error", e);
+        logger.error("customer info error", e);
       });
   }, [setProAccess]);
 

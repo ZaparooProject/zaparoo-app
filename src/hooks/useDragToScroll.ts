@@ -26,6 +26,8 @@ export function useDragToScroll<T extends HTMLElement = HTMLElement>({
   const isDraggingRef = useRef(false);
   const startXRef = useRef(0);
   const scrollStartRef = useRef(0);
+  // Store cleanup function to allow unmount cleanup
+  const cleanupRef = useRef<(() => void) | null>(null);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!enabled || !elementRef.current) return;
@@ -54,17 +56,27 @@ export function useDragToScroll<T extends HTMLElement = HTMLElement>({
       isDraggingRef.current = false;
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
+      cleanupRef.current = null;
     };
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
+
+    // Store cleanup function for unmount
+    cleanupRef.current = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
   }, [enabled, scrollSensitivity]);
 
   // Clean up event listeners on unmount
   useEffect(() => {
     return () => {
-      if (isDraggingRef.current) {
-        isDraggingRef.current = false;
+      isDraggingRef.current = false;
+      // Clean up any dangling listeners
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
       }
     };
   }, []);

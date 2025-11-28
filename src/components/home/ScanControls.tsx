@@ -31,9 +31,16 @@ export function ScanControls({
         <div className="mt-8 mb-9 text-center">
           <div
             onClick={onScanButton}
-            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onScanButton()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onScanButton();
+              }
+            }}
             role="button"
             tabIndex={0}
+            aria-label={t("scan.pressToScan")}
+            className="inline-block cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-4 focus-visible:ring-offset-background"
           >
             <ScanSpinner status={scanStatus} spinning={scanSession} />
           </div>

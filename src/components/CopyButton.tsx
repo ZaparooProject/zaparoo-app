@@ -20,7 +20,7 @@ export const CopyButton = (props: { text: string }) => {
 
   return (
     <span
-      className="ml-1 cursor-pointer px-1 text-xs font-semibold text-white underline"
+      className="ml-1 cursor-pointer rounded px-1 text-xs font-semibold text-white underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
       onClick={(e) => {
         e.stopPropagation();
         writeToClipboard(props.text).then(() => {
@@ -44,6 +44,7 @@ export const CopyButton = (props: { text: string }) => {
       }}
       role="button"
       tabIndex={0}
+      aria-label={display}
       style={{ whiteSpace: "nowrap" }}
     >
       {display}

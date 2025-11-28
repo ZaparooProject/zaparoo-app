@@ -8,11 +8,15 @@ interface ToggleChipProps {
   setState: (state: boolean) => void;
   disabled?: boolean;
   compact?: boolean;
+  /** Accessible label for screen readers (required for icon-only toggles) */
+  "aria-label"?: string;
 }
 
 export function ToggleChip(props: ToggleChipProps) {
   return (
     <button
+      aria-pressed={props.state}
+      aria-label={props["aria-label"] || props.label}
       className={classNames(
         "flex",
         "flex-row",
@@ -25,6 +29,11 @@ export function ToggleChip(props: ToggleChipProps) {
         "border",
         "border-solid",
         "bg-background",
+        "focus-visible:outline-none",
+        "focus-visible:ring-2",
+        "focus-visible:ring-white/50",
+        "focus-visible:ring-offset-2",
+        "focus-visible:ring-offset-background",
         {
           "w-10": !props.label && props.icon,
           "h-10": !props.label && props.icon,

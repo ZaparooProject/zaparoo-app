@@ -4,6 +4,7 @@ import { Capacitor } from "@capacitor/core";
 import { CapacitorShake } from "@capgo/capacitor-shake";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useStatusStore } from "../lib/store";
+import { logger } from "../lib/logger";
 
 interface UseShakeDetectionProps {
   shakeEnabled: boolean;
@@ -32,15 +33,16 @@ export function useShakeDetection({
     }
 
     let listener: PluginListenerHandle | null = null;
+    let isMounted = true;
 
     const setupListener = async () => {
       try {
-        listener = await CapacitorShake.addListener("shake", async () => {
+        const newListener = await CapacitorShake.addListener("shake", async () => {
           const now = Date.now();
 
           // Debounce: ignore shakes that happen too quickly
           if (now - lastShakeTimeRef.current < DEBOUNCE_MS) {
-            console.log(
+            logger.log(
               "Shake detected but debounced (too soon after last shake)"
             );
             return;
@@ -51,21 +53,30 @@ export function useShakeDetection({
           const zapscript = usePreferencesStore.getState().shakeZapscript;
 
           if (!zapscript) {
-            console.log("Shake detected, but no zapscript configured");
+            logger.log("Shake detected, but no zapscript configured");
             return;
           }
 
-          console.log("Shake detected, queueing zapscript:", zapscript);
+          logger.log("Shake detected, queueing zapscript:", zapscript);
           setRunQueue({ value: zapscript, unsafe: true });
         });
+
+        // Only assign listener if still mounted
+        if (isMounted) {
+          listener = newListener;
+        } else {
+          // Component unmounted during async setup, clean up immediately
+          newListener.remove();
+        }
       } catch (error) {
-        console.error("Failed to setup shake listener:", error);
+        logger.error("Failed to setup shake listener:", error);
       }
     };
 
     setupListener();
 
     return () => {
+      isMounted = false;
       if (listener) {
         listener.remove();
       }

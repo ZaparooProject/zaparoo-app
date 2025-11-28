@@ -9,6 +9,8 @@ interface ButtonProps {
   icon?: ReactElement;
   disabled?: boolean;
   className?: string;
+  /** Accessible label for screen readers (required for icon-only buttons) */
+  "aria-label"?: string;
 }
 
 export const Button = memo(function Button(props: ButtonProps) {
@@ -20,6 +22,7 @@ export const Button = memo(function Button(props: ButtonProps) {
 
   return (
     <button
+      aria-label={props["aria-label"] || props.label}
       className={classNames(
         "flex",
         "flex-row",
@@ -33,6 +36,11 @@ export const Button = memo(function Button(props: ButtonProps) {
         "duration-100",
         "active:scale-95",
         "touch-manipulation",
+        "focus-visible:outline-none",
+        "focus-visible:ring-2",
+        "focus-visible:ring-white/50",
+        "focus-visible:ring-offset-2",
+        "focus-visible:ring-offset-background",
         // Size variants
         {
           // Small size

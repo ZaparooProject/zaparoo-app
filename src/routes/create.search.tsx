@@ -9,6 +9,7 @@ import { VirtualSearchResults } from "@/components/VirtualSearchResults.tsx";
 import { CopyButton } from "@/components/CopyButton.tsx";
 import { BackToTop } from "@/components/BackToTop.tsx";
 import { TagBadge } from "@/components/TagBadge.tsx";
+import { logger } from "../lib/logger";
 import { CoreAPI } from "../lib/coreApi.ts";
 import {
   BackIcon,
@@ -51,7 +52,7 @@ export const Route = createFileRoute("/create/search")({
         savedTags = JSON.parse(tagPreference.value);
       }
     } catch (e) {
-      console.warn("Failed to parse saved tags preference:", e);
+      logger.warn("Failed to parse saved tags preference:", e);
     }
 
     return {
@@ -148,9 +149,13 @@ function Search() {
   }, [nfcWriter]);
 
   useEffect(() => {
-    CoreAPI.media().then((s) => {
-      setGamesIndex(s.database);
-    });
+    CoreAPI.media()
+      .then((s) => {
+        setGamesIndex(s.database);
+      })
+      .catch((e) => {
+        logger.error("Failed to fetch media index:", e);
+      });
   }, [setGamesIndex]);
 
   // Set default write mode when selected result changes

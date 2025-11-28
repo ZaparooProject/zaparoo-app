@@ -1,3 +1,5 @@
+import { logger } from "./logger.ts";
+
 export enum WebSocketState {
   IDLE = "idle",
   CONNECTING = "connecting",
@@ -61,7 +63,7 @@ export class WebSocketManager {
 
   connect(): void {
     if (this.isDestroyed) {
-      console.warn("Cannot connect: WebSocketManager has been destroyed");
+      logger.warn("Cannot connect: WebSocketManager has been destroyed");
       return;
     }
 
@@ -82,17 +84,17 @@ export class WebSocketManager {
    */
   immediateReconnect(): void {
     if (this.isDestroyed) {
-      console.warn("Cannot reconnect: WebSocketManager has been destroyed");
+      logger.warn("Cannot reconnect: WebSocketManager has been destroyed");
       return;
     }
 
     // If already connected, do nothing
     if (this.state === WebSocketState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
-      console.log("Already connected, skipping immediate reconnect");
+      logger.log("Already connected, skipping immediate reconnect");
       return;
     }
 
-    console.log("Immediate reconnect triggered");
+    logger.log("Immediate reconnect triggered");
 
     // Clear any pending reconnection timer
     if (this.reconnectTimer) {
@@ -135,13 +137,13 @@ export class WebSocketManager {
     } else if (shouldQueue) {
       // Check if queue is at capacity
       if (this.messageQueue.length >= this.MAX_QUEUE_SIZE) {
-        console.warn(
+        logger.warn(
           `Message queue full (${this.MAX_QUEUE_SIZE} messages). Discarding oldest message.`
         );
         this.messageQueue.shift(); // Remove oldest message
       }
       // Queue the message for sending once reconnected
-      console.debug("WebSocket not open, queuing message");
+      logger.debug("WebSocket not open, queuing message");
       this.messageQueue.push(data);
     } else {
       throw new Error(
@@ -155,7 +157,7 @@ export class WebSocketManager {
       return;
     }
 
-    console.debug(`Flushing ${this.messageQueue.length} queued messages`);
+    logger.debug(`Flushing ${this.messageQueue.length} queued messages`);
     const messages = [...this.messageQueue];
     this.messageQueue = [];
 
@@ -168,7 +170,7 @@ export class WebSocketManager {
           this.messageQueue.push(message);
         }
       } catch (error) {
-        console.error("Failed to send queued message:", error);
+        logger.error("Failed to send queued message:", error);
         // Re-queue failed message
         this.messageQueue.push(message);
       }
@@ -196,7 +198,7 @@ export class WebSocketManager {
       this.setupEventHandlers();
       this.startConnectionTimeout();
     } catch (error) {
-      console.error("Failed to create WebSocket:", error);
+      logger.error("Failed to create WebSocket:", error);
       this.handleConnectionError();
     }
   }
@@ -205,7 +207,7 @@ export class WebSocketManager {
     if (!this.ws) return;
 
     this.ws.onopen = () => {
-      console.debug("WebSocket connected");
+      logger.debug("WebSocket connected");
       this.clearConnectionTimeout();
       this.reconnectAttempts = 0;
       this.setState(WebSocketState.CONNECTED);
@@ -215,7 +217,7 @@ export class WebSocketManager {
     };
 
     this.ws.onclose = () => {
-      console.debug("WebSocket closed");
+      logger.debug("WebSocket closed");
       this.clearConnectionTimeout();
       this.stopHeartbeat();
       this.callbacks.onClose?.();
@@ -223,7 +225,7 @@ export class WebSocketManager {
     };
 
     this.ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
+      logger.error("WebSocket error:", error);
       this.clearConnectionTimeout();
       this.callbacks.onError?.(error);
       this.handleConnectionError();
@@ -245,7 +247,7 @@ export class WebSocketManager {
 
   private setState(newState: WebSocketState): void {
     if (this.state !== newState) {
-      console.debug(`WebSocket state change: ${this.state} -> ${newState}`);
+      logger.debug(`WebSocket state change: ${this.state} -> ${newState}`);
       this.state = newState;
       this.callbacks.onStateChange?.(newState);
     }
@@ -288,7 +290,7 @@ export class WebSocketManager {
     const jitter = Math.random() * cappedDelay * 0.5;
     const delay = Math.floor(cappedDelay + jitter);
 
-    console.debug(
+    logger.debug(
       `Scheduling reconnect attempt ${this.reconnectAttempts + 1} in ${delay}ms (base: ${cappedDelay}ms + jitter: ${Math.floor(jitter)}ms)`
     );
 
@@ -309,7 +311,7 @@ export class WebSocketManager {
           this.ws.send(this.config.pingMessage);
           this.startPongTimeout();
         } catch (error) {
-          console.error("Failed to send ping:", error);
+          logger.error("Failed to send ping:", error);
           this.handleConnectionError();
         }
       }
@@ -336,7 +338,7 @@ export class WebSocketManager {
   private startPongTimeout(): void {
     this.clearPongTimeout();
     this.pongTimer = setTimeout(() => {
-      console.warn("Pong timeout - closing connection");
+      logger.warn("Pong timeout - closing connection");
       this.ws?.close();
     }, this.config.pongTimeout);
   }
@@ -351,7 +353,7 @@ export class WebSocketManager {
   private startConnectionTimeout(): void {
     this.clearConnectionTimeout();
     this.connectionTimer = setTimeout(() => {
-      console.warn(`Connection timeout after ${this.config.connectionTimeout}ms - closing connection`);
+      logger.warn(`Connection timeout after ${this.config.connectionTimeout}ms - closing connection`);
       // Close the WebSocket to trigger reconnection logic
       if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
         this.ws.close();

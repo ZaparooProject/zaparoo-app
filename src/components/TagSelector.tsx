@@ -240,10 +240,11 @@ export function TagSelector({
         <div className="p-2 pt-3">
           {/* Search bar */}
           <div className="relative mb-3">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" aria-hidden="true" />
             <input
               type="text"
               placeholder={t("tagSelector.searchPlaceholder")}
+              aria-label={t("tagSelector.searchTags")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="border-input bg-background text-foreground w-full rounded-md border px-10 py-2 text-sm focus:ring-2 focus:ring-white/20 focus:outline-none"
@@ -253,8 +254,9 @@ export function TagSelector({
                 onClick={() => setSearchQuery("")}
                 className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2"
                 type="button"
+                aria-label={t("tagSelector.clearSearch")}
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
           </div>

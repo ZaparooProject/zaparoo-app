@@ -1,6 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { logger } from "../lib/logger";
 // import {
 //   ScanTextIcon,
 //   PenToolIcon,
@@ -40,7 +41,7 @@ function NfcUtils() {
 
   useEffect(() => {
     if (nfcWriter.status !== null) {
-      console.log(JSON.stringify(nfcWriter.result?.info.rawTag));
+      logger.log(JSON.stringify(nfcWriter.result?.info.rawTag));
       setWriteOpen(false);
 
       // Clean up the nfcWriter state after operation completes
