@@ -62,15 +62,15 @@ export const HistoryModal = memo(function HistoryModal({ isOpen, onClose, histor
                         ? "-"
                         : item.uid
                   })}
-                  {item.text !== "" && item.uid !== "__api__" && (
-                    <CopyButton text={item.text} />
+                  {item.uid !== "" && item.uid !== "__api__" && (
+                    <CopyButton text={item.uid} className="ml-1" />
                   )}
                 </p>
                 <p style={{ wordBreak: "break-all" }}>
                   {t("scan.lastScannedText", {
                     text: item.text === "" ? "-" : item.text
                   })}
-                  {item.text !== "" && <CopyButton text={item.text} />}
+                  {item.text !== "" && <CopyButton text={item.text} className="ml-1" />}
                 </p>
               </div>
             ))}

@@ -44,7 +44,7 @@ export function LastScannedInfo({
                   : lastToken.uid
             })}
             {lastToken.uid !== "" && lastToken.uid !== "__api__" && (
-              <CopyButton text={lastToken.uid} />
+              <CopyButton text={lastToken.uid} className="ml-1" />
             )}
           </p>
         )}
@@ -52,7 +52,7 @@ export function LastScannedInfo({
           {t("scan.lastScannedText", {
             text: lastToken.text === "" ? "-" : lastToken.text
           })}
-          {lastToken.text !== "" && <CopyButton text={lastToken.text} />}
+          {lastToken.text !== "" && <CopyButton text={lastToken.text} className="ml-1" />}
         </p>
       </div>
     </div>

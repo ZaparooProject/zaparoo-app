@@ -1,17 +1,15 @@
 import { useState } from "react";
 import {
-  CopyIcon,
   EyeIcon,
   EyeOffIcon,
   ShareIcon,
   NfcIcon
 } from "lucide-react";
-import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { Clipboard } from "@capacitor/clipboard";
 import { Share } from "@capacitor/share";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/wui/Button";
+import { CopyButton } from "@/components/CopyButton";
 import { Result } from "@/lib/nfc";
 
 interface ReadTabProps {
@@ -22,15 +20,6 @@ interface ReadTabProps {
 export function ReadTab({ result, onScan }: ReadTabProps) {
   const { t } = useTranslation();
   const [showRawData, setShowRawData] = useState(false);
-
-  const copyToClipboard = async (text: string, label: string) => {
-    try {
-      await Clipboard.write({ string: text });
-      toast.success(t("create.nfc.readTab.copiedToClipboard", { label }));
-    } catch {
-      toast.error(t("create.nfc.readTab.copyFailed"));
-    }
-  };
 
   const shareTagData = async () => {
     if (!result?.info?.tag) return;
@@ -47,8 +36,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
         dialogTitle: t("create.nfc.readTab.shareTitle")
       });
     } catch {
-      // Fallback to copy if share fails or is cancelled
-      copyToClipboard(shareText, t("create.nfc.readTab.tagData"));
+      // Share cancelled or failed - no action needed
     }
   };
 
@@ -81,39 +69,17 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
         <div className="space-y-4">
           <div>
             <Label htmlFor="uid">{t("create.nfc.readTab.uid")}</Label>
-            <div className="mt-1 flex items-center gap-2">
-              <code className="bg-background/50 flex-1 rounded-lg px-3 py-2 font-mono text-sm">
-                {tag?.uid || "-"}
-              </code>
-              {tag?.uid && (
-                <Button
-                  icon={<CopyIcon size={16} />}
-                  onClick={() => copyToClipboard(tag.uid, t("create.nfc.readTab.uid"))}
-                  size="sm"
-                  variant="outline"
-                />
-              )}
+            <div className="bg-background/50 mt-1 rounded-lg px-3 py-2 font-mono text-sm">
+              {tag?.uid || "-"}
+              {tag?.uid && <CopyButton text={tag.uid} className="ml-1" />}
             </div>
           </div>
 
           <div>
             <Label htmlFor="content">{t("create.nfc.readTab.content")}</Label>
-            <div className="mt-1 flex items-start gap-2">
-              <div className="bg-background/50 flex-1 rounded-lg px-3 py-2">
-                {tag?.text ? (
-                  <div className="text-sm break-all">{tag.text}</div>
-                ) : (
-                  <div className="text-foreground-secondary text-sm">-</div>
-                )}
-              </div>
-              {tag?.text && (
-                <Button
-                  icon={<CopyIcon size={16} />}
-                  onClick={() => copyToClipboard(tag.text, t("create.nfc.readTab.content"))}
-                  size="sm"
-                  variant="outline"
-                />
-              )}
+            <div className="bg-background/50 mt-1 rounded-lg px-3 py-2 text-sm break-all">
+              {tag?.text || <span className="text-foreground-secondary">-</span>}
+              {tag?.text && <CopyButton text={tag.text} className="ml-1" />}
             </div>
           </div>
         </div>
@@ -262,34 +228,23 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
           {/* Tag ID */}
           <div>
             <Label>{t("create.nfc.readTab.tagId")}</Label>
-            <div className="mt-1 flex items-center gap-2">
-              <code className="bg-background/50 flex-1 rounded-lg px-3 py-2 font-mono text-sm">
-                {rawTag?.id
-                  ? showRawData
-                    ? rawTag.id
-                        .map((byte) => byte.toString(16).padStart(2, "0"))
-                        .join(" ")
-                    : rawTag.id
-                        .map((byte) => byte.toString(16).padStart(2, "0"))
-                        .join("")
-                  : "-"}
-              </code>
+            <code className="bg-background/50 mt-1 block rounded-lg px-3 py-2 font-mono text-sm">
+              {rawTag?.id
+                ? showRawData
+                  ? rawTag.id
+                      .map((byte) => byte.toString(16).padStart(2, "0"))
+                      .join(" ")
+                  : rawTag.id
+                      .map((byte) => byte.toString(16).padStart(2, "0"))
+                      .join("")
+                : "-"}
               {rawTag?.id && (
-                <Button
-                  icon={<CopyIcon size={16} />}
-                  onClick={() =>
-                    copyToClipboard(
-                      rawTag
-                        .id!.map((byte) => byte.toString(16).padStart(2, "0"))
-                        .join(""),
-                      t("create.nfc.readTab.tagId")
-                    )
-                  }
-                  size="sm"
-                  variant="outline"
+                <CopyButton
+                  text={rawTag.id.map((byte) => byte.toString(16).padStart(2, "0")).join("")}
+                  className="ml-1"
                 />
               )}
-            </div>
+            </code>
           </div>
 
           {/* ATQA bytes (Android NFC-A) */}

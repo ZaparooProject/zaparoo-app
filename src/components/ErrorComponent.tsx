@@ -34,19 +34,7 @@ Timestamp: ${new Date().toISOString()}
         <div className="mb-4 rounded bg-black/40 p-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">Diagnostic Details</h2>
-            {Capacitor.isNativePlatform() ? (
-              <CopyButton text={errorDetails} />
-            ) : (
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(errorDetails);
-                  alert("Copied to clipboard!");
-                }}
-                className="ml-1 cursor-pointer px-1 text-xs font-semibold text-white underline"
-              >
-                copy
-              </button>
-            )}
+            <CopyButton text={errorDetails} />
           </div>
           <pre className="mt-2 max-h-64 overflow-auto text-xs whitespace-pre-wrap text-red-200">
             {errorDetails}
