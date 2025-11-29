@@ -547,7 +547,7 @@ function Search() {
         selectedSystems={querySystem === "all" ? [] : [querySystem]}
         mode="single"
         title={t("create.search.selectSystem")}
-        includeAllOption={false}
+        includeAllOption={true}
         defaultSelection="all"
       />
       <TagSelector
