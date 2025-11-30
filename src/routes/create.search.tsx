@@ -145,8 +145,10 @@ function Search() {
 
   const { t } = useTranslation();
 
+  // Close modal when NFC operation completes
   useEffect(() => {
     if (nfcWriter.status !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing UI with NFC hook state
       setWriteOpen(false);
     }
   }, [nfcWriter]);
@@ -164,6 +166,7 @@ function Search() {
   // Set default write mode when selected result changes
   useEffect(() => {
     if (selectedResult) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: deriving UI state from selection
       setWriteMode(selectedResult.zapScript ? "zapScript" : "path");
     }
   }, [selectedResult]);

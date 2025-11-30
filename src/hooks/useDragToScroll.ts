@@ -81,6 +81,9 @@ export function useDragToScroll<T extends HTMLElement = HTMLElement>({
     };
   }, []);
 
+  // Note: Reading refs here is intentional - isDragging is meant to track realtime drag state
+  // The ref is used because React state would cause re-renders during mouse movement
+  /* eslint-disable react-hooks/refs -- Intentional: reading drag state for return value */
   const dragProps = {
     ref: elementRef,
     onMouseDown: handleMouseDown,

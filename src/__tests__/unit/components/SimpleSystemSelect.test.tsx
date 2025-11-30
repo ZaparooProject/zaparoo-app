@@ -108,8 +108,9 @@ describe("SimpleSystemSelect", () => {
     const onSelect = vi.fn();
     renderComponent({ value: "", onSelect });
 
+    // Wait for the options to actually load (not just the combobox to exist)
     await waitFor(() => {
-      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "Super Nintendo" })).toBeInTheDocument();
     });
 
     const select = screen.getByRole("combobox");

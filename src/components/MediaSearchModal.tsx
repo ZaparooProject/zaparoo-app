@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Preferences } from "@capacitor/preferences";
 import classNames from "classnames";
 import { useStatusStore } from "@/lib/store.ts";
@@ -64,15 +64,16 @@ export function MediaSearchModal(props: {
     });
   };
 
-  useEffect(() => {
-    if (selectedResult) {
+  // Handle result selection - called by VirtualSearchResults when a result is clicked
+  const handleResultSelect = (result: SearchResultGame | null) => {
+    if (result) {
       // Use zapScript if available, otherwise fall back to path
-      const valueToInsert = selectedResult.zapScript || selectedResult.path;
+      const valueToInsert = result.zapScript || result.path;
       onSelect(valueToInsert);
       close();
-      setSelectedResult(null);
     }
-  }, [selectedResult, onSelect, close]);
+    setSelectedResult(result);
+  };
 
   const canSearch = connected && gamesIndex.exists && !gamesIndex.indexing;
 
@@ -138,7 +139,7 @@ export function MediaSearchModal(props: {
                   : []
               }
               selectedResult={selectedResult}
-              setSelectedResult={setSelectedResult}
+              setSelectedResult={handleResultSelect}
               hasSearched={searchParams !== null}
               isSearching={isSearching}
               onSearchComplete={() => setIsSearching(false)}

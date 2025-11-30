@@ -4,7 +4,6 @@ import { useWriteQueueProcessor } from "../../../hooks/useWriteQueueProcessor";
 import { useStatusStore } from "../../../lib/store";
 import { usePreferencesStore } from "../../../lib/preferencesStore";
 import { useNfcWriter } from "../../../lib/writeNfcHook";
-import { Status } from "../../../lib/nfc";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { CoreAPI } from "../../../lib/coreApi";
@@ -57,15 +56,12 @@ vi.mock("react-i18next", () => ({
 }));
 
 describe("useWriteQueueProcessor", () => {
-  let mockNfcWriter: {
-    write: ReturnType<typeof vi.fn>;
-    end: ReturnType<typeof vi.fn>;
-    status: Status | null;
-    writing: boolean;
-    result: any;
-  };
-  let mockSetWriteOpen: ReturnType<typeof vi.fn>;
-  let mockSetWriteQueue: ReturnType<typeof vi.fn>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockNfcWriter: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockSetWriteOpen: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockSetWriteQueue: any;
 
   beforeEach(() => {
     vi.clearAllMocks();

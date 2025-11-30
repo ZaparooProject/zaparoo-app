@@ -39,6 +39,8 @@ function NfcUtils() {
 
   const { t } = useTranslation();
 
+  // Handle NFC operation completion - update UI state and cleanup
+  /* eslint-disable react-hooks/set-state-in-effect -- Intentional: syncing UI with NFC hook state */
   useEffect(() => {
     if (nfcWriter.status !== null) {
       logger.log(JSON.stringify(nfcWriter.result?.info.rawTag));
@@ -53,6 +55,7 @@ function NfcUtils() {
       }
     }
   }, [nfcWriter]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const router = useRouter();
   const goBack = () => router.history.back();

@@ -47,6 +47,7 @@ export function useVirtualInfiniteSearch({
   });
 
   // Flatten all pages into a single array for virtual scrolling
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- Intentional: optional chain for safety, actual dep is pages array
   const allItems = useMemo(() => {
     if (!searchQuery.data?.pages) return [];
 

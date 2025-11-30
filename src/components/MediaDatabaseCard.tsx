@@ -16,16 +16,20 @@ export function MediaDatabaseCard() {
   const queryClient = useQueryClient();
   const connected = useStatusStore((state) => state.connected);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelRequested, setCancelRequested] = useState(false);
   const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
 
-  // Reset cancelling state when indexing stops
+  // Derive isCancelling: true only if we requested cancel AND indexing is still happening
+  const isCancelling = cancelRequested && gamesIndex.indexing;
+
+  // Reset cancel request when indexing stops (syncing with external Zustand store state)
   useEffect(() => {
-    if (!gamesIndex.indexing && isCancelling) {
-      setIsCancelling(false);
+    if (!gamesIndex.indexing && cancelRequested) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing local UI state with external store
+      setCancelRequested(false);
     }
-  }, [gamesIndex.indexing, isCancelling]);
+  }, [gamesIndex.indexing, cancelRequested]);
 
   // Fetch real-time database status
   const { data: mediaStatus, isLoading } = useQuery({
@@ -54,16 +58,16 @@ export function MediaDatabaseCard() {
   };
 
   const handleCancelUpdate = async () => {
-    setIsCancelling(true);
+    setCancelRequested(true);
     try {
       await CoreAPI.mediaGenerateCancel();
-      // Note: Don't reset isCancelling here - let the useEffect handle it
+      // Note: Don't reset cancelRequested here - it resets automatically via effect
       // when the indexing status updates from the WebSocket notification
       queryClient.invalidateQueries({ queryKey: ["media"] });
     } catch (error) {
       logger.error("Failed to cancel media generation:", error, { category: "api", action: "mediaGenerateCancel", severity: "warning" });
       // Only reset on error, since cancellation request failed
-      setIsCancelling(false);
+      setCancelRequested(false);
     }
   };
 

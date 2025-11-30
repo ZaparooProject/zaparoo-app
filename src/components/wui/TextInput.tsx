@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/refs -- False positive: linter incorrectly flags all props as refs when component has a ref prop */
 import React, { KeyboardEventHandler, useEffect, useState, useId } from "react";
 import classNames from "classnames";
 import { SaveIcon, ClearIcon } from "../../lib/images";

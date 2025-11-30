@@ -117,7 +117,16 @@ const ProPurchaseModal = (props: {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useProPurchase = (initialProAccess: boolean = false) => {
-  const [proAccess, setProAccess] = useState(initialProAccess);
+  // Initialize from preferences store if already hydrated, otherwise use provided initial value
+  const getInitialProAccess = () => {
+    const store = usePreferencesStore.getState();
+    if (store._proAccessHydrated) {
+      return store.launcherAccess;
+    }
+    return initialProAccess;
+  };
+
+  const [proAccess, setProAccess] = useState(getInitialProAccess);
   const proPurchaseModalOpen = useStatusStore((state) => state.proPurchaseModalOpen);
   const setProPurchaseModalOpen = useStatusStore((state) => state.setProPurchaseModalOpen);
   const [launcherPackage, setLauncherPackage] =
@@ -146,13 +155,9 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
         toast.error(t("settings.app.offeringsError"));
       });
 
-    // Skip customer info check if already hydrated in App.tsx
+    // Skip customer info check if already hydrated (initial state already set)
     const proAccessHydrated = usePreferencesStore.getState()._proAccessHydrated;
     if (proAccessHydrated) {
-      // Use cached value from preferences store
-      const cachedLauncherAccess =
-        usePreferencesStore.getState().launcherAccess;
-      setProAccess(cachedLauncherAccess);
       return;
     }
 
@@ -170,7 +175,7 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
       .catch((e) => {
         logger.error("customer info error", e, { category: "purchase", action: "getCustomerInfo", severity: "warning" });
       });
-  }, [setProAccess]);
+  }, []);
 
   return {
     proAccess,

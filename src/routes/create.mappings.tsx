@@ -59,6 +59,8 @@ function Mappings() {
     queryFn: () => CoreAPI.mappings()
   });
 
+  // Handle NFC read completion - update UI state when operation completes
+  /* eslint-disable react-hooks/set-state-in-effect -- Intentional: syncing UI with NFC hook state */
   useEffect(() => {
     if (nfcWriter.status !== null) {
       setWriteOpen(false);
@@ -75,6 +77,7 @@ function Mappings() {
       }
     }
   }, [nfcWriter.result, nfcWriter, mappings.data]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const closeWriteModal = async () => {
     setWriteOpen(false);

@@ -29,8 +29,10 @@ function Create() {
 
   const { t } = useTranslation();
 
+  // Close modal when NFC operation completes (status changes from null to result)
   useEffect(() => {
     if (nfcWriter.status !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing UI with NFC hook state
       setWriteOpen(false);
     }
   }, [nfcWriter]);

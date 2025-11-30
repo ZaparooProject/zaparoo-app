@@ -154,10 +154,12 @@ export function SlideModal(props: {
             <X className="h-5 w-5" />
           </button>
         </div>
+        {/* eslint-disable react-hooks/refs -- False positives: scrollRef is passed as ref prop, children/footer are ReactNode props */}
         <div ref={props.scrollRef} className="flex-1 overflow-y-auto">
           {props.children}
         </div>
         {props.footer && <div className="flex-shrink-0">{props.footer}</div>}
+        {/* eslint-enable react-hooks/refs */}
       </div>
     </>
   );

@@ -19,7 +19,8 @@ vi.mock("shepherd.js", () => {
     on: vi.fn()
   };
 
-  mockTourConstructor = vi.fn(() => mockTourInstance);
+  // Must use regular function (not arrow) for Vitest 4 constructor mocks
+  mockTourConstructor = vi.fn(function () { return mockTourInstance; });
 
   return {
     default: {

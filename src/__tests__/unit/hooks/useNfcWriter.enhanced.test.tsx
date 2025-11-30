@@ -218,8 +218,8 @@ describe("useNfcWriter - Enhanced Functionality", () => {
         abort: vi.fn()
       };
 
-      // Mock AbortController globally
-      global.AbortController = vi.fn().mockImplementation(() => mockAbortController);
+      // Mock AbortController globally - must use regular function for Vitest 4 constructor mocks
+      global.AbortController = vi.fn().mockImplementation(function () { return mockAbortController; });
 
       const { result } = renderHook(() => useNfcWriter(WriteMethod.RemoteReader));
 
@@ -270,7 +270,8 @@ describe("useNfcWriter - Enhanced Functionality", () => {
         abort: vi.fn()
       };
 
-      global.AbortController = vi.fn().mockImplementation(() => mockAbortController);
+      // Must use regular function for Vitest 4 constructor mocks
+      global.AbortController = vi.fn().mockImplementation(function () { return mockAbortController; });
 
       const { result } = renderHook(() => useNfcWriter());
 

@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI } from "../../lib/coreApi";
+import { CoreAPI } from "@/lib/coreApi.ts";
 
 describe("CoreAPI Missing Methods", () => {
-  let mockSend: ReturnType<typeof vi.fn>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockSend: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockWsManager: any;
 
   beforeEach(() => {

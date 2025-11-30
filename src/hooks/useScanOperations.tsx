@@ -65,6 +65,7 @@ export function useScanOperations({
             logger.log("delaying restart for ios");
             setTimeout(() => {
               logger.log("restarting scan");
+              // eslint-disable-next-line react-hooks/immutability -- Intentional: recursive callback for continuous NFC scanning
               doScan();
             }, 4000);
           } else {

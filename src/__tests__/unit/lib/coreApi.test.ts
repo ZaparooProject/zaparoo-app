@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI, getDeviceAddress, getWsUrl } from "../../../lib/coreApi";
+import { CoreAPI, getDeviceAddress, getWsUrl } from "@/lib/coreApi.ts";
 import { Capacitor } from "@capacitor/core";
-import { Notification, SettingsResponse, Method, UpdateSettingsRequest } from "../../../lib/models";
+import {
+  Notification,
+  SettingsResponse,
+  Method,
+  UpdateSettingsRequest
+} from "@/lib/models.ts";
 
 // Mock Capacitor
 vi.mock("@capacitor/core");
@@ -11,24 +16,25 @@ const localStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
-  clear: vi.fn(),
+  clear: vi.fn()
 };
 
-Object.defineProperty(window, 'localStorage', {
+Object.defineProperty(window, "localStorage", {
   value: localStorageMock,
-  writable: true,
+  writable: true
 });
 
 // Mock window.location
-Object.defineProperty(window, 'location', {
+Object.defineProperty(window, "location", {
   value: {
-    hostname: 'localhost',
+    hostname: "localhost"
   },
-  writable: true,
+  writable: true
 });
 
 describe("CoreAPI", () => {
-  let mockSend: ReturnType<typeof vi.fn>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockSend: any;
 
   beforeEach(() => {
     mockSend = vi.fn();
@@ -57,10 +63,10 @@ describe("CoreAPI", () => {
     CoreAPI.version().catch(() => {
       // Ignore timeout errors to prevent unhandled rejections
     });
-    
+
     // Verify the request was sent with correct format
     expect(mockSend).toHaveBeenCalledOnce();
-    
+
     const sentData = JSON.parse(mockSend.mock.calls[0][0]);
     expect(sentData.jsonrpc).toBe("2.0");
     expect(sentData.method).toBe("version");
@@ -108,8 +114,9 @@ describe("CoreAPI", () => {
 
   it("should handle invalid JSON in processReceived", async () => {
     const invalidJsonEvent = { data: "invalid json" } as MessageEvent;
-    await expect(CoreAPI.processReceived(invalidJsonEvent))
-      .rejects.toThrow("Error parsing JSON response");
+    await expect(CoreAPI.processReceived(invalidJsonEvent)).rejects.toThrow(
+      "Error parsing JSON response"
+    );
   });
 
   it("should call stop method with correct JSON-RPC format", () => {
@@ -150,7 +157,7 @@ describe("CoreAPI", () => {
     const checkInterface = (settings: SettingsResponse) => {
       // This line should cause a TypeScript error if runZapScript doesn't exist
       const hasRunZapScript: boolean = settings.runZapScript;
-      expect(typeof hasRunZapScript).toBe('boolean');
+      expect(typeof hasRunZapScript).toBe("boolean");
     };
 
     const mockSettings: SettingsResponse = {
@@ -277,7 +284,10 @@ describe("CoreAPI", () => {
       readersScanIgnoreSystems: coreApiResponse.readersScanIgnoreSystem
     };
 
-    expect(typedResponse.readersScanIgnoreSystems).toEqual(["system1", "system2"]);
+    expect(typedResponse.readersScanIgnoreSystems).toEqual([
+      "system1",
+      "system2"
+    ]);
   });
 
   describe("getWsUrl", () => {

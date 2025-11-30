@@ -65,8 +65,8 @@ class MockWebSocket {
   }
 }
 
-// Set up the mock implementation
-mockWebSocketConstructor.mockImplementation((url: string) => {
+// Set up the mock implementation - must use regular function (not arrow) for Vitest 4 constructor mocks
+mockWebSocketConstructor.mockImplementation(function (url: string) {
   const ws = new MockWebSocket(url);
   // Add WebSocket constants to the constructor for compatibility
   (mockWebSocketConstructor as any).CONNECTING = MockWebSocket.CONNECTING;
@@ -78,11 +78,17 @@ mockWebSocketConstructor.mockImplementation((url: string) => {
 
 describe('WebSocketManager', () => {
   let manager: WebSocketManager;
-  let onStateChange: ReturnType<typeof vi.fn>;
-  let onOpen: ReturnType<typeof vi.fn>;
-  let onClose: ReturnType<typeof vi.fn>;
-  let onError: ReturnType<typeof vi.fn>;
-  let onMessage: ReturnType<typeof vi.fn>;
+  // Use 'any' for mock types to work with Vitest 4's stricter Mock type
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let onStateChange: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let onOpen: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let onClose: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let onError: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let onMessage: any;
 
   beforeEach(() => {
     vi.clearAllMocks();

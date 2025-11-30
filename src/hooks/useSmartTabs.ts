@@ -35,7 +35,8 @@ export function useSmartTabs<T extends HTMLElement = HTMLElement>({
     enabled: hasOverflow
   });
 
-  // Check for overflow
+  // Check for overflow - reads from DOM and updates state
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- Intentional: callback depends on ref object, not its value
   const checkOverflow = useCallback(() => {
     const element = dragProps.ref.current;
     if (!element) return;
@@ -70,7 +71,8 @@ export function useSmartTabs<T extends HTMLElement = HTMLElement>({
     const element = dragProps.ref.current;
     if (!element) return;
 
-    // Initial check
+    // Initial check - syncing state with DOM measurements
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: initial DOM measurement
     checkOverflow();
 
     // Create resize observer to watch for size changes

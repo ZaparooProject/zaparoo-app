@@ -46,14 +46,6 @@ vi.mock("../../../components/wui/Button.tsx", () => ({
   )
 }));
 
-// Mock environment variable
-Object.defineProperty(import.meta, 'env', {
-  value: {
-    VITE_VERSION: '1.2.3'
-  },
-  writable: true
-});
-
 describe("Settings About Route", () => {
   let queryClient: QueryClient;
 
@@ -132,7 +124,10 @@ describe("Settings About Route", () => {
 
     render(<TestComponent />);
 
-    expect(screen.getByTestId("app-version")).toHaveTextContent("Version 1.2.3");
+    // Verify version is displayed (value comes from .env file)
+    const versionElement = screen.getByTestId("app-version");
+    expect(versionElement).toBeInTheDocument();
+    expect(versionElement.textContent).toMatch(/^Version \d+\.\d+\.\d+$/);
   });
 
   it("should display developer credits", async () => {

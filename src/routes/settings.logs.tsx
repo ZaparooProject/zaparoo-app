@@ -54,6 +54,7 @@ function Logs() {
   });
 
   // Parse JSONL content into structured log entries
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- Intentional: optional chain for safety, actual dep is content property
   const logEntries = useMemo(() => {
     if (!logsQuery.data?.content) return [];
 

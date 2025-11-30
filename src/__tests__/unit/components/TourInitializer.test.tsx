@@ -31,7 +31,8 @@ vi.mock("../../../lib/tourService", () => ({
 let mockTourCallbacks: Record<string, Array<() => void>> = {};
 
 describe("TourInitializer", () => {
-  let mockSetTourCompleted: ReturnType<typeof vi.fn>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockSetTourCompleted: any;
 
   beforeEach(() => {
     vi.clearAllMocks();

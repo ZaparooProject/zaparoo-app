@@ -32,7 +32,8 @@ const mockWebSocketManager = {
 };
 
 vi.mock("../../../lib/websocketManager", () => ({
-  WebSocketManager: vi.fn().mockImplementation((_config, callbacks) => {
+  // Must use regular function (not arrow) for Vitest 4 constructor mocks
+  WebSocketManager: vi.fn().mockImplementation(function (_config: unknown, callbacks: unknown) {
     mockWebSocketManager.callbacks = callbacks;
     return mockWebSocketManager;
   }),
