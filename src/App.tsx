@@ -98,12 +98,22 @@ export default function App() {
   const { t } = useTranslation();
 
   useEffect(() => {
+    let cleanup: (() => void) | undefined;
+
     FirebaseAuthentication.addListener("authStateChange", (change) => {
       setLoggedInUser(change.user);
       if (change.user) {
-        FirebaseAuthentication.getIdToken();
+        FirebaseAuthentication.getIdToken().catch(() => {
+          // Token refresh failed - will retry on next auth state change
+        });
       }
+    }).then((handle) => {
+      cleanup = () => handle.remove();
     });
+
+    return () => {
+      cleanup?.();
+    };
   }, [setLoggedInUser]);
 
   useEffect(() => {

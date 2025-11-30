@@ -23,46 +23,6 @@
 }
 
 @layer components {
-  .barcode-scanner-active {
-    display: none;
-  }
-
-  .lds-facebook,
-  .lds-facebook div {
-    box-sizing: border-box;
-  }
-
-  .lds-facebook {
-    display: inline-block;
-    position: relative;
-    width: 80px;
-    height: 80px;
-  }
-
-  .lds-facebook div {
-    display: inline-block;
-    position: absolute;
-    left: 8px;
-    width: 16px;
-    background: currentColor;
-    animation: lds-facebook 1.2s cubic-bezier(0, 0.5, 0.5, 1) infinite;
-  }
-
-  .lds-facebook div:nth-child(1) {
-    left: 8px;
-    animation-delay: -0.24s;
-  }
-
-  .lds-facebook div:nth-child(2) {
-    left: 32px;
-    animation-delay: -0.12s;
-  }
-
-  .lds-facebook div:nth-child(3) {
-    left: 56px;
-    animation-delay: 0s;
-  }
-
   /* Font faces */
   @font-face {
     font-family: 'Open Sans';
@@ -228,18 +188,6 @@
       transform: scale(1);
     }
   }
-
-  @keyframes lds-facebook {
-    0% {
-      top: 8px;
-      height: 64px;
-    }
-    50%,
-    100% {
-      top: 24px;
-      height: 32px;
-    }
-  }
 }
 
 @layer utilities {
@@ -264,9 +212,7 @@
   .border-bd-input { border-color: var(--color-border-input); }
 
   /* Backgrounds */
-  .bg-bd-filled { background-color: var(--color-border-filled); }
   .bg-bd-outline { background-color: var(--color-border-outline); }
-  .bg-bd-input { background-color: var(--color-border-input); }
 
   /* wui Gradients */
   .bg-button-pattern {
@@ -283,12 +229,6 @@
   .bg-wui-card {
     background: radial-gradient(68.44% 136.87% at center top, var(--card) 0%, var(--background) 100%);
   }
-
-  /* Button colors */
-  .bg-btn-start { background-color: var(--color-button-start); }
-  .bg-btn-end { background-color: var(--color-button-end); }
-  .text-btn-start { color: var(--color-button-start); }
-  .text-btn-end { color: var(--color-button-end); }
 }
 
 @theme inline {
