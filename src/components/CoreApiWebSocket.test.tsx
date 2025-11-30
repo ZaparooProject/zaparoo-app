@@ -68,7 +68,9 @@ vi.mock("../lib/coreApi", () => ({
 // Mock Capacitor Preferences
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
-    get: vi.fn().mockResolvedValue({ value: null })
+    get: vi.fn().mockResolvedValue({ value: null }),
+    set: vi.fn().mockResolvedValue(undefined),
+    remove: vi.fn().mockResolvedValue(undefined)
   }
 }));
 

@@ -50,7 +50,8 @@ vi.mock("../../../lib/websocketManager", () => ({
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     get: vi.fn(() => Promise.resolve({ value: null })),
-    set: vi.fn(() => Promise.resolve())
+    set: vi.fn(() => Promise.resolve()),
+    remove: vi.fn(() => Promise.resolve())
   }
 }));
 

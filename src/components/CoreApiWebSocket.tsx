@@ -26,6 +26,9 @@ import {
 import { useStatusStore, ConnectionState } from "../lib/store.ts";
 import { formatDurationDisplay } from "../lib/utils.ts";
 
+// Module-level timestamp to detect HMR - resets when module reloads
+const moduleLoadTimestamp = Date.now();
+
 export function CoreApiWebSocket() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -102,6 +105,16 @@ export function CoreApiWebSocket() {
     logPrefix: string = ""
   ) => {
     try {
+      // In dev mode, skip optimistic state if module just loaded (HMR scenario)
+      // This prevents showing stale "reconnecting" state after hot reload
+      if (import.meta.env.DEV) {
+        const timeSinceModuleLoad = Date.now() - moduleLoadTimestamp;
+        if (timeSinceModuleLoad < 2000) {
+          logger.log(`${logPrefix}Skipping optimistic state - module just loaded (HMR)`);
+          return false;
+        }
+      }
+
       const [lastStateResult, lastTimestampResult] = await Promise.all([
         Preferences.get({ key: "lastConnectionState" }),
         Preferences.get({ key: "lastConnectionTimestamp" })
@@ -488,6 +501,13 @@ export function CoreApiWebSocket() {
       wsManager.destroy();
       wsManagerRef.current = null;
       setConnectionState(ConnectionState.DISCONNECTED);
+
+      // In dev mode, clear persisted connection state to prevent HMR from
+      // showing stale "reconnecting" state on module hot reload
+      if (import.meta.env.DEV) {
+        Preferences.remove({ key: "lastConnectionState" });
+        Preferences.remove({ key: "lastConnectionTimestamp" });
+      }
     };
   }, [
     targetDeviceAddress,
