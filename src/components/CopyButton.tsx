@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { Clipboard } from "@capacitor/clipboard";
 import { Capacitor } from "@capacitor/core";
 import { Copy, Check } from "lucide-react";
@@ -19,27 +19,20 @@ export const CopyButton = (props: {
 }) => {
   const [copied, setCopied] = useState(false);
   const size = props.size ?? 14;
-  const mountedRef = useRef(true);
 
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const handleCopy = (e: React.MouseEvent | React.KeyboardEvent) => {
+  const handleCopy = async (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     if (copied) return;
 
-    writeToClipboard(props.text).then(() => {
-      if (!mountedRef.current) return;
-      setCopied(true);
-      setTimeout(() => {
-        if (mountedRef.current) {
-          setCopied(false);
-        }
-      }, 2000);
-    });
+    try {
+      await writeToClipboard(props.text);
+    } catch {
+      // Clipboard API may fail on web due to permissions, but browser
+      // fallbacks often still copy the text. Continue with animation.
+    }
+
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
