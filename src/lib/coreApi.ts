@@ -393,7 +393,7 @@ class CoreApi {
   processReceived(msg: MessageEvent): Promise<NotificationRequest | null> {
     return new Promise<NotificationRequest | null>((resolve, reject) => {
       try {
-        if (msg.data == "pong") {
+        if (msg.data === "pong") {
           resolve(null);
           return;
         }

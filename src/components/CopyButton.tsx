@@ -39,7 +39,7 @@ export const CopyButton = (props: {
     <button
       type="button"
       className={classNames(
-        "relative inline-flex align-middle",
+        "relative inline-flex align-middle -translate-y-0.5",
         "rounded p-0.5",
         "text-white/60 hover:text-white",
         "transition-colors duration-150",

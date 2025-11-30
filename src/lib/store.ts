@@ -162,7 +162,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
       Preferences.set({
         key: "deviceHistory",
         value: JSON.stringify(devices)
-      });
+      }).catch(() => {});
       return {
         deviceHistory: devices
       };
@@ -175,7 +175,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
       Preferences.set({
         key: "deviceHistory",
         value: JSON.stringify(devices)
-      });
+      }).catch(() => {});
       return {
         deviceHistory: devices
       };
@@ -184,7 +184,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
     Preferences.set({
       key: "deviceHistory",
       value: JSON.stringify([])
-    });
+    }).catch(() => {});
     set({ deviceHistory: [] });
   },
   runQueue: null,

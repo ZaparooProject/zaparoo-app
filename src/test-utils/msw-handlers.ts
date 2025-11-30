@@ -5,8 +5,6 @@ export const websocketHandler = ws.link("ws://*/api/v0.1");
 
 export const handlers = [
   websocketHandler.addEventListener("connection", ({ client }) => {
-    console.log("MSW: WebSocket connection established");
-    
     // Handle ping messages for heartbeat
     client.addEventListener("message", (event) => {
       if (event.data === "ping") {
@@ -60,8 +58,8 @@ export const handlers = [
             result: {}
           }));
         }
-      } catch (error) {
-        console.error("MSW: Error processing WebSocket message:", error);
+      } catch {
+        // Silently ignore parse errors in tests
       }
     });
   })

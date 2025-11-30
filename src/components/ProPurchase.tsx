@@ -21,51 +21,45 @@ export const RestorePuchasesButton = () => {
     <Button
       label={t("settings.app.restorePurchases")}
       className="w-full"
-      onClick={() => {
-        Purchases.restorePurchases()
-          .then(() => {
-            Purchases.getCustomerInfo()
-              .then((info) => {
-                if (info.customerInfo.entitlements.active.tapto_launcher) {
-                  setLauncherAccess(true);
-                } else {
-                  setLauncherAccess(false);
-                }
-                location.reload();
-              })
-              .catch((e) => {
-                logger.error("customer info error", e, { category: "purchase", action: "getCustomerInfo", severity: "warning" });
-              });
-            toast.success((to) => (
-              <span
-                className="flex grow flex-col"
-                onClick={() => toast.dismiss(to.id)}
-                onKeyDown={(e) =>
-                  (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
-                }
-                role="button"
-                tabIndex={0}
-              >
-                {t("settings.app.restoreSuccess")}
-              </span>
-            ));
-          })
-          .catch((e) => {
-            logger.error("restore purchases error", e, { category: "purchase", action: "restore", severity: "warning" });
-            toast.error((to) => (
-              <span
-                className="flex grow flex-col"
-                onClick={() => toast.dismiss(to.id)}
-                onKeyDown={(e) =>
-                  (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
-                }
-                role="button"
-                tabIndex={0}
-              >
-                {t("settings.app.restoreFail")}
-              </span>
-            ));
-          });
+      onClick={async () => {
+        try {
+          await Purchases.restorePurchases();
+          const info = await Purchases.getCustomerInfo();
+          if (info.customerInfo.entitlements.active.tapto_launcher) {
+            setLauncherAccess(true);
+          } else {
+            setLauncherAccess(false);
+          }
+          toast.success((to) => (
+            <span
+              className="flex grow flex-col"
+              onClick={() => toast.dismiss(to.id)}
+              onKeyDown={(e) =>
+                (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
+              }
+              role="button"
+              tabIndex={0}
+            >
+              {t("settings.app.restoreSuccess")}
+            </span>
+          ));
+          location.reload();
+        } catch (e) {
+          logger.error("restore purchases error", e, { category: "purchase", action: "restore", severity: "warning" });
+          toast.error((to) => (
+            <span
+              className="flex grow flex-col"
+              onClick={() => toast.dismiss(to.id)}
+              onKeyDown={(e) =>
+                (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
+              }
+              role="button"
+              tabIndex={0}
+            >
+              {t("settings.app.restoreFail")}
+            </span>
+          ));
+        }
       }}
     />
   );

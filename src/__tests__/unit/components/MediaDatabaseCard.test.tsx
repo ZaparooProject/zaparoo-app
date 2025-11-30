@@ -312,6 +312,4 @@ describe('MediaDatabaseCard', () => {
     // Verify it's NOT showing the normal "Cancel" text
     expect(screen.queryByRole('button', { name: /^settings\.updateDb\.cancel$/i })).not.toBeInTheDocument();
   });
-
-  // TODO: Add tests for optimization progress and total media count when query mocking is fixed
 });

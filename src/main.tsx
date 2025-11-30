@@ -24,12 +24,16 @@ const queryClient = new QueryClient({
   }
 });
 
-Preferences.get({ key: "apiUrl" }).then((res) => {
-  if (res.value && localStorage.getItem("apiUrl") === null) {
-    localStorage.setItem("apiUrl", res.value);
-    window.location.reload();
-  }
-});
+Preferences.get({ key: "apiUrl" })
+  .then((res) => {
+    if (res.value && localStorage.getItem("apiUrl") === null) {
+      localStorage.setItem("apiUrl", res.value);
+      window.location.reload();
+    }
+  })
+  .catch(() => {
+    // Silently ignore - migration from Preferences to localStorage is optional
+  });
 
 const onDeviceReady = async () => {
   if (import.meta.env.MODE === "development") {
