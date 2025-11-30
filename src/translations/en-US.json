@@ -59,10 +59,14 @@
       "noWriteMethodAvailable": "No NFC writing capability available",
       "nfcNotSupported": "NFC is not supported on this device"
     },
+    "accessibility": {
+      "skipToContent": "Skip to main content"
+    },
     "scan": {
       "cameraMode": "Camera",
       "nfcMode": "NFC",
       "scanError": "Error scanning tag",
+      "scanSuccess": "Tag scanned successfully",
       "noDevices": "No Zaparoo Devices Found",
       "connecting": "Connecting...",
       "reconnecting": "Reconnecting...",
@@ -136,7 +140,9 @@
         "recentSearches": "Recent Searches",
         "noRecentSearches": "No recent searches yet",
         "noRecentSearchesHint": "Start searching to build your search history",
-        "clearHistory": "Clear History"
+        "clearHistory": "Clear History",
+        "gamesDbSettings": "Open database settings",
+        "searchResult": "Select search result"
       },
       "custom": {
         "title": "Custom ZapScript",
@@ -199,7 +205,8 @@
           "copyFailed": "Failed to copy to clipboard",
           "tagData": "Tag data",
           "shareTitle": "NFC Tag Data",
-          "shareText": "UID: {{uid}}\nText: {{text}}"
+          "shareText": "UID: {{uid}}\nText: {{text}}",
+          "shareTagData": "Share tag data"
         },
         "write": {
           "templates": {
@@ -363,6 +370,23 @@
         "notConnected": "Connect to a Zaparoo device to access logs",
         "showMore": "Show more",
         "showLess": "Show less"
+      },
+      "deleteDevice": "Delete device",
+      "accessibility": {
+        "title": "Accessibility",
+        "haptics": "Haptic feedback",
+        "hapticsDescription": "Vibrate on button taps and interactions",
+        "systemStatus": "System Status",
+        "screenReader": "Screen reader",
+        "active": "Active",
+        "inactive": "Inactive",
+        "textZoom": "Text zoom",
+        "systemStatusNote": "These settings are controlled by your device's system settings",
+        "builtInFeatures": "Built-in Accessibility Features",
+        "featureReducedMotion": "Respects reduced motion preferences",
+        "featureKeyboardNav": "Full keyboard navigation support",
+        "featureScreenReaderSupport": "Screen reader announcements",
+        "featureFocusIndicators": "Visible focus indicators"
       },
       "help": {
         "title": "Help",
