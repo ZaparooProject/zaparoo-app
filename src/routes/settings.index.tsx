@@ -9,6 +9,7 @@ import { ArrowLeftRightIcon, TrashIcon, Check } from "lucide-react";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button as SCNButton } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import i18n from "../i18n";
 import { PageFrame } from "../components/PageFrame";
 import { useStatusStore } from "../lib/store";
@@ -107,11 +108,18 @@ function Settings() {
           </div>
 
           <div className="flex min-h-[1.5rem] flex-col gap-1">
-            {versionSuccess && version && (
+            {!versionSuccess ? (
               <div className="flex flex-row items-center justify-between gap-2">
-                <div>Platform: {version.platform}</div>
-                <div>Version: {version.version}</div>
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-5 w-24" />
               </div>
+            ) : (
+              version && (
+                <div className="flex flex-row items-center justify-between gap-2">
+                  <div>Platform: {version.platform}</div>
+                  <div>Version: {version.version}</div>
+                </div>
+              )
             )}
             {connectionError !== "" && (
               <div className="text-error">{connectionError}</div>
