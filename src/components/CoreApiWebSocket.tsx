@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { App } from "@capacitor/app";
 import toast from "react-hot-toast";
@@ -327,7 +328,11 @@ export function CoreApiWebSocket() {
             });
         },
         onClose: () => {
-          setConnectionState(ConnectionState.RECONNECTING);
+          // Only show RECONNECTING if we weren't intentionally reconnecting
+          // (e.g., due to visibility change or app resume)
+          if (!isResumingRef.current) {
+            setConnectionState(ConnectionState.RECONNECTING);
+          }
         },
         onError: (error) => {
           const errorMsg = "Error communicating with server: " + wsUrl;
@@ -561,6 +566,52 @@ export function CoreApiWebSocket() {
       pauseListener?.remove();
     };
   }, [targetDeviceAddress, setConnectionState, setConnectionError, applyOptimisticState]); // Re-setup listeners if device address changes
+
+  // Browser visibility change handling (web platform only)
+  useEffect(() => {
+    // Skip on native platforms - they use Capacitor lifecycle events
+    if (Capacitor.isNativePlatform()) return;
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === "visible") {
+        logger.log("Tab became visible, checking connection status");
+
+        if (!targetDeviceAddress || !wsManagerRef.current) return;
+
+        const wsManager = wsManagerRef.current;
+
+        // Resume heartbeat first to test connection health
+        wsManager.resumeHeartbeat();
+
+        // Check if WebSocket is actually connected
+        if (!wsManager.isConnected) {
+          logger.log("Connection not healthy, triggering immediate reconnect");
+          isResumingRef.current = true;
+          applyOptimisticState(resumeTimeoutRef, "Tab visible: ");
+          wsManager.immediateReconnect();
+        } else {
+          logger.log("Connection still healthy after tab switch");
+          setConnectionState(ConnectionState.CONNECTED);
+        }
+      } else if (document.visibilityState === "hidden") {
+        logger.log("Tab hidden, pausing heartbeat and persisting state");
+
+        if (wsManagerRef.current) {
+          // Pause heartbeat to prevent timeout during tab suspension
+          wsManagerRef.current.pauseHeartbeat();
+
+          const currentState = wsManagerRef.current.currentState;
+          const timestamp = Date.now();
+
+          await Preferences.set({ key: "lastConnectionState", value: currentState });
+          await Preferences.set({ key: "lastConnectionTimestamp", value: timestamp.toString() });
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [targetDeviceAddress, setConnectionState, applyOptimisticState]);
 
   return null;
 }

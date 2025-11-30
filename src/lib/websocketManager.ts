@@ -152,6 +152,26 @@ export class WebSocketManager {
     }
   }
 
+  /**
+   * Pause the heartbeat mechanism.
+   * Used when browser tab is hidden to prevent false disconnections.
+   */
+  pauseHeartbeat(): void {
+    logger.debug("Pausing heartbeat");
+    this.stopHeartbeat();
+  }
+
+  /**
+   * Resume the heartbeat mechanism.
+   * Used when browser tab becomes visible again.
+   */
+  resumeHeartbeat(): void {
+    if (this.state === WebSocketState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
+      logger.debug("Resuming heartbeat");
+      this.startHeartbeat();
+    }
+  }
+
   private flushMessageQueue(): void {
     if (this.messageQueue.length === 0) {
       return;

@@ -61,7 +61,8 @@ vi.mock("react-i18next", async (importOriginal) => {
 
 vi.mock("@capacitor-firebase/authentication", () => ({
   FirebaseAuthentication: {
-    addListener: vi.fn(() => ({ remove: vi.fn() })),
+    addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
+    getIdToken: vi.fn(() => Promise.resolve({ token: "mock-token" })),
   },
 }));
 
