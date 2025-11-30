@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/wui/Button";
 import { CopyButton } from "@/components/CopyButton";
 import { Result } from "@/lib/nfc";
+import { logger } from "@/lib/logger";
 
 interface ReadTabProps {
   result: Result | null;
@@ -36,7 +37,8 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
         text: shareText,
         dialogTitle: t("create.nfc.readTab.shareTitle")
       });
-    } catch {
+    } catch (error) {
+      logger.error("Failed to share tag data:", error, { category: "share", action: "shareTagData", severity: "warning" });
       toast.error(t("shareFailed"));
     }
   };

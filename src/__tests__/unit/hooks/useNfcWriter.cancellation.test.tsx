@@ -178,7 +178,11 @@ describe("useNfcWriter Cancellation", () => {
 
       // Should still call cancelWrite even if readersWriteCancel fails
       expect(CoreAPI.cancelWrite).toHaveBeenCalledTimes(1);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to cancel remote write:", expect.any(Error));
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Failed to cancel remote write:",
+        expect.any(Error),
+        expect.objectContaining({ category: "nfc", action: "cancelRemoteWrite" })
+      );
 
       consoleErrorSpy.mockRestore();
     });

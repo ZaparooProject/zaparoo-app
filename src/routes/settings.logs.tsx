@@ -13,6 +13,7 @@ import { TextInput } from "../components/wui/TextInput";
 import { BackIcon } from "../lib/images";
 import { HeaderButton } from "../components/wui/HeaderButton";
 import { ToggleChip } from "../components/wui/ToggleChip";
+import { logger } from "../lib/logger";
 
 interface LogEntry {
   level: string;
@@ -125,7 +126,7 @@ function Logs() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Failed to download log file:", error);
+      logger.error("Failed to download log file:", error, { category: "storage", action: "downloadLog", severity: "warning" });
     }
   };
 
@@ -136,7 +137,7 @@ function Logs() {
       const decodedContent = atob(logsQuery.data.content);
       await navigator.clipboard.writeText(decodedContent);
     } catch (error) {
-      console.error("Failed to copy to clipboard:", error);
+      logger.error("Failed to copy to clipboard:", error, { category: "storage", action: "copyLog", severity: "warning" });
     }
   };
 

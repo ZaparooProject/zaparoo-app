@@ -69,7 +69,7 @@ export function useShakeDetection({
           newListener.remove();
         }
       } catch (error) {
-        logger.error("Failed to setup shake listener:", error);
+        logger.error("Failed to setup shake listener:", error, { category: "accelerometer", action: "setupShakeListener", severity: "warning" });
       }
     };
 

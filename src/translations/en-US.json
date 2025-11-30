@@ -7,6 +7,12 @@
     "loading": "Loading...",
     "cancelling": "Cancelling...",
     "shareFailed": "Failed to share",
+    "errorBoundary": {
+      "title": "Oops, something really bad happened!",
+      "description": "The application has encountered an unexpected error. Please copy the details below and report this issue.",
+      "diagnosticDetails": "Diagnostic Details",
+      "reload": "Reload Application"
+    },
     "notConnected": "Not connected to device",
     "yes": "Yes",
     "stopPlaying": "This will stop the playing media. You may lose any unsaved progress.",

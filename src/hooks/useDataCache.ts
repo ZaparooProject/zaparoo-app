@@ -3,6 +3,7 @@ import { Preferences } from "@capacitor/preferences";
 import { useShallow } from "zustand/react/shallow";
 import { IndexResponse, TokenResponse, PlayingResponse } from "../lib/models";
 import { useStatusStore } from "../lib/store";
+import { logger } from "../lib/logger";
 
 export function useDataCache(): void {
   const { setGamesIndex, setLastToken, setPlaying } = useStatusStore(
@@ -33,7 +34,7 @@ export function useDataCache(): void {
 
         // Note: lastConnection is not stored in Zustand store, so we skip it
       } catch (error) {
-        console.error("Failed to load cached data:", error);
+        logger.error("Failed to load cached data:", error, { category: "storage", action: "get", key: "cached_data", severity: "warning" });
       }
     };
     void loadCachedData();

@@ -2,6 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { EdgeToEdge } from "@capawesome/capacitor-android-edge-to-edge-support";
 import { useEffect } from "react";
 import { useStatusStore } from "./store";
+import { logger } from "./logger";
 
 export interface SafeAreaInsets {
   top: string;
@@ -49,7 +50,7 @@ export const SafeAreaHandler = () => {
             right: `${insets.right}px`
           });
         } catch (error) {
-          console.warn('EdgeToEdge plugin not available:', error);
+          logger.warn('EdgeToEdge plugin not available:', error);
           // Fallback to env() values
           setSafeInsets({
             top: "env(safe-area-inset-top, 0px)",

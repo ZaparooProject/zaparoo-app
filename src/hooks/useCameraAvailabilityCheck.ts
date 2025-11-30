@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
 import { usePreferencesStore } from "../lib/preferencesStore";
+import { logger } from "../lib/logger";
 
 /**
  * Hook to check camera/barcode scanner availability once at app startup.
@@ -27,7 +28,7 @@ export function useCameraAvailabilityCheck() {
         setCameraAvailabilityHydrated(true);
       })
       .catch((e) => {
-        console.error("Failed to check camera availability:", e);
+        logger.error("Failed to check camera availability:", e, { category: "camera", action: "availabilityCheck", severity: "warning" });
         // On error, assume camera not available
         setCameraAvailable(false);
         setCameraAvailabilityHydrated(true);

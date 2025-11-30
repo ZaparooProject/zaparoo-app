@@ -15,6 +15,7 @@ import {
   Status
 } from "./nfc";
 import { CoreAPI } from "./coreApi.ts";
+import { logger } from "./logger";
 
 interface WriteNfcHook {
   write: (action: WriteAction, text?: string) => Promise<void>;
@@ -97,7 +98,7 @@ async function determineWriteMethod(preferredMethod: WriteMethod, preferRemoteWr
         return WriteMethod.LocalNFC;
       }
     } catch (error) {
-      console.log("NFC availability check failed:", error);
+      logger.error("NFC availability check failed:", error, { category: "nfc", action: "determineWriteMethod", severity: "warning" });
     }
   }
 
@@ -151,7 +152,7 @@ export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, prefer
       switch (action) {
         case WriteAction.Write: {
           if (!text) {
-            console.error("No text provided to write");
+            logger.error("No text provided to write", { category: "nfc", action: "writeValidation" });
             return;
           }
 
@@ -176,7 +177,12 @@ export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, prefer
           break;
         case WriteAction.Format:
           if (Capacitor.getPlatform() !== "android") {
-            console.error("Format is only supported on Android");
+            logger.error("Format is only supported on Android", {
+              category: "nfc",
+              action: "formatPlatformCheck",
+              platform: Capacitor.getPlatform(),
+              severity: "warning"
+            });
             return;
           }
           actionFunc = formatTag;
@@ -232,6 +238,7 @@ export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, prefer
         })
         .catch((e: Error) => {
           setWriting(false);
+          logger.error("NFC write operation failed", e, { category: "nfc", action: action, writeMethod: currentWriteMethod });
           let showMs = 4000;
           if (Capacitor.getPlatform() === "ios") {
             showMs += 4000;
@@ -270,7 +277,7 @@ export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, prefer
           try {
             await CoreAPI.readersWriteCancel();
           } catch (error) {
-            console.error("Failed to cancel remote write:", error);
+            logger.error("Failed to cancel remote write:", error, { category: "nfc", action: "cancelRemoteWrite" });
           }
         } else {
           // For local NFC or when method is unknown, use the existing cancellation

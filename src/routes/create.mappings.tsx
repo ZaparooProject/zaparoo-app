@@ -12,6 +12,7 @@ import { HeaderButton } from "@/components/wui/HeaderButton.tsx";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import { useStatusStore } from "@/lib/store.ts";
 import { MappingResponse } from "@/lib/models.ts";
+import { logger } from "@/lib/logger";
 import { Button } from "../components/wui/Button";
 import { PageFrame } from "../components/PageFrame";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
@@ -81,7 +82,7 @@ function Mappings() {
   };
 
   const saveMapping = () => {
-    console.log(mappings.data?.mappings);
+    logger.log("saveMapping:", mappings.data?.mappings);
     const existing = mappingExists(mappings.data?.mappings, tokenId);
     if (existing !== null) {
       CoreAPI.updateMapping({

@@ -162,7 +162,7 @@ export function CoreApiWebSocket() {
         return false; // Not optimistic
       }
     } catch (error) {
-      logger.error(`${logPrefix}Error checking optimistic state:`, error);
+      logger.error(`${logPrefix}Error checking optimistic state:`, error, { category: "storage", action: "get", key: "lastConnectionState", severity: "warning" });
       return false;
     }
   }, [setConnectionState, setConnectionError]);
@@ -288,7 +288,7 @@ export function CoreApiWebSocket() {
               }
             })
             .catch((e) => {
-              logger.error("Failed to get device history:", e);
+              logger.error("Failed to get device history:", e, { category: "storage", action: "get", key: "deviceHistory", severity: "warning" });
             });
 
           // Get media information
@@ -305,7 +305,7 @@ export function CoreApiWebSocket() {
               }
             })
             .catch((e) => {
-              logger.error("Failed to get media information:", e);
+              logger.error("Failed to get media information:", e, { category: "api", action: "media" });
               toast.error(t("error", { msg: "Failed to fetch media" }));
             });
 
@@ -322,7 +322,7 @@ export function CoreApiWebSocket() {
               }
             })
             .catch((e) => {
-              logger.error("Failed to get tokens information:", e);
+              logger.error("Failed to get tokens information:", e, { category: "api", action: "tokens" });
               toast.error(t("error", { msg: "Failed to fetch tokens" }));
             });
         },
@@ -427,7 +427,7 @@ export function CoreApiWebSocket() {
               }
             })
             .catch((e) => {
-              logger.error("Error processing message:", e);
+              logger.error("Error processing message:", e, { category: "websocket", action: "processMessage" });
               toast.error(t("error", { msg: e?.message || "Unknown error" }));
             });
         },

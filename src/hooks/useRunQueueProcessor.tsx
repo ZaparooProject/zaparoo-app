@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { useStatusStore } from "../lib/store";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { runToken } from "../lib/tokenOperations.tsx";
+import { logger } from "../lib/logger";
 
 export function useRunQueueProcessor() {
   const { t } = useTranslation();
@@ -35,7 +36,7 @@ export function useRunQueueProcessor() {
         const currentConnected = getConnected();
 
         if (currentConnected) {
-          console.log("Processing run queue:", currentRunValue.value);
+          logger.log("Processing run queue:", currentRunValue.value);
           runToken(
             "",
             currentRunValue.value,
@@ -46,21 +47,29 @@ export function useRunQueueProcessor() {
             currentRunValue.unsafe
           )
             .then((success: boolean) => {
-              console.log("runQueue success", success);
+              logger.log("runQueue success", success);
               isProcessingRef.current = false;
             })
             .catch((e) => {
-              console.error("runQueue error", e);
+              logger.error("runQueue error", e, {
+                category: "queue",
+                action: "runQueue",
+                tokenValue: currentRunValue.value.slice(0, 50)
+              });
               isProcessingRef.current = false;
             });
         } else if (retryCount < maxRetries) {
           retryCount++;
-          console.log(
+          logger.log(
             `Device not connected, retrying (${retryCount}/${maxRetries})...`
           );
           setTimeout(attemptRun, retryInterval);
         } else {
-          console.error("Failed to connect to device after multiple attempts");
+          logger.error("Failed to connect to device after multiple attempts", {
+            category: "connection",
+            action: "runQueue",
+            maxRetries
+          });
           toast.error(t("create.custom.failMsg"));
           isProcessingRef.current = false;
         }

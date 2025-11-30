@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useStatusStore } from "@/lib/store";
 import { CoreAPI } from "@/lib/coreApi";
 import { DatabaseIcon } from "@/lib/images";
+import { logger } from "@/lib/logger";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 import { SystemSelector, SystemSelectorTrigger } from "./SystemSelector";
@@ -60,7 +61,7 @@ export function MediaDatabaseCard() {
       // when the indexing status updates from the WebSocket notification
       queryClient.invalidateQueries({ queryKey: ["media"] });
     } catch (error) {
-      console.error("Failed to cancel media generation:", error);
+      logger.error("Failed to cancel media generation:", error, { category: "api", action: "mediaGenerateCancel", severity: "warning" });
       // Only reset on error, since cancellation request failed
       setIsCancelling(false);
     }

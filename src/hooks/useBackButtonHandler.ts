@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { App } from '@capacitor/app';
+import { logger } from '../lib/logger';
 
 interface BackButtonHandler {
   id: string;
@@ -20,7 +21,9 @@ class BackButtonManager {
   removeHandler(id: string) {
     this.handlers = this.handlers.filter(h => h.id !== id);
     if (this.handlers.length === 0) {
-      this.removeListener().catch(console.error);
+      this.removeListener().catch((e) => {
+        logger.error("Failed to remove back button listener:", e, { category: "lifecycle", action: "removeBackButtonListener", severity: "warning" });
+      });
     }
   }
 

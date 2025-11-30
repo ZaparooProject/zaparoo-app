@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { usePreferencesStore } from "../lib/preferencesStore";
+import { logger } from "../lib/logger";
+
 
 /**
  * Hook to check Pro access status from RevenueCat on app startup.
@@ -15,7 +17,7 @@ export function useProAccessCheck() {
   useEffect(() => {
     // Skip on web platform
     if (Capacitor.getPlatform() === "web") {
-      console.log("Web platform, skipping Pro access check");
+      logger.log("Web platform, skipping Pro access check");
       setProAccessHydrated(true);
       return;
     }
@@ -31,7 +33,7 @@ export function useProAccessCheck() {
         setProAccessHydrated(true);
       })
       .catch((e) => {
-        console.error("Failed to check Pro access:", e);
+        logger.error("Failed to check Pro access:", e, { category: "purchase", action: "proAccessCheck", severity: "warning" });
         // On error, mark as hydrated but keep cached value
         setProAccessHydrated(true);
       });

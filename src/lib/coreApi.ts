@@ -287,7 +287,7 @@ class CoreApi {
         return promise;
       }
     } catch (e) {
-      logger.error("Error in API call:", e);
+      logger.error("Error in API call:", e, { category: "api", action: "call", method });
       return Promise.reject(
         new Error(
           `API call error: ${e instanceof Error ? e.message : String(e)}`
@@ -362,7 +362,7 @@ class CoreApi {
 
       return { id, promise };
     } catch (e) {
-      logger.error("Error in tracked API call:", e);
+      logger.error("Error in tracked API call:", e, { category: "api", action: "callWithTracking", method });
       throw new Error(
         `API call error: ${e instanceof Error ? e.message : String(e)}`
       );
@@ -402,7 +402,12 @@ class CoreApi {
         try {
           res = JSON.parse(msg.data);
         } catch (e) {
-          logger.error("Could not parse JSON:", msg.data, e);
+          logger.error("Could not parse JSON:", msg.data, e, {
+            category: "api",
+            action: "parseJSON",
+            severity: "critical",
+            dataPreview: String(msg.data).slice(0, 100)
+          });
           reject(
             new Error(
               `Error parsing JSON response: ${e instanceof Error ? e.message : String(e)}`
@@ -466,7 +471,7 @@ class CoreApi {
           this.pendingWriteId = null;
         }
       } catch (e) {
-        logger.error("Unexpected error processing message:", e);
+        logger.error("Unexpected error processing message:", e, { category: "api", action: "processReceived" });
         reject(
           new Error(
             `Unexpected error: ${e instanceof Error ? e.message : String(e)}`

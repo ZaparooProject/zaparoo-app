@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Preferences } from "@capacitor/preferences";
+import { logger } from "../lib/logger";
 
 export interface RecentSearch {
   query: string;
@@ -25,7 +26,7 @@ export function useRecentSearches() {
           setRecentSearches(parsed);
         }
       } catch (error) {
-        console.warn("Failed to load recent searches:", error);
+        logger.error("Failed to load recent searches:", error, { category: "storage", action: "get", key: RECENT_SEARCHES_KEY, severity: "warning" });
       } finally {
         setIsLoading(false);
       }
@@ -42,7 +43,7 @@ export function useRecentSearches() {
         value: JSON.stringify(searches)
       });
     } catch (error) {
-      console.warn("Failed to save recent searches:", error);
+      logger.error("Failed to save recent searches:", error, { category: "storage", action: "set", key: RECENT_SEARCHES_KEY, severity: "warning" });
     }
   }, []);
 

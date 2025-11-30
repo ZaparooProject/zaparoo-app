@@ -34,7 +34,7 @@ export const RestorePuchasesButton = () => {
                 location.reload();
               })
               .catch((e) => {
-                logger.error("customer info error", e);
+                logger.error("customer info error", e, { category: "purchase", action: "getCustomerInfo", severity: "warning" });
               });
             toast.success((to) => (
               <span
@@ -50,7 +50,8 @@ export const RestorePuchasesButton = () => {
               </span>
             ));
           })
-          .catch(() => {
+          .catch((e) => {
+            logger.error("restore purchases error", e, { category: "purchase", action: "restore", severity: "warning" });
             toast.error((to) => (
               <span
                 className="flex grow flex-col"
@@ -110,7 +111,7 @@ const ProPurchaseModal = (props: {
                   if (e.message.includes("Purchase was cancelled")) {
                     return;
                   }
-                  logger.error("purchase error", e);
+                  logger.error("purchase error", e, { category: "purchase", action: "purchasePackage", severity: "warning" });
                 });
             }
           }}
@@ -147,7 +148,7 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
         }
       })
       .catch((e) => {
-        logger.error("offerings error", e);
+        logger.error("offerings error", e, { category: "purchase", action: "getOfferings", severity: "warning" });
         toast.error(t("settings.app.offeringsError"));
       });
 
@@ -173,7 +174,7 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
         }
       })
       .catch((e) => {
-        logger.error("customer info error", e);
+        logger.error("customer info error", e, { category: "purchase", action: "getCustomerInfo", severity: "warning" });
       });
   }, [setProAccess]);
 

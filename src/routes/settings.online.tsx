@@ -12,6 +12,7 @@ import { PageFrame } from "../components/PageFrame.tsx";
 import { HeaderButton } from "../components/wui/HeaderButton";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { BackIcon } from "../lib/images";
+import { logger } from "../lib/logger";
 
 export const Route = createFileRoute("/settings/online")({
   component: About
@@ -70,7 +71,7 @@ function About() {
                         setOnlinePassword("");
                       })
                       .catch((e) => {
-                        console.error(e);
+                        logger.error("Firebase sign out failed:", e, { category: "api", action: "signOut", severity: "warning" });
                       });
                   }}
                   className="w-full"
@@ -111,7 +112,7 @@ function About() {
                       setOnlineLoggingIn(false);
                     })
                     .catch((e: Error) => {
-                      console.error(e);
+                      logger.error("Firebase email login failed:", e, { category: "api", action: "signInWithEmail", severity: "warning" });
                       toast.error(t("online.loginWrong"));
                       setOnlineLoggingIn(false);
                       setLoggedInUser(null);
@@ -134,7 +135,7 @@ function About() {
                       setLoggedInUser(result.user);
                     })
                     .catch((e: Error) => {
-                      console.error(e);
+                      logger.error("Firebase Google login failed:", e, { category: "api", action: "signInWithGoogle", severity: "warning" });
                       toast.error(t("online.loginWrong"));
                       setLoggedInUser(null);
                     })

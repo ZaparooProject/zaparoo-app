@@ -5,6 +5,7 @@ import {
   NfcUtils
 } from "@capawesome-team/capacitor-nfc";
 import type { PluginListenerHandle } from "@capacitor/core";
+import { logger } from "./logger";
 
 export enum Status {
   Success,
@@ -81,7 +82,11 @@ async function withNfcSession<T>(
             Nfc.stopScanSession();
             await handleSuccess(result);
           } catch (error) {
-            console.error("NFC operation error:", error, { stack: error instanceof Error ? error.stack : undefined });
+            logger.error("NFC operation error:", error, {
+              category: "nfc",
+              action: "nfcTagScanned",
+              stack: error instanceof Error ? error.stack : undefined
+            });
             Nfc.stopScanSession();
             await handleError(error);
           }
@@ -93,10 +98,11 @@ async function withNfcSession<T>(
         });
 
         const scanErrorHandle = await Nfc.addListener("scanSessionError", async (err) => {
-          console.error("NFC scan session error:", err, {
+          logger.error("NFC scan session error:", err, {
+            category: "nfc",
+            action: "scanSessionError",
             message: err.message,
-            stack: err instanceof Error ? err.stack : undefined,
-            fullError: JSON.stringify(err, null, 2)
+            stack: err instanceof Error ? err.stack : undefined
           });
           Nfc.stopScanSession();
           await handleError(err);
@@ -190,7 +196,7 @@ export async function writeTag(text: string): Promise<Result> {
   try {
     return await withNfcSession<Result>(async (event) => {
       await Nfc.write({ message: { records: [record] } });
-      console.log("write success");
+      logger.log("write success");
       return {
         status: Status.Success,
         info: {
@@ -217,7 +223,7 @@ export async function formatTag(): Promise<Result> {
   try {
     return await withNfcSession<Result>(async (event) => {
       await Nfc.format();
-      console.log("format success");
+      logger.log("format success");
       return {
         status: Status.Success,
         info: {
@@ -244,7 +250,7 @@ export async function eraseTag(): Promise<Result> {
   try {
     return await withNfcSession<Result>(async (event) => {
       await Nfc.erase();
-      console.log("erase success");
+      logger.log("erase success");
       return {
         status: Status.Success,
         info: {
@@ -270,7 +276,7 @@ export async function eraseTag(): Promise<Result> {
 export async function readRaw(): Promise<Result> {
   try {
     return await withNfcSession<Result>(async (event) => {
-      console.log("read raw success");
+      logger.log("read raw success");
       return {
         status: Status.Success,
         info: {
@@ -297,7 +303,7 @@ export async function makeReadOnly(): Promise<Result> {
   try {
     return await withNfcSession<Result>(async (event) => {
       await Nfc.makeReadOnly();
-      console.log("make read only success");
+      logger.log("make read only success");
       return {
         status: Status.Success,
         info: {

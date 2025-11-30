@@ -198,7 +198,12 @@ export class WebSocketManager {
       this.setupEventHandlers();
       this.startConnectionTimeout();
     } catch (error) {
-      logger.error("Failed to create WebSocket:", error);
+      logger.error("Failed to create WebSocket:", error, {
+        category: "connection",
+        action: "createWebSocket",
+        severity: "critical",
+        reconnectAttempts: this.reconnectAttempts
+      });
       this.handleConnectionError();
     }
   }
@@ -225,7 +230,12 @@ export class WebSocketManager {
     };
 
     this.ws.onerror = (error) => {
-      logger.error("WebSocket error:", error);
+      logger.error("WebSocket error:", error, {
+        category: "connection",
+        action: "onerror",
+        severity: "critical",
+        reconnectAttempts: this.reconnectAttempts
+      });
       this.clearConnectionTimeout();
       this.callbacks.onError?.(error);
       this.handleConnectionError();
@@ -311,7 +321,11 @@ export class WebSocketManager {
           this.ws.send(this.config.pingMessage);
           this.startPongTimeout();
         } catch (error) {
-          logger.error("Failed to send ping:", error);
+          logger.error("Failed to send ping:", error, {
+            category: "connection",
+            action: "sendPing",
+            severity: "critical"
+          });
           this.handleConnectionError();
         }
       }

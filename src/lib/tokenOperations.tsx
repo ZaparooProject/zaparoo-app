@@ -2,6 +2,7 @@ import toast from "react-hot-toast";
 import { CoreAPI } from "./coreApi";
 import { TokenResponse } from "./models";
 import { sessionManager } from "./nfc";
+import { logger } from "./logger";
 
 const zapUrls = [
   "https://zpr.au",
@@ -64,7 +65,12 @@ export const runToken = async (
                 {e.message}
               </span>
             ));
-            console.error("launch error", e);
+            logger.error("launch error", e, {
+              category: "api",
+              action: "runToken",
+              hasUid: !!uid,
+              textPrefix: text.slice(0, 20)
+            });
             resolve(false);
           });
         return;

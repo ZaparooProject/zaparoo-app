@@ -23,6 +23,7 @@ import { useAccelerometerAvailabilityCheck } from "./hooks/useAccelerometerAvail
 import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
 import { useShakeDetection } from "./hooks/useShakeDetection";
+import { initDeviceInfo } from "./lib/logger";
 
 // Component to initialize queue processors after preferences hydrate
 // This ensures sessionManager.launchOnScan is set correctly before processing
@@ -72,6 +73,11 @@ export default function App() {
   const accelerometerAvailabilityHydrated = usePreferencesStore(
     (state) => state._accelerometerAvailabilityHydrated
   );
+
+  // Initialize device info for error reporting context
+  useEffect(() => {
+    initDeviceInfo();
+  }, []);
 
   // Initialize data cache early in app lifecycle
   useDataCache();

@@ -7,6 +7,7 @@ import { cancelSession, readTag, sessionManager, Status } from "../lib/nfc";
 import { ScanResult, TokenResponse } from "../lib/models";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { runToken } from "../lib/tokenOperations.tsx";
+import { logger } from "../lib/logger";
 
 interface UseScanOperationsProps {
   connected: boolean;
@@ -61,13 +62,13 @@ export function useScanOperations({
           result.status !== Status.Cancelled
         ) {
           if (Capacitor.getPlatform() === "ios") {
-            console.log("delaying restart for ios");
+            logger.log("delaying restart for ios");
             setTimeout(() => {
-              console.log("restarting scan");
+              logger.log("restarting scan");
               doScan();
             }, 4000);
           } else {
-            console.log("restarting scan");
+            logger.log("restarting scan");
             doScan();
           }
           return;
@@ -75,9 +76,10 @@ export function useScanOperations({
 
         setScanSession(false);
       })
-      .catch(() => {
+      .catch((error) => {
         setScanStatus(ScanResult.Error);
         setScanSession(false);
+        logger.error("NFC scan failed", error, { category: "nfc", action: "doScan" });
         toast.error((to) => (
           // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
           <span
@@ -104,34 +106,38 @@ export function useScanOperations({
   }, [scanSession, doScan]);
 
   const handleCameraScan = useCallback(async () => {
-    BarcodeScanner.scan().then((res) => {
-      if (res.barcodes.length < 1) {
-        return;
-      }
-
-      const barcode = res.barcodes[0];
-
-      if (barcode.rawValue.startsWith("**write:")) {
-        const writeValue = barcode.rawValue.slice(8);
-
-        if (writeValue === "") {
+    BarcodeScanner.scan()
+      .then((res) => {
+        if (res.barcodes.length < 1) {
           return;
         }
 
-        setWriteOpen(true);
-        nfcWriter.write(WriteAction.Write, writeValue);
-        return;
-      }
+        const barcode = res.barcodes[0];
 
-      runToken(
-        barcode.rawValue,
-        barcode.rawValue,
-        launcherAccess,
-        connected,
-        setLastToken,
-        setProPurchaseModalOpen
-      );
-    });
+        if (barcode.rawValue.startsWith("**write:")) {
+          const writeValue = barcode.rawValue.slice(8);
+
+          if (writeValue === "") {
+            return;
+          }
+
+          setWriteOpen(true);
+          nfcWriter.write(WriteAction.Write, writeValue);
+          return;
+        }
+
+        runToken(
+          barcode.rawValue,
+          barcode.rawValue,
+          launcherAccess,
+          connected,
+          setLastToken,
+          setProPurchaseModalOpen
+        );
+      })
+      .catch((error) => {
+        logger.error("Barcode scan error:", error, { category: "camera", action: "barcodeScan" });
+      });
   }, [connected, launcherAccess, setLastToken, setProPurchaseModalOpen, setWriteOpen, nfcWriter]);
 
   const handleStopConfirm = useCallback(() => {

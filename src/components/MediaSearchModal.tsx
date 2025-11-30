@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Preferences } from "@capacitor/preferences";
 import classNames from "classnames";
 import { useStatusStore } from "@/lib/store.ts";
+import { logger } from "@/lib/logger";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { Button } from "@/components/wui/Button.tsx";
@@ -58,7 +59,9 @@ export function MediaSearchModal(props: {
   // Handle system selection
   const handleSystemSelect = async (systemId: string) => {
     setSelectedSystem(systemId);
-    await Preferences.set({ key: "searchSystem", value: systemId });
+    await Preferences.set({ key: "searchSystem", value: systemId }).catch((e) => {
+      logger.error("Failed to save search system preference:", e, { category: "storage", action: "set", key: "searchSystem", severity: "warning" });
+    });
   };
 
   useEffect(() => {
