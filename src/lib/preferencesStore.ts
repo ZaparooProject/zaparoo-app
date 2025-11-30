@@ -53,6 +53,9 @@ export interface PreferencesState {
     error: boolean;
   };
 
+  // Display settings
+  showFilenames: boolean;
+
   // Hydration tracking (internal, not persisted)
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
@@ -98,6 +101,7 @@ export interface PreferencesActions {
   setCustomText: (value: string) => void;
   setTourCompleted: (value: boolean) => void;
   setLogLevelFilters: (filters: PreferencesState["logLevelFilters"]) => void;
+  setShowFilenames: (value: boolean) => void;
 }
 
 export type PreferencesStore = PreferencesState & PreferencesActions;
@@ -136,7 +140,8 @@ const DEFAULT_PREFERENCES: Omit<
     info: true,
     warn: true,
     error: true
-  }
+  },
+  showFilenames: false
 };
 
 export const usePreferencesStore = create<PreferencesStore>()(
@@ -199,7 +204,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
       setShakeZapscript: (value) => set({ shakeZapscript: value }),
       setCustomText: (value) => set({ customText: value }),
       setTourCompleted: (value) => set({ tourCompleted: value }),
-      setLogLevelFilters: (filters) => set({ logLevelFilters: filters })
+      setLogLevelFilters: (filters) => set({ logLevelFilters: filters }),
+      setShowFilenames: (value) => set({ showFilenames: value })
     }),
     {
       name: "app-preferences",
@@ -216,7 +222,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
         shakeZapscript: state.shakeZapscript,
         customText: state.customText,
         tourCompleted: state.tourCompleted,
-        logLevelFilters: state.logLevelFilters
+        logLevelFilters: state.logLevelFilters,
+        showFilenames: state.showFilenames
       }),
 
       // Callback when hydration completes

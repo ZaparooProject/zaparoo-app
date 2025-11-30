@@ -16,6 +16,7 @@ import { useDataCache } from "./hooks/useDataCache";
 import { getDeviceAddress } from "./lib/coreApi";
 import { SlideModalProvider } from "./components/SlideModalProvider";
 import { usePreferencesStore } from "./lib/preferencesStore";
+import { filenameFromPath } from "./lib/path";
 import { useProAccessCheck } from "./hooks/useProAccessCheck";
 import { useNfcAvailabilityCheck } from "./hooks/useNfcAvailabilityCheck";
 import { useCameraAvailabilityCheck } from "./hooks/useCameraAvailabilityCheck";
@@ -73,6 +74,7 @@ export default function App() {
   const accelerometerAvailabilityHydrated = usePreferencesStore(
     (state) => state._accelerometerAvailabilityHydrated
   );
+  const showFilenames = usePreferencesStore((state) => state.showFilenames);
 
   // Initialize device info for error reporting context
   useEffect(() => {
@@ -130,6 +132,10 @@ export default function App() {
       playing.mediaName !== "" &&
       playing.mediaName !== prevPlaying?.mediaName
     ) {
+      const displayName = showFilenames && playing.mediaPath
+        ? filenameFromPath(playing.mediaPath) || playing.mediaName
+        : playing.mediaName;
+
       toast.success(
         (to) => (
           <span
@@ -142,7 +148,7 @@ export default function App() {
             tabIndex={0}
           >
             <span className="font-bold">{t("toast.nowPlayingHeading")}</span>
-            <span>{playing.mediaName}</span>
+            <span>{displayName}</span>
           </span>
         ),
         {
@@ -155,7 +161,7 @@ export default function App() {
         }
       );
     }
-  }, [playing, prevPlaying, t]);
+  }, [playing, prevPlaying, t, showFilenames]);
 
   // Block rendering until preferences, Pro access, and hardware availability are hydrated to prevent layout shifts
   if (!hasHydrated || !proAccessHydrated || !nfcAvailabilityHydrated || !cameraAvailabilityHydrated || !accelerometerAvailabilityHydrated) {

@@ -1,20 +1,34 @@
 import { useTranslation } from "react-i18next";
+import { filenameFromPath } from "@/lib/path.ts";
+import { usePreferencesStore } from "@/lib/preferencesStore.ts";
 import { StopIcon } from "../../lib/images";
 import { Button } from "../wui/Button";
 
 interface NowPlayingInfoProps {
   mediaName: string;
+  mediaPath?: string;
   systemName: string;
   onStop: () => void;
 }
 
-export function NowPlayingInfo({ mediaName, systemName, onStop }: NowPlayingInfoProps) {
+export function NowPlayingInfo({
+  mediaName,
+  mediaPath,
+  systemName,
+  onStop
+}: NowPlayingInfoProps) {
   const { t } = useTranslation();
+  const showFilenames = usePreferencesStore((s) => s.showFilenames);
+
+  const displayName =
+    showFilenames && mediaPath
+      ? filenameFromPath(mediaPath) || mediaName
+      : mediaName;
 
   return (
     <div className="p-3">
       <div className="flex flex-row items-center justify-between">
-        <p className="font-bold capitalize text-gray-400">
+        <p className="font-bold text-gray-400 capitalize">
           {t("scan.nowPlayingHeading")}
         </p>
         <Button
@@ -28,7 +42,7 @@ export function NowPlayingInfo({ mediaName, systemName, onStop }: NowPlayingInfo
       <div>
         <p>
           {t("scan.nowPlayingName", {
-            game: mediaName === "" ? "-" : mediaName
+            game: displayName === "" ? "-" : displayName
           })}
         </p>
         <p>

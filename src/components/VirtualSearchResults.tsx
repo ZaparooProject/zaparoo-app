@@ -4,6 +4,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link } from "@tanstack/react-router";
 import { SearchResultGame } from "@/lib/models.ts";
 import { useStatusStore } from "@/lib/store.ts";
+import { usePreferencesStore } from "@/lib/preferencesStore.ts";
+import { filenameFromPath } from "@/lib/path.ts";
 import { Card } from "@/components/wui/Card.tsx";
 import { NextIcon, SettingsIcon, WarningIcon } from "@/lib/images.tsx";
 import { LoadingSpinner } from "@/components/ui/loading-spinner.tsx";
@@ -293,6 +295,9 @@ const SearchResultItem = React.memo(function SearchResultItem({
   isLast,
   index
 }: SearchResultItemProps) {
+  const showFilenames = usePreferencesStore((s) => s.showFilenames);
+  const displayName = showFilenames ? filenameFromPath(game.path) || game.name : game.name;
+
   const handleGameSelect = () => {
     if (
       selectedResult &&
@@ -333,7 +338,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
       }}
     >
       <div className="flex flex-col">
-        <p className="font-semibold">{game.name}</p>
+        <p className="font-semibold">{displayName}</p>
         <p className="text-sm">{game.system.name}</p>
         <TagList tags={game.tags} maxMobile={2} maxDesktop={4} />
       </div>

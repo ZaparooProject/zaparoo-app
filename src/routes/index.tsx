@@ -160,6 +160,7 @@ function Index() {
           {connected && (
             <NowPlayingInfo
               mediaName={playing.mediaName}
+              mediaPath={playing.mediaPath}
               systemName={playing.systemName}
               onStop={() => setStopConfirmOpen(true)}
             />

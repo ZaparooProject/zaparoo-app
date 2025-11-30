@@ -6,6 +6,7 @@ import { CoreAPI } from "../lib/coreApi.ts";
 import { ToggleSwitch } from "../components/wui/ToggleSwitch";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { useStatusStore } from "../lib/store";
+import { usePreferencesStore } from "../lib/preferencesStore";
 import { PageFrame } from "../components/PageFrame";
 import { UpdateSettingsRequest } from "../lib/models.ts";
 import { BackIcon, NextIcon } from "../lib/images";
@@ -18,6 +19,8 @@ export const Route = createFileRoute("/settings/advanced")({
 
 function AdvancedSettings() {
   const connected = useStatusStore((state) => state.connected);
+  const showFilenames = usePreferencesStore((s) => s.showFilenames);
+  const setShowFilenames = usePreferencesStore((s) => s.setShowFilenames);
 
   const { data, refetch, isPending } = useQuery({
     queryKey: ["settings"],
@@ -60,6 +63,12 @@ function AdvancedSettings() {
           value={data?.debugLogging ?? false}
           setValue={(v) => update.mutate({ debugLogging: v })}
           disabled={!connected}
+        />
+
+        <ToggleSwitch
+          label={t("settings.advanced.showFilenames")}
+          value={showFilenames}
+          setValue={setShowFilenames}
         />
 
         <Link to="/settings/logs">

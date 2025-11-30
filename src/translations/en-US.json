@@ -299,6 +299,7 @@
       "advanced": {
         "title": "Advanced",
         "debugLogging": "Debug logging",
+        "showFilenames": "Show filenames for media",
         "viewLogs": "View logs"
       },
       "core": {

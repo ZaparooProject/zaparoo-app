@@ -21,6 +21,8 @@ import {
 } from "../lib/images";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { SearchResultGame, SystemsResponse } from "../lib/models";
+import { usePreferencesStore } from "../lib/preferencesStore";
+import { filenameFromPath } from "../lib/path";
 import { SlideModal } from "../components/SlideModal";
 import { Button } from "../components/wui/Button";
 import { HeaderButton } from "../components/wui/HeaderButton";
@@ -78,6 +80,7 @@ function Search() {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const setGamesIndex = useStatusStore((state) => state.setGamesIndex);
   const connected = useStatusStore((state) => state.connected);
+  const showFilenames = usePreferencesStore((s) => s.showFilenames);
 
   const [querySystem, setQuerySystem] = useState(loaderData.systemQuery);
   const [queryTags, setQueryTags] = useState<string[]>(loaderData.tagQuery);
@@ -350,7 +353,13 @@ function Search() {
       <SlideModal
         isOpen={selectedResult !== null && !writeOpen}
         close={() => setSelectedResult(null)}
-        title={selectedResult?.name || "Game Details"}
+        title={
+          selectedResult
+            ? showFilenames
+              ? filenameFromPath(selectedResult.path) || selectedResult.name
+              : selectedResult.name
+            : "Game Details"
+        }
       >
         <div className="flex flex-col gap-4 pt-2">
           {/* Primary Info */}
