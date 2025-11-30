@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowDownIcon, CameraIcon, NfcIcon, SaveIcon } from "lucide-react";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
@@ -42,9 +42,13 @@ const mappingExists = (mappings: MappingResponse[] | undefined, id: string) => {
 function Mappings() {
   const connected = useStatusStore((state) => state.connected);
   const nfcWriter = useNfcWriter();
-  const [writeOpen, setWriteOpen] = useState(false);
+  // Track user intent to open modal; actual visibility derived from NFC status
+  const [writeIntent, setWriteIntent] = useState(false);
+  const writeOpen = writeIntent && nfcWriter.status === null;
   const [tokenId, setTokenId] = useState<string>("");
   const [script, setScript] = useState<string>("");
+  // Track previous status to detect completion
+  const prevStatusRef = useRef(nfcWriter.status);
   const { t } = useTranslation();
   const router = useRouter();
   const goBack = () => router.history.back();
@@ -59,28 +63,28 @@ function Mappings() {
     queryFn: () => CoreAPI.mappings()
   });
 
-  // Handle NFC read completion - update UI state when operation completes
-  /* eslint-disable react-hooks/set-state-in-effect -- Intentional: syncing UI with NFC hook state */
+  // Handle NFC read completion - populate form fields when operation completes
   useEffect(() => {
-    if (nfcWriter.status !== null) {
-      setWriteOpen(false);
+    const justCompleted = prevStatusRef.current === null && nfcWriter.status !== null;
+    prevStatusRef.current = nfcWriter.status;
 
-      if (nfcWriter.result?.info.tag?.uid) {
-        const uid = nfcWriter.result.info.tag.uid;
-        setTokenId(uid);
-        const existing = mappingExists(mappings.data?.mappings, uid);
-        if (existing !== null) {
-          setScript(existing.script);
-        } else {
-          setScript("");
-        }
+    // Populate form fields from NFC read result
+    /* eslint-disable react-hooks/set-state-in-effect -- Intentional: populating form after async NFC operation */
+    if (justCompleted && nfcWriter.result?.info.tag?.uid) {
+      const uid = nfcWriter.result.info.tag.uid;
+      setTokenId(uid);
+      const existing = mappingExists(mappings.data?.mappings, uid);
+      if (existing !== null) {
+        setScript(existing.script);
+      } else {
+        setScript("");
       }
     }
-  }, [nfcWriter.result, nfcWriter, mappings.data]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [nfcWriter.result, nfcWriter.status, mappings.data]);
 
   const closeWriteModal = async () => {
-    setWriteOpen(false);
+    setWriteIntent(false);
     await nfcWriter.end();
   };
 
@@ -147,7 +151,7 @@ function Mappings() {
                 icon={<NfcIcon size={20} />}
                 onClick={() => {
                   nfcWriter.write(WriteAction.Read);
-                  setWriteOpen(true);
+                  setWriteIntent(true);
                 }}
                 label={t("scan.nfcMode")}
               />

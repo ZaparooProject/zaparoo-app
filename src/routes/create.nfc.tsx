@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { logger } from "../lib/logger";
 // import {
@@ -29,33 +29,38 @@ export const Route = createFileRoute("/create/nfc")({
 
 function NfcUtils() {
   const nfcWriter = useNfcWriter();
-  const [writeOpen, setWriteOpen] = useState(false);
+  // Track user intent to open modal; actual visibility derived from NFC status
+  const [writeIntent, setWriteIntent] = useState(false);
+  const writeOpen = writeIntent && nfcWriter.status === null;
   const [activeTab, setActiveTab] = useState("read");
+  // Track previous status to detect completion
+  const prevStatusRef = useRef(nfcWriter.status);
 
   const closeWriteModal = async () => {
-    setWriteOpen(false);
+    setWriteIntent(false);
     await nfcWriter.end();
   };
 
   const { t } = useTranslation();
 
-  // Handle NFC operation completion - update UI state and cleanup
-  /* eslint-disable react-hooks/set-state-in-effect -- Intentional: syncing UI with NFC hook state */
+  // Handle NFC operation completion - cleanup and tab switching
   useEffect(() => {
-    if (nfcWriter.status !== null) {
+    const justCompleted = prevStatusRef.current === null && nfcWriter.status !== null;
+    prevStatusRef.current = nfcWriter.status;
+
+    if (justCompleted) {
       logger.log(JSON.stringify(nfcWriter.result?.info.rawTag));
-      setWriteOpen(false);
 
       // Clean up the nfcWriter state after operation completes
       nfcWriter.end();
 
       // Switch to read tab after operation to show results
       if (nfcWriter.result?.info?.tag || nfcWriter.result?.info?.rawTag) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: navigating to results tab after async NFC operation
         setActiveTab("read");
       }
     }
   }, [nfcWriter]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const router = useRouter();
   const goBack = () => router.history.back();
@@ -66,12 +71,12 @@ function NfcUtils() {
 
   const handleScan = () => {
     nfcWriter.write(WriteAction.Read);
-    setWriteOpen(true);
+    setWriteIntent(true);
   };
 
   const handleToolAction = (action: WriteAction) => {
     nfcWriter.write(action);
-    setWriteOpen(true);
+    setWriteIntent(true);
   };
 
   return (

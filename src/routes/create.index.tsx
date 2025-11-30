@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { ListPlusIcon, NfcIcon } from "lucide-react";
@@ -21,21 +21,15 @@ function Create() {
   const playing = useStatusStore((state) => state.playing);
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
   const nfcWriter = useNfcWriter();
-  const [writeOpen, setWriteOpen] = useState(false);
+  // Track user intent to open modal; actual visibility derived from NFC status
+  const [writeIntent, setWriteIntent] = useState(false);
+  const writeOpen = writeIntent && nfcWriter.status === null;
   const closeWriteModal = async () => {
-    setWriteOpen(false);
+    setWriteIntent(false);
     await nfcWriter.end();
   };
 
   const { t } = useTranslation();
-
-  // Close modal when NFC operation completes (status changes from null to result)
-  useEffect(() => {
-    if (nfcWriter.status !== null) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing UI with NFC hook state
-      setWriteOpen(false);
-    }
-  }, [nfcWriter]);
 
   return (
     <>
@@ -66,7 +60,7 @@ function Create() {
             onClick={() => {
               if (playing.mediaPath !== "") {
                 nfcWriter.write(WriteAction.Write, playing.mediaPath);
-                setWriteOpen(true);
+                setWriteIntent(true);
               }
             }}
           >

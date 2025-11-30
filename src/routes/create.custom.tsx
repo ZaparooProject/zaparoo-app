@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
@@ -21,20 +21,14 @@ function CustomText() {
     useShallow(selectCustomText)
   );
   const nfcWriter = useNfcWriter();
-  const [writeOpen, setWriteOpen] = useState(false);
+  // Track user intent to open modal; actual visibility derived from NFC status
+  const [writeIntent, setWriteIntent] = useState(false);
+  const writeOpen = writeIntent && nfcWriter.status === null;
   const closeWriteModal = async () => {
-    setWriteOpen(false);
+    setWriteIntent(false);
     await nfcWriter.end();
   };
   const { t } = useTranslation();
-
-  // Close modal when NFC operation completes (status changes from null to result)
-  useEffect(() => {
-    if (nfcWriter.status !== null) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing UI with NFC hook state
-      setWriteOpen(false);
-    }
-  }, [nfcWriter]);
 
   const router = useRouter();
   const goBack = () => router.history.back();
@@ -69,7 +63,7 @@ function CustomText() {
               onClick={() => {
                 if (customText !== "") {
                   nfcWriter.write(WriteAction.Write, customText);
-                  setWriteOpen(true);
+                  setWriteIntent(true);
                 }
               }}
             />
