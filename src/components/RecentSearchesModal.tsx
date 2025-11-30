@@ -21,7 +21,7 @@ export function RecentSearchesModal({
   recentSearches,
   onSearchSelect,
   onClearHistory,
-  getSearchDisplayText
+  getSearchDisplayText,
 }: RecentSearchesModalProps) {
   const { t } = useTranslation();
 
@@ -43,9 +43,11 @@ export function RecentSearchesModal({
     >
       <div className="flex flex-col gap-3 pt-2">
         {recentSearches.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">
+          <div className="text-muted-foreground py-8 text-center">
             <p>{t("create.search.noRecentSearches")}</p>
-            <p className="text-sm mt-2">{t("create.search.noRecentSearchesHint")}</p>
+            <p className="mt-2 text-sm">
+              {t("create.search.noRecentSearchesHint")}
+            </p>
           </div>
         ) : (
           <>
@@ -59,10 +61,10 @@ export function RecentSearchesModal({
                   <div className="flex flex-row items-center gap-3">
                     <Button icon={<SearchIcon size="20" />} />
                     <div className="flex grow flex-col">
-                      <span className="font-semibold text-sm">
+                      <span className="text-sm font-semibold">
                         {getSearchDisplayText(search)}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-muted-foreground text-xs">
                         {new Date(search.timestamp).toLocaleString()}
                       </span>
                     </div>
@@ -71,7 +73,7 @@ export function RecentSearchesModal({
               ))}
             </div>
 
-            <div className="pt-3 border-t border-foreground-muted/20">
+            <div className="border-foreground-muted/20 border-t pt-3">
               <Button
                 label={t("create.search.clearHistory")}
                 icon={<Trash2 size="20" />}

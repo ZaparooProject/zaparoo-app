@@ -2,7 +2,7 @@ import axios from "axios";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 
 const client = axios.create({
-  baseURL: "https://api.zaparoo.com/v1"
+  baseURL: "https://api.zaparoo.com/v1",
 });
 
 client.interceptors.request.use(async function (config) {

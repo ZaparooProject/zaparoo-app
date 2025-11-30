@@ -6,7 +6,7 @@ export enum WebSocketState {
   CONNECTED = "connected",
   RECONNECTING = "reconnecting",
   DISCONNECTED = "disconnected",
-  ERROR = "error"
+  ERROR = "error",
 }
 
 export interface WebSocketManagerConfig {
@@ -45,7 +45,7 @@ export class WebSocketManager {
 
   constructor(
     config: WebSocketManagerConfig,
-    callbacks: WebSocketManagerCallbacks = {}
+    callbacks: WebSocketManagerCallbacks = {},
   ) {
     this.config = {
       url: config.url,
@@ -56,7 +56,7 @@ export class WebSocketManager {
       reconnectBackoffMultiplier: config.reconnectBackoffMultiplier ?? 1.5,
       maxReconnectInterval: config.maxReconnectInterval ?? 30000,
       pingMessage: config.pingMessage ?? "ping",
-      connectionTimeout: config.connectionTimeout ?? 10000
+      connectionTimeout: config.connectionTimeout ?? 10000,
     };
     this.callbacks = callbacks;
   }
@@ -89,7 +89,10 @@ export class WebSocketManager {
     }
 
     // If already connected, do nothing
-    if (this.state === WebSocketState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
+    if (
+      this.state === WebSocketState.CONNECTED &&
+      this.ws?.readyState === WebSocket.OPEN
+    ) {
       logger.log("Already connected, skipping immediate reconnect");
       return;
     }
@@ -138,7 +141,7 @@ export class WebSocketManager {
       // Check if queue is at capacity
       if (this.messageQueue.length >= this.MAX_QUEUE_SIZE) {
         logger.warn(
-          `Message queue full (${this.MAX_QUEUE_SIZE} messages). Discarding oldest message.`
+          `Message queue full (${this.MAX_QUEUE_SIZE} messages). Discarding oldest message.`,
         );
         this.messageQueue.shift(); // Remove oldest message
       }
@@ -147,7 +150,7 @@ export class WebSocketManager {
       this.messageQueue.push(data);
     } else {
       throw new Error(
-        `Cannot send message: WebSocket is not open (state: ${this.ws?.readyState})`
+        `Cannot send message: WebSocket is not open (state: ${this.ws?.readyState})`,
       );
     }
   }
@@ -166,7 +169,10 @@ export class WebSocketManager {
    * Used when browser tab becomes visible again.
    */
   resumeHeartbeat(): void {
-    if (this.state === WebSocketState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
+    if (
+      this.state === WebSocketState.CONNECTED &&
+      this.ws?.readyState === WebSocket.OPEN
+    ) {
       logger.debug("Resuming heartbeat");
       this.startHeartbeat();
     }
@@ -222,7 +228,7 @@ export class WebSocketManager {
         category: "connection",
         action: "createWebSocket",
         severity: "critical",
-        reconnectAttempts: this.reconnectAttempts
+        reconnectAttempts: this.reconnectAttempts,
       });
       this.handleConnectionError();
     }
@@ -254,7 +260,7 @@ export class WebSocketManager {
         category: "connection",
         action: "onerror",
         severity: "critical",
-        reconnectAttempts: this.reconnectAttempts
+        reconnectAttempts: this.reconnectAttempts,
       });
       this.clearConnectionTimeout();
       this.callbacks.onError?.(error);
@@ -313,7 +319,7 @@ export class WebSocketManager {
       Math.pow(this.config.reconnectBackoffMultiplier, this.reconnectAttempts);
     const cappedDelay = Math.min(
       backoffDelay,
-      this.config.maxReconnectInterval
+      this.config.maxReconnectInterval,
     );
 
     // Add random jitter (0-50% of the delay) to prevent synchronized reconnection attempts
@@ -321,7 +327,7 @@ export class WebSocketManager {
     const delay = Math.floor(cappedDelay + jitter);
 
     logger.debug(
-      `Scheduling reconnect attempt ${this.reconnectAttempts + 1} in ${delay}ms (base: ${cappedDelay}ms + jitter: ${Math.floor(jitter)}ms)`
+      `Scheduling reconnect attempt ${this.reconnectAttempts + 1} in ${delay}ms (base: ${cappedDelay}ms + jitter: ${Math.floor(jitter)}ms)`,
     );
 
     this.reconnectTimer = setTimeout(() => {
@@ -344,7 +350,7 @@ export class WebSocketManager {
           logger.error("Failed to send ping:", error, {
             category: "connection",
             action: "sendPing",
-            severity: "critical"
+            severity: "critical",
           });
           this.handleConnectionError();
         }
@@ -387,7 +393,9 @@ export class WebSocketManager {
   private startConnectionTimeout(): void {
     this.clearConnectionTimeout();
     this.connectionTimer = setTimeout(() => {
-      logger.warn(`Connection timeout after ${this.config.connectionTimeout}ms - closing connection`);
+      logger.warn(
+        `Connection timeout after ${this.config.connectionTimeout}ms - closing connection`,
+      );
       // Close the WebSocket to trigger reconnection logic
       if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
         this.ws.close();

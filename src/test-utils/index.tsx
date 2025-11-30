@@ -9,27 +9,25 @@ const createTestQueryClient = () =>
     defaultOptions: {
       queries: {
         retry: false,
-        staleTime: Infinity
+        staleTime: Infinity,
       },
       mutations: {
-        retry: false
-      }
-    }
+        retry: false,
+      },
+    },
   });
 
 // Custom render function that wraps components with necessary providers
 function customRender(
   ui: React.ReactElement,
-  options?: Omit<RenderOptions, "wrapper">
+  options?: Omit<RenderOptions, "wrapper">,
 ) {
   const queryClient = createTestQueryClient();
-  
+
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <SlideModalProvider>
-          {children}
-        </SlideModalProvider>
+        <SlideModalProvider>{children}</SlideModalProvider>
       </QueryClientProvider>
     );
   }

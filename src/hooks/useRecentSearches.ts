@@ -26,7 +26,12 @@ export function useRecentSearches() {
           setRecentSearches(parsed);
         }
       } catch (error) {
-        logger.error("Failed to load recent searches:", error, { category: "storage", action: "get", key: RECENT_SEARCHES_KEY, severity: "warning" });
+        logger.error("Failed to load recent searches:", error, {
+          category: "storage",
+          action: "get",
+          key: RECENT_SEARCHES_KEY,
+          severity: "warning",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -40,10 +45,15 @@ export function useRecentSearches() {
     try {
       await Preferences.set({
         key: RECENT_SEARCHES_KEY,
-        value: JSON.stringify(searches)
+        value: JSON.stringify(searches),
       });
     } catch (error) {
-      logger.error("Failed to save recent searches:", error, { category: "storage", action: "set", key: RECENT_SEARCHES_KEY, severity: "warning" });
+      logger.error("Failed to save recent searches:", error, {
+        category: "storage",
+        action: "set",
+        key: RECENT_SEARCHES_KEY,
+        severity: "warning",
+      });
     }
   }, []);
 
@@ -53,35 +63,44 @@ export function useRecentSearches() {
       a.query === b.query &&
       a.system === b.system &&
       a.tags.length === b.tags.length &&
-      a.tags.every(tag => b.tags.includes(tag))
+      a.tags.every((tag) => b.tags.includes(tag))
     );
   }, []);
 
   // Add a new search to recent searches
-  const addRecentSearch = useCallback(async (search: Omit<RecentSearch, "timestamp">) => {
-    // Skip if search has no meaningful parameters
-    if (!search.query.trim() && search.system === "all" && search.tags.length === 0) {
-      return;
-    }
+  const addRecentSearch = useCallback(
+    async (search: Omit<RecentSearch, "timestamp">) => {
+      // Skip if search has no meaningful parameters
+      if (
+        !search.query.trim() &&
+        search.system === "all" &&
+        search.tags.length === 0
+      ) {
+        return;
+      }
 
-    const newSearch: RecentSearch = {
-      ...search,
-      timestamp: Date.now()
-    };
+      const newSearch: RecentSearch = {
+        ...search,
+        timestamp: Date.now(),
+      };
 
-    setRecentSearches(current => {
-      // Remove any existing identical search
-      const filtered = current.filter(existing => !areSearchesEqual(existing, newSearch));
+      setRecentSearches((current) => {
+        // Remove any existing identical search
+        const filtered = current.filter(
+          (existing) => !areSearchesEqual(existing, newSearch),
+        );
 
-      // Add new search at the beginning and limit to max items
-      const updated = [newSearch, ...filtered].slice(0, MAX_RECENT_SEARCHES);
+        // Add new search at the beginning and limit to max items
+        const updated = [newSearch, ...filtered].slice(0, MAX_RECENT_SEARCHES);
 
-      // Save to preferences
-      saveToPreferences(updated);
+        // Save to preferences
+        saveToPreferences(updated);
 
-      return updated;
-    });
-  }, [areSearchesEqual, saveToPreferences]);
+        return updated;
+      });
+    },
+    [areSearchesEqual, saveToPreferences],
+  );
 
   // Clear all recent searches
   const clearRecentSearches = useCallback(async () => {
@@ -113,6 +132,6 @@ export function useRecentSearches() {
     isLoading,
     addRecentSearch,
     clearRecentSearches,
-    getSearchDisplayText
+    getSearchDisplayText,
   };
 }

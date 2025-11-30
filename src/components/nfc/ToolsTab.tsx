@@ -5,7 +5,7 @@ import {
   EraserIcon,
   PencilOffIcon,
   SquareAsteriskIcon,
-  AlertTriangleIcon
+  AlertTriangleIcon,
 } from "lucide-react";
 import { Button } from "@/components/wui/Button";
 import { WriteAction } from "@/lib/writeNfcHook";
@@ -36,7 +36,7 @@ export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
       description: t("create.nfc.tools.formatDescription"),
       warning: t("create.nfc.tools.formatWarning"),
       platforms: ["android"],
-      dangerous: true
+      dangerous: true,
     },
     {
       action: WriteAction.Erase,
@@ -45,7 +45,7 @@ export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
       description: t("create.nfc.tools.eraseDescription"),
       warning: t("create.nfc.tools.eraseWarning"),
       platforms: ["android", "ios"],
-      dangerous: true
+      dangerous: true,
     },
     {
       action: WriteAction.MakeReadOnly,
@@ -54,17 +54,19 @@ export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
       description: t("create.nfc.tools.makeReadOnlyDescription"),
       warning: t("create.nfc.tools.makeReadOnlyWarning"),
       platforms: ["android", "ios"],
-      dangerous: true
-    }
+      dangerous: true,
+    },
   ];
 
   const currentPlatform = Capacitor.getPlatform();
-  const availableTools = tools.filter(tool =>
-    tool.platforms.includes(currentPlatform) || tool.platforms.includes("all")
+  const availableTools = tools.filter(
+    (tool) =>
+      tool.platforms.includes(currentPlatform) ||
+      tool.platforms.includes("all"),
   );
 
   const handleToolClick = (action: WriteAction) => {
-    if (typeof onToolAction === 'function') {
+    if (typeof onToolAction === "function") {
       onToolAction(action);
     }
   };
@@ -74,10 +76,13 @@ export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
       {/* Tools */}
       {availableTools.map((tool) => {
         return (
-          <div key={tool.action} className="bg-background-secondary/50 space-y-4 rounded-2xl p-4">
+          <div
+            key={tool.action}
+            className="bg-background-secondary/50 space-y-4 rounded-2xl p-4"
+          >
             <div>
-              <h3 className="text-lg font-semibold mb-1">{tool.label}</h3>
-              <p className="text-foreground-secondary text-sm mb-3">
+              <h3 className="mb-1 text-lg font-semibold">{tool.label}</h3>
+              <p className="text-foreground-secondary mb-3 text-sm">
                 {tool.description}
               </p>
 
@@ -91,9 +96,12 @@ export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
               />
 
               {tool.dangerous && (
-                <div className="flex items-start gap-2 mt-3">
-                  <AlertTriangleIcon size={16} className="text-red-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-red-600 font-medium">
+                <div className="mt-3 flex items-start gap-2">
+                  <AlertTriangleIcon
+                    size={16}
+                    className="mt-0.5 flex-shrink-0 text-red-500"
+                  />
+                  <p className="text-sm font-medium text-red-600">
                     {tool.warning}
                   </p>
                 </div>

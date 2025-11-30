@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useNfcWriter, WriteAction, WriteMethod } from "../../../lib/writeNfcHook";
+import {
+  useNfcWriter,
+  WriteAction,
+  WriteMethod,
+} from "../../../lib/writeNfcHook";
 import { CoreAPI } from "../../../lib/coreApi";
 import { Capacitor } from "@capacitor/core";
 import { Status } from "../../../lib/nfc";
@@ -24,7 +28,7 @@ vi.mock("@capawesome-team/capacitor-nfc", () => ({
 }));
 
 vi.mock("../../../lib/coreApi", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     CoreAPI: {
@@ -43,8 +47,8 @@ vi.mock("../../../lib/nfc", () => ({
   Status: {
     Success: 0,
     Error: 1,
-    Cancelled: 2
-  }
+    Cancelled: 2,
+  },
 }));
 
 // Mock react-i18next
@@ -78,7 +82,9 @@ describe("useNfcWriter Cancellation", () => {
 
   describe("write cancellation", () => {
     it("should cancel pending write operations when end() is called", async () => {
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.Auto, false));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.Auto, false),
+      );
 
       // Mock write operation that doesn't resolve immediately
       const writePromise = new Promise((resolve) => {
@@ -103,7 +109,9 @@ describe("useNfcWriter Cancellation", () => {
     it("should call readersWriteCancel for remote writer method", async () => {
       vi.mocked(CoreAPI.readersWriteCancel).mockResolvedValue();
 
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.RemoteReader, false));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.RemoteReader, false),
+      );
 
       // Start write operation
       const writePromise = Promise.resolve();
@@ -131,12 +139,14 @@ describe("useNfcWriter Cancellation", () => {
       const { Nfc } = await import("@capawesome-team/capacitor-nfc");
       vi.mocked(Nfc.isAvailable).mockResolvedValue({ nfc: true, hce: false });
 
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.LocalNFC, false));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.LocalNFC, false),
+      );
 
       // Start write operation using local NFC
       const writePromise = Promise.resolve({
         status: "success" as any,
-        info: { rawTag: null, tag: null }
+        info: { rawTag: null, tag: null },
       });
       const { writeTag } = await import("../../../lib/nfc");
       vi.mocked(writeTag).mockReturnValue(writePromise);
@@ -156,9 +166,13 @@ describe("useNfcWriter Cancellation", () => {
     });
 
     it("should handle cancellation errors gracefully", async () => {
-      vi.mocked(CoreAPI.readersWriteCancel).mockRejectedValue(new Error("Cancel failed"));
+      vi.mocked(CoreAPI.readersWriteCancel).mockRejectedValue(
+        new Error("Cancel failed"),
+      );
 
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.RemoteReader, false));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.RemoteReader, false),
+      );
 
       // Start write operation
       const writePromise = Promise.resolve();
@@ -169,7 +183,9 @@ describe("useNfcWriter Cancellation", () => {
       });
 
       // Mock console.error to verify error logging
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // End/cancel the operation - should not throw
       await act(async () => {
@@ -181,14 +197,19 @@ describe("useNfcWriter Cancellation", () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Failed to cancel remote write:",
         expect.any(Error),
-        expect.objectContaining({ category: "nfc", action: "cancelRemoteWrite" })
+        expect.objectContaining({
+          category: "nfc",
+          action: "cancelRemoteWrite",
+        }),
       );
 
       consoleErrorSpy.mockRestore();
     });
 
     it("should reset write method and status after cancellation", async () => {
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.RemoteReader, false));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.RemoteReader, false),
+      );
 
       // Start write operation
       const writePromise = Promise.resolve();
@@ -210,7 +231,9 @@ describe("useNfcWriter Cancellation", () => {
 
   describe("rapid write/cancel sequences", () => {
     it("should handle rapid write and cancel operations", async () => {
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.Auto, false));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.Auto, false),
+      );
 
       // Perform multiple rapid write/cancel sequences
       for (let i = 0; i < 3; i++) {
@@ -235,7 +258,9 @@ describe("useNfcWriter Cancellation", () => {
     it("should prevent timeout errors with immediate cancellation", async () => {
       vi.useFakeTimers();
 
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.Auto, false));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.Auto, false),
+      );
 
       // Start write operation that would timeout
       const writePromise = new Promise<void>((_resolve) => {
@@ -262,7 +287,9 @@ describe("useNfcWriter Cancellation", () => {
     });
 
     it("should handle abort signal properly", async () => {
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.Auto, false));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.Auto, false),
+      );
 
       // Mock CoreAPI.write to return cancelled result when aborted
       vi.mocked(CoreAPI.write).mockResolvedValue({ cancelled: true });
@@ -286,7 +313,9 @@ describe("useNfcWriter Cancellation", () => {
     });
 
     it("should handle multiple rapid cancel operations without duplicate toasts", async () => {
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.Auto, false));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.Auto, false),
+      );
       const mockToastError = vi.fn();
 
       // Mock toast.error to track calls
@@ -294,8 +323,8 @@ describe("useNfcWriter Cancellation", () => {
         default: {
           error: mockToastError,
           success: vi.fn(),
-          dismiss: vi.fn()
-        }
+          dismiss: vi.fn(),
+        },
       }));
 
       // Perform multiple rapid write/cancel sequences

@@ -24,7 +24,7 @@ export function MediaSearchModal(props: {
   const [query, setQuery] = useState("");
   const [selectedSystem, setSelectedSystem] = useState<string>("all");
   const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
-    null
+    null,
   );
 
   // State for tracking actual searched parameters
@@ -41,27 +41,30 @@ export function MediaSearchModal(props: {
 
   // Manual search function
   const performSearch = () => {
-    if (
-      !connected ||
-      !gamesIndex.exists ||
-      gamesIndex.indexing
-    ) {
+    if (!connected || !gamesIndex.exists || gamesIndex.indexing) {
       return;
     }
 
     setIsSearching(true);
     setSearchParams({
       query: query,
-      system: selectedSystem
+      system: selectedSystem,
     });
   };
 
   // Handle system selection
   const handleSystemSelect = async (systemId: string) => {
     setSelectedSystem(systemId);
-    await Preferences.set({ key: "searchSystem", value: systemId }).catch((e) => {
-      logger.error("Failed to save search system preference:", e, { category: "storage", action: "set", key: "searchSystem", severity: "warning" });
-    });
+    await Preferences.set({ key: "searchSystem", value: systemId }).catch(
+      (e) => {
+        logger.error("Failed to save search system preference:", e, {
+          category: "storage",
+          action: "set",
+          key: "searchSystem",
+          severity: "warning",
+        });
+      },
+    );
   };
 
   // Handle result selection - called by VirtualSearchResults when a result is clicked
@@ -114,7 +117,7 @@ export function MediaSearchModal(props: {
                 onSelect={handleSystemSelect}
                 includeAllOption={true}
                 className={classNames({
-                  "opacity-50": !canSearch
+                  "opacity-50": !canSearch,
                 })}
               />
             </div>

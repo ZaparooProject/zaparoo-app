@@ -15,7 +15,7 @@ export const defaultSafeAreaInsets: SafeAreaInsets = {
   top: "0px",
   bottom: "0px",
   left: "0px",
-  right: "0px"
+  right: "0px",
 };
 
 // The @capawesome/capacitor-android-edge-to-edge-support plugin handles edge-to-edge
@@ -32,14 +32,14 @@ export const SafeAreaHandler = () => {
           top: "env(safe-area-inset-top, 0px)",
           bottom: "env(safe-area-inset-bottom, 0px)",
           left: "env(safe-area-inset-left, 0px)",
-          right: "env(safe-area-inset-right, 0px)"
+          right: "env(safe-area-inset-right, 0px)",
         };
         setSafeInsets(webInsets);
         return;
       }
 
       // For Android, enable edge-to-edge and get insets
-      if (Capacitor.getPlatform() === 'android') {
+      if (Capacitor.getPlatform() === "android") {
         try {
           await EdgeToEdge.enable();
           const insets = await EdgeToEdge.getInsets();
@@ -47,16 +47,16 @@ export const SafeAreaHandler = () => {
             top: `${insets.top}px`,
             bottom: `${insets.bottom}px`,
             left: `${insets.left}px`,
-            right: `${insets.right}px`
+            right: `${insets.right}px`,
           });
         } catch (error) {
-          logger.warn('EdgeToEdge plugin not available:', error);
+          logger.warn("EdgeToEdge plugin not available:", error);
           // Fallback to env() values
           setSafeInsets({
             top: "env(safe-area-inset-top, 0px)",
             bottom: "env(safe-area-inset-bottom, 0px)",
             left: "env(safe-area-inset-left, 0px)",
-            right: "env(safe-area-inset-right, 0px)"
+            right: "env(safe-area-inset-right, 0px)",
           });
         }
       } else {
@@ -65,7 +65,7 @@ export const SafeAreaHandler = () => {
           top: "env(safe-area-inset-top, 0px)",
           bottom: "env(safe-area-inset-bottom, 0px)",
           left: "env(safe-area-inset-left, 0px)",
-          right: "env(safe-area-inset-right, 0px)"
+          right: "env(safe-area-inset-right, 0px)",
         });
       }
     };
@@ -77,10 +77,10 @@ export const SafeAreaHandler = () => {
       setTimeout(initializeSafeArea, 200);
     };
 
-    window.addEventListener('orientationchange', handleOrientationChange);
+    window.addEventListener("orientationchange", handleOrientationChange);
 
     return () => {
-      window.removeEventListener('orientationchange', handleOrientationChange);
+      window.removeEventListener("orientationchange", handleOrientationChange);
     };
   }, [setSafeInsets]);
 

@@ -5,7 +5,7 @@ import {
   Notification,
   SettingsResponse,
   Method,
-  UpdateSettingsRequest
+  UpdateSettingsRequest,
 } from "@/lib/models.ts";
 
 // Mock Capacitor
@@ -16,24 +16,23 @@ const localStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
-  clear: vi.fn()
+  clear: vi.fn(),
 };
 
 Object.defineProperty(window, "localStorage", {
   value: localStorageMock,
-  writable: true
+  writable: true,
 });
 
 // Mock window.location
 Object.defineProperty(window, "location", {
   value: {
-    hostname: "localhost"
+    hostname: "localhost",
   },
-  writable: true
+  writable: true,
 });
 
 describe("CoreAPI", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockSend: any;
 
   beforeEach(() => {
@@ -115,7 +114,7 @@ describe("CoreAPI", () => {
   it("should handle invalid JSON in processReceived", async () => {
     const invalidJsonEvent = { data: "invalid json" } as MessageEvent;
     await expect(CoreAPI.processReceived(invalidJsonEvent)).rejects.toThrow(
-      "Error parsing JSON response"
+      "Error parsing JSON response",
     );
   });
 
@@ -140,15 +139,15 @@ describe("CoreAPI", () => {
       data: JSON.stringify({
         jsonrpc: "2.0",
         method: "tokens.removed",
-        params: { uid: "test-uid" }
-      })
+        params: { uid: "test-uid" },
+      }),
     } as MessageEvent;
 
     const result = await CoreAPI.processReceived(tokensRemovedEvent);
 
     expect(result).toEqual({
       method: Notification.TokensRemoved,
-      params: { uid: "test-uid" }
+      params: { uid: "test-uid" },
     });
   });
 
@@ -167,7 +166,7 @@ describe("CoreAPI", () => {
       readersAutoDetect: true,
       readersScanMode: "tap",
       readersScanExitDelay: 0,
-      readersScanIgnoreSystems: []
+      readersScanIgnoreSystems: [],
     };
 
     checkInterface(mockSettings);
@@ -250,7 +249,7 @@ describe("CoreAPI", () => {
     // Test that UpdateSettingsRequest supports runZapScript field for API compatibility
     const updateRequest: UpdateSettingsRequest = {
       runZapScript: false,
-      debugLogging: true
+      debugLogging: true,
     };
 
     expect(updateRequest.runZapScript).toBe(false);
@@ -269,7 +268,7 @@ describe("CoreAPI", () => {
       readersAutoDetect: true,
       readersScanMode: "tap" as const,
       readersScanExitDelay: 2.5,
-      readersScanIgnoreSystem: ["system1", "system2"] // Core uses singular
+      readersScanIgnoreSystem: ["system1", "system2"], // Core uses singular
     };
 
     // This should work with our SettingsResponse interface
@@ -281,12 +280,12 @@ describe("CoreAPI", () => {
       readersAutoDetect: coreApiResponse.readersAutoDetect,
       readersScanMode: coreApiResponse.readersScanMode,
       readersScanExitDelay: coreApiResponse.readersScanExitDelay,
-      readersScanIgnoreSystems: coreApiResponse.readersScanIgnoreSystem
+      readersScanIgnoreSystems: coreApiResponse.readersScanIgnoreSystem,
     };
 
     expect(typedResponse.readersScanIgnoreSystems).toEqual([
       "system1",
-      "system2"
+      "system2",
     ]);
   });
 

@@ -16,16 +16,18 @@ vi.mock("shepherd.js", () => {
     cancel: vi.fn(),
     complete: vi.fn(),
     hide: vi.fn(),
-    on: vi.fn()
+    on: vi.fn(),
   };
 
   // Must use regular function (not arrow) for Vitest 4 constructor mocks
-  mockTourConstructor = vi.fn(function () { return mockTourInstance; });
+  mockTourConstructor = vi.fn(function () {
+    return mockTourInstance;
+  });
 
   return {
     default: {
-      Tour: mockTourConstructor
-    }
+      Tour: mockTourConstructor,
+    },
   };
 });
 
@@ -58,8 +60,8 @@ describe("tourService - createAppTour", () => {
       defaultStepOptions: {
         cancelIcon: { enabled: true },
         classes: "zaparoo-tour-step",
-        scrollTo: { behavior: "smooth", block: "center" }
-      }
+        scrollTo: { behavior: "smooth", block: "center" },
+      },
     });
 
     expect(tour.addStep).toHaveBeenCalledTimes(5);
@@ -75,7 +77,7 @@ describe("tourService - createAppTour", () => {
     const tour = createAppTour(mockNavigate, mockT, false);
 
     const calls = vi.mocked(tour.addStep).mock.calls;
-    const stepIds = calls.map(call => call[0].id);
+    const stepIds = calls.map((call) => call[0].id);
 
     expect(stepIds).toContain("device-address");
   });
@@ -84,7 +86,7 @@ describe("tourService - createAppTour", () => {
     const tour = createAppTour(mockNavigate, mockT, true);
 
     const calls = vi.mocked(tour.addStep).mock.calls;
-    const stepIds = calls.map(call => call[0].id);
+    const stepIds = calls.map((call) => call[0].id);
 
     expect(stepIds).not.toContain("device-address");
   });
@@ -93,7 +95,7 @@ describe("tourService - createAppTour", () => {
     const tour = createAppTour(mockNavigate, mockT, false);
 
     const calls = vi.mocked(tour.addStep).mock.calls;
-    const stepIds = calls.map(call => call[0].id);
+    const stepIds = calls.map((call) => call[0].id);
 
     expect(stepIds).toContain("welcome");
     expect(stepIds).toContain("media-database");
@@ -104,33 +106,62 @@ describe("tourService - createAppTour", () => {
   it("should use correct step numbering when not connected", () => {
     createAppTour(mockNavigate, mockT, false);
 
-    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", { current: 1, total: 5 });
-    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", { current: 2, total: 5 });
-    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", { current: 3, total: 5 });
-    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", { current: 4, total: 5 });
-    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", { current: 5, total: 5 });
+    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", {
+      current: 1,
+      total: 5,
+    });
+    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", {
+      current: 2,
+      total: 5,
+    });
+    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", {
+      current: 3,
+      total: 5,
+    });
+    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", {
+      current: 4,
+      total: 5,
+    });
+    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", {
+      current: 5,
+      total: 5,
+    });
   });
 
   it("should use correct step numbering when connected", () => {
     createAppTour(mockNavigate, mockT, true);
 
-    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", { current: 1, total: 4 });
-    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", { current: 2, total: 4 });
-    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", { current: 3, total: 4 });
-    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", { current: 4, total: 4 });
+    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", {
+      current: 1,
+      total: 4,
+    });
+    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", {
+      current: 2,
+      total: 4,
+    });
+    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", {
+      current: 3,
+      total: 4,
+    });
+    expect(mockT).toHaveBeenCalledWith("tour.stepIndicator", {
+      current: 4,
+      total: 4,
+    });
   });
 
   it("should configure navigation for device address step", () => {
     const tour = createAppTour(mockNavigate, mockT, false);
 
     const calls = vi.mocked(tour.addStep).mock.calls;
-    const deviceAddressStep = calls.find(call => call[0].id === "device-address")?.[0] as any;
+    const deviceAddressStep = calls.find(
+      (call) => call[0].id === "device-address",
+    )?.[0] as any;
 
     expect(deviceAddressStep).toBeDefined();
     expect(deviceAddressStep?.beforeShowPromise).toBeDefined();
     expect(deviceAddressStep?.attachTo).toEqual({
       element: '[data-tour="device-address"]',
-      on: "bottom"
+      on: "bottom",
     });
   });
 
@@ -138,7 +169,9 @@ describe("tourService - createAppTour", () => {
     const tour = createAppTour(mockNavigate, mockT, true);
 
     const calls = vi.mocked(tour.addStep).mock.calls;
-    const mediaDatabaseStep = calls.find(call => call[0].id === "media-database")?.[0] as any;
+    const mediaDatabaseStep = calls.find(
+      (call) => call[0].id === "media-database",
+    )?.[0] as any;
 
     expect(mediaDatabaseStep).toBeDefined();
     expect(mediaDatabaseStep?.beforeShowPromise).toBeDefined();
@@ -148,7 +181,9 @@ describe("tourService - createAppTour", () => {
     const tour = createAppTour(mockNavigate, mockT, false);
 
     const calls = vi.mocked(tour.addStep).mock.calls;
-    const mediaDatabaseStep = calls.find(call => call[0].id === "media-database")?.[0] as any;
+    const mediaDatabaseStep = calls.find(
+      (call) => call[0].id === "media-database",
+    )?.[0] as any;
 
     expect(mediaDatabaseStep).toBeDefined();
     expect(mediaDatabaseStep?.beforeShowPromise).toBeUndefined();
@@ -158,10 +193,14 @@ describe("tourService - createAppTour", () => {
     const tour = createAppTour(mockNavigate, mockT, false);
 
     const calls = vi.mocked(tour.addStep).mock.calls;
-    const deviceAddressStep = calls.find(call => call[0].id === "device-address")?.[0] as any;
+    const deviceAddressStep = calls.find(
+      (call) => call[0].id === "device-address",
+    )?.[0] as any;
 
     expect(deviceAddressStep?.buttons).toBeDefined();
-    const backButton = deviceAddressStep?.buttons?.find((b: any) => b.secondary === true);
+    const backButton = deviceAddressStep?.buttons?.find(
+      (b: any) => b.secondary === true,
+    );
 
     expect(backButton).toBeDefined();
     expect(typeof backButton?.action).toBe("function");
@@ -171,10 +210,14 @@ describe("tourService - createAppTour", () => {
     const tour = createAppTour(mockNavigate, mockT, false);
 
     const calls = vi.mocked(tour.addStep).mock.calls;
-    const createCardsStep = calls.find(call => call[0].id === "create-cards")?.[0] as any;
+    const createCardsStep = calls.find(
+      (call) => call[0].id === "create-cards",
+    )?.[0] as any;
 
     expect(createCardsStep?.buttons).toBeDefined();
-    const backButton = createCardsStep?.buttons?.find((b: any) => b.secondary === true);
+    const backButton = createCardsStep?.buttons?.find(
+      (b: any) => b.secondary === true,
+    );
 
     expect(backButton).toBeDefined();
     expect(typeof backButton?.action).toBe("function");
@@ -210,21 +253,35 @@ describe("tourService - createAppTour", () => {
 
     const calls = vi.mocked(tour.addStep).mock.calls;
 
-    const deviceAddressStep = calls.find(call => call[0].id === "device-address")?.[0] as any;
-    expect(deviceAddressStep?.attachTo?.element).toBe('[data-tour="device-address"]');
+    const deviceAddressStep = calls.find(
+      (call) => call[0].id === "device-address",
+    )?.[0] as any;
+    expect(deviceAddressStep?.attachTo?.element).toBe(
+      '[data-tour="device-address"]',
+    );
 
-    const mediaDatabaseStep = calls.find(call => call[0].id === "media-database")?.[0] as any;
-    expect(mediaDatabaseStep?.attachTo?.element).toBe('[data-tour="update-database"]');
+    const mediaDatabaseStep = calls.find(
+      (call) => call[0].id === "media-database",
+    )?.[0] as any;
+    expect(mediaDatabaseStep?.attachTo?.element).toBe(
+      '[data-tour="update-database"]',
+    );
 
-    const createCardsStep = calls.find(call => call[0].id === "create-cards")?.[0] as any;
-    expect(createCardsStep?.attachTo?.element).toBe('[data-tour="create-search"]');
+    const createCardsStep = calls.find(
+      (call) => call[0].id === "create-cards",
+    )?.[0] as any;
+    expect(createCardsStep?.attachTo?.element).toBe(
+      '[data-tour="create-search"]',
+    );
   });
 
   it("should configure welcome step with skip and get started buttons", () => {
     const tour = createAppTour(mockNavigate, mockT, false);
 
     const calls = vi.mocked(tour.addStep).mock.calls;
-    const welcomeStep = calls.find(call => call[0].id === "welcome")?.[0] as any;
+    const welcomeStep = calls.find(
+      (call) => call[0].id === "welcome",
+    )?.[0] as any;
 
     expect(welcomeStep?.buttons).toBeDefined();
     expect(welcomeStep?.buttons).toHaveLength(2);
@@ -241,7 +298,9 @@ describe("tourService - createAppTour", () => {
     const tour = createAppTour(mockNavigate, mockT, false);
 
     const calls = vi.mocked(tour.addStep).mock.calls;
-    const completeStep = calls.find(call => call[0].id === "complete")?.[0] as any;
+    const completeStep = calls.find(
+      (call) => call[0].id === "complete",
+    )?.[0] as any;
 
     expect(completeStep?.buttons).toBeDefined();
     expect(completeStep?.buttons).toHaveLength(1);
@@ -253,13 +312,14 @@ describe("tourService - createAppTour", () => {
   it("should include progress bar in formatted text", () => {
     createAppTour(mockNavigate, mockT, false);
 
-    const formattedTexts = vi.mocked(mockT).mock.results
-      .map(result => result.value)
-      .filter((value): value is string => typeof value === 'string');
+    const formattedTexts = vi
+      .mocked(mockT)
+      .mock.results.map((result) => result.value)
+      .filter((value): value is string => typeof value === "string");
 
     // Check that some text contains the step indicator pattern
-    const hasStepIndicator = formattedTexts.some(text =>
-      text.includes('tour.stepIndicator')
+    const hasStepIndicator = formattedTexts.some((text) =>
+      text.includes("tour.stepIndicator"),
     );
 
     expect(hasStepIndicator).toBe(true);

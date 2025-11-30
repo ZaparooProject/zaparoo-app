@@ -109,7 +109,9 @@ describe("Write Method Selection Logic", () => {
       const { Nfc } = await import("@capawesome-team/capacitor-nfc");
 
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-      vi.mocked(Nfc.isAvailable).mockRejectedValue(new Error("NFC check failed"));
+      vi.mocked(Nfc.isAvailable).mockRejectedValue(
+        new Error("NFC check failed"),
+      );
       vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
 
       const preferRemoteWriter = false;

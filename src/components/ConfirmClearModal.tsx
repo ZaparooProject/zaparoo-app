@@ -29,7 +29,7 @@ export function ConfirmClearModal(props: {
               props.onConfirm();
               props.close();
             }}
-            className="flex-1 border-error text-error"
+            className="border-error text-error flex-1"
           />
         </div>
       </div>

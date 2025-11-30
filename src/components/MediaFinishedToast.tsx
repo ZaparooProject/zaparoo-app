@@ -7,10 +7,10 @@ export const MediaFinishedToast = (props: { id: string }) => {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   return (
     <div
-      className="flex grow flex-col cursor-pointer"
+      className="flex grow cursor-pointer flex-col"
       onClick={() => toast.dismiss(props.id)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           toast.dismiss(props.id);
         }

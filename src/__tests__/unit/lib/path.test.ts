@@ -58,39 +58,39 @@ describe("isValidExtension", () => {
 describe("filenameFromPath", () => {
   it("extracts filename from Unix paths", () => {
     expect(filenameFromPath("/games/snes/Super Mario World.sfc")).toBe(
-      "Super Mario World"
+      "Super Mario World",
     );
     expect(filenameFromPath("/roms/nes/Zelda.nes")).toBe("Zelda");
   });
 
   it("extracts filename from Windows paths", () => {
     expect(filenameFromPath("C:\\Games\\Mario Kart 64.z64")).toBe(
-      "Mario Kart 64"
+      "Mario Kart 64",
     );
     expect(filenameFromPath("D:\\ROMs\\SNES\\Final Fantasy III.sfc")).toBe(
-      "Final Fantasy III"
+      "Final Fantasy III",
     );
   });
 
   it("handles custom tags in parentheses", () => {
     expect(filenameFromPath("/roms/Game (USA) (Rev 1).zip")).toBe(
-      "Game (USA) (Rev 1)"
+      "Game (USA) (Rev 1)",
     );
     expect(filenameFromPath("/roms/Game (Japan) (En).sfc")).toBe(
-      "Game (Japan) (En)"
+      "Game (Japan) (En)",
     );
   });
 
   it("handles custom tags in brackets", () => {
     expect(filenameFromPath("/roms/Game (USA) (Rev 1) [!].zip")).toBe(
-      "Game (USA) (Rev 1) [!]"
+      "Game (USA) (Rev 1) [!]",
     );
     expect(filenameFromPath("/roms/Game [T+Eng].nes")).toBe("Game [T+Eng]");
   });
 
   it("keeps invalid extensions as part of filename", () => {
     expect(filenameFromPath("/path/Name.Something Else")).toBe(
-      "Name.Something Else"
+      "Name.Something Else",
     );
     expect(filenameFromPath("/path/Game.With-Hyphen")).toBe("Game.With-Hyphen");
   });

@@ -8,7 +8,7 @@ const mockWebSocket = vi.fn().mockImplementation(() => ({
   send: mockSend,
   close: vi.fn(),
   addEventListener: vi.fn(),
-  removeEventListener: vi.fn()
+  removeEventListener: vi.fn(),
 }));
 
 // Add static properties to mock
@@ -16,7 +16,7 @@ Object.assign(mockWebSocket, {
   CONNECTING: 0,
   OPEN: 1,
   CLOSING: 2,
-  CLOSED: 3
+  CLOSED: 3,
 });
 
 global.WebSocket = mockWebSocket as any;
@@ -39,19 +39,19 @@ describe("CoreAPI - Enhanced Methods", () => {
             id: "reader1",
             info: "NFC Reader 1",
             capabilities: ["read", "write"],
-            connected: true
+            connected: true,
           },
           {
             id: "reader2",
             info: "NFC Reader 2",
             capabilities: ["read"],
-            connected: true
-          }
-        ]
+            connected: true,
+          },
+        ],
       };
 
       // Mock the call method to resolve with readers response
-      vi.spyOn(CoreAPI, 'call' as any).mockResolvedValue(mockReadersResponse);
+      vi.spyOn(CoreAPI, "call" as any).mockResolvedValue(mockReadersResponse);
 
       const result = await CoreAPI.hasWriteCapableReader();
 
@@ -65,12 +65,12 @@ describe("CoreAPI - Enhanced Methods", () => {
             id: "reader1",
             info: "Read Only Reader",
             capabilities: ["read"],
-            connected: true
-          }
-        ]
+            connected: true,
+          },
+        ],
       };
 
-      vi.spyOn(CoreAPI, 'call' as any).mockResolvedValue(mockReadersResponse);
+      vi.spyOn(CoreAPI, "call" as any).mockResolvedValue(mockReadersResponse);
 
       const result = await CoreAPI.hasWriteCapableReader();
 
@@ -84,12 +84,12 @@ describe("CoreAPI - Enhanced Methods", () => {
             id: "reader1",
             info: "NFC Reader",
             capabilities: ["read", "write"],
-            connected: false
-          }
-        ]
+            connected: false,
+          },
+        ],
       };
 
-      vi.spyOn(CoreAPI, 'call' as any).mockResolvedValue(mockReadersResponse);
+      vi.spyOn(CoreAPI, "call" as any).mockResolvedValue(mockReadersResponse);
 
       const result = await CoreAPI.hasWriteCapableReader();
 
@@ -97,14 +97,21 @@ describe("CoreAPI - Enhanced Methods", () => {
     });
 
     it("should handle API errors gracefully", async () => {
-      vi.spyOn(CoreAPI, 'call' as any).mockRejectedValue(new Error("API Error"));
+      vi.spyOn(CoreAPI, "call" as any).mockRejectedValue(
+        new Error("API Error"),
+      );
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       const result = await CoreAPI.hasWriteCapableReader();
 
       expect(result).toBe(false);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to check write capable readers:", expect.any(Error));
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Failed to check write capable readers:",
+        expect.any(Error),
+      );
 
       consoleErrorSpy.mockRestore();
     });
@@ -116,12 +123,12 @@ describe("CoreAPI - Enhanced Methods", () => {
             id: "reader1",
             info: "NFC Reader",
             capabilities: ["READ", "WRITE"], // uppercase
-            connected: true
-          }
-        ]
+            connected: true,
+          },
+        ],
       };
 
-      vi.spyOn(CoreAPI, 'call' as any).mockResolvedValue(mockReadersResponse);
+      vi.spyOn(CoreAPI, "call" as any).mockResolvedValue(mockReadersResponse);
 
       const result = await CoreAPI.hasWriteCapableReader();
 
@@ -139,10 +146,10 @@ describe("CoreAPI - Enhanced Methods", () => {
       (CoreAPI as any).pendingWriteId = mockId;
       (CoreAPI as any).responsePool[mockId] = {
         resolve: mockResolve,
-        reject: vi.fn()
+        reject: vi.fn(),
       };
 
-      vi.spyOn(CoreAPI, 'readersWriteCancel').mockResolvedValue();
+      vi.spyOn(CoreAPI, "readersWriteCancel").mockResolvedValue();
 
       CoreAPI.cancelWrite();
 
@@ -158,11 +165,15 @@ describe("CoreAPI - Enhanced Methods", () => {
       (CoreAPI as any).pendingWriteId = mockId;
       (CoreAPI as any).responsePool[mockId] = {
         resolve: mockResolve,
-        reject: vi.fn()
+        reject: vi.fn(),
       };
 
-      vi.spyOn(CoreAPI, 'readersWriteCancel').mockRejectedValue(new Error("Cancel failed"));
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.spyOn(CoreAPI, "readersWriteCancel").mockRejectedValue(
+        new Error("Cancel failed"),
+      );
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       CoreAPI.cancelWrite();
 
@@ -170,9 +181,12 @@ describe("CoreAPI - Enhanced Methods", () => {
       expect((CoreAPI as any).pendingWriteId).toBeNull();
 
       // Wait for async operation
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to send write cancel command:", expect.any(Error));
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Failed to send write cancel command:",
+        expect.any(Error),
+      );
 
       consoleErrorSpy.mockRestore();
     });
@@ -180,7 +194,7 @@ describe("CoreAPI - Enhanced Methods", () => {
     it("should do nothing when no pending write exists", () => {
       (CoreAPI as any).pendingWriteId = null;
 
-      vi.spyOn(CoreAPI, 'readersWriteCancel');
+      vi.spyOn(CoreAPI, "readersWriteCancel");
 
       CoreAPI.cancelWrite();
 
@@ -203,11 +217,15 @@ describe("CoreAPI - Enhanced Methods", () => {
       });
 
       // Mock console.error to prevent test output pollution
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       expect(() => {
         CoreAPI.callWithTracking("version" as any);
-      }).toThrow("API call error: Failed to send request: WebSocket send error: Send failed");
+      }).toThrow(
+        "API call error: Failed to send request: WebSocket send error: Send failed",
+      );
 
       consoleErrorSpy.mockRestore();
     });
@@ -226,9 +244,9 @@ describe("CoreAPI - Enhanced Methods", () => {
   describe("write method with tracking", () => {
     it("should track write requests for cancellation", () => {
       // Mock the callWithTracking to return a valid result
-      vi.spyOn(CoreAPI, 'callWithTracking').mockReturnValue({
+      vi.spyOn(CoreAPI, "callWithTracking").mockReturnValue({
         id: "test-id",
-        promise: Promise.resolve()
+        promise: Promise.resolve(),
       });
 
       CoreAPI.write({ text: "test" });
@@ -242,9 +260,9 @@ describe("CoreAPI - Enhanced Methods", () => {
 
     it("should clear pending write ID on success", async () => {
       // Mock successful write
-      vi.spyOn(CoreAPI, 'callWithTracking').mockReturnValue({
+      vi.spyOn(CoreAPI, "callWithTracking").mockReturnValue({
         id: "test-id",
-        promise: Promise.resolve()
+        promise: Promise.resolve(),
       });
 
       await CoreAPI.write({ text: "test" });
@@ -253,16 +271,18 @@ describe("CoreAPI - Enhanced Methods", () => {
     });
 
     it("should clear pending write ID on error", async () => {
-      vi.spyOn(CoreAPI, 'callWithTracking').mockReturnValue({
+      vi.spyOn(CoreAPI, "callWithTracking").mockReturnValue({
         id: "test-id",
-        promise: Promise.reject(new Error("Write failed"))
+        promise: Promise.reject(new Error("Write failed")),
       });
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       try {
         await CoreAPI.write({ text: "test" });
-      } catch (error) {
+      } catch {
         // Expected
       }
 
@@ -291,13 +311,13 @@ describe("getWsUrl - Enhanced URL parsing", () => {
       clear: vi.fn(() => {
         localStorageMock._store = {};
       }),
-      _store: {} as { [key: string]: string }
+      _store: {} as { [key: string]: string },
     };
 
-    Object.defineProperty(window, 'localStorage', {
+    Object.defineProperty(window, "localStorage", {
       value: localStorageMock,
       writable: true,
-      configurable: true
+      configurable: true,
     });
 
     // Clear the mock store
@@ -306,15 +326,15 @@ describe("getWsUrl - Enhanced URL parsing", () => {
 
   afterEach(() => {
     // Restore original values
-    Object.defineProperty(window, 'localStorage', {
+    Object.defineProperty(window, "localStorage", {
       value: originalLocalStorage,
       writable: true,
-      configurable: true
+      configurable: true,
     });
-    Object.defineProperty(window, 'location', {
+    Object.defineProperty(window, "location", {
       value: originalLocation,
       writable: true,
-      configurable: true
+      configurable: true,
     });
   });
 

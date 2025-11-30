@@ -5,29 +5,38 @@ import "@/test-setup";
 
 // Mock lodash debounce
 vi.mock("lodash", () => ({
-  debounce: (fn: Function, _delay: number) => {
-    const debouncedFn = (...args: any[]) => fn(...args);
+  debounce: <T extends (...args: unknown[]) => unknown>(
+    fn: T,
+    _delay: number,
+  ) => {
+    const debouncedFn = (...args: Parameters<T>) => fn(...args);
     debouncedFn.cancel = vi.fn();
     return debouncedFn;
-  }
+  },
 }));
 
 // Mock react-i18next
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key
-  })
+    t: (key: string) => key,
+  }),
 }));
 
 // Test component wrapper that creates a scroll container
-function TestWrapper({ threshold, scrollTop = 0 }: { threshold?: number; scrollTop?: number }) {
+function TestWrapper({
+  threshold,
+  scrollTop = 0,
+}: {
+  threshold?: number;
+  scrollTop?: number;
+}) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Set up initial scroll position
   if (scrollContainerRef.current) {
-    Object.defineProperty(scrollContainerRef.current, 'scrollTop', {
+    Object.defineProperty(scrollContainerRef.current, "scrollTop", {
       value: scrollTop,
-      writable: true
+      writable: true,
     });
   }
 
@@ -40,7 +49,10 @@ function TestWrapper({ threshold, scrollTop = 0 }: { threshold?: number; scrollT
       >
         <div style={{ height: "1000px" }}>Long content</div>
       </div>
-      <BackToTop scrollContainerRef={scrollContainerRef} threshold={threshold} />
+      <BackToTop
+        scrollContainerRef={scrollContainerRef}
+        threshold={threshold}
+      />
     </div>
   );
 }
@@ -57,7 +69,10 @@ describe("BackToTop", () => {
     render(<TestWrapper />);
 
     const button = screen.getByRole("button", { name: "backToTop" });
-    expect(button.parentElement).toHaveClass("opacity-0", "pointer-events-none");
+    expect(button.parentElement).toHaveClass(
+      "opacity-0",
+      "pointer-events-none",
+    );
   });
 
   it("should show when scrolled past threshold", async () => {
@@ -67,16 +82,19 @@ describe("BackToTop", () => {
     const button = screen.getByRole("button", { name: "backToTop" });
 
     // Mock scrollTop property
-    Object.defineProperty(container, 'scrollTop', {
+    Object.defineProperty(container, "scrollTop", {
       value: 400,
-      writable: true
+      writable: true,
     });
 
     // Trigger scroll event
     fireEvent.scroll(container);
 
     await waitFor(() => {
-      expect(button.parentElement).toHaveClass("opacity-100", "pointer-events-auto");
+      expect(button.parentElement).toHaveClass(
+        "opacity-100",
+        "pointer-events-auto",
+      );
     });
   });
 
@@ -87,27 +105,33 @@ describe("BackToTop", () => {
     const button = screen.getByRole("button", { name: "backToTop" });
 
     // Scroll to just below custom threshold
-    Object.defineProperty(container, 'scrollTop', {
+    Object.defineProperty(container, "scrollTop", {
       value: 300,
-      writable: true
+      writable: true,
     });
 
     fireEvent.scroll(container);
 
     await waitFor(() => {
-      expect(button.parentElement).toHaveClass("opacity-0", "pointer-events-none");
+      expect(button.parentElement).toHaveClass(
+        "opacity-0",
+        "pointer-events-none",
+      );
     });
 
     // Scroll past custom threshold
-    Object.defineProperty(container, 'scrollTop', {
+    Object.defineProperty(container, "scrollTop", {
       value: 600,
-      writable: true
+      writable: true,
     });
 
     fireEvent.scroll(container);
 
     await waitFor(() => {
-      expect(button.parentElement).toHaveClass("opacity-100", "pointer-events-auto");
+      expect(button.parentElement).toHaveClass(
+        "opacity-100",
+        "pointer-events-auto",
+      );
     });
   });
 
@@ -125,7 +149,7 @@ describe("BackToTop", () => {
 
     expect(scrollToSpy).toHaveBeenCalledWith({
       top: 0,
-      behavior: "smooth"
+      behavior: "smooth",
     });
   });
 
@@ -136,9 +160,9 @@ describe("BackToTop", () => {
     const button = screen.getByRole("button", { name: "backToTop" });
 
     // First scroll down
-    Object.defineProperty(container, 'scrollTop', {
+    Object.defineProperty(container, "scrollTop", {
       value: 400,
-      writable: true
+      writable: true,
     });
     fireEvent.scroll(container);
 
@@ -147,14 +171,17 @@ describe("BackToTop", () => {
     });
 
     // Then scroll back to top
-    Object.defineProperty(container, 'scrollTop', {
+    Object.defineProperty(container, "scrollTop", {
       value: 0,
-      writable: true
+      writable: true,
     });
     fireEvent.scroll(container);
 
     await waitFor(() => {
-      expect(button.parentElement).toHaveClass("opacity-0", "pointer-events-none");
+      expect(button.parentElement).toHaveClass(
+        "opacity-0",
+        "pointer-events-none",
+      );
     });
   });
 

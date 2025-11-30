@@ -7,7 +7,11 @@ import { vi } from "vitest";
 export class MockAbortController {
   signal: {
     aborted: boolean;
-    addEventListener: (type: string, listener: () => void, options?: any) => void;
+    addEventListener: (
+      type: string,
+      listener: () => void,
+      options?: any,
+    ) => void;
     removeEventListener: (type: string, listener: () => void) => void;
   };
 
@@ -19,7 +23,7 @@ export class MockAbortController {
       addEventListener: vi.fn((_type: string, listener: () => void) => {
         this._listeners.push(listener);
       }),
-      removeEventListener: vi.fn()
+      removeEventListener: vi.fn(),
     };
   }
 
@@ -42,10 +46,10 @@ export function setupMockAbortController() {
 export const mockI18n = {
   t: (key: string, options?: any) => {
     // Handle simple interpolation for testing
-    if (options && typeof options === 'object') {
+    if (options && typeof options === "object") {
       let result = key;
       Object.entries(options).forEach(([param, value]) => {
-        result = result.replace(new RegExp(`{{${param}}}`, 'g'), String(value));
+        result = result.replace(new RegExp(`{{${param}}}`, "g"), String(value));
       });
       return result;
     }
@@ -77,10 +81,10 @@ export const mockCapacitorPreferences = () => ({
 });
 
 // Capacitor Core mock
-export const mockCapacitorCore = (platform = 'ios') => ({
+export const mockCapacitorCore = (platform = "ios") => ({
   Capacitor: {
     getPlatform: vi.fn().mockReturnValue(platform),
-    isNativePlatform: vi.fn().mockReturnValue(platform !== 'web'),
+    isNativePlatform: vi.fn().mockReturnValue(platform !== "web"),
   },
 });
 
@@ -105,7 +109,7 @@ export const mockReactHotToast = () => ({
 
 // Mock global location.reload
 export const mockLocationReload = () => {
-  Object.defineProperty(window, 'location', {
+  Object.defineProperty(window, "location", {
     value: {
       reload: vi.fn(),
     },

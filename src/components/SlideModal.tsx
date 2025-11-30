@@ -26,14 +26,14 @@ export function SlideModal(props: {
     isActive: props.isOpen,
     containerRef: modalRef,
     restoreFocus: true,
-    autoFocus: true
+    autoFocus: true,
   });
 
   const swipeHandlers = useSmartSwipe({
     onSwipeDown: props.close,
     preventScrollOnSwipe: false,
     swipeThreshold: 50,
-    velocityThreshold: 0.3
+    velocityThreshold: 0.3,
   });
 
   // Handle Android back button
@@ -47,7 +47,7 @@ export function SlideModal(props: {
       return false; // Let other handlers process it
     },
     100, // High priority
-    props.isOpen // Only active when modal is open
+    props.isOpen, // Only active when modal is open
   );
 
   // Register/unregister modal with manager and handle auto-close
@@ -78,7 +78,7 @@ export function SlideModal(props: {
         className="fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 ease-in-out"
         style={{
           opacity: props.isOpen ? 1 : 0,
-          pointerEvents: props.isOpen ? "auto" : "none"
+          pointerEvents: props.isOpen ? "auto" : "none",
         }}
         onClick={props.close}
         onKeyDown={(e) => e.key === "Escape" && props.close()}
@@ -114,14 +114,14 @@ export function SlideModal(props: {
           "p-3",
           "mix-blend-normal",
           "backdrop-blur-lg",
-          props.className
+          props.className,
         )}
         style={{
           bottom: props.isOpen ? "0" : "-100vh",
           transition: "bottom 0.2s ease-in-out",
           ...(props.fixedHeight
             ? { height: props.fixedHeight }
-            : { maxHeight: `calc(100vh - ${safeInsets.top} - 75px)` })
+            : { maxHeight: `calc(100vh - ${safeInsets.top} - 75px)` }),
         }}
       >
         <div
@@ -139,7 +139,9 @@ export function SlideModal(props: {
           ></div>
         </div>
         <div className="relative sm:pb-2">
-          <p id={`${modalId}-title`} className="text-center text-lg">{props.title}</p>
+          <p id={`${modalId}-title`} className="text-center text-lg">
+            {props.title}
+          </p>
           {/* Desktop close button */}
           <button
             onClick={props.close}
@@ -148,7 +150,7 @@ export function SlideModal(props: {
             style={{
               position: "absolute",
               top: "-5px",
-              right: "0"
+              right: "0",
             }}
           >
             <X className="h-5 w-5" />

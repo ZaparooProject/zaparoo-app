@@ -8,7 +8,7 @@ export function Card(props: {
   onClick?: () => void;
 }) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       if (!props.disabled && props.onClick) {
         props.onClick();
@@ -30,9 +30,10 @@ export function Card(props: {
         {
           "text-foreground-disabled": props.disabled,
           "bg-card-pattern": !props.disabled,
-          "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background": isClickable
+          "focus-visible:ring-offset-background cursor-pointer focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none":
+            isClickable,
         },
-        props.className
+        props.className,
       )}
       onClick={() => !props.disabled && props.onClick && props.onClick()}
       role={isClickable ? "button" : undefined}

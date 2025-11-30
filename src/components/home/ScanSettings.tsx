@@ -15,7 +15,7 @@ export function ScanSettings({
   restartScan,
   setRestartScan,
   launchOnScan,
-  setLaunchOnScan
+  setLaunchOnScan,
 }: ScanSettingsProps) {
   const { t } = useTranslation();
 

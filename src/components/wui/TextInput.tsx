@@ -56,10 +56,14 @@ export function TextInput(props: {
                 "border-red-500": props.error,
                 "border-foreground-disabled": props.disabled,
                 "text-foreground-disabled": props.disabled,
-                "pr-10": props.clearable && value && value.length > 0 && !props.disabled,
+                "pr-10":
+                  props.clearable &&
+                  value &&
+                  value.length > 0 &&
+                  !props.disabled,
                 "rounded-md": !props.saveValue,
-                "rounded-s-md": props.saveValue
-              }
+                "rounded-s-md": props.saveValue,
+              },
             )}
             disabled={props.disabled}
             placeholder={props.placeholder}
@@ -77,7 +81,7 @@ export function TextInput(props: {
           {props.clearable && value && value.length > 0 && !props.disabled && (
             <button
               type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-white transition-colors rounded"
+              className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-gray-400 transition-colors hover:text-white"
               onClick={() => {
                 setValue("");
                 setModified(true);

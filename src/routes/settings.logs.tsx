@@ -24,7 +24,7 @@ interface LogEntry {
 }
 
 export const Route = createFileRoute("/settings/logs")({
-  component: Logs
+  component: Logs,
 });
 
 function Logs() {
@@ -37,20 +37,20 @@ function Logs() {
   const levelFilters = usePreferencesStore((s) => s.logLevelFilters);
   const setLogLevelFilters = usePreferencesStore((s) => s.setLogLevelFilters);
   const [expandedEntries, setExpandedEntries] = useState<Set<number>>(
-    new Set()
+    new Set(),
   );
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
-    preventScrollOnSwipe: false
+    preventScrollOnSwipe: false,
   });
 
   const logsQuery = useQuery({
     queryKey: ["logs"],
     queryFn: () => CoreAPI.settingsLogsDownload(),
     enabled: connected,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
   });
 
   // Parse JSONL content into structured log entries
@@ -72,7 +72,7 @@ function Logs() {
             level: "info",
             time: new Date().toISOString(),
             message: line,
-            _index: index
+            _index: index,
           } as LogEntry & { _index: number };
         }
       });
@@ -127,7 +127,11 @@ function Logs() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      logger.error("Failed to download log file:", error, { category: "storage", action: "downloadLog", severity: "warning" });
+      logger.error("Failed to download log file:", error, {
+        category: "storage",
+        action: "downloadLog",
+        severity: "warning",
+      });
     }
   };
 
@@ -138,7 +142,11 @@ function Logs() {
       const decodedContent = atob(logsQuery.data.content);
       await navigator.clipboard.writeText(decodedContent);
     } catch (error) {
-      logger.error("Failed to copy to clipboard:", error, { category: "storage", action: "copyLog", severity: "warning" });
+      logger.error("Failed to copy to clipboard:", error, {
+        category: "storage",
+        action: "copyLog",
+        severity: "warning",
+      });
     }
   };
 
@@ -314,7 +322,7 @@ function Logs() {
                       borderBottom:
                         index === filteredEntries.length - 1
                           ? ""
-                          : "1px solid rgba(255,255,255,0.6)"
+                          : "1px solid rgba(255,255,255,0.6)",
                     }}
                   >
                     <div className="mb-2 flex flex-row items-center gap-2 font-sans">
@@ -358,8 +366,8 @@ function Logs() {
                             "time",
                             "caller",
                             "message",
-                            "_index"
-                          ].includes(key)
+                            "_index",
+                          ].includes(key),
                       )
                       .map(([key, value]) => {
                         const fieldId = `${entry._index}_${key}`;

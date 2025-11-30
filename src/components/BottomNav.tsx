@@ -17,16 +17,16 @@ function Button(props: {
     <div
       className={classNames(
         "inline-flex flex-col items-center justify-center",
-        props.className
+        props.className,
       )}
       data-tour={props["data-tour"]}
     >
       <Link
         to={props.path}
         style={{
-          transition: "color 0.3s, filter 0.3s"
+          transition: "color 0.3s, filter 0.3s",
         }}
-        className="rounded-lg text-bd-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 [&.active]:text-[#3faeec] [&.active]:drop-shadow-[0_0_5px_#3faeec]"
+        className="text-bd-outline rounded-lg focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none [&.active]:text-[#3faeec] [&.active]:drop-shadow-[0_0_5px_#3faeec]"
       >
         <div>
           <div className="flex justify-center drop-shadow">{props.icon}</div>
@@ -46,15 +46,15 @@ export function BottomNav() {
       aria-label={t("nav.mainNavigation")}
       className="border-t border-t-[#ffffff21] bg-[#111928bf] backdrop-blur"
       style={{
-        height: '80px'
+        height: "80px",
       }}
     >
       <ResponsiveContainer maxWidth="nav" className="h-full">
         <div
-          className="mx-auto grid h-full max-w-lg grid-cols-3 gap-4 px-9 items-center"
+          className="mx-auto grid h-full max-w-lg grid-cols-3 items-center gap-4 px-9"
           style={{
             paddingRight: `calc(2.25rem + ${safeInsets.right})`,
-            paddingLeft: `calc(2.25rem + ${safeInsets.left})`
+            paddingLeft: `calc(2.25rem + ${safeInsets.left})`,
           }}
         >
           <Button text={t("nav.index")} icon={<ZapIcon size="24" />} path="/" />

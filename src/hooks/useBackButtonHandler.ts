@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-import { App } from '@capacitor/app';
-import { logger } from '../lib/logger';
+import { useEffect } from "react";
+import { App } from "@capacitor/app";
+import { logger } from "../lib/logger";
 
 interface BackButtonHandler {
   id: string;
@@ -19,10 +19,14 @@ class BackButtonManager {
   }
 
   removeHandler(id: string) {
-    this.handlers = this.handlers.filter(h => h.id !== id);
+    this.handlers = this.handlers.filter((h) => h.id !== id);
     if (this.handlers.length === 0) {
       this.removeListener().catch((e) => {
-        logger.error("Failed to remove back button listener:", e, { category: "lifecycle", action: "removeBackButtonListener", severity: "warning" });
+        logger.error("Failed to remove back button listener:", e, {
+          category: "lifecycle",
+          action: "removeBackButtonListener",
+          severity: "warning",
+        });
       });
     }
   }
@@ -30,7 +34,7 @@ class BackButtonManager {
   private setupListener() {
     if (this.listener) return;
 
-    this.listener = App.addListener('backButton', () => {
+    this.listener = App.addListener("backButton", () => {
       for (const { handler } of this.handlers) {
         const result = handler();
         if (result === true) {
@@ -60,7 +64,7 @@ export function useBackButtonHandler(
   id: string,
   handler: () => boolean | void,
   priority: number = 50,
-  enabled: boolean = true
+  enabled: boolean = true,
 ) {
   useEffect(() => {
     if (!enabled) return;
@@ -68,7 +72,7 @@ export function useBackButtonHandler(
     const handlerObj: BackButtonHandler = {
       id,
       handler,
-      priority
+      priority,
     };
 
     backButtonManager.addHandler(handlerObj);

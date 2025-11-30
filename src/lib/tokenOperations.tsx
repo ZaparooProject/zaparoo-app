@@ -7,7 +7,7 @@ import { logger } from "./logger";
 const zapUrls = [
   "https://zpr.au",
   "https://zaparoo.link",
-  "https://go.tapto.life"
+  "https://go.tapto.life",
 ];
 
 const isZapUrl = (url: string) => {
@@ -22,7 +22,7 @@ export const runToken = async (
   setLastToken: (token: TokenResponse) => void,
   setProPurchaseModalOpen: (open: boolean) => void,
   unsafe = false,
-  override = false
+  override = false,
 ): Promise<boolean> => {
   return new Promise((resolve) => {
     if (uid === "" && text === "") {
@@ -34,7 +34,7 @@ export const runToken = async (
       text: text,
       scanTime: new Date().toISOString(),
       type: "",
-      data: ""
+      data: "",
     };
     setLastToken(token);
 
@@ -48,7 +48,7 @@ export const runToken = async (
         CoreAPI.run({
           uid: uid,
           text: text,
-          unsafe: unsafe
+          unsafe: unsafe,
         })
           .then(() => {
             resolve(true);
@@ -58,7 +58,9 @@ export const runToken = async (
               <span
                 className="flex grow flex-col"
                 onClick={() => toast.dismiss(to.id)}
-                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toast.dismiss(to.id)}
+                onKeyDown={(e) =>
+                  (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
+                }
                 role="button"
                 tabIndex={0}
               >
@@ -69,7 +71,7 @@ export const runToken = async (
               category: "api",
               action: "runToken",
               hasUid: !!uid,
-              textPrefix: text.slice(0, 20)
+              textPrefix: text.slice(0, 20),
             });
             resolve(false);
           });

@@ -6,7 +6,7 @@ const FOCUSABLE_SELECTORS = [
   "textarea:not([disabled])",
   "input:not([disabled])",
   "select:not([disabled])",
-  '[tabindex]:not([tabindex="-1"])'
+  '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
 
 interface UseFocusTrapOptions {
@@ -28,7 +28,7 @@ export function useFocusTrap({
   isActive,
   containerRef,
   restoreFocus = true,
-  autoFocus = true
+  autoFocus = true,
 }: UseFocusTrapOptions): void {
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
@@ -46,7 +46,7 @@ export function useFocusTrap({
     // Get all focusable elements within the container
     const getFocusableElements = (): HTMLElement[] => {
       return Array.from(
-        container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)
+        container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS),
       ).filter((el) => {
         // Filter out elements that are hidden or not visible
         return el.offsetParent !== null;
@@ -56,10 +56,11 @@ export function useFocusTrap({
     // Focus the first focusable element
     if (autoFocus) {
       const focusableElements = getFocusableElements();
-      if (focusableElements.length > 0) {
+      const firstFocusable = focusableElements[0];
+      if (firstFocusable) {
         // Small delay to ensure the modal is fully rendered
         requestAnimationFrame(() => {
-          focusableElements[0].focus();
+          firstFocusable.focus();
         });
       }
     }
@@ -73,6 +74,7 @@ export function useFocusTrap({
 
       const firstElement = focusableElements[0];
       const lastElement = focusableElements[focusableElements.length - 1];
+      if (!firstElement || !lastElement) return;
 
       // Shift + Tab: if on first element, move to last
       if (event.shiftKey) {

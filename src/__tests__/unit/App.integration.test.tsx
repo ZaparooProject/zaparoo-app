@@ -4,27 +4,30 @@ import App from "@/App";
 import "@/test-setup";
 
 // Mock window.location for i18n
-Object.defineProperty(window, 'location', {
+Object.defineProperty(window, "location", {
   value: {
-    hostname: 'localhost',
-    search: '',
-    hash: '',
-    pathname: '/'
+    hostname: "localhost",
+    search: "",
+    hash: "",
+    pathname: "/",
   },
   writable: true,
-  configurable: true
+  configurable: true,
 });
 
 // Mock all the hooks and dependencies
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@tanstack/react-router")>();
+  const actual =
+    await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
     createRouter: vi.fn(() => ({
       subscribe: vi.fn(),
       navigate: vi.fn(),
     })),
-    RouterProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="router">{children}</div>,
+    RouterProvider: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="router">{children}</div>
+    ),
   };
 });
 
@@ -82,7 +85,7 @@ vi.mock("@/lib/store", () => {
   };
 
   const useStatusStore: any = vi.fn((selector) => {
-    if (typeof selector === 'function') {
+    if (typeof selector === "function") {
       return selector(mockState);
     }
     return mockState;

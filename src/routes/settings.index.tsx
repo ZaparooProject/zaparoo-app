@@ -28,17 +28,17 @@ export const Route = createFileRoute("/settings/")({
   loader: (): LoaderData => {
     const state = usePreferencesStore.getState();
     return {
-      launcherAccess: state.launcherAccess
+      launcherAccess: state.launcherAccess,
     };
   },
-  component: Settings
+  component: Settings,
 });
 
 function Settings() {
   const initData = Route.useLoaderData();
 
   const { PurchaseModal, setProPurchaseModalOpen, proAccess } = useProPurchase(
-    initData.launcherAccess
+    initData.launcherAccess,
   );
 
   const connectionError = useStatusStore((state) => state.connectionError);
@@ -46,18 +46,18 @@ function Settings() {
   const deviceHistory = useStatusStore((state) => state.deviceHistory);
   const setDeviceHistory = useStatusStore((state) => state.setDeviceHistory);
   const removeDeviceHistory = useStatusStore(
-    (state) => state.removeDeviceHistory
+    (state) => state.removeDeviceHistory,
   );
   const resetConnectionState = useStatusStore(
-    (state) => state.resetConnectionState
+    (state) => state.resetConnectionState,
   );
   const setTargetDeviceAddress = useStatusStore(
-    (state) => state.setTargetDeviceAddress
+    (state) => state.setTargetDeviceAddress,
   );
 
   const { data: version, isSuccess: versionSuccess } = useQuery({
     queryKey: ["version"],
-    queryFn: () => CoreAPI.version()
+    queryFn: () => CoreAPI.version(),
   });
 
   const [address, setAddress] = useState(getDeviceAddress());

@@ -23,7 +23,7 @@ const resources = {
   "nl-NL": nl_NL,
   ja: ja_JP,
   "ja-JP": ja_JP,
-  "de-DE": de_DE
+  "de-DE": de_DE,
 };
 
 i18n
@@ -34,8 +34,8 @@ i18n
     fallbackLng: "en-US",
     // debug: true,
     interpolation: {
-      escapeValue: false
-    }
+      escapeValue: false,
+    },
   });
 
 export default i18n;

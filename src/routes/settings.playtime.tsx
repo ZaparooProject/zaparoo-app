@@ -11,10 +11,14 @@ import { PageFrame } from "../components/PageFrame";
 import { BackIcon } from "../lib/images";
 import { HeaderButton } from "../components/wui/HeaderButton";
 import { TextInput } from "../components/wui/TextInput";
-import { formatDuration, formatDurationDisplay, parseDuration } from "../lib/utils";
+import {
+  formatDuration,
+  formatDurationDisplay,
+  parseDuration,
+} from "../lib/utils";
 
 export const Route = createFileRoute("/settings/playtime")({
-  component: PlaytimeSettings
+  component: PlaytimeSettings,
 });
 
 function PlaytimeSettings() {
@@ -25,7 +29,7 @@ function PlaytimeSettings() {
   const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
-    preventScrollOnSwipe: false
+    preventScrollOnSwipe: false,
   });
 
   // Local state for form inputs
@@ -36,17 +40,27 @@ function PlaytimeSettings() {
   const [resetMinutes, setResetMinutes] = useState("0");
 
   // Debounce timers
-  const dailyTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const dailyTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   // Fetch playtime limits configuration
-  const { data: limitsConfig, refetch: refetchLimits, isPending } = useQuery({
+  const {
+    data: limitsConfig,
+    refetch: refetchLimits,
+    isPending,
+  } = useQuery({
     queryKey: ["playtime", "limits"],
     queryFn: () => CoreAPI.playtimeLimits(),
     enabled: connected,
     refetchOnMount: "always",
-    refetchInterval: 30000
+    refetchInterval: 30000,
   });
 
   // Fetch playtime status (for display)
@@ -55,7 +69,7 @@ function PlaytimeSettings() {
     queryFn: () => CoreAPI.playtime(),
     enabled: connected && limitsConfig?.enabled === true,
     refetchOnMount: "always",
-    refetchInterval: 30000
+    refetchInterval: 30000,
   });
 
   // Update mutation
@@ -63,7 +77,7 @@ function PlaytimeSettings() {
     mutationFn: CoreAPI.playtimeLimitsUpdate.bind(CoreAPI),
     onSuccess: () => {
       refetchLimits();
-    }
+    },
   });
 
   // Initialize form values when data loads
@@ -93,7 +107,7 @@ function PlaytimeSettings() {
     dailyTimeoutRef.current = setTimeout(() => {
       const daily = formatDuration({
         hours: parseInt(dailyHours) || 0,
-        minutes: parseInt(dailyMinutes) || 0
+        minutes: parseInt(dailyMinutes) || 0,
       });
       updateMutation.mutate({ daily });
     }, 500);
@@ -117,7 +131,7 @@ function PlaytimeSettings() {
     sessionTimeoutRef.current = setTimeout(() => {
       const session = formatDuration({
         hours: parseInt(sessionHours) || 0,
-        minutes: parseInt(sessionMinutes) || 0
+        minutes: parseInt(sessionMinutes) || 0,
       });
       updateMutation.mutate({ session });
     }, 500);
@@ -142,7 +156,7 @@ function PlaytimeSettings() {
       const resetMins = parseInt(resetMinutes) || 0;
       const sessionReset = formatDuration({
         hours: Math.floor(resetMins / 60),
-        minutes: resetMins % 60
+        minutes: resetMins % 60,
       });
       updateMutation.mutate({ sessionReset });
     }, 500);
@@ -195,7 +209,9 @@ function PlaytimeSettings() {
         <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">{t("settings.playtime.title")}</h1>
+        <h1 className="text-foreground text-xl">
+          {t("settings.playtime.title")}
+        </h1>
       }
     >
       {!connected ? (
@@ -213,44 +229,73 @@ function PlaytimeSettings() {
 
           {/* Status Display - only shown when enabled and has data */}
           {limitsConfig?.enabled && playtimeStatus && (
-            <div className="flex flex-col gap-2 p-3 rounded-lg bg-background-secondary border border-bd-filled">
+            <div className="bg-background-secondary border-bd-filled flex flex-col gap-2 rounded-lg border p-3">
               {/* Session Status */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{t("settings.core.playtime.currentSession")}</span>
-                  <span className={classNames(
-                    "text-xs px-2 py-0.5 rounded-full",
-                    getStateBadgeColor(playtimeStatus.state)
-                  )}>
+                  <span className="text-sm font-medium">
+                    {t("settings.core.playtime.currentSession")}
+                  </span>
+                  <span
+                    className={classNames(
+                      "rounded-full px-2 py-0.5 text-xs",
+                      getStateBadgeColor(playtimeStatus.state),
+                    )}
+                  >
                     {getStateLabel(playtimeStatus.state)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("settings.core.playtime.sessionDuration")}</span>
-                  <span>{formatDurationDisplay(playtimeStatus.sessionDuration)}</span>
+                  <span className="text-muted-foreground">
+                    {t("settings.core.playtime.sessionDuration")}
+                  </span>
+                  <span>
+                    {formatDurationDisplay(playtimeStatus.sessionDuration)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("settings.core.playtime.sessionRemaining")}</span>
-                  <span>{formatDurationDisplay(playtimeStatus.sessionRemaining)}</span>
+                  <span className="text-muted-foreground">
+                    {t("settings.core.playtime.sessionRemaining")}
+                  </span>
+                  <span>
+                    {formatDurationDisplay(playtimeStatus.sessionRemaining)}
+                  </span>
                 </div>
-                {playtimeStatus.cooldownRemaining && playtimeStatus.state === "cooldown" && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("settings.core.playtime.cooldownRemaining")}</span>
-                    <span>{formatDurationDisplay(playtimeStatus.cooldownRemaining)}</span>
-                  </div>
-                )}
+                {playtimeStatus.cooldownRemaining &&
+                  playtimeStatus.state === "cooldown" && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {t("settings.core.playtime.cooldownRemaining")}
+                      </span>
+                      <span>
+                        {formatDurationDisplay(
+                          playtimeStatus.cooldownRemaining,
+                        )}
+                      </span>
+                    </div>
+                  )}
               </div>
 
               {/* Daily Status */}
-              <div className="flex flex-col gap-2 pt-2 border-t border-bd-filled">
-                <span className="text-sm font-medium">{t("settings.core.playtime.dailyUsage")}</span>
+              <div className="border-bd-filled flex flex-col gap-2 border-t pt-2">
+                <span className="text-sm font-medium">
+                  {t("settings.core.playtime.dailyUsage")}
+                </span>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("settings.core.playtime.dailyUsageToday")}</span>
-                  <span>{formatDurationDisplay(playtimeStatus.dailyUsageToday)}</span>
+                  <span className="text-muted-foreground">
+                    {t("settings.core.playtime.dailyUsageToday")}
+                  </span>
+                  <span>
+                    {formatDurationDisplay(playtimeStatus.dailyUsageToday)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("settings.core.playtime.dailyRemaining")}</span>
-                  <span>{formatDurationDisplay(playtimeStatus.dailyRemaining)}</span>
+                  <span className="text-muted-foreground">
+                    {t("settings.core.playtime.dailyRemaining")}
+                  </span>
+                  <span>
+                    {formatDurationDisplay(playtimeStatus.dailyRemaining)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -260,7 +305,11 @@ function PlaytimeSettings() {
           <div className="flex flex-col gap-3">
             {/* Daily Limit */}
             <div className="flex flex-col gap-2">
-              <label className={classNames("text-sm font-medium", { "text-muted-foreground": !limitsConfig?.enabled })}>
+              <label
+                className={classNames("text-sm font-medium", {
+                  "text-muted-foreground": !limitsConfig?.enabled,
+                })}
+              >
                 {t("settings.core.playtime.dailyLimit")}
               </label>
               <div className="flex gap-2">
@@ -285,7 +334,11 @@ function PlaytimeSettings() {
 
             {/* Session Limit */}
             <div className="flex flex-col gap-2">
-              <label className={classNames("text-sm font-medium", { "text-muted-foreground": !limitsConfig?.enabled })}>
+              <label
+                className={classNames("text-sm font-medium", {
+                  "text-muted-foreground": !limitsConfig?.enabled,
+                })}
+              >
                 {t("settings.core.playtime.sessionLimit")}
               </label>
               <div className="flex gap-2">
@@ -310,7 +363,11 @@ function PlaytimeSettings() {
 
             {/* Session Reset Timeout */}
             <div className="flex flex-col gap-2">
-              <label className={classNames("text-sm font-medium", { "text-muted-foreground": !limitsConfig?.enabled })}>
+              <label
+                className={classNames("text-sm font-medium", {
+                  "text-muted-foreground": !limitsConfig?.enabled,
+                })}
+              >
                 {t("settings.core.playtime.sessionReset")}
               </label>
               <TextInput
@@ -321,7 +378,7 @@ function PlaytimeSettings() {
                 label={t("settings.core.playtime.minutes")}
                 disabled={!connected || !limitsConfig?.enabled}
               />
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 {t("settings.core.playtime.neverReset")}
               </span>
             </div>

@@ -26,7 +26,7 @@ import {
   UpdateMappingRequest,
   UpdateSettingsRequest,
   VersionResponse,
-  WriteRequest
+  WriteRequest,
 } from "./models";
 
 const RequestTimeout = 30 * 1000;
@@ -101,7 +101,7 @@ class CoreApi {
       } catch (e) {
         logger.error("Error in WebSocket send:", e);
         throw new Error(
-          `WebSocket send error: ${e instanceof Error ? e.message : String(e)}`
+          `WebSocket send error: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
     };
@@ -125,7 +125,7 @@ class CoreApi {
       } catch (e) {
         logger.error("Error in WebSocket send:", e);
         throw new Error(
-          `WebSocket send error: ${e instanceof Error ? e.message : String(e)}`
+          `WebSocket send error: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
     };
@@ -138,32 +138,41 @@ class CoreApi {
       const requestsToProcess = [...this.requestQueue];
       this.requestQueue = []; // Clear the queue
 
-      requestsToProcess.forEach(queued => {
+      requestsToProcess.forEach((queued) => {
         const { req, promiseHandlers, signal } = queued;
         const { resolve, reject } = promiseHandlers;
 
         // Re-initialize promise handling for the now-sent request
-        this.responsePool[req.id] = { resolve, reject };
+        const poolEntry = {
+          resolve,
+          reject,
+          timeoutId: undefined as ReturnType<typeof setTimeout> | undefined,
+        };
+        this.responsePool[req.id] = poolEntry;
 
         const timeoutId = setTimeout(() => {
-          if (this.responsePool[req.id]) {
-            this.responsePool[req.id].reject(new Error("Request timeout (after queueing and sending)"));
+          const entry = this.responsePool[req.id];
+          if (entry) {
+            entry.reject(
+              new Error("Request timeout (after queueing and sending)"),
+            );
             delete this.responsePool[req.id];
           }
         }, RequestTimeout);
-        this.responsePool[req.id].timeoutId = timeoutId;
+        poolEntry.timeoutId = timeoutId;
 
         if (signal) {
           const abortHandler = () => {
-            if (this.responsePool[req.id]) {
-              if (this.responsePool[req.id].timeoutId) {
-                clearTimeout(this.responsePool[req.id].timeoutId);
+            const entry = this.responsePool[req.id];
+            if (entry) {
+              if (entry.timeoutId) {
+                clearTimeout(entry.timeoutId);
               }
-              this.responsePool[req.id].resolve({ cancelled: true });
+              entry.resolve({ cancelled: true });
               delete this.responsePool[req.id];
             }
           };
-          signal.addEventListener('abort', abortHandler, { once: true });
+          signal.addEventListener("abort", abortHandler, { once: true });
         }
 
         try {
@@ -171,9 +180,16 @@ class CoreApi {
         } catch (e) {
           logger.error("Failed to send queued request during flush:", e);
           // If send fails even during flush, reject the original promise
-          if (this.responsePool[req.id]) {
-            clearTimeout(this.responsePool[req.id].timeoutId!);
-            this.responsePool[req.id].reject(new Error(`Failed to send queued request: ${e instanceof Error ? e.message : String(e)}`));
+          const entry = this.responsePool[req.id];
+          if (entry) {
+            if (entry.timeoutId) {
+              clearTimeout(entry.timeoutId);
+            }
+            entry.reject(
+              new Error(
+                `Failed to send queued request: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
             delete this.responsePool[req.id];
           }
         }
@@ -186,8 +202,9 @@ class CoreApi {
     logger.log("Resetting CoreAPI state");
 
     // Clear all pending response promises with cancellation
-    Object.keys(this.responsePool).forEach(id => {
+    Object.keys(this.responsePool).forEach((id) => {
       const responsePromise = this.responsePool[id];
+      if (!responsePromise) return;
       if (responsePromise.timeoutId) {
         clearTimeout(responsePromise.timeoutId);
       }
@@ -195,12 +212,12 @@ class CoreApi {
     });
 
     // Clear response pool contents
-    Object.keys(this.responsePool).forEach(id => {
+    Object.keys(this.responsePool).forEach((id) => {
       delete this.responsePool[id];
     });
 
     // Clear request queue
-    this.requestQueue.forEach(queued => {
+    this.requestQueue.forEach((queued) => {
       queued.promiseHandlers.resolve({ cancelled: true });
     });
     this.requestQueue = [];
@@ -213,7 +230,11 @@ class CoreApi {
     this.send = () => logger.warn("WebSocket send is not initialized");
   }
 
-  call(method: Method, params?: unknown, signal?: AbortSignal): Promise<unknown> {
+  call(
+    method: Method,
+    params?: unknown,
+    signal?: AbortSignal,
+  ): Promise<unknown> {
     try {
       const id = uuidv4();
       const req: ApiRequest = {
@@ -221,7 +242,7 @@ class CoreApi {
         id,
         timestamp: Date.now(),
         method,
-        params
+        params,
       };
 
       // Check if already aborted
@@ -235,31 +256,35 @@ class CoreApi {
         const payload = JSON.stringify(req);
         logger.debug("Sending request", payload);
 
+        let poolEntry: ResponsePromise | undefined;
         const promise = new Promise<unknown>((resolve, reject) => {
-          this.responsePool[id] = { resolve, reject };
+          poolEntry = { resolve, reject };
+          this.responsePool[id] = poolEntry;
         });
 
         // Add timeout handling with rejection
         const timeoutId = setTimeout(() => {
-          if (this.responsePool[id]) {
-            this.responsePool[id].reject(new Error("Request timeout"));
+          const entry = this.responsePool[id];
+          if (entry) {
+            entry.reject(new Error("Request timeout"));
             delete this.responsePool[id];
           }
         }, RequestTimeout);
-        this.responsePool[id].timeoutId = timeoutId;
+        poolEntry!.timeoutId = timeoutId;
 
         // Add abort signal handling
         if (signal) {
           const abortHandler = () => {
-            if (this.responsePool[id]) {
-              if (this.responsePool[id].timeoutId) {
-                clearTimeout(this.responsePool[id].timeoutId);
+            const entry = this.responsePool[id];
+            if (entry) {
+              if (entry.timeoutId) {
+                clearTimeout(entry.timeoutId);
               }
-              this.responsePool[id].resolve({ cancelled: true });
+              entry.resolve({ cancelled: true });
               delete this.responsePool[id];
             }
           };
-          signal.addEventListener('abort', abortHandler, { once: true });
+          signal.addEventListener("abort", abortHandler, { once: true });
         }
 
         try {
@@ -269,14 +294,16 @@ class CoreApi {
           delete this.responsePool[id];
           return Promise.reject(
             new Error(
-              `Failed to send request: ${e instanceof Error ? e.message : String(e)}`
-            )
+              `Failed to send request: ${e instanceof Error ? e.message : String(e)}`,
+            ),
           );
         }
         return promise;
       } else {
         // Connection not open, queue the request
-        logger.debug(`Queueing request ${req.method} (ID: ${id}). Current state: ${this.wsManager?.currentState}`);
+        logger.debug(
+          `Queueing request ${req.method} (ID: ${id}). Current state: ${this.wsManager?.currentState}`,
+        );
         const promise = new Promise<unknown>((resolve, reject) => {
           this.requestQueue.push({
             req,
@@ -287,16 +314,24 @@ class CoreApi {
         return promise;
       }
     } catch (e) {
-      logger.error("Error in API call:", e, { category: "api", action: "call", method });
+      logger.error("Error in API call:", e, {
+        category: "api",
+        action: "call",
+        method,
+      });
       return Promise.reject(
         new Error(
-          `API call error: ${e instanceof Error ? e.message : String(e)}`
-        )
+          `API call error: ${e instanceof Error ? e.message : String(e)}`,
+        ),
       );
     }
   }
 
-  callWithTracking(method: Method, params?: unknown, signal?: AbortSignal): { id: string; promise: Promise<unknown> } {
+  callWithTracking(
+    method: Method,
+    params?: unknown,
+    signal?: AbortSignal,
+  ): { id: string; promise: Promise<unknown> } {
     try {
       const id = uuidv4();
       const req: ApiRequest = {
@@ -304,7 +339,7 @@ class CoreApi {
         id,
         timestamp: Date.now(),
         method,
-        params
+        params,
       };
 
       const payload = JSON.stringify(req);
@@ -315,36 +350,40 @@ class CoreApi {
         return { id, promise: Promise.resolve({ cancelled: true }) };
       }
 
+      let poolEntry: ResponsePromise | undefined;
       const promise = new Promise<unknown>((resolve, reject) => {
-        this.responsePool[id] = { resolve, reject };
+        poolEntry = { resolve, reject };
+        this.responsePool[id] = poolEntry;
       });
 
       // Add timeout handling with rejection
       const timeoutId = setTimeout(() => {
-        if (this.responsePool[id]) {
-          this.responsePool[id].reject(new Error("Request timeout"));
+        const entry = this.responsePool[id];
+        if (entry) {
+          entry.reject(new Error("Request timeout"));
           delete this.responsePool[id];
         }
       }, RequestTimeout);
 
       // Store the timeout ID so it can be cleared if needed
-      this.responsePool[id].timeoutId = timeoutId;
+      poolEntry!.timeoutId = timeoutId;
 
       // Add abort signal handling
       if (signal) {
         const abortHandler = () => {
-          if (this.responsePool[id]) {
+          const entry = this.responsePool[id];
+          if (entry) {
             // Clear timeout and resolve with cancelled status
-            if (this.responsePool[id].timeoutId) {
-              clearTimeout(this.responsePool[id].timeoutId);
+            if (entry.timeoutId) {
+              clearTimeout(entry.timeoutId);
             }
-            this.responsePool[id].resolve({ cancelled: true });
+            entry.resolve({ cancelled: true });
             delete this.responsePool[id];
           }
         };
 
-        signal.addEventListener('abort', abortHandler, { once: true });
-        this.responsePool[id].abortController = new AbortController();
+        signal.addEventListener("abort", abortHandler, { once: true });
+        poolEntry!.abortController = new AbortController();
       }
 
       logger.debug(payload);
@@ -356,30 +395,37 @@ class CoreApi {
         logger.error("Failed to send tracked request:", e);
         delete this.responsePool[id];
         throw new Error(
-          `Failed to send request: ${e instanceof Error ? e.message : String(e)}`
+          `Failed to send request: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
 
       return { id, promise };
     } catch (e) {
-      logger.error("Error in tracked API call:", e, { category: "api", action: "callWithTracking", method });
+      logger.error("Error in tracked API call:", e, {
+        category: "api",
+        action: "callWithTracking",
+        method,
+      });
       throw new Error(
-        `API call error: ${e instanceof Error ? e.message : String(e)}`
+        `API call error: ${e instanceof Error ? e.message : String(e)}`,
       );
     }
   }
 
   cancelWrite(): void {
-    if (this.pendingWriteId && this.responsePool[this.pendingWriteId]) {
+    const entry = this.pendingWriteId
+      ? this.responsePool[this.pendingWriteId]
+      : undefined;
+    if (this.pendingWriteId && entry) {
       logger.debug("Cancelling write request:", this.pendingWriteId);
 
       // Clear the timeout to prevent it from firing
-      if (this.responsePool[this.pendingWriteId].timeoutId) {
-        clearTimeout(this.responsePool[this.pendingWriteId].timeoutId);
+      if (entry.timeoutId) {
+        clearTimeout(entry.timeoutId);
       }
 
       // Resolve with cancelled status instead of rejecting
-      this.responsePool[this.pendingWriteId].resolve({ cancelled: true });
+      entry.resolve({ cancelled: true });
       delete this.responsePool[this.pendingWriteId];
       this.pendingWriteId = null;
 
@@ -406,12 +452,12 @@ class CoreApi {
             category: "api",
             action: "parseJSON",
             severity: "critical",
-            dataPreview: String(msg.data).slice(0, 100)
+            dataPreview: String(msg.data).slice(0, 100),
           });
           reject(
             new Error(
-              `Error parsing JSON response: ${e instanceof Error ? e.message : String(e)}`
-            )
+              `Error parsing JSON response: ${e instanceof Error ? e.message : String(e)}`,
+            ),
           );
           return;
         }
@@ -427,14 +473,14 @@ class CoreApi {
             const req = res as ApiRequest;
             resolve({
               method: req.method as Notification,
-              params: req.params
+              params: req.params,
             });
           } catch (e) {
             logger.error("Error processing notification:", e);
             reject(
               new Error(
-                `Error processing notification: ${e instanceof Error ? e.message : String(e)}`
-              )
+                `Error processing notification: ${e instanceof Error ? e.message : String(e)}`,
+              ),
             );
           }
           return;
@@ -471,11 +517,14 @@ class CoreApi {
           this.pendingWriteId = null;
         }
       } catch (e) {
-        logger.error("Unexpected error processing message:", e, { category: "api", action: "processReceived" });
+        logger.error("Unexpected error processing message:", e, {
+          category: "api",
+          action: "processReceived",
+        });
         reject(
           new Error(
-            `Unexpected error: ${e instanceof Error ? e.message : String(e)}`
-          )
+            `Unexpected error: ${e instanceof Error ? e.message : String(e)}`,
+          ),
         );
       }
     });
@@ -493,8 +542,8 @@ class CoreApi {
             logger.error("Error processing version response:", e);
             reject(
               new Error(
-                `Failed to process version response: ${e instanceof Error ? e.message : String(e)}`
-              )
+                `Failed to process version response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
             );
           }
         })
@@ -504,7 +553,6 @@ class CoreApi {
         });
     });
   }
-
 
   run(params: LaunchRequest): Promise<void> {
     return new Promise<void>((resolve, reject) => {
@@ -519,9 +567,16 @@ class CoreApi {
     });
   }
 
-  write(params: WriteRequest, signal?: AbortSignal): Promise<void | { cancelled: true }> {
+  write(
+    params: WriteRequest,
+    signal?: AbortSignal,
+  ): Promise<void | { cancelled: true }> {
     return new Promise<void | { cancelled: true }>((resolve, reject) => {
-      const writeResult = this.callWithTracking(Method.ReadersWrite, params, signal);
+      const writeResult = this.callWithTracking(
+        Method.ReadersWrite,
+        params,
+        signal,
+      );
       this.pendingWriteId = writeResult.id;
 
       writeResult.promise
@@ -532,7 +587,7 @@ class CoreApi {
           }
 
           // Check if the result indicates cancellation
-          if (result && typeof result === 'object' && 'cancelled' in result) {
+          if (result && typeof result === "object" && "cancelled" in result) {
             resolve(result as { cancelled: true });
           } else {
             resolve();
@@ -561,8 +616,8 @@ class CoreApi {
             logger.error("Error processing history response:", e);
             reject(
               new Error(
-                `Failed to process history response: ${e instanceof Error ? e.message : String(e)}`
-              )
+                `Failed to process history response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
             );
           }
         })
@@ -573,7 +628,10 @@ class CoreApi {
     });
   }
 
-  mediaSearch(params: SearchParams, signal?: AbortSignal): Promise<SearchResultsResponse> {
+  mediaSearch(
+    params: SearchParams,
+    signal?: AbortSignal,
+  ): Promise<SearchResultsResponse> {
     return new Promise<SearchResultsResponse>((resolve, reject) => {
       this.call(Method.MediaSearch, params, signal)
         .then((result) => {
@@ -585,8 +643,8 @@ class CoreApi {
             logger.error("Error processing media search response:", e);
             reject(
               new Error(
-                `Failed to process media search response: ${e instanceof Error ? e.message : String(e)}`
-              )
+                `Failed to process media search response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
             );
           }
         })
@@ -610,8 +668,8 @@ class CoreApi {
             logger.error("Error processing media tags response:", e);
             reject(
               new Error(
-                `Failed to process media tags response: ${e instanceof Error ? e.message : String(e)}`
-              )
+                `Failed to process media tags response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
             );
           }
         })
@@ -621,7 +679,6 @@ class CoreApi {
         });
     });
   }
-
 
   mediaGenerate(params?: { systems?: string[] }): Promise<void> {
     return new Promise<void>((resolve, reject) => {
@@ -661,8 +718,8 @@ class CoreApi {
             logger.error("Error processing systems response:", e);
             reject(
               new Error(
-                `Failed to process systems response: ${e instanceof Error ? e.message : String(e)}`
-              )
+                `Failed to process systems response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
             );
           }
         })
@@ -685,8 +742,8 @@ class CoreApi {
             logger.error("Error processing settings response:", e);
             reject(
               new Error(
-                `Failed to process settings response: ${e instanceof Error ? e.message : String(e)}`
-              )
+                `Failed to process settings response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
             );
           }
         })
@@ -723,8 +780,8 @@ class CoreApi {
             logger.error("Error processing mappings response:", e);
             reject(
               new Error(
-                `Failed to process mappings response: ${e instanceof Error ? e.message : String(e)}`
-              )
+                `Failed to process mappings response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
             );
           }
         })
@@ -802,8 +859,8 @@ class CoreApi {
             logger.error("Error processing media response:", e);
             reject(
               new Error(
-                `Failed to process media response: ${e instanceof Error ? e.message : String(e)}`
-              )
+                `Failed to process media response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
             );
           }
         })
@@ -826,8 +883,8 @@ class CoreApi {
             logger.error("Error processing tokens response:", e);
             reject(
               new Error(
-                `Failed to process tokens response: ${e instanceof Error ? e.message : String(e)}`
-              )
+                `Failed to process tokens response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
             );
           }
         })
@@ -877,7 +934,6 @@ class CoreApi {
     });
   }
 
-
   settingsReload(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       this.call(Method.SettingsReload)
@@ -907,18 +963,18 @@ class CoreApi {
   async hasWriteCapableReader(): Promise<boolean> {
     try {
       const response = await this.readers();
-      return response.readers.some(reader =>
-        reader.connected &&
-        reader.capabilities.some(capability =>
-          capability.toLowerCase().includes('write')
-        )
+      return response.readers.some(
+        (reader) =>
+          reader.connected &&
+          reader.capabilities.some((capability) =>
+            capability.toLowerCase().includes("write"),
+          ),
       );
     } catch (error) {
       logger.error("Failed to check write capable readers:", error);
       return false;
     }
   }
-
 
   readersWriteCancel(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
@@ -947,7 +1003,9 @@ class CoreApi {
   }
 
   settingsLogsDownload(): Promise<LogDownloadResponse> {
-    return this.call(Method.SettingsLogsDownload) as Promise<LogDownloadResponse>;
+    return this.call(
+      Method.SettingsLogsDownload,
+    ) as Promise<LogDownloadResponse>;
   }
 
   playtime(): Promise<PlaytimeStatus> {
@@ -962,8 +1020,8 @@ class CoreApi {
             logger.error("Error processing playtime response:", e);
             reject(
               new Error(
-                `Failed to process playtime response: ${e instanceof Error ? e.message : String(e)}`
-              )
+                `Failed to process playtime response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
             );
           }
         })
@@ -986,8 +1044,8 @@ class CoreApi {
             logger.error("Error processing playtime limits response:", e);
             reject(
               new Error(
-                `Failed to process playtime limits response: ${e instanceof Error ? e.message : String(e)}`
-              )
+                `Failed to process playtime limits response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
             );
           }
         })
@@ -1052,11 +1110,15 @@ export function getWsUrl() {
 
     // Check if address contains a port (format: host:port)
     // For IPv6 addresses, we need to be more careful about colons
-    const lastColonIndex = address.lastIndexOf(':');
+    const lastColonIndex = address.lastIndexOf(":");
     if (lastColonIndex > 0 && lastColonIndex < address.length - 1) {
       const potentialPort = address.substring(lastColonIndex + 1);
       // Validate that what follows the colon is a valid port number
-      if (/^\d+$/.test(potentialPort) && parseInt(potentialPort) > 0 && parseInt(potentialPort) <= 65535) {
+      if (
+        /^\d+$/.test(potentialPort) &&
+        parseInt(potentialPort) > 0 &&
+        parseInt(potentialPort) <= 65535
+      ) {
         host = address.substring(0, lastColonIndex);
         port = potentialPort;
       }

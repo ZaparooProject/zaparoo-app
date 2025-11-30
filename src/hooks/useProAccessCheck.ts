@@ -4,15 +4,18 @@ import { Purchases } from "@revenuecat/purchases-capacitor";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { logger } from "../lib/logger";
 
-
 /**
  * Hook to check Pro access status from RevenueCat on app startup.
  * This runs once at the App level to prevent layout shifts.
  * The result is cached in the preferences store.
  */
 export function useProAccessCheck() {
-  const setLauncherAccess = usePreferencesStore((state) => state.setLauncherAccess);
-  const setProAccessHydrated = usePreferencesStore((state) => state.setProAccessHydrated);
+  const setLauncherAccess = usePreferencesStore(
+    (state) => state.setLauncherAccess,
+  );
+  const setProAccessHydrated = usePreferencesStore(
+    (state) => state.setProAccessHydrated,
+  );
 
   useEffect(() => {
     // Skip on web platform
@@ -33,7 +36,11 @@ export function useProAccessCheck() {
         setProAccessHydrated(true);
       })
       .catch((e) => {
-        logger.error("Failed to check Pro access:", e, { category: "purchase", action: "proAccessCheck", severity: "warning" });
+        logger.error("Failed to check Pro access:", e, {
+          category: "purchase",
+          action: "proAccessCheck",
+          severity: "warning",
+        });
         // On error, mark as hydrated but keep cached value
         setProAccessHydrated(true);
       });

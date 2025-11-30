@@ -9,13 +9,13 @@ import { useStatusStore } from "@/lib/store";
 // Mock CoreAPI
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
-    systems: vi.fn()
-  }
+    systems: vi.fn(),
+  },
 }));
 
 // Mock store
 vi.mock("@/lib/store", () => ({
-  useStatusStore: vi.fn()
+  useStatusStore: vi.fn(),
 }));
 
 const mockSystems = {
@@ -25,8 +25,8 @@ const mockSystems = {
     { id: "genesis", name: "Sega Genesis", category: "Sega" },
     { id: "ps1", name: "PlayStation", category: "Sony" },
     { id: "n64", name: "Nintendo 64", category: "Nintendo" },
-    { id: "saturn", name: "Sega Saturn", category: "Sega" }
-  ]
+    { id: "saturn", name: "Sega Saturn", category: "Sega" },
+  ],
 };
 
 describe("SimpleSystemSelect", () => {
@@ -35,13 +35,13 @@ describe("SimpleSystemSelect", () => {
   beforeEach(() => {
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false }
-      }
+        queries: { retry: false },
+      },
     });
 
     vi.mocked(CoreAPI.systems).mockResolvedValue(mockSystems);
     vi.mocked(useStatusStore).mockReturnValue({
-      gamesIndex: { indexing: false, exists: true }
+      gamesIndex: { indexing: false, exists: true },
     });
   });
 
@@ -55,7 +55,7 @@ describe("SimpleSystemSelect", () => {
     return render(
       <QueryClientProvider client={queryClient}>
         <SimpleSystemSelect {...props} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
   };
 
@@ -93,13 +93,15 @@ describe("SimpleSystemSelect", () => {
         (opt) =>
           opt.textContent === "Nintendo Entertainment System" ||
           opt.textContent === "Nintendo 64" ||
-          opt.textContent === "Super Nintendo"
+          opt.textContent === "Super Nintendo",
       );
 
       // NES comes before N64 which comes before SNES alphabetically
-      expect(nintendoOptions[0].textContent).toBe("Nintendo 64");
-      expect(nintendoOptions[1].textContent).toBe("Nintendo Entertainment System");
-      expect(nintendoOptions[2].textContent).toBe("Super Nintendo");
+      expect(nintendoOptions[0]!.textContent).toBe("Nintendo 64");
+      expect(nintendoOptions[1]!.textContent).toBe(
+        "Nintendo Entertainment System",
+      );
+      expect(nintendoOptions[2]!.textContent).toBe("Super Nintendo");
     });
   });
 
@@ -110,7 +112,9 @@ describe("SimpleSystemSelect", () => {
 
     // Wait for the options to actually load (not just the combobox to exist)
     await waitFor(() => {
-      expect(screen.getByRole("option", { name: "Super Nintendo" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("option", { name: "Super Nintendo" }),
+      ).toBeInTheDocument();
     });
 
     const select = screen.getByRole("combobox");
@@ -132,7 +136,9 @@ describe("SimpleSystemSelect", () => {
     renderComponent({ value: "", onSelect, includeAllOption: true });
 
     await waitFor(() => {
-      const allOption = screen.getByRole("option", { name: "systemSelector.allSystems" });
+      const allOption = screen.getByRole("option", {
+        name: "systemSelector.allSystems",
+      });
       expect(allOption).toBeInTheDocument();
     });
   });
@@ -145,7 +151,9 @@ describe("SimpleSystemSelect", () => {
       expect(screen.getByRole("combobox")).toBeInTheDocument();
     });
 
-    const allOption = screen.queryByRole("option", { name: "systemSelector.allSystems" });
+    const allOption = screen.queryByRole("option", {
+      name: "systemSelector.allSystems",
+    });
     expect(allOption).not.toBeInTheDocument();
   });
 
@@ -161,7 +169,7 @@ describe("SimpleSystemSelect", () => {
 
   it("disables select when indexing", () => {
     vi.mocked(useStatusStore).mockReturnValue({
-      gamesIndex: { indexing: true, exists: true }
+      gamesIndex: { indexing: true, exists: true },
     });
 
     const onSelect = vi.fn();

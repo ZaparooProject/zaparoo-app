@@ -10,26 +10,26 @@ vi.mock("../../../lib/writeNfcHook", () => ({
     write: vi.fn(),
     end: vi.fn(),
     writing: false,
-    result: null
+    result: null,
   })),
   WriteAction: {
-    Read: 'read',
-    Write: 'write',
-    Format: 'format'
-  }
+    Read: "read",
+    Write: "write",
+    Format: "format",
+  },
 }));
 
 vi.mock("../../../hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({}))
+  useSmartSwipe: vi.fn(() => ({})),
 }));
 
 const mockNavigate = vi.fn();
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    createFileRoute: actual.createFileRoute
+    createFileRoute: actual.createFileRoute,
   };
 });
 
@@ -37,19 +37,23 @@ vi.mock("../../../components/PageFrame", () => ({
   PageFrame: ({ title, back, children, ...props }: any) => (
     <div data-testid="page-frame" {...props}>
       <div data-testid="page-title">{title}</div>
-      <button data-testid="back-button" onClick={back}>Back</button>
+      <button data-testid="back-button" onClick={back}>
+        Back
+      </button>
       <div data-testid="page-content">{children}</div>
     </div>
-  )
+  ),
 }));
 
 vi.mock("../../../components/WriteModal", () => ({
   WriteModal: ({ isOpen, close }: any) =>
     isOpen ? (
       <div data-testid="write-modal">
-        <button data-testid="close-modal" onClick={close}>Close</button>
+        <button data-testid="close-modal" onClick={close}>
+          Close
+        </button>
       </div>
-    ) : null
+    ) : null,
 }));
 
 vi.mock("../../../components/ui/tabs", () => ({
@@ -88,7 +92,7 @@ vi.mock("../../../components/ui/tabs", () => ({
     <div data-testid={`tab-content-${value}`} className={className}>
       {children}
     </div>
-  )
+  ),
 }));
 
 vi.mock("../../../components/nfc/ReadTab", () => ({
@@ -97,9 +101,11 @@ vi.mock("../../../components/nfc/ReadTab", () => ({
       <button data-testid="scan-button" onClick={onScan}>
         Scan NFC
       </button>
-      {result && <div data-testid="scan-result">Result: {JSON.stringify(result)}</div>}
+      {result && (
+        <div data-testid="scan-result">Result: {JSON.stringify(result)}</div>
+      )}
     </div>
-  )
+  ),
 }));
 
 vi.mock("../../../components/nfc/ToolsTab", () => ({
@@ -107,21 +113,21 @@ vi.mock("../../../components/nfc/ToolsTab", () => ({
     <div data-testid="tools-tab">
       <button
         data-testid="format-button"
-        onClick={() => onToolAction('format')}
+        onClick={() => onToolAction("format")}
         disabled={isProcessing}
       >
         Format Tag
       </button>
       <button
         data-testid="erase-button"
-        onClick={() => onToolAction('erase')}
+        onClick={() => onToolAction("erase")}
         disabled={isProcessing}
       >
         Erase Tag
       </button>
       {isProcessing && <div data-testid="processing">Processing...</div>}
     </div>
-  )
+  ),
 }));
 
 describe("Create NFC Route", () => {
@@ -132,8 +138,8 @@ describe("Create NFC Route", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
   });
 
@@ -143,9 +149,7 @@ describe("Create NFC Route", () => {
 
   it("should render NFC utilities page with all components", async () => {
     const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
     // Mock the NFC utilities component
@@ -193,7 +197,7 @@ describe("Create NFC Route", () => {
     render(
       <TestWrapper>
         <NfcUtilsComponent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     expect(screen.getByTestId("page-frame")).toBeInTheDocument();
@@ -222,8 +226,12 @@ describe("Create NFC Route", () => {
           >
             Tools
           </button>
-          {activeTab === "read" && <div data-testid="read-content">Read Content</div>}
-          {activeTab === "tools" && <div data-testid="tools-content">Tools Content</div>}
+          {activeTab === "read" && (
+            <div data-testid="read-content">Read Content</div>
+          )}
+          {activeTab === "tools" && (
+            <div data-testid="tools-content">Tools Content</div>
+          )}
         </div>
       );
     };
@@ -243,7 +251,8 @@ describe("Create NFC Route", () => {
   });
 
   it("should handle scan button click", async () => {
-    const { useNfcWriter, WriteAction } = await import("../../../lib/writeNfcHook");
+    const { useNfcWriter, WriteAction } =
+      await import("../../../lib/writeNfcHook");
     const mockWrite = vi.fn();
 
     vi.mocked(useNfcWriter).mockReturnValue({
@@ -251,7 +260,7 @@ describe("Create NFC Route", () => {
       write: mockWrite,
       end: vi.fn(),
       writing: false,
-      result: null
+      result: null,
     });
 
     const TestComponent = () => {
@@ -291,7 +300,7 @@ describe("Create NFC Route", () => {
       write: mockWrite,
       end: vi.fn(),
       writing: false,
-      result: null
+      result: null,
     });
 
     const TestComponent = () => {
@@ -307,13 +316,13 @@ describe("Create NFC Route", () => {
         <div>
           <button
             data-testid="format-button"
-            onClick={() => handleToolAction('format')}
+            onClick={() => handleToolAction("format")}
           >
             Format
           </button>
           <button
             data-testid="erase-button"
-            onClick={() => handleToolAction('erase')}
+            onClick={() => handleToolAction("erase")}
           >
             Erase
           </button>
@@ -327,7 +336,7 @@ describe("Create NFC Route", () => {
     const formatButton = screen.getByTestId("format-button");
     fireEvent.click(formatButton);
 
-    expect(mockWrite).toHaveBeenCalledWith('format');
+    expect(mockWrite).toHaveBeenCalledWith("format");
     expect(screen.getByTestId("write-modal")).toBeInTheDocument();
   });
 
@@ -380,7 +389,7 @@ describe("Create NFC Route", () => {
       write: vi.fn(),
       end: mockEnd,
       writing: false,
-      result: null
+      result: null,
     });
 
     const { rerender } = render(<TestComponent />);
@@ -389,11 +398,14 @@ describe("Create NFC Route", () => {
 
     // Change status to non-null (modal should close)
     vi.mocked(useNfcWriter).mockReturnValue({
-      status: 'success' as any,
+      status: "success" as any,
       write: vi.fn(),
       end: mockEnd,
       writing: false,
-      result: { status: 'success' as any, info: { rawTag: null, tag: { uid: "test-uid", text: "" } } }
+      result: {
+        status: "success" as any,
+        info: { rawTag: null, tag: { uid: "test-uid", text: "" } },
+      },
     });
 
     rerender(<TestComponent />);
@@ -431,7 +443,7 @@ describe("Create NFC Route", () => {
       write: vi.fn(),
       end: vi.fn(),
       writing: false,
-      result: null
+      result: null,
     });
 
     const { rerender } = render(<TestComponent />);
@@ -440,11 +452,14 @@ describe("Create NFC Route", () => {
 
     // Change status to success with tag results
     vi.mocked(useNfcWriter).mockReturnValue({
-      status: 'success' as any,
+      status: "success" as any,
       write: vi.fn(),
       end: vi.fn(),
       writing: false,
-      result: { status: 'success' as any, info: { rawTag: null, tag: { uid: "test-uid", text: "" } } }
+      result: {
+        status: "success" as any,
+        info: { rawTag: null, tag: { uid: "test-uid", text: "" } },
+      },
     });
 
     rerender(<TestComponent />);
@@ -461,7 +476,7 @@ describe("Create NFC Route", () => {
       write: vi.fn(),
       end: mockEnd,
       writing: false,
-      result: null
+      result: null,
     });
 
     const TestComponent = () => {
@@ -499,7 +514,7 @@ describe("Create NFC Route", () => {
   });
 
   it("should log raw tag data when operation completes", async () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const { useNfcWriter } = await import("../../../lib/writeNfcHook");
 
     const TestComponent = () => {
@@ -520,23 +535,28 @@ describe("Create NFC Route", () => {
       write: vi.fn(),
       end: vi.fn(),
       writing: false,
-      result: null
+      result: null,
     });
 
     const { rerender } = render(<TestComponent />);
 
     // Change status to success with rawTag data
     vi.mocked(useNfcWriter).mockReturnValue({
-      status: 'success' as any,
+      status: "success" as any,
       write: vi.fn(),
       end: vi.fn(),
       writing: false,
-      result: { status: 'success' as any, info: { rawTag: { data: "test-raw-data" } as any, tag: null } }
+      result: {
+        status: "success" as any,
+        info: { rawTag: { data: "test-raw-data" } as any, tag: null },
+      },
     });
 
     rerender(<TestComponent />);
 
-    expect(consoleSpy).toHaveBeenCalledWith(JSON.stringify({ data: "test-raw-data" }));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      JSON.stringify({ data: "test-raw-data" }),
+    );
 
     consoleSpy.mockRestore();
   });

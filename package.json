@@ -9,13 +9,16 @@
     "build": "tsc --noEmit -p tsconfig.build.json && vite build && pnpm exec cap sync",
     "build:server": "tsc --noEmit -p tsconfig.build.json && vite build && cross-env NODE_ENV=development cap sync",
     "build:analyze": "tsc --noEmit -p tsconfig.build.json && vite build --mode analyze",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 3",
-    "eslist": "pnpm run lint",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "prepare": "husky"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^7.1.0",
@@ -91,14 +94,19 @@
     "autoprefixer": "^10.4.22",
     "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import-x": "^4.16.1",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "eslint-plugin-testing-library": "^7.13.5",
+    "eslint-plugin-vitest": "^0.5.4",
     "globals": "^16.5.0",
     "happy-dom": "^20.0.11",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "msw": "^2.12.3",
     "postcss": "^8.5.6",
     "prettier": "^3.7.3",
@@ -111,6 +119,15 @@
     "typescript": "^5.9.3",
     "vite": "^7.2.4",
     "vitest": "^4.0.14"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   },
   "pnpm": {
     "onlyBuiltDependencies": [

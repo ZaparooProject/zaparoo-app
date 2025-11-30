@@ -13,13 +13,13 @@ vi.mock("../../../lib/coreApi", () => {
     media: vi.fn(() => Promise.resolve({ database: {}, active: [] })),
     tokens: vi.fn(() => Promise.resolve({ last: null })),
     processReceived: vi.fn(),
-    flushQueue: vi.fn()
+    flushQueue: vi.fn(),
   };
 
   return {
     CoreAPI: mockCoreAPI,
     getDeviceAddress: () => mockGetDeviceAddress(),
-    getWsUrl: () => mockGetWsUrl()
+    getWsUrl: () => mockGetWsUrl(),
   };
 });
 
@@ -28,12 +28,15 @@ const mockWebSocketManager = {
   connect: vi.fn(),
   destroy: vi.fn(),
   send: vi.fn(),
-  callbacks: {} as any
+  callbacks: {} as any,
 };
 
 vi.mock("../../../lib/websocketManager", () => ({
   // Must use regular function (not arrow) for Vitest 4 constructor mocks
-  WebSocketManager: vi.fn().mockImplementation(function (_config: unknown, callbacks: unknown) {
+  WebSocketManager: vi.fn().mockImplementation(function (
+    _config: unknown,
+    callbacks: unknown,
+  ) {
     mockWebSocketManager.callbacks = callbacks;
     return mockWebSocketManager;
   }),
@@ -43,8 +46,8 @@ vi.mock("../../../lib/websocketManager", () => ({
     CONNECTED: "connected",
     RECONNECTING: "reconnecting",
     DISCONNECTED: "disconnected",
-    ERROR: "error"
-  }
+    ERROR: "error",
+  },
 }));
 
 // Mock Preferences
@@ -52,23 +55,23 @@ vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     get: vi.fn(() => Promise.resolve({ value: null })),
     set: vi.fn(() => Promise.resolve()),
-    remove: vi.fn(() => Promise.resolve())
-  }
+    remove: vi.fn(() => Promise.resolve()),
+  },
 }));
 
 // Mock react-hot-toast
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }));
 
 // Mock i18next
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key
-  })
+    t: (key: string) => key,
+  }),
 }));
 
 // Track targetDeviceAddress state
@@ -92,7 +95,7 @@ vi.mock("../../../lib/store", () => {
         setGamesIndex: vi.fn(),
         setLastToken: vi.fn(),
         addDeviceHistory: vi.fn(),
-        setDeviceHistory: vi.fn()
+        setDeviceHistory: vi.fn(),
       };
       return selector(mockStore);
     }),
@@ -102,19 +105,19 @@ vi.mock("../../../lib/store", () => {
       CONNECTING: "connecting",
       CONNECTED: "connected",
       RECONNECTING: "reconnecting",
-      ERROR: "error"
-    }
+      ERROR: "error",
+    },
   };
 });
 
 const renderWithQueryClient = () => {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
       <CoreApiWebSocket />
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -138,9 +141,7 @@ describe("CoreApiWebSocket Hot Reload", () => {
     });
     mockGetWsUrl.mockReturnValue("ws://192.168.1.100:7497");
 
-    await act(async () => {
-      renderWithQueryClient();
-    });
+    renderWithQueryClient();
 
     // Advance timers to trigger retries
     await act(async () => {
@@ -156,9 +157,7 @@ describe("CoreApiWebSocket Hot Reload", () => {
     mockGetDeviceAddress.mockReturnValue("");
     mockGetWsUrl.mockReturnValue("");
 
-    await act(async () => {
-      renderWithQueryClient();
-    });
+    renderWithQueryClient();
 
     // Fast-forward through all retry attempts (5 attempts * 100ms = 500ms)
     await act(async () => {
@@ -181,9 +180,7 @@ describe("CoreApiWebSocket Hot Reload", () => {
     });
     mockGetWsUrl.mockReturnValue("ws://192.168.1.100:7497");
 
-    await act(async () => {
-      renderWithQueryClient();
-    });
+    renderWithQueryClient();
 
     // Advance through multiple retries until address becomes valid
     await act(async () => {
@@ -201,9 +198,7 @@ describe("CoreApiWebSocket Hot Reload", () => {
     // Start with address already in store
     mockTargetDeviceAddress = "192.168.1.100";
 
-    await act(async () => {
-      renderWithQueryClient();
-    });
+    renderWithQueryClient();
 
     // Should have connected immediately since address was already in store
     expect(mockWebSocketManager.connect).toHaveBeenCalled();
@@ -214,7 +209,7 @@ describe("CoreApiWebSocket Hot Reload", () => {
     mockGetDeviceAddress.mockReturnValue("");
     mockGetWsUrl.mockReturnValue("");
 
-    const { unmount } = await act(async () => renderWithQueryClient());
+    const { unmount } = renderWithQueryClient();
 
     // Start retry cycle
     await act(async () => {
@@ -233,6 +228,8 @@ describe("CoreApiWebSocket Hot Reload", () => {
 
     // Should not have made significantly more calls after unmount
     // Allow for 1-2 extra due to race conditions in cleanup
-    expect(mockGetDeviceAddress.mock.calls.length).toBeLessThanOrEqual(callCountBeforeUnmount + 2);
+    expect(mockGetDeviceAddress.mock.calls.length).toBeLessThanOrEqual(
+      callCountBeforeUnmount + 2,
+    );
   });
 });

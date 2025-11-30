@@ -20,7 +20,7 @@ import { WriteModal } from "../components/WriteModal";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 
 export const Route = createFileRoute("/create/mappings")({
-  component: Mappings
+  component: Mappings,
 });
 
 const mappingExists = (mappings: MappingResponse[] | undefined, id: string) => {
@@ -32,7 +32,7 @@ const mappingExists = (mappings: MappingResponse[] | undefined, id: string) => {
     if (mapping.type == "uid" && mapping.pattern === id) {
       return {
         id: mapping.id,
-        script: mapping.override
+        script: mapping.override,
       };
     }
   }
@@ -55,17 +55,18 @@ function Mappings() {
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
-    preventScrollOnSwipe: false
+    preventScrollOnSwipe: false,
   });
 
   const mappings = useQuery({
     queryKey: ["mappings"],
-    queryFn: () => CoreAPI.mappings()
+    queryFn: () => CoreAPI.mappings(),
   });
 
   // Handle NFC read completion - populate form fields when operation completes
   useEffect(() => {
-    const justCompleted = prevStatusRef.current === null && nfcWriter.status !== null;
+    const justCompleted =
+      prevStatusRef.current === null && nfcWriter.status !== null;
     prevStatusRef.current = nfcWriter.status;
 
     // Populate form fields from NFC read result
@@ -99,7 +100,7 @@ function Mappings() {
         type: "uid",
         match: "exact",
         pattern: tokenId,
-        override: script
+        override: script,
       }).then(() => {
         toast.success(t("create.mappings.savedSuccess"));
         setTokenId("");
@@ -112,7 +113,7 @@ function Mappings() {
         type: "uid",
         match: "exact",
         pattern: tokenId,
-        override: script
+        override: script,
       }).then(() => {
         toast.success(t("create.mappings.savedSuccess"));
         setTokenId("");
@@ -133,103 +134,103 @@ function Mappings() {
           <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
         }
         headerCenter={
-          <h1 className="text-foreground text-xl">{t("create.mappings.title")}</h1>
+          <h1 className="text-foreground text-xl">
+            {t("create.mappings.title")}
+          </h1>
         }
       >
-          <div className="flex flex-col gap-3">
-            <div>
-              <TextInput
-                value={tokenId}
-                setValue={(v) => setTokenId(v)}
-                label={t("create.mappings.tokenId")}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                className="w-full"
-                icon={<NfcIcon size={20} />}
-                onClick={() => {
-                  nfcWriter.write(WriteAction.Read);
-                  setWriteIntent(true);
-                }}
-                label={t("scan.nfcMode")}
-              />
-              <Button
-                className="w-full"
-                icon={<CameraIcon size={20} />}
-                onClick={() => {
-                  BarcodeScanner.scan().then((res) => {
-                    if (res.barcodes.length < 1) {
-                      return;
-                    }
-                    const barcode = res.barcodes[0];
-                    setTokenId(barcode.rawValue);
-                    const existing = mappingExists(
-                      mappings.data?.mappings,
-                      barcode.rawValue
-                    );
-                    if (existing !== null) {
-                      setScript(existing.script);
-                    } else {
-                      setScript("");
-                    }
-                  });
-                }}
-                label={t("scan.cameraMode")}
-              />
-            </div>
-
-            <div className="flex flex-row items-center justify-center">
-              <ArrowDownIcon size={50} />
-            </div>
-
-            <ZapScriptInput
-              value={script}
-              setValue={setScript}
-              showPalette
-              rows={4}
-            />
-
-            <Button
-              icon={<SaveIcon size={20} />}
-              label={t("create.mappings.saveMapping")}
-              disabled={!tokenId || !script || !connected}
-              onClick={() => {
-                if (tokenId && script && connected) {
-                  saveMapping();
-                  mappings.refetch();
-                }
-              }}
-            />
-
-            <Button
-              variant="text"
-              icon={<ClearIcon size="20" />}
-              label={t("create.mappings.clearMapping")}
-              disabled={
-                !mappingExists(mappings.data?.mappings, tokenId) ||
-                !connected ||
-                !tokenId
-              }
-              onClick={() => {
-                const existing = mappingExists(
-                  mappings.data?.mappings,
-                  tokenId
-                );
-                if (existing && connected && tokenId) {
-                  CoreAPI.deleteMapping({ id: parseInt(existing.id, 10) }).then(
-                    () => {
-                      setTokenId("");
-                      setScript("");
-                      mappings.refetch();
-                    }
-                  );
-                }
-              }}
+        <div className="flex flex-col gap-3">
+          <div>
+            <TextInput
+              value={tokenId}
+              setValue={(v) => setTokenId(v)}
+              label={t("create.mappings.tokenId")}
             />
           </div>
-        </PageFrame>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              className="w-full"
+              icon={<NfcIcon size={20} />}
+              onClick={() => {
+                nfcWriter.write(WriteAction.Read);
+                setWriteIntent(true);
+              }}
+              label={t("scan.nfcMode")}
+            />
+            <Button
+              className="w-full"
+              icon={<CameraIcon size={20} />}
+              onClick={() => {
+                BarcodeScanner.scan().then((res) => {
+                  if (res.barcodes.length < 1) {
+                    return;
+                  }
+                  const barcode = res.barcodes[0];
+                  if (!barcode) return;
+                  setTokenId(barcode.rawValue);
+                  const existing = mappingExists(
+                    mappings.data?.mappings,
+                    barcode.rawValue,
+                  );
+                  if (existing !== null) {
+                    setScript(existing.script);
+                  } else {
+                    setScript("");
+                  }
+                });
+              }}
+              label={t("scan.cameraMode")}
+            />
+          </div>
+
+          <div className="flex flex-row items-center justify-center">
+            <ArrowDownIcon size={50} />
+          </div>
+
+          <ZapScriptInput
+            value={script}
+            setValue={setScript}
+            showPalette
+            rows={4}
+          />
+
+          <Button
+            icon={<SaveIcon size={20} />}
+            label={t("create.mappings.saveMapping")}
+            disabled={!tokenId || !script || !connected}
+            onClick={() => {
+              if (tokenId && script && connected) {
+                saveMapping();
+                mappings.refetch();
+              }
+            }}
+          />
+
+          <Button
+            variant="text"
+            icon={<ClearIcon size="20" />}
+            label={t("create.mappings.clearMapping")}
+            disabled={
+              !mappingExists(mappings.data?.mappings, tokenId) ||
+              !connected ||
+              !tokenId
+            }
+            onClick={() => {
+              const existing = mappingExists(mappings.data?.mappings, tokenId);
+              if (existing && connected && tokenId) {
+                CoreAPI.deleteMapping({ id: parseInt(existing.id, 10) }).then(
+                  () => {
+                    setTokenId("");
+                    setScript("");
+                    mappings.refetch();
+                  },
+                );
+              }
+            }}
+          />
+        </div>
+      </PageFrame>
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
     </>
   );

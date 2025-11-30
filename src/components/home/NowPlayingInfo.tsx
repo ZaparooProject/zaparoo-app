@@ -15,7 +15,7 @@ export function NowPlayingInfo({
   mediaName,
   mediaPath,
   systemName,
-  onStop
+  onStop,
 }: NowPlayingInfoProps) {
   const { t } = useTranslation();
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
@@ -42,12 +42,12 @@ export function NowPlayingInfo({
       <div>
         <p>
           {t("scan.nowPlayingName", {
-            game: displayName === "" ? "-" : displayName
+            game: displayName === "" ? "-" : displayName,
           })}
         </p>
         <p>
           {t("scan.nowPlayingSystem", {
-            system: systemName === "" ? "-" : systemName
+            system: systemName === "" ? "-" : systemName,
           })}
         </p>
       </div>

@@ -18,7 +18,9 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
   const writeQueue = useStatusStore((state) => state.writeQueue);
   const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
   const setWriteOpen = useStatusStore((state) => state.setWriteOpen);
-  const preferRemoteWriter = usePreferencesStore((state) => state.preferRemoteWriter);
+  const preferRemoteWriter = usePreferencesStore(
+    (state) => state.preferRemoteWriter,
+  );
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
 
   const isProcessingRef = useRef(false);
@@ -36,7 +38,10 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
     // Only call end() if there's an active write operation
     if (nfcWriter.status !== null) {
       nfcWriter.end().catch((e) => {
-        logger.error("NFC writer end failed:", e, { category: "nfc", action: "endWriter" });
+        logger.error("NFC writer end failed:", e, {
+          category: "nfc",
+          action: "endWriter",
+        });
       });
     }
 
@@ -54,7 +59,11 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
             const nfcAvailable = await Nfc.isAvailable();
             hasWriteCapability = nfcAvailable.nfc;
           } catch (error) {
-            logger.error("NFC availability check failed:", error, { category: "nfc", action: "checkAvailability", severity: "warning" });
+            logger.error("NFC availability check failed:", error, {
+              category: "nfc",
+              action: "checkAvailability",
+              severity: "warning",
+            });
           }
         }
 
@@ -66,10 +75,10 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
         if (!hasWriteCapability) {
           toast.error((to) => (
             <span
-              className="flex grow flex-col cursor-pointer"
+              className="flex grow cursor-pointer flex-col"
               onClick={() => toast.dismiss(to.id)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   toast.dismiss(to.id);
                 }
@@ -89,46 +98,48 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
         await nfcWriter.write(WriteAction.Write, currentWriteValue);
         isProcessingRef.current = false;
       } catch (error) {
-        logger.error("Write capability check failed:", error, { category: "nfc", action: "checkWriteCapability" });
+        logger.error("Write capability check failed:", error, {
+          category: "nfc",
+          action: "checkWriteCapability",
+        });
         throw error;
       }
     };
 
     const checkNfcAndWrite = () => {
-      checkWriteCapabilityAndWrite()
-        .catch((e) => {
-          if (retryCount < maxRetries) {
-            retryCount++;
-            logger.log(
-              `NFC not ready, retrying (${retryCount}/${maxRetries})...`
-            );
-            timeoutRef.current = setTimeout(checkNfcAndWrite, retryInterval);
-          } else {
-            logger.error("NFC write failed after retries", e, {
-              category: "nfc",
-              action: "writeQueue",
-              retryCount,
-              maxRetries
-            });
-            toast.error((to) => (
-              <span
-                className="flex grow flex-col cursor-pointer"
-                onClick={() => toast.dismiss(to.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    toast.dismiss(to.id);
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-              >
-                {e.message}
-              </span>
-            ));
-            isProcessingRef.current = false;
-          }
-        });
+      checkWriteCapabilityAndWrite().catch((e) => {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          logger.log(
+            `NFC not ready, retrying (${retryCount}/${maxRetries})...`,
+          );
+          timeoutRef.current = setTimeout(checkNfcAndWrite, retryInterval);
+        } else {
+          logger.error("NFC write failed after retries", e, {
+            category: "nfc",
+            action: "writeQueue",
+            retryCount,
+            maxRetries,
+          });
+          toast.error((to) => (
+            <span
+              className="flex grow cursor-pointer flex-col"
+              onClick={() => toast.dismiss(to.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toast.dismiss(to.id);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              {e.message}
+            </span>
+          ));
+          isProcessingRef.current = false;
+        }
+      });
     };
 
     timeoutRef.current = setTimeout(checkNfcAndWrite, 1000);

@@ -10,7 +10,7 @@ export function TourInitializer() {
   const { t } = useTranslation();
   const tourCompleted = usePreferencesStore((state) => state.tourCompleted);
   const setTourCompleted = usePreferencesStore(
-    (state) => state.setTourCompleted
+    (state) => state.setTourCompleted,
   );
 
   useEffect(() => {

@@ -6,18 +6,18 @@ import { SafeAreaInsets } from "./safeArea";
 
 const defaultSafeAreaInsets: SafeAreaInsets = {
   top: "0px",
-  bottom: "0px", 
+  bottom: "0px",
   left: "0px",
-  right: "0px"
+  right: "0px",
 };
 
 export enum ConnectionState {
   IDLE = "IDLE",
-  CONNECTING = "CONNECTING", 
+  CONNECTING = "CONNECTING",
   CONNECTED = "CONNECTED",
   RECONNECTING = "RECONNECTING",
   ERROR = "ERROR",
-  DISCONNECTED = "DISCONNECTED"
+  DISCONNECTED = "DISCONNECTED",
 }
 
 export interface DeviceHistoryEntry {
@@ -94,11 +94,14 @@ export const useStatusStore = create<StatusState>()((set) => ({
   setTargetDeviceAddress: (address) => set({ targetDeviceAddress: address }),
 
   connectionState: ConnectionState.IDLE,
-  setConnectionState: (state) => set({
-    connectionState: state,
-    // Treat RECONNECTING as "connected enough" to show cached data and enable UI
-    connected: state === ConnectionState.CONNECTED || state === ConnectionState.RECONNECTING
-  }),
+  setConnectionState: (state) =>
+    set({
+      connectionState: state,
+      // Treat RECONNECTING as "connected enough" to show cached data and enable UI
+      connected:
+        state === ConnectionState.CONNECTED ||
+        state === ConnectionState.RECONNECTING,
+    }),
 
   lastConnectionTime: null,
   setLastConnectionTime: (time) => set({ lastConnectionTime: time }),
@@ -119,7 +122,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
     totalSteps: 0,
     currentStep: 0,
     currentStepDisplay: "",
-    totalFiles: 0
+    totalFiles: 0,
   },
   setGamesIndex: (index) => set({ gamesIndex: index }),
 
@@ -127,7 +130,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
     systemId: "",
     systemName: "",
     mediaName: "",
-    mediaPath: ""
+    mediaPath: "",
   },
   setPlaying: (playing) => set({ playing }),
 
@@ -142,7 +145,8 @@ export const useStatusStore = create<StatusState>()((set) => ({
   setNfcModalOpen: (nfcModalOpen) => set({ nfcModalOpen }),
 
   proPurchaseModalOpen: false,
-  setProPurchaseModalOpen: (proPurchaseModalOpen) => set({ proPurchaseModalOpen }),
+  setProPurchaseModalOpen: (proPurchaseModalOpen) =>
+    set({ proPurchaseModalOpen }),
 
   writeOpen: false,
   setWriteOpen: (writeOpen) => set({ writeOpen }),
@@ -157,33 +161,33 @@ export const useStatusStore = create<StatusState>()((set) => ({
     set((state) => {
       const devices = [
         ...state.deviceHistory.filter((entry) => entry.address !== address),
-        { address }
+        { address },
       ];
       Preferences.set({
         key: "deviceHistory",
-        value: JSON.stringify(devices)
+        value: JSON.stringify(devices),
       }).catch(() => {});
       return {
-        deviceHistory: devices
+        deviceHistory: devices,
       };
     }),
   removeDeviceHistory: (address) =>
     set((state) => {
       const devices = state.deviceHistory.filter(
-        (entry) => entry.address !== address
+        (entry) => entry.address !== address,
       );
       Preferences.set({
         key: "deviceHistory",
-        value: JSON.stringify(devices)
+        value: JSON.stringify(devices),
       }).catch(() => {});
       return {
-        deviceHistory: devices
+        deviceHistory: devices,
       };
     }),
   clearDeviceHistory: () => {
     Preferences.set({
       key: "deviceHistory",
-      value: JSON.stringify([])
+      value: JSON.stringify([]),
     }).catch(() => {});
     set({ deviceHistory: [] });
   },
@@ -211,14 +215,14 @@ export const useStatusStore = create<StatusState>()((set) => ({
         totalSteps: 0,
         currentStep: 0,
         currentStepDisplay: "",
-        totalFiles: 0
+        totalFiles: 0,
       },
       playing: {
         systemId: "",
         systemName: "",
         mediaName: "",
-        mediaPath: ""
-      }
+        mediaPath: "",
+      },
     });
-  }
+  },
 }));

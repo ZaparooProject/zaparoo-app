@@ -3,7 +3,6 @@ import { useContext } from "react";
 import { SlideModalProvider } from "@/components/SlideModalProvider";
 import { SlideModalContext } from "@/hooks/useSlideModalManager";
 
-
 // Consumer component that can trigger manager functions
 function TestConsumer() {
   const manager = useContext(SlideModalContext);
@@ -47,7 +46,7 @@ describe("SlideModalProvider", () => {
     render(
       <SlideModalProvider>
         <div>Test Content</div>
-      </SlideModalProvider>
+      </SlideModalProvider>,
     );
 
     expect(screen.getByText("Test Content")).toBeInTheDocument();
@@ -57,7 +56,7 @@ describe("SlideModalProvider", () => {
     render(
       <SlideModalProvider>
         <TestConsumer />
-      </SlideModalProvider>
+      </SlideModalProvider>,
     );
 
     expect(screen.getByTestId("register-modals")).toBeInTheDocument();
@@ -92,7 +91,7 @@ describe("SlideModalProvider", () => {
     render(
       <SlideModalProvider>
         <TestComponent />
-      </SlideModalProvider>
+      </SlideModalProvider>,
     );
 
     // Test registration
@@ -138,7 +137,7 @@ describe("SlideModalProvider", () => {
     render(
       <SlideModalProvider>
         <TestComponent />
-      </SlideModalProvider>
+      </SlideModalProvider>,
     );
 
     // Register modals
@@ -170,7 +169,7 @@ describe("SlideModalProvider", () => {
     render(
       <SlideModalProvider>
         <TestComponent />
-      </SlideModalProvider>
+      </SlideModalProvider>,
     );
 
     // Should not throw error when no modals are registered

@@ -6,7 +6,7 @@ describe("ResponsiveContainer", () => {
     render(
       <ResponsiveContainer>
         <div>Test Content</div>
-      </ResponsiveContainer>
+      </ResponsiveContainer>,
     );
 
     expect(screen.getByText("Test Content")).toBeInTheDocument();
@@ -16,7 +16,7 @@ describe("ResponsiveContainer", () => {
     const { container } = render(
       <ResponsiveContainer>
         <div>Content</div>
-      </ResponsiveContainer>
+      </ResponsiveContainer>,
     );
 
     const wrapper = container.firstChild as HTMLElement;
@@ -27,7 +27,7 @@ describe("ResponsiveContainer", () => {
     const { container } = render(
       <ResponsiveContainer maxWidth="nav">
         <div>Content</div>
-      </ResponsiveContainer>
+      </ResponsiveContainer>,
     );
 
     const wrapper = container.firstChild as HTMLElement;
@@ -38,22 +38,32 @@ describe("ResponsiveContainer", () => {
     const { container } = render(
       <ResponsiveContainer maxWidth="full">
         <div>Content</div>
-      </ResponsiveContainer>
+      </ResponsiveContainer>,
     );
 
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper).toHaveClass("w-full");
-    expect(wrapper).not.toHaveClass("sm:max-w-2xl", "sm:max-w-lg", "sm:mx-auto");
+    expect(wrapper).not.toHaveClass(
+      "sm:max-w-2xl",
+      "sm:max-w-lg",
+      "sm:mx-auto",
+    );
   });
 
   it("should merge custom className with default classes", () => {
     const { container } = render(
       <ResponsiveContainer className="custom-class bg-red-500">
         <div>Content</div>
-      </ResponsiveContainer>
+      </ResponsiveContainer>,
     );
 
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper).toHaveClass("w-full", "sm:max-w-2xl", "sm:mx-auto", "custom-class", "bg-red-500");
+    expect(wrapper).toHaveClass(
+      "w-full",
+      "sm:max-w-2xl",
+      "sm:mx-auto",
+      "custom-class",
+      "bg-red-500",
+    );
   });
 });

@@ -50,7 +50,9 @@ export function filenameFromPath(path: string): string {
   // Get basename (last segment after final slash)
   const lastSlashIndex = normalizedPath.lastIndexOf("/");
   const basename =
-    lastSlashIndex >= 0 ? normalizedPath.slice(lastSlashIndex + 1) : normalizedPath;
+    lastSlashIndex >= 0
+      ? normalizedPath.slice(lastSlashIndex + 1)
+      : normalizedPath;
 
   if (!basename) return "";
 

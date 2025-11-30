@@ -8,7 +8,7 @@ const mockSend = vi.fn();
 const mockWsManager = {
   isConnected: true,
   currentState: "connected",
-  send: mockSend
+  send: mockSend,
 };
 
 describe("CoreAPI - settingsLogsDownload method", () => {
@@ -35,7 +35,7 @@ describe("CoreAPI - settingsLogsDownload method", () => {
     // Verify the request was sent with correct format
     expect(mockSend).toHaveBeenCalledOnce();
 
-    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
     expect(sentData.jsonrpc).toBe("2.0");
     expect(sentData.method).toBe(Method.SettingsLogsDownload);
     expect(sentData.id).toBeDefined();

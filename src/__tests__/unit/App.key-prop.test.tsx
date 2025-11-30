@@ -28,7 +28,9 @@ describe("App Component - CoreApiWebSocket Key Prop", () => {
 
     // The key prop should be dynamic based on device address
     // This ensures React will unmount and remount the component when the key changes
-    expect(appSource).toMatch(/<CoreApiWebSocket key={getDeviceAddress\(\)} \/>/);
+    expect(appSource).toMatch(
+      /<CoreApiWebSocket key={getDeviceAddress\(\)} \/>/,
+    );
   });
 
   it("should maintain other App component structure", () => {

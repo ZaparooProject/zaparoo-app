@@ -11,7 +11,7 @@ function BackHandler() {
   const navigate = useNavigate();
 
   useBackButtonHandler(
-    'navigation',
+    "navigation",
     () => {
       if (location.pathname === "/") {
         App.exitApp();
@@ -38,7 +38,7 @@ function BackHandler() {
 
       return false;
     },
-    0 // Lowest priority - fallback navigation
+    0, // Lowest priority - fallback navigation
   );
 
   return null;
@@ -46,20 +46,25 @@ function BackHandler() {
 
 export const Route = createRootRoute({
   component: () => (
-    <div className="flex flex-col h-screen w-screen">
+    <div className="flex h-screen w-screen flex-col">
       <SafeAreaHandler />
       <BackHandler />
       <TourInitializer />
-      <main className="flex-1 min-h-0">
+      <main className="min-h-0 flex-1">
         <Outlet />
       </main>
       <footer
-        className="flex-shrink-0 z-30"
-        style={{ '--bottom-nav-height': 'calc(80px + env(safe-area-inset-bottom, 0px))' } as React.CSSProperties}
+        className="z-30 flex-shrink-0"
+        style={
+          {
+            "--bottom-nav-height":
+              "calc(80px + env(safe-area-inset-bottom, 0px))",
+          } as React.CSSProperties
+        }
       >
         <BottomNav />
       </footer>
     </div>
   ),
-  errorComponent: ErrorComponent
+  errorComponent: ErrorComponent,
 });

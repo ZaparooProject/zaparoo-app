@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CoreAPI } from "@/lib/coreApi.ts";
 
 describe("CoreAPI Missing Methods", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockSend: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let mockWsManager: any;
 
   beforeEach(() => {
@@ -13,7 +12,7 @@ describe("CoreAPI Missing Methods", () => {
     mockWsManager = {
       isConnected: true,
       currentState: "connected",
-      send: mockSend
+      send: mockSend,
     };
     CoreAPI.setSend(mockSend);
     CoreAPI.setWsInstance(mockWsManager);

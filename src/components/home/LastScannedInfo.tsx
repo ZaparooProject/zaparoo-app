@@ -11,7 +11,7 @@ interface LastScannedInfoProps {
 
 export function LastScannedInfo({
   lastToken,
-  scanStatus
+  scanStatus,
 }: LastScannedInfoProps) {
   const { t } = useTranslation();
 
@@ -24,7 +24,7 @@ export function LastScannedInfo({
       </div>
       <div
         className={classNames({
-          color: scanStatus === ScanResult.Success ? successColor : ""
+          color: scanStatus === ScanResult.Success ? successColor : "",
         })}
       >
         <p>
@@ -32,7 +32,7 @@ export function LastScannedInfo({
             time:
               lastToken.uid === "" && lastToken.text === ""
                 ? "-"
-                : new Date(lastToken.scanTime).toLocaleString()
+                : new Date(lastToken.scanTime).toLocaleString(),
           })}
         </p>
         {lastToken.uid !== lastToken.text && (
@@ -41,7 +41,7 @@ export function LastScannedInfo({
               uid:
                 lastToken.uid === "" || lastToken.uid === "__api__"
                   ? "-"
-                  : lastToken.uid
+                  : lastToken.uid,
             })}
             {lastToken.uid !== "" && lastToken.uid !== "__api__" && (
               <CopyButton text={lastToken.uid} className="ml-1" />
@@ -50,9 +50,11 @@ export function LastScannedInfo({
         )}
         <p style={{ wordBreak: "break-all" }}>
           {t("scan.lastScannedText", {
-            text: lastToken.text === "" ? "-" : lastToken.text
+            text: lastToken.text === "" ? "-" : lastToken.text,
           })}
-          {lastToken.text !== "" && <CopyButton text={lastToken.text} className="ml-1" />}
+          {lastToken.text !== "" && (
+            <CopyButton text={lastToken.text} className="ml-1" />
+          )}
         </p>
       </div>
     </div>

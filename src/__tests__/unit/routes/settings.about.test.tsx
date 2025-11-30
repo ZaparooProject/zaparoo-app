@@ -6,21 +6,21 @@ import React from "react";
 // Mock dependencies
 vi.mock("@capacitor/browser", () => ({
   Browser: {
-    open: vi.fn()
-  }
+    open: vi.fn(),
+  },
 }));
 
 vi.mock("../../../hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({}))
+  useSmartSwipe: vi.fn(() => ({})),
 }));
 
 const mockNavigate = vi.fn();
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    createFileRoute: actual.createFileRoute
+    createFileRoute: actual.createFileRoute,
   };
 });
 
@@ -28,22 +28,24 @@ vi.mock("../../../components/PageFrame", () => ({
   PageFrame: ({ title, back, children, ...props }: any) => (
     <div data-testid="page-frame" {...props}>
       <div data-testid="page-title">{title}</div>
-      <button data-testid="back-button" onClick={back}>Back</button>
+      <button data-testid="back-button" onClick={back}>
+        Back
+      </button>
       <div data-testid="page-content">{children}</div>
     </div>
-  )
+  ),
 }));
 
 vi.mock("../../../components/wui/Button.tsx", () => ({
   Button: ({ label, onClick, variant }: any) => (
     <button
-      data-testid={`button-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      data-testid={`button-${label.toLowerCase().replace(/\s+/g, "-")}`}
       onClick={onClick}
       data-variant={variant}
     >
       {label}
     </button>
-  )
+  ),
 }));
 
 describe("Settings About Route", () => {
@@ -54,8 +56,8 @@ describe("Settings About Route", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
   });
 
@@ -65,9 +67,7 @@ describe("Settings About Route", () => {
 
   it("should render about page with all components", async () => {
     const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
     // Mock the about component
@@ -100,7 +100,7 @@ describe("Settings About Route", () => {
     render(
       <TestWrapper>
         <AboutComponent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     expect(screen.getByTestId("page-frame")).toBeInTheDocument();
@@ -116,9 +116,7 @@ describe("Settings About Route", () => {
   it("should display version from environment variable", async () => {
     const TestComponent = () => {
       return (
-        <p data-testid="app-version">
-          Version {import.meta.env.VITE_VERSION}
-        </p>
+        <p data-testid="app-version">Version {import.meta.env.VITE_VERSION}</p>
       );
     };
 
@@ -148,7 +146,9 @@ describe("Settings About Route", () => {
 
     render(<TestComponent />);
 
-    expect(screen.getByTestId("dev-name-1")).toHaveTextContent("Callan Barrett");
+    expect(screen.getByTestId("dev-name-1")).toHaveTextContent(
+      "Callan Barrett",
+    );
     expect(screen.getByTestId("dev-role-1")).toHaveTextContent("Developer");
     expect(screen.getByTestId("dev-name-2")).toHaveTextContent("Tim Wilsie");
     expect(screen.getByTestId("dev-role-2")).toHaveTextContent("UX Designer");
@@ -191,22 +191,43 @@ describe("Settings About Route", () => {
 
     expect(screen.getByText("Translations By")).toBeInTheDocument();
     expect(screen.getByTestId("translator-1")).toHaveTextContent("Seexelas");
-    expect(screen.getByTestId("language-1")).toHaveTextContent("French/Français");
+    expect(screen.getByTestId("language-1")).toHaveTextContent(
+      "French/Français",
+    );
     expect(screen.getByTestId("translator-2")).toHaveTextContent("Phoenix");
-    expect(screen.getByTestId("language-2")).toHaveTextContent("Dutch/Nederlands");
+    expect(screen.getByTestId("language-2")).toHaveTextContent(
+      "Dutch/Nederlands",
+    );
     expect(screen.getByTestId("translator-3")).toHaveTextContent("Anime0t4ku");
-    expect(screen.getByTestId("language-3")).toHaveTextContent("Japanese/日本語");
+    expect(screen.getByTestId("language-3")).toHaveTextContent(
+      "Japanese/日本語",
+    );
   });
 
   it("should display patron credits with correct styling", async () => {
     const TestComponent = () => {
       return (
         <div className="text-center">
-          Jon, <span style={{ color: "#F1C40D" }} data-testid="patron-retrorgb">RetroRGB</span>,{" "}
-          <span style={{ color: "#F1C40D" }} data-testid="patron-jose">Jose BG</span>,{" "}
-          <span style={{ color: "#F1C40D" }} data-testid="patron-mark">Mark DeRidder</span>,{" "}
-          <span style={{ color: "#E91E63" }} data-testid="patron-biddle">Biddle</span>,{" "}
-          <span style={{ color: "#E74C3C" }} data-testid="patron-retrosoft">Retrosoft Studios</span>
+          Jon,{" "}
+          <span style={{ color: "#F1C40D" }} data-testid="patron-retrorgb">
+            RetroRGB
+          </span>
+          ,{" "}
+          <span style={{ color: "#F1C40D" }} data-testid="patron-jose">
+            Jose BG
+          </span>
+          ,{" "}
+          <span style={{ color: "#F1C40D" }} data-testid="patron-mark">
+            Mark DeRidder
+          </span>
+          ,{" "}
+          <span style={{ color: "#E91E63" }} data-testid="patron-biddle">
+            Biddle
+          </span>
+          ,{" "}
+          <span style={{ color: "#E74C3C" }} data-testid="patron-retrosoft">
+            Retrosoft Studios
+          </span>
         </div>
       );
     };
@@ -220,8 +241,12 @@ describe("Settings About Route", () => {
     expect(screen.getByTestId("patron-jose")).toHaveStyle("color: #F1C40D");
     expect(screen.getByTestId("patron-biddle")).toHaveTextContent("Biddle");
     expect(screen.getByTestId("patron-biddle")).toHaveStyle("color: #E91E63");
-    expect(screen.getByTestId("patron-retrosoft")).toHaveTextContent("Retrosoft Studios");
-    expect(screen.getByTestId("patron-retrosoft")).toHaveStyle("color: #E74C3C");
+    expect(screen.getByTestId("patron-retrosoft")).toHaveTextContent(
+      "Retrosoft Studios",
+    );
+    expect(screen.getByTestId("patron-retrosoft")).toHaveStyle(
+      "color: #E74C3C",
+    );
   });
 
   it("should handle Patreon button click", async () => {
@@ -233,7 +258,7 @@ describe("Settings About Route", () => {
           data-testid="patreon-button"
           onClick={() =>
             Browser.open({
-              url: "https://patreon.com/wizzo"
+              url: "https://patreon.com/wizzo",
             })
           }
         >
@@ -248,7 +273,7 @@ describe("Settings About Route", () => {
     fireEvent.click(patreonButton);
 
     expect(Browser.open).toHaveBeenCalledWith({
-      url: "https://patreon.com/wizzo"
+      url: "https://patreon.com/wizzo",
     });
   });
 
@@ -276,12 +301,15 @@ describe("Settings About Route", () => {
     const TestComponent = () => {
       return (
         <div className="flex flex-col gap-3">
-          <h3 className="text-center text-lg font-bold" data-testid="wizzodev-title">
+          <h3
+            className="text-center text-lg font-bold"
+            data-testid="wizzodev-title"
+          >
             Wizzodev
           </h3>
           <div className="text-center">
-            Jon, <span style={{ color: "#F1C40D" }}>RetroRGB</span>,{" "}
-            Casey McGinty, <span style={{ color: "#E91E63" }}>Biddle</span>
+            Jon, <span style={{ color: "#F1C40D" }}>RetroRGB</span>, Casey
+            McGinty, <span style={{ color: "#E91E63" }}>Biddle</span>
           </div>
         </div>
       );
@@ -308,7 +336,10 @@ describe("Settings About Route", () => {
               <span>Developer Info</span>
             </div>
           </div>
-          <div data-testid="translations-section" className="flex flex-col gap-2">
+          <div
+            data-testid="translations-section"
+            className="flex flex-col gap-2"
+          >
             <h3 className="text-center text-lg font-bold">Translations</h3>
           </div>
           <div data-testid="patrons-section" className="flex flex-col gap-3">
@@ -320,11 +351,27 @@ describe("Settings About Route", () => {
 
     render(<TestComponent />);
 
-    expect(screen.getByTestId("about-content")).toHaveClass("flex", "flex-col", "gap-8");
+    expect(screen.getByTestId("about-content")).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-8",
+    );
     expect(screen.getByTestId("app-info-section")).toHaveClass("text-center");
-    expect(screen.getByTestId("team-section")).toHaveClass("flex", "flex-col", "gap-2");
-    expect(screen.getByTestId("translations-section")).toHaveClass("flex", "flex-col", "gap-2");
-    expect(screen.getByTestId("patrons-section")).toHaveClass("flex", "flex-col", "gap-3");
+    expect(screen.getByTestId("team-section")).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-2",
+    );
+    expect(screen.getByTestId("translations-section")).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-2",
+    );
+    expect(screen.getByTestId("patrons-section")).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-3",
+    );
   });
 
   it("should display all major patron contributors", async () => {
@@ -342,10 +389,14 @@ describe("Settings About Route", () => {
 
     render(<TestComponent />);
 
-    expect(screen.getByTestId("patron-gentlemen")).toHaveTextContent("Gentlemen's Pixel Club");
+    expect(screen.getByTestId("patron-gentlemen")).toHaveTextContent(
+      "Gentlemen's Pixel Club",
+    );
     expect(screen.getByTestId("patron-voljoe")).toHaveTextContent("VolJoe");
     expect(screen.getByTestId("patron-shijuro")).toHaveTextContent("Shijuro");
     expect(screen.getByTestId("patron-tim")).toHaveTextContent("Tim Sullivan");
-    expect(screen.getByTestId("patron-jesusfish")).toHaveTextContent("TheJesusFish");
+    expect(screen.getByTestId("patron-jesusfish")).toHaveTextContent(
+      "TheJesusFish",
+    );
   });
 });

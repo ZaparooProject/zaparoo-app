@@ -27,7 +27,7 @@ export enum Method {
   Version = "version",
   Playtime = "playtime",
   PlaytimeLimits = "settings.playtime.limits",
-  PlaytimeLimitsUpdate = "settings.playtime.limits.update"
+  PlaytimeLimitsUpdate = "settings.playtime.limits.update",
 }
 
 export enum Notification {
@@ -40,7 +40,7 @@ export enum Notification {
   MediaStopped = "media.stopped",
   MediaIndexing = "media.indexing",
   PlaytimeLimitWarning = "playtime.limit.warning",
-  PlaytimeLimitReached = "playtime.limit.reached"
+  PlaytimeLimitReached = "playtime.limit.reached",
 }
 
 export interface VersionResponse {
@@ -209,7 +209,7 @@ export interface PlayingResponse {
 export enum ScanResult {
   Default,
   Success,
-  Error
+  Error,
 }
 
 export interface MediaResponse {

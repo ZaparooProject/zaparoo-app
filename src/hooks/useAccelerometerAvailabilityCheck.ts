@@ -10,8 +10,12 @@ import { logger } from "../lib/logger";
  * The result is cached in the preferences store.
  */
 export function useAccelerometerAvailabilityCheck() {
-  const setAccelerometerAvailable = usePreferencesStore((state) => state.setAccelerometerAvailable);
-  const setAccelerometerAvailabilityHydrated = usePreferencesStore((state) => state.setAccelerometerAvailabilityHydrated);
+  const setAccelerometerAvailable = usePreferencesStore(
+    (state) => state.setAccelerometerAvailable,
+  );
+  const setAccelerometerAvailabilityHydrated = usePreferencesStore(
+    (state) => state.setAccelerometerAvailabilityHydrated,
+  );
 
   useEffect(() => {
     // Skip on web platform
@@ -35,7 +39,11 @@ export function useAccelerometerAvailabilityCheck() {
         // Clean up test listener
         await listener.remove();
       } catch (e) {
-        logger.error("Failed to check accelerometer availability:", e, { category: "accelerometer", action: "availabilityCheck", severity: "warning" });
+        logger.error("Failed to check accelerometer availability:", e, {
+          category: "accelerometer",
+          action: "availabilityCheck",
+          severity: "warning",
+        });
         // On error, assume accelerometer not available
         setAccelerometerAvailable(false);
         setAccelerometerAvailabilityHydrated(true);

@@ -9,7 +9,7 @@ describe("StatusStore", () => {
       connectionError: "",
       connectionState: ConnectionState.IDLE,
       lastConnectionTime: null,
-      deviceHistory: []
+      deviceHistory: [],
     });
   });
 
@@ -24,32 +24,37 @@ describe("StatusStore", () => {
 
   it("should update connection state", () => {
     const { setConnected, setConnectionError } = useStatusStore.getState();
-    
+
     setConnected(true);
     expect(useStatusStore.getState().connected).toBe(true);
-    
+
     setConnectionError("Test error");
     expect(useStatusStore.getState().connectionError).toBe("Test error");
   });
 
   it("should manage device history", () => {
-    const { addDeviceHistory, removeDeviceHistory, clearDeviceHistory } = useStatusStore.getState();
-    
+    const { addDeviceHistory, removeDeviceHistory, clearDeviceHistory } =
+      useStatusStore.getState();
+
     // Add a device
     addDeviceHistory("192.168.1.100");
-    expect(useStatusStore.getState().deviceHistory).toEqual([{ address: "192.168.1.100" }]);
-    
+    expect(useStatusStore.getState().deviceHistory).toEqual([
+      { address: "192.168.1.100" },
+    ]);
+
     // Add another device
     addDeviceHistory("192.168.1.200");
     expect(useStatusStore.getState().deviceHistory).toEqual([
       { address: "192.168.1.100" },
-      { address: "192.168.1.200" }
+      { address: "192.168.1.200" },
     ]);
-    
+
     // Remove a device
     removeDeviceHistory("192.168.1.100");
-    expect(useStatusStore.getState().deviceHistory).toEqual([{ address: "192.168.1.200" }]);
-    
+    expect(useStatusStore.getState().deviceHistory).toEqual([
+      { address: "192.168.1.200" },
+    ]);
+
     // Clear all devices
     clearDeviceHistory();
     expect(useStatusStore.getState().deviceHistory).toEqual([]);
@@ -81,30 +86,32 @@ describe("StatusStore", () => {
     it("should set connection state", () => {
       const { setConnectionState } = useStatusStore.getState();
       setConnectionState(ConnectionState.CONNECTING);
-      
-      expect(useStatusStore.getState().connectionState).toBe(ConnectionState.CONNECTING);
+
+      expect(useStatusStore.getState().connectionState).toBe(
+        ConnectionState.CONNECTING,
+      );
     });
 
     it("should set last connection time", () => {
       const { setLastConnectionTime } = useStatusStore.getState();
       const now = Date.now();
       setLastConnectionTime(now);
-      
+
       expect(useStatusStore.getState().lastConnectionTime).toBe(now);
     });
 
     it("should provide backward compatible connected getter", () => {
       const { setConnectionState } = useStatusStore.getState();
-      
+
       setConnectionState(ConnectionState.CONNECTED);
       expect(useStatusStore.getState().connected).toBe(true);
-      
+
       setConnectionState(ConnectionState.CONNECTING);
       expect(useStatusStore.getState().connected).toBe(false);
-      
+
       setConnectionState(ConnectionState.DISCONNECTED);
       expect(useStatusStore.getState().connected).toBe(false);
-      
+
       setConnectionState(ConnectionState.ERROR);
       expect(useStatusStore.getState().connected).toBe(false);
     });
@@ -126,7 +133,7 @@ describe("StatusStore", () => {
         uid: "test-uid",
         text: "test-text",
         data: "test-data",
-        scanTime: "2024-01-01T00:00:00Z"
+        scanTime: "2024-01-01T00:00:00Z",
       });
       store.setGamesIndex({
         exists: false,
@@ -134,13 +141,13 @@ describe("StatusStore", () => {
         totalSteps: 10,
         currentStep: 5,
         currentStepDisplay: "Processing...",
-        totalFiles: 100
+        totalFiles: 100,
       });
       store.setPlaying({
         systemId: "test-system",
         systemName: "Test System",
         mediaName: "Test Game",
-        mediaPath: "/path/to/game"
+        mediaPath: "/path/to/game",
       });
 
       // Reset the state
@@ -162,7 +169,7 @@ describe("StatusStore", () => {
         uid: "",
         text: "",
         data: "",
-        scanTime: ""
+        scanTime: "",
       });
       expect(resetState.gamesIndex).toEqual({
         exists: true,
@@ -171,13 +178,13 @@ describe("StatusStore", () => {
         totalSteps: 0,
         currentStep: 0,
         currentStepDisplay: "",
-        totalFiles: 0
+        totalFiles: 0,
       });
       expect(resetState.playing).toEqual({
         systemId: "",
         systemName: "",
         mediaName: "",
-        mediaPath: ""
+        mediaPath: "",
       });
     });
 

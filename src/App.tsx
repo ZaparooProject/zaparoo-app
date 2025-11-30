@@ -38,7 +38,7 @@ function QueueProcessors() {
   useShakeDetection({
     shakeEnabled,
     launcherAccess,
-    connected
+    connected,
   });
   return null;
 }
@@ -50,7 +50,7 @@ const router = createRouter({
   basepath:
     Capacitor.isNativePlatform() || location.hostname === "zaparoo.app"
       ? "/"
-      : "/app/"
+      : "/app/",
 });
 
 declare module "@tanstack/react-router" {
@@ -63,16 +63,16 @@ export default function App() {
   // Wait for preferences to hydrate before rendering to prevent layout shifts
   const hasHydrated = usePreferencesStore((state) => state._hasHydrated);
   const proAccessHydrated = usePreferencesStore(
-    (state) => state._proAccessHydrated
+    (state) => state._proAccessHydrated,
   );
   const nfcAvailabilityHydrated = usePreferencesStore(
-    (state) => state._nfcAvailabilityHydrated
+    (state) => state._nfcAvailabilityHydrated,
   );
   const cameraAvailabilityHydrated = usePreferencesStore(
-    (state) => state._cameraAvailabilityHydrated
+    (state) => state._cameraAvailabilityHydrated,
   );
   const accelerometerAvailabilityHydrated = usePreferencesStore(
-    (state) => state._accelerometerAvailabilityHydrated
+    (state) => state._accelerometerAvailabilityHydrated,
   );
   const showFilenames = usePreferencesStore((state) => state.showFilenames);
 
@@ -130,7 +130,7 @@ export default function App() {
           <span className="text-success pr-1 pl-1">
             <DatabaseIcon size="24" />
           </span>
-        )
+        ),
       });
     }
   }, [gamesIndex, prevGamesIndex, t]);
@@ -142,9 +142,10 @@ export default function App() {
       playing.mediaName !== "" &&
       playing.mediaName !== prevPlaying?.mediaName
     ) {
-      const displayName = showFilenames && playing.mediaPath
-        ? filenameFromPath(playing.mediaPath) || playing.mediaName
-        : playing.mediaName;
+      const displayName =
+        showFilenames && playing.mediaPath
+          ? filenameFromPath(playing.mediaPath) || playing.mediaName
+          : playing.mediaName;
 
       toast.success(
         (to) => (
@@ -167,14 +168,20 @@ export default function App() {
             <span className="text-success pr-1">
               <PlayIcon size="24" />
             </span>
-          )
-        }
+          ),
+        },
       );
     }
   }, [playing, prevPlaying, t, showFilenames]);
 
   // Block rendering until preferences, Pro access, and hardware availability are hydrated to prevent layout shifts
-  if (!hasHydrated || !proAccessHydrated || !nfcAvailabilityHydrated || !cameraAvailabilityHydrated || !accelerometerAvailabilityHydrated) {
+  if (
+    !hasHydrated ||
+    !proAccessHydrated ||
+    !nfcAvailabilityHydrated ||
+    !cameraAvailabilityHydrated ||
+    !accelerometerAvailabilityHydrated
+  ) {
     return null; // Keep splash screen visible
   }
 
@@ -195,20 +202,20 @@ export default function App() {
             backdropFilter: "blur(8px)",
             borderRadius: "12px",
             width: "calc(100% - 2rem)",
-            color: "var(--color-foreground)"
-          }
+            color: "var(--color-foreground)",
+          },
         }}
         containerStyle={{
           top: "calc(env(safe-area-inset-top, 0px) + 1rem)",
           left: "env(safe-area-inset-left, 0px)",
-          right: "env(safe-area-inset-right, 0px)"
+          right: "env(safe-area-inset-right, 0px)",
         }}
       />
       <div
         className="app-frame h-screen w-screen"
         style={{
           background: "var(--color-background)",
-          color: "var(--color-foreground)"
+          color: "var(--color-foreground)",
         }}
       >
         <SlideModalProvider>

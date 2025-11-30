@@ -9,49 +9,49 @@ const useStatusStoreMock = vi.fn();
 
 vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
-    settingsLogsDownload: mockSettingsLogsDownload
-  }
+    settingsLogsDownload: mockSettingsLogsDownload,
+  },
 }));
 
 vi.mock("../../../hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({}))
+  useSmartSwipe: vi.fn(() => ({})),
 }));
 
 // Mock TanStack Router
 vi.mock("@tanstack/react-router", async (originalImport) => {
-  const actual = await originalImport() as any;
+  const actual = (await originalImport()) as any;
   return {
     ...actual,
     useNavigate: vi.fn(() => vi.fn()),
     createFileRoute: vi.fn(() => ({
-      options: { component: null }
-    }))
+      options: { component: null },
+    })),
   };
 });
 
 // Mock react-i18next
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key
-  })
+    t: (key: string) => key,
+  }),
 }));
 
 vi.mock("../../../lib/store", () => ({
-  useStatusStore: useStatusStoreMock
+  useStatusStore: useStatusStoreMock,
 }));
 
 vi.mock("@tanstack/react-query", async (originalImport) => {
-  const actual = await originalImport() as any;
+  const actual = (await originalImport()) as any;
   return {
     ...actual,
     useQuery: vi.fn(),
     QueryClient: actual.QueryClient,
-    QueryClientProvider: actual.QueryClientProvider
+    QueryClientProvider: actual.QueryClientProvider,
   };
 });
 
 // Mock clipboard API
-Object.defineProperty(navigator, 'clipboard', {
+Object.defineProperty(navigator, "clipboard", {
   value: {
     writeText: vi.fn().mockImplementation(() => Promise.resolve()),
   },
@@ -59,12 +59,15 @@ Object.defineProperty(navigator, 'clipboard', {
 });
 
 // Mock URL.createObjectURL and related APIs
-global.URL.createObjectURL = vi.fn(() => 'mock-url');
+global.URL.createObjectURL = vi.fn(() => "mock-url");
 global.URL.revokeObjectURL = vi.fn();
 
 // Mock atob and btoa
 global.atob = vi.fn((str) => {
-  if (str === "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0=") {
+  if (
+    str ===
+    "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0="
+  ) {
     return '{"level":"info","time":"2025-01-01T12:00:00Z","message":"test message"}';
   }
   return `decoded-${str}`;
@@ -84,8 +87,8 @@ describe("Settings Logs Route", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
 
     // Initialize mocks with default values
@@ -120,39 +123,41 @@ describe("Settings Logs Route", () => {
       isFetched: true,
       isFetching: false,
       refetch: vi.fn(),
-      status: hasData ? 'success' : 'error'
+      status: hasData ? "success" : "error",
     } as any);
 
     const LogsComponent = ({ data }: { data?: any }) => {
-      console.log('LogsComponent rendering...');
+      console.log("LogsComponent rendering...");
       let connected;
       try {
         connected = useStatusStoreMock((state: any) => {
-          console.log('useStatusStoreMock called with state:', state);
+          console.log("useStatusStoreMock called with state:", state);
           return state.connected;
         });
-        console.log('Connected value:', connected);
+        console.log("Connected value:", connected);
       } catch (error) {
-        console.error('Error in useStatusStoreMock:', error);
+        console.error("Error in useStatusStoreMock:", error);
         connected = true; // fallback
       }
-      console.log('Setting up state...');
+      console.log("Setting up state...");
       const [searchTerm, setSearchTerm] = React.useState("");
       const levelFilters = {
         debug: true,
         info: true,
         warn: true,
-        error: true
+        error: true,
       };
 
-      console.log('Processing logEntries with data:', data);
+      console.log("Processing logEntries with data:", data);
       // Process log entries from the mocked data - this will now update properly
       const logEntries = React.useMemo(() => {
         if (!data?.content) return [];
 
         try {
           const decodedContent = atob(data.content);
-          const lines = decodedContent.split('\n').filter(line => line.trim());
+          const lines = decodedContent
+            .split("\n")
+            .filter((line) => line.trim());
 
           return lines.map((line, index) => {
             try {
@@ -162,7 +167,7 @@ describe("Settings Logs Route", () => {
                 level: "info",
                 time: new Date().toISOString(),
                 message: line,
-                _index: index
+                _index: index,
               };
             }
           });
@@ -172,8 +177,9 @@ describe("Settings Logs Route", () => {
       }, [data]);
 
       const filteredEntries = React.useMemo(() => {
-        return logEntries.filter(entry => {
-          const levelKey = entry.level.toLowerCase() as keyof typeof levelFilters;
+        return logEntries.filter((entry) => {
+          const levelKey =
+            entry.level.toLowerCase() as keyof typeof levelFilters;
           if (!levelFilters[levelKey] && levelFilters[levelKey] !== undefined) {
             return false;
           }
@@ -189,7 +195,6 @@ describe("Settings Logs Route", () => {
           return true;
         });
       }, [logEntries, levelFilters, searchTerm]);
-
 
       const downloadFile = () => {
         if (!data) return;
@@ -207,7 +212,7 @@ describe("Settings Logs Route", () => {
         await navigator.clipboard.writeText(decodedContent);
       };
 
-      console.log('About to return JSX, connected:', connected, 'data:', data);
+      console.log("About to return JSX, connected:", connected, "data:", data);
       return (
         <div data-testid="logs-page">
           <h1>settings.logs.title</h1>
@@ -232,7 +237,7 @@ describe("Settings Logs Route", () => {
           )}
 
           <button
-            onClick={() => console.log('Refresh triggered')}
+            onClick={() => console.log("Refresh triggered")}
             disabled={!connected}
             data-testid="refresh-button"
           >
@@ -259,17 +264,29 @@ describe("Settings Logs Route", () => {
           {data && filteredEntries.length > 0 && (
             <div data-testid="log-entries">
               <div data-testid="entry-count">
-                {searchTerm || Object.values(levelFilters).some(v => !v) ? (
-                  <>Showing {filteredEntries.length} of {logEntries.length} entries</>
+                {searchTerm || Object.values(levelFilters).some((v) => !v) ? (
+                  <>
+                    Showing {filteredEntries.length} of {logEntries.length}{" "}
+                    entries
+                  </>
                 ) : (
                   <>{logEntries.length} entries</>
                 )}
               </div>
               {filteredEntries.map((entry) => (
-                <div key={entry._index} data-testid={`log-entry-${entry._index}`}>
-                  <span data-testid={`log-level-${entry._index}`}>{entry.level}</span>
-                  <span data-testid={`log-time-${entry._index}`}>{entry.time}</span>
-                  <span data-testid={`log-message-${entry._index}`}>{entry.message}</span>
+                <div
+                  key={entry._index}
+                  data-testid={`log-entry-${entry._index}`}
+                >
+                  <span data-testid={`log-level-${entry._index}`}>
+                    {entry.level}
+                  </span>
+                  <span data-testid={`log-time-${entry._index}`}>
+                    {entry.time}
+                  </span>
+                  <span data-testid={`log-message-${entry._index}`}>
+                    {entry.message}
+                  </span>
                 </div>
               ))}
             </div>
@@ -281,7 +298,7 @@ describe("Settings Logs Route", () => {
     return render(
       <QueryClientProvider client={queryClient}>
         <LogsComponent data={mockData} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
   };
 
@@ -302,22 +319,26 @@ describe("Settings Logs Route", () => {
   it("renders log entries when data is available", async () => {
     const mockLogData = {
       filename: "test.log",
-      content: "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0=",
-      size: 100
+      content:
+        "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0=",
+      size: 100,
     };
 
     await renderLogsComponent(mockLogData);
 
     expect(screen.getByTestId("log-entries")).toBeInTheDocument();
     expect(screen.getByTestId("log-entry-0")).toBeInTheDocument();
-    expect(screen.getByTestId("log-message-0")).toHaveTextContent("test message");
+    expect(screen.getByTestId("log-message-0")).toHaveTextContent(
+      "test message",
+    );
   });
 
   it("shows copy and download buttons when data is available", async () => {
     const mockLogData = {
       filename: "test.log",
-      content: "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0=",
-      size: 100
+      content:
+        "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0=",
+      size: 100,
     };
 
     await renderLogsComponent(mockLogData);
@@ -333,8 +354,9 @@ describe("Settings Logs Route", () => {
   it("shows no entries message when no entries match filters", async () => {
     const mockLogData = {
       filename: "test.log",
-      content: "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0=",
-      size: 100
+      content:
+        "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0=",
+      size: 100,
     };
 
     await renderLogsComponent(mockLogData);
@@ -343,14 +365,17 @@ describe("Settings Logs Route", () => {
     fireEvent.change(searchInput, { target: { value: "nonexistent" } });
 
     expect(screen.getByTestId("no-entries")).toBeInTheDocument();
-    expect(screen.getByText("settings.logs.noEntriesFound")).toBeInTheDocument();
+    expect(
+      screen.getByText("settings.logs.noEntriesFound"),
+    ).toBeInTheDocument();
   });
 
   it("handles clipboard copy functionality", async () => {
     const mockLogData = {
       filename: "test.log",
-      content: "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0=",
-      size: 100
+      content:
+        "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0=",
+      size: 100,
     };
 
     await renderLogsComponent(mockLogData);
@@ -359,17 +384,18 @@ describe("Settings Logs Route", () => {
     fireEvent.click(copyButton);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      '{"level":"info","time":"2025-01-01T12:00:00Z","message":"test message"}'
+      '{"level":"info","time":"2025-01-01T12:00:00Z","message":"test message"}',
     );
   });
 
   it("handles download functionality", async () => {
-    const consoleSpy = vi.spyOn(console, 'log');
+    const consoleSpy = vi.spyOn(console, "log");
 
     const mockLogData = {
       filename: "test.log",
-      content: "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0=",
-      size: 100
+      content:
+        "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0=",
+      size: 100,
     };
 
     await renderLogsComponent(mockLogData);
@@ -377,14 +403,17 @@ describe("Settings Logs Route", () => {
     const downloadButton = screen.getByTestId("download-button");
     fireEvent.click(downloadButton);
 
-    expect(consoleSpy).toHaveBeenCalledWith("Download triggered for:", "test.log");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Download triggered for:",
+      "test.log",
+    );
   });
 
   it("handles malformed log data gracefully", async () => {
     const mockLogData = {
       filename: "bad.log",
       content: "aW52YWxpZCBqc29u", // "invalid json" in base64
-      size: 50
+      size: 50,
     };
 
     await renderLogsComponent(mockLogData);
@@ -398,13 +427,15 @@ describe("Settings Logs Route", () => {
     const mockLogData = {
       filename: "empty.log",
       content: "",
-      size: 0
+      size: 0,
     };
 
     await renderLogsComponent(mockLogData);
 
     expect(screen.getByTestId("no-entries")).toBeInTheDocument();
-    expect(screen.getByText("settings.logs.noEntriesFound")).toBeInTheDocument();
+    expect(
+      screen.getByText("settings.logs.noEntriesFound"),
+    ).toBeInTheDocument();
   });
 
   // Removed skipped test "shows correct entry counts with filters" - same data count mismatch issue
@@ -412,13 +443,16 @@ describe("Settings Logs Route", () => {
   it("displays log timestamps correctly", async () => {
     const mockLogData = {
       filename: "test.log",
-      content: "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0=",
-      size: 100
+      content:
+        "eyJsZXZlbCI6ImluZm8iLCJ0aW1lIjoiMjAyNS0wMS0wMVQxMjowMDowMFoiLCJtZXNzYWdlIjoidGVzdCBtZXNzYWdlIn0=",
+      size: 100,
     };
 
     await renderLogsComponent(mockLogData);
 
-    expect(screen.getByTestId("log-time-0")).toHaveTextContent("2025-01-01T12:00:00Z");
+    expect(screen.getByTestId("log-time-0")).toHaveTextContent(
+      "2025-01-01T12:00:00Z",
+    );
   });
 
   // Removed skipped test "displays log levels correctly" - log level ordering issue due to test architecture

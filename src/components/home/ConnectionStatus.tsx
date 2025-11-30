@@ -13,17 +13,24 @@ interface ConnectionStatusProps {
   onRetry?: () => void;
 }
 
-export const ConnectionStatus = memo(function ConnectionStatus({ connected, connectionState, onRetry }: ConnectionStatusProps) {
+export const ConnectionStatus = memo(function ConnectionStatus({
+  connected,
+  connectionState,
+  onRetry,
+}: ConnectionStatusProps) {
   const { t } = useTranslation();
 
   // Support both old boolean prop and new connectionState prop
-  const isConnected = connectionState ? connectionState === ConnectionState.CONNECTED : connected;
+  const isConnected = connectionState
+    ? connectionState === ConnectionState.CONNECTED
+    : connected;
   const isConnecting = connectionState === ConnectionState.CONNECTING;
   const isReconnecting = connectionState === ConnectionState.RECONNECTING;
   const isError = connectionState === ConnectionState.ERROR;
 
   // Determine icon, color, and content based on state
-  const showWarningIcon = isError || (!isConnected && !isConnecting && !isReconnecting);
+  const showWarningIcon =
+    isError || (!isConnected && !isConnecting && !isReconnecting);
   const iconColor = isConnected
     ? "text-success"
     : isReconnecting
@@ -52,13 +59,17 @@ export const ConnectionStatus = memo(function ConnectionStatus({ connected, conn
     <Card className="mb-4">
       <div className="flex flex-row items-center justify-between gap-3">
         <div className={`px-1.5 ${iconColor}`}>
-          {showWarningIcon ? <WarningIcon size="24" /> : <DeviceIcon size="24" />}
+          {showWarningIcon ? (
+            <WarningIcon size="24" />
+          ) : (
+            <DeviceIcon size="24" />
+          )}
         </div>
         <div className="flex grow flex-col">
           <span className={titleClass}>{titleText}</span>
           {isError ? (
             <button
-              className="text-left text-sm text-primary underline"
+              className="text-primary text-left text-sm underline"
               onClick={() => {
                 onRetry?.();
               }}
@@ -66,9 +77,11 @@ export const ConnectionStatus = memo(function ConnectionStatus({ connected, conn
               {t("scan.retry")}
             </button>
           ) : (
-            <span className={isReconnecting ? "text-muted-foreground" : undefined}>
+            <span
+              className={isReconnecting ? "text-muted-foreground" : undefined}
+            >
               {t("scan.connectedSub", {
-                ip: getDeviceAddress()
+                ip: getDeviceAddress(),
               })}
             </span>
           )}
@@ -76,7 +89,7 @@ export const ConnectionStatus = memo(function ConnectionStatus({ connected, conn
         <Link
           to="/settings"
           search={{
-            focus: "address"
+            focus: "address",
           }}
         >
           <Button icon={<SettingsIcon size="24" />} variant="text" />

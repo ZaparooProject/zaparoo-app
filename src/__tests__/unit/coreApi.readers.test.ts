@@ -20,7 +20,7 @@ describe("CoreAPI - readers method", () => {
 
     // Should call send with correct method
     expect(mockSend).toHaveBeenCalledWith(
-      expect.stringContaining('"method":"readers"')
+      expect.stringContaining('"method":"readers"'),
     );
   });
 });

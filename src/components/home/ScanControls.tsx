@@ -10,7 +10,7 @@ import { usePreferencesStore } from "../../lib/preferencesStore";
 function getScanStatusAnnouncement(
   scanSession: boolean,
   scanStatus: ScanResult,
-  t: (key: string) => string
+  t: (key: string) => string,
 ): string {
   if (scanSession) {
     return t("scan.statusScanning");
@@ -37,13 +37,17 @@ export function ScanControls({
   scanStatus,
   connected,
   onScanButton,
-  onCameraScan
+  onCameraScan,
 }: ScanControlsProps) {
   const { t } = useTranslation();
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
   const cameraAvailable = usePreferencesStore((state) => state.cameraAvailable);
 
-  const statusAnnouncement = getScanStatusAnnouncement(scanSession, scanStatus, t);
+  const statusAnnouncement = getScanStatusAnnouncement(
+    scanSession,
+    scanStatus,
+    t,
+  );
 
   return (
     <>
@@ -57,7 +61,7 @@ export function ScanControls({
           <div
             onClick={onScanButton}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 onScanButton();
               }
@@ -65,7 +69,7 @@ export function ScanControls({
             role="button"
             tabIndex={0}
             aria-label={t("scan.pressToScan")}
-            className="inline-block cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+            className="focus-visible:ring-offset-background inline-block cursor-pointer rounded-full focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-4 focus-visible:outline-none"
           >
             <ScanSpinner status={scanStatus} spinning={scanSession} />
           </div>

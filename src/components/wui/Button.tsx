@@ -50,27 +50,28 @@ export const Button = memo(function Button(props: ButtonProps) {
           "py-1.5": size === "default",
           // Large size
           "py-2": size === "lg",
-          "text-lg": size === "lg"
+          "text-lg": size === "lg",
         },
         // Icon-only button sizes
         {
           "h-8 w-8 min-w-8 px-1.5": !props.label && props.icon && size === "sm",
           "h-10 w-10 min-w-10 px-1.5":
             !props.label && props.icon && size === "default",
-          "h-12 w-12 min-w-12 px-2": !props.label && props.icon && size === "lg"
+          "h-12 w-12 min-w-12 px-2":
+            !props.label && props.icon && size === "lg",
         },
         // Label padding
         {
           "px-4": props.label && size === "sm",
           "px-6": props.label && size === "default",
-          "px-8": props.label && size === "lg"
+          "px-8": props.label && size === "lg",
         },
         // Rounded corners
         {
           "rounded-full": !props.label && props.icon,
           "rounded-[16px]": props.label && size === "sm",
           "rounded-[20px]": props.label && size === "default",
-          "rounded-[24px]": props.label && size === "lg"
+          "rounded-[24px]": props.label && size === "lg",
         },
         // Variants and states
         {
@@ -82,9 +83,9 @@ export const Button = memo(function Button(props: ButtonProps) {
           "border-foreground-disabled": props.disabled,
           "text-foreground-disabled": props.disabled,
           "text-white": !props.disabled,
-          "opacity-80": isPressed && !props.disabled
+          "opacity-80": isPressed && !props.disabled,
         },
-        props.className
+        props.className,
       )}
       disabled={props.disabled}
       onClick={() => {
@@ -95,6 +96,7 @@ export const Button = memo(function Button(props: ButtonProps) {
       }}
       onTouchStart={(e) => {
         const touch = e.touches[0];
+        if (!touch) return;
         touchStartPos.current = { x: touch.clientX, y: touch.clientY };
         hasMoved.current = false;
         setIsPressed(true);
@@ -102,9 +104,10 @@ export const Button = memo(function Button(props: ButtonProps) {
       onTouchMove={(e) => {
         if (touchStartPos.current) {
           const touch = e.touches[0];
+          if (!touch) return;
           const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
           const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
-          
+
           // If moved more than 10px, consider it a scroll gesture
           if (deltaX > 10 || deltaY > 10) {
             hasMoved.current = true;

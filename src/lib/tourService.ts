@@ -14,12 +14,19 @@ export interface TourNavigate {
  * - Updating the media database
  * - Creating cards
  */
-export const createAppTour = (navigate: TourNavigate, t: TFunction, connected: boolean) => {
+export const createAppTour = (
+  navigate: TourNavigate,
+  t: TFunction,
+  connected: boolean,
+) => {
   const TOTAL_STEPS = connected ? 4 : 5;
 
   // Helper to format text with step indicator and progress bar
   const formatText = (step: number, text: string) => {
-    const indicator = t("tour.stepIndicator", { current: step, total: TOTAL_STEPS });
+    const indicator = t("tour.stepIndicator", {
+      current: step,
+      total: TOTAL_STEPS,
+    });
     const progress = (step / TOTAL_STEPS) * 100;
     return `
       <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
@@ -105,22 +112,26 @@ export const createAppTour = (navigate: TourNavigate, t: TFunction, connected: b
       element: '[data-tour="update-database"]',
       on: "top",
     },
-    beforeShowPromise: connected ? function () {
-      return new Promise((resolve) => {
-        navigate({ to: "/settings" }).then(() => {
-          setTimeout(resolve, 300);
-        });
-      });
-    } : undefined,
+    beforeShowPromise: connected
+      ? function () {
+          return new Promise((resolve) => {
+            navigate({ to: "/settings" }).then(() => {
+              setTimeout(resolve, 300);
+            });
+          });
+        }
+      : undefined,
     buttons: [
       {
         text: t("tour.buttons.back"),
-        action: connected ? () => {
-          tour.hide();
-          navigate({ to: "/" }).then(() => {
-            setTimeout(() => tour.back(), 300);
-          });
-        } : tour.back,
+        action: connected
+          ? () => {
+              tour.hide();
+              navigate({ to: "/" }).then(() => {
+                setTimeout(() => tour.back(), 300);
+              });
+            }
+          : tour.back,
         secondary: true,
       },
       {

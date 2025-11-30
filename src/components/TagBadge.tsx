@@ -5,7 +5,7 @@ interface TagBadgeProps {
 
 export function TagBadge({ type, tag }: TagBadgeProps) {
   return (
-    <span className="inline-block px-2.5 py-1 text-xs rounded-full bg-white/20 text-white border border-white/10">
+    <span className="inline-block rounded-full border border-white/10 bg-white/20 px-2.5 py-1 text-xs text-white">
       {type}:{tag}
     </span>
   );

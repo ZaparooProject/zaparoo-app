@@ -13,8 +13,8 @@ describe("Create Text Route", () => {
       // Verify that redirect was called with the correct parameters
       expect(redirectResult.options).toEqual(
         expect.objectContaining({
-          to: "/create/custom"
-        })
+          to: "/create/custom",
+        }),
       );
     }
   });

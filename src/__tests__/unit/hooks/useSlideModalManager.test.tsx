@@ -18,7 +18,7 @@ describe("useSlideModalManager", () => {
   describe("with provider", () => {
     it("should register and unregister modals", () => {
       const { result } = renderHook(() => useSlideModalManager(), {
-        wrapper: SlideModalProvider
+        wrapper: SlideModalProvider,
       });
 
       const mockClose1 = vi.fn();
@@ -37,7 +37,7 @@ describe("useSlideModalManager", () => {
 
     it("should unregister modals", () => {
       const { result } = renderHook(() => useSlideModalManager(), {
-        wrapper: SlideModalProvider
+        wrapper: SlideModalProvider,
       });
 
       const mockClose = vi.fn();
@@ -56,7 +56,7 @@ describe("useSlideModalManager", () => {
 
     it("should handle closeAllExcept with no registered modals", () => {
       const { result } = renderHook(() => useSlideModalManager(), {
-        wrapper: SlideModalProvider
+        wrapper: SlideModalProvider,
       });
 
       // This should not throw an error
@@ -70,13 +70,13 @@ describe("useSlideModalManager", () => {
     it("should render children", () => {
       const TestComponent = () => <div>Test Child</div>;
 
-      const { getByText } = render(
+      render(
         <SlideModalProvider>
           <TestComponent />
-        </SlideModalProvider>
+        </SlideModalProvider>,
       );
 
-      expect(getByText("Test Child")).toBeInTheDocument();
+      expect(screen.getByText("Test Child")).toBeInTheDocument();
     });
   });
 });

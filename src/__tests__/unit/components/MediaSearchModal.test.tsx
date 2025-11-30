@@ -42,7 +42,11 @@ vi.mock("@/lib/coreApi", () => ({
     }),
     mediaSearch: vi.fn().mockResolvedValue({
       results: [
-        { path: "/games/mario.sfc", name: "Super Mario World", systemName: "Super Nintendo" },
+        {
+          path: "/games/mario.sfc",
+          name: "Super Mario World",
+          systemName: "Super Nintendo",
+        },
       ],
       total: 1,
       pagination: {
@@ -78,11 +82,17 @@ vi.mock("@/components/wui/TextInput", () => ({
 }));
 
 vi.mock("@/components/VirtualSearchResults", () => ({
-  VirtualSearchResults: ({ query: _query, systems: _systems, selectedResult: _selectedResult, setSelectedResult, hasSearched }: any) => {
+  VirtualSearchResults: ({
+    query: _query,
+    systems: _systems,
+    selectedResult: _selectedResult,
+    setSelectedResult,
+    hasSearched,
+  }: any) => {
     if (!hasSearched) {
       return (
-        <div className="text-center text-white/60 mt-6">
-          <p className="text-lg mb-2">create.search.startSearching</p>
+        <div className="mt-6 text-center text-white/60">
+          <p className="mb-2 text-lg">create.search.startSearching</p>
           <p className="text-sm">create.search.startSearchingHint</p>
         </div>
       );
@@ -93,11 +103,13 @@ vi.mock("@/components/VirtualSearchResults", () => ({
         <button
           key={0}
           data-testid="result-0"
-          onClick={() => setSelectedResult?.({
-            path: "/games/mario.sfc",
-            name: "Super Mario World",
-            zapScript: "**launch:/games/mario.sfc"
-          })}
+          onClick={() =>
+            setSelectedResult?.({
+              path: "/games/mario.sfc",
+              name: "Super Mario World",
+              zapScript: "**launch:/games/mario.sfc",
+            })
+          }
         >
           Super Mario World
         </button>
@@ -107,19 +119,14 @@ vi.mock("@/components/VirtualSearchResults", () => ({
 }));
 
 vi.mock("@/components/BackToTop", () => ({
-  BackToTop: () => (
-    <div data-testid="back-to-top" />
-  ),
+  BackToTop: () => <div data-testid="back-to-top" />,
 }));
 
 vi.mock("@/components/SystemSelector", () => ({
   SystemSelector: ({ isOpen }: any) =>
     isOpen ? <div data-testid="system-selector-modal" /> : null,
   SystemSelectorTrigger: ({ selectedSystems, placeholder, onClick }: any) => (
-    <button
-      data-testid="system-selector-trigger"
-      onClick={onClick}
-    >
+    <button data-testid="system-selector-trigger" onClick={onClick}>
       {selectedSystems.length > 0 ? selectedSystems[0] : placeholder}
     </button>
   ),
@@ -150,7 +157,7 @@ describe("MediaSearchModal", () => {
     return render(
       <QueryClientProvider client={queryClient}>
         <MediaSearchModal {...defaultProps} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
   };
 
@@ -167,7 +174,10 @@ describe("MediaSearchModal", () => {
 
     const searchInput = screen.getByTestId("search-input");
     expect(searchInput).toBeInTheDocument();
-    expect(searchInput).toHaveAttribute("placeholder", "create.search.gameInputPlaceholder");
+    expect(searchInput).toHaveAttribute(
+      "placeholder",
+      "create.search.gameInputPlaceholder",
+    );
   });
 
   it("should render search results component", async () => {
@@ -178,7 +188,9 @@ describe("MediaSearchModal", () => {
     fireEvent.change(searchInput, { target: { value: "mario" } });
 
     // Click search button to trigger search
-    const searchButton = screen.getByRole("button", { name: /create.search.searchButton/i });
+    const searchButton = screen.getByRole("button", {
+      name: /create.search.searchButton/i,
+    });
     fireEvent.click(searchButton);
 
     // Wait for search results to appear
@@ -212,7 +224,9 @@ describe("MediaSearchModal", () => {
     fireEvent.change(searchInput, { target: { value: "mario" } });
 
     // Click search button to trigger search
-    const searchButton = screen.getByRole("button", { name: /create.search.searchButton/i });
+    const searchButton = screen.getByRole("button", {
+      name: /create.search.searchButton/i,
+    });
     fireEvent.click(searchButton);
 
     // Wait for search results to load and contain results

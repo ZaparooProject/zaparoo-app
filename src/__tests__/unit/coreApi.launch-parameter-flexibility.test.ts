@@ -8,7 +8,7 @@ const mockSend = vi.fn();
 const mockWsManager = {
   isConnected: true,
   currentState: "connected",
-  send: mockSend
+  send: mockSend,
 };
 
 describe("CoreAPI - Launch Parameter Flexibility", () => {
@@ -23,7 +23,7 @@ describe("CoreAPI - Launch Parameter Flexibility", () => {
     // According to zaparoo-core API docs, this should be valid:
     // "A request's parameters must contain at least a populated `uid`, `text` or `data` value."
     const textOnlyRequest: LaunchRequest = {
-      text: "**launch.system:snes"
+      text: "**launch.system:snes",
     };
 
     // This should not cause type errors - text only should be sufficient
@@ -32,9 +32,9 @@ describe("CoreAPI - Launch Parameter Flexibility", () => {
     });
 
     expect(mockSend).toHaveBeenCalledOnce();
-    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
     expect(sentData.params).toEqual({
-      text: "**launch.system:snes"
+      text: "**launch.system:snes",
     });
   });
 
@@ -42,7 +42,7 @@ describe("CoreAPI - Launch Parameter Flexibility", () => {
     // According to zaparoo-core API docs, 'type' is an optional parameter
     const requestWithType: LaunchRequest = {
       type: "nfc",
-      text: "**launch.system:snes"
+      text: "**launch.system:snes",
     };
 
     CoreAPI.run(requestWithType).catch(() => {
@@ -50,10 +50,10 @@ describe("CoreAPI - Launch Parameter Flexibility", () => {
     });
 
     expect(mockSend).toHaveBeenCalledOnce();
-    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
     expect(sentData.params).toEqual({
       type: "nfc",
-      text: "**launch.system:snes"
+      text: "**launch.system:snes",
     });
   });
 });

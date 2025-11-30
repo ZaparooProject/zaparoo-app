@@ -13,7 +13,6 @@ import { Button } from "@/components/wui/Button.tsx";
 import { useVirtualInfiniteSearch } from "@/hooks/useVirtualInfiniteSearch";
 import { TagList } from "@/components/TagList.tsx";
 
-
 export interface VirtualSearchResultsProps {
   query: string;
   systems: string[];
@@ -41,7 +40,7 @@ export function VirtualSearchResults({
   onClearFilters,
   isSearching = false,
   onSearchComplete,
-  scrollContainerRef
+  scrollContainerRef,
 }: VirtualSearchResultsProps) {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const { t } = useTranslation();
@@ -54,12 +53,12 @@ export function VirtualSearchResults({
     hasNextPage,
     isError,
     fetchNextPage,
-    refetch
+    refetch,
   } = useVirtualInfiniteSearch({
     query,
     systems,
     tags,
-    enabled: hasSearched && gamesIndex.exists && !gamesIndex.indexing
+    enabled: hasSearched && gamesIndex.exists && !gamesIndex.indexing,
   });
 
   // Call onSearchComplete when loading finishes
@@ -70,23 +69,27 @@ export function VirtualSearchResults({
   }, [isLoading, hasSearched, onSearchComplete]);
 
   // Calculate estimated item height based on whether tags are shown
-  const estimateSize = useCallback((index: number) => {
-    if (index >= allItems.length) return 60; // Loading item
-    const item = allItems[index];
-    // Increased estimates to accommodate wrapped text and reduce layout shifts
-    // Base height: 32px (pt-3 pb-5) + content + 1px border = total (gap handled by virtualizer)
-    // Without tags: ~60px content + 32px padding + 1px border = 93px
-    // With tags: ~80px content + 32px padding + 1px border = 113px
-    return item.tags && item.tags.length > 0 ? 113 : 93;
-  }, [allItems]);
+  const estimateSize = useCallback(
+    (index: number) => {
+      if (index >= allItems.length) return 60; // Loading item
+      const item = allItems[index];
+      // Increased estimates to accommodate wrapped text and reduce layout shifts
+      // Base height: 32px (pt-3 pb-5) + content + 1px border = total (gap handled by virtualizer)
+      // Without tags: ~60px content + 32px padding + 1px border = 93px
+      // With tags: ~80px content + 32px padding + 1px border = 113px
+      return item?.tags && item.tags.length > 0 ? 113 : 93;
+    },
+    [allItems],
+  );
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: totalCount + (hasNextPage ? 1 : 0), // +1 for loading sentinel
     getScrollElement: () => scrollContainerRef?.current || null,
     estimateSize,
     overscan: 5,
     scrollMargin: 8,
-    gap: 8
+    gap: 8,
   });
 
   // Fetch next page when approaching the end
@@ -109,7 +112,7 @@ export function VirtualSearchResults({
     hasNextPage,
     fetchNextPage,
     totalCount,
-    isFetchingNextPage
+    isFetchingNextPage,
   ]);
 
   // Screen reader announcement for search results
@@ -117,7 +120,7 @@ export function VirtualSearchResults({
     if (isLoading) return t("create.search.loading");
     if (isError) return t("create.search.searchError");
     if (totalCount > 0) {
-      return `${totalCount} ${totalCount === 1 ? 'result' : 'results'} found`;
+      return `${totalCount} ${totalCount === 1 ? "result" : "results"} found`;
     }
     return "";
   };
@@ -126,7 +129,7 @@ export function VirtualSearchResults({
     return (
       <Card className="mt-3">
         <div className="flex flex-row items-center justify-between gap-3">
-          <div className="px-1.5 text-error">
+          <div className="text-error px-1.5">
             <WarningIcon size="24" />
           </div>
           <div className="flex grow flex-col">
@@ -137,7 +140,7 @@ export function VirtualSearchResults({
           <Link
             to="/settings"
             search={{
-              focus: "database"
+              focus: "database",
             }}
           >
             <Button icon={<SettingsIcon size="24" />} variant="text" />
@@ -150,8 +153,8 @@ export function VirtualSearchResults({
   // Show initial state when no search has been performed
   if (!hasSearched) {
     return (
-      <div className="text-center text-white/60 mt-6">
-        <p className="text-lg mb-2">{t("create.search.startSearching")}</p>
+      <div className="mt-6 text-center text-white/60">
+        <p className="mb-2 text-lg">{t("create.search.startSearching")}</p>
         <p className="text-sm">{t("create.search.startSearchingHint")}</p>
       </div>
     );
@@ -160,7 +163,7 @@ export function VirtualSearchResults({
   // Show loading spinner when searching initially
   if (isLoading || isSearching) {
     return (
-      <div className="flex items-center gap-2 justify-center text-white/60 mt-6">
+      <div className="mt-6 flex items-center justify-center gap-2 text-white/60">
         <LoadingSpinner size={16} className="text-primary" />
         <span>{t("create.search.loading")}</span>
       </div>
@@ -169,8 +172,8 @@ export function VirtualSearchResults({
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center mt-6">
-        <p className="text-white mb-3">{t("create.search.searchError")}</p>
+      <div className="mt-6 flex flex-col items-center">
+        <p className="mb-3 text-white">{t("create.search.searchError")}</p>
         <Button
           label={t("create.search.tryAgain")}
           onClick={() => refetch()}
@@ -182,7 +185,8 @@ export function VirtualSearchResults({
 
   // Enhanced empty state with helpful suggestions
   if (totalCount === 0) {
-    const hasActiveFilters = searchSystem !== "all" || (searchTags && searchTags.length > 0);
+    const hasActiveFilters =
+      searchSystem !== "all" || (searchTags && searchTags.length > 0);
     const hasQuery = query && query.trim().length > 0;
 
     let mainMessage: string;
@@ -205,15 +209,13 @@ export function VirtualSearchResults({
     }
 
     return (
-      <div className="text-center mt-6">
-        <p className="text-white mb-3">{mainMessage}</p>
+      <div className="mt-6 text-center">
+        <p className="mb-3 text-white">{mainMessage}</p>
         {suggestionMessage && (
-          <p className="text-sm text-white/70 mb-3">
-            {suggestionMessage}
-          </p>
+          <p className="mb-3 text-sm text-white/70">{suggestionMessage}</p>
         )}
         {hasActiveFilters && onClearFilters && (
-          <div className="flex justify-center mt-2">
+          <div className="mt-2 flex justify-center">
             <Button
               label={t("create.search.clearFilters")}
               onClick={onClearFilters}
@@ -236,45 +238,45 @@ export function VirtualSearchResults({
       <div
         style={{
           height: `${virtualizer.getTotalSize()}px`,
-          width: '100%',
-          position: 'relative'
+          width: "100%",
+          position: "relative",
         }}
         data-testid="search-results"
       >
-          {virtualItems.map((virtualItem) => {
-            const isLoading = virtualItem.index >= totalCount;
-            const game = allItems[virtualItem.index];
+        {virtualItems.map((virtualItem) => {
+          const isLoading = virtualItem.index >= totalCount;
+          const game = allItems[virtualItem.index];
 
-            return (
-              <div
-                key={virtualItem.key}
-                ref={virtualizer.measureElement}
-                data-index={virtualItem.index}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  transform: `translateY(${virtualItem.start}px)`
-                }}
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-2 justify-center text-white/60">
-                    <LoadingSpinner size={16} className="text-primary" />
-                    <span>{t("create.search.loading")}</span>
-                  </div>
-                ) : (
-                  <SearchResultItem
-                    game={game}
-                    selectedResult={selectedResult}
-                    setSelectedResult={setSelectedResult}
-                    isLast={virtualItem.index === totalCount - 1}
-                    index={virtualItem.index}
-                  />
-                )}
-              </div>
-            );
-          })}
+          return (
+            <div
+              key={virtualItem.key}
+              ref={virtualizer.measureElement}
+              data-index={virtualItem.index}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualItem.start}px)`,
+              }}
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center gap-2 text-white/60">
+                  <LoadingSpinner size={16} className="text-primary" />
+                  <span>{t("create.search.loading")}</span>
+                </div>
+              ) : game ? (
+                <SearchResultItem
+                  game={game}
+                  selectedResult={selectedResult}
+                  setSelectedResult={setSelectedResult}
+                  isLast={virtualItem.index === totalCount - 1}
+                  index={virtualItem.index}
+                />
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </>
   );
@@ -293,21 +295,17 @@ const SearchResultItem = React.memo(function SearchResultItem({
   selectedResult,
   setSelectedResult,
   isLast,
-  index
+  index,
 }: SearchResultItemProps) {
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
-  const displayName = showFilenames ? filenameFromPath(game.path) || game.name : game.name;
+  const displayName = showFilenames
+    ? filenameFromPath(game.path) || game.name
+    : game.name;
 
   const handleGameSelect = () => {
-    if (
-      selectedResult &&
-      selectedResult.path === game.path
-    ) {
+    if (selectedResult && selectedResult.path === game.path) {
       setSelectedResult(null);
-    } else if (
-      selectedResult &&
-      selectedResult.path !== game.path
-    ) {
+    } else if (selectedResult && selectedResult.path !== game.path) {
       setSelectedResult(null);
       setTimeout(() => {
         setSelectedResult(game);
@@ -321,7 +319,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
     <div
       className="flex cursor-pointer flex-row items-center justify-between gap-1 px-1 pt-3 pb-5"
       style={{
-        borderBottom: isLast ? "" : "1px solid rgba(255,255,255,0.6)"
+        borderBottom: isLast ? "" : "1px solid rgba(255,255,255,0.6)",
       }}
       role="button"
       tabIndex={0}
@@ -331,7 +329,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
         handleGameSelect();
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           handleGameSelect();
         }

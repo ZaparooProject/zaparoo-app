@@ -1,16 +1,18 @@
-import { describe, it, expect } from 'vitest';
-import type { SearchParams } from '../../lib/models';
+import { describe, it, expect } from "vitest";
+import type { SearchParams } from "../../lib/models";
 
-describe('SearchParams Type Requirements', () => {
-  it('should allow maxResults as a required property for Core API compatibility', () => {
+describe("SearchParams Type Requirements", () => {
+  it("should allow maxResults as a required property for Core API compatibility", () => {
     // This test requires maxResults to exist in the interface
-    function requiresMaxResults(params: SearchParams & { maxResults: number }): number {
+    function requiresMaxResults(
+      params: SearchParams & { maxResults: number },
+    ): number {
       return params.maxResults;
     }
 
     const searchParams: SearchParams = {
-      query: 'mario',
-      systems: ['snes']
+      query: "mario",
+      systems: ["snes"],
     };
 
     // This should fail if maxResults doesn't exist as optional in interface

@@ -11,11 +11,11 @@ const mockCoreAPI = {
   version: vi.fn(),
   systems: vi.fn(),
   mappings: vi.fn(),
-  mappingsReload: vi.fn()
+  mappingsReload: vi.fn(),
 };
 
 vi.mock("../../../lib/coreApi", () => ({
-  CoreAPI: mockCoreAPI
+  CoreAPI: mockCoreAPI,
 }));
 
 vi.mock("../../../lib/store", () => ({
@@ -25,11 +25,11 @@ vi.mock("../../../lib/store", () => ({
       loggedInUser: {
         uid: "test-user",
         email: "test@example.com",
-        displayName: "Test User"
-      }
+        displayName: "Test User",
+      },
     };
     return selector(mockState);
-  })
+  }),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -40,7 +40,8 @@ vi.mock("react-i18next", () => ({
         "settings.advanced.dangerZone": "Danger Zone",
         "settings.advanced.resetSettings": "Reset Settings",
         "settings.advanced.reloadMappings": "Reload Mappings",
-        "settings.advanced.confirmReset": "Are you sure you want to reset all settings?",
+        "settings.advanced.confirmReset":
+          "Are you sure you want to reset all settings?",
         "settings.online.title": "Online Features",
         "settings.online.signIn": "Sign In",
         "settings.online.signOut": "Sign Out",
@@ -49,40 +50,40 @@ vi.mock("react-i18next", () => ({
         "settings.help.discord": "Discord Support",
         "settings.about.title": "About",
         "settings.about.version": "Version",
-        "settings.about.checkUpdates": "Check for Updates"
+        "settings.about.checkUpdates": "Check for Updates",
       };
       return translations[key] || key;
-    }
-  })
+    },
+  }),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: vi.fn(() => vi.fn()),
   createFileRoute: vi.fn(() => ({
-    useLoaderData: vi.fn(() => ({}))
-  }))
+    useLoaderData: vi.fn(() => ({})),
+  })),
 }));
 
 vi.mock("../../../hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({}))
+  useSmartSwipe: vi.fn(() => ({})),
 }));
 
 vi.mock("@capacitor/browser", () => ({
   Browser: {
-    open: vi.fn()
-  }
+    open: vi.fn(),
+  },
 }));
 
 vi.mock("@capacitor/app", () => ({
   App: {
-    getInfo: vi.fn().mockResolvedValue({ version: "1.0.0" })
-  }
+    getInfo: vi.fn().mockResolvedValue({ version: "1.0.0" }),
+  },
 }));
 
 vi.mock("firebase/auth", () => ({
   signOut: vi.fn(),
   signInWithEmailAndPassword: vi.fn(),
-  getAuth: vi.fn(() => ({}))
+  getAuth: vi.fn(() => ({})),
 }));
 
 describe("Settings Routes - Edge Cases", () => {
@@ -93,18 +94,18 @@ describe("Settings Routes - Edge Cases", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
   });
 
   describe("Advanced Settings Edge Cases", () => {
     it("should handle concurrent dangerous operations", async () => {
-      mockCoreAPI.settingsUpdate.mockImplementation(() =>
-        new Promise(resolve => setTimeout(resolve, 100))
+      mockCoreAPI.settingsUpdate.mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 100)),
       );
-      mockCoreAPI.mappingsReload.mockImplementation(() =>
-        new Promise(resolve => setTimeout(resolve, 150))
+      mockCoreAPI.mappingsReload.mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 150)),
       );
 
       const ConcurrentOperationsComponent = () => {
@@ -114,12 +115,12 @@ describe("Settings Routes - Edge Cases", () => {
 
         const handleReset = async () => {
           setIsResetting(true);
-          setOperations(prev => [...prev, "reset-started"]);
+          setOperations((prev) => [...prev, "reset-started"]);
           try {
             await mockCoreAPI.settingsUpdate({ resetToDefaults: true });
-            setOperations(prev => [...prev, "reset-completed"]);
-          } catch (error) {
-            setOperations(prev => [...prev, "reset-failed"]);
+            setOperations((prev) => [...prev, "reset-completed"]);
+          } catch {
+            setOperations((prev) => [...prev, "reset-failed"]);
           } finally {
             setIsResetting(false);
           }
@@ -127,12 +128,12 @@ describe("Settings Routes - Edge Cases", () => {
 
         const handleReloadMappings = async () => {
           setIsReloading(true);
-          setOperations(prev => [...prev, "reload-started"]);
+          setOperations((prev) => [...prev, "reload-started"]);
           try {
             await mockCoreAPI.mappingsReload();
-            setOperations(prev => [...prev, "reload-completed"]);
-          } catch (error) {
-            setOperations(prev => [...prev, "reload-failed"]);
+            setOperations((prev) => [...prev, "reload-completed"]);
+          } catch {
+            setOperations((prev) => [...prev, "reload-failed"]);
           } finally {
             setIsReloading(false);
           }
@@ -156,9 +157,7 @@ describe("Settings Routes - Edge Cases", () => {
               {isReloading ? "Reloading..." : "Reload Mappings"}
             </button>
 
-            <div data-testid="operations">
-              {operations.join(",")}
-            </div>
+            <div data-testid="operations">{operations.join(",")}</div>
           </div>
         );
       };
@@ -166,7 +165,7 @@ describe("Settings Routes - Edge Cases", () => {
       render(
         <QueryClientProvider client={queryClient}>
           <ConcurrentOperationsComponent />
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       // Start both operations concurrently
@@ -177,15 +176,22 @@ describe("Settings Routes - Edge Cases", () => {
       expect(screen.getByTestId("reset-btn")).toBeDisabled();
       expect(screen.getByTestId("reload-btn")).toBeDisabled();
 
+      // Wait for all operations to complete
       await waitFor(() => {
-        const operations = screen.getByTestId("operations").textContent;
-        expect(operations).toContain("reset-started");
-        expect(operations).toContain("reload-started");
-        expect(operations).toContain("reset-completed");
-        expect(operations).toContain("reload-completed");
+        expect(screen.getByTestId("operations").textContent).toContain(
+          "reload-completed",
+        );
       });
 
-      expect(mockCoreAPI.settingsUpdate).toHaveBeenCalledWith({ resetToDefaults: true });
+      // Verify all operations occurred
+      const operations = screen.getByTestId("operations").textContent;
+      expect(operations).toContain("reset-started");
+      expect(operations).toContain("reload-started");
+      expect(operations).toContain("reset-completed");
+
+      expect(mockCoreAPI.settingsUpdate).toHaveBeenCalledWith({
+        resetToDefaults: true,
+      });
       expect(mockCoreAPI.mappingsReload).toHaveBeenCalled();
     });
 
@@ -195,7 +201,7 @@ describe("Settings Routes - Edge Cases", () => {
         debugLogging: "invalid-boolean",
         connectionTimeout: "not-a-number",
         customField: undefined,
-        nullField: null
+        nullField: null,
       });
 
       const CorruptedSettingsComponent = () => {
@@ -210,17 +216,17 @@ describe("Settings Routes - Edge Cases", () => {
             // Validate settings data
             const validationErrors: string[] = [];
 
-            if (typeof data.debugLogging !== 'boolean') {
-              validationErrors.push('debugLogging is not a boolean');
+            if (typeof data.debugLogging !== "boolean") {
+              validationErrors.push("debugLogging is not a boolean");
             }
 
-            if (typeof data.connectionTimeout !== 'number') {
-              validationErrors.push('connectionTimeout is not a number');
+            if (typeof data.connectionTimeout !== "number") {
+              validationErrors.push("connectionTimeout is not a number");
             }
 
             setErrors(validationErrors);
-          } catch (error) {
-            setErrors(['Failed to load settings']);
+          } catch {
+            setErrors(["Failed to load settings"]);
           }
         };
 
@@ -238,9 +244,7 @@ describe("Settings Routes - Edge Cases", () => {
             )}
 
             {errors.length > 0 && (
-              <div data-testid="validation-errors">
-                {errors.join(", ")}
-              </div>
+              <div data-testid="validation-errors">{errors.join(", ")}</div>
             )}
           </div>
         );
@@ -249,7 +253,7 @@ describe("Settings Routes - Edge Cases", () => {
       render(
         <QueryClientProvider client={queryClient}>
           <CorruptedSettingsComponent />
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       fireEvent.click(screen.getByTestId("load-settings"));
@@ -257,7 +261,7 @@ describe("Settings Routes - Edge Cases", () => {
       await waitFor(() => {
         expect(screen.getByTestId("settings-data")).toBeInTheDocument();
         expect(screen.getByTestId("validation-errors")).toHaveTextContent(
-          "debugLogging is not a boolean, connectionTimeout is not a number"
+          "debugLogging is not a boolean, connectionTimeout is not a number",
         );
       });
     });
@@ -268,10 +272,11 @@ describe("Settings Routes - Edge Cases", () => {
       const { signOut } = await import("firebase/auth");
       const mockSignOut = vi.mocked(signOut);
 
-      mockSignOut.mockImplementation(() =>
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Sign out failed")), 50)
-        )
+      mockSignOut.mockImplementation(
+        () =>
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Sign out failed")), 50),
+          ),
       );
 
       const AuthStateComponent = () => {
@@ -286,7 +291,7 @@ describe("Settings Routes - Edge Cases", () => {
           try {
             await mockSignOut({} as any);
             setUser(null as any);
-          } catch (err) {
+          } catch {
             setError("Failed to sign out");
             // Simulate auth state still being valid
             setUser({ email: "test@example.com" });
@@ -317,23 +322,30 @@ describe("Settings Routes - Edge Cases", () => {
       render(
         <QueryClientProvider client={queryClient}>
           <AuthStateComponent />
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
-      expect(screen.getByTestId("user-state")).toHaveTextContent("Signed in: test@example.com");
+      expect(screen.getByTestId("user-state")).toHaveTextContent(
+        "Signed in: test@example.com",
+      );
 
       fireEvent.click(screen.getByTestId("sign-out-btn"));
 
       await waitFor(() => {
-        expect(screen.getByTestId("auth-error")).toHaveTextContent("Failed to sign out");
+        expect(screen.getByTestId("auth-error")).toHaveTextContent(
+          "Failed to sign out",
+        );
         // User should still be signed in due to error
-        expect(screen.getByTestId("user-state")).toHaveTextContent("Signed in: test@example.com");
+        expect(screen.getByTestId("user-state")).toHaveTextContent(
+          "Signed in: test@example.com",
+        );
       });
     });
 
     it("should handle subscription status edge cases", async () => {
       const SubscriptionStatusComponent = () => {
-        const [subscriptionData, setSubscriptionData] = React.useState<any>(null);
+        const [subscriptionData, setSubscriptionData] =
+          React.useState<any>(null);
         const [loading, setLoading] = React.useState(false);
 
         const checkSubscription = () => {
@@ -345,10 +357,11 @@ describe("Settings Routes - Edge Cases", () => {
               { active: true, expires: new Date(Date.now() - 86400000) }, // Expired 1 day ago
               { active: false, expires: null },
               null, // API error
-              { active: "invalid", expires: "not-a-date" } // Malformed data
+              { active: "invalid", expires: "not-a-date" }, // Malformed data
             ];
 
-            const randomState = states[Math.floor(Math.random() * states.length)];
+            const randomState =
+              states[Math.floor(Math.random() * states.length)];
             setSubscriptionData(randomState);
             setLoading(false);
           }, 100);
@@ -396,7 +409,7 @@ describe("Settings Routes - Edge Cases", () => {
       render(
         <QueryClientProvider client={queryClient}>
           <SubscriptionStatusComponent />
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       // Test multiple subscription checks to hit different states
@@ -405,7 +418,9 @@ describe("Settings Routes - Edge Cases", () => {
 
         await waitFor(() => {
           const status = screen.getByTestId("subscription-status").textContent;
-          expect(status).toMatch(/Status: (Unknown|Active|Expired|Inactive|Invalid)/);
+          expect(status).toMatch(
+            /Status: (Unknown|Active|Expired|Inactive|Invalid)/,
+          );
         });
       }
     });
@@ -424,8 +439,8 @@ describe("Settings Routes - Edge Cases", () => {
         const openLink = async (url: string, label: string) => {
           try {
             await mockOpen({ url });
-          } catch (error) {
-            setLinkErrors(prev => [...prev, `Failed to open ${label}`]);
+          } catch {
+            setLinkErrors((prev) => [...prev, `Failed to open ${label}`]);
           }
         };
 
@@ -433,7 +448,9 @@ describe("Settings Routes - Edge Cases", () => {
           <div>
             <button
               data-testid="docs-link"
-              onClick={() => openLink("https://docs.zaparoo.org", "Documentation")}
+              onClick={() =>
+                openLink("https://docs.zaparoo.org", "Documentation")
+              }
             >
               Documentation
             </button>
@@ -447,15 +464,15 @@ describe("Settings Routes - Edge Cases", () => {
 
             <button
               data-testid="github-link"
-              onClick={() => openLink("https://github.com/zaparoo/zaparoo-core", "GitHub")}
+              onClick={() =>
+                openLink("https://github.com/zaparoo/zaparoo-core", "GitHub")
+              }
             >
               GitHub
             </button>
 
             {linkErrors.length > 0 && (
-              <div data-testid="link-errors">
-                {linkErrors.join(", ")}
-              </div>
+              <div data-testid="link-errors">{linkErrors.join(", ")}</div>
             )}
           </div>
         );
@@ -464,7 +481,7 @@ describe("Settings Routes - Edge Cases", () => {
       render(
         <QueryClientProvider client={queryClient}>
           <ExternalLinksComponent />
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       // Try opening all links
@@ -474,7 +491,7 @@ describe("Settings Routes - Edge Cases", () => {
 
       await waitFor(() => {
         expect(screen.getByTestId("link-errors")).toHaveTextContent(
-          "Failed to open Documentation, Failed to open Discord, Failed to open GitHub"
+          "Failed to open Documentation, Failed to open Discord, Failed to open GitHub",
         );
       });
 
@@ -497,7 +514,7 @@ describe("Settings Routes - Edge Cases", () => {
           version: "1.2.3",
           build: "456",
           name: "Zaparoo App",
-          id: "org.zaparoo.app"
+          id: "org.zaparoo.app",
         });
       });
 
@@ -511,13 +528,13 @@ describe("Settings Routes - Edge Cases", () => {
           try {
             const info = await mockGetInfo();
             setVersion(info.version);
-          } catch (err) {
+          } catch {
             setError("Failed to get version info");
           }
         };
 
         const retryVersionCheck = () => {
-          setRetryCount(prev => prev + 1);
+          setRetryCount((prev) => prev + 1);
           checkVersion();
         };
 
@@ -534,10 +551,7 @@ describe("Settings Routes - Edge Cases", () => {
             {error && (
               <div>
                 <div data-testid="version-error">{error}</div>
-                <button
-                  data-testid="retry-btn"
-                  onClick={retryVersionCheck}
-                >
+                <button data-testid="retry-btn" onClick={retryVersionCheck}>
                   Retry ({retryCount})
                 </button>
               </div>
@@ -549,13 +563,17 @@ describe("Settings Routes - Edge Cases", () => {
       render(
         <QueryClientProvider client={queryClient}>
           <VersionCheckComponent />
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       // Initial load should fail
       await waitFor(() => {
-        expect(screen.getByTestId("version-error")).toHaveTextContent("Failed to get version info");
-        expect(screen.getByTestId("version-display")).toHaveTextContent("Version: Unknown");
+        expect(screen.getByTestId("version-error")).toHaveTextContent(
+          "Failed to get version info",
+        );
+        expect(screen.getByTestId("version-display")).toHaveTextContent(
+          "Version: Unknown",
+        );
       });
 
       // First retry should also fail
@@ -567,7 +585,9 @@ describe("Settings Routes - Edge Cases", () => {
       // Second retry should succeed
       fireEvent.click(screen.getByTestId("retry-btn"));
       await waitFor(() => {
-        expect(screen.getByTestId("version-display")).toHaveTextContent("Version: 1.2.3");
+        expect(screen.getByTestId("version-display")).toHaveTextContent(
+          "Version: 1.2.3",
+        );
         expect(screen.queryByTestId("version-error")).not.toBeInTheDocument();
       });
 
@@ -588,11 +608,12 @@ describe("Settings Routes - Edge Cases", () => {
             { available: true, version: "1.5.0", critical: true },
             { available: false, message: "Up to date" },
             null, // Server error
-            { available: "maybe", version: "unknown" } // Malformed response
+            { available: "maybe", version: "unknown" }, // Malformed response
           ];
 
           setTimeout(() => {
-            const response = responses[Math.floor(Math.random() * responses.length)];
+            const response =
+              responses[Math.floor(Math.random() * responses.length)];
 
             if (!response) {
               setUpdateStatus("error");
@@ -618,15 +639,17 @@ describe("Settings Routes - Edge Cases", () => {
               onClick={checkForUpdates}
               disabled={updateStatus === "checking"}
             >
-              {updateStatus === "checking" ? "Checking..." : "Check for Updates"}
+              {updateStatus === "checking"
+                ? "Checking..."
+                : "Check for Updates"}
             </button>
 
             <div data-testid="update-status">Status: {updateStatus}</div>
 
             {updateInfo && (
               <div data-testid="update-info">
-                Available: {String(updateInfo.available)} |
-                Version: {updateInfo.version || "N/A"}
+                Available: {String(updateInfo.available)} | Version:{" "}
+                {updateInfo.version || "N/A"}
                 {updateInfo.critical && " | CRITICAL"}
               </div>
             )}
@@ -637,7 +660,7 @@ describe("Settings Routes - Edge Cases", () => {
       render(
         <QueryClientProvider client={queryClient}>
           <UpdateCheckComponent />
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       // Test multiple update checks
@@ -646,7 +669,9 @@ describe("Settings Routes - Edge Cases", () => {
 
         await waitFor(() => {
           const status = screen.getByTestId("update-status").textContent;
-          expect(status).toMatch(/Status: (available|critical|up-to-date|error|unknown)/);
+          expect(status).toMatch(
+            /Status: (available|critical|up-to-date|error|unknown)/,
+          );
         });
       }
     });

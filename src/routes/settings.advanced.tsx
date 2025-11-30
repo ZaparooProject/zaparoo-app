@@ -14,7 +14,7 @@ import { HeaderButton } from "../components/wui/HeaderButton";
 import { RestorePuchasesButton } from "../components/ProPurchase";
 
 export const Route = createFileRoute("/settings/advanced")({
-  component: AdvancedSettings
+  component: AdvancedSettings,
 });
 
 function AdvancedSettings() {
@@ -24,13 +24,13 @@ function AdvancedSettings() {
 
   const { data, refetch, isPending } = useQuery({
     queryKey: ["settings"],
-    queryFn: () => CoreAPI.settings()
+    queryFn: () => CoreAPI.settings(),
   });
 
   const update = useMutation({
     mutationFn: (params: UpdateSettingsRequest) =>
       CoreAPI.settingsUpdate(params),
-    onSuccess: () => refetch()
+    onSuccess: () => refetch(),
   });
 
   const { t } = useTranslation();
@@ -39,7 +39,7 @@ function AdvancedSettings() {
   const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
-    preventScrollOnSwipe: false
+    preventScrollOnSwipe: false,
   });
 
   // Show blank page while loading to prevent flicker
@@ -54,7 +54,9 @@ function AdvancedSettings() {
         <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">{t("settings.advanced.title")}</h1>
+        <h1 className="text-foreground text-xl">
+          {t("settings.advanced.title")}
+        </h1>
       }
     >
       <div className="flex flex-col gap-5">

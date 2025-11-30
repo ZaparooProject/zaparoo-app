@@ -15,7 +15,7 @@ import { BackIcon } from "../lib/images";
 import { logger } from "../lib/logger";
 
 export const Route = createFileRoute("/settings/online")({
-  component: About
+  component: About,
 });
 
 function About() {
@@ -23,7 +23,7 @@ function About() {
   const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
-    preventScrollOnSwipe: false
+    preventScrollOnSwipe: false,
   });
 
   const { t } = useTranslation();
@@ -44,106 +44,114 @@ function About() {
         <h1 className="text-foreground text-xl">{t("online.title")}</h1>
       }
     >
-        <div className="flex flex-col gap-3">
-          <Button
-            label={t("online.openDashboard")}
-            className="w-full"
-            icon={<ExternalLinkIcon size="20" />}
-            onClick={() =>
-              Browser.open({ url: "https://zaparoo.com/dashboard" })
-            }
-          />
+      <div className="flex flex-col gap-3">
+        <Button
+          label={t("online.openDashboard")}
+          className="w-full"
+          icon={<ExternalLinkIcon size="20" />}
+          onClick={() => Browser.open({ url: "https://zaparoo.com/dashboard" })}
+        />
 
-          {loggedInUser !== null ? (
+        {loggedInUser !== null ? (
+          <div className="flex flex-col gap-3">
+            <span>{t("online.loggedInAs", { email: loggedInUser.email })}</span>
             <div className="flex flex-col gap-3">
-              <span>
-                {t("online.loggedInAs", { email: loggedInUser.email })}
-              </span>
-              <div className="flex flex-col gap-3">
-                <Button
-                  label={t("online.logout")}
-                  icon={<LogOutIcon size="20" />}
-                  onClick={() => {
-                    FirebaseAuthentication.signOut()
-                      .then(() => {
-                        setLoggedInUser(null);
-                        setOnlineEmail("");
-                        setOnlinePassword("");
-                      })
-                      .catch((e) => {
-                        logger.error("Firebase sign out failed:", e, { category: "api", action: "signOut", severity: "warning" });
-                      });
-                  }}
-                  className="w-full"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <TextInput
-                label={t("online.email")}
-                placeholder="me@example.com"
-                value={onlineEmail}
-                setValue={setOnlineEmail}
-              />
-              <TextInput
-                label={t("online.password")}
-                placeholder=""
-                type="password"
-                value={onlinePassword}
-                setValue={setOnlinePassword}
-              />
               <Button
-                label={t("online.login")}
-                icon={<LogInIcon size="20" />}
+                label={t("online.logout")}
+                icon={<LogOutIcon size="20" />}
                 onClick={() => {
-                  setOnlineLoggingIn(true);
-                  FirebaseAuthentication.signInWithEmailAndPassword({
-                    email: onlineEmail,
-                    password: onlinePassword
-                  })
-                    .then((result) => {
-                      if (result) {
-                        toast.success(t("online.loginSuccess"));
-                      } else {
-                        toast.error(t("online.loginWrong"));
-                      }
-                      setLoggedInUser(result.user);
-                      setOnlineLoggingIn(false);
-                    })
-                    .catch((e: Error) => {
-                      logger.error("Firebase email login failed:", e, { category: "api", action: "signInWithEmail", severity: "warning" });
-                      toast.error(t("online.loginWrong"));
-                      setOnlineLoggingIn(false);
+                  FirebaseAuthentication.signOut()
+                    .then(() => {
                       setLoggedInUser(null);
+                      setOnlineEmail("");
+                      setOnlinePassword("");
+                    })
+                    .catch((e) => {
+                      logger.error("Firebase sign out failed:", e, {
+                        category: "api",
+                        action: "signOut",
+                        severity: "warning",
+                      });
                     });
                 }}
-                disabled={!onlineEmail || !onlinePassword || onlineLoggingIn}
                 className="w-full"
-              />
-              <Button
-                label={t("online.loginGoogle")}
-                className="w-full"
-                onClick={() =>
-                  FirebaseAuthentication.signInWithGoogle()
-                    .then((result) => {
-                      if (result) {
-                        toast.success(t("online.loginSuccess"));
-                      } else {
-                        toast.error(t("online.loginWrong"));
-                      }
-                      setLoggedInUser(result.user);
-                    })
-                    .catch((e: Error) => {
-                      logger.error("Firebase Google login failed:", e, { category: "api", action: "signInWithGoogle", severity: "warning" });
-                      toast.error(t("online.loginWrong"));
-                      setLoggedInUser(null);
-                    })
-                }
               />
             </div>
-          )}
-        </div>
-      </PageFrame>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <TextInput
+              label={t("online.email")}
+              placeholder="me@example.com"
+              value={onlineEmail}
+              setValue={setOnlineEmail}
+            />
+            <TextInput
+              label={t("online.password")}
+              placeholder=""
+              type="password"
+              value={onlinePassword}
+              setValue={setOnlinePassword}
+            />
+            <Button
+              label={t("online.login")}
+              icon={<LogInIcon size="20" />}
+              onClick={() => {
+                setOnlineLoggingIn(true);
+                FirebaseAuthentication.signInWithEmailAndPassword({
+                  email: onlineEmail,
+                  password: onlinePassword,
+                })
+                  .then((result) => {
+                    if (result) {
+                      toast.success(t("online.loginSuccess"));
+                    } else {
+                      toast.error(t("online.loginWrong"));
+                    }
+                    setLoggedInUser(result.user);
+                    setOnlineLoggingIn(false);
+                  })
+                  .catch((e: Error) => {
+                    logger.error("Firebase email login failed:", e, {
+                      category: "api",
+                      action: "signInWithEmail",
+                      severity: "warning",
+                    });
+                    toast.error(t("online.loginWrong"));
+                    setOnlineLoggingIn(false);
+                    setLoggedInUser(null);
+                  });
+              }}
+              disabled={!onlineEmail || !onlinePassword || onlineLoggingIn}
+              className="w-full"
+            />
+            <Button
+              label={t("online.loginGoogle")}
+              className="w-full"
+              onClick={() =>
+                FirebaseAuthentication.signInWithGoogle()
+                  .then((result) => {
+                    if (result) {
+                      toast.success(t("online.loginSuccess"));
+                    } else {
+                      toast.error(t("online.loginWrong"));
+                    }
+                    setLoggedInUser(result.user);
+                  })
+                  .catch((e: Error) => {
+                    logger.error("Firebase Google login failed:", e, {
+                      category: "api",
+                      action: "signInWithGoogle",
+                      severity: "warning",
+                    });
+                    toast.error(t("online.loginWrong"));
+                    setLoggedInUser(null);
+                  })
+              }
+            />
+          </div>
+        )}
+      </div>
+    </PageFrame>
   );
 }

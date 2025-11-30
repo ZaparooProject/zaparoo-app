@@ -44,7 +44,7 @@ export function SystemSelector({
   mode,
   title,
   includeAllOption = false,
-  defaultSelection
+  defaultSelection,
 }: SystemSelectorProps) {
   const { t } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -67,7 +67,7 @@ export function SystemSelector({
       const { scrollWidth, clientWidth } = container;
       setShowLeftGradient(scrollLeft > 0);
       setShowRightGradient(scrollLeft < scrollWidth - clientWidth - 1);
-    }
+    },
   });
 
   // Get indexing state to disable selector when indexing is in progress
@@ -76,7 +76,7 @@ export function SystemSelector({
   // Fetch systems data
   const { data: systemsData, isLoading } = useQuery({
     queryKey: ["systems"],
-    queryFn: () => CoreAPI.systems()
+    queryFn: () => CoreAPI.systems(),
   });
 
   // Process and filter systems
@@ -130,7 +130,7 @@ export function SystemSelector({
       filtered = filtered.filter(
         (system) =>
           system.name.toLowerCase().includes(query) ||
-          system.id.toLowerCase().includes(query)
+          system.id.toLowerCase().includes(query),
       );
     }
 
@@ -160,7 +160,7 @@ export function SystemSelector({
         onSelect(newSelection);
       }
     },
-    [mode, selectedSystems, onSelect, onClose, gamesIndex.indexing]
+    [mode, selectedSystems, onSelect, onClose, gamesIndex.indexing],
   );
 
   // Handle clear all
@@ -176,11 +176,12 @@ export function SystemSelector({
   }, [onClose]);
 
   // Set up virtualizer
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: filteredSystems.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: () => ITEM_HEIGHT,
-    overscan: 5
+    overscan: 5,
   });
 
   // Footer for multi-select mode
@@ -190,7 +191,7 @@ export function SystemSelector({
         <div className="text-center">
           <span className="text-muted-foreground text-sm">
             {t("systemSelector.selectedCount", {
-              count: selectedSystems.length
+              count: selectedSystems.length,
             })}
           </span>
         </div>
@@ -198,13 +199,12 @@ export function SystemSelector({
           {selectedSystems.length > 0 && (
             <button
               onClick={handleClearAll}
-              className={classNames(
-                "text-sm underline",
-                {
-                  "text-muted-foreground hover:text-foreground": !gamesIndex.indexing,
-                  "text-muted-foreground/50 cursor-not-allowed": gamesIndex.indexing
-                }
-              )}
+              className={classNames("text-sm underline", {
+                "text-muted-foreground hover:text-foreground":
+                  !gamesIndex.indexing,
+                "text-muted-foreground/50 cursor-not-allowed":
+                  gamesIndex.indexing,
+              })}
               disabled={gamesIndex.indexing}
               type="button"
             >
@@ -215,7 +215,10 @@ export function SystemSelector({
             label={t("systemSelector.apply")}
             onClick={handleApply}
             className="flex-1"
-            disabled={gamesIndex.indexing || (selectedSystems.length === 0 && !includeAllOption)}
+            disabled={
+              gamesIndex.indexing ||
+              (selectedSystems.length === 0 && !includeAllOption)
+            }
           />
         </div>
       </div>
@@ -235,7 +238,10 @@ export function SystemSelector({
         <div className="space-y-4 p-2 pt-3">
           {/* Search bar */}
           <div className="relative">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" aria-hidden="true" />
+            <Search
+              className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
             <input
               type="text"
               placeholder="Filter systems..."
@@ -274,9 +280,7 @@ export function SystemSelector({
             )}
 
             <div className="px-2 py-2">
-              <TabsList
-                {...tabsProps}
-              >
+              <TabsList {...tabsProps}>
                 <TabsTrigger value="all">
                   {t("systemSelector.allCategories")}
                 </TabsTrigger>
@@ -315,118 +319,131 @@ export function SystemSelector({
                 </span>
               </div>
             ) : (
-              <div className="flex flex-col h-full">
+              <div className="flex h-full flex-col">
                 {/* Add "All Systems" option for single/insert mode */}
-                {(mode === "single" || mode === "insert") && includeAllOption && selectedCategory === "all" && !debouncedSearchQuery.trim() && (
-                  <div className="pb-2">
-                    <button
-                      className={classNames(
-                        "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                        "rounded-lg focus:outline-none",
-                        {
-                          "bg-white/10": defaultSelection === "all" && selectedSystems.length === 0,
-                          "hover:bg-white/10 focus:bg-white/10": !gamesIndex.indexing,
-                          "opacity-50 cursor-not-allowed": gamesIndex.indexing
-                        }
-                      )}
-                      onClick={() => handleSystemSelect("all")}
-                      disabled={gamesIndex.indexing}
-                      type="button"
-                    >
-                      <div className="flex items-center space-x-3">
-                        {mode !== "insert" && (
-                          <div
-                            className={classNames(
-                              "border-input h-5 w-5 rounded-full border-2",
-                              {
-                                "bg-primary border-primary": defaultSelection === "all" && selectedSystems.length === 0
-                              }
-                            )}
-                          >
-                            {defaultSelection === "all" && selectedSystems.length === 0 && (
-                              <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
-                            )}
-                          </div>
+                {(mode === "single" || mode === "insert") &&
+                  includeAllOption &&
+                  selectedCategory === "all" &&
+                  !debouncedSearchQuery.trim() && (
+                    <div className="pb-2">
+                      <button
+                        className={classNames(
+                          "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
+                          "rounded-lg focus:outline-none",
+                          {
+                            "bg-white/10":
+                              defaultSelection === "all" &&
+                              selectedSystems.length === 0,
+                            "hover:bg-white/10 focus:bg-white/10":
+                              !gamesIndex.indexing,
+                            "cursor-not-allowed opacity-50":
+                              gamesIndex.indexing,
+                          },
                         )}
-                        <span className="text-foreground font-medium">
-                          {t("systemSelector.allSystems")}
-                        </span>
-                      </div>
-                    </button>
-                  </div>
-                )}
+                        onClick={() => handleSystemSelect("all")}
+                        disabled={gamesIndex.indexing}
+                        type="button"
+                      >
+                        <div className="flex items-center space-x-3">
+                          {mode !== "insert" && (
+                            <div
+                              className={classNames(
+                                "border-input h-5 w-5 rounded-full border-2",
+                                {
+                                  "bg-primary border-primary":
+                                    defaultSelection === "all" &&
+                                    selectedSystems.length === 0,
+                                },
+                              )}
+                            >
+                              {defaultSelection === "all" &&
+                                selectedSystems.length === 0 && (
+                                  <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
+                                )}
+                            </div>
+                          )}
+                          <span className="text-foreground font-medium">
+                            {t("systemSelector.allSystems")}
+                          </span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
                 <div ref={scrollContainerRef} className="flex-1 overflow-auto">
                   <div
                     style={{
                       height: `${virtualizer.getTotalSize()}px`,
                       width: "100%",
-                      position: "relative"
+                      position: "relative",
                     }}
                   >
                     {virtualizer.getVirtualItems().map((virtualItem) => {
                       const system = filteredSystems[virtualItem.index];
+                      if (!system) return null;
                       const isSelected = selectedSystems.includes(system.id);
 
-                    return (
-                      <div
-                        key={virtualItem.key}
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: `${virtualItem.size}px`,
-                          transform: `translateY(${virtualItem.start}px)`
-                        }}
-                      >
-                        <button
-                          className={classNames(
-                            "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                            "rounded-lg focus:outline-none",
-                            {
-                              "bg-white/10": isSelected,
-                              "hover:bg-white/10 focus:bg-white/10": !gamesIndex.indexing,
-                              "opacity-50 cursor-not-allowed": gamesIndex.indexing
-                            }
-                          )}
-                          onClick={() => handleSystemSelect(system.id)}
-                          disabled={gamesIndex.indexing}
-                          type="button"
+                      return (
+                        <div
+                          key={virtualItem.key}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: `${virtualItem.size}px`,
+                            transform: `translateY(${virtualItem.start}px)`,
+                          }}
                         >
-                          <div className="flex items-center space-x-3">
-                            {mode === "insert" ? null : mode === "multi" ? (
-                              <div
-                                className={classNames(
-                                  "border-input flex h-5 w-5 items-center justify-center rounded border-2",
-                                  {
-                                    "bg-primary border-primary": isSelected
-                                  }
-                                )}
-                              >
-                                {isSelected && (
-                                  <Check className="h-3 w-3 text-white" />
-                                )}
-                              </div>
-                            ) : (
-                              <div
-                                className={classNames(
-                                  "border-input h-5 w-5 rounded-full border-2",
-                                  {
-                                    "bg-primary border-primary": isSelected
-                                  }
-                                )}
-                              >
-                                {isSelected && (
-                                  <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
-                                )}
-                              </div>
+                          <button
+                            className={classNames(
+                              "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
+                              "rounded-lg focus:outline-none",
+                              {
+                                "bg-white/10": isSelected,
+                                "hover:bg-white/10 focus:bg-white/10":
+                                  !gamesIndex.indexing,
+                                "cursor-not-allowed opacity-50":
+                                  gamesIndex.indexing,
+                              },
                             )}
-                            <span className="text-foreground font-medium">
-                              {system.name}
-                            </span>
-                          </div>
-                        </button>
-                      </div>
+                            onClick={() => handleSystemSelect(system.id)}
+                            disabled={gamesIndex.indexing}
+                            type="button"
+                          >
+                            <div className="flex items-center space-x-3">
+                              {mode === "insert" ? null : mode === "multi" ? (
+                                <div
+                                  className={classNames(
+                                    "border-input flex h-5 w-5 items-center justify-center rounded border-2",
+                                    {
+                                      "bg-primary border-primary": isSelected,
+                                    },
+                                  )}
+                                >
+                                  {isSelected && (
+                                    <Check className="h-3 w-3 text-white" />
+                                  )}
+                                </div>
+                              ) : (
+                                <div
+                                  className={classNames(
+                                    "border-input h-5 w-5 rounded-full border-2",
+                                    {
+                                      "bg-primary border-primary": isSelected,
+                                    },
+                                  )}
+                                >
+                                  {isSelected && (
+                                    <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
+                                  )}
+                                </div>
+                              )}
+                              <span className="text-foreground font-medium">
+                                {system.name}
+                              </span>
+                            </div>
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -440,7 +457,11 @@ export function SystemSelector({
         <BackToTop
           scrollContainerRef={slideModalScrollRef}
           threshold={200}
-          bottomOffset={mode === "single" || mode === "insert" ? "1rem" : "calc(1rem + 100px)"}
+          bottomOffset={
+            mode === "single" || mode === "insert"
+              ? "1rem"
+              : "calc(1rem + 100px)"
+          }
         />
       </div>
     </SlideModal>
@@ -454,7 +475,7 @@ export function SystemSelectorTrigger({
   placeholder = "Select systems",
   mode = "multi",
   className,
-  onClick
+  onClick,
 }: {
   selectedSystems: string[];
   systemsData?: { systems: System[] };
@@ -472,16 +493,21 @@ export function SystemSelectorTrigger({
     if (!systemsData?.systems) return placeholder;
 
     if (selectedSystems.length === 0) {
-      return mode === "single" || mode === "insert" ? t("systemSelector.allSystems") : placeholder;
+      return mode === "single" || mode === "insert"
+        ? t("systemSelector.allSystems")
+        : placeholder;
     }
 
     if (selectedSystems.length === systemsData.systems.length) {
       return t("systemSelector.allSystems");
     }
 
-    if ((mode === "single" || mode === "insert") && selectedSystems.length === 1) {
+    if (
+      (mode === "single" || mode === "insert") &&
+      selectedSystems.length === 1
+    ) {
       const system = systemsData.systems.find(
-        (s) => s.id === selectedSystems[0]
+        (s) => s.id === selectedSystems[0],
       );
       return system?.name || selectedSystems[0];
     }
@@ -494,7 +520,7 @@ export function SystemSelectorTrigger({
     }
 
     return t("systemSelector.multipleSelected", {
-      count: selectedSystems.length
+      count: selectedSystems.length,
     });
   }, [selectedSystems, systemsData, placeholder, mode, t]);
 
@@ -511,9 +537,9 @@ export function SystemSelectorTrigger({
         "border-input text-foreground flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus:ring-2 focus:ring-white/20 focus:outline-none",
         {
           "hover:bg-white/10": !gamesIndex.indexing,
-          "opacity-50 cursor-not-allowed": gamesIndex.indexing
+          "cursor-not-allowed opacity-50": gamesIndex.indexing,
         },
-        className
+        className,
       )}
       style={{ backgroundColor: "var(--color-background)" }}
       disabled={gamesIndex.indexing}
@@ -521,7 +547,7 @@ export function SystemSelectorTrigger({
     >
       <span
         className={classNames({
-          "text-muted-foreground": selectedSystems.length === 0
+          "text-muted-foreground": selectedSystems.length === 0,
         })}
       >
         {displayText}

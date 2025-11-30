@@ -12,7 +12,7 @@ import { PageFrame } from "../components/PageFrame";
 import {
   usePreferencesStore,
   selectAppSettings,
-  selectShakeSettings
+  selectShakeSettings,
 } from "../lib/preferencesStore";
 import { BackIcon, CheckIcon } from "../lib/images";
 import { HeaderButton } from "../components/wui/HeaderButton";
@@ -44,10 +44,10 @@ export const Route = createFileRoute("/settings/readers")({
       preferRemoteWriter: state.preferRemoteWriter,
       shakeEnabled: state.shakeEnabled,
       shakeMode: state.shakeMode,
-      shakeZapscript: state.shakeZapscript
+      shakeZapscript: state.shakeZapscript,
     };
   },
-  component: ReadersSettings
+  component: ReadersSettings,
 });
 
 function ReadersSettings() {
@@ -55,18 +55,24 @@ function ReadersSettings() {
   const connected = useStatusStore((state) => state.connected);
   const [systemPickerOpen, setSystemPickerOpen] = useState(false);
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
-  const accelerometerAvailable = usePreferencesStore((state) => state.accelerometerAvailable);
+  const accelerometerAvailable = usePreferencesStore(
+    (state) => state.accelerometerAvailable,
+  );
 
   // Core settings query
-  const { data: coreSettings, refetch, isPending } = useQuery({
+  const {
+    data: coreSettings,
+    refetch,
+    isPending,
+  } = useQuery({
     queryKey: ["settings"],
-    queryFn: () => CoreAPI.settings()
+    queryFn: () => CoreAPI.settings(),
   });
 
   const updateCoreSetting = useMutation({
     mutationFn: (params: UpdateSettingsRequest) =>
       CoreAPI.settingsUpdate(params),
-    onSuccess: () => refetch()
+    onSuccess: () => refetch(),
   });
 
   // Get app settings from store
@@ -77,7 +83,7 @@ function ReadersSettings() {
     preferRemoteWriter,
     setRestartScan,
     setLaunchOnScan,
-    setPreferRemoteWriter
+    setPreferRemoteWriter,
   } = usePreferencesStore(useShallow(selectAppSettings));
 
   // Get shake settings from store
@@ -87,7 +93,7 @@ function ReadersSettings() {
     shakeZapscript,
     setShakeEnabled,
     setShakeMode,
-    setShakeZapscript
+    setShakeZapscript,
   } = usePreferencesStore(useShallow(selectShakeSettings));
 
   // Extract system name from zapscript for display
@@ -104,7 +110,7 @@ function ReadersSettings() {
   const shakeSystem = getSystemFromZapscript();
 
   const { PurchaseModal, setProPurchaseModalOpen } = useProPurchase(
-    initData.launcherAccess
+    initData.launcherAccess,
   );
 
   const { t } = useTranslation();
@@ -113,7 +119,7 @@ function ReadersSettings() {
   const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
-    preventScrollOnSwipe: false
+    preventScrollOnSwipe: false,
   });
 
   // Show blank page while loading to prevent flicker
@@ -128,14 +134,16 @@ function ReadersSettings() {
         <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">{t("settings.readers.title")}</h1>
+        <h1 className="text-foreground text-xl">
+          {t("settings.readers.title")}
+        </h1>
       }
     >
       <div className="flex flex-col gap-3">
         {/* Scan Mode - from Core */}
         <div className="py-2">
           <span>{t("settings.readers.scanMode")}</span>
-          <div className="flex flex-row mt-2" role="group">
+          <div className="mt-2 flex flex-row" role="group">
             <button
               type="button"
               className={classNames(
@@ -155,15 +163,17 @@ function ReadersSettings() {
                 "border-bd-filled",
                 {
                   "bg-button-pattern":
-                    coreSettings?.readersScanMode === "tap" && connected
+                    coreSettings?.readersScanMode === "tap" && connected,
                 },
                 {
                   "bg-background": !connected,
                   "border-foreground-disabled": !connected,
-                  "text-foreground-disabled": !connected
-                }
+                  "text-foreground-disabled": !connected,
+                },
               )}
-              onClick={() => updateCoreSetting.mutate({ readersScanMode: "tap" })}
+              onClick={() =>
+                updateCoreSetting.mutate({ readersScanMode: "tap" })
+              }
             >
               {coreSettings?.readersScanMode === "tap" && connected && (
                 <CheckIcon size="28" />
@@ -189,15 +199,17 @@ function ReadersSettings() {
                 "border-bd-filled",
                 {
                   "bg-button-pattern":
-                    coreSettings?.readersScanMode === "hold" && connected
+                    coreSettings?.readersScanMode === "hold" && connected,
                 },
                 {
                   "bg-background": !connected,
                   "border-foreground-disabled": !connected,
-                  "text-foreground-disabled": !connected
-                }
+                  "text-foreground-disabled": !connected,
+                },
               )}
-              onClick={() => updateCoreSetting.mutate({ readersScanMode: "hold" })}
+              onClick={() =>
+                updateCoreSetting.mutate({ readersScanMode: "hold" })
+              }
             >
               {coreSettings?.readersScanMode === "hold" && connected && (
                 <CheckIcon size="28" />
@@ -262,113 +274,118 @@ function ReadersSettings() {
           />
         )}
 
-        {Capacitor.isNativePlatform() && accelerometerAvailable && shakeEnabled && launcherAccess && (
-          <>
-            <div>
-              <div className="flex flex-row" role="group">
-                <button
-                  type="button"
-                  className={classNames(
-                    "flex",
-                    "flex-row",
-                    "w-full",
-                    "rounded-s-full",
-                    "items-center",
-                    "justify-center",
-                    "py-1",
-                    "font-medium",
-                    "gap-1",
-                    "tracking-[0.1px]",
-                    "h-9",
-                    "border",
-                    "border-solid",
-                    "border-bd-filled",
-                    {
-                      "bg-button-pattern": shakeMode === "random" && connected,
-                      "bg-background": shakeMode !== "random" || !connected,
-                      "border-foreground-disabled": !connected,
-                      "text-foreground-disabled": !connected
-                    }
-                  )}
-                  onClick={() => setShakeMode("random")}
-                  disabled={!connected}
-                >
-                  {shakeMode === "random" && connected && (
-                    <CheckIcon size="28" />
-                  )}
-                  {t("settings.app.shakeRandomMedia")}
-                </button>
-
-                <button
-                  type="button"
-                  className={classNames(
-                    "flex",
-                    "flex-row",
-                    "w-full",
-                    "rounded-e-full",
-                    "items-center",
-                    "justify-center",
-                    "py-1",
-                    "font-medium",
-                    "gap-1",
-                    "tracking-[0.1px]",
-                    "h-9",
-                    "border",
-                    "border-solid",
-                    "border-bd-filled",
-                    {
-                      "bg-button-pattern": shakeMode === "custom" && connected,
-                      "bg-background": shakeMode !== "custom" || !connected,
-                      "border-foreground-disabled": !connected,
-                      "text-foreground-disabled": !connected
-                    }
-                  )}
-                  onClick={() => setShakeMode("custom")}
-                  disabled={!connected}
-                >
-                  {shakeMode === "custom" && connected && (
-                    <CheckIcon size="28" />
-                  )}
-                  {t("settings.app.shakeCustom")}
-                </button>
-              </div>
-            </div>
-
-            {shakeMode === "random" && (
+        {Capacitor.isNativePlatform() &&
+          accelerometerAvailable &&
+          shakeEnabled &&
+          launcherAccess && (
+            <>
               <div>
-                <div className="flex items-center justify-between gap-2">
-                  {shakeSystem ? (
-                    <span className="text-foreground">
-                      {shakeSystem === "all"
-                        ? t("systemSelector.allSystems")
-                        : shakeSystem}
-                    </span>
-                  ) : (
-                    <span className="text-foreground">-</span>
-                  )}
-                  <Button
-                    label={t("settings.app.shakeSelectSystem")}
-                    onClick={() => setSystemPickerOpen(true)}
-                    variant="outline"
-                    size="sm"
+                <div className="flex flex-row" role="group">
+                  <button
+                    type="button"
+                    className={classNames(
+                      "flex",
+                      "flex-row",
+                      "w-full",
+                      "rounded-s-full",
+                      "items-center",
+                      "justify-center",
+                      "py-1",
+                      "font-medium",
+                      "gap-1",
+                      "tracking-[0.1px]",
+                      "h-9",
+                      "border",
+                      "border-solid",
+                      "border-bd-filled",
+                      {
+                        "bg-button-pattern":
+                          shakeMode === "random" && connected,
+                        "bg-background": shakeMode !== "random" || !connected,
+                        "border-foreground-disabled": !connected,
+                        "text-foreground-disabled": !connected,
+                      },
+                    )}
+                    onClick={() => setShakeMode("random")}
                     disabled={!connected}
-                  />
+                  >
+                    {shakeMode === "random" && connected && (
+                      <CheckIcon size="28" />
+                    )}
+                    {t("settings.app.shakeRandomMedia")}
+                  </button>
+
+                  <button
+                    type="button"
+                    className={classNames(
+                      "flex",
+                      "flex-row",
+                      "w-full",
+                      "rounded-e-full",
+                      "items-center",
+                      "justify-center",
+                      "py-1",
+                      "font-medium",
+                      "gap-1",
+                      "tracking-[0.1px]",
+                      "h-9",
+                      "border",
+                      "border-solid",
+                      "border-bd-filled",
+                      {
+                        "bg-button-pattern":
+                          shakeMode === "custom" && connected,
+                        "bg-background": shakeMode !== "custom" || !connected,
+                        "border-foreground-disabled": !connected,
+                        "text-foreground-disabled": !connected,
+                      },
+                    )}
+                    onClick={() => setShakeMode("custom")}
+                    disabled={!connected}
+                  >
+                    {shakeMode === "custom" && connected && (
+                      <CheckIcon size="28" />
+                    )}
+                    {t("settings.app.shakeCustom")}
+                  </button>
                 </div>
               </div>
-            )}
 
-            {shakeMode === "custom" && (
-              <div>
-                <ZapScriptInput
-                  value={shakeZapscript}
-                  setValue={setShakeZapscript}
-                  showPalette={false}
-                  rows={2}
-                />
-              </div>
-            )}
-          </>
-        )}
+              {shakeMode === "random" && (
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    {shakeSystem ? (
+                      <span className="text-foreground">
+                        {shakeSystem === "all"
+                          ? t("systemSelector.allSystems")
+                          : shakeSystem}
+                      </span>
+                    ) : (
+                      <span className="text-foreground">-</span>
+                    )}
+                    <Button
+                      label={t("settings.app.shakeSelectSystem")}
+                      onClick={() => setSystemPickerOpen(true)}
+                      variant="outline"
+                      size="sm"
+                      disabled={!connected}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {shakeMode === "custom" && (
+                <div>
+                  <ZapScriptInput
+                    value={shakeZapscript}
+                    setValue={setShakeZapscript}
+                    showPalette={false}
+                    rows={2}
+                  />
+                </div>
+              )}
+            </>
+          )}
 
         {/* Sound Effects - from Core */}
         <ToggleSwitch

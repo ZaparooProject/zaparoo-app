@@ -11,7 +11,9 @@ export function useRunQueueProcessor() {
   const runQueue = useStatusStore((state) => state.runQueue);
   const setRunQueue = useStatusStore((state) => state.setRunQueue);
   const setLastToken = useStatusStore((state) => state.setLastToken);
-  const setProPurchaseModalOpen = useStatusStore((state) => state.setProPurchaseModalOpen);
+  const setProPurchaseModalOpen = useStatusStore(
+    (state) => state.setProPurchaseModalOpen,
+  );
   const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
   const getConnected = () => useStatusStore.getState().connected;
   const isProcessingRef = useRef(false);
@@ -44,7 +46,7 @@ export function useRunQueueProcessor() {
             currentConnected,
             setLastToken,
             setProPurchaseModalOpen,
-            currentRunValue.unsafe
+            currentRunValue.unsafe,
           )
             .then((success: boolean) => {
               logger.log("runQueue success", success);
@@ -54,21 +56,21 @@ export function useRunQueueProcessor() {
               logger.error("runQueue error", e, {
                 category: "queue",
                 action: "runQueue",
-                tokenValue: currentRunValue.value.slice(0, 50)
+                tokenValue: currentRunValue.value.slice(0, 50),
               });
               isProcessingRef.current = false;
             });
         } else if (retryCount < maxRetries) {
           retryCount++;
           logger.log(
-            `Device not connected, retrying (${retryCount}/${maxRetries})...`
+            `Device not connected, retrying (${retryCount}/${maxRetries})...`,
           );
           setTimeout(attemptRun, retryInterval);
         } else {
           logger.error("Failed to connect to device after multiple attempts", {
             category: "connection",
             action: "runQueue",
-            maxRetries
+            maxRetries,
           });
           toast.error(t("create.custom.failMsg"));
           isProcessingRef.current = false;
@@ -77,13 +79,7 @@ export function useRunQueueProcessor() {
 
       attemptRun();
     },
-    [
-      launcherAccess,
-      setLastToken,
-      setProPurchaseModalOpen,
-      setRunQueue,
-      t
-    ]
+    [launcherAccess, setLastToken, setProPurchaseModalOpen, setRunQueue, t],
   );
 
   useEffect(() => {
@@ -95,7 +91,7 @@ export function useRunQueueProcessor() {
     setProPurchaseModalOpen,
     setRunQueue,
     t,
-    processQueue
+    processQueue,
   ]);
 
   return { processQueue };

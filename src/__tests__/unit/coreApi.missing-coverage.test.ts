@@ -18,9 +18,9 @@ describe("CoreAPI Missing Coverage", () => {
         readers: [
           {
             connected: true,
-            capabilities: ["read", "write", "format"]
-          }
-        ]
+            capabilities: ["read", "write", "format"],
+          },
+        ],
       };
 
       // Mock CoreAPI.readers to return the mock data
@@ -42,9 +42,9 @@ describe("CoreAPI Missing Coverage", () => {
         readers: [
           {
             connected: true,
-            capabilities: ["read", "format"]
-          }
-        ]
+            capabilities: ["read", "format"],
+          },
+        ],
       };
 
       // Mock CoreAPI.readers to return the mock data
@@ -61,7 +61,9 @@ describe("CoreAPI Missing Coverage", () => {
     });
 
     it("should handle errors in hasWriteCapableReader method", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Mock CoreAPI.readers to reject
       const originalReaders = CoreAPI.readers;
@@ -70,7 +72,10 @@ describe("CoreAPI Missing Coverage", () => {
       const result = await (CoreAPI as any).hasWriteCapableReader();
 
       expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith("Failed to check write capable readers:", expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to check write capable readers:",
+        expect.any(Error),
+      );
 
       // Restore
       CoreAPI.readers = originalReaders;
@@ -98,7 +103,9 @@ describe("CoreAPI Missing Coverage", () => {
       const originalCall = CoreAPI.call;
       CoreAPI.call = vi.fn().mockResolvedValue({ result: "success" });
 
-      await expect((CoreAPI as any).launchersRefresh()).resolves.toBeUndefined();
+      await expect(
+        (CoreAPI as any).launchersRefresh(),
+      ).resolves.toBeUndefined();
       expect(CoreAPI.call).toHaveBeenCalledWith("launchers.refresh");
 
       // Restore

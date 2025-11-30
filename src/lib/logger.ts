@@ -71,7 +71,7 @@ export async function initDeviceInfo(): Promise<void> {
       model: info.model,
       osVersion: info.osVersion,
       manufacturer: info.manufacturer,
-      isVirtual: info.isVirtual
+      isVirtual: info.isVirtual,
     };
   } catch (e) {
     // Silently fail - device info is nice-to-have, not critical
@@ -99,7 +99,7 @@ function buildBaseContext(): Record<string, unknown> {
 
     // Connection state
     connectionState: state.connectionState,
-    isConnected: state.connected
+    isConnected: state.connected,
   };
 }
 
@@ -231,5 +231,5 @@ export const logger = {
       default:
         rollbar.error(errorToReport, customData);
     }
-  }
+  },
 };

@@ -15,14 +15,14 @@ const AppUrlListener: React.FC = () => {
       const queryParams = Object.fromEntries(params.entries());
       const data = {
         path,
-        queryParams
+        queryParams,
       };
       logger.log("App URL opened:", data);
 
-      if (path === "/run") {
+      if (path === "/run" && queryParams.v) {
         logger.log("Run queue:", queryParams.v);
         setRunQueue({ value: queryParams.v, unsafe: true });
-      } else if (path === "/write") {
+      } else if (path === "/write" && queryParams.v) {
         logger.log("Write queue:", queryParams.v);
         setWriteQueue(queryParams.v);
       }

@@ -15,13 +15,13 @@ import {
   PlayingResponse,
   PlaytimeLimitReachedParams,
   PlaytimeLimitWarningParams,
-  TokenResponse
+  TokenResponse,
 } from "../lib/models.ts";
 import {
   getWsUrl,
   CoreAPI,
   getDeviceAddress,
-  NotificationRequest
+  NotificationRequest,
 } from "../lib/coreApi.ts";
 import { useStatusStore, ConnectionState } from "../lib/store.ts";
 import { formatDurationDisplay } from "../lib/utils.ts";
@@ -33,7 +33,9 @@ export function CoreApiWebSocket() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const wsManagerRef = useRef<WebSocketManager | null>(null);
-  const optimisticTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const optimisticTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isResumingRef = useRef(false);
 
@@ -46,7 +48,7 @@ export function CoreApiWebSocket() {
     setGamesIndex,
     setLastToken,
     addDeviceHistory,
-    setDeviceHistory
+    setDeviceHistory,
   } = useStatusStore(
     useShallow((state) => ({
       targetDeviceAddress: state.targetDeviceAddress,
@@ -57,8 +59,8 @@ export function CoreApiWebSocket() {
       setGamesIndex: state.setGamesIndex,
       setLastToken: state.setLastToken,
       addDeviceHistory: state.addDeviceHistory,
-      setDeviceHistory: state.setDeviceHistory
-    }))
+      setDeviceHistory: state.setDeviceHistory,
+    })),
   );
 
   // Derive WebSocket URL from device address
@@ -100,86 +102,100 @@ export function CoreApiWebSocket() {
   }, [targetDeviceAddress, setTargetDeviceAddress]);
 
   // Shared function to check and apply optimistic connection state
-  const applyOptimisticState = useCallback(async (
-    timeoutRef: { current: ReturnType<typeof setTimeout> | null },
-    logPrefix: string = ""
-  ) => {
-    try {
-      // In dev mode, skip optimistic state if module just loaded (HMR scenario)
-      // This prevents showing stale "reconnecting" state after hot reload
-      if (import.meta.env.DEV) {
-        const timeSinceModuleLoad = Date.now() - moduleLoadTimestamp;
-        if (timeSinceModuleLoad < 2000) {
-          logger.log(`${logPrefix}Skipping optimistic state - module just loaded (HMR)`);
-          return false;
-        }
-      }
-
-      const [lastStateResult, lastTimestampResult] = await Promise.all([
-        Preferences.get({ key: "lastConnectionState" }),
-        Preferences.get({ key: "lastConnectionTimestamp" })
-      ]);
-
-      const lastState = lastStateResult.value;
-      const lastTimestamp = lastTimestampResult.value;
-
-      // Only be optimistic if:
-      // 1. Device address exists
-      // 2. Last state was CONNECTED
-      // 3. Last connection was within 10 minutes
-      const TEN_MINUTES = 10 * 60 * 1000;
-      const now = Date.now();
-
-      if (
-        lastState === WebSocketState.CONNECTED &&
-        lastTimestamp &&
-        now - parseInt(lastTimestamp) < TEN_MINUTES
-      ) {
-        logger.log(`${logPrefix}Showing optimistic reconnecting state`);
-        setConnectionState(ConnectionState.RECONNECTING);
-        setConnectionError("");
-
-        // Clear any existing timeout
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
+  const applyOptimisticState = useCallback(
+    async (
+      timeoutRef: { current: ReturnType<typeof setTimeout> | null },
+      logPrefix: string = "",
+    ) => {
+      try {
+        // In dev mode, skip optimistic state if module just loaded (HMR scenario)
+        // This prevents showing stale "reconnecting" state after hot reload
+        if (import.meta.env.DEV) {
+          const timeSinceModuleLoad = Date.now() - moduleLoadTimestamp;
+          if (timeSinceModuleLoad < 2000) {
+            logger.log(
+              `${logPrefix}Skipping optimistic state - module just loaded (HMR)`,
+            );
+            return false;
+          }
         }
 
-        // Set a timeout to show real state if connection fails
-        timeoutRef.current = setTimeout(() => {
-          if (wsManagerRef.current) {
-            const actualState = wsManagerRef.current.currentState;
-            // If still not actually connected after 5 seconds, show real state
-            if (actualState !== WebSocketState.CONNECTED) {
-              logger.log(`${logPrefix}Optimistic timeout: showing real connection state`);
-              switch (actualState) {
-                case WebSocketState.CONNECTING:
-                  setConnectionState(ConnectionState.CONNECTING);
-                  break;
-                case WebSocketState.RECONNECTING:
-                  setConnectionState(ConnectionState.RECONNECTING);
-                  break;
-                case WebSocketState.ERROR:
-                  setConnectionState(ConnectionState.ERROR);
-                  break;
-                case WebSocketState.DISCONNECTED:
-                  setConnectionState(ConnectionState.DISCONNECTED);
-                  break;
+        const [lastStateResult, lastTimestampResult] = await Promise.all([
+          Preferences.get({ key: "lastConnectionState" }),
+          Preferences.get({ key: "lastConnectionTimestamp" }),
+        ]);
+
+        const lastState = lastStateResult.value;
+        const lastTimestamp = lastTimestampResult.value;
+
+        // Only be optimistic if:
+        // 1. Device address exists
+        // 2. Last state was CONNECTED
+        // 3. Last connection was within 10 minutes
+        const TEN_MINUTES = 10 * 60 * 1000;
+        const now = Date.now();
+
+        if (
+          lastState === WebSocketState.CONNECTED &&
+          lastTimestamp &&
+          now - parseInt(lastTimestamp) < TEN_MINUTES
+        ) {
+          logger.log(`${logPrefix}Showing optimistic reconnecting state`);
+          setConnectionState(ConnectionState.RECONNECTING);
+          setConnectionError("");
+
+          // Clear any existing timeout
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+          }
+
+          // Set a timeout to show real state if connection fails
+          timeoutRef.current = setTimeout(() => {
+            if (wsManagerRef.current) {
+              const actualState = wsManagerRef.current.currentState;
+              // If still not actually connected after 5 seconds, show real state
+              if (actualState !== WebSocketState.CONNECTED) {
+                logger.log(
+                  `${logPrefix}Optimistic timeout: showing real connection state`,
+                );
+                switch (actualState) {
+                  case WebSocketState.CONNECTING:
+                    setConnectionState(ConnectionState.CONNECTING);
+                    break;
+                  case WebSocketState.RECONNECTING:
+                    setConnectionState(ConnectionState.RECONNECTING);
+                    break;
+                  case WebSocketState.ERROR:
+                    setConnectionState(ConnectionState.ERROR);
+                    break;
+                  case WebSocketState.DISCONNECTED:
+                    setConnectionState(ConnectionState.DISCONNECTED);
+                    break;
+                }
               }
             }
-          }
-          timeoutRef.current = null;
-        }, 5000); // 5 second timeout
+            timeoutRef.current = null;
+          }, 5000); // 5 second timeout
 
-        return true; // Optimistic state applied
-      } else {
-        logger.log(`${logPrefix}Not showing optimistic state - conditions not met`);
-        return false; // Not optimistic
+          return true; // Optimistic state applied
+        } else {
+          logger.log(
+            `${logPrefix}Not showing optimistic state - conditions not met`,
+          );
+          return false; // Not optimistic
+        }
+      } catch (error) {
+        logger.error(`${logPrefix}Error checking optimistic state:`, error, {
+          category: "storage",
+          action: "get",
+          key: "lastConnectionState",
+          severity: "warning",
+        });
+        return false;
       }
-    } catch (error) {
-      logger.error(`${logPrefix}Error checking optimistic state:`, error, { category: "storage", action: "get", key: "lastConnectionState", severity: "warning" });
-      return false;
-    }
-  }, [setConnectionState, setConnectionError]);
+    },
+    [setConnectionState, setConnectionError],
+  );
 
   useEffect(() => {
     // Early exit checks
@@ -224,7 +240,7 @@ export function CoreApiWebSocket() {
           systemId: "",
           systemName: "",
           mediaPath: "",
-          mediaName: ""
+          mediaName: "",
         });
       } catch (err) {
         logger.error("Error processing media.stopped notification:", err);
@@ -243,12 +259,18 @@ export function CoreApiWebSocket() {
 
         // Check for any meaningful state changes that require media query invalidation
         const indexingStateChanged = currentState.indexing !== params.indexing;
-        const optimizingStateChanged = currentState.optimizing !== params.optimizing;
+        const optimizingStateChanged =
+          currentState.optimizing !== params.optimizing;
         const existsStateChanged = currentState.exists !== params.exists;
         const totalMediaChanged = currentState.totalMedia !== params.totalMedia;
 
         // Invalidate media query on any significant state change to keep UI in sync
-        if (indexingStateChanged || optimizingStateChanged || existsStateChanged || totalMediaChanged) {
+        if (
+          indexingStateChanged ||
+          optimizingStateChanged ||
+          existsStateChanged ||
+          totalMediaChanged
+        ) {
           logger.log("Database state changed, invalidating media query");
           queryClient.invalidateQueries({ queryKey: ["media"] });
         }
@@ -277,7 +299,7 @@ export function CoreApiWebSocket() {
         reconnectBackoffMultiplier: 1.5,
         maxReconnectInterval: 2000,
         pingMessage: "ping",
-        connectionTimeout: 10000
+        connectionTimeout: 10000,
       },
       {
         onOpen: () => {
@@ -298,11 +320,18 @@ export function CoreApiWebSocket() {
                 addDeviceHistory(getDeviceAddress());
               } catch (e) {
                 logger.error("Error processing device history:", e);
-                toast.error(t("error", { msg: "Failed to load device history" }));
+                toast.error(
+                  t("error", { msg: "Failed to load device history" }),
+                );
               }
             })
             .catch((e) => {
-              logger.error("Failed to get device history:", e, { category: "storage", action: "get", key: "deviceHistory", severity: "warning" });
+              logger.error("Failed to get device history:", e, {
+                category: "storage",
+                action: "get",
+                key: "deviceHistory",
+                severity: "warning",
+              });
             });
 
           // Get media information
@@ -310,16 +339,22 @@ export function CoreApiWebSocket() {
             .then((v) => {
               try {
                 setGamesIndex(v.database);
-                if (v.active.length > 0) {
-                  setPlaying(v.active[0]);
+                const firstActive = v.active[0];
+                if (firstActive) {
+                  setPlaying(firstActive);
                 }
               } catch (e) {
                 logger.error("Error processing media data:", e);
-                toast.error(t("error", { msg: "Failed to process media data" }));
+                toast.error(
+                  t("error", { msg: "Failed to process media data" }),
+                );
               }
             })
             .catch((e) => {
-              logger.error("Failed to get media information:", e, { category: "api", action: "media" });
+              logger.error("Failed to get media information:", e, {
+                category: "api",
+                action: "media",
+              });
               toast.error(t("error", { msg: "Failed to fetch media" }));
             });
 
@@ -332,11 +367,16 @@ export function CoreApiWebSocket() {
                 }
               } catch (e) {
                 logger.error("Error processing tokens data:", e);
-                toast.error(t("error", { msg: "Failed to process tokens data" }));
+                toast.error(
+                  t("error", { msg: "Failed to process tokens data" }),
+                );
               }
             })
             .catch((e) => {
-              logger.error("Failed to get tokens information:", e, { category: "api", action: "tokens" });
+              logger.error("Failed to get tokens information:", e, {
+                category: "api",
+                action: "tokens",
+              });
               toast.error(t("error", { msg: "Failed to fetch tokens" }));
             });
         },
@@ -380,58 +420,71 @@ export function CoreApiWebSocket() {
                       activeToken(v.params as TokenResponse);
                       break;
                     case Notification.PlaytimeLimitWarning: {
-                      const warningParams = v.params as PlaytimeLimitWarningParams;
-                      const remainingTime = formatDurationDisplay(warningParams.remaining);
+                      const warningParams =
+                        v.params as PlaytimeLimitWarningParams;
+                      const remainingTime = formatDurationDisplay(
+                        warningParams.remaining,
+                      );
                       toast(
                         (to) => (
                           <span
                             className="flex grow flex-col"
                             onClick={() => toast.dismiss(to.id)}
-                            onKeyUp={(e) => (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)}
+                            onKeyUp={(e) =>
+                              (e.key === "Enter" || e.key === " ") &&
+                              toast.dismiss(to.id)
+                            }
                             role="button"
                             tabIndex={0}
                           >
                             {t("settings.core.playtime.warningToast", {
-                              remaining: remainingTime
+                              remaining: remainingTime,
                             })}
                           </span>
                         ),
                         {
                           icon: (
-                            <span className="text-warning pl-1 pr-1">
+                            <span className="text-warning pr-1 pl-1">
                               <Clock size={20} />
                             </span>
                           ),
-                          duration: 5000
-                        }
+                          duration: 5000,
+                        },
                       );
                       break;
                     }
                     case Notification.PlaytimeLimitReached: {
-                      const reachedParams = v.params as PlaytimeLimitReachedParams;
-                      const limitType = reachedParams.reason === "daily" ? t("settings.core.playtime.dailyLimit") : t("settings.core.playtime.sessionLimit");
+                      const reachedParams =
+                        v.params as PlaytimeLimitReachedParams;
+                      const limitType =
+                        reachedParams.reason === "daily"
+                          ? t("settings.core.playtime.dailyLimit")
+                          : t("settings.core.playtime.sessionLimit");
                       toast(
                         (to) => (
                           <span
                             className="flex grow flex-col"
                             onClick={() => toast.dismiss(to.id)}
-                            onKeyUp={(e) => (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)}
+                            onKeyUp={(e) =>
+                              (e.key === "Enter" || e.key === " ") &&
+                              toast.dismiss(to.id)
+                            }
                             role="button"
                             tabIndex={0}
                           >
                             {t("settings.core.playtime.reachedToast", {
-                              type: limitType
+                              type: limitType,
                             })}
                           </span>
                         ),
                         {
                           icon: (
-                            <span className="text-error pl-1 pr-1">
+                            <span className="text-error pr-1 pl-1">
                               <AlertTriangle size={20} />
                             </span>
                           ),
-                          duration: 6000
-                        }
+                          duration: 6000,
+                        },
                       );
                       break;
                     }
@@ -440,12 +493,17 @@ export function CoreApiWebSocket() {
                   }
                 } catch (err) {
                   logger.error("Error processing notification:", err);
-                  toast.error(t("error", { msg: "Error processing notification" }));
+                  toast.error(
+                    t("error", { msg: "Error processing notification" }),
+                  );
                 }
               }
             })
             .catch((e) => {
-              logger.error("Error processing message:", e, { category: "websocket", action: "processMessage" });
+              logger.error("Error processing message:", e, {
+                category: "websocket",
+                action: "processMessage",
+              });
               toast.error(t("error", { msg: e?.message || "Unknown error" }));
             });
         },
@@ -476,8 +534,8 @@ export function CoreApiWebSocket() {
               setConnectionState(ConnectionState.DISCONNECTED);
               break;
           }
-        }
-      }
+        },
+      },
     );
 
     wsManagerRef.current = wsManager;
@@ -521,13 +579,15 @@ export function CoreApiWebSocket() {
     setPlaying,
     queryClient,
     t,
-    applyOptimisticState
+    applyOptimisticState,
   ]); // Dependencies: re-create WebSocket if address or URL changes
 
   // App lifecycle listeners for handling pause/resume
   useEffect(() => {
-    let resumeListener: Awaited<ReturnType<typeof App.addListener>> | null = null;
-    let pauseListener: Awaited<ReturnType<typeof App.addListener>> | null = null;
+    let resumeListener: Awaited<ReturnType<typeof App.addListener>> | null =
+      null;
+    let pauseListener: Awaited<ReturnType<typeof App.addListener>> | null =
+      null;
 
     const setupListeners = async () => {
       // Handle app resume - trigger immediate reconnection with optimistic state
@@ -560,14 +620,16 @@ export function CoreApiWebSocket() {
           // Persist connection state for optimistic UI on resume
           await Preferences.set({
             key: "lastConnectionState",
-            value: currentState
+            value: currentState,
           });
           await Preferences.set({
             key: "lastConnectionTimestamp",
-            value: timestamp.toString()
+            value: timestamp.toString(),
           });
 
-          logger.log(`Persisted connection state: ${currentState} at ${timestamp}`);
+          logger.log(
+            `Persisted connection state: ${currentState} at ${timestamp}`,
+          );
         }
       });
     };
@@ -585,7 +647,12 @@ export function CoreApiWebSocket() {
       resumeListener?.remove();
       pauseListener?.remove();
     };
-  }, [targetDeviceAddress, setConnectionState, setConnectionError, applyOptimisticState]); // Re-setup listeners if device address changes
+  }, [
+    targetDeviceAddress,
+    setConnectionState,
+    setConnectionError,
+    applyOptimisticState,
+  ]); // Re-setup listeners if device address changes
 
   // Browser visibility change handling (web platform only)
   useEffect(() => {
@@ -623,14 +690,21 @@ export function CoreApiWebSocket() {
           const currentState = wsManagerRef.current.currentState;
           const timestamp = Date.now();
 
-          await Preferences.set({ key: "lastConnectionState", value: currentState });
-          await Preferences.set({ key: "lastConnectionTimestamp", value: timestamp.toString() });
+          await Preferences.set({
+            key: "lastConnectionState",
+            value: currentState,
+          });
+          await Preferences.set({
+            key: "lastConnectionTimestamp",
+            value: timestamp.toString(),
+          });
         }
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [targetDeviceAddress, setConnectionState, applyOptimisticState]);
 
   return null;

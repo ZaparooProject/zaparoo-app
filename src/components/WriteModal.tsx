@@ -12,12 +12,12 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: () => props.close(),
-    preventScrollOnSwipe: false
+    preventScrollOnSwipe: false,
   });
 
   // Handle Android back button
   useBackButtonHandler(
-    'write-modal',
+    "write-modal",
     () => {
       if (props.isOpen) {
         props.close();
@@ -26,7 +26,7 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
       return false; // Let other handlers process it
     },
     100, // High priority
-    props.isOpen // Only active when modal is open
+    props.isOpen, // Only active when modal is open
   );
 
   if (!props.isOpen) {

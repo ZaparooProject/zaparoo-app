@@ -37,7 +37,7 @@ describe("WriteModal Coverage", () => {
         connected: false,
         currentWriteMethod: null,
         setCurrentWriteMethod: vi.fn(),
-      }))
+      })),
     }));
 
     // Basic render test

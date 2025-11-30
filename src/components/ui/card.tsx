@@ -4,7 +4,8 @@ import { cn } from "@/lib/utils";
 import { cardVariants } from "./card-variants";
 
 export interface CardProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends
+    React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof cardVariants> {
   disabled?: boolean;
 }
@@ -14,7 +15,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     const isClickable = !!onClick && !disabled;
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
+      if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         if (isClickable && onClick) {
           onClick(e as unknown as React.MouseEvent<HTMLDivElement>);
@@ -28,10 +29,10 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
         className={cn(
           cardVariants({
             variant,
-            clickable: isClickable ? true : false
+            clickable: isClickable ? true : false,
           }),
           disabled && "text-[hsl(var(--muted-foreground))] opacity-50",
-          className
+          className,
         )}
         onClick={!disabled ? onClick : undefined}
         role={isClickable ? "button" : undefined}
@@ -40,7 +41,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
         {...props}
       />
     );
-  }
+  },
 );
 Card.displayName = "Card";
 
@@ -63,7 +64,10 @@ const CardTitle = React.forwardRef<
   // eslint-disable-next-line jsx-a11y/heading-has-content
   <h3
     ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+    className={cn(
+      "text-lg leading-none font-semibold tracking-tight",
+      className,
+    )}
     {...props}
   />
 ));
@@ -75,7 +79,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-muted-foreground text-sm", className)}
     {...props}
   />
 ));

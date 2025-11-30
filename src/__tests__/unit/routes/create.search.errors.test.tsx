@@ -12,8 +12,8 @@ vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
     mediaSearch: mockMediaSearch,
     systems: mockSystems,
-    media: mockMedia
-  }
+    media: mockMedia,
+  },
 }));
 
 vi.mock("../../../lib/store", () => ({
@@ -23,11 +23,11 @@ vi.mock("../../../lib/store", () => ({
       gamesIndex: { games: [] },
       setGamesIndex: vi.fn(),
       setConnected: vi.fn(),
-      connectionState: 'CONNECTED' as any,
+      connectionState: "CONNECTED" as any,
       setConnectionState: vi.fn(),
       lastConnectionTime: null,
       setLastConnectionTime: vi.fn(),
-      connectionError: '',
+      connectionError: "",
       setConnectionError: vi.fn(),
       retryCount: 0,
       retryConnection: vi.fn(),
@@ -50,27 +50,27 @@ vi.mock("../../../lib/store", () => ({
       clearDeviceHistory: vi.fn(),
       runQueue: null,
       setRunQueue: vi.fn(),
-      writeQueue: '',
+      writeQueue: "",
       setWriteQueue: vi.fn(),
       pendingDisconnection: false,
       setConnectionStateWithGracePeriod: vi.fn(),
       clearGracePeriod: vi.fn(),
-      resetConnectionState: vi.fn()
+      resetConnectionState: vi.fn(),
     };
     return selector(mockState);
-  })
+  }),
 }));
 
 vi.mock("../../../lib/writeNfcHook", () => ({
   useNfcWriter: vi.fn(() => ({
     status: null,
     write: vi.fn(),
-    end: vi.fn()
-  }))
+    end: vi.fn(),
+  })),
 }));
 
 vi.mock("../../../hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({}))
+  useSmartSwipe: vi.fn(() => ({})),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -78,21 +78,21 @@ vi.mock("@tanstack/react-router", () => ({
   createFileRoute: vi.fn(() => ({
     useLoaderData: vi.fn(() => ({
       systemQuery: "all",
-      systems: { systems: [{ id: "snes", name: "SNES" }] }
-    }))
-  }))
+      systems: { systems: [{ id: "snes", name: "SNES" }] },
+    })),
+  })),
 }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key
-  })
+    t: (key: string) => key,
+  }),
 }));
 
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
-    set: vi.fn().mockResolvedValue(undefined)
-  }
+    set: vi.fn().mockResolvedValue(undefined),
+  },
 }));
 
 describe("Create Search Route - Error Handling", () => {
@@ -103,8 +103,8 @@ describe("Create Search Route - Error Handling", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
   });
 
@@ -146,13 +146,15 @@ describe("Create Search Route - Error Handling", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <SearchErrorComponent />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     fireEvent.click(screen.getByTestId("search-btn"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("search-error")).toHaveTextContent("API connection failed");
+      expect(screen.getByTestId("search-error")).toHaveTextContent(
+        "API connection failed",
+      );
     });
   });
 
@@ -165,7 +167,10 @@ describe("Create Search Route - Error Handling", () => {
 
       const handleSearch = async () => {
         setHasSearched(true);
-        const response = await mockMediaSearch({ query: "nonexistent", systems: [] });
+        const response = await mockMediaSearch({
+          query: "nonexistent",
+          systems: [],
+        });
         setResults(response.results);
       };
 
@@ -195,7 +200,7 @@ describe("Create Search Route - Error Handling", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <EmptyResultsComponent />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     fireEvent.click(screen.getByTestId("search-btn"));
@@ -206,10 +211,11 @@ describe("Create Search Route - Error Handling", () => {
   });
 
   it("should handle search timeout", async () => {
-    mockMediaSearch.mockImplementation(() =>
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Request timeout")), 100)
-      )
+    mockMediaSearch.mockImplementation(
+      () =>
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Request timeout")), 100),
+        ),
     );
 
     const TimeoutComponent = () => {
@@ -222,7 +228,7 @@ describe("Create Search Route - Error Handling", () => {
 
         try {
           await mockMediaSearch({ query: "test", systems: [] });
-        } catch (err) {
+        } catch {
           setError("Request timed out");
         } finally {
           setIsLoading(false);
@@ -248,14 +254,19 @@ describe("Create Search Route - Error Handling", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <TimeoutComponent />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     fireEvent.click(screen.getByTestId("search-btn"));
 
-    await waitFor(() => {
-      expect(screen.getByTestId("timeout-error")).toHaveTextContent("Request timed out");
-    }, { timeout: 200 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("timeout-error")).toHaveTextContent(
+          "Request timed out",
+        );
+      },
+      { timeout: 200 },
+    );
   });
 
   it("should handle rapid search queries", async () => {
@@ -272,27 +283,18 @@ describe("Create Search Route - Error Handling", () => {
       const handleSearch = async (query: string) => {
         const response = await mockMediaSearch({ query, systems: [] });
         setResults(response.results);
-        setSearchCount(prev => prev + 1);
+        setSearchCount((prev) => prev + 1);
       };
 
       return (
         <div>
-          <button
-            data-testid="search-1"
-            onClick={() => handleSearch("query1")}
-          >
+          <button data-testid="search-1" onClick={() => handleSearch("query1")}>
             Search 1
           </button>
-          <button
-            data-testid="search-2"
-            onClick={() => handleSearch("query2")}
-          >
+          <button data-testid="search-2" onClick={() => handleSearch("query2")}>
             Search 2
           </button>
-          <button
-            data-testid="search-3"
-            onClick={() => handleSearch("query3")}
-          >
+          <button data-testid="search-3" onClick={() => handleSearch("query3")}>
             Search 3
           </button>
 
@@ -305,7 +307,7 @@ describe("Create Search Route - Error Handling", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <RapidSearchComponent />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     // Fire rapid searches
@@ -327,8 +329,8 @@ describe("Create Search Route - Error Handling", () => {
         { name: null, system: "Genesis" }, // Invalid name
         { system: "NES" }, // Missing name
         null, // Null result
-        undefined // Undefined result
-      ]
+        undefined, // Undefined result
+      ],
     });
 
     const MalformedDataComponent = () => {
@@ -340,8 +342,9 @@ describe("Create Search Route - Error Handling", () => {
         setResults(response.results);
 
         // Filter valid results
-        const valid = response.results.filter((result: any) =>
-          result && result.name && typeof result.name === 'string'
+        const valid = response.results.filter(
+          (result: any) =>
+            result && result.name && typeof result.name === "string",
         );
         setValidResults(valid);
       };
@@ -367,7 +370,7 @@ describe("Create Search Route - Error Handling", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <MalformedDataComponent />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     fireEvent.click(screen.getByTestId("search-btn"));
@@ -375,7 +378,9 @@ describe("Create Search Route - Error Handling", () => {
     await waitFor(() => {
       expect(screen.getByTestId("total-results")).toHaveTextContent("Total: 5");
       expect(screen.getByTestId("valid-results")).toHaveTextContent("Valid: 1");
-      expect(screen.getByTestId("valid-result-0")).toHaveTextContent("Valid Game");
+      expect(screen.getByTestId("valid-result-0")).toHaveTextContent(
+        "Valid Game",
+      );
     });
   });
 
@@ -385,7 +390,9 @@ describe("Create Search Route - Error Handling", () => {
 
     const SystemFilterErrorComponent = () => {
       const [systems, setSystems] = React.useState<any[]>([]);
-      const [systemsError, setSystemsError] = React.useState<string | null>(null);
+      const [systemsError, setSystemsError] = React.useState<string | null>(
+        null,
+      );
       const [selectedSystem, setSelectedSystem] = React.useState("all");
 
       React.useEffect(() => {
@@ -393,7 +400,7 @@ describe("Create Search Route - Error Handling", () => {
           try {
             const response = await mockSystems();
             setSystems(response.systems || []);
-          } catch (err) {
+          } catch {
             setSystemsError("Failed to load systems");
           }
         };
@@ -421,7 +428,7 @@ describe("Create Search Route - Error Handling", () => {
               onChange={(e) => setSelectedSystem(e.target.value)}
             >
               <option value="all">All Systems</option>
-              {systems.map(system => (
+              {systems.map((system) => (
                 <option key={system.id} value={system.id}>
                   {system.name}
                 </option>
@@ -439,7 +446,7 @@ describe("Create Search Route - Error Handling", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <SystemFilterErrorComponent />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     await waitFor(() => {
@@ -450,7 +457,7 @@ describe("Create Search Route - Error Handling", () => {
 
   it("should handle write modal errors during search", async () => {
     mockMediaSearch.mockResolvedValue({
-      results: [{ id: "1", name: "Test Game", path: "/game.rom" }]
+      results: [{ id: "1", name: "Test Game", path: "/game.rom" }],
     });
 
     const WriteModalErrorComponent = () => {
@@ -489,9 +496,7 @@ describe("Create Search Route - Error Handling", () => {
             </div>
           ))}
 
-          {writeError && (
-            <div data-testid="write-error">{writeError}</div>
-          )}
+          {writeError && <div data-testid="write-error">{writeError}</div>}
         </div>
       );
     };
@@ -499,7 +504,7 @@ describe("Create Search Route - Error Handling", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <WriteModalErrorComponent />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     fireEvent.click(screen.getByTestId("search-btn"));
@@ -511,7 +516,9 @@ describe("Create Search Route - Error Handling", () => {
     fireEvent.click(screen.getByTestId("write-btn-0"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("write-error")).toHaveTextContent("NFC write failed");
+      expect(screen.getByTestId("write-error")).toHaveTextContent(
+        "NFC write failed",
+      );
     });
   });
 
@@ -524,11 +531,11 @@ describe("Create Search Route - Error Handling", () => {
         gamesIndex: { games: [] },
         setGamesIndex: vi.fn(),
         setConnected: vi.fn(),
-        connectionState: 'DISCONNECTED' as any,
+        connectionState: "DISCONNECTED" as any,
         setConnectionState: vi.fn(),
         lastConnectionTime: null,
         setLastConnectionTime: vi.fn(),
-        connectionError: '',
+        connectionError: "",
         setConnectionError: vi.fn(),
         retryCount: 0,
         retryConnection: vi.fn(),
@@ -551,12 +558,12 @@ describe("Create Search Route - Error Handling", () => {
         clearDeviceHistory: vi.fn(),
         runQueue: null,
         setRunQueue: vi.fn(),
-        writeQueue: '',
+        writeQueue: "",
         setWriteQueue: vi.fn(),
         pendingDisconnection: false,
         setConnectionStateWithGracePeriod: vi.fn(),
         clearGracePeriod: vi.fn(),
-        resetConnectionState: vi.fn()
+        resetConnectionState: vi.fn(),
       };
       return selector(mockState);
     });
@@ -596,10 +603,12 @@ describe("Create Search Route - Error Handling", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <DisconnectedSearchComponent />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
-    expect(screen.getByTestId("connection-status")).toHaveTextContent("Disconnected");
+    expect(screen.getByTestId("connection-status")).toHaveTextContent(
+      "Disconnected",
+    );
     expect(screen.getByTestId("search-btn")).toBeDisabled();
     expect(screen.getByTestId("disconnected-message")).toBeInTheDocument();
   });

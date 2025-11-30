@@ -11,7 +11,9 @@ import { logger } from "../lib/logger";
  */
 export function useNfcAvailabilityCheck() {
   const setNfcAvailable = usePreferencesStore((state) => state.setNfcAvailable);
-  const setNfcAvailabilityHydrated = usePreferencesStore((state) => state.setNfcAvailabilityHydrated);
+  const setNfcAvailabilityHydrated = usePreferencesStore(
+    (state) => state.setNfcAvailabilityHydrated,
+  );
 
   useEffect(() => {
     // Skip on web platform
@@ -28,7 +30,11 @@ export function useNfcAvailabilityCheck() {
         setNfcAvailabilityHydrated(true);
       })
       .catch((e) => {
-        logger.error("Failed to check NFC availability:", e, { category: "nfc", action: "availabilityCheck", severity: "warning" });
+        logger.error("Failed to check NFC availability:", e, {
+          category: "nfc",
+          action: "availabilityCheck",
+          severity: "warning",
+        });
         // On error, assume NFC not available
         setNfcAvailable(false);
         setNfcAvailabilityHydrated(true);

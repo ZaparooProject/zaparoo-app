@@ -82,7 +82,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
     return render(
       <QueryClientProvider client={queryClient}>
         <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
   };
 
@@ -114,7 +114,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
     const { rerender } = render(
       <QueryClientProvider client={queryClient}>
         <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     // Wait for initial data to load
@@ -146,7 +146,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
     rerender(
       <QueryClientProvider client={queryClient}>
         <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     // Wait for second page to be fetched
@@ -154,14 +154,14 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
       () => {
         expect(mediaSearchSpy).toHaveBeenCalledTimes(2);
       },
-      { timeout: 3000 }
+      { timeout: 3000 },
     );
 
     // Verify the second call included the cursor
     expect(mediaSearchSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         cursor: "cursor-page-2",
-      })
+      }),
     );
   });
 
@@ -192,7 +192,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
     const { rerender } = render(
       <QueryClientProvider client={queryClient}>
         <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     await waitFor(() => {
@@ -209,7 +209,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
     rerender(
       <QueryClientProvider client={queryClient}>
         <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     // Wait a bit to ensure no additional calls are made
@@ -247,7 +247,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
     const { rerender } = render(
       <QueryClientProvider client={queryClient}>
         <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     await waitFor(() => {
@@ -264,7 +264,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
     rerender(
       <QueryClientProvider client={queryClient}>
         <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -335,7 +335,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
     const loadingTexts = screen.queryAllByText("create.search.loading");
     // Filter out the one in the aria-live region if present
     const visibleLoading = loadingTexts.filter(
-      (el) => !el.classList.contains("sr-only")
+      (el) => !el.classList.contains("sr-only"),
     );
     expect(visibleLoading.length).toBe(0);
   });

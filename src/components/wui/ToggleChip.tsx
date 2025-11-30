@@ -41,15 +41,15 @@ export function ToggleChip(props: ToggleChipProps) {
           "px-4": props.compact && (props.label || !props.icon),
           "px-6": !props.compact && (props.label || !props.icon),
           "rounded-full": !props.label && props.icon,
-          "rounded-[8px]": props.label || !props.icon
+          "rounded-[8px]": props.label || !props.icon,
         },
         {
           "bg-button-pattern": props.state && !props.disabled,
           "border-bd-filled": props.state && !props.disabled,
           "border-bd-outline": !props.state && !props.disabled,
           "border-foreground-disabled": props.disabled,
-          "text-foreground-disabled": props.disabled
-        }
+          "text-foreground-disabled": props.disabled,
+        },
       )}
       onClick={() => !props.disabled && props.setState(!props.state)}
     >

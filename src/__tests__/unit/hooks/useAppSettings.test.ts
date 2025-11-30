@@ -4,7 +4,10 @@ import { useAppSettings } from "../../../hooks/useAppSettings";
 import { Preferences } from "@capacitor/preferences";
 // sessionManager is mocked in nfc mock
 
-vi.mock("@capacitor/preferences", () => import("../../../__mocks__/@capacitor/preferences"));
+vi.mock(
+  "@capacitor/preferences",
+  () => import("../../../__mocks__/@capacitor/preferences"),
+);
 vi.mock("../../../lib/nfc");
 
 describe("useAppSettings", () => {
@@ -13,7 +16,15 @@ describe("useAppSettings", () => {
   });
 
   it("should initialize with provided initData", () => {
-    const initData = { restartScan: true, launchOnScan: false, launcherAccess: false, preferRemoteWriter: false, shakeEnabled: false, shakeMode: "random" as const, shakeZapscript: "" };
+    const initData = {
+      restartScan: true,
+      launchOnScan: false,
+      launcherAccess: false,
+      preferRemoteWriter: false,
+      shakeEnabled: false,
+      shakeMode: "random" as const,
+      shakeZapscript: "",
+    };
 
     const { result } = renderHook(() => useAppSettings({ initData }));
 
@@ -30,7 +41,7 @@ describe("useAppSettings", () => {
       preferRemoteWriter: true,
       shakeEnabled: false,
       shakeMode: "random" as const,
-      shakeZapscript: ""
+      shakeZapscript: "",
     };
 
     const { result } = renderHook(() => useAppSettings({ initData }));
@@ -43,7 +54,15 @@ describe("useAppSettings", () => {
   });
 
   it("should persist restartScan setting when changed", async () => {
-    const initData = { restartScan: false, launchOnScan: true, launcherAccess: false, preferRemoteWriter: false, shakeEnabled: false, shakeMode: "random" as const, shakeZapscript: "" };
+    const initData = {
+      restartScan: false,
+      launchOnScan: true,
+      launcherAccess: false,
+      preferRemoteWriter: false,
+      shakeEnabled: false,
+      shakeMode: "random" as const,
+      shakeZapscript: "",
+    };
 
     const { result } = renderHook(() => useAppSettings({ initData }));
 
@@ -55,12 +74,20 @@ describe("useAppSettings", () => {
     expect(result.current.restartScan).toBe(true);
     expect(Preferences.set).toHaveBeenCalledWith({
       key: "restartScan",
-      value: "true"
+      value: "true",
     });
   });
 
   it("should persist launchOnScan setting when changed", async () => {
-    const initData = { restartScan: false, launchOnScan: true, launcherAccess: false, preferRemoteWriter: false, shakeEnabled: false, shakeMode: "random" as const, shakeZapscript: "" };
+    const initData = {
+      restartScan: false,
+      launchOnScan: true,
+      launcherAccess: false,
+      preferRemoteWriter: false,
+      shakeEnabled: false,
+      shakeMode: "random" as const,
+      shakeZapscript: "",
+    };
 
     const { result } = renderHook(() => useAppSettings({ initData }));
 
@@ -72,12 +99,20 @@ describe("useAppSettings", () => {
     expect(result.current.launchOnScan).toBe(false);
     expect(Preferences.set).toHaveBeenCalledWith({
       key: "launchOnScan",
-      value: "false"
+      value: "false",
     });
   });
 
   it("should persist preferRemoteWriter setting when changed", async () => {
-    const initData = { restartScan: false, launchOnScan: true, launcherAccess: false, preferRemoteWriter: false, shakeEnabled: false, shakeMode: "random" as const, shakeZapscript: "" };
+    const initData = {
+      restartScan: false,
+      launchOnScan: true,
+      launcherAccess: false,
+      preferRemoteWriter: false,
+      shakeEnabled: false,
+      shakeMode: "random" as const,
+      shakeZapscript: "",
+    };
 
     const { result } = renderHook(() => useAppSettings({ initData }));
 
@@ -89,7 +124,7 @@ describe("useAppSettings", () => {
     expect(result.current.preferRemoteWriter).toBe(true);
     expect(Preferences.set).toHaveBeenCalledWith({
       key: "preferRemoteWriter",
-      value: "true"
+      value: "true",
     });
   });
 });

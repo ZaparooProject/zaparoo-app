@@ -40,18 +40,18 @@ export const Route = createFileRoute("/")({
       launcherAccess: state.launcherAccess,
       preferRemoteWriter: state.preferRemoteWriter,
       shakeMode: state.shakeMode,
-      shakeZapscript: state.shakeZapscript
+      shakeZapscript: state.shakeZapscript,
     };
   },
   ssr: false,
-  component: Index
+  component: Index,
 });
 
 function Index() {
   const initData = Route.useLoaderData();
   const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
   const preferRemoteWriter = usePreferencesStore(
-    (state) => state.preferRemoteWriter
+    (state) => state.preferRemoteWriter,
   );
 
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
@@ -86,19 +86,19 @@ function Index() {
     scanStatus,
     handleScanButton,
     handleCameraScan,
-    handleStopConfirm
+    handleStopConfirm,
   } = useScanOperations({
     connected,
     launcherAccess,
     setLastToken,
     setProPurchaseModalOpen,
-    setWriteOpen
+    setWriteOpen,
   });
 
   const history = useQuery({
     queryKey: ["history"],
     queryFn: () => CoreAPI.history(),
-    enabled: historyOpen
+    enabled: historyOpen,
   });
 
   useEffect(() => {
@@ -153,7 +153,10 @@ function Index() {
         />
 
         <div>
-          <ConnectionStatus connected={connected} connectionState={connectionState} />
+          <ConnectionStatus
+            connected={connected}
+            connectionState={connectionState}
+          />
 
           <LastScannedInfo lastToken={lastToken} scanStatus={scanStatus} />
 

@@ -17,7 +17,7 @@ import {
   PlayIcon,
   SearchIcon,
   HistoryIcon,
-  DeviceIcon
+  DeviceIcon,
 } from "../lib/images";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { SearchResultGame, SystemsResponse } from "../lib/models";
@@ -33,7 +33,7 @@ import { WriteModal } from "../components/WriteModal";
 import { PageFrame } from "../components/PageFrame";
 import {
   SystemSelector,
-  SystemSelectorTrigger
+  SystemSelectorTrigger,
 } from "../components/SystemSelector";
 import { TagSelector, TagSelectorTrigger } from "../components/TagSelector";
 import { useRecentSearches } from "../hooks/useRecentSearches";
@@ -45,7 +45,7 @@ export const Route = createFileRoute("/create/search")({
       await Promise.all([
         Preferences.get({ key: "searchSystem" }),
         Preferences.get({ key: "searchTags" }),
-        CoreAPI.systems()
+        CoreAPI.systems(),
       ]);
 
     let savedTags: string[] = [];
@@ -54,19 +54,24 @@ export const Route = createFileRoute("/create/search")({
         savedTags = JSON.parse(tagPreference.value);
       }
     } catch (e) {
-      logger.error("Failed to parse saved tags preference:", e, { category: "storage", action: "get", key: "searchTags", severity: "warning" });
+      logger.error("Failed to parse saved tags preference:", e, {
+        category: "storage",
+        action: "get",
+        key: "searchTags",
+        severity: "warning",
+      });
     }
 
     return {
       systemQuery: systemPreference.value || "all",
       tagQuery: savedTags,
-      systems: systemsResponse
+      systems: systemsResponse,
     };
   },
   // Disable caching to ensure fresh preference is always read
   staleTime: 0,
   gcTime: 0,
-  component: Search
+  component: Search,
 });
 
 interface LoaderData {
@@ -104,7 +109,7 @@ function Search() {
     recentSearches,
     addRecentSearch,
     clearRecentSearches,
-    getSearchDisplayText
+    getSearchDisplayText,
   } = useRecentSearches();
 
   // Manual search function
@@ -117,19 +122,19 @@ function Search() {
     setSearchParams({
       query: query,
       system: querySystem,
-      tags: queryTags
+      tags: queryTags,
     });
 
     // Add to recent searches
     await addRecentSearch({
       query: query,
       system: querySystem,
-      tags: queryTags
+      tags: queryTags,
     });
   };
 
   const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
-    null
+    null,
   );
   const [writeMode, setWriteMode] = useState<"path" | "zapScript">("zapScript");
 
@@ -177,19 +182,20 @@ function Search() {
     queryFn: () => CoreAPI.mediaTags([]),
     retry: false,
     staleTime: 60000, // Cache for 1 minute
-    enabled: connected // Only check when connected
+    enabled: connected, // Only check when connected
   });
 
   const router = useRouter();
   const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
-    preventScrollOnSwipe: false
+    preventScrollOnSwipe: false,
   });
 
   // Handle system selection from selector
   const handleSystemSelect = async (systems: string[]) => {
-    const selectedSystem = systems.length === 1 ? systems[0] : "all";
+    const selectedSystem =
+      (systems.length === 1 ? systems[0] : undefined) ?? "all";
     setQuerySystem(selectedSystem);
     setSelectedResult(null);
     await Preferences.set({ key: "searchSystem", value: selectedSystem });
@@ -209,13 +215,13 @@ function Search() {
     setSelectedResult(null);
     await Promise.all([
       Preferences.set({ key: "searchSystem", value: "all" }),
-      Preferences.set({ key: "searchTags", value: JSON.stringify([]) })
+      Preferences.set({ key: "searchTags", value: JSON.stringify([]) }),
     ]);
   };
 
   // Handle selecting a recent search to prefill the form and execute search
   const handleRecentSearchSelect = async (
-    recentSearch: (typeof recentSearches)[0]
+    recentSearch: (typeof recentSearches)[0],
   ) => {
     setQuery(recentSearch.query);
     setQuerySystem(recentSearch.system);
@@ -227,8 +233,8 @@ function Search() {
       Preferences.set({ key: "searchSystem", value: recentSearch.system }),
       Preferences.set({
         key: "searchTags",
-        value: JSON.stringify(recentSearch.tags)
-      })
+        value: JSON.stringify(recentSearch.tags),
+      }),
     ]);
 
     // Automatically execute the search
@@ -237,7 +243,7 @@ function Search() {
       setSearchParams({
         query: recentSearch.query,
         system: recentSearch.system,
-        tags: recentSearch.tags
+        tags: recentSearch.tags,
       });
     }
   };
@@ -250,7 +256,9 @@ function Search() {
           <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
         }
         headerCenter={
-          <h1 className="text-foreground text-xl">{t("create.search.title")}</h1>
+          <h1 className="text-foreground text-xl">
+            {t("create.search.title")}
+          </h1>
         }
         scrollRef={scrollContainerRef}
         headerRight={
@@ -300,7 +308,7 @@ function Search() {
                 onClick={() => setSystemSelectorOpen(true)}
                 className={classNames({
                   "opacity-50":
-                    !connected || !gamesIndex.exists || gamesIndex.indexing
+                    !connected || !gamesIndex.exists || gamesIndex.indexing,
                 })}
               />
             </div>
@@ -316,7 +324,7 @@ function Search() {
                 disabled={tagsApiError}
                 className={classNames({
                   "opacity-50":
-                    !connected || !gamesIndex.exists || gamesIndex.indexing
+                    !connected || !gamesIndex.exists || gamesIndex.indexing,
                 })}
               />
             </div>
@@ -417,8 +425,8 @@ function Search() {
                   {
                     "border-white/30 bg-white/10": writeMode === "path",
                     "border-white/10 bg-white/5 hover:bg-white/[0.07]":
-                      writeMode !== "path"
-                  }
+                      writeMode !== "path",
+                  },
                 )}
               >
                 <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
@@ -442,8 +450,8 @@ function Search() {
                     "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
                     {
                       "border-white bg-white": writeMode === "path",
-                      "border-white/30": writeMode !== "path"
-                    }
+                      "border-white/30": writeMode !== "path",
+                    },
                   )}
                 >
                   {writeMode === "path" && (
@@ -472,8 +480,8 @@ function Search() {
                     {
                       "border-white/30 bg-white/10": writeMode === "zapScript",
                       "border-white/10 bg-white/5 hover:bg-white/[0.07]":
-                        writeMode !== "zapScript"
-                    }
+                        writeMode !== "zapScript",
+                    },
                   )}
                 >
                   <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
@@ -498,8 +506,8 @@ function Search() {
                       "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
                       {
                         "border-white bg-white": writeMode === "zapScript",
-                        "border-white/30": writeMode !== "zapScript"
-                      }
+                        "border-white/30": writeMode !== "zapScript",
+                      },
                     )}
                   >
                     {writeMode === "zapScript" && (
@@ -542,7 +550,7 @@ function Search() {
                       : selectedResult.path;
                   CoreAPI.run({
                     uid: "",
-                    text: textToRun
+                    text: textToRun,
                   });
                 }
               }}

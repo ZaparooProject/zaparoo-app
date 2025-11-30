@@ -12,7 +12,7 @@ import {
   readRaw,
   writeTag,
   Result,
-  Status
+  Status,
 } from "./nfc";
 import { CoreAPI } from "./coreApi.ts";
 import { logger } from "./logger";
@@ -28,7 +28,7 @@ interface WriteNfcHook {
 export enum WriteMethod {
   Auto = "auto",
   LocalNFC = "local",
-  RemoteReader = "remote"
+  RemoteReader = "remote",
 }
 
 export enum WriteAction {
@@ -36,7 +36,7 @@ export enum WriteAction {
   Read = "read",
   Format = "format",
   Erase = "erase",
-  MakeReadOnly = "makeReadOnly"
+  MakeReadOnly = "makeReadOnly",
 }
 
 function coreWrite(text: string, signal?: AbortSignal): Promise<Result> {
@@ -45,29 +45,29 @@ function coreWrite(text: string, signal?: AbortSignal): Promise<Result> {
       status: Status.Cancelled,
       info: {
         rawTag: null,
-        tag: null
-      }
+        tag: null,
+      },
     });
   }
 
   return CoreAPI.write({ text }, signal)
     .then((result) => {
       // Check if the result indicates cancellation
-      if (result && typeof result === 'object' && 'cancelled' in result) {
+      if (result && typeof result === "object" && "cancelled" in result) {
         return {
           status: Status.Cancelled,
           info: {
             rawTag: null,
-            tag: null
-          }
+            tag: null,
+          },
         };
       } else {
         return {
           status: Status.Success,
           info: {
             rawTag: null,
-            tag: null
-          }
+            tag: null,
+          },
         };
       }
     })
@@ -76,7 +76,10 @@ function coreWrite(text: string, signal?: AbortSignal): Promise<Result> {
     });
 }
 
-async function determineWriteMethod(preferredMethod: WriteMethod, preferRemoteWriter: boolean): Promise<WriteMethod> {
+async function determineWriteMethod(
+  preferredMethod: WriteMethod,
+  preferRemoteWriter: boolean,
+): Promise<WriteMethod> {
   if (preferredMethod !== WriteMethod.Auto) {
     return preferredMethod;
   }
@@ -98,7 +101,11 @@ async function determineWriteMethod(preferredMethod: WriteMethod, preferRemoteWr
         return WriteMethod.LocalNFC;
       }
     } catch (error) {
-      logger.error("NFC availability check failed:", error, { category: "nfc", action: "determineWriteMethod", severity: "warning" });
+      logger.error("NFC availability check failed:", error, {
+        category: "nfc",
+        action: "determineWriteMethod",
+        severity: "warning",
+      });
     }
   }
 
@@ -111,12 +118,17 @@ async function determineWriteMethod(preferredMethod: WriteMethod, preferRemoteWr
   return isNativePlatform ? WriteMethod.LocalNFC : WriteMethod.RemoteReader;
 }
 
-export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, preferRemoteWriter: boolean = false): WriteNfcHook {
+export function useNfcWriter(
+  writeMethod: WriteMethod = WriteMethod.Auto,
+  preferRemoteWriter: boolean = false,
+): WriteNfcHook {
   const [writing, setWriting] = useState(false);
   const [result, setResult] = useState<null | Result>(null);
   const [status, setStatus] = useState<null | Status>(null);
-  const [currentWriteMethod, setCurrentWriteMethod] = useState<WriteMethod | null>(null);
-  const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [currentWriteMethod, setCurrentWriteMethod] =
+    useState<WriteMethod | null>(null);
+  const [abortController, setAbortController] =
+    useState<AbortController | null>(null);
 
   const { t } = useTranslation();
 
@@ -152,11 +164,17 @@ export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, prefer
       switch (action) {
         case WriteAction.Write: {
           if (!text) {
-            logger.error("No text provided to write", { category: "nfc", action: "writeValidation" });
+            logger.error("No text provided to write", {
+              category: "nfc",
+              action: "writeValidation",
+            });
             return;
           }
 
-          const selectedWriteMethod = await determineWriteMethod(writeMethod, preferRemoteWriter);
+          const selectedWriteMethod = await determineWriteMethod(
+            writeMethod,
+            preferRemoteWriter,
+          );
           setCurrentWriteMethod(selectedWriteMethod);
 
           if (selectedWriteMethod === WriteMethod.LocalNFC) {
@@ -181,7 +199,7 @@ export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, prefer
               category: "nfc",
               action: "formatPlatformCheck",
               platform: Capacitor.getPlatform(),
-              severity: "warning"
+              severity: "warning",
             });
             return;
           }
@@ -225,12 +243,12 @@ export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, prefer
               {
                 id: "writeSuccess",
                 icon: (
-                  <span className="pr-1 text-success">
+                  <span className="text-success pr-1">
                     <CheckIcon size="24" />
                   </span>
                 ),
-                duration: showMs
-              }
+                duration: showMs,
+              },
             );
             setResult(result);
             setStatus(Status.Success);
@@ -238,7 +256,11 @@ export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, prefer
         })
         .catch((e: Error) => {
           setWriting(false);
-          logger.error("NFC write operation failed", e, { category: "nfc", action: action, writeMethod: currentWriteMethod });
+          logger.error("NFC write operation failed", e, {
+            category: "nfc",
+            action: action,
+            writeMethod: currentWriteMethod,
+          });
           let showMs = 4000;
           if (Capacitor.getPlatform() === "ios") {
             showMs += 4000;
@@ -256,12 +278,12 @@ export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, prefer
             ),
             {
               icon: (
-                <span className="pr-1 text-error">
+                <span className="text-error pr-1">
                   <WarningIcon size="24" />
                 </span>
               ),
-              duration: showMs
-            }
+              duration: showMs,
+            },
           );
           setStatus(Status.Error);
         });
@@ -277,7 +299,10 @@ export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, prefer
           try {
             await CoreAPI.readersWriteCancel();
           } catch (error) {
-            logger.error("Failed to cancel remote write:", error, { category: "nfc", action: "cancelRemoteWrite" });
+            logger.error("Failed to cancel remote write:", error, {
+              category: "nfc",
+              action: "cancelRemoteWrite",
+            });
           }
         } else {
           // For local NFC or when method is unknown, use the existing cancellation
@@ -297,6 +322,6 @@ export function useNfcWriter(writeMethod: WriteMethod = WriteMethod.Auto, prefer
     },
     writing,
     result,
-    status
+    status,
   };
 }

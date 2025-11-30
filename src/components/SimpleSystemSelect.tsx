@@ -17,7 +17,7 @@ export function SimpleSystemSelect({
   onSelect,
   placeholder,
   includeAllOption = false,
-  className
+  className,
 }: SimpleSystemSelectProps) {
   const { t } = useTranslation();
 
@@ -27,7 +27,7 @@ export function SimpleSystemSelect({
   // Fetch systems data
   const { data: systemsData, isLoading } = useQuery({
     queryKey: ["systems"],
-    queryFn: () => CoreAPI.systems()
+    queryFn: () => CoreAPI.systems(),
   });
 
   // Group systems by category and sort
@@ -40,7 +40,10 @@ export function SimpleSystemSelect({
       acc[category].push(system);
       return acc;
     },
-    {} as Record<string, Array<{ id: string; name: string; category?: string }>>
+    {} as Record<
+      string,
+      Array<{ id: string; name: string; category?: string }>
+    >,
   );
 
   // Sort categories alphabetically and systems within each category
@@ -48,7 +51,7 @@ export function SimpleSystemSelect({
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([category, systems]) => ({
       category,
-      systems: systems.sort((a, b) => a.name.localeCompare(b.name))
+      systems: systems.sort((a, b) => a.name.localeCompare(b.name)),
     }));
 
   const handleChange = (e: { target: { value: string } }) => {
@@ -64,9 +67,9 @@ export function SimpleSystemSelect({
         "border-input text-foreground w-full rounded-md border px-3 py-2 text-sm transition-colors focus:ring-2 focus:ring-white/20 focus:outline-none",
         {
           "hover:bg-white/10": !gamesIndex.indexing && !isLoading,
-          "opacity-50 cursor-not-allowed": gamesIndex.indexing || isLoading
+          "cursor-not-allowed opacity-50": gamesIndex.indexing || isLoading,
         },
-        className
+        className,
       )}
       style={{ backgroundColor: "var(--color-background)" }}
     >

@@ -8,8 +8,8 @@ import toast from "react-hot-toast";
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }));
 
 vi.mock("@capacitor-mlkit/barcode-scanning", () => ({
@@ -17,11 +17,11 @@ vi.mock("@capacitor-mlkit/barcode-scanning", () => ({
     scan: vi.fn().mockResolvedValue({
       barcodes: [
         {
-          rawValue: "test-barcode-value"
-        }
-      ]
-    })
-  }
+          rawValue: "test-barcode-value",
+        },
+      ],
+    }),
+  },
 }));
 
 vi.mock("../../../lib/coreApi.ts", () => ({
@@ -34,23 +34,23 @@ vi.mock("../../../lib/coreApi.ts", () => ({
           pattern: "existing-uid",
           override: "existing script",
           enabled: true,
-          label: "Test Mapping"
-        }
-      ]
+          label: "Test Mapping",
+        },
+      ],
     }),
     updateMapping: vi.fn().mockResolvedValue({}),
     newMapping: vi.fn().mockResolvedValue({}),
-    deleteMapping: vi.fn().mockResolvedValue({})
-  }
+    deleteMapping: vi.fn().mockResolvedValue({}),
+  },
 }));
 
 vi.mock("../../../lib/store.ts", () => ({
   useStatusStore: vi.fn((selector) => {
     const mockState = {
-      connected: true
+      connected: true,
     };
     return selector(mockState);
-  })
+  }),
 }));
 
 vi.mock("../../../lib/writeNfcHook", () => ({
@@ -59,29 +59,29 @@ vi.mock("../../../lib/writeNfcHook", () => ({
     write: vi.fn(),
     end: vi.fn(),
     writing: false,
-    result: null
+    result: null,
   })),
   WriteAction: {
-    Read: 'read'
-  }
+    Read: "read",
+  },
 }));
 
 vi.mock("../../../hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({}))
+  useSmartSwipe: vi.fn(() => ({})),
 }));
 
 const mockNavigate = vi.fn();
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    createFileRoute: actual.createFileRoute
+    createFileRoute: actual.createFileRoute,
   };
 });
 
 vi.mock("@tanstack/react-query", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     useQuery: vi.fn(() => ({
@@ -93,14 +93,14 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
             pattern: "existing-uid",
             override: "existing script",
             enabled: true,
-            label: "Test Mapping"
-          }
-        ]
+            label: "Test Mapping",
+          },
+        ],
       },
       isLoading: false,
       isError: false,
-      refetch: vi.fn()
-    }))
+      refetch: vi.fn(),
+    })),
   };
 });
 
@@ -114,7 +114,7 @@ vi.mock("../../../components/wui/TextInput.tsx", () => ({
         onChange={(e) => setValue(e.target.value)}
       />
     </div>
-  )
+  ),
 }));
 
 vi.mock("../../../components/ZapScriptInput.tsx", () => ({
@@ -126,13 +126,13 @@ vi.mock("../../../components/ZapScriptInput.tsx", () => ({
       data-palette={showPalette}
       rows={rows}
     />
-  )
+  ),
 }));
 
 vi.mock("../../../components/wui/Button", () => ({
   Button: ({ label, onClick, disabled, icon, variant }: any) => (
     <button
-      data-testid={`button-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      data-testid={`button-${label.toLowerCase().replace(/\s+/g, "-")}`}
       onClick={onClick}
       disabled={disabled}
       data-variant={variant}
@@ -140,26 +140,30 @@ vi.mock("../../../components/wui/Button", () => ({
       {icon && <span data-testid="button-icon">{icon}</span>}
       {label}
     </button>
-  )
+  ),
 }));
 
 vi.mock("../../../components/PageFrame", () => ({
   PageFrame: ({ title, back, children, ...props }: any) => (
     <div data-testid="page-frame" {...props}>
       <div data-testid="page-title">{title}</div>
-      <button data-testid="back-button" onClick={back}>Back</button>
+      <button data-testid="back-button" onClick={back}>
+        Back
+      </button>
       <div data-testid="page-content">{children}</div>
     </div>
-  )
+  ),
 }));
 
 vi.mock("../../../components/WriteModal", () => ({
   WriteModal: ({ isOpen, close }: any) =>
     isOpen ? (
       <div data-testid="write-modal">
-        <button data-testid="close-modal" onClick={close}>Close</button>
+        <button data-testid="close-modal" onClick={close}>
+          Close
+        </button>
       </div>
-    ) : null
+    ) : null,
 }));
 
 describe("Create Mappings Route", () => {
@@ -170,8 +174,8 @@ describe("Create Mappings Route", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
   });
 
@@ -181,9 +185,7 @@ describe("Create Mappings Route", () => {
 
   it("should render mappings page with all components", async () => {
     const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
     // Mock the mappings component
@@ -221,7 +223,7 @@ describe("Create Mappings Route", () => {
     render(
       <TestWrapper>
         <MappingsComponent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     expect(screen.getByTestId("page-frame")).toBeInTheDocument();
@@ -254,7 +256,9 @@ describe("Create Mappings Route", () => {
     const tokenInput = screen.getByTestId("token-input");
     fireEvent.change(tokenInput, { target: { value: "test-token-id" } });
 
-    expect(screen.getByTestId("token-value")).toHaveTextContent("test-token-id");
+    expect(screen.getByTestId("token-value")).toHaveTextContent(
+      "test-token-id",
+    );
   });
 
   it("should handle script input changes", async () => {
@@ -276,13 +280,18 @@ describe("Create Mappings Route", () => {
     render(<TestComponent />);
 
     const scriptInput = screen.getByTestId("script-input");
-    fireEvent.change(scriptInput, { target: { value: "**launch.system:snes" } });
+    fireEvent.change(scriptInput, {
+      target: { value: "**launch.system:snes" },
+    });
 
-    expect(screen.getByTestId("script-value")).toHaveTextContent("**launch.system:snes");
+    expect(screen.getByTestId("script-value")).toHaveTextContent(
+      "**launch.system:snes",
+    );
   });
 
   it("should handle NFC scan button click", async () => {
-    const { useNfcWriter, WriteAction } = await import("../../../lib/writeNfcHook");
+    const { useNfcWriter, WriteAction } =
+      await import("../../../lib/writeNfcHook");
     const mockWrite = vi.fn();
 
     vi.mocked(useNfcWriter).mockReturnValue({
@@ -290,7 +299,7 @@ describe("Create Mappings Route", () => {
       write: mockWrite,
       end: vi.fn(),
       writing: false,
-      result: null
+      result: null,
     });
 
     const TestComponent = () => {
@@ -322,15 +331,17 @@ describe("Create Mappings Route", () => {
   });
 
   it("should handle barcode scanning", async () => {
-    const { BarcodeScanner } = await import("@capacitor-mlkit/barcode-scanning");
+    const { BarcodeScanner } =
+      await import("@capacitor-mlkit/barcode-scanning");
 
     const TestComponent = () => {
       const [tokenId, setTokenId] = React.useState("");
 
       const handleBarcodeScan = () => {
         BarcodeScanner.scan().then((res) => {
-          if (res.barcodes.length > 0) {
-            setTokenId(res.barcodes[0].rawValue);
+          const barcode = res.barcodes[0];
+          if (barcode) {
+            setTokenId(barcode.rawValue);
           }
         });
       };
@@ -351,7 +362,9 @@ describe("Create Mappings Route", () => {
     fireEvent.click(barcodeButton);
 
     await waitFor(() => {
-      expect(screen.getByTestId("token-value")).toHaveTextContent("test-barcode-value");
+      expect(screen.getByTestId("token-value")).toHaveTextContent(
+        "test-barcode-value",
+      );
     });
   });
 
@@ -371,7 +384,7 @@ describe("Create Mappings Route", () => {
             type: "uid",
             match: "exact",
             pattern: tokenId,
-            override: script
+            override: script,
           });
           toast.success("Mapping saved successfully!");
           setTokenId("");
@@ -416,7 +429,7 @@ describe("Create Mappings Route", () => {
         type: "uid",
         match: "exact",
         pattern: "new-token",
-        override: "**launch.system:nes"
+        override: "**launch.system:nes",
       });
     });
 
@@ -436,12 +449,14 @@ describe("Create Mappings Route", () => {
           id: "1",
           type: "uid",
           pattern: "existing-uid",
-          override: "existing script"
-        }
+          override: "existing script",
+        },
       ];
 
       const saveMapping = async () => {
-        const existing = mappings.find(m => m.type === "uid" && m.pattern === tokenId);
+        const existing = mappings.find(
+          (m) => m.type === "uid" && m.pattern === tokenId,
+        );
         if (existing) {
           try {
             await CoreAPI.updateMapping({
@@ -451,7 +466,7 @@ describe("Create Mappings Route", () => {
               type: "uid",
               match: "exact",
               pattern: tokenId,
-              override: script
+              override: script,
             });
             toast.success("Mapping saved successfully!");
           } catch (error) {
@@ -482,7 +497,7 @@ describe("Create Mappings Route", () => {
         type: "uid",
         match: "exact",
         pattern: "existing-uid",
-        override: "updated script"
+        override: "updated script",
       });
     });
 
@@ -501,12 +516,14 @@ describe("Create Mappings Route", () => {
           id: "1",
           type: "uid",
           pattern: "existing-uid",
-          override: "existing script"
-        }
+          override: "existing script",
+        },
       ];
 
       const deleteMapping = async () => {
-        const existing = mappings.find(m => m.type === "uid" && m.pattern === tokenId);
+        const existing = mappings.find(
+          (m) => m.type === "uid" && m.pattern === tokenId,
+        );
         if (existing) {
           try {
             await CoreAPI.deleteMapping({ id: parseInt(existing.id, 10) });
@@ -549,11 +566,11 @@ describe("Create Mappings Route", () => {
       const mockState = {
         connected: false,
         setConnected: vi.fn(),
-        connectionState: 'disconnected',
+        connectionState: "disconnected",
         setConnectionState: vi.fn(),
         lastConnectionTime: null,
         setLastConnectionTime: vi.fn(),
-        playing: { mediaName: '', systemName: '', mediaPath: '' },
+        playing: { mediaName: "", systemName: "", mediaPath: "" },
         setPlaying: vi.fn(),
         lastToken: null,
         setLastToken: vi.fn(),
@@ -570,16 +587,10 @@ describe("Create Mappings Route", () => {
 
       return (
         <div>
-          <button
-            data-testid="save-button"
-            disabled={!connected}
-          >
+          <button data-testid="save-button" disabled={!connected}>
             Save
           </button>
-          <button
-            data-testid="clear-button"
-            disabled={!connected}
-          >
+          <button data-testid="clear-button" disabled={!connected}>
             Clear
           </button>
         </div>
@@ -605,8 +616,8 @@ describe("Create Mappings Route", () => {
           id: "1",
           type: "uid",
           pattern: "scanned-uid",
-          override: "existing script for scanned uid"
-        }
+          override: "existing script for scanned uid",
+        },
       ];
 
       React.useEffect(() => {
@@ -614,7 +625,9 @@ describe("Create Mappings Route", () => {
           if (nfcWriter.result?.info.tag?.uid) {
             const uid = nfcWriter.result.info.tag.uid;
             setTokenId(uid);
-            const existing = mappings.find(m => m.type === "uid" && m.pattern === uid);
+            const existing = mappings.find(
+              (m) => m.type === "uid" && m.pattern === uid,
+            );
             if (existing) {
               setScript(existing.override);
             } else {
@@ -639,7 +652,7 @@ describe("Create Mappings Route", () => {
       write: vi.fn(),
       end: vi.fn(),
       writing: false,
-      result: null
+      result: null,
     });
 
     const { rerender } = render(<TestComponent />);
@@ -653,13 +666,21 @@ describe("Create Mappings Route", () => {
       write: vi.fn(),
       end: vi.fn(),
       writing: false,
-      result: { status: 'success' as any, info: { rawTag: null, tag: { uid: "scanned-uid", text: "scanned-text" } } }
+      result: {
+        status: "success" as any,
+        info: {
+          rawTag: null,
+          tag: { uid: "scanned-uid", text: "scanned-text" },
+        },
+      },
     });
 
     rerender(<TestComponent />);
 
     expect(screen.getByTestId("token-value")).toHaveTextContent("scanned-uid");
-    expect(screen.getByTestId("script-value")).toHaveTextContent("existing script for scanned uid");
+    expect(screen.getByTestId("script-value")).toHaveTextContent(
+      "existing script for scanned uid",
+    );
   });
 
   it("should handle back navigation", async () => {
@@ -698,13 +719,13 @@ describe("Create Mappings Route", () => {
       isFetched: false,
       isFetching: false,
       refetch: vi.fn(),
-      status: 'pending'
+      status: "pending",
     } as any);
 
     const TestComponent = () => {
       const mappings = useQuery({
         queryKey: ["mappings"],
-        queryFn: vi.fn()
+        queryFn: vi.fn(),
       });
 
       if (mappings.isLoading || mappings.isError) {
@@ -732,7 +753,7 @@ describe("Create Mappings Route", () => {
       isFetched: true,
       isFetching: false,
       refetch: vi.fn(),
-      status: 'error'
+      status: "error",
     } as any);
 
     rerender(<TestComponent />);
@@ -753,7 +774,7 @@ describe("Create Mappings Route", () => {
       isFetched: true,
       isFetching: false,
       refetch: vi.fn(),
-      status: 'success'
+      status: "success",
     } as any);
 
     rerender(<TestComponent />);

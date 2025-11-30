@@ -121,12 +121,12 @@ describe("CoreAPI reset method", () => {
     expect(results).toEqual([
       { cancelled: true },
       { cancelled: true },
-      { cancelled: true }
+      { cancelled: true },
     ]);
   });
 
   it("should log reset message", () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
     CoreAPI.reset();
 

@@ -8,20 +8,20 @@ import { useDataCache } from "./useDataCache";
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     get: vi.fn(),
-    set: vi.fn()
-  }
+    set: vi.fn(),
+  },
 }));
 
 // Mock the store
 vi.mock("../lib/store", () => ({
-  useStatusStore: vi.fn()
+  useStatusStore: vi.fn(),
 }));
 
 describe("useDataCache", () => {
   const mockSetters = {
     setGamesIndex: vi.fn(),
     setLastToken: vi.fn(),
-    setPlaying: vi.fn()
+    setPlaying: vi.fn(),
   };
 
   beforeEach(() => {
@@ -37,7 +37,9 @@ describe("useDataCache", () => {
       renderHook(() => useDataCache());
     });
 
-    expect(mockPreferences.get).toHaveBeenCalledWith({ key: "cached_gamesIndex" });
+    expect(mockPreferences.get).toHaveBeenCalledWith({
+      key: "cached_gamesIndex",
+    });
   });
 
   it("should call store setters when cached data is loaded", async () => {
@@ -62,8 +64,19 @@ describe("useDataCache", () => {
   it("should handle multiple cache types", async () => {
     const mockPreferences = vi.mocked(Preferences);
     const mockGamesIndex = { exists: true, indexing: false, totalSteps: 10 };
-    const mockToken = { type: "test", uid: "123", text: "token", data: "data", scanTime: "now" };
-    const mockPlaying = { systemId: "1", systemName: "Test", mediaPath: "/test", mediaName: "Game" };
+    const mockToken = {
+      type: "test",
+      uid: "123",
+      text: "token",
+      data: "data",
+      scanTime: "now",
+    };
+    const mockPlaying = {
+      systemId: "1",
+      systemName: "Test",
+      mediaPath: "/test",
+      mediaName: "Game",
+    };
 
     mockPreferences.get.mockImplementation(({ key }) => {
       switch (key) {
@@ -102,8 +115,12 @@ describe("useDataCache", () => {
       expect(mockPreferences.get).toHaveBeenCalledTimes(3);
     });
 
-    expect(mockPreferences.get).toHaveBeenCalledWith({ key: "cached_gamesIndex" });
-    expect(mockPreferences.get).toHaveBeenCalledWith({ key: "cached_lastToken" });
+    expect(mockPreferences.get).toHaveBeenCalledWith({
+      key: "cached_gamesIndex",
+    });
+    expect(mockPreferences.get).toHaveBeenCalledWith({
+      key: "cached_lastToken",
+    });
     expect(mockPreferences.get).toHaveBeenCalledWith({ key: "cached_playing" });
   });
 });

@@ -39,12 +39,12 @@ export const CopyButton = (props: {
     <button
       type="button"
       className={classNames(
-        "relative inline-flex align-middle -translate-y-0.5",
+        "relative inline-flex -translate-y-0.5 align-middle",
         "rounded p-0.5",
         "text-white/60 hover:text-white",
         "transition-colors duration-150",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-        props.className
+        "focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
+        props.className,
       )}
       onClick={handleCopy}
       aria-label={copied ? "Copied" : "Copy to clipboard"}
@@ -54,14 +54,14 @@ export const CopyButton = (props: {
         size={size}
         className={classNames(
           "absolute inset-0 m-auto transition-all duration-200",
-          copied ? "opacity-0 scale-75" : "opacity-100 scale-100"
+          copied ? "scale-75 opacity-0" : "scale-100 opacity-100",
         )}
       />
       <Check
         size={size}
         className={classNames(
           "absolute inset-0 m-auto text-green-400 transition-all duration-200",
-          copied ? "opacity-100 scale-100" : "opacity-0 scale-75"
+          copied ? "scale-100 opacity-100" : "scale-75 opacity-0",
         )}
       />
     </button>

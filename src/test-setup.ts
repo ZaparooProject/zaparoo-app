@@ -12,7 +12,10 @@ vi.mock("react-i18next", () => ({
       if (options && typeof options === "object") {
         let result = key;
         Object.entries(options).forEach(([param, value]) => {
-          result = result.replace(new RegExp(`{{${param}}}`, "g"), String(value));
+          result = result.replace(
+            new RegExp(`{{${param}}}`, "g"),
+            String(value),
+          );
         });
         return result;
       }
@@ -20,11 +23,11 @@ vi.mock("react-i18next", () => ({
     },
     i18n: {
       changeLanguage: vi.fn(() => Promise.resolve()),
-      language: "en"
-    }
+      language: "en",
+    },
   }),
   Trans: ({ children }: { children: React.ReactNode }) => children,
-  initReactI18next: { type: "3rdParty", init: () => {} }
+  initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
 // Setup MSW server with handlers
@@ -58,8 +61,8 @@ Object.defineProperty(window, "matchMedia", {
     removeListener: () => {},
     addEventListener: () => {},
     removeEventListener: () => {},
-    dispatchEvent: () => {}
-  })
+    dispatchEvent: () => {},
+  }),
 });
 
 // Mock IntersectionObserver
@@ -73,7 +76,7 @@ global.IntersectionObserver = class IntersectionObserver {
 // Platform detection mock
 Object.defineProperty(navigator, "platform", {
   writable: true,
-  value: "MacIntel"
+  value: "MacIntel",
 });
 
 // WebSocket mock for happy-dom environment

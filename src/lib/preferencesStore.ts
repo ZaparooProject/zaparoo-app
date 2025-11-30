@@ -23,7 +23,7 @@ const capacitorPreferencesStorage: StateStorage = {
   },
   removeItem: async (name: string): Promise<void> => {
     await Preferences.remove({ key: name });
-  }
+  },
 };
 
 // Preferences state interface
@@ -139,9 +139,9 @@ const DEFAULT_PREFERENCES: Omit<
     debug: true,
     info: true,
     warn: true,
-    error: true
+    error: true,
   },
-  showFilenames: false
+  showFilenames: false,
 };
 
 export const usePreferencesStore = create<PreferencesStore>()(
@@ -178,7 +178,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
 
       // Accelerometer availability (not persisted, checked on app start)
       accelerometerAvailable: false,
-      setAccelerometerAvailable: (value) => set({ accelerometerAvailable: value }),
+      setAccelerometerAvailable: (value) =>
+        set({ accelerometerAvailable: value }),
 
       // Accelerometer availability hydration tracking
       _accelerometerAvailabilityHydrated: false,
@@ -205,7 +206,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
       setCustomText: (value) => set({ customText: value }),
       setTourCompleted: (value) => set({ tourCompleted: value }),
       setLogLevelFilters: (filters) => set({ logLevelFilters: filters }),
-      setShowFilenames: (value) => set({ showFilenames: value })
+      setShowFilenames: (value) => set({ showFilenames: value }),
     }),
     {
       name: "app-preferences",
@@ -223,7 +224,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
         customText: state.customText,
         tourCompleted: state.tourCompleted,
         logLevelFilters: state.logLevelFilters,
-        showFilenames: state.showFilenames
+        showFilenames: state.showFilenames,
       }),
 
       // Callback when hydration completes
@@ -251,11 +252,12 @@ export const usePreferencesStore = create<PreferencesStore>()(
           cameraAvailable: currentState.cameraAvailable,
           _cameraAvailabilityHydrated: currentState._cameraAvailabilityHydrated,
           accelerometerAvailable: currentState.accelerometerAvailable,
-          _accelerometerAvailabilityHydrated: currentState._accelerometerAvailabilityHydrated
+          _accelerometerAvailabilityHydrated:
+            currentState._accelerometerAvailabilityHydrated,
         };
-      }
-    }
-  )
+      },
+    },
+  ),
 );
 
 // Selectors for common use cases
@@ -266,7 +268,7 @@ export const selectAppSettings = (state: PreferencesStore) => ({
   preferRemoteWriter: state.preferRemoteWriter,
   setRestartScan: state.setRestartScan,
   setLaunchOnScan: state.setLaunchOnScan,
-  setPreferRemoteWriter: state.setPreferRemoteWriter
+  setPreferRemoteWriter: state.setPreferRemoteWriter,
 });
 
 export const selectShakeSettings = (state: PreferencesStore) => ({
@@ -276,10 +278,10 @@ export const selectShakeSettings = (state: PreferencesStore) => ({
   launcherAccess: state.launcherAccess,
   setShakeEnabled: state.setShakeEnabled,
   setShakeMode: state.setShakeMode,
-  setShakeZapscript: state.setShakeZapscript
+  setShakeZapscript: state.setShakeZapscript,
 });
 
 export const selectCustomText = (state: PreferencesStore) => ({
   customText: state.customText,
-  setCustomText: state.setCustomText
+  setCustomText: state.setCustomText,
 });

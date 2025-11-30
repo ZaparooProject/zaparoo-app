@@ -15,7 +15,7 @@ interface UseShakeDetectionProps {
 export function useShakeDetection({
   shakeEnabled,
   launcherAccess,
-  connected
+  connected,
 }: UseShakeDetectionProps) {
   const setRunQueue = useStatusStore((state) => state.setRunQueue);
   const lastShakeTimeRef = useRef(0);
@@ -37,29 +37,32 @@ export function useShakeDetection({
 
     const setupListener = async () => {
       try {
-        const newListener = await CapacitorShake.addListener("shake", async () => {
-          const now = Date.now();
+        const newListener = await CapacitorShake.addListener(
+          "shake",
+          async () => {
+            const now = Date.now();
 
-          // Debounce: ignore shakes that happen too quickly
-          if (now - lastShakeTimeRef.current < DEBOUNCE_MS) {
-            logger.log(
-              "Shake detected but debounced (too soon after last shake)"
-            );
-            return;
-          }
+            // Debounce: ignore shakes that happen too quickly
+            if (now - lastShakeTimeRef.current < DEBOUNCE_MS) {
+              logger.log(
+                "Shake detected but debounced (too soon after last shake)",
+              );
+              return;
+            }
 
-          lastShakeTimeRef.current = now;
+            lastShakeTimeRef.current = now;
 
-          const zapscript = usePreferencesStore.getState().shakeZapscript;
+            const zapscript = usePreferencesStore.getState().shakeZapscript;
 
-          if (!zapscript) {
-            logger.log("Shake detected, but no zapscript configured");
-            return;
-          }
+            if (!zapscript) {
+              logger.log("Shake detected, but no zapscript configured");
+              return;
+            }
 
-          logger.log("Shake detected, queueing zapscript:", zapscript);
-          setRunQueue({ value: zapscript, unsafe: true });
-        });
+            logger.log("Shake detected, queueing zapscript:", zapscript);
+            setRunQueue({ value: zapscript, unsafe: true });
+          },
+        );
 
         // Only assign listener if still mounted
         if (isMounted) {
@@ -69,7 +72,11 @@ export function useShakeDetection({
           newListener.remove();
         }
       } catch (error) {
-        logger.error("Failed to setup shake listener:", error, { category: "accelerometer", action: "setupShakeListener", severity: "warning" });
+        logger.error("Failed to setup shake listener:", error, {
+          category: "accelerometer",
+          action: "setupShakeListener",
+          severity: "warning",
+        });
       }
     };
 

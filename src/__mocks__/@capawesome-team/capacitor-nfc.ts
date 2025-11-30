@@ -8,5 +8,5 @@ export const CapacitorNfc = {
   removeAllListeners: vi.fn().mockResolvedValue(undefined),
   startSession: vi.fn().mockResolvedValue(undefined),
   stopSession: vi.fn().mockResolvedValue(undefined),
-  write: vi.fn().mockResolvedValue(undefined)
+  write: vi.fn().mockResolvedValue(undefined),
 };

@@ -10,8 +10,12 @@ import { logger } from "../lib/logger";
  * The result is cached in the preferences store.
  */
 export function useCameraAvailabilityCheck() {
-  const setCameraAvailable = usePreferencesStore((state) => state.setCameraAvailable);
-  const setCameraAvailabilityHydrated = usePreferencesStore((state) => state.setCameraAvailabilityHydrated);
+  const setCameraAvailable = usePreferencesStore(
+    (state) => state.setCameraAvailable,
+  );
+  const setCameraAvailabilityHydrated = usePreferencesStore(
+    (state) => state.setCameraAvailabilityHydrated,
+  );
 
   useEffect(() => {
     // Skip on web platform
@@ -28,7 +32,11 @@ export function useCameraAvailabilityCheck() {
         setCameraAvailabilityHydrated(true);
       })
       .catch((e) => {
-        logger.error("Failed to check camera availability:", e, { category: "camera", action: "availabilityCheck", severity: "warning" });
+        logger.error("Failed to check camera availability:", e, {
+          category: "camera",
+          action: "availabilityCheck",
+          severity: "warning",
+        });
         // On error, assume camera not available
         setCameraAvailable(false);
         setCameraAvailabilityHydrated(true);

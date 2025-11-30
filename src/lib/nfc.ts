@@ -2,7 +2,7 @@ import {
   Nfc,
   NfcTag,
   NfcTagScannedEvent,
-  NfcUtils
+  NfcUtils,
 } from "@capawesome-team/capacitor-nfc";
 import type { PluginListenerHandle } from "@capacitor/core";
 import { logger } from "./logger";
@@ -10,7 +10,7 @@ import { logger } from "./logger";
 export enum Status {
   Success,
   Error,
-  Cancelled
+  Cancelled,
 }
 
 export interface TagInfo {
@@ -31,7 +31,7 @@ export const sessionManager = {
   launchOnScan: true,
   setLaunchOnScan: (value: boolean) => {
     sessionManager.launchOnScan = value;
-  }
+  },
 };
 
 export interface Tag {
@@ -50,14 +50,14 @@ const createNdefTextRecord = (text: string) => {
  * This ensures all listeners are removed after the operation completes, preventing memory leaks.
  */
 async function withNfcSession<T>(
-  handler: (event: NfcTagScannedEvent) => Promise<T>
+  handler: (event: NfcTagScannedEvent) => Promise<T>,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     let listeners: PluginListenerHandle[] = [];
 
     const cleanup = async () => {
       // Remove all listeners
-      await Promise.all(listeners.map(listener => listener.remove()));
+      await Promise.all(listeners.map((listener) => listener.remove()));
       listeners = [];
     };
 
@@ -76,40 +76,55 @@ async function withNfcSession<T>(
         // Register all listeners and store their handles before starting the scan session.
         // This prevents a race condition where native events could fire before listener handles
         // are stored, which would cause cleanup() to fail and reintroduce the memory leak.
-        const nfcTagScannedHandle = await Nfc.addListener("nfcTagScanned", async (event) => {
-          try {
-            const result = await handler(event);
+        const nfcTagScannedHandle = await Nfc.addListener(
+          "nfcTagScanned",
+          async (event) => {
+            try {
+              const result = await handler(event);
+              Nfc.stopScanSession();
+              await handleSuccess(result);
+            } catch (error) {
+              logger.error("NFC operation error:", error, {
+                category: "nfc",
+                action: "nfcTagScanned",
+                stack: error instanceof Error ? error.stack : undefined,
+              });
+              Nfc.stopScanSession();
+              await handleError(error);
+            }
+          },
+        );
+
+        const scanCanceledHandle = await Nfc.addListener(
+          "scanSessionCanceled",
+          async () => {
             Nfc.stopScanSession();
-            await handleSuccess(result);
-          } catch (error) {
-            logger.error("NFC operation error:", error, {
+            await handleError(
+              new Error("NFC scan session was cancelled by user"),
+            );
+          },
+        );
+
+        const scanErrorHandle = await Nfc.addListener(
+          "scanSessionError",
+          async (err) => {
+            logger.error("NFC scan session error:", err, {
               category: "nfc",
-              action: "nfcTagScanned",
-              stack: error instanceof Error ? error.stack : undefined
+              action: "scanSessionError",
+              message: err.message,
+              stack: err instanceof Error ? err.stack : undefined,
             });
             Nfc.stopScanSession();
-            await handleError(error);
-          }
-        });
-
-        const scanCanceledHandle = await Nfc.addListener("scanSessionCanceled", async () => {
-          Nfc.stopScanSession();
-          await handleError(new Error("NFC scan session was cancelled by user"));
-        });
-
-        const scanErrorHandle = await Nfc.addListener("scanSessionError", async (err) => {
-          logger.error("NFC scan session error:", err, {
-            category: "nfc",
-            action: "scanSessionError",
-            message: err.message,
-            stack: err instanceof Error ? err.stack : undefined
-          });
-          Nfc.stopScanSession();
-          await handleError(err);
-        });
+            await handleError(err);
+          },
+        );
 
         // Store all listener handles for cleanup
-        listeners.push(nfcTagScannedHandle, scanCanceledHandle, scanErrorHandle);
+        listeners.push(
+          nfcTagScannedHandle,
+          scanCanceledHandle,
+          scanErrorHandle,
+        );
 
         // Now it's safe to start the scan session
         await Nfc.startScanSession();
@@ -127,7 +142,7 @@ async function withNfcSession<T>(
 export function int2hex(v: number[]): string {
   let hexId = "";
   for (let i = 0; i < v.length; i++) {
-    hexId += v[i].toString(16).padStart(2, "0");
+    hexId += (v[i] ?? 0).toString(16).padStart(2, "0");
   }
   hexId = hexId.replace(/-/g, "");
   return hexId;
@@ -136,7 +151,7 @@ export function int2hex(v: number[]): string {
 export function int2char(v: number[]): string {
   let charId = "";
   for (let i = 0; i < v.length; i++) {
-    charId += String.fromCharCode(v[i]);
+    charId += String.fromCharCode(v[i] ?? 0);
   }
   return charId;
 }
@@ -150,7 +165,7 @@ function readNfcEvent(event: NfcTagScannedEvent): Tag | null {
   if (event.nfcTag.message && event.nfcTag.message.records.length > 0) {
     const ndef = event.nfcTag.message.records[0];
 
-    if (ndef.payload) {
+    if (ndef?.payload) {
       let bs = ndef.payload;
       if (bs.length > 3 && bs[0] == 2) {
         bs = bs.slice(3);
@@ -169,8 +184,8 @@ export async function readTag(): Promise<Result> {
         status: Status.Success,
         info: {
           rawTag: event.nfcTag,
-          tag: readNfcEvent(event)
-        }
+          tag: readNfcEvent(event),
+        },
       };
     });
   } catch (error) {
@@ -182,8 +197,8 @@ export async function readTag(): Promise<Result> {
         status: Status.Cancelled,
         info: {
           rawTag: null,
-          tag: null
-        }
+          tag: null,
+        },
       };
     }
     throw error;
@@ -201,8 +216,8 @@ export async function writeTag(text: string): Promise<Result> {
         status: Status.Success,
         info: {
           rawTag: event.nfcTag,
-          tag: readNfcEvent(event)
-        }
+          tag: readNfcEvent(event),
+        },
       };
     });
   } catch (error) {
@@ -211,8 +226,8 @@ export async function writeTag(text: string): Promise<Result> {
         status: Status.Cancelled,
         info: {
           rawTag: null,
-          tag: null
-        }
+          tag: null,
+        },
       };
     }
     throw error;
@@ -228,8 +243,8 @@ export async function formatTag(): Promise<Result> {
         status: Status.Success,
         info: {
           rawTag: event.nfcTag,
-          tag: readNfcEvent(event)
-        }
+          tag: readNfcEvent(event),
+        },
       };
     });
   } catch (error) {
@@ -238,8 +253,8 @@ export async function formatTag(): Promise<Result> {
         status: Status.Cancelled,
         info: {
           rawTag: null,
-          tag: null
-        }
+          tag: null,
+        },
       };
     }
     throw error;
@@ -255,8 +270,8 @@ export async function eraseTag(): Promise<Result> {
         status: Status.Success,
         info: {
           rawTag: event.nfcTag,
-          tag: readNfcEvent(event)
-        }
+          tag: readNfcEvent(event),
+        },
       };
     });
   } catch (error) {
@@ -265,8 +280,8 @@ export async function eraseTag(): Promise<Result> {
         status: Status.Cancelled,
         info: {
           rawTag: null,
-          tag: null
-        }
+          tag: null,
+        },
       };
     }
     throw error;
@@ -281,8 +296,8 @@ export async function readRaw(): Promise<Result> {
         status: Status.Success,
         info: {
           rawTag: event.nfcTag,
-          tag: readNfcEvent(event)
-        }
+          tag: readNfcEvent(event),
+        },
       };
     });
   } catch (error) {
@@ -291,8 +306,8 @@ export async function readRaw(): Promise<Result> {
         status: Status.Cancelled,
         info: {
           rawTag: null,
-          tag: null
-        }
+          tag: null,
+        },
       };
     }
     throw error;
@@ -308,8 +323,8 @@ export async function makeReadOnly(): Promise<Result> {
         status: Status.Success,
         info: {
           rawTag: event.nfcTag,
-          tag: readNfcEvent(event)
-        }
+          tag: readNfcEvent(event),
+        },
       };
     });
   } catch (error) {
@@ -318,8 +333,8 @@ export async function makeReadOnly(): Promise<Result> {
         status: Status.Cancelled,
         info: {
           rawTag: null,
-          tag: null
-        }
+          tag: null,
+        },
       };
     }
     throw error;

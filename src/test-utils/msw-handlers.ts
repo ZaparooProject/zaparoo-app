@@ -14,53 +14,61 @@ export const handlers = [
 
       try {
         const message = JSON.parse(event.data.toString());
-        
+
         // Mock responses for common API calls
         if (message.method === "version") {
-          client.send(JSON.stringify({
-            jsonrpc: "2.0",
-            id: message.id,
-            timestamp: Date.now(),
-            result: {
-              version: "1.0.0-test",
-              commit: "abc123"
-            }
-          }));
-        } else if (message.method === "media") {
-          client.send(JSON.stringify({
-            jsonrpc: "2.0",
-            id: message.id,
-            timestamp: Date.now(),
-            result: {
-              database: {
-                total_files: 100,
-                indexed_files: 95,
-                processing: false
+          client.send(
+            JSON.stringify({
+              jsonrpc: "2.0",
+              id: message.id,
+              timestamp: Date.now(),
+              result: {
+                version: "1.0.0-test",
+                commit: "abc123",
               },
-              active: []
-            }
-          }));
+            }),
+          );
+        } else if (message.method === "media") {
+          client.send(
+            JSON.stringify({
+              jsonrpc: "2.0",
+              id: message.id,
+              timestamp: Date.now(),
+              result: {
+                database: {
+                  total_files: 100,
+                  indexed_files: 95,
+                  processing: false,
+                },
+                active: [],
+              },
+            }),
+          );
         } else if (message.method === "tokens") {
-          client.send(JSON.stringify({
-            jsonrpc: "2.0",
-            id: message.id,
-            timestamp: Date.now(),
-            result: {
-              last: null
-            }
-          }));
+          client.send(
+            JSON.stringify({
+              jsonrpc: "2.0",
+              id: message.id,
+              timestamp: Date.now(),
+              result: {
+                last: null,
+              },
+            }),
+          );
         } else {
           // Generic success response for other methods
-          client.send(JSON.stringify({
-            jsonrpc: "2.0",
-            id: message.id,
-            timestamp: Date.now(),
-            result: {}
-          }));
+          client.send(
+            JSON.stringify({
+              jsonrpc: "2.0",
+              id: message.id,
+              timestamp: Date.now(),
+              result: {},
+            }),
+          );
         }
       } catch {
         // Silently ignore parse errors in tests
       }
     });
-  })
+  }),
 ];

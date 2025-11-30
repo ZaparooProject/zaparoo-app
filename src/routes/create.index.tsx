@@ -13,7 +13,7 @@ import { PageFrame } from "../components/PageFrame";
 import { usePreferencesStore } from "../lib/preferencesStore";
 
 export const Route = createFileRoute("/create/")({
-  component: Create
+  component: Create,
 });
 
 function Create() {
@@ -39,7 +39,11 @@ function Create() {
         }
       >
         <div className="flex flex-col gap-3">
-          <Link to="/create/search" disabled={!connected} data-tour="create-search">
+          <Link
+            to="/create/search"
+            disabled={!connected}
+            data-tour="create-search"
+          >
             <Card disabled={!connected}>
               <div className="flex flex-row items-center gap-3">
                 <Button disabled={!connected} icon={<SearchIcon size="20" />} />
@@ -85,7 +89,10 @@ function Create() {
           <Link to="/create/mappings" disabled={!connected}>
             <Card disabled={!connected}>
               <div className="flex flex-row items-center gap-3">
-                <Button icon={<ListPlusIcon size="20" />} disabled={!connected} />
+                <Button
+                  icon={<ListPlusIcon size="20" />}
+                  disabled={!connected}
+                />
                 <div className="flex grow flex-col">
                   <span className="font-semibold">
                     {t("create.mappingsHeading")}

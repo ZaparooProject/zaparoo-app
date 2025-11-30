@@ -83,7 +83,7 @@ export function ScanSpinner(props: {
                 : props.status === ScanResult.Error
                   ? errorColor
                   : primaryColor,
-            animation: props.spinning ? "spinner 20s infinite linear" : "none"
+            animation: props.spinning ? "spinner 20s infinite linear" : "none",
           }}
           className={classNames(
             "flex",
@@ -95,7 +95,7 @@ export function ScanSpinner(props: {
             "border-[3px]",
             "border-solid",
             "border-primary",
-            "drop-shadow-[0_0_20px_var(--color-primary)]"
+            "drop-shadow-[0_0_20px_var(--color-primary)]",
           )}
         >
           <div
@@ -106,7 +106,9 @@ export function ScanSpinner(props: {
                   : props.status === ScanResult.Error
                     ? errorColor
                     : primaryColor,
-              animation: props.spinning ? "spinner 30s infinite linear" : "none"
+              animation: props.spinning
+                ? "spinner 30s infinite linear"
+                : "none",
             }}
             className={classNames(
               "flex",
@@ -117,7 +119,7 @@ export function ScanSpinner(props: {
               "rounded-[16px]",
               "border-[3px]",
               "border-solid",
-              "border-primary"
+              "border-primary",
             )}
           >
             <div
@@ -130,7 +132,7 @@ export function ScanSpinner(props: {
                       : primaryColor,
                 animation: props.spinning
                   ? "spinner 40s infinite linear"
-                  : "none"
+                  : "none",
               }}
               className={classNames(
                 "flex",
@@ -141,7 +143,7 @@ export function ScanSpinner(props: {
                 "rounded-[16px]",
                 "border-[3px]",
                 "border-solid",
-                "border-primary"
+                "border-primary",
               )}
             >
               <div
@@ -155,7 +157,7 @@ export function ScanSpinner(props: {
                     ? "attention 5s infinite linear"
                     : "none",
                   transformOrigin: "center",
-                  willChange: "opacity, transform"
+                  willChange: "opacity, transform",
                 }}
               ></div>
             </div>

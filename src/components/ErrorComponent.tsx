@@ -15,7 +15,7 @@ export function ErrorComponent({ error }: { error: Error }) {
         category: "general",
         severity: "critical",
         component: "ErrorComponent",
-        context: "route-error-boundary"
+        context: "route-error-boundary",
       });
     }
   }, [error]);
@@ -36,13 +36,11 @@ Timestamp: ${new Date().toISOString()}
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 9999
+        zIndex: 9999,
       }}
     >
       <div className="w-full max-w-md rounded-lg bg-red-900/30 p-6 shadow-lg">
-        <h1 className="mb-4 text-2xl font-bold">
-          {t("errorBoundary.title")}
-        </h1>
+        <h1 className="mb-4 text-2xl font-bold">{t("errorBoundary.title")}</h1>
         <p className="mb-6">{t("errorBoundary.description")}</p>
 
         <div className="mb-4 rounded bg-black/40 p-3">

@@ -13,12 +13,12 @@ import { PageFrame } from "../components/PageFrame";
 import { usePreferencesStore, selectCustomText } from "../lib/preferencesStore";
 
 export const Route = createFileRoute("/create/custom")({
-  component: CustomText
+  component: CustomText,
 });
 
 function CustomText() {
   const { customText, setCustomText } = usePreferencesStore(
-    useShallow(selectCustomText)
+    useShallow(selectCustomText),
   );
   const nfcWriter = useNfcWriter();
   // Track user intent to open modal; actual visibility derived from NFC status
@@ -34,7 +34,7 @@ function CustomText() {
   const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
-    preventScrollOnSwipe: false
+    preventScrollOnSwipe: false,
   });
 
   return (
@@ -45,30 +45,32 @@ function CustomText() {
           <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
         }
         headerCenter={
-          <h1 className="text-foreground text-xl">{t("create.custom.title")}</h1>
+          <h1 className="text-foreground text-xl">
+            {t("create.custom.title")}
+          </h1>
         }
       >
-          <div className="flex flex-col gap-3">
-            <ZapScriptInput
-              value={customText}
-              setValue={setCustomText}
-              showPalette
-              rows={5}
-            />
+        <div className="flex flex-col gap-3">
+          <ZapScriptInput
+            value={customText}
+            setValue={setCustomText}
+            showPalette
+            rows={5}
+          />
 
-            <Button
-              icon={<CreateIcon size="20" />}
-              label={t("create.custom.write")}
-              disabled={customText === ""}
-              onClick={() => {
-                if (customText !== "") {
-                  nfcWriter.write(WriteAction.Write, customText);
-                  setWriteIntent(true);
-                }
-              }}
-            />
-          </div>
-        </PageFrame>
+          <Button
+            icon={<CreateIcon size="20" />}
+            label={t("create.custom.write")}
+            disabled={customText === ""}
+            onClick={() => {
+              if (customText !== "") {
+                nfcWriter.write(WriteAction.Write, customText);
+                setWriteIntent(true);
+              }
+            }}
+          />
+        </div>
+      </PageFrame>
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
     </>
   );

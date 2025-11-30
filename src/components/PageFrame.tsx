@@ -31,25 +31,21 @@ export function PageFrame(props: PageFrameProps) {
 
   return (
     <div
-      className={`flex h-full w-full flex-col ${className || ''}`}
+      className={`flex h-full w-full flex-col ${className || ""}`}
       {...restProps}
     >
       {hasHeaderContent && (
-        <header className="bg-background sticky top-0 z-10 pt-safe-top-4 p-4 pr-safe-right-4 pl-safe-left-4">
+        <header className="bg-background pt-safe-top-4 pr-safe-right-4 pl-safe-left-4 sticky top-0 z-10 p-4">
           <ResponsiveContainer>
             {header ? (
               header
             ) : (
               <div className="grid min-h-8 grid-cols-5 items-center justify-center gap-4">
-                <div className="col-span-1 flex">
-                  {headerLeft}
-                </div>
+                <div className="col-span-1 flex">{headerLeft}</div>
                 <div className="col-span-3 flex items-center justify-center text-center">
                   {headerCenter}
                 </div>
-                <div className="col-span-1 flex justify-end">
-                  {headerRight}
-                </div>
+                <div className="col-span-1 flex justify-end">{headerRight}</div>
               </div>
             )}
           </ResponsiveContainer>
@@ -57,11 +53,9 @@ export function PageFrame(props: PageFrameProps) {
       )}
       <div
         ref={scrollRef}
-        className={`flex-1 overflow-y-auto ${hasHeaderContent ? 'px-4 pb-4' : 'p-4'} pr-safe-right-4 pl-safe-left-4 pb-safe-bottom-4`}
+        className={`flex-1 overflow-y-auto ${hasHeaderContent ? "px-4 pb-4" : "p-4"} pr-safe-right-4 pl-safe-left-4 pb-safe-bottom-4`}
       >
-        <ResponsiveContainer>
-          {children}
-        </ResponsiveContainer>
+        <ResponsiveContainer>{children}</ResponsiveContainer>
       </div>
     </div>
   );

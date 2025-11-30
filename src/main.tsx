@@ -19,9 +19,9 @@ initializeApp(firebaseConfig);
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30000 // 30 seconds - prevents refetch flicker on navigation
-    }
-  }
+      staleTime: 30000, // 30 seconds - prevents refetch flicker on navigation
+    },
+  },
 });
 
 Preferences.get({ key: "apiUrl" })
@@ -38,7 +38,7 @@ Preferences.get({ key: "apiUrl" })
 const onDeviceReady = async () => {
   if (import.meta.env.MODE === "development") {
     await Purchases.setLogLevel({
-      level: LOG_LEVEL.DEBUG
+      level: LOG_LEVEL.DEBUG,
     });
   }
 
@@ -46,7 +46,7 @@ const onDeviceReady = async () => {
     await Purchases.configure({ apiKey: import.meta.env.VITE_APPLE_STORE_API });
   } else if (Capacitor.getPlatform() === "android") {
     await Purchases.configure({
-      apiKey: import.meta.env.VITE_GOOGLE_STORE_API
+      apiKey: import.meta.env.VITE_GOOGLE_STORE_API,
     });
   }
 };
@@ -79,6 +79,6 @@ if (!rootElement.innerHTML) {
       ) : (
         AppContent
       )}
-    </StrictMode>
+    </StrictMode>,
   );
 }

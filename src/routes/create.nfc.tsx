@@ -18,13 +18,13 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-  TabsContent
+  TabsContent,
 } from "../components/ui/tabs";
 import { ReadTab } from "../components/nfc/ReadTab";
 import { ToolsTab } from "../components/nfc/ToolsTab";
 
 export const Route = createFileRoute("/create/nfc")({
-  component: NfcUtils
+  component: NfcUtils,
 });
 
 function NfcUtils() {
@@ -45,7 +45,8 @@ function NfcUtils() {
 
   // Handle NFC operation completion - cleanup and tab switching
   useEffect(() => {
-    const justCompleted = prevStatusRef.current === null && nfcWriter.status !== null;
+    const justCompleted =
+      prevStatusRef.current === null && nfcWriter.status !== null;
     prevStatusRef.current = nfcWriter.status;
 
     if (justCompleted) {
@@ -66,7 +67,7 @@ function NfcUtils() {
   const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
-    preventScrollOnSwipe: false
+    preventScrollOnSwipe: false,
   });
 
   const handleScan = () => {
@@ -100,10 +101,7 @@ function NfcUtils() {
               <TabsTrigger value="tools">Tools</TabsTrigger>
             </TabsList>
             <TabsContent value="read" className="flex-1 overflow-y-auto">
-              <ReadTab
-                result={nfcWriter.result}
-                onScan={handleScan}
-              />
+              <ReadTab result={nfcWriter.result} onScan={handleScan} />
             </TabsContent>
             <TabsContent value="tools" className="flex-1 overflow-y-auto">
               <ToolsTab

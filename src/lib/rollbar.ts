@@ -86,7 +86,7 @@ const scrubFields = [
   "firebase_token",
   // App-specific token fields (from error metadata)
   "tokenValue",
-  "textPrefix"
+  "textPrefix",
 ];
 
 // Only enable on native platforms (iOS/Android) in production
@@ -119,7 +119,7 @@ export const rollbarConfig: Rollbar.Configuration = {
     log: false, // Don't capture console logs
     dom: false, // Don't track DOM interactions (could capture PII)
     navigation: true, // Track page/route navigation
-    connectivity: true // Track online/offline status
+    connectivity: true, // Track online/offline status
   },
   maxTelemetryEvents: 20,
 
@@ -128,11 +128,11 @@ export const rollbarConfig: Rollbar.Configuration = {
     client: {
       javascript: {
         code_version: import.meta.env.VITE_VERSION || "unknown",
-        source_map_enabled: false
-      }
+        source_map_enabled: false,
+      },
     },
     platform: Capacitor.getPlatform(),
-    isNative: Capacitor.isNativePlatform()
+    isNative: Capacitor.isNativePlatform(),
   },
 
   // Transform payload before sending - extra safety check for PII
@@ -163,7 +163,7 @@ export const rollbarConfig: Rollbar.Configuration = {
 
   // Only transmit on native + production
   transmit: shouldEnable,
-  verbose: !isProduction
+  verbose: !isProduction,
 };
 
 // Create and export the Rollbar instance

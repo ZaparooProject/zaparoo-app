@@ -17,29 +17,39 @@ describe("CoreAPI Simple Additional Coverage", () => {
 
   describe("WebSocket management errors", () => {
     it("should handle invalid WebSocketManager instance", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Pass invalid WebSocket manager
       CoreAPI.setWsInstance(null as any);
 
-      expect(consoleSpy).toHaveBeenCalledWith("Invalid WebSocketManager instance provided to CoreAPI");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Invalid WebSocketManager instance provided to CoreAPI",
+      );
       consoleSpy.mockRestore();
     });
 
     it("should handle invalid send function", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Pass invalid send function
       CoreAPI.setSend(null as any);
 
-      expect(consoleSpy).toHaveBeenCalledWith("Invalid send function provided to CoreAPI");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Invalid send function provided to CoreAPI",
+      );
       consoleSpy.mockRestore();
     });
   });
 
   describe("Queue flush error handling", () => {
     it("should handle send errors during queue flush", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Set up a disconnected state to queue requests
       CoreAPI.setWsInstance({ isConnected: false, send: mockSend } as any);
@@ -57,14 +67,19 @@ describe("CoreAPI Simple Additional Coverage", () => {
       // The queued request should be rejected
       await expect(requestPromise).rejects.toThrow();
 
-      expect(consoleSpy).toHaveBeenCalledWith("Failed to send queued request during flush:", expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to send queued request during flush:",
+        expect.any(Error),
+      );
       consoleSpy.mockRestore();
     });
   });
 
   describe("hasWriteCapableReader error handling", () => {
     it("should handle errors in hasWriteCapableReader", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Mock CoreAPI.readers to throw an error
       const originalReaders = CoreAPI.readers;
@@ -73,7 +88,10 @@ describe("CoreAPI Simple Additional Coverage", () => {
       const result = await (CoreAPI as any).hasWriteCapableReader();
 
       expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith("Failed to check write capable readers:", expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to check write capable readers:",
+        expect.any(Error),
+      );
 
       CoreAPI.readers = originalReaders;
       consoleSpy.mockRestore();
@@ -82,15 +100,22 @@ describe("CoreAPI Simple Additional Coverage", () => {
 
   describe("Method-specific error propagation", () => {
     it("should properly handle version method errors", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Mock the internal call to fail
       const originalCall = (CoreAPI as any).call;
-      (CoreAPI as any).call = vi.fn().mockRejectedValue(new Error("Version call failed"));
+      (CoreAPI as any).call = vi
+        .fn()
+        .mockRejectedValue(new Error("Version call failed"));
 
       await expect(CoreAPI.version()).rejects.toThrow();
 
-      expect(consoleSpy).toHaveBeenCalledWith("Version API call failed:", expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Version API call failed:",
+        expect.any(Error),
+      );
 
       (CoreAPI as any).call = originalCall;
       consoleSpy.mockRestore();
@@ -99,7 +124,9 @@ describe("CoreAPI Simple Additional Coverage", () => {
 
   describe("Network error simulation", () => {
     it("should handle network disconnection during API calls", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Simulate network error
       mockSend.mockImplementation(() => {
@@ -108,9 +135,14 @@ describe("CoreAPI Simple Additional Coverage", () => {
         throw networkError;
       });
 
-      await expect(CoreAPI.call(Method.Version)).rejects.toThrow("Failed to send request");
+      await expect(CoreAPI.call(Method.Version)).rejects.toThrow(
+        "Failed to send request",
+      );
 
-      expect(consoleSpy).toHaveBeenCalledWith("Failed to send request:", expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to send request:",
+        expect.any(Error),
+      );
       consoleSpy.mockRestore();
     });
   });

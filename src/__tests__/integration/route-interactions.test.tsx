@@ -10,11 +10,11 @@ const mockCoreAPI = {
   mediaSearch: vi.fn(),
   systems: vi.fn(),
   media: vi.fn(),
-  stop: vi.fn()
+  stop: vi.fn(),
 };
 
 vi.mock("../../lib/coreApi", () => ({
-  CoreAPI: mockCoreAPI
+  CoreAPI: mockCoreAPI,
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -26,41 +26,44 @@ vi.mock("@tanstack/react-router", () => ({
       restartScan: false,
       launchOnScan: true,
       launcherAccess: true,
-      preferRemoteWriter: false
-    }))
-  }))
+      preferRemoteWriter: false,
+    })),
+  })),
 }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, params?: any) => {
       if (key.includes("{{")) {
-        return key.replace(/{{(\w+)}}/g, (_, param) => params?.[param] || param);
+        return key.replace(
+          /{{(\w+)}}/g,
+          (_, param) => params?.[param] || param,
+        );
       }
       return key;
-    }
-  })
+    },
+  }),
 }));
 
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     get: vi.fn().mockResolvedValue({ value: "all" }),
-    set: vi.fn().mockResolvedValue(undefined)
-  }
+    set: vi.fn().mockResolvedValue(undefined),
+  },
 }));
 
 vi.mock("@capacitor-community/keep-awake", () => ({
   KeepAwake: {
     keepAwake: vi.fn(),
-    allowSleep: vi.fn()
-  }
+    allowSleep: vi.fn(),
+  },
 }));
 
 vi.mock("../../lib/nfc", () => ({
   cancelSession: vi.fn(),
   Status: {
-    Success: 'success'
-  }
+    Success: "success",
+  },
 }));
 
 // Store state management for integration tests
@@ -75,12 +78,12 @@ let mockStoreState = {
   setPlaying: vi.fn(),
   runQueue: null,
   setRunQueue: vi.fn(),
-  writeQueue: '',
-  setWriteQueue: vi.fn()
+  writeQueue: "",
+  setWriteQueue: vi.fn(),
 };
 
 vi.mock("../../lib/store", () => ({
-  useStatusStore: vi.fn((selector) => selector(mockStoreState))
+  useStatusStore: vi.fn((selector) => selector(mockStoreState)),
 }));
 
 vi.mock("../../hooks/useScanOperations", () => ({
@@ -90,25 +93,25 @@ vi.mock("../../hooks/useScanOperations", () => ({
     handleScanButton: vi.fn(),
     handleCameraScan: vi.fn(),
     handleStopConfirm: vi.fn(),
-    runToken: vi.fn()
-  }))
+    runToken: vi.fn(),
+  })),
 }));
 
 vi.mock("../../hooks/useRunQueueProcessor", () => ({
-  useRunQueueProcessor: vi.fn()
+  useRunQueueProcessor: vi.fn(),
 }));
 
 vi.mock("../../hooks/useWriteQueueProcessor", () => ({
   useWriteQueueProcessor: vi.fn(() => ({
-    reset: vi.fn()
-  }))
+    reset: vi.fn(),
+  })),
 }));
 
 vi.mock("../../hooks/useAppSettings", () => ({
   useAppSettings: vi.fn(() => ({
     launcherAccess: true,
-    preferRemoteWriter: false
-  }))
+    preferRemoteWriter: false,
+  })),
 }));
 
 vi.mock("../../lib/writeNfcHook", () => ({
@@ -116,19 +119,19 @@ vi.mock("../../lib/writeNfcHook", () => ({
     status: null,
     write: vi.fn(),
     end: vi.fn(),
-    writing: false
+    writing: false,
   })),
   WriteMethod: {
-    Auto: 'auto'
-  }
+    Auto: "auto",
+  },
 }));
 
 vi.mock("../../components/ProPurchase", () => ({
   useProPurchase: vi.fn(() => ({
     PurchaseModal: () => <div data-testid="purchase-modal">Purchase Modal</div>,
     proPurchaseModalOpen: false,
-    setProPurchaseModalOpen: vi.fn()
-  }))
+    setProPurchaseModalOpen: vi.fn(),
+  })),
 }));
 
 describe("Route Interactions - Integration Tests", () => {
@@ -139,8 +142,8 @@ describe("Route Interactions - Integration Tests", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
 
     // Reset mock store state
@@ -155,8 +158,8 @@ describe("Route Interactions - Integration Tests", () => {
       setPlaying: vi.fn(),
       runQueue: null,
       setRunQueue: vi.fn(),
-      writeQueue: '',
-      setWriteQueue: vi.fn()
+      writeQueue: "",
+      setWriteQueue: vi.fn(),
     };
   });
 
@@ -229,7 +232,7 @@ describe("Route Interactions - Integration Tests", () => {
       render(
         <QueryClientProvider client={queryClient}>
           <HomeToCreateFlow />
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       expect(screen.getByTestId("current-route")).toHaveTextContent("home");
@@ -242,7 +245,9 @@ describe("Route Interactions - Integration Tests", () => {
 
       // Navigate to search
       fireEvent.click(screen.getByTestId("search-button"));
-      expect(screen.getByTestId("current-route")).toHaveTextContent("create/search");
+      expect(screen.getByTestId("current-route")).toHaveTextContent(
+        "create/search",
+      );
       expect(screen.getByTestId("search-page")).toBeInTheDocument();
 
       // Navigate back
@@ -254,8 +259,13 @@ describe("Route Interactions - Integration Tests", () => {
   describe("Search to Write Flow", () => {
     it("should handle complete search-to-write workflow", async () => {
       const searchResults = [
-        { id: "1", name: "Super Mario World", system: "SNES", path: "/games/smw.sfc" },
-        { id: "2", name: "Sonic", system: "Genesis", path: "/games/sonic.bin" }
+        {
+          id: "1",
+          name: "Super Mario World",
+          system: "SNES",
+          path: "/games/smw.sfc",
+        },
+        { id: "2", name: "Sonic", system: "Genesis", path: "/games/sonic.bin" },
       ];
 
       mockCoreAPI.mediaSearch.mockResolvedValue({
@@ -265,7 +275,7 @@ describe("Route Interactions - Integration Tests", () => {
           nextCursor: null,
           hasNextPage: false,
           pageSize: searchResults.length,
-        }
+        },
       });
 
       const SearchToWriteFlow = () => {
@@ -276,7 +286,7 @@ describe("Route Interactions - Integration Tests", () => {
         const handleSearch = async () => {
           const response = await mockCoreAPI.mediaSearch({
             query: "mario",
-            systems: []
+            systems: [],
           });
           setResults(response.results);
         };
@@ -335,7 +345,7 @@ describe("Route Interactions - Integration Tests", () => {
       render(
         <QueryClientProvider client={queryClient}>
           <SearchToWriteFlow />
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       // Perform search
@@ -355,7 +365,9 @@ describe("Route Interactions - Integration Tests", () => {
       // Confirm write
       fireEvent.click(screen.getByTestId("confirm-write"));
 
-      expect(mockStoreState.setWriteQueue).toHaveBeenCalledWith("/games/smw.sfc");
+      expect(mockStoreState.setWriteQueue).toHaveBeenCalledWith(
+        "/games/smw.sfc",
+      );
       expect(screen.queryByTestId("write-modal")).not.toBeInTheDocument();
     });
   });
@@ -363,7 +375,8 @@ describe("Route Interactions - Integration Tests", () => {
   describe("Connection State Changes", () => {
     it("should handle connection state changes across routes", async () => {
       const ConnectionAwareComponent = () => {
-        const [connectionState, setConnectionState] = React.useState("connected");
+        const [connectionState, setConnectionState] =
+          React.useState("connected");
         const [currentRoute, setCurrentRoute] = React.useState("home");
 
         // Mock store state changes
@@ -377,9 +390,7 @@ describe("Route Interactions - Integration Tests", () => {
 
         return (
           <div>
-            <div data-testid="connection-status">
-              Status: {connectionState}
-            </div>
+            <div data-testid="connection-status">Status: {connectionState}</div>
 
             <button
               data-testid="disconnect-btn"
@@ -436,19 +447,25 @@ describe("Route Interactions - Integration Tests", () => {
       render(
         <QueryClientProvider client={queryClient}>
           <ConnectionAwareComponent />
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       // Initially connected
-      expect(screen.getByTestId("connection-status")).toHaveTextContent("Status: connected");
+      expect(screen.getByTestId("connection-status")).toHaveTextContent(
+        "Status: connected",
+      );
 
       // Navigate to search (should work when connected)
       fireEvent.click(screen.getByTestId("nav-search"));
-      expect(screen.getByTestId("route-status")).toHaveTextContent("Route: create/search");
+      expect(screen.getByTestId("route-status")).toHaveTextContent(
+        "Route: create/search",
+      );
 
       // Disconnect
       fireEvent.click(screen.getByTestId("disconnect-btn"));
-      expect(screen.getByTestId("connection-status")).toHaveTextContent("Status: disconnected");
+      expect(screen.getByTestId("connection-status")).toHaveTextContent(
+        "Status: disconnected",
+      );
 
       // Search should be disabled when disconnected
       expect(screen.getByTestId("search-games")).toBeDisabled();
@@ -456,7 +473,9 @@ describe("Route Interactions - Integration Tests", () => {
 
       // Reconnect
       fireEvent.click(screen.getByTestId("reconnect-btn"));
-      expect(screen.getByTestId("connection-status")).toHaveTextContent("Status: connected");
+      expect(screen.getByTestId("connection-status")).toHaveTextContent(
+        "Status: connected",
+      );
       expect(screen.getByTestId("search-games")).not.toBeDisabled();
     });
   });
@@ -477,10 +496,7 @@ describe("Route Interactions - Integration Tests", () => {
             >
               Open History
             </button>
-            <button
-              data-testid="open-write"
-              onClick={() => setWriteOpen(true)}
-            >
+            <button data-testid="open-write" onClick={() => setWriteOpen(true)}>
               Open Write
             </button>
             <button
@@ -501,8 +517,10 @@ describe("Route Interactions - Integration Tests", () => {
                 historyOpen && "history",
                 writeOpen && "write",
                 searchOpen && "search",
-                stopConfirmOpen && "stopConfirm"
-              ].filter(Boolean).join(",")}
+                stopConfirmOpen && "stopConfirm",
+              ]
+                .filter(Boolean)
+                .join(",")}
             </div>
 
             {historyOpen && (
@@ -555,14 +573,16 @@ describe("Route Interactions - Integration Tests", () => {
       render(
         <QueryClientProvider client={queryClient}>
           <MultiModalComponent />
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       // Open multiple modals
       fireEvent.click(screen.getByTestId("open-history"));
       fireEvent.click(screen.getByTestId("open-write"));
 
-      expect(screen.getByTestId("modal-states")).toHaveTextContent("history,write");
+      expect(screen.getByTestId("modal-states")).toHaveTextContent(
+        "history,write",
+      );
       expect(screen.getByTestId("history-modal")).toBeInTheDocument();
       expect(screen.getByTestId("write-modal")).toBeInTheDocument();
 
@@ -573,7 +593,9 @@ describe("Route Interactions - Integration Tests", () => {
 
       // Open another modal while one is open
       fireEvent.click(screen.getByTestId("open-stop-confirm"));
-      expect(screen.getByTestId("modal-states")).toHaveTextContent("write,stopConfirm");
+      expect(screen.getByTestId("modal-states")).toHaveTextContent(
+        "write,stopConfirm",
+      );
 
       // Close all modals
       fireEvent.click(screen.getByTestId("close-write"));
@@ -628,7 +650,9 @@ describe("Route Interactions - Integration Tests", () => {
             {currentRoute === "custom" && (
               <div data-testid="custom-page">
                 <div data-testid="preserved-query">Query: {searchQuery}</div>
-                <div data-testid="preserved-system">System: {selectedSystem}</div>
+                <div data-testid="preserved-system">
+                  System: {selectedSystem}
+                </div>
 
                 <button
                   data-testid="nav-back"
@@ -645,28 +669,36 @@ describe("Route Interactions - Integration Tests", () => {
       render(
         <QueryClientProvider client={queryClient}>
           <DataPersistenceComponent />
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       // Set search data
       fireEvent.change(screen.getByTestId("query-input"), {
-        target: { value: "mario" }
+        target: { value: "mario" },
       });
       fireEvent.change(screen.getByTestId("system-select"), {
-        target: { value: "snes" }
+        target: { value: "snes" },
       });
 
       // Navigate away
       fireEvent.click(screen.getByTestId("nav-custom"));
-      expect(screen.getByTestId("current-route")).toHaveTextContent("Route: custom");
+      expect(screen.getByTestId("current-route")).toHaveTextContent(
+        "Route: custom",
+      );
 
       // Check data is preserved
-      expect(screen.getByTestId("preserved-query")).toHaveTextContent("Query: mario");
-      expect(screen.getByTestId("preserved-system")).toHaveTextContent("System: snes");
+      expect(screen.getByTestId("preserved-query")).toHaveTextContent(
+        "Query: mario",
+      );
+      expect(screen.getByTestId("preserved-system")).toHaveTextContent(
+        "System: snes",
+      );
 
       // Navigate back
       fireEvent.click(screen.getByTestId("nav-back"));
-      expect(screen.getByTestId("current-route")).toHaveTextContent("Route: search");
+      expect(screen.getByTestId("current-route")).toHaveTextContent(
+        "Route: search",
+      );
 
       // Check data is still there
       expect(screen.getByTestId("query-input")).toHaveValue("mario");

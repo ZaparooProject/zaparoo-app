@@ -18,5 +18,5 @@ export const cardVariants = cva(
       variant: "default",
       clickable: false,
     },
-  }
+  },
 );

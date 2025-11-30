@@ -22,7 +22,7 @@ export function useScanOperations({
   launcherAccess,
   setLastToken,
   setProPurchaseModalOpen,
-  setWriteOpen
+  setWriteOpen,
 }: UseScanOperationsProps) {
   const { t } = useTranslation();
   const nfcWriter = useNfcWriter();
@@ -48,7 +48,7 @@ export function useScanOperations({
             launcherAccess,
             connected,
             setLastToken,
-            setProPurchaseModalOpen
+            setProPurchaseModalOpen,
           );
           if (!ok) {
             cancelSession();
@@ -80,7 +80,10 @@ export function useScanOperations({
       .catch((error) => {
         setScanStatus(ScanResult.Error);
         setScanSession(false);
-        logger.error("NFC scan failed", error, { category: "nfc", action: "doScan" });
+        logger.error("NFC scan failed", error, {
+          category: "nfc",
+          action: "doScan",
+        });
         toast.error((to) => (
           // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
           <span
@@ -94,7 +97,14 @@ export function useScanOperations({
           setScanStatus(ScanResult.Default);
         }, statusTimeout);
       });
-  }, [connected, launcherAccess, setLastToken, setProPurchaseModalOpen, statusTimeout, t]);
+  }, [
+    connected,
+    launcherAccess,
+    setLastToken,
+    setProPurchaseModalOpen,
+    statusTimeout,
+    t,
+  ]);
 
   const handleScanButton = useCallback(async () => {
     if (scanSession) {
@@ -114,6 +124,7 @@ export function useScanOperations({
         }
 
         const barcode = res.barcodes[0];
+        if (!barcode) return;
 
         if (barcode.rawValue.startsWith("**write:")) {
           const writeValue = barcode.rawValue.slice(8);
@@ -133,13 +144,23 @@ export function useScanOperations({
           launcherAccess,
           connected,
           setLastToken,
-          setProPurchaseModalOpen
+          setProPurchaseModalOpen,
         );
       })
       .catch((error) => {
-        logger.error("Barcode scan error:", error, { category: "camera", action: "barcodeScan" });
+        logger.error("Barcode scan error:", error, {
+          category: "camera",
+          action: "barcodeScan",
+        });
       });
-  }, [connected, launcherAccess, setLastToken, setProPurchaseModalOpen, setWriteOpen, nfcWriter]);
+  }, [
+    connected,
+    launcherAccess,
+    setLastToken,
+    setProPurchaseModalOpen,
+    setWriteOpen,
+    nfcWriter,
+  ]);
 
   const handleStopConfirm = useCallback(() => {
     runToken(
@@ -150,16 +171,25 @@ export function useScanOperations({
       setLastToken,
       setProPurchaseModalOpen,
       false,
-      true
+      true,
     );
   }, [connected, launcherAccess, setLastToken, setProPurchaseModalOpen]);
 
-  return useMemo(() => ({
-    scanSession,
-    scanStatus,
-    handleScanButton,
-    handleCameraScan,
-    handleStopConfirm,
-    runToken
-  }), [scanSession, scanStatus, handleScanButton, handleCameraScan, handleStopConfirm]);
+  return useMemo(
+    () => ({
+      scanSession,
+      scanStatus,
+      handleScanButton,
+      handleCameraScan,
+      handleStopConfirm,
+      runToken,
+    }),
+    [
+      scanSession,
+      scanStatus,
+      handleScanButton,
+      handleCameraScan,
+      handleStopConfirm,
+    ],
+  );
 }

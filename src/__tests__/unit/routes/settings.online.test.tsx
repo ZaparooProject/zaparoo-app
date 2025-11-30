@@ -9,8 +9,8 @@ import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }));
 
 vi.mock("@capacitor-firebase/authentication", () => ({
@@ -20,29 +20,29 @@ vi.mock("@capacitor-firebase/authentication", () => ({
     signInWithEmailAndPassword: vi.fn().mockResolvedValue({
       user: {
         email: "test@example.com",
-        uid: "test-uid"
-      }
+        uid: "test-uid",
+      },
     }),
     signInWithGoogle: vi.fn().mockResolvedValue({
       user: {
         email: "google@example.com",
-        uid: "google-uid"
-      }
-    })
-  }
+        uid: "google-uid",
+      },
+    }),
+  },
 }));
 
 vi.mock("@capacitor/browser", () => ({
   default: {},
   Browser: {
-    open: vi.fn()
-  }
+    open: vi.fn(),
+  },
 }));
 
 vi.mock("lucide-react", () => ({
   ExternalLinkIcon: () => "ExternalLinkIcon",
   LogInIcon: () => "LogInIcon",
-  LogOutIcon: () => "LogOutIcon"
+  LogOutIcon: () => "LogOutIcon",
 }));
 
 const mockSetLoggedInUser = vi.fn();
@@ -54,19 +54,19 @@ vi.mock("../../../lib/store.ts", () => ({
     CONNECTED: "CONNECTED",
     RECONNECTING: "RECONNECTING",
     ERROR: "ERROR",
-    DISCONNECTED: "DISCONNECTED"
+    DISCONNECTED: "DISCONNECTED",
   },
   useStatusStore: vi.fn((selector) => {
     const mockState = {
       loggedInUser: null,
-      setLoggedInUser: mockSetLoggedInUser
+      setLoggedInUser: mockSetLoggedInUser,
     };
     return selector(mockState);
-  })
+  }),
 }));
 
 vi.mock("../../../hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({}))
+  useSmartSwipe: vi.fn(() => ({})),
 }));
 
 // Mock other modules that contain enums to prevent compilation issues
@@ -75,58 +75,60 @@ vi.mock("../../../lib/nfc.ts", () => ({
     Idle: "idle",
     Reading: "reading",
     Success: "success",
-    Error: "error"
-  }
+    Error: "error",
+  },
 }));
 
 vi.mock("../../../lib/writeNfcHook.tsx", () => ({
   WriteMethod: {
     NFC: "nfc",
-    Remote: "remote"
+    Remote: "remote",
   },
   WriteAction: {
     Read: "read",
     Write: "write",
-    Format: "format"
+    Format: "format",
   },
   useNfcWriter: vi.fn(() => ({
     status: null,
     write: vi.fn(),
     end: vi.fn(),
     writing: false,
-    result: null
-  }))
+    result: null,
+  })),
 }));
 
 const mockNavigate = vi.fn();
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    createFileRoute: actual.createFileRoute
+    createFileRoute: actual.createFileRoute,
   };
 });
 
 vi.mock("../../../components/wui/TextInput.tsx", () => ({
   TextInput: ({ value, setValue, label, placeholder, type }: any) => (
     <div>
-      <label data-testid={`label-${label?.toLowerCase().replace(/\s+/g, '-')}`}>{label}</label>
+      <label data-testid={`label-${label?.toLowerCase().replace(/\s+/g, "-")}`}>
+        {label}
+      </label>
       <input
-        data-testid={`input-${label?.toLowerCase().replace(/\s+/g, '-')}`}
+        data-testid={`input-${label?.toLowerCase().replace(/\s+/g, "-")}`}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
         type={type}
       />
     </div>
-  )
+  ),
 }));
 
 vi.mock("../../../components/wui/Button.tsx", () => ({
   Button: ({ label, onClick, disabled, icon, className }: any) => (
     <button
-      data-testid={`button-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      data-testid={`button-${label.toLowerCase().replace(/\s+/g, "-")}`}
       onClick={onClick}
       disabled={disabled}
       className={className}
@@ -134,17 +136,19 @@ vi.mock("../../../components/wui/Button.tsx", () => ({
       {icon && <span data-testid="button-icon">{icon}</span>}
       {label}
     </button>
-  )
+  ),
 }));
 
 vi.mock("../../../components/PageFrame.tsx", () => ({
   PageFrame: ({ title, back, children, ...props }: any) => (
     <div data-testid="page-frame" {...props}>
       <div data-testid="page-title">{title}</div>
-      <button data-testid="back-button" onClick={back}>Back</button>
+      <button data-testid="back-button" onClick={back}>
+        Back
+      </button>
       <div data-testid="page-content">{children}</div>
     </div>
-  )
+  ),
 }));
 
 describe("Settings Online Route", () => {
@@ -155,8 +159,8 @@ describe("Settings Online Route", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
 
     // Reset mockSetLoggedInUser calls - the mock is already set up at the module level
@@ -169,9 +173,7 @@ describe("Settings Online Route", () => {
 
   it("should render online settings page with all components", async () => {
     const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
     // Mock the online component for logged out state
@@ -206,7 +208,9 @@ describe("Settings Online Route", () => {
               />
             </div>
             <button data-testid="button-login">Login</button>
-            <button data-testid="button-login-with-google">Login with Google</button>
+            <button data-testid="button-login-with-google">
+              Login with Google
+            </button>
           </div>
         </div>
       );
@@ -215,7 +219,7 @@ describe("Settings Online Route", () => {
     render(
       <TestWrapper>
         <OnlineComponent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     expect(screen.getByTestId("page-frame")).toBeInTheDocument();
@@ -234,9 +238,7 @@ describe("Settings Online Route", () => {
       return (
         <button
           data-testid="dashboard-button"
-          onClick={() =>
-            Browser.open({ url: "https://zaparoo.com/dashboard" })
-          }
+          onClick={() => Browser.open({ url: "https://zaparoo.com/dashboard" })}
         >
           Open Dashboard
         </button>
@@ -249,7 +251,7 @@ describe("Settings Online Route", () => {
     fireEvent.click(dashboardButton);
 
     expect(Browser.open).toHaveBeenCalledWith({
-      url: "https://zaparoo.com/dashboard"
+      url: "https://zaparoo.com/dashboard",
     });
   });
 
@@ -286,12 +288,17 @@ describe("Settings Online Route", () => {
     fireEvent.change(emailInput, { target: { value: "test@example.com" } });
     fireEvent.change(passwordInput, { target: { value: "password123" } });
 
-    expect(screen.getByTestId("email-value")).toHaveTextContent("test@example.com");
-    expect(screen.getByTestId("password-value")).toHaveTextContent("password123");
+    expect(screen.getByTestId("email-value")).toHaveTextContent(
+      "test@example.com",
+    );
+    expect(screen.getByTestId("password-value")).toHaveTextContent(
+      "password123",
+    );
   });
 
   it("should handle successful email/password login", async () => {
-    const { FirebaseAuthentication } = await import("@capacitor-firebase/authentication");
+    const { FirebaseAuthentication } =
+      await import("@capacitor-firebase/authentication");
 
     const TestComponent = () => {
       const [onlineEmail] = React.useState("test@example.com");
@@ -302,7 +309,7 @@ describe("Settings Online Route", () => {
         setOnlineLoggingIn(true);
         FirebaseAuthentication.signInWithEmailAndPassword({
           email: onlineEmail,
-          password: onlinePassword
+          password: onlinePassword,
         })
           .then((result) => {
             if (result) {
@@ -341,9 +348,11 @@ describe("Settings Online Route", () => {
     fireEvent.click(loginButton);
 
     await waitFor(() => {
-      expect(FirebaseAuthentication.signInWithEmailAndPassword).toHaveBeenCalledWith({
+      expect(
+        FirebaseAuthentication.signInWithEmailAndPassword,
+      ).toHaveBeenCalledWith({
         email: "test@example.com",
-        password: "password123"
+        password: "password123",
       });
     });
 
@@ -351,21 +360,24 @@ describe("Settings Online Route", () => {
       expect(toast.success).toHaveBeenCalledWith("Login successful!");
       expect(mockSetLoggedInUser).toHaveBeenCalledWith({
         email: "test@example.com",
-        uid: "test-uid"
+        uid: "test-uid",
       });
     });
   });
 
   it("should handle failed email/password login", async () => {
-    const { FirebaseAuthentication } = await import("@capacitor-firebase/authentication");
+    const { FirebaseAuthentication } =
+      await import("@capacitor-firebase/authentication");
 
     // Mock console.error to suppress expected error output
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     // Mock failed login
-    vi.mocked(FirebaseAuthentication.signInWithEmailAndPassword).mockRejectedValueOnce(
-      new Error("Invalid credentials")
-    );
+    vi.mocked(
+      FirebaseAuthentication.signInWithEmailAndPassword,
+    ).mockRejectedValueOnce(new Error("Invalid credentials"));
 
     const TestComponent = () => {
       const [, setOnlineLoggingIn] = React.useState(false);
@@ -374,7 +386,7 @@ describe("Settings Online Route", () => {
         setOnlineLoggingIn(true);
         FirebaseAuthentication.signInWithEmailAndPassword({
           email: "test@example.com",
-          password: "wrong-password"
+          password: "wrong-password",
         })
           .then((result) => {
             if (result) {
@@ -415,7 +427,6 @@ describe("Settings Online Route", () => {
   });
 
   it("should handle successful Google login", async () => {
-
     const TestComponent = () => {
       const handleGoogleLogin = () => {
         FirebaseAuthentication.signInWithGoogle()
@@ -454,7 +465,7 @@ describe("Settings Online Route", () => {
       expect(toast.success).toHaveBeenCalledWith("Login successful!");
       expect(mockSetLoggedInUser).toHaveBeenCalledWith({
         email: "google@example.com",
-        uid: "google-uid"
+        uid: "google-uid",
       });
     });
   });
@@ -466,9 +477,9 @@ describe("Settings Online Route", () => {
       const mockState = {
         loggedInUser: {
           email: "loggedin@example.com",
-          uid: "logged-in-uid"
+          uid: "logged-in-uid",
         },
-        setLoggedInUser: mockSetLoggedInUser
+        setLoggedInUser: mockSetLoggedInUser,
       };
       return selector(mockState);
     });
@@ -493,14 +504,13 @@ describe("Settings Online Route", () => {
     render(<TestComponent />);
 
     expect(screen.getByTestId("logged-in-text")).toHaveTextContent(
-      "Logged in as: loggedin@example.com"
+      "Logged in as: loggedin@example.com",
     );
     expect(screen.getByTestId("button-logout")).toBeInTheDocument();
     expect(screen.queryByTestId("login-form")).not.toBeInTheDocument();
   });
 
   it("should handle logout", async () => {
-
     const TestComponent = () => {
       const [onlineEmail, setOnlineEmail] = React.useState("test@example.com");
       const [onlinePassword, setOnlinePassword] = React.useState("password123");
@@ -616,11 +626,11 @@ describe("Settings Online Route", () => {
   });
 
   it("should handle logout errors gracefully", async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     // Mock logout error
     vi.mocked(FirebaseAuthentication.signOut).mockRejectedValueOnce(
-      new Error("Logout failed")
+      new Error("Logout failed"),
     );
 
     const TestComponent = () => {

@@ -9,7 +9,9 @@ describe("App", () => {
     const appSource = readFileSync(appPath, "utf-8");
 
     // Check that useDataCache is imported
-    expect(appSource).toMatch(/import.*useDataCache.*from.*hooks\/useDataCache/);
+    expect(appSource).toMatch(
+      /import.*useDataCache.*from.*hooks\/useDataCache/,
+    );
 
     // Check that useDataCache is called in the component
     expect(appSource).toMatch(/useDataCache\(\)/);
@@ -24,14 +26,20 @@ describe("App", () => {
     expect(appSource).not.toMatch(/import.*MediaIndexingToast/);
 
     // Check that MediaFinishedToast is still imported and used
-    expect(appSource).toMatch(/import.*MediaFinishedToast.*from.*components\/MediaFinishedToast/);
+    expect(appSource).toMatch(
+      /import.*MediaFinishedToast.*from.*components\/MediaFinishedToast/,
+    );
     expect(appSource).toMatch(/MediaFinishedToast/);
 
     // Check that only completion toast logic exists
-    expect(appSource).toMatch(/Only show completion toast, progress is now shown in MediaDatabaseCard/);
+    expect(appSource).toMatch(
+      /Only show completion toast, progress is now shown in MediaDatabaseCard/,
+    );
 
     // Verify indexing toast logic is removed
-    expect(appSource).not.toMatch(/if \(gamesIndex\.indexing && !hideGamesIndex\)/);
+    expect(appSource).not.toMatch(
+      /if \(gamesIndex\.indexing && !hideGamesIndex\)/,
+    );
     expect(appSource).not.toMatch(/toast\.loading/);
   });
 

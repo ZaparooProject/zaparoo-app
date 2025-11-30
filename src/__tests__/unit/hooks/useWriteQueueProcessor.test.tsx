@@ -11,56 +11,55 @@ import toast from "react-hot-toast";
 
 // Mock all dependencies
 vi.mock("../../../lib/store", () => ({
-  useStatusStore: vi.fn()
+  useStatusStore: vi.fn(),
 }));
 
 vi.mock("../../../lib/preferencesStore", () => ({
-  usePreferencesStore: vi.fn()
+  usePreferencesStore: vi.fn(),
 }));
 
 vi.mock("../../../lib/writeNfcHook", () => ({
   useNfcWriter: vi.fn(),
   WriteMethod: { Auto: "auto" },
-  WriteAction: { Write: "write" }
+  WriteAction: { Write: "write" },
 }));
 
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
-    isNativePlatform: vi.fn()
-  }
+    isNativePlatform: vi.fn(),
+  },
 }));
 
 vi.mock("@capawesome-team/capacitor-nfc", () => ({
   Nfc: {
-    isAvailable: vi.fn()
-  }
+    isAvailable: vi.fn(),
+  },
 }));
 
 vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
-    hasWriteCapableReader: vi.fn()
-  }
+    hasWriteCapableReader: vi.fn(),
+  },
 }));
 
 vi.mock("react-hot-toast", () => ({
   default: {
     error: vi.fn(),
-    dismiss: vi.fn()
-  }
+    dismiss: vi.fn(),
+  },
 }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key
-  })
+    t: (key: string) => key,
+  }),
 }));
 
 describe("useWriteQueueProcessor", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockNfcWriter: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let mockSetWriteOpen: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let mockSetWriteQueue: any;
 
   beforeEach(() => {
@@ -72,7 +71,7 @@ describe("useWriteQueueProcessor", () => {
       end: vi.fn().mockResolvedValue(undefined),
       status: null,
       writing: false,
-      result: null
+      result: null,
     };
 
     mockSetWriteOpen = vi.fn();
@@ -83,9 +82,9 @@ describe("useWriteQueueProcessor", () => {
 
     // Mock the preferences store
     vi.mocked(usePreferencesStore).mockImplementation((selector: any) => {
-      if (typeof selector === 'function') {
+      if (typeof selector === "function") {
         return selector({
-          preferRemoteWriter: false
+          preferRemoteWriter: false,
         });
       }
       return false;
@@ -96,9 +95,9 @@ describe("useWriteQueueProcessor", () => {
       const mockState = {
         writeQueue: "",
         setWriteQueue: mockSetWriteQueue,
-        setWriteOpen: mockSetWriteOpen
+        setWriteOpen: mockSetWriteOpen,
       };
-      if (typeof selector === 'function') {
+      if (typeof selector === "function") {
         return selector(mockState);
       }
       return mockState;
@@ -133,9 +132,9 @@ describe("useWriteQueueProcessor", () => {
       const mockState = {
         writeQueue: "test-write-content",
         setWriteQueue: mockSetWriteQueue,
-        setWriteOpen: mockSetWriteOpen
+        setWriteOpen: mockSetWriteOpen,
       };
-      if (typeof selector === 'function') {
+      if (typeof selector === "function") {
         return selector(mockState);
       }
       return mockState;
@@ -152,7 +151,10 @@ describe("useWriteQueueProcessor", () => {
     // Now assertions should work immediately
     expect(mockSetWriteQueue).toHaveBeenCalledWith("");
     expect(mockSetWriteOpen).toHaveBeenCalledWith(true);
-    expect(mockNfcWriter.write).toHaveBeenCalledWith("write", "test-write-content");
+    expect(mockNfcWriter.write).toHaveBeenCalledWith(
+      "write",
+      "test-write-content",
+    );
   });
 
   it("should check remote writers when NFC unavailable", async () => {
@@ -163,9 +165,9 @@ describe("useWriteQueueProcessor", () => {
       const mockState = {
         writeQueue: "test-content",
         setWriteQueue: mockSetWriteQueue,
-        setWriteOpen: mockSetWriteOpen
+        setWriteOpen: mockSetWriteOpen,
       };
-      if (typeof selector === 'function') {
+      if (typeof selector === "function") {
         return selector(mockState);
       }
       return mockState;
@@ -192,9 +194,9 @@ describe("useWriteQueueProcessor", () => {
       const mockState = {
         writeQueue: "test-content",
         setWriteQueue: mockSetWriteQueue,
-        setWriteOpen: mockSetWriteOpen
+        setWriteOpen: mockSetWriteOpen,
       };
-      if (typeof selector === 'function') {
+      if (typeof selector === "function") {
         return selector(mockState);
       }
       return mockState;
@@ -222,9 +224,9 @@ describe("useWriteQueueProcessor", () => {
       const mockState = {
         writeQueue: "web-content",
         setWriteQueue: mockSetWriteQueue,
-        setWriteOpen: mockSetWriteOpen
+        setWriteOpen: mockSetWriteOpen,
       };
-      if (typeof selector === 'function') {
+      if (typeof selector === "function") {
         return selector(mockState);
       }
       return mockState;
@@ -251,9 +253,9 @@ describe("useWriteQueueProcessor", () => {
       const mockState = {
         writeQueue: "test-content",
         setWriteQueue: mockSetWriteQueue,
-        setWriteOpen: mockSetWriteOpen
+        setWriteOpen: mockSetWriteOpen,
       };
-      if (typeof selector === 'function') {
+      if (typeof selector === "function") {
         return selector(mockState);
       }
       return mockState;

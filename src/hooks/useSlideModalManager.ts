@@ -11,7 +11,9 @@ export const SlideModalContext = createContext<SlideModalManager | null>(null);
 export const useSlideModalManager = (): SlideModalManager => {
   const context = useContext(SlideModalContext);
   if (!context) {
-    throw new Error("useSlideModalManager must be used within a SlideModalProvider");
+    throw new Error(
+      "useSlideModalManager must be used within a SlideModalProvider",
+    );
   }
   return context;
 };
