@@ -27,6 +27,7 @@
     "nav": {
       "back": "戻る",
       "cancel": "キャンセル",
+      "close": "閉じる",
       "create": "作成",
       "assign": "割り当てる",
       "index": "Zap",

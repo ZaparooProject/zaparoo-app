@@ -27,6 +27,7 @@
     "nav": {
       "back": "Terug",
       "cancel": "Annuleren",
+      "close": "Sluiten",
       "create": "Creëren",
       "assign": "Toewijzen",
       "index": "Zap",

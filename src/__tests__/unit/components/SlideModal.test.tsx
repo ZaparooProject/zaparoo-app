@@ -64,9 +64,11 @@ describe("SlideModal", () => {
     const closeMock = vi.fn();
     render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
 
-    // The close button has aria-label from t("nav.cancel")
-    const closeButton = screen.getByRole("button", { name: "nav.cancel" });
-    fireEvent.click(closeButton);
+    // There are two close buttons (drag handle on mobile, X button on desktop)
+    // Get all and click the first one (drag handle)
+    const closeButtons = screen.getAllByRole("button", { name: "nav.close" });
+    expect(closeButtons.length).toBe(2);
+    fireEvent.click(closeButtons[0]);
 
     expect(closeMock).toHaveBeenCalled();
   });

@@ -150,11 +150,12 @@ export function SlideModal(props: {
           style={{ overflowY: "initial" }}
           {...swipeHandlers}
         >
-          {/* Drag handle - visual only, not interactive for a11y (use close button instead) */}
-          <div
+          {/* Drag handle - accessible button for TalkBack, visual bar for sighted users */}
+          <button
+            type="button"
             onClick={props.close}
-            aria-hidden="true"
-            className="h-[5px] w-[80px] rounded-full bg-[#00E0FF]"
+            aria-label={t("nav.close")}
+            className="h-[5px] w-[80px] rounded-full bg-[#00E0FF] focus:ring-2 focus:ring-white/50 focus:outline-none"
           />
         </div>
         <div className="relative sm:pb-2">
@@ -169,7 +170,7 @@ export function SlideModal(props: {
           <button
             onClick={props.close}
             className="absolute top-[-5px] right-0 flex h-8 w-8 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-white/10 hover:opacity-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none max-sm:sr-only"
-            aria-label={t("nav.cancel")}
+            aria-label={t("nav.close")}
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
