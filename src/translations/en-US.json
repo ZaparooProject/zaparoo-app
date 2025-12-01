@@ -137,6 +137,7 @@
         "tagsLabel": "Tags",
         "selectWriteValue": "Select value to write to tag",
         "writeLabel": "Write to tag",
+        "copyLabel": "Copy",
         "playLabel": "Preview",
         "selectSystem": "Select System",
         "selectTags": "Select Tags",
@@ -397,18 +398,11 @@
       "accessibility": {
         "title": "Accessibility",
         "haptics": "Haptic feedback",
-        "hapticsDescription": "Vibrate on button taps and interactions",
-        "systemStatus": "System Status",
-        "screenReader": "Screen reader",
-        "active": "Active",
-        "inactive": "Inactive",
-        "textZoom": "Text zoom",
-        "systemStatusNote": "These settings are controlled by your device's system settings",
-        "builtInFeatures": "Built-in Accessibility Features",
-        "featureReducedMotion": "Respects reduced motion preferences",
-        "featureKeyboardNav": "Full keyboard navigation support",
-        "featureScreenReaderSupport": "Screen reader announcements",
-        "featureFocusIndicators": "Visible focus indicators"
+        "textSize": "Text size",
+        "textSizeSmall": "S",
+        "textSizeDefault": "M",
+        "textSizeLarge": "L",
+        "textSizeExtraLarge": "XL"
       },
       "help": {
         "title": "Help",

@@ -7,8 +7,8 @@ export default defineConfig({
   plugins: [react(), TanStackRouterVite()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src")
-    }
+      "@": path.resolve(__dirname, "./src"),
+    },
   },
   test: {
     globals: true,
@@ -20,13 +20,13 @@ export default defineConfig({
 
     include: [
       "src/__tests__/**/*.test.{ts,tsx}",
-      "src/**/__tests__/**/*.test.{ts,tsx}"
+      "src/**/__tests__/**/*.test.{ts,tsx}",
     ],
     exclude: [
       "**/node_modules/**",
       "**/dist/**",
       "**/.{idea,git,cache,output,temp}/**",
-      "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*"
+      "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*",
     ],
 
     reporters: ["default"],
@@ -37,9 +37,9 @@ export default defineConfig({
     deps: {
       optimizer: {
         client: {
-          enabled: true
-        }
-      }
+          enabled: true,
+        },
+      },
     },
 
     css: false,
@@ -61,8 +61,8 @@ export default defineConfig({
         "**/coverage/**",
         "**/dist/**",
         "capacitor.config.ts",
-        "tailwind.config.js"
-      ]
-    }
-  }
+        "tailwind.config.js",
+      ],
+    },
+  },
 });

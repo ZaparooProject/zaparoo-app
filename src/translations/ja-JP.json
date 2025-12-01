@@ -137,6 +137,7 @@
         "tagsLabel": "タグ",
         "selectWriteValue": "タグに書き込む値を選択",
         "writeLabel": "タグに書き込む",
+        "copyLabel": "コピー",
         "playLabel": "プレビュー",
         "selectSystem": "システムを選択",
         "selectTags": "タグを選択",
@@ -397,18 +398,11 @@
       "accessibility": {
         "title": "アクセシビリティ",
         "haptics": "触覚フィードバック",
-        "hapticsDescription": "ボタンタップや操作時に振動",
-        "systemStatus": "システムステータス",
-        "screenReader": "スクリーンリーダー",
-        "active": "有効",
-        "inactive": "無効",
-        "textZoom": "テキストズーム",
-        "systemStatusNote": "これらの設定はデバイスのシステム設定で管理されています",
-        "builtInFeatures": "内蔵アクセシビリティ機能",
-        "featureReducedMotion": "視覚効果を減らす設定に対応",
-        "featureKeyboardNav": "完全なキーボードナビゲーションをサポート",
-        "featureScreenReaderSupport": "スクリーンリーダーの読み上げ",
-        "featureFocusIndicators": "フォーカスインジケーターの表示"
+        "textSize": "文字サイズ",
+        "textSizeSmall": "S",
+        "textSizeDefault": "M",
+        "textSizeLarge": "L",
+        "textSizeExtraLarge": "XL"
       },
       "help": {
         "title": "ヘルプ",

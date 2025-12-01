@@ -137,6 +137,7 @@
         "tagsLabel": "Tags",
         "selectWriteValue": "Selecteer waarde om naar tag te schrijven",
         "writeLabel": "Schrijf naar tag",
+        "copyLabel": "Kopiëren",
         "playLabel": "Voorbeeld",
         "selectSystem": "Selecteer systeem",
         "selectTags": "Selecteer tags",
@@ -397,18 +398,11 @@
       "accessibility": {
         "title": "Toegankelijkheid",
         "haptics": "Haptische feedback",
-        "hapticsDescription": "Trillen bij knoppen en interacties",
-        "systemStatus": "Systeemstatus",
-        "screenReader": "Schermlezer",
-        "active": "Actief",
-        "inactive": "Inactief",
-        "textZoom": "Tekstzoom",
-        "systemStatusNote": "Deze instellingen worden beheerd door de systeeminstellingen van je apparaat",
-        "builtInFeatures": "Ingebouwde toegankelijkheidsfuncties",
-        "featureReducedMotion": "Respecteert voorkeuren voor verminderde beweging",
-        "featureKeyboardNav": "Volledige toetsenbordnavigatie-ondersteuning",
-        "featureScreenReaderSupport": "Schermlezeraankondigingen",
-        "featureFocusIndicators": "Zichtbare focusindicatoren"
+        "textSize": "Tekstgrootte",
+        "textSizeSmall": "S",
+        "textSizeDefault": "M",
+        "textSizeLarge": "L",
+        "textSizeExtraLarge": "XL"
       },
       "help": {
         "title": "Help",

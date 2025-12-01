@@ -4,9 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
 import classNames from "classnames";
-import { Folder, FileCode, Tag } from "lucide-react";
+import { Folder, FileCode, Tag, Copy } from "lucide-react";
 import { VirtualSearchResults } from "@/components/VirtualSearchResults.tsx";
-import { CopyButton } from "@/components/CopyButton.tsx";
 import { BackToTop } from "@/components/BackToTop.tsx";
 import { TagBadge } from "@/components/TagBadge.tsx";
 import { logger } from "../lib/logger";
@@ -156,7 +155,6 @@ function Search() {
   // Close modal when NFC operation completes
   useEffect(() => {
     if (nfcWriter.status !== null) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing UI with NFC hook state
       setWriteOpen(false);
     }
   }, [nfcWriter]);
@@ -174,7 +172,6 @@ function Search() {
   // Set default write mode when selected result changes
   useEffect(() => {
     if (selectedResult) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: deriving UI state from selection
       setWriteMode(selectedResult.zapScript ? "zapScript" : "path");
     }
   }, [selectedResult]);
@@ -475,9 +472,6 @@ function Search() {
                   )}
                 </div>
               </label>
-              {selectedResult?.path && (
-                <CopyButton text={selectedResult.path} />
-              )}
             </div>
 
             {/* ZapScript Option */}
@@ -539,13 +533,12 @@ function Search() {
                     )}
                   </div>
                 </label>
-                <CopyButton text={selectedResult.zapScript} />
               </div>
             )}
           </fieldset>
 
           {/* Actions */}
-          <div className="flex flex-row gap-2 pt-2">
+          <div className="flex flex-col gap-2 pt-2">
             <Button
               label={t("create.search.writeLabel")}
               icon={<CreateIcon size="20" />}
@@ -561,26 +554,52 @@ function Search() {
                   setWriteOpen(true);
                 }
               }}
-              className="grow"
+              className="w-full"
             />
-            <Button
-              label={t("create.search.playLabel")}
-              icon={<PlayIcon size="20" />}
-              variant="outline"
-              disabled={!selectedResult || !connected}
-              onClick={() => {
-                if (selectedResult) {
-                  const textToRun =
-                    writeMode === "zapScript" && selectedResult.zapScript
-                      ? selectedResult.zapScript
-                      : selectedResult.path;
-                  CoreAPI.run({
-                    uid: "",
-                    text: textToRun,
-                  });
-                }
-              }}
-            />
+            <div className="flex flex-row gap-2">
+              <Button
+                label={t("create.search.copyLabel")}
+                icon={<Copy size="20" />}
+                variant="outline"
+                disabled={!selectedResult}
+                onClick={async () => {
+                  if (selectedResult) {
+                    const textToCopy =
+                      writeMode === "zapScript" && selectedResult.zapScript
+                        ? selectedResult.zapScript
+                        : selectedResult.path;
+                    try {
+                      await navigator.clipboard.writeText(textToCopy);
+                    } catch {
+                      // Fallback for native
+                      const { Clipboard } =
+                        await import("@capacitor/clipboard");
+                      await Clipboard.write({ string: textToCopy });
+                    }
+                  }
+                }}
+                className="flex-1"
+              />
+              <Button
+                label={t("create.search.playLabel")}
+                icon={<PlayIcon size="20" />}
+                variant="outline"
+                disabled={!selectedResult || !connected}
+                onClick={() => {
+                  if (selectedResult) {
+                    const textToRun =
+                      writeMode === "zapScript" && selectedResult.zapScript
+                        ? selectedResult.zapScript
+                        : selectedResult.path;
+                    CoreAPI.run({
+                      uid: "",
+                      text: textToRun,
+                    });
+                  }
+                }}
+                className="flex-1"
+              />
+            </div>
           </div>
         </div>
       </SlideModal>

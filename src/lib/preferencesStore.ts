@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 import { Preferences } from "@capacitor/preferences";
+import { Capacitor } from "@capacitor/core";
+import { TextZoom } from "@capacitor/text-zoom";
 import { sessionManager } from "./nfc";
 
 /**
@@ -58,6 +60,7 @@ export interface PreferencesState {
 
   // Accessibility settings
   hapticsEnabled: boolean;
+  textZoomLevel: number;
 
   // Hydration tracking (internal, not persisted)
   _hasHydrated: boolean;
@@ -106,6 +109,7 @@ export interface PreferencesActions {
   setLogLevelFilters: (filters: PreferencesState["logLevelFilters"]) => void;
   setShowFilenames: (value: boolean) => void;
   setHapticsEnabled: (value: boolean) => void;
+  setTextZoomLevel: (value: number) => void;
 }
 
 export type PreferencesStore = PreferencesState & PreferencesActions;
@@ -147,6 +151,7 @@ const DEFAULT_PREFERENCES: Omit<
   },
   showFilenames: false,
   hapticsEnabled: true, // Enable haptic feedback by default
+  textZoomLevel: 1.0, // Default text zoom (100%)
 };
 
 export const usePreferencesStore = create<PreferencesStore>()(
@@ -213,6 +218,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
       setLogLevelFilters: (filters) => set({ logLevelFilters: filters }),
       setShowFilenames: (value) => set({ showFilenames: value }),
       setHapticsEnabled: (value) => set({ hapticsEnabled: value }),
+      setTextZoomLevel: (value) => set({ textZoomLevel: value }),
     }),
     {
       name: "app-preferences",
@@ -232,6 +238,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
         logLevelFilters: state.logLevelFilters,
         showFilenames: state.showFilenames,
         hapticsEnabled: state.hapticsEnabled,
+        textZoomLevel: state.textZoomLevel,
       }),
 
       // Callback when hydration completes
@@ -240,6 +247,13 @@ export const usePreferencesStore = create<PreferencesStore>()(
           // Initialize sessionManager with hydrated values
           sessionManager.setShouldRestart(state.restartScan);
           sessionManager.setLaunchOnScan(state.launchOnScan);
+
+          // Apply text zoom on native platforms
+          if (Capacitor.isNativePlatform() && state.textZoomLevel !== 1.0) {
+            TextZoom.set({ value: state.textZoomLevel }).catch(() => {
+              // Silently ignore - text zoom may not be available
+            });
+          }
 
           state.setHasHydrated(true);
         }

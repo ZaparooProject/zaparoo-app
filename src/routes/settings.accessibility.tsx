@@ -1,20 +1,27 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
+import classNames from "classnames";
 import { ToggleSwitch } from "../components/wui/ToggleSwitch";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { PageFrame } from "../components/PageFrame";
-import { BackIcon } from "../lib/images";
+import { BackIcon, CheckIcon } from "../lib/images";
 import { HeaderButton } from "../components/wui/HeaderButton";
-import { useTextZoom } from "../hooks/useTextZoom";
-import { useScreenReaderActive } from "../hooks/useScreenReaderActive";
-import { Card } from "../components/wui/Card";
 import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
+import { useTextZoom } from "../hooks/useTextZoom";
+import { useHaptics } from "../hooks/useHaptics";
 
 export const Route = createFileRoute("/settings/accessibility")({
   component: AccessibilitySettings,
 });
+
+const TEXT_ZOOM_PRESETS = [
+  { key: "small", value: 0.85 },
+  { key: "default", value: 1.0 },
+  { key: "large", value: 1.15 },
+  { key: "extraLarge", value: 1.3 },
+] as const;
 
 function AccessibilitySettings() {
   const { t } = useTranslation();
@@ -22,9 +29,24 @@ function AccessibilitySettings() {
 
   const hapticsEnabled = usePreferencesStore((s) => s.hapticsEnabled);
   const setHapticsEnabled = usePreferencesStore((s) => s.setHapticsEnabled);
+  const textZoomLevel = usePreferencesStore((s) => s.textZoomLevel);
+  const setTextZoomLevel = usePreferencesStore((s) => s.setTextZoomLevel);
 
-  const { zoomLevel, isAvailable: textZoomAvailable } = useTextZoom();
-  const { isActive: screenReaderActive } = useScreenReaderActive();
+  const { set: applyZoomLevel, isAvailable: textZoomAvailable } = useTextZoom();
+  const { impact } = useHaptics();
+
+  // Find the closest preset to the current zoom level
+  const currentPreset = TEXT_ZOOM_PRESETS.reduce((prev, curr) =>
+    Math.abs(curr.value - textZoomLevel) < Math.abs(prev.value - textZoomLevel)
+      ? curr
+      : prev,
+  );
+
+  const handleZoomChange = (value: number) => {
+    impact("light");
+    setTextZoomLevel(value); // Persist to store
+    applyZoomLevel(value); // Apply immediately
+  };
 
   const router = useRouter();
   const goBack = () => router.history.back();
@@ -50,57 +72,73 @@ function AccessibilitySettings() {
       }
     >
       <div className="flex flex-col gap-5">
-        {/* Haptic Feedback Toggle */}
-        {Capacitor.isNativePlatform() && (
-          <div className="space-y-1">
-            <ToggleSwitch
-              label={t("settings.accessibility.haptics")}
-              value={hapticsEnabled}
-              setValue={setHapticsEnabled}
-            />
-            <p className="text-foreground-muted text-sm">
-              {t("settings.accessibility.hapticsDescription")}
-            </p>
+        {/* Text Size - native only */}
+        {Capacitor.isNativePlatform() && textZoomAvailable && (
+          <div className="py-2">
+            <span id="text-size-label">
+              {t("settings.accessibility.textSize")}
+            </span>
+            <div
+              className="mt-2 flex flex-row"
+              role="radiogroup"
+              aria-labelledby="text-size-label"
+            >
+              {TEXT_ZOOM_PRESETS.map((preset, index) => {
+                const isFirst = index === 0;
+                const isLast = index === TEXT_ZOOM_PRESETS.length - 1;
+                const isSelected = currentPreset.key === preset.key;
+
+                return (
+                  <button
+                    key={preset.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    className={classNames(
+                      "flex",
+                      "flex-row",
+                      "w-full",
+                      "items-center",
+                      "justify-center",
+                      "py-1",
+                      "font-medium",
+                      "gap-1",
+                      "tracking-[0.1px]",
+                      "h-9",
+                      "border",
+                      "border-solid",
+                      "border-bd-filled",
+                      {
+                        "rounded-s-full": isFirst,
+                        "rounded-e-full": isLast,
+                        "bg-button-pattern": isSelected,
+                        "bg-background": !isSelected,
+                      },
+                    )}
+                    onClick={() => handleZoomChange(preset.value)}
+                  >
+                    {isSelected && (
+                      <span aria-hidden="true">
+                        <CheckIcon size="28" />
+                      </span>
+                    )}
+                    {t(
+                      `settings.accessibility.textSize${preset.key.charAt(0).toUpperCase() + preset.key.slice(1)}`,
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
-        {/* Status Information Card */}
+        {/* Haptic Feedback - native only */}
         {Capacitor.isNativePlatform() && (
-          <Card className="space-y-3">
-            <h2 className="font-semibold">
-              {t("settings.accessibility.systemStatus")}
-            </h2>
-
-            <div className="text-foreground-secondary space-y-2 text-sm">
-              {/* Screen Reader Status */}
-              <div className="flex items-center justify-between">
-                <span>{t("settings.accessibility.screenReader")}</span>
-                <span
-                  className={
-                    screenReaderActive
-                      ? "text-success"
-                      : "text-foreground-muted"
-                  }
-                >
-                  {screenReaderActive
-                    ? t("settings.accessibility.active")
-                    : t("settings.accessibility.inactive")}
-                </span>
-              </div>
-
-              {/* Text Zoom Status */}
-              {textZoomAvailable && (
-                <div className="flex items-center justify-between">
-                  <span>{t("settings.accessibility.textZoom")}</span>
-                  <span>{Math.round(zoomLevel * 100)}%</span>
-                </div>
-              )}
-            </div>
-
-            <p className="text-foreground-muted mt-2 text-xs">
-              {t("settings.accessibility.systemStatusNote")}
-            </p>
-          </Card>
+          <ToggleSwitch
+            label={t("settings.accessibility.haptics")}
+            value={hapticsEnabled}
+            setValue={setHapticsEnabled}
+          />
         )}
       </div>
     </PageFrame>
