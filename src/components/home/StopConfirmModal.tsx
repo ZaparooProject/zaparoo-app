@@ -21,7 +21,7 @@ export function StopConfirmModal({
         <p className="text-center">{t("stopPlaying")}</p>
         <div className="flex flex-row justify-center gap-4">
           <Button label={t("nav.cancel")} variant="outline" onClick={onClose} />
-          <Button label={t("yes")} onClick={onConfirm} />
+          <Button label={t("yes")} intent="primary" onClick={onConfirm} />
         </div>
       </div>
     </SlideModal>

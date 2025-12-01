@@ -27,6 +27,7 @@ import { SlideModal } from "../components/SlideModal";
 import { Button } from "../components/wui/Button";
 import { HeaderButton } from "../components/wui/HeaderButton";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
+import { useHaptics } from "../hooks/useHaptics";
 import { useStatusStore } from "../lib/store";
 import { TextInput } from "../components/wui/TextInput";
 import { WriteModal } from "../components/WriteModal";
@@ -85,6 +86,7 @@ function Search() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.search.title"));
   const loaderData = Route.useLoaderData();
+  const { selectionChanged } = useHaptics();
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const setGamesIndex = useStatusStore((state) => state.setGamesIndex);
   const connected = useStatusStore((state) => state.connected);
@@ -426,7 +428,10 @@ function Search() {
                 name="write-mode"
                 value="path"
                 checked={writeMode === "path"}
-                onChange={() => setWriteMode("path")}
+                onChange={() => {
+                  selectionChanged();
+                  setWriteMode("path");
+                }}
                 className="sr-only"
               />
               <label
@@ -484,7 +489,10 @@ function Search() {
                   name="write-mode"
                   value="zapScript"
                   checked={writeMode === "zapScript"}
-                  onChange={() => setWriteMode("zapScript")}
+                  onChange={() => {
+                    selectionChanged();
+                    setWriteMode("zapScript");
+                  }}
                   className="sr-only"
                 />
                 <label
@@ -541,6 +549,7 @@ function Search() {
             <Button
               label={t("create.search.writeLabel")}
               icon={<CreateIcon size="20" />}
+              intent="primary"
               disabled={!selectedResult}
               onClick={() => {
                 if (selectedResult) {

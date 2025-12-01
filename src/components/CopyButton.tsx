@@ -3,6 +3,7 @@ import { Clipboard } from "@capacitor/clipboard";
 import { Capacitor } from "@capacitor/core";
 import { Copy, Check } from "lucide-react";
 import classNames from "classnames";
+import { useHaptics } from "@/hooks/useHaptics";
 
 const writeToClipboard = async (s: string) => {
   if (Capacitor.isNativePlatform()) {
@@ -19,6 +20,7 @@ export const CopyButton = (props: {
 }) => {
   const [copied, setCopied] = useState(false);
   const size = props.size ?? 14;
+  const { notification } = useHaptics();
 
   const handleCopy = async (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
@@ -32,6 +34,7 @@ export const CopyButton = (props: {
     }
 
     setCopied(true);
+    notification("success");
     setTimeout(() => setCopied(false), 2000);
   };
 

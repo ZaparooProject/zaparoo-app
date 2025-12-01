@@ -71,6 +71,7 @@ export function CommandsModal(props: {
                     key={cmd.label}
                     label={cmd.label}
                     variant="outline"
+                    intent="primary"
                     onClick={() => {
                       props.onSelect(cmd.command);
                       props.close();

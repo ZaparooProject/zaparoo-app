@@ -12,10 +12,12 @@ import {
 import { logger } from "../lib/logger";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useStatusStore } from "../lib/store";
+import { useHaptics } from "../hooks/useHaptics";
 import { Button } from "./wui/Button";
 
 export const RestorePuchasesButton = () => {
   const setLauncherAccess = usePreferencesStore.getState().setLauncherAccess;
+  const { notification } = useHaptics();
 
   return (
     <Button
@@ -30,6 +32,7 @@ export const RestorePuchasesButton = () => {
           } else {
             setLauncherAccess(false);
           }
+          notification("success");
           toast.success(t("settings.app.restoreSuccess"));
           location.reload();
         } catch (e) {

@@ -9,6 +9,7 @@ import { logger } from "../lib/logger";
 //   ClockIcon
 // } from "lucide-react";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
+import { useHaptics } from "../hooks/useHaptics";
 import { WriteModal } from "../components/WriteModal";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { PageFrame } from "../components/PageFrame";
@@ -32,6 +33,7 @@ function NfcUtils() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.nfc.title"));
   const nfcWriter = useNfcWriter();
+  const { impact } = useHaptics();
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);
   const writeOpen = writeIntent && nfcWriter.status === null;
@@ -98,7 +100,10 @@ function NfcUtils() {
         >
           <Tabs
             value={activeTab}
-            onValueChange={setActiveTab}
+            onValueChange={(value) => {
+              impact("light");
+              setActiveTab(value);
+            }}
             className="flex h-full flex-col"
           >
             <TabsList className="grid w-full grid-cols-2">

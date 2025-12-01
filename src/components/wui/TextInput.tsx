@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/refs -- False positive: linter incorrectly flags all props as refs when component has a ref prop */
 import React, { KeyboardEventHandler, useEffect, useState, useId } from "react";
 import classNames from "classnames";
+import { useHaptics } from "@/hooks/useHaptics";
 import { SaveIcon, ClearIcon } from "../../lib/images";
 import { Button } from "./Button";
 
@@ -23,6 +24,7 @@ export function TextInput(props: {
   const errorId = useId();
   const [value, setValue] = useState(props.value);
   const [modified, setModified] = useState(false);
+  const { impact } = useHaptics();
 
   useEffect(() => {
     setValue(props.value);
@@ -89,6 +91,7 @@ export function TextInput(props: {
               type="button"
               className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-gray-400 transition-colors hover:text-white"
               onClick={() => {
+                impact("light");
                 setValue("");
                 setModified(true);
                 if (props.setValue) {

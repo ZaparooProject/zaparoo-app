@@ -24,6 +24,7 @@ export function ConfirmClearModal(props: {
           />
           <Button
             variant="outline"
+            intent="destructive"
             label={t("create.custom.clear")}
             onClick={() => {
               props.onConfirm();

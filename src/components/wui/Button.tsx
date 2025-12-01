@@ -7,6 +7,8 @@ interface ButtonProps {
   label?: string;
   variant?: "fill" | "outline" | "text";
   size?: "default" | "sm" | "lg";
+  /** Semantic intent for haptic feedback: default (light), primary (medium), destructive (heavy) */
+  intent?: "default" | "primary" | "destructive";
   icon?: ReactElement;
   disabled?: boolean;
   className?: string;
@@ -118,7 +120,13 @@ export const Button = memo(
           hasMoved.current = false;
           setIsPressed(true);
           if (!props.disabled) {
-            impact("light");
+            const hapticStyle =
+              props.intent === "destructive"
+                ? "heavy"
+                : props.intent === "primary"
+                  ? "medium"
+                  : "light";
+            impact(hapticStyle);
           }
         }}
         onTouchMove={(e) => {

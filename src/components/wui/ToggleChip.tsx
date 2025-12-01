@@ -1,5 +1,6 @@
 import classNames from "classnames";
 import { ReactElement } from "react";
+import { useHaptics } from "@/hooks/useHaptics";
 
 interface ToggleChipProps {
   label?: string;
@@ -13,6 +14,8 @@ interface ToggleChipProps {
 }
 
 export function ToggleChip(props: ToggleChipProps) {
+  const { impact } = useHaptics();
+
   return (
     <button
       aria-pressed={props.state}
@@ -51,7 +54,12 @@ export function ToggleChip(props: ToggleChipProps) {
           "text-foreground-disabled": props.disabled,
         },
       )}
-      onClick={() => !props.disabled && props.setState(!props.state)}
+      onClick={() => {
+        if (!props.disabled) {
+          impact("light");
+          props.setState(!props.state);
+        }
+      }}
     >
       {props.icon}
       {props.label}

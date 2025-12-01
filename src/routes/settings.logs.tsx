@@ -6,6 +6,7 @@ import { Download, Copy, RefreshCw } from "lucide-react";
 import { BackToTop } from "../components/BackToTop";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
+import { useHaptics } from "../hooks/useHaptics";
 import { useStatusStore } from "../lib/store";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { PageFrame } from "../components/PageFrame";
@@ -34,6 +35,7 @@ function Logs() {
   const router = useRouter();
   const goBack = () => router.history.back();
   const connected = useStatusStore((state) => state.connected);
+  const { impact } = useHaptics();
   const [searchTerm, setSearchTerm] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const levelFilters = usePreferencesStore((s) => s.logLevelFilters);
@@ -180,6 +182,7 @@ function Logs() {
   const MESSAGE_TRUNCATE_LENGTH = 200;
 
   const toggleExpandEntry = (index: number) => {
+    impact("light");
     setExpandedEntries((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(index)) {
@@ -192,6 +195,7 @@ function Logs() {
   };
 
   const toggleExpandField = (entryIndex: number, fieldKey: string) => {
+    impact("light");
     const fieldId = `${entryIndex}_${fieldKey}`;
     setExpandedFields((prev) => {
       const newSet = new Set(prev);

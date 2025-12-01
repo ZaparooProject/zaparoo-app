@@ -92,6 +92,7 @@ export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
                 label={isProcessing ? t("loading") : tool.label}
                 icon={tool.icon}
                 variant="outline"
+                intent={tool.dangerous ? "destructive" : "default"}
                 className="w-full"
               />
 

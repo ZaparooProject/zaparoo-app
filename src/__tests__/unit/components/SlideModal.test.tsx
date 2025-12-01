@@ -68,7 +68,7 @@ describe("SlideModal", () => {
     // Get all and click the first one (drag handle)
     const closeButtons = screen.getAllByRole("button", { name: "nav.close" });
     expect(closeButtons.length).toBe(2);
-    fireEvent.click(closeButtons[0]);
+    fireEvent.click(closeButtons[0]!);
 
     expect(closeMock).toHaveBeenCalled();
   });

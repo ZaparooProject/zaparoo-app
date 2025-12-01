@@ -3,7 +3,6 @@ import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
-import { useHaptics } from "@/hooks/useHaptics";
 import { CheckIcon, WarningIcon } from "./images";
 import {
   cancelSession,
@@ -132,7 +131,6 @@ export function useNfcWriter(
     useState<AbortController | null>(null);
 
   const { t } = useTranslation();
-  const { notification } = useHaptics();
 
   useEffect(() => {
     return () => {
@@ -254,7 +252,6 @@ export function useNfcWriter(
             );
             setResult(result);
             setStatus(Status.Success);
-            notification("success");
           }
         })
         .catch((e: Error) => {
@@ -289,7 +286,6 @@ export function useNfcWriter(
             },
           );
           setStatus(Status.Error);
-          notification("error");
         });
     },
     end: async () => {
