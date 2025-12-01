@@ -23,6 +23,7 @@ import { ProBadge } from "../components/ProBadge";
 import { ZapScriptInput } from "../components/ZapScriptInput";
 import { CoreAPI } from "../lib/coreApi.ts";
 import { UpdateSettingsRequest } from "../lib/models.ts";
+import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
 
 interface LoaderData {
   restartScan: boolean;
@@ -51,6 +52,8 @@ export const Route = createFileRoute("/settings/readers")({
 });
 
 function ReadersSettings() {
+  const { t } = useTranslation();
+  usePageHeadingFocus(t("settings.readers.title"));
   const initData = Route.useLoaderData();
   const connected = useStatusStore((state) => state.connected);
   const [systemPickerOpen, setSystemPickerOpen] = useState(false);
@@ -113,8 +116,6 @@ function ReadersSettings() {
     initData.launcherAccess,
   );
 
-  const { t } = useTranslation();
-
   const router = useRouter();
   const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
@@ -131,7 +132,11 @@ function ReadersSettings() {
     <PageFrame
       {...swipeHandlers}
       headerLeft={
-        <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+        <HeaderButton
+          onClick={goBack}
+          icon={<BackIcon size="24" />}
+          aria-label={t("nav.back")}
+        />
       }
       headerCenter={
         <h1 className="text-foreground text-xl">
@@ -142,10 +147,18 @@ function ReadersSettings() {
       <div className="flex flex-col gap-3">
         {/* Scan Mode - from Core */}
         <div className="py-2">
-          <span>{t("settings.readers.scanMode")}</span>
-          <div className="mt-2 flex flex-row" role="group">
+          <span id="scan-mode-label">{t("settings.readers.scanMode")}</span>
+          <div
+            className="mt-2 flex flex-row"
+            role="radiogroup"
+            aria-labelledby="scan-mode-label"
+          >
             <button
               type="button"
+              role="radio"
+              aria-checked={
+                coreSettings?.readersScanMode === "tap" && connected
+              }
               className={classNames(
                 "flex",
                 "flex-row",
@@ -176,12 +189,18 @@ function ReadersSettings() {
               }
             >
               {coreSettings?.readersScanMode === "tap" && connected && (
-                <CheckIcon size="28" />
+                <span aria-hidden="true">
+                  <CheckIcon size="28" />
+                </span>
               )}
               {t("settings.tapMode")}
             </button>
             <button
               type="button"
+              role="radio"
+              aria-checked={
+                coreSettings?.readersScanMode === "hold" && connected
+              }
               className={classNames(
                 "flex",
                 "flex-row",
@@ -212,7 +231,9 @@ function ReadersSettings() {
               }
             >
               {coreSettings?.readersScanMode === "hold" && connected && (
-                <CheckIcon size="28" />
+                <span aria-hidden="true">
+                  <CheckIcon size="28" />
+                </span>
               )}
               {t("settings.insertMode")}
             </button>
@@ -279,76 +300,84 @@ function ReadersSettings() {
           shakeEnabled &&
           launcherAccess && (
             <>
-              <div>
-                <div className="flex flex-row" role="group">
-                  <button
-                    type="button"
-                    className={classNames(
-                      "flex",
-                      "flex-row",
-                      "w-full",
-                      "rounded-s-full",
-                      "items-center",
-                      "justify-center",
-                      "py-1",
-                      "font-medium",
-                      "gap-1",
-                      "tracking-[0.1px]",
-                      "h-9",
-                      "border",
-                      "border-solid",
-                      "border-bd-filled",
-                      {
-                        "bg-button-pattern":
-                          shakeMode === "random" && connected,
-                        "bg-background": shakeMode !== "random" || !connected,
-                        "border-foreground-disabled": !connected,
-                        "text-foreground-disabled": !connected,
-                      },
-                    )}
-                    onClick={() => setShakeMode("random")}
-                    disabled={!connected}
-                  >
-                    {shakeMode === "random" && connected && (
+              <div
+                className="flex flex-row"
+                role="radiogroup"
+                aria-label={t("settings.app.shakeModeLabel")}
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={shakeMode === "random" && connected}
+                  className={classNames(
+                    "flex",
+                    "flex-row",
+                    "w-full",
+                    "rounded-s-full",
+                    "items-center",
+                    "justify-center",
+                    "py-1",
+                    "font-medium",
+                    "gap-1",
+                    "tracking-[0.1px]",
+                    "h-9",
+                    "border",
+                    "border-solid",
+                    "border-bd-filled",
+                    {
+                      "bg-button-pattern": shakeMode === "random" && connected,
+                      "bg-background": shakeMode !== "random" || !connected,
+                      "border-foreground-disabled": !connected,
+                      "text-foreground-disabled": !connected,
+                    },
+                  )}
+                  onClick={() => setShakeMode("random")}
+                  disabled={!connected}
+                >
+                  {shakeMode === "random" && connected && (
+                    <span aria-hidden="true">
                       <CheckIcon size="28" />
-                    )}
-                    {t("settings.app.shakeRandomMedia")}
-                  </button>
+                    </span>
+                  )}
+                  {t("settings.app.shakeRandomMedia")}
+                </button>
 
-                  <button
-                    type="button"
-                    className={classNames(
-                      "flex",
-                      "flex-row",
-                      "w-full",
-                      "rounded-e-full",
-                      "items-center",
-                      "justify-center",
-                      "py-1",
-                      "font-medium",
-                      "gap-1",
-                      "tracking-[0.1px]",
-                      "h-9",
-                      "border",
-                      "border-solid",
-                      "border-bd-filled",
-                      {
-                        "bg-button-pattern":
-                          shakeMode === "custom" && connected,
-                        "bg-background": shakeMode !== "custom" || !connected,
-                        "border-foreground-disabled": !connected,
-                        "text-foreground-disabled": !connected,
-                      },
-                    )}
-                    onClick={() => setShakeMode("custom")}
-                    disabled={!connected}
-                  >
-                    {shakeMode === "custom" && connected && (
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={shakeMode === "custom" && connected}
+                  className={classNames(
+                    "flex",
+                    "flex-row",
+                    "w-full",
+                    "rounded-e-full",
+                    "items-center",
+                    "justify-center",
+                    "py-1",
+                    "font-medium",
+                    "gap-1",
+                    "tracking-[0.1px]",
+                    "h-9",
+                    "border",
+                    "border-solid",
+                    "border-bd-filled",
+                    {
+                      "bg-button-pattern": shakeMode === "custom" && connected,
+                      "bg-background": shakeMode !== "custom" || !connected,
+                      "border-foreground-disabled": !connected,
+                      "text-foreground-disabled": !connected,
+                    },
+                  )}
+                  onClick={() => setShakeMode("custom")}
+                  disabled={!connected}
+                >
+                  {shakeMode === "custom" && connected && (
+                    <span aria-hidden="true">
                       <CheckIcon size="28" />
-                    )}
-                    {t("settings.app.shakeCustom")}
-                  </button>
-                </div>
+                    </span>
+                  )}
+                  {t("settings.app.shakeCustom")}
+                </button>
               </div>
 
               {shakeMode === "random" && (

@@ -37,6 +37,7 @@ vi.mock("react-hot-toast", () => ({
     success: vi.fn(),
   },
   Toaster: () => <div data-testid="toaster" />,
+  useToasterStore: () => ({ toasts: [] }),
 }));
 
 vi.mock("@capacitor/core", () => ({

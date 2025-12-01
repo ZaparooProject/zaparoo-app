@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from "../../../test-utils";
+import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CopyButton } from "../../../components/CopyButton";
 import { Capacitor } from "@capacitor/core";
@@ -86,21 +86,25 @@ describe("CopyButton", () => {
   });
 
   it("should show checkmark on click and revert after timeout", async () => {
-    vi.useFakeTimers();
     render(<CopyButton text="test text" />);
 
     const button = screen.getByRole("button");
 
+    // Click button - the async handler will update state
     fireEvent.click(button);
 
-    expect(button).toHaveAttribute("aria-label", "Copied");
-
-    // After 2 seconds, should revert back
-    await act(async () => {
-      vi.advanceTimersByTime(2000);
+    // Wait for the copied state to be set
+    await waitFor(() => {
+      expect(button).toHaveAttribute("aria-label", "Copied");
     });
 
-    expect(button).toHaveAttribute("aria-label", "Copy to clipboard");
+    // Wait for the state to revert after 2 seconds
+    await waitFor(
+      () => {
+        expect(button).toHaveAttribute("aria-label", "Copy to clipboard");
+      },
+      { timeout: 3000 },
+    );
   });
 
   it("should accept custom size prop", () => {

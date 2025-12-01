@@ -38,6 +38,7 @@ import {
 import { TagSelector, TagSelectorTrigger } from "../components/TagSelector";
 import { useRecentSearches } from "../hooks/useRecentSearches";
 import { RecentSearchesModal } from "../components/RecentSearchesModal";
+import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/create/search")({
   loader: async (): Promise<LoaderData> => {
@@ -81,6 +82,8 @@ interface LoaderData {
 }
 
 function Search() {
+  const { t } = useTranslation();
+  usePageHeadingFocus(t("create.search.title"));
   const loaderData = Route.useLoaderData();
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const setGamesIndex = useStatusStore((state) => state.setGamesIndex);
@@ -147,8 +150,6 @@ function Search() {
     setWriteOpen(false);
     await nfcWriter.end();
   };
-
-  const { t } = useTranslation();
 
   // Close modal when NFC operation completes
   useEffect(() => {
@@ -253,7 +254,11 @@ function Search() {
       <PageFrame
         {...swipeHandlers}
         headerLeft={
-          <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+          <HeaderButton
+            onClick={goBack}
+            icon={<BackIcon size="24" />}
+            aria-label={t("nav.back")}
+          />
         }
         headerCenter={
           <h1 className="text-foreground text-xl">
@@ -404,11 +409,17 @@ function Search() {
           </div>
 
           {/* Technical Details - Selectable Options */}
-          <fieldset className="space-y-2">
-            <legend className="sr-only">Select value to write to tag</legend>
+          <fieldset
+            className="space-y-2"
+            role="radiogroup"
+            aria-label={t("create.search.selectWriteValue")}
+          >
+            <legend className="sr-only">
+              {t("create.search.selectWriteValue")}
+            </legend>
 
             {/* Path Option */}
-            <div>
+            <div className="flex items-center gap-2">
               <input
                 type="radio"
                 id="write-mode-path"
@@ -420,8 +431,9 @@ function Search() {
               />
               <label
                 htmlFor="write-mode-path"
+                aria-label={`${t("create.search.pathLabel")}: ${selectedResult?.path || ""}${writeMode === "path" ? `, ${t("selected")}` : ""}`}
                 className={classNames(
-                  "flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
+                  "flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
                   {
                     "border-white/30 bg-white/10": writeMode === "path",
                     "border-white/10 bg-white/5 hover:bg-white/[0.07]":
@@ -429,23 +441,22 @@ function Search() {
                   },
                 )}
               >
-                <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+                <div
+                  className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3"
+                  aria-hidden="true"
+                >
                   <div className="flex items-center gap-2 sm:min-w-[100px]">
                     <Folder size={16} className="flex-shrink-0 text-white/60" />
                     <span className="text-sm text-white/60">
                       {t("create.search.pathLabel")}
                     </span>
                   </div>
-                  <div className="flex min-w-0 flex-1 items-start gap-2">
-                    <code className="flex-1 text-left font-mono text-sm break-all text-white/90">
-                      {selectedResult?.path}
-                    </code>
-                    {selectedResult?.path && (
-                      <CopyButton text={selectedResult.path} />
-                    )}
-                  </div>
+                  <code className="flex-1 text-left font-mono text-sm break-all text-white/90">
+                    {selectedResult?.path}
+                  </code>
                 </div>
                 <div
+                  aria-hidden="true"
                   className={classNames(
                     "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
                     {
@@ -459,11 +470,14 @@ function Search() {
                   )}
                 </div>
               </label>
+              {selectedResult?.path && (
+                <CopyButton text={selectedResult.path} />
+              )}
             </div>
 
             {/* ZapScript Option */}
             {selectedResult?.zapScript && (
-              <div>
+              <div className="flex items-center gap-2">
                 <input
                   type="radio"
                   id="write-mode-zapscript"
@@ -475,8 +489,9 @@ function Search() {
                 />
                 <label
                   htmlFor="write-mode-zapscript"
+                  aria-label={`${t("create.search.zapscriptLabel")}: ${selectedResult.zapScript}${writeMode === "zapScript" ? `, ${t("selected")}` : ""}`}
                   className={classNames(
-                    "flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
+                    "flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
                     {
                       "border-white/30 bg-white/10": writeMode === "zapScript",
                       "border-white/10 bg-white/5 hover:bg-white/[0.07]":
@@ -484,7 +499,10 @@ function Search() {
                     },
                   )}
                 >
-                  <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+                  <div
+                    className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3"
+                    aria-hidden="true"
+                  >
                     <div className="flex items-center gap-2 sm:min-w-[100px]">
                       <FileCode
                         size={16}
@@ -494,14 +512,12 @@ function Search() {
                         {t("create.search.zapscriptLabel")}
                       </span>
                     </div>
-                    <div className="flex min-w-0 flex-1 items-start gap-2">
-                      <code className="flex-1 text-left font-mono text-sm break-words text-white/90">
-                        {selectedResult.zapScript}
-                      </code>
-                      <CopyButton text={selectedResult.zapScript} />
-                    </div>
+                    <code className="flex-1 text-left font-mono text-sm break-words text-white/90">
+                      {selectedResult.zapScript}
+                    </code>
                   </div>
                   <div
+                    aria-hidden="true"
                     className={classNames(
                       "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
                       {
@@ -515,6 +531,7 @@ function Search() {
                     )}
                   </div>
                 </label>
+                <CopyButton text={selectedResult.zapScript} />
               </div>
             )}
           </fieldset>

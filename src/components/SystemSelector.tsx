@@ -8,6 +8,7 @@ import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
 import { useSmartTabs } from "@/hooks/useSmartTabs";
+import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
 import { BackToTop } from "./BackToTop";
@@ -47,6 +48,7 @@ export function SystemSelector({
   defaultSelection,
 }: SystemSelectorProps) {
   const { t } = useTranslation();
+  const { announce } = useAnnouncer();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const slideModalScrollRef = useRef<HTMLDivElement>(null);
 
@@ -149,18 +151,47 @@ export function SystemSelector({
       if (mode === "single" || mode === "insert") {
         if (systemId === "all") {
           onSelect([]);
+          announce(
+            t("systemSelector.selected", {
+              name: t("systemSelector.allSystems"),
+            }),
+          );
         } else {
+          const systemName =
+            systemsData?.systems.find((s) => s.id === systemId)?.name ||
+            systemId;
           onSelect([systemId]);
+          announce(t("systemSelector.selected", { name: systemName }));
         }
         onClose();
       } else {
-        const newSelection = selectedSystems.includes(systemId)
+        // Multi-select mode
+        const wasSelected = selectedSystems.includes(systemId);
+        const newSelection = wasSelected
           ? selectedSystems.filter((id) => id !== systemId)
           : [...selectedSystems, systemId];
         onSelect(newSelection);
+
+        // Announce the state change
+        const systemName =
+          systemsData?.systems.find((s) => s.id === systemId)?.name || systemId;
+        if (wasSelected) {
+          announce(t("systemSelector.deselected", { name: systemName }));
+        } else {
+          announce(t("systemSelector.selected", { name: systemName }));
+        }
       }
     },
-    [mode, selectedSystems, onSelect, onClose, gamesIndex.indexing],
+    [
+      mode,
+      selectedSystems,
+      onSelect,
+      onClose,
+      gamesIndex.indexing,
+      announce,
+      t,
+      systemsData,
+    ],
   );
 
   // Handle clear all
@@ -244,8 +275,7 @@ export function SystemSelector({
             />
             <input
               type="text"
-              placeholder="Filter systems..."
-              aria-label={t("systemSelector.searchSystems")}
+              placeholder={t("systemSelector.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="border-input bg-background text-foreground w-full rounded-md border px-10 py-2 text-sm focus:ring-2 focus:ring-white/20 focus:outline-none"
@@ -273,6 +303,7 @@ export function SystemSelector({
             {/* Left gradient - only show when scrolled and overflowing */}
             {hasOverflow && (
               <div
+                aria-hidden="true"
                 className={`pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-8 bg-gradient-to-r from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
                   showLeftGradient ? "opacity-100" : "opacity-0"
                 }`}
@@ -295,6 +326,7 @@ export function SystemSelector({
             {/* Right gradient - only show when more content and overflowing */}
             {hasOverflow && (
               <div
+                aria-hidden="true"
                 className={`pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-gradient-to-l from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
                   showRightGradient ? "opacity-100" : "opacity-0"
                 }`}
@@ -305,6 +337,7 @@ export function SystemSelector({
           <TabsContent
             value={selectedCategory}
             className="min-h-0 flex-1 overflow-hidden"
+            tabIndex={-1}
           >
             {isLoading ? (
               <div className="flex h-32 items-center justify-center">
@@ -319,13 +352,13 @@ export function SystemSelector({
                 </span>
               </div>
             ) : (
-              <div className="flex h-full flex-col">
+              <>
                 {/* Add "All Systems" option for single/insert mode */}
                 {(mode === "single" || mode === "insert") &&
                   includeAllOption &&
                   selectedCategory === "all" &&
                   !debouncedSearchQuery.trim() && (
-                    <div className="pb-2">
+                    <div className="px-2 pb-2">
                       <button
                         className={classNames(
                           "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
@@ -343,8 +376,17 @@ export function SystemSelector({
                         onClick={() => handleSystemSelect("all")}
                         disabled={gamesIndex.indexing}
                         type="button"
+                        role="radio"
+                        aria-checked={
+                          defaultSelection === "all" &&
+                          selectedSystems.length === 0
+                        }
+                        aria-label={t("systemSelector.allSystems")}
                       >
-                        <div className="flex items-center space-x-3">
+                        <div
+                          className="flex items-center space-x-3"
+                          aria-hidden="true"
+                        >
                           {mode !== "insert" && (
                             <div
                               className={classNames(
@@ -369,13 +411,18 @@ export function SystemSelector({
                       </button>
                     </div>
                   )}
-                <div ref={scrollContainerRef} className="flex-1 overflow-auto">
+                <div
+                  ref={scrollContainerRef}
+                  className="flex-1 overflow-auto px-2"
+                  tabIndex={-1}
+                >
                   <div
                     style={{
                       height: `${virtualizer.getTotalSize()}px`,
                       width: "100%",
                       position: "relative",
                     }}
+                    role="presentation"
                   >
                     {virtualizer.getVirtualItems().map((virtualItem) => {
                       const system = filteredSystems[virtualItem.index];
@@ -409,8 +456,14 @@ export function SystemSelector({
                             onClick={() => handleSystemSelect(system.id)}
                             disabled={gamesIndex.indexing}
                             type="button"
+                            role={mode === "multi" ? "checkbox" : "radio"}
+                            aria-checked={isSelected}
+                            aria-label={system.name}
                           >
-                            <div className="flex items-center space-x-3">
+                            <div
+                              className="flex items-center space-x-3"
+                              aria-hidden="true"
+                            >
                               {mode === "insert" ? null : mode === "multi" ? (
                                 <div
                                   className={classNames(
@@ -448,7 +501,7 @@ export function SystemSelector({
                     })}
                   </div>
                 </div>
-              </div>
+              </>
             )}
           </TabsContent>
         </Tabs>

@@ -73,22 +73,7 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
         }
 
         if (!hasWriteCapability) {
-          toast.error((to) => (
-            <span
-              className="flex grow cursor-pointer flex-col"
-              onClick={() => toast.dismiss(to.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  toast.dismiss(to.id);
-                }
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              {t("write.noWriteMethodAvailable")}
-            </span>
-          ));
+          toast.error(t("write.noWriteMethodAvailable"));
           isProcessingRef.current = false;
           return;
         }
@@ -121,22 +106,7 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
             retryCount,
             maxRetries,
           });
-          toast.error((to) => (
-            <span
-              className="flex grow cursor-pointer flex-col"
-              onClick={() => toast.dismiss(to.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  toast.dismiss(to.id);
-                }
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              {e.message}
-            </span>
-          ));
+          toast.error(e.message);
           isProcessingRef.current = false;
         }
       });

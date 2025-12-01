@@ -18,6 +18,7 @@ import { PageFrame } from "../components/PageFrame";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { WriteModal } from "../components/WriteModal";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
+import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/create/mappings")({
   component: Mappings,
@@ -40,6 +41,8 @@ const mappingExists = (mappings: MappingResponse[] | undefined, id: string) => {
 };
 
 function Mappings() {
+  const { t } = useTranslation();
+  usePageHeadingFocus(t("create.mappings.title"));
   const connected = useStatusStore((state) => state.connected);
   const nfcWriter = useNfcWriter();
   // Track user intent to open modal; actual visibility derived from NFC status
@@ -49,7 +52,6 @@ function Mappings() {
   const [script, setScript] = useState<string>("");
   // Track previous status to detect completion
   const prevStatusRef = useRef(nfcWriter.status);
-  const { t } = useTranslation();
   const router = useRouter();
   const goBack = () => router.history.back();
 
@@ -131,7 +133,11 @@ function Mappings() {
       <PageFrame
         {...swipeHandlers}
         headerLeft={
-          <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+          <HeaderButton
+            onClick={goBack}
+            icon={<BackIcon size="24" />}
+            aria-label={t("nav.back")}
+          />
         }
         headerCenter={
           <h1 className="text-foreground text-xl">

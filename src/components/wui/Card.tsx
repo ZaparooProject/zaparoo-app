@@ -36,9 +36,10 @@ export function Card(props: {
         props.className,
       )}
       onClick={() => !props.disabled && props.onClick && props.onClick()}
-      role={isClickable ? "button" : undefined}
+      role={props.onClick ? "button" : undefined}
       tabIndex={isClickable ? 0 : undefined}
       onKeyDown={isClickable ? handleKeyDown : undefined}
+      aria-disabled={props.onClick && props.disabled ? true : undefined}
     >
       {props.children}
     </div>

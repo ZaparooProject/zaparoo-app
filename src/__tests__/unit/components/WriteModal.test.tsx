@@ -15,84 +15,40 @@ vi.mock("react-i18next", () => ({
 }));
 
 describe("WriteModal", () => {
-  it("renders null when not open", () => {
+  it("does not render modal content when not open", () => {
     const { container } = render(<WriteModal isOpen={false} close={vi.fn()} />);
 
-    expect(container.firstChild).toBeNull();
+    // The modal dialog should not be present
+    const modalDialog = container.querySelector('[role="dialog"]');
+    expect(modalDialog).not.toBeInTheDocument();
   });
 
   it("renders modal content when open", () => {
     render(<WriteModal isOpen={true} close={vi.fn()} />);
 
-    expect(screen.getByText(/spinner\.holdTag/)).toBeInTheDocument();
+    // Check for cancel button text
+    expect(screen.getByText("nav.cancel")).toBeInTheDocument();
   });
 
-  it("calls close when back icon is clicked", () => {
+  it("calls close when cancel button is clicked", () => {
     const mockClose = vi.fn();
-    const { container } = render(
-      <WriteModal isOpen={true} close={mockClose} />,
-    );
+    render(<WriteModal isOpen={true} close={mockClose} />);
 
-    // The back icon is in a div with onClick, find by class
-    const backDiv = container.querySelector(".flex.flex-row.gap-2");
-    expect(backDiv).toBeInTheDocument();
-
-    if (backDiv) {
-      fireEvent.click(backDiv);
-    }
+    // Find the cancel button by its text
+    const cancelButton = screen.getByText("nav.cancel");
+    fireEvent.click(cancelButton);
 
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 
-  it("calls close when Enter key is pressed on spinner", () => {
-    const mockClose = vi.fn();
-    const { container } = render(
-      <WriteModal isOpen={true} close={mockClose} />,
-    );
+  it("renders modal with correct accessibility attributes", () => {
+    const { container } = render(<WriteModal isOpen={true} close={vi.fn()} />);
 
-    // The keyboard handler is on the div with role="button" that contains the spinner
-    const spinnerButton = container.querySelector(
-      '[role="button"][tabindex="0"]',
-    );
-    expect(spinnerButton).toBeInTheDocument();
-
-    fireEvent.keyDown(spinnerButton!, { key: "Enter" });
-
-    expect(mockClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("calls close when Space key is pressed on spinner", () => {
-    const mockClose = vi.fn();
-    const { container } = render(
-      <WriteModal isOpen={true} close={mockClose} />,
-    );
-
-    // The keyboard handler is on the div with role="button" that contains the spinner
-    const spinnerButton = container.querySelector(
-      '[role="button"][tabindex="0"]',
-    );
-    expect(spinnerButton).toBeInTheDocument();
-
-    fireEvent.keyDown(spinnerButton!, { key: " " });
-
-    expect(mockClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not call close for other keys on spinner", () => {
-    const mockClose = vi.fn();
-    const { container } = render(
-      <WriteModal isOpen={true} close={mockClose} />,
-    );
-
-    // The keyboard handler is on the div with role="button" that contains the spinner
-    const spinnerButton = container.querySelector(
-      '[role="button"][tabindex="0"]',
-    );
-    expect(spinnerButton).toBeInTheDocument();
-
-    fireEvent.keyDown(spinnerButton!, { key: "Escape" });
-
-    expect(mockClose).not.toHaveBeenCalled();
+    // Check for the modal dialog role
+    const modalDialog = container.querySelector('[role="dialog"]');
+    expect(modalDialog).toBeInTheDocument();
+    expect(modalDialog).toHaveAttribute("aria-modal", "true");
+    expect(modalDialog).toHaveAttribute("aria-label", "spinner.holdTag");
   });
 
   it("renders spinner with correct layout structure", () => {
@@ -103,10 +59,6 @@ describe("WriteModal", () => {
       ".z-30.flex.h-screen.w-screen",
     );
     expect(modalContainer).toBeInTheDocument();
-
-    // Check for spinner text which is definitely present in the output
-    const spinnerText = screen.getByText("spinner.holdTagReader");
-    expect(spinnerText).toBeInTheDocument();
 
     // Check for cancel button which is also present
     const cancelButton = screen.getByText("nav.cancel");

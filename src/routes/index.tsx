@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { Capacitor } from "@capacitor/core";
 import { KeepAwake } from "@capacitor-community/keep-awake";
 import { useNfcWriter, WriteMethod } from "@/lib/writeNfcHook.tsx";
 import { Status } from "@/lib/nfc.ts";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
+import { useAnnouncer } from "@/components/A11yAnnouncer";
 import logoImage from "@/assets/lockup.webp";
 import { cancelSession } from "../lib/nfc";
 import { CoreAPI } from "../lib/coreApi.ts";
@@ -21,6 +24,7 @@ import { HistoryModal } from "../components/home/HistoryModal";
 import { StopConfirmModal } from "../components/home/StopConfirmModal";
 import { useScanOperations } from "../hooks/useScanOperations";
 import { usePreferencesStore } from "../lib/preferencesStore";
+import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
 
 interface LoaderData {
   restartScan: boolean;
@@ -48,8 +52,13 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const { t } = useTranslation();
+  usePageHeadingFocus(t("nav.index"));
+  const { announce } = useAnnouncer();
   const initData = Route.useLoaderData();
   const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
+  const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
+  const cameraAvailable = usePreferencesStore((state) => state.cameraAvailable);
   const preferRemoteWriter = usePreferencesStore(
     (state) => state.preferRemoteWriter,
   );
@@ -120,9 +129,39 @@ function Index() {
     };
   }, []);
 
+  // Announce page context for screen reader users on page load (once only)
+  const hasAnnouncedRef = useRef(false);
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    if (hasAnnouncedRef.current) return;
+
+    // Determine what to announce based on available features
+    let message: string;
+    if (nfcAvailable) {
+      // NFC available - announce scan instruction
+      message = t("spinner.pressToScan");
+    } else if (cameraAvailable) {
+      // No NFC but camera available - announce camera option
+      message = t("scan.cameraAvailable");
+    } else {
+      // Neither available - announce page name
+      message = t("nav.index");
+    }
+
+    // Small delay to ensure page is rendered and screen reader is ready
+    const timer = setTimeout(() => {
+      if (!hasAnnouncedRef.current) {
+        hasAnnouncedRef.current = true;
+        announce(message);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [announce, t, nfcAvailable, cameraAvailable]);
+
   return (
     <>
       <PageFrame>
+        <h1 className="sr-only">Zaparoo</h1>
         <div className="flex flex-row justify-between">
           <div>
             <img src={logoImage} alt="Zaparoo logo" width="160px" />
@@ -141,6 +180,7 @@ function Index() {
               }
             }}
             disabled={!connected}
+            aria-label={t("scan.historyTitle")}
           />
         </div>
 

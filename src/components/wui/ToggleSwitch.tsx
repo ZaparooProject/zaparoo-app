@@ -1,5 +1,6 @@
 import classNames from "classnames";
 import React from "react";
+import { useHaptics } from "@/hooks/useHaptics";
 
 export function ToggleSwitch(props: {
   label: string | React.ReactNode;
@@ -8,6 +9,7 @@ export function ToggleSwitch(props: {
   disabled?: boolean;
   onDisabledClick?: () => void;
 }) {
+  const { impact } = useHaptics();
   const hasDisabledClickHandler = props.disabled && props.onDisabledClick;
 
   const handleClick = hasDisabledClickHandler
@@ -47,6 +49,7 @@ export function ToggleSwitch(props: {
               return;
             }
 
+            impact("medium");
             props.setValue(e.target.checked);
           }}
         />

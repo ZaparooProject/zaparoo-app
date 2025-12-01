@@ -56,6 +56,9 @@ export interface PreferencesState {
   // Display settings
   showFilenames: boolean;
 
+  // Accessibility settings
+  hapticsEnabled: boolean;
+
   // Hydration tracking (internal, not persisted)
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
@@ -102,6 +105,7 @@ export interface PreferencesActions {
   setTourCompleted: (value: boolean) => void;
   setLogLevelFilters: (filters: PreferencesState["logLevelFilters"]) => void;
   setShowFilenames: (value: boolean) => void;
+  setHapticsEnabled: (value: boolean) => void;
 }
 
 export type PreferencesStore = PreferencesState & PreferencesActions;
@@ -142,6 +146,7 @@ const DEFAULT_PREFERENCES: Omit<
     error: true,
   },
   showFilenames: false,
+  hapticsEnabled: true, // Enable haptic feedback by default
 };
 
 export const usePreferencesStore = create<PreferencesStore>()(
@@ -207,6 +212,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
       setTourCompleted: (value) => set({ tourCompleted: value }),
       setLogLevelFilters: (filters) => set({ logLevelFilters: filters }),
       setShowFilenames: (value) => set({ showFilenames: value }),
+      setHapticsEnabled: (value) => set({ hapticsEnabled: value }),
     }),
     {
       name: "app-preferences",
@@ -225,6 +231,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
         tourCompleted: state.tourCompleted,
         logLevelFilters: state.logLevelFilters,
         showFilenames: state.showFilenames,
+        hapticsEnabled: state.hapticsEnabled,
       }),
 
       // Callback when hydration completes

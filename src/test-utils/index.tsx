@@ -2,6 +2,7 @@ import React from "react";
 import { render, RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SlideModalProvider } from "../components/SlideModalProvider";
+import { A11yAnnouncerProvider } from "../components/A11yAnnouncer";
 
 // Create a test query client
 const createTestQueryClient = () =>
@@ -27,7 +28,9 @@ function customRender(
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <SlideModalProvider>{children}</SlideModalProvider>
+        <A11yAnnouncerProvider>
+          <SlideModalProvider>{children}</SlideModalProvider>
+        </A11yAnnouncerProvider>
       </QueryClientProvider>
     );
   }

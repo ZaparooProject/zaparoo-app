@@ -15,8 +15,17 @@
     },
     "notConnected": "Niet verbonden met apparaat",
     "yes": "Ja",
+    "none": "Geen",
+    "duration": {
+      "hours_one": "{{count}} uur",
+      "hours_other": "{{count}} uur",
+      "minutes_one": "{{count}} minuut",
+      "minutes_other": "{{count}} minuten"
+    },
+    "selected": "geselecteerd",
     "stopPlaying": "Dit stopt het afspelende media. Je kunt onopgeslagen voortgang verliezen.",
     "nav": {
+      "back": "Terug",
       "cancel": "Annuleren",
       "create": "Creëren",
       "assign": "Toewijzen",
@@ -64,6 +73,7 @@
     },
     "scan": {
       "cameraMode": "Camera",
+      "cameraAvailable": "Gebruik camera om te scannen",
       "nfcMode": "NFC",
       "scanError": "Fout bij scannen van tag",
       "scanSuccess": "Tag succesvol gescand",
@@ -79,6 +89,7 @@
       "nowPlayingHeading": "Nu aan het spelen",
       "nowPlayingName": "Naam: {{game}}",
       "nowPlayingSystem": "Systeem: {{system}}",
+      "stopPlayingButton": "Stop afspelen",
       "lastScannedHeading": "Laatst gescand",
       "lastScannedTime": "Tijd: {{time}}",
       "lastScannedUid": "ID: {{uid}}",
@@ -123,6 +134,7 @@
         "pathLabel": "Pad",
         "zapscriptLabel": "ZapScript",
         "tagsLabel": "Tags",
+        "selectWriteValue": "Selecteer waarde om naar tag te schrijven",
         "writeLabel": "Schrijf naar tag",
         "playLabel": "Voorbeeld",
         "selectSystem": "Selecteer systeem",
@@ -147,6 +159,7 @@
       "custom": {
         "title": "Aangepast ZapScript",
         "textPlaceholder": "Voer ZapScript in",
+        "textareaLabel": "ZapScript-editor",
         "write": "Schrijf naar tag",
         "run": "Uitvoeren",
         "clear": "Wissen",
@@ -157,7 +170,13 @@
         "selectSystem": "Systeem",
         "zapscriptHelp": "Hulp",
         "clearConfirmTitle": "ZapScript wissen?",
-        "commandPalette": "Commandopalet"
+        "commandPalette": "Commandopalet",
+        "insertCommandStart": "Commandostart invoegen",
+        "insertCommandSeparator": "Commandoscheidingsteken invoegen",
+        "insertMedia": "Mediapad invoegen",
+        "insertSystem": "Systeem invoegen",
+        "insertCommand": "Commando invoegen",
+        "runZapScript": "ZapScript uitvoeren"
       },
       "nfc": {
         "title": "NFC-hulpprogramma's",
@@ -263,6 +282,7 @@
     },
     "settings": {
       "title": "Instellingen",
+      "moreSettings": "Meer instellingen",
       "device": "Apparaatadres",
       "modeLabel": "Scanmodus",
       "tapMode": "Tik",
@@ -351,7 +371,8 @@
         "shakeRandomMedia": "Willekeurige media",
         "shakeCustom": "Aangepast",
         "shakeSelectSystem": "Selecteer systeem",
-        "shakeZapscript": "Zapscript om te starten"
+        "shakeZapscript": "Zapscript om te starten",
+        "shakeModeLabel": "Schudmodus"
       },
       "logs": {
         "title": "Logs",
@@ -407,6 +428,11 @@
     "systemSelector": {
       "title": "Selecteer systemen",
       "searchPlaceholder": "Zoek systemen...",
+      "searchSystems": "Zoek systemen",
+      "clearSearch": "Zoekopdracht wissen",
+      "systemsList": "Systeemlijst",
+      "selected": "{{name}} geselecteerd",
+      "deselected": "{{name}} gedeselecteerd",
       "allSystems": "Alle systemen",
       "allCategories": "Alle",
       "noResults": "Geen systemen gevonden",
@@ -419,6 +445,8 @@
     "tagSelector": {
       "title": "Selecteer tags",
       "searchPlaceholder": "Tags filteren...",
+      "searchTags": "Tags filteren",
+      "clearSearch": "Zoekopdracht wissen",
       "allTypes": "Alle types",
       "noResults": "Geen tags gevonden",
       "noTags": "Geen tags beschikbaar",
@@ -426,6 +454,8 @@
       "multipleSelected": "{{count}} tags geselecteerd",
       "clearAll": "Alles wissen",
       "apply": "Toepassen",
+      "selected": "{{name}} geselecteerd",
+      "deselected": "{{name}} gedeselecteerd",
       "type": {
         "accessibility": "Toegankelijkheid",
         "addon": "Add-on",

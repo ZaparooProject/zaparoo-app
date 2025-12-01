@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CoreApiWebSocket } from "@/components/CoreApiWebSocket.tsx";
+import { A11yAnnouncerProvider } from "@/components/A11yAnnouncer";
 
 // Mock the coreApi functions
 const mockGetDeviceAddress = vi.fn();
@@ -116,7 +117,9 @@ const renderWithQueryClient = () => {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <CoreApiWebSocket />
+      <A11yAnnouncerProvider>
+        <CoreApiWebSocket />
+      </A11yAnnouncerProvider>
     </QueryClientProvider>,
   );
 };

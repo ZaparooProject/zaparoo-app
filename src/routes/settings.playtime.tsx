@@ -11,19 +11,23 @@ import { PageFrame } from "../components/PageFrame";
 import { BackIcon } from "../lib/images";
 import { HeaderButton } from "../components/wui/HeaderButton";
 import { TextInput } from "../components/wui/TextInput";
+import { Skeleton } from "../components/ui/skeleton";
 import {
   formatDuration,
   formatDurationDisplay,
+  formatDurationAccessible,
   parseDuration,
 } from "../lib/utils";
+import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/settings/playtime")({
   component: PlaytimeSettings,
 });
 
 function PlaytimeSettings() {
-  const connected = useStatusStore((state) => state.connected);
   const { t } = useTranslation();
+  usePageHeadingFocus(t("settings.playtime.title"));
+  const connected = useStatusStore((state) => state.connected);
 
   const router = useRouter();
   const goBack = () => router.history.back();
@@ -64,7 +68,7 @@ function PlaytimeSettings() {
   });
 
   // Fetch playtime status (for display)
-  const { data: playtimeStatus } = useQuery({
+  const { data: playtimeStatus, isPending: isStatusPending } = useQuery({
     queryKey: ["playtime", "status"],
     queryFn: () => CoreAPI.playtime(),
     enabled: connected && limitsConfig?.enabled === true,
@@ -206,7 +210,11 @@ function PlaytimeSettings() {
     <PageFrame
       {...swipeHandlers}
       headerLeft={
-        <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+        <HeaderButton
+          onClick={goBack}
+          icon={<BackIcon size="24" />}
+          aria-label={t("nav.back")}
+        />
       }
       headerCenter={
         <h1 className="text-foreground text-xl">
@@ -227,8 +235,8 @@ function PlaytimeSettings() {
             disabled={!connected}
           />
 
-          {/* Status Display - only shown when enabled and has data */}
-          {limitsConfig?.enabled && playtimeStatus && (
+          {/* Status Display - shown when enabled */}
+          {limitsConfig?.enabled && (
             <div className="bg-background-secondary border-bd-filled flex flex-col gap-2 rounded-lg border p-3">
               {/* Session Status */}
               <div className="flex flex-col gap-2">
@@ -236,38 +244,69 @@ function PlaytimeSettings() {
                   <span className="text-sm font-medium">
                     {t("settings.core.playtime.currentSession")}
                   </span>
-                  <span
-                    className={classNames(
-                      "rounded-full px-2 py-0.5 text-xs",
-                      getStateBadgeColor(playtimeStatus.state),
-                    )}
-                  >
-                    {getStateLabel(playtimeStatus.state)}
-                  </span>
+                  {isStatusPending ? (
+                    <Skeleton className="h-5 w-16" />
+                  ) : (
+                    <span
+                      className={classNames(
+                        "rounded-full px-2 py-0.5 text-xs",
+                        getStateBadgeColor(playtimeStatus?.state ?? "reset"),
+                      )}
+                    >
+                      {getStateLabel(playtimeStatus?.state ?? "reset")}
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
                     {t("settings.core.playtime.sessionDuration")}
                   </span>
-                  <span>
-                    {formatDurationDisplay(playtimeStatus.sessionDuration)}
-                  </span>
+                  {isStatusPending ? (
+                    <Skeleton className="h-5 w-14" />
+                  ) : (
+                    <span
+                      aria-label={formatDurationAccessible(
+                        playtimeStatus?.sessionDuration ?? "0s",
+                        t,
+                      )}
+                    >
+                      {formatDurationDisplay(
+                        playtimeStatus?.sessionDuration ?? "0s",
+                      )}
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
                     {t("settings.core.playtime.sessionRemaining")}
                   </span>
-                  <span>
-                    {formatDurationDisplay(playtimeStatus.sessionRemaining)}
-                  </span>
+                  {isStatusPending ? (
+                    <Skeleton className="h-5 w-14" />
+                  ) : (
+                    <span
+                      aria-label={formatDurationAccessible(
+                        playtimeStatus?.sessionRemaining ?? "0s",
+                        t,
+                      )}
+                    >
+                      {formatDurationDisplay(
+                        playtimeStatus?.sessionRemaining ?? "0s",
+                      )}
+                    </span>
+                  )}
                 </div>
-                {playtimeStatus.cooldownRemaining &&
-                  playtimeStatus.state === "cooldown" && (
+                {playtimeStatus?.cooldownRemaining &&
+                  playtimeStatus?.state === "cooldown" && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">
                         {t("settings.core.playtime.cooldownRemaining")}
                       </span>
-                      <span>
+                      <span
+                        aria-label={formatDurationAccessible(
+                          playtimeStatus.cooldownRemaining,
+                          t,
+                        )}
+                      >
                         {formatDurationDisplay(
                           playtimeStatus.cooldownRemaining,
                         )}
@@ -285,17 +324,39 @@ function PlaytimeSettings() {
                   <span className="text-muted-foreground">
                     {t("settings.core.playtime.dailyUsageToday")}
                   </span>
-                  <span>
-                    {formatDurationDisplay(playtimeStatus.dailyUsageToday)}
-                  </span>
+                  {isStatusPending ? (
+                    <Skeleton className="h-5 w-14" />
+                  ) : (
+                    <span
+                      aria-label={formatDurationAccessible(
+                        playtimeStatus?.dailyUsageToday ?? "0s",
+                        t,
+                      )}
+                    >
+                      {formatDurationDisplay(
+                        playtimeStatus?.dailyUsageToday ?? "0s",
+                      )}
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
                     {t("settings.core.playtime.dailyRemaining")}
                   </span>
-                  <span>
-                    {formatDurationDisplay(playtimeStatus.dailyRemaining)}
-                  </span>
+                  {isStatusPending ? (
+                    <Skeleton className="h-5 w-14" />
+                  ) : (
+                    <span
+                      aria-label={formatDurationAccessible(
+                        playtimeStatus?.dailyRemaining ?? "0s",
+                        t,
+                      )}
+                    >
+                      {formatDurationDisplay(
+                        playtimeStatus?.dailyRemaining ?? "0s",
+                      )}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

@@ -11,12 +11,15 @@ import { WriteModal } from "../components/WriteModal";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { PageFrame } from "../components/PageFrame";
 import { usePreferencesStore, selectCustomText } from "../lib/preferencesStore";
+import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/create/custom")({
   component: CustomText,
 });
 
 function CustomText() {
+  const { t } = useTranslation();
+  usePageHeadingFocus(t("create.custom.title"));
   const { customText, setCustomText } = usePreferencesStore(
     useShallow(selectCustomText),
   );
@@ -28,7 +31,6 @@ function CustomText() {
     setWriteIntent(false);
     await nfcWriter.end();
   };
-  const { t } = useTranslation();
 
   const router = useRouter();
   const goBack = () => router.history.back();
@@ -42,7 +44,11 @@ function CustomText() {
       <PageFrame
         {...swipeHandlers}
         headerLeft={
-          <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+          <HeaderButton
+            onClick={goBack}
+            icon={<BackIcon size="24" />}
+            aria-label={t("nav.back")}
+          />
         }
         headerCenter={
           <h1 className="text-foreground text-xl">

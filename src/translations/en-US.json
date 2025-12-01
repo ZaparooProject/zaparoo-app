@@ -15,8 +15,17 @@
     },
     "notConnected": "Not connected to device",
     "yes": "Yes",
+    "none": "None",
+    "duration": {
+      "hours_one": "{{count}} hour",
+      "hours_other": "{{count}} hours",
+      "minutes_one": "{{count}} minute",
+      "minutes_other": "{{count}} minutes"
+    },
+    "selected": "selected",
     "stopPlaying": "This will stop the playing media. You may lose any unsaved progress.",
     "nav": {
+      "back": "Back",
       "cancel": "Cancel",
       "create": "Create",
       "assign": "Assign",
@@ -64,6 +73,7 @@
     },
     "scan": {
       "cameraMode": "Camera",
+      "cameraAvailable": "Use camera to scan",
       "nfcMode": "NFC",
       "scanError": "Error scanning tag",
       "scanSuccess": "Tag scanned successfully",
@@ -79,6 +89,7 @@
       "nowPlayingHeading": "Now playing",
       "nowPlayingName": "Name: {{game}}",
       "nowPlayingSystem": "System: {{system}}",
+      "stopPlayingButton": "Stop playing",
       "lastScannedHeading": "Last scanned",
       "lastScannedTime": "Time: {{time}}",
       "lastScannedUid": "ID: {{uid}}",
@@ -123,6 +134,7 @@
         "pathLabel": "Path",
         "zapscriptLabel": "ZapScript",
         "tagsLabel": "Tags",
+        "selectWriteValue": "Select value to write to tag",
         "writeLabel": "Write to tag",
         "playLabel": "Preview",
         "selectSystem": "Select System",
@@ -147,6 +159,7 @@
       "custom": {
         "title": "Custom ZapScript",
         "textPlaceholder": "Enter ZapScript",
+        "textareaLabel": "ZapScript editor",
         "write": "Write to tag",
         "run": "Run",
         "clear": "Clear",
@@ -157,7 +170,13 @@
         "selectSystem": "System",
         "zapscriptHelp": "Help",
         "clearConfirmTitle": "Clear ZapScript?",
-        "commandPalette": "Command palette"
+        "commandPalette": "Command palette",
+        "insertCommandStart": "Insert command start",
+        "insertCommandSeparator": "Insert command separator",
+        "insertMedia": "Insert media path",
+        "insertSystem": "Insert system",
+        "insertCommand": "Insert command",
+        "runZapScript": "Run ZapScript"
       },
       "nfc": {
         "title": "NFC Utilities",
@@ -263,6 +282,7 @@
     },
     "settings": {
       "title": "Settings",
+      "moreSettings": "More settings",
       "device": "Device address",
       "modeLabel": "Scan mode",
       "tapMode": "Tap",
@@ -351,7 +371,8 @@
         "shakeRandomMedia": "Random Media",
         "shakeCustom": "Custom",
         "shakeSelectSystem": "Select system",
-        "shakeZapscript": "Zapscript to launch"
+        "shakeZapscript": "Zapscript to launch",
+        "shakeModeLabel": "Shake mode"
       },
       "logs": {
         "title": "Logs",
@@ -407,6 +428,11 @@
     "systemSelector": {
       "title": "Select Systems",
       "searchPlaceholder": "Search systems...",
+      "searchSystems": "Search systems",
+      "clearSearch": "Clear search",
+      "systemsList": "Systems list",
+      "selected": "{{name}} selected",
+      "deselected": "{{name}} deselected",
       "allSystems": "All systems",
       "allCategories": "All",
       "noResults": "No systems found",
@@ -419,6 +445,8 @@
     "tagSelector": {
       "title": "Select Tags",
       "searchPlaceholder": "Filter tags...",
+      "searchTags": "Filter tags",
+      "clearSearch": "Clear search",
       "allTypes": "All types",
       "noResults": "No tags found",
       "noTags": "No tags available",
@@ -426,6 +454,8 @@
       "multipleSelected": "{{count}} tags selected",
       "clearAll": "Clear all",
       "apply": "Apply",
+      "selected": "{{name}} selected",
+      "deselected": "{{name}} deselected",
       "type": {
         "accessibility": "Accessibility",
         "addon": "Add-on",

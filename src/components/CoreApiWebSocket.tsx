@@ -24,13 +24,18 @@ import {
   NotificationRequest,
 } from "../lib/coreApi.ts";
 import { useStatusStore, ConnectionState } from "../lib/store.ts";
-import { formatDurationDisplay } from "../lib/utils.ts";
+import {
+  formatDurationDisplay,
+  formatDurationAccessible,
+} from "../lib/utils.ts";
+import { useAnnouncer } from "./A11yAnnouncer.tsx";
 
 // Module-level timestamp to detect HMR - resets when module reloads
 const moduleLoadTimestamp = Date.now();
 
 export function CoreApiWebSocket() {
   const { t } = useTranslation();
+  const { announce } = useAnnouncer();
   const queryClient = useQueryClient();
   const wsManagerRef = useRef<WebSocketManager | null>(null);
   const optimisticTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -425,6 +430,15 @@ export function CoreApiWebSocket() {
                       const remainingTime = formatDurationDisplay(
                         warningParams.remaining,
                       );
+                      const remainingTimeAccessible = formatDurationAccessible(
+                        warningParams.remaining,
+                        t,
+                      );
+                      const warningMessage = t(
+                        "settings.core.playtime.warningToast",
+                        { remaining: remainingTimeAccessible },
+                      );
+                      announce(warningMessage, "assertive");
                       toast(
                         (to) => (
                           <span
@@ -436,6 +450,7 @@ export function CoreApiWebSocket() {
                             }
                             role="button"
                             tabIndex={0}
+                            aria-hidden="true"
                           >
                             {t("settings.core.playtime.warningToast", {
                               remaining: remainingTime,
@@ -460,6 +475,11 @@ export function CoreApiWebSocket() {
                         reachedParams.reason === "daily"
                           ? t("settings.core.playtime.dailyLimit")
                           : t("settings.core.playtime.sessionLimit");
+                      const reachedMessage = t(
+                        "settings.core.playtime.reachedToast",
+                        { type: limitType },
+                      );
+                      announce(reachedMessage, "assertive");
                       toast(
                         (to) => (
                           <span
@@ -471,10 +491,9 @@ export function CoreApiWebSocket() {
                             }
                             role="button"
                             tabIndex={0}
+                            aria-hidden="true"
                           >
-                            {t("settings.core.playtime.reachedToast", {
-                              type: limitType,
-                            })}
+                            {reachedMessage}
                           </span>
                         ),
                         {
@@ -580,6 +599,7 @@ export function CoreApiWebSocket() {
     queryClient,
     t,
     applyOptimisticState,
+    announce,
   ]); // Dependencies: re-create WebSocket if address or URL changes
 
   // App lifecycle listeners for handling pause/resume

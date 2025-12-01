@@ -56,45 +56,50 @@ export const ConnectionStatus = memo(function ConnectionStatus({
       : "font-semibold";
 
   return (
-    <Card className="mb-4">
-      <div className="flex flex-row items-center justify-between gap-3">
-        <div className={`px-1.5 ${iconColor}`}>
-          {showWarningIcon ? (
-            <WarningIcon size="24" />
-          ) : (
-            <DeviceIcon size="24" />
-          )}
+    <section aria-labelledby="connection-status-heading">
+      <Card className="mb-4">
+        <div className="flex flex-row items-center justify-between gap-3">
+          <div className={`px-1.5 ${iconColor}`} aria-hidden="true">
+            {showWarningIcon ? (
+              <WarningIcon size="24" />
+            ) : (
+              <DeviceIcon size="24" />
+            )}
+          </div>
+          <div className="flex grow flex-col">
+            <h2 id="connection-status-heading" className={titleClass}>
+              {titleText}
+            </h2>
+            {isError ? (
+              <button
+                className="text-primary text-left text-sm underline"
+                onClick={() => {
+                  onRetry?.();
+                }}
+              >
+                {t("scan.retry")}
+              </button>
+            ) : (
+              <span
+                className={isReconnecting ? "text-muted-foreground" : undefined}
+              >
+                {t("scan.connectedSub", {
+                  ip: getDeviceAddress(),
+                })}
+              </span>
+            )}
+          </div>
+          <Link
+            to="/settings"
+            search={{
+              focus: "address",
+            }}
+            aria-label={t("nav.settings")}
+          >
+            <Button icon={<SettingsIcon size="24" />} variant="text" />
+          </Link>
         </div>
-        <div className="flex grow flex-col">
-          <span className={titleClass}>{titleText}</span>
-          {isError ? (
-            <button
-              className="text-primary text-left text-sm underline"
-              onClick={() => {
-                onRetry?.();
-              }}
-            >
-              {t("scan.retry")}
-            </button>
-          ) : (
-            <span
-              className={isReconnecting ? "text-muted-foreground" : undefined}
-            >
-              {t("scan.connectedSub", {
-                ip: getDeviceAddress(),
-              })}
-            </span>
-          )}
-        </div>
-        <Link
-          to="/settings"
-          search={{
-            focus: "address",
-          }}
-        >
-          <Button icon={<SettingsIcon size="24" />} variant="text" />
-        </Link>
-      </div>
-    </Card>
+      </Card>
+    </section>
   );
 });

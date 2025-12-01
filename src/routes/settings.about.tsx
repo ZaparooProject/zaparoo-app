@@ -6,15 +6,17 @@ import { HeaderButton } from "../components/wui/HeaderButton";
 import { Button } from "../components/wui/Button.tsx";
 import { BackIcon } from "../lib/images";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
+import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/settings/about")({
   component: About,
 });
 
 function About() {
+  const { t } = useTranslation();
+  usePageHeadingFocus(t("settings.about.title"));
   const router = useRouter();
   const goBack = () => router.history.back();
-  const { t } = useTranslation();
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
@@ -25,7 +27,11 @@ function About() {
     <PageFrame
       {...swipeHandlers}
       headerLeft={
-        <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+        <HeaderButton
+          onClick={goBack}
+          icon={<BackIcon size="24" />}
+          aria-label={t("nav.back")}
+        />
       }
       headerCenter={
         <h1 className="text-foreground text-xl">{t("settings.about.title")}</h1>

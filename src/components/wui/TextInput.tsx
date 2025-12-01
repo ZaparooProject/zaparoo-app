@@ -19,6 +19,7 @@ export function TextInput(props: {
   /** Error message to display below the input */
   error?: string;
 }) {
+  const inputId = useId();
   const errorId = useId();
   const [value, setValue] = useState(props.value);
   const [modified, setModified] = useState(false);
@@ -34,10 +35,15 @@ export function TextInput(props: {
 
   return (
     <div className={props.className}>
-      {props.label && <span className="mb-1 block">{props.label}</span>}
+      {props.label && (
+        <label htmlFor={inputId} className="mb-1 block">
+          {props.label}
+        </label>
+      )}
       <div className="flex flex-row">
         <div className="relative flex-grow">
           <input
+            id={inputId}
             ref={props.ref}
             type={type}
             aria-invalid={!!props.error}
@@ -99,6 +105,7 @@ export function TextInput(props: {
           <Button
             disabled={!modified || props.disabled}
             icon={<SaveIcon size="20" />}
+            aria-label="Save"
             className="h-12 w-12 rounded-s-lg pr-3"
             onClick={() => {
               if (

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useStatusStore } from "@/lib/store";
@@ -6,9 +7,12 @@ import { useBackButtonHandler } from "../hooks/useBackButtonHandler";
 import { ScanResult } from "../lib/models";
 import { ScanSpinner } from "./ScanSpinner";
 import { Button } from "./wui/Button";
+import { useAnnouncer } from "./A11yAnnouncer";
 
 export function WriteModal(props: { isOpen: boolean; close: () => void }) {
   const { t } = useTranslation();
+  const { announce } = useAnnouncer();
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: () => props.close(),
@@ -29,6 +33,19 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
     props.isOpen, // Only active when modal is open
   );
 
+  // Announce and focus when modal opens
+  useEffect(() => {
+    if (props.isOpen) {
+      // Announce the modal
+      announce(t("spinner.holdTag"), "assertive");
+      // Focus the cancel button after a short delay
+      const timer = setTimeout(() => {
+        cancelButtonRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [props.isOpen, announce, t]);
+
   if (!props.isOpen) {
     return null;
   }
@@ -37,20 +54,17 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
     <div
       className="z-30 flex h-screen w-screen items-center justify-center bg-[#111928] pb-[90px]"
       style={{ position: "fixed", left: 0, top: 0 }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("spinner.holdTag")}
       {...swipeHandlers}
     >
       <div className="flex flex-col items-center gap-8">
-        <div
-          onClick={() => props.close()}
-          onKeyDown={(e) =>
-            (e.key === "Enter" || e.key === " ") && props.close()
-          }
-          role="button"
-          tabIndex={0}
-        >
+        <div aria-hidden="true">
           <ScanSpinner spinning={true} status={ScanResult.Default} write />
         </div>
         <Button
+          ref={cancelButtonRef}
           variant="outline"
           onClick={() => props.close()}
           label={t("nav.cancel")}

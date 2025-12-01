@@ -10,6 +10,7 @@ import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button as SCNButton } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
 import i18n from "../i18n";
 import { PageFrame } from "../components/PageFrame";
 import { useStatusStore } from "../lib/store";
@@ -35,6 +36,10 @@ export const Route = createFileRoute("/settings/")({
 });
 
 function Settings() {
+  const { t } = useTranslation();
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.title"),
+  );
   const initData = Route.useLoaderData();
 
   const { PurchaseModal, setProPurchaseModalOpen, proAccess } = useProPurchase(
@@ -65,8 +70,6 @@ function Settings() {
 
   const queryClient = useQueryClient();
 
-  const { t } = useTranslation();
-
   useEffect(() => {
     Preferences.get({ key: "deviceHistory" }).then((v) => {
       if (v.value) {
@@ -88,7 +91,9 @@ function Settings() {
     <>
       <PageFrame
         headerCenter={
-          <h1 className="text-foreground text-xl">{t("settings.title")}</h1>
+          <h1 ref={headingRef} className="text-foreground text-xl">
+            {t("settings.title")}
+          </h1>
         }
       >
         <div className="flex flex-col gap-5">
@@ -162,6 +167,7 @@ function Settings() {
                           size="icon"
                           color="danger"
                           onClick={() => removeDeviceHistory(entry.address)}
+                          aria-label={t("settings.deleteDevice")}
                         >
                           <TrashIcon size="20" />
                         </SCNButton>
@@ -251,40 +257,76 @@ function Settings() {
             </select>
           </div>
 
-          <Link to="/settings/readers">
-            <div className="flex flex-row items-center justify-between">
+          <nav
+            aria-labelledby="more-settings-heading"
+            className="flex flex-col gap-1"
+          >
+            <h2 id="more-settings-heading" className="sr-only">
+              {t("settings.moreSettings")}
+            </h2>
+
+            <Link
+              to="/settings/readers"
+              className="flex min-h-[48px] flex-row items-center justify-between"
+            >
               <p>{t("settings.readers.title")}</p>
-              <NextIcon size="20" />
-            </div>
-          </Link>
+              <span aria-hidden="true">
+                <NextIcon size="20" />
+              </span>
+            </Link>
 
-          <Link to="/settings/playtime">
-            <div className="flex flex-row items-center justify-between">
+            <Link
+              to="/settings/playtime"
+              className="flex min-h-[48px] flex-row items-center justify-between"
+            >
               <p>{t("settings.playtime.title")}</p>
-              <NextIcon size="20" />
-            </div>
-          </Link>
+              <span aria-hidden="true">
+                <NextIcon size="20" />
+              </span>
+            </Link>
 
-          <Link to="/settings/advanced">
-            <div className="flex flex-row items-center justify-between">
+            <Link
+              to="/settings/advanced"
+              className="flex min-h-[48px] flex-row items-center justify-between"
+            >
               <p>{t("settings.advanced.title")}</p>
-              <NextIcon size="20" />
-            </div>
-          </Link>
+              <span aria-hidden="true">
+                <NextIcon size="20" />
+              </span>
+            </Link>
 
-          <Link to="/settings/help">
-            <div className="flex flex-row items-center justify-between">
+            {Capacitor.isNativePlatform() && (
+              <Link
+                to="/settings/accessibility"
+                className="flex min-h-[48px] flex-row items-center justify-between"
+              >
+                <p>{t("settings.accessibility.title")}</p>
+                <span aria-hidden="true">
+                  <NextIcon size="20" />
+                </span>
+              </Link>
+            )}
+
+            <Link
+              to="/settings/help"
+              className="flex min-h-[48px] flex-row items-center justify-between"
+            >
               <p>{t("settings.help.title")}</p>
-              <NextIcon size="20" />
-            </div>
-          </Link>
+              <span aria-hidden="true">
+                <NextIcon size="20" />
+              </span>
+            </Link>
 
-          <Link to="/settings/about">
-            <div className="flex flex-row items-center justify-between">
+            <Link
+              to="/settings/about"
+              className="flex min-h-[48px] flex-row items-center justify-between"
+            >
               <p>{t("settings.about.title")}</p>
-              <NextIcon size="20" />
-            </div>
-          </Link>
+              <span aria-hidden="true">
+                <NextIcon size="20" />
+              </span>
+            </Link>
+          </nav>
         </div>
       </PageFrame>
 

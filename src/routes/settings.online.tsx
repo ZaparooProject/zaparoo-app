@@ -13,20 +13,21 @@ import { HeaderButton } from "../components/wui/HeaderButton";
 import { useSmartSwipe } from "../hooks/useSmartSwipe";
 import { BackIcon } from "../lib/images";
 import { logger } from "../lib/logger";
+import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/settings/online")({
   component: About,
 });
 
 function About() {
+  const { t } = useTranslation();
+  usePageHeadingFocus(t("online.title"));
   const router = useRouter();
   const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,
   });
-
-  const { t } = useTranslation();
 
   const loggedInUser = useStatusStore((state) => state.loggedInUser);
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
@@ -38,7 +39,11 @@ function About() {
     <PageFrame
       {...swipeHandlers}
       headerLeft={
-        <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+        <HeaderButton
+          onClick={goBack}
+          icon={<BackIcon size="24" />}
+          aria-label={t("nav.back")}
+        />
       }
       headerCenter={
         <h1 className="text-foreground text-xl">{t("online.title")}</h1>

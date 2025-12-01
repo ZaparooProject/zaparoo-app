@@ -143,7 +143,11 @@ export function VirtualSearchResults({
               focus: "database",
             }}
           >
-            <Button icon={<SettingsIcon size="24" />} variant="text" />
+            <Button
+              icon={<SettingsIcon size="24" />}
+              variant="text"
+              aria-label={t("create.search.gamesDbSettings")}
+            />
           </Link>
         </div>
       </Card>

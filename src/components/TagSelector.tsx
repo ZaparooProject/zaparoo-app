@@ -8,6 +8,7 @@ import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
 import { TagInfo } from "@/lib/models";
+import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
 import { BackToTop } from "./BackToTop";
@@ -42,6 +43,7 @@ export function TagSelector({
   title,
 }: TagSelectorProps) {
   const { t } = useTranslation();
+  const { announce } = useAnnouncer();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const slideModalScrollRef = useRef<HTMLDivElement>(null);
 
@@ -143,12 +145,20 @@ export function TagSelector({
 
       // Format tag as "<type>:<value>" for the API
       const formattedTag = `${tag.type}:${tag.tag}`;
-      const newSelection = selectedTags.includes(formattedTag)
+      const wasSelected = selectedTags.includes(formattedTag);
+      const newSelection = wasSelected
         ? selectedTags.filter((t) => t !== formattedTag)
         : [...selectedTags, formattedTag];
       onSelect(newSelection);
+
+      // Announce the state change
+      if (wasSelected) {
+        announce(t("tagSelector.deselected", { name: tag.tag }));
+      } else {
+        announce(t("tagSelector.selected", { name: tag.tag }));
+      }
     },
-    [selectedTags, onSelect, gamesIndex.indexing],
+    [selectedTags, onSelect, gamesIndex.indexing, announce, t],
   );
 
   // Handle clear all
@@ -249,7 +259,6 @@ export function TagSelector({
             <input
               type="text"
               placeholder={t("tagSelector.searchPlaceholder")}
-              aria-label={t("tagSelector.searchTags")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="border-input bg-background text-foreground w-full rounded-md border px-10 py-2 text-sm focus:ring-2 focus:ring-white/20 focus:outline-none"
@@ -291,7 +300,7 @@ export function TagSelector({
         </div>
 
         {/* Content area */}
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-hidden" tabIndex={-1}>
           {isLoading ? (
             <div className="flex h-32 items-center justify-center">
               <span className="text-muted-foreground">{t("loading")}</span>
@@ -314,13 +323,18 @@ export function TagSelector({
             </div>
           ) : debouncedSearchQuery ? (
             // Search results - show virtualized list of all matching tags
-            <div ref={scrollContainerRef} className="h-full px-2 pb-4">
+            <div
+              ref={scrollContainerRef}
+              className="h-full px-2 pb-4"
+              tabIndex={-1}
+            >
               <div
                 style={{
                   height: `${virtualizer.getTotalSize()}px`,
                   width: "100%",
                   position: "relative",
                 }}
+                role="presentation"
               >
                 {virtualizer.getVirtualItems().map((virtualItem) => {
                   const tag = allTags[virtualItem.index];
@@ -356,8 +370,14 @@ export function TagSelector({
                         onClick={() => handleTagSelect(tag)}
                         disabled={gamesIndex.indexing}
                         type="button"
+                        role="checkbox"
+                        aria-checked={isSelected}
+                        aria-label={`${tag.tag}, ${t(`tagSelector.type.${tag.type}`, { defaultValue: tag.type })}`}
                       >
-                        <div className="flex items-center space-x-3">
+                        <div
+                          className="flex items-center space-x-3"
+                          aria-hidden="true"
+                        >
                           <div
                             className={classNames(
                               "border-input flex h-5 w-5 items-center justify-center rounded border-2",
@@ -448,8 +468,14 @@ export function TagSelector({
                                 onClick={() => handleTagSelect(tag)}
                                 disabled={gamesIndex.indexing}
                                 type="button"
+                                role="checkbox"
+                                aria-checked={isSelected}
+                                aria-label={tag.tag}
                               >
-                                <div className="flex items-center space-x-3">
+                                <div
+                                  className="flex items-center space-x-3"
+                                  aria-hidden="true"
+                                >
                                   <div
                                     className={classNames(
                                       "border-input flex h-5 w-5 items-center justify-center rounded border-2",

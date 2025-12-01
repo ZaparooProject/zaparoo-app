@@ -18,6 +18,7 @@ import { Route as SettingsOnlineRouteImport } from './routes/settings.online'
 import { Route as SettingsLogsRouteImport } from './routes/settings.logs'
 import { Route as SettingsHelpRouteImport } from './routes/settings.help'
 import { Route as SettingsAdvancedRouteImport } from './routes/settings.advanced'
+import { Route as SettingsAccessibilityRouteImport } from './routes/settings.accessibility'
 import { Route as SettingsAboutRouteImport } from './routes/settings.about'
 import { Route as CreateTextRouteImport } from './routes/create.text'
 import { Route as CreateSearchRouteImport } from './routes/create.search'
@@ -70,6 +71,11 @@ const SettingsAdvancedRoute = SettingsAdvancedRouteImport.update({
   path: '/settings/advanced',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsAccessibilityRoute = SettingsAccessibilityRouteImport.update({
+  id: '/settings/accessibility',
+  path: '/settings/accessibility',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsAboutRoute = SettingsAboutRouteImport.update({
   id: '/settings/about',
   path: '/settings/about',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/create/search': typeof CreateSearchRoute
   '/create/text': typeof CreateTextRoute
   '/settings/about': typeof SettingsAboutRoute
+  '/settings/accessibility': typeof SettingsAccessibilityRoute
   '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
   '/settings/logs': typeof SettingsLogsRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/create/search': typeof CreateSearchRoute
   '/create/text': typeof CreateTextRoute
   '/settings/about': typeof SettingsAboutRoute
+  '/settings/accessibility': typeof SettingsAccessibilityRoute
   '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
   '/settings/logs': typeof SettingsLogsRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/create/search': typeof CreateSearchRoute
   '/create/text': typeof CreateTextRoute
   '/settings/about': typeof SettingsAboutRoute
+  '/settings/accessibility': typeof SettingsAccessibilityRoute
   '/settings/advanced': typeof SettingsAdvancedRoute
   '/settings/help': typeof SettingsHelpRoute
   '/settings/logs': typeof SettingsLogsRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/create/search'
     | '/create/text'
     | '/settings/about'
+    | '/settings/accessibility'
     | '/settings/advanced'
     | '/settings/help'
     | '/settings/logs'
@@ -180,6 +190,7 @@ export interface FileRouteTypes {
     | '/create/search'
     | '/create/text'
     | '/settings/about'
+    | '/settings/accessibility'
     | '/settings/advanced'
     | '/settings/help'
     | '/settings/logs'
@@ -197,6 +208,7 @@ export interface FileRouteTypes {
     | '/create/search'
     | '/create/text'
     | '/settings/about'
+    | '/settings/accessibility'
     | '/settings/advanced'
     | '/settings/help'
     | '/settings/logs'
@@ -215,6 +227,7 @@ export interface RootRouteChildren {
   CreateSearchRoute: typeof CreateSearchRoute
   CreateTextRoute: typeof CreateTextRoute
   SettingsAboutRoute: typeof SettingsAboutRoute
+  SettingsAccessibilityRoute: typeof SettingsAccessibilityRoute
   SettingsAdvancedRoute: typeof SettingsAdvancedRoute
   SettingsHelpRoute: typeof SettingsHelpRoute
   SettingsLogsRoute: typeof SettingsLogsRoute
@@ -290,6 +303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAdvancedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/accessibility': {
+      id: '/settings/accessibility'
+      path: '/settings/accessibility'
+      fullPath: '/settings/accessibility'
+      preLoaderRoute: typeof SettingsAccessibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/about': {
       id: '/settings/about'
       path: '/settings/about'
@@ -343,6 +363,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreateSearchRoute: CreateSearchRoute,
   CreateTextRoute: CreateTextRoute,
   SettingsAboutRoute: SettingsAboutRoute,
+  SettingsAccessibilityRoute: SettingsAccessibilityRoute,
   SettingsAdvancedRoute: SettingsAdvancedRoute,
   SettingsHelpRoute: SettingsHelpRoute,
   SettingsLogsRoute: SettingsLogsRoute,

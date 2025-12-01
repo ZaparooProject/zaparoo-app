@@ -15,8 +15,17 @@
     },
     "notConnected": "デバイスに接続されていません",
     "yes": "はい",
+    "none": "なし",
+    "duration": {
+      "hours_one": "{{count}}時間",
+      "hours_other": "{{count}}時間",
+      "minutes_one": "{{count}}分",
+      "minutes_other": "{{count}}分"
+    },
+    "selected": "選択済み",
     "stopPlaying": "再生中のメディアを停止します。未保存の進行状況が失われる可能性があります。",
     "nav": {
+      "back": "戻る",
       "cancel": "キャンセル",
       "create": "作成",
       "assign": "割り当てる",
@@ -64,6 +73,7 @@
     },
     "scan": {
       "cameraMode": "カメラ",
+      "cameraAvailable": "カメラでスキャン",
       "nfcMode": "NFC",
       "scanError": "タグのスキャンエラー",
       "scanSuccess": "タグのスキャンに成功しました",
@@ -79,6 +89,7 @@
       "nowPlayingHeading": "再生中",
       "nowPlayingName": "名前: {{game}}",
       "nowPlayingSystem": "システム: {{system}}",
+      "stopPlayingButton": "再生を停止",
       "lastScannedHeading": "最後にスキャン",
       "lastScannedTime": "時刻: {{time}}",
       "lastScannedUid": "ID: {{uid}}",
@@ -123,6 +134,7 @@
         "pathLabel": "パス",
         "zapscriptLabel": "ZapScript",
         "tagsLabel": "タグ",
+        "selectWriteValue": "タグに書き込む値を選択",
         "writeLabel": "タグに書き込む",
         "playLabel": "プレビュー",
         "selectSystem": "システムを選択",
@@ -147,6 +159,7 @@
       "custom": {
         "title": "カスタムZapScript",
         "textPlaceholder": "ZapScriptを入力",
+        "textareaLabel": "ZapScriptエディター",
         "write": "タグに書き込む",
         "run": "実行",
         "clear": "クリア",
@@ -157,7 +170,13 @@
         "selectSystem": "システム",
         "zapscriptHelp": "ヘルプ",
         "clearConfirmTitle": "ZapScriptをクリアしますか？",
-        "commandPalette": "コマンドパレット"
+        "commandPalette": "コマンドパレット",
+        "insertCommandStart": "コマンド開始を挿入",
+        "insertCommandSeparator": "コマンド区切りを挿入",
+        "insertMedia": "メディアパスを挿入",
+        "insertSystem": "システムを挿入",
+        "insertCommand": "コマンドを挿入",
+        "runZapScript": "ZapScriptを実行"
       },
       "nfc": {
         "title": "NFCユーティリティ",
@@ -263,6 +282,7 @@
     },
     "settings": {
       "title": "設定",
+      "moreSettings": "その他の設定",
       "device": "デバイスアドレス",
       "modeLabel": "スキャンモード",
       "tapMode": "タップ",
@@ -351,7 +371,8 @@
         "shakeRandomMedia": "ランダムメディア",
         "shakeCustom": "カスタム",
         "shakeSelectSystem": "システムを選択",
-        "shakeZapscript": "起動するZapScript"
+        "shakeZapscript": "起動するZapScript",
+        "shakeModeLabel": "シェイクモード"
       },
       "logs": {
         "title": "ログ",
@@ -407,6 +428,11 @@
     "systemSelector": {
       "title": "システムを選択",
       "searchPlaceholder": "システムを検索...",
+      "searchSystems": "システムを検索",
+      "clearSearch": "検索をクリア",
+      "systemsList": "システムリスト",
+      "selected": "{{name}}を選択しました",
+      "deselected": "{{name}}の選択を解除",
       "allSystems": "すべてのシステム",
       "allCategories": "すべて",
       "noResults": "システムが見つかりません",
@@ -419,6 +445,8 @@
     "tagSelector": {
       "title": "タグを選択",
       "searchPlaceholder": "タグをフィルター...",
+      "searchTags": "タグをフィルター",
+      "clearSearch": "検索をクリア",
       "allTypes": "すべてのタイプ",
       "noResults": "タグが見つかりません",
       "noTags": "利用可能なタグがありません",
@@ -426,6 +454,8 @@
       "multipleSelected": "{{count}}タグを選択",
       "clearAll": "すべてクリア",
       "apply": "適用",
+      "selected": "{{name}}を選択",
+      "deselected": "{{name}}の選択を解除",
       "type": {
         "accessibility": "アクセシビリティ",
         "addon": "アドオン",

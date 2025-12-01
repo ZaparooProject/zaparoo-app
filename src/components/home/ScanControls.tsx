@@ -68,7 +68,7 @@ export function ScanControls({
             }}
             role="button"
             tabIndex={0}
-            aria-label={t("scan.pressToScan")}
+            aria-label={t("spinner.pressToScan")}
             className="focus-visible:ring-offset-background inline-block cursor-pointer rounded-full focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-4 focus-visible:outline-none"
           >
             <ScanSpinner status={scanStatus} spinning={scanSession} />

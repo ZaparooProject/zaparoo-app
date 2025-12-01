@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
-import toast, { Toaster } from "react-hot-toast";
+import toast, { Toaster, useToasterStore } from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
 import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
@@ -25,6 +25,10 @@ import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
 import { useShakeDetection } from "./hooks/useShakeDetection";
 import { initDeviceInfo } from "./lib/logger";
+import {
+  A11yAnnouncerProvider,
+  useAnnouncer,
+} from "./components/A11yAnnouncer";
 
 // Component to initialize queue processors after preferences hydrate
 // This ensures sessionManager.launchOnScan is set correctly before processing
@@ -40,6 +44,133 @@ function QueueProcessors() {
     launcherAccess,
     connected,
   });
+  return null;
+}
+
+// Component to announce all toasts for screen readers
+// This ensures TalkBack/VoiceOver users hear toast notifications
+function ToastAnnouncer() {
+  const { announce } = useAnnouncer();
+  const { toasts } = useToasterStore();
+  const announcedIds = React.useRef(new Set<string>());
+
+  useEffect(() => {
+    for (const t of toasts) {
+      // Only announce new, visible toasts
+      if (t.visible && !announcedIds.current.has(t.id)) {
+        announcedIds.current.add(t.id);
+
+        // Extract text content from the toast message
+        let message = "";
+        if (typeof t.message === "string") {
+          message = t.message;
+        } else if (typeof t.message === "function") {
+          // For function messages (like our custom toasts), we can't easily extract text
+          // The toast content will need to be announced separately if needed
+          // Skip announcement for complex toasts - they should handle their own a11y
+          continue;
+        }
+
+        if (message) {
+          announce(message);
+        }
+      }
+    }
+
+    // Clean up old toast IDs to prevent memory leak
+    const currentIds = new Set(toasts.map((t) => t.id));
+    for (const id of announcedIds.current) {
+      if (!currentIds.has(id)) {
+        announcedIds.current.delete(id);
+      }
+    }
+  }, [toasts, announce]);
+
+  return null;
+}
+
+// Component to show "now playing" toast with screen reader announcement
+function NowPlayingToast() {
+  const { t } = useTranslation();
+  const { announce } = useAnnouncer();
+  const playing = useStatusStore((state) => state.playing);
+  const prevPlaying = usePrevious(playing);
+  const showFilenames = usePreferencesStore((state) => state.showFilenames);
+
+  useEffect(() => {
+    // Only show toast when a new game actually starts (mediaName changes)
+    if (
+      playing.mediaName !== "" &&
+      playing.mediaName !== prevPlaying?.mediaName
+    ) {
+      const displayName =
+        showFilenames && playing.mediaPath
+          ? filenameFromPath(playing.mediaPath) || playing.mediaName
+          : playing.mediaName;
+
+      toast.success(
+        (to) => (
+          <span
+            className="flex grow flex-col"
+            onClick={() => toast.dismiss(to.id)}
+            onKeyDown={(e) =>
+              (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
+            }
+            role="button"
+            tabIndex={0}
+          >
+            <span className="font-bold">{t("toast.nowPlayingHeading")}</span>
+            <span>{displayName}</span>
+          </span>
+        ),
+        {
+          id: "playingGame-" + Date.now(),
+          icon: (
+            <span className="text-success pr-1">
+              <PlayIcon size="24" />
+            </span>
+          ),
+        },
+      );
+
+      // Announce for screen readers (since this uses a function message)
+      announce(`${t("toast.nowPlayingHeading")}: ${displayName}`);
+    }
+  }, [playing, prevPlaying, t, showFilenames, announce]);
+
+  return null;
+}
+
+// Component to show "media finished" toast with screen reader announcement
+function MediaFinishedToastHandler() {
+  const { t } = useTranslation();
+  const { announce } = useAnnouncer();
+  const gamesIndex = useStatusStore((state) => state.gamesIndex);
+  const prevGamesIndex = usePrevious(gamesIndex);
+
+  useEffect(() => {
+    // Only show completion toast when indexing finishes with results
+    if (
+      !gamesIndex.indexing &&
+      prevGamesIndex?.indexing &&
+      (gamesIndex.totalFiles ?? 0) > 0
+    ) {
+      toast.success((to) => <MediaFinishedToast id={to.id} />, {
+        id: "indexed",
+        icon: (
+          <span className="text-success pr-1 pl-1">
+            <DatabaseIcon size="24" />
+          </span>
+        ),
+      });
+
+      // Announce for screen readers
+      announce(
+        `${t("toast.updatedDb")}. ${t("toast.filesFound", { count: gamesIndex.totalFiles })}`,
+      );
+    }
+  }, [gamesIndex, prevGamesIndex, t, announce]);
+
   return null;
 }
 
@@ -74,7 +205,6 @@ export default function App() {
   const accelerometerAvailabilityHydrated = usePreferencesStore(
     (state) => state._accelerometerAvailabilityHydrated,
   );
-  const showFilenames = usePreferencesStore((state) => state.showFilenames);
 
   // Initialize device info for error reporting context
   useEffect(() => {
@@ -90,12 +220,7 @@ export default function App() {
   useCameraAvailabilityCheck();
   useAccelerometerAvailabilityCheck();
 
-  const playing = useStatusStore((state) => state.playing);
-  const prevPlaying = usePrevious(playing);
-  const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  const prevGamesIndex = usePrevious(gamesIndex);
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
-  const { t } = useTranslation();
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
@@ -116,64 +241,6 @@ export default function App() {
     };
   }, [setLoggedInUser]);
 
-  useEffect(() => {
-    // Only show completion toast, progress is now shown in MediaDatabaseCard
-    // Skip toast if totalFiles is 0 (indicates cancellation)
-    if (
-      !gamesIndex.indexing &&
-      prevGamesIndex?.indexing &&
-      (gamesIndex.totalFiles ?? 0) > 0
-    ) {
-      toast.success((to) => <MediaFinishedToast id={to.id} />, {
-        id: "indexed",
-        icon: (
-          <span className="text-success pr-1 pl-1">
-            <DatabaseIcon size="24" />
-          </span>
-        ),
-      });
-    }
-  }, [gamesIndex, prevGamesIndex, t]);
-
-  useEffect(() => {
-    // Only show toast when a new game actually starts (mediaName changes)
-    // This prevents duplicate toasts for the same game and handles debouncing naturally
-    if (
-      playing.mediaName !== "" &&
-      playing.mediaName !== prevPlaying?.mediaName
-    ) {
-      const displayName =
-        showFilenames && playing.mediaPath
-          ? filenameFromPath(playing.mediaPath) || playing.mediaName
-          : playing.mediaName;
-
-      toast.success(
-        (to) => (
-          <span
-            className="flex grow flex-col"
-            onClick={() => toast.dismiss(to.id)}
-            onKeyDown={(e) =>
-              (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
-            }
-            role="button"
-            tabIndex={0}
-          >
-            <span className="font-bold">{t("toast.nowPlayingHeading")}</span>
-            <span>{displayName}</span>
-          </span>
-        ),
-        {
-          id: "playingGame-" + Date.now(),
-          icon: (
-            <span className="text-success pr-1">
-              <PlayIcon size="24" />
-            </span>
-          ),
-        },
-      );
-    }
-  }, [playing, prevPlaying, t, showFilenames]);
-
   // Block rendering until preferences, Pro access, and hardware availability are hydrated to prevent layout shifts
   if (
     !hasHydrated ||
@@ -188,7 +255,6 @@ export default function App() {
   return (
     <>
       <AppUrlListener />
-      <CoreApiWebSocket key={getDeviceAddress()} />
       <QueueProcessors />
       <Toaster
         position="top-center"
@@ -211,17 +277,23 @@ export default function App() {
           right: "env(safe-area-inset-right, 0px)",
         }}
       />
-      <div
-        className="app-frame h-screen w-screen"
-        style={{
-          background: "var(--color-background)",
-          color: "var(--color-foreground)",
-        }}
-      >
-        <SlideModalProvider>
-          <RouterProvider router={router} />
-        </SlideModalProvider>
-      </div>
+      <A11yAnnouncerProvider>
+        <CoreApiWebSocket key={getDeviceAddress()} />
+        <ToastAnnouncer />
+        <NowPlayingToast />
+        <MediaFinishedToastHandler />
+        <div
+          className="app-frame h-screen w-screen"
+          style={{
+            background: "var(--color-background)",
+            color: "var(--color-foreground)",
+          }}
+        >
+          <SlideModalProvider>
+            <RouterProvider router={router} />
+          </SlideModalProvider>
+        </div>
+      </A11yAnnouncerProvider>
     </>
   );
 }

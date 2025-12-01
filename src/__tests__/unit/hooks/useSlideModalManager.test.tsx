@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, renderHook } from "../../../test-utils";
+import { render, renderHook, screen } from "../../../test-utils";
 import { useSlideModalManager } from "../../../hooks/useSlideModalManager";
 import { SlideModalProvider } from "../../../components/SlideModalProvider";
 

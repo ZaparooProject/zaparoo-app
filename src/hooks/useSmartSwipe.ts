@@ -1,5 +1,6 @@
 import { useSwipeable, SwipeableHandlers } from "react-swipeable";
 import { useMediaQuery } from "@uidotdev/usehooks";
+import { useHaptics } from "./useHaptics";
 
 interface SmartSwipeOptions {
   onSwipeLeft?: () => void;
@@ -22,6 +23,7 @@ export function useSmartSwipe(
 ): SwipeableHandlers {
   // Tailwind 'sm' breakpoint is 640px - only enable mouse tracking on smaller screens
   const isMobile = useMediaQuery("(max-width: 639px)");
+  const { impact } = useHaptics();
   const {
     onSwipeLeft,
     onSwipeRight,
@@ -43,6 +45,7 @@ export function useSmartSwipe(
             Math.abs(eventData.deltaX) > swipeThreshold &&
             eventData.velocity > velocityThreshold
           ) {
+            impact("light");
             onSwipeLeft();
           }
         }
@@ -54,6 +57,7 @@ export function useSmartSwipe(
             Math.abs(eventData.deltaX) > swipeThreshold &&
             eventData.velocity > velocityThreshold
           ) {
+            impact("light");
             onSwipeRight();
           }
         }
@@ -65,6 +69,7 @@ export function useSmartSwipe(
             Math.abs(eventData.deltaY) > swipeThreshold &&
             eventData.velocity > velocityThreshold
           ) {
+            impact("light");
             onSwipeUp();
           }
         }
@@ -76,6 +81,7 @@ export function useSmartSwipe(
             Math.abs(eventData.deltaY) > swipeThreshold &&
             eventData.velocity > velocityThreshold
           ) {
+            impact("light");
             onSwipeDown();
           }
         }

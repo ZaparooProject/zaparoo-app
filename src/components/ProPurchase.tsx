@@ -30,19 +30,7 @@ export const RestorePuchasesButton = () => {
           } else {
             setLauncherAccess(false);
           }
-          toast.success((to) => (
-            <span
-              className="flex grow flex-col"
-              onClick={() => toast.dismiss(to.id)}
-              onKeyDown={(e) =>
-                (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
-              }
-              role="button"
-              tabIndex={0}
-            >
-              {t("settings.app.restoreSuccess")}
-            </span>
-          ));
+          toast.success(t("settings.app.restoreSuccess"));
           location.reload();
         } catch (e) {
           logger.error("restore purchases error", e, {
@@ -50,19 +38,7 @@ export const RestorePuchasesButton = () => {
             action: "restore",
             severity: "warning",
           });
-          toast.error((to) => (
-            <span
-              className="flex grow flex-col"
-              onClick={() => toast.dismiss(to.id)}
-              onKeyDown={(e) =>
-                (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
-              }
-              role="button"
-              tabIndex={0}
-            >
-              {t("settings.app.restoreFail")}
-            </span>
-          ));
+          toast.error(t("settings.app.restoreFail"));
         }
       }}
     />

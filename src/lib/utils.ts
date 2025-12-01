@@ -103,3 +103,41 @@ export function formatDurationDisplay(
 
   return parts.length > 0 ? parts.join(" ") : "0m";
 }
+
+/** Translation function type for formatDurationAccessible */
+type TranslateFn = (key: string, options?: { count: number }) => string;
+
+/**
+ * Format Go duration string for screen reader accessibility
+ * Uses full words instead of abbreviations to avoid TalkBack misreading "5m" as "5 metres"
+ * Examples: "4h" => "4 hours", "1h30m" => "1 hour 30 minutes", "45m" => "45 minutes"
+ * @param duration - Go duration string (e.g., "1h30m", "45m", "2h")
+ * @param t - Translation function from useTranslation hook
+ */
+export function formatDurationAccessible(
+  duration: string | undefined | null,
+  t: TranslateFn,
+): string {
+  if (duration === undefined || duration === null) {
+    return "";
+  }
+
+  if (duration === "0" || duration === "0s" || duration === "") {
+    return t("duration.minutes", { count: 0 });
+  }
+
+  const { hours, minutes } = parseDuration(duration);
+  const parts: string[] = [];
+
+  if (hours > 0) {
+    parts.push(t("duration.hours", { count: hours }));
+  }
+
+  if (minutes > 0) {
+    parts.push(t("duration.minutes", { count: minutes }));
+  }
+
+  return parts.length > 0
+    ? parts.join(" ")
+    : t("duration.minutes", { count: 0 });
+}

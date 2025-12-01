@@ -54,19 +54,7 @@ export const runToken = async (
             resolve(true);
           })
           .catch((e) => {
-            toast.error((to) => (
-              <span
-                className="flex grow flex-col"
-                onClick={() => toast.dismiss(to.id)}
-                onKeyDown={(e) =>
-                  (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
-                }
-                role="button"
-                tabIndex={0}
-              >
-                {e.message}
-              </span>
-            ));
+            toast.error(e.message);
             logger.error("launch error", e, {
               category: "api",
               action: "runToken",

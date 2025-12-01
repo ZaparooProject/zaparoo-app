@@ -22,12 +22,15 @@ import {
 } from "../components/ui/tabs";
 import { ReadTab } from "../components/nfc/ReadTab";
 import { ToolsTab } from "../components/nfc/ToolsTab";
+import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/create/nfc")({
   component: NfcUtils,
 });
 
 function NfcUtils() {
+  const { t } = useTranslation();
+  usePageHeadingFocus(t("create.nfc.title"));
   const nfcWriter = useNfcWriter();
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);
@@ -40,8 +43,6 @@ function NfcUtils() {
     setWriteIntent(false);
     await nfcWriter.end();
   };
-
-  const { t } = useTranslation();
 
   // Handle NFC operation completion - cleanup and tab switching
   useEffect(() => {
@@ -85,7 +86,11 @@ function NfcUtils() {
       <div {...swipeHandlers} className="flex h-full w-full flex-col">
         <PageFrame
           headerLeft={
-            <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+            <HeaderButton
+              onClick={goBack}
+              icon={<BackIcon size="24" />}
+              aria-label={t("nav.back")}
+            />
           }
           headerCenter={
             <h1 className="text-foreground text-xl">{t("create.nfc.title")}</h1>

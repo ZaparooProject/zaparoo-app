@@ -31,9 +31,9 @@ describe("App", () => {
     );
     expect(appSource).toMatch(/MediaFinishedToast/);
 
-    // Check that only completion toast logic exists
+    // Check that only completion toast logic exists (shows toast when indexing completes)
     expect(appSource).toMatch(
-      /Only show completion toast, progress is now shown in MediaDatabaseCard/,
+      /Only show completion toast when indexing finishes with results/,
     );
 
     // Verify indexing toast logic is removed
@@ -59,8 +59,8 @@ describe("App", () => {
     const appPath = resolve(__dirname, "../../App.tsx");
     const appSource = readFileSync(appPath, "utf-8");
 
-    // Check that useEffect for media indexing has correct dependencies
-    expect(appSource).toMatch(/}, \[gamesIndex, prevGamesIndex, t\]/);
+    // Check that useEffect for media indexing has correct dependencies (including announce for a11y)
+    expect(appSource).toMatch(/}, \[gamesIndex, prevGamesIndex, t, announce\]/);
 
     // Should not include hideGamesIndex in dependencies anymore
     expect(appSource).not.toMatch(/hideGamesIndex.*\]/);

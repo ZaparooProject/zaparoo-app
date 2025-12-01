@@ -24,6 +24,7 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
     <div data-testid={`link-${to}`}>{children}</div>
   ),
+  useLocation: () => ({ pathname: "/" }),
 }));
 
 const mockUseStatusStore = vi.mocked(useStatusStore);

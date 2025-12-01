@@ -12,12 +12,15 @@ import { UpdateSettingsRequest } from "../lib/models.ts";
 import { BackIcon, NextIcon } from "../lib/images";
 import { HeaderButton } from "../components/wui/HeaderButton";
 import { RestorePuchasesButton } from "../components/ProPurchase";
+import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/settings/advanced")({
   component: AdvancedSettings,
 });
 
 function AdvancedSettings() {
+  const { t } = useTranslation();
+  usePageHeadingFocus(t("settings.advanced.title"));
   const connected = useStatusStore((state) => state.connected);
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
   const setShowFilenames = usePreferencesStore((s) => s.setShowFilenames);
@@ -32,8 +35,6 @@ function AdvancedSettings() {
       CoreAPI.settingsUpdate(params),
     onSuccess: () => refetch(),
   });
-
-  const { t } = useTranslation();
 
   const router = useRouter();
   const goBack = () => router.history.back();
@@ -51,7 +52,11 @@ function AdvancedSettings() {
     <PageFrame
       {...swipeHandlers}
       headerLeft={
-        <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+        <HeaderButton
+          onClick={goBack}
+          icon={<BackIcon size="24" />}
+          aria-label={t("nav.back")}
+        />
       }
       headerCenter={
         <h1 className="text-foreground text-xl">

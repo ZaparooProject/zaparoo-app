@@ -1,11 +1,12 @@
 import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { App } from "@capacitor/app";
-import React from "react";
+import React, { useRef } from "react";
 import { SafeAreaHandler } from "@/lib/safeArea";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { BottomNav } from "../components/BottomNav";
 import { TourInitializer } from "../components/TourInitializer";
 import { useBackButtonHandler } from "../hooks/useBackButtonHandler";
+import { SkipLink } from "../components/SkipLink";
 
 function BackHandler() {
   const navigate = useNavigate();
@@ -44,13 +45,21 @@ function BackHandler() {
   return null;
 }
 
-export const Route = createRootRoute({
-  component: () => (
+function RootLayout() {
+  const mainRef = useRef<HTMLElement>(null);
+
+  return (
     <div className="flex h-screen w-screen flex-col">
+      <SkipLink targetId="main-content" />
       <SafeAreaHandler />
       <BackHandler />
       <TourInitializer />
-      <main className="min-h-0 flex-1">
+      <main
+        id="main-content"
+        ref={mainRef}
+        tabIndex={-1}
+        className="min-h-0 flex-1 outline-none"
+      >
         <Outlet />
       </main>
       <footer
@@ -65,6 +74,10 @@ export const Route = createRootRoute({
         <BottomNav />
       </footer>
     </div>
-  ),
+  );
+}
+
+export const Route = createRootRoute({
+  component: RootLayout,
   errorComponent: ErrorComponent,
 });

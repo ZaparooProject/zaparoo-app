@@ -14,6 +14,7 @@ import { BackIcon } from "../lib/images";
 import { HeaderButton } from "../components/wui/HeaderButton";
 import { ToggleChip } from "../components/wui/ToggleChip";
 import { logger } from "../lib/logger";
+import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
 
 interface LogEntry {
   level: string;
@@ -29,6 +30,7 @@ export const Route = createFileRoute("/settings/logs")({
 
 function Logs() {
   const { t } = useTranslation();
+  usePageHeadingFocus(t("settings.logs.title"));
   const router = useRouter();
   const goBack = () => router.history.back();
   const connected = useStatusStore((state) => state.connected);
@@ -207,7 +209,11 @@ function Logs() {
       <PageFrame
         {...swipeHandlers}
         headerLeft={
-          <HeaderButton onClick={goBack} icon={<BackIcon size="24" />} />
+          <HeaderButton
+            onClick={goBack}
+            icon={<BackIcon size="24" />}
+            aria-label={t("nav.back")}
+          />
         }
         headerCenter={
           <h1 className="text-foreground text-xl">

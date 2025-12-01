@@ -66,6 +66,7 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
               onClick={shareTagData}
               size="sm"
               variant="outline"
+              aria-label={t("create.nfc.readTab.shareTagData")}
             />
           )}
         </div>

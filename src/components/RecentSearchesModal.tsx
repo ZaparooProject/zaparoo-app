@@ -59,7 +59,10 @@ export function RecentSearchesModal({
                   onClick={() => handleSearchSelect(search)}
                 >
                   <div className="flex flex-row items-center gap-3">
-                    <Button icon={<SearchIcon size="20" />} />
+                    <Button
+                      icon={<SearchIcon size="20" />}
+                      aria-label={t("create.search.searchResult")}
+                    />
                     <div className="flex grow flex-col">
                       <span className="text-sm font-semibold">
                         {getSearchDisplayText(search)}

@@ -8,6 +8,8 @@ import { ScanResult, TokenResponse } from "../lib/models";
 import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
 import { runToken } from "../lib/tokenOperations.tsx";
 import { logger } from "../lib/logger";
+import { useAnnouncer } from "../components/A11yAnnouncer";
+import { useHaptics } from "./useHaptics";
 
 interface UseScanOperationsProps {
   connected: boolean;
@@ -26,6 +28,8 @@ export function useScanOperations({
 }: UseScanOperationsProps) {
   const { t } = useTranslation();
   const nfcWriter = useNfcWriter();
+  const { notification } = useHaptics();
+  const { announce } = useAnnouncer();
   const [scanSession, setScanSession] = useState(false);
   const [scanStatus, setScanStatus] = useState<ScanResult>(ScanResult.Default);
 
@@ -37,6 +41,8 @@ export function useScanOperations({
     readTag()
       .then((result) => {
         setScanStatus(ScanResult.Success);
+        notification("success");
+        announce(t("scan.scanSuccess"));
         setTimeout(() => {
           setScanStatus(ScanResult.Default);
         }, statusTimeout);
@@ -80,19 +86,12 @@ export function useScanOperations({
       .catch((error) => {
         setScanStatus(ScanResult.Error);
         setScanSession(false);
+        notification("error");
         logger.error("NFC scan failed", error, {
           category: "nfc",
           action: "doScan",
         });
-        toast.error((to) => (
-          // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-          <span
-            className="flex grow flex-col"
-            onClick={() => toast.dismiss(to.id)}
-          >
-            {t("scan.scanError")}
-          </span>
-        ));
+        toast.error(t("scan.scanError"));
         setTimeout(() => {
           setScanStatus(ScanResult.Default);
         }, statusTimeout);
@@ -104,6 +103,8 @@ export function useScanOperations({
     setProPurchaseModalOpen,
     statusTimeout,
     t,
+    notification,
+    announce,
   ]);
 
   const handleScanButton = useCallback(async () => {

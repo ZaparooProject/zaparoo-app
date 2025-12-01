@@ -26,31 +26,47 @@ export function NowPlayingInfo({
       : mediaName;
 
   return (
-    <div className="p-3">
+    <section className="p-3" aria-labelledby="now-playing-heading">
       <div className="flex flex-row items-center justify-between">
-        <p className="font-bold text-gray-400 capitalize">
+        <h2
+          id="now-playing-heading"
+          className="font-bold text-gray-400 capitalize"
+        >
           {t("scan.nowPlayingHeading")}
-        </p>
+        </h2>
         <Button
           icon={<StopIcon size="24" />}
           variant="text"
           disabled={!mediaName}
           onClick={onStop}
           className="flex items-center"
+          aria-label={t("scan.stopPlayingButton")}
         />
       </div>
       <div>
         <p>
-          {t("scan.nowPlayingName", {
-            game: displayName === "" ? "-" : displayName,
-          })}
+          {t("scan.nowPlayingName", { game: "" })}
+          {displayName === "" ? (
+            <>
+              <span aria-hidden="true">—</span>
+              <span className="sr-only">{t("none")}</span>
+            </>
+          ) : (
+            displayName
+          )}
         </p>
         <p>
-          {t("scan.nowPlayingSystem", {
-            system: systemName === "" ? "-" : systemName,
-          })}
+          {t("scan.nowPlayingSystem", { system: "" })}
+          {systemName === "" ? (
+            <>
+              <span aria-hidden="true">—</span>
+              <span className="sr-only">{t("none")}</span>
+            </>
+          ) : (
+            systemName
+          )}
         </p>
       </div>
-    </div>
+    </section>
   );
 }
