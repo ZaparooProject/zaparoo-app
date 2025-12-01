@@ -497,6 +497,10 @@
         "year": "Year"
       }
     },
+    "connection": {
+      "connecting": "Connecting...",
+      "reconnecting": "Reconnecting..."
+    },
     "tour": {
       "stepIndicator": "{{current}}/{{total}}",
       "welcome": {

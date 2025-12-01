@@ -16,16 +16,16 @@ describe("CoreAPI Simple Additional Coverage", () => {
   });
 
   describe("WebSocket management errors", () => {
-    it("should handle invalid WebSocketManager instance", () => {
+    it("should handle invalid transport instance", () => {
       const consoleSpy = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});
 
-      // Pass invalid WebSocket manager
+      // Pass invalid transport instance
       CoreAPI.setWsInstance(null as any);
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "Invalid WebSocketManager instance provided to CoreAPI",
+        "Invalid transport instance provided to CoreAPI",
       );
       consoleSpy.mockRestore();
     });

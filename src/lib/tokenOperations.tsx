@@ -23,6 +23,12 @@ export const runToken = async (
   setProPurchaseModalOpen: (open: boolean) => void,
   unsafe = false,
   override = false,
+  /**
+   * Whether to queue launch commands when disconnected.
+   * - true: Queue commands to run when reconnected (reconnecting scenario)
+   * - false: Don't queue, just store token locally (proper offline scenario)
+   */
+  canQueueCommands = true,
 ): Promise<boolean> => {
   return new Promise((resolve) => {
     if (uid === "" && text === "") {
@@ -39,6 +45,12 @@ export const runToken = async (
     setLastToken(token);
 
     if (!sessionManager.launchOnScan) {
+      return resolve(true);
+    }
+
+    // If not connected and can't queue commands, just store the token without launching
+    if (!connected && !canQueueCommands) {
+      logger.log("Offline scan - storing token without queueing launch");
       return resolve(true);
     }
 
@@ -72,6 +84,7 @@ export const runToken = async (
     };
 
     if (!connected) {
+      // Small delay when reconnecting to let connection stabilize
       setTimeout(() => {
         run();
       }, 500);

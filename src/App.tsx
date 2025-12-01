@@ -9,11 +9,11 @@ import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
 import { DatabaseIcon, PlayIcon } from "./lib/images";
-import { CoreApiWebSocket } from "./components/CoreApiWebSocket.tsx";
+import { ConnectionProvider } from "./components/ConnectionProvider";
+import { ReconnectingIndicator } from "./components/ReconnectingIndicator";
 import AppUrlListener from "./lib/deepLinks.tsx";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { useDataCache } from "./hooks/useDataCache";
-import { getDeviceAddress } from "./lib/coreApi";
 import { SlideModalProvider } from "./components/SlideModalProvider";
 import { usePreferencesStore } from "./lib/preferencesStore";
 import { filenameFromPath } from "./lib/path";
@@ -278,21 +278,23 @@ export default function App() {
         }}
       />
       <A11yAnnouncerProvider>
-        <CoreApiWebSocket key={getDeviceAddress()} />
-        <ToastAnnouncer />
-        <NowPlayingToast />
-        <MediaFinishedToastHandler />
-        <div
-          className="app-frame h-screen w-screen"
-          style={{
-            background: "var(--color-background)",
-            color: "var(--color-foreground)",
-          }}
-        >
-          <SlideModalProvider>
-            <RouterProvider router={router} />
-          </SlideModalProvider>
-        </div>
+        <ConnectionProvider>
+          <ToastAnnouncer />
+          <NowPlayingToast />
+          <MediaFinishedToastHandler />
+          <ReconnectingIndicator />
+          <div
+            className="app-frame h-screen w-screen"
+            style={{
+              background: "var(--color-background)",
+              color: "var(--color-foreground)",
+            }}
+          >
+            <SlideModalProvider>
+              <RouterProvider router={router} />
+            </SlideModalProvider>
+          </div>
+        </ConnectionProvider>
       </A11yAnnouncerProvider>
     </>
   );

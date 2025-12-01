@@ -29,7 +29,6 @@ describe("ScanControls", () => {
   const mockProps = {
     scanSession: false,
     scanStatus: ScanResult.Default,
-    connected: true,
     onScanButton: vi.fn(),
     onCameraScan: vi.fn(),
   };
@@ -59,26 +58,16 @@ describe("ScanControls", () => {
     expect(mockProps.onScanButton).toHaveBeenCalledTimes(1);
   });
 
-  it("renders camera scan button when connected and on native", () => {
+  it("renders camera scan button on native platform", () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
 
-    render(<ScanControls {...mockProps} connected={true} />);
+    render(<ScanControls {...mockProps} />);
 
     const cameraButton = screen.getByRole("button", {
       name: /scan\.cameraMode/i,
     });
     expect(cameraButton).toBeInTheDocument();
-  });
-
-  it("does not render camera scan button when disconnected", () => {
-    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-
-    render(<ScanControls {...mockProps} connected={false} />);
-
-    const cameraButton = screen.queryByRole("button", {
-      name: /scan\.cameraMode/i,
-    });
-    expect(cameraButton).not.toBeInTheDocument();
+    expect(cameraButton).not.toBeDisabled();
   });
 
   it("does not render scan spinner on web platform", () => {

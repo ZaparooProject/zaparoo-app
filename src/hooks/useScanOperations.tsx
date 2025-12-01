@@ -12,6 +12,8 @@ import { useAnnouncer } from "../components/A11yAnnouncer";
 
 interface UseScanOperationsProps {
   connected: boolean;
+  /** Whether we have received data from the server (indicates prior connection) */
+  hasData: boolean;
   launcherAccess: boolean;
   setLastToken: (token: TokenResponse) => void;
   setProPurchaseModalOpen: (open: boolean) => void;
@@ -20,6 +22,7 @@ interface UseScanOperationsProps {
 
 export function useScanOperations({
   connected,
+  hasData,
   launcherAccess,
   setLastToken,
   setProPurchaseModalOpen,
@@ -45,6 +48,8 @@ export function useScanOperations({
         }, statusTimeout);
 
         if (result.info.tag) {
+          // Only queue commands if we were previously connected (reconnecting scenario)
+          // If never connected (proper offline), just store the token without queueing
           const ok = runToken(
             result.info.tag.uid,
             result.info.tag.text,
@@ -52,6 +57,9 @@ export function useScanOperations({
             connected,
             setLastToken,
             setProPurchaseModalOpen,
+            false, // unsafe
+            false, // override
+            hasData, // canQueueCommands - only queue if we had a prior connection
           );
           if (!ok) {
             cancelSession();
@@ -94,6 +102,7 @@ export function useScanOperations({
       });
   }, [
     connected,
+    hasData,
     launcherAccess,
     setLastToken,
     setProPurchaseModalOpen,
@@ -141,6 +150,9 @@ export function useScanOperations({
           connected,
           setLastToken,
           setProPurchaseModalOpen,
+          false, // unsafe
+          false, // override
+          hasData, // canQueueCommands - only queue if we had a prior connection
         );
       })
       .catch((error) => {
@@ -151,6 +163,7 @@ export function useScanOperations({
       });
   }, [
     connected,
+    hasData,
     launcherAccess,
     setLastToken,
     setProPurchaseModalOpen,
@@ -166,8 +179,9 @@ export function useScanOperations({
       connected,
       setLastToken,
       setProPurchaseModalOpen,
-      false,
-      true,
+      false, // unsafe
+      true, // override
+      false, // canQueueCommands - never queue stop commands, only run when connected
     );
   }, [connected, launcherAccess, setLastToken, setProPurchaseModalOpen]);
 

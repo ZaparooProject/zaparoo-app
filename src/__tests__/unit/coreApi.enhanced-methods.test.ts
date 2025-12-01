@@ -224,7 +224,7 @@ describe("CoreAPI - Enhanced Methods", () => {
       expect(() => {
         CoreAPI.callWithTracking("version" as any);
       }).toThrow(
-        "API call error: Failed to send request: WebSocket send error: Send failed",
+        "API call error: Failed to send request: Transport send error: Send failed",
       );
 
       consoleErrorSpy.mockRestore();

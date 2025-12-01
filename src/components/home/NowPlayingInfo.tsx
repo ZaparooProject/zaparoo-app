@@ -9,6 +9,7 @@ interface NowPlayingInfoProps {
   mediaPath?: string;
   systemName: string;
   onStop: () => void;
+  connected?: boolean;
 }
 
 export function NowPlayingInfo({
@@ -16,6 +17,7 @@ export function NowPlayingInfo({
   mediaPath,
   systemName,
   onStop,
+  connected = true,
 }: NowPlayingInfoProps) {
   const { t } = useTranslation();
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
@@ -37,7 +39,7 @@ export function NowPlayingInfo({
         <Button
           icon={<StopIcon size="24" />}
           variant="text"
-          disabled={!mediaName}
+          disabled={!connected || !mediaName}
           onClick={onStop}
           className="flex items-center"
           aria-label={t("scan.stopPlayingButton")}

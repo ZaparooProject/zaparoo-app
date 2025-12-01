@@ -1,7 +1,6 @@
 import { Preferences } from "@capacitor/preferences";
 import { v4 as uuidv4 } from "uuid";
 import { Capacitor } from "@capacitor/core";
-import { WebSocketManager } from "./websocketManager.ts";
 import { logger } from "./logger.ts";
 import {
   AddMappingRequest,
@@ -28,6 +27,16 @@ import {
   VersionResponse,
   WriteRequest,
 } from "./models";
+
+/**
+ * Interface for transport compatibility.
+ * Both WebSocketTransport and the old WebSocketManager implement this.
+ */
+interface TransportLike {
+  send(data: string): void;
+  readonly isConnected: boolean;
+  readonly currentState?: string;
+}
 
 const RequestTimeout = 30 * 1000;
 
@@ -77,7 +86,7 @@ class CoreApi {
   private send: (msg: Parameters<WebSocket["send"]>[0]) => void;
   private readonly responsePool: { [key: string]: ResponsePromise };
   private pendingWriteId: string | null = null;
-  private wsManager: WebSocketManager | null = null;
+  private transport: TransportLike | null = null;
   private requestQueue: QueuedRequest[] = [];
 
   constructor() {
@@ -85,23 +94,23 @@ class CoreApi {
     this.responsePool = {};
   }
 
-  setWsInstance(wsManager: WebSocketManager) {
-    if (!wsManager || typeof wsManager.send !== "function") {
-      logger.error("Invalid WebSocketManager instance provided to CoreAPI");
-      this.wsManager = null;
+  setWsInstance(transport: TransportLike) {
+    if (!transport || typeof transport.send !== "function") {
+      logger.error("Invalid transport instance provided to CoreAPI");
+      this.transport = null;
       this.send = () =>
-        logger.warn("WebSocket send is not properly initialized");
+        logger.warn("Transport send is not properly initialized");
       return;
     }
 
-    this.wsManager = wsManager;
+    this.transport = transport;
     this.send = (msg) => {
       try {
-        wsManager.send(String(msg));
+        transport.send(String(msg));
       } catch (e) {
-        logger.error("Error in WebSocket send:", e);
+        logger.error("Error in transport send:", e);
         throw new Error(
-          `WebSocket send error: ${e instanceof Error ? e.message : String(e)}`,
+          `Transport send error: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
     };
@@ -133,7 +142,7 @@ class CoreApi {
 
   // Method to flush queue - can be called externally
   flushQueue() {
-    if (this.wsManager?.isConnected && this.requestQueue.length > 0) {
+    if (this.transport?.isConnected && this.requestQueue.length > 0) {
       logger.log(`Flushing ${this.requestQueue.length} queued requests.`);
       const requestsToProcess = [...this.requestQueue];
       this.requestQueue = []; // Clear the queue
@@ -226,7 +235,7 @@ class CoreApi {
     this.pendingWriteId = null;
 
     // Reset WebSocket manager (will be set by new connection)
-    this.wsManager = null;
+    this.transport = null;
     this.send = () => logger.warn("WebSocket send is not initialized");
   }
 
@@ -251,7 +260,7 @@ class CoreApi {
       }
 
       // Check WebSocket state
-      if (this.wsManager?.isConnected) {
+      if (this.transport?.isConnected) {
         // Connection is open, send immediately
         const payload = JSON.stringify(req);
         logger.debug("Sending request", payload);
@@ -302,7 +311,7 @@ class CoreApi {
       } else {
         // Connection not open, queue the request
         logger.debug(
-          `Queueing request ${req.method} (ID: ${id}). Current state: ${this.wsManager?.currentState}`,
+          `Queueing request ${req.method} (ID: ${id}). Current state: ${this.transport?.currentState}`,
         );
         const promise = new Promise<unknown>((resolve, reject) => {
           this.requestQueue.push({

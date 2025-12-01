@@ -90,7 +90,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
   connected: false,
   setConnected: (status) => set({ connected: status }),
 
-  targetDeviceAddress: "", // Initialized empty, will be set by CoreApiWebSocket on mount
+  targetDeviceAddress: "", // Initialized empty, will be set by ConnectionProvider on mount
   setTargetDeviceAddress: (address) => set({ targetDeviceAddress: address }),
 
   connectionState: ConnectionState.IDLE,

@@ -27,7 +27,6 @@ function getScanStatusAnnouncement(
 interface ScanControlsProps {
   scanSession: boolean;
   scanStatus: ScanResult;
-  connected: boolean;
   onScanButton: () => void;
   onCameraScan: () => void;
 }
@@ -35,7 +34,6 @@ interface ScanControlsProps {
 export function ScanControls({
   scanSession,
   scanStatus,
-  connected,
   onScanButton,
   onCameraScan,
 }: ScanControlsProps) {
@@ -78,7 +76,7 @@ export function ScanControls({
         <div className="mt-8"></div>
       )}
 
-      {connected && Capacitor.isNativePlatform() && cameraAvailable && (
+      {Capacitor.isNativePlatform() && cameraAvailable && (
         <div className="mb-4 flex justify-center">
           <Button
             variant="text"

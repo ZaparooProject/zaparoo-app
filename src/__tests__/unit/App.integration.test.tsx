@@ -111,8 +111,20 @@ vi.mock("@/lib/coreApi", () => ({
   },
 }));
 
-vi.mock("@/components/CoreApiWebSocket", () => ({
-  CoreApiWebSocket: () => <div data-testid="websocket" />,
+vi.mock("@/components/ConnectionProvider", () => ({
+  ConnectionProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="connection-provider">{children}</div>
+  ),
+  useConnection: () => ({
+    activeConnection: null,
+    isConnected: true,
+    hasData: false,
+    showReconnecting: false,
+  }),
+}));
+
+vi.mock("@/components/ReconnectingIndicator", () => ({
+  ReconnectingIndicator: () => null,
 }));
 
 vi.mock("@/lib/deepLinks", () => ({
@@ -146,8 +158,8 @@ describe("App Integration", () => {
     // Verify Toaster is rendered
     expect(screen.getByTestId("toaster")).toBeInTheDocument();
 
-    // Verify other components are rendered
-    expect(screen.getByTestId("websocket")).toBeInTheDocument();
+    // Verify ConnectionProvider is rendered
+    expect(screen.getByTestId("connection-provider")).toBeInTheDocument();
     expect(screen.getByTestId("deep-links")).toBeInTheDocument();
   });
 
@@ -158,10 +170,10 @@ describe("App Integration", () => {
     expect(screen.getByTestId("router")).toBeInTheDocument();
   });
 
-  it("should call getDeviceAddress", () => {
+  it("should have ConnectionProvider wrapping app content", () => {
     render(<App />);
 
-    // Verify getDeviceAddress is available (implicitly tested by rendering)
-    expect(screen.getByTestId("websocket")).toBeInTheDocument();
+    // Verify ConnectionProvider is rendered
+    expect(screen.getByTestId("connection-provider")).toBeInTheDocument();
   });
 });

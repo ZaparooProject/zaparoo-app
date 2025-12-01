@@ -25,6 +25,7 @@ import { StopConfirmModal } from "../components/home/StopConfirmModal";
 import { useScanOperations } from "../hooks/useScanOperations";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
+import { useConnection } from "../hooks/useConnection";
 
 interface LoaderData {
   restartScan: boolean;
@@ -86,6 +87,7 @@ function Index() {
   const playing = useStatusStore((state) => state.playing);
   const lastToken = useStatusStore((state) => state.lastToken);
   const setLastToken = useStatusStore((state) => state.setLastToken);
+  const { hasData } = useConnection();
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
@@ -98,6 +100,7 @@ function Index() {
     handleStopConfirm,
   } = useScanOperations({
     connected,
+    hasData,
     launcherAccess,
     setLastToken,
     setProPurchaseModalOpen,
@@ -187,7 +190,6 @@ function Index() {
         <ScanControls
           scanSession={scanSession}
           scanStatus={scanStatus}
-          connected={connected}
           onScanButton={handleScanButton}
           onCameraScan={handleCameraScan}
         />
@@ -200,14 +202,13 @@ function Index() {
 
           <LastScannedInfo lastToken={lastToken} scanStatus={scanStatus} />
 
-          {connected && (
-            <NowPlayingInfo
-              mediaName={playing.mediaName}
-              mediaPath={playing.mediaPath}
-              systemName={playing.systemName}
-              onStop={() => setStopConfirmOpen(true)}
-            />
-          )}
+          <NowPlayingInfo
+            mediaName={playing.mediaName}
+            mediaPath={playing.mediaPath}
+            systemName={playing.systemName}
+            onStop={() => setStopConfirmOpen(true)}
+            connected={connected}
+          />
         </div>
       </PageFrame>
 
