@@ -105,11 +105,14 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const hasConnectedBefore = localConnection?.hasConnectedBefore ?? false;
 
   // Show "Connecting..." for new devices that haven't connected yet
+  // Also show when localConnection is null but we have a target address (initial setup)
   const showConnecting =
     !isConnected &&
     !hasConnectedBefore &&
-    (localConnection?.state === "connecting" ||
-      localConnection?.state === "reconnecting");
+    (localConnection === null
+      ? targetDeviceAddress !== ""
+      : localConnection.state === "connecting" ||
+        localConnection.state === "reconnecting");
 
   // Show "Reconnecting..." for devices that had prior successful connection
   const showReconnecting = !isConnected && (hasData || hasConnectedBefore);
@@ -391,9 +394,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
   // Setup connection when device address changes
   useEffect(() => {
+    // Reset local connection state when device changes so UI doesn't show stale data
+    setLocalConnection(null);
+
     if (targetDeviceAddress === "") {
-      setConnectionState(ConnectionState.ERROR);
-      setConnectionError("No device address configured");
+      setConnectionState(ConnectionState.DISCONNECTED);
       return;
     }
 

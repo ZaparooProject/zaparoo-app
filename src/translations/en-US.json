@@ -303,6 +303,10 @@
       "getApp": "Get the Zaparoo App",
       "language": "Language",
       "deviceHistory": "Change device",
+      "connectionFailed": "Unable to connect to device",
+      "notConnected": "Not connected",
+      "enterDeviceAddress": "Enter a device address",
+      "deleteDevice": "Remove device from history",
       "about": {
         "title": "About",
         "version": "Version: {{version}}",

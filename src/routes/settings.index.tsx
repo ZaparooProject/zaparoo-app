@@ -1,25 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
-import { ArrowLeftRightIcon, TrashIcon, Check } from "lucide-react";
+import { TrashIcon, Check } from "lucide-react";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button as SCNButton } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
 import i18n from "../i18n";
 import { PageFrame } from "../components/PageFrame";
 import { useStatusStore } from "../lib/store";
 import { usePreferencesStore } from "../lib/preferencesStore";
-import { TextInput } from "../components/wui/TextInput";
 import { Button } from "../components/wui/Button";
 import { ExternalIcon, NextIcon } from "../lib/images";
 import { getDeviceAddress, setDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
 import { MediaDatabaseCard } from "../components/MediaDatabaseCard";
+import { DeviceConnectionCard } from "../components/DeviceConnectionCard";
 
 interface LoaderData {
   launcherAccess: boolean;
@@ -60,11 +59,6 @@ function Settings() {
     (state) => state.setTargetDeviceAddress,
   );
 
-  const { data: version, isSuccess: versionSuccess } = useQuery({
-    queryKey: ["version"],
-    queryFn: () => CoreAPI.version(),
-  });
-
   const [address, setAddress] = useState(getDeviceAddress());
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -98,85 +92,53 @@ function Settings() {
       >
         <div className="flex flex-col gap-5">
           <div data-tour="device-address">
-            <TextInput
-              label={t("settings.device")}
-              placeholder="192.168.1.23"
-              value={address}
-              setValue={setAddress}
-              saveValue={handleDeviceAddressChange}
-              onKeyUp={(e) => {
-                if (e.key === "Enter" && address !== getDeviceAddress()) {
-                  handleDeviceAddressChange(address);
-                }
-              }}
+            <DeviceConnectionCard
+              address={address}
+              setAddress={setAddress}
+              onAddressChange={handleDeviceAddressChange}
+              connectionError={connectionError}
+              hasDeviceHistory={deviceHistory.length > 0}
+              onHistoryClick={() => setHistoryOpen(true)}
             />
           </div>
 
-          <div className="flex min-h-[1.5rem] flex-col gap-1">
-            {!versionSuccess ? (
-              <div className="flex flex-row items-center justify-between gap-2">
-                <Skeleton className="h-5 w-28" />
-                <Skeleton className="h-5 w-24" />
-              </div>
-            ) : (
-              version && (
-                <div className="flex flex-row items-center justify-between gap-2">
-                  <div>Platform: {version.platform}</div>
-                  <div>Version: {version.version}</div>
-                </div>
-              )
-            )}
-            {connectionError !== "" && (
-              <div className="text-error">{connectionError}</div>
-            )}
-          </div>
-
-          {deviceHistory.length > 0 && (
-            <>
-              <Button
-                icon={<ArrowLeftRightIcon size="20" />}
-                label={t("settings.deviceHistory")}
-                className="w-full"
-                onClick={() => setHistoryOpen(true)}
-              />
-              <SlideModal
-                isOpen={historyOpen}
-                close={() => setHistoryOpen(false)}
-                title={t("settings.deviceHistory")}
-              >
-                <div className="flex flex-col gap-3 pt-2">
-                  {deviceHistory
-                    .sort((a, b) => (a.address > b.address ? 1 : -1))
-                    .map((entry) => (
-                      <div
-                        key={entry.address}
-                        className="flex flex-row items-center justify-between gap-3"
-                      >
-                        <SCNButton
-                          className="w-full"
-                          onClick={() => {
-                            handleDeviceAddressChange(entry.address);
-                            setHistoryOpen(false);
-                          }}
-                          variant="outline"
-                        >
-                          {entry.address}
-                        </SCNButton>
-                        <SCNButton
-                          variant="ghost"
-                          size="icon"
-                          color="danger"
-                          onClick={() => removeDeviceHistory(entry.address)}
-                          aria-label={t("settings.deleteDevice")}
-                        >
-                          <TrashIcon size="20" />
-                        </SCNButton>
-                      </div>
-                    ))}
-                </div>
-              </SlideModal>
-            </>
-          )}
+          {/* Device History Modal */}
+          <SlideModal
+            isOpen={historyOpen}
+            close={() => setHistoryOpen(false)}
+            title={t("settings.deviceHistory")}
+          >
+            <div className="flex flex-col gap-3 pt-2">
+              {deviceHistory
+                .sort((a, b) => (a.address > b.address ? 1 : -1))
+                .map((entry) => (
+                  <div
+                    key={entry.address}
+                    className="flex flex-row items-center justify-between gap-3"
+                  >
+                    <SCNButton
+                      className="w-full"
+                      onClick={() => {
+                        handleDeviceAddressChange(entry.address);
+                        setHistoryOpen(false);
+                      }}
+                      variant="outline"
+                    >
+                      {entry.address}
+                    </SCNButton>
+                    <SCNButton
+                      variant="ghost"
+                      size="icon"
+                      color="danger"
+                      onClick={() => removeDeviceHistory(entry.address)}
+                      aria-label={t("settings.deleteDevice")}
+                    >
+                      <TrashIcon size="20" />
+                    </SCNButton>
+                  </div>
+                ))}
+            </div>
+          </SlideModal>
 
           <MediaDatabaseCard />
 

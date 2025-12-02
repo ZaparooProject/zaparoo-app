@@ -155,10 +155,41 @@ export const rollbarConfig: Rollbar.Configuration = {
     }
   },
 
-  // Ignore user-initiated cancellations
+  // Ignore user-initiated cancellations and connection errors
   checkIgnore: (_isUncaught, args) => {
-    const msg = String(args[0] || "");
-    return msg.includes("cancelled") || msg.includes("aborted");
+    const msg = String(args[0] || "").toLowerCase();
+    const errorMsg =
+      args[0] instanceof Error ? args[0].message.toLowerCase() : "";
+
+    // Patterns to ignore - these are expected operational errors, not bugs
+    const ignorePatterns = [
+      // User-initiated
+      "cancelled",
+      "aborted",
+      // Connection/network errors - expected when device is off/unreachable
+      "websocket",
+      "connection reset",
+      "connection closed",
+      "connection refused",
+      "connection timeout",
+      "network error",
+      "network request failed",
+      "failed to fetch",
+      "load failed",
+      "timeout",
+      "econnrefused",
+      "econnreset",
+      "etimedout",
+      "enetunreach",
+      "ehostunreach",
+      // WebSocket specific
+      "socket is not open",
+      "socket is already closed",
+      "readystate",
+    ];
+
+    const combinedMsg = `${msg} ${errorMsg}`;
+    return ignorePatterns.some((pattern) => combinedMsg.includes(pattern));
   },
 
   // Only transmit on native + production

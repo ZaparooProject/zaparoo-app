@@ -73,6 +73,7 @@ export function TextInput(props: {
                 "rounded-s-md": props.saveValue,
               },
             )}
+            style={{ backgroundColor: "var(--color-background)" }}
             disabled={props.disabled}
             placeholder={props.placeholder}
             value={value}
