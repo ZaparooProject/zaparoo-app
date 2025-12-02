@@ -32,9 +32,9 @@ describe("Tour Integration - data-tour attributes", () => {
     });
 
     it("should wrap device address input with tour target", () => {
-      // Check that data-tour is on a div that contains TextInput
+      // Check that data-tour is on a div that contains DeviceConnectionCard
       expect(settingsSource).toMatch(
-        /<div\s+data-tour="device-address"[\s\S]*?<TextInput/,
+        /<div\s+data-tour="device-address"[\s\S]*?<DeviceConnectionCard/,
       );
     });
   });

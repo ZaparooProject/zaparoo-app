@@ -204,7 +204,7 @@ describe("Settings Index Route", () => {
     const settingsSource = readFileSync(settingsPath, "utf-8");
 
     // Check that other important elements are still present
-    expect(settingsSource).toMatch(/TextInput/);
+    expect(settingsSource).toMatch(/DeviceConnectionCard/);
     expect(settingsSource).toMatch(/settings\.device/);
     expect(settingsSource).toMatch(/settings\.designer/);
     expect(settingsSource).toMatch(/settings\.readers\.title/);
@@ -256,15 +256,17 @@ describe("Settings Index Route", () => {
       expect(settingsSource).toMatch(/queryClient\.invalidateQueries\(\)/);
     });
 
-    it("should use handleDeviceAddressChange in TextInput saveValue", () => {
+    it("should use handleDeviceAddressChange in DeviceConnectionCard", () => {
       const settingsPath = resolve(
         __dirname,
         "../../../routes/settings.index.tsx",
       );
       const settingsSource = readFileSync(settingsPath, "utf-8");
 
-      // TextInput should use handleDeviceAddressChange as saveValue
-      expect(settingsSource).toMatch(/saveValue={handleDeviceAddressChange}/);
+      // DeviceConnectionCard should use handleDeviceAddressChange via onAddressChange
+      expect(settingsSource).toMatch(
+        /onAddressChange={handleDeviceAddressChange}/,
+      );
     });
 
     it("should use handleDeviceAddressChange in device history buttons", () => {
