@@ -1,11 +1,20 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { renderHook, waitFor } from "@testing-library/react";
 import { usePageHeadingFocus } from "../../../hooks/usePageHeadingFocus";
+import { Capacitor } from "@capacitor/core";
+import { ScreenReader } from "@capacitor/screen-reader";
+
+vi.mock("@capacitor/core", () => import("../../../__mocks__/@capacitor/core"));
+vi.mock(
+  "@capacitor/screen-reader",
+  () => import("../../../__mocks__/@capacitor/screen-reader"),
+);
 
 describe("usePageHeadingFocus", () => {
   const originalTitle = document.title;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     document.title = "Initial Title";
   });
 
@@ -47,7 +56,11 @@ describe("usePageHeadingFocus", () => {
     expect(document.title).toBe("Zaparoo");
   });
 
-  it("focuses element when ref is attached", () => {
+  it("focuses element when screen reader is enabled", async () => {
+    // Enable screen reader for this test
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(ScreenReader.isEnabled).mockResolvedValue({ value: true });
+
     const heading = document.createElement("h1");
     heading.textContent = "Page Title";
     document.body.appendChild(heading);
@@ -59,25 +72,49 @@ describe("usePageHeadingFocus", () => {
       return ref;
     });
 
-    // Check that the element received tabindex and focus
-    expect(heading.getAttribute("tabindex")).toBe("-1");
+    // Wait for screen reader check to complete
+    await waitFor(() => {
+      expect(heading.getAttribute("tabindex")).toBe("-1");
+    });
     expect(document.activeElement).toBe(heading);
 
     document.body.removeChild(heading);
     unmount();
   });
 
-  it("sets tabindex to -1 on focused element", () => {
-    // Create a real component scenario
+  it("does not focus element when screen reader is disabled", () => {
+    // Screen reader disabled (default mock behavior)
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+
+    const heading = document.createElement("h1");
+    heading.textContent = "Page Title";
+    document.body.appendChild(heading);
+
+    renderHook(() => {
+      const ref = usePageHeadingFocus<HTMLHeadingElement>("Test");
+      (ref as React.MutableRefObject<HTMLHeadingElement>).current = heading;
+      return ref;
+    });
+
+    // Element should NOT have tabindex set and should NOT be focused
+    expect(heading.getAttribute("tabindex")).toBeNull();
+    expect(document.activeElement).not.toBe(heading);
+
+    document.body.removeChild(heading);
+  });
+
+  it("sets tabindex to -1 on focused element when screen reader enabled", async () => {
+    // Enable screen reader for this test
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(ScreenReader.isEnabled).mockResolvedValue({ value: true });
+
     const heading = document.createElement("h1");
     heading.id = "test-heading";
     document.body.appendChild(heading);
 
-    // Render the hook and manually simulate what happens
     renderHook(
       ({ title }) => {
         const ref = usePageHeadingFocus<HTMLHeadingElement>(title);
-        // Simulate ref attachment before effect runs
         if (!ref.current) {
           (ref as React.MutableRefObject<HTMLHeadingElement>).current = heading;
         }
@@ -86,8 +123,10 @@ describe("usePageHeadingFocus", () => {
       { initialProps: { title: "Test" } },
     );
 
-    // Check the element was configured properly
-    expect(heading.getAttribute("tabindex")).toBe("-1");
+    // Wait for screen reader check to complete
+    await waitFor(() => {
+      expect(heading.getAttribute("tabindex")).toBe("-1");
+    });
 
     document.body.removeChild(heading);
   });
