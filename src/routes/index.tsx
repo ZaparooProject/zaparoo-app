@@ -83,7 +83,6 @@ function Index() {
     useProPurchase(initData.launcherAccess);
 
   const connected = useStatusStore((state) => state.connected);
-  const connectionState = useStatusStore((state) => state.connectionState);
   const playing = useStatusStore((state) => state.playing);
   const lastToken = useStatusStore((state) => state.lastToken);
   const setLastToken = useStatusStore((state) => state.setLastToken);
@@ -195,10 +194,7 @@ function Index() {
         />
 
         <div>
-          <ConnectionStatus
-            connected={connected}
-            connectionState={connectionState}
-          />
+          <ConnectionStatus />
 
           <LastScannedInfo lastToken={lastToken} scanStatus={scanStatus} />
 

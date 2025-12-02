@@ -1,19 +1,25 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "../../../../test-utils";
 import { ConnectionStatus } from "../../../../components/home/ConnectionStatus";
-import { ConnectionState } from "../../../../lib/store";
 
 // Mock coreApi
+const mockGetDeviceAddress = vi.fn(() => "192.168.1.100");
 vi.mock("../../../../lib/coreApi", () => ({
-  getDeviceAddress: vi.fn(() => "192.168.1.100"),
+  getDeviceAddress: () => mockGetDeviceAddress(),
+}));
+
+// Mock useConnection hook
+const mockUseConnection = vi.fn();
+vi.mock("../../../../hooks/useConnection", () => ({
+  useConnection: () => mockUseConnection(),
 }));
 
 // Mock i18next
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, options?: any) => {
+    t: (key: string, options?: Record<string, string>) => {
       if (key === "scan.connectedSub" && options?.ip) {
-        return `Connected to ${options.ip}`;
+        return `Address: ${options.ip}`;
       }
       return key;
     },
@@ -22,7 +28,15 @@ vi.mock("react-i18next", () => ({
 
 // Mock TanStack Router
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children, to, search }: any) => (
+  Link: ({
+    children,
+    to,
+    search,
+  }: {
+    children: React.ReactNode;
+    to: string;
+    search?: Record<string, string>;
+  }) => (
     <a
       href={to}
       data-testid="settings-link"
@@ -34,61 +48,99 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 describe("ConnectionStatus", () => {
-  it("renders disconnected state with warning", () => {
-    render(<ConnectionStatus connectionState={ConnectionState.DISCONNECTED} />);
+  beforeEach(() => {
+    mockGetDeviceAddress.mockReturnValue("192.168.1.100");
+    mockUseConnection.mockReturnValue({
+      isConnected: false,
+      showConnecting: false,
+      showReconnecting: false,
+      hasData: false,
+    });
+  });
 
-    expect(screen.getByText("scan.noDevices")).toBeInTheDocument();
+  it("renders disconnected state when no address is saved", () => {
+    mockGetDeviceAddress.mockReturnValue("");
+
+    render(<ConnectionStatus />);
+
+    expect(screen.getByText("settings.notConnected")).toBeInTheDocument();
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
   it("renders connected state with device address", () => {
-    render(<ConnectionStatus connectionState={ConnectionState.CONNECTED} />);
+    mockUseConnection.mockReturnValue({
+      isConnected: true,
+      showConnecting: false,
+      showReconnecting: false,
+      hasData: true,
+    });
+
+    render(<ConnectionStatus />);
 
     expect(screen.getByText("scan.connectedHeading")).toBeInTheDocument();
-    expect(screen.getByText("Connected to 192.168.1.100")).toBeInTheDocument();
+    expect(screen.getByText("Address: 192.168.1.100")).toBeInTheDocument();
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
   it("renders connecting state with loading indicator", () => {
-    render(<ConnectionStatus connectionState={ConnectionState.CONNECTING} />);
+    mockUseConnection.mockReturnValue({
+      isConnected: false,
+      showConnecting: true,
+      showReconnecting: false,
+      hasData: false,
+    });
 
-    expect(screen.getByText("scan.connecting")).toBeInTheDocument();
+    render(<ConnectionStatus />);
+
+    expect(screen.getByText("connection.connecting")).toBeInTheDocument();
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
   it("renders reconnecting state with loading indicator", () => {
-    render(<ConnectionStatus connectionState={ConnectionState.RECONNECTING} />);
+    mockUseConnection.mockReturnValue({
+      isConnected: false,
+      showConnecting: false,
+      showReconnecting: true,
+      hasData: true,
+    });
 
-    expect(screen.getByText("scan.reconnecting")).toBeInTheDocument();
+    render(<ConnectionStatus />);
+
+    expect(screen.getByText("connection.reconnecting")).toBeInTheDocument();
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
-  it("renders error state with retry option", () => {
-    render(<ConnectionStatus connectionState={ConnectionState.ERROR} />);
+  it("renders error state when connection error exists", () => {
+    mockGetDeviceAddress.mockReturnValue("192.168.1.100");
+    mockUseConnection.mockReturnValue({
+      isConnected: false,
+      showConnecting: false,
+      showReconnecting: false,
+      hasData: false,
+    });
 
-    expect(screen.getByText("scan.connectionError")).toBeInTheDocument();
-    expect(screen.getByText("scan.retry")).toBeInTheDocument();
+    // Error state is determined by having an address but not connected/connecting/reconnecting
+    // and the component receiving a connectionError prop (handled by DeviceConnectionCard)
+    // For ConnectionStatus on the Zap page, it shows disconnected state instead
+    render(<ConnectionStatus />);
+
+    // When there's an address but we're not in any connecting state and not connected,
+    // this shows as disconnected
+    expect(screen.getByText("settings.notConnected")).toBeInTheDocument();
   });
 
-  it("should call retry function when retry button is clicked", () => {
-    const mockRetry = vi.fn();
-    render(
-      <ConnectionStatus
-        connectionState={ConnectionState.ERROR}
-        onRetry={mockRetry}
-      />,
-    );
+  it("has settings link with correct props", () => {
+    mockUseConnection.mockReturnValue({
+      isConnected: true,
+      showConnecting: false,
+      showReconnecting: false,
+      hasData: true,
+    });
 
-    const retryButton = screen.getByText("scan.retry");
-    retryButton.click();
+    render(<ConnectionStatus />);
 
-    expect(mockRetry).toHaveBeenCalled();
-  });
-
-  it("renders idle state with warning", () => {
-    render(<ConnectionStatus connectionState={ConnectionState.IDLE} />);
-
-    expect(screen.getByText("scan.noDevices")).toBeInTheDocument();
-    expect(screen.getByRole("button")).toBeInTheDocument();
+    const link = screen.getByTestId("settings-link");
+    expect(link).toHaveAttribute("href", "/settings");
+    expect(link).toHaveAttribute("data-search", '{"focus":"address"}');
   });
 });

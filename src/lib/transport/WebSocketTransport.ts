@@ -249,10 +249,15 @@ export class WebSocketTransport implements Transport {
       this.handleDisconnection();
     };
 
-    this.ws.onerror = (event) => {
+    this.ws.onerror = (event: Event) => {
       logger.error(`[Transport:${this.deviceId}] WebSocket error:`, event);
       this.clearConnectionTimeout();
-      this.handlers.onError?.(new Error("WebSocket error"));
+      // WebSocket error events don't expose details for security reasons,
+      // but we can check if it's an ErrorEvent which may have a message
+      const errorEvent = event as ErrorEvent;
+      const message =
+        errorEvent.message || `Failed to connect to ${this.config.url}`;
+      this.handlers.onError?.(new Error(message));
       this.handleConnectionError();
     };
 
@@ -299,6 +304,11 @@ export class WebSocketTransport implements Transport {
       return;
     }
 
+    // Guard against duplicate scheduling (e.g., both onerror and onclose firing)
+    if (this.reconnectTimer) {
+      return;
+    }
+
     // Calculate backoff delay with jitter
     const baseDelay = this.config.reconnectInterval;
     const backoffDelay =
@@ -316,6 +326,7 @@ export class WebSocketTransport implements Transport {
     );
 
     this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = undefined;
       if (this.isDestroyed) return;
       this.reconnectAttempts++;
       this.connect();

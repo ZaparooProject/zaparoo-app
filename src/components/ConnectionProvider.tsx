@@ -463,6 +463,20 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             );
           });
       },
+      onError: (deviceId, error) => {
+        logger.log(
+          `[ConnectionProvider] Connection error for ${deviceId}:`,
+          error.message,
+        );
+        if (deviceId === connectionManager.getActiveDeviceId()) {
+          logger.log(
+            `[ConnectionProvider] Setting connection error: ${error.message}`,
+          );
+          setConnectionError(
+            error.message || tRef.current("settings.connectionFailed"),
+          );
+        }
+      },
     });
 
     // Add device and set as active

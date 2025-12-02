@@ -2,103 +2,38 @@ import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { memo } from "react";
 import { getDeviceAddress } from "../../lib/coreApi";
-import { DeviceIcon, SettingsIcon, WarningIcon } from "../../lib/images";
+import { SettingsIcon } from "../../lib/images";
 import { Button } from "../wui/Button";
 import { Card } from "../wui/Card";
-import { ConnectionState } from "../../lib/store";
+import { ConnectionStatusDisplay } from "../ConnectionStatusDisplay";
+import { useStatusStore } from "../../lib/store";
 
-interface ConnectionStatusProps {
-  connected?: boolean;
-  connectionState?: ConnectionState;
-  onRetry?: () => void;
-}
-
-export const ConnectionStatus = memo(function ConnectionStatus({
-  connected,
-  connectionState,
-  onRetry,
-}: ConnectionStatusProps) {
+export const ConnectionStatus = memo(function ConnectionStatus() {
   const { t } = useTranslation();
+  const address = getDeviceAddress();
+  const connectionError = useStatusStore((state) => state.connectionError);
 
-  // Support both old boolean prop and new connectionState prop
-  const isConnected = connectionState
-    ? connectionState === ConnectionState.CONNECTED
-    : connected;
-  const isConnecting = connectionState === ConnectionState.CONNECTING;
-  const isReconnecting = connectionState === ConnectionState.RECONNECTING;
-  const isError = connectionState === ConnectionState.ERROR;
-
-  // Determine icon, color, and content based on state
-  const showWarningIcon =
-    isError || (!isConnected && !isConnecting && !isReconnecting);
-  const iconColor = isConnected
-    ? "text-success"
-    : isReconnecting
-      ? "text-muted-foreground"
-      : isConnecting
-        ? "text-amber-500"
-        : "text-error";
-
-  const titleText = isConnected
-    ? t("scan.connectedHeading")
-    : isReconnecting
-      ? t("scan.reconnecting")
-      : isConnecting
-        ? t("scan.connecting")
-        : isError
-          ? t("scan.connectionError")
-          : t("scan.noDevices");
-
-  const titleClass = isConnected
-    ? "font-bold"
-    : isReconnecting
-      ? "text-muted-foreground"
-      : "font-semibold";
+  // Zap page shows IP address as subtitle
+  const connectedSubtitle = address
+    ? t("scan.connectedSub", { ip: address })
+    : undefined;
 
   return (
     <section aria-labelledby="connection-status-heading">
       <Card className="mb-4">
-        <div className="flex flex-row items-center justify-between gap-3">
-          <div className={`px-1.5 ${iconColor}`} aria-hidden="true">
-            {showWarningIcon ? (
-              <WarningIcon size="24" />
-            ) : (
-              <DeviceIcon size="24" />
-            )}
-          </div>
-          <div className="flex grow flex-col">
-            <h2 id="connection-status-heading" className={titleClass}>
-              {titleText}
-            </h2>
-            {isError ? (
-              <button
-                className="text-primary text-left text-sm underline"
-                onClick={() => {
-                  onRetry?.();
-                }}
-              >
-                {t("scan.retry")}
-              </button>
-            ) : (
-              <span
-                className={isReconnecting ? "text-muted-foreground" : undefined}
-              >
-                {t("scan.connectedSub", {
-                  ip: getDeviceAddress(),
-                })}
-              </span>
-            )}
-          </div>
-          <Link
-            to="/settings"
-            search={{
-              focus: "address",
-            }}
-            aria-label={t("nav.settings")}
-          >
-            <Button icon={<SettingsIcon size="24" />} variant="text" />
-          </Link>
-        </div>
+        <ConnectionStatusDisplay
+          connectionError={connectionError}
+          connectedSubtitle={connectedSubtitle}
+          action={
+            <Link
+              to="/settings"
+              search={{ focus: "address" }}
+              aria-label={t("nav.settings")}
+            >
+              <Button icon={<SettingsIcon size="24" />} variant="text" />
+            </Link>
+          }
+        />
       </Card>
     </section>
   );

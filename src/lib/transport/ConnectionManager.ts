@@ -21,6 +21,8 @@ export interface ConnectionManagerEventHandlers {
   onMessage?: (deviceId: string, event: MessageEvent) => void;
   /** Called when the active device changes */
   onActiveDeviceChange?: (deviceId: string | null) => void;
+  /** Called when a connection error occurs */
+  onError?: (deviceId: string, error: Error) => void;
 }
 
 export class ConnectionManager {
@@ -76,6 +78,7 @@ export class ConnectionManager {
           `[ConnectionManager] Device ${config.deviceId} error:`,
           error,
         );
+        this.handlers.onError?.(config.deviceId, error);
       },
       onMessage: (event) => {
         // Mark that we've received data (internal tracking only - don't trigger React re-renders)
