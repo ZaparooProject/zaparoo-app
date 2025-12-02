@@ -499,6 +499,7 @@
     },
     "tour": {
       "stepIndicator": "{{current}}/{{total}}",
+      "stepIndicatorAccessible": "ステップ{{current}}/{{total}}。",
       "welcome": {
         "title": "Zaparooへようこそ！",
         "text": "セットアップを始めましょう。このツアーでは、デバイスへの接続方法、ライブラリのスキャン方法、最初のトークンの作成方法をご紹介します。"

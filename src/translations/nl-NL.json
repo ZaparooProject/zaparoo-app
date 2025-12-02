@@ -499,6 +499,7 @@
     },
     "tour": {
       "stepIndicator": "{{current}}/{{total}}",
+      "stepIndicatorAccessible": "Stap {{current}} van {{total}}.",
       "welcome": {
         "title": "Welkom bij Zaparoo!",
         "text": "Laten we je op weg helpen. Deze rondleiding laat je zien hoe je verbinding maakt met je apparaat, je bibliotheek scant en je eerste token maakt."
