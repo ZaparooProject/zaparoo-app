@@ -100,11 +100,20 @@ export class WebSocketTransport implements Transport {
       return;
     }
 
+    // Skip if already in a connecting/connected state
+    // Note: "reconnecting" is allowed to proceed since we may need to create a new WebSocket
     if (this._state === "connecting" || this._state === "connected") {
       return;
     }
 
-    this.setState("connecting");
+    // Use "reconnecting" state if we've connected before, "connecting" for first connection
+    // This prevents state flickering during reconnection loops
+    if (this._hasConnectedBefore && this._state !== "reconnecting") {
+      this.setState("reconnecting");
+    } else if (!this._hasConnectedBefore) {
+      this.setState("connecting");
+    }
+    // If already in "reconnecting" state, don't change it (prevents unnecessary re-renders)
     this.createWebSocket();
   }
 
@@ -164,6 +173,14 @@ export class WebSocketTransport implements Transport {
 
     this.reconnectAttempts = 0;
     this.cleanup();
+
+    // Set state to allow connect() to proceed
+    // Use "reconnecting" if we've connected before to maintain consistent UI state
+    if (this._hasConnectedBefore) {
+      this.setState("reconnecting");
+    } else {
+      this.setState("disconnected");
+    }
 
     // Brief delay to allow network stack to be ready after app resume
     setTimeout(() => {
@@ -359,11 +376,9 @@ export class WebSocketTransport implements Transport {
   }
 
   private resetHeartbeat(): void {
+    // On message receive, just clear the pong timeout - the ping interval continues as normal.
+    // No need to restart the entire interval; that was causing unnecessary overhead.
     this.clearPongTimeout();
-    if (this.pingTimer) {
-      this.stopHeartbeat();
-      this.startHeartbeat();
-    }
   }
 
   private startPongTimeout(): void {

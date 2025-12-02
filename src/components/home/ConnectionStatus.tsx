@@ -36,7 +36,7 @@ export const ConnectionStatus = memo(function ConnectionStatus({
     : isReconnecting
       ? "text-muted-foreground"
       : isConnecting
-        ? "text-warning"
+        ? "text-amber-500"
         : "text-error";
 
   const titleText = isConnected

@@ -77,7 +77,19 @@ describe("ReconnectingIndicator", () => {
 
       const indicator = screen.getByText("Connecting...").closest("div");
       expect(indicator?.className).toContain("bg-muted");
-      expect(indicator?.className).not.toContain("bg-warning");
+      expect(indicator?.className).not.toContain("bg-amber-600");
+    });
+
+    it("should show a spinner", () => {
+      mockUseConnection.mockReturnValue({
+        showConnecting: true,
+        showReconnecting: false,
+      });
+
+      const { container } = render(<ReconnectingIndicator />);
+
+      const spinner = container.querySelector(".animate-spin");
+      expect(spinner).toBeInTheDocument();
     });
   });
 
@@ -115,7 +127,19 @@ describe("ReconnectingIndicator", () => {
       render(<ReconnectingIndicator />);
 
       const indicator = screen.getByText("Reconnecting...").closest("div");
-      expect(indicator?.className).toContain("bg-warning");
+      expect(indicator?.className).toContain("bg-amber-600");
+    });
+
+    it("should show a spinner", () => {
+      mockUseConnection.mockReturnValue({
+        showConnecting: false,
+        showReconnecting: true,
+      });
+
+      const { container } = render(<ReconnectingIndicator />);
+
+      const spinner = container.querySelector(".animate-spin");
+      expect(spinner).toBeInTheDocument();
     });
   });
 

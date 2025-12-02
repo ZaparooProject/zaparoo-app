@@ -254,6 +254,29 @@ describe("ConnectionManager", () => {
       );
     });
 
+    it("should only call onConnectionChange once per state change (no duplicates)", async () => {
+      const onConnectionChange = vi.fn();
+      manager.setEventHandlers({ onConnectionChange });
+
+      manager.addDevice({
+        deviceId: "device-1",
+        type: "websocket",
+        address: "ws://localhost:7497",
+      }) as unknown as MockTransport;
+
+      // Wait for auto-connect to complete
+      await vi.advanceTimersByTimeAsync(10);
+
+      // Count how many times "connected" state was reported
+      const connectedCalls = onConnectionChange.mock.calls.filter(
+        (call) => call[1].state === "connected",
+      );
+
+      // Should only be called once for connected state, not twice
+      // (This verifies the fix for duplicate onOpen + onStateChange firing)
+      expect(connectedCalls.length).toBe(1);
+    });
+
     it("should sync hasConnectedBefore from transport on state change", async () => {
       manager.addDevice({
         deviceId: "device-1",

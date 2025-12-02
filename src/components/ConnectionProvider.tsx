@@ -5,7 +5,14 @@
  * using the new transport abstraction layer.
  */
 
-import { useEffect, useRef, useCallback, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
@@ -14,7 +21,12 @@ import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Clock, AlertTriangle } from "lucide-react";
-import { connectionManager, type TransportState } from "../lib/transport";
+import { showRateLimitedErrorToast } from "../lib/toastUtils";
+import {
+  connectionManager,
+  type TransportState,
+  type DeviceConnection,
+} from "../lib/transport";
 import { logger } from "../lib/logger";
 import {
   IndexResponse,
@@ -47,6 +59,15 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const { announce } = useAnnouncer();
   const queryClient = useQueryClient();
   const isInitialized = useRef(false);
+  // Track current connection to prevent stale events from old connections
+  const currentConnectionId = useRef<string | null>(null);
+
+  // Refs for stable callback references - prevents effect re-run on callback changes
+  const handleConnectionOpenRef = useRef<() => void>(() => {});
+  const processNotificationRef = useRef<
+    (notification: NotificationRequest) => void
+  >(() => {});
+  const tRef = useRef(t);
 
   // Store state
   const {
@@ -73,21 +94,30 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     })),
   );
 
-  // Derive context value
-  const activeConnection = connectionManager.getActiveConnection();
-  const isConnected = activeConnection?.state === "connected";
-  const hasData = activeConnection?.hasData ?? false;
-  const hasConnectedBefore = activeConnection?.hasConnectedBefore ?? false;
+  // Connection state tracked via useState to prevent unnecessary re-renders
+  // These are updated via onConnectionChange callback
+  const [localConnection, setLocalConnection] =
+    useState<DeviceConnection | null>(null);
+
+  // Derive display states from local connection state
+  const isConnected = localConnection?.state === "connected";
+  const hasData = localConnection?.hasData ?? false;
+  const hasConnectedBefore = localConnection?.hasConnectedBefore ?? false;
 
   // Show "Connecting..." for new devices that haven't connected yet
   const showConnecting =
     !isConnected &&
     !hasConnectedBefore &&
-    (activeConnection?.state === "connecting" ||
-      activeConnection?.state === "reconnecting");
+    (localConnection?.state === "connecting" ||
+      localConnection?.state === "reconnecting");
 
   // Show "Reconnecting..." for devices that had prior successful connection
   const showReconnecting = !isConnected && (hasData || hasConnectedBefore);
+
+  // Keep refs updated with latest callbacks (but don't trigger effect re-runs)
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   // Map TransportState to ConnectionState for backward compatibility
   const mapTransportState = useCallback(
@@ -191,7 +221,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               ),
               {
                 icon: (
-                  <span className="text-warning pr-1 pl-1">
+                  <span className="pr-1 pl-1 text-amber-500">
                     <Clock size={20} />
                   </span>
                 ),
@@ -290,7 +320,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       })
       .catch((e) => {
         logger.error("Failed to get media information:", e);
-        toast.error(t("error", { msg: "Failed to fetch media" }));
+        // Use rate-limited toast to prevent spam on connection issues
+        showRateLimitedErrorToast(t("error", { msg: "Failed to fetch media" }));
       });
 
     // Fetch tokens information
@@ -307,7 +338,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       })
       .catch((e) => {
         logger.error("Failed to get tokens information:", e);
-        toast.error(t("error", { msg: "Failed to fetch tokens" }));
+        // Use rate-limited toast to prevent spam on connection issues
+        showRateLimitedErrorToast(
+          t("error", { msg: "Failed to fetch tokens" }),
+        );
       });
   }, [
     setConnectionError,
@@ -318,6 +352,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setLastToken,
     t,
   ]);
+
+  // Keep callback refs updated (allows stable references in connection effect)
+  useEffect(() => {
+    handleConnectionOpenRef.current = handleConnectionOpen;
+    processNotificationRef.current = processNotification;
+  }, [handleConnectionOpen, processNotification]);
 
   // Initialize device address from localStorage
   useEffect(() => {
@@ -364,22 +404,42 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       return;
     }
 
+    // Generate unique ID for this connection session to prevent stale events
+    const connectionId = crypto.randomUUID();
+    currentConnectionId.current = connectionId;
+
+    // Reset CoreAPI to clear any zombie requests from previous connections
+    CoreAPI.reset();
+
     logger.log(
-      `[ConnectionProvider] Setting up connection to: ${targetDeviceAddress}`,
+      `[ConnectionProvider] Setting up connection to: ${targetDeviceAddress} (id: ${connectionId.slice(0, 8)})`,
     );
 
     // Setup connection manager event handlers
+    // Use refs for callbacks to avoid re-running this effect when callbacks change
     connectionManager.setEventHandlers({
       onConnectionChange: (deviceId, connection) => {
         if (deviceId === connectionManager.getActiveDeviceId()) {
           setConnectionState(mapTransportState(connection.state));
 
+          // Update local connection state for context consumers
+          // Note: useState always triggers re-render when called with a new object reference
+          setLocalConnection(connection);
+
           // Handle connection open - always re-fetch data to prevent stale state
           if (connection.state === "connected") {
+            // Guard against stale connection events from old connections
+            if (connectionId !== currentConnectionId.current) {
+              logger.warn(
+                `[ConnectionProvider] Ignoring stale connection event (expected: ${currentConnectionId.current?.slice(0, 8)}, got: ${connectionId.slice(0, 8)})`,
+              );
+              return;
+            }
+
             if (!isInitialized.current) {
               isInitialized.current = true;
             }
-            handleConnectionOpen();
+            handleConnectionOpenRef.current();
           }
         }
       },
@@ -388,12 +448,14 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         CoreAPI.processReceived(event)
           .then((notification: NotificationRequest | null) => {
             if (notification !== null) {
-              processNotification(notification);
+              processNotificationRef.current(notification);
             }
           })
           .catch((e) => {
             logger.error("Error processing message:", e);
-            toast.error(t("error", { msg: e?.message || "Unknown error" }));
+            showRateLimitedErrorToast(
+              tRef.current("error", { msg: e?.message || "Unknown error" }),
+            );
           });
       },
     });
@@ -425,8 +487,16 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setConnectionState(ConnectionState.CONNECTING);
 
     return () => {
-      logger.log("[ConnectionProvider] Cleanup: removing device");
+      logger.log(
+        `[ConnectionProvider] Cleanup: removing device (id: ${connectionId.slice(0, 8)})`,
+      );
       isInitialized.current = false;
+      // Clear connection ID if it's still ours (prevents race with new connection)
+      if (currentConnectionId.current === connectionId) {
+        currentConnectionId.current = null;
+      }
+      // Reset CoreAPI to clear any pending requests for this connection
+      CoreAPI.reset();
       connectionManager.removeDevice(targetDeviceAddress);
       setConnectionState(ConnectionState.DISCONNECTED);
     };
@@ -435,9 +505,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setConnectionState,
     setConnectionError,
     mapTransportState,
-    handleConnectionOpen,
-    processNotification,
-    t,
+    // Note: handleConnectionOpen, processNotification, and t are accessed via refs
+    // to prevent this effect from re-running when those callbacks change
   ]);
 
   // App lifecycle listeners (Capacitor)
@@ -486,13 +555,17 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
-  const contextValue: ConnectionContextValue = {
-    activeConnection,
-    isConnected,
-    hasData,
-    showConnecting,
-    showReconnecting,
-  };
+  // Memoize context value to prevent unnecessary re-renders of consumers
+  const contextValue = useMemo<ConnectionContextValue>(
+    () => ({
+      activeConnection: localConnection,
+      isConnected,
+      hasData,
+      showConnecting,
+      showReconnecting,
+    }),
+    [localConnection, isConnected, hasData, showConnecting, showReconnecting],
+  );
 
   return (
     <ConnectionContext.Provider value={contextValue}>

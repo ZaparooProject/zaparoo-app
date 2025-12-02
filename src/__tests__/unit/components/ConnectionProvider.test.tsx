@@ -48,6 +48,7 @@ vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
     setWsInstance: vi.fn(),
     flushQueue: vi.fn(),
+    reset: vi.fn(),
     processReceived: vi.fn().mockResolvedValue(null),
     media: vi.fn().mockResolvedValue({ database: {}, active: [] }),
     tokens: vi.fn().mockResolvedValue({ last: null }),

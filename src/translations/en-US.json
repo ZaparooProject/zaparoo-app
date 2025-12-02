@@ -61,7 +61,7 @@
       "preparingDb": "Preparing database",
       "writingDb": "Writing database to disk",
       "hideLabel": "Hide",
-      "updatedDb": "Games database updated",
+      "updatedDb": "Media database updated",
       "filesFound": "{{count}} items scanned",
       "nowPlayingHeading": "Now playing"
     },
@@ -143,7 +143,7 @@
         "selectTags": "Select Tags",
         "loading": "Loading...",
         "startSearching": "Ready to search",
-        "startSearchingHint": "Enter a game name or select filters to start searching",
+        "startSearchingHint": "Enter a media name or select filters to start searching",
         "noResultsFound": "No results found for \"{{query}}\"",
         "noResultsFoundSimple": "No results found",
         "tryRemovingFiltersOnly": "Try removing filters to see more results",

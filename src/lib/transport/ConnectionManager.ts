@@ -65,9 +65,8 @@ export class ConnectionManager {
     // Setup event handlers
     const transportHandlers: TransportEventHandlers = {
       onOpen: () => {
-        connection.state = "connected";
-        this.connections.set(config.deviceId, { ...connection });
-        this.handlers.onConnectionChange?.(config.deviceId, { ...connection });
+        // State change is handled by onStateChange callback
+        logger.debug(`[ConnectionManager] Transport ${config.deviceId} opened`);
       },
       onClose: () => {
         // State will be updated by onStateChange
@@ -79,11 +78,10 @@ export class ConnectionManager {
         );
       },
       onMessage: (event) => {
-        // Mark that we've received data
+        // Mark that we've received data (internal tracking only - don't trigger React re-renders)
         connection.hasData = true;
         connection.lastDataTimestamp = Date.now();
         this.connections.set(config.deviceId, { ...connection });
-        this.handlers.onConnectionChange?.(config.deviceId, { ...connection });
         this.handlers.onMessage?.(config.deviceId, event);
       },
       onStateChange: (state) => {

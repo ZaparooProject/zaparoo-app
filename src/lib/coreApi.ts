@@ -143,11 +143,32 @@ class CoreApi {
   // Method to flush queue - can be called externally
   flushQueue() {
     if (this.transport?.isConnected && this.requestQueue.length > 0) {
-      logger.log(`Flushing ${this.requestQueue.length} queued requests.`);
-      const requestsToProcess = [...this.requestQueue];
+      const now = Date.now();
+      const MAX_QUEUE_AGE_MS = 10000; // 10 seconds - drop stale requests
+
+      // Filter out stale requests before processing
+      const freshRequests = this.requestQueue.filter((queued) => {
+        const age = now - queued.req.timestamp;
+        if (age > MAX_QUEUE_AGE_MS) {
+          logger.warn(
+            `Dropping stale request ${queued.req.method} (age: ${age}ms)`,
+          );
+          // Resolve with cancelled status instead of rejecting to prevent error handlers
+          queued.promiseHandlers.resolve({ cancelled: true });
+          return false;
+        }
+        return true;
+      });
+
       this.requestQueue = []; // Clear the queue
 
-      requestsToProcess.forEach((queued) => {
+      if (freshRequests.length === 0) {
+        return;
+      }
+
+      logger.log(`Flushing ${freshRequests.length} queued requests.`);
+
+      freshRequests.forEach((queued) => {
         const { req, promiseHandlers, signal } = queued;
         const { resolve, reject } = promiseHandlers;
 
@@ -210,14 +231,16 @@ class CoreApi {
   reset() {
     logger.log("Resetting CoreAPI state");
 
-    // Clear all pending response promises with cancellation
+    const cancelError = new Error("Request cancelled: connection reset");
+
+    // Clear all pending response promises with rejection
     Object.keys(this.responsePool).forEach((id) => {
       const responsePromise = this.responsePool[id];
       if (!responsePromise) return;
       if (responsePromise.timeoutId) {
         clearTimeout(responsePromise.timeoutId);
       }
-      responsePromise.resolve({ cancelled: true });
+      responsePromise.reject(cancelError);
     });
 
     // Clear response pool contents
@@ -227,7 +250,7 @@ class CoreApi {
 
     // Clear request queue
     this.requestQueue.forEach((queued) => {
-      queued.promiseHandlers.resolve({ cancelled: true });
+      queued.promiseHandlers.reject(cancelError);
     });
     this.requestQueue = [];
 
