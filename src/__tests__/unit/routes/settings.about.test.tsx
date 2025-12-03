@@ -113,21 +113,6 @@ describe("Settings About Route", () => {
     expect(screen.getByTestId("button-join-patreon")).toBeInTheDocument();
   });
 
-  it("should display version from environment variable", async () => {
-    // Mock version for consistent testing across environments
-    const mockVersion = "1.0.0";
-    const TestComponent = () => {
-      return <p data-testid="app-version">Version {mockVersion}</p>;
-    };
-
-    render(<TestComponent />);
-
-    // Verify version is displayed with correct format
-    const versionElement = screen.getByTestId("app-version");
-    expect(versionElement).toBeInTheDocument();
-    expect(versionElement.textContent).toMatch(/^Version \d+\.\d+\.\d+$/);
-  });
-
   it("should display developer credits", async () => {
     const TestComponent = () => {
       return (
