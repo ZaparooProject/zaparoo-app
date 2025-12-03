@@ -6,8 +6,22 @@
 
 import { Capacitor } from "@capacitor/core";
 import { Device } from "@capacitor/device";
-import { rollbar, isRollbarEnabled } from "./rollbar";
 import { useStatusStore } from "./store";
+
+// Check if Rollbar should be enabled (native + production + token present)
+const isNative = Capacitor.isNativePlatform();
+const isProduction = import.meta.env.PROD;
+const isRollbarEnabled =
+  isNative && isProduction && !!import.meta.env.VITE_ROLLBAR_ACCESS_TOKEN;
+
+// Lazy-loaded rollbar module - only imported on native platforms
+let rollbarModule: typeof import("./rollbar") | null = null;
+const rollbarPromise = isRollbarEnabled
+  ? import("./rollbar").then((m) => {
+      rollbarModule = m;
+      return m;
+    })
+  : Promise.resolve(null);
 
 const isDev = import.meta.env.DEV;
 
@@ -215,6 +229,9 @@ export const logger = {
 
     // Report with appropriate severity (always include customData with base context)
     const severity = metadata?.severity || "error";
+    const rollbar = rollbarModule?.rollbar;
+    if (!rollbar) return;
+
     switch (severity) {
       case "critical":
         rollbar.critical(errorToReport, customData);
@@ -233,3 +250,6 @@ export const logger = {
     }
   },
 };
+
+// Export rollbar promise for components that need to wait for initialization
+export { rollbarPromise, isRollbarEnabled };

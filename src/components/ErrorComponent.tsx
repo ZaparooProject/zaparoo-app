@@ -2,8 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { CopyButton } from "@/components/CopyButton.tsx";
-import { logger } from "@/lib/logger";
-import { isRollbarEnabled } from "@/lib/rollbar";
+import { logger, isRollbarEnabled } from "@/lib/logger";
 
 export function ErrorComponent({ error }: { error: Error }) {
   const { t } = useTranslation();

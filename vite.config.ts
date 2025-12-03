@@ -1,5 +1,6 @@
 import { defineConfig, ServerOptions } from "vite";
 import react from "@vitejs/plugin-react";
+import legacy from "@vitejs/plugin-legacy";
 import { TanStackRouterVite } from "@tanstack/router-vite-plugin";
 import { visualizer } from "rollup-plugin-visualizer";
 import path from "path";
@@ -21,7 +22,21 @@ export default defineConfig(({ command, mode }) => {
     };
   }
 
-  const plugins = [react(), TanStackRouterVite()];
+  const plugins = [
+    react(),
+    TanStackRouterVite(),
+    legacy({
+      targets: [
+        "chrome >= 49",
+        "safari >= 11",
+        "firefox >= 52",
+        "ios >= 11",
+        "android >= 49",
+      ],
+      additionalLegacyPolyfills: ["regenerator-runtime/runtime"],
+      modernPolyfills: true,
+    }),
+  ];
 
   if (mode === "analyze") {
     plugins.push(
@@ -57,6 +72,10 @@ export default defineConfig(({ command, mode }) => {
         output: {
           manualChunks: (id) => {
             if (id.includes("node_modules")) {
+              // Let dynamically-imported packages be split automatically
+              if (id.includes("rollbar") || id.includes("shepherd")) {
+                return undefined;
+              }
               if (id.includes("react") || id.includes("react-dom")) {
                 return "vendor";
               }
