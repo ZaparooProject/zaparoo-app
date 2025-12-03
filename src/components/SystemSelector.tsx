@@ -529,6 +529,7 @@ export function SystemSelectorTrigger({
   mode = "multi",
   className,
   onClick,
+  disabled = false,
 }: {
   selectedSystems: string[];
   systemsData?: { systems: System[] };
@@ -536,6 +537,7 @@ export function SystemSelectorTrigger({
   mode?: "single" | "multi" | "insert";
   className?: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -577,9 +579,11 @@ export function SystemSelectorTrigger({
     });
   }, [selectedSystems, systemsData, placeholder, mode, t]);
 
+  const isDisabled = disabled || gamesIndex.indexing;
+
   const handleClick = () => {
-    // Don't open selector while indexing
-    if (gamesIndex.indexing) return;
+    // Don't open selector while indexing or disabled
+    if (isDisabled) return;
     onClick();
   };
 
@@ -589,13 +593,13 @@ export function SystemSelectorTrigger({
       className={classNames(
         "border-input text-foreground flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus:ring-2 focus:ring-white/20 focus:outline-none",
         {
-          "hover:bg-white/10": !gamesIndex.indexing,
-          "cursor-not-allowed opacity-50": gamesIndex.indexing,
+          "hover:bg-white/10": !isDisabled,
+          "cursor-not-allowed opacity-50": isDisabled,
         },
         className,
       )}
       style={{ backgroundColor: "var(--color-background)" }}
-      disabled={gamesIndex.indexing}
+      disabled={isDisabled}
       type="button"
     >
       <span

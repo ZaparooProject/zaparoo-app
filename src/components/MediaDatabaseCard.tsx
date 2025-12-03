@@ -254,6 +254,7 @@ export function MediaDatabaseCard() {
             placeholder={t("settings.updateDb.allSystems")}
             mode="multi"
             onClick={() => setSystemSelectorOpen(true)}
+            disabled={!connected}
           />
 
           <div data-tour="update-database">
