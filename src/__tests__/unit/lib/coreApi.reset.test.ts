@@ -90,7 +90,9 @@ describe("CoreAPI reset method", () => {
 
     // Attempting to call an API method should not use the old WebSocket
     expect(() => {
-      CoreAPI.version();
+      const promise = CoreAPI.version();
+      // Attach catch handler to prevent unhandled rejection when CoreAPI.reset() is called
+      promise.catch(() => {});
     }).not.toThrow();
   });
 

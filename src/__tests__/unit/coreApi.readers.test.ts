@@ -16,6 +16,10 @@ describe("CoreAPI - readers method", () => {
     expect((CoreAPI as any).readers).toBeDefined();
 
     const promise = (CoreAPI as any).readers();
+    // Attach catch handler immediately to prevent unhandled rejection
+    // when CoreAPI.reset() is called in test-setup.ts afterEach
+    promise.catch(() => {});
+
     expect(promise).toBeInstanceOf(Promise);
 
     // Should call send with correct method

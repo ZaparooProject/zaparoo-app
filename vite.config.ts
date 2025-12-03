@@ -1,6 +1,7 @@
 import { defineConfig, ServerOptions } from "vite";
 import react from "@vitejs/plugin-react";
-import { TanStackRouterVite } from "@tanstack/router-vite-plugin";
+import legacy from "@vitejs/plugin-legacy";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import { visualizer } from "rollup-plugin-visualizer";
 import path from "path";
 import dotenv from "dotenv";
@@ -21,7 +22,21 @@ export default defineConfig(({ command, mode }) => {
     };
   }
 
-  const plugins = [react(), TanStackRouterVite()];
+  const plugins = [
+    tanstackRouter({ autoCodeSplitting: true }),
+    react(),
+    legacy({
+      targets: [
+        "chrome >= 49",
+        "safari >= 11",
+        "firefox >= 52",
+        "ios >= 11",
+        "android >= 49",
+      ],
+      additionalLegacyPolyfills: ["regenerator-runtime/runtime"],
+      modernPolyfills: true,
+    }),
+  ];
 
   if (mode === "analyze") {
     plugins.push(
@@ -53,34 +68,70 @@ export default defineConfig(({ command, mode }) => {
           pure_funcs: ["console.log", "console.info", "console.debug"],
         },
       },
+      chunkSizeWarningLimit: 700,
       rollupOptions: {
         output: {
           manualChunks: (id) => {
-            if (id.includes("node_modules")) {
-              if (id.includes("react") || id.includes("react-dom")) {
-                return "vendor";
-              }
-              if (id.includes("@tanstack/react-router")) {
-                return "router";
-              }
-              if (id.includes("firebase")) {
-                return "firebase";
-              }
-              if (id.includes("i18next")) {
-                return "i18n";
-              }
-              if (id.includes("lucide")) {
-                return "icons";
-              }
-              if (id.includes("@capacitor")) {
-                return "capacitor";
-              }
-              return "vendor-other";
+            // Only process node_modules
+            if (!id.includes("node_modules")) {
+              return;
             }
+
+            // Extract the package name from the path (handles pnpm's .pnpm structure)
+            // e.g., "node_modules/.pnpm/firebase@11.0.0/node_modules/firebase/..." -> "firebase"
+            // e.g., "node_modules/react/..." -> "react"
+            let packageName: string;
+            if (id.includes("node_modules/.pnpm/")) {
+              // pnpm structure: get the package name after .pnpm/
+              const pnpmPart = id.split("node_modules/.pnpm/")[1];
+              // Handle scoped packages: @scope+package@version -> @scope/package
+              const nameWithVersion = pnpmPart.split("/")[0];
+              // Remove version suffix (@x.x.x)
+              packageName = nameWithVersion
+                .replace(/@[\d.]+.*$/, "")
+                .replace(/\+/g, "/");
+            } else {
+              // Standard node_modules structure
+              const parts = id.split("node_modules/")[1].split("/");
+              // Handle scoped packages (@org/package)
+              packageName = parts[0].startsWith("@")
+                ? `${parts[0]}/${parts[1]}`
+                : parts[0];
+            }
+
+            // Group large, stable packages into their own chunks
+            if (
+              packageName === "firebase" ||
+              packageName.startsWith("@firebase/")
+            ) {
+              return "vendor-firebase";
+            }
+
+            if (packageName === "rollbar" || packageName === "@rollbar/react") {
+              return "vendor-rollbar";
+            }
+
+            if (
+              packageName.startsWith("i18next") ||
+              packageName === "react-i18next"
+            ) {
+              return "vendor-i18n";
+            }
+
+            if (
+              packageName.startsWith("@capacitor") ||
+              packageName.startsWith("@capawesome") ||
+              packageName.startsWith("@capgo/") ||
+              packageName.startsWith("@revenuecat/")
+            ) {
+              return "vendor-capacitor";
+            }
+
+            // Everything else goes into a shared vendor chunk
+            return "vendor";
           },
         },
       },
-      chunkSizeWarningLimit: 500,
     },
   };
 });

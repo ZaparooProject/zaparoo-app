@@ -1,15 +1,25 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 
-// Mock rollbar before importing logger
-vi.mock("../../../lib/rollbar", () => ({
-  isRollbarEnabled: true,
-  rollbar: {
-    error: vi.fn(),
-    warning: vi.fn(),
-    info: vi.fn(),
-    debug: vi.fn(),
-    critical: vi.fn(),
+// Mock Capacitor to simulate native platform
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    getPlatform: () => "ios",
+    isNativePlatform: () => true,
   },
+}));
+
+// Mock rollbar module that logger will lazy-load
+const mockRollbar = {
+  error: vi.fn(),
+  warning: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+  critical: vi.fn(),
+};
+
+vi.mock("../../../lib/rollbar", () => ({
+  rollbar: mockRollbar,
+  rollbarConfig: {},
 }));
 
 // Mock store
@@ -19,14 +29,6 @@ vi.mock("../../../lib/store", () => ({
       connectionState: "connected",
       connected: true,
     }),
-  },
-}));
-
-// Mock Capacitor
-vi.mock("@capacitor/core", () => ({
-  Capacitor: {
-    getPlatform: () => "ios",
-    isNativePlatform: () => true,
   },
 }));
 
@@ -42,9 +44,13 @@ vi.mock("@capacitor/device", () => ({
   },
 }));
 
+// Mock import.meta.env for production mode with token
+vi.stubEnv("PROD", true);
+vi.stubEnv("VITE_ROLLBAR_ACCESS_TOKEN", "test-token");
+
 describe("Logger Rate Limiting", () => {
   let logger: typeof import("../../../lib/logger").logger;
-  let rollbar: typeof import("../../../lib/rollbar").rollbar;
+  let rollbarPromise: typeof import("../../../lib/logger").rollbarPromise;
 
   beforeEach(async () => {
     vi.useFakeTimers();
@@ -52,10 +58,12 @@ describe("Logger Rate Limiting", () => {
 
     // Re-import after resetting modules to get fresh state
     const loggerModule = await import("../../../lib/logger");
-    const rollbarModule = await import("../../../lib/rollbar");
 
     logger = loggerModule.logger;
-    rollbar = rollbarModule.rollbar;
+    rollbarPromise = loggerModule.rollbarPromise;
+
+    // Wait for rollbar to be loaded
+    await rollbarPromise;
 
     vi.clearAllMocks();
   });
@@ -67,7 +75,7 @@ describe("Logger Rate Limiting", () => {
   it("should report the first error", () => {
     logger.error("Test error", { category: "general", action: "test" });
 
-    expect(rollbar.error).toHaveBeenCalledTimes(1);
+    expect(mockRollbar.error).toHaveBeenCalledTimes(1);
   });
 
   it("should throttle duplicate errors within the same minute", () => {
@@ -75,12 +83,12 @@ describe("Logger Rate Limiting", () => {
 
     // First call should go through
     logger.error("NFC error", { ...metadata });
-    expect(rollbar.error).toHaveBeenCalledTimes(1);
+    expect(mockRollbar.error).toHaveBeenCalledTimes(1);
 
     // Same fingerprint within 1 minute should be throttled
     logger.error("NFC error", { ...metadata });
     logger.error("NFC error", { ...metadata });
-    expect(rollbar.error).toHaveBeenCalledTimes(1);
+    expect(mockRollbar.error).toHaveBeenCalledTimes(1);
   });
 
   it("should allow different error fingerprints", () => {
@@ -88,7 +96,7 @@ describe("Logger Rate Limiting", () => {
     logger.error("Error 2", { category: "api" as const, action: "fetch" });
     logger.error("Error 3", { category: "storage" as const, action: "save" });
 
-    expect(rollbar.error).toHaveBeenCalledTimes(3);
+    expect(mockRollbar.error).toHaveBeenCalledTimes(3);
   });
 
   it("should enforce global limit of 10 errors per minute", () => {
@@ -101,7 +109,7 @@ describe("Logger Rate Limiting", () => {
     }
 
     // Only 10 should be reported
-    expect(rollbar.error).toHaveBeenCalledTimes(10);
+    expect(mockRollbar.error).toHaveBeenCalledTimes(10);
   });
 
   it("should reset rate limits after 1 minute", () => {
@@ -112,14 +120,14 @@ describe("Logger Rate Limiting", () => {
         action: `action${i}`,
       });
     }
-    expect(rollbar.error).toHaveBeenCalledTimes(10);
+    expect(mockRollbar.error).toHaveBeenCalledTimes(10);
 
     // This should be throttled
     logger.error("Error 11", {
       category: "general" as const,
       action: "action11",
     });
-    expect(rollbar.error).toHaveBeenCalledTimes(10);
+    expect(mockRollbar.error).toHaveBeenCalledTimes(10);
 
     // Advance time by 61 seconds
     vi.advanceTimersByTime(61_000);
@@ -129,7 +137,7 @@ describe("Logger Rate Limiting", () => {
       category: "general" as const,
       action: "actionNew",
     });
-    expect(rollbar.error).toHaveBeenCalledTimes(11);
+    expect(mockRollbar.error).toHaveBeenCalledTimes(11);
   });
 
   it("should allow same fingerprint after throttle window expires", () => {
@@ -137,48 +145,46 @@ describe("Logger Rate Limiting", () => {
 
     // First call
     logger.error("NFC error", { ...metadata });
-    expect(rollbar.error).toHaveBeenCalledTimes(1);
+    expect(mockRollbar.error).toHaveBeenCalledTimes(1);
 
     // Throttled
     logger.error("NFC error", { ...metadata });
-    expect(rollbar.error).toHaveBeenCalledTimes(1);
+    expect(mockRollbar.error).toHaveBeenCalledTimes(1);
 
     // Advance past throttle window
     vi.advanceTimersByTime(61_000);
 
     // Should now go through
     logger.error("NFC error", { ...metadata });
-    expect(rollbar.error).toHaveBeenCalledTimes(2);
+    expect(mockRollbar.error).toHaveBeenCalledTimes(2);
   });
 
-  it("should use correct severity method on rollbar", async () => {
-    const rollbarModule = await import("../../../lib/rollbar");
-
+  it("should use correct severity method on rollbar", () => {
     logger.error("Critical error", {
       category: "general" as const,
       severity: "critical",
     });
-    expect(rollbarModule.rollbar.critical).toHaveBeenCalledTimes(1);
+    expect(mockRollbar.critical).toHaveBeenCalledTimes(1);
 
     logger.error("Warning", {
       category: "general" as const,
       severity: "warning",
       action: "warn",
     });
-    expect(rollbarModule.rollbar.warning).toHaveBeenCalledTimes(1);
+    expect(mockRollbar.warning).toHaveBeenCalledTimes(1);
 
     logger.error("Info", {
       category: "general" as const,
       severity: "info",
       action: "info",
     });
-    expect(rollbarModule.rollbar.info).toHaveBeenCalledTimes(1);
+    expect(mockRollbar.info).toHaveBeenCalledTimes(1);
   });
 
   it("should include base context in error reports", () => {
     logger.error("Test error", { category: "nfc" as const, action: "test" });
 
-    expect(rollbar.error).toHaveBeenCalledWith(
+    expect(mockRollbar.error).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({
         platform: "ios",

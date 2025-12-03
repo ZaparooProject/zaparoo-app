@@ -74,8 +74,8 @@ describe("TourInitializer", () => {
 
     renderHook(() => TourInitializer());
 
-    // Fast-forward timers
-    vi.runAllTimers();
+    // Fast-forward timers and flush promises for dynamic import
+    await vi.runAllTimersAsync();
 
     expect(createAppTour).toHaveBeenCalled();
   });
@@ -87,7 +87,7 @@ describe("TourInitializer", () => {
 
     renderHook(() => TourInitializer());
 
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
 
     expect(createAppTour).toHaveBeenCalledWith(
       expect.any(Function),
@@ -101,7 +101,7 @@ describe("TourInitializer", () => {
 
     renderHook(() => TourInitializer());
 
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
 
     expect(createAppTour).toHaveBeenCalled();
 
@@ -118,7 +118,7 @@ describe("TourInitializer", () => {
 
     renderHook(() => TourInitializer());
 
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
 
     expect(createAppTour).toHaveBeenCalled();
 
@@ -149,11 +149,11 @@ describe("TourInitializer", () => {
     renderHook(() => TourInitializer());
 
     // Before 1 second
-    vi.advanceTimersByTime(999);
+    await vi.advanceTimersByTimeAsync(999);
     expect(createAppTour).not.toHaveBeenCalled();
 
-    // After 1 second
-    vi.advanceTimersByTime(1);
+    // After 1 second - flush promises for dynamic import
+    await vi.advanceTimersByTimeAsync(1);
 
     expect(createAppTour).toHaveBeenCalled();
   });

@@ -7,11 +7,9 @@ import { LOG_LEVEL, Purchases } from "@revenuecat/purchases-capacitor";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { initializeApp } from "firebase/app";
-import { Provider as RollbarProvider, ErrorBoundary } from "@rollbar/react";
 import App from "./App";
 import firebaseConfig from "./firebase.json";
 import { ThemeProvider } from "./components/theme-provider";
-import { rollbarConfig, isRollbarEnabled } from "./lib/rollbar";
 import { ErrorComponent } from "./components/ErrorComponent";
 
 initializeApp(firebaseConfig);
@@ -61,12 +59,25 @@ const AppContent = (
   </ThemeProvider>
 );
 
-const rootElement = document.getElementById("app")!;
-if (!rootElement.innerHTML) {
+// Check if Rollbar should be enabled (native + production + token present)
+const isNative = Capacitor.isNativePlatform();
+const isProduction = import.meta.env.PROD;
+const shouldEnableRollbar =
+  isNative && isProduction && !!import.meta.env.VITE_ROLLBAR_ACCESS_TOKEN;
+
+async function renderApp() {
+  const rootElement = document.getElementById("app")!;
+  if (rootElement.innerHTML) return;
+
   const root = ReactDOM.createRoot(rootElement);
-  root.render(
-    <StrictMode>
-      {isRollbarEnabled ? (
+
+  if (shouldEnableRollbar) {
+    // Lazy-load Rollbar only on native platforms to reduce web bundle size
+    const [{ Provider: RollbarProvider, ErrorBoundary }, { rollbarConfig }] =
+      await Promise.all([import("@rollbar/react"), import("./lib/rollbar")]);
+
+    root.render(
+      <StrictMode>
         <RollbarProvider config={rollbarConfig}>
           <ErrorBoundary
             fallbackUI={({ error }) => (
@@ -76,9 +87,11 @@ if (!rootElement.innerHTML) {
             {AppContent}
           </ErrorBoundary>
         </RollbarProvider>
-      ) : (
-        AppContent
-      )}
-    </StrictMode>,
-  );
+      </StrictMode>,
+    );
+  } else {
+    root.render(<StrictMode>{AppContent}</StrictMode>);
+  }
 }
+
+renderApp();

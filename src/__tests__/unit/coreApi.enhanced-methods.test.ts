@@ -205,6 +205,8 @@ describe("CoreAPI - Enhanced Methods", () => {
   describe("callWithTracking", () => {
     it("should track request ID and provide cancellation capability", () => {
       const { id, promise } = CoreAPI.callWithTracking("version" as any);
+      // Attach catch handler to prevent unhandled rejection when CoreAPI.reset() is called
+      promise.catch(() => {});
 
       expect(id).toBeTruthy();
       expect(promise).toBeInstanceOf(Promise);
@@ -236,6 +238,8 @@ describe("CoreAPI - Enhanced Methods", () => {
 
       // Just verify the method exists and can be called without the complex timeout testing
       const result = CoreAPI.callWithTracking("version" as any);
+      // Attach catch handler to prevent unhandled rejection when CoreAPI.reset() is called
+      result.promise.catch(() => {});
       expect(result.id).toBeTruthy();
       expect(result.promise).toBeInstanceOf(Promise);
     });

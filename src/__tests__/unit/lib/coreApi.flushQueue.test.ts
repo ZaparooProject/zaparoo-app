@@ -67,7 +67,9 @@ describe("CoreAPI flushQueue TTL", () => {
     CoreAPI.setWsInstance(mockTransport as never);
 
     // Queue a request
-    CoreAPI.call(Method.Media);
+    const promise = CoreAPI.call(Method.Media);
+    // Attach catch handler to prevent unhandled rejection when CoreAPI.reset() is called
+    promise.catch(() => {});
 
     // Advance time by only 5 seconds (within TTL)
     vi.advanceTimersByTime(5000);
@@ -92,7 +94,9 @@ describe("CoreAPI flushQueue TTL", () => {
     vi.advanceTimersByTime(11000);
 
     // Queue second request (fresh)
-    CoreAPI.call(Method.Tokens);
+    const freshPromise = CoreAPI.call(Method.Tokens);
+    // Attach catch handler to prevent unhandled rejection when CoreAPI.reset() is called
+    freshPromise.catch(() => {});
 
     // Now connect and flush
     mockTransport.isConnected = true;

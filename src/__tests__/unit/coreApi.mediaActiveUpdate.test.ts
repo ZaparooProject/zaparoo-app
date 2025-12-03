@@ -23,6 +23,8 @@ describe("CoreAPI - mediaActiveUpdate method", () => {
     expect((CoreAPI as any).mediaActiveUpdate).toBeDefined();
 
     const promise = (CoreAPI as any).mediaActiveUpdate(params);
+    // Attach catch handler to prevent unhandled rejection when CoreAPI.reset() is called
+    promise.catch(() => {});
     expect(promise).toBeInstanceOf(Promise);
 
     // Should call send with correct method
