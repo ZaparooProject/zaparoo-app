@@ -45,7 +45,7 @@ export default defineConfig({
     css: false,
 
     coverage: {
-      provider: "v8",
+      provider: "istanbul",
       reporter: ["text", "json", "html", "lcov"],
       reportsDirectory: "./coverage",
 
