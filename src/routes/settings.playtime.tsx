@@ -3,22 +3,22 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useEffect, useRef } from "react";
 import classNames from "classnames";
-import { CoreAPI } from "../lib/coreApi.ts";
-import { ToggleSwitch } from "../components/wui/ToggleSwitch";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { useStatusStore } from "../lib/store";
-import { PageFrame } from "../components/PageFrame";
-import { BackIcon } from "../lib/images";
-import { HeaderButton } from "../components/wui/HeaderButton";
-import { TextInput } from "../components/wui/TextInput";
-import { Skeleton } from "../components/ui/skeleton";
+import { CoreAPI } from "@/lib/coreApi.ts";
+import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
+import { useSmartSwipe } from "@/hooks/useSmartSwipe";
+import { useStatusStore } from "@/lib/store";
+import { PageFrame } from "@/components/PageFrame";
+import { BackIcon } from "@/lib/images";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { TextInput } from "@/components/wui/TextInput";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   formatDuration,
   formatDurationDisplay,
   formatDurationAccessible,
   parseDuration,
-} from "../lib/utils";
-import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
+} from "@/lib/utils";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/settings/playtime")({
   component: PlaytimeSettings,

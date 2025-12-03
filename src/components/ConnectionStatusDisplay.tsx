@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CheckCircle2, AlertCircle, WifiOff, Loader2 } from "lucide-react";
-import { useConnection } from "../hooks/useConnection";
-import { getDeviceAddress } from "../lib/coreApi";
+import { useConnection } from "@/hooks/useConnection";
+import { getDeviceAddress } from "@/lib/coreApi";
 
 type ConnectionUIState =
   | "connecting"

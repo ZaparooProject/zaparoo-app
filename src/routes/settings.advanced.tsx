@@ -2,17 +2,17 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { CoreAPI } from "../lib/coreApi.ts";
-import { ToggleSwitch } from "../components/wui/ToggleSwitch";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { useStatusStore } from "../lib/store";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { PageFrame } from "../components/PageFrame";
-import { UpdateSettingsRequest } from "../lib/models.ts";
-import { BackIcon, NextIcon } from "../lib/images";
-import { HeaderButton } from "../components/wui/HeaderButton";
-import { RestorePuchasesButton } from "../components/ProPurchase";
-import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
+import { CoreAPI } from "@/lib/coreApi.ts";
+import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
+import { useSmartSwipe } from "@/hooks/useSmartSwipe";
+import { useStatusStore } from "@/lib/store";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { PageFrame } from "@/components/PageFrame";
+import { UpdateSettingsRequest } from "@/lib/models.ts";
+import { BackIcon, NextIcon } from "@/lib/images";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { RestorePuchasesButton } from "@/components/ProPurchase";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/settings/advanced")({
   component: AdvancedSettings,

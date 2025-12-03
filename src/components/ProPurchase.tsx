@@ -9,10 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { logger } from "../lib/logger";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { useStatusStore } from "../lib/store";
-import { useHaptics } from "../hooks/useHaptics";
+import { logger } from "@/lib/logger";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { useStatusStore } from "@/lib/store";
+import { useHaptics } from "@/hooks/useHaptics";
 import { Button } from "./wui/Button";
 
 export const RestorePuchasesButton = () => {

@@ -9,16 +9,16 @@ import { TrashIcon, Check } from "lucide-react";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { SlideModal } from "@/components/SlideModal.tsx";
 import { Button as SCNButton } from "@/components/ui/button";
-import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
-import i18n from "../i18n";
-import { PageFrame } from "../components/PageFrame";
-import { useStatusStore } from "../lib/store";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { Button } from "../components/wui/Button";
-import { ExternalIcon, NextIcon } from "../lib/images";
-import { getDeviceAddress, setDeviceAddress, CoreAPI } from "../lib/coreApi.ts";
-import { MediaDatabaseCard } from "../components/MediaDatabaseCard";
-import { DeviceConnectionCard } from "../components/DeviceConnectionCard";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import i18n from "@/i18n";
+import { PageFrame } from "@/components/PageFrame";
+import { useStatusStore } from "@/lib/store";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { Button } from "@/components/wui/Button";
+import { ExternalIcon, NextIcon } from "@/lib/images";
+import { getDeviceAddress, setDeviceAddress, CoreAPI } from "@/lib/coreApi.ts";
+import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
+import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
 
 interface LoaderData {
   launcherAccess: boolean;

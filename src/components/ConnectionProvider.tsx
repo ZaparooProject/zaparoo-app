@@ -21,13 +21,13 @@ import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Clock, AlertTriangle } from "lucide-react";
-import { showRateLimitedErrorToast } from "../lib/toastUtils";
+import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import {
   connectionManager,
   type TransportState,
   type DeviceConnection,
-} from "../lib/transport";
-import { logger } from "../lib/logger";
+} from "@/lib/transport";
+import { logger } from "@/lib/logger";
 import {
   IndexResponse,
   Notification,
@@ -35,19 +35,19 @@ import {
   PlaytimeLimitReachedParams,
   PlaytimeLimitWarningParams,
   TokenResponse,
-} from "../lib/models";
+} from "@/lib/models";
 import {
   CoreAPI,
   getDeviceAddress,
   getWsUrl,
   type NotificationRequest,
-} from "../lib/coreApi";
-import { useStatusStore, ConnectionState } from "../lib/store";
-import { formatDurationDisplay, formatDurationAccessible } from "../lib/utils";
+} from "@/lib/coreApi";
+import { useStatusStore, ConnectionState } from "@/lib/store";
+import { formatDurationDisplay, formatDurationAccessible } from "@/lib/utils";
 import {
   ConnectionContext,
   type ConnectionContextValue,
-} from "../hooks/useConnection";
+} from "@/hooks/useConnection";
 import { useAnnouncer } from "./A11yAnnouncer";
 
 interface ConnectionProviderProps {

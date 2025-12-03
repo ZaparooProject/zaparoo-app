@@ -3,10 +3,10 @@ import { App } from "@capacitor/app";
 import React, { useRef } from "react";
 import { SafeAreaHandler } from "@/lib/safeArea";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
-import { BottomNav } from "../components/BottomNav";
-import { TourInitializer } from "../components/TourInitializer";
-import { useBackButtonHandler } from "../hooks/useBackButtonHandler";
-import { SkipLink } from "../components/SkipLink";
+import { BottomNav } from "@/components/BottomNav";
+import { TourInitializer } from "@/components/TourInitializer";
+import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
+import { SkipLink } from "@/components/SkipLink";
 
 function BackHandler() {
   const navigate = useNavigate();

@@ -5,25 +5,25 @@ import { Capacitor } from "@capacitor/core";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import classNames from "classnames";
-import { ToggleSwitch } from "../components/wui/ToggleSwitch";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { useStatusStore } from "../lib/store";
-import { PageFrame } from "../components/PageFrame";
+import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
+import { useSmartSwipe } from "@/hooks/useSmartSwipe";
+import { useStatusStore } from "@/lib/store";
+import { PageFrame } from "@/components/PageFrame";
 import {
   usePreferencesStore,
   selectAppSettings,
   selectShakeSettings,
-} from "../lib/preferencesStore";
-import { BackIcon, CheckIcon } from "../lib/images";
-import { HeaderButton } from "../components/wui/HeaderButton";
-import { SystemSelector } from "../components/SystemSelector";
-import { Button } from "../components/wui/Button";
-import { useProPurchase } from "../components/ProPurchase";
-import { ProBadge } from "../components/ProBadge";
-import { ZapScriptInput } from "../components/ZapScriptInput";
-import { CoreAPI } from "../lib/coreApi.ts";
-import { UpdateSettingsRequest } from "../lib/models.ts";
-import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
+} from "@/lib/preferencesStore";
+import { BackIcon, CheckIcon } from "@/lib/images";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { SystemSelector } from "@/components/SystemSelector";
+import { Button } from "@/components/wui/Button";
+import { useProPurchase } from "@/components/ProPurchase";
+import { ProBadge } from "@/components/ProBadge";
+import { ZapScriptInput } from "@/components/ZapScriptInput";
+import { CoreAPI } from "@/lib/coreApi.ts";
+import { UpdateSettingsRequest } from "@/lib/models.ts";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
 interface LoaderData {
   restartScan: boolean;

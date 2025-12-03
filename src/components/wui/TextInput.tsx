@@ -2,7 +2,7 @@
 import React, { KeyboardEventHandler, useEffect, useState, useId } from "react";
 import classNames from "classnames";
 import { useHaptics } from "@/hooks/useHaptics";
-import { SaveIcon, ClearIcon } from "../../lib/images";
+import { SaveIcon, ClearIcon } from "@/lib/images";
 import { Button } from "./Button";
 
 export function TextInput(props: {

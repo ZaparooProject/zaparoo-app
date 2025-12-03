@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Trash2 } from "lucide-react";
-import { RecentSearch } from "../hooks/useRecentSearches";
-import { SearchIcon } from "../lib/images";
+import { RecentSearch } from "@/hooks/useRecentSearches";
+import { SearchIcon } from "@/lib/images";
 import { SlideModal } from "./SlideModal";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";

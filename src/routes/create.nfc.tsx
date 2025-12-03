@@ -1,29 +1,24 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { logger } from "../lib/logger";
+import { logger } from "@/lib/logger";
 // import {
 //   ScanTextIcon,
 //   PenToolIcon,
 //   WrenchIcon,
 //   ClockIcon
 // } from "lucide-react";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { useHaptics } from "../hooks/useHaptics";
-import { WriteModal } from "../components/WriteModal";
-import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { PageFrame } from "../components/PageFrame";
-import { HeaderButton } from "../components/wui/HeaderButton";
-import { BackIcon } from "../lib/images";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "../components/ui/tabs";
-import { ReadTab } from "../components/nfc/ReadTab";
-import { ToolsTab } from "../components/nfc/ToolsTab";
-import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
+import { useSmartSwipe } from "@/hooks/useSmartSwipe";
+import { useHaptics } from "@/hooks/useHaptics";
+import { WriteModal } from "@/components/WriteModal";
+import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { PageFrame } from "@/components/PageFrame";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { BackIcon } from "@/lib/images";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ReadTab } from "@/components/nfc/ReadTab";
+import { ToolsTab } from "@/components/nfc/ToolsTab";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/create/nfc")({
   component: NfcUtils,

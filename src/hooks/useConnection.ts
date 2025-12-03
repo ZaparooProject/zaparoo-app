@@ -6,7 +6,7 @@
  */
 
 import { createContext, useContext } from "react";
-import type { DeviceConnection } from "../lib/transport";
+import type { DeviceConnection } from "@/lib/transport";
 
 /**
  * Context value for connection state.

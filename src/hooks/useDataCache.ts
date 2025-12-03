@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { Preferences } from "@capacitor/preferences";
 import { useShallow } from "zustand/react/shallow";
-import { IndexResponse, TokenResponse, PlayingResponse } from "../lib/models";
-import { useStatusStore } from "../lib/store";
-import { logger } from "../lib/logger";
+import { IndexResponse, TokenResponse, PlayingResponse } from "@/lib/models";
+import { useStatusStore } from "@/lib/store";
+import { logger } from "@/lib/logger";
 
 export function useDataCache(): void {
   const { setGamesIndex, setLastToken, setPlaying } = useStatusStore(

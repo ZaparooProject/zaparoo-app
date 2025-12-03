@@ -1,8 +1,8 @@
 import { useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { logger } from "../lib/logger";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { logger } from "@/lib/logger";
 
 /**
  * Hook providing haptic feedback functionality.

@@ -1,12 +1,12 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Browser } from "@capacitor/browser";
-import { PageFrame } from "../components/PageFrame";
-import { HeaderButton } from "../components/wui/HeaderButton";
-import { Button } from "../components/wui/Button.tsx";
-import { BackIcon } from "../lib/images";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
+import { PageFrame } from "@/components/PageFrame";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { Button } from "@/components/wui/Button.tsx";
+import { BackIcon } from "@/lib/images";
+import { useSmartSwipe } from "@/hooks/useSmartSwipe";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/settings/about")({
   component: About,

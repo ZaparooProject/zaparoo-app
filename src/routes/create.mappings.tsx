@@ -13,12 +13,12 @@ import { CoreAPI } from "@/lib/coreApi.ts";
 import { useStatusStore } from "@/lib/store.ts";
 import { MappingResponse } from "@/lib/models.ts";
 import { logger } from "@/lib/logger";
-import { Button } from "../components/wui/Button";
-import { PageFrame } from "../components/PageFrame";
-import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { WriteModal } from "../components/WriteModal";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
+import { Button } from "@/components/wui/Button";
+import { PageFrame } from "@/components/PageFrame";
+import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { WriteModal } from "@/components/WriteModal";
+import { useSmartSwipe } from "@/hooks/useSmartSwipe";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/create/mappings")({
   component: Mappings,

@@ -3,15 +3,15 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
-import { BackIcon, CreateIcon } from "../lib/images";
-import { HeaderButton } from "../components/wui/HeaderButton";
-import { Button } from "../components/wui/Button";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { WriteModal } from "../components/WriteModal";
-import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { PageFrame } from "../components/PageFrame";
-import { usePreferencesStore, selectCustomText } from "../lib/preferencesStore";
-import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
+import { BackIcon, CreateIcon } from "@/lib/images";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { Button } from "@/components/wui/Button";
+import { useSmartSwipe } from "@/hooks/useSmartSwipe";
+import { WriteModal } from "@/components/WriteModal";
+import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { PageFrame } from "@/components/PageFrame";
+import { usePreferencesStore, selectCustomText } from "@/lib/preferencesStore";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/create/custom")({
   component: CustomText,

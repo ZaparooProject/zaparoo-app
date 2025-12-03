@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { logger } from "../lib/logger";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { logger } from "@/lib/logger";
 
 /**
  * Hook to check Pro access status from RevenueCat on app startup.

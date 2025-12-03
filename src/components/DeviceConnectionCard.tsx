@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftRightIcon } from "lucide-react";
-import { useConnection } from "../hooks/useConnection";
-import { CoreAPI, getDeviceAddress } from "../lib/coreApi";
+import { useConnection } from "@/hooks/useConnection";
+import { CoreAPI, getDeviceAddress } from "@/lib/coreApi";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 import { TextInput } from "./wui/TextInput";

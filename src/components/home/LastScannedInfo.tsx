@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
-import { TokenResponse, ScanResult } from "../../lib/models";
+import { TokenResponse, ScanResult } from "@/lib/models";
 import { successColor } from "../ScanSpinner";
 import { CopyButton } from "../CopyButton";
 

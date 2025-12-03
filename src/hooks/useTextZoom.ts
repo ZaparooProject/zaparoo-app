@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
 import { TextZoom } from "@capacitor/text-zoom";
-import { logger } from "../lib/logger";
+import { logger } from "@/lib/logger";
 
 interface TextZoomState {
   /** Current zoom level (1.0 = 100%, 1.5 = 150%, etc.) */

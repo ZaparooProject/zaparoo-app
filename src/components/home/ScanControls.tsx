@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Camera } from "lucide-react";
+import { ScanResult } from "@/lib/models";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 import { ScanSpinner } from "../ScanSpinner";
 import { Button } from "../wui/Button";
-import { ScanResult } from "../../lib/models";
-import { usePreferencesStore } from "../../lib/preferencesStore";
 
 /** Get screen reader announcement for current scan state */
 function getScanStatusAnnouncement(

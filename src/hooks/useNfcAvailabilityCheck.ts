@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { logger } from "../lib/logger";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { logger } from "@/lib/logger";
 
 /**
  * Hook to check NFC availability once at app startup.

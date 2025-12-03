@@ -4,10 +4,10 @@ import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { WriteAction, useNfcWriter, WriteMethod } from "@/lib/writeNfcHook";
-import { useStatusStore } from "../lib/store";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { CoreAPI } from "../lib/coreApi";
-import { logger } from "../lib/logger";
+import { useStatusStore } from "@/lib/store";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { CoreAPI } from "@/lib/coreApi";
+import { logger } from "@/lib/logger";
 
 interface UseWriteQueueProcessorReturn {
   reset: () => void;

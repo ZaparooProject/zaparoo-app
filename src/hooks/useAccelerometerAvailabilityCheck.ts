@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { CapacitorShake } from "@capgo/capacitor-shake";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { logger } from "../lib/logger";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { logger } from "@/lib/logger";
 
 /**
  * Hook to check accelerometer/shake detection availability once at app startup.

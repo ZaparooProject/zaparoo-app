@@ -2,15 +2,15 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import classNames from "classnames";
-import { ToggleSwitch } from "../components/wui/ToggleSwitch";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { PageFrame } from "../components/PageFrame";
-import { BackIcon, CheckIcon } from "../lib/images";
-import { HeaderButton } from "../components/wui/HeaderButton";
-import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
-import { useTextZoom } from "../hooks/useTextZoom";
-import { useHaptics } from "../hooks/useHaptics";
+import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
+import { useSmartSwipe } from "@/hooks/useSmartSwipe";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { PageFrame } from "@/components/PageFrame";
+import { BackIcon, CheckIcon } from "@/lib/images";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { useTextZoom } from "@/hooks/useTextZoom";
+import { useHaptics } from "@/hooks/useHaptics";
 
 export const Route = createFileRoute("/settings/accessibility")({
   component: AccessibilitySettings,

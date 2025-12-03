@@ -3,12 +3,12 @@ import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
 import toast from "react-hot-toast";
-import { cancelSession, readTag, sessionManager, Status } from "../lib/nfc";
-import { ScanResult, TokenResponse } from "../lib/models";
-import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { runToken } from "../lib/tokenOperations.tsx";
-import { logger } from "../lib/logger";
-import { useAnnouncer } from "../components/A11yAnnouncer";
+import { cancelSession, readTag, sessionManager, Status } from "@/lib/nfc";
+import { ScanResult, TokenResponse } from "@/lib/models";
+import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { runToken } from "@/lib/tokenOperations.tsx";
+import { logger } from "@/lib/logger";
+import { useAnnouncer } from "@/components/A11yAnnouncer";
 
 interface UseScanOperationsProps {
   connected: boolean;

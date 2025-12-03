@@ -2,9 +2,9 @@ import { useEffect, useRef } from "react";
 import type { PluginListenerHandle } from "@capacitor/core";
 import { Capacitor } from "@capacitor/core";
 import { CapacitorShake } from "@capgo/capacitor-shake";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { useStatusStore } from "../lib/store";
-import { logger } from "../lib/logger";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { useStatusStore } from "@/lib/store";
+import { logger } from "@/lib/logger";
 
 interface UseShakeDetectionProps {
   shakeEnabled: boolean;

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { filenameFromPath } from "@/lib/path.ts";
 import { usePreferencesStore } from "@/lib/preferencesStore.ts";
-import { StopIcon } from "../../lib/images";
+import { StopIcon } from "@/lib/images";
 import { Button } from "../wui/Button";
 
 interface NowPlayingInfoProps {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Preferences } from "@capacitor/preferences";
-import { sessionManager } from "../lib/nfc";
-import { logger } from "../lib/logger";
+import { sessionManager } from "@/lib/nfc";
+import { logger } from "@/lib/logger";
 
 interface UseAppSettingsProps {
   initData: {

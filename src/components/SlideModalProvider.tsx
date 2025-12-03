@@ -2,7 +2,7 @@ import { useRef, useCallback, ReactNode } from "react";
 import {
   SlideModalContext,
   SlideModalManager,
-} from "../hooks/useSlideModalManager";
+} from "@/hooks/useSlideModalManager";
 
 export const SlideModalProvider = ({ children }: { children: ReactNode }) => {
   const modals = useRef<Map<string, () => void>>(new Map());

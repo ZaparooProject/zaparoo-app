@@ -8,8 +8,8 @@ import { Folder, FileCode, Tag, Copy } from "lucide-react";
 import { VirtualSearchResults } from "@/components/VirtualSearchResults.tsx";
 import { BackToTop } from "@/components/BackToTop.tsx";
 import { TagBadge } from "@/components/TagBadge.tsx";
-import { logger } from "../lib/logger";
-import { CoreAPI } from "../lib/coreApi.ts";
+import { logger } from "@/lib/logger";
+import { CoreAPI } from "@/lib/coreApi.ts";
 import {
   BackIcon,
   CreateIcon,
@@ -17,28 +17,28 @@ import {
   SearchIcon,
   HistoryIcon,
   DeviceIcon,
-} from "../lib/images";
-import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { SearchResultGame, SystemsResponse } from "../lib/models";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { filenameFromPath } from "../lib/path";
-import { SlideModal } from "../components/SlideModal";
-import { Button } from "../components/wui/Button";
-import { HeaderButton } from "../components/wui/HeaderButton";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { useHaptics } from "../hooks/useHaptics";
-import { useStatusStore } from "../lib/store";
-import { TextInput } from "../components/wui/TextInput";
-import { WriteModal } from "../components/WriteModal";
-import { PageFrame } from "../components/PageFrame";
+} from "@/lib/images";
+import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { SearchResultGame, SystemsResponse } from "@/lib/models";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { filenameFromPath } from "@/lib/path";
+import { SlideModal } from "@/components/SlideModal";
+import { Button } from "@/components/wui/Button";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { useSmartSwipe } from "@/hooks/useSmartSwipe";
+import { useHaptics } from "@/hooks/useHaptics";
+import { useStatusStore } from "@/lib/store";
+import { TextInput } from "@/components/wui/TextInput";
+import { WriteModal } from "@/components/WriteModal";
+import { PageFrame } from "@/components/PageFrame";
 import {
   SystemSelector,
   SystemSelectorTrigger,
-} from "../components/SystemSelector";
-import { TagSelector, TagSelectorTrigger } from "../components/TagSelector";
-import { useRecentSearches } from "../hooks/useRecentSearches";
-import { RecentSearchesModal } from "../components/RecentSearchesModal";
-import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
+} from "@/components/SystemSelector";
+import { TagSelector, TagSelectorTrigger } from "@/components/TagSelector";
+import { useRecentSearches } from "@/hooks/useRecentSearches";
+import { RecentSearchesModal } from "@/components/RecentSearchesModal";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/create/search")({
   loader: async (): Promise<LoaderData> => {

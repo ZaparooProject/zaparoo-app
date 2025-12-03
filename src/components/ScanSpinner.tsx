@@ -3,9 +3,9 @@ import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { ScanResult } from "../lib/models";
-import { DownIcon, SettingsIcon, WarningIcon } from "../lib/images";
-import { usePreferencesStore } from "../lib/preferencesStore";
+import { ScanResult } from "@/lib/models";
+import { DownIcon, SettingsIcon, WarningIcon } from "@/lib/images";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 

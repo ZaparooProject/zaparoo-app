@@ -5,15 +5,15 @@ import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import toast from "react-hot-toast";
 import { Browser } from "@capacitor/browser";
 import { ExternalLinkIcon, LogInIcon, LogOutIcon } from "lucide-react";
-import { TextInput } from "../components/wui/TextInput.tsx";
-import { Button } from "../components/wui/Button.tsx";
-import { useStatusStore } from "../lib/store.ts";
-import { PageFrame } from "../components/PageFrame.tsx";
-import { HeaderButton } from "../components/wui/HeaderButton";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { BackIcon } from "../lib/images";
-import { logger } from "../lib/logger";
-import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
+import { TextInput } from "@/components/wui/TextInput.tsx";
+import { Button } from "@/components/wui/Button.tsx";
+import { useStatusStore } from "@/lib/store.ts";
+import { PageFrame } from "@/components/PageFrame.tsx";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { useSmartSwipe } from "@/hooks/useSmartSwipe";
+import { BackIcon } from "@/lib/images";
+import { logger } from "@/lib/logger";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/settings/online")({
   component: About,

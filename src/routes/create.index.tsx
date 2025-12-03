@@ -3,15 +3,15 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { ListPlusIcon, NfcIcon } from "lucide-react";
-import { usePageHeadingFocus } from "../hooks/usePageHeadingFocus";
-import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "../lib/images";
-import { useStatusStore } from "../lib/store";
-import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { Card } from "../components/wui/Card";
-import { Button } from "../components/wui/Button";
-import { WriteModal } from "../components/WriteModal";
-import { PageFrame } from "../components/PageFrame";
-import { usePreferencesStore } from "../lib/preferencesStore";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "@/lib/images";
+import { useStatusStore } from "@/lib/store";
+import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { Card } from "@/components/wui/Card";
+import { Button } from "@/components/wui/Button";
+import { WriteModal } from "@/components/WriteModal";
+import { PageFrame } from "@/components/PageFrame";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 
 export const Route = createFileRoute("/create/")({
   component: Create,

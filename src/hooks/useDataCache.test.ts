@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { Preferences } from "@capacitor/preferences";
-import { useStatusStore } from "../lib/store";
+import { useStatusStore } from "@/lib/store";
 import { useDataCache } from "./useDataCache";
 
 // Mock Capacitor Preferences

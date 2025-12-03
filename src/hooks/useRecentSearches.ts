@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Preferences } from "@capacitor/preferences";
-import { logger } from "../lib/logger";
+import { logger } from "@/lib/logger";
 
 export interface RecentSearch {
   query: string;

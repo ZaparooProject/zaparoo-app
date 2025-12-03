@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { useStatusStore } from "../lib/store";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { runToken } from "../lib/tokenOperations.tsx";
-import { logger } from "../lib/logger";
+import { useStatusStore } from "@/lib/store";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { runToken } from "@/lib/tokenOperations.tsx";
+import { logger } from "@/lib/logger";
 
 export function useRunQueueProcessor() {
   const { t } = useTranslation();

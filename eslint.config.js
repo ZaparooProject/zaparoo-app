@@ -87,6 +87,17 @@ export default defineConfig(
 
       // Import rules
       "import-x/no-unresolved": "error",
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["../**/lib/*", "../**/hooks/*", "../**/components/*"],
+              message: "Use @/ alias instead of relative parent imports.",
+            },
+          ],
+        },
+      ],
       "import-x/order": [
         "warn",
         {

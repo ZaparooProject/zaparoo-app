@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { App } from "@capacitor/app";
-import { logger } from "../lib/logger";
+import { logger } from "@/lib/logger";
 
 interface BackButtonHandler {
   id: string;

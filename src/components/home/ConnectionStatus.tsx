@@ -1,12 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { memo } from "react";
-import { getDeviceAddress } from "../../lib/coreApi";
-import { SettingsIcon } from "../../lib/images";
+import { getDeviceAddress } from "@/lib/coreApi";
+import { SettingsIcon } from "@/lib/images";
+import { useStatusStore } from "@/lib/store";
 import { Button } from "../wui/Button";
 import { Card } from "../wui/Card";
 import { ConnectionStatusDisplay } from "../ConnectionStatusDisplay";
-import { useStatusStore } from "../../lib/store";
 
 export const ConnectionStatus = memo(function ConnectionStatus() {
   const { t } = useTranslation();

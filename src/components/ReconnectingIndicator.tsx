@@ -11,7 +11,7 @@
 
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
-import { useConnection } from "../hooks/useConnection";
+import { useConnection } from "@/hooks/useConnection";
 
 export function ReconnectingIndicator() {
   const { t } = useTranslation();
