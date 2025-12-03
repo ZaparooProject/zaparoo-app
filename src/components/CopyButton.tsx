@@ -1,52 +1,72 @@
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import React, { useState } from "react";
 import { Clipboard } from "@capacitor/clipboard";
 import { Capacitor } from "@capacitor/core";
+import { Copy, Check } from "lucide-react";
+import classNames from "classnames";
+import { useHaptics } from "@/hooks/useHaptics";
 
 const writeToClipboard = async (s: string) => {
-  await Clipboard.write({
-    string: s
-  });
+  if (Capacitor.isNativePlatform()) {
+    await Clipboard.write({ string: s });
+  } else {
+    await navigator.clipboard.writeText(s);
+  }
 };
 
-export const CopyButton = (props: { text: string }) => {
-  const { t } = useTranslation();
+export const CopyButton = (props: {
+  text: string;
+  size?: number;
+  className?: string;
+}) => {
+  const [copied, setCopied] = useState(false);
+  const size = props.size ?? 14;
+  const { notification } = useHaptics();
 
-  const [display, setDisplay] = useState(t("copy"));
+  const handleCopy = async (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    if (copied) return;
 
-  if (!Capacitor.isNativePlatform()) {
-    return <></>;
-  }
+    try {
+      await writeToClipboard(props.text);
+    } catch {
+      // Clipboard API may fail on web due to permissions, but browser
+      // fallbacks often still copy the text. Continue with animation.
+    }
+
+    setCopied(true);
+    notification("success");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
-    <span
-      className="ml-1 cursor-pointer px-1 text-xs font-semibold text-white underline"
-      onClick={(e) => {
-        e.stopPropagation();
-        writeToClipboard(props.text).then(() => {
-          setDisplay(t("copied"));
-          setTimeout(() => {
-            setDisplay(t("copy"));
-          }, 2000);
-        });
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          e.stopPropagation();
-          writeToClipboard(props.text).then(() => {
-            setDisplay(t("copied"));
-            setTimeout(() => {
-              setDisplay(t("copy"));
-            }, 2000);
-          });
-        }
-      }}
-      role="button"
-      tabIndex={0}
-      style={{ whiteSpace: "nowrap" }}
+    <button
+      type="button"
+      className={classNames(
+        "relative inline-flex -translate-y-0.5 align-middle",
+        "rounded p-0.5",
+        "text-white/60 hover:text-white",
+        "transition-colors duration-150",
+        "focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
+        props.className,
+      )}
+      onClick={handleCopy}
+      aria-label={copied ? "Copied" : "Copy to clipboard"}
+      style={{ width: size + 4, height: size + 4 }}
     >
-      {display}
-    </span>
+      <Copy
+        size={size}
+        className={classNames(
+          "absolute inset-0 m-auto transition-all duration-200",
+          copied ? "scale-75 opacity-0" : "scale-100 opacity-100",
+        )}
+      />
+      <Check
+        size={size}
+        className={classNames(
+          "absolute inset-0 m-auto text-green-400 transition-all duration-200",
+          copied ? "scale-100 opacity-100" : "scale-75 opacity-0",
+        )}
+      />
+    </button>
   );
 };

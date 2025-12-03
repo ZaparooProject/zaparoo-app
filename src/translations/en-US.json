@@ -6,16 +6,35 @@
     "error": "Error: {{msg}}",
     "loading": "Loading...",
     "cancelling": "Cancelling...",
+    "shareFailed": "Failed to share",
+    "errorBoundary": {
+      "title": "Oops, something really bad happened!",
+      "description": "The application has encountered an unexpected error. Please copy the details below and report this issue.",
+      "diagnosticDetails": "Diagnostic Details",
+      "reload": "Reload Application"
+    },
+    "notConnected": "Not connected to device",
     "yes": "Yes",
+    "none": "None",
+    "duration": {
+      "hours_one": "{{count}} hour",
+      "hours_other": "{{count}} hours",
+      "minutes_one": "{{count}} minute",
+      "minutes_other": "{{count}} minutes"
+    },
+    "selected": "selected",
     "stopPlaying": "This will stop the playing media. You may lose any unsaved progress.",
     "nav": {
+      "back": "Back",
       "cancel": "Cancel",
+      "close": "Close",
       "create": "Create",
       "assign": "Assign",
       "index": "Zap",
       "design": "Design",
       "settings": "Settings",
-      "run": "Run"
+      "run": "Run",
+      "mainNavigation": "Main navigation"
     },
     "spinner": {
       "notSupportedLabel": "Device does not support NFC",
@@ -42,7 +61,7 @@
       "preparingDb": "Preparing database",
       "writingDb": "Writing database to disk",
       "hideLabel": "Hide",
-      "updatedDb": "Games database updated",
+      "updatedDb": "Media database updated",
       "filesFound": "{{count}} items scanned",
       "nowPlayingHeading": "Now playing"
     },
@@ -50,10 +69,15 @@
       "noWriteMethodAvailable": "No NFC writing capability available",
       "nfcNotSupported": "NFC is not supported on this device"
     },
+    "accessibility": {
+      "skipToContent": "Skip to main content"
+    },
     "scan": {
       "cameraMode": "Camera",
+      "cameraAvailable": "Use camera to scan",
       "nfcMode": "NFC",
       "scanError": "Error scanning tag",
+      "scanSuccess": "Tag scanned successfully",
       "noDevices": "No Zaparoo Devices Found",
       "connecting": "Connecting...",
       "reconnecting": "Reconnecting...",
@@ -66,6 +90,7 @@
       "nowPlayingHeading": "Now playing",
       "nowPlayingName": "Name: {{game}}",
       "nowPlayingSystem": "System: {{system}}",
+      "stopPlayingButton": "Stop playing",
       "lastScannedHeading": "Last scanned",
       "lastScannedTime": "Time: {{time}}",
       "lastScannedUid": "ID: {{uid}}",
@@ -75,7 +100,10 @@
       "purchaseProP1": "Zaparoo Pro can be unlocked with a one-time purchase of {{price}}, which will help support future development of Zaparoo.",
       "purchaseProP2": "Pro includes the Launch on scan feature, which turns your phone into a wireless Zaparoo reader! All future Pro features will be included at no extra cost.",
       "purchaseProAction": "Unlock Zaparoo Pro",
-      "completeIntro": "Let's Zaparoo"
+      "completeIntro": "Let's Zaparoo",
+      "statusScanning": "Scanning for NFC tag",
+      "statusSuccess": "Tag scanned successfully",
+      "statusError": "Tag scan failed"
     },
     "create": {
       "title": "Create a New Tag",
@@ -107,13 +135,15 @@
         "pathLabel": "Path",
         "zapscriptLabel": "ZapScript",
         "tagsLabel": "Tags",
+        "selectWriteValue": "Select value to write to tag",
         "writeLabel": "Write to tag",
+        "copyLabel": "Copy",
         "playLabel": "Preview",
         "selectSystem": "Select System",
         "selectTags": "Select Tags",
         "loading": "Loading...",
         "startSearching": "Ready to search",
-        "startSearchingHint": "Enter a game name or select filters to start searching",
+        "startSearchingHint": "Enter a media name or select filters to start searching",
         "noResultsFound": "No results found for \"{{query}}\"",
         "noResultsFoundSimple": "No results found",
         "tryRemovingFiltersOnly": "Try removing filters to see more results",
@@ -124,11 +154,14 @@
         "recentSearches": "Recent Searches",
         "noRecentSearches": "No recent searches yet",
         "noRecentSearchesHint": "Start searching to build your search history",
-        "clearHistory": "Clear History"
+        "clearHistory": "Clear History",
+        "gamesDbSettings": "Open database settings",
+        "searchResult": "Select search result"
       },
       "custom": {
         "title": "Custom ZapScript",
         "textPlaceholder": "Enter ZapScript",
+        "textareaLabel": "ZapScript editor",
         "write": "Write to tag",
         "run": "Run",
         "clear": "Clear",
@@ -139,7 +172,13 @@
         "selectSystem": "System",
         "zapscriptHelp": "Help",
         "clearConfirmTitle": "Clear ZapScript?",
-        "commandPalette": "Command palette"
+        "commandPalette": "Command palette",
+        "insertCommandStart": "Insert command start",
+        "insertCommandSeparator": "Insert command separator",
+        "insertMedia": "Insert media path",
+        "insertSystem": "Insert system",
+        "insertCommand": "Insert command",
+        "runZapScript": "Run ZapScript"
       },
       "nfc": {
         "title": "NFC Utilities",
@@ -187,7 +226,8 @@
           "copyFailed": "Failed to copy to clipboard",
           "tagData": "Tag data",
           "shareTitle": "NFC Tag Data",
-          "shareText": "UID: {{uid}}\nText: {{text}}"
+          "shareText": "UID: {{uid}}\nText: {{text}}",
+          "shareTagData": "Share tag data"
         },
         "write": {
           "templates": {
@@ -244,6 +284,7 @@
     },
     "settings": {
       "title": "Settings",
+      "moreSettings": "More settings",
       "device": "Device address",
       "modeLabel": "Scan mode",
       "tapMode": "Tap",
@@ -262,6 +303,10 @@
       "getApp": "Get the Zaparoo App",
       "language": "Language",
       "deviceHistory": "Change device",
+      "connectionFailed": "Unable to connect to device",
+      "notConnected": "Not connected",
+      "enterDeviceAddress": "Enter a device address",
+      "deleteDevice": "Remove device from history",
       "about": {
         "title": "About",
         "version": "Version: {{version}}",
@@ -270,6 +315,25 @@
         "contributors": "Zaparoo contributors",
         "wizzodev": "Wizzo.dev Patrons",
         "joinPatreon": "Join the Patreon"
+      },
+      "readers": {
+        "title": "Readers",
+        "soundEffects": "Play sound effects on scan",
+        "autoDetect": "Auto-detect external NFC reader",
+        "scanMode": "Scan mode",
+        "continuousScan": "Continuous scanning",
+        "launchOnScan": "Launch on scan",
+        "preferRemoteWriter": "Prefer connected reader for writing",
+        "shakeToLaunch": "Shake to launch"
+      },
+      "playtime": {
+        "title": "Playtime"
+      },
+      "advanced": {
+        "title": "Advanced",
+        "debugLogging": "Debug logging",
+        "showFilenames": "Show filenames for media",
+        "viewLogs": "View logs"
       },
       "core": {
         "title": "Core Settings",
@@ -297,8 +361,8 @@
           "dailyUsageToday": "Used today",
           "dailyRemaining": "Remaining",
           "cooldownRemaining": "Cooldown ends in",
-          "warningToast": "{{remaining}} remaining until {{type}} limit",
-          "reachedToast": "{{type}} limit reached"
+          "warningToast": "{{remaining}} of playtime remaining",
+          "reachedToast": "{{type}} reached"
         }
       },
       "app": {
@@ -309,10 +373,12 @@
         "restoreFail": "Failed to restore purchases",
         "shakeToLaunch": "Shake to launch",
         "proFeature": "Pro",
+        "proActive": "Zaparoo Pro Active",
         "shakeRandomMedia": "Random Media",
         "shakeCustom": "Custom",
         "shakeSelectSystem": "Select system",
-        "shakeZapscript": "Zapscript to launch"
+        "shakeZapscript": "Zapscript to launch",
+        "shakeModeLabel": "Shake mode"
       },
       "logs": {
         "title": "Logs",
@@ -331,6 +397,16 @@
         "notConnected": "Connect to a Zaparoo device to access logs",
         "showMore": "Show more",
         "showLess": "Show less"
+      },
+      "deleteDevice": "Delete device",
+      "accessibility": {
+        "title": "Accessibility",
+        "haptics": "Haptic feedback",
+        "textSize": "Text size",
+        "textSizeSmall": "S",
+        "textSizeDefault": "M",
+        "textSizeLarge": "L",
+        "textSizeExtraLarge": "XL"
       },
       "help": {
         "title": "Help",
@@ -351,6 +427,11 @@
     "systemSelector": {
       "title": "Select Systems",
       "searchPlaceholder": "Search systems...",
+      "searchSystems": "Search systems",
+      "clearSearch": "Clear search",
+      "systemsList": "Systems list",
+      "selected": "{{name}} selected",
+      "deselected": "{{name}} deselected",
       "allSystems": "All systems",
       "allCategories": "All",
       "noResults": "No systems found",
@@ -363,6 +444,8 @@
     "tagSelector": {
       "title": "Select Tags",
       "searchPlaceholder": "Filter tags...",
+      "searchTags": "Filter tags",
+      "clearSearch": "Clear search",
       "allTypes": "All types",
       "noResults": "No tags found",
       "noTags": "No tags available",
@@ -370,6 +453,8 @@
       "multipleSelected": "{{count}} tags selected",
       "clearAll": "Clear all",
       "apply": "Apply",
+      "selected": "{{name}} selected",
+      "deselected": "{{name}} deselected",
       "type": {
         "accessibility": "Accessibility",
         "addon": "Add-on",
@@ -416,8 +501,13 @@
         "year": "Year"
       }
     },
+    "connection": {
+      "connecting": "Connecting...",
+      "reconnecting": "Reconnecting..."
+    },
     "tour": {
       "stepIndicator": "{{current}}/{{total}}",
+      "stepIndicatorAccessible": "Step {{current}} of {{total}}.",
       "welcome": {
         "title": "Welcome to Zaparoo!",
         "text": "Let's get you set up. This tour will show you how to connect to your device, scan your library, and create your first token."

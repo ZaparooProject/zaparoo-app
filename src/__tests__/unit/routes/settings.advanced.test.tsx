@@ -12,32 +12,32 @@ const mockRefetch = vi.fn();
 vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
     settings: mockSettings,
-    settingsUpdate: mockSettingsUpdate
-  }
+    settingsUpdate: mockSettingsUpdate,
+  },
 }));
 
 vi.mock("../../../hooks/useAppSettings", () => ({
   useAppSettings: vi.fn(() => ({
     preferRemoteWriter: false,
-    setPreferRemoteWriter: mockSetPreferRemoteWriter
-  }))
+    setPreferRemoteWriter: mockSetPreferRemoteWriter,
+  })),
 }));
 
 vi.mock("../../../hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({}))
+  useSmartSwipe: vi.fn(() => ({})),
 }));
 
 vi.mock("../../../lib/store", () => ({
   useStatusStore: vi.fn((selector) => {
     const mockState = {
-      connected: true
+      connected: true,
     };
     return selector(mockState);
-  })
+  }),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     useNavigate: vi.fn(() => vi.fn()),
@@ -46,9 +46,9 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
         restartScan: false,
         launchOnScan: true,
         launcherAccess: true,
-        preferRemoteWriter: false
-      }))
-    }))
+        preferRemoteWriter: false,
+      })),
+    })),
   };
 });
 
@@ -64,37 +64,37 @@ vi.mock("react-i18next", () => ({
         "settings.modeLabel": "Scan Mode",
         "settings.tapMode": "Tap Mode",
         "settings.insertMode": "Insert Mode",
-        "settings.insertHelp": "Hold tags on reader until removed"
+        "settings.insertHelp": "Hold tags on reader until removed",
       };
       return translations[key] || key;
-    }
-  })
+    },
+  }),
 }));
 
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
-    isNativePlatform: vi.fn(() => false)
-  }
+    isNativePlatform: vi.fn(() => false),
+  },
 }));
 
 vi.mock("@capawesome-team/capacitor-nfc", () => ({
   Nfc: {
-    isAvailable: vi.fn(() => Promise.resolve({ nfc: false }))
-  }
+    isAvailable: vi.fn(() => Promise.resolve({ nfc: false })),
+  },
 }));
 
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     get: vi.fn().mockImplementation(({ key }) => {
       const values: { [key: string]: string } = {
-        "restartScan": "false",
-        "launchOnScan": "true",
-        "launcherAccess": "true",
-        "preferRemoteWriter": "false"
+        restartScan: "false",
+        launchOnScan: "true",
+        launcherAccess: "true",
+        preferRemoteWriter: "false",
       };
       return Promise.resolve({ value: values[key] || "false" });
-    })
-  }
+    }),
+  },
 }));
 
 describe("Settings Advanced Route", () => {
@@ -105,8 +105,8 @@ describe("Settings Advanced Route", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
 
     // Mock default settings data
@@ -114,7 +114,7 @@ describe("Settings Advanced Route", () => {
       audioScanFeedback: true,
       readersAutoDetect: false,
       debugLogging: false,
-      readersScanMode: "tap"
+      readersScanMode: "tap",
     });
 
     mockSettingsUpdate.mockResolvedValue({});
@@ -131,7 +131,9 @@ describe("Settings Advanced Route", () => {
       const [audioScanFeedback, setAudioScanFeedback] = React.useState(true);
       const [readersAutoDetect, setReadersAutoDetect] = React.useState(false);
       const [debugLogging, setDebugLogging] = React.useState(false);
-      const [readersScanMode, setReadersScanMode] = React.useState<"tap" | "hold">("tap");
+      const [readersScanMode, setReadersScanMode] = React.useState<
+        "tap" | "hold"
+      >("tap");
       const [connected, setConnected] = React.useState(true);
 
       return (
@@ -210,7 +212,9 @@ describe("Settings Advanced Route", () => {
           </div>
 
           {readersScanMode === "hold" && connected && (
-            <p data-testid="insert-mode-help">Hold tags on reader until removed</p>
+            <p data-testid="insert-mode-help">
+              Hold tags on reader until removed
+            </p>
           )}
 
           <div data-testid="connection-status">
@@ -228,7 +232,7 @@ describe("Settings Advanced Route", () => {
     return render(
       <QueryClientProvider client={queryClient}>
         <AdvancedComponent />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
   };
 
@@ -246,29 +250,39 @@ describe("Settings Advanced Route", () => {
   it("should handle sound effects toggle", async () => {
     renderAdvancedSettings();
 
-    const soundEffectsToggle = screen.getByTestId("sound-effects-toggle").querySelector('input')!;
+    const soundEffectsToggle = screen
+      .getByTestId("sound-effects-toggle")
+      .querySelector("input")!;
     expect(soundEffectsToggle).toBeChecked();
 
     fireEvent.click(soundEffectsToggle);
 
-    expect(mockSettingsUpdate).toHaveBeenCalledWith({ audioScanFeedback: false });
+    expect(mockSettingsUpdate).toHaveBeenCalledWith({
+      audioScanFeedback: false,
+    });
   });
 
   it("should handle auto detect readers toggle", async () => {
     renderAdvancedSettings();
 
-    const autoDetectToggle = screen.getByTestId("auto-detect-toggle").querySelector('input')!;
+    const autoDetectToggle = screen
+      .getByTestId("auto-detect-toggle")
+      .querySelector("input")!;
     expect(autoDetectToggle).not.toBeChecked();
 
     fireEvent.click(autoDetectToggle);
 
-    expect(mockSettingsUpdate).toHaveBeenCalledWith({ readersAutoDetect: true });
+    expect(mockSettingsUpdate).toHaveBeenCalledWith({
+      readersAutoDetect: true,
+    });
   });
 
   it("should handle debug logging toggle", async () => {
     renderAdvancedSettings();
 
-    const debugToggle = screen.getByTestId("debug-toggle").querySelector('input')!;
+    const debugToggle = screen
+      .getByTestId("debug-toggle")
+      .querySelector("input")!;
     expect(debugToggle).not.toBeChecked();
 
     fireEvent.click(debugToggle);
@@ -288,7 +302,9 @@ describe("Settings Advanced Route", () => {
     // Switch to hold mode
     fireEvent.click(holdModeButton);
 
-    expect(mockSettingsUpdate).toHaveBeenCalledWith({ readersScanMode: "hold" });
+    expect(mockSettingsUpdate).toHaveBeenCalledWith({
+      readersScanMode: "hold",
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId("insert-mode-help")).toBeInTheDocument();
@@ -303,9 +319,15 @@ describe("Settings Advanced Route", () => {
     fireEvent.click(disconnectButton);
 
     await waitFor(() => {
-      const soundEffectsToggle = screen.getByTestId("sound-effects-toggle").querySelector('input')!;
-      const autoDetectToggle = screen.getByTestId("auto-detect-toggle").querySelector('input')!;
-      const debugToggle = screen.getByTestId("debug-toggle").querySelector('input')!;
+      const soundEffectsToggle = screen
+        .getByTestId("sound-effects-toggle")
+        .querySelector("input")!;
+      const autoDetectToggle = screen
+        .getByTestId("auto-detect-toggle")
+        .querySelector("input")!;
+      const debugToggle = screen
+        .getByTestId("debug-toggle")
+        .querySelector("input")!;
       const tapModeButton = screen.getByTestId("tap-mode-button");
       const holdModeButton = screen.getByTestId("hold-mode-button");
 
@@ -332,7 +354,9 @@ describe("Settings Advanced Route", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("insert-mode-help")).toBeInTheDocument();
-      expect(screen.getByText("Hold tags on reader until removed")).toBeInTheDocument();
+      expect(
+        screen.getByText("Hold tags on reader until removed"),
+      ).toBeInTheDocument();
     });
   });
 
@@ -369,7 +393,9 @@ describe("Settings Advanced Route", () => {
 
     render(<ComponentWithRemoteWriter />);
 
-    const remoteWriterToggle = screen.getByTestId("prefer-remote-writer-toggle").querySelector('input')!;
+    const remoteWriterToggle = screen
+      .getByTestId("prefer-remote-writer-toggle")
+      .querySelector("input")!;
     expect(remoteWriterToggle).not.toBeChecked();
 
     fireEvent.click(remoteWriterToggle);
@@ -382,7 +408,7 @@ describe("Settings Advanced Route", () => {
       restartScan: false,
       launchOnScan: true,
       launcherAccess: true,
-      preferRemoteWriter: false
+      preferRemoteWriter: false,
     };
 
     // Mock the route loader by testing with the actual expected data structure
@@ -390,7 +416,7 @@ describe("Settings Advanced Route", () => {
       restartScan: false,
       launchOnScan: true,
       launcherAccess: true,
-      preferRemoteWriter: false
+      preferRemoteWriter: false,
     });
   });
 
@@ -419,7 +445,9 @@ describe("Settings Advanced Route", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("settings-error")).toBeInTheDocument();
-      expect(screen.getByText("Error: Failed to fetch settings")).toBeInTheDocument();
+      expect(
+        screen.getByText("Error: Failed to fetch settings"),
+      ).toBeInTheDocument();
     });
   });
 
@@ -454,7 +482,9 @@ describe("Settings Advanced Route", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("update-error")).toBeInTheDocument();
-      expect(screen.getByText("Update error: Update failed")).toBeInTheDocument();
+      expect(
+        screen.getByText("Update error: Update failed"),
+      ).toBeInTheDocument();
     });
   });
 

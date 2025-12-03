@@ -2,11 +2,12 @@ import toast from "react-hot-toast";
 import { CoreAPI } from "./coreApi";
 import { TokenResponse } from "./models";
 import { sessionManager } from "./nfc";
+import { logger } from "./logger";
 
 const zapUrls = [
   "https://zpr.au",
   "https://zaparoo.link",
-  "https://go.tapto.life"
+  "https://go.tapto.life",
 ];
 
 const isZapUrl = (url: string) => {
@@ -21,7 +22,13 @@ export const runToken = async (
   setLastToken: (token: TokenResponse) => void,
   setProPurchaseModalOpen: (open: boolean) => void,
   unsafe = false,
-  override = false
+  override = false,
+  /**
+   * Whether to queue launch commands when disconnected.
+   * - true: Queue commands to run when reconnected (reconnecting scenario)
+   * - false: Don't queue, just store token locally (proper offline scenario)
+   */
+  canQueueCommands = true,
 ): Promise<boolean> => {
   return new Promise((resolve) => {
     if (uid === "" && text === "") {
@@ -33,11 +40,17 @@ export const runToken = async (
       text: text,
       scanTime: new Date().toISOString(),
       type: "",
-      data: ""
+      data: "",
     };
     setLastToken(token);
 
     if (!sessionManager.launchOnScan) {
+      return resolve(true);
+    }
+
+    // If not connected and can't queue commands, just store the token without launching
+    if (!connected && !canQueueCommands) {
+      logger.log("Offline scan - storing token without queueing launch");
       return resolve(true);
     }
 
@@ -47,24 +60,19 @@ export const runToken = async (
         CoreAPI.run({
           uid: uid,
           text: text,
-          unsafe: unsafe
+          unsafe: unsafe,
         })
           .then(() => {
             resolve(true);
           })
           .catch((e) => {
-            toast.error((to) => (
-              <span
-                className="flex grow flex-col"
-                onClick={() => toast.dismiss(to.id)}
-                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toast.dismiss(to.id)}
-                role="button"
-                tabIndex={0}
-              >
-                {e.message}
-              </span>
-            ));
-            console.error("launch error", e);
+            toast.error(e.message);
+            logger.error("launch error", e, {
+              category: "api",
+              action: "runToken",
+              hasUid: !!uid,
+              textPrefix: text.slice(0, 20),
+            });
             resolve(false);
           });
         return;
@@ -76,6 +84,7 @@ export const runToken = async (
     };
 
     if (!connected) {
+      // Small delay when reconnecting to let connection stabilize
       setTimeout(() => {
         run();
       }, 500);

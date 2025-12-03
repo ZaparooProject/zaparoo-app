@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { useNfcWriter, WriteAction, WriteMethod } from "../../../lib/writeNfcHook";
+import {
+  useNfcWriter,
+  WriteAction,
+  WriteMethod,
+} from "../../../lib/writeNfcHook";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { CoreAPI } from "../../../lib/coreApi";
@@ -11,20 +15,20 @@ vi.mock("@capacitor/core");
 
 vi.mock("@capawesome-team/capacitor-nfc", () => ({
   Nfc: {
-    isAvailable: vi.fn()
-  }
+    isAvailable: vi.fn(),
+  },
 }));
 
 vi.mock("../../../lib/coreApi", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     CoreAPI: {
       write: vi.fn(),
       hasWriteCapableReader: vi.fn(),
       cancelWrite: vi.fn(),
-      readersWriteCancel: vi.fn()
-    }
+      readersWriteCancel: vi.fn(),
+    },
   };
 });
 
@@ -35,22 +39,22 @@ vi.mock("../../../lib/nfc", () => ({
   Status: {
     Success: "success",
     Error: "error",
-    Cancelled: "cancelled"
-  }
+    Cancelled: "cancelled",
+  },
 }));
 
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),
-    dismiss: vi.fn()
-  }
+    dismiss: vi.fn(),
+  },
 }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key
-  })
+    t: (key: string) => key,
+  }),
 }));
 
 describe("useNfcWriter - Enhanced Functionality", () => {
@@ -70,7 +74,7 @@ describe("useNfcWriter - Enhanced Functionality", () => {
       const { writeTag } = await import("../../../lib/nfc");
       vi.mocked(writeTag).mockResolvedValue({
         status: "success" as any,
-        info: { rawTag: null, tag: null }
+        info: { rawTag: null, tag: null },
       });
 
       const { result } = renderHook(() => useNfcWriter(WriteMethod.LocalNFC));
@@ -86,20 +90,25 @@ describe("useNfcWriter - Enhanced Functionality", () => {
     it("should use remote writer when specified", async () => {
       vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
 
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.RemoteReader));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.RemoteReader),
+      );
 
       await act(async () => {
         await result.current.write(WriteAction.Write, "test-content");
       });
 
-      expect(CoreAPI.write).toHaveBeenCalledWith({ text: "test-content" }, expect.any(Object));
+      expect(CoreAPI.write).toHaveBeenCalledWith(
+        { text: "test-content" },
+        expect.any(Object),
+      );
     });
 
     it("should auto-detect and prefer local NFC on native platform", async () => {
       const { writeTag } = await import("../../../lib/nfc");
       vi.mocked(writeTag).mockResolvedValue({
         status: "success" as any,
-        info: { rawTag: null, tag: null }
+        info: { rawTag: null, tag: null },
       });
 
       const { result } = renderHook(() => useNfcWriter(WriteMethod.Auto));
@@ -121,7 +130,10 @@ describe("useNfcWriter - Enhanced Functionality", () => {
         await result.current.write(WriteAction.Write, "test-content");
       });
 
-      expect(CoreAPI.write).toHaveBeenCalledWith({ text: "test-content" }, expect.any(Object));
+      expect(CoreAPI.write).toHaveBeenCalledWith(
+        { text: "test-content" },
+        expect.any(Object),
+      );
     });
 
     it("should prefer remote when user preference set", async () => {
@@ -133,7 +145,10 @@ describe("useNfcWriter - Enhanced Functionality", () => {
         await result.current.write(WriteAction.Write, "test-content");
       });
 
-      expect(CoreAPI.write).toHaveBeenCalledWith({ text: "test-content" }, expect.any(Object));
+      expect(CoreAPI.write).toHaveBeenCalledWith(
+        { text: "test-content" },
+        expect.any(Object),
+      );
       expect(CoreAPI.hasWriteCapableReader).toHaveBeenCalled();
     });
   });
@@ -143,7 +158,9 @@ describe("useNfcWriter - Enhanced Functionality", () => {
       vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
       vi.mocked(CoreAPI.write).mockResolvedValue();
 
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.RemoteReader));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.RemoteReader),
+      );
 
       // Start a write operation and wait for it to determine write method
       await act(async () => {
@@ -163,7 +180,7 @@ describe("useNfcWriter - Enhanced Functionality", () => {
       const { writeTag, cancelSession } = await import("../../../lib/nfc");
       vi.mocked(writeTag).mockResolvedValue({
         status: "success" as any,
-        info: { rawTag: null, tag: null }
+        info: { rawTag: null, tag: null },
       });
 
       const { result } = renderHook(() => useNfcWriter(WriteMethod.LocalNFC));
@@ -197,7 +214,9 @@ describe("useNfcWriter - Enhanced Functionality", () => {
       vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
       vi.mocked(CoreAPI.write).mockRejectedValue(new Error("Write failed"));
 
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.RemoteReader));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.RemoteReader),
+      );
 
       await act(async () => {
         await result.current.write(WriteAction.Write, "test-content");
@@ -214,14 +233,22 @@ describe("useNfcWriter - Enhanced Functionality", () => {
 
       // Create an immediately aborted controller
       const mockAbortController = {
-        signal: { aborted: true, addEventListener: vi.fn(), removeEventListener: vi.fn() },
-        abort: vi.fn()
+        signal: {
+          aborted: true,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        },
+        abort: vi.fn(),
       };
 
-      // Mock AbortController globally
-      global.AbortController = vi.fn().mockImplementation(() => mockAbortController);
+      // Mock AbortController globally - must use regular function for Vitest 4 constructor mocks
+      global.AbortController = vi.fn().mockImplementation(function () {
+        return mockAbortController;
+      });
 
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.RemoteReader));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.RemoteReader),
+      );
 
       await act(async () => {
         await result.current.write(WriteAction.Write, "test-content");
@@ -233,7 +260,9 @@ describe("useNfcWriter - Enhanced Functionality", () => {
 
     it("should not process write without text content", async () => {
       // Mock console.log to suppress expected "No text provided to write" message
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleLogSpy = vi
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
 
       const { result } = renderHook(() => useNfcWriter());
 
@@ -252,7 +281,9 @@ describe("useNfcWriter - Enhanced Functionality", () => {
       vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
       vi.mocked(CoreAPI.write).mockResolvedValue();
 
-      const { result } = renderHook(() => useNfcWriter(WriteMethod.RemoteReader));
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.RemoteReader),
+      );
 
       // Do a write operation - the hook manages its internal state
       await act(async () => {
@@ -266,11 +297,18 @@ describe("useNfcWriter - Enhanced Functionality", () => {
 
     it("should provide clean abort controller for each operation", async () => {
       const mockAbortController = {
-        signal: { aborted: false, addEventListener: vi.fn(), removeEventListener: vi.fn() },
-        abort: vi.fn()
+        signal: {
+          aborted: false,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        },
+        abort: vi.fn(),
       };
 
-      global.AbortController = vi.fn().mockImplementation(() => mockAbortController);
+      // Must use regular function for Vitest 4 constructor mocks
+      global.AbortController = vi.fn().mockImplementation(function () {
+        return mockAbortController;
+      });
 
       const { result } = renderHook(() => useNfcWriter());
 
@@ -298,7 +336,10 @@ describe("useNfcWriter - Enhanced Functionality", () => {
         await result.current.write(WriteAction.Write, "test-content");
       });
 
-      expect(CoreAPI.write).toHaveBeenCalledWith({ text: "test-content" }, expect.any(Object));
+      expect(CoreAPI.write).toHaveBeenCalledWith(
+        { text: "test-content" },
+        expect.any(Object),
+      );
     });
 
     it("should check NFC availability on native platforms", async () => {

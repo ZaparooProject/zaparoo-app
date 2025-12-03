@@ -3,14 +3,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock dependencies
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
-    get: vi.fn()
-  }
+    get: vi.fn(),
+  },
 }));
 
 vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
-    systems: vi.fn()
-  }
+    systems: vi.fn(),
+  },
 }));
 
 describe("Create Search Route Loader", () => {
@@ -37,13 +37,13 @@ describe("Create Search Route Loader", () => {
     const mockSystemsResponse = {
       systems: [
         { id: "snes", name: "Super Nintendo" },
-        { id: "genesis", name: "Sega Genesis" }
-      ]
+        { id: "genesis", name: "Sega Genesis" },
+      ],
     };
 
     mockPreferencesGet
-      .mockResolvedValueOnce({ value: "snes" })      // searchSystem
-      .mockResolvedValueOnce({ value: '[]' });       // searchTags (empty array)
+      .mockResolvedValueOnce({ value: "snes" }) // searchSystem
+      .mockResolvedValueOnce({ value: "[]" }); // searchTags (empty array)
     mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
 
     const result = await Route.options?.loader?.({} as any);
@@ -51,7 +51,7 @@ describe("Create Search Route Loader", () => {
     expect(result).toEqual({
       systemQuery: "snes",
       tagQuery: [],
-      systems: mockSystemsResponse
+      systems: mockSystemsResponse,
     });
 
     expect(mockPreferencesGet).toHaveBeenCalledWith({ key: "searchSystem" });
@@ -63,8 +63,8 @@ describe("Create Search Route Loader", () => {
     const mockSystemsResponse = { systems: [] };
 
     mockPreferencesGet
-      .mockResolvedValueOnce({ value: null })        // searchSystem
-      .mockResolvedValueOnce({ value: null });       // searchTags
+      .mockResolvedValueOnce({ value: null }) // searchSystem
+      .mockResolvedValueOnce({ value: null }); // searchTags
     mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
 
     const result = await Route.options?.loader?.({} as any);
@@ -72,7 +72,7 @@ describe("Create Search Route Loader", () => {
     expect(result).toEqual({
       systemQuery: "all",
       tagQuery: [],
-      systems: mockSystemsResponse
+      systems: mockSystemsResponse,
     });
   });
 
@@ -80,8 +80,8 @@ describe("Create Search Route Loader", () => {
     const mockSystemsResponse = { systems: [] };
 
     mockPreferencesGet
-      .mockResolvedValueOnce({ value: undefined })   // searchSystem
-      .mockResolvedValueOnce({ value: undefined });  // searchTags
+      .mockResolvedValueOnce({ value: undefined }) // searchSystem
+      .mockResolvedValueOnce({ value: undefined }); // searchTags
     mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
 
     const result = await Route.options?.loader?.({} as any);
@@ -89,7 +89,7 @@ describe("Create Search Route Loader", () => {
     expect(result).toEqual({
       systemQuery: "all",
       tagQuery: [],
-      systems: mockSystemsResponse
+      systems: mockSystemsResponse,
     });
   });
 
@@ -97,8 +97,8 @@ describe("Create Search Route Loader", () => {
     const mockSystemsResponse = { systems: [] };
 
     mockPreferencesGet
-      .mockResolvedValueOnce({ value: "" })          // searchSystem
-      .mockResolvedValueOnce({ value: "" });         // searchTags
+      .mockResolvedValueOnce({ value: "" }) // searchSystem
+      .mockResolvedValueOnce({ value: "" }); // searchTags
     mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
 
     const result = await Route.options?.loader?.({} as any);
@@ -106,15 +106,19 @@ describe("Create Search Route Loader", () => {
     expect(result).toEqual({
       systemQuery: "all", // empty string should default to "all"
       tagQuery: [],
-      systems: mockSystemsResponse
+      systems: mockSystemsResponse,
     });
   });
 
   it("should handle preferences API failure", async () => {
-    mockPreferencesGet.mockRejectedValue(new Error("Preferences not available"));
+    mockPreferencesGet.mockRejectedValue(
+      new Error("Preferences not available"),
+    );
     mockCoreApiSystems.mockResolvedValue({ systems: [] });
 
-    await expect(Route.options?.loader?.({} as any)).rejects.toThrow("Preferences not available");
+    await expect(Route.options?.loader?.({} as any)).rejects.toThrow(
+      "Preferences not available",
+    );
 
     // CoreAPI.systems is called in parallel, so it will be called even if preferences fail
     expect(mockCoreApiSystems).toHaveBeenCalled();
@@ -122,11 +126,13 @@ describe("Create Search Route Loader", () => {
 
   it("should handle CoreAPI systems failure", async () => {
     mockPreferencesGet
-      .mockResolvedValueOnce({ value: "snes" })      // searchSystem
-      .mockResolvedValueOnce({ value: '[]' });       // searchTags
+      .mockResolvedValueOnce({ value: "snes" }) // searchSystem
+      .mockResolvedValueOnce({ value: "[]" }); // searchTags
     mockCoreApiSystems.mockRejectedValue(new Error("Core API unavailable"));
 
-    await expect(Route.options?.loader?.({} as any)).rejects.toThrow("Core API unavailable");
+    await expect(Route.options?.loader?.({} as any)).rejects.toThrow(
+      "Core API unavailable",
+    );
   });
 
   it("should handle both APIs failing", async () => {
@@ -134,13 +140,15 @@ describe("Create Search Route Loader", () => {
     mockCoreApiSystems.mockRejectedValue(new Error("Core API failed"));
 
     // Should fail on the first error (preferences)
-    await expect(Route.options?.loader?.({} as any)).rejects.toThrow("Preferences failed");
+    await expect(Route.options?.loader?.({} as any)).rejects.toThrow(
+      "Preferences failed",
+    );
   });
 
   it("should handle malformed systems response", async () => {
     mockPreferencesGet
-      .mockResolvedValueOnce({ value: "snes" })      // searchSystem
-      .mockResolvedValueOnce({ value: '[]' });       // searchTags
+      .mockResolvedValueOnce({ value: "snes" }) // searchSystem
+      .mockResolvedValueOnce({ value: "[]" }); // searchTags
     mockCoreApiSystems.mockResolvedValue(null);
 
     const result = await Route.options?.loader?.({} as any);
@@ -148,7 +156,7 @@ describe("Create Search Route Loader", () => {
     expect(result).toEqual({
       systemQuery: "snes",
       tagQuery: [],
-      systems: null
+      systems: null,
     });
   });
 
@@ -158,7 +166,7 @@ describe("Create Search Route Loader", () => {
     // Test with a custom system ID
     mockPreferencesGet
       .mockResolvedValueOnce({ value: "custom-system-123" }) // searchSystem
-      .mockResolvedValueOnce({ value: '["action", "rpg"]' });  // searchTags (JSON array)
+      .mockResolvedValueOnce({ value: '["action", "rpg"]' }); // searchTags (JSON array)
     mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
 
     const result = await Route.options?.loader?.({} as any);
@@ -166,19 +174,19 @@ describe("Create Search Route Loader", () => {
     expect(result).toEqual({
       systemQuery: "custom-system-123",
       tagQuery: ["action", "rpg"],
-      systems: mockSystemsResponse
+      systems: mockSystemsResponse,
     });
   });
 
   it("should execute both API calls in parallel", async () => {
-    const systemPreferencesPromise = new Promise(resolve =>
-      setTimeout(() => resolve({ value: "snes" }), 10)
+    const systemPreferencesPromise = new Promise((resolve) =>
+      setTimeout(() => resolve({ value: "snes" }), 10),
     );
-    const tagPreferencesPromise = new Promise(resolve =>
-      setTimeout(() => resolve({ value: '[]' }), 5)
+    const tagPreferencesPromise = new Promise((resolve) =>
+      setTimeout(() => resolve({ value: "[]" }), 5),
     );
-    const systemsPromise = new Promise(resolve =>
-      setTimeout(() => resolve({ systems: [] }), 10)
+    const systemsPromise = new Promise((resolve) =>
+      setTimeout(() => resolve({ systems: [] }), 10),
     );
 
     mockPreferencesGet
@@ -197,13 +205,13 @@ describe("Create Search Route Loader", () => {
   it("should handle systems response with large data", async () => {
     const largeSystems = Array.from({ length: 100 }, (_, i) => ({
       id: `system-${i}`,
-      name: `System ${i}`
+      name: `System ${i}`,
     }));
     const mockSystemsResponse = { systems: largeSystems };
 
     mockPreferencesGet
-      .mockResolvedValueOnce({ value: "system-50" })  // searchSystem
-      .mockResolvedValueOnce({ value: '[]' });        // searchTags
+      .mockResolvedValueOnce({ value: "system-50" }) // searchSystem
+      .mockResolvedValueOnce({ value: "[]" }); // searchTags
     mockCoreApiSystems.mockResolvedValue(mockSystemsResponse);
 
     const result = await Route.options?.loader?.({} as any);
@@ -215,16 +223,19 @@ describe("Create Search Route Loader", () => {
 
   it("should handle CoreAPI timeout", async () => {
     mockPreferencesGet
-      .mockResolvedValueOnce({ value: "snes" })      // searchSystem
-      .mockResolvedValueOnce({ value: '[]' });       // searchTags
+      .mockResolvedValueOnce({ value: "snes" }) // searchSystem
+      .mockResolvedValueOnce({ value: "[]" }); // searchTags
 
     // Simulate a timeout
-    mockCoreApiSystems.mockImplementation(() =>
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Request timeout")), 100)
-      )
+    mockCoreApiSystems.mockImplementation(
+      () =>
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Request timeout")), 100),
+        ),
     );
 
-    await expect(Route.options?.loader?.({} as any)).rejects.toThrow("Request timeout");
+    await expect(Route.options?.loader?.({} as any)).rejects.toThrow(
+      "Request timeout",
+    );
   }, 200);
 });

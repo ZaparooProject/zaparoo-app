@@ -30,7 +30,7 @@ export function ZapScriptInput(props: {
 
   const systems = useQuery({
     queryKey: ["systems"],
-    queryFn: () => CoreAPI.systems()
+    queryFn: () => CoreAPI.systems(),
   });
 
   const { t } = useTranslation();
@@ -57,7 +57,9 @@ export function ZapScriptInput(props: {
       <div className="flex flex-col">
         <textarea
           ref={textareaRef}
-          className="rounded-b-none border border-solid border-bd-input bg-background p-3"
+          className="border-bd-input bg-background rounded-b-none border border-solid p-3"
+          aria-label={t("create.custom.textareaLabel")}
+          aria-describedby="zapscript-char-count"
           placeholder={t("create.custom.textPlaceholder")}
           value={props.value}
           autoCapitalize="off"
@@ -68,16 +70,19 @@ export function ZapScriptInput(props: {
             setCursorPosition(e.currentTarget.selectionStart);
           }}
           style={{
-            resize: "vertical"
+            resize: "vertical",
           }}
           rows={props.rows ?? 4}
         />
 
-        <div className="rounded-b-md border border-t-0 border-solid border-bd-input bg-background p-2 pt-2">
+        <div className="border-bd-input bg-background rounded-b-md border border-t-0 border-solid p-2 pt-2">
           <div className="flex items-center justify-between">
             <div
-              className="pl-3 text-sm text-muted-foreground"
+              id="zapscript-char-count"
+              className="text-muted-foreground pl-3 text-sm"
               style={{ flex: 1 }}
+              aria-live="polite"
+              aria-atomic="true"
             >
               {t("create.custom.characters", { count: props.value.length })}
             </div>
@@ -85,6 +90,8 @@ export function ZapScriptInput(props: {
               variant="text"
               size="sm"
               onClick={() => setShowControls(!showControls)}
+              aria-expanded={showControls}
+              aria-controls="zapscript-controls"
               icon={
                 showControls ? (
                   <ChevronUp size={20} />
@@ -97,35 +104,39 @@ export function ZapScriptInput(props: {
           </div>
 
           {showControls && (
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div id="zapscript-controls" className="flex flex-wrap gap-2 pt-2">
               <div className="flex w-full gap-2">
-                {[
-                  { label: "**", text: "**" },
-                  { label: "||", text: "||" }
-                ].map((item) => (
-                  <Button
-                    key={item.label}
-                    label={item.label}
-                    variant="outline"
-                    onClick={() => insertTextAtCursor(item.text)}
-                    className="grow"
-                  />
-                ))}
+                <Button
+                  label="**"
+                  aria-label={t("create.custom.insertCommandStart")}
+                  variant="outline"
+                  onClick={() => insertTextAtCursor("**")}
+                  className="grow"
+                />
+                <Button
+                  label="||"
+                  aria-label={t("create.custom.insertCommandSeparator")}
+                  variant="outline"
+                  onClick={() => insertTextAtCursor("||")}
+                  className="grow"
+                />
                 <Button
                   icon={<PlayIcon size="20" />}
                   onClick={() => {
                     CoreAPI.run({
                       uid: "",
-                      text: props.value
+                      text: props.value,
                     });
                   }}
                   variant="outline"
                   disabled={props.value === "" || !connected}
+                  aria-label={t("create.custom.runZapScript")}
                   label={t("create.custom.run")}
                   className="grow"
                 />
                 <Button
                   icon={<EraserIcon size="20" />}
+                  aria-label={t("create.custom.clear")}
                   variant="outline"
                   disabled={props.value === ""}
                   onClick={() => setShowClearConfirm(true)}
@@ -134,6 +145,7 @@ export function ZapScriptInput(props: {
               </div>
               <div className="grid w-full grid-cols-2 gap-2">
                 <Button
+                  aria-label={t("create.custom.insertMedia")}
                   label={t("create.custom.searchMedia")}
                   variant="outline"
                   disabled={!connected}
@@ -142,6 +154,7 @@ export function ZapScriptInput(props: {
                   icon={<PlusIcon size={20} />}
                 />
                 <Button
+                  aria-label={t("create.custom.insertSystem")}
                   label={t("create.custom.selectSystem")}
                   variant="outline"
                   disabled={!connected}
@@ -153,6 +166,7 @@ export function ZapScriptInput(props: {
                   icon={<PlusIcon size={20} />}
                 />
                 <Button
+                  aria-label={t("create.custom.insertCommand")}
                   label={t("create.custom.commands")}
                   variant="outline"
                   onClick={() => setCommandsOpen(true)}
@@ -164,7 +178,7 @@ export function ZapScriptInput(props: {
                   variant="outline"
                   onClick={() =>
                     Browser.open({
-                      url: "https://zaparoo.org/docs/zapscript/"
+                      url: "https://zaparoo.org/docs/zapscript/",
                     })
                   }
                   className="w-full"
@@ -187,8 +201,9 @@ export function ZapScriptInput(props: {
         isOpen={systemsOpen}
         onClose={() => setSystemsOpen(false)}
         onSelect={(systems) => {
-          if (systems.length > 0) {
-            insertTextAtCursor(systems[0]);
+          const firstSystem = systems[0];
+          if (firstSystem) {
+            insertTextAtCursor(firstSystem);
           }
         }}
         selectedSystems={[]}

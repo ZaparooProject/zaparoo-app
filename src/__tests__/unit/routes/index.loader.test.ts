@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock the preferences store
 vi.mock("../../../lib/preferencesStore", () => ({
   usePreferencesStore: {
-    getState: vi.fn()
+    getState: vi.fn(),
   },
   selectAppSettings: vi.fn(),
   selectShakeSettings: vi.fn(),
@@ -17,7 +17,8 @@ describe("Index Route Loader", () => {
     vi.clearAllMocks();
 
     // Get the mock function
-    const { usePreferencesStore } = await import("../../../lib/preferencesStore");
+    const { usePreferencesStore } =
+      await import("../../../lib/preferencesStore");
     mockGetState = vi.mocked(usePreferencesStore.getState);
 
     // Import route after mocking

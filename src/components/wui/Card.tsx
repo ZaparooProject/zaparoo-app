@@ -8,7 +8,7 @@ export function Card(props: {
   onClick?: () => void;
 }) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       if (!props.disabled && props.onClick) {
         props.onClick();
@@ -29,14 +29,17 @@ export function Card(props: {
         "border-[rgba(255,255,255,0.13)]",
         {
           "text-foreground-disabled": props.disabled,
-          "bg-card-pattern": !props.disabled
+          "bg-card-pattern": !props.disabled,
+          "focus-visible:ring-offset-background cursor-pointer focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none":
+            isClickable,
         },
-        props.className
+        props.className,
       )}
       onClick={() => !props.disabled && props.onClick && props.onClick()}
-      role={isClickable ? "button" : undefined}
+      role={props.onClick ? "button" : undefined}
       tabIndex={isClickable ? 0 : undefined}
       onKeyDown={isClickable ? handleKeyDown : undefined}
+      aria-disabled={props.onClick && props.disabled ? true : undefined}
     >
       {props.children}
     </div>

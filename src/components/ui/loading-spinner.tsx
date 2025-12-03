@@ -13,6 +13,8 @@ export const LoadingSpinner = React.forwardRef<
   return (
     <svg
       ref={ref}
+      role="status"
+      aria-label="Loading"
       xmlns="http://www.w3.org/2000/svg"
       width={size}
       height={size}

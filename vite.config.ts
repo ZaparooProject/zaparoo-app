@@ -17,7 +17,7 @@ export default defineConfig(({ command, mode }) => {
   ) {
     server = {
       host: "0.0.0.0",
-      port: 8100
+      port: 8100,
     };
   }
 
@@ -29,8 +29,8 @@ export default defineConfig(({ command, mode }) => {
         open: true,
         filename: "dist/stats.html",
         gzipSize: true,
-        brotliSize: true
-      })
+        brotliSize: true,
+      }),
     );
   }
 
@@ -39,48 +39,48 @@ export default defineConfig(({ command, mode }) => {
     server,
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src")
-      }
+        "@": path.resolve(__dirname, "./src"),
+      },
     },
     plugins,
     build: {
       sourcemap: false,
-      minify: 'terser',
+      minify: "terser",
       terserOptions: {
         compress: {
           drop_console: true,
           drop_debugger: true,
-          pure_funcs: ['console.log', 'console.info', 'console.debug']
-        }
+          pure_funcs: ["console.log", "console.info", "console.debug"],
+        },
       },
       rollupOptions: {
         output: {
           manualChunks: (id) => {
-            if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom')) {
-                return 'vendor';
+            if (id.includes("node_modules")) {
+              if (id.includes("react") || id.includes("react-dom")) {
+                return "vendor";
               }
-              if (id.includes('@tanstack/react-router')) {
-                return 'router';
+              if (id.includes("@tanstack/react-router")) {
+                return "router";
               }
-              if (id.includes('firebase')) {
-                return 'firebase';
+              if (id.includes("firebase")) {
+                return "firebase";
               }
-              if (id.includes('i18next')) {
-                return 'i18n';
+              if (id.includes("i18next")) {
+                return "i18n";
               }
-              if (id.includes('lucide')) {
-                return 'icons';
+              if (id.includes("lucide")) {
+                return "icons";
               }
-              if (id.includes('@capacitor')) {
-                return 'capacitor';
+              if (id.includes("@capacitor")) {
+                return "capacitor";
               }
-              return 'vendor-other';
+              return "vendor-other";
             }
-          }
-        }
+          },
+        },
       },
-      chunkSizeWarningLimit: 500
-    }
+      chunkSizeWarningLimit: 500,
+    },
   };
 });

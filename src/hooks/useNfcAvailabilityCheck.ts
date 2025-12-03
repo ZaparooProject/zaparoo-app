@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
-import { usePreferencesStore } from "../lib/preferencesStore";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { logger } from "@/lib/logger";
 
 /**
  * Hook to check NFC availability once at app startup.
@@ -10,7 +11,9 @@ import { usePreferencesStore } from "../lib/preferencesStore";
  */
 export function useNfcAvailabilityCheck() {
   const setNfcAvailable = usePreferencesStore((state) => state.setNfcAvailable);
-  const setNfcAvailabilityHydrated = usePreferencesStore((state) => state.setNfcAvailabilityHydrated);
+  const setNfcAvailabilityHydrated = usePreferencesStore(
+    (state) => state.setNfcAvailabilityHydrated,
+  );
 
   useEffect(() => {
     // Skip on web platform
@@ -27,7 +30,11 @@ export function useNfcAvailabilityCheck() {
         setNfcAvailabilityHydrated(true);
       })
       .catch((e) => {
-        console.error("Failed to check NFC availability:", e);
+        logger.error("Failed to check NFC availability:", e, {
+          category: "nfc",
+          action: "availabilityCheck",
+          severity: "warning",
+        });
         // On error, assume NFC not available
         setNfcAvailable(false);
         setNfcAvailabilityHydrated(true);

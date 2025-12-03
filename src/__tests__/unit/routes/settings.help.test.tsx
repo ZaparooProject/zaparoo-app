@@ -6,21 +6,21 @@ import React from "react";
 // Mock dependencies
 vi.mock("@capacitor/browser", () => ({
   Browser: {
-    open: vi.fn()
-  }
+    open: vi.fn(),
+  },
 }));
 
 vi.mock("../../../hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({}))
+  useSmartSwipe: vi.fn(() => ({})),
 }));
 
 const mockNavigate = vi.fn();
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    createFileRoute: actual.createFileRoute
+    createFileRoute: actual.createFileRoute,
   };
 });
 
@@ -28,22 +28,24 @@ vi.mock("../../../components/PageFrame", () => ({
   PageFrame: ({ title, back, children, ...props }: any) => (
     <div data-testid="page-frame" {...props}>
       <div data-testid="page-title">{title}</div>
-      <button data-testid="back-button" onClick={back}>Back</button>
+      <button data-testid="back-button" onClick={back}>
+        Back
+      </button>
       <div data-testid="page-content">{children}</div>
     </div>
-  )
+  ),
 }));
 
 vi.mock("../../../components/wui/Button", () => ({
   Button: ({ label, onClick, variant }: any) => (
     <button
-      data-testid={`button-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      data-testid={`button-${label.toLowerCase().replace(/\s+/g, "-")}`}
       onClick={onClick}
       data-variant={variant}
     >
       {label}
     </button>
-  )
+  ),
 }));
 
 describe("Settings Help Route", () => {
@@ -54,8 +56,8 @@ describe("Settings Help Route", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
   });
 
@@ -65,9 +67,7 @@ describe("Settings Help Route", () => {
 
   it("should render help page with all components", async () => {
     const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
     // Mock the help component
@@ -80,10 +80,16 @@ describe("Settings Help Route", () => {
             <button data-testid="button-main-site">Main Site</button>
 
             <div className="flex flex-col gap-4">
-              <h2 className="text-center text-lg font-semibold">Documentation</h2>
+              <h2 className="text-center text-lg font-semibold">
+                Documentation
+              </h2>
               <button data-testid="button-zaparoo-wiki">Zaparoo Wiki</button>
-              <button data-testid="button-getting-started">Getting Started</button>
-              <button data-testid="button-command-reference">Command Reference</button>
+              <button data-testid="button-getting-started">
+                Getting Started
+              </button>
+              <button data-testid="button-command-reference">
+                Command Reference
+              </button>
             </div>
 
             <div className="flex flex-col gap-4">
@@ -93,7 +99,9 @@ describe("Settings Help Route", () => {
             </div>
 
             <div className="flex flex-col gap-4">
-              <h2 className="text-center text-lg font-semibold">Technical Support</h2>
+              <h2 className="text-center text-lg font-semibold">
+                Technical Support
+              </h2>
               <button data-testid="button-report-issue">Report Issue</button>
               <p className="text-center">
                 Email:{" "}
@@ -110,7 +118,7 @@ describe("Settings Help Route", () => {
     render(
       <TestWrapper>
         <HelpComponent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     expect(screen.getByTestId("page-frame")).toBeInTheDocument();
@@ -137,7 +145,7 @@ describe("Settings Help Route", () => {
           data-testid="main-site-button"
           onClick={() =>
             Browser.open({
-              url: "https://zaparoo.org/"
+              url: "https://zaparoo.org/",
             })
           }
         >
@@ -152,7 +160,7 @@ describe("Settings Help Route", () => {
     fireEvent.click(button);
 
     expect(Browser.open).toHaveBeenCalledWith({
-      url: "https://zaparoo.org/"
+      url: "https://zaparoo.org/",
     });
   });
 
@@ -166,7 +174,7 @@ describe("Settings Help Route", () => {
             data-testid="wiki-button"
             onClick={() =>
               Browser.open({
-                url: "https://zaparoo.org/docs/"
+                url: "https://zaparoo.org/docs/",
               })
             }
           >
@@ -176,7 +184,7 @@ describe("Settings Help Route", () => {
             data-testid="getting-started-button"
             onClick={() =>
               Browser.open({
-                url: "https://zaparoo.org/docs/getting-started/"
+                url: "https://zaparoo.org/docs/getting-started/",
               })
             }
           >
@@ -186,7 +194,7 @@ describe("Settings Help Route", () => {
             data-testid="command-reference-button"
             onClick={() =>
               Browser.open({
-                url: "https://zaparoo.org/docs/zapscript/"
+                url: "https://zaparoo.org/docs/zapscript/",
               })
             }
           >
@@ -202,7 +210,7 @@ describe("Settings Help Route", () => {
     const wikiButton = screen.getByTestId("wiki-button");
     fireEvent.click(wikiButton);
     expect(Browser.open).toHaveBeenCalledWith({
-      url: "https://zaparoo.org/docs/"
+      url: "https://zaparoo.org/docs/",
     });
 
     vi.clearAllMocks();
@@ -211,7 +219,7 @@ describe("Settings Help Route", () => {
     const gettingStartedButton = screen.getByTestId("getting-started-button");
     fireEvent.click(gettingStartedButton);
     expect(Browser.open).toHaveBeenCalledWith({
-      url: "https://zaparoo.org/docs/getting-started/"
+      url: "https://zaparoo.org/docs/getting-started/",
     });
 
     vi.clearAllMocks();
@@ -220,7 +228,7 @@ describe("Settings Help Route", () => {
     const commandRefButton = screen.getByTestId("command-reference-button");
     fireEvent.click(commandRefButton);
     expect(Browser.open).toHaveBeenCalledWith({
-      url: "https://zaparoo.org/docs/zapscript/"
+      url: "https://zaparoo.org/docs/zapscript/",
     });
   });
 
@@ -234,7 +242,7 @@ describe("Settings Help Route", () => {
             data-testid="discord-button"
             onClick={() =>
               Browser.open({
-                url: "https://zaparoo.org/discord"
+                url: "https://zaparoo.org/discord",
               })
             }
           >
@@ -244,7 +252,7 @@ describe("Settings Help Route", () => {
             data-testid="reddit-button"
             onClick={() =>
               Browser.open({
-                url: "https://reddit.com/r/Zaparoo"
+                url: "https://reddit.com/r/Zaparoo",
               })
             }
           >
@@ -260,7 +268,7 @@ describe("Settings Help Route", () => {
     const discordButton = screen.getByTestId("discord-button");
     fireEvent.click(discordButton);
     expect(Browser.open).toHaveBeenCalledWith({
-      url: "https://zaparoo.org/discord"
+      url: "https://zaparoo.org/discord",
     });
 
     vi.clearAllMocks();
@@ -269,7 +277,7 @@ describe("Settings Help Route", () => {
     const redditButton = screen.getByTestId("reddit-button");
     fireEvent.click(redditButton);
     expect(Browser.open).toHaveBeenCalledWith({
-      url: "https://reddit.com/r/Zaparoo"
+      url: "https://reddit.com/r/Zaparoo",
     });
   });
 
@@ -283,7 +291,7 @@ describe("Settings Help Route", () => {
             data-testid="report-issue-button"
             onClick={() =>
               Browser.open({
-                url: "https://github.com/ZaparooProject/zaparoo-app/issues/new"
+                url: "https://github.com/ZaparooProject/zaparoo-app/issues/new",
               })
             }
           >
@@ -309,7 +317,7 @@ describe("Settings Help Route", () => {
     const reportButton = screen.getByTestId("report-issue-button");
     fireEvent.click(reportButton);
     expect(Browser.open).toHaveBeenCalledWith({
-      url: "https://github.com/ZaparooProject/zaparoo-app/issues/new"
+      url: "https://github.com/ZaparooProject/zaparoo-app/issues/new",
     });
 
     // Test email link
@@ -342,8 +350,14 @@ describe("Settings Help Route", () => {
     const TestComponent = () => {
       return (
         <div className="flex flex-col gap-4">
-          <div data-testid="documentation-section" className="flex flex-col gap-4">
-            <h2 data-testid="documentation-title" className="text-center text-lg font-semibold">
+          <div
+            data-testid="documentation-section"
+            className="flex flex-col gap-4"
+          >
+            <h2
+              data-testid="documentation-title"
+              className="text-center text-lg font-semibold"
+            >
               Documentation
             </h2>
             <button>Wiki</button>
@@ -352,7 +366,10 @@ describe("Settings Help Route", () => {
           </div>
 
           <div data-testid="community-section" className="flex flex-col gap-4">
-            <h2 data-testid="community-title" className="text-center text-lg font-semibold">
+            <h2
+              data-testid="community-title"
+              className="text-center text-lg font-semibold"
+            >
               Community
             </h2>
             <button>Discord</button>
@@ -360,7 +377,10 @@ describe("Settings Help Route", () => {
           </div>
 
           <div data-testid="support-section" className="flex flex-col gap-4">
-            <h2 data-testid="support-title" className="text-center text-lg font-semibold">
+            <h2
+              data-testid="support-title"
+              className="text-center text-lg font-semibold"
+            >
               Technical Support
             </h2>
             <button>Report Issue</button>
@@ -371,30 +391,74 @@ describe("Settings Help Route", () => {
 
     render(<TestComponent />);
 
-    expect(screen.getByTestId("documentation-section")).toHaveClass("flex", "flex-col", "gap-4");
-    expect(screen.getByTestId("documentation-title")).toHaveClass("text-center", "text-lg", "font-semibold");
-    expect(screen.getByTestId("documentation-title")).toHaveTextContent("Documentation");
+    expect(screen.getByTestId("documentation-section")).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-4",
+    );
+    expect(screen.getByTestId("documentation-title")).toHaveClass(
+      "text-center",
+      "text-lg",
+      "font-semibold",
+    );
+    expect(screen.getByTestId("documentation-title")).toHaveTextContent(
+      "Documentation",
+    );
 
-    expect(screen.getByTestId("community-section")).toHaveClass("flex", "flex-col", "gap-4");
-    expect(screen.getByTestId("community-title")).toHaveClass("text-center", "text-lg", "font-semibold");
-    expect(screen.getByTestId("community-title")).toHaveTextContent("Community");
+    expect(screen.getByTestId("community-section")).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-4",
+    );
+    expect(screen.getByTestId("community-title")).toHaveClass(
+      "text-center",
+      "text-lg",
+      "font-semibold",
+    );
+    expect(screen.getByTestId("community-title")).toHaveTextContent(
+      "Community",
+    );
 
-    expect(screen.getByTestId("support-section")).toHaveClass("flex", "flex-col", "gap-4");
-    expect(screen.getByTestId("support-title")).toHaveClass("text-center", "text-lg", "font-semibold");
-    expect(screen.getByTestId("support-title")).toHaveTextContent("Technical Support");
+    expect(screen.getByTestId("support-section")).toHaveClass(
+      "flex",
+      "flex-col",
+      "gap-4",
+    );
+    expect(screen.getByTestId("support-title")).toHaveClass(
+      "text-center",
+      "text-lg",
+      "font-semibold",
+    );
+    expect(screen.getByTestId("support-title")).toHaveTextContent(
+      "Technical Support",
+    );
   });
 
   it("should display all buttons with outline variant", async () => {
     const TestComponent = () => {
       return (
         <div>
-          <button data-testid="button-1" data-variant="outline">Main Site</button>
-          <button data-testid="button-2" data-variant="outline">Wiki</button>
-          <button data-testid="button-3" data-variant="outline">Getting Started</button>
-          <button data-testid="button-4" data-variant="outline">Command Reference</button>
-          <button data-testid="button-5" data-variant="outline">Discord</button>
-          <button data-testid="button-6" data-variant="outline">Reddit</button>
-          <button data-testid="button-7" data-variant="outline">Report Issue</button>
+          <button data-testid="button-1" data-variant="outline">
+            Main Site
+          </button>
+          <button data-testid="button-2" data-variant="outline">
+            Wiki
+          </button>
+          <button data-testid="button-3" data-variant="outline">
+            Getting Started
+          </button>
+          <button data-testid="button-4" data-variant="outline">
+            Command Reference
+          </button>
+          <button data-testid="button-5" data-variant="outline">
+            Discord
+          </button>
+          <button data-testid="button-6" data-variant="outline">
+            Reddit
+          </button>
+          <button data-testid="button-7" data-variant="outline">
+            Report Issue
+          </button>
         </div>
       );
     };
@@ -402,7 +466,7 @@ describe("Settings Help Route", () => {
     render(<TestComponent />);
 
     const buttons = screen.getAllByRole("button");
-    buttons.forEach(button => {
+    buttons.forEach((button) => {
       expect(button).toHaveAttribute("data-variant", "outline");
     });
   });
@@ -415,10 +479,10 @@ describe("Settings Help Route", () => {
       "https://zaparoo.org/docs/zapscript/",
       "https://zaparoo.org/discord",
       "https://reddit.com/r/Zaparoo",
-      "https://github.com/ZaparooProject/zaparoo-app/issues/new"
+      "https://github.com/ZaparooProject/zaparoo-app/issues/new",
     ];
 
-    urls.forEach(url => {
+    urls.forEach((url) => {
       expect(url).toMatch(/^https:\/\//);
       expect(url).toBeTruthy();
     });

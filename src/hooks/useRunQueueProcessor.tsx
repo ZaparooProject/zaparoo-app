@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { useStatusStore } from "../lib/store";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { runToken } from "../lib/tokenOperations.tsx";
+import { useStatusStore } from "@/lib/store";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { runToken } from "@/lib/tokenOperations.tsx";
+import { logger } from "@/lib/logger";
 
 export function useRunQueueProcessor() {
   const { t } = useTranslation();
   const runQueue = useStatusStore((state) => state.runQueue);
   const setRunQueue = useStatusStore((state) => state.setRunQueue);
   const setLastToken = useStatusStore((state) => state.setLastToken);
-  const setProPurchaseModalOpen = useStatusStore((state) => state.setProPurchaseModalOpen);
+  const setProPurchaseModalOpen = useStatusStore(
+    (state) => state.setProPurchaseModalOpen,
+  );
   const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
   const getConnected = () => useStatusStore.getState().connected;
   const isProcessingRef = useRef(false);
@@ -35,7 +38,7 @@ export function useRunQueueProcessor() {
         const currentConnected = getConnected();
 
         if (currentConnected) {
-          console.log("Processing run queue:", currentRunValue.value);
+          logger.log("Processing run queue:", currentRunValue.value);
           runToken(
             "",
             currentRunValue.value,
@@ -43,24 +46,32 @@ export function useRunQueueProcessor() {
             currentConnected,
             setLastToken,
             setProPurchaseModalOpen,
-            currentRunValue.unsafe
+            currentRunValue.unsafe,
           )
             .then((success: boolean) => {
-              console.log("runQueue success", success);
+              logger.log("runQueue success", success);
               isProcessingRef.current = false;
             })
             .catch((e) => {
-              console.error("runQueue error", e);
+              logger.error("runQueue error", e, {
+                category: "queue",
+                action: "runQueue",
+                tokenValue: currentRunValue.value.slice(0, 50),
+              });
               isProcessingRef.current = false;
             });
         } else if (retryCount < maxRetries) {
           retryCount++;
-          console.log(
-            `Device not connected, retrying (${retryCount}/${maxRetries})...`
+          logger.log(
+            `Device not connected, retrying (${retryCount}/${maxRetries})...`,
           );
           setTimeout(attemptRun, retryInterval);
         } else {
-          console.error("Failed to connect to device after multiple attempts");
+          logger.error("Failed to connect to device after multiple attempts", {
+            category: "connection",
+            action: "runQueue",
+            maxRetries,
+          });
           toast.error(t("create.custom.failMsg"));
           isProcessingRef.current = false;
         }
@@ -68,13 +79,7 @@ export function useRunQueueProcessor() {
 
       attemptRun();
     },
-    [
-      launcherAccess,
-      setLastToken,
-      setProPurchaseModalOpen,
-      setRunQueue,
-      t
-    ]
+    [launcherAccess, setLastToken, setProPurchaseModalOpen, setRunQueue, t],
   );
 
   useEffect(() => {
@@ -86,7 +91,7 @@ export function useRunQueueProcessor() {
     setProPurchaseModalOpen,
     setRunQueue,
     t,
-    processQueue
+    processQueue,
   ]);
 
   return { processQueue };

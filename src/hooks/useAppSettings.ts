@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Preferences } from "@capacitor/preferences";
-import { sessionManager } from "../lib/nfc";
+import { sessionManager } from "@/lib/nfc";
+import { logger } from "@/lib/logger";
 
 interface UseAppSettingsProps {
   initData: {
@@ -17,7 +18,9 @@ interface UseAppSettingsProps {
 export function useAppSettings({ initData }: UseAppSettingsProps) {
   const [restartScan, setRestartScan] = useState(initData.restartScan);
   const [launchOnScan, setLaunchOnScan] = useState(initData.launchOnScan);
-  const [preferRemoteWriter, setPreferRemoteWriter] = useState(initData.preferRemoteWriter);
+  const [preferRemoteWriter, setPreferRemoteWriter] = useState(
+    initData.preferRemoteWriter,
+  );
   const [shakeEnabled, setShakeEnabled] = useState(initData.shakeEnabled);
   const [shakeMode, setShakeMode] = useState(initData.shakeMode);
   const [shakeZapscript, setShakeZapscript] = useState(initData.shakeZapscript);
@@ -33,38 +36,95 @@ export function useAppSettings({ initData }: UseAppSettingsProps) {
     sessionManager.setLaunchOnScan(launchOnScan);
   }, [launchOnScan]);
 
-
   const handleSetRestartScan = (value: boolean) => {
     setRestartScan(value);
-    Preferences.set({ key: "restartScan", value: value.toString() });
+    Preferences.set({ key: "restartScan", value: value.toString() }).catch(
+      (e) => {
+        logger.error("Failed to save restartScan preference:", e, {
+          category: "storage",
+          action: "set",
+          key: "restartScan",
+          severity: "warning",
+        });
+      },
+    );
   };
 
   const handleSetLaunchOnScan = (value: boolean) => {
     setLaunchOnScan(value);
-    Preferences.set({ key: "launchOnScan", value: value.toString() });
+    Preferences.set({ key: "launchOnScan", value: value.toString() }).catch(
+      (e) => {
+        logger.error("Failed to save launchOnScan preference:", e, {
+          category: "storage",
+          action: "set",
+          key: "launchOnScan",
+          severity: "warning",
+        });
+      },
+    );
   };
 
   const handleSetPreferRemoteWriter = (value: boolean) => {
     setPreferRemoteWriter(value);
-    Preferences.set({ key: "preferRemoteWriter", value: value.toString() });
+    Preferences.set({
+      key: "preferRemoteWriter",
+      value: value.toString(),
+    }).catch((e) => {
+      logger.error("Failed to save preferRemoteWriter preference:", e, {
+        category: "storage",
+        action: "set",
+        key: "preferRemoteWriter",
+        severity: "warning",
+      });
+    });
   };
 
   const handleSetShakeEnabled = (value: boolean) => {
     setShakeEnabled(value);
-    Preferences.set({ key: "shakeEnabled", value: value.toString() });
+    Preferences.set({ key: "shakeEnabled", value: value.toString() }).catch(
+      (e) => {
+        logger.error("Failed to save shakeEnabled preference:", e, {
+          category: "storage",
+          action: "set",
+          key: "shakeEnabled",
+          severity: "warning",
+        });
+      },
+    );
   };
 
   const handleSetShakeMode = (value: "random" | "custom") => {
     setShakeMode(value);
-    Preferences.set({ key: "shakeMode", value });
+    Preferences.set({ key: "shakeMode", value }).catch((e) => {
+      logger.error("Failed to save shakeMode preference:", e, {
+        category: "storage",
+        action: "set",
+        key: "shakeMode",
+        severity: "warning",
+      });
+    });
     // Clear zapscript when mode changes
     setShakeZapscript("");
-    Preferences.set({ key: "shakeZapscript", value: "" });
+    Preferences.set({ key: "shakeZapscript", value: "" }).catch((e) => {
+      logger.error("Failed to save shakeZapscript preference:", e, {
+        category: "storage",
+        action: "set",
+        key: "shakeZapscript",
+        severity: "warning",
+      });
+    });
   };
 
   const handleSetShakeZapscript = (value: string) => {
     setShakeZapscript(value);
-    Preferences.set({ key: "shakeZapscript", value });
+    Preferences.set({ key: "shakeZapscript", value }).catch((e) => {
+      logger.error("Failed to save shakeZapscript preference:", e, {
+        category: "storage",
+        action: "set",
+        key: "shakeZapscript",
+        severity: "warning",
+      });
+    });
   };
 
   return {
@@ -80,6 +140,6 @@ export function useAppSettings({ initData }: UseAppSettingsProps) {
     shakeMode,
     setShakeMode: handleSetShakeMode,
     shakeZapscript,
-    setShakeZapscript: handleSetShakeZapscript
+    setShakeZapscript: handleSetShakeZapscript,
   };
 }

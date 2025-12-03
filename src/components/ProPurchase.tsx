@@ -7,63 +7,42 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from "@/components/ui/dialog";
-import { usePreferencesStore } from "../lib/preferencesStore";
-import { useStatusStore } from "../lib/store";
+import { logger } from "@/lib/logger";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { useStatusStore } from "@/lib/store";
+import { useHaptics } from "@/hooks/useHaptics";
 import { Button } from "./wui/Button";
 
 export const RestorePuchasesButton = () => {
   const setLauncherAccess = usePreferencesStore.getState().setLauncherAccess;
+  const { notification } = useHaptics();
 
   return (
     <Button
       label={t("settings.app.restorePurchases")}
       className="w-full"
-      onClick={() => {
-        Purchases.restorePurchases()
-          .then(() => {
-            Purchases.getCustomerInfo()
-              .then((info) => {
-                if (info.customerInfo.entitlements.active.tapto_launcher) {
-                  setLauncherAccess(true);
-                } else {
-                  setLauncherAccess(false);
-                }
-                location.reload();
-              })
-              .catch((e) => {
-                console.error("customer info error", e);
-              });
-            toast.success((to) => (
-              <span
-                className="flex grow flex-col"
-                onClick={() => toast.dismiss(to.id)}
-                onKeyDown={(e) =>
-                  (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
-                }
-                role="button"
-                tabIndex={0}
-              >
-                {t("settings.app.restoreSuccess")}
-              </span>
-            ));
-          })
-          .catch(() => {
-            toast.error((to) => (
-              <span
-                className="flex grow flex-col"
-                onClick={() => toast.dismiss(to.id)}
-                onKeyDown={(e) =>
-                  (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
-                }
-                role="button"
-                tabIndex={0}
-              >
-                {t("settings.app.restoreFail")}
-              </span>
-            ));
+      onClick={async () => {
+        try {
+          await Purchases.restorePurchases();
+          const info = await Purchases.getCustomerInfo();
+          if (info.customerInfo.entitlements.active.tapto_launcher) {
+            setLauncherAccess(true);
+          } else {
+            setLauncherAccess(false);
+          }
+          notification("success");
+          toast.success(t("settings.app.restoreSuccess"));
+          location.reload();
+        } catch (e) {
+          logger.error("restore purchases error", e, {
+            category: "purchase",
+            action: "restore",
+            severity: "warning",
           });
+          toast.error(t("settings.app.restoreFail"));
+        }
       }}
     />
   );
@@ -88,7 +67,7 @@ const ProPurchaseModal = (props: {
           {t("scan.purchaseProP1", {
             price: props.purchasePackage
               ? props.purchasePackage.product.priceString
-              : "$6.99 USD"
+              : "$6.99 USD",
           })}
         </div>
         <div className="pb-2">{t("scan.purchaseProP2")}</div>
@@ -99,7 +78,7 @@ const ProPurchaseModal = (props: {
             if (props.purchasePackage) {
               Purchases.purchasePackage({ aPackage: props.purchasePackage })
                 .then((purchase) => {
-                  console.log("purchase success", purchase);
+                  logger.log("purchase success", purchase);
                   props.setProAccess(true);
                   usePreferencesStore.getState().setLauncherAccess(true);
                   usePreferencesStore.getState().setLaunchOnScan(true);
@@ -109,7 +88,11 @@ const ProPurchaseModal = (props: {
                   if (e.message.includes("Purchase was cancelled")) {
                     return;
                   }
-                  console.error("purchase error", e);
+                  logger.error("purchase error", e, {
+                    category: "purchase",
+                    action: "purchasePackage",
+                    severity: "warning",
+                  });
                 });
             }
           }}
@@ -121,15 +104,28 @@ const ProPurchaseModal = (props: {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useProPurchase = (initialProAccess: boolean = false) => {
-  const [proAccess, setProAccess] = useState(initialProAccess);
-  const proPurchaseModalOpen = useStatusStore((state) => state.proPurchaseModalOpen);
-  const setProPurchaseModalOpen = useStatusStore((state) => state.setProPurchaseModalOpen);
+  // Initialize from preferences store if already hydrated, otherwise use provided initial value
+  const getInitialProAccess = () => {
+    const store = usePreferencesStore.getState();
+    if (store._proAccessHydrated) {
+      return store.launcherAccess;
+    }
+    return initialProAccess;
+  };
+
+  const [proAccess, setProAccess] = useState(getInitialProAccess);
+  const proPurchaseModalOpen = useStatusStore(
+    (state) => state.proPurchaseModalOpen,
+  );
+  const setProPurchaseModalOpen = useStatusStore(
+    (state) => state.setProPurchaseModalOpen,
+  );
   const [launcherPackage, setLauncherPackage] =
     useState<PurchasesPackage | null>(null);
 
   useEffect(() => {
     if (Capacitor.getPlatform() === "web") {
-      console.log("web platform, skipping purchases");
+      logger.log("web platform, skipping purchases");
       return;
     }
 
@@ -140,22 +136,23 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
           offerings.current &&
           offerings.current.availablePackages.length > 0
         ) {
-          setLauncherPackage(offerings.current.availablePackages[0]);
+          setLauncherPackage(offerings.current.availablePackages[0] ?? null);
         } else {
-          console.error("no launcher purchase package found");
+          logger.error("no launcher purchase package found");
         }
       })
       .catch((e) => {
-        console.error("offerings error", e);
+        logger.error("offerings error", e, {
+          category: "purchase",
+          action: "getOfferings",
+          severity: "warning",
+        });
+        toast.error(t("settings.app.offeringsError"));
       });
 
-    // Skip customer info check if already hydrated in App.tsx
+    // Skip customer info check if already hydrated (initial state already set)
     const proAccessHydrated = usePreferencesStore.getState()._proAccessHydrated;
     if (proAccessHydrated) {
-      // Use cached value from preferences store
-      const cachedLauncherAccess =
-        usePreferencesStore.getState().launcherAccess;
-      setProAccess(cachedLauncherAccess);
       return;
     }
 
@@ -171,9 +168,13 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
         }
       })
       .catch((e) => {
-        console.error("customer info error", e);
+        logger.error("customer info error", e, {
+          category: "purchase",
+          action: "getCustomerInfo",
+          severity: "warning",
+        });
       });
-  }, [setProAccess]);
+  }, []);
 
   return {
     proAccess,
@@ -186,6 +187,6 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
       />
     ),
     proPurchaseModalOpen,
-    setProPurchaseModalOpen
+    setProPurchaseModalOpen,
   };
 };

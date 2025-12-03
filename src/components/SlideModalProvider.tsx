@@ -1,5 +1,8 @@
 import { useRef, useCallback, ReactNode } from "react";
-import { SlideModalContext, SlideModalManager } from "../hooks/useSlideModalManager";
+import {
+  SlideModalContext,
+  SlideModalManager,
+} from "@/hooks/useSlideModalManager";
 
 export const SlideModalProvider = ({ children }: { children: ReactNode }) => {
   const modals = useRef<Map<string, () => void>>(new Map());
@@ -23,7 +26,7 @@ export const SlideModalProvider = ({ children }: { children: ReactNode }) => {
   const manager: SlideModalManager = {
     registerModal,
     unregisterModal,
-    closeAllExcept
+    closeAllExcept,
   };
 
   return (

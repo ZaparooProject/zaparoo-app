@@ -39,10 +39,7 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
-      - name: Run tests
-        run: pnpm run test
-
-      - name: Generate coverage
+      - name: Run tests with coverage
         run: pnpm run test:coverage
 
       - name: Upload coverage reports to Codecov

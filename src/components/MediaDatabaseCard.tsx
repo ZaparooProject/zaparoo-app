@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useStatusStore } from "@/lib/store";
 import { CoreAPI } from "@/lib/coreApi";
 import { DatabaseIcon } from "@/lib/images";
+import { logger } from "@/lib/logger";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 import { SystemSelector, SystemSelectorTrigger } from "./SystemSelector";
@@ -15,16 +16,20 @@ export function MediaDatabaseCard() {
   const queryClient = useQueryClient();
   const connected = useStatusStore((state) => state.connected);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelRequested, setCancelRequested] = useState(false);
   const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
 
-  // Reset cancelling state when indexing stops
+  // Derive isCancelling: true only if we requested cancel AND indexing is still happening
+  const isCancelling = cancelRequested && gamesIndex.indexing;
+
+  // Reset cancel request when indexing stops (syncing with external Zustand store state)
   useEffect(() => {
-    if (!gamesIndex.indexing && isCancelling) {
-      setIsCancelling(false);
+    if (!gamesIndex.indexing && cancelRequested) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing local UI state with external store
+      setCancelRequested(false);
     }
-  }, [gamesIndex.indexing, isCancelling]);
+  }, [gamesIndex.indexing, cancelRequested]);
 
   // Fetch real-time database status
   const { data: mediaStatus, isLoading } = useQuery({
@@ -32,7 +37,7 @@ export function MediaDatabaseCard() {
     queryFn: () => CoreAPI.media(),
     enabled: connected,
     staleTime: 30000, // Cache for 30 seconds
-    retry: false
+    retry: false,
   });
 
   // Fetch systems data for selector
@@ -44,39 +49,47 @@ export function MediaDatabaseCard() {
 
   const handleUpdateDatabase = () => {
     // If no systems selected or all systems selected, pass undefined (all systems)
-    const systemsToUpdate = selectedSystems.length === 0 ||
-      (systemsData?.systems && selectedSystems.length === systemsData.systems.length)
-      ? undefined
-      : selectedSystems;
+    const systemsToUpdate =
+      selectedSystems.length === 0 ||
+      (systemsData?.systems &&
+        selectedSystems.length === systemsData.systems.length)
+        ? undefined
+        : selectedSystems;
 
-    CoreAPI.mediaGenerate(systemsToUpdate ? { systems: systemsToUpdate } : undefined);
+    CoreAPI.mediaGenerate(
+      systemsToUpdate ? { systems: systemsToUpdate } : undefined,
+    );
   };
 
   const handleCancelUpdate = async () => {
-    setIsCancelling(true);
+    setCancelRequested(true);
     try {
       await CoreAPI.mediaGenerateCancel();
-      // Note: Don't reset isCancelling here - let the useEffect handle it
+      // Note: Don't reset cancelRequested here - it resets automatically via effect
       // when the indexing status updates from the WebSocket notification
       queryClient.invalidateQueries({ queryKey: ["media"] });
     } catch (error) {
-      console.error("Failed to cancel media generation:", error);
+      logger.error("Failed to cancel media generation:", error, {
+        category: "api",
+        action: "mediaGenerateCancel",
+        severity: "warning",
+      });
       // Only reset on error, since cancellation request failed
-      setIsCancelling(false);
+      setCancelRequested(false);
     }
   };
 
   // Check various states from both store and API
-  const isOptimizing = gamesIndex.optimizing || mediaStatus?.database?.optimizing;
+  const isOptimizing =
+    gamesIndex.optimizing || mediaStatus?.database?.optimizing;
   const isIndexing = gamesIndex.indexing || mediaStatus?.database?.indexing;
 
   const renderStatus = () => {
-
     // Check optimization status first - this takes priority
     if (isOptimizing) {
       return (
         <div className="mt-3 space-y-2">
-          <div className="text-sm flex items-center justify-between">
+          <div className="flex items-center justify-between text-sm">
             <span>{t("settings.updateDb.status.optimizing")}</span>
             {/* No spinner for optimizing - only throbbing bar */}
           </div>
@@ -93,12 +106,15 @@ export function MediaDatabaseCard() {
     // Show progress when indexing (either from store or API)
     if (isIndexing) {
       // Prefer gamesIndex data if available (has detailed progress), otherwise use generic preparing state
-      const hasDetailedProgress = gamesIndex.indexing && gamesIndex.totalSteps && gamesIndex.totalSteps > 0;
+      const hasDetailedProgress =
+        gamesIndex.indexing &&
+        gamesIndex.totalSteps &&
+        gamesIndex.totalSteps > 0;
 
       return (
         <div className="mt-3 space-y-3">
           <div className="space-y-2">
-            <div className="text-sm flex items-center justify-between">
+            <div className="flex items-center justify-between text-sm">
               <span>
                 {hasDetailedProgress && gamesIndex.currentStepDisplay
                   ? gamesIndex.currentStep === gamesIndex.totalSteps
@@ -107,10 +123,12 @@ export function MediaDatabaseCard() {
                   : t("toast.preparingDb")}
               </span>
               {/* Only show spinner for system-specific steps (not preparing/writing) */}
-              {isIndexing && hasDetailedProgress && gamesIndex.currentStepDisplay &&
-               gamesIndex.currentStep !== gamesIndex.totalSteps && (
-                <LoadingSpinner size={16} className="text-muted-foreground" />
-              )}
+              {isIndexing &&
+                hasDetailedProgress &&
+                gamesIndex.currentStepDisplay &&
+                gamesIndex.currentStep !== gamesIndex.totalSteps && (
+                  <LoadingSpinner size={16} className="text-muted-foreground" />
+                )}
             </div>
             <div className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid">
               <div
@@ -121,20 +139,24 @@ export function MediaDatabaseCard() {
                     "animate-pulse":
                       !hasDetailedProgress ||
                       gamesIndex.currentStep === 0 ||
-                      gamesIndex.currentStep === gamesIndex.totalSteps
-                  }
+                      gamesIndex.currentStep === gamesIndex.totalSteps,
+                  },
                 )}
                 style={{
                   width:
-                    hasDetailedProgress && gamesIndex.currentStep && gamesIndex.totalSteps
+                    hasDetailedProgress &&
+                    gamesIndex.currentStep &&
+                    gamesIndex.totalSteps
                       ? `${((gamesIndex.currentStep / gamesIndex.totalSteps) * 100).toFixed(2)}%`
-                      : "100%"
+                      : "100%",
                 }}
               />
             </div>
           </div>
           <Button
-            label={isCancelling ? t("cancelling") : t("settings.updateDb.cancel")}
+            label={
+              isCancelling ? t("cancelling") : t("settings.updateDb.cancel")
+            }
             variant="outline"
             className="w-full"
             disabled={!connected || isCancelling}
@@ -182,7 +204,7 @@ export function MediaDatabaseCard() {
           <div className="text-muted-foreground mt-3 text-sm">
             {t("settings.updateDb.status.mediaCount", {
               count: totalMedia,
-              formattedCount
+              formattedCount,
             })}
           </div>
         );
@@ -198,8 +220,31 @@ export function MediaDatabaseCard() {
     return null;
   };
 
+  // Get status text for screen reader announcement
+  const getStatusText = (): string => {
+    if (isOptimizing) return t("settings.updateDb.status.optimizing");
+    if (isIndexing) {
+      const hasDetailedProgress =
+        gamesIndex.indexing &&
+        gamesIndex.totalSteps &&
+        gamesIndex.totalSteps > 0;
+      if (hasDetailedProgress && gamesIndex.currentStepDisplay) {
+        return gamesIndex.currentStep === gamesIndex.totalSteps
+          ? t("toast.writingDb")
+          : gamesIndex.currentStepDisplay;
+      }
+      return t("toast.preparingDb");
+    }
+    return "";
+  };
+
   return (
     <>
+      {/* Screen reader announcement for database update progress */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {getStatusText()}
+      </div>
+
       <Card>
         <div className="space-y-3">
           {/* System selector for choosing which systems to update */}
@@ -209,6 +254,7 @@ export function MediaDatabaseCard() {
             placeholder={t("settings.updateDb.allSystems")}
             mode="multi"
             onClick={() => setSystemSelectorOpen(true)}
+            disabled={!connected}
           />
 
           <div data-tour="update-database">

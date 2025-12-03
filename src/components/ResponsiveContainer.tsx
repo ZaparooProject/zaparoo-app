@@ -10,18 +10,18 @@ interface ResponsiveContainerProps {
 export function ResponsiveContainer({
   children,
   className,
-  maxWidth = "app"
+  maxWidth = "app",
 }: ResponsiveContainerProps) {
   return (
     <div
       className={classNames(
         "w-full",
         {
-          "sm:max-w-2xl sm:mx-auto": maxWidth === "app",    // 672px max-width on 640px+ screens
-          "sm:max-w-lg sm:mx-auto": maxWidth === "nav",     // 512px max-width on 640px+ screens
+          "sm:mx-auto sm:max-w-2xl": maxWidth === "app", // 672px max-width on 640px+ screens
+          "sm:mx-auto sm:max-w-lg": maxWidth === "nav", // 512px max-width on 640px+ screens
           // "full" uses no max-width constraints
         },
-        className
+        className,
       )}
     >
       {children}

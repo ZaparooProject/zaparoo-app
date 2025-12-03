@@ -1,7 +1,7 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import { CoreAPI } from '@/lib/coreApi';
-import { SearchResultGame, SearchParams } from '@/lib/models';
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { CoreAPI } from "@/lib/coreApi";
+import { SearchResultGame, SearchParams } from "@/lib/models";
 
 interface UseVirtualInfiniteSearchOptions {
   query: string;
@@ -16,17 +16,17 @@ export function useVirtualInfiniteSearch({
   systems,
   tags = [],
   maxResults = 100,
-  enabled = true
+  enabled = true,
 }: UseVirtualInfiniteSearchOptions) {
   const searchQuery = useInfiniteQuery({
-    queryKey: ['infiniteMediaSearch', query, systems, tags, maxResults],
+    queryKey: ["infiniteMediaSearch", query, systems, tags, maxResults],
     queryFn: async ({ pageParam }) => {
       const searchParams: SearchParams = {
         query,
         systems,
         tags,
         maxResults,
-        cursor: pageParam as string | undefined
+        cursor: pageParam as string | undefined,
       };
 
       return CoreAPI.mediaSearch(searchParams);
@@ -35,7 +35,9 @@ export function useVirtualInfiniteSearch({
     getNextPageParam: (lastPage) => {
       // If pagination exists, use it. Otherwise fall back to legacy behavior (no pagination)
       if (lastPage?.pagination) {
-        return lastPage.pagination.hasNextPage ? lastPage.pagination.nextCursor : undefined;
+        return lastPage.pagination.hasNextPage
+          ? lastPage.pagination.nextCursor
+          : undefined;
       }
       // Legacy fallback: no more pages if pagination field doesn't exist
       return undefined;
@@ -43,15 +45,16 @@ export function useVirtualInfiniteSearch({
     enabled: enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   // Flatten all pages into a single array for virtual scrolling
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- Intentional: optional chain for safety, actual dep is pages array
   const allItems = useMemo(() => {
     if (!searchQuery.data?.pages) return [];
 
     const items: SearchResultGame[] = [];
-    searchQuery.data.pages.forEach(page => {
+    searchQuery.data.pages.forEach((page) => {
       items.push(...page.results);
     });
 
@@ -88,6 +91,6 @@ export function useVirtualInfiniteSearch({
     refetch: searchQuery.refetch,
 
     // Raw query for debugging
-    query: searchQuery
+    query: searchQuery,
   };
 }

@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { CapacitorShake } from "@capgo/capacitor-shake";
-import { usePreferencesStore } from "../lib/preferencesStore";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { logger } from "@/lib/logger";
 
 /**
  * Hook to check accelerometer/shake detection availability once at app startup.
@@ -9,8 +10,12 @@ import { usePreferencesStore } from "../lib/preferencesStore";
  * The result is cached in the preferences store.
  */
 export function useAccelerometerAvailabilityCheck() {
-  const setAccelerometerAvailable = usePreferencesStore((state) => state.setAccelerometerAvailable);
-  const setAccelerometerAvailabilityHydrated = usePreferencesStore((state) => state.setAccelerometerAvailabilityHydrated);
+  const setAccelerometerAvailable = usePreferencesStore(
+    (state) => state.setAccelerometerAvailable,
+  );
+  const setAccelerometerAvailabilityHydrated = usePreferencesStore(
+    (state) => state.setAccelerometerAvailabilityHydrated,
+  );
 
   useEffect(() => {
     // Skip on web platform
@@ -34,7 +39,11 @@ export function useAccelerometerAvailabilityCheck() {
         // Clean up test listener
         await listener.remove();
       } catch (e) {
-        console.error("Failed to check accelerometer availability:", e);
+        logger.error("Failed to check accelerometer availability:", e, {
+          category: "accelerometer",
+          action: "availabilityCheck",
+          severity: "warning",
+        });
         // On error, assume accelerometer not available
         setAccelerometerAvailable(false);
         setAccelerometerAvailabilityHydrated(true);

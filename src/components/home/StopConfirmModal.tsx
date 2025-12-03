@@ -8,27 +8,20 @@ interface StopConfirmModalProps {
   onConfirm: () => void;
 }
 
-export function StopConfirmModal({ isOpen, onClose, onConfirm }: StopConfirmModalProps) {
+export function StopConfirmModal({
+  isOpen,
+  onClose,
+  onConfirm,
+}: StopConfirmModalProps) {
   const { t } = useTranslation();
 
   return (
-    <SlideModal
-      isOpen={isOpen}
-      close={onClose}
-      title={t("create.nfc.confirm")}
-    >
+    <SlideModal isOpen={isOpen} close={onClose} title={t("create.nfc.confirm")}>
       <div className="flex flex-col gap-4 p-4">
         <p className="text-center">{t("stopPlaying")}</p>
         <div className="flex flex-row justify-center gap-4">
-          <Button
-            label={t("nav.cancel")}
-            variant="outline"
-            onClick={onClose}
-          />
-          <Button
-            label={t("yes")}
-            onClick={onConfirm}
-          />
+          <Button label={t("nav.cancel")} variant="outline" onClick={onClose} />
+          <Button label={t("yes")} intent="primary" onClick={onConfirm} />
         </div>
       </div>
     </SlideModal>

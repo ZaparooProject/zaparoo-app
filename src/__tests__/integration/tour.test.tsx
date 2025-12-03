@@ -14,15 +14,15 @@ describe("Tour Integration - data-tour attributes", () => {
   beforeEach(() => {
     settingsSource = readFileSync(
       resolve(__dirname, "../../routes/settings.index.tsx"),
-      "utf-8"
+      "utf-8",
     );
     mediaDatabaseCardSource = readFileSync(
       resolve(__dirname, "../../components/MediaDatabaseCard.tsx"),
-      "utf-8"
+      "utf-8",
     );
     createIndexSource = readFileSync(
       resolve(__dirname, "../../routes/create.index.tsx"),
-      "utf-8"
+      "utf-8",
     );
   });
 
@@ -32,9 +32,9 @@ describe("Tour Integration - data-tour attributes", () => {
     });
 
     it("should wrap device address input with tour target", () => {
-      // Check that data-tour is on a div that contains TextInput
+      // Check that data-tour is on a div that contains DeviceConnectionCard
       expect(settingsSource).toMatch(
-        /<div\s+data-tour="device-address"[\s\S]*?<TextInput/
+        /<div\s+data-tour="device-address"[\s\S]*?<DeviceConnectionCard/,
       );
     });
   });
@@ -47,7 +47,7 @@ describe("Tour Integration - data-tour attributes", () => {
     it("should wrap update button with tour target", () => {
       // Check that data-tour is on a div that contains the update button
       expect(mediaDatabaseCardSource).toMatch(
-        /<div\s+data-tour="update-database"[\s\S]*?<Button/
+        /<div\s+data-tour="update-database"[\s\S]*?<Button/,
       );
     });
   });
@@ -60,7 +60,7 @@ describe("Tour Integration - data-tour attributes", () => {
     it("should have tour target on Link to search", () => {
       // Check that data-tour is on Link component
       expect(createIndexSource).toMatch(
-        /<Link[\s\S]*?data-tour="create-search"/
+        /<Link[\s\S]*?data-tour="create-search"/,
       );
     });
   });
@@ -69,7 +69,7 @@ describe("Tour Integration - data-tour attributes", () => {
     it("should reference all data-tour attributes", () => {
       const tourServiceSource = readFileSync(
         resolve(__dirname, "../../lib/tourService.ts"),
-        "utf-8"
+        "utf-8",
       );
 
       // Check that tourService references the correct data-tour selectors
@@ -83,7 +83,7 @@ describe("Tour Integration - data-tour attributes", () => {
     it("should have all tour translation keys defined", () => {
       const translationsSource = readFileSync(
         resolve(__dirname, "../../translations/en-US.json"),
-        "utf-8"
+        "utf-8",
       );
 
       const translations = JSON.parse(translationsSource);
@@ -129,7 +129,7 @@ describe("Tour Integration - data-tour attributes", () => {
     it("should have tourCompleted in preferences store", () => {
       const preferencesStoreSource = readFileSync(
         resolve(__dirname, "../../lib/preferencesStore.ts"),
-        "utf-8"
+        "utf-8",
       );
 
       expect(preferencesStoreSource).toMatch(/tourCompleted:\s*boolean/);
@@ -139,19 +139,23 @@ describe("Tour Integration - data-tour attributes", () => {
     it("should include tourCompleted in DEFAULT_PREFERENCES", () => {
       const preferencesStoreSource = readFileSync(
         resolve(__dirname, "../../lib/preferencesStore.ts"),
-        "utf-8"
+        "utf-8",
       );
 
-      expect(preferencesStoreSource).toMatch(/DEFAULT_PREFERENCES[\s\S]*?tourCompleted:\s*false/);
+      expect(preferencesStoreSource).toMatch(
+        /DEFAULT_PREFERENCES[\s\S]*?tourCompleted:\s*false/,
+      );
     });
 
     it("should persist tourCompleted in partialize", () => {
       const preferencesStoreSource = readFileSync(
         resolve(__dirname, "../../lib/preferencesStore.ts"),
-        "utf-8"
+        "utf-8",
       );
 
-      expect(preferencesStoreSource).toMatch(/partialize[\s\S]*?tourCompleted:/);
+      expect(preferencesStoreSource).toMatch(
+        /partialize[\s\S]*?tourCompleted:/,
+      );
     });
   });
 
@@ -159,7 +163,7 @@ describe("Tour Integration - data-tour attributes", () => {
     it("should import TourInitializer component", () => {
       const rootSource = readFileSync(
         resolve(__dirname, "../../routes/__root.tsx"),
-        "utf-8"
+        "utf-8",
       );
 
       expect(rootSource).toMatch(/import.*TourInitializer.*from/);
@@ -168,7 +172,7 @@ describe("Tour Integration - data-tour attributes", () => {
     it("should render TourInitializer in component tree", () => {
       const rootSource = readFileSync(
         resolve(__dirname, "../../routes/__root.tsx"),
-        "utf-8"
+        "utf-8",
       );
 
       expect(rootSource).toMatch(/<TourInitializer\s*\/>/);
@@ -179,7 +183,7 @@ describe("Tour Integration - data-tour attributes", () => {
     it("should have tour-specific CSS classes", () => {
       const cssSource = readFileSync(
         resolve(__dirname, "../../index.css"),
-        "utf-8"
+        "utf-8",
       );
 
       // Check for zaparoo-tour-step class
@@ -195,7 +199,7 @@ describe("Tour Integration - data-tour attributes", () => {
     it("should have custom theme matching app design", () => {
       const cssSource = readFileSync(
         resolve(__dirname, "../../index.css"),
-        "utf-8"
+        "utf-8",
       );
 
       // Check that custom colors are used (not default shepherd)

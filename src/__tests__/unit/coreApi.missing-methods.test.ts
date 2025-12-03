@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI } from "../../lib/coreApi";
+import { CoreAPI } from "@/lib/coreApi.ts";
 
 describe("CoreAPI Missing Methods", () => {
-  let mockSend: ReturnType<typeof vi.fn>;
+  let mockSend: any;
+
   let mockWsManager: any;
 
   beforeEach(() => {
@@ -11,7 +12,7 @@ describe("CoreAPI Missing Methods", () => {
     mockWsManager = {
       isConnected: true,
       currentState: "connected",
-      send: mockSend
+      send: mockSend,
     };
     CoreAPI.setSend(mockSend);
     CoreAPI.setWsInstance(mockWsManager);

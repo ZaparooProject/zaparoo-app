@@ -14,21 +14,35 @@ export interface TourNavigate {
  * - Updating the media database
  * - Creating cards
  */
-export const createAppTour = (navigate: TourNavigate, t: TFunction, connected: boolean) => {
+export const createAppTour = (
+  navigate: TourNavigate,
+  t: TFunction,
+  connected: boolean,
+) => {
   const TOTAL_STEPS = connected ? 4 : 5;
 
   // Helper to format text with step indicator and progress bar
+  // The visual progress bar is hidden from screen readers (aria-hidden)
+  // Screen readers get a separate visually-hidden announcement with step info
   const formatText = (step: number, text: string) => {
-    const indicator = t("tour.stepIndicator", { current: step, total: TOTAL_STEPS });
+    const indicator = t("tour.stepIndicator", {
+      current: step,
+      total: TOTAL_STEPS,
+    });
+    const srStepText = t("tour.stepIndicatorAccessible", {
+      current: step,
+      total: TOTAL_STEPS,
+    });
     const progress = (step / TOTAL_STEPS) * 100;
     return `
-      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+      <span class="sr-only">${srStepText}</span>
+      <div aria-hidden="true" style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
         <div style="flex: 1; height: 2px; background: rgba(255, 255, 255, 0.2); border-radius: 1px; overflow: hidden;">
           <div style="height: 100%; width: ${progress}%; background: hsl(0 0% 100%); transition: width 0.3s ease;"></div>
         </div>
         <span style="font-size: 0.75rem; font-weight: 600; color: hsl(0 0% 100%); flex-shrink: 0;">${indicator}</span>
       </div>
-      ${text}
+      <p>${text}</p>
     `;
   };
 
@@ -105,22 +119,26 @@ export const createAppTour = (navigate: TourNavigate, t: TFunction, connected: b
       element: '[data-tour="update-database"]',
       on: "top",
     },
-    beforeShowPromise: connected ? function () {
-      return new Promise((resolve) => {
-        navigate({ to: "/settings" }).then(() => {
-          setTimeout(resolve, 300);
-        });
-      });
-    } : undefined,
+    beforeShowPromise: connected
+      ? function () {
+          return new Promise((resolve) => {
+            navigate({ to: "/settings" }).then(() => {
+              setTimeout(resolve, 300);
+            });
+          });
+        }
+      : undefined,
     buttons: [
       {
         text: t("tour.buttons.back"),
-        action: connected ? () => {
-          tour.hide();
-          navigate({ to: "/" }).then(() => {
-            setTimeout(() => tour.back(), 300);
-          });
-        } : tour.back,
+        action: connected
+          ? () => {
+              tour.hide();
+              navigate({ to: "/" }).then(() => {
+                setTimeout(() => tour.back(), 300);
+              });
+            }
+          : tour.back,
         secondary: true,
       },
       {

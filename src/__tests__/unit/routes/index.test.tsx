@@ -6,35 +6,35 @@ import React from "react";
 // Mock dependencies
 vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
-    history: vi.fn()
-  }
+    history: vi.fn(),
+  },
 }));
 
 vi.mock("../../../hooks/useAppSettings", () => ({
   useAppSettings: vi.fn(() => ({
     launcherAccess: true,
-    preferRemoteWriter: false
-  }))
+    preferRemoteWriter: false,
+  })),
 }));
 
 vi.mock("../../../lib/writeNfcHook", () => ({
   useNfcWriter: vi.fn(() => ({
     status: null,
-    end: vi.fn()
+    end: vi.fn(),
   })),
   WriteMethod: {
-    Auto: 'auto'
-  }
+    Auto: "auto",
+  },
 }));
 
 vi.mock("../../../hooks/useWriteQueueProcessor", () => ({
   useWriteQueueProcessor: vi.fn(() => ({
-    reset: vi.fn()
-  }))
+    reset: vi.fn(),
+  })),
 }));
 
 vi.mock("../../../hooks/useRunQueueProcessor", () => ({
-  useRunQueueProcessor: vi.fn()
+  useRunQueueProcessor: vi.fn(),
 }));
 
 vi.mock("../../../hooks/useScanOperations", () => ({
@@ -44,8 +44,8 @@ vi.mock("../../../hooks/useScanOperations", () => ({
     handleScanButton: vi.fn(),
     handleCameraScan: vi.fn(),
     handleStopConfirm: vi.fn(),
-    runToken: vi.fn()
-  }))
+    runToken: vi.fn(),
+  })),
 }));
 
 vi.mock("../../../lib/store", () => ({
@@ -55,17 +55,17 @@ vi.mock("../../../lib/store", () => ({
       playing: {
         mediaName: "Test Game",
         systemName: "Test System",
-        mediaPath: "/test/path"
+        mediaPath: "/test/path",
       },
       lastToken: {
         uid: "test-uid",
         text: "test-text",
-        time: new Date().toISOString()
+        time: new Date().toISOString(),
       },
-      setLastToken: vi.fn()
+      setLastToken: vi.fn(),
     };
     return selector(mockState);
-  })
+  }),
 }));
 
 vi.mock("../../../lib/preferencesStore", () => ({
@@ -77,9 +77,9 @@ vi.mock("../../../lib/preferencesStore", () => ({
       preferRemoteWriter: true,
       shakeEnabled: true,
       shakeMode: "random" as const,
-      shakeZapscript: ""
-    }))
-  }
+      shakeZapscript: "",
+    })),
+  },
 }));
 
 // Mock Capacitor
@@ -87,36 +87,36 @@ vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     get: vi.fn().mockImplementation(({ key }) => {
       const values: { [key: string]: string } = {
-        "restartScan": "true",
-        "launchOnScan": "true",
-        "launcherAccess": "true",
-        "preferRemoteWriter": "true"
+        restartScan: "true",
+        launchOnScan: "true",
+        launcherAccess: "true",
+        preferRemoteWriter: "true",
       };
       return Promise.resolve({ value: values[key] || "true" });
-    })
-  }
+    }),
+  },
 }));
 
 vi.mock("@capacitor-community/keep-awake", () => ({
   KeepAwake: {
     keepAwake: vi.fn(),
-    allowSleep: vi.fn()
-  }
+    allowSleep: vi.fn(),
+  },
 }));
 
 vi.mock("../../../lib/nfc", () => ({
   Status: {
-    Success: 'success'
+    Success: "success",
   },
-  cancelSession: vi.fn()
+  cancelSession: vi.fn(),
 }));
 
 vi.mock("../../../components/ProPurchase", () => ({
   useProPurchase: vi.fn(() => ({
     PurchaseModal: () => <div data-testid="purchase-modal">Purchase Modal</div>,
     proPurchaseModalOpen: false,
-    setProPurchaseModalOpen: vi.fn()
-  }))
+    setProPurchaseModalOpen: vi.fn(),
+  })),
 }));
 
 describe("Index Route (Home Page)", () => {
@@ -127,8 +127,8 @@ describe("Index Route (Home Page)", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
   });
 
@@ -138,9 +138,7 @@ describe("Index Route (Home Page)", () => {
 
   it("should render the home page with all main components", async () => {
     const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
     // Create a more comprehensive version of the Index component for testing
@@ -236,7 +234,7 @@ describe("Index Route (Home Page)", () => {
     render(
       <TestWrapper>
         <IndexComponent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     expect(screen.getByTestId("home-page")).toBeInTheDocument();
@@ -258,7 +256,7 @@ describe("Index Route (Home Page)", () => {
       launcherAccess: true,
       preferRemoteWriter: true,
       shakeMode: "random",
-      shakeZapscript: ""
+      shakeZapscript: "",
     });
   });
 
@@ -298,9 +296,9 @@ describe("Index Route (Home Page)", () => {
           uid: "04a1b2c3d4e5f6",
           text: "**launch.system:snes",
           data: "04a1b2c3",
-          success: true
-        }
-      ]
+          success: true,
+        },
+      ],
     });
 
     // Mock history modal component
@@ -340,7 +338,7 @@ describe("Index Route (Home Page)", () => {
       write: vi.fn(),
       end: vi.fn(),
       writing: false,
-      result: null
+      result: null,
     };
 
     vi.mocked(useNfcWriter).mockReturnValue(mockNfcWriter);
@@ -365,10 +363,7 @@ describe("Index Route (Home Page)", () => {
           </button>
           {writeOpen && (
             <div data-testid="write-modal">
-              <button
-                data-testid="close-write-modal"
-                onClick={closeWriteModal}
-              >
+              <button data-testid="close-write-modal" onClick={closeWriteModal}>
                 Close
               </button>
             </div>
@@ -443,7 +438,9 @@ describe("Index Route (Home Page)", () => {
     fireEvent.click(confirmButton);
 
     await waitFor(() => {
-      expect(screen.queryByTestId("stop-confirm-modal")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("stop-confirm-modal"),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -469,7 +466,9 @@ describe("Index Route (Home Page)", () => {
 
     render(<StoreTestComponent />);
 
-    expect(screen.getByTestId("connection-state")).toHaveTextContent("Connected");
+    expect(screen.getByTestId("connection-state")).toHaveTextContent(
+      "Connected",
+    );
     expect(screen.getByTestId("playing-info")).toHaveTextContent("Test Game");
   });
 
@@ -484,7 +483,9 @@ describe("Index Route (Home Page)", () => {
         };
       }, []);
 
-      return <div data-testid="nfc-session-component">NFC Session Component</div>;
+      return (
+        <div data-testid="nfc-session-component">NFC Session Component</div>
+      );
     };
 
     const { unmount } = render(<NFCSessionComponent />);
@@ -501,9 +502,11 @@ describe("Index Route (Home Page)", () => {
 
     vi.mocked(useProPurchase).mockReturnValue({
       proAccess: true,
-      PurchaseModal: () => <div data-testid="purchase-modal">Purchase Modal</div>,
+      PurchaseModal: () => (
+        <div data-testid="purchase-modal">Purchase Modal</div>
+      ),
       proPurchaseModalOpen: false,
-      setProPurchaseModalOpen: mockSetProPurchaseModalOpen
+      setProPurchaseModalOpen: mockSetProPurchaseModalOpen,
     });
 
     // Component that uses Pro Purchase
@@ -549,10 +552,7 @@ describe("Index Route (Home Page)", () => {
 
       return (
         <div>
-          <button
-            data-testid="scan-button"
-            onClick={handleScanButton}
-          >
+          <button data-testid="scan-button" onClick={handleScanButton}>
             {scanStatus === "idle" ? "Start Scan" : "Stop Scan"}
           </button>
           <div data-testid="scan-status">{scanStatus}</div>
@@ -573,18 +573,21 @@ describe("Index Route (Home Page)", () => {
 
     expect(scanStatus).toHaveTextContent("scanning");
     expect(scanButton).toHaveTextContent("Stop Scan");
-    expect(screen.getByTestId("scan-session")).toHaveTextContent("test-session");
+    expect(screen.getByTestId("scan-session")).toHaveTextContent(
+      "test-session",
+    );
   });
 
   it("should handle disconnected state properly", async () => {
     // Import useStatusStore properly
-    const { useStatusStore: mockUseStatusStore } = await import("../../../lib/store");
+    const { useStatusStore: mockUseStatusStore } =
+      await import("../../../lib/store");
     vi.mocked(mockUseStatusStore).mockImplementation((selector: any) => {
       const mockState = {
         connected: false,
         playing: { mediaName: "", systemName: "", mediaPath: "" },
         lastToken: null,
-        setLastToken: vi.fn()
+        setLastToken: vi.fn(),
       };
       return selector(mockState);
     });
@@ -598,10 +601,7 @@ describe("Index Route (Home Page)", () => {
           <div data-testid="connection-status">
             {connected ? "Connected" : "Disconnected"}
           </div>
-          <button
-            data-testid="history-button"
-            disabled={!connected}
-          >
+          <button data-testid="history-button" disabled={!connected}>
             History
           </button>
           {connected && playing.mediaName && (
@@ -615,7 +615,9 @@ describe("Index Route (Home Page)", () => {
 
     render(<DisconnectedComponent />);
 
-    expect(screen.getByTestId("connection-status")).toHaveTextContent("Disconnected");
+    expect(screen.getByTestId("connection-status")).toHaveTextContent(
+      "Disconnected",
+    );
     expect(screen.getByTestId("history-button")).toBeDisabled();
     expect(screen.queryByTestId("now-playing")).not.toBeInTheDocument();
   });
@@ -626,7 +628,7 @@ describe("Index Route (Home Page)", () => {
       const [playing, setPlaying] = React.useState({
         mediaName: "Super Mario Bros",
         systemName: "NES",
-        mediaPath: "/path/to/game"
+        mediaPath: "/path/to/game",
       });
 
       return (
@@ -640,10 +642,17 @@ describe("Index Route (Home Page)", () => {
 
           <button
             data-testid="toggle-playing"
-            onClick={() => setPlaying(prev =>
-              prev.mediaName ? { mediaName: "", systemName: "", mediaPath: "" }
-                             : { mediaName: "Super Mario Bros", systemName: "NES", mediaPath: "/path/to/game" }
-            )}
+            onClick={() =>
+              setPlaying((prev) =>
+                prev.mediaName
+                  ? { mediaName: "", systemName: "", mediaPath: "" }
+                  : {
+                      mediaName: "Super Mario Bros",
+                      systemName: "NES",
+                      mediaPath: "/path/to/game",
+                    },
+              )
+            }
           >
             Toggle Playing
           </button>
@@ -663,7 +672,9 @@ describe("Index Route (Home Page)", () => {
 
     // Initially connected with game playing
     expect(screen.getByTestId("now-playing")).toBeInTheDocument();
-    expect(screen.getByTestId("media-name")).toHaveTextContent("Super Mario Bros");
+    expect(screen.getByTestId("media-name")).toHaveTextContent(
+      "Super Mario Bros",
+    );
     expect(screen.getByTestId("system-name")).toHaveTextContent("NES");
 
     // Disconnect
@@ -731,7 +742,8 @@ describe("Index Route (Home Page)", () => {
   it("should handle history modal with pro purchase modal interaction", async () => {
     const HistoryProInteractionComponent = () => {
       const [historyOpen, setHistoryOpen] = React.useState(false);
-      const [proPurchaseModalOpen, setProPurchaseModalOpen] = React.useState(false);
+      const [proPurchaseModalOpen, setProPurchaseModalOpen] =
+        React.useState(false);
 
       const handleHistoryToggle = (state: boolean) => {
         if (!historyOpen && proPurchaseModalOpen) {
@@ -764,9 +776,7 @@ describe("Index Route (Home Page)", () => {
             <div data-testid="pro-purchase-modal">Pro Purchase Modal</div>
           )}
 
-          {historyOpen && (
-            <div data-testid="history-modal">History Modal</div>
-          )}
+          {historyOpen && <div data-testid="history-modal">History Modal</div>}
         </div>
       );
     };
@@ -780,12 +790,20 @@ describe("Index Route (Home Page)", () => {
     // Try to open history - should close pro modal first
     fireEvent.click(screen.getByTestId("toggle-history"));
 
-    await waitFor(() => {
-      expect(screen.queryByTestId("pro-purchase-modal")).not.toBeInTheDocument();
-    }, { timeout: 200 });
+    await waitFor(
+      () => {
+        expect(
+          screen.queryByTestId("pro-purchase-modal"),
+        ).not.toBeInTheDocument();
+      },
+      { timeout: 200 },
+    );
 
-    await waitFor(() => {
-      expect(screen.getByTestId("history-modal")).toBeInTheDocument();
-    }, { timeout: 300 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("history-modal")).toBeInTheDocument();
+      },
+      { timeout: 300 },
+    );
   });
 });

@@ -1,10 +1,13 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
-import { RestorePuchasesButton, useProPurchase } from '@/components/ProPurchase';
-import { renderHook, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { vi } from "vitest";
+import {
+  RestorePuchasesButton,
+  useProPurchase,
+} from "@/components/ProPurchase";
+import { renderHook, act } from "@testing-library/react";
 
 // Mock modules inline to avoid hoisting issues
-vi.mock('@capacitor/preferences', () => ({
+vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     get: vi.fn(),
     set: vi.fn().mockResolvedValue(undefined),
@@ -13,14 +16,14 @@ vi.mock('@capacitor/preferences', () => ({
   },
 }));
 
-vi.mock('@capacitor/core', () => ({
+vi.mock("@capacitor/core", () => ({
   Capacitor: {
-    getPlatform: vi.fn().mockReturnValue('ios'),
+    getPlatform: vi.fn().mockReturnValue("ios"),
     isNativePlatform: vi.fn().mockReturnValue(true),
   },
 }));
 
-vi.mock('@revenuecat/purchases-capacitor', () => ({
+vi.mock("@revenuecat/purchases-capacitor", () => ({
   Purchases: {
     restorePurchases: vi.fn(),
     getCustomerInfo: vi.fn(),
@@ -29,7 +32,7 @@ vi.mock('@revenuecat/purchases-capacitor', () => ({
   },
 }));
 
-vi.mock('react-hot-toast', () => ({
+vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),
@@ -37,12 +40,12 @@ vi.mock('react-hot-toast', () => ({
   },
 }));
 
-vi.mock('i18next', () => ({
+vi.mock("i18next", () => ({
   t: (key: string) => key,
 }));
 
 // Mock UI components
-vi.mock('@/components/ui/dialog', () => ({
+vi.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children, open, onOpenChange }: any) =>
     open ? (
       <div data-testid="dialog" onClick={() => onOpenChange(false)}>
@@ -57,10 +60,10 @@ vi.mock('@/components/ui/dialog', () => ({
   ),
   DialogTitle: ({ children }: any) => (
     <h2 data-testid="dialog-title">{children}</h2>
-  )
+  ),
 }));
 
-vi.mock('@/components/wui/Button', () => ({
+vi.mock("@/components/wui/Button", () => ({
   Button: ({ label, onClick, disabled, className }: any) => (
     <button
       data-testid="button"
@@ -70,12 +73,12 @@ vi.mock('@/components/wui/Button', () => ({
     >
       {label}
     </button>
-  )
+  ),
 }));
 
-describe('RestorePuchasesButton', () => {
+describe("RestorePuchasesButton", () => {
   beforeAll(() => {
-    Object.defineProperty(window, 'location', {
+    Object.defineProperty(window, "location", {
       value: {
         reload: vi.fn(),
       },
@@ -86,32 +89,32 @@ describe('RestorePuchasesButton', () => {
     vi.clearAllMocks();
   });
 
-  it('should render restore purchases button', () => {
+  it("should render restore purchases button", () => {
     render(<RestorePuchasesButton />);
 
-    const button = screen.getByTestId('button');
+    const button = screen.getByTestId("button");
     expect(button).toBeInTheDocument();
-    expect(button).toHaveTextContent('settings.app.restorePurchases');
+    expect(button).toHaveTextContent("settings.app.restorePurchases");
   });
 
-  it('should handle successful restore with active entitlement', async () => {
+  it("should handle successful restore with active entitlement", async () => {
     const mockCustomerInfo = {
       customerInfo: {
         entitlements: {
           active: {
-            tapto_launcher: true
-          }
-        }
-      }
+            tapto_launcher: true,
+          },
+        },
+      },
     } as any;
 
-    const { Purchases } = await import('@revenuecat/purchases-capacitor');
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
     vi.mocked(Purchases.restorePurchases).mockResolvedValue({} as any);
     vi.mocked(Purchases.getCustomerInfo).mockResolvedValue(mockCustomerInfo);
 
     render(<RestorePuchasesButton />);
 
-    const button = screen.getByTestId('button');
+    const button = screen.getByTestId("button");
     fireEvent.click(button);
 
     await waitFor(() => {
@@ -119,64 +122,68 @@ describe('RestorePuchasesButton', () => {
       expect(Purchases.getCustomerInfo).toHaveBeenCalled();
     });
 
-    const { Preferences } = await import('@capacitor/preferences');
+    const { Preferences } = await import("@capacitor/preferences");
     // Preferences.set is now called with app-preferences key and full state
     expect(Preferences.set).toHaveBeenCalled();
-    const setCall = vi.mocked(Preferences.set).mock.calls[0][0];
-    expect(setCall.key).toBe('app-preferences');
+    const setCall = vi.mocked(Preferences.set).mock.calls[0]![0];
+    expect(setCall.key).toBe("app-preferences");
     const state = JSON.parse(setCall.value);
     expect(state.state.launcherAccess).toBe(true);
 
     expect(window.location.reload).toHaveBeenCalled();
   });
 
-  it('should handle restore purchases failure', async () => {
-    const { Purchases } = await import('@revenuecat/purchases-capacitor');
-    vi.mocked(Purchases.restorePurchases).mockRejectedValue(new Error('Restore failed'));
+  it("should handle restore purchases failure", async () => {
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.restorePurchases).mockRejectedValue(
+      new Error("Restore failed"),
+    );
 
     render(<RestorePuchasesButton />);
 
-    const button = screen.getByTestId('button');
+    const button = screen.getByTestId("button");
     fireEvent.click(button);
 
     await waitFor(() => {
       expect(Purchases.restorePurchases).toHaveBeenCalled();
     });
 
-    const toast = await import('react-hot-toast');
+    const toast = await import("react-hot-toast");
     expect(toast.default.error).toHaveBeenCalled();
   });
 });
 
-describe('useProPurchase', () => {
+describe("useProPurchase", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     // Set up default mock returns for the hook
-    const { Purchases } = await import('@revenuecat/purchases-capacitor');
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
     vi.mocked(Purchases.getOfferings).mockResolvedValue({
       current: {
-        availablePackages: []
-      }
+        availablePackages: [],
+      },
     } as any);
     vi.mocked(Purchases.getCustomerInfo).mockResolvedValue({
       customerInfo: {
         entitlements: {
-          active: {}
-        }
-      }
+          active: {},
+        },
+      },
     } as any);
   });
 
-  it('should initialize with default values', async () => {
+  it("should initialize with default values", async () => {
     // Mock console.error to suppress expected "no launcher purchase package found" message
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     const { result } = renderHook(() => useProPurchase());
 
     expect(result.current.proAccess).toBe(false);
     expect(result.current.proPurchaseModalOpen).toBe(false);
-    expect(typeof result.current.setProPurchaseModalOpen).toBe('function');
-    expect(typeof result.current.PurchaseModal).toBe('function');
+    expect(typeof result.current.setProPurchaseModalOpen).toBe("function");
+    expect(typeof result.current.PurchaseModal).toBe("function");
 
     // Wait for any async effects to complete
     await waitFor(() => {
@@ -186,9 +193,11 @@ describe('useProPurchase', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('should initialize with custom initial pro access', async () => {
+  it("should initialize with custom initial pro access", async () => {
     // Mock console.error to suppress expected "no launcher purchase package found" message
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     const { result } = renderHook(() => useProPurchase(true));
 
@@ -202,47 +211,47 @@ describe('useProPurchase', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('should skip initialization on web platform', async () => {
-    const { Capacitor } = await import('@capacitor/core');
-    const { Purchases } = await import('@revenuecat/purchases-capacitor');
-    vi.mocked(Capacitor.getPlatform).mockReturnValue('web');
+  it("should skip initialization on web platform", async () => {
+    const { Capacitor } = await import("@capacitor/core");
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Capacitor.getPlatform).mockReturnValue("web");
 
     renderHook(() => useProPurchase());
 
     // Give it a moment to potentially make calls
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(Purchases.getOfferings).not.toHaveBeenCalled();
     expect(Purchases.getCustomerInfo).not.toHaveBeenCalled();
   });
 
-  it('should fetch offerings and customer info on mobile platforms', async () => {
-    const { Capacitor } = await import('@capacitor/core');
-    vi.mocked(Capacitor.getPlatform).mockReturnValue('ios'); // Ensure non-web platform
+  it("should fetch offerings and customer info on mobile platforms", async () => {
+    const { Capacitor } = await import("@capacitor/core");
+    vi.mocked(Capacitor.getPlatform).mockReturnValue("ios"); // Ensure non-web platform
 
     const mockOfferings = {
       current: {
         availablePackages: [
           {
             product: {
-              priceString: '$6.99'
-            }
-          }
-        ]
-      }
+              priceString: "$6.99",
+            },
+          },
+        ],
+      },
     } as any;
 
     const mockCustomerInfo = {
       customerInfo: {
         entitlements: {
           active: {
-            tapto_launcher: true
-          }
-        }
-      }
+            tapto_launcher: true,
+          },
+        },
+      },
     } as any;
 
-    const { Purchases } = await import('@revenuecat/purchases-capacitor');
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
     vi.mocked(Purchases.getOfferings).mockResolvedValue(mockOfferings);
     vi.mocked(Purchases.getCustomerInfo).mockResolvedValue(mockCustomerInfo);
 
@@ -254,18 +263,20 @@ describe('useProPurchase', () => {
       expect(result.current.proAccess).toBe(true);
     });
 
-    const { Preferences } = await import('@capacitor/preferences');
+    const { Preferences } = await import("@capacitor/preferences");
     // Preferences.set is now called with app-preferences key and full state
     expect(Preferences.set).toHaveBeenCalled();
-    const setCall = vi.mocked(Preferences.set).mock.calls[0][0];
-    expect(setCall.key).toBe('app-preferences');
+    const setCall = vi.mocked(Preferences.set).mock.calls[0]![0];
+    expect(setCall.key).toBe("app-preferences");
     const state = JSON.parse(setCall.value);
     expect(state.state.launcherAccess).toBe(true);
   });
 
-  it('should render PurchaseModal component', async () => {
+  it("should render PurchaseModal component", async () => {
     // Mock console.error to suppress expected "no launcher purchase package found" message
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     const { result } = renderHook(() => useProPurchase());
 
@@ -273,7 +284,7 @@ describe('useProPurchase', () => {
     render(<PurchaseModalComponent />);
 
     // Modal should not be visible initially
-    expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
 
     // Wait for any async effects to complete
     await waitFor(() => {
@@ -283,9 +294,11 @@ describe('useProPurchase', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('should open purchase modal', async () => {
+  it("should open purchase modal", async () => {
     // Mock console.error to suppress expected "no launcher purchase package found" message
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     const { result } = renderHook(() => useProPurchase());
 
@@ -301,8 +314,8 @@ describe('useProPurchase', () => {
     const PurchaseModalComponent = result.current.PurchaseModal;
     render(<PurchaseModalComponent />);
 
-    expect(screen.getByTestId('dialog')).toBeInTheDocument();
-    expect(screen.getByText('scan.purchaseProTitle')).toBeInTheDocument();
+    expect(screen.getByTestId("dialog")).toBeInTheDocument();
+    expect(screen.getByText("scan.purchaseProTitle")).toBeInTheDocument();
 
     consoleErrorSpy.mockRestore();
   });

@@ -12,8 +12,8 @@ vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
     systems: mockSystems,
     mediaSearch: mockMediaSearch,
-    run: mockRun
-  }
+    run: mockRun,
+  },
 }));
 
 vi.mock("../../../lib/store", () => ({
@@ -21,10 +21,10 @@ vi.mock("../../../lib/store", () => ({
     const mockState = {
       connected: true,
       gamesIndex: { exists: true, indexing: false },
-      setGamesIndex: vi.fn()
+      setGamesIndex: vi.fn(),
     };
     return selector(mockState);
-  })
+  }),
 }));
 
 const mockNfcWriter = {
@@ -32,22 +32,22 @@ const mockNfcWriter = {
   write: vi.fn(),
   end: vi.fn(),
   writing: false,
-  result: null
+  result: null,
 };
 
 vi.mock("../../../lib/writeNfcHook", () => ({
   useNfcWriter: vi.fn(() => mockNfcWriter),
   WriteAction: {
-    Write: 'write'
-  }
+    Write: "write",
+  },
 }));
 
 vi.mock("../../../hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({}))
+  useSmartSwipe: vi.fn(() => ({})),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     useNavigate: vi.fn(() => vi.fn()),
@@ -57,11 +57,11 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
         systems: {
           systems: [
             { id: "snes", name: "Super Nintendo Entertainment System" },
-            { id: "genesis", name: "Sega Genesis" }
-          ]
-        }
-      }))
-    }))
+            { id: "genesis", name: "Sega Genesis" },
+          ],
+        },
+      })),
+    })),
   };
 });
 
@@ -77,11 +77,11 @@ vi.mock("react-i18next", () => ({
         "create.search.searchButton": "Search",
         "create.search.noResults": "No games found",
         "create.search.writeLabel": "Write",
-        "create.search.playLabel": "Play"
+        "create.search.playLabel": "Play",
       };
       return translations[key] || key;
-    }
-  })
+    },
+  }),
 }));
 
 describe("Create Search Route - Enhanced Coverage", () => {
@@ -92,16 +92,16 @@ describe("Create Search Route - Enhanced Coverage", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
 
     mockSystems.mockResolvedValue({
       systems: [
         { id: "snes", name: "Super Nintendo Entertainment System" },
         { id: "genesis", name: "Sega Genesis" },
-        { id: "nes", name: "Nintendo Entertainment System" }
-      ]
+        { id: "nes", name: "Nintendo Entertainment System" },
+      ],
     });
   });
 
@@ -109,8 +109,20 @@ describe("Create Search Route - Enhanced Coverage", () => {
     vi.restoreAllMocks();
   });
 
-  const renderSearchComponent = (props: { connected?: boolean; searchResults?: any[]; isLoading?: boolean; error?: any } = {}) => {
-    const { connected = true, searchResults, isLoading = false, error = null } = props;
+  const renderSearchComponent = (
+    props: {
+      connected?: boolean;
+      searchResults?: any[];
+      isLoading?: boolean;
+      error?: any;
+    } = {},
+  ) => {
+    const {
+      connected = true,
+      searchResults,
+      isLoading = false,
+      error = null,
+    } = props;
 
     const SearchComponent = () => {
       const [query, setQuery] = React.useState("");
@@ -124,7 +136,7 @@ describe("Create Search Route - Enhanced Coverage", () => {
       const systems = [
         { id: "all", name: "All Systems" },
         { id: "snes", name: "Super Nintendo Entertainment System" },
-        { id: "genesis", name: "Sega Genesis" }
+        { id: "genesis", name: "Sega Genesis" },
       ];
 
       const handleSearch = async () => {
@@ -136,7 +148,7 @@ describe("Create Search Route - Enhanced Coverage", () => {
         try {
           mockMediaSearch({
             query,
-            systems: querySystem === "all" ? [] : [querySystem]
+            systems: querySystem === "all" ? [] : [querySystem],
           });
 
           if (searchResults) {
@@ -156,7 +168,7 @@ describe("Create Search Route - Enhanced Coverage", () => {
         mockRun({
           type: "launch",
           text: `**launch.system:${result.systemName}`,
-          data: result
+          data: result,
         });
       };
 
@@ -195,7 +207,7 @@ describe("Create Search Route - Enhanced Coverage", () => {
               onChange={(e) => setQuerySystem(e.target.value)}
               disabled={!connected}
             >
-              {systems.map(system => (
+              {systems.map((system) => (
                 <option key={system.id} value={system.id}>
                   {system.name}
                 </option>
@@ -211,9 +223,7 @@ describe("Create Search Route - Enhanced Coverage", () => {
             </button>
           </div>
 
-          {loading && (
-            <div data-testid="loading">Searching for games...</div>
-          )}
+          {loading && <div data-testid="loading">Searching for games...</div>}
 
           {searchError && (
             <div data-testid="search-error">
@@ -223,12 +233,24 @@ describe("Create Search Route - Enhanced Coverage", () => {
 
           {results.length > 0 && (
             <div data-testid="search-results">
-              <div data-testid="results-count">{results.length} results found</div>
+              <div data-testid="results-count">
+                {results.length} results found
+              </div>
               {results.map((result, index) => (
-                <div key={index} data-testid={`search-result-${index}`} className="search-result">
-                  <div data-testid={`game-name-${index}`}>{result.mediaName}</div>
-                  <div data-testid={`system-name-${index}`}>{result.systemName}</div>
-                  <div data-testid={`media-path-${index}`}>{result.mediaPath}</div>
+                <div
+                  key={index}
+                  data-testid={`search-result-${index}`}
+                  className="search-result"
+                >
+                  <div data-testid={`game-name-${index}`}>
+                    {result.mediaName}
+                  </div>
+                  <div data-testid={`system-name-${index}`}>
+                    {result.systemName}
+                  </div>
+                  <div data-testid={`media-path-${index}`}>
+                    {result.mediaPath}
+                  </div>
 
                   <div className="result-actions">
                     <button
@@ -260,8 +282,12 @@ describe("Create Search Route - Enhanced Coverage", () => {
             <div data-testid="write-modal" className="modal">
               <div className="modal-content">
                 <h2>Write to NFC Tag</h2>
-                <div data-testid="selected-game">{selectedResult.mediaName}</div>
-                <div data-testid="selected-system">{selectedResult.systemName}</div>
+                <div data-testid="selected-game">
+                  {selectedResult.mediaName}
+                </div>
+                <div data-testid="selected-system">
+                  {selectedResult.systemName}
+                </div>
 
                 <div className="modal-actions">
                   <button
@@ -288,7 +314,7 @@ describe("Create Search Route - Enhanced Coverage", () => {
     return render(
       <QueryClientProvider client={queryClient}>
         <SearchComponent />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
   };
 
@@ -307,7 +333,9 @@ describe("Create Search Route - Enhanced Coverage", () => {
     renderSearchComponent({ connected: false });
 
     expect(screen.getByTestId("not-connected")).toBeInTheDocument();
-    expect(screen.getByText("Not connected to Zaparoo Core")).toBeInTheDocument();
+    expect(
+      screen.getByText("Not connected to Zaparoo Core"),
+    ).toBeInTheDocument();
   });
 
   it("should disable controls when disconnected", () => {
@@ -349,7 +377,7 @@ describe("Create Search Route - Enhanced Coverage", () => {
 
     expect(mockMediaSearch).toHaveBeenCalledWith({
       query: "Super Mario",
-      systems: ["snes"]
+      systems: ["snes"],
     });
   });
 
@@ -364,7 +392,7 @@ describe("Create Search Route - Enhanced Coverage", () => {
 
     expect(mockMediaSearch).toHaveBeenCalledWith({
       query: "Sonic",
-      systems: []
+      systems: [],
     });
   });
 
@@ -373,22 +401,26 @@ describe("Create Search Route - Enhanced Coverage", () => {
       {
         mediaName: "Super Mario World",
         systemName: "SNES",
-        mediaPath: "/games/snes/super_mario_world.sfc"
+        mediaPath: "/games/snes/super_mario_world.sfc",
       },
       {
         mediaName: "Super Mario Bros 3",
         systemName: "NES",
-        mediaPath: "/games/nes/super_mario_bros_3.nes"
-      }
+        mediaPath: "/games/nes/super_mario_bros_3.nes",
+      },
     ];
 
     renderSearchComponent({ searchResults: mockResults });
 
     expect(screen.getByTestId("search-results")).toBeInTheDocument();
-    expect(screen.getByTestId("results-count")).toHaveTextContent("2 results found");
+    expect(screen.getByTestId("results-count")).toHaveTextContent(
+      "2 results found",
+    );
     expect(screen.getByTestId("search-result-0")).toBeInTheDocument();
     expect(screen.getByTestId("search-result-1")).toBeInTheDocument();
-    expect(screen.getByTestId("game-name-0")).toHaveTextContent("Super Mario World");
+    expect(screen.getByTestId("game-name-0")).toHaveTextContent(
+      "Super Mario World",
+    );
     expect(screen.getByTestId("system-name-0")).toHaveTextContent("SNES");
   });
 
@@ -397,7 +429,9 @@ describe("Create Search Route - Enhanced Coverage", () => {
 
     expect(screen.getByTestId("loading")).toBeInTheDocument();
     expect(screen.getByText("Searching for games...")).toBeInTheDocument();
-    expect(screen.getByTestId("search-button")).toHaveTextContent("Searching...");
+    expect(screen.getByTestId("search-button")).toHaveTextContent(
+      "Searching...",
+    );
   });
 
   it("should display error message when search fails", () => {
@@ -405,7 +439,9 @@ describe("Create Search Route - Enhanced Coverage", () => {
     renderSearchComponent({ error });
 
     expect(screen.getByTestId("search-error")).toBeInTheDocument();
-    expect(screen.getByText("Error: Search service unavailable")).toBeInTheDocument();
+    expect(
+      screen.getByText("Error: Search service unavailable"),
+    ).toBeInTheDocument();
   });
 
   it("should show no results message when no games found", () => {
@@ -415,7 +451,9 @@ describe("Create Search Route - Enhanced Coverage", () => {
     fireEvent.change(gameInput, { target: { value: "NonexistentGame" } });
 
     expect(screen.getByTestId("no-results")).toBeInTheDocument();
-    expect(screen.getByText('No games found for "NonexistentGame"')).toBeInTheDocument();
+    expect(
+      screen.getByText('No games found for "NonexistentGame"'),
+    ).toBeInTheDocument();
   });
 
   it("should handle play button click", () => {
@@ -423,8 +461,8 @@ describe("Create Search Route - Enhanced Coverage", () => {
       {
         mediaName: "Super Mario World",
         systemName: "SNES",
-        mediaPath: "/games/snes/super_mario_world.sfc"
-      }
+        mediaPath: "/games/snes/super_mario_world.sfc",
+      },
     ];
 
     renderSearchComponent({ searchResults: mockResults });
@@ -435,7 +473,7 @@ describe("Create Search Route - Enhanced Coverage", () => {
     expect(mockRun).toHaveBeenCalledWith({
       type: "launch",
       text: "**launch.system:SNES",
-      data: mockResults[0]
+      data: mockResults[0],
     });
   });
 
@@ -444,8 +482,8 @@ describe("Create Search Route - Enhanced Coverage", () => {
       {
         mediaName: "Super Mario World",
         systemName: "SNES",
-        mediaPath: "/games/snes/super_mario_world.sfc"
-      }
+        mediaPath: "/games/snes/super_mario_world.sfc",
+      },
     ];
 
     renderSearchComponent({ searchResults: mockResults });
@@ -454,7 +492,9 @@ describe("Create Search Route - Enhanced Coverage", () => {
     fireEvent.click(writeButton);
 
     expect(screen.getByTestId("write-modal")).toBeInTheDocument();
-    expect(screen.getByTestId("selected-game")).toHaveTextContent("Super Mario World");
+    expect(screen.getByTestId("selected-game")).toHaveTextContent(
+      "Super Mario World",
+    );
     expect(screen.getByTestId("selected-system")).toHaveTextContent("SNES");
     expect(mockNfcWriter.write).toHaveBeenCalledWith(mockResults[0]);
   });
@@ -464,8 +504,8 @@ describe("Create Search Route - Enhanced Coverage", () => {
       {
         mediaName: "Super Mario World",
         systemName: "SNES",
-        mediaPath: "/games/snes/super_mario_world.sfc"
-      }
+        mediaPath: "/games/snes/super_mario_world.sfc",
+      },
     ];
 
     renderSearchComponent({ searchResults: mockResults });
@@ -492,13 +532,13 @@ describe("Create Search Route - Enhanced Coverage", () => {
       {
         mediaName: "Super Mario World",
         systemName: "SNES",
-        mediaPath: "/games/snes/super_mario_world.sfc"
-      }
+        mediaPath: "/games/snes/super_mario_world.sfc",
+      },
     ];
 
     renderSearchComponent({
       connected: false,
-      searchResults: mockResults
+      searchResults: mockResults,
     });
 
     expect(screen.getByTestId("play-button-0")).toBeDisabled();
@@ -535,31 +575,39 @@ describe("Create Search Route - Enhanced Coverage", () => {
       {
         mediaName: "Super Mario World",
         systemName: "SNES",
-        mediaPath: "/games/snes/super_mario_world.sfc"
+        mediaPath: "/games/snes/super_mario_world.sfc",
       },
       {
         mediaName: "Sonic the Hedgehog",
         systemName: "Genesis",
-        mediaPath: "/games/genesis/sonic.bin"
+        mediaPath: "/games/genesis/sonic.bin",
       },
       {
         mediaName: "Mega Man X",
         systemName: "SNES",
-        mediaPath: "/games/snes/mega_man_x.sfc"
-      }
+        mediaPath: "/games/snes/mega_man_x.sfc",
+      },
     ];
 
     renderSearchComponent({ searchResults: mockResults });
 
-    expect(screen.getByTestId("results-count")).toHaveTextContent("3 results found");
+    expect(screen.getByTestId("results-count")).toHaveTextContent(
+      "3 results found",
+    );
 
     // Check first result
-    expect(screen.getByTestId("game-name-0")).toHaveTextContent("Super Mario World");
+    expect(screen.getByTestId("game-name-0")).toHaveTextContent(
+      "Super Mario World",
+    );
     expect(screen.getByTestId("system-name-0")).toHaveTextContent("SNES");
-    expect(screen.getByTestId("media-path-0")).toHaveTextContent("/games/snes/super_mario_world.sfc");
+    expect(screen.getByTestId("media-path-0")).toHaveTextContent(
+      "/games/snes/super_mario_world.sfc",
+    );
 
     // Check second result
-    expect(screen.getByTestId("game-name-1")).toHaveTextContent("Sonic the Hedgehog");
+    expect(screen.getByTestId("game-name-1")).toHaveTextContent(
+      "Sonic the Hedgehog",
+    );
     expect(screen.getByTestId("system-name-1")).toHaveTextContent("Genesis");
 
     // Check third result

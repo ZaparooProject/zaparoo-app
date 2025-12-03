@@ -3,9 +3,9 @@ import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { ScanResult } from "../lib/models";
-import { DownIcon, SettingsIcon, WarningIcon } from "../lib/images";
-import { usePreferencesStore } from "../lib/preferencesStore";
+import { ScanResult } from "@/lib/models";
+import { DownIcon, SettingsIcon, WarningIcon } from "@/lib/images";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 
@@ -32,22 +32,9 @@ export function ScanSpinner(props: {
     }
   }, []);
 
+  // NFC not supported - return null to let parent handle graceful degradation
   if (!nfcSupported && Capacitor.isNativePlatform()) {
-    return (
-      <Card className="mx-2 mb-2">
-        <div className="flex flex-row items-center justify-between gap-3">
-          <div className="text-error px-1.5">
-            <WarningIcon size="24" />
-          </div>
-          <div className="flex grow flex-col text-left">
-            <span className="font-semibold">
-              {t("spinner.notSupportedLabel")}
-            </span>
-            <span className="text-sm">{t("spinner.notSupportedSub")}</span>
-          </div>
-        </div>
-      </Card>
-    );
+    return null;
   }
 
   if (!nfcEnabled) {
@@ -96,7 +83,7 @@ export function ScanSpinner(props: {
                 : props.status === ScanResult.Error
                   ? errorColor
                   : primaryColor,
-            animation: props.spinning ? "spinner 20s infinite linear" : "none"
+            animation: props.spinning ? "spinner 20s infinite linear" : "none",
           }}
           className={classNames(
             "flex",
@@ -108,7 +95,7 @@ export function ScanSpinner(props: {
             "border-[3px]",
             "border-solid",
             "border-primary",
-            "drop-shadow-[0_0_20px_var(--color-primary)]"
+            "drop-shadow-[0_0_20px_var(--color-primary)]",
           )}
         >
           <div
@@ -119,7 +106,9 @@ export function ScanSpinner(props: {
                   : props.status === ScanResult.Error
                     ? errorColor
                     : primaryColor,
-              animation: props.spinning ? "spinner 30s infinite linear" : "none"
+              animation: props.spinning
+                ? "spinner 30s infinite linear"
+                : "none",
             }}
             className={classNames(
               "flex",
@@ -130,7 +119,7 @@ export function ScanSpinner(props: {
               "rounded-[16px]",
               "border-[3px]",
               "border-solid",
-              "border-primary"
+              "border-primary",
             )}
           >
             <div
@@ -143,7 +132,7 @@ export function ScanSpinner(props: {
                       : primaryColor,
                 animation: props.spinning
                   ? "spinner 40s infinite linear"
-                  : "none"
+                  : "none",
               }}
               className={classNames(
                 "flex",
@@ -154,7 +143,7 @@ export function ScanSpinner(props: {
                 "rounded-[16px]",
                 "border-[3px]",
                 "border-solid",
-                "border-primary"
+                "border-primary",
               )}
             >
               <div
@@ -168,7 +157,7 @@ export function ScanSpinner(props: {
                     ? "attention 5s infinite linear"
                     : "none",
                   transformOrigin: "center",
-                  willChange: "opacity, transform"
+                  willChange: "opacity, transform",
                 }}
               ></div>
             </div>

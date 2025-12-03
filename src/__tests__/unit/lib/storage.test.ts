@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // IMPORTANT: Mock before imports to ensure proper module replacement
-vi.mock("@capacitor/preferences", () => import("../../../__mocks__/@capacitor/preferences"));
+vi.mock(
+  "@capacitor/preferences",
+  () => import("../../../__mocks__/@capacitor/preferences"),
+);
 vi.mock("@capacitor/core", () => import("../../../__mocks__/@capacitor/core"));
 
 import { getDeviceAddress, setDeviceAddress } from "../../../lib/coreApi";
@@ -27,20 +30,20 @@ describe("Device Address Storage", () => {
       clear: vi.fn(() => {
         localStorageMock._store = {};
       }),
-      _store: {} as { [key: string]: string }
+      _store: {} as { [key: string]: string },
     };
 
-    Object.defineProperty(window, 'localStorage', {
+    Object.defineProperty(window, "localStorage", {
       value: localStorageMock,
       writable: true,
-      configurable: true
+      configurable: true,
     });
 
     // Reset window.location for each test to avoid interference
-    Object.defineProperty(window, 'location', {
-      value: { hostname: 'localhost' },
+    Object.defineProperty(window, "location", {
+      value: { hostname: "localhost" },
       writable: true,
-      configurable: true
+      configurable: true,
     });
 
     // Clear the mock store
@@ -49,15 +52,15 @@ describe("Device Address Storage", () => {
 
   afterEach(() => {
     // Restore original values
-    Object.defineProperty(window, 'localStorage', {
+    Object.defineProperty(window, "localStorage", {
       value: originalLocalStorage,
       writable: true,
-      configurable: true
+      configurable: true,
     });
-    Object.defineProperty(window, 'location', {
+    Object.defineProperty(window, "location", {
       value: originalLocation,
       writable: true,
-      configurable: true
+      configurable: true,
     });
   });
 
@@ -75,10 +78,10 @@ describe("Device Address Storage", () => {
   it("should use window.location.hostname on web platform when no address stored", () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
     localStorage.clear(); // Ensure localStorage is empty
-    Object.defineProperty(window, 'location', {
-      value: { hostname: 'localhost' },
+    Object.defineProperty(window, "location", {
+      value: { hostname: "localhost" },
       writable: true,
-      configurable: true
+      configurable: true,
     });
 
     const address = getDeviceAddress();

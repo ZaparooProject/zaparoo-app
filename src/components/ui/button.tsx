@@ -10,8 +10,7 @@ const buttonVariants = cva(
       variant: {
         default:
           "bg-primary text-primary-foreground shadow hover:bg-primary/90",
-        wui:
-          "bg-wui-button border border-solid border-[rgba(255,255,255,0.4)] text-white shadow hover:opacity-80",
+        wui: "bg-wui-button border border-solid border-[rgba(255,255,255,0.4)] text-white shadow hover:opacity-80",
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
         outline:
@@ -21,7 +20,7 @@ const buttonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-white/10 hover:text-white",
-        link: "text-primary underline-offset-4 hover:underline"
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-6 py-1.5 rounded-[20px]",
@@ -29,18 +28,19 @@ const buttonVariants = cva(
         lg: "h-12 px-8 py-2 text-lg rounded-[24px]",
         icon: "h-10 w-10 min-w-10 px-1.5 rounded-full",
         "icon-sm": "h-8 w-8 min-w-8 px-1.5 rounded-full",
-        "icon-lg": "h-12 w-12 min-w-12 px-2 rounded-full"
-      }
+        "icon-lg": "h-12 w-12 min-w-12 px-2 rounded-full",
+      },
     },
     defaultVariants: {
       variant: "default",
-      size: "default"
-    }
-  }
+      size: "default",
+    },
+  },
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
@@ -53,15 +53,19 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const Comp = asChild ? Slot : "button";
 
-    const handleClick = React.useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-      // Only trigger click if this wasn't a scroll gesture
-      if (!hasMoved.current && !props.disabled && onClick) {
-        onClick(e);
-      }
-    }, [onClick, props.disabled]);
+    const handleClick = React.useCallback(
+      (e: React.MouseEvent<HTMLButtonElement>) => {
+        // Only trigger click if this wasn't a scroll gesture
+        if (!hasMoved.current && !props.disabled && onClick) {
+          onClick(e);
+        }
+      },
+      [onClick, props.disabled],
+    );
 
     const handleTouchStart = React.useCallback((e: React.TouchEvent) => {
       const touch = e.touches[0];
+      if (!touch) return;
       touchStartPos.current = { x: touch.clientX, y: touch.clientY };
       hasMoved.current = false;
       setIsPressed(true);
@@ -70,6 +74,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const handleTouchMove = React.useCallback((e: React.TouchEvent) => {
       if (touchStartPos.current) {
         const touch = e.touches[0];
+        if (!touch) return;
         const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
         const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
 
@@ -101,7 +106,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(
           buttonVariants({ variant, size }),
           isPressed && !props.disabled && "opacity-80",
-          className
+          className,
         )}
         ref={ref}
         onClick={handleClick}
@@ -115,7 +120,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       />
     );
-  }
+  },
 );
 Button.displayName = "Button";
 

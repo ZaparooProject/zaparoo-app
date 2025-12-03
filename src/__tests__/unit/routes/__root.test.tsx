@@ -7,39 +7,39 @@ import React from "react";
 const mockExitApp = vi.fn();
 vi.mock("@capacitor/app", () => ({
   App: {
-    exitApp: mockExitApp
-  }
+    exitApp: mockExitApp,
+  },
 }));
 
 vi.mock("../../../lib/safeArea", () => ({
-  SafeAreaHandler: () => <div data-testid="safe-area-handler">Safe Area Handler</div>
+  SafeAreaHandler: () => (
+    <div data-testid="safe-area-handler">Safe Area Handler</div>
+  ),
 }));
 
 vi.mock("../../../components/ErrorComponent", () => ({
   ErrorComponent: ({ error }: { error: Error }) => (
-    <div data-testid="error-component">
-      Error: {error.message}
-    </div>
-  )
+    <div data-testid="error-component">Error: {error.message}</div>
+  ),
 }));
 
 vi.mock("../../../components/BottomNav", () => ({
-  BottomNav: () => <div data-testid="bottom-nav">Bottom Navigation</div>
+  BottomNav: () => <div data-testid="bottom-nav">Bottom Navigation</div>,
 }));
 
 const mockUseBackButtonHandler = vi.fn();
 vi.mock("../../../hooks/useBackButtonHandler", () => ({
-  useBackButtonHandler: mockUseBackButtonHandler
+  useBackButtonHandler: mockUseBackButtonHandler,
 }));
 
 const mockNavigate = vi.fn();
 const mockUseNavigate = vi.fn(() => mockNavigate);
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     useNavigate: mockUseNavigate,
-    Outlet: () => <div data-testid="outlet">Route Content</div>
+    Outlet: () => <div data-testid="outlet">Route Content</div>,
   };
 });
 
@@ -55,8 +55,8 @@ describe("Root Route", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
   });
 
@@ -66,21 +66,19 @@ describe("Root Route", () => {
 
   it("should render root layout with all components", () => {
     const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
     // Mock root component structure
     const RootComponent = () => {
       return (
-        <div className="flex flex-col h-screen w-screen">
+        <div className="flex h-screen w-screen flex-col">
           <div data-testid="safe-area-handler">Safe Area Handler</div>
           <div data-testid="back-handler">Back Handler</div>
-          <main className="flex-1 min-h-0">
+          <main className="min-h-0 flex-1">
             <div data-testid="outlet">Route Content</div>
           </main>
-          <footer className="flex-shrink-0 z-30">
+          <footer className="z-30 flex-shrink-0">
             <div data-testid="bottom-nav">Bottom Navigation</div>
           </footer>
         </div>
@@ -90,7 +88,7 @@ describe("Root Route", () => {
     render(
       <TestWrapper>
         <RootComponent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     expect(screen.getByTestId("safe-area-handler")).toBeInTheDocument();
@@ -104,18 +102,20 @@ describe("Root Route", () => {
       return (
         <div
           data-testid="root-container"
-          className="flex flex-col h-screen w-screen"
+          className="flex h-screen w-screen flex-col"
         >
-          <main
-            data-testid="main-content"
-            className="flex-1 min-h-0"
-          >
+          <main data-testid="main-content" className="min-h-0 flex-1">
             <div data-testid="outlet">Route Content</div>
           </main>
           <footer
             data-testid="footer"
-            className="flex-shrink-0 z-30"
-            style={{ '--bottom-nav-height': 'calc(80px + env(safe-area-inset-bottom, 0px))' } as React.CSSProperties}
+            className="z-30 flex-shrink-0"
+            style={
+              {
+                "--bottom-nav-height":
+                  "calc(80px + env(safe-area-inset-bottom, 0px))",
+              } as React.CSSProperties
+            }
           >
             <div data-testid="bottom-nav">Bottom Navigation</div>
           </footer>
@@ -126,7 +126,12 @@ describe("Root Route", () => {
     render(<RootLayoutComponent />);
 
     const rootContainer = screen.getByTestId("root-container");
-    expect(rootContainer).toHaveClass("flex", "flex-col", "h-screen", "w-screen");
+    expect(rootContainer).toHaveClass(
+      "flex",
+      "flex-col",
+      "h-screen",
+      "w-screen",
+    );
 
     const mainContent = screen.getByTestId("main-content");
     expect(mainContent).toHaveClass("flex-1", "min-h-0");
@@ -180,10 +185,7 @@ describe("Root Route", () => {
     // Test root path behavior directly
     const TestComponent = () => (
       <div>
-        <button
-          data-testid="back-button-test"
-          onClick={() => mockExitApp()}
-        >
+        <button data-testid="back-button-test" onClick={() => mockExitApp()}>
           Test Back Button
         </button>
       </div>
@@ -272,8 +274,13 @@ describe("Root Route", () => {
       return (
         <footer
           data-testid="footer-with-styles"
-          className="flex-shrink-0 z-30"
-          style={{ '--bottom-nav-height': 'calc(80px + env(safe-area-inset-bottom, 0px))' } as React.CSSProperties}
+          className="z-30 flex-shrink-0"
+          style={
+            {
+              "--bottom-nav-height":
+                "calc(80px + env(safe-area-inset-bottom, 0px))",
+            } as React.CSSProperties
+          }
         >
           <div data-testid="bottom-nav">Bottom Navigation</div>
         </footer>
@@ -285,27 +292,31 @@ describe("Root Route", () => {
     const footer = screen.getByTestId("footer-with-styles");
     expect(footer).toHaveClass("flex-shrink-0", "z-30");
 
-    const style = footer.getAttribute('style');
-    expect(style).toContain('--bottom-nav-height: calc(80px + env(safe-area-inset-bottom, 0px))');
+    const style = footer.getAttribute("style");
+    expect(style).toContain(
+      "--bottom-nav-height: calc(80px + env(safe-area-inset-bottom, 0px))",
+    );
   });
 
   it("should use correct back button handler priority", () => {
     // Test that the back button handler is called with correct priority
     const TestComponent = () => {
       React.useEffect(() => {
-        mockUseBackButtonHandler('navigation', vi.fn(), 0);
+        mockUseBackButtonHandler("navigation", vi.fn(), 0);
       }, []);
 
-      return <div data-testid="back-button-priority-test">Testing Priority</div>;
+      return (
+        <div data-testid="back-button-priority-test">Testing Priority</div>
+      );
     };
 
     render(<TestComponent />);
 
     expect(screen.getByTestId("back-button-priority-test")).toBeInTheDocument();
     expect(mockUseBackButtonHandler).toHaveBeenCalledWith(
-      'navigation',
+      "navigation",
       expect.any(Function),
-      0
+      0,
     );
   });
 });

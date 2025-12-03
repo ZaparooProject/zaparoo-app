@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { App, URLOpenListenerEvent } from "@capacitor/app";
 import { useStatusStore } from "./store";
+import { logger } from "./logger";
 
 const AppUrlListener: React.FC = () => {
   const setRunQueue = useStatusStore((state) => state.setRunQueue);
@@ -14,15 +15,15 @@ const AppUrlListener: React.FC = () => {
       const queryParams = Object.fromEntries(params.entries());
       const data = {
         path,
-        queryParams
+        queryParams,
       };
-      console.log("App URL opened:", data);
+      logger.log("App URL opened:", data);
 
-      if (path === "/run") {
-        console.log("Run queue:", queryParams.v);
+      if (path === "/run" && queryParams.v) {
+        logger.log("Run queue:", queryParams.v);
         setRunQueue({ value: queryParams.v, unsafe: true });
-      } else if (path === "/write") {
-        console.log("Write queue:", queryParams.v);
+      } else if (path === "/write" && queryParams.v) {
+        logger.log("Write queue:", queryParams.v);
         setWriteQueue(queryParams.v);
       }
     });

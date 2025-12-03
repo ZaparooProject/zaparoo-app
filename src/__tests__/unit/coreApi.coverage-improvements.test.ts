@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI, getDeviceAddress, setDeviceAddress, getWsUrl } from "../../lib/coreApi";
+import {
+  CoreAPI,
+  getDeviceAddress,
+  setDeviceAddress,
+  getWsUrl,
+} from "../../lib/coreApi";
 
 const mockSend = vi.fn();
 import { Preferences } from "@capacitor/preferences";
@@ -51,7 +56,9 @@ describe("CoreAPI Coverage Improvements", () => {
 
   describe("Storage error handling", () => {
     it("should handle localStorage error in getDeviceAddress", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Make localStorage.getItem throw an error
       mockLocalStorage.getItem.mockImplementation(() => {
@@ -61,13 +68,18 @@ describe("CoreAPI Coverage Improvements", () => {
       const result = getDeviceAddress();
 
       expect(result).toBe("");
-      expect(consoleSpy).toHaveBeenCalledWith("Error getting device address:", expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Error getting device address:",
+        expect.any(Error),
+      );
 
       consoleSpy.mockRestore();
     });
 
     it("should handle localStorage error in setDeviceAddress", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Make localStorage.setItem throw an error
       mockLocalStorage.setItem.mockImplementation(() => {
@@ -76,22 +88,31 @@ describe("CoreAPI Coverage Improvements", () => {
 
       setDeviceAddress("test-address");
 
-      expect(consoleSpy).toHaveBeenCalledWith("Error setting device address:", expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Error setting device address:",
+        expect.any(Error),
+      );
 
       consoleSpy.mockRestore();
     });
 
     it("should handle Preferences.set error in setDeviceAddress", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      const consoleLogSpy = vi
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
 
       // Make Preferences.set reject
-      vi.mocked(Preferences.set).mockRejectedValue(new Error("Preferences failed"));
+      vi.mocked(Preferences.set).mockRejectedValue(
+        new Error("Preferences failed"),
+      );
 
       setDeviceAddress("test-address");
 
       // Wait for the async Preferences call to complete
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Due to test environment mocking complexities, we'll check if either the success
       // or error path was taken (both are valid in this test environment)
@@ -106,7 +127,9 @@ describe("CoreAPI Coverage Improvements", () => {
     });
 
     it("should handle error in getWsUrl and return empty string", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Mock String.prototype.lastIndexOf to throw an error during URL construction
       const originalLastIndexOf = String.prototype.lastIndexOf;
@@ -117,7 +140,10 @@ describe("CoreAPI Coverage Improvements", () => {
       const result = getWsUrl();
 
       expect(result).toBe("");
-      expect(consoleSpy).toHaveBeenCalledWith("Error getting WebSocket URL:", expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Error getting WebSocket URL:",
+        expect.any(Error),
+      );
 
       // Restore mocks
       String.prototype.lastIndexOf = originalLastIndexOf;
@@ -127,18 +153,24 @@ describe("CoreAPI Coverage Improvements", () => {
 
   describe("setSend edge cases", () => {
     it("should handle invalid send function", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Test with non-function
       CoreAPI.setSend(null as any);
 
-      expect(consoleSpy).toHaveBeenCalledWith("Invalid send function provided to CoreAPI");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Invalid send function provided to CoreAPI",
+      );
 
       consoleSpy.mockRestore();
     });
 
     it("should handle send function error", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Set up a send function that throws
       CoreAPI.setSend(() => {
@@ -146,7 +178,9 @@ describe("CoreAPI Coverage Improvements", () => {
       });
 
       // Test that calling an API method handles the send error
-      await expect(CoreAPI.version()).rejects.toThrow(/Failed to send request.*Send failed/);
+      await expect(CoreAPI.version()).rejects.toThrow(
+        /Failed to send request.*Send failed/,
+      );
 
       consoleSpy.mockRestore();
     });
@@ -160,15 +194,21 @@ describe("CoreAPI Coverage Improvements", () => {
       });
 
       await expect(CoreAPI.processReceived(messageEvent)).rejects.toThrow(
-        "Not a valid JSON-RPC payload."
+        "Not a valid JSON-RPC payload.",
       );
     });
 
     it("should handle notification errors gracefully", async () => {
-      const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const consoleLogSpy = vi
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
 
       // Test notification without id
-      const notification = { jsonrpc: "2.0", method: "test.notification", params: { test: "data" } };
+      const notification = {
+        jsonrpc: "2.0",
+        method: "test.notification",
+        params: { test: "data" },
+      };
       const messageEvent = new MessageEvent("message", {
         data: JSON.stringify(notification),
       });
@@ -177,14 +217,16 @@ describe("CoreAPI Coverage Improvements", () => {
 
       expect(result).toEqual({
         method: "test.notification",
-        params: { test: "data" }
+        params: { test: "data" },
       });
 
       consoleLogSpy.mockRestore();
     });
 
     it("should handle response for unknown request ID", async () => {
-      const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const consoleLogSpy = vi
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
 
       const response = { jsonrpc: "2.0", id: "unknown-id", result: "test" };
       const messageEvent = new MessageEvent("message", {
@@ -194,7 +236,10 @@ describe("CoreAPI Coverage Improvements", () => {
       const result = await CoreAPI.processReceived(messageEvent);
 
       expect(result).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith("Response ID does not exist:", JSON.stringify(response));
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        "Response ID does not exist:",
+        JSON.stringify(response),
+      );
 
       consoleLogSpy.mockRestore();
     });
@@ -202,7 +247,9 @@ describe("CoreAPI Coverage Improvements", () => {
 
   describe("API method error paths", () => {
     it("should handle version method response processing error", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Mock call to return a response, but then make the response processing throw
       vi.spyOn(CoreAPI, "call").mockImplementation(() => {
@@ -211,25 +258,34 @@ describe("CoreAPI Coverage Improvements", () => {
         });
       });
 
-      await expect(CoreAPI.version()).rejects.toThrow("Response processing failed");
+      await expect(CoreAPI.version()).rejects.toThrow(
+        "Response processing failed",
+      );
 
       consoleSpy.mockRestore();
     });
 
     it("should handle systems method call rejection", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Mock call to reject
       vi.spyOn(CoreAPI, "call").mockRejectedValue(new Error("Network error"));
 
       await expect(CoreAPI.systems()).rejects.toThrow("Network error");
-      expect(consoleSpy).toHaveBeenCalledWith("Systems API call failed:", expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Systems API call failed:",
+        expect.any(Error),
+      );
 
       consoleSpy.mockRestore();
     });
 
     it("should handle settings method response processing error", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Mock call to return invalid response that will cause processing error
       vi.spyOn(CoreAPI, "call").mockImplementation(() => {

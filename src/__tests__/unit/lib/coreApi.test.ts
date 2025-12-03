@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI, getDeviceAddress, getWsUrl } from "../../../lib/coreApi";
+import { CoreAPI, getDeviceAddress, getWsUrl } from "@/lib/coreApi.ts";
 import { Capacitor } from "@capacitor/core";
-import { Notification, SettingsResponse, Method, UpdateSettingsRequest } from "../../../lib/models";
+import {
+  Notification,
+  SettingsResponse,
+  Method,
+  UpdateSettingsRequest,
+} from "@/lib/models.ts";
 
 // Mock Capacitor
 vi.mock("@capacitor/core");
@@ -14,21 +19,21 @@ const localStorageMock = {
   clear: vi.fn(),
 };
 
-Object.defineProperty(window, 'localStorage', {
+Object.defineProperty(window, "localStorage", {
   value: localStorageMock,
   writable: true,
 });
 
 // Mock window.location
-Object.defineProperty(window, 'location', {
+Object.defineProperty(window, "location", {
   value: {
-    hostname: 'localhost',
+    hostname: "localhost",
   },
   writable: true,
 });
 
 describe("CoreAPI", () => {
-  let mockSend: ReturnType<typeof vi.fn>;
+  let mockSend: any;
 
   beforeEach(() => {
     mockSend = vi.fn();
@@ -57,10 +62,10 @@ describe("CoreAPI", () => {
     CoreAPI.version().catch(() => {
       // Ignore timeout errors to prevent unhandled rejections
     });
-    
+
     // Verify the request was sent with correct format
     expect(mockSend).toHaveBeenCalledOnce();
-    
+
     const sentData = JSON.parse(mockSend.mock.calls[0][0]);
     expect(sentData.jsonrpc).toBe("2.0");
     expect(sentData.method).toBe("version");
@@ -108,8 +113,9 @@ describe("CoreAPI", () => {
 
   it("should handle invalid JSON in processReceived", async () => {
     const invalidJsonEvent = { data: "invalid json" } as MessageEvent;
-    await expect(CoreAPI.processReceived(invalidJsonEvent))
-      .rejects.toThrow("Error parsing JSON response");
+    await expect(CoreAPI.processReceived(invalidJsonEvent)).rejects.toThrow(
+      "Error parsing JSON response",
+    );
   });
 
   it("should call stop method with correct JSON-RPC format", () => {
@@ -133,15 +139,15 @@ describe("CoreAPI", () => {
       data: JSON.stringify({
         jsonrpc: "2.0",
         method: "tokens.removed",
-        params: { uid: "test-uid" }
-      })
+        params: { uid: "test-uid" },
+      }),
     } as MessageEvent;
 
     const result = await CoreAPI.processReceived(tokensRemovedEvent);
 
     expect(result).toEqual({
       method: Notification.TokensRemoved,
-      params: { uid: "test-uid" }
+      params: { uid: "test-uid" },
     });
   });
 
@@ -150,7 +156,7 @@ describe("CoreAPI", () => {
     const checkInterface = (settings: SettingsResponse) => {
       // This line should cause a TypeScript error if runZapScript doesn't exist
       const hasRunZapScript: boolean = settings.runZapScript;
-      expect(typeof hasRunZapScript).toBe('boolean');
+      expect(typeof hasRunZapScript).toBe("boolean");
     };
 
     const mockSettings: SettingsResponse = {
@@ -160,7 +166,7 @@ describe("CoreAPI", () => {
       readersAutoDetect: true,
       readersScanMode: "tap",
       readersScanExitDelay: 0,
-      readersScanIgnoreSystems: []
+      readersScanIgnoreSystems: [],
     };
 
     checkInterface(mockSettings);
@@ -243,7 +249,7 @@ describe("CoreAPI", () => {
     // Test that UpdateSettingsRequest supports runZapScript field for API compatibility
     const updateRequest: UpdateSettingsRequest = {
       runZapScript: false,
-      debugLogging: true
+      debugLogging: true,
     };
 
     expect(updateRequest.runZapScript).toBe(false);
@@ -262,7 +268,7 @@ describe("CoreAPI", () => {
       readersAutoDetect: true,
       readersScanMode: "tap" as const,
       readersScanExitDelay: 2.5,
-      readersScanIgnoreSystem: ["system1", "system2"] // Core uses singular
+      readersScanIgnoreSystem: ["system1", "system2"], // Core uses singular
     };
 
     // This should work with our SettingsResponse interface
@@ -274,10 +280,13 @@ describe("CoreAPI", () => {
       readersAutoDetect: coreApiResponse.readersAutoDetect,
       readersScanMode: coreApiResponse.readersScanMode,
       readersScanExitDelay: coreApiResponse.readersScanExitDelay,
-      readersScanIgnoreSystems: coreApiResponse.readersScanIgnoreSystem
+      readersScanIgnoreSystems: coreApiResponse.readersScanIgnoreSystem,
     };
 
-    expect(typedResponse.readersScanIgnoreSystems).toEqual(["system1", "system2"]);
+    expect(typedResponse.readersScanIgnoreSystems).toEqual([
+      "system1",
+      "system2",
+    ]);
   });
 
   describe("getWsUrl", () => {

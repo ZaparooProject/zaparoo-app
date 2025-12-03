@@ -8,7 +8,7 @@ const mockSend = vi.fn();
 const mockWsManager = {
   isConnected: true,
   currentState: "connected",
-  send: mockSend
+  send: mockSend,
 };
 
 describe("CoreAPI - launchersRefresh method", () => {
@@ -35,7 +35,7 @@ describe("CoreAPI - launchersRefresh method", () => {
     // Verify the request was sent with correct format
     expect(mockSend).toHaveBeenCalledOnce();
 
-    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
     expect(sentData.jsonrpc).toBe("2.0");
     expect(sentData.method).toBe(Method.LaunchersRefresh);
     expect(sentData.id).toBeDefined();
@@ -51,8 +51,13 @@ describe("CoreAPI - launchersRefresh method", () => {
 
     expect((CoreAPI as any).launchersRefresh).toBeDefined();
 
-    await expect((CoreAPI as any).launchersRefresh()).rejects.toThrow("Test error");
-    expect(consoleSpy).toHaveBeenCalledWith("Launchers refresh API call failed:", expect.any(Error));
+    await expect((CoreAPI as any).launchersRefresh()).rejects.toThrow(
+      "Test error",
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Launchers refresh API call failed:",
+      expect.any(Error),
+    );
 
     // Restore
     CoreAPI.call = originalCall;

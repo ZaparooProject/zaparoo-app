@@ -20,7 +20,11 @@ describe("CoreAPI AbortSignal Handling", () => {
     it("should return cancelled result when signal is already aborted", async () => {
       const abortedSignal = { aborted: true };
 
-      const result = await CoreAPI.call(Method.Media, {}, abortedSignal as AbortSignal);
+      const result = await CoreAPI.call(
+        Method.Media,
+        {},
+        abortedSignal as AbortSignal,
+      );
 
       expect(result).toEqual({ cancelled: true });
       expect(mockSend).not.toHaveBeenCalled();
@@ -40,7 +44,7 @@ describe("CoreAPI AbortSignal Handling", () => {
     });
 
     it("should clear timeout when request is aborted", async () => {
-      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
+      const clearTimeoutSpy = vi.spyOn(global, "clearTimeout");
       const abortController = new AbortController();
 
       // Start the request
@@ -58,13 +62,20 @@ describe("CoreAPI AbortSignal Handling", () => {
 
     it("should properly set up abort event listener", async () => {
       const abortController = new AbortController();
-      const addEventListenerSpy = vi.spyOn(abortController.signal, 'addEventListener');
+      const addEventListenerSpy = vi.spyOn(
+        abortController.signal,
+        "addEventListener",
+      );
 
       // Start a request with abort signal
       const promise = CoreAPI.call(Method.Media, {}, abortController.signal);
 
       // Verify addEventListener was called
-      expect(addEventListenerSpy).toHaveBeenCalledWith('abort', expect.any(Function), { once: true });
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        "abort",
+        expect.any(Function),
+        { once: true },
+      );
 
       // Abort to complete the test
       abortController.abort();
@@ -80,7 +91,11 @@ describe("CoreAPI AbortSignal Handling", () => {
     it("should return cancelled result when signal is already aborted", async () => {
       const abortedSignal = { aborted: true };
 
-      const { promise } = CoreAPI.callWithTracking(Method.Media, {}, abortedSignal as AbortSignal);
+      const { promise } = CoreAPI.callWithTracking(
+        Method.Media,
+        {},
+        abortedSignal as AbortSignal,
+      );
       const result = await promise;
 
       expect(result).toEqual({ cancelled: true });
@@ -91,7 +106,11 @@ describe("CoreAPI AbortSignal Handling", () => {
       const abortController = new AbortController();
 
       // Start the tracked request
-      const { id, promise } = CoreAPI.callWithTracking(Method.Media, {}, abortController.signal);
+      const { id, promise } = CoreAPI.callWithTracking(
+        Method.Media,
+        {},
+        abortController.signal,
+      );
 
       // Abort the signal before response
       abortController.abort();
@@ -104,7 +123,7 @@ describe("CoreAPI AbortSignal Handling", () => {
 
   describe("timeout handling with AbortSignal", () => {
     it("should clear timeout when abort signal is triggered", async () => {
-      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
+      const clearTimeoutSpy = vi.spyOn(global, "clearTimeout");
       const abortController = new AbortController();
 
       // Start the request
@@ -148,7 +167,10 @@ describe("CoreAPI AbortSignal Handling", () => {
       const abortController = new AbortController();
 
       // Start write operation
-      const writePromise = CoreAPI.write({ text: "test" }, abortController.signal);
+      const writePromise = CoreAPI.write(
+        { text: "test" },
+        abortController.signal,
+      );
 
       // Cancel the write
       abortController.abort();
@@ -160,7 +182,10 @@ describe("CoreAPI AbortSignal Handling", () => {
     it("should handle write with pre-aborted signal", async () => {
       const abortedSignal = { aborted: true };
 
-      const result = await CoreAPI.write({ text: "test" }, abortedSignal as AbortSignal);
+      const result = await CoreAPI.write(
+        { text: "test" },
+        abortedSignal as AbortSignal,
+      );
       expect(result).toEqual({ cancelled: true });
     });
 
@@ -168,7 +193,10 @@ describe("CoreAPI AbortSignal Handling", () => {
       const abortController = new AbortController();
 
       // Start write operation
-      const writePromise = CoreAPI.write({ text: "test" }, abortController.signal);
+      const writePromise = CoreAPI.write(
+        { text: "test" },
+        abortController.signal,
+      );
 
       // Verify pendingWriteId is set
       const originalPendingId = (CoreAPI as any).pendingWriteId;
@@ -202,7 +230,7 @@ describe("CoreAPI AbortSignal Handling", () => {
     });
 
     it("should clear timeout when cancelling write", async () => {
-      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
+      const clearTimeoutSpy = vi.spyOn(global, "clearTimeout");
 
       // Start a write operation
       const writePromise = CoreAPI.write({ text: "test" });
@@ -237,7 +265,7 @@ describe("CoreAPI AbortSignal Handling", () => {
 
       // Verify write request was sent
       expect(mockSend).toHaveBeenCalledTimes(1);
-      const writeCall = JSON.parse(mockSend.mock.calls[0][0]);
+      const writeCall = JSON.parse(mockSend.mock.calls[0]![0]);
       expect(writeCall.method).toBe("readers.write");
 
       // Cancel the write
@@ -249,7 +277,7 @@ describe("CoreAPI AbortSignal Handling", () => {
 
       // Verify cancel request was sent
       expect(mockSend).toHaveBeenCalledTimes(2);
-      const cancelCall = JSON.parse(mockSend.mock.calls[1][0]);
+      const cancelCall = JSON.parse(mockSend.mock.calls[1]![0]);
       expect(cancelCall.method).toBe("readers.write.cancel");
     });
   });

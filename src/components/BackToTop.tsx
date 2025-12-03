@@ -12,7 +12,7 @@ interface BackToTopProps {
 export function BackToTop({
   scrollContainerRef,
   threshold = 300,
-  bottomOffset = "calc(1rem + 80px)"
+  bottomOffset = "calc(1rem + 80px)",
 }: BackToTopProps) {
   const [isVisible, setIsVisible] = useState(false);
   const { t } = useTranslation();
@@ -47,14 +47,14 @@ export function BackToTop({
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTo({
         top: 0,
-        behavior: "smooth"
+        behavior: "smooth",
       });
     }
   };
 
   return (
     <div
-      className={`fixed right-4 sm:right-8 transition-opacity duration-300 ${
+      className={`fixed right-4 transition-opacity duration-300 sm:right-8 ${
         isVisible
           ? "pointer-events-auto opacity-100"
           : "pointer-events-none opacity-0"
@@ -63,7 +63,7 @@ export function BackToTop({
         zIndex: 30,
         transform: "translateZ(0)",
         willChange: "opacity",
-        bottom: bottomOffset
+        bottom: bottomOffset,
       }}
     >
       <button

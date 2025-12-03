@@ -1,42 +1,74 @@
 import { useTranslation } from "react-i18next";
-import { StopIcon } from "../../lib/images";
+import { filenameFromPath } from "@/lib/path.ts";
+import { usePreferencesStore } from "@/lib/preferencesStore.ts";
+import { StopIcon } from "@/lib/images";
 import { Button } from "../wui/Button";
 
 interface NowPlayingInfoProps {
   mediaName: string;
+  mediaPath?: string;
   systemName: string;
   onStop: () => void;
+  connected?: boolean;
 }
 
-export function NowPlayingInfo({ mediaName, systemName, onStop }: NowPlayingInfoProps) {
+export function NowPlayingInfo({
+  mediaName,
+  mediaPath,
+  systemName,
+  onStop,
+  connected = true,
+}: NowPlayingInfoProps) {
   const { t } = useTranslation();
+  const showFilenames = usePreferencesStore((s) => s.showFilenames);
+
+  const displayName =
+    showFilenames && mediaPath
+      ? filenameFromPath(mediaPath) || mediaName
+      : mediaName;
 
   return (
-    <div className="p-3">
+    <section className="p-3" aria-labelledby="now-playing-heading">
       <div className="flex flex-row items-center justify-between">
-        <p className="font-bold capitalize text-gray-400">
+        <h2
+          id="now-playing-heading"
+          className="font-bold text-gray-400 capitalize"
+        >
           {t("scan.nowPlayingHeading")}
-        </p>
+        </h2>
         <Button
           icon={<StopIcon size="24" />}
           variant="text"
-          disabled={!mediaName}
+          disabled={!connected || !mediaName}
           onClick={onStop}
           className="flex items-center"
+          aria-label={t("scan.stopPlayingButton")}
         />
       </div>
       <div>
         <p>
-          {t("scan.nowPlayingName", {
-            game: mediaName === "" ? "-" : mediaName
-          })}
+          {t("scan.nowPlayingName", { game: "" })}
+          {displayName === "" ? (
+            <>
+              <span aria-hidden="true">—</span>
+              <span className="sr-only">{t("none")}</span>
+            </>
+          ) : (
+            displayName
+          )}
         </p>
         <p>
-          {t("scan.nowPlayingSystem", {
-            system: systemName === "" ? "-" : systemName
-          })}
+          {t("scan.nowPlayingSystem", { system: "" })}
+          {systemName === "" ? (
+            <>
+              <span aria-hidden="true">—</span>
+              <span className="sr-only">{t("none")}</span>
+            </>
+          ) : (
+            systemName
+          )}
         </p>
       </div>
-    </div>
+    </section>
   );
 }

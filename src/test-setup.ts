@@ -5,6 +5,31 @@ import { setupServer } from "msw/node";
 import { handlers } from "./test-utils/msw-handlers";
 import { CoreAPI } from "./lib/coreApi";
 
+// Global i18n mock - returns translation keys as-is
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      if (options && typeof options === "object") {
+        let result = key;
+        Object.entries(options).forEach(([param, value]) => {
+          result = result.replace(
+            new RegExp(`{{${param}}}`, "g"),
+            String(value),
+          );
+        });
+        return result;
+      }
+      return key;
+    },
+    i18n: {
+      changeLanguage: vi.fn(() => Promise.resolve()),
+      language: "en",
+    },
+  }),
+  Trans: ({ children }: { children: React.ReactNode }) => children,
+  initReactI18next: { type: "3rdParty", init: () => {} },
+}));
+
 // Setup MSW server with handlers
 export const server = setupServer(...handlers);
 
@@ -36,8 +61,8 @@ Object.defineProperty(window, "matchMedia", {
     removeListener: () => {},
     addEventListener: () => {},
     removeEventListener: () => {},
-    dispatchEvent: () => {}
-  })
+    dispatchEvent: () => {},
+  }),
 });
 
 // Mock IntersectionObserver
@@ -51,7 +76,7 @@ global.IntersectionObserver = class IntersectionObserver {
 // Platform detection mock
 Object.defineProperty(navigator, "platform", {
   writable: true,
-  value: "MacIntel"
+  value: "MacIntel",
 });
 
 // WebSocket mock for happy-dom environment

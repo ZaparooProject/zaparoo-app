@@ -8,6 +8,7 @@ import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
 import { TagInfo } from "@/lib/models";
+import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
 import { BackToTop } from "./BackToTop";
@@ -15,7 +16,7 @@ import {
   Accordion,
   AccordionItem,
   AccordionTrigger,
-  AccordionContent
+  AccordionContent,
 } from "./ui/accordion";
 
 interface TagSelectorProps {
@@ -39,9 +40,10 @@ export function TagSelector({
   onSelect,
   selectedTags,
   systems = [],
-  title
+  title,
 }: TagSelectorProps) {
   const { t } = useTranslation();
+  const { announce } = useAnnouncer();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const slideModalScrollRef = useRef<HTMLDivElement>(null);
 
@@ -57,12 +59,12 @@ export function TagSelector({
   const {
     data: tagsData,
     isLoading,
-    isError
+    isError,
   } = useQuery({
     queryKey: ["tags", systems],
     queryFn: () => CoreAPI.mediaTags(systems.length > 0 ? systems : undefined),
     enabled: isOpen, // Only fetch when modal is open
-    retry: false // Don't retry on error for backwards compatibility
+    retry: false, // Don't retry on error for backwards compatibility
   });
 
   // Process and group tags
@@ -83,7 +85,7 @@ export function TagSelector({
       if (!grouped[tag.type]) {
         grouped[tag.type] = [];
       }
-      grouped[tag.type].push(tag);
+      grouped[tag.type]!.push(tag);
     });
 
     // Sort types alphabetically, but put common ones first
@@ -102,7 +104,7 @@ export function TagSelector({
 
     // Sort tags within each group
     Object.keys(grouped).forEach((type) => {
-      grouped[type].sort((a, b) => a.tag.localeCompare(b.tag));
+      grouped[type]!.sort((a, b) => a.tag.localeCompare(b.tag));
     });
 
     // Apply search filter if needed
@@ -115,10 +117,10 @@ export function TagSelector({
       filteredAllTags = [];
 
       Object.keys(grouped).forEach((type) => {
-        const filteredTags = grouped[type].filter(
+        const filteredTags = grouped[type]!.filter(
           (tag) =>
             tag.tag.toLowerCase().includes(query) ||
-            tag.type.toLowerCase().includes(query)
+            tag.type.toLowerCase().includes(query),
         );
 
         if (filteredTags.length > 0) {
@@ -130,8 +132,8 @@ export function TagSelector({
 
     return {
       groupedTags: filteredGrouped,
-      types: types.filter((type) => filteredGrouped[type]?.length > 0),
-      allTags: filteredAllTags
+      types: types.filter((type) => (filteredGrouped[type]?.length ?? 0) > 0),
+      allTags: filteredAllTags,
     };
   }, [tagsData, debouncedSearchQuery]);
 
@@ -143,12 +145,20 @@ export function TagSelector({
 
       // Format tag as "<type>:<value>" for the API
       const formattedTag = `${tag.type}:${tag.tag}`;
-      const newSelection = selectedTags.includes(formattedTag)
+      const wasSelected = selectedTags.includes(formattedTag);
+      const newSelection = wasSelected
         ? selectedTags.filter((t) => t !== formattedTag)
         : [...selectedTags, formattedTag];
       onSelect(newSelection);
+
+      // Announce the state change
+      if (wasSelected) {
+        announce(t("tagSelector.deselected", { name: tag.tag }));
+      } else {
+        announce(t("tagSelector.selected", { name: tag.tag }));
+      }
     },
-    [selectedTags, onSelect, gamesIndex.indexing]
+    [selectedTags, onSelect, gamesIndex.indexing, announce, t],
   );
 
   // Handle clear all
@@ -180,15 +190,16 @@ export function TagSelector({
       setExpandedSections(expanded);
       setAllExpanded(expanded.length === types.length);
     },
-    [types.length]
+    [types.length],
   );
 
   // Set up virtualizer for all tags (used when search is active)
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: allTags.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: () => ITEM_HEIGHT,
-    overscan: 5
+    overscan: 5,
   });
 
   // Footer for multi-select mode
@@ -197,7 +208,7 @@ export function TagSelector({
       <div className="text-center">
         <span className="text-muted-foreground text-sm">
           {t("tagSelector.selectedCount", {
-            count: selectedTags.length
+            count: selectedTags.length,
           })}
         </span>
       </div>
@@ -208,7 +219,8 @@ export function TagSelector({
             className={classNames("text-sm underline", {
               "text-muted-foreground hover:text-foreground":
                 !gamesIndex.indexing,
-              "text-muted-foreground/50 cursor-not-allowed": gamesIndex.indexing
+              "text-muted-foreground/50 cursor-not-allowed":
+                gamesIndex.indexing,
             })}
             disabled={gamesIndex.indexing}
             type="button"
@@ -240,7 +252,10 @@ export function TagSelector({
         <div className="p-2 pt-3">
           {/* Search bar */}
           <div className="relative mb-3">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <Search
+              className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
             <input
               type="text"
               placeholder={t("tagSelector.searchPlaceholder")}
@@ -253,8 +268,9 @@ export function TagSelector({
                 onClick={() => setSearchQuery("")}
                 className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2"
                 type="button"
+                aria-label={t("tagSelector.clearSearch")}
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -270,7 +286,7 @@ export function TagSelector({
                 <>
                   <ChevronUp className="h-4 w-4" />
                   {t("tagSelector.collapseAll", {
-                    defaultValue: "Collapse all"
+                    defaultValue: "Collapse all",
                   })}
                 </>
               ) : (
@@ -284,7 +300,7 @@ export function TagSelector({
         </div>
 
         {/* Content area */}
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-hidden" tabIndex={-1}>
           {isLoading ? (
             <div className="flex h-32 items-center justify-center">
               <span className="text-muted-foreground">{t("loading")}</span>
@@ -293,7 +309,7 @@ export function TagSelector({
             <div className="flex h-32 items-center justify-center">
               <span className="text-muted-foreground">
                 {t("tagSelector.unavailable", {
-                  defaultValue: "Tags unavailable"
+                  defaultValue: "Tags unavailable",
                 })}
               </span>
             </div>
@@ -307,16 +323,22 @@ export function TagSelector({
             </div>
           ) : debouncedSearchQuery ? (
             // Search results - show virtualized list of all matching tags
-            <div ref={scrollContainerRef} className="h-full px-2 pb-4">
+            <div
+              ref={scrollContainerRef}
+              className="h-full px-2 pb-4"
+              tabIndex={-1}
+            >
               <div
                 style={{
                   height: `${virtualizer.getTotalSize()}px`,
                   width: "100%",
-                  position: "relative"
+                  position: "relative",
                 }}
+                role="presentation"
               >
                 {virtualizer.getVirtualItems().map((virtualItem) => {
                   const tag = allTags[virtualItem.index];
+                  if (!tag) return null;
                   const formattedTag = `${tag.type}:${tag.tag}`;
                   const isSelected = selectedTags.includes(formattedTag);
 
@@ -330,7 +352,7 @@ export function TagSelector({
                         width: "100%",
                         height: `${virtualItem.size}px`,
                         transform: `translateY(${virtualItem.start}px)`,
-                        padding: "2px 8px"
+                        padding: "2px 8px",
                       }}
                     >
                       <button
@@ -341,20 +363,27 @@ export function TagSelector({
                             "bg-white/10": isSelected,
                             "hover:bg-white/10 focus:bg-white/10":
                               !gamesIndex.indexing,
-                            "cursor-not-allowed opacity-50": gamesIndex.indexing
-                          }
+                            "cursor-not-allowed opacity-50":
+                              gamesIndex.indexing,
+                          },
                         )}
                         onClick={() => handleTagSelect(tag)}
                         disabled={gamesIndex.indexing}
                         type="button"
+                        role="checkbox"
+                        aria-checked={isSelected}
+                        aria-label={`${tag.tag}, ${t(`tagSelector.type.${tag.type}`, { defaultValue: tag.type })}`}
                       >
-                        <div className="flex items-center space-x-3">
+                        <div
+                          className="flex items-center space-x-3"
+                          aria-hidden="true"
+                        >
                           <div
                             className={classNames(
                               "border-input flex h-5 w-5 items-center justify-center rounded border-2",
                               {
-                                "bg-primary border-primary": isSelected
-                              }
+                                "bg-primary border-primary": isSelected,
+                              },
                             )}
                           >
                             {isSelected && (
@@ -367,7 +396,7 @@ export function TagSelector({
                             </span>
                             <span className="text-muted-foreground text-xs">
                               {t(`tagSelector.type.${tag.type}`, {
-                                defaultValue: tag.type
+                                defaultValue: tag.type,
                               })}
                             </span>
                           </div>
@@ -404,7 +433,7 @@ export function TagSelector({
                         <div className="flex w-full items-center justify-between">
                           <span>
                             {t(`tagSelector.type.${type}`, {
-                              defaultValue: type
+                              defaultValue: type,
                             })}{" "}
                             ({tagsInType.length})
                           </span>
@@ -426,31 +455,37 @@ export function TagSelector({
                               <button
                                 key={tag.tag}
                                 className={classNames(
-                                  "flex w-full items-center justify-between px-3 py-2 text-left transition-colors",
+                                  "flex w-full items-center justify-between px-3 py-3 text-left transition-colors",
                                   "rounded-md focus:outline-none",
                                   {
                                     "bg-white/10": isSelected,
                                     "hover:bg-white/5 focus:bg-white/5":
                                       !gamesIndex.indexing,
                                     "cursor-not-allowed opacity-50":
-                                      gamesIndex.indexing
-                                  }
+                                      gamesIndex.indexing,
+                                  },
                                 )}
                                 onClick={() => handleTagSelect(tag)}
                                 disabled={gamesIndex.indexing}
                                 type="button"
+                                role="checkbox"
+                                aria-checked={isSelected}
+                                aria-label={tag.tag}
                               >
-                                <div className="flex items-center space-x-3">
+                                <div
+                                  className="flex items-center space-x-3"
+                                  aria-hidden="true"
+                                >
                                   <div
                                     className={classNames(
-                                      "border-input flex h-4 w-4 items-center justify-center rounded border-2",
+                                      "border-input flex h-5 w-5 items-center justify-center rounded border-2",
                                       {
-                                        "bg-primary border-primary": isSelected
-                                      }
+                                        "bg-primary border-primary": isSelected,
+                                      },
                                     )}
                                   >
                                     {isSelected && (
-                                      <Check className="h-2.5 w-2.5 text-white" />
+                                      <Check className="h-3 w-3 text-white" />
                                     )}
                                   </div>
                                   <span className="text-foreground text-sm font-medium">
@@ -487,7 +522,7 @@ export function TagSelectorTrigger({
   placeholder = "Select tags",
   className,
   onClick,
-  disabled = false
+  disabled = false,
 }: {
   selectedTags: string[];
   placeholder?: string;
@@ -511,7 +546,7 @@ export function TagSelectorTrigger({
     }
 
     return t("tagSelector.multipleSelected", {
-      count: selectedTags.length
+      count: selectedTags.length,
     });
   }, [selectedTags, placeholder, t]);
 
@@ -528,9 +563,9 @@ export function TagSelectorTrigger({
         "border-input text-foreground flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus:ring-2 focus:ring-white/20 focus:outline-none",
         {
           "hover:bg-white/10": !gamesIndex.indexing && !disabled,
-          "cursor-not-allowed opacity-50": gamesIndex.indexing || disabled
+          "cursor-not-allowed opacity-50": gamesIndex.indexing || disabled,
         },
-        className
+        className,
       )}
       style={{ backgroundColor: "var(--color-background)" }}
       disabled={gamesIndex.indexing || disabled}
@@ -538,7 +573,7 @@ export function TagSelectorTrigger({
     >
       <span
         className={classNames({
-          "text-muted-foreground": selectedTags.length === 0
+          "text-muted-foreground": selectedTags.length === 0,
         })}
       >
         {displayText}

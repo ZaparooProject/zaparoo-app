@@ -1,39 +1,44 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
 import classNames from "classnames";
-import { Folder, FileCode, Tag } from "lucide-react";
+import { Folder, FileCode, Tag, Copy } from "lucide-react";
 import { VirtualSearchResults } from "@/components/VirtualSearchResults.tsx";
-import { CopyButton } from "@/components/CopyButton.tsx";
 import { BackToTop } from "@/components/BackToTop.tsx";
 import { TagBadge } from "@/components/TagBadge.tsx";
-import { CoreAPI } from "../lib/coreApi.ts";
+import { logger } from "@/lib/logger";
+import { CoreAPI } from "@/lib/coreApi.ts";
 import {
+  BackIcon,
   CreateIcon,
   PlayIcon,
   SearchIcon,
   HistoryIcon,
-  DeviceIcon
-} from "../lib/images";
-import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { SearchResultGame, SystemsResponse } from "../lib/models";
-import { SlideModal } from "../components/SlideModal";
-import { Button } from "../components/wui/Button";
-import { HeaderButton } from "../components/wui/HeaderButton";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
-import { useStatusStore } from "../lib/store";
-import { TextInput } from "../components/wui/TextInput";
-import { WriteModal } from "../components/WriteModal";
-import { PageFrame } from "../components/PageFrame";
+  DeviceIcon,
+} from "@/lib/images";
+import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { SearchResultGame, SystemsResponse } from "@/lib/models";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { filenameFromPath } from "@/lib/path";
+import { SlideModal } from "@/components/SlideModal";
+import { Button } from "@/components/wui/Button";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { useSmartSwipe } from "@/hooks/useSmartSwipe";
+import { useHaptics } from "@/hooks/useHaptics";
+import { useStatusStore } from "@/lib/store";
+import { TextInput } from "@/components/wui/TextInput";
+import { WriteModal } from "@/components/WriteModal";
+import { PageFrame } from "@/components/PageFrame";
 import {
   SystemSelector,
-  SystemSelectorTrigger
-} from "../components/SystemSelector";
-import { TagSelector, TagSelectorTrigger } from "../components/TagSelector";
-import { useRecentSearches } from "../hooks/useRecentSearches";
-import { RecentSearchesModal } from "../components/RecentSearchesModal";
+  SystemSelectorTrigger,
+} from "@/components/SystemSelector";
+import { TagSelector, TagSelectorTrigger } from "@/components/TagSelector";
+import { useRecentSearches } from "@/hooks/useRecentSearches";
+import { RecentSearchesModal } from "@/components/RecentSearchesModal";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/create/search")({
   loader: async (): Promise<LoaderData> => {
@@ -41,7 +46,7 @@ export const Route = createFileRoute("/create/search")({
       await Promise.all([
         Preferences.get({ key: "searchSystem" }),
         Preferences.get({ key: "searchTags" }),
-        CoreAPI.systems()
+        CoreAPI.systems(),
       ]);
 
     let savedTags: string[] = [];
@@ -50,19 +55,24 @@ export const Route = createFileRoute("/create/search")({
         savedTags = JSON.parse(tagPreference.value);
       }
     } catch (e) {
-      console.warn("Failed to parse saved tags preference:", e);
+      logger.error("Failed to parse saved tags preference:", e, {
+        category: "storage",
+        action: "get",
+        key: "searchTags",
+        severity: "warning",
+      });
     }
 
     return {
       systemQuery: systemPreference.value || "all",
       tagQuery: savedTags,
-      systems: systemsResponse
+      systems: systemsResponse,
     };
   },
   // Disable caching to ensure fresh preference is always read
   staleTime: 0,
   gcTime: 0,
-  component: Search
+  component: Search,
 });
 
 interface LoaderData {
@@ -72,10 +82,14 @@ interface LoaderData {
 }
 
 function Search() {
+  const { t } = useTranslation();
+  usePageHeadingFocus(t("create.search.title"));
   const loaderData = Route.useLoaderData();
+  const { selectionChanged } = useHaptics();
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const setGamesIndex = useStatusStore((state) => state.setGamesIndex);
   const connected = useStatusStore((state) => state.connected);
+  const showFilenames = usePreferencesStore((s) => s.showFilenames);
 
   const [querySystem, setQuerySystem] = useState(loaderData.systemQuery);
   const [queryTags, setQueryTags] = useState<string[]>(loaderData.tagQuery);
@@ -99,7 +113,7 @@ function Search() {
     recentSearches,
     addRecentSearch,
     clearRecentSearches,
-    getSearchDisplayText
+    getSearchDisplayText,
   } = useRecentSearches();
 
   // Manual search function
@@ -112,19 +126,19 @@ function Search() {
     setSearchParams({
       query: query,
       system: querySystem,
-      tags: queryTags
+      tags: queryTags,
     });
 
     // Add to recent searches
     await addRecentSearch({
       query: query,
       system: querySystem,
-      tags: queryTags
+      tags: queryTags,
     });
   };
 
   const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
-    null
+    null,
   );
   const [writeMode, setWriteMode] = useState<"path" | "zapScript">("zapScript");
 
@@ -138,8 +152,7 @@ function Search() {
     await nfcWriter.end();
   };
 
-  const { t } = useTranslation();
-
+  // Close modal when NFC operation completes
   useEffect(() => {
     if (nfcWriter.status !== null) {
       setWriteOpen(false);
@@ -147,9 +160,13 @@ function Search() {
   }, [nfcWriter]);
 
   useEffect(() => {
-    CoreAPI.media().then((s) => {
-      setGamesIndex(s.database);
-    });
+    CoreAPI.media()
+      .then((s) => {
+        setGamesIndex(s.database);
+      })
+      .catch((e) => {
+        logger.error("Failed to fetch media index:", e);
+      });
   }, [setGamesIndex]);
 
   // Set default write mode when selected result changes
@@ -165,18 +182,20 @@ function Search() {
     queryFn: () => CoreAPI.mediaTags([]),
     retry: false,
     staleTime: 60000, // Cache for 1 minute
-    enabled: connected // Only check when connected
+    enabled: connected, // Only check when connected
   });
 
-  const navigate = useNavigate();
+  const router = useRouter();
+  const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
-    onSwipeRight: () => navigate({ to: "/create" }),
-    preventScrollOnSwipe: false
+    onSwipeRight: goBack,
+    preventScrollOnSwipe: false,
   });
 
   // Handle system selection from selector
   const handleSystemSelect = async (systems: string[]) => {
-    const selectedSystem = systems.length === 1 ? systems[0] : "all";
+    const selectedSystem =
+      (systems.length === 1 ? systems[0] : undefined) ?? "all";
     setQuerySystem(selectedSystem);
     setSelectedResult(null);
     await Preferences.set({ key: "searchSystem", value: selectedSystem });
@@ -196,13 +215,13 @@ function Search() {
     setSelectedResult(null);
     await Promise.all([
       Preferences.set({ key: "searchSystem", value: "all" }),
-      Preferences.set({ key: "searchTags", value: JSON.stringify([]) })
+      Preferences.set({ key: "searchTags", value: JSON.stringify([]) }),
     ]);
   };
 
   // Handle selecting a recent search to prefill the form and execute search
   const handleRecentSearchSelect = async (
-    recentSearch: (typeof recentSearches)[0]
+    recentSearch: (typeof recentSearches)[0],
   ) => {
     setQuery(recentSearch.query);
     setQuerySystem(recentSearch.system);
@@ -214,8 +233,8 @@ function Search() {
       Preferences.set({ key: "searchSystem", value: recentSearch.system }),
       Preferences.set({
         key: "searchTags",
-        value: JSON.stringify(recentSearch.tags)
-      })
+        value: JSON.stringify(recentSearch.tags),
+      }),
     ]);
 
     // Automatically execute the search
@@ -224,7 +243,7 @@ function Search() {
       setSearchParams({
         query: recentSearch.query,
         system: recentSearch.system,
-        tags: recentSearch.tags
+        tags: recentSearch.tags,
       });
     }
   };
@@ -233,8 +252,18 @@ function Search() {
     <>
       <PageFrame
         {...swipeHandlers}
-        title={t("create.search.title")}
-        back={() => navigate({ to: "/create" })}
+        headerLeft={
+          <HeaderButton
+            onClick={goBack}
+            icon={<BackIcon size="24" />}
+            aria-label={t("nav.back")}
+          />
+        }
+        headerCenter={
+          <h1 className="text-foreground text-xl">
+            {t("create.search.title")}
+          </h1>
+        }
         scrollRef={scrollContainerRef}
         headerRight={
           <HeaderButton
@@ -283,7 +312,7 @@ function Search() {
                 onClick={() => setSystemSelectorOpen(true)}
                 className={classNames({
                   "opacity-50":
-                    !connected || !gamesIndex.exists || gamesIndex.indexing
+                    !connected || !gamesIndex.exists || gamesIndex.indexing,
                 })}
               />
             </div>
@@ -299,7 +328,7 @@ function Search() {
                 disabled={tagsApiError}
                 className={classNames({
                   "opacity-50":
-                    !connected || !gamesIndex.exists || gamesIndex.indexing
+                    !connected || !gamesIndex.exists || gamesIndex.indexing,
                 })}
               />
             </div>
@@ -339,14 +368,20 @@ function Search() {
       <SlideModal
         isOpen={selectedResult !== null && !writeOpen}
         close={() => setSelectedResult(null)}
-        title={selectedResult?.name || "Game Details"}
+        title={
+          selectedResult
+            ? showFilenames
+              ? filenameFromPath(selectedResult.path) || selectedResult.name
+              : selectedResult.name
+            : "Game Details"
+        }
       >
         <div className="flex flex-col gap-4 pt-2">
           {/* Primary Info */}
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
               <div className="flex items-center gap-2 sm:min-w-[100px]">
-                <DeviceIcon size="16" />
+                <DeviceIcon size="16" className="text-white/60" />
                 <span className="text-sm text-white/60">
                   {t("create.search.systemLabel")}
                 </span>
@@ -373,54 +408,63 @@ function Search() {
           </div>
 
           {/* Technical Details - Selectable Options */}
-          <fieldset className="space-y-2">
-            <legend className="sr-only">Select value to write to tag</legend>
+          <fieldset
+            className="space-y-2"
+            role="radiogroup"
+            aria-label={t("create.search.selectWriteValue")}
+          >
+            <legend className="sr-only">
+              {t("create.search.selectWriteValue")}
+            </legend>
 
             {/* Path Option */}
-            <div>
+            <div className="flex items-center gap-2">
               <input
                 type="radio"
                 id="write-mode-path"
                 name="write-mode"
                 value="path"
                 checked={writeMode === "path"}
-                onChange={() => setWriteMode("path")}
+                onChange={() => {
+                  selectionChanged();
+                  setWriteMode("path");
+                }}
                 className="sr-only"
               />
               <label
                 htmlFor="write-mode-path"
+                aria-label={`${t("create.search.pathLabel")}: ${selectedResult?.path || ""}${writeMode === "path" ? `, ${t("selected")}` : ""}`}
                 className={classNames(
-                  "flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
+                  "flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
                   {
                     "border-white/30 bg-white/10": writeMode === "path",
                     "border-white/10 bg-white/5 hover:bg-white/[0.07]":
-                      writeMode !== "path"
-                  }
+                      writeMode !== "path",
+                  },
                 )}
               >
-                <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+                <div
+                  className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3"
+                  aria-hidden="true"
+                >
                   <div className="flex items-center gap-2 sm:min-w-[100px]">
                     <Folder size={16} className="flex-shrink-0 text-white/60" />
                     <span className="text-sm text-white/60">
                       {t("create.search.pathLabel")}
                     </span>
                   </div>
-                  <div className="flex min-w-0 flex-1 items-start gap-2">
-                    <code className="flex-1 text-left font-mono text-sm break-all text-white/90">
-                      {selectedResult?.path}
-                    </code>
-                    {selectedResult?.path && (
-                      <CopyButton text={selectedResult.path} />
-                    )}
-                  </div>
+                  <code className="flex-1 text-left font-mono text-sm break-all text-white/90">
+                    {selectedResult?.path}
+                  </code>
                 </div>
                 <div
+                  aria-hidden="true"
                   className={classNames(
                     "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
                     {
                       "border-white bg-white": writeMode === "path",
-                      "border-white/30": writeMode !== "path"
-                    }
+                      "border-white/30": writeMode !== "path",
+                    },
                   )}
                 >
                   {writeMode === "path" && (
@@ -432,28 +476,35 @@ function Search() {
 
             {/* ZapScript Option */}
             {selectedResult?.zapScript && (
-              <div>
+              <div className="flex items-center gap-2">
                 <input
                   type="radio"
                   id="write-mode-zapscript"
                   name="write-mode"
                   value="zapScript"
                   checked={writeMode === "zapScript"}
-                  onChange={() => setWriteMode("zapScript")}
+                  onChange={() => {
+                    selectionChanged();
+                    setWriteMode("zapScript");
+                  }}
                   className="sr-only"
                 />
                 <label
                   htmlFor="write-mode-zapscript"
+                  aria-label={`${t("create.search.zapscriptLabel")}: ${selectedResult.zapScript}${writeMode === "zapScript" ? `, ${t("selected")}` : ""}`}
                   className={classNames(
-                    "flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
+                    "flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
                     {
                       "border-white/30 bg-white/10": writeMode === "zapScript",
                       "border-white/10 bg-white/5 hover:bg-white/[0.07]":
-                        writeMode !== "zapScript"
-                    }
+                        writeMode !== "zapScript",
+                    },
                   )}
                 >
-                  <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+                  <div
+                    className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3"
+                    aria-hidden="true"
+                  >
                     <div className="flex items-center gap-2 sm:min-w-[100px]">
                       <FileCode
                         size={16}
@@ -463,20 +514,18 @@ function Search() {
                         {t("create.search.zapscriptLabel")}
                       </span>
                     </div>
-                    <div className="flex min-w-0 flex-1 items-start gap-2">
-                      <code className="flex-1 text-left font-mono text-sm break-words text-white/90">
-                        {selectedResult.zapScript}
-                      </code>
-                      <CopyButton text={selectedResult.zapScript} />
-                    </div>
+                    <code className="flex-1 text-left font-mono text-sm break-words text-white/90">
+                      {selectedResult.zapScript}
+                    </code>
                   </div>
                   <div
+                    aria-hidden="true"
                     className={classNames(
                       "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
                       {
                         "border-white bg-white": writeMode === "zapScript",
-                        "border-white/30": writeMode !== "zapScript"
-                      }
+                        "border-white/30": writeMode !== "zapScript",
+                      },
                     )}
                   >
                     {writeMode === "zapScript" && (
@@ -489,10 +538,11 @@ function Search() {
           </fieldset>
 
           {/* Actions */}
-          <div className="flex flex-row gap-2 pt-2">
+          <div className="flex flex-col gap-2 pt-2">
             <Button
               label={t("create.search.writeLabel")}
               icon={<CreateIcon size="20" />}
+              intent="primary"
               disabled={!selectedResult}
               onClick={() => {
                 if (selectedResult) {
@@ -504,26 +554,52 @@ function Search() {
                   setWriteOpen(true);
                 }
               }}
-              className="grow"
+              className="w-full"
             />
-            <Button
-              label={t("create.search.playLabel")}
-              icon={<PlayIcon size="20" />}
-              variant="outline"
-              disabled={!selectedResult || !connected}
-              onClick={() => {
-                if (selectedResult) {
-                  const textToRun =
-                    writeMode === "zapScript" && selectedResult.zapScript
-                      ? selectedResult.zapScript
-                      : selectedResult.path;
-                  CoreAPI.run({
-                    uid: "",
-                    text: textToRun
-                  });
-                }
-              }}
-            />
+            <div className="flex flex-row gap-2">
+              <Button
+                label={t("create.search.copyLabel")}
+                icon={<Copy size="20" />}
+                variant="outline"
+                disabled={!selectedResult}
+                onClick={async () => {
+                  if (selectedResult) {
+                    const textToCopy =
+                      writeMode === "zapScript" && selectedResult.zapScript
+                        ? selectedResult.zapScript
+                        : selectedResult.path;
+                    try {
+                      await navigator.clipboard.writeText(textToCopy);
+                    } catch {
+                      // Fallback for native
+                      const { Clipboard } =
+                        await import("@capacitor/clipboard");
+                      await Clipboard.write({ string: textToCopy });
+                    }
+                  }
+                }}
+                className="flex-1"
+              />
+              <Button
+                label={t("create.search.playLabel")}
+                icon={<PlayIcon size="20" />}
+                variant="outline"
+                disabled={!selectedResult || !connected}
+                onClick={() => {
+                  if (selectedResult) {
+                    const textToRun =
+                      writeMode === "zapScript" && selectedResult.zapScript
+                        ? selectedResult.zapScript
+                        : selectedResult.path;
+                    CoreAPI.run({
+                      uid: "",
+                      text: textToRun,
+                    });
+                  }
+                }}
+                className="flex-1"
+              />
+            </div>
           </div>
         </div>
       </SlideModal>
@@ -536,7 +612,7 @@ function Search() {
         selectedSystems={querySystem === "all" ? [] : [querySystem]}
         mode="single"
         title={t("create.search.selectSystem")}
-        includeAllOption={false}
+        includeAllOption={true}
         defaultSelection="all"
       />
       <TagSelector

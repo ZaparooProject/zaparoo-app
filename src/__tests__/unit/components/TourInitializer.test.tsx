@@ -6,13 +6,13 @@ import { useStatusStore } from "../../../lib/store";
 
 // Mock dependencies
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn()
+  useNavigate: () => vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key
-  })
+    t: (key: string) => key,
+  }),
 }));
 
 vi.mock("../../../lib/tourService", () => ({
@@ -24,14 +24,14 @@ vi.mock("../../../lib/tourService", () => ({
         mockTourCallbacks[event] = [];
       }
       mockTourCallbacks[event].push(callback);
-    })
-  }))
+    }),
+  })),
 }));
 
 let mockTourCallbacks: Record<string, Array<() => void>> = {};
 
 describe("TourInitializer", () => {
-  let mockSetTourCompleted: ReturnType<typeof vi.fn>;
+  let mockSetTourCompleted: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -43,11 +43,11 @@ describe("TourInitializer", () => {
     // Reset stores
     usePreferencesStore.setState({
       tourCompleted: false,
-      setTourCompleted: mockSetTourCompleted
+      setTourCompleted: mockSetTourCompleted,
     });
 
     useStatusStore.setState({
-      connected: false
+      connected: false,
     });
   });
 
@@ -92,7 +92,7 @@ describe("TourInitializer", () => {
     expect(createAppTour).toHaveBeenCalledWith(
       expect.any(Function),
       expect.any(Function),
-      true // connected = true
+      true, // connected = true
     );
   });
 

@@ -3,13 +3,17 @@ import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
 import toast from "react-hot-toast";
-import { cancelSession, readTag, sessionManager, Status } from "../lib/nfc";
-import { ScanResult, TokenResponse } from "../lib/models";
-import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { runToken } from "../lib/tokenOperations.tsx";
+import { cancelSession, readTag, sessionManager, Status } from "@/lib/nfc";
+import { ScanResult, TokenResponse } from "@/lib/models";
+import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { runToken } from "@/lib/tokenOperations.tsx";
+import { logger } from "@/lib/logger";
+import { useAnnouncer } from "@/components/A11yAnnouncer";
 
 interface UseScanOperationsProps {
   connected: boolean;
+  /** Whether we have received data from the server (indicates prior connection) */
+  hasData: boolean;
   launcherAccess: boolean;
   setLastToken: (token: TokenResponse) => void;
   setProPurchaseModalOpen: (open: boolean) => void;
@@ -18,13 +22,15 @@ interface UseScanOperationsProps {
 
 export function useScanOperations({
   connected,
+  hasData,
   launcherAccess,
   setLastToken,
   setProPurchaseModalOpen,
-  setWriteOpen
+  setWriteOpen,
 }: UseScanOperationsProps) {
   const { t } = useTranslation();
   const nfcWriter = useNfcWriter();
+  const { announce } = useAnnouncer();
   const [scanSession, setScanSession] = useState(false);
   const [scanStatus, setScanStatus] = useState<ScanResult>(ScanResult.Default);
 
@@ -36,18 +42,24 @@ export function useScanOperations({
     readTag()
       .then((result) => {
         setScanStatus(ScanResult.Success);
+        announce(t("scan.scanSuccess"));
         setTimeout(() => {
           setScanStatus(ScanResult.Default);
         }, statusTimeout);
 
         if (result.info.tag) {
+          // Only queue commands if we were previously connected (reconnecting scenario)
+          // If never connected (proper offline), just store the token without queueing
           const ok = runToken(
             result.info.tag.uid,
             result.info.tag.text,
             launcherAccess,
             connected,
             setLastToken,
-            setProPurchaseModalOpen
+            setProPurchaseModalOpen,
+            false, // unsafe
+            false, // override
+            hasData, // canQueueCommands - only queue if we had a prior connection
           );
           if (!ok) {
             cancelSession();
@@ -61,13 +73,14 @@ export function useScanOperations({
           result.status !== Status.Cancelled
         ) {
           if (Capacitor.getPlatform() === "ios") {
-            console.log("delaying restart for ios");
+            logger.log("delaying restart for ios");
             setTimeout(() => {
-              console.log("restarting scan");
+              logger.log("restarting scan");
+              // eslint-disable-next-line react-hooks/immutability -- Intentional: recursive callback for continuous NFC scanning
               doScan();
             }, 4000);
           } else {
-            console.log("restarting scan");
+            logger.log("restarting scan");
             doScan();
           }
           return;
@@ -75,23 +88,28 @@ export function useScanOperations({
 
         setScanSession(false);
       })
-      .catch(() => {
+      .catch((error) => {
         setScanStatus(ScanResult.Error);
         setScanSession(false);
-        toast.error((to) => (
-          // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-          <span
-            className="flex grow flex-col"
-            onClick={() => toast.dismiss(to.id)}
-          >
-            {t("scan.scanError")}
-          </span>
-        ));
+        logger.error("NFC scan failed", error, {
+          category: "nfc",
+          action: "doScan",
+        });
+        toast.error(t("scan.scanError"));
         setTimeout(() => {
           setScanStatus(ScanResult.Default);
         }, statusTimeout);
       });
-  }, [connected, launcherAccess, setLastToken, setProPurchaseModalOpen, statusTimeout, t]);
+  }, [
+    connected,
+    hasData,
+    launcherAccess,
+    setLastToken,
+    setProPurchaseModalOpen,
+    statusTimeout,
+    t,
+    announce,
+  ]);
 
   const handleScanButton = useCallback(async () => {
     if (scanSession) {
@@ -104,35 +122,54 @@ export function useScanOperations({
   }, [scanSession, doScan]);
 
   const handleCameraScan = useCallback(async () => {
-    BarcodeScanner.scan().then((res) => {
-      if (res.barcodes.length < 1) {
-        return;
-      }
-
-      const barcode = res.barcodes[0];
-
-      if (barcode.rawValue.startsWith("**write:")) {
-        const writeValue = barcode.rawValue.slice(8);
-
-        if (writeValue === "") {
+    BarcodeScanner.scan()
+      .then((res) => {
+        if (res.barcodes.length < 1) {
           return;
         }
 
-        setWriteOpen(true);
-        nfcWriter.write(WriteAction.Write, writeValue);
-        return;
-      }
+        const barcode = res.barcodes[0];
+        if (!barcode) return;
 
-      runToken(
-        barcode.rawValue,
-        barcode.rawValue,
-        launcherAccess,
-        connected,
-        setLastToken,
-        setProPurchaseModalOpen
-      );
-    });
-  }, [connected, launcherAccess, setLastToken, setProPurchaseModalOpen, setWriteOpen, nfcWriter]);
+        if (barcode.rawValue.startsWith("**write:")) {
+          const writeValue = barcode.rawValue.slice(8);
+
+          if (writeValue === "") {
+            return;
+          }
+
+          setWriteOpen(true);
+          nfcWriter.write(WriteAction.Write, writeValue);
+          return;
+        }
+
+        runToken(
+          barcode.rawValue,
+          barcode.rawValue,
+          launcherAccess,
+          connected,
+          setLastToken,
+          setProPurchaseModalOpen,
+          false, // unsafe
+          false, // override
+          hasData, // canQueueCommands - only queue if we had a prior connection
+        );
+      })
+      .catch((error) => {
+        logger.error("Barcode scan error:", error, {
+          category: "camera",
+          action: "barcodeScan",
+        });
+      });
+  }, [
+    connected,
+    hasData,
+    launcherAccess,
+    setLastToken,
+    setProPurchaseModalOpen,
+    setWriteOpen,
+    nfcWriter,
+  ]);
 
   const handleStopConfirm = useCallback(() => {
     runToken(
@@ -142,17 +179,27 @@ export function useScanOperations({
       connected,
       setLastToken,
       setProPurchaseModalOpen,
-      false,
-      true
+      false, // unsafe
+      true, // override
+      false, // canQueueCommands - never queue stop commands, only run when connected
     );
   }, [connected, launcherAccess, setLastToken, setProPurchaseModalOpen]);
 
-  return useMemo(() => ({
-    scanSession,
-    scanStatus,
-    handleScanButton,
-    handleCameraScan,
-    handleStopConfirm,
-    runToken
-  }), [scanSession, scanStatus, handleScanButton, handleCameraScan, handleStopConfirm]);
+  return useMemo(
+    () => ({
+      scanSession,
+      scanStatus,
+      handleScanButton,
+      handleCameraScan,
+      handleStopConfirm,
+      runToken,
+    }),
+    [
+      scanSession,
+      scanStatus,
+      handleScanButton,
+      handleCameraScan,
+      handleStopConfirm,
+    ],
+  );
 }

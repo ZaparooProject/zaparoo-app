@@ -41,11 +41,7 @@ describe("CommandsModal", () => {
 
   it("should render when open", () => {
     render(
-      <CommandsModal
-        isOpen={true}
-        close={mockClose}
-        onSelect={mockOnSelect}
-      />
+      <CommandsModal isOpen={true} close={mockClose} onSelect={mockOnSelect} />,
     );
 
     const modal = screen.getByTestId("slide-modal");
@@ -54,11 +50,7 @@ describe("CommandsModal", () => {
 
   it("should render all command categories", () => {
     render(
-      <CommandsModal
-        isOpen={true}
-        close={mockClose}
-        onSelect={mockOnSelect}
-      />
+      <CommandsModal isOpen={true} close={mockClose} onSelect={mockOnSelect} />,
     );
 
     // Check for category headers
@@ -72,11 +64,7 @@ describe("CommandsModal", () => {
 
   it("should render launch commands", () => {
     render(
-      <CommandsModal
-        isOpen={true}
-        close={mockClose}
-        onSelect={mockOnSelect}
-      />
+      <CommandsModal isOpen={true} close={mockClose} onSelect={mockOnSelect} />,
     );
 
     // Check for launch commands
@@ -87,11 +75,7 @@ describe("CommandsModal", () => {
 
   it("should render input commands", () => {
     render(
-      <CommandsModal
-        isOpen={true}
-        close={mockClose}
-        onSelect={mockOnSelect}
-      />
+      <CommandsModal isOpen={true} close={mockClose} onSelect={mockOnSelect} />,
     );
 
     // Check for input commands
@@ -103,11 +87,7 @@ describe("CommandsModal", () => {
 
   it("should render playlist commands", () => {
     render(
-      <CommandsModal
-        isOpen={true}
-        close={mockClose}
-        onSelect={mockOnSelect}
-      />
+      <CommandsModal isOpen={true} close={mockClose} onSelect={mockOnSelect} />,
     );
 
     // Check for playlist commands
@@ -119,11 +99,7 @@ describe("CommandsModal", () => {
 
   it("should call onSelect when command is clicked", () => {
     render(
-      <CommandsModal
-        isOpen={true}
-        close={mockClose}
-        onSelect={mockOnSelect}
-      />
+      <CommandsModal isOpen={true} close={mockClose} onSelect={mockOnSelect} />,
     );
 
     // Click on a launch.system command button
@@ -135,11 +111,7 @@ describe("CommandsModal", () => {
 
   it("should call onSelect with correct command for different types", () => {
     render(
-      <CommandsModal
-        isOpen={true}
-        close={mockClose}
-        onSelect={mockOnSelect}
-      />
+      <CommandsModal isOpen={true} close={mockClose} onSelect={mockOnSelect} />,
     );
 
     // Test different command types
@@ -159,7 +131,7 @@ describe("CommandsModal", () => {
         isOpen={false}
         close={mockClose}
         onSelect={mockOnSelect}
-      />
+      />,
     );
 
     const modal = screen.getByTestId("slide-modal");

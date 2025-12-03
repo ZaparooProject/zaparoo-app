@@ -4,7 +4,6 @@ import { useWriteQueueProcessor } from "../../../hooks/useWriteQueueProcessor";
 import { useStatusStore } from "../../../lib/store";
 import { usePreferencesStore } from "../../../lib/preferencesStore";
 import { useNfcWriter } from "../../../lib/writeNfcHook";
-import { Status } from "../../../lib/nfc";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { CoreAPI } from "../../../lib/coreApi";
@@ -12,60 +11,56 @@ import toast from "react-hot-toast";
 
 // Mock all dependencies
 vi.mock("../../../lib/store", () => ({
-  useStatusStore: vi.fn()
+  useStatusStore: vi.fn(),
 }));
 
 vi.mock("../../../lib/preferencesStore", () => ({
-  usePreferencesStore: vi.fn()
+  usePreferencesStore: vi.fn(),
 }));
 
 vi.mock("../../../lib/writeNfcHook", () => ({
   useNfcWriter: vi.fn(),
   WriteMethod: { Auto: "auto" },
-  WriteAction: { Write: "write" }
+  WriteAction: { Write: "write" },
 }));
 
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
-    isNativePlatform: vi.fn()
-  }
+    isNativePlatform: vi.fn(),
+  },
 }));
 
 vi.mock("@capawesome-team/capacitor-nfc", () => ({
   Nfc: {
-    isAvailable: vi.fn()
-  }
+    isAvailable: vi.fn(),
+  },
 }));
 
 vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
-    hasWriteCapableReader: vi.fn()
-  }
+    hasWriteCapableReader: vi.fn(),
+  },
 }));
 
 vi.mock("react-hot-toast", () => ({
   default: {
     error: vi.fn(),
-    dismiss: vi.fn()
-  }
+    dismiss: vi.fn(),
+  },
 }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key
-  })
+    t: (key: string) => key,
+  }),
 }));
 
 describe("useWriteQueueProcessor", () => {
-  let mockNfcWriter: {
-    write: ReturnType<typeof vi.fn>;
-    end: ReturnType<typeof vi.fn>;
-    status: Status | null;
-    writing: boolean;
-    result: any;
-  };
-  let mockSetWriteOpen: ReturnType<typeof vi.fn>;
-  let mockSetWriteQueue: ReturnType<typeof vi.fn>;
+  let mockNfcWriter: any;
+
+  let mockSetWriteOpen: any;
+
+  let mockSetWriteQueue: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -76,7 +71,7 @@ describe("useWriteQueueProcessor", () => {
       end: vi.fn().mockResolvedValue(undefined),
       status: null,
       writing: false,
-      result: null
+      result: null,
     };
 
     mockSetWriteOpen = vi.fn();
@@ -87,9 +82,9 @@ describe("useWriteQueueProcessor", () => {
 
     // Mock the preferences store
     vi.mocked(usePreferencesStore).mockImplementation((selector: any) => {
-      if (typeof selector === 'function') {
+      if (typeof selector === "function") {
         return selector({
-          preferRemoteWriter: false
+          preferRemoteWriter: false,
         });
       }
       return false;
@@ -100,9 +95,9 @@ describe("useWriteQueueProcessor", () => {
       const mockState = {
         writeQueue: "",
         setWriteQueue: mockSetWriteQueue,
-        setWriteOpen: mockSetWriteOpen
+        setWriteOpen: mockSetWriteOpen,
       };
-      if (typeof selector === 'function') {
+      if (typeof selector === "function") {
         return selector(mockState);
       }
       return mockState;
@@ -137,9 +132,9 @@ describe("useWriteQueueProcessor", () => {
       const mockState = {
         writeQueue: "test-write-content",
         setWriteQueue: mockSetWriteQueue,
-        setWriteOpen: mockSetWriteOpen
+        setWriteOpen: mockSetWriteOpen,
       };
-      if (typeof selector === 'function') {
+      if (typeof selector === "function") {
         return selector(mockState);
       }
       return mockState;
@@ -156,7 +151,10 @@ describe("useWriteQueueProcessor", () => {
     // Now assertions should work immediately
     expect(mockSetWriteQueue).toHaveBeenCalledWith("");
     expect(mockSetWriteOpen).toHaveBeenCalledWith(true);
-    expect(mockNfcWriter.write).toHaveBeenCalledWith("write", "test-write-content");
+    expect(mockNfcWriter.write).toHaveBeenCalledWith(
+      "write",
+      "test-write-content",
+    );
   });
 
   it("should check remote writers when NFC unavailable", async () => {
@@ -167,9 +165,9 @@ describe("useWriteQueueProcessor", () => {
       const mockState = {
         writeQueue: "test-content",
         setWriteQueue: mockSetWriteQueue,
-        setWriteOpen: mockSetWriteOpen
+        setWriteOpen: mockSetWriteOpen,
       };
-      if (typeof selector === 'function') {
+      if (typeof selector === "function") {
         return selector(mockState);
       }
       return mockState;
@@ -193,13 +191,15 @@ describe("useWriteQueueProcessor", () => {
     vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(false);
 
     vi.mocked(useStatusStore).mockImplementation((selector: any) => {
-      if (typeof selector === 'function') {
-        return selector({
-          writeQueue: "test-content",
-          setWriteQueue: mockSetWriteQueue
-        });
+      const mockState = {
+        writeQueue: "test-content",
+        setWriteQueue: mockSetWriteQueue,
+        setWriteOpen: mockSetWriteOpen,
+      };
+      if (typeof selector === "function") {
+        return selector(mockState);
       }
-      return mockSetWriteQueue;
+      return mockState;
     });
 
     renderHook(() => useWriteQueueProcessor());
@@ -224,9 +224,9 @@ describe("useWriteQueueProcessor", () => {
       const mockState = {
         writeQueue: "web-content",
         setWriteQueue: mockSetWriteQueue,
-        setWriteOpen: mockSetWriteOpen
+        setWriteOpen: mockSetWriteOpen,
       };
-      if (typeof selector === 'function') {
+      if (typeof selector === "function") {
         return selector(mockState);
       }
       return mockState;
@@ -250,13 +250,15 @@ describe("useWriteQueueProcessor", () => {
     mockNfcWriter.status = null;
 
     vi.mocked(useStatusStore).mockImplementation((selector: any) => {
-      if (typeof selector === 'function') {
-        return selector({
-          writeQueue: "test-content",
-          setWriteQueue: mockSetWriteQueue
-        });
+      const mockState = {
+        writeQueue: "test-content",
+        setWriteQueue: mockSetWriteQueue,
+        setWriteOpen: mockSetWriteOpen,
+      };
+      if (typeof selector === "function") {
+        return selector(mockState);
       }
-      return mockSetWriteQueue;
+      return mockState;
     });
 
     renderHook(() => useWriteQueueProcessor());

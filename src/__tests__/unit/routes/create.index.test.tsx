@@ -11,11 +11,11 @@ vi.mock("../../../lib/store", () => ({
       playing: {
         mediaName: "Test Game",
         mediaPath: "/test/game.sfc",
-        systemName: "Test System"
-      }
+        systemName: "Test System",
+      },
     };
     return selector(mockState);
-  })
+  }),
 }));
 
 vi.mock("../../../lib/writeNfcHook", () => ({
@@ -24,19 +24,19 @@ vi.mock("../../../lib/writeNfcHook", () => ({
     write: vi.fn(),
     end: vi.fn(),
     writing: false,
-    result: null
+    result: null,
   })),
   WriteAction: {
-    Write: 'write'
-  }
+    Write: "write",
+  },
 }));
 
 vi.mock("@capacitor/core");
 
 vi.mock("@capawesome-team/capacitor-nfc", () => ({
   Nfc: {
-    isAvailable: vi.fn().mockResolvedValue({ nfc: true })
-  }
+    isAvailable: vi.fn().mockResolvedValue({ nfc: true }),
+  },
 }));
 
 vi.mock("react-i18next", () => ({
@@ -54,18 +54,18 @@ vi.mock("react-i18next", () => ({
         "create.customHeading": "Custom text",
         "create.customSub": "Write custom text to a token",
         "create.nfcHeading": "NFC",
-        "create.nfcSub": "Read from another NFC token"
+        "create.nfcSub": "Read from another NFC token",
       };
 
       let result = translations[key] || key;
       if (params) {
-        Object.keys(params).forEach(param => {
+        Object.keys(params).forEach((param) => {
           result = result.replace(`{{${param}}}`, params[param]);
         });
       }
       return result;
-    }
-  }))
+    },
+  })),
 }));
 
 describe("Create Index Route", () => {
@@ -76,8 +76,8 @@ describe("Create Index Route", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
   });
 
@@ -90,9 +90,7 @@ describe("Create Index Route", () => {
 
   it("should render the create page with all navigation cards", async () => {
     const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
     // Create a simplified version of the Create component for testing
@@ -112,7 +110,7 @@ describe("Create Index Route", () => {
     render(
       <TestWrapper>
         <CreateComponent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     expect(screen.getByTestId("create-page")).toBeInTheDocument();
@@ -171,7 +169,9 @@ describe("Create Index Route", () => {
     const { Nfc } = await import("@capawesome-team/capacitor-nfc");
 
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    vi.mocked(Nfc.isAvailable).mockRejectedValue(new Error("NFC not supported"));
+    vi.mocked(Nfc.isAvailable).mockRejectedValue(
+      new Error("NFC not supported"),
+    );
 
     // Component that handles NFC errors
     const NFCErrorHandlingComponent = () => {
@@ -233,11 +233,14 @@ describe("Create Index Route", () => {
 
     render(<WebPlatformComponent />);
 
-    expect(screen.getByTestId("nfc-status")).toHaveTextContent("Web Platform - NFC Disabled");
+    expect(screen.getByTestId("nfc-status")).toHaveTextContent(
+      "Web Platform - NFC Disabled",
+    );
   });
 
   it("should handle current game write functionality", async () => {
-    const { useNfcWriter, WriteAction } = await import("../../../lib/writeNfcHook");
+    const { useNfcWriter, WriteAction } =
+      await import("../../../lib/writeNfcHook");
     const { useStatusStore } = await import("../../../lib/store");
 
     const mockWrite = vi.fn();
@@ -246,7 +249,7 @@ describe("Create Index Route", () => {
       write: mockWrite,
       end: vi.fn(),
       writing: false,
-      result: null
+      result: null,
     });
 
     // Component that handles current game writing
@@ -272,14 +275,18 @@ describe("Create Index Route", () => {
           >
             Write Current Game
           </button>
-          {writeOpen && <div data-testid="write-modal-open">Write Modal Open</div>}
+          {writeOpen && (
+            <div data-testid="write-modal-open">Write Modal Open</div>
+          )}
         </div>
       );
     };
 
     render(<CurrentGameWriteComponent />);
 
-    expect(screen.getByTestId("current-game-info")).toHaveTextContent("Test Game");
+    expect(screen.getByTestId("current-game-info")).toHaveTextContent(
+      "Test Game",
+    );
 
     const writeButton = screen.getByTestId("write-current-game");
     expect(writeButton).not.toBeDisabled();
@@ -297,11 +304,13 @@ describe("Create Index Route", () => {
       const mockState = {
         connected: true,
         setConnected: vi.fn(),
-        connectionState: 'CONNECTED' as any,
+        targetDeviceAddress: "192.168.1.1",
+        setTargetDeviceAddress: vi.fn(),
+        connectionState: "CONNECTED" as any,
         setConnectionState: vi.fn(),
         lastConnectionTime: null,
         setLastConnectionTime: vi.fn(),
-        connectionError: '',
+        connectionError: "",
         setConnectionError: vi.fn(),
         retryCount: 0,
         retryConnection: vi.fn(),
@@ -313,7 +322,7 @@ describe("Create Index Route", () => {
           systemId: "",
           mediaName: "",
           mediaPath: "",
-          systemName: ""
+          systemName: "",
         },
         setPlaying: vi.fn(),
         cameraOpen: false,
@@ -335,12 +344,12 @@ describe("Create Index Route", () => {
         clearDeviceHistory: vi.fn(),
         runQueue: null,
         setRunQueue: vi.fn(),
-        writeQueue: '',
+        writeQueue: "",
         setWriteQueue: vi.fn(),
         pendingDisconnection: false,
         setConnectionStateWithGracePeriod: vi.fn(),
         clearGracePeriod: vi.fn(),
-        resetConnectionState: vi.fn()
+        resetConnectionState: vi.fn(),
       };
       return selector(mockState);
     });
@@ -358,7 +367,9 @@ describe("Create Index Route", () => {
             Write Current Game
           </button>
           <div data-testid="game-status">
-            {playing.mediaName ? `Playing: ${playing.mediaName}` : "No game currently playing"}
+            {playing.mediaName
+              ? `Playing: ${playing.mediaName}`
+              : "No game currently playing"}
           </div>
         </div>
       );
@@ -368,7 +379,9 @@ describe("Create Index Route", () => {
 
     const writeButton = screen.getByTestId("write-current-game");
     expect(writeButton).toBeDisabled();
-    expect(screen.getByTestId("game-status")).toHaveTextContent("No game currently playing");
+    expect(screen.getByTestId("game-status")).toHaveTextContent(
+      "No game currently playing",
+    );
   });
 
   it("should handle write modal closure properly", async () => {
@@ -381,7 +394,7 @@ describe("Create Index Route", () => {
       write: vi.fn(),
       end: mockEnd,
       writing: false,
-      result: null
+      result: null,
     });
 
     // Component that handles write modal lifecycle
@@ -404,10 +417,7 @@ describe("Create Index Route", () => {
         <div>
           {writeOpen ? (
             <div data-testid="write-modal">
-              <button
-                data-testid="close-write-modal"
-                onClick={closeWriteModal}
-              >
+              <button data-testid="close-write-modal" onClick={closeWriteModal}>
                 Close
               </button>
             </div>
@@ -422,7 +432,8 @@ describe("Create Index Route", () => {
 
     // Modal should close automatically when status changes
     // Use findBy for better async element waiting
-    await screen.findByTestId("write-modal-closed");
+    const closedModal = await screen.findByTestId("write-modal-closed");
+    expect(closedModal).toBeInTheDocument();
   });
 
   it("should handle connection-dependent card states", async () => {
@@ -433,11 +444,13 @@ describe("Create Index Route", () => {
       const mockState = {
         connected: false,
         setConnected: vi.fn(),
-        connectionState: 'DISCONNECTED' as any,
+        targetDeviceAddress: "192.168.1.1",
+        setTargetDeviceAddress: vi.fn(),
+        connectionState: "DISCONNECTED" as any,
         setConnectionState: vi.fn(),
         lastConnectionTime: null,
         setLastConnectionTime: vi.fn(),
-        connectionError: '',
+        connectionError: "",
         setConnectionError: vi.fn(),
         retryCount: 0,
         retryConnection: vi.fn(),
@@ -449,7 +462,7 @@ describe("Create Index Route", () => {
           systemId: "test",
           mediaName: "Test Game",
           mediaPath: "/test/game.sfc",
-          systemName: "Test System"
+          systemName: "Test System",
         },
         setPlaying: vi.fn(),
         cameraOpen: false,
@@ -471,12 +484,12 @@ describe("Create Index Route", () => {
         clearDeviceHistory: vi.fn(),
         runQueue: null,
         setRunQueue: vi.fn(),
-        writeQueue: '',
+        writeQueue: "",
         setWriteQueue: vi.fn(),
         pendingDisconnection: false,
         setConnectionStateWithGracePeriod: vi.fn(),
         clearGracePeriod: vi.fn(),
-        resetConnectionState: vi.fn()
+        resetConnectionState: vi.fn(),
       };
       return selector(mockState);
     });
@@ -490,16 +503,10 @@ describe("Create Index Route", () => {
           <div data-testid="connection-status">
             {connected ? "Connected" : "Disconnected"}
           </div>
-          <button
-            data-testid="search-link"
-            disabled={!connected}
-          >
+          <button data-testid="search-link" disabled={!connected}>
             Search for a game
           </button>
-          <button
-            data-testid="mappings-link"
-            disabled={!connected}
-          >
+          <button data-testid="mappings-link" disabled={!connected}>
             Mappings
           </button>
         </div>
@@ -508,7 +515,9 @@ describe("Create Index Route", () => {
 
     render(<ConnectionDependentComponent />);
 
-    expect(screen.getByTestId("connection-status")).toHaveTextContent("Disconnected");
+    expect(screen.getByTestId("connection-status")).toHaveTextContent(
+      "Disconnected",
+    );
     expect(screen.getByTestId("search-link")).toBeDisabled();
     expect(screen.getByTestId("mappings-link")).toBeDisabled();
   });
@@ -525,7 +534,7 @@ describe("Create Index Route", () => {
     vi.mocked(useTranslation).mockReturnValue({
       t: mockT as any,
       i18n: {} as any,
-      ready: true
+      ready: true,
     } as any);
 
     // Component using translations
@@ -545,8 +554,12 @@ describe("Create Index Route", () => {
     render(<TranslationComponent />);
 
     expect(mockT).toHaveBeenCalledWith("create.title");
-    expect(mockT).toHaveBeenCalledWith("create.currentGameSub", { game: "Super Mario World" });
-    expect(screen.getByTestId("current-game-text")).toHaveTextContent("Write Super Mario World to a token");
+    expect(mockT).toHaveBeenCalledWith("create.currentGameSub", {
+      game: "Super Mario World",
+    });
+    expect(screen.getByTestId("current-game-text")).toHaveTextContent(
+      "Write Super Mario World to a token",
+    );
   });
 
   // Additional error handling and edge case tests
@@ -612,7 +625,7 @@ describe("Create Index Route", () => {
       write: vi.fn(),
       end: mockEnd,
       writing: false,
-      result: null
+      result: null,
     });
 
     const CleanupComponent = () => {
@@ -647,8 +660,8 @@ describe("Create Index Route", () => {
           systemId: null, // Corrupted data
           mediaName: "", // Empty name
           mediaPath: undefined, // Undefined path
-          systemName: null
-        }
+          systemName: null,
+        },
       };
       return selector(mockState);
     });
@@ -660,13 +673,12 @@ describe("Create Index Route", () => {
 
       return (
         <div>
-          <div data-testid="game-valid">{isValidGame ? "Valid" : "Invalid"}</div>
+          <div data-testid="game-valid">
+            {isValidGame ? "Valid" : "Invalid"}
+          </div>
           <div data-testid="media-name">{playing?.mediaName || "No name"}</div>
           <div data-testid="media-path">{playing?.mediaPath || "No path"}</div>
-          <button
-            data-testid="write-btn"
-            disabled={!isValidGame}
-          >
+          <button data-testid="write-btn" disabled={!isValidGame}>
             Write Game
           </button>
         </div>
@@ -683,18 +695,21 @@ describe("Create Index Route", () => {
 
   it("should handle write operation timeout", async () => {
     const { useNfcWriter } = await import("../../../lib/writeNfcHook");
-    const mockWrite = vi.fn().mockImplementation(() =>
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Write timeout")), 50)
-      )
-    );
+    const mockWrite = vi
+      .fn()
+      .mockImplementation(
+        () =>
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Write timeout")), 50),
+          ),
+      );
 
     vi.mocked(useNfcWriter).mockReturnValue({
       status: null,
       write: mockWrite,
       end: vi.fn(),
       writing: true,
-      result: null
+      result: null,
     });
 
     const TimeoutComponent = () => {

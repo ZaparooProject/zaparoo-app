@@ -5,5 +5,5 @@ export const Preferences = {
   set: vi.fn().mockResolvedValue(undefined),
   remove: vi.fn().mockResolvedValue(undefined),
   clear: vi.fn().mockResolvedValue(undefined),
-  keys: vi.fn().mockResolvedValue({ keys: [] })
+  keys: vi.fn().mockResolvedValue({ keys: [] }),
 };

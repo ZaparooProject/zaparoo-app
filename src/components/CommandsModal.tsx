@@ -32,7 +32,7 @@ export function CommandsModal(props: {
     { label: "http.post", command: "**http.post:" },
     { label: "stop", command: "**stop" },
     { label: "execute", command: "**execute:" },
-    { label: "delay", command: "**delay:" }
+    { label: "delay", command: "**delay:" },
   ];
 
   const categories = {
@@ -46,11 +46,11 @@ export function CommandsModal(props: {
       "playlist.previous",
       "playlist.pause",
       "playlist.goto",
-      "playlist.open"
+      "playlist.open",
     ],
     MiSTer: ["mister.ini", "mister.core", "mister.script"],
     HTTP: ["http.get", "http.post"],
-    Other: ["stop", "execute", "delay"]
+    Other: ["stop", "execute", "delay"],
   };
 
   return (
@@ -60,27 +60,28 @@ export function CommandsModal(props: {
       title={t("create.custom.commands")}
     >
       <div className="flex flex-col gap-4">
-          {Object.entries(categories).map(([category, commandLabels]) => (
-            <div key={category} className="flex flex-col gap-2">
-              <h3 className="text-lg font-semibold capitalize">{category}</h3>
-              <div className="flex flex-col gap-2">
-                {commands
-                  .filter((cmd) => commandLabels.includes(cmd.label))
-                  .map((cmd) => (
-                    <Button
-                      key={cmd.label}
-                      label={cmd.label}
-                      variant="outline"
-                      onClick={() => {
-                        props.onSelect(cmd.command);
-                        props.close();
-                      }}
-                      className="touch-manipulation"
-                    />
-                  ))}
-              </div>
+        {Object.entries(categories).map(([category, commandLabels]) => (
+          <div key={category} className="flex flex-col gap-2">
+            <h3 className="text-lg font-semibold capitalize">{category}</h3>
+            <div className="flex flex-col gap-2">
+              {commands
+                .filter((cmd) => commandLabels.includes(cmd.label))
+                .map((cmd) => (
+                  <Button
+                    key={cmd.label}
+                    label={cmd.label}
+                    variant="outline"
+                    intent="primary"
+                    onClick={() => {
+                      props.onSelect(cmd.command);
+                      props.close();
+                    }}
+                    className="touch-manipulation"
+                  />
+                ))}
             </div>
-          ))}
+          </div>
+        ))}
       </div>
     </SlideModal>
   );

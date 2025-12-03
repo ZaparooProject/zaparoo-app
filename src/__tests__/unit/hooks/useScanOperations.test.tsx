@@ -9,8 +9,8 @@ vi.mock("@capacitor-mlkit/barcode-scanning");
 vi.mock("react-hot-toast");
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key
-  })
+    t: (key: string) => key,
+  }),
 }));
 
 describe("useScanOperations", () => {

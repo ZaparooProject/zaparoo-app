@@ -1,4 +1,4 @@
-require_relative '../../node_modules/.pnpm/@capacitor+ios@7.4.1_@capacitor+core@7.4.1/node_modules/@capacitor/ios/scripts/pods_helpers'
+require_relative '../../node_modules/.pnpm/@capacitor+ios@7.4.4_@capacitor+core@7.4.4/node_modules/@capacitor/ios/scripts/pods_helpers'
 
 platform :ios, '15.5'
 use_frameworks!
@@ -9,20 +9,24 @@ use_frameworks!
 install! 'cocoapods', :disable_input_output_paths => true
 
 def capacitor_pods
-  pod 'Capacitor', :path => '../../node_modules/.pnpm/@capacitor+ios@7.4.1_@capacitor+core@7.4.1/node_modules/@capacitor/ios'
-  pod 'CapacitorCordova', :path => '../../node_modules/.pnpm/@capacitor+ios@7.4.1_@capacitor+core@7.4.1/node_modules/@capacitor/ios'
-  pod 'CapacitorCommunityKeepAwake', :path => '../../node_modules/.pnpm/@capacitor-community+keep-awake@7.1.0_@capacitor+core@7.4.1/node_modules/@capacitor-community/keep-awake'
-  pod 'CapacitorFirebaseAuthentication', :path => '../../node_modules/.pnpm/@capacitor-firebase+authentication@7.2.0_@capacitor+core@7.4.1_firebase@11.10.0/node_modules/@capacitor-firebase/authentication'
-  pod 'CapacitorMlkitBarcodeScanning', :path => '../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@7.2.1_@capacitor+core@7.4.1/node_modules/@capacitor-mlkit/barcode-scanning'
-  pod 'CapacitorApp', :path => '../../node_modules/.pnpm/@capacitor+app@7.0.1_@capacitor+core@7.4.1/node_modules/@capacitor/app'
-  pod 'CapacitorBrowser', :path => '../../node_modules/.pnpm/@capacitor+browser@7.0.1_@capacitor+core@7.4.1/node_modules/@capacitor/browser'
-  pod 'CapacitorClipboard', :path => '../../node_modules/.pnpm/@capacitor+clipboard@7.0.1_@capacitor+core@7.4.1/node_modules/@capacitor/clipboard'
-  pod 'CapacitorPreferences', :path => '../../node_modules/.pnpm/@capacitor+preferences@7.0.1_@capacitor+core@7.4.1/node_modules/@capacitor/preferences'
-  pod 'CapacitorShare', :path => '../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.1/node_modules/@capacitor/share'
-  pod 'CapacitorStatusBar', :path => '../../node_modules/.pnpm/@capacitor+status-bar@7.0.1_@capacitor+core@7.4.1/node_modules/@capacitor/status-bar'
-  pod 'CapawesomeTeamCapacitorNfc', :path => '../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.3.0_@capacitor+core@7.4.1/node_modules/@capawesome-team/capacitor-nfc'
-  pod 'CapgoCapacitorShake', :path => '../../node_modules/.pnpm/@capgo+capacitor-shake@7.2.14_@capacitor+core@7.4.1/node_modules/@capgo/capacitor-shake'
-  pod 'RevenuecatPurchasesCapacitor', :path => '../../node_modules/.pnpm/@revenuecat+purchases-capacitor@10.3.7_@capacitor+core@7.4.1/node_modules/@revenuecat/purchases-capacitor'
+  pod 'Capacitor', :path => '../../node_modules/.pnpm/@capacitor+ios@7.4.4_@capacitor+core@7.4.4/node_modules/@capacitor/ios'
+  pod 'CapacitorCordova', :path => '../../node_modules/.pnpm/@capacitor+ios@7.4.4_@capacitor+core@7.4.4/node_modules/@capacitor/ios'
+  pod 'CapacitorCommunityKeepAwake', :path => '../../node_modules/.pnpm/@capacitor-community+keep-awake@7.1.0_@capacitor+core@7.4.4/node_modules/@capacitor-community/keep-awake'
+  pod 'CapacitorFirebaseAuthentication', :path => '../../node_modules/.pnpm/@capacitor-firebase+authentication@7.4.0_@capacitor+core@7.4.4_firebase@11.10.0/node_modules/@capacitor-firebase/authentication'
+  pod 'CapacitorMlkitBarcodeScanning', :path => '../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@7.4.0_@capacitor+core@7.4.4/node_modules/@capacitor-mlkit/barcode-scanning'
+  pod 'CapacitorApp', :path => '../../node_modules/.pnpm/@capacitor+app@7.1.0_@capacitor+core@7.4.4/node_modules/@capacitor/app'
+  pod 'CapacitorBrowser', :path => '../../node_modules/.pnpm/@capacitor+browser@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/browser'
+  pod 'CapacitorClipboard', :path => '../../node_modules/.pnpm/@capacitor+clipboard@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/clipboard'
+  pod 'CapacitorDevice', :path => '../../node_modules/.pnpm/@capacitor+device@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/device'
+  pod 'CapacitorHaptics', :path => '../../node_modules/.pnpm/@capacitor+haptics@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/haptics'
+  pod 'CapacitorPreferences', :path => '../../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/preferences'
+  pod 'CapacitorScreenReader', :path => '../../node_modules/.pnpm/@capacitor+screen-reader@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/screen-reader'
+  pod 'CapacitorShare', :path => '../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/share'
+  pod 'CapacitorStatusBar', :path => '../../node_modules/.pnpm/@capacitor+status-bar@7.0.3_@capacitor+core@7.4.4/node_modules/@capacitor/status-bar'
+  pod 'CapacitorTextZoom', :path => '../../node_modules/.pnpm/@capacitor+text-zoom@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/text-zoom'
+  pod 'CapawesomeTeamCapacitorNfc', :path => '../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.3.0_@capacitor+core@7.4.4/node_modules/@capawesome-team/capacitor-nfc'
+  pod 'CapgoCapacitorShake', :path => '../../node_modules/.pnpm/@capgo+capacitor-shake@7.2.19_@capacitor+core@7.4.4/node_modules/@capgo/capacitor-shake'
+  pod 'RevenuecatPurchasesCapacitor', :path => '../../node_modules/.pnpm/@revenuecat+purchases-capacitor@11.2.16_@capacitor+core@7.4.4/node_modules/@revenuecat/purchases-capacitor'
 end
 
 target 'App' do

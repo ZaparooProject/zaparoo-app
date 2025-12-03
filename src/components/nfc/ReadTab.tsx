@@ -1,18 +1,13 @@
 import { useState } from "react";
-import {
-  CopyIcon,
-  EyeIcon,
-  EyeOffIcon,
-  ShareIcon,
-  NfcIcon
-} from "lucide-react";
-import toast from "react-hot-toast";
+import { EyeIcon, EyeOffIcon, ShareIcon, NfcIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Clipboard } from "@capacitor/clipboard";
 import { Share } from "@capacitor/share";
+import toast from "react-hot-toast";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/wui/Button";
+import { CopyButton } from "@/components/CopyButton";
 import { Result } from "@/lib/nfc";
+import { logger } from "@/lib/logger";
 
 interface ReadTabProps {
   result: Result | null;
@@ -23,32 +18,27 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
   const { t } = useTranslation();
   const [showRawData, setShowRawData] = useState(false);
 
-  const copyToClipboard = async (text: string, label: string) => {
-    try {
-      await Clipboard.write({ string: text });
-      toast.success(t("create.nfc.readTab.copiedToClipboard", { label }));
-    } catch {
-      toast.error(t("create.nfc.readTab.copyFailed"));
-    }
-  };
-
   const shareTagData = async () => {
     if (!result?.info?.tag) return;
 
     const shareText = t("create.nfc.readTab.shareText", {
       uid: result.info.tag.uid,
-      text: result.info.tag.text
+      text: result.info.tag.text,
     });
 
     try {
       await Share.share({
         title: t("create.nfc.readTab.shareTitle"),
         text: shareText,
-        dialogTitle: t("create.nfc.readTab.shareTitle")
+        dialogTitle: t("create.nfc.readTab.shareTitle"),
       });
-    } catch {
-      // Fallback to copy if share fails or is cancelled
-      copyToClipboard(shareText, t("create.nfc.readTab.tagData"));
+    } catch (error) {
+      logger.error("Failed to share tag data:", error, {
+        category: "share",
+        action: "shareTagData",
+        severity: "warning",
+      });
+      toast.error(t("shareFailed"));
     }
   };
 
@@ -67,13 +57,16 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
       {/* Basic Information Card */}
       <div className="bg-background-secondary/50 space-y-4 rounded-2xl p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">{t("create.nfc.readTab.tagInformation")}</h3>
+          <h3 className="text-lg font-semibold">
+            {t("create.nfc.readTab.tagInformation")}
+          </h3>
           {tag && (
             <Button
               icon={<ShareIcon size={16} />}
               onClick={shareTagData}
               size="sm"
               variant="outline"
+              aria-label={t("create.nfc.readTab.shareTagData")}
             />
           )}
         </div>
@@ -81,39 +74,19 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
         <div className="space-y-4">
           <div>
             <Label htmlFor="uid">{t("create.nfc.readTab.uid")}</Label>
-            <div className="mt-1 flex items-center gap-2">
-              <code className="bg-background/50 flex-1 rounded-lg px-3 py-2 font-mono text-sm">
-                {tag?.uid || "-"}
-              </code>
-              {tag?.uid && (
-                <Button
-                  icon={<CopyIcon size={16} />}
-                  onClick={() => copyToClipboard(tag.uid, t("create.nfc.readTab.uid"))}
-                  size="sm"
-                  variant="outline"
-                />
-              )}
+            <div className="bg-background/50 mt-1 rounded-lg px-3 py-2 font-mono text-sm">
+              {tag?.uid || "-"}
+              {tag?.uid && <CopyButton text={tag.uid} className="ml-1" />}
             </div>
           </div>
 
           <div>
             <Label htmlFor="content">{t("create.nfc.readTab.content")}</Label>
-            <div className="mt-1 flex items-start gap-2">
-              <div className="bg-background/50 flex-1 rounded-lg px-3 py-2">
-                {tag?.text ? (
-                  <div className="text-sm break-all">{tag.text}</div>
-                ) : (
-                  <div className="text-foreground-secondary text-sm">-</div>
-                )}
-              </div>
-              {tag?.text && (
-                <Button
-                  icon={<CopyIcon size={16} />}
-                  onClick={() => copyToClipboard(tag.text, t("create.nfc.readTab.content"))}
-                  size="sm"
-                  variant="outline"
-                />
+            <div className="bg-background/50 mt-1 rounded-lg px-3 py-2 text-sm break-all">
+              {tag?.text || (
+                <span className="text-foreground-secondary">-</span>
               )}
+              {tag?.text && <CopyButton text={tag.text} className="ml-1" />}
             </div>
           </div>
         </div>
@@ -121,7 +94,9 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
 
       {/* Technical Details Card */}
       <div className="bg-background-secondary/50 space-y-4 rounded-2xl p-4">
-        <h3 className="text-lg font-semibold">{t("create.nfc.readTab.technicalDetails")}</h3>
+        <h3 className="text-lg font-semibold">
+          {t("create.nfc.readTab.technicalDetails")}
+        </h3>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -135,7 +110,9 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
                       : "bg-red-100 text-red-800"
                   }`}
                 >
-                  {rawTag.isWritable ? t("create.nfc.readTab.yes") : t("create.nfc.readTab.no")}
+                  {rawTag.isWritable
+                    ? t("create.nfc.readTab.yes")
+                    : t("create.nfc.readTab.no")}
                 </span>
               ) : (
                 <span className="text-foreground-secondary">-</span>
@@ -146,7 +123,9 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
           <div>
             <Label>{t("create.nfc.readTab.maxSize")}</Label>
             <div className="mt-1 font-mono text-sm">
-              {rawTag?.maxSize ? `${rawTag.maxSize} ${t("create.nfc.readTab.bytes")}` : "-"}
+              {rawTag?.maxSize
+                ? `${rawTag.maxSize} ${t("create.nfc.readTab.bytes")}`
+                : "-"}
             </div>
           </div>
 
@@ -161,7 +140,9 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
                       : "bg-red-100 text-red-800"
                   }`}
                 >
-                  {rawTag.canMakeReadOnly ? t("create.nfc.readTab.yes") : t("create.nfc.readTab.no")}
+                  {rawTag.canMakeReadOnly
+                    ? t("create.nfc.readTab.yes")
+                    : t("create.nfc.readTab.no")}
                 </span>
               ) : (
                 <span className="text-foreground-secondary">-</span>
@@ -198,7 +179,11 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
         </div>
 
         <div>
-          <Label>{t("create.nfc.readTab.ndefRecords", { count: rawTag?.message?.records?.length || 0 })}</Label>
+          <Label>
+            {t("create.nfc.readTab.ndefRecords", {
+              count: rawTag?.message?.records?.length || 0,
+            })}
+          </Label>
           {rawTag?.message?.records && rawTag.message.records.length > 0 ? (
             <>
               <div className="mt-1 space-y-2">
@@ -209,22 +194,29 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
                     </div>
                     <div className="space-y-1 text-xs">
                       <div>
-                        <span className="font-medium">{t("create.nfc.readTab.tnf")}</span> {record.tnf}
+                        <span className="font-medium">
+                          {t("create.nfc.readTab.tnf")}
+                        </span>{" "}
+                        {record.tnf}
                       </div>
                       {record.type && record.type.length > 0 && (
                         <div>
-                          <span className="font-medium">{t("create.nfc.readTab.type")}</span>{" "}
-                          {record.type[0].toString(16)}
+                          <span className="font-medium">
+                            {t("create.nfc.readTab.type")}
+                          </span>{" "}
+                          {record.type[0]?.toString(16)}
                         </div>
                       )}
                       {record.payload && (
                         <div>
-                          <span className="font-medium">{t("create.nfc.readTab.payload")}</span>
+                          <span className="font-medium">
+                            {t("create.nfc.readTab.payload")}
+                          </span>
                           <div className="mt-1 font-mono text-xs break-all">
                             {showRawData
                               ? record.payload
                                   .map((byte) =>
-                                    byte.toString(16).padStart(2, "0")
+                                    byte.toString(16).padStart(2, "0"),
                                   )
                                   .join(" ")
                               : record.payload
@@ -241,7 +233,11 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
                 icon={
                   showRawData ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />
                 }
-                label={showRawData ? t("create.nfc.readTab.hideHex") : t("create.nfc.readTab.showHex")}
+                label={
+                  showRawData
+                    ? t("create.nfc.readTab.hideHex")
+                    : t("create.nfc.readTab.showHex")
+                }
                 onClick={() => setShowRawData(!showRawData)}
                 size="sm"
                 variant="outline"
@@ -256,40 +252,33 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
 
       {/* Low-Level Tag Data Card */}
       <div className="bg-background-secondary/50 space-y-4 rounded-2xl p-4">
-        <h3 className="text-lg font-semibold">{t("create.nfc.readTab.lowLevelTagData")}</h3>
+        <h3 className="text-lg font-semibold">
+          {t("create.nfc.readTab.lowLevelTagData")}
+        </h3>
 
         <div className="space-y-4">
           {/* Tag ID */}
           <div>
             <Label>{t("create.nfc.readTab.tagId")}</Label>
-            <div className="mt-1 flex items-center gap-2">
-              <code className="bg-background/50 flex-1 rounded-lg px-3 py-2 font-mono text-sm">
-                {rawTag?.id
-                  ? showRawData
-                    ? rawTag.id
-                        .map((byte) => byte.toString(16).padStart(2, "0"))
-                        .join(" ")
-                    : rawTag.id
-                        .map((byte) => byte.toString(16).padStart(2, "0"))
-                        .join("")
-                  : "-"}
-              </code>
+            <code className="bg-background/50 mt-1 block rounded-lg px-3 py-2 font-mono text-sm">
+              {rawTag?.id
+                ? showRawData
+                  ? rawTag.id
+                      .map((byte) => byte.toString(16).padStart(2, "0"))
+                      .join(" ")
+                  : rawTag.id
+                      .map((byte) => byte.toString(16).padStart(2, "0"))
+                      .join("")
+                : "-"}
               {rawTag?.id && (
-                <Button
-                  icon={<CopyIcon size={16} />}
-                  onClick={() =>
-                    copyToClipboard(
-                      rawTag
-                        .id!.map((byte) => byte.toString(16).padStart(2, "0"))
-                        .join(""),
-                      t("create.nfc.readTab.tagId")
-                    )
-                  }
-                  size="sm"
-                  variant="outline"
+                <CopyButton
+                  text={rawTag.id
+                    .map((byte) => byte.toString(16).padStart(2, "0"))
+                    .join("")}
+                  className="ml-1"
                 />
               )}
-            </div>
+            </code>
           </div>
 
           {/* ATQA bytes (Android NFC-A) */}

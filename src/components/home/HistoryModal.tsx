@@ -22,15 +22,15 @@ interface HistoryModalProps {
   historyData: HistoryData | undefined;
 }
 
-export const HistoryModal = memo(function HistoryModal({ isOpen, onClose, historyData }: HistoryModalProps) {
+export const HistoryModal = memo(function HistoryModal({
+  isOpen,
+  onClose,
+  historyData,
+}: HistoryModalProps) {
   const { t } = useTranslation();
 
   return (
-    <SlideModal
-      isOpen={isOpen}
-      close={onClose}
-      title={t("scan.historyTitle")}
-    >
+    <SlideModal isOpen={isOpen} close={onClose} title={t("scan.historyTitle")}>
       {historyData && (
         <div>
           {historyData.entries &&
@@ -44,7 +44,7 @@ export const HistoryModal = memo(function HistoryModal({ isOpen, onClose, histor
                     i === historyData.entries.length - 1
                       ? ""
                       : "1px solid rgba(255,255,255,0.6)",
-                  padding: "0.5rem"
+                  padding: "0.5rem",
                 }}
               >
                 <p>
@@ -52,7 +52,7 @@ export const HistoryModal = memo(function HistoryModal({ isOpen, onClose, histor
                     time:
                       item.uid === "" && item.text === ""
                         ? "-"
-                        : new Date(item.time).toLocaleString()
+                        : new Date(item.time).toLocaleString(),
                   })}
                 </p>
                 <p style={{ wordBreak: "break-all" }}>
@@ -60,17 +60,19 @@ export const HistoryModal = memo(function HistoryModal({ isOpen, onClose, histor
                     uid:
                       item.uid === "" || item.uid === "__api__"
                         ? "-"
-                        : item.uid
+                        : item.uid,
                   })}
-                  {item.text !== "" && item.uid !== "__api__" && (
-                    <CopyButton text={item.text} />
+                  {item.uid !== "" && item.uid !== "__api__" && (
+                    <CopyButton text={item.uid} className="ml-1" />
                   )}
                 </p>
                 <p style={{ wordBreak: "break-all" }}>
                   {t("scan.lastScannedText", {
-                    text: item.text === "" ? "-" : item.text
+                    text: item.text === "" ? "-" : item.text,
                   })}
-                  {item.text !== "" && <CopyButton text={item.text} />}
+                  {item.text !== "" && (
+                    <CopyButton text={item.text} className="ml-1" />
+                  )}
                 </p>
               </div>
             ))}

@@ -11,7 +11,9 @@ interface HeaderButtonProps {
   className?: string;
 }
 
-export const HeaderButton = memo(function HeaderButton(props: HeaderButtonProps) {
+export const HeaderButton = memo(function HeaderButton(
+  props: HeaderButtonProps,
+) {
   const [isPressed, setIsPressed] = useState(false);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   const hasMoved = useRef(false);
@@ -34,14 +36,14 @@ export const HeaderButton = memo(function HeaderButton(props: HeaderButtonProps)
         {
           // Active state (when modal is open, etc.)
           "text-[#00E0FF]": props.active && !props.disabled,
-          // Normal state
-          "opacity-70 hover:opacity-100": !props.active && !props.disabled,
-          // Disabled state
-          "opacity-50 cursor-not-allowed": props.disabled,
+          // Normal state - using explicit colors instead of opacity for better contrast
+          "text-gray-300 hover:text-white": !props.active && !props.disabled,
+          // Disabled state - using explicit gray that meets WCAG contrast
+          "cursor-not-allowed text-gray-500": props.disabled,
           // Pressed state
-          "opacity-80": isPressed && !props.disabled
+          "text-gray-400": isPressed && !props.disabled,
         },
-        props.className
+        props.className,
       )}
       disabled={props.disabled}
       title={props.title}
@@ -55,6 +57,7 @@ export const HeaderButton = memo(function HeaderButton(props: HeaderButtonProps)
       onTouchStart={(e) => {
         if (props.disabled) return;
         const touch = e.touches[0];
+        if (!touch) return;
         touchStartPos.current = { x: touch.clientX, y: touch.clientY };
         hasMoved.current = false;
         setIsPressed(true);
@@ -62,6 +65,7 @@ export const HeaderButton = memo(function HeaderButton(props: HeaderButtonProps)
       onTouchMove={(e) => {
         if (props.disabled || !touchStartPos.current) return;
         const touch = e.touches[0];
+        if (!touch) return;
         const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
         const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
 

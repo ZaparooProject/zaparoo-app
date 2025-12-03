@@ -12,10 +12,10 @@ vi.mock("../../../lib/coreApi", () => ({
     settings: vi.fn(),
     settingsUpdate: vi.fn(),
     mediaGenerate: vi.fn(),
-    reset: vi.fn()
+    reset: vi.fn(),
   },
   getDeviceAddress: vi.fn(() => "192.168.1.100"),
-  setDeviceAddress: vi.fn()
+  setDeviceAddress: vi.fn(),
 }));
 
 vi.mock("../../../hooks/useAppSettings", () => ({
@@ -25,15 +25,15 @@ vi.mock("../../../hooks/useAppSettings", () => ({
     launchOnScan: true,
     setLaunchOnScan: vi.fn(),
     preferRemoteWriter: false,
-    setPreferRemoteWriter: vi.fn()
-  }))
+    setPreferRemoteWriter: vi.fn(),
+  })),
 }));
 
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }));
 
 // Mock the store
@@ -45,7 +45,7 @@ vi.mock("../../../lib/store", () => ({
     deviceHistory: [{ address: "192.168.1.200" }],
     setDeviceHistory: vi.fn(),
     removeDeviceHistory: vi.fn(),
-    resetConnectionState: mockResetConnectionState
+    resetConnectionState: mockResetConnectionState,
   })),
   ConnectionState: {
     IDLE: "IDLE",
@@ -53,18 +53,18 @@ vi.mock("../../../lib/store", () => ({
     CONNECTED: "CONNECTED",
     RECONNECTING: "RECONNECTING",
     ERROR: "ERROR",
-    DISCONNECTED: "DISCONNECTED"
-  }
+    DISCONNECTED: "DISCONNECTED",
+  },
 }));
 
 vi.mock("@tanstack/react-query", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     useMutation: vi.fn(() => ({
       mutate: vi.fn(),
       isPending: false,
-      error: null
+      error: null,
     })),
     useQuery: vi.fn(() => ({
       data: {
@@ -73,22 +73,24 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
         audioScanFeedback: true,
         readersAutoDetect: true,
         debugLogging: false,
-        readersScanMode: "tap"
+        readersScanMode: "tap",
       },
       isLoading: false,
       isSuccess: true,
       error: null,
-      refetch: vi.fn()
+      refetch: vi.fn(),
     })),
     useQueryClient: vi.fn(() => ({
-      invalidateQueries: vi.fn()
-    }))
+      invalidateQueries: vi.fn(),
+    })),
   };
 });
 
 // Mock MediaDatabaseCard component
 vi.mock("../../../components/MediaDatabaseCard", () => ({
-  MediaDatabaseCard: () => <div data-testid="media-database-card">Media Database Card</div>
+  MediaDatabaseCard: () => (
+    <div data-testid="media-database-card">Media Database Card</div>
+  ),
 }));
 
 describe("Settings Index Route", () => {
@@ -99,29 +101,34 @@ describe("Settings Index Route", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
 
     const memoryHistory = createMemoryHistory({
-      initialEntries: ['/settings']
+      initialEntries: ["/settings"],
     });
 
     createRouter({
       history: memoryHistory,
       context: {
-        queryClient
-      }
+        queryClient,
+      },
     });
   });
 
   it("should import MediaDatabaseCard component", () => {
     // Read settings.index.tsx source code to verify MediaDatabaseCard import
-    const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
+    const settingsPath = resolve(
+      __dirname,
+      "../../../routes/settings.index.tsx",
+    );
     const settingsSource = readFileSync(settingsPath, "utf-8");
 
     // Check that MediaDatabaseCard is imported
-    expect(settingsSource).toMatch(/import.*MediaDatabaseCard.*from.*components\/MediaDatabaseCard/);
+    expect(settingsSource).toMatch(
+      /import.*MediaDatabaseCard.*from.*components\/MediaDatabaseCard/,
+    );
 
     // Check that MediaDatabaseCard is used in JSX
     expect(settingsSource).toMatch(/<MediaDatabaseCard\s*\/>/);
@@ -129,7 +136,10 @@ describe("Settings Index Route", () => {
 
   it("should not import or use DatabaseIcon anymore", () => {
     // Read settings.index.tsx source code to verify DatabaseIcon removal
-    const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
+    const settingsPath = resolve(
+      __dirname,
+      "../../../routes/settings.index.tsx",
+    );
     const settingsSource = readFileSync(settingsPath, "utf-8");
 
     // Check that DatabaseIcon is no longer imported
@@ -137,12 +147,17 @@ describe("Settings Index Route", () => {
 
     // Check that the old update database button is removed
     expect(settingsSource).not.toMatch(/CoreAPI\.mediaGenerate\(\)/);
-    expect(settingsSource).not.toMatch(/label.*settings\.updateDb.*icon.*DatabaseIcon/);
+    expect(settingsSource).not.toMatch(
+      /label.*settings\.updateDb.*icon.*DatabaseIcon/,
+    );
   });
 
   it("should not use gamesIndex state anymore", () => {
     // Read settings.index.tsx source code to verify gamesIndex removal
-    const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
+    const settingsPath = resolve(
+      __dirname,
+      "../../../routes/settings.index.tsx",
+    );
     const settingsSource = readFileSync(settingsPath, "utf-8");
 
     // Check that gamesIndex is no longer used in the settings component
@@ -152,11 +167,16 @@ describe("Settings Index Route", () => {
 
   it("should have MediaDatabaseCard in place of old database button", () => {
     // Read settings.index.tsx source code to verify replacement
-    const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
+    const settingsPath = resolve(
+      __dirname,
+      "../../../routes/settings.index.tsx",
+    );
     const settingsSource = readFileSync(settingsPath, "utf-8");
 
     // The old button structure should be gone
-    expect(settingsSource).not.toMatch(/<div>\s*<Button.*label.*settings\.updateDb/);
+    expect(settingsSource).not.toMatch(
+      /<div>\s*<Button.*label.*settings\.updateDb/,
+    );
 
     // MediaDatabaseCard should be in its place
     expect(settingsSource).toMatch(/<MediaDatabaseCard\s*\/>/);
@@ -168,7 +188,7 @@ describe("Settings Index Route", () => {
         <div data-testid="settings-page">
           <div data-testid="media-database-card">Media Database Card</div>
         </div>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     expect(screen.getByTestId("media-database-card")).toBeInTheDocument();
@@ -177,27 +197,35 @@ describe("Settings Index Route", () => {
 
   it("should maintain other existing functionality", () => {
     // Read settings.index.tsx source code to verify other components remain
-    const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
+    const settingsPath = resolve(
+      __dirname,
+      "../../../routes/settings.index.tsx",
+    );
     const settingsSource = readFileSync(settingsPath, "utf-8");
 
     // Check that other important elements are still present
-    expect(settingsSource).toMatch(/TextInput/);
+    expect(settingsSource).toMatch(/DeviceConnectionCard/);
     expect(settingsSource).toMatch(/settings\.device/);
     expect(settingsSource).toMatch(/settings\.designer/);
-    expect(settingsSource).toMatch(/settings\.app\.title/);
-    expect(settingsSource).toMatch(/settings\.core\.title/);
-    expect(settingsSource).toMatch(/settings\.logs\.title/);
+    expect(settingsSource).toMatch(/settings\.readers\.title/);
+    expect(settingsSource).toMatch(/settings\.playtime\.title/);
+    expect(settingsSource).toMatch(/settings\.advanced\.title/);
     expect(settingsSource).toMatch(/settings\.help\.title/);
     expect(settingsSource).toMatch(/settings\.about\.title/);
   });
 
   it("should have proper component structure", () => {
     // Verify the component structure is maintained
-    const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
+    const settingsPath = resolve(
+      __dirname,
+      "../../../routes/settings.index.tsx",
+    );
     const settingsSource = readFileSync(settingsPath, "utf-8");
 
-    // PageFrame should still be the main wrapper
-    expect(settingsSource).toMatch(/<PageFrame.*title.*settings\.title/);
+    // PageFrame should still be the main wrapper with headerCenter
+    expect(settingsSource).toMatch(/<PageFrame/);
+    expect(settingsSource).toMatch(/headerCenter/);
+    expect(settingsSource).toMatch(/settings\.title/);
 
     // Should have the main flex column container
     expect(settingsSource).toMatch(/className="flex flex-col gap-5"/);
@@ -209,7 +237,10 @@ describe("Settings Index Route", () => {
   describe("Device Address Change Flow", () => {
     it("should use handleDeviceAddressChange instead of location.reload", () => {
       // Read settings.index.tsx source code to verify the change
-      const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
+      const settingsPath = resolve(
+        __dirname,
+        "../../../routes/settings.index.tsx",
+      );
       const settingsSource = readFileSync(settingsPath, "utf-8");
 
       // Should not use location.reload anymore
@@ -225,48 +256,73 @@ describe("Settings Index Route", () => {
       expect(settingsSource).toMatch(/queryClient\.invalidateQueries\(\)/);
     });
 
-    it("should use handleDeviceAddressChange in TextInput saveValue", () => {
-      const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
+    it("should use handleDeviceAddressChange in DeviceConnectionCard", () => {
+      const settingsPath = resolve(
+        __dirname,
+        "../../../routes/settings.index.tsx",
+      );
       const settingsSource = readFileSync(settingsPath, "utf-8");
 
-      // TextInput should use handleDeviceAddressChange as saveValue
-      expect(settingsSource).toMatch(/saveValue={handleDeviceAddressChange}/);
+      // DeviceConnectionCard should use handleDeviceAddressChange via onAddressChange
+      expect(settingsSource).toMatch(
+        /onAddressChange={handleDeviceAddressChange}/,
+      );
     });
 
     it("should use handleDeviceAddressChange in device history buttons", () => {
-      const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
+      const settingsPath = resolve(
+        __dirname,
+        "../../../routes/settings.index.tsx",
+      );
       const settingsSource = readFileSync(settingsPath, "utf-8");
 
       // Device history buttons should use handleDeviceAddressChange
-      expect(settingsSource).toMatch(/onClick={\(\) => \{[\s\S]*?handleDeviceAddressChange\(entry\.address\)/);
+      expect(settingsSource).toMatch(
+        /onClick={\(\) => \{[\s\S]*?handleDeviceAddressChange\(entry\.address\)/,
+      );
       expect(settingsSource).toMatch(/setHistoryOpen\(false\)/);
     });
 
     it("should import useQueryClient from React Query", () => {
-      const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
+      const settingsPath = resolve(
+        __dirname,
+        "../../../routes/settings.index.tsx",
+      );
       const settingsSource = readFileSync(settingsPath, "utf-8");
 
       // Should import useQueryClient
-      expect(settingsSource).toMatch(/import.*useQueryClient.*from.*@tanstack\/react-query/);
+      expect(settingsSource).toMatch(
+        /import.*useQueryClient.*from.*@tanstack\/react-query/,
+      );
 
       // Should call useQueryClient hook
       expect(settingsSource).toMatch(/const queryClient = useQueryClient\(\)/);
     });
 
     it("should import resetConnectionState from store", () => {
-      const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
+      const settingsPath = resolve(
+        __dirname,
+        "../../../routes/settings.index.tsx",
+      );
       const settingsSource = readFileSync(settingsPath, "utf-8");
 
-      // Should use resetConnectionState from the store (handle multi-line formatting)
-      expect(settingsSource).toMatch(/const resetConnectionState = useStatusStore\(\s*\(state\) => state\.resetConnectionState\s*\)/);
+      // Should use resetConnectionState from the store (handle multi-line formatting and trailing comma)
+      expect(settingsSource).toMatch(
+        /const resetConnectionState = useStatusStore\(\s*\(state\) => state\.resetConnectionState,?\s*\)/,
+      );
     });
 
     it("should have proper function sequence in handleDeviceAddressChange", () => {
-      const settingsPath = resolve(__dirname, "../../../routes/settings.index.tsx");
+      const settingsPath = resolve(
+        __dirname,
+        "../../../routes/settings.index.tsx",
+      );
       const settingsSource = readFileSync(settingsPath, "utf-8");
 
       // Extract the handleDeviceAddressChange function
-      const functionMatch = settingsSource.match(/const handleDeviceAddressChange = \(newAddress: string\) => \{([\s\S]*?)\};/);
+      const functionMatch = settingsSource.match(
+        /const handleDeviceAddressChange = \(newAddress: string\) => \{([\s\S]*?)\};/,
+      );
       expect(functionMatch).toBeTruthy();
 
       if (functionMatch) {

@@ -8,7 +8,7 @@ const mockSend = vi.fn();
 const mockWsManager = {
   isConnected: true,
   currentState: "connected",
-  send: mockSend
+  send: mockSend,
 };
 
 describe("CoreAPI - settingsReload method", () => {
@@ -32,7 +32,7 @@ describe("CoreAPI - settingsReload method", () => {
     // Verify the request was sent using the enum
     expect(mockSend).toHaveBeenCalledOnce();
 
-    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
     expect(sentData.jsonrpc).toBe("2.0");
     expect(sentData.method).toBe(Method.SettingsReload);
     expect(sentData.id).toBeDefined();

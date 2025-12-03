@@ -2,6 +2,7 @@ import React from "react";
 import { render, RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SlideModalProvider } from "../components/SlideModalProvider";
+import { A11yAnnouncerProvider } from "../components/A11yAnnouncer";
 
 // Create a test query client
 const createTestQueryClient = () =>
@@ -9,27 +10,27 @@ const createTestQueryClient = () =>
     defaultOptions: {
       queries: {
         retry: false,
-        staleTime: Infinity
+        staleTime: Infinity,
       },
       mutations: {
-        retry: false
-      }
-    }
+        retry: false,
+      },
+    },
   });
 
 // Custom render function that wraps components with necessary providers
 function customRender(
   ui: React.ReactElement,
-  options?: Omit<RenderOptions, "wrapper">
+  options?: Omit<RenderOptions, "wrapper">,
 ) {
   const queryClient = createTestQueryClient();
-  
+
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <SlideModalProvider>
-          {children}
-        </SlideModalProvider>
+        <A11yAnnouncerProvider>
+          <SlideModalProvider>{children}</SlideModalProvider>
+        </A11yAnnouncerProvider>
       </QueryClientProvider>
     );
   }

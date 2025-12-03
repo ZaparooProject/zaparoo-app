@@ -1,5 +1,6 @@
 import classNames from "classnames";
 import React from "react";
+import { useHaptics } from "@/hooks/useHaptics";
 
 export function ToggleSwitch(props: {
   label: string | React.ReactNode;
@@ -8,6 +9,7 @@ export function ToggleSwitch(props: {
   disabled?: boolean;
   onDisabledClick?: () => void;
 }) {
+  const { impact } = useHaptics();
   const hasDisabledClickHandler = props.disabled && props.onDisabledClick;
 
   const handleClick = hasDisabledClickHandler
@@ -19,7 +21,7 @@ export function ToggleSwitch(props: {
 
   const handleKeyDown = hasDisabledClickHandler
     ? (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           props.onDisabledClick!();
         }
@@ -29,7 +31,7 @@ export function ToggleSwitch(props: {
   return (
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <label
-      className="flex cursor-pointer select-none items-center justify-between text-foreground"
+      className="text-foreground flex cursor-pointer items-center justify-between select-none"
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role={hasDisabledClickHandler ? "button" : undefined}
@@ -47,6 +49,7 @@ export function ToggleSwitch(props: {
               return;
             }
 
+            impact("medium");
             props.setValue(e.target.checked);
           }}
         />
@@ -62,8 +65,8 @@ export function ToggleSwitch(props: {
               "bg-button-pattern": props.value && !props.disabled,
               "bg-background": !props.value && !props.disabled,
               "border-bd-outline": !props.disabled,
-              "border-foreground-disabled": props.disabled
-            }
+              "border-foreground-disabled": props.disabled,
+            },
           )}
         ></div>
         <div
@@ -87,8 +90,8 @@ export function ToggleSwitch(props: {
               "peer-checked:bg-foreground-disabled": props.disabled,
               "pointer-events-none": props.disabled,
               "bg-white": !props.disabled,
-              "bg-foreground-disabled": props.disabled
-            }
+              "bg-foreground-disabled": props.disabled,
+            },
           )}
         ></div>
       </div>

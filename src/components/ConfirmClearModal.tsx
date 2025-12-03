@@ -24,12 +24,13 @@ export function ConfirmClearModal(props: {
           />
           <Button
             variant="outline"
+            intent="destructive"
             label={t("create.custom.clear")}
             onClick={() => {
               props.onConfirm();
               props.close();
             }}
-            className="flex-1 border-error text-error"
+            className="border-error text-error flex-1"
           />
         </div>
       </div>

@@ -26,16 +26,17 @@ interface SmartTabsReturn<T extends HTMLElement = HTMLElement> {
  * - Supports horizontal scrolling with mouse wheel and shift+scroll
  */
 export function useSmartTabs<T extends HTMLElement = HTMLElement>({
-  onScrollChange
+  onScrollChange,
 }: SmartTabsOptions = {}): SmartTabsReturn<T> {
   const [hasOverflow, setHasOverflow] = useState(false);
 
   // Get drag-to-scroll functionality
   const { isDragging, dragProps } = useDragToScroll<T>({
-    enabled: hasOverflow
+    enabled: hasOverflow,
   });
 
-  // Check for overflow
+  // Check for overflow - reads from DOM and updates state
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- Intentional: callback depends on ref object, not its value
   const checkOverflow = useCallback(() => {
     const element = dragProps.ref.current;
     if (!element) return;
@@ -45,32 +46,39 @@ export function useSmartTabs<T extends HTMLElement = HTMLElement>({
   }, [dragProps.ref]);
 
   // Handle scroll events for gradient indicators
-  const handleScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
-    if (!onScrollChange) return;
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLElement>) => {
+      if (!onScrollChange) return;
 
-    const element = e.currentTarget;
-    onScrollChange(element.scrollLeft, hasOverflow);
-  }, [onScrollChange, hasOverflow]);
+      const element = e.currentTarget;
+      onScrollChange(element.scrollLeft, hasOverflow);
+    },
+    [onScrollChange, hasOverflow],
+  );
 
   // Handle wheel events for horizontal scrolling
-  const handleWheel = useCallback((e: React.WheelEvent<HTMLElement>) => {
-    if (!hasOverflow) return;
+  const handleWheel = useCallback(
+    (e: React.WheelEvent<HTMLElement>) => {
+      if (!hasOverflow) return;
 
-    // Only handle horizontal scrolling or shift+vertical scroll
-    if (e.deltaX !== 0 || e.shiftKey) {
-      e.preventDefault();
-      const element = e.currentTarget;
-      const scrollAmount = e.deltaX !== 0 ? e.deltaX : e.deltaY;
-      element.scrollLeft += scrollAmount;
-    }
-  }, [hasOverflow]);
+      // Only handle horizontal scrolling or shift+vertical scroll
+      if (e.deltaX !== 0 || e.shiftKey) {
+        e.preventDefault();
+        const element = e.currentTarget;
+        const scrollAmount = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+        element.scrollLeft += scrollAmount;
+      }
+    },
+    [hasOverflow],
+  );
 
   // Set up resize observer to detect overflow changes
   useEffect(() => {
     const element = dragProps.ref.current;
     if (!element) return;
 
-    // Initial check
+    // Initial check - syncing state with DOM measurements
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: initial DOM measurement
     checkOverflow();
 
     // Create resize observer to watch for size changes
@@ -88,7 +96,7 @@ export function useSmartTabs<T extends HTMLElement = HTMLElement>({
 
     mutationObserver.observe(element, {
       childList: true,
-      subtree: true
+      subtree: true,
     });
 
     return () => {
@@ -114,12 +122,12 @@ export function useSmartTabs<T extends HTMLElement = HTMLElement>({
     ...dragProps,
     onScroll: onScrollChange ? handleScroll : undefined,
     onWheel: handleWheel,
-    className: getClassName()
+    className: getClassName(),
   };
 
   return {
     hasOverflow,
     isDragging,
-    tabsProps
+    tabsProps,
   };
 }

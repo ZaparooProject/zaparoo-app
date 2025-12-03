@@ -42,10 +42,10 @@ describe("CoreAPI - Comprehensive API Validation", () => {
         "mappings.reload",
         "readers.write",
         "readers.write.cancel",
-        "version"
+        "version",
       ];
 
-      expectedMethods.forEach(method => {
+      expectedMethods.forEach((method) => {
         expect(Object.values(Method)).toContain(method);
       });
     });
@@ -54,22 +54,19 @@ describe("CoreAPI - Comprehensive API Validation", () => {
       // These methods should be removed as they're deprecated
       const deprecatedMethods = [
         "launch", // deprecated, use "run" instead
-        "media.index" // deprecated, use "media.generate" instead
+        "media.index", // deprecated, use "media.generate" instead
       ];
 
-      deprecatedMethods.forEach(method => {
+      deprecatedMethods.forEach((method) => {
         expect(Object.values(Method)).not.toContain(method);
       });
     });
 
     it("should NOT have unsupported methods", () => {
       // These methods should not exist as they're not in Core API
-      const unsupportedMethods = [
-        "clients",
-        "run.script"
-      ];
+      const unsupportedMethods = ["clients", "run.script"];
 
-      unsupportedMethods.forEach(method => {
+      unsupportedMethods.forEach((method) => {
         expect(Object.values(Method)).not.toContain(method);
       });
     });
@@ -98,21 +95,18 @@ describe("CoreAPI - Comprehensive API Validation", () => {
         "deleteMapping",
         "mappingsReload",
         "write", // readers.write
-        "readersWriteCancel"
+        "readersWriteCancel",
       ];
 
-      requiredMethods.forEach(method => {
+      requiredMethods.forEach((method) => {
         expect(typeof (CoreAPI as any)[method]).toBe("function");
       });
     });
 
     it("should NOT have deprecated methods", () => {
-      const deprecatedMethods = [
-        "launch",
-        "mediaIndex"
-      ];
+      const deprecatedMethods = ["launch", "mediaIndex"];
 
-      deprecatedMethods.forEach(method => {
+      deprecatedMethods.forEach((method) => {
         expect((CoreAPI as any)[method]).toBeUndefined();
       });
     });
@@ -124,10 +118,10 @@ describe("CoreAPI - Comprehensive API Validation", () => {
       CoreAPI.run({ text: "**launch.system:snes" }).catch(() => {});
 
       expect(mockSend).toHaveBeenCalledWith(
-        expect.stringContaining('"method":"run"')
+        expect.stringContaining('"method":"run"'),
       );
 
-      const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
       expect(sentData.params).toEqual({ text: "**launch.system:snes" });
     });
 
@@ -135,10 +129,10 @@ describe("CoreAPI - Comprehensive API Validation", () => {
       CoreAPI.mediaGenerate({ systems: ["snes"] }).catch(() => {});
 
       expect(mockSend).toHaveBeenCalledWith(
-        expect.stringContaining('"method":"media.generate"')
+        expect.stringContaining('"method":"media.generate"'),
       );
 
-      const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
       expect(sentData.params).toEqual({ systems: ["snes"] });
     });
 
@@ -146,10 +140,10 @@ describe("CoreAPI - Comprehensive API Validation", () => {
       CoreAPI.settings().catch(() => {});
 
       expect(mockSend).toHaveBeenCalledWith(
-        expect.stringContaining('"method":"settings"')
+        expect.stringContaining('"method":"settings"'),
       );
 
-      const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
       expect(sentData.method).toBe("settings");
     });
   });
@@ -181,19 +175,19 @@ describe("CoreAPI - Comprehensive API Validation", () => {
           uid: "12345",
           text: "test",
           data: "abcdef",
-          scanTime: "2024-09-24T17:49:42.938167429+08:00"
-        }
+          scanTime: "2024-09-24T17:49:42.938167429+08:00",
+        },
       };
 
       const messageEvent = new MessageEvent("message", {
-        data: JSON.stringify(notificationData)
+        data: JSON.stringify(notificationData),
       });
 
       const result = await CoreAPI.processReceived(messageEvent);
 
       expect(result).toEqual({
         method: "tokens.added",
-        params: notificationData.params
+        params: notificationData.params,
       });
     });
   });

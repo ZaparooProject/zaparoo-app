@@ -12,10 +12,10 @@ export const MediaIndexingToast = (props: {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   return (
     <div
-      className="flex grow flex-row items-center justify-between cursor-pointer"
+      className="flex grow cursor-pointer flex-row items-center justify-between"
       onClick={() => toast.dismiss(props.id)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           toast.dismiss(props.id);
         }
@@ -32,22 +32,22 @@ export const MediaIndexingToast = (props: {
               : gamesIndex.currentStepDisplay
             : t("toast.preparingDb")}
         </div>
-        <div className="h-[10px] w-full rounded-full border border-solid border-bd-filled bg-background">
+        <div className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid">
           <div
             className={classNames(
-              "h-[8px] rounded-full border border-solid border-background bg-button-pattern",
+              "border-background bg-button-pattern h-[8px] rounded-full border border-solid",
               {
                 hidden: gamesIndex.currentStep === 0,
                 "animate-pulse":
                   gamesIndex.currentStep === 0 ||
-                  gamesIndex.currentStep === gamesIndex.totalSteps
-              }
+                  gamesIndex.currentStep === gamesIndex.totalSteps,
+              },
             )}
             style={{
               width:
                 gamesIndex.currentStep && gamesIndex.totalSteps
                   ? `${((gamesIndex.currentStep / gamesIndex.totalSteps) * 100).toFixed(2)}%`
-                  : "100%"
+                  : "100%",
             }}
           ></div>
         </div>

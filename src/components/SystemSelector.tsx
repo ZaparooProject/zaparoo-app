@@ -8,6 +8,7 @@ import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
 import { useSmartTabs } from "@/hooks/useSmartTabs";
+import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
 import { BackToTop } from "./BackToTop";
@@ -44,9 +45,10 @@ export function SystemSelector({
   mode,
   title,
   includeAllOption = false,
-  defaultSelection
+  defaultSelection,
 }: SystemSelectorProps) {
   const { t } = useTranslation();
+  const { announce } = useAnnouncer();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const slideModalScrollRef = useRef<HTMLDivElement>(null);
 
@@ -67,7 +69,7 @@ export function SystemSelector({
       const { scrollWidth, clientWidth } = container;
       setShowLeftGradient(scrollLeft > 0);
       setShowRightGradient(scrollLeft < scrollWidth - clientWidth - 1);
-    }
+    },
   });
 
   // Get indexing state to disable selector when indexing is in progress
@@ -76,7 +78,7 @@ export function SystemSelector({
   // Fetch systems data
   const { data: systemsData, isLoading } = useQuery({
     queryKey: ["systems"],
-    queryFn: () => CoreAPI.systems()
+    queryFn: () => CoreAPI.systems(),
   });
 
   // Process and filter systems
@@ -130,7 +132,7 @@ export function SystemSelector({
       filtered = filtered.filter(
         (system) =>
           system.name.toLowerCase().includes(query) ||
-          system.id.toLowerCase().includes(query)
+          system.id.toLowerCase().includes(query),
       );
     }
 
@@ -149,18 +151,47 @@ export function SystemSelector({
       if (mode === "single" || mode === "insert") {
         if (systemId === "all") {
           onSelect([]);
+          announce(
+            t("systemSelector.selected", {
+              name: t("systemSelector.allSystems"),
+            }),
+          );
         } else {
+          const systemName =
+            systemsData?.systems.find((s) => s.id === systemId)?.name ||
+            systemId;
           onSelect([systemId]);
+          announce(t("systemSelector.selected", { name: systemName }));
         }
         onClose();
       } else {
-        const newSelection = selectedSystems.includes(systemId)
+        // Multi-select mode
+        const wasSelected = selectedSystems.includes(systemId);
+        const newSelection = wasSelected
           ? selectedSystems.filter((id) => id !== systemId)
           : [...selectedSystems, systemId];
         onSelect(newSelection);
+
+        // Announce the state change
+        const systemName =
+          systemsData?.systems.find((s) => s.id === systemId)?.name || systemId;
+        if (wasSelected) {
+          announce(t("systemSelector.deselected", { name: systemName }));
+        } else {
+          announce(t("systemSelector.selected", { name: systemName }));
+        }
       }
     },
-    [mode, selectedSystems, onSelect, onClose, gamesIndex.indexing]
+    [
+      mode,
+      selectedSystems,
+      onSelect,
+      onClose,
+      gamesIndex.indexing,
+      announce,
+      t,
+      systemsData,
+    ],
   );
 
   // Handle clear all
@@ -176,11 +207,12 @@ export function SystemSelector({
   }, [onClose]);
 
   // Set up virtualizer
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: filteredSystems.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: () => ITEM_HEIGHT,
-    overscan: 5
+    overscan: 5,
   });
 
   // Footer for multi-select mode
@@ -190,7 +222,7 @@ export function SystemSelector({
         <div className="text-center">
           <span className="text-muted-foreground text-sm">
             {t("systemSelector.selectedCount", {
-              count: selectedSystems.length
+              count: selectedSystems.length,
             })}
           </span>
         </div>
@@ -198,13 +230,12 @@ export function SystemSelector({
           {selectedSystems.length > 0 && (
             <button
               onClick={handleClearAll}
-              className={classNames(
-                "text-sm underline",
-                {
-                  "text-muted-foreground hover:text-foreground": !gamesIndex.indexing,
-                  "text-muted-foreground/50 cursor-not-allowed": gamesIndex.indexing
-                }
-              )}
+              className={classNames("text-sm underline", {
+                "text-muted-foreground hover:text-foreground":
+                  !gamesIndex.indexing,
+                "text-muted-foreground/50 cursor-not-allowed":
+                  gamesIndex.indexing,
+              })}
               disabled={gamesIndex.indexing}
               type="button"
             >
@@ -215,7 +246,10 @@ export function SystemSelector({
             label={t("systemSelector.apply")}
             onClick={handleApply}
             className="flex-1"
-            disabled={gamesIndex.indexing || (selectedSystems.length === 0 && !includeAllOption)}
+            disabled={
+              gamesIndex.indexing ||
+              (selectedSystems.length === 0 && !includeAllOption)
+            }
           />
         </div>
       </div>
@@ -235,10 +269,13 @@ export function SystemSelector({
         <div className="space-y-4 p-2 pt-3">
           {/* Search bar */}
           <div className="relative">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <Search
+              className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
             <input
               type="text"
-              placeholder="Filter systems..."
+              placeholder={t("systemSelector.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="border-input bg-background text-foreground w-full rounded-md border px-10 py-2 text-sm focus:ring-2 focus:ring-white/20 focus:outline-none"
@@ -248,8 +285,9 @@ export function SystemSelector({
                 onClick={() => setSearchQuery("")}
                 className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2"
                 type="button"
+                aria-label={t("systemSelector.clearSearch")}
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -265,6 +303,7 @@ export function SystemSelector({
             {/* Left gradient - only show when scrolled and overflowing */}
             {hasOverflow && (
               <div
+                aria-hidden="true"
                 className={`pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-8 bg-gradient-to-r from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
                   showLeftGradient ? "opacity-100" : "opacity-0"
                 }`}
@@ -272,9 +311,7 @@ export function SystemSelector({
             )}
 
             <div className="px-2 py-2">
-              <TabsList
-                {...tabsProps}
-              >
+              <TabsList {...tabsProps}>
                 <TabsTrigger value="all">
                   {t("systemSelector.allCategories")}
                 </TabsTrigger>
@@ -289,6 +326,7 @@ export function SystemSelector({
             {/* Right gradient - only show when more content and overflowing */}
             {hasOverflow && (
               <div
+                aria-hidden="true"
                 className={`pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-gradient-to-l from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
                   showRightGradient ? "opacity-100" : "opacity-0"
                 }`}
@@ -299,6 +337,7 @@ export function SystemSelector({
           <TabsContent
             value={selectedCategory}
             className="min-h-0 flex-1 overflow-hidden"
+            tabIndex={-1}
           >
             {isLoading ? (
               <div className="flex h-32 items-center justify-center">
@@ -313,123 +352,156 @@ export function SystemSelector({
                 </span>
               </div>
             ) : (
-              <div className="flex flex-col h-full">
+              <>
                 {/* Add "All Systems" option for single/insert mode */}
-                {(mode === "single" || mode === "insert") && includeAllOption && selectedCategory === "all" && !debouncedSearchQuery.trim() && (
-                  <div className="pb-2">
-                    <button
-                      className={classNames(
-                        "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                        "rounded-lg focus:outline-none",
-                        {
-                          "bg-white/10": defaultSelection === "all" && selectedSystems.length === 0,
-                          "hover:bg-white/10 focus:bg-white/10": !gamesIndex.indexing,
-                          "opacity-50 cursor-not-allowed": gamesIndex.indexing
-                        }
-                      )}
-                      onClick={() => handleSystemSelect("all")}
-                      disabled={gamesIndex.indexing}
-                      type="button"
-                    >
-                      <div className="flex items-center space-x-3">
-                        {mode !== "insert" && (
-                          <div
-                            className={classNames(
-                              "border-input h-5 w-5 rounded-full border-2",
-                              {
-                                "bg-primary border-primary": defaultSelection === "all" && selectedSystems.length === 0
-                              }
-                            )}
-                          >
-                            {defaultSelection === "all" && selectedSystems.length === 0 && (
-                              <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
-                            )}
-                          </div>
+                {(mode === "single" || mode === "insert") &&
+                  includeAllOption &&
+                  selectedCategory === "all" &&
+                  !debouncedSearchQuery.trim() && (
+                    <div className="px-2 pb-2">
+                      <button
+                        className={classNames(
+                          "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
+                          "rounded-lg focus:outline-none",
+                          {
+                            "bg-white/10":
+                              defaultSelection === "all" &&
+                              selectedSystems.length === 0,
+                            "hover:bg-white/10 focus:bg-white/10":
+                              !gamesIndex.indexing,
+                            "cursor-not-allowed opacity-50":
+                              gamesIndex.indexing,
+                          },
                         )}
-                        <span className="text-foreground font-medium">
-                          {t("systemSelector.allSystems")}
-                        </span>
-                      </div>
-                    </button>
-                  </div>
-                )}
-                <div ref={scrollContainerRef} className="flex-1 overflow-auto">
+                        onClick={() => handleSystemSelect("all")}
+                        disabled={gamesIndex.indexing}
+                        type="button"
+                        role="radio"
+                        aria-checked={
+                          defaultSelection === "all" &&
+                          selectedSystems.length === 0
+                        }
+                        aria-label={t("systemSelector.allSystems")}
+                      >
+                        <div
+                          className="flex items-center space-x-3"
+                          aria-hidden="true"
+                        >
+                          {mode !== "insert" && (
+                            <div
+                              className={classNames(
+                                "border-input h-5 w-5 rounded-full border-2",
+                                {
+                                  "bg-primary border-primary":
+                                    defaultSelection === "all" &&
+                                    selectedSystems.length === 0,
+                                },
+                              )}
+                            >
+                              {defaultSelection === "all" &&
+                                selectedSystems.length === 0 && (
+                                  <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
+                                )}
+                            </div>
+                          )}
+                          <span className="text-foreground font-medium">
+                            {t("systemSelector.allSystems")}
+                          </span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                <div
+                  ref={scrollContainerRef}
+                  className="flex-1 overflow-auto px-2"
+                  tabIndex={-1}
+                >
                   <div
                     style={{
                       height: `${virtualizer.getTotalSize()}px`,
                       width: "100%",
-                      position: "relative"
+                      position: "relative",
                     }}
+                    role="presentation"
                   >
                     {virtualizer.getVirtualItems().map((virtualItem) => {
                       const system = filteredSystems[virtualItem.index];
+                      if (!system) return null;
                       const isSelected = selectedSystems.includes(system.id);
 
-                    return (
-                      <div
-                        key={virtualItem.key}
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: `${virtualItem.size}px`,
-                          transform: `translateY(${virtualItem.start}px)`
-                        }}
-                      >
-                        <button
-                          className={classNames(
-                            "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                            "rounded-lg focus:outline-none",
-                            {
-                              "bg-white/10": isSelected,
-                              "hover:bg-white/10 focus:bg-white/10": !gamesIndex.indexing,
-                              "opacity-50 cursor-not-allowed": gamesIndex.indexing
-                            }
-                          )}
-                          onClick={() => handleSystemSelect(system.id)}
-                          disabled={gamesIndex.indexing}
-                          type="button"
+                      return (
+                        <div
+                          key={virtualItem.key}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: `${virtualItem.size}px`,
+                            transform: `translateY(${virtualItem.start}px)`,
+                          }}
                         >
-                          <div className="flex items-center space-x-3">
-                            {mode === "insert" ? null : mode === "multi" ? (
-                              <div
-                                className={classNames(
-                                  "border-input flex h-5 w-5 items-center justify-center rounded border-2",
-                                  {
-                                    "bg-primary border-primary": isSelected
-                                  }
-                                )}
-                              >
-                                {isSelected && (
-                                  <Check className="h-3 w-3 text-white" />
-                                )}
-                              </div>
-                            ) : (
-                              <div
-                                className={classNames(
-                                  "border-input h-5 w-5 rounded-full border-2",
-                                  {
-                                    "bg-primary border-primary": isSelected
-                                  }
-                                )}
-                              >
-                                {isSelected && (
-                                  <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
-                                )}
-                              </div>
+                          <button
+                            className={classNames(
+                              "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
+                              "rounded-lg focus:outline-none",
+                              {
+                                "bg-white/10": isSelected,
+                                "hover:bg-white/10 focus:bg-white/10":
+                                  !gamesIndex.indexing,
+                                "cursor-not-allowed opacity-50":
+                                  gamesIndex.indexing,
+                              },
                             )}
-                            <span className="text-foreground font-medium">
-                              {system.name}
-                            </span>
-                          </div>
-                        </button>
-                      </div>
+                            onClick={() => handleSystemSelect(system.id)}
+                            disabled={gamesIndex.indexing}
+                            type="button"
+                            role={mode === "multi" ? "checkbox" : "radio"}
+                            aria-checked={isSelected}
+                            aria-label={system.name}
+                          >
+                            <div
+                              className="flex items-center space-x-3"
+                              aria-hidden="true"
+                            >
+                              {mode === "insert" ? null : mode === "multi" ? (
+                                <div
+                                  className={classNames(
+                                    "border-input flex h-5 w-5 items-center justify-center rounded border-2",
+                                    {
+                                      "bg-primary border-primary": isSelected,
+                                    },
+                                  )}
+                                >
+                                  {isSelected && (
+                                    <Check className="h-3 w-3 text-white" />
+                                  )}
+                                </div>
+                              ) : (
+                                <div
+                                  className={classNames(
+                                    "border-input h-5 w-5 rounded-full border-2",
+                                    {
+                                      "bg-primary border-primary": isSelected,
+                                    },
+                                  )}
+                                >
+                                  {isSelected && (
+                                    <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
+                                  )}
+                                </div>
+                              )}
+                              <span className="text-foreground font-medium">
+                                {system.name}
+                              </span>
+                            </div>
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
                 </div>
-              </div>
+              </>
             )}
           </TabsContent>
         </Tabs>
@@ -438,7 +510,11 @@ export function SystemSelector({
         <BackToTop
           scrollContainerRef={slideModalScrollRef}
           threshold={200}
-          bottomOffset={mode === "single" || mode === "insert" ? "1rem" : "calc(1rem + 100px)"}
+          bottomOffset={
+            mode === "single" || mode === "insert"
+              ? "1rem"
+              : "calc(1rem + 100px)"
+          }
         />
       </div>
     </SlideModal>
@@ -452,7 +528,8 @@ export function SystemSelectorTrigger({
   placeholder = "Select systems",
   mode = "multi",
   className,
-  onClick
+  onClick,
+  disabled = false,
 }: {
   selectedSystems: string[];
   systemsData?: { systems: System[] };
@@ -460,6 +537,7 @@ export function SystemSelectorTrigger({
   mode?: "single" | "multi" | "insert";
   className?: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -470,16 +548,21 @@ export function SystemSelectorTrigger({
     if (!systemsData?.systems) return placeholder;
 
     if (selectedSystems.length === 0) {
-      return mode === "single" || mode === "insert" ? t("systemSelector.allSystems") : placeholder;
+      return mode === "single" || mode === "insert"
+        ? t("systemSelector.allSystems")
+        : placeholder;
     }
 
     if (selectedSystems.length === systemsData.systems.length) {
       return t("systemSelector.allSystems");
     }
 
-    if ((mode === "single" || mode === "insert") && selectedSystems.length === 1) {
+    if (
+      (mode === "single" || mode === "insert") &&
+      selectedSystems.length === 1
+    ) {
       const system = systemsData.systems.find(
-        (s) => s.id === selectedSystems[0]
+        (s) => s.id === selectedSystems[0],
       );
       return system?.name || selectedSystems[0];
     }
@@ -492,13 +575,15 @@ export function SystemSelectorTrigger({
     }
 
     return t("systemSelector.multipleSelected", {
-      count: selectedSystems.length
+      count: selectedSystems.length,
     });
   }, [selectedSystems, systemsData, placeholder, mode, t]);
 
+  const isDisabled = disabled || gamesIndex.indexing;
+
   const handleClick = () => {
-    // Don't open selector while indexing
-    if (gamesIndex.indexing) return;
+    // Don't open selector while indexing or disabled
+    if (isDisabled) return;
     onClick();
   };
 
@@ -508,18 +593,18 @@ export function SystemSelectorTrigger({
       className={classNames(
         "border-input text-foreground flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus:ring-2 focus:ring-white/20 focus:outline-none",
         {
-          "hover:bg-white/10": !gamesIndex.indexing,
-          "opacity-50 cursor-not-allowed": gamesIndex.indexing
+          "hover:bg-white/10": !isDisabled,
+          "cursor-not-allowed opacity-50": isDisabled,
         },
-        className
+        className,
       )}
       style={{ backgroundColor: "var(--color-background)" }}
-      disabled={gamesIndex.indexing}
+      disabled={isDisabled}
       type="button"
     >
       <span
         className={classNames({
-          "text-muted-foreground": selectedSystems.length === 0
+          "text-muted-foreground": selectedSystems.length === 0,
         })}
       >
         {displayText}

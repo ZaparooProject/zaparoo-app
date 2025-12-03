@@ -1,28 +1,33 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import toast from "react-hot-toast";
 import { Browser } from "@capacitor/browser";
 import { ExternalLinkIcon, LogInIcon, LogOutIcon } from "lucide-react";
-import { TextInput } from "../components/wui/TextInput.tsx";
-import { Button } from "../components/wui/Button.tsx";
-import { useStatusStore } from "../lib/store.ts";
-import { PageFrame } from "../components/PageFrame.tsx";
-import { useSmartSwipe } from "../hooks/useSmartSwipe";
+import { TextInput } from "@/components/wui/TextInput.tsx";
+import { Button } from "@/components/wui/Button.tsx";
+import { useStatusStore } from "@/lib/store.ts";
+import { PageFrame } from "@/components/PageFrame.tsx";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { useSmartSwipe } from "@/hooks/useSmartSwipe";
+import { BackIcon } from "@/lib/images";
+import { logger } from "@/lib/logger";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
 export const Route = createFileRoute("/settings/online")({
-  component: About
+  component: About,
 });
 
 function About() {
-  const navigate = useNavigate();
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: () => navigate({ to: "/settings" }),
-    preventScrollOnSwipe: false
-  });
-
   const { t } = useTranslation();
+  usePageHeadingFocus(t("online.title"));
+  const router = useRouter();
+  const goBack = () => router.history.back();
+  const swipeHandlers = useSmartSwipe({
+    onSwipeRight: goBack,
+    preventScrollOnSwipe: false,
+  });
 
   const loggedInUser = useStatusStore((state) => state.loggedInUser);
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
@@ -33,109 +38,125 @@ function About() {
   return (
     <PageFrame
       {...swipeHandlers}
-      title={t("online.title")}
-      back={() => navigate({ to: "/settings" })}
+      headerLeft={
+        <HeaderButton
+          onClick={goBack}
+          icon={<BackIcon size="24" />}
+          aria-label={t("nav.back")}
+        />
+      }
+      headerCenter={
+        <h1 className="text-foreground text-xl">{t("online.title")}</h1>
+      }
     >
-        <div className="flex flex-col gap-3">
-          <Button
-            label={t("online.openDashboard")}
-            className="w-full"
-            icon={<ExternalLinkIcon size="20" />}
-            onClick={() =>
-              Browser.open({ url: "https://zaparoo.com/dashboard" })
-            }
-          />
+      <div className="flex flex-col gap-3">
+        <Button
+          label={t("online.openDashboard")}
+          className="w-full"
+          icon={<ExternalLinkIcon size="20" />}
+          onClick={() => Browser.open({ url: "https://zaparoo.com/dashboard" })}
+        />
 
-          {loggedInUser !== null ? (
+        {loggedInUser !== null ? (
+          <div className="flex flex-col gap-3">
+            <span>{t("online.loggedInAs", { email: loggedInUser.email })}</span>
             <div className="flex flex-col gap-3">
-              <span>
-                {t("online.loggedInAs", { email: loggedInUser.email })}
-              </span>
-              <div className="flex flex-col gap-3">
-                <Button
-                  label={t("online.logout")}
-                  icon={<LogOutIcon size="20" />}
-                  onClick={() => {
-                    FirebaseAuthentication.signOut()
-                      .then(() => {
-                        setLoggedInUser(null);
-                        setOnlineEmail("");
-                        setOnlinePassword("");
-                      })
-                      .catch((e) => {
-                        console.error(e);
-                      });
-                  }}
-                  className="w-full"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <TextInput
-                label={t("online.email")}
-                placeholder="me@example.com"
-                value={onlineEmail}
-                setValue={setOnlineEmail}
-              />
-              <TextInput
-                label={t("online.password")}
-                placeholder=""
-                type="password"
-                value={onlinePassword}
-                setValue={setOnlinePassword}
-              />
               <Button
-                label={t("online.login")}
-                icon={<LogInIcon size="20" />}
+                label={t("online.logout")}
+                icon={<LogOutIcon size="20" />}
                 onClick={() => {
-                  setOnlineLoggingIn(true);
-                  FirebaseAuthentication.signInWithEmailAndPassword({
-                    email: onlineEmail,
-                    password: onlinePassword
-                  })
-                    .then((result) => {
-                      if (result) {
-                        toast.success(t("online.loginSuccess"));
-                      } else {
-                        toast.error(t("online.loginWrong"));
-                      }
-                      setLoggedInUser(result.user);
-                      setOnlineLoggingIn(false);
-                    })
-                    .catch((e: Error) => {
-                      console.error(e);
-                      toast.error(t("online.loginWrong"));
-                      setOnlineLoggingIn(false);
+                  FirebaseAuthentication.signOut()
+                    .then(() => {
                       setLoggedInUser(null);
+                      setOnlineEmail("");
+                      setOnlinePassword("");
+                    })
+                    .catch((e) => {
+                      logger.error("Firebase sign out failed:", e, {
+                        category: "api",
+                        action: "signOut",
+                        severity: "warning",
+                      });
                     });
                 }}
-                disabled={!onlineEmail || !onlinePassword || onlineLoggingIn}
                 className="w-full"
-              />
-              <Button
-                label={t("online.loginGoogle")}
-                className="w-full"
-                onClick={() =>
-                  FirebaseAuthentication.signInWithGoogle()
-                    .then((result) => {
-                      if (result) {
-                        toast.success(t("online.loginSuccess"));
-                      } else {
-                        toast.error(t("online.loginWrong"));
-                      }
-                      setLoggedInUser(result.user);
-                    })
-                    .catch((e: Error) => {
-                      console.error(e);
-                      toast.error(t("online.loginWrong"));
-                      setLoggedInUser(null);
-                    })
-                }
               />
             </div>
-          )}
-        </div>
-      </PageFrame>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <TextInput
+              label={t("online.email")}
+              placeholder="me@example.com"
+              value={onlineEmail}
+              setValue={setOnlineEmail}
+            />
+            <TextInput
+              label={t("online.password")}
+              placeholder=""
+              type="password"
+              value={onlinePassword}
+              setValue={setOnlinePassword}
+            />
+            <Button
+              label={t("online.login")}
+              icon={<LogInIcon size="20" />}
+              onClick={() => {
+                setOnlineLoggingIn(true);
+                FirebaseAuthentication.signInWithEmailAndPassword({
+                  email: onlineEmail,
+                  password: onlinePassword,
+                })
+                  .then((result) => {
+                    if (result) {
+                      toast.success(t("online.loginSuccess"));
+                    } else {
+                      toast.error(t("online.loginWrong"));
+                    }
+                    setLoggedInUser(result.user);
+                    setOnlineLoggingIn(false);
+                  })
+                  .catch((e: Error) => {
+                    logger.error("Firebase email login failed:", e, {
+                      category: "api",
+                      action: "signInWithEmail",
+                      severity: "warning",
+                    });
+                    toast.error(t("online.loginWrong"));
+                    setOnlineLoggingIn(false);
+                    setLoggedInUser(null);
+                  });
+              }}
+              disabled={!onlineEmail || !onlinePassword || onlineLoggingIn}
+              className="w-full"
+            />
+            <Button
+              label={t("online.loginGoogle")}
+              className="w-full"
+              onClick={() =>
+                FirebaseAuthentication.signInWithGoogle()
+                  .then((result) => {
+                    if (result) {
+                      toast.success(t("online.loginSuccess"));
+                    } else {
+                      toast.error(t("online.loginWrong"));
+                    }
+                    setLoggedInUser(result.user);
+                  })
+                  .catch((e: Error) => {
+                    logger.error("Firebase Google login failed:", e, {
+                      category: "api",
+                      action: "signInWithGoogle",
+                      severity: "warning",
+                    });
+                    toast.error(t("online.loginWrong"));
+                    setLoggedInUser(null);
+                  })
+              }
+            />
+          </div>
+        )}
+      </div>
+    </PageFrame>
   );
 }

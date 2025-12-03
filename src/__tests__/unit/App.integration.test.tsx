@@ -4,27 +4,30 @@ import App from "@/App";
 import "@/test-setup";
 
 // Mock window.location for i18n
-Object.defineProperty(window, 'location', {
+Object.defineProperty(window, "location", {
   value: {
-    hostname: 'localhost',
-    search: '',
-    hash: '',
-    pathname: '/'
+    hostname: "localhost",
+    search: "",
+    hash: "",
+    pathname: "/",
   },
   writable: true,
-  configurable: true
+  configurable: true,
 });
 
 // Mock all the hooks and dependencies
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@tanstack/react-router")>();
+  const actual =
+    await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
     createRouter: vi.fn(() => ({
       subscribe: vi.fn(),
       navigate: vi.fn(),
     })),
-    RouterProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="router">{children}</div>,
+    RouterProvider: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="router">{children}</div>
+    ),
   };
 });
 
@@ -34,6 +37,7 @@ vi.mock("react-hot-toast", () => ({
     success: vi.fn(),
   },
   Toaster: () => <div data-testid="toaster" />,
+  useToasterStore: () => ({ toasts: [] }),
 }));
 
 vi.mock("@capacitor/core", () => ({
@@ -61,7 +65,8 @@ vi.mock("react-i18next", async (importOriginal) => {
 
 vi.mock("@capacitor-firebase/authentication", () => ({
   FirebaseAuthentication: {
-    addListener: vi.fn(() => ({ remove: vi.fn() })),
+    addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
+    getIdToken: vi.fn(() => Promise.resolve({ token: "mock-token" })),
   },
 }));
 
@@ -81,7 +86,7 @@ vi.mock("@/lib/store", () => {
   };
 
   const useStatusStore: any = vi.fn((selector) => {
-    if (typeof selector === 'function') {
+    if (typeof selector === "function") {
       return selector(mockState);
     }
     return mockState;
@@ -106,8 +111,20 @@ vi.mock("@/lib/coreApi", () => ({
   },
 }));
 
-vi.mock("@/components/CoreApiWebSocket", () => ({
-  CoreApiWebSocket: () => <div data-testid="websocket" />,
+vi.mock("@/components/ConnectionProvider", () => ({
+  ConnectionProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="connection-provider">{children}</div>
+  ),
+  useConnection: () => ({
+    activeConnection: null,
+    isConnected: true,
+    hasData: false,
+    showReconnecting: false,
+  }),
+}));
+
+vi.mock("@/components/ReconnectingIndicator", () => ({
+  ReconnectingIndicator: () => null,
 }));
 
 vi.mock("@/lib/deepLinks", () => ({
@@ -141,8 +158,8 @@ describe("App Integration", () => {
     // Verify Toaster is rendered
     expect(screen.getByTestId("toaster")).toBeInTheDocument();
 
-    // Verify other components are rendered
-    expect(screen.getByTestId("websocket")).toBeInTheDocument();
+    // Verify ConnectionProvider is rendered
+    expect(screen.getByTestId("connection-provider")).toBeInTheDocument();
     expect(screen.getByTestId("deep-links")).toBeInTheDocument();
   });
 
@@ -153,10 +170,10 @@ describe("App Integration", () => {
     expect(screen.getByTestId("router")).toBeInTheDocument();
   });
 
-  it("should call getDeviceAddress", () => {
+  it("should have ConnectionProvider wrapping app content", () => {
     render(<App />);
 
-    // Verify getDeviceAddress is available (implicitly tested by rendering)
-    expect(screen.getByTestId("websocket")).toBeInTheDocument();
+    // Verify ConnectionProvider is rendered
+    expect(screen.getByTestId("connection-provider")).toBeInTheDocument();
   });
 });

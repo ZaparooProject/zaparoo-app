@@ -1,55 +1,69 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { ListPlusIcon, NfcIcon } from "lucide-react";
-import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "../lib/images";
-import { useStatusStore } from "../lib/store";
-import { useNfcWriter, WriteAction } from "../lib/writeNfcHook";
-import { Card } from "../components/wui/Card";
-import { Button } from "../components/wui/Button";
-import { WriteModal } from "../components/WriteModal";
-import { PageFrame } from "../components/PageFrame";
-import { usePreferencesStore } from "../lib/preferencesStore";
+import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "@/lib/images";
+import { useStatusStore } from "@/lib/store";
+import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { Card } from "@/components/wui/Card";
+import { Button } from "@/components/wui/Button";
+import { WriteModal } from "@/components/WriteModal";
+import { PageFrame } from "@/components/PageFrame";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 
 export const Route = createFileRoute("/create/")({
-  component: Create
+  component: Create,
 });
 
 function Create() {
+  const { t } = useTranslation();
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t("create.title"));
   const connected = useStatusStore((state) => state.connected);
   const playing = useStatusStore((state) => state.playing);
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
   const nfcWriter = useNfcWriter();
-  const [writeOpen, setWriteOpen] = useState(false);
+  // Track user intent to open modal; actual visibility derived from NFC status
+  const [writeIntent, setWriteIntent] = useState(false);
+  const writeOpen = writeIntent && nfcWriter.status === null;
   const closeWriteModal = async () => {
-    setWriteOpen(false);
+    setWriteIntent(false);
     await nfcWriter.end();
   };
 
-  const { t } = useTranslation();
-
-  useEffect(() => {
-    if (nfcWriter.status !== null) {
-      setWriteOpen(false);
-    }
-  }, [nfcWriter]);
-
   return (
     <>
-      <PageFrame title={t("create.title")}>
+      <PageFrame
+        headerCenter={
+          <h1 ref={headingRef} className="text-foreground text-xl">
+            {t("create.title")}
+          </h1>
+        }
+      >
         <div className="flex flex-col gap-3">
-          <Link to="/create/search" disabled={!connected} data-tour="create-search">
+          <Link
+            to="/create/search"
+            disabled={!connected}
+            aria-disabled={!connected}
+            data-tour="create-search"
+          >
             <Card disabled={!connected}>
               <div className="flex flex-row items-center gap-3">
-                <Button disabled={!connected} icon={<SearchIcon size="20" />} />
+                <Button
+                  disabled={!connected}
+                  icon={<SearchIcon size="20" />}
+                  decorative
+                />
                 <div className="flex grow flex-col">
                   <span className="font-semibold">
                     {t("create.searchGameHeading")}
                   </span>
                   <span className="text-sm">{t("create.searchGameSub")}</span>
                 </div>
-                <NextIcon size="20" />
+                <span aria-hidden="true">
+                  <NextIcon size="20" />
+                </span>
               </div>
             </Card>
           </Link>
@@ -60,7 +74,7 @@ function Create() {
             onClick={() => {
               if (playing.mediaPath !== "") {
                 nfcWriter.write(WriteAction.Write, playing.mediaPath);
-                setWriteOpen(true);
+                setWriteIntent(true);
               }
             }}
           >
@@ -68,6 +82,7 @@ function Create() {
               <Button
                 icon={<PlayIcon size="26" />}
                 disabled={playing.mediaPath === "" && playing.mediaName === ""}
+                decorative
               />
               <div className="flex grow flex-col">
                 <span className="font-semibold">
@@ -82,17 +97,27 @@ function Create() {
             </div>
           </Card>
 
-          <Link to="/create/mappings" disabled={!connected}>
+          <Link
+            to="/create/mappings"
+            disabled={!connected}
+            aria-disabled={!connected}
+          >
             <Card disabled={!connected}>
               <div className="flex flex-row items-center gap-3">
-                <Button icon={<ListPlusIcon size="20" />} disabled={!connected} />
+                <Button
+                  icon={<ListPlusIcon size="20" />}
+                  disabled={!connected}
+                  decorative
+                />
                 <div className="flex grow flex-col">
                   <span className="font-semibold">
                     {t("create.mappingsHeading")}
                   </span>
                   <span className="text-sm">{t("create.mappingsSub")}</span>
                 </div>
-                <NextIcon size="20" />
+                <span aria-hidden="true">
+                  <NextIcon size="20" />
+                </span>
               </div>
             </Card>
           </Link>
@@ -100,14 +125,16 @@ function Create() {
           <Link to="/create/custom">
             <Card>
               <div className="flex flex-row items-center gap-3">
-                <Button icon={<TextIcon size="20" />} />
+                <Button icon={<TextIcon size="20" />} decorative />
                 <div className="flex grow flex-col">
                   <span className="font-semibold">
                     {t("create.customHeading")}
                   </span>
                   <span className="text-sm">{t("create.customSub")}</span>
                 </div>
-                <NextIcon size="20" />
+                <span aria-hidden="true">
+                  <NextIcon size="20" />
+                </span>
               </div>
             </Card>
           </Link>
@@ -115,12 +142,14 @@ function Create() {
           <Link
             to="/create/nfc"
             disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
+            aria-disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
           >
             <Card disabled={!Capacitor.isNativePlatform() || !nfcAvailable}>
               <div className="flex flex-row items-center gap-3">
                 <Button
                   icon={<NfcIcon size="24" />}
                   disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
+                  decorative
                 />
                 <div className="flex grow flex-col">
                   <span className="font-semibold">
@@ -128,7 +157,9 @@ function Create() {
                   </span>
                   <span className="text-sm">{t("create.nfcSub")}</span>
                 </div>
-                <NextIcon size="20" />
+                <span aria-hidden="true">
+                  <NextIcon size="20" />
+                </span>
               </div>
             </Card>
           </Link>

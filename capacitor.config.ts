@@ -15,23 +15,23 @@ const config: CapacitorConfig = {
         ? `http://${process.env.DEV_SERVER_IP}:8100`
         : undefined,
     androidScheme: "http",
-    cleartext: true
+    cleartext: true,
   },
   android: {
-    allowMixedContent: true
+    allowMixedContent: true,
   },
   plugins: {
     CapacitorHttp: {
-      enabled: true
+      enabled: true,
     },
     FirebaseAuthentication: {
       skipNativeAuth: false,
-      providers: ["google.com"]
+      providers: ["google.com"],
     },
     EdgeToEdge: {
-      backgroundColor: "#111928"
-    }
-  }
+      backgroundColor: "#111928",
+    },
+  },
 };
 
 export default config;

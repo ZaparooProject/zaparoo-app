@@ -16,7 +16,7 @@ describe("CoreAPI - mediaActiveUpdate method", () => {
     const params = {
       systemId: "test-system",
       mediaPath: "/path/to/media",
-      mediaName: "Test Media"
+      mediaName: "Test Media",
     };
 
     // This test should fail until we implement mediaActiveUpdate
@@ -27,7 +27,7 @@ describe("CoreAPI - mediaActiveUpdate method", () => {
 
     // Should call send with correct method
     expect(mockSend).toHaveBeenCalledWith(
-      expect.stringContaining('"method":"media.active.update"')
+      expect.stringContaining('"method":"media.active.update"'),
     );
   });
 

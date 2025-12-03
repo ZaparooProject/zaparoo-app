@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { useStatusStore } from '../../lib/store';
-import { usePreferencesStore } from '../../lib/preferencesStore';
-import { sessionManager } from '../../lib/nfc';
+import { describe, it, expect, beforeEach } from "vitest";
+import { useStatusStore } from "../../lib/store";
+import { usePreferencesStore } from "../../lib/preferencesStore";
+import { sessionManager } from "../../lib/nfc";
 
-describe('Queue Processing Integration', () => {
+describe("Queue Processing Integration", () => {
   beforeEach(() => {
     // Reset stores to initial state
     useStatusStore.getState().setRunQueue(null);
@@ -16,25 +16,26 @@ describe('Queue Processing Integration', () => {
     sessionManager.shouldRestart = false;
   });
 
-  describe('Store State Management', () => {
-    it('should initialize queues in empty state', () => {
+  describe("Store State Management", () => {
+    it("should initialize queues in empty state", () => {
       const state = useStatusStore.getState();
 
       expect(state.runQueue).toBeNull();
       expect(state.writeQueue).toBe("");
     });
 
-    it('should have global modal states in store', () => {
+    it("should have global modal states in store", () => {
       const state = useStatusStore.getState();
 
       expect(state.proPurchaseModalOpen).toBe(false);
       expect(state.writeOpen).toBe(false);
-      expect(typeof state.setProPurchaseModalOpen).toBe('function');
-      expect(typeof state.setWriteOpen).toBe('function');
+      expect(typeof state.setProPurchaseModalOpen).toBe("function");
+      expect(typeof state.setWriteOpen).toBe("function");
     });
 
-    it('should update modal states globally', () => {
-      const { setProPurchaseModalOpen, setWriteOpen } = useStatusStore.getState();
+    it("should update modal states globally", () => {
+      const { setProPurchaseModalOpen, setWriteOpen } =
+        useStatusStore.getState();
 
       setProPurchaseModalOpen(true);
       expect(useStatusStore.getState().proPurchaseModalOpen).toBe(true);
@@ -44,8 +45,8 @@ describe('Queue Processing Integration', () => {
     });
   });
 
-  describe('Queue Processor Initialization', () => {
-    it('should respect launchOnScan preference from storage on startup', () => {
+  describe("Queue Processor Initialization", () => {
+    it("should respect launchOnScan preference from storage on startup", () => {
       const prefsStore = usePreferencesStore.getState();
 
       // Simulate user disabled launch on scan in preferences
@@ -60,22 +61,25 @@ describe('Queue Processing Integration', () => {
     });
   });
 
-  describe('Run Queue Processing', () => {
-    it('should process run queue items added to store', () => {
+  describe("Run Queue Processing", () => {
+    it("should process run queue items added to store", () => {
       const { setRunQueue } = useStatusStore.getState();
 
       // Add item to run queue
-      setRunQueue({ value: '**launch.system:menu', unsafe: true });
+      setRunQueue({ value: "**launch.system:menu", unsafe: true });
 
       // Verify queue was set
       const state = useStatusStore.getState();
-      expect(state.runQueue).toEqual({ value: '**launch.system:menu', unsafe: true });
+      expect(state.runQueue).toEqual({
+        value: "**launch.system:menu",
+        unsafe: true,
+      });
     });
 
-    it('should clear run queue after processing', () => {
+    it("should clear run queue after processing", () => {
       const { setRunQueue } = useStatusStore.getState();
 
-      setRunQueue({ value: 'test', unsafe: false });
+      setRunQueue({ value: "test", unsafe: false });
       expect(useStatusStore.getState().runQueue).not.toBeNull();
 
       // Simulate processor clearing the queue
@@ -84,64 +88,66 @@ describe('Queue Processing Integration', () => {
     });
   });
 
-  describe('Write Queue Processing', () => {
-    it('should process write queue items added to store', () => {
+  describe("Write Queue Processing", () => {
+    it("should process write queue items added to store", () => {
       const { setWriteQueue } = useStatusStore.getState();
 
       // Add item to write queue
-      setWriteQueue('**launch.system:menu');
+      setWriteQueue("**launch.system:menu");
 
       // Verify queue was set
       const state = useStatusStore.getState();
-      expect(state.writeQueue).toBe('**launch.system:menu');
+      expect(state.writeQueue).toBe("**launch.system:menu");
     });
 
-    it('should clear write queue after processing', () => {
+    it("should clear write queue after processing", () => {
       const { setWriteQueue } = useStatusStore.getState();
 
-      setWriteQueue('test-content');
-      expect(useStatusStore.getState().writeQueue).toBe('test-content');
+      setWriteQueue("test-content");
+      expect(useStatusStore.getState().writeQueue).toBe("test-content");
 
       // Simulate processor clearing the queue
-      setWriteQueue('');
-      expect(useStatusStore.getState().writeQueue).toBe('');
+      setWriteQueue("");
+      expect(useStatusStore.getState().writeQueue).toBe("");
     });
   });
 
-  describe('Cross-Route Functionality', () => {
-    it('should maintain queue state when navigating between routes', () => {
+  describe("Cross-Route Functionality", () => {
+    it("should maintain queue state when navigating between routes", () => {
       const { setRunQueue, setWriteQueue } = useStatusStore.getState();
 
       // Simulate being on home route and adding to queue
-      setRunQueue({ value: 'home-route-command', unsafe: false });
-      setWriteQueue('home-route-write');
+      setRunQueue({ value: "home-route-command", unsafe: false });
+      setWriteQueue("home-route-write");
 
       // Queue should persist regardless of route
       // (In real app, queue processors are at App level, not route level)
-      expect(useStatusStore.getState().runQueue?.value).toBe('home-route-command');
-      expect(useStatusStore.getState().writeQueue).toBe('home-route-write');
+      expect(useStatusStore.getState().runQueue?.value).toBe(
+        "home-route-command",
+      );
+      expect(useStatusStore.getState().writeQueue).toBe("home-route-write");
 
       // Simulate navigation to settings route
       // Queue state should still be accessible
       const state = useStatusStore.getState();
-      expect(state.runQueue?.value).toBe('home-route-command');
-      expect(state.writeQueue).toBe('home-route-write');
+      expect(state.runQueue?.value).toBe("home-route-command");
+      expect(state.writeQueue).toBe("home-route-write");
     });
 
-    it('should allow shake-to-launch from any route via global queue', () => {
+    it("should allow shake-to-launch from any route via global queue", () => {
       const { setRunQueue } = useStatusStore.getState();
 
       // Simulate shake detection adding to queue from settings route
-      setRunQueue({ value: '**launch.random', unsafe: true });
+      setRunQueue({ value: "**launch.random", unsafe: true });
 
       // Verify queue was set (processor will handle it regardless of route)
       expect(useStatusStore.getState().runQueue).toEqual({
-        value: '**launch.random',
-        unsafe: true
+        value: "**launch.random",
+        unsafe: true,
       });
     });
 
-    it('should show Pro purchase modal globally from any route', () => {
+    it("should show Pro purchase modal globally from any route", () => {
       const { setProPurchaseModalOpen } = useStatusStore.getState();
 
       // Simulate non-Pro user trying to launch from settings route
@@ -155,7 +161,7 @@ describe('Queue Processing Integration', () => {
       expect(useStatusStore.getState().proPurchaseModalOpen).toBe(false);
     });
 
-    it('should show write modal globally from any route', () => {
+    it("should show write modal globally from any route", () => {
       const { setWriteOpen } = useStatusStore.getState();
 
       // Simulate write triggered from create route
@@ -170,8 +176,8 @@ describe('Queue Processing Integration', () => {
     });
   });
 
-  describe('Session Manager Integration', () => {
-    it('should sync preferences to sessionManager on change', () => {
+  describe("Session Manager Integration", () => {
+    it("should sync preferences to sessionManager on change", () => {
       const prefsStore = usePreferencesStore.getState();
 
       // Test restartScan
@@ -185,7 +191,7 @@ describe('Queue Processing Integration', () => {
       expect(sessionManager.launchOnScan).toBe(false);
     });
 
-    it('should initialize sessionManager from preferences on hydration', () => {
+    it("should initialize sessionManager from preferences on hydration", () => {
       const prefsStore = usePreferencesStore.getState();
 
       // Set preferences
@@ -198,31 +204,31 @@ describe('Queue Processing Integration', () => {
     });
   });
 
-  describe('Queue Processing Edge Cases', () => {
-    it('should handle empty run queue value', () => {
+  describe("Queue Processing Edge Cases", () => {
+    it("should handle empty run queue value", () => {
       const { setRunQueue } = useStatusStore.getState();
 
-      setRunQueue({ value: '', unsafe: false });
-      expect(useStatusStore.getState().runQueue?.value).toBe('');
+      setRunQueue({ value: "", unsafe: false });
+      expect(useStatusStore.getState().runQueue?.value).toBe("");
     });
 
-    it('should handle empty write queue value', () => {
+    it("should handle empty write queue value", () => {
       const { setWriteQueue } = useStatusStore.getState();
 
-      setWriteQueue('');
-      expect(useStatusStore.getState().writeQueue).toBe('');
+      setWriteQueue("");
+      expect(useStatusStore.getState().writeQueue).toBe("");
     });
 
-    it('should handle rapid queue updates', () => {
+    it("should handle rapid queue updates", () => {
       const { setRunQueue } = useStatusStore.getState();
 
       // Simulate rapid shake detections or deep links
-      setRunQueue({ value: 'first', unsafe: true });
-      setRunQueue({ value: 'second', unsafe: true });
-      setRunQueue({ value: 'third', unsafe: true });
+      setRunQueue({ value: "first", unsafe: true });
+      setRunQueue({ value: "second", unsafe: true });
+      setRunQueue({ value: "third", unsafe: true });
 
       // Last one should win (queue is not actually a queue, it's a single slot)
-      expect(useStatusStore.getState().runQueue?.value).toBe('third');
+      expect(useStatusStore.getState().runQueue?.value).toBe("third");
     });
   });
 });

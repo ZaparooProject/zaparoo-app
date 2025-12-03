@@ -24,12 +24,13 @@ describe("CoreAPI reset method", () => {
     // Reset the CoreAPI
     CoreAPI.reset();
 
-    // The pending request should be cancelled
-    const result = await pendingPromise;
-    expect(result).toEqual({ cancelled: true });
+    // The pending request should be rejected with cancellation error
+    await expect(pendingPromise).rejects.toThrow(
+      "Request cancelled: connection reset",
+    );
   });
 
-  it("should clear request queue", () => {
+  it("should clear request queue", async () => {
     // Set up a mock WebSocket manager that's not connected
     const mockWsManager = {
       send: vi.fn(),
@@ -45,8 +46,10 @@ describe("CoreAPI reset method", () => {
     // Reset the CoreAPI
     CoreAPI.reset();
 
-    // The queued request should be cancelled
-    return expect(queuedPromise).resolves.toEqual({ cancelled: true });
+    // The queued request should be rejected with cancellation error
+    await expect(queuedPromise).rejects.toThrow(
+      "Request cancelled: connection reset",
+    );
   });
 
   it("should clear pending write ID", async () => {
@@ -66,9 +69,10 @@ describe("CoreAPI reset method", () => {
     // Reset the CoreAPI
     CoreAPI.reset();
 
-    // The write request should be cancelled
-    const result = await writePromise;
-    expect(result).toEqual({ cancelled: true });
+    // The write request should be rejected with cancellation error
+    await expect(writePromise).rejects.toThrow(
+      "Request cancelled: connection reset",
+    );
   });
 
   it("should reset WebSocket manager and send function", () => {
@@ -116,17 +120,20 @@ describe("CoreAPI reset method", () => {
     // Reset the CoreAPI
     CoreAPI.reset();
 
-    // All requests should be cancelled
-    const results = await Promise.all([promise1, promise2, promise3]);
-    expect(results).toEqual([
-      { cancelled: true },
-      { cancelled: true },
-      { cancelled: true }
-    ]);
+    // All requests should be rejected with cancellation error
+    await expect(promise1).rejects.toThrow(
+      "Request cancelled: connection reset",
+    );
+    await expect(promise2).rejects.toThrow(
+      "Request cancelled: connection reset",
+    );
+    await expect(promise3).rejects.toThrow(
+      "Request cancelled: connection reset",
+    );
   });
 
   it("should log reset message", () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
     CoreAPI.reset();
 
@@ -162,9 +169,10 @@ describe("CoreAPI reset method", () => {
       // clearTimeout should have been called for the request timeout
       expect(clearTimeoutSpy).toHaveBeenCalled();
 
-      // The request should be cancelled
-      const result = await pendingPromise;
-      expect(result).toEqual({ cancelled: true });
+      // The request should be rejected with cancellation error
+      await expect(pendingPromise).rejects.toThrow(
+        "Request cancelled: connection reset",
+      );
     } finally {
       // Restore original functions
       global.setTimeout = originalSetTimeout;

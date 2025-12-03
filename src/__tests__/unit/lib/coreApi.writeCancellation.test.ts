@@ -5,8 +5,8 @@ import { CoreAPI } from "../../../lib/coreApi";
 vi.mock("../../../lib/models", () => ({
   Method: {
     ReadersWrite: "readers.write",
-    ReadersWriteCancel: "readers.write.cancel"
-  }
+    ReadersWriteCancel: "readers.write.cancel",
+  },
 }));
 
 describe("CoreAPI Write Cancellation", () => {
@@ -39,7 +39,7 @@ describe("CoreAPI Write Cancellation", () => {
 
       // Verify that a request was sent
       expect(mockSend).toHaveBeenCalledTimes(1);
-      const sentPayload = mockSend.mock.calls[0][0];
+      const sentPayload = mockSend.mock.calls[0]![0];
       const sentRequest = JSON.parse(sentPayload);
 
       expect(sentRequest.method).toBe("readers.write");
@@ -92,7 +92,7 @@ describe("CoreAPI Write Cancellation", () => {
       const writePromise = CoreAPI.write({ text: "test" });
 
       // Simulate successful response
-      const sentPayload = mockSend.mock.calls[0][0];
+      const sentPayload = mockSend.mock.calls[0]![0];
       JSON.parse(sentPayload);
 
       // Since we can't easily mock the WebSocket message processing,
@@ -126,7 +126,7 @@ describe("CoreAPI Write Cancellation", () => {
 
       // Should send a cancel command
       expect(mockSend).toHaveBeenCalledTimes(1);
-      const cancelPayload = mockSend.mock.calls[0][0];
+      const cancelPayload = mockSend.mock.calls[0]![0];
       const cancelRequest = JSON.parse(cancelPayload);
 
       expect(cancelRequest.method).toBe("readers.write.cancel");
@@ -141,7 +141,9 @@ describe("CoreAPI Write Cancellation", () => {
       CoreAPI.setSend(mockSend);
 
       // Mock readersWriteCancel to prevent actual network calls
-      const mockReadersWriteCancel = vi.spyOn(CoreAPI, 'readersWriteCancel').mockResolvedValue();
+      const mockReadersWriteCancel = vi
+        .spyOn(CoreAPI, "readersWriteCancel")
+        .mockResolvedValue();
 
       // Start write operation
       const writePromise = CoreAPI.write({ text: "test" });
@@ -168,7 +170,9 @@ describe("CoreAPI Write Cancellation", () => {
       CoreAPI.setSend(mockSend);
 
       // Mock console.error to prevent test output pollution from expected timeout
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Start write operation
       const writePromise = CoreAPI.write({ text: "test" });
@@ -190,7 +194,9 @@ describe("CoreAPI Write Cancellation", () => {
       CoreAPI.setSend(mockSend);
 
       // Mock console.error to prevent test output pollution
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Start write operation
       const writePromise = CoreAPI.write({ text: "test" });
@@ -220,12 +226,18 @@ describe("CoreAPI Write Cancellation", () => {
       const writePromise = CoreAPI.write({ text: "test" });
 
       // Mock console.error to suppress expected error output
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       // Mock readersWriteCancel to throw an error
-      const mockReadersWriteCancel = vi.spyOn(CoreAPI, 'readersWriteCancel').mockRejectedValue(
-        new Error("Failed to send request: WebSocket send error: WebSocket send failed")
-      );
+      const mockReadersWriteCancel = vi
+        .spyOn(CoreAPI, "readersWriteCancel")
+        .mockRejectedValue(
+          new Error(
+            "Failed to send request: WebSocket send error: WebSocket send failed",
+          ),
+        );
 
       // Cancel the write (this will call readersWriteCancel internally)
       CoreAPI.cancelWrite();

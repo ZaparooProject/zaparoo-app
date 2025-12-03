@@ -12,8 +12,8 @@ vi.mock("@capacitor/preferences", () => ({
       }
       return Promise.resolve({ value: null });
     }),
-    set: vi.fn().mockResolvedValue(undefined)
-  }
+    set: vi.fn().mockResolvedValue(undefined),
+  },
 }));
 
 vi.mock("../../../lib/writeNfcHook", () => ({
@@ -22,24 +22,24 @@ vi.mock("../../../lib/writeNfcHook", () => ({
     write: vi.fn(),
     end: vi.fn(),
     writing: false,
-    result: null
+    result: null,
   })),
   WriteAction: {
-    Write: 'write'
-  }
+    Write: "write",
+  },
 }));
 
 vi.mock("../../../hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({}))
+  useSmartSwipe: vi.fn(() => ({})),
 }));
 
 const mockNavigate = vi.fn();
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    createFileRoute: actual.createFileRoute
+    createFileRoute: actual.createFileRoute,
   };
 });
 
@@ -52,7 +52,7 @@ vi.mock("../../../components/ZapScriptInput.tsx", () => ({
       data-palette={showPalette}
       rows={rows}
     />
-  )
+  ),
 }));
 
 vi.mock("../../../components/wui/Button", () => ({
@@ -65,26 +65,30 @@ vi.mock("../../../components/wui/Button", () => ({
       {icon && <span data-testid="button-icon">{icon}</span>}
       {label}
     </button>
-  )
+  ),
 }));
 
 vi.mock("../../../components/PageFrame", () => ({
   PageFrame: ({ title, back, children, ...props }: any) => (
     <div data-testid="page-frame" {...props}>
       <div data-testid="page-title">{title}</div>
-      <button data-testid="back-button" onClick={back}>Back</button>
+      <button data-testid="back-button" onClick={back}>
+        Back
+      </button>
       <div data-testid="page-content">{children}</div>
     </div>
-  )
+  ),
 }));
 
 vi.mock("../../../components/WriteModal", () => ({
   WriteModal: ({ isOpen, close }: any) =>
     isOpen ? (
       <div data-testid="write-modal">
-        <button data-testid="close-modal" onClick={close}>Close</button>
+        <button data-testid="close-modal" onClick={close}>
+          Close
+        </button>
       </div>
-    ) : null
+    ) : null,
 }));
 
 describe("Create Custom Route", () => {
@@ -95,8 +99,8 @@ describe("Create Custom Route", () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
-        mutations: { retry: false }
-      }
+        mutations: { retry: false },
+      },
     });
   });
 
@@ -113,9 +117,7 @@ describe("Create Custom Route", () => {
 
   it("should render custom text page with all components", async () => {
     const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
     // Mock the custom text component
@@ -147,7 +149,7 @@ describe("Create Custom Route", () => {
     render(
       <TestWrapper>
         <CustomTextComponent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     expect(screen.getByTestId("page-frame")).toBeInTheDocument();
@@ -178,7 +180,9 @@ describe("Create Custom Route", () => {
     const textInput = screen.getByTestId("text-input");
     fireEvent.change(textInput, { target: { value: "new custom text" } });
 
-    expect(screen.getByTestId("text-value")).toHaveTextContent("new custom text");
+    expect(screen.getByTestId("text-value")).toHaveTextContent(
+      "new custom text",
+    );
   });
 
   it("should disable write button when text is empty", async () => {
@@ -192,10 +196,7 @@ describe("Create Custom Route", () => {
             value={customText}
             onChange={(e) => setCustomText(e.target.value)}
           />
-          <button
-            data-testid="write-button"
-            disabled={customText === ""}
-          >
+          <button data-testid="write-button" disabled={customText === ""}>
             Write
           </button>
         </div>
@@ -214,7 +215,8 @@ describe("Create Custom Route", () => {
   });
 
   it("should handle write button click", async () => {
-    const { useNfcWriter, WriteAction } = await import("../../../lib/writeNfcHook");
+    const { useNfcWriter, WriteAction } =
+      await import("../../../lib/writeNfcHook");
     const mockWrite = vi.fn();
 
     vi.mocked(useNfcWriter).mockReturnValue({
@@ -222,7 +224,7 @@ describe("Create Custom Route", () => {
       write: mockWrite,
       end: vi.fn(),
       writing: false,
-      result: null
+      result: null,
     });
 
     const TestComponent = () => {
@@ -258,7 +260,7 @@ describe("Create Custom Route", () => {
     const writeButton = screen.getByTestId("write-button");
     fireEvent.click(writeButton);
 
-    expect(mockWrite).toHaveBeenCalledWith('write', 'test text');
+    expect(mockWrite).toHaveBeenCalledWith("write", "test text");
     expect(screen.getByTestId("write-modal")).toBeInTheDocument();
   });
 
@@ -294,7 +296,7 @@ describe("Create Custom Route", () => {
     await waitFor(() => {
       expect(Preferences.set).toHaveBeenCalledWith({
         key: "customText",
-        value: "updated text"
+        value: "updated text",
       });
     });
   });
@@ -348,7 +350,7 @@ describe("Create Custom Route", () => {
       write: vi.fn(),
       end: vi.fn(),
       writing: false,
-      result: null
+      result: null,
     });
 
     const { rerender } = render(<TestComponent />);
@@ -362,7 +364,7 @@ describe("Create Custom Route", () => {
       write: vi.fn(),
       end: vi.fn(),
       writing: false,
-      result: null
+      result: null,
     });
 
     rerender(<TestComponent />);
@@ -379,7 +381,7 @@ describe("Create Custom Route", () => {
       write: vi.fn(),
       end: mockEnd,
       writing: false,
-      result: null
+      result: null,
     });
 
     const TestComponent = () => {
