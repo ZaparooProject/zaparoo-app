@@ -84,7 +84,7 @@
     "@eslint/js": "^9.39.1",
     "@faker-js/faker": "^10.1.0",
     "@tanstack/eslint-plugin-query": "^5.91.2",
-    "@tanstack/router-vite-plugin": "^1.139.12",
+    "@tanstack/router-plugin": "^1.139.14",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",

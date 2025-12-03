@@ -1,7 +1,7 @@
 import { defineConfig, ServerOptions } from "vite";
 import react from "@vitejs/plugin-react";
 import legacy from "@vitejs/plugin-legacy";
-import { TanStackRouterVite } from "@tanstack/router-vite-plugin";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import { visualizer } from "rollup-plugin-visualizer";
 import path from "path";
 import dotenv from "dotenv";
@@ -23,8 +23,8 @@ export default defineConfig(({ command, mode }) => {
   }
 
   const plugins = [
+    tanstackRouter({ target: "react", autoCodeSplitting: true }),
     react(),
-    TanStackRouterVite(),
     legacy({
       targets: [
         "chrome >= 49",
