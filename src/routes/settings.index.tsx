@@ -205,7 +205,19 @@ function Settings() {
             <label className="text-white">{t("settings.language")}</label>
             <select
               className="border-bd-input bg-background text-foreground rounded-md border border-solid p-3"
-              value={i18n.languages[0]}
+              value={(() => {
+                const lang = i18n.resolvedLanguage ?? "en-US";
+                const baseToLocale: Record<string, string> = {
+                  en: "en-US",
+                  fr: "fr-FR",
+                  zh: "zh-CN",
+                  ko: "ko-KR",
+                  nl: "nl-NL",
+                  ja: "ja-JP",
+                  de: "de-DE",
+                };
+                return baseToLocale[lang] ?? lang;
+              })()}
               onChange={(e) => i18n.changeLanguage(e.target.value)}
             >
               <option value="de-DE">Deutsch</option>
