@@ -72,6 +72,10 @@ function Settings() {
     CoreAPI.reset();
     queryClient.invalidateQueries();
     setAddress(newAddress);
+
+    // Clear saved search filters since they may not exist on the new device
+    Preferences.remove({ key: "searchSystem" });
+    Preferences.remove({ key: "searchTags" });
   };
 
   return (
