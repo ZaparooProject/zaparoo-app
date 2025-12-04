@@ -27,6 +27,7 @@ def capacitor_pods
   pod 'CapawesomeTeamCapacitorNfc', :path => '../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.3.0_@capacitor+core@7.4.4/node_modules/@capawesome-team/capacitor-nfc'
   pod 'CapgoCapacitorShake', :path => '../../node_modules/.pnpm/@capgo+capacitor-shake@7.2.19_@capacitor+core@7.4.4/node_modules/@capgo/capacitor-shake'
   pod 'RevenuecatPurchasesCapacitor', :path => '../../node_modules/.pnpm/@revenuecat+purchases-capacitor@11.2.16_@capacitor+core@7.4.4/node_modules/@revenuecat/purchases-capacitor'
+  pod 'CapacitorPluginSafeArea', :path => '../../node_modules/.pnpm/capacitor-plugin-safe-area@4.0.3_@capacitor+core@7.4.4/node_modules/capacitor-plugin-safe-area'
 end
 
 target 'App' do

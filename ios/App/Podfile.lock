@@ -24,6 +24,8 @@ PODS:
   - CapacitorMlkitBarcodeScanning (7.4.0):
     - Capacitor
     - GoogleMLKit/BarcodeScanning (= 7.0.0)
+  - CapacitorPluginSafeArea (4.0.3):
+    - Capacitor
   - CapacitorPreferences (7.0.2):
     - Capacitor
   - CapacitorScreenReader (7.0.2):
@@ -137,6 +139,7 @@ DEPENDENCIES:
   - "CapacitorFirebaseAuthentication (from `../../node_modules/.pnpm/@capacitor-firebase+authentication@7.4.0_@capacitor+core@7.4.4_firebase@11.10.0/node_modules/@capacitor-firebase/authentication`)"
   - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/haptics`)"
   - "CapacitorMlkitBarcodeScanning (from `../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@7.4.0_@capacitor+core@7.4.4/node_modules/@capacitor-mlkit/barcode-scanning`)"
+  - "CapacitorPluginSafeArea (from `../../node_modules/.pnpm/capacitor-plugin-safe-area@4.0.3_@capacitor+core@7.4.4/node_modules/capacitor-plugin-safe-area`)"
   - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/preferences`)"
   - "CapacitorScreenReader (from `../../node_modules/.pnpm/@capacitor+screen-reader@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/screen-reader`)"
   - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/share`)"
@@ -190,6 +193,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+haptics@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/haptics"
   CapacitorMlkitBarcodeScanning:
     :path: "../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@7.4.0_@capacitor+core@7.4.4/node_modules/@capacitor-mlkit/barcode-scanning"
+  CapacitorPluginSafeArea:
+    :path: "../../node_modules/.pnpm/capacitor-plugin-safe-area@4.0.3_@capacitor+core@7.4.4/node_modules/capacitor-plugin-safe-area"
   CapacitorPreferences:
     :path: "../../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/preferences"
   CapacitorScreenReader:
@@ -218,6 +223,7 @@ SPEC CHECKSUMS:
   CapacitorFirebaseAuthentication: 3d0a776b7dbf39351799c144b30253468ece6495
   CapacitorHaptics: 09d96bcb5a2b74ede8fd039b4cdf58fc43dcacf1
   CapacitorMlkitBarcodeScanning: 3da6ad386abfd58dce3736ee506184aab1275aa3
+  CapacitorPluginSafeArea: 0b05430642c0da92b5f174e900ccecf39a71e2c3
   CapacitorPreferences: b583b5deb74e564c35968189d25d32c0fd41200d
   CapacitorScreenReader: 5d2b8326d8a13666ac08ddddaf35af086384ed80
   CapacitorShare: 051c3ceee0ddf3bb54574851a622bbb317eed5bd
@@ -247,6 +253,6 @@ SPEC CHECKSUMS:
   RevenueCat: fa9ad7e1c8817deddb737646946b6b3d8b25f54b
   RevenuecatPurchasesCapacitor: b6b2edc502f419a22facde96874a9ff0000bf15e
 
-PODFILE CHECKSUM: b76cb301ae229d19519b46d6da49085d0c601949
+PODFILE CHECKSUM: 2dc0c3777af0d8a962df553d165325c1f211f08a
 
 COCOAPODS: 1.16.2
