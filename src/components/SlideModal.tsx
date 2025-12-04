@@ -54,8 +54,8 @@ export function SlideModal(props: {
   const swipeHandlers = useSmartSwipe({
     onSwipeDown: props.close,
     preventScrollOnSwipe: false,
-    swipeThreshold: 50,
-    velocityThreshold: 0.3,
+    swipeThreshold: 30,
+    velocityThreshold: 0.2,
   });
 
   // Handle Android back button
@@ -145,31 +145,37 @@ export function SlideModal(props: {
             : { maxHeight: `calc(100vh - ${safeInsets.top} - 75px)` }),
         }}
       >
+        {/* Swipeable header area - includes drag handle and title on mobile */}
         <div
-          className="flex w-full justify-center pb-3 sm:hidden"
-          style={{ overflowY: "initial" }}
+          className="sm:hidden"
+          style={{ touchAction: "pan-x" }}
           {...swipeHandlers}
         >
-          {/* Drag handle - accessible button for TalkBack, visual bar for sighted users */}
-          <button
-            type="button"
-            onClick={props.close}
-            aria-label={t("nav.close")}
-            className="h-[5px] w-[80px] rounded-full bg-[#00E0FF] focus:ring-2 focus:ring-white/50 focus:outline-none"
-          />
+          <div className="flex w-full justify-center pb-3">
+            {/* Drag handle - accessible button for TalkBack, visual bar for sighted users */}
+            <button
+              type="button"
+              onClick={props.close}
+              aria-label={t("nav.close")}
+              className="h-[5px] w-[80px] rounded-full bg-[#00E0FF] focus:ring-2 focus:ring-white/50 focus:outline-none"
+            />
+          </div>
+          <div className="relative pb-2">
+            <p
+              ref={titleRef}
+              id={`${modalId}-title`}
+              className="text-center text-lg outline-none"
+            >
+              {props.title}
+            </p>
+          </div>
         </div>
-        <div className="relative sm:pb-2">
-          <p
-            ref={titleRef}
-            id={`${modalId}-title`}
-            className="text-center text-lg outline-none"
-          >
-            {props.title}
-          </p>
-          {/* Close button - visible on desktop, sr-only on mobile */}
+        {/* Desktop header - not swipeable */}
+        <div className="relative hidden pb-2 sm:block">
+          <p className="text-center text-lg outline-none">{props.title}</p>
           <button
             onClick={props.close}
-            className="absolute top-[-5px] right-0 flex h-8 w-8 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-white/10 hover:opacity-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none max-sm:sr-only"
+            className="absolute top-[-5px] right-0 flex h-8 w-8 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-white/10 hover:opacity-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
             aria-label={t("nav.close")}
           >
             <X className="h-5 w-5" aria-hidden="true" />

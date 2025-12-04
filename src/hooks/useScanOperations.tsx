@@ -9,6 +9,7 @@ import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
 import { runToken } from "@/lib/tokenOperations.tsx";
 import { logger } from "@/lib/logger";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
+import { useHaptics } from "@/hooks/useHaptics";
 
 interface UseScanOperationsProps {
   connected: boolean;
@@ -31,6 +32,7 @@ export function useScanOperations({
   const { t } = useTranslation();
   const nfcWriter = useNfcWriter();
   const { announce } = useAnnouncer();
+  const { impact } = useHaptics();
   const [scanSession, setScanSession] = useState(false);
   const [scanStatus, setScanStatus] = useState<ScanResult>(ScanResult.Default);
 
@@ -131,6 +133,9 @@ export function useScanOperations({
         const barcode = res.barcodes[0];
         if (!barcode) return;
 
+        // Heavy haptic feedback to confirm barcode was scanned
+        impact("heavy");
+
         if (barcode.rawValue.startsWith("**write:")) {
           const writeValue = barcode.rawValue.slice(8);
 
@@ -169,6 +174,7 @@ export function useScanOperations({
     setProPurchaseModalOpen,
     setWriteOpen,
     nfcWriter,
+    impact,
   ]);
 
   const handleStopConfirm = useCallback(() => {
