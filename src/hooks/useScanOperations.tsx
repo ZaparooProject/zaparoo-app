@@ -161,6 +161,13 @@ export function useScanOperations({
         );
       })
       .catch((error) => {
+        // User canceling the scan is not an error
+        const message = error?.message?.toLowerCase() || "";
+        if (message.includes("canceled") || message.includes("cancelled")) {
+          logger.debug("Barcode scan canceled by user");
+          return;
+        }
+
         logger.error("Barcode scan error:", error, {
           category: "camera",
           action: "barcodeScan",

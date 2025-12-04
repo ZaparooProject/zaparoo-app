@@ -140,10 +140,10 @@ export const useProPurchase = () => {
         }
       })
       .catch((e) => {
-        logger.error("offerings error", e, {
+        // Network issues or Play Store unavailable - not critical
+        logger.warn("offerings error", e, {
           category: "purchase",
           action: "getOfferings",
-          severity: "warning",
         });
         toast.error(t("settings.app.offeringsError"));
       });

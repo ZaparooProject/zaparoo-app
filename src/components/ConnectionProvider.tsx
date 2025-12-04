@@ -410,7 +410,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     }
 
     // Generate unique ID for this connection session to prevent stale events
-    const connectionId = crypto.randomUUID();
+    // Use crypto.randomUUID if available, fallback for older Android WebViews
+    const connectionId =
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     currentConnectionId.current = connectionId;
 
     // Reset CoreAPI to clear any zombie requests from previous connections

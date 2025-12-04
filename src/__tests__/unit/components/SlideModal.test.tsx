@@ -23,8 +23,12 @@ vi.mock("../../../hooks/useSlideModalManager", () => ({
 // Mock store
 vi.mock("../../../lib/store", () => ({
   useStatusStore: vi.fn(() => ({
-    top: 44,
-    bottom: 34,
+    safeInsets: {
+      top: "44px",
+      bottom: "34px",
+      left: "0px",
+      right: "0px",
+    },
   })),
 }));
 
@@ -39,7 +43,9 @@ describe("SlideModal", () => {
   it("renders modal when open", () => {
     render(<SlideModal {...mockProps} isOpen={true} />);
 
-    expect(screen.getByText("Test Modal")).toBeInTheDocument();
+    // Title appears twice (mobile and desktop headers)
+    const titles = screen.getAllByText("Test Modal");
+    expect(titles.length).toBe(2);
     expect(screen.getByText("Test Content")).toBeInTheDocument();
   });
 

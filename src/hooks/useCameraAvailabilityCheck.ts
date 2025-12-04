@@ -25,21 +25,45 @@ export function useCameraAvailabilityCheck() {
       return;
     }
 
-    // Check if barcode scanner is supported
-    BarcodeScanner.isSupported()
-      .then((result) => {
+    const checkAndSetupScanner = async () => {
+      try {
+        // On Android, check if Google Barcode Scanner module is available
+        // and install it if needed (runs in background)
+        if (Capacitor.getPlatform() === "android") {
+          const { available } =
+            await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
+          if (!available) {
+            // Install in background - don't wait for completion
+            BarcodeScanner.installGoogleBarcodeScannerModule().catch((e) => {
+              logger.debug(
+                "Google Barcode Scanner module installation failed:",
+                e,
+                {
+                  category: "camera",
+                  action: "installModule",
+                  severity: "info",
+                },
+              );
+            });
+          }
+        }
+
+        // Check if barcode scanner is supported
+        const result = await BarcodeScanner.isSupported();
         setCameraAvailable(result.supported);
-        setCameraAvailabilityHydrated(true);
-      })
-      .catch((e) => {
-        logger.error("Failed to check camera availability:", e, {
+      } catch (e) {
+        logger.debug("Failed to check camera availability:", e, {
           category: "camera",
           action: "availabilityCheck",
-          severity: "warning",
+          severity: "info",
         });
         // On error, assume camera not available
         setCameraAvailable(false);
+      } finally {
         setCameraAvailabilityHydrated(true);
-      });
+      }
+    };
+
+    checkAndSetupScanner();
   }, [setCameraAvailable, setCameraAvailabilityHydrated]);
 }
