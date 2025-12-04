@@ -132,7 +132,8 @@ export function SlideModal(props: {
           "border-solid",
           "border-[rgba(255,255,255,0.13)]",
           "bg-[rgba(17,25,40,0.7)]",
-          "p-3",
+          "px-3",
+          "pt-3",
           "mix-blend-normal",
           "backdrop-blur-lg",
           props.className,
@@ -140,6 +141,7 @@ export function SlideModal(props: {
         style={{
           bottom: props.isOpen ? "0" : "-100vh",
           transition: "bottom 0.2s ease-in-out",
+          paddingBottom: `calc(${safeInsets.bottom} + 0.75rem)`,
           ...(props.fixedHeight
             ? { height: props.fixedHeight }
             : { maxHeight: `calc(100vh - ${safeInsets.top} - 75px)` }),
@@ -186,8 +188,6 @@ export function SlideModal(props: {
           {props.children}
         </div>
         {props.footer && <div className="flex-shrink-0">{props.footer}</div>}
-        {/* Safe area bottom padding */}
-        <div style={{ height: safeInsets.bottom }} />
         {/* eslint-enable react-hooks/refs */}
       </div>
     </>

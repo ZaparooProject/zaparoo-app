@@ -437,7 +437,7 @@ function Logs() {
       <BackToTop
         scrollContainerRef={scrollContainerRef}
         threshold={200}
-        bottomOffset="80px"
+        bottomOffset="calc(80px + 1rem)"
       />
     </>
   );
