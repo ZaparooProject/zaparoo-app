@@ -6,7 +6,7 @@ import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
-import { useStatusStore } from "@/lib/store";
+import { useStatusStore, ConnectionState } from "@/lib/store";
 import { PageFrame } from "@/components/PageFrame";
 import { BackIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
@@ -28,6 +28,12 @@ function PlaytimeSettings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("settings.playtime.title"));
   const connected = useStatusStore((state) => state.connected);
+  const connectionState = useStatusStore((state) => state.connectionState);
+
+  // Determine if we're in a loading state (connecting or reconnecting)
+  const isConnecting =
+    connectionState === ConnectionState.CONNECTING ||
+    connectionState === ConnectionState.RECONNECTING;
 
   const router = useRouter();
   const goBack = () => router.history.back();
@@ -201,11 +207,6 @@ function PlaytimeSettings() {
     }
   };
 
-  // Show blank page while loading to prevent flicker
-  if (isPending) {
-    return null;
-  }
-
   return (
     <PageFrame
       {...swipeHandlers}
@@ -222,230 +223,223 @@ function PlaytimeSettings() {
         </h1>
       }
     >
-      {!connected ? (
-        <div className="text-muted-foreground py-8 text-center text-sm">
-          {t("notConnected")}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          <ToggleSwitch
-            label={t("settings.core.playtime.enabled")}
-            value={limitsConfig?.enabled ?? false}
-            setValue={handleEnabledToggle}
-            disabled={!connected}
-          />
+      <div className="flex flex-col gap-3">
+        <ToggleSwitch
+          label={t("settings.core.playtime.enabled")}
+          value={limitsConfig?.enabled ?? false}
+          setValue={handleEnabledToggle}
+          disabled={!connected}
+          loading={isConnecting || (connected && isPending)}
+        />
 
-          {/* Status Display - shown when enabled */}
-          {limitsConfig?.enabled && (
-            <div className="bg-background-secondary border-bd-filled flex flex-col gap-2 rounded-lg border p-3">
-              {/* Session Status */}
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    {t("settings.core.playtime.currentSession")}
-                  </span>
-                  {isStatusPending ? (
-                    <Skeleton className="h-5 w-16" />
-                  ) : (
-                    <span
-                      className={classNames(
-                        "rounded-full px-2 py-0.5 text-xs",
-                        getStateBadgeColor(playtimeStatus?.state ?? "reset"),
-                      )}
-                    >
-                      {getStateLabel(playtimeStatus?.state ?? "reset")}
-                    </span>
-                  )}
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {t("settings.core.playtime.sessionDuration")}
-                  </span>
-                  {isStatusPending ? (
-                    <Skeleton className="h-5 w-14" />
-                  ) : (
-                    <span
-                      aria-label={formatDurationAccessible(
-                        playtimeStatus?.sessionDuration ?? "0s",
-                        t,
-                      )}
-                    >
-                      {formatDurationDisplay(
-                        playtimeStatus?.sessionDuration ?? "0s",
-                      )}
-                    </span>
-                  )}
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {t("settings.core.playtime.sessionRemaining")}
-                  </span>
-                  {isStatusPending ? (
-                    <Skeleton className="h-5 w-14" />
-                  ) : (
-                    <span
-                      aria-label={formatDurationAccessible(
-                        playtimeStatus?.sessionRemaining ?? "0s",
-                        t,
-                      )}
-                    >
-                      {formatDurationDisplay(
-                        playtimeStatus?.sessionRemaining ?? "0s",
-                      )}
-                    </span>
-                  )}
-                </div>
-                {playtimeStatus?.cooldownRemaining &&
-                  playtimeStatus?.state === "cooldown" && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {t("settings.core.playtime.cooldownRemaining")}
-                      </span>
-                      <span
-                        aria-label={formatDurationAccessible(
-                          playtimeStatus.cooldownRemaining,
-                          t,
-                        )}
-                      >
-                        {formatDurationDisplay(
-                          playtimeStatus.cooldownRemaining,
-                        )}
-                      </span>
-                    </div>
-                  )}
-              </div>
-
-              {/* Daily Status */}
-              <div className="border-bd-filled flex flex-col gap-2 border-t pt-2">
+        {/* Status Display - shown when enabled */}
+        {limitsConfig?.enabled && (
+          <div className="bg-background-secondary border-bd-filled flex flex-col gap-2 rounded-lg border p-3">
+            {/* Session Status */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">
-                  {t("settings.core.playtime.dailyUsage")}
+                  {t("settings.core.playtime.currentSession")}
                 </span>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {t("settings.core.playtime.dailyUsageToday")}
+                {isStatusPending ? (
+                  <Skeleton className="h-5 w-16" />
+                ) : (
+                  <span
+                    className={classNames(
+                      "rounded-full px-2 py-0.5 text-xs",
+                      getStateBadgeColor(playtimeStatus?.state ?? "reset"),
+                    )}
+                  >
+                    {getStateLabel(playtimeStatus?.state ?? "reset")}
                   </span>
-                  {isStatusPending ? (
-                    <Skeleton className="h-5 w-14" />
-                  ) : (
+                )}
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {t("settings.core.playtime.sessionDuration")}
+                </span>
+                {isStatusPending ? (
+                  <Skeleton className="h-5 w-14" />
+                ) : (
+                  <span
+                    aria-label={formatDurationAccessible(
+                      playtimeStatus?.sessionDuration ?? "0s",
+                      t,
+                    )}
+                  >
+                    {formatDurationDisplay(
+                      playtimeStatus?.sessionDuration ?? "0s",
+                    )}
+                  </span>
+                )}
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {t("settings.core.playtime.sessionRemaining")}
+                </span>
+                {isStatusPending ? (
+                  <Skeleton className="h-5 w-14" />
+                ) : (
+                  <span
+                    aria-label={formatDurationAccessible(
+                      playtimeStatus?.sessionRemaining ?? "0s",
+                      t,
+                    )}
+                  >
+                    {formatDurationDisplay(
+                      playtimeStatus?.sessionRemaining ?? "0s",
+                    )}
+                  </span>
+                )}
+              </div>
+              {playtimeStatus?.cooldownRemaining &&
+                playtimeStatus?.state === "cooldown" && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {t("settings.core.playtime.cooldownRemaining")}
+                    </span>
                     <span
                       aria-label={formatDurationAccessible(
-                        playtimeStatus?.dailyUsageToday ?? "0s",
+                        playtimeStatus.cooldownRemaining,
                         t,
                       )}
                     >
-                      {formatDurationDisplay(
-                        playtimeStatus?.dailyUsageToday ?? "0s",
-                      )}
+                      {formatDurationDisplay(playtimeStatus.cooldownRemaining)}
                     </span>
-                  )}
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {t("settings.core.playtime.dailyRemaining")}
+                  </div>
+                )}
+            </div>
+
+            {/* Daily Status */}
+            <div className="border-bd-filled flex flex-col gap-2 border-t pt-2">
+              <span className="text-sm font-medium">
+                {t("settings.core.playtime.dailyUsage")}
+              </span>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {t("settings.core.playtime.dailyUsageToday")}
+                </span>
+                {isStatusPending ? (
+                  <Skeleton className="h-5 w-14" />
+                ) : (
+                  <span
+                    aria-label={formatDurationAccessible(
+                      playtimeStatus?.dailyUsageToday ?? "0s",
+                      t,
+                    )}
+                  >
+                    {formatDurationDisplay(
+                      playtimeStatus?.dailyUsageToday ?? "0s",
+                    )}
                   </span>
-                  {isStatusPending ? (
-                    <Skeleton className="h-5 w-14" />
-                  ) : (
-                    <span
-                      aria-label={formatDurationAccessible(
-                        playtimeStatus?.dailyRemaining ?? "0s",
-                        t,
-                      )}
-                    >
-                      {formatDurationDisplay(
-                        playtimeStatus?.dailyRemaining ?? "0s",
-                      )}
-                    </span>
-                  )}
-                </div>
+                )}
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {t("settings.core.playtime.dailyRemaining")}
+                </span>
+                {isStatusPending ? (
+                  <Skeleton className="h-5 w-14" />
+                ) : (
+                  <span
+                    aria-label={formatDurationAccessible(
+                      playtimeStatus?.dailyRemaining ?? "0s",
+                      t,
+                    )}
+                  >
+                    {formatDurationDisplay(
+                      playtimeStatus?.dailyRemaining ?? "0s",
+                    )}
+                  </span>
+                )}
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Configuration Inputs - always visible, disabled when feature is off */}
-          <div className="flex flex-col gap-3">
-            {/* Daily Limit */}
-            <div className="flex flex-col gap-2">
-              <label
-                className={classNames("text-sm font-medium", {
-                  "text-muted-foreground": !limitsConfig?.enabled,
-                })}
-              >
-                {t("settings.core.playtime.dailyLimit")}
-              </label>
-              <div className="flex gap-2">
-                <TextInput
-                  type="number"
-                  placeholder="0"
-                  value={dailyHours}
-                  setValue={setDailyHours}
-                  label={t("settings.core.playtime.hours")}
-                  disabled={!connected || !limitsConfig?.enabled}
-                />
-                <TextInput
-                  type="number"
-                  placeholder="0"
-                  value={dailyMinutes}
-                  setValue={setDailyMinutes}
-                  label={t("settings.core.playtime.minutes")}
-                  disabled={!connected || !limitsConfig?.enabled}
-                />
-              </div>
-            </div>
-
-            {/* Session Limit */}
-            <div className="flex flex-col gap-2">
-              <label
-                className={classNames("text-sm font-medium", {
-                  "text-muted-foreground": !limitsConfig?.enabled,
-                })}
-              >
-                {t("settings.core.playtime.sessionLimit")}
-              </label>
-              <div className="flex gap-2">
-                <TextInput
-                  type="number"
-                  placeholder="0"
-                  value={sessionHours}
-                  setValue={setSessionHours}
-                  label={t("settings.core.playtime.hours")}
-                  disabled={!connected || !limitsConfig?.enabled}
-                />
-                <TextInput
-                  type="number"
-                  placeholder="0"
-                  value={sessionMinutes}
-                  setValue={setSessionMinutes}
-                  label={t("settings.core.playtime.minutes")}
-                  disabled={!connected || !limitsConfig?.enabled}
-                />
-              </div>
-            </div>
-
-            {/* Session Reset Timeout */}
-            <div className="flex flex-col gap-2">
-              <label
-                className={classNames("text-sm font-medium", {
-                  "text-muted-foreground": !limitsConfig?.enabled,
-                })}
-              >
-                {t("settings.core.playtime.sessionReset")}
-              </label>
+        {/* Configuration Inputs - always visible, disabled when feature is off */}
+        <div className="flex flex-col gap-3">
+          {/* Daily Limit */}
+          <div className="flex flex-col gap-2">
+            <label
+              className={classNames("text-sm font-medium", {
+                "text-muted-foreground": !limitsConfig?.enabled,
+              })}
+            >
+              {t("settings.core.playtime.dailyLimit")}
+            </label>
+            <div className="flex gap-2">
               <TextInput
                 type="number"
                 placeholder="0"
-                value={resetMinutes}
-                setValue={setResetMinutes}
+                value={dailyHours}
+                setValue={setDailyHours}
+                label={t("settings.core.playtime.hours")}
+                disabled={!connected || !limitsConfig?.enabled}
+              />
+              <TextInput
+                type="number"
+                placeholder="0"
+                value={dailyMinutes}
+                setValue={setDailyMinutes}
                 label={t("settings.core.playtime.minutes")}
                 disabled={!connected || !limitsConfig?.enabled}
               />
-              <span className="text-muted-foreground text-xs">
-                {t("settings.core.playtime.neverReset")}
-              </span>
             </div>
           </div>
+
+          {/* Session Limit */}
+          <div className="flex flex-col gap-2">
+            <label
+              className={classNames("text-sm font-medium", {
+                "text-muted-foreground": !limitsConfig?.enabled,
+              })}
+            >
+              {t("settings.core.playtime.sessionLimit")}
+            </label>
+            <div className="flex gap-2">
+              <TextInput
+                type="number"
+                placeholder="0"
+                value={sessionHours}
+                setValue={setSessionHours}
+                label={t("settings.core.playtime.hours")}
+                disabled={!connected || !limitsConfig?.enabled}
+              />
+              <TextInput
+                type="number"
+                placeholder="0"
+                value={sessionMinutes}
+                setValue={setSessionMinutes}
+                label={t("settings.core.playtime.minutes")}
+                disabled={!connected || !limitsConfig?.enabled}
+              />
+            </div>
+          </div>
+
+          {/* Session Reset Timeout */}
+          <div className="flex flex-col gap-2">
+            <label
+              className={classNames("text-sm font-medium", {
+                "text-muted-foreground": !limitsConfig?.enabled,
+              })}
+            >
+              {t("settings.core.playtime.sessionReset")}
+            </label>
+            <TextInput
+              type="number"
+              placeholder="0"
+              value={resetMinutes}
+              setValue={setResetMinutes}
+              label={t("settings.core.playtime.minutes")}
+              disabled={!connected || !limitsConfig?.enabled}
+            />
+            <span className="text-muted-foreground text-xs">
+              {t("settings.core.playtime.neverReset")}
+            </span>
+          </div>
         </div>
-      )}
+      </div>
     </PageFrame>
   );
 }

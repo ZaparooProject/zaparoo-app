@@ -7,7 +7,7 @@ import { useShallow } from "zustand/react/shallow";
 import classNames from "classnames";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
-import { useStatusStore } from "@/lib/store";
+import { useStatusStore, ConnectionState } from "@/lib/store";
 import { PageFrame } from "@/components/PageFrame";
 import {
   usePreferencesStore,
@@ -15,6 +15,7 @@ import {
   selectShakeSettings,
 } from "@/lib/preferencesStore";
 import { BackIcon, CheckIcon } from "@/lib/images";
+import { Skeleton } from "@/components/ui/skeleton";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { SystemSelector } from "@/components/SystemSelector";
 import { Button } from "@/components/wui/Button";
@@ -33,7 +34,13 @@ function ReadersSettings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("settings.readers.title"));
   const connected = useStatusStore((state) => state.connected);
+  const connectionState = useStatusStore((state) => state.connectionState);
   const [systemPickerOpen, setSystemPickerOpen] = useState(false);
+
+  // Determine if we're in a loading state (connecting or reconnecting)
+  const isConnecting =
+    connectionState === ConnectionState.CONNECTING ||
+    connectionState === ConnectionState.RECONNECTING;
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
   const accelerometerAvailable = usePreferencesStore(
     (state) => state.accelerometerAvailable,
@@ -98,10 +105,8 @@ function ReadersSettings() {
     preventScrollOnSwipe: false,
   });
 
-  // Show blank page while loading to prevent flicker
-  if (isPending) {
-    return null;
-  }
+  // Show loading skeletons when connecting or when connected but data is loading
+  const isLoading = isConnecting || (connected && isPending);
 
   return (
     <PageFrame
@@ -123,96 +128,105 @@ function ReadersSettings() {
         {/* Scan Mode - from Core */}
         <div className="py-2">
           <span id="scan-mode-label">{t("settings.readers.scanMode")}</span>
-          <div
-            className="mt-2 flex flex-row"
-            role="radiogroup"
-            aria-labelledby="scan-mode-label"
-          >
-            <button
-              type="button"
-              role="radio"
-              aria-checked={
-                coreSettings?.readersScanMode === "tap" && connected
-              }
-              className={classNames(
-                "flex",
-                "flex-row",
-                "w-full",
-                "rounded-s-full",
-                "items-center",
-                "justify-center",
-                "py-1",
-                "font-medium",
-                "gap-1",
-                "tracking-[0.1px]",
-                "h-9",
-                "border",
-                "border-solid",
-                "border-bd-filled",
-                {
-                  "bg-button-pattern":
-                    coreSettings?.readersScanMode === "tap" && connected,
-                },
-                {
-                  "bg-background": !connected,
-                  "border-foreground-disabled": !connected,
-                  "text-foreground-disabled": !connected,
-                },
-              )}
-              onClick={() =>
-                updateCoreSetting.mutate({ readersScanMode: "tap" })
-              }
+          {isLoading ? (
+            <div className="mt-2 flex flex-row">
+              <Skeleton className="h-9 w-full rounded-s-full" />
+              <Skeleton className="h-9 w-full rounded-e-full" />
+            </div>
+          ) : (
+            <div
+              className="mt-2 flex flex-row"
+              role="radiogroup"
+              aria-labelledby="scan-mode-label"
             >
-              {coreSettings?.readersScanMode === "tap" && connected && (
-                <span aria-hidden="true">
-                  <CheckIcon size="28" />
-                </span>
-              )}
-              {t("settings.tapMode")}
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={
-                coreSettings?.readersScanMode === "hold" && connected
-              }
-              className={classNames(
-                "flex",
-                "flex-row",
-                "w-full",
-                "rounded-e-full",
-                "items-center",
-                "justify-center",
-                "py-1",
-                "font-medium",
-                "gap-1",
-                "tracking-[0.1px]",
-                "h-9",
-                "border",
-                "border-solid",
-                "border-bd-filled",
-                {
-                  "bg-button-pattern":
-                    coreSettings?.readersScanMode === "hold" && connected,
-                },
-                {
-                  "bg-background": !connected,
-                  "border-foreground-disabled": !connected,
-                  "text-foreground-disabled": !connected,
-                },
-              )}
-              onClick={() =>
-                updateCoreSetting.mutate({ readersScanMode: "hold" })
-              }
-            >
-              {coreSettings?.readersScanMode === "hold" && connected && (
-                <span aria-hidden="true">
-                  <CheckIcon size="28" />
-                </span>
-              )}
-              {t("settings.insertMode")}
-            </button>
-          </div>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={
+                  coreSettings?.readersScanMode === "tap" && connected
+                }
+                className={classNames(
+                  "flex",
+                  "flex-row",
+                  "w-full",
+                  "rounded-s-full",
+                  "items-center",
+                  "justify-center",
+                  "py-1",
+                  "font-medium",
+                  "gap-1",
+                  "tracking-[0.1px]",
+                  "h-9",
+                  "border",
+                  "border-solid",
+                  "border-bd-filled",
+                  {
+                    "bg-button-pattern":
+                      coreSettings?.readersScanMode === "tap" && connected,
+                  },
+                  {
+                    "bg-background": !connected,
+                    "border-foreground-disabled": !connected,
+                    "text-foreground-disabled": !connected,
+                  },
+                )}
+                onClick={() =>
+                  updateCoreSetting.mutate({ readersScanMode: "tap" })
+                }
+                disabled={!connected}
+              >
+                {coreSettings?.readersScanMode === "tap" && connected && (
+                  <span aria-hidden="true">
+                    <CheckIcon size="28" />
+                  </span>
+                )}
+                {t("settings.tapMode")}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={
+                  coreSettings?.readersScanMode === "hold" && connected
+                }
+                className={classNames(
+                  "flex",
+                  "flex-row",
+                  "w-full",
+                  "rounded-e-full",
+                  "items-center",
+                  "justify-center",
+                  "py-1",
+                  "font-medium",
+                  "gap-1",
+                  "tracking-[0.1px]",
+                  "h-9",
+                  "border",
+                  "border-solid",
+                  "border-bd-filled",
+                  {
+                    "bg-button-pattern":
+                      coreSettings?.readersScanMode === "hold" && connected,
+                  },
+                  {
+                    "bg-background": !connected,
+                    "border-foreground-disabled": !connected,
+                    "text-foreground-disabled": !connected,
+                  },
+                )}
+                onClick={() =>
+                  updateCoreSetting.mutate({ readersScanMode: "hold" })
+                }
+                disabled={!connected}
+              >
+                {coreSettings?.readersScanMode === "hold" && connected && (
+                  <span aria-hidden="true">
+                    <CheckIcon size="28" />
+                  </span>
+                )}
+                {t("settings.insertMode")}
+              </button>
+            </div>
+          )}
           {coreSettings?.readersScanMode === "hold" && connected && (
             <p className="pt-1 text-sm">{t("settings.insertHelp")}</p>
           )}
@@ -262,6 +276,7 @@ function ReadersSettings() {
             value={shakeEnabled}
             setValue={setShakeEnabled}
             disabled={!connected}
+            loading={isLoading}
           />
         )}
 
@@ -391,6 +406,7 @@ function ReadersSettings() {
           value={coreSettings?.audioScanFeedback ?? false}
           setValue={(v) => updateCoreSetting.mutate({ audioScanFeedback: v })}
           disabled={!connected}
+          loading={isLoading}
         />
 
         {/* Auto Detect - from Core */}
@@ -399,6 +415,7 @@ function ReadersSettings() {
           value={coreSettings?.readersAutoDetect ?? false}
           setValue={(v) => updateCoreSetting.mutate({ readersAutoDetect: v })}
           disabled={!connected}
+          loading={isLoading}
         />
       </div>
 
