@@ -172,6 +172,7 @@ export const rollbarConfig: Rollbar.Configuration = {
       "connection closed",
       "connection refused",
       "connection timeout",
+      "failed to connect",
       "network error",
       "network request failed",
       "failed to fetch",
