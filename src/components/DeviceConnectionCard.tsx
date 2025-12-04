@@ -52,8 +52,9 @@ export function DeviceConnectionCard({
             value={address}
             setValue={setAddress}
             saveValue={onAddressChange}
+            saveDisabled={address === savedAddress}
             onKeyUp={(e) => {
-              if (e.key === "Enter" && address !== getDeviceAddress()) {
+              if (e.key === "Enter" && address !== savedAddress) {
                 onAddressChange(address);
               }
             }}

@@ -60,6 +60,12 @@ function Settings() {
   }, [setDeviceHistory]);
 
   const handleDeviceAddressChange = (newAddress: string) => {
+    // Skip if address hasn't actually changed - prevents resetting connection
+    // state when user edits and reverts to same value
+    if (newAddress === getDeviceAddress()) {
+      return;
+    }
+
     setDeviceAddress(newAddress);
     resetConnectionState();
     setTargetDeviceAddress(newAddress); // Update store to trigger WebSocket reconnection
