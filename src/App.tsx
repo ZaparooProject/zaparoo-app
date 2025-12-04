@@ -204,6 +204,7 @@ export default function App() {
   const accelerometerAvailabilityHydrated = usePreferencesStore(
     (state) => state._accelerometerAvailabilityHydrated,
   );
+  const safeInsets = useStatusStore((state) => state.safeInsets);
 
   // Initialize device info and status bar
   useEffect(() => {
@@ -277,9 +278,9 @@ export default function App() {
           },
         }}
         containerStyle={{
-          top: "calc(env(safe-area-inset-top, 0px) + 1rem)",
-          left: "env(safe-area-inset-left, 0px)",
-          right: "env(safe-area-inset-right, 0px)",
+          top: `calc(${safeInsets.top} + 1rem)`,
+          left: safeInsets.left,
+          right: safeInsets.right,
         }}
       />
       <A11yAnnouncerProvider>

@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { TourInitializer } from "@/components/TourInitializer";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { SkipLink } from "@/components/SkipLink";
+import { useStatusStore } from "@/lib/store";
 
 function BackHandler() {
   const navigate = useNavigate();
@@ -47,6 +48,7 @@ function BackHandler() {
 
 function RootLayout() {
   const mainRef = useRef<HTMLElement>(null);
+  const safeInsets = useStatusStore((state) => state.safeInsets);
 
   return (
     <div className="flex h-screen w-screen flex-col">
@@ -66,8 +68,7 @@ function RootLayout() {
         className="z-30 flex-shrink-0"
         style={
           {
-            "--bottom-nav-height":
-              "calc(80px + env(safe-area-inset-bottom, 0px))",
+            "--bottom-nav-height": `calc(80px + ${safeInsets.bottom})`,
           } as React.CSSProperties
         }
       >

@@ -3,13 +3,6 @@
 @custom-variant dark (&:is(.dark *));
 
 @layer base {
-  :root {
-    --safe-area-inset-top: 0px;
-    --safe-area-inset-bottom: 0px;
-    --safe-area-inset-left: 0px;
-    --safe-area-inset-right: 0px;
-  }
-
   * {
     border-color: hsl(var(--border));
   }

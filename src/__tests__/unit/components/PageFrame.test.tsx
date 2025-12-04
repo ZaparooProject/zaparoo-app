@@ -150,7 +150,7 @@ describe("PageFrame", () => {
     expect(screen.getAllByTestId("responsive-container")).toHaveLength(1);
   });
 
-  it("should apply correct classes when header is present", () => {
+  it("should apply correct styles when header is present", () => {
     const { container } = render(
       <PageFrame
         headerCenter={<h1 className="text-foreground text-xl">Test Title</h1>}
@@ -160,10 +160,11 @@ describe("PageFrame", () => {
     );
 
     const scrollContainer = container.querySelector(".flex-1.overflow-y-auto");
-    expect(scrollContainer).toHaveClass("px-4", "pb-4");
+    expect(scrollContainer).toBeInTheDocument();
+    expect(scrollContainer).toHaveClass("pb-4");
   });
 
-  it("should apply correct classes when header is not present", () => {
+  it("should apply correct styles when header is not present", () => {
     const { container } = render(
       <PageFrame>
         <div>Test content</div>
@@ -171,7 +172,8 @@ describe("PageFrame", () => {
     );
 
     const scrollContainer = container.querySelector(".flex-1.overflow-y-auto");
-    expect(scrollContainer).toHaveClass("p-4");
+    expect(scrollContainer).toBeInTheDocument();
+    expect(scrollContainer).toHaveClass("pb-4");
   });
 
   it("should handle empty header components gracefully", () => {

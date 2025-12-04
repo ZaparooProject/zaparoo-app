@@ -18,68 +18,53 @@ export const defaultSafeAreaInsets: SafeAreaInsets = {
   right: "0px",
 };
 
+const webInsets = {
+  top: "env(safe-area-inset-top, 0px)",
+  bottom: "env(safe-area-inset-bottom, 0px)",
+  left: "env(safe-area-inset-left, 0px)",
+  right: "env(safe-area-inset-right, 0px)",
+};
+
+export const initSafeAreaInsets = async (
+  setInsets: (insets: SafeAreaInsets) => void,
+  listen = true,
+) => {
+  if (!Capacitor.isNativePlatform()) {
+    setInsets(webInsets);
+    return;
+  }
+
+  try {
+    const { insets } = await SafeArea.getSafeAreaInsets();
+    setInsets({
+      top: `${insets.top}px`,
+      bottom: `${insets.bottom}px`,
+      left: `${insets.left}px`,
+      right: `${insets.right}px`,
+    });
+
+    if (!listen) {
+      return;
+    }
+
+    await SafeArea.addListener("safeAreaChanged", (data) => {
+      setInsets({
+        top: `${data.insets.top}px`,
+        bottom: `${data.insets.bottom}px`,
+        left: `${data.insets.left}px`,
+        right: `${data.insets.right}px`,
+      });
+    });
+  } catch (e) {
+    logger.error("Failed to get safe area insets:", e);
+  }
+};
+
 export const SafeAreaHandler = () => {
   const setSafeInsets = useStatusStore((state) => state.setSafeInsets);
 
   useEffect(() => {
-    const initializeSafeArea = async () => {
-      // For web platforms, use env() values directly
-      if (!Capacitor.isNativePlatform()) {
-        const webInsets = {
-          top: "env(safe-area-inset-top, 0px)",
-          bottom: "env(safe-area-inset-bottom, 0px)",
-          left: "env(safe-area-inset-left, 0px)",
-          right: "env(safe-area-inset-right, 0px)",
-        };
-        setSafeInsets(webInsets);
-        return;
-      }
-
-      // For native platforms (iOS and Android), use the SafeArea plugin
-      try {
-        const { insets } = await SafeArea.getSafeAreaInsets();
-        setSafeInsets({
-          top: `${insets.top}px`,
-          bottom: `${insets.bottom}px`,
-          left: `${insets.left}px`,
-          right: `${insets.right}px`,
-        });
-      } catch (error) {
-        logger.warn("SafeArea plugin not available:", error);
-        // Fallback to env() values
-        setSafeInsets({
-          top: "env(safe-area-inset-top, 0px)",
-          bottom: "env(safe-area-inset-bottom, 0px)",
-          left: "env(safe-area-inset-left, 0px)",
-          right: "env(safe-area-inset-right, 0px)",
-        });
-      }
-    };
-
-    initializeSafeArea();
-
-    // Listen for safe area changes (e.g., orientation changes, keyboard)
-    let listenerHandle: { remove: () => Promise<void> } | null = null;
-
-    SafeArea.addListener("safeAreaChanged", (data) => {
-      const { insets } = data;
-      setSafeInsets({
-        top: `${insets.top}px`,
-        bottom: `${insets.bottom}px`,
-        left: `${insets.left}px`,
-        right: `${insets.right}px`,
-      });
-    })
-      .then((handle) => {
-        listenerHandle = handle;
-      })
-      .catch((error) => {
-        logger.warn("Failed to add SafeArea listener:", error);
-      });
-
-    return () => {
-      listenerHandle?.remove();
-    };
+    initSafeAreaInsets(setSafeInsets);
   }, [setSafeInsets]);
 
   return null;

@@ -83,6 +83,7 @@ vi.mock("@/lib/store", () => {
     setProPurchaseModalOpen: vi.fn(),
     connected: true,
     playing: { mediaName: "", systemId: "", mediaPath: "" },
+    safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
   };
 
   const useStatusStore: any = vi.fn((selector) => {

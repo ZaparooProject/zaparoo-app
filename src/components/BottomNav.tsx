@@ -58,7 +58,8 @@ export function BottomNav() {
       aria-label={t("nav.mainNavigation")}
       className="border-t border-t-[#ffffff21] bg-[#111928bf] backdrop-blur"
       style={{
-        height: "80px",
+        height: `calc(80px + ${safeInsets.bottom})`,
+        paddingBottom: safeInsets.bottom,
       }}
     >
       <ResponsiveContainer maxWidth="nav" className="h-full">

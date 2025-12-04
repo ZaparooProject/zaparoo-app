@@ -1,4 +1,5 @@
 import React, { RefObject, ReactNode } from "react";
+import { useStatusStore } from "@/lib/store";
 import { ResponsiveContainer } from "./ResponsiveContainer";
 
 interface PageFrameProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -15,6 +16,8 @@ interface PageFrameProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function PageFrame(props: PageFrameProps) {
+  const safeInsets = useStatusStore((state) => state.safeInsets);
+
   // Destructure known props and collect the rest
   const {
     children,
@@ -34,8 +37,16 @@ export function PageFrame(props: PageFrameProps) {
       className={`flex h-full w-full flex-col ${className || ""}`}
       {...restProps}
     >
-      {hasHeaderContent && (
-        <header className="bg-background pt-safe-top-4 pr-safe-right-4 pl-safe-left-4 sticky top-0 z-10 p-4">
+      <div
+        className="bg-background sticky top-0 z-10"
+        style={{
+          paddingTop: `calc(1rem + ${safeInsets.top})`,
+          paddingRight: `calc(1rem + ${safeInsets.right})`,
+          paddingLeft: `calc(1rem + ${safeInsets.left})`,
+          paddingBottom: hasHeaderContent ? "1rem" : 0,
+        }}
+      >
+        {hasHeaderContent && (
           <ResponsiveContainer>
             {header ? (
               header
@@ -49,11 +60,15 @@ export function PageFrame(props: PageFrameProps) {
               </div>
             )}
           </ResponsiveContainer>
-        </header>
-      )}
+        )}
+      </div>
       <div
         ref={scrollRef}
-        className={`flex-1 overflow-y-auto ${hasHeaderContent ? "px-4 pb-4" : "p-4"} pr-safe-right-4 pl-safe-left-4 pb-safe-bottom-4`}
+        className="flex-1 overflow-y-auto pb-4"
+        style={{
+          paddingRight: `calc(1rem + ${safeInsets.right})`,
+          paddingLeft: `calc(1rem + ${safeInsets.left})`,
+        }}
       >
         <ResponsiveContainer>{children}</ResponsiveContainer>
       </div>

@@ -65,6 +65,7 @@ vi.mock("@/lib/store", () => {
       setLoggedInUser: mockSetLoggedInUser,
       connected: true,
       playing: { mediaName: "", systemId: "", mediaPath: "" },
+      safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
     };
     if (typeof selector === "function") {
       return selector(mockState);
@@ -75,6 +76,7 @@ vi.mock("@/lib/store", () => {
   useStatusStore.getState = () => ({
     playing: { mediaName: "", systemId: "", mediaPath: "" },
     gamesIndex: { exists: true, indexing: false, totalFiles: 0 },
+    safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
   });
 
   return { useStatusStore };
