@@ -272,4 +272,229 @@ describe("runToken", () => {
       expect(mockSetProPurchaseModalOpen).not.toHaveBeenCalled();
     });
   });
+
+  /**
+   * REGRESSION TESTS: Pro Feature Gating
+   *
+   * These tests ensure the Pro purchase flow works correctly:
+   * - launchOnScan defaults to ON
+   * - Non-Pro users see purchase modal when trying to launch
+   * - NFC/camera scans can work as read-only when launchOnScan is OFF
+   * - Shake to launch always requires Pro check (no read-only fallback)
+   * - Zap URLs bypass Pro check entirely
+   */
+  describe("requiresLaunch parameter (Pro feature gating)", () => {
+    describe("when requiresLaunch is FALSE (NFC/camera scans)", () => {
+      it("should return true without launching when launchOnScan is OFF (read-only mode)", async () => {
+        (sessionManager as { launchOnScan: boolean }).launchOnScan = false;
+
+        const result = await runToken(
+          "uid123",
+          "regular token",
+          false, // no Pro access
+          true, // connected
+          mockSetLastToken,
+          mockSetProPurchaseModalOpen,
+          false, // unsafe
+          false, // override
+          true, // canQueueCommands
+          false, // requiresLaunch = false (NFC/camera behavior)
+        );
+
+        expect(result).toBe(true);
+        expect(mockSetLastToken).toHaveBeenCalled(); // Token still stored
+        expect(mockSetProPurchaseModalOpen).not.toHaveBeenCalled(); // NO Pro modal
+        expect(CoreAPI.run).not.toHaveBeenCalled(); // NO launch
+      });
+
+      it("should show Pro modal when launchOnScan is ON without Pro access", async () => {
+        (sessionManager as { launchOnScan: boolean }).launchOnScan = true;
+
+        const result = await runToken(
+          "uid123",
+          "regular token",
+          false, // no Pro access
+          true, // connected
+          mockSetLastToken,
+          mockSetProPurchaseModalOpen,
+          false, // unsafe
+          false, // override
+          true, // canQueueCommands
+          false, // requiresLaunch = false (NFC/camera behavior)
+        );
+
+        expect(result).toBe(false);
+        expect(mockSetLastToken).toHaveBeenCalled(); // Token stored before check
+        expect(mockSetProPurchaseModalOpen).toHaveBeenCalledWith(true); // Pro modal shown
+        expect(CoreAPI.run).not.toHaveBeenCalled(); // NO launch
+      });
+
+      it("should launch when launchOnScan is ON with Pro access", async () => {
+        (sessionManager as { launchOnScan: boolean }).launchOnScan = true;
+
+        const resultPromise = runToken(
+          "uid123",
+          "regular token",
+          true, // has Pro access
+          true, // connected
+          mockSetLastToken,
+          mockSetProPurchaseModalOpen,
+          false, // unsafe
+          false, // override
+          true, // canQueueCommands
+          false, // requiresLaunch = false (NFC/camera behavior)
+        );
+
+        await vi.runAllTimersAsync();
+        const result = await resultPromise;
+
+        expect(result).toBe(true);
+        expect(mockSetProPurchaseModalOpen).not.toHaveBeenCalled();
+        expect(CoreAPI.run).toHaveBeenCalled(); // Launch happens
+      });
+    });
+
+    describe("when requiresLaunch is TRUE (shake to launch)", () => {
+      it("should show Pro modal even when launchOnScan is OFF (no read-only fallback)", async () => {
+        (sessionManager as { launchOnScan: boolean }).launchOnScan = false;
+
+        const result = await runToken(
+          "uid123",
+          "regular token",
+          false, // no Pro access
+          true, // connected
+          mockSetLastToken,
+          mockSetProPurchaseModalOpen,
+          false, // unsafe
+          false, // override
+          true, // canQueueCommands
+          true, // requiresLaunch = true (shake behavior)
+        );
+
+        expect(result).toBe(false);
+        expect(mockSetLastToken).toHaveBeenCalled(); // Token stored
+        expect(mockSetProPurchaseModalOpen).toHaveBeenCalledWith(true); // Pro modal SHOWN
+        expect(CoreAPI.run).not.toHaveBeenCalled();
+      });
+
+      it("should show Pro modal when launchOnScan is ON without Pro access", async () => {
+        (sessionManager as { launchOnScan: boolean }).launchOnScan = true;
+
+        const result = await runToken(
+          "uid123",
+          "regular token",
+          false, // no Pro access
+          true, // connected
+          mockSetLastToken,
+          mockSetProPurchaseModalOpen,
+          false, // unsafe
+          false, // override
+          true, // canQueueCommands
+          true, // requiresLaunch = true (shake behavior)
+        );
+
+        expect(result).toBe(false);
+        expect(mockSetProPurchaseModalOpen).toHaveBeenCalledWith(true);
+        expect(CoreAPI.run).not.toHaveBeenCalled();
+      });
+
+      it("should launch with Pro access regardless of launchOnScan setting", async () => {
+        (sessionManager as { launchOnScan: boolean }).launchOnScan = false;
+
+        const resultPromise = runToken(
+          "uid123",
+          "regular token",
+          true, // has Pro access
+          true, // connected
+          mockSetLastToken,
+          mockSetProPurchaseModalOpen,
+          false, // unsafe
+          false, // override
+          true, // canQueueCommands
+          true, // requiresLaunch = true (shake behavior)
+        );
+
+        await vi.runAllTimersAsync();
+        const result = await resultPromise;
+
+        expect(result).toBe(true);
+        expect(mockSetProPurchaseModalOpen).not.toHaveBeenCalled();
+        expect(CoreAPI.run).toHaveBeenCalled();
+      });
+
+      it("should bypass Pro check for Zap URLs even with requiresLaunch=true", async () => {
+        const resultPromise = runToken(
+          "",
+          "https://zpr.au/test",
+          false, // no Pro access
+          true, // connected
+          mockSetLastToken,
+          mockSetProPurchaseModalOpen,
+          false, // unsafe
+          false, // override
+          true, // canQueueCommands
+          true, // requiresLaunch = true
+        );
+
+        await vi.runAllTimersAsync();
+        const result = await resultPromise;
+
+        expect(result).toBe(true);
+        expect(mockSetProPurchaseModalOpen).not.toHaveBeenCalled(); // NO Pro modal
+        expect(CoreAPI.run).toHaveBeenCalled(); // Launch happens
+      });
+    });
+
+    describe("Zap URL handling with Pro gating", () => {
+      const zapUrls = [
+        "https://zpr.au/token123",
+        "https://zaparoo.link/mytoken",
+        "https://go.tapto.life/abc",
+        "HTTPS://ZPR.AU/UPPERCASE", // Case insensitive
+      ];
+
+      zapUrls.forEach((url) => {
+        it(`should bypass Pro check for ${url.split("/")[2]}`, async () => {
+          (sessionManager as { launchOnScan: boolean }).launchOnScan = true;
+
+          const resultPromise = runToken(
+            "",
+            url,
+            false, // no Pro access
+            true,
+            mockSetLastToken,
+            mockSetProPurchaseModalOpen,
+            false,
+            false,
+            true,
+            false, // NFC/camera scan behavior
+          );
+
+          await vi.runAllTimersAsync();
+          const result = await resultPromise;
+
+          expect(result).toBe(true);
+          expect(mockSetProPurchaseModalOpen).not.toHaveBeenCalled();
+          expect(CoreAPI.run).toHaveBeenCalled();
+        });
+      });
+
+      it("should NOT bypass Pro check for similar but different URLs", async () => {
+        (sessionManager as { launchOnScan: boolean }).launchOnScan = true;
+
+        const result = await runToken(
+          "",
+          "https://zpr.fake/token", // NOT a valid Zap URL
+          false, // no Pro access
+          true,
+          mockSetLastToken,
+          mockSetProPurchaseModalOpen,
+        );
+
+        expect(result).toBe(false);
+        expect(mockSetProPurchaseModalOpen).toHaveBeenCalledWith(true);
+        expect(CoreAPI.run).not.toHaveBeenCalled();
+      });
+    });
+  });
 });

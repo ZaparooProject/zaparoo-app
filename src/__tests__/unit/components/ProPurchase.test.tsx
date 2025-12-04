@@ -130,7 +130,8 @@ describe("RestorePuchasesButton", () => {
     const state = JSON.parse(setCall.value);
     expect(state.state.launcherAccess).toBe(true);
 
-    expect(window.location.reload).toHaveBeenCalled();
+    // No longer reloads the page - state updates reactively
+    expect(window.location.reload).not.toHaveBeenCalled();
   });
 
   it("should handle restore purchases failure", async () => {
@@ -156,6 +157,9 @@ describe("RestorePuchasesButton", () => {
 describe("useProPurchase", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    // Reset store state
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
+    usePreferencesStore.setState({ launcherAccess: false });
     // Set up default mock returns for the hook
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     vi.mocked(Purchases.getOfferings).mockResolvedValue({
@@ -172,7 +176,7 @@ describe("useProPurchase", () => {
     } as any);
   });
 
-  it("should initialize with default values", async () => {
+  it("should read proAccess from store", async () => {
     // Mock console.error to suppress expected "no launcher purchase package found" message
     const consoleErrorSpy = vi
       .spyOn(console, "error")
@@ -193,13 +197,17 @@ describe("useProPurchase", () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it("should initialize with custom initial pro access", async () => {
+  it("should reflect store state when launcherAccess is true", async () => {
+    // Set store state before rendering
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
+    usePreferencesStore.setState({ launcherAccess: true });
+
     // Mock console.error to suppress expected "no launcher purchase package found" message
     const consoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
 
-    const { result } = renderHook(() => useProPurchase(true));
+    const { result } = renderHook(() => useProPurchase());
 
     expect(result.current.proAccess).toBe(true);
 
@@ -225,9 +233,16 @@ describe("useProPurchase", () => {
     expect(Purchases.getCustomerInfo).not.toHaveBeenCalled();
   });
 
-  it("should fetch offerings and customer info on mobile platforms", async () => {
+  it("should fetch offerings and customer info on mobile platforms when not hydrated", async () => {
     const { Capacitor } = await import("@capacitor/core");
     vi.mocked(Capacitor.getPlatform).mockReturnValue("ios"); // Ensure non-web platform
+
+    // Set not hydrated so getCustomerInfo is called
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
+    usePreferencesStore.setState({
+      _proAccessHydrated: false,
+      launcherAccess: false,
+    });
 
     const mockOfferings = {
       current: {
@@ -262,14 +277,6 @@ describe("useProPurchase", () => {
       expect(Purchases.getCustomerInfo).toHaveBeenCalled();
       expect(result.current.proAccess).toBe(true);
     });
-
-    const { Preferences } = await import("@capacitor/preferences");
-    // Preferences.set is now called with app-preferences key and full state
-    expect(Preferences.set).toHaveBeenCalled();
-    const setCall = vi.mocked(Preferences.set).mock.calls[0]![0];
-    expect(setCall.key).toBe("app-preferences");
-    const state = JSON.parse(setCall.value);
-    expect(state.state.launcherAccess).toBe(true);
   });
 
   it("should render PurchaseModal component", async () => {

@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import React from "react";
+import React, { useId } from "react";
 import { useHaptics } from "@/hooks/useHaptics";
 
 export function ToggleSwitch(props: {
@@ -8,18 +8,21 @@ export function ToggleSwitch(props: {
   setValue: (value: boolean) => void;
   disabled?: boolean;
   onDisabledClick?: () => void;
+  /** Content rendered after the label, outside the clickable label area */
+  suffix?: React.ReactNode;
 }) {
   const { impact } = useHaptics();
+  const inputId = useId();
   const hasDisabledClickHandler = props.disabled && props.onDisabledClick;
 
-  const handleClick = hasDisabledClickHandler
+  const handleContainerClick = hasDisabledClickHandler
     ? (e: React.MouseEvent) => {
         e.preventDefault();
         props.onDisabledClick!();
       }
     : undefined;
 
-  const handleKeyDown = hasDisabledClickHandler
+  const handleContainerKeyDown = hasDisabledClickHandler
     ? (e: React.KeyboardEvent) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -29,17 +32,23 @@ export function ToggleSwitch(props: {
     : undefined;
 
   return (
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-    <label
+    <div
       className="text-foreground flex cursor-pointer items-center justify-between select-none"
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
+      onClick={handleContainerClick}
+      onKeyDown={handleContainerKeyDown}
       role={hasDisabledClickHandler ? "button" : undefined}
       tabIndex={hasDisabledClickHandler ? 0 : undefined}
     >
-      <span>{props.label}</span>
-      <div className="relative">
+      <span className="flex items-center">
+        <label htmlFor={inputId} className="cursor-pointer">
+          {props.label}
+        </label>
+        {props.suffix}
+      </span>
+      {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Label wraps and is associated with input via htmlFor */}
+      <label htmlFor={inputId} className="relative cursor-pointer">
         <input
+          id={inputId}
           type="checkbox"
           className="peer sr-only"
           checked={props.value}
@@ -94,7 +103,7 @@ export function ToggleSwitch(props: {
             },
           )}
         ></div>
-      </div>
-    </label>
+      </label>
+    </div>
   );
 }

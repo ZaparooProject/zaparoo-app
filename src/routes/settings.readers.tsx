@@ -25,36 +25,13 @@ import { CoreAPI } from "@/lib/coreApi.ts";
 import { UpdateSettingsRequest } from "@/lib/models.ts";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
-interface LoaderData {
-  restartScan: boolean;
-  launchOnScan: boolean;
-  launcherAccess: boolean;
-  preferRemoteWriter: boolean;
-  shakeEnabled: boolean;
-  shakeMode: "random" | "custom";
-  shakeZapscript: string;
-}
-
 export const Route = createFileRoute("/settings/readers")({
-  loader: (): LoaderData => {
-    const state = usePreferencesStore.getState();
-    return {
-      restartScan: state.restartScan,
-      launchOnScan: state.launchOnScan,
-      launcherAccess: state.launcherAccess,
-      preferRemoteWriter: state.preferRemoteWriter,
-      shakeEnabled: state.shakeEnabled,
-      shakeMode: state.shakeMode,
-      shakeZapscript: state.shakeZapscript,
-    };
-  },
   component: ReadersSettings,
 });
 
 function ReadersSettings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("settings.readers.title"));
-  const initData = Route.useLoaderData();
   const connected = useStatusStore((state) => state.connected);
   const [systemPickerOpen, setSystemPickerOpen] = useState(false);
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
@@ -112,9 +89,7 @@ function ReadersSettings() {
 
   const shakeSystem = getSystemFromZapscript();
 
-  const { PurchaseModal, setProPurchaseModalOpen } = useProPurchase(
-    initData.launcherAccess,
-  );
+  const { PurchaseModal, setProPurchaseModalOpen } = useProPurchase();
 
   const router = useRouter();
   const goBack = () => router.history.back();
@@ -253,16 +228,15 @@ function ReadersSettings() {
         {/* Launch On Scan - from App (native only, Pro feature) */}
         {Capacitor.isNativePlatform() && connected && (
           <ToggleSwitch
-            label={
-              <>
-                {t("settings.readers.launchOnScan")}
-                {!launcherAccess && <ProBadge />}
-              </>
+            label={t("settings.readers.launchOnScan")}
+            suffix={
+              <ProBadge
+                onPress={() => setProPurchaseModalOpen(true)}
+                show={!launcherAccess}
+              />
             }
-            value={launcherAccess && launchOnScan}
+            value={launchOnScan}
             setValue={setLaunchOnScan}
-            disabled={!launcherAccess}
-            onDisabledClick={() => setProPurchaseModalOpen(true)}
           />
         )}
 
@@ -278,27 +252,22 @@ function ReadersSettings() {
         {/* Shake to Launch - from App (native + accelerometer, Pro feature) */}
         {Capacitor.isNativePlatform() && accelerometerAvailable && (
           <ToggleSwitch
-            label={
-              <>
-                {t("settings.readers.shakeToLaunch")}
-                {!launcherAccess && <ProBadge />}
-              </>
+            label={t("settings.readers.shakeToLaunch")}
+            suffix={
+              <ProBadge
+                onPress={() => setProPurchaseModalOpen(true)}
+                show={!launcherAccess}
+              />
             }
             value={shakeEnabled}
             setValue={setShakeEnabled}
-            disabled={!launcherAccess || !connected}
-            onDisabledClick={() => {
-              if (!launcherAccess) {
-                setProPurchaseModalOpen(true);
-              }
-            }}
+            disabled={!connected}
           />
         )}
 
         {Capacitor.isNativePlatform() &&
           accelerometerAvailable &&
-          shakeEnabled &&
-          launcherAccess && (
+          shakeEnabled && (
             <>
               <div
                 className="flex flex-row"

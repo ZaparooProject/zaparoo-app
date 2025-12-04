@@ -47,6 +47,9 @@ export function useRunQueueProcessor() {
             setLastToken,
             setProPurchaseModalOpen,
             currentRunValue.unsafe,
+            false, // override
+            true, // canQueueCommands
+            true, // requiresLaunch - queue items are deliberate launch actions
           )
             .then((success: boolean) => {
               logger.log("runQueue success", success);

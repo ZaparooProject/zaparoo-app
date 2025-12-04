@@ -137,8 +137,9 @@ describe("nfc", () => {
     mockMakeReadOnly.mockClear();
     mockIsSupported.mockClear();
 
-    // Reset sessionManager state
+    // Reset sessionManager state to test defaults
     sessionManager.setShouldRestart(false);
+    // Reset to true (default) - Pro check happens at launch time
     sessionManager.setLaunchOnScan(true);
   });
 
@@ -193,6 +194,7 @@ describe("nfc", () => {
   describe("sessionManager", () => {
     it("should have default values", () => {
       expect(sessionManager.shouldRestart).toBe(false);
+      // launchOnScan defaults to true - Pro check happens at launch time
       expect(sessionManager.launchOnScan).toBe(true);
     });
 
