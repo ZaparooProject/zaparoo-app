@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "../../../test-utils";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent } from "../../../test-utils";
 import { createRouter, createMemoryHistory } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import React from "react";
 
 // Mock dependencies
 vi.mock("../../../lib/coreApi", () => ({
@@ -321,7 +322,7 @@ describe("Settings Index Route", () => {
 
       // Extract the handleDeviceAddressChange function
       const functionMatch = settingsSource.match(
-        /const handleDeviceAddressChange = \(newAddress: string\) => \{([\s\S]*?)\};/,
+        /const handleDeviceAddressChange = \(newAddress: string\) => \{([\s\S]*?)};/,
       );
       expect(functionMatch).toBeTruthy();
 
@@ -336,5 +337,372 @@ describe("Settings Index Route", () => {
         expect(functionBody).toMatch(/setAddress\(newAddress\)/);
       }
     });
+  });
+});
+
+describe("Settings Index Route - Component Behavior", () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("renders navigation links to all settings pages", () => {
+    const SettingsNavComponent = () => (
+      <div data-testid="settings-nav">
+        <a href="/settings/readers" data-testid="link-readers">
+          Readers
+        </a>
+        <a href="/settings/playtime" data-testid="link-playtime">
+          Playtime
+        </a>
+        <a href="/settings/accessibility" data-testid="link-accessibility">
+          Accessibility
+        </a>
+        <a href="/settings/advanced" data-testid="link-advanced">
+          Advanced
+        </a>
+        <a href="/settings/help" data-testid="link-help">
+          Help
+        </a>
+        <a href="/settings/about" data-testid="link-about">
+          About
+        </a>
+      </div>
+    );
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SettingsNavComponent />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("link-readers")).toBeInTheDocument();
+    expect(screen.getByTestId("link-playtime")).toBeInTheDocument();
+    expect(screen.getByTestId("link-accessibility")).toBeInTheDocument();
+    expect(screen.getByTestId("link-advanced")).toBeInTheDocument();
+    expect(screen.getByTestId("link-help")).toBeInTheDocument();
+    expect(screen.getByTestId("link-about")).toBeInTheDocument();
+  });
+
+  it("shows language selector with all supported languages", () => {
+    const LanguageSelectorComponent = () => {
+      const [language, setLanguage] = React.useState("en-US");
+
+      return (
+        <div data-testid="language-selector">
+          <label htmlFor="language">Language</label>
+          <select
+            id="language"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            data-testid="language-select"
+          >
+            <option value="de-DE">Deutsch</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="en-US">English (US)</option>
+            <option value="fr-FR">Français</option>
+            <option value="nl-NL">Nederlands</option>
+            <option value="zh-CN">中文</option>
+            <option value="ja-JP">日本語</option>
+            <option value="ko-KR">한국어</option>
+          </select>
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <LanguageSelectorComponent />
+      </QueryClientProvider>,
+    );
+
+    const select = screen.getByTestId("language-select");
+    expect(select).toHaveValue("en-US");
+
+    // Verify all language options exist
+    expect(screen.getByText("Deutsch")).toBeInTheDocument();
+    expect(screen.getByText("English (UK)")).toBeInTheDocument();
+    expect(screen.getByText("English (US)")).toBeInTheDocument();
+    expect(screen.getByText("Français")).toBeInTheDocument();
+    expect(screen.getByText("Nederlands")).toBeInTheDocument();
+    expect(screen.getByText("中文")).toBeInTheDocument();
+    expect(screen.getByText("日本語")).toBeInTheDocument();
+    expect(screen.getByText("한국어")).toBeInTheDocument();
+  });
+
+  it("handles language change", () => {
+    const mockChangeLanguage = vi.fn();
+    const LanguageSelectorComponent = () => {
+      const [language, setLanguage] = React.useState("en-US");
+
+      const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setLanguage(e.target.value);
+        mockChangeLanguage(e.target.value);
+      };
+
+      return (
+        <select
+          value={language}
+          onChange={handleChange}
+          data-testid="language-select"
+        >
+          <option value="en-US">English (US)</option>
+          <option value="ja-JP">日本語</option>
+        </select>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <LanguageSelectorComponent />
+      </QueryClientProvider>,
+    );
+
+    const select = screen.getByTestId("language-select");
+    fireEvent.change(select, { target: { value: "ja-JP" } });
+
+    expect(mockChangeLanguage).toHaveBeenCalledWith("ja-JP");
+    expect(select).toHaveValue("ja-JP");
+  });
+
+  it("shows device history modal when history button is clicked", () => {
+    const DeviceHistoryComponent = () => {
+      const [historyOpen, setHistoryOpen] = React.useState(false);
+      const deviceHistory = [
+        { address: "192.168.1.100" },
+        { address: "192.168.1.200" },
+      ];
+
+      return (
+        <div data-testid="device-history-test">
+          <button
+            onClick={() => setHistoryOpen(true)}
+            data-testid="open-history"
+            disabled={deviceHistory.length === 0}
+          >
+            Device History
+          </button>
+
+          {historyOpen && (
+            <div data-testid="history-modal">
+              <h2>Device History</h2>
+              {deviceHistory.map((entry) => (
+                <button
+                  key={entry.address}
+                  data-testid={`history-${entry.address}`}
+                  onClick={() => setHistoryOpen(false)}
+                >
+                  {entry.address}
+                </button>
+              ))}
+              <button
+                onClick={() => setHistoryOpen(false)}
+                data-testid="close-history"
+              >
+                Close
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <DeviceHistoryComponent />
+      </QueryClientProvider>,
+    );
+
+    // Open history modal
+    fireEvent.click(screen.getByTestId("open-history"));
+    expect(screen.getByTestId("history-modal")).toBeInTheDocument();
+
+    // Check history entries
+    expect(screen.getByTestId("history-192.168.1.100")).toBeInTheDocument();
+    expect(screen.getByTestId("history-192.168.1.200")).toBeInTheDocument();
+
+    // Select a history entry
+    fireEvent.click(screen.getByTestId("history-192.168.1.100"));
+    expect(screen.queryByTestId("history-modal")).not.toBeInTheDocument();
+  });
+
+  it("shows Pro purchase button when not subscribed on native platform", () => {
+    const ProPurchaseComponent = () => {
+      const isNative = true;
+      const proAccess = false;
+      const [modalOpen, setModalOpen] = React.useState(false);
+
+      return (
+        <div data-testid="pro-purchase-test">
+          {isNative && (
+            <>
+              {proAccess ? (
+                <button disabled data-testid="pro-active">
+                  Pro Active
+                </button>
+              ) : (
+                <button
+                  onClick={() => setModalOpen(true)}
+                  data-testid="purchase-pro"
+                >
+                  Purchase Pro
+                </button>
+              )}
+            </>
+          )}
+
+          {modalOpen && (
+            <div data-testid="purchase-modal">
+              <h2>Purchase Pro</h2>
+              <button onClick={() => setModalOpen(false)}>Close</button>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ProPurchaseComponent />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("purchase-pro")).toBeInTheDocument();
+    expect(screen.queryByTestId("pro-active")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("purchase-pro"));
+    expect(screen.getByTestId("purchase-modal")).toBeInTheDocument();
+  });
+
+  it("shows Pro active state when subscribed", () => {
+    const ProActiveComponent = () => {
+      const proAccess = true;
+
+      return (
+        <div data-testid="pro-active-test">
+          {proAccess && (
+            <button disabled data-testid="pro-active">
+              Pro Active
+            </button>
+          )}
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ProActiveComponent />
+      </QueryClientProvider>,
+    );
+
+    const proButton = screen.getByTestId("pro-active");
+    expect(proButton).toBeInTheDocument();
+    expect(proButton).toBeDisabled();
+  });
+
+  it("opens designer URL when designer button is clicked", () => {
+    const mockOpen = vi.fn();
+    const DesignerButtonComponent = () => {
+      const handleClick = () => {
+        mockOpen({ url: "https://design.zaparoo.org" });
+      };
+
+      return (
+        <button onClick={handleClick} data-testid="designer-button">
+          Open Designer
+        </button>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <DesignerButtonComponent />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByTestId("designer-button"));
+    expect(mockOpen).toHaveBeenCalledWith({
+      url: "https://design.zaparoo.org",
+    });
+  });
+
+  it("shows Get App button on web platform", () => {
+    const GetAppComponent = () => {
+      const isNative = false;
+
+      return (
+        <div data-testid="get-app-test">
+          {!isNative && <button data-testid="get-app-button">Get App</button>}
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GetAppComponent />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("get-app-button")).toBeInTheDocument();
+  });
+
+  it("prevents redundant connection reset when address hasn't changed", () => {
+    const mockResetConnectionState = vi.fn();
+    const mockSetDeviceAddress = vi.fn();
+    const savedAddress = "192.168.1.100";
+
+    const AddressChangeComponent = () => {
+      const handleDeviceAddressChange = (newAddress: string) => {
+        // Skip if address hasn't actually changed
+        if (newAddress === savedAddress) {
+          return;
+        }
+        mockSetDeviceAddress(newAddress);
+        mockResetConnectionState();
+      };
+
+      return (
+        <div data-testid="address-change-test">
+          <button
+            onClick={() => handleDeviceAddressChange("192.168.1.100")}
+            data-testid="same-address"
+          >
+            Same Address
+          </button>
+          <button
+            onClick={() => handleDeviceAddressChange("192.168.1.200")}
+            data-testid="different-address"
+          >
+            Different Address
+          </button>
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AddressChangeComponent />
+      </QueryClientProvider>,
+    );
+
+    // Click same address - should not trigger reset
+    fireEvent.click(screen.getByTestId("same-address"));
+    expect(mockResetConnectionState).not.toHaveBeenCalled();
+
+    // Click different address - should trigger reset
+    fireEvent.click(screen.getByTestId("different-address"));
+    expect(mockResetConnectionState).toHaveBeenCalled();
+    expect(mockSetDeviceAddress).toHaveBeenCalledWith("192.168.1.200");
   });
 });

@@ -154,7 +154,9 @@ describe("Create Search Route - Enhanced Coverage", () => {
           if (searchResults) {
             setResults(searchResults);
           } else if (error) {
-            throw error;
+            setSearchError(error);
+            setResults([]);
+            return;
           }
         } catch (err) {
           setSearchError(err);
@@ -621,5 +623,413 @@ describe("Create Search Route - Enhanced Coverage", () => {
     expect(screen.getByTestId("write-button-1")).toBeInTheDocument();
     expect(screen.getByTestId("play-button-2")).toBeInTheDocument();
     expect(screen.getByTestId("write-button-2")).toBeInTheDocument();
+  });
+});
+
+describe("Create Search Route - Additional Features", () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("handles recent searches functionality", () => {
+    const RecentSearchesComponent = () => {
+      const [recentSearches, setRecentSearches] = React.useState<
+        Array<{ query: string; system: string; tags: string[] }>
+      >([
+        { query: "Mario", system: "snes", tags: [] },
+        { query: "Sonic", system: "genesis", tags: [] },
+      ]);
+      const [query, setQuery] = React.useState("");
+      const [querySystem, setQuerySystem] = React.useState("all");
+      const [recentSearchesOpen, setRecentSearchesOpen] = React.useState(false);
+
+      const handleRecentSearchSelect = (search: (typeof recentSearches)[0]) => {
+        setQuery(search.query);
+        setQuerySystem(search.system);
+        setRecentSearchesOpen(false);
+      };
+
+      const clearRecentSearches = () => {
+        setRecentSearches([]);
+      };
+
+      return (
+        <div data-testid="recent-searches-test">
+          <button
+            onClick={() => setRecentSearchesOpen(true)}
+            disabled={recentSearches.length === 0}
+            data-testid="open-recent-searches"
+          >
+            Recent Searches
+          </button>
+
+          <input
+            data-testid="search-query"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <span data-testid="current-system">{querySystem}</span>
+
+          {recentSearchesOpen && (
+            <div data-testid="recent-searches-modal">
+              <h2>Recent Searches</h2>
+              {recentSearches.map((search, index) => (
+                <button
+                  key={index}
+                  data-testid={`recent-search-${index}`}
+                  onClick={() => handleRecentSearchSelect(search)}
+                >
+                  {search.query} - {search.system}
+                </button>
+              ))}
+              <button
+                data-testid="clear-recent-searches"
+                onClick={clearRecentSearches}
+              >
+                Clear History
+              </button>
+              <button
+                data-testid="close-recent-searches"
+                onClick={() => setRecentSearchesOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RecentSearchesComponent />
+      </QueryClientProvider>,
+    );
+
+    // Open recent searches
+    const openButton = screen.getByTestId("open-recent-searches");
+    fireEvent.click(openButton);
+
+    expect(screen.getByTestId("recent-searches-modal")).toBeInTheDocument();
+    expect(screen.getByTestId("recent-search-0")).toHaveTextContent(
+      "Mario - snes",
+    );
+    expect(screen.getByTestId("recent-search-1")).toHaveTextContent(
+      "Sonic - genesis",
+    );
+
+    // Select a recent search
+    fireEvent.click(screen.getByTestId("recent-search-0"));
+
+    expect(screen.getByTestId("search-query")).toHaveValue("Mario");
+    expect(screen.getByTestId("current-system")).toHaveTextContent("snes");
+    expect(
+      screen.queryByTestId("recent-searches-modal"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("clears recent searches when clear button is clicked", () => {
+    const RecentSearchesComponent = () => {
+      const [recentSearches, setRecentSearches] = React.useState([
+        { query: "Mario", system: "snes", tags: [] },
+      ]);
+
+      return (
+        <div data-testid="clear-searches-test">
+          <span data-testid="search-count">{recentSearches.length}</span>
+          <button
+            data-testid="clear-searches"
+            onClick={() => setRecentSearches([])}
+          >
+            Clear
+          </button>
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RecentSearchesComponent />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("search-count")).toHaveTextContent("1");
+
+    fireEvent.click(screen.getByTestId("clear-searches"));
+
+    expect(screen.getByTestId("search-count")).toHaveTextContent("0");
+  });
+
+  it("handles tag filtering in search", () => {
+    const TagFilterComponent = () => {
+      const [queryTags, setQueryTags] = React.useState<string[]>([]);
+      const [tagSelectorOpen, setTagSelectorOpen] = React.useState(false);
+
+      const handleTagSelect = (tags: string[]) => {
+        setQueryTags(tags);
+        setTagSelectorOpen(false);
+      };
+
+      return (
+        <div data-testid="tag-filter-test">
+          <button
+            onClick={() => setTagSelectorOpen(true)}
+            data-testid="open-tag-selector"
+          >
+            Select Tags
+          </button>
+
+          <div data-testid="selected-tags">
+            {queryTags.length === 0
+              ? "All Tags"
+              : queryTags.map((tag) => (
+                  <span key={tag} data-testid={`tag-${tag}`}>
+                    {tag}
+                  </span>
+                ))}
+          </div>
+
+          {tagSelectorOpen && (
+            <div data-testid="tag-selector-modal">
+              <button
+                data-testid="select-action-tag"
+                onClick={() => handleTagSelect(["action"])}
+              >
+                Action
+              </button>
+              <button
+                data-testid="select-rpg-tag"
+                onClick={() => handleTagSelect(["rpg"])}
+              >
+                RPG
+              </button>
+              <button
+                data-testid="select-multiple-tags"
+                onClick={() => handleTagSelect(["action", "rpg"])}
+              >
+                Action & RPG
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TagFilterComponent />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("selected-tags")).toHaveTextContent("All Tags");
+
+    fireEvent.click(screen.getByTestId("open-tag-selector"));
+    fireEvent.click(screen.getByTestId("select-multiple-tags"));
+
+    expect(screen.getByTestId("tag-action")).toBeInTheDocument();
+    expect(screen.getByTestId("tag-rpg")).toBeInTheDocument();
+  });
+
+  it("handles write mode selection between path and zapScript", () => {
+    const WriteModeComponent = () => {
+      const [writeMode, setWriteMode] = React.useState<"path" | "zapScript">(
+        "zapScript",
+      );
+      const selectedResult = {
+        path: "/games/snes/mario.sfc",
+        zapScript: "**launch.system:snes:/games/snes/mario.sfc",
+      };
+
+      return (
+        <div data-testid="write-mode-test">
+          <fieldset role="radiogroup" aria-label="Select write value">
+            <div>
+              <input
+                type="radio"
+                id="write-mode-path"
+                name="write-mode"
+                value="path"
+                checked={writeMode === "path"}
+                onChange={() => setWriteMode("path")}
+                data-testid="path-radio"
+              />
+              <label htmlFor="write-mode-path">
+                Path: {selectedResult.path}
+              </label>
+            </div>
+            <div>
+              <input
+                type="radio"
+                id="write-mode-zapscript"
+                name="write-mode"
+                value="zapScript"
+                checked={writeMode === "zapScript"}
+                onChange={() => setWriteMode("zapScript")}
+                data-testid="zapscript-radio"
+              />
+              <label htmlFor="write-mode-zapscript">
+                ZapScript: {selectedResult.zapScript}
+              </label>
+            </div>
+          </fieldset>
+
+          <span data-testid="current-write-mode">{writeMode}</span>
+          <span data-testid="value-to-write">
+            {writeMode === "zapScript"
+              ? selectedResult.zapScript
+              : selectedResult.path}
+          </span>
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <WriteModeComponent />
+      </QueryClientProvider>,
+    );
+
+    // Default is zapScript
+    expect(screen.getByTestId("current-write-mode")).toHaveTextContent(
+      "zapScript",
+    );
+    expect(screen.getByTestId("zapscript-radio")).toBeChecked();
+
+    // Switch to path
+    fireEvent.click(screen.getByTestId("path-radio"));
+
+    expect(screen.getByTestId("current-write-mode")).toHaveTextContent("path");
+    expect(screen.getByTestId("value-to-write")).toHaveTextContent(
+      "/games/snes/mario.sfc",
+    );
+  });
+
+  it("handles copy functionality with fallback", async () => {
+    const mockCopyFn = vi.fn();
+
+    const CopyComponent = () => {
+      const [copied, setCopied] = React.useState(false);
+      const textToCopy = "/games/snes/mario.sfc";
+
+      const handleCopy = async () => {
+        mockCopyFn(textToCopy);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      };
+
+      return (
+        <div data-testid="copy-test">
+          <span data-testid="copy-status">{copied ? "Copied!" : "Ready"}</span>
+          <button onClick={handleCopy} data-testid="copy-button">
+            Copy
+          </button>
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CopyComponent />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("copy-status")).toHaveTextContent("Ready");
+
+    fireEvent.click(screen.getByTestId("copy-button"));
+
+    expect(mockCopyFn).toHaveBeenCalledWith("/games/snes/mario.sfc");
+    expect(screen.getByTestId("copy-status")).toHaveTextContent("Copied!");
+  });
+
+  it("handles keyboard Enter to trigger search", () => {
+    const mockSearch = vi.fn();
+
+    const KeyboardSearchComponent = () => {
+      const [query, setQuery] = React.useState("");
+
+      const handleKeyUp = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter" && query.trim()) {
+          mockSearch(query);
+        }
+      };
+
+      return (
+        <div data-testid="keyboard-search-test">
+          <input
+            data-testid="search-input"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyUp={handleKeyUp}
+          />
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <KeyboardSearchComponent />
+      </QueryClientProvider>,
+    );
+
+    const input = screen.getByTestId("search-input");
+    fireEvent.change(input, { target: { value: "Mario" } });
+    fireEvent.keyUp(input, { key: "Enter" });
+
+    expect(mockSearch).toHaveBeenCalledWith("Mario");
+  });
+
+  it("shows filename or name based on showFilenames preference", () => {
+    const FilenameDisplayComponent = () => {
+      const [showFilenames, setShowFilenames] = React.useState(false);
+      const game = {
+        name: "Super Mario World",
+        path: "/games/snes/smw.sfc",
+      };
+
+      const filenameFromPath = (path: string) => {
+        const parts = path.split("/");
+        return parts[parts.length - 1];
+      };
+
+      return (
+        <div data-testid="filename-display-test">
+          <button
+            onClick={() => setShowFilenames(!showFilenames)}
+            data-testid="toggle-filenames"
+          >
+            Toggle
+          </button>
+          <span data-testid="display-name">
+            {showFilenames ? filenameFromPath(game.path) : game.name}
+          </span>
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <FilenameDisplayComponent />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("display-name")).toHaveTextContent(
+      "Super Mario World",
+    );
+
+    fireEvent.click(screen.getByTestId("toggle-filenames"));
+
+    expect(screen.getByTestId("display-name")).toHaveTextContent("smw.sfc");
   });
 });

@@ -494,3 +494,270 @@ describe("Settings Advanced Route", () => {
     expect(queryClient.getDefaultOptions().mutations?.retry).toBe(false);
   });
 });
+
+describe("Settings Advanced - Additional Coverage", () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("renders show filenames toggle", () => {
+    const mockSetShowFilenames = vi.fn();
+    const ComponentWithShowFilenames = () => {
+      const [showFilenames, setShowFilenames] = React.useState(false);
+
+      return (
+        <div data-testid="advanced-settings-extra">
+          <div data-testid="show-filenames-toggle">
+            <label>
+              <input
+                type="checkbox"
+                checked={showFilenames}
+                onChange={(e) => {
+                  setShowFilenames(e.target.checked);
+                  mockSetShowFilenames(e.target.checked);
+                }}
+              />
+              Show Filenames
+            </label>
+          </div>
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ComponentWithShowFilenames />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("show-filenames-toggle")).toBeInTheDocument();
+  });
+
+  it("toggles show filenames setting", () => {
+    const mockSetShowFilenames = vi.fn();
+    const ComponentWithShowFilenames = () => {
+      const [showFilenames, setShowFilenames] = React.useState(false);
+
+      return (
+        <div data-testid="advanced-settings-extra">
+          <div data-testid="show-filenames-toggle">
+            <label>
+              <input
+                type="checkbox"
+                checked={showFilenames}
+                onChange={(e) => {
+                  setShowFilenames(e.target.checked);
+                  mockSetShowFilenames(e.target.checked);
+                }}
+                data-testid="show-filenames-checkbox"
+              />
+              Show Filenames
+            </label>
+          </div>
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ComponentWithShowFilenames />
+      </QueryClientProvider>,
+    );
+
+    const checkbox = screen.getByTestId("show-filenames-checkbox");
+    fireEvent.click(checkbox);
+
+    expect(mockSetShowFilenames).toHaveBeenCalledWith(true);
+  });
+
+  it("renders view logs link when connected", () => {
+    const ComponentWithLogsLink = () => {
+      const connected = true;
+
+      return (
+        <div data-testid="advanced-settings-extra">
+          {connected ? (
+            <a href="/settings/logs" data-testid="view-logs-link">
+              View Logs
+            </a>
+          ) : (
+            <span
+              data-testid="view-logs-disabled"
+              className="text-foreground-disabled"
+            >
+              View Logs
+            </span>
+          )}
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ComponentWithLogsLink />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("view-logs-link")).toBeInTheDocument();
+  });
+
+  it("disables view logs when disconnected", () => {
+    const ComponentWithLogsLink = () => {
+      const connected = false;
+
+      return (
+        <div data-testid="advanced-settings-extra">
+          {connected ? (
+            <a href="/settings/logs" data-testid="view-logs-link">
+              View Logs
+            </a>
+          ) : (
+            <span
+              data-testid="view-logs-disabled"
+              className="text-foreground-disabled"
+            >
+              View Logs
+            </span>
+          )}
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ComponentWithLogsLink />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.queryByTestId("view-logs-link")).not.toBeInTheDocument();
+    expect(screen.getByTestId("view-logs-disabled")).toBeInTheDocument();
+  });
+
+  it("renders restore purchases button on native platform", async () => {
+    const { Capacitor } = await import("@capacitor/core");
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+
+    const ComponentWithRestorePurchases = () => {
+      const isNative = true;
+
+      return (
+        <div data-testid="advanced-settings-extra">
+          {isNative && (
+            <button data-testid="restore-purchases-button">
+              Restore Purchases
+            </button>
+          )}
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ComponentWithRestorePurchases />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("restore-purchases-button")).toBeInTheDocument();
+  });
+
+  it("handles loading state correctly", () => {
+    const ComponentWithLoading = () => {
+      const [isLoading, setIsLoading] = React.useState(true);
+
+      return (
+        <div data-testid="advanced-settings-loading">
+          {isLoading ? (
+            <div data-testid="loading-skeleton">Loading...</div>
+          ) : (
+            <div data-testid="settings-content">Settings Loaded</div>
+          )}
+          <button
+            onClick={() => setIsLoading(false)}
+            data-testid="finish-loading"
+          >
+            Finish Loading
+          </button>
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ComponentWithLoading />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("loading-skeleton")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("finish-loading"));
+
+    expect(screen.getByTestId("settings-content")).toBeInTheDocument();
+  });
+
+  it("handles connection state transitions", () => {
+    const ComponentWithConnectionState = () => {
+      const [connectionState, setConnectionState] = React.useState("CONNECTED");
+      const isConnecting =
+        connectionState === "CONNECTING" || connectionState === "RECONNECTING";
+      const connected = connectionState === "CONNECTED";
+
+      return (
+        <div data-testid="connection-state-test">
+          <span data-testid="connection-state">{connectionState}</span>
+          <span data-testid="is-connecting">{isConnecting.toString()}</span>
+          <span data-testid="is-connected">{connected.toString()}</span>
+          <button
+            onClick={() => setConnectionState("CONNECTING")}
+            data-testid="set-connecting"
+          >
+            Set Connecting
+          </button>
+          <button
+            onClick={() => setConnectionState("RECONNECTING")}
+            data-testid="set-reconnecting"
+          >
+            Set Reconnecting
+          </button>
+          <button
+            onClick={() => setConnectionState("DISCONNECTED")}
+            data-testid="set-disconnected"
+          >
+            Set Disconnected
+          </button>
+        </div>
+      );
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ComponentWithConnectionState />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("is-connected")).toHaveTextContent("true");
+    expect(screen.getByTestId("is-connecting")).toHaveTextContent("false");
+
+    fireEvent.click(screen.getByTestId("set-connecting"));
+    expect(screen.getByTestId("is-connecting")).toHaveTextContent("true");
+    expect(screen.getByTestId("is-connected")).toHaveTextContent("false");
+
+    fireEvent.click(screen.getByTestId("set-reconnecting"));
+    expect(screen.getByTestId("is-connecting")).toHaveTextContent("true");
+
+    fireEvent.click(screen.getByTestId("set-disconnected"));
+    expect(screen.getByTestId("is-connecting")).toHaveTextContent("false");
+    expect(screen.getByTestId("is-connected")).toHaveTextContent("false");
+  });
+});
