@@ -15,7 +15,7 @@ function NavButton(props: {
   className?: string;
   "data-tour"?: string;
 }) {
-  const { selectionChanged } = useHaptics();
+  const { impact } = useHaptics();
 
   return (
     <div
@@ -27,7 +27,7 @@ function NavButton(props: {
     >
       <Link
         to={props.path}
-        onClick={() => selectionChanged()}
+        onClick={() => impact("light")}
         aria-current={props.isActive ? "page" : undefined}
         style={{
           transition: "color 0.3s, filter 0.3s",

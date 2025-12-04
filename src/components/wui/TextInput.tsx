@@ -13,6 +13,8 @@ export function TextInput(props: {
   disabled?: boolean;
   className?: string;
   saveValue?: (value: string) => void;
+  /** Disable just the save button (e.g., when value equals saved value) */
+  saveDisabled?: boolean;
   clearable?: boolean;
   type?: string;
   onKeyUp?: KeyboardEventHandler<HTMLInputElement>;
@@ -107,13 +109,14 @@ export function TextInput(props: {
         </div>
         {props.saveValue && (
           <Button
-            disabled={!modified || props.disabled}
+            disabled={!modified || props.disabled || props.saveDisabled}
             icon={<SaveIcon size="20" />}
             aria-label="Save"
             className="h-12 w-12 rounded-s-lg pr-3"
             onClick={() => {
               if (
                 props.disabled ||
+                props.saveDisabled ||
                 value === undefined ||
                 props.saveValue === undefined
               ) {

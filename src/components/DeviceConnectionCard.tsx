@@ -29,10 +29,11 @@ export function DeviceConnectionCard({
   const { isConnected } = useConnection();
 
   // Fetch version info when connected
+  const savedAddress = getDeviceAddress();
   const { data: version, isLoading: isVersionLoading } = useQuery({
-    queryKey: ["version", address],
+    queryKey: ["version", savedAddress],
     queryFn: () => CoreAPI.version(),
-    enabled: isConnected && !!address,
+    enabled: isConnected && !!savedAddress,
   });
 
   // Settings page shows version/platform info as subtitle
@@ -51,8 +52,9 @@ export function DeviceConnectionCard({
             value={address}
             setValue={setAddress}
             saveValue={onAddressChange}
+            saveDisabled={address === savedAddress}
             onKeyUp={(e) => {
-              if (e.key === "Enter" && address !== getDeviceAddress()) {
+              if (e.key === "Enter" && address !== savedAddress) {
                 onAddressChange(address);
               }
             }}

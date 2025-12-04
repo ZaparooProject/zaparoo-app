@@ -108,70 +108,10 @@ export function useHaptics() {
     [hapticsEnabled],
   );
 
-  /**
-   * Trigger selection changed feedback (iOS only - subtle tick)
-   */
-  const selectionChanged = useCallback(async () => {
-    if (!hapticsEnabled || !Capacitor.isNativePlatform()) {
-      return;
-    }
-
-    try {
-      await Haptics.selectionChanged();
-    } catch (error) {
-      logger.debug("Haptics selectionChanged failed:", error, {
-        category: "haptics",
-        action: "selectionChanged",
-        severity: "info",
-      });
-    }
-  }, [hapticsEnabled]);
-
-  /**
-   * Start selection feedback loop (call selectionEnd when done)
-   */
-  const selectionStart = useCallback(async () => {
-    if (!hapticsEnabled || !Capacitor.isNativePlatform()) {
-      return;
-    }
-
-    try {
-      await Haptics.selectionStart();
-    } catch (error) {
-      logger.debug("Haptics selectionStart failed:", error, {
-        category: "haptics",
-        action: "selectionStart",
-        severity: "info",
-      });
-    }
-  }, [hapticsEnabled]);
-
-  /**
-   * End selection feedback loop
-   */
-  const selectionEnd = useCallback(async () => {
-    if (!hapticsEnabled || !Capacitor.isNativePlatform()) {
-      return;
-    }
-
-    try {
-      await Haptics.selectionEnd();
-    } catch (error) {
-      logger.debug("Haptics selectionEnd failed:", error, {
-        category: "haptics",
-        action: "selectionEnd",
-        severity: "info",
-      });
-    }
-  }, [hapticsEnabled]);
-
   return {
     impact,
     notification,
     vibrate,
-    selectionChanged,
-    selectionStart,
-    selectionEnd,
     isEnabled: hapticsEnabled,
   };
 }
