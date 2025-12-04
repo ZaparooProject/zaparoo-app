@@ -139,9 +139,13 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@firebase/util",
+      "@scarf/scarf",
       "@tailwindcss/oxide",
+      "core-js",
       "esbuild",
-      "protobufjs"
+      "msw",
+      "protobufjs",
+      "unrs-resolver"
     ]
   }
 }
