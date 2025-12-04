@@ -5,9 +5,11 @@ import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { runToken } from "@/lib/tokenOperations.tsx";
 import { logger } from "@/lib/logger";
+import { useHaptics } from "@/hooks/useHaptics";
 
 export function useRunQueueProcessor() {
   const { t } = useTranslation();
+  const { notification } = useHaptics();
   const runQueue = useStatusStore((state) => state.runQueue);
   const setRunQueue = useStatusStore((state) => state.setRunQueue);
   const setLastToken = useStatusStore((state) => state.setLastToken);
@@ -75,6 +77,7 @@ export function useRunQueueProcessor() {
             action: "runQueue",
             maxRetries,
           });
+          notification("error");
           toast.error(t("create.custom.failMsg"));
           isProcessingRef.current = false;
         }
@@ -82,7 +85,14 @@ export function useRunQueueProcessor() {
 
       attemptRun();
     },
-    [launcherAccess, setLastToken, setProPurchaseModalOpen, setRunQueue, t],
+    [
+      launcherAccess,
+      setLastToken,
+      setProPurchaseModalOpen,
+      setRunQueue,
+      t,
+      notification,
+    ],
   );
 
   useEffect(() => {

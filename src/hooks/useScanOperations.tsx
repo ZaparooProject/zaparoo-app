@@ -32,7 +32,7 @@ export function useScanOperations({
   const { t } = useTranslation();
   const nfcWriter = useNfcWriter();
   const { announce } = useAnnouncer();
-  const { impact } = useHaptics();
+  const { impact, notification } = useHaptics();
   const [scanSession, setScanSession] = useState(false);
   const [scanStatus, setScanStatus] = useState<ScanResult>(ScanResult.Default);
 
@@ -165,6 +165,7 @@ export function useScanOperations({
           category: "camera",
           action: "barcodeScan",
         });
+        notification("error");
       });
   }, [
     connected,
@@ -175,6 +176,7 @@ export function useScanOperations({
     setWriteOpen,
     nfcWriter,
     impact,
+    notification,
   ]);
 
   const handleStopConfirm = useCallback(() => {
