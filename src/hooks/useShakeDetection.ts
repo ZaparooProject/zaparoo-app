@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { PluginListenerHandle } from "@capacitor/core";
 import { Capacitor } from "@capacitor/core";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { CapacitorShake } from "@capgo/capacitor-shake";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useStatusStore } from "@/lib/store";
@@ -59,6 +60,20 @@ export function useShakeDetection({
             }
 
             logger.log("Shake detected, queueing zapscript:", zapscript);
+
+            // Heavy haptic feedback to confirm shake was recognized
+            const hapticsEnabled =
+              usePreferencesStore.getState().hapticsEnabled;
+            if (hapticsEnabled) {
+              Haptics.impact({ style: ImpactStyle.Heavy }).catch((error) => {
+                logger.debug("Haptics impact failed:", error, {
+                  category: "haptics",
+                  action: "shakeImpact",
+                  severity: "info",
+                });
+              });
+            }
+
             setRunQueue({ value: zapscript, unsafe: true });
           },
         );

@@ -304,7 +304,7 @@ export function SystemSelector({
             {hasOverflow && (
               <div
                 aria-hidden="true"
-                className={`pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-8 bg-gradient-to-r from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
+                className={`pointer-events-none absolute top-0 bottom-0 left-0 w-8 bg-gradient-to-r from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
                   showLeftGradient ? "opacity-100" : "opacity-0"
                 }`}
               />
@@ -327,7 +327,7 @@ export function SystemSelector({
             {hasOverflow && (
               <div
                 aria-hidden="true"
-                className={`pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-gradient-to-l from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
+                className={`pointer-events-none absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
                   showRightGradient ? "opacity-100" : "opacity-0"
                 }`}
               />

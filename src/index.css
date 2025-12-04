@@ -13,6 +13,11 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+
+  /* Style native select dropdown arrow for dark theme (especially iOS) */
+  select {
+    color-scheme: dark;
+  }
 }
 
 @layer components {

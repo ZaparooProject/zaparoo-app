@@ -147,7 +147,9 @@ export function MediaDatabaseCard() {
                     hasDetailedProgress &&
                     gamesIndex.currentStep &&
                     gamesIndex.totalSteps
-                      ? `${((gamesIndex.currentStep / gamesIndex.totalSteps) * 100).toFixed(2)}%`
+                      ? gamesIndex.currentStep === gamesIndex.totalSteps
+                        ? "100%" // Use static 100% to avoid iOS animation glitch
+                        : `${((gamesIndex.currentStep / gamesIndex.totalSteps) * 100).toFixed(2)}%`
                       : "100%",
                 }}
               />
