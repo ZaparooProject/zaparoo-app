@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import toast, { Toaster, useToasterStore } from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style } from "@capacitor/status-bar";
 import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
@@ -204,9 +205,15 @@ export default function App() {
     (state) => state._accelerometerAvailabilityHydrated,
   );
 
-  // Initialize device info for error reporting context
+  // Initialize device info and status bar
   useEffect(() => {
     initDeviceInfo();
+
+    // Show status bar and configure style
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.show();
+      StatusBar.setStyle({ style: Style.Dark });
+    }
   }, []);
 
   // Initialize data cache early in app lifecycle
