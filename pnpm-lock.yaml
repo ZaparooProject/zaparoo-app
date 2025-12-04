@@ -59,9 +59,6 @@ importers:
       '@capawesome-team/capacitor-nfc':
         specifier: 7.3.0
         version: 7.3.0(@capacitor/core@7.4.4)
-      '@capawesome/capacitor-android-edge-to-edge-support':
-        specifier: ^7.2.3
-        version: 7.2.3(@capacitor/core@7.4.4)
       '@capgo/capacitor-shake':
         specifier: ^7.2.19
         version: 7.2.19(@capacitor/core@7.4.4)
@@ -107,6 +104,9 @@ importers:
       axios:
         specifier: ^1.13.2
         version: 1.13.2
+      capacitor-plugin-safe-area:
+        specifier: ^4.0.3
+        version: 4.0.3(@capacitor/core@7.4.4)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1006,11 +1006,6 @@ packages:
 
   '@capawesome-team/capacitor-nfc@7.3.0':
     resolution: {integrity: sha512-JdiGf7mzKm6HHKOrL3No3aoCyv4LCZjCZB8ECCtxKf+Jhn1Zs/DMCjzVXYikQN4CF3qFWJyUYm7+KKOPQHIVsQ==, tarball: https://npm.pkg.github.com/download/@capawesome-team/capacitor-nfc/7.3.0/58d8ceeb088cb31db9da2981c1a404ada866d1e7}
-    peerDependencies:
-      '@capacitor/core': '>=7.0.0'
-
-  '@capawesome/capacitor-android-edge-to-edge-support@7.2.3':
-    resolution: {integrity: sha512-WtwXeU5Clg13t3SO6JvtIfJlpO+E48tHC+vNmC519zcS6GV9URl705UOvwOOvEyh6GFxAi2dHi8lj8iqIOYCdA==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -3050,6 +3045,11 @@ packages:
 
   caniuse-lite@1.0.30001757:
     resolution: {integrity: sha512-r0nnL/I28Zi/yjk1el6ilj27tKcdjLsNqAOZr0yVjWPrSQyHgKI2INaEWw21bAQSv2LXRt1XuCS/GomNpWOxsQ==}
+
+  capacitor-plugin-safe-area@4.0.3:
+    resolution: {integrity: sha512-RteQU+EcwfQFup66fOrlfYNfkGi3jSVwD8YimUAdyZlelriiqRctmKK5ONYXyt+Wd2e5y5F1A081kB9SRHGg2Q==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
 
   chai@6.2.1:
     resolution: {integrity: sha512-p4Z49OGG5W/WBCPSS/dH3jQ73kD6tiMmUM+bckNK6Jr5JHMG3k9bg/BvKR8lKmtVBKmOiuVaV2ws8s9oSbwysg==}
@@ -7108,10 +7108,6 @@ snapshots:
     dependencies:
       '@capacitor/core': 7.4.4
 
-  '@capawesome/capacitor-android-edge-to-edge-support@7.2.3(@capacitor/core@7.4.4)':
-    dependencies:
-      '@capacitor/core': 7.4.4
-
   '@capgo/capacitor-shake@7.2.19(@capacitor/core@7.4.4)':
     dependencies:
       '@capacitor/core': 7.4.4
@@ -9300,6 +9296,10 @@ snapshots:
   camelcase@5.3.1: {}
 
   caniuse-lite@1.0.30001757: {}
+
+  capacitor-plugin-safe-area@4.0.3(@capacitor/core@7.4.4):
+    dependencies:
+      '@capacitor/core': 7.4.4
 
   chai@6.2.1: {}
 

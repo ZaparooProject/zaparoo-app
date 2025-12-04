@@ -28,9 +28,6 @@ const config: CapacitorConfig = {
       skipNativeAuth: false,
       providers: ["google.com"],
     },
-    EdgeToEdge: {
-      backgroundColor: "#111928",
-    },
     StatusBar: {
       overlaysWebView: true,
     },
