@@ -434,7 +434,11 @@ function Logs() {
           )}
         </div>
       </PageFrame>
-      <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
+      <BackToTop
+        scrollContainerRef={scrollContainerRef}
+        threshold={200}
+        bottomOffset="80px"
+      />
     </>
   );
 }

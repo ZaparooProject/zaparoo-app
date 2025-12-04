@@ -603,7 +603,11 @@ function Search() {
           </div>
         </div>
       </SlideModal>
-      <BackToTop scrollContainerRef={scrollContainerRef} threshold={200} />
+      <BackToTop
+        scrollContainerRef={scrollContainerRef}
+        threshold={200}
+        bottomOffset="80px"
+      />
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
       <SystemSelector
         isOpen={systemSelectorOpen}

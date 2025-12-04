@@ -186,6 +186,8 @@ export function SlideModal(props: {
           {props.children}
         </div>
         {props.footer && <div className="flex-shrink-0">{props.footer}</div>}
+        {/* Safe area bottom padding */}
+        <div style={{ height: safeInsets.bottom }} />
         {/* eslint-enable react-hooks/refs */}
       </div>
     </>
