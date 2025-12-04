@@ -85,7 +85,7 @@ function Search() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.search.title"));
   const loaderData = Route.useLoaderData();
-  const { selectionChanged } = useHaptics();
+  const { impact } = useHaptics();
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const setGamesIndex = useStatusStore((state) => state.setGamesIndex);
   const connected = useStatusStore((state) => state.connected);
@@ -426,7 +426,7 @@ function Search() {
                 value="path"
                 checked={writeMode === "path"}
                 onChange={() => {
-                  selectionChanged();
+                  impact("light");
                   setWriteMode("path");
                 }}
                 className="sr-only"
@@ -484,7 +484,7 @@ function Search() {
                   value="zapScript"
                   checked={writeMode === "zapScript"}
                   onChange={() => {
-                    selectionChanged();
+                    impact("light");
                     setWriteMode("zapScript");
                   }}
                   className="sr-only"
