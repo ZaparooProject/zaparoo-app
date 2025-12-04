@@ -299,18 +299,18 @@ export function SystemSelector({
           onValueChange={setSelectedCategory}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="relative">
-            {/* Left gradient - only show when scrolled and overflowing */}
-            {hasOverflow && (
-              <div
-                aria-hidden="true"
-                className={`pointer-events-none absolute top-0 bottom-0 left-0 w-8 bg-gradient-to-r from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
-                  showLeftGradient ? "opacity-100" : "opacity-0"
-                }`}
-              />
-            )}
+          <div className="px-2 py-2">
+            <div className="relative overflow-hidden rounded-lg">
+              {/* Left gradient - only show when scrolled and overflowing */}
+              {hasOverflow && (
+                <div
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-8 bg-gradient-to-r from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
+                    showLeftGradient ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+              )}
 
-            <div className="px-2 py-2">
               <TabsList {...tabsProps}>
                 <TabsTrigger value="all">
                   {t("systemSelector.allCategories")}
@@ -321,17 +321,17 @@ export function SystemSelector({
                   </TabsTrigger>
                 ))}
               </TabsList>
-            </div>
 
-            {/* Right gradient - only show when more content and overflowing */}
-            {hasOverflow && (
-              <div
-                aria-hidden="true"
-                className={`pointer-events-none absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
-                  showRightGradient ? "opacity-100" : "opacity-0"
-                }`}
-              />
-            )}
+              {/* Right gradient - only show when more content and overflowing */}
+              {hasOverflow && (
+                <div
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-gradient-to-l from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
+                    showRightGradient ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+              )}
+            </div>
           </div>
 
           <TabsContent
