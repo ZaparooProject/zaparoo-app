@@ -29,6 +29,12 @@ export const runToken = async (
    * - false: Don't queue, just store token locally (proper offline scenario)
    */
   canQueueCommands = true,
+  /**
+   * Whether this action requires launching (no read-only fallback).
+   * - true: Always check Pro access, show modal if needed (e.g., shake to launch)
+   * - false: Respect launchOnScan setting, can be used as read-only (e.g., NFC/camera scan)
+   */
+  requiresLaunch = false,
 ): Promise<boolean> => {
   return new Promise((resolve) => {
     if (uid === "" && text === "") {
@@ -44,8 +50,23 @@ export const runToken = async (
     };
     setLastToken(token);
 
-    if (!sessionManager.launchOnScan) {
-      return resolve(true);
+    // For actions that require launching (like shake), always check Pro first
+    if (requiresLaunch) {
+      if (!launcherAccess && !isZapUrl(text) && !override) {
+        setProPurchaseModalOpen(true);
+        return resolve(false);
+      }
+      // requiresLaunch actions skip the launchOnScan check - they always want to launch
+    } else {
+      // For NFC/camera scans: check launchOnScan first (can be read-only)
+      if (!sessionManager.launchOnScan) {
+        return resolve(true);
+      }
+      // launchOnScan is ON, so check Pro access
+      if (!launcherAccess && !isZapUrl(text) && !override) {
+        setProPurchaseModalOpen(true);
+        return resolve(false);
+      }
     }
 
     // If not connected and can't queue commands, just store the token without launching
@@ -55,32 +76,24 @@ export const runToken = async (
     }
 
     const run = async () => {
-      // Only allow launch for Pro users, Zap URLs, or override
-      if (launcherAccess || isZapUrl(text) || override) {
-        CoreAPI.run({
-          uid: uid,
-          text: text,
-          unsafe: unsafe,
+      CoreAPI.run({
+        uid: uid,
+        text: text,
+        unsafe: unsafe,
+      })
+        .then(() => {
+          resolve(true);
         })
-          .then(() => {
-            resolve(true);
-          })
-          .catch((e) => {
-            toast.error(e.message);
-            logger.error("launch error", e, {
-              category: "api",
-              action: "runToken",
-              hasUid: !!uid,
-              textPrefix: text.slice(0, 20),
-            });
-            resolve(false);
+        .catch((e) => {
+          toast.error(e.message);
+          logger.error("launch error", e, {
+            category: "api",
+            action: "runToken",
+            hasUid: !!uid,
+            textPrefix: text.slice(0, 20),
           });
-        return;
-      } else {
-        // Non-Pro users without Zap URL should see Pro purchase modal
-        setProPurchaseModalOpen(true);
-        return resolve(false);
-      }
+          resolve(false);
+        });
     };
 
     if (!connected) {

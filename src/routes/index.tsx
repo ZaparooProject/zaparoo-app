@@ -27,27 +27,7 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useConnection } from "@/hooks/useConnection";
 
-interface LoaderData {
-  restartScan: boolean;
-  launchOnScan: boolean;
-  launcherAccess: boolean;
-  preferRemoteWriter: boolean;
-  shakeMode: "random" | "custom";
-  shakeZapscript: string;
-}
-
 export const Route = createFileRoute("/")({
-  loader: (): LoaderData => {
-    const state = usePreferencesStore.getState();
-    return {
-      restartScan: state.restartScan,
-      launchOnScan: state.launchOnScan,
-      launcherAccess: state.launcherAccess,
-      preferRemoteWriter: state.preferRemoteWriter,
-      shakeMode: state.shakeMode,
-      shakeZapscript: state.shakeZapscript,
-    };
-  },
   ssr: false,
   component: Index,
 });
@@ -56,7 +36,6 @@ function Index() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("nav.index"));
   const { announce } = useAnnouncer();
-  const initData = Route.useLoaderData();
   const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
   const cameraAvailable = usePreferencesStore((state) => state.cameraAvailable);
@@ -80,7 +59,7 @@ function Index() {
     }
   }, [nfcWriter.status, setWriteOpen]);
   const { PurchaseModal, proPurchaseModalOpen, setProPurchaseModalOpen } =
-    useProPurchase(initData.launcherAccess);
+    useProPurchase();
 
   const connected = useStatusStore((state) => state.connected);
   const playing = useStatusStore((state) => state.playing);

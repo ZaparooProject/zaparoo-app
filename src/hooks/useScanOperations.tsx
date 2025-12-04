@@ -173,14 +173,14 @@ export function useScanOperations({
 
   const handleStopConfirm = useCallback(() => {
     runToken(
-      "**launch.system:menu",
-      "**launch.system:menu",
+      "**stop",
+      "**stop",
       launcherAccess,
       connected,
       setLastToken,
       setProPurchaseModalOpen,
       false, // unsafe
-      true, // override
+      true, // override - stop works without Pro
       false, // canQueueCommands - never queue stop commands, only run when connected
     );
   }, [connected, launcherAccess, setLastToken, setProPurchaseModalOpen]);

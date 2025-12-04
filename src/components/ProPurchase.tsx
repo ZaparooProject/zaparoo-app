@@ -24,17 +24,23 @@ export const RestorePuchasesButton = () => {
       label={t("settings.app.restorePurchases")}
       className="w-full"
       onClick={async () => {
+        logger.log("Restore button clicked");
         try {
           await Purchases.restorePurchases();
           const info = await Purchases.getCustomerInfo();
+          logger.log("Restore purchases - customer info:", {
+            entitlements: info.customerInfo.entitlements,
+            activeEntitlements: Object.keys(
+              info.customerInfo.entitlements.active || {},
+            ),
+            hasTaptoLauncher:
+              !!info.customerInfo.entitlements.active?.tapto_launcher,
+          });
           if (info.customerInfo.entitlements.active.tapto_launcher) {
             setLauncherAccess(true);
-          } else {
-            setLauncherAccess(false);
+            notification("success");
+            toast.success(t("settings.app.restoreSuccess"));
           }
-          notification("success");
-          toast.success(t("settings.app.restoreSuccess"));
-          location.reload();
         } catch (e) {
           logger.error("restore purchases error", e, {
             category: "purchase",
@@ -80,7 +86,6 @@ const ProPurchaseModal = (props: {
                 .then((purchase) => {
                   logger.log("purchase success", purchase);
                   props.setProAccess(true);
-                  usePreferencesStore.getState().setLauncherAccess(true);
                   usePreferencesStore.getState().setLaunchOnScan(true);
                   props.setProPurchaseModalOpen(false);
                 })
@@ -103,17 +108,10 @@ const ProPurchaseModal = (props: {
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const useProPurchase = (initialProAccess: boolean = false) => {
-  // Initialize from preferences store if already hydrated, otherwise use provided initial value
-  const getInitialProAccess = () => {
-    const store = usePreferencesStore.getState();
-    if (store._proAccessHydrated) {
-      return store.launcherAccess;
-    }
-    return initialProAccess;
-  };
-
-  const [proAccess, setProAccess] = useState(getInitialProAccess);
+export const useProPurchase = () => {
+  // Subscribe directly to the store for reactive updates
+  const proAccess = usePreferencesStore((state) => state.launcherAccess);
+  const setProAccess = usePreferencesStore((state) => state.setLauncherAccess);
   const proPurchaseModalOpen = useStatusStore(
     (state) => state.proPurchaseModalOpen,
   );
@@ -161,10 +159,8 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
       .then((info) => {
         if (info.customerInfo.entitlements.active.tapto_launcher) {
           setProAccess(true);
-          usePreferencesStore.getState().setLauncherAccess(true);
         } else {
           setProAccess(false);
-          usePreferencesStore.getState().setLauncherAccess(false);
         }
       })
       .catch((e) => {
@@ -174,7 +170,7 @@ export const useProPurchase = (initialProAccess: boolean = false) => {
           severity: "warning",
         });
       });
-  }, []);
+  }, [setProAccess]);
 
   return {
     proAccess,

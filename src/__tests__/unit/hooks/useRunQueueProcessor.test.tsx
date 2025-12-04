@@ -152,6 +152,9 @@ describe("useRunQueueProcessor", () => {
       mockSetLastToken,
       mockSetProPurchaseModalOpen,
       false, // unsafe
+      false, // override
+      true, // canQueueCommands
+      true, // requiresLaunch
     );
   });
 
@@ -173,6 +176,9 @@ describe("useRunQueueProcessor", () => {
       mockSetLastToken,
       mockSetProPurchaseModalOpen,
       true, // unsafe should be true
+      false, // override
+      true, // canQueueCommands
+      true, // requiresLaunch
     );
   });
 
@@ -296,7 +302,10 @@ describe("useRunQueueProcessor", () => {
       true,
       mockSetLastToken,
       mockSetProPurchaseModalOpen,
-      false,
+      false, // unsafe
+      false, // override
+      true, // canQueueCommands
+      true, // requiresLaunch
     );
   });
 });

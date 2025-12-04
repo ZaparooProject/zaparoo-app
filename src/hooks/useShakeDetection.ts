@@ -8,13 +8,11 @@ import { logger } from "@/lib/logger";
 
 interface UseShakeDetectionProps {
   shakeEnabled: boolean;
-  launcherAccess: boolean;
   connected: boolean;
 }
 
 export function useShakeDetection({
   shakeEnabled,
-  launcherAccess,
   connected,
 }: UseShakeDetectionProps) {
   const setRunQueue = useStatusStore((state) => state.setRunQueue);
@@ -27,8 +25,9 @@ export function useShakeDetection({
       return;
     }
 
-    // Require Pro access, connection, and enabled setting
-    if (!shakeEnabled || !launcherAccess || !connected) {
+    // Require connection and enabled setting
+    // Pro access is checked when the shake triggers runToken via the queue processor
+    if (!shakeEnabled || !connected) {
       return;
     }
 
@@ -88,5 +87,5 @@ export function useShakeDetection({
         listener.remove();
       }
     };
-  }, [shakeEnabled, launcherAccess, connected, setRunQueue]);
+  }, [shakeEnabled, connected, setRunQueue]);
 }

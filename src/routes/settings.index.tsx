@@ -13,24 +13,13 @@ import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import i18n from "@/i18n";
 import { PageFrame } from "@/components/PageFrame";
 import { useStatusStore } from "@/lib/store";
-import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Button } from "@/components/wui/Button";
 import { ExternalIcon, NextIcon } from "@/lib/images";
 import { getDeviceAddress, setDeviceAddress, CoreAPI } from "@/lib/coreApi.ts";
 import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
 import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
 
-interface LoaderData {
-  launcherAccess: boolean;
-}
-
 export const Route = createFileRoute("/settings/")({
-  loader: (): LoaderData => {
-    const state = usePreferencesStore.getState();
-    return {
-      launcherAccess: state.launcherAccess,
-    };
-  },
   component: Settings,
 });
 
@@ -39,11 +28,9 @@ function Settings() {
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
     t("settings.title"),
   );
-  const initData = Route.useLoaderData();
 
-  const { PurchaseModal, setProPurchaseModalOpen, proAccess } = useProPurchase(
-    initData.launcherAccess,
-  );
+  const { PurchaseModal, setProPurchaseModalOpen, proAccess } =
+    useProPurchase();
 
   const connectionError = useStatusStore((state) => state.connectionError);
   // const loggedInUser = useStatusStore((state) => state.loggedInUser);
@@ -259,16 +246,6 @@ function Settings() {
               </span>
             </Link>
 
-            <Link
-              to="/settings/advanced"
-              className="flex min-h-[48px] flex-row items-center justify-between"
-            >
-              <p>{t("settings.advanced.title")}</p>
-              <span aria-hidden="true">
-                <NextIcon size="20" />
-              </span>
-            </Link>
-
             {Capacitor.isNativePlatform() && (
               <Link
                 to="/settings/accessibility"
@@ -280,6 +257,16 @@ function Settings() {
                 </span>
               </Link>
             )}
+
+            <Link
+              to="/settings/advanced"
+              className="flex min-h-[48px] flex-row items-center justify-between"
+            >
+              <p>{t("settings.advanced.title")}</p>
+              <span aria-hidden="true">
+                <NextIcon size="20" />
+              </span>
+            </Link>
 
             <Link
               to="/settings/help"

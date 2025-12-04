@@ -245,21 +245,6 @@ describe("Index Route (Home Page)", () => {
     expect(screen.getByTestId("now-playing")).toBeInTheDocument();
   });
 
-  it("should handle loader data properly", async () => {
-    // Import the actual route to test its loader
-    const { Route } = await import("../../../routes/index");
-    const result = await Route.options.loader!({} as any);
-
-    expect(result).toEqual({
-      restartScan: true, // based on mock
-      launchOnScan: true,
-      launcherAccess: true,
-      preferRemoteWriter: true,
-      shakeMode: "random",
-      shakeZapscript: "",
-    });
-  });
-
   it("should initialize keep awake functionality", async () => {
     const { KeepAwake } = await import("@capacitor-community/keep-awake");
 
@@ -511,7 +496,7 @@ describe("Index Route (Home Page)", () => {
 
     // Component that uses Pro Purchase
     const ProPurchaseComponent = () => {
-      const { PurchaseModal, setProPurchaseModalOpen } = useProPurchase(true);
+      const { PurchaseModal, setProPurchaseModalOpen } = useProPurchase();
 
       return (
         <div>

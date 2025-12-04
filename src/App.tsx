@@ -34,14 +34,12 @@ import {
 // This ensures sessionManager.launchOnScan is set correctly before processing
 function QueueProcessors() {
   const shakeEnabled = usePreferencesStore((state) => state.shakeEnabled);
-  const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
   const connected = useStatusStore((state) => state.connected);
 
   useRunQueueProcessor();
   useWriteQueueProcessor();
   useShakeDetection({
     shakeEnabled,
-    launcherAccess,
     connected,
   });
   return null;

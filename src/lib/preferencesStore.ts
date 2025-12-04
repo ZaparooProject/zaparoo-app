@@ -135,7 +135,7 @@ const DEFAULT_PREFERENCES: Omit<
   | "setAccelerometerAvailabilityHydrated"
 > = {
   restartScan: false,
-  launchOnScan: false, // Pro feature - default to false
+  launchOnScan: true, // Default on - Pro check happens at launch time
   launcherAccess: false,
   preferRemoteWriter: false,
   shakeEnabled: false,
@@ -150,8 +150,8 @@ const DEFAULT_PREFERENCES: Omit<
     error: true,
   },
   showFilenames: false,
-  hapticsEnabled: true, // Enable haptic feedback by default
-  textZoomLevel: 1.0, // Default text zoom (100%)
+  hapticsEnabled: true,
+  textZoomLevel: 1.0,
 };
 
 export const usePreferencesStore = create<PreferencesStore>()(
