@@ -23,6 +23,8 @@ This project also depends on the Capacitor plugin [Capawesome NFC](https://capaw
 
 After checking out, run `pnpm install` to install dependencies.
 
+Optionally, copy `src/firebase.json.example` to `src/firebase.json` and fill in your Firebase config to enable auth features. The app will build and run without it.
+
 | Command              | Description                                       |
 | -------------------- | ------------------------------------------------- |
 | `pnpm dev`           | Start development server                          |
