@@ -26,6 +26,7 @@ import { useScanOperations } from "@/hooks/useScanOperations";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useConnection } from "@/hooks/useConnection";
+import { logger } from "@/lib/logger";
 
 export const Route = createFileRoute("/")({
   ssr: false,
@@ -98,9 +99,24 @@ function Index() {
   }, [history, historyOpen]);
 
   useEffect(() => {
-    KeepAwake.keepAwake();
+    // KeepAwake is not supported on web builds
+    if (!Capacitor.isNativePlatform()) return;
+
+    KeepAwake.keepAwake().catch((error) => {
+      logger.error("Failed to enable keep awake", error, {
+        category: "lifecycle",
+        action: "keepAwake",
+        severity: "warning",
+      });
+    });
     return () => {
-      KeepAwake.allowSleep();
+      KeepAwake.allowSleep().catch((error) => {
+        logger.error("Failed to disable keep awake", error, {
+          category: "lifecycle",
+          action: "allowSleep",
+          severity: "warning",
+        });
+      });
     };
   }, []);
 
