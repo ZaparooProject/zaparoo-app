@@ -245,30 +245,6 @@ describe("Index Route (Home Page)", () => {
     expect(screen.getByTestId("now-playing")).toBeInTheDocument();
   });
 
-  it("should initialize keep awake functionality", async () => {
-    const { KeepAwake } = await import("@capacitor-community/keep-awake");
-
-    // Mock the component that would use KeepAwake
-    const KeepAwakeComponent = () => {
-      React.useEffect(() => {
-        KeepAwake.keepAwake();
-        return () => {
-          KeepAwake.allowSleep();
-        };
-      }, []);
-
-      return <div data-testid="keep-awake-component">Keep Awake Component</div>;
-    };
-
-    const { unmount } = render(<KeepAwakeComponent />);
-
-    expect(KeepAwake.keepAwake).toHaveBeenCalled();
-
-    unmount();
-
-    expect(KeepAwake.allowSleep).toHaveBeenCalled();
-  });
-
   it("should handle history modal opening and closing", async () => {
     const { CoreAPI } = await import("../../../lib/coreApi");
     const mockHistory = vi.mocked(CoreAPI.history);

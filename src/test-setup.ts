@@ -5,6 +5,9 @@ import { setupServer } from "msw/node";
 import { handlers } from "./test-utils/msw-handlers";
 import { CoreAPI } from "./lib/coreApi";
 
+// Define global constants that Vite normally injects
+(globalThis as any).__APP_BASE_PATH__ = "/";
+
 // Global i18n mock - returns translation keys as-is
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({

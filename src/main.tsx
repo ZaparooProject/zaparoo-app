@@ -8,11 +8,22 @@ import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { initializeApp } from "firebase/app";
 import App from "./App";
-import firebaseConfig from "./firebase.json";
 import { ThemeProvider } from "./components/theme-provider";
 import { ErrorComponent } from "./components/ErrorComponent";
+import { logger } from "./lib/logger";
 
-initializeApp(firebaseConfig);
+// Firebase config is optional - auth features will be disabled without it
+const firebaseConfigs = import.meta.glob<Record<string, string>>(
+  "./firebase.json",
+  { eager: true, import: "default" },
+);
+const firebaseConfig = firebaseConfigs["./firebase.json"];
+
+if (firebaseConfig && firebaseConfig.apiKey) {
+  initializeApp(firebaseConfig);
+} else {
+  logger.warn("Firebase config not found - auth features disabled");
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {

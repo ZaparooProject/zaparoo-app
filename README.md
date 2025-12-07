@@ -1,30 +1,46 @@
 # Zaparoo App
 
-The Zaparoo App is the primary user interface for using the [Zaparoo Core](https://github.com/ZaparooProject/zaparoo-core) service. It's a React web app built on Capacitor, which is deployed as a phone app on iOS and Android.
+[![Tests](https://github.com/ZaparooProject/zaparoo-app/actions/workflows/test.yml/badge.svg)](https://github.com/ZaparooProject/zaparoo-app/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/ZaparooProject/zaparoo-app/graph/badge.svg)](https://codecov.io/gh/ZaparooProject/zaparoo-app)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-<a href="https://apps.apple.com/us/app/zaparoo/id6480331015"><img src="https://github.com/wizzomafizzo/mrext/assets/442478/2fa137a2-7b37-4c70-9495-960032ee8590" alt="Download iOS App" title="Download iOS App" width="140"></a>
+Zaparoo App is the primary user interface for the [Zaparoo Core](https://github.com/ZaparooProject/zaparoo-core) service. It's a React web app built on Capacitor, which is deployed as a phone app on iOS/Android and embedded in Zaparoo Core as a web interface.
 
-<a href="https://play.google.com/store/apps/details?id=dev.wizzo.tapto"><img src="https://github.com/steverichey/google-play-badge-svg/raw/master/img/en_get.svg" alt="Download Android App" title="Download Android App" width="140"></a>
+<a href="https://apps.apple.com/us/app/zaparoo/id6480331015"><img src="assets/app-store-badge.png" alt="Download iOS App" title="Download iOS App" height="40"></a>&nbsp;&nbsp;<a href="https://play.google.com/store/apps/details?id=dev.wizzo.tapto"><img src="assets/google-play-badge.png" alt="Download Android App" title="Download Android App" height="40"></a>
 
-The Zaparoo App is released under the [GPLv3 license](./LICENSE) including its paid features. You're free to do with it what you like under the conditions of the license and trademarks, but we ask in good faith to avoid redistributing the built app with these paid features enabled, as they're used to support development of the project.
+Zaparoo App is released under the [GPLv3 license](./LICENSE) including its paid features. You're free to do with it what you like under the conditions of the license and trademarks, but we ask in good faith to avoid redistributing the built app with these paid features enabled, as they're used to support development of the project.
 
 ## Dependencies
 
-- Node.js (NPM)
+- [Node.js](https://nodejs.org/)
+- [pnpm](https://pnpm.io/)
 - Android Studio (if building for Android)
 - Xcode (if building for iOS)
 
-Plus all dependencies pulled in via NPM.
+This project also depends on the Capacitor plugin [Capawesome NFC](https://capawesome.io/plugins/nfc/) which requires a license. Please contact [wizzo](https://github.com/wizzomafizzo) for a development copy of this plugin or remove it from the code after checking out.
 
-This project also depends on the Capacitor plugin [Capawesome NFC](https://capawesome.io/plugins/nfc/) which is currently released under a donationware license. Please submit an issue for a development copy of this plugin or remove it from the code after checking out.
+## Development
 
-## Build
+After checking out, run `pnpm install` to install dependencies.
 
-After checking out:
+Optionally, copy `src/firebase.json.example` to `src/firebase.json` and fill in your Firebase config to enable auth features. The app will build and run without it.
 
-- Run `npm install` to install dependencies.
-- Run `npm run build && npx cap sync` to build and sync web app with mobile app code.
-- Run `npx open ios` or `npx open android` to launch the appropriate mobile app IDE.
+| Command              | Description                                       |
+| -------------------- | ------------------------------------------------- |
+| `pnpm dev`           | Start development server                          |
+| `pnpm build`         | Production build and sync with mobile platforms   |
+| `pnpm build:web`     | Production build for web only (no Capacitor sync) |
+| `pnpm build:core`    | Build for embedding in Zaparoo Core web interface |
+| `pnpm sync`          | Sync web build with mobile platforms              |
+| `pnpm test`          | Run tests                                         |
+| `pnpm test:coverage` | Run tests with coverage report                    |
+| `pnpm lint`          | Run ESLint                                        |
+| `pnpm typecheck`     | Run TypeScript type checking                      |
+
+To build and run on a mobile device:
+
+1. Run `pnpm build` to build the web app and sync with mobile app code.
+2. Run `pnpm cap open ios` or `pnpm cap open android` to launch the appropriate mobile app IDE.
 
 See the Capacitor [iOS](https://capacitorjs.com/docs/ios) and [Android](https://capacitorjs.com/docs/android) documentation for information about setting up your app IDE environment correctly if you have issues.
 
@@ -40,7 +56,7 @@ When you contribute to the app, you accept that the app contains some paid featu
 
 If you're not comfortable with this arrangement or would like to avoid overlap, Pro features are strictly defined as:
 
-- Any feature that enables the app to act as a reader. That is, any feature which triggers the `launch` Zaparoo API command namespace, excluding those which are used to preview the result of a command.
+- Any feature that enables the app to act as a reader. That is, any feature which triggers the `run` Zaparoo API command namespace, excluding those which are used to preview the result of a command.
 - Cosmetic features such as app icons and themes.
 
 All other features of the Zaparoo App are free.
@@ -54,12 +70,14 @@ All contributors to the app will be included here and in the About page of the a
 
 ### Translations
 
-- [Anime0t4ku](https://github.com/Anime0t4ku) - Japanese/日本語
-- [Phoenix](https://github.com/PhoenixFire61) - Dutch/Nederlands
-- Pink Melon - Korean/한국어
 - RetroCastle - Chinese (Simplified)/中文
+- [Anime0t4ku](https://github.com/Anime0t4ku) - Dutch/Nederlands, Japanese/日本語
+- [Phoenix](https://github.com/PhoenixFire61) - Dutch/Nederlands
 - Seexelas - French/Français
 - Ze Conehead - German/Deutsch
+- Pink Melon - Korean/한국어
+
+Translation files are located in `src/translations/` as JSON files. To add or update a translation, copy `en-US.json` as a starting point and translate the values. The filename should use the BCP 47 locale format (e.g. `de-DE.json` for German, `ja-JP.json` for Japanese).
 
 ## Trademarks
 

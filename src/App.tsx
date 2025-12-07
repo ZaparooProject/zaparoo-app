@@ -177,10 +177,7 @@ const router = createRouter({
   scrollRestoration: true,
   routeTree,
   defaultErrorComponent: ErrorComponent,
-  basepath:
-    Capacitor.isNativePlatform() || location.hostname === "zaparoo.app"
-      ? "/"
-      : "/app/",
+  basepath: __APP_BASE_PATH__,
 });
 
 declare module "@tanstack/react-router" {
