@@ -3,7 +3,6 @@ import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { KeepAwake } from "@capacitor-community/keep-awake";
 import { useNfcWriter, WriteMethod } from "@/lib/writeNfcHook.tsx";
 import { Status } from "@/lib/nfc.ts";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
@@ -26,7 +25,7 @@ import { useScanOperations } from "@/hooks/useScanOperations";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useConnection } from "@/hooks/useConnection";
-import { logger } from "@/lib/logger";
+import { useKeepAwake } from "@/hooks/useKeepAwake";
 
 export const Route = createFileRoute("/")({
   ssr: false,
@@ -98,27 +97,7 @@ function Index() {
     }
   }, [history, historyOpen]);
 
-  useEffect(() => {
-    // KeepAwake is not supported on web builds
-    if (!Capacitor.isNativePlatform()) return;
-
-    KeepAwake.keepAwake().catch((error) => {
-      logger.error("Failed to enable keep awake", error, {
-        category: "lifecycle",
-        action: "keepAwake",
-        severity: "warning",
-      });
-    });
-    return () => {
-      KeepAwake.allowSleep().catch((error) => {
-        logger.error("Failed to disable keep awake", error, {
-          category: "lifecycle",
-          action: "allowSleep",
-          severity: "warning",
-        });
-      });
-    };
-  }, []);
+  useKeepAwake();
 
   useEffect(() => {
     return () => {
