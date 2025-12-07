@@ -46,6 +46,8 @@ export default defineConfig(
       globals: {
         ...globals.browser,
         ...globals.es2022,
+        // Build-time constant from vite.config.ts
+        __APP_BASE_PATH__: "readonly",
       },
       parserOptions: {
         ecmaFeatures: {

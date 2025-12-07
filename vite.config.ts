@@ -22,6 +22,11 @@ export default defineConfig(({ command, mode }) => {
     };
   }
 
+  // Core build mode is for embedding in Zaparoo Core web UI at /app/ path
+  const isCoreBuild = mode === "core";
+  const base = isCoreBuild ? "/app/" : "/";
+  const outDir = isCoreBuild ? "dist-core" : "dist";
+
   const plugins = [
     tanstackRouter({ autoCodeSplitting: true }),
     react(),
@@ -50,8 +55,12 @@ export default defineConfig(({ command, mode }) => {
   }
 
   return {
-    base: "./",
+    base,
     server,
+    define: {
+      // Expose base path to runtime for TanStack Router basepath
+      __APP_BASE_PATH__: JSON.stringify(base),
+    },
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
@@ -59,6 +68,7 @@ export default defineConfig(({ command, mode }) => {
     },
     plugins,
     build: {
+      outDir,
       sourcemap: false,
       minify: "terser",
       terserOptions: {

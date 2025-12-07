@@ -51,9 +51,16 @@ jobs:
           VITE_GOOGLE_STORE_API: ${{ secrets.VITE_GOOGLE_STORE_API }}
           VITE_APPLE_STORE_API: ${{ secrets.VITE_APPLE_STORE_API }}
         run: pnpm build
-      - name: Package release tarball
+      - name: Production build (core)
+        env:
+          VITE_GOOGLE_STORE_API: ${{ secrets.VITE_GOOGLE_STORE_API }}
+          VITE_APPLE_STORE_API: ${{ secrets.VITE_APPLE_STORE_API }}
+        run: pnpm build:core
+      - name: Package release tarballs
         if: startsWith(github.ref, 'refs/tags/')
-        run: tar czvf zaparoo_app-web-${VERSION}.tar.gz -C ./dist .
+        run: |
+          tar czvf zaparoo_app-web-${VERSION}.tar.gz -C ./dist .
+          tar czvf zaparoo_app-web-core-${VERSION}.tar.gz -C ./dist-core .
       - name: Create release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')

@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:server": "cross-env NODE_ENV=development vite",
     "build": "tsc --noEmit -p tsconfig.build.json && vite build && pnpm exec cap sync",
+    "build:core": "tsc --noEmit -p tsconfig.build.json && vite build --mode core",
     "build:server": "tsc --noEmit -p tsconfig.build.json && vite build && cross-env NODE_ENV=development cap sync",
     "build:analyze": "tsc --noEmit -p tsconfig.build.json && vite build --mode analyze",
     "lint": "eslint .",
