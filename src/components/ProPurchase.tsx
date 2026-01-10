@@ -13,6 +13,7 @@ import { logger } from "@/lib/logger";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useStatusStore } from "@/lib/store";
 import { useHaptics } from "@/hooks/useHaptics";
+import { PurchaseCancelledError, wrapPurchaseError } from "@/lib/errors";
 import { Button } from "./wui/Button";
 
 export const RestorePuchasesButton = () => {
@@ -90,10 +91,14 @@ const ProPurchaseModal = (props: {
                   props.setProPurchaseModalOpen(false);
                 })
                 .catch((e: Error) => {
-                  if (e.message.includes("Purchase was cancelled")) {
+                  // Wrap RevenueCat errors to get typed errors
+                  const wrappedError = wrapPurchaseError(e);
+
+                  // User canceling the purchase is not an error
+                  if (wrappedError instanceof PurchaseCancelledError) {
                     return;
                   }
-                  logger.error("purchase error", e, {
+                  logger.error("purchase error", wrappedError, {
                     category: "purchase",
                     action: "purchasePackage",
                     severity: "warning",

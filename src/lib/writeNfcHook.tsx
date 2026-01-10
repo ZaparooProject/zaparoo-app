@@ -17,6 +17,7 @@ import {
 } from "./nfc";
 import { CoreAPI } from "./coreApi.ts";
 import { logger } from "./logger";
+import { NfcCancelledError, isCancellationError } from "./errors";
 
 interface WriteNfcHook {
   write: (action: WriteAction, text?: string) => Promise<void>;
@@ -257,6 +258,11 @@ export function useNfcWriter(
         })
         .catch((e: Error) => {
           setWriting(false);
+          // Don't log user-initiated cancellations as errors
+          if (e instanceof NfcCancelledError || isCancellationError(e)) {
+            setStatus(Status.Cancelled);
+            return;
+          }
           logger.error("NFC write operation failed", e, {
             category: "nfc",
             action: action,

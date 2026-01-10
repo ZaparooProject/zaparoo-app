@@ -6,6 +6,12 @@ import {
   NfcUtils,
 } from "@capawesome-team/capacitor-nfc";
 import { logger } from "./logger";
+import {
+  NfcCancelledError,
+  NfcUnformattedTagError,
+  NfcFormatError,
+  wrapNfcError,
+} from "./errors";
 
 export enum Status {
   Success,
@@ -99,9 +105,7 @@ async function withNfcSession<T>(
           "scanSessionCanceled",
           async () => {
             Nfc.stopScanSession();
-            await handleError(
-              new Error("NFC scan session was cancelled by user"),
-            );
+            await handleError(new NfcCancelledError());
           },
         );
 
@@ -190,9 +194,7 @@ export async function readTag(): Promise<Result> {
     });
   } catch (error) {
     // Handle cancellation as a successful result with Cancelled status
-    // NOTE: This relies on error message string matching, which is fragile.
-    // If the native layer changes error messages, cancellations may be treated as exceptions.
-    if (error instanceof Error && error.message.includes("cancelled")) {
+    if (error instanceof NfcCancelledError) {
       return {
         status: Status.Cancelled,
         info: {
@@ -205,21 +207,19 @@ export async function readTag(): Promise<Result> {
   }
 }
 
-function isUnformattedTagError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  const msg = error.message.toLowerCase();
-  return (
-    msg.includes("not yet been formatted as ndef") ||
-    msg.includes("tag is not ndef") ||
-    msg.includes("not ndef formatted")
-  );
-}
-
 /**
  * Checks if an error is related to NFC tag formatting failures.
  * Used to show user-friendly error messages in the UI.
  */
 export function isFormatRelatedError(error: unknown): boolean {
+  // Check typed error first
+  if (
+    error instanceof NfcFormatError ||
+    error instanceof NfcUnformattedTagError
+  ) {
+    return true;
+  }
+  // Fallback for native plugin errors we haven't wrapped yet
   if (!(error instanceof Error)) return false;
   const msg = error.message.toLowerCase();
   return (
@@ -241,8 +241,9 @@ export async function writeTag(text: string): Promise<Result> {
         await Nfc.write({ message: { records: [record] } });
         logger.log("write success");
       } catch (writeError) {
+        const wrappedError = wrapNfcError(writeError);
         if (
-          isUnformattedTagError(writeError) &&
+          wrappedError instanceof NfcUnformattedTagError &&
           Capacitor.getPlatform() === "android"
         ) {
           logger.log("Tag not NDEF formatted, auto-formatting...");
@@ -309,7 +310,7 @@ export async function writeTag(text: string): Promise<Result> {
       };
     });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("cancelled")) {
+    if (error instanceof NfcCancelledError) {
       return {
         status: Status.Cancelled,
         info: {
@@ -336,7 +337,7 @@ export async function formatTag(): Promise<Result> {
       };
     });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("cancelled")) {
+    if (error instanceof NfcCancelledError) {
       return {
         status: Status.Cancelled,
         info: {
@@ -363,7 +364,7 @@ export async function eraseTag(): Promise<Result> {
       };
     });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("cancelled")) {
+    if (error instanceof NfcCancelledError) {
       return {
         status: Status.Cancelled,
         info: {
@@ -389,7 +390,7 @@ export async function readRaw(): Promise<Result> {
       };
     });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("cancelled")) {
+    if (error instanceof NfcCancelledError) {
       return {
         status: Status.Cancelled,
         info: {
@@ -416,7 +417,7 @@ export async function makeReadOnly(): Promise<Result> {
       };
     });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("cancelled")) {
+    if (error instanceof NfcCancelledError) {
       return {
         status: Status.Cancelled,
         info: {
