@@ -995,9 +995,13 @@ class CoreApi {
   async hasWriteCapableReader(): Promise<boolean> {
     try {
       const response = await this.readers();
+      if (!response?.readers || !Array.isArray(response.readers)) {
+        return false;
+      }
       return response.readers.some(
         (reader) =>
           reader.connected &&
+          Array.isArray(reader.capabilities) &&
           reader.capabilities.some((capability) =>
             capability.toLowerCase().includes("write"),
           ),
