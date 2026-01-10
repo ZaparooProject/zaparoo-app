@@ -1,10 +1,10 @@
+import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import {
   Nfc,
   NfcTag,
   NfcTagScannedEvent,
   NfcUtils,
 } from "@capawesome-team/capacitor-nfc";
-import type { PluginListenerHandle } from "@capacitor/core";
 import { logger } from "./logger";
 
 export enum Status {
@@ -205,13 +205,101 @@ export async function readTag(): Promise<Result> {
   }
 }
 
+function isUnformattedTagError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const msg = error.message.toLowerCase();
+  return (
+    msg.includes("not yet been formatted as ndef") ||
+    msg.includes("tag is not ndef") ||
+    msg.includes("not ndef formatted")
+  );
+}
+
+/**
+ * Checks if an error is related to NFC tag formatting failures.
+ * Used to show user-friendly error messages in the UI.
+ */
+export function isFormatRelatedError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const msg = error.message.toLowerCase();
+  return (
+    msg.includes("unknown error") ||
+    msg.includes("an unknown error has occurred") ||
+    msg.includes("only one tagtechnology") ||
+    msg.includes("format")
+  );
+}
+
 export async function writeTag(text: string): Promise<Result> {
   const record = createNdefTextRecord(text);
+  const maxFormatRetries = 3;
+  const formatRetryDelayMs = 500;
 
   try {
     return await withNfcSession<Result>(async (event) => {
-      await Nfc.write({ message: { records: [record] } });
-      logger.log("write success");
+      try {
+        await Nfc.write({ message: { records: [record] } });
+        logger.log("write success");
+      } catch (writeError) {
+        if (
+          isUnformattedTagError(writeError) &&
+          Capacitor.getPlatform() === "android"
+        ) {
+          logger.log("Tag not NDEF formatted, auto-formatting...");
+          let lastFormatError: unknown = null;
+
+          for (let attempt = 1; attempt <= maxFormatRetries; attempt++) {
+            try {
+              // Before retrying, try to close any stale TagTechnology connection.
+              // This may help in some cases, though it's not guaranteed due to
+              // a bug in the capacitor-nfc plugin where format() doesn't properly
+              // clean up its internal NdefFormatable connection on failure.
+              if (attempt > 1) {
+                try {
+                  await Nfc.close();
+                } catch {
+                  // Ignore close errors - connection may already be closed
+                }
+                await new Promise((resolve) =>
+                  setTimeout(resolve, formatRetryDelayMs),
+                );
+              }
+
+              await Nfc.format();
+              await Nfc.write({ message: { records: [record] } });
+              logger.log("Write after auto-format successful");
+              return {
+                status: Status.Success,
+                info: {
+                  rawTag: event.nfcTag,
+                  tag: readNfcEvent(event),
+                },
+              };
+            } catch (formatError) {
+              lastFormatError = formatError;
+              logger.log(
+                `Format attempt ${attempt} failed: ${formatError instanceof Error ? formatError.message : String(formatError)}`,
+              );
+            }
+          }
+
+          // All retries exhausted - log technical error for debugging
+          logger.error(
+            "NFC format/write failed after retries",
+            lastFormatError,
+            {
+              category: "nfc",
+              action: "writeTag",
+              stack:
+                lastFormatError instanceof Error
+                  ? lastFormatError.stack
+                  : undefined,
+            },
+          );
+          throw lastFormatError;
+        }
+        throw writeError;
+      }
       return {
         status: Status.Success,
         info: {

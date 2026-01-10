@@ -30,7 +30,10 @@ const {
   mockFormat,
   mockErase,
   mockMakeReadOnly,
+  mockConnect,
+  mockClose,
   mockIsSupported,
+  mockGetPlatform,
 } = vi.hoisted(() => {
   const state: MockNfcState = {
     nfcTagScannedCallback: null,
@@ -70,7 +73,10 @@ const {
     mockFormat: vi.fn().mockResolvedValue(undefined),
     mockErase: vi.fn().mockResolvedValue(undefined),
     mockMakeReadOnly: vi.fn().mockResolvedValue(undefined),
+    mockConnect: vi.fn().mockResolvedValue(undefined),
+    mockClose: vi.fn().mockResolvedValue(undefined),
     mockIsSupported: vi.fn().mockResolvedValue({ nfc: true }),
+    mockGetPlatform: vi.fn().mockReturnValue("android"),
   };
 });
 
@@ -92,11 +98,22 @@ vi.mock("@capawesome-team/capacitor-nfc", () => {
       format: mockFormat,
       erase: mockErase,
       makeReadOnly: mockMakeReadOnly,
+      connect: mockConnect,
+      close: mockClose,
       isSupported: mockIsSupported,
     },
     NfcUtils: MockNfcUtils,
+    NfcTagTechType: {
+      NdefFormatable: "NDEF_FORMATABLE",
+    },
   };
 });
+
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    getPlatform: mockGetPlatform,
+  },
+}));
 
 vi.mock("../../../lib/logger", () => ({
   logger: {
@@ -135,7 +152,19 @@ describe("nfc", () => {
     mockFormat.mockClear();
     mockErase.mockClear();
     mockMakeReadOnly.mockClear();
+    mockConnect.mockClear();
+    mockClose.mockClear();
     mockIsSupported.mockClear();
+    mockGetPlatform.mockClear();
+
+    // Reset mocks to default resolved values (important for tests that override them)
+    mockWrite.mockResolvedValue(undefined);
+    mockFormat.mockResolvedValue(undefined);
+    mockConnect.mockResolvedValue(undefined);
+    mockClose.mockResolvedValue(undefined);
+
+    // Reset default platform to Android
+    mockGetPlatform.mockReturnValue("android");
 
     // Reset sessionManager state to test defaults
     sessionManager.setShouldRestart(false);
@@ -421,6 +450,151 @@ describe("nfc", () => {
       mockState.listenerHandles.forEach((handle) => {
         expect(handle.remove).toHaveBeenCalled();
       });
+    });
+
+    it("should auto-format unformatted tag on Android and retry write", async () => {
+      mockWrite.mockRejectedValueOnce(
+        new Error("The NFC tag has not yet been formatted as NDEF."),
+      );
+
+      const writePromise = writeTag("test content");
+
+      await vi.waitFor(() => {
+        expect(mockState.nfcTagScannedCallback).not.toBeNull();
+      });
+
+      mockState.nfcTagScannedCallback?.({
+        nfcTag: { id: [1, 2, 3, 4] },
+      } as NfcTagScannedEvent);
+
+      const result = await writePromise;
+
+      expect(mockFormat).toHaveBeenCalled();
+      expect(mockWrite).toHaveBeenCalledTimes(2);
+      expect(result.status).toBe(Status.Success);
+    });
+
+    it("should not auto-format on iOS", async () => {
+      mockGetPlatform.mockReturnValue("ios");
+      mockWrite.mockRejectedValueOnce(
+        new Error("The NFC tag has not yet been formatted as NDEF."),
+      );
+
+      const writePromise = writeTag("test content");
+
+      await vi.waitFor(() => {
+        expect(mockState.nfcTagScannedCallback).not.toBeNull();
+      });
+
+      mockState.nfcTagScannedCallback?.({
+        nfcTag: { id: [1, 2, 3, 4] },
+      } as NfcTagScannedEvent);
+
+      await expect(writePromise).rejects.toThrow(
+        "The NFC tag has not yet been formatted as NDEF.",
+      );
+      expect(mockFormat).not.toHaveBeenCalled();
+    });
+
+    it("should propagate non-formatting errors", async () => {
+      mockWrite.mockRejectedValueOnce(new Error("Tag is read-only"));
+
+      const writePromise = writeTag("test content");
+
+      await vi.waitFor(() => {
+        expect(mockState.nfcTagScannedCallback).not.toBeNull();
+      });
+
+      mockState.nfcTagScannedCallback?.({
+        nfcTag: { id: [1, 2, 3, 4] },
+      } as NfcTagScannedEvent);
+
+      await expect(writePromise).rejects.toThrow("Tag is read-only");
+      expect(mockFormat).not.toHaveBeenCalled();
+    });
+
+    it("should propagate format errors after retries exhausted", async () => {
+      mockWrite.mockRejectedValue(
+        new Error("The NFC tag has not yet been formatted as NDEF."),
+      );
+      // Reject all 3 retry attempts
+      mockFormat.mockRejectedValue(new Error("Format failed"));
+
+      const writePromise = writeTag("test content");
+
+      await vi.waitFor(() => {
+        expect(mockState.nfcTagScannedCallback).not.toBeNull();
+      });
+
+      mockState.nfcTagScannedCallback?.({
+        nfcTag: { id: [1, 2, 3, 4] },
+      } as NfcTagScannedEvent);
+
+      await expect(writePromise).rejects.toThrow("Format failed");
+      // Verify all 3 retries were attempted
+      expect(mockFormat).toHaveBeenCalledTimes(3);
+    });
+
+    it("should retry on unknown error during format and succeed", async () => {
+      // Initial write fails with unformatted error, triggering auto-format
+      mockWrite
+        .mockRejectedValueOnce(
+          new Error("The NFC tag has not yet been formatted as NDEF."),
+        )
+        .mockResolvedValueOnce(undefined); // Write succeeds after second format attempt
+      // First format attempt fails with "unknown error", second succeeds
+      mockFormat
+        .mockRejectedValueOnce(new Error("An unknown error has occurred."))
+        .mockResolvedValueOnce(undefined);
+
+      const writePromise = writeTag("test content");
+
+      await vi.waitFor(() => {
+        expect(mockState.nfcTagScannedCallback).not.toBeNull();
+      });
+
+      mockState.nfcTagScannedCallback?.({
+        nfcTag: { id: [1, 2, 3, 4] },
+      } as NfcTagScannedEvent);
+
+      const result = await writePromise;
+
+      expect(mockFormat).toHaveBeenCalledTimes(2);
+      // Write is called: once initially (fails), then once after successful format
+      expect(mockWrite).toHaveBeenCalledTimes(2);
+      expect(result.status).toBe(Status.Success);
+    });
+
+    it("should call Nfc.close() before retrying format to release stale connection", async () => {
+      // Initial write fails with unformatted error
+      mockWrite
+        .mockRejectedValueOnce(
+          new Error("The NFC tag has not yet been formatted as NDEF."),
+        )
+        .mockResolvedValueOnce(undefined); // Write succeeds after second format attempt
+      // First format attempt fails with TagTechnology error, second succeeds
+      mockFormat
+        .mockRejectedValueOnce(
+          new Error("Only one TagTechnology can be connected at a time."),
+        )
+        .mockResolvedValueOnce(undefined);
+
+      const writePromise = writeTag("test content");
+
+      await vi.waitFor(() => {
+        expect(mockState.nfcTagScannedCallback).not.toBeNull();
+      });
+
+      mockState.nfcTagScannedCallback?.({
+        nfcTag: { id: [1, 2, 3, 4] },
+      } as NfcTagScannedEvent);
+
+      const result = await writePromise;
+
+      // Nfc.close() is called before the second attempt
+      expect(mockClose).toHaveBeenCalledTimes(1);
+      expect(mockFormat).toHaveBeenCalledTimes(2);
+      expect(result.status).toBe(Status.Success);
     });
   });
 

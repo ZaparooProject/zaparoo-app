@@ -13,6 +13,7 @@ import {
   writeTag,
   Result,
   Status,
+  isFormatRelatedError,
 } from "./nfc";
 import { CoreAPI } from "./coreApi.ts";
 import { logger } from "./logger";
@@ -265,6 +266,11 @@ export function useNfcWriter(
           if (Capacitor.getPlatform() === "ios") {
             showMs += 4000;
           }
+          // Use user-friendly message for format-related errors on Android
+          const userMessage =
+            Capacitor.getPlatform() === "android" && isFormatRelatedError(e)
+              ? t("spinner.formatErrorRetry")
+              : e.message;
           toast.error(
             (to) => (
               // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
@@ -273,7 +279,7 @@ export function useNfcWriter(
                 onClick={() => toast.dismiss(to.id)}
               >
                 <span>{toastFailed}</span>
-                <span>{e.message}</span>
+                <span>{userMessage}</span>
               </span>
             ),
             {
