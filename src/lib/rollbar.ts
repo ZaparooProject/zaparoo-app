@@ -174,6 +174,7 @@ export const rollbarConfig: Rollbar.Configuration = {
       // User-initiated (fallback for external libraries)
       "canceled",
       "cancelled",
+      "scan canceled", // MLKit barcode scanner cancellation message
       "aborted",
       // Connection/network errors - expected when device is off/unreachable
       "websocket",
