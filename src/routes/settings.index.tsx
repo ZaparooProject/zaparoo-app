@@ -8,6 +8,7 @@ import { Preferences } from "@capacitor/preferences";
 import { TrashIcon, Check } from "lucide-react";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { SlideModal } from "@/components/SlideModal.tsx";
+import { NetworkScanModal } from "@/components/NetworkScanModal";
 import { Button as SCNButton } from "@/components/ui/button";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import i18n from "@/i18n";
@@ -48,6 +49,7 @@ function Settings() {
 
   const [address, setAddress] = useState(getDeviceAddress());
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -96,6 +98,7 @@ function Settings() {
               connectionError={connectionError}
               hasDeviceHistory={deviceHistory.length > 0}
               onHistoryClick={() => setHistoryOpen(true)}
+              onScanClick={() => setScanOpen(true)}
             />
           </div>
 
@@ -136,6 +139,13 @@ function Settings() {
                 ))}
             </div>
           </SlideModal>
+
+          {/* Network Scan Modal */}
+          <NetworkScanModal
+            isOpen={scanOpen}
+            onClose={() => setScanOpen(false)}
+            onSelectDevice={handleDeviceAddressChange}
+          />
 
           <MediaDatabaseCard />
 

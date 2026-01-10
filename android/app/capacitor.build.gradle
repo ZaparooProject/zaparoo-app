@@ -27,6 +27,7 @@ dependencies {
     implementation project(':capgo-capacitor-shake')
     implementation project(':revenuecat-purchases-capacitor')
     implementation project(':capacitor-plugin-safe-area')
+    implementation project(':capacitor-zeroconf')
 
 }
 

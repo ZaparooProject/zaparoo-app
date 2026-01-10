@@ -58,6 +58,7 @@
     "@uidotdev/usehooks": "^2.4.1",
     "axios": "^1.13.2",
     "capacitor-plugin-safe-area": "^4.0.3",
+    "capacitor-zeroconf": "^4.0.0",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",

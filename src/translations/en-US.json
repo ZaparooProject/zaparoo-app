@@ -304,6 +304,13 @@
       "getApp": "Get the Zaparoo App",
       "language": "Language",
       "deviceHistory": "Change device",
+      "networkScan": {
+        "title": "Find Devices",
+        "searching": "Searching for devices...",
+        "stillSearching": "Still searching...",
+        "noDevices": "No devices found",
+        "version": "v{{version}}"
+      },
       "connectionFailed": "Unable to connect to device",
       "notConnected": "Not connected",
       "enterDeviceAddress": "Enter a device address",
@@ -517,7 +524,7 @@
       },
       "deviceAddress": {
         "title": "Connect Your Device",
-        "text": "Enter your Zaparoo Core device IP address here. You can find this on your device's display or in your router settings."
+        "text": "Tap the search icon to find Zaparoo devices on your network, or enter a device IP address manually if needed."
       },
       "mediaDatabase": {
         "title": "Update Media Library",

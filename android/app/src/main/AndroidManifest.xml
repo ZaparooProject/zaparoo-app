@@ -62,4 +62,7 @@
 
     <!-- To get access to the accelerometer for shake detection. -->
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+
+    <!-- Required for mDNS/Zeroconf network discovery (capacitor-zeroconf plugin) -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
 </manifest>

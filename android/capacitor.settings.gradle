@@ -55,3 +55,6 @@ project(':revenuecat-purchases-capacitor').projectDir = new File('../node_module
 
 include ':capacitor-plugin-safe-area'
 project(':capacitor-plugin-safe-area').projectDir = new File('../node_modules/.pnpm/capacitor-plugin-safe-area@4.0.3_@capacitor+core@7.4.4/node_modules/capacitor-plugin-safe-area/android')
+
+include ':capacitor-zeroconf'
+project(':capacitor-zeroconf').projectDir = new File('../node_modules/.pnpm/capacitor-zeroconf@4.0.0_@capacitor+core@7.4.4_bonjour@3.5.0/node_modules/capacitor-zeroconf/android')
