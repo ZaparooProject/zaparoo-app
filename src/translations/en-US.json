@@ -386,6 +386,8 @@
         "refresh": "Refresh",
         "filters": "Filters",
         "download": "Download",
+        "share": "Share",
+        "shareTitle": "Zaparoo Core Logs",
         "copy": "Copy to Clipboard",
         "filename": "Filename",
         "fileSize": "File Size",

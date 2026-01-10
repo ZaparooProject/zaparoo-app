@@ -35,6 +35,9 @@ importers:
       '@capacitor/device':
         specifier: ^7.0.2
         version: 7.0.2(@capacitor/core@7.4.4)
+      '@capacitor/filesystem':
+        specifier: ^7.1.6
+        version: 7.1.6(@capacitor/core@7.4.4)
       '@capacitor/haptics':
         specifier: ^7.0.2
         version: 7.0.2(@capacitor/core@7.4.4)
@@ -969,6 +972,11 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
+  '@capacitor/filesystem@7.1.6':
+    resolution: {integrity: sha512-7NGrmp9v/ejR2C2QKr66na5IJMCBH78TEX2AwqQyq2MCR3yM2PsWvFPAnNOYlBHPgBzzxEC+sjPRBk1bDsXJvg==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
+
   '@capacitor/haptics@7.0.2':
     resolution: {integrity: sha512-vqfeEM6s2zMgLjpITCTUIy7P/hadq/Gr5E/RClFgMJPB41Y5FsqOKD+j85/uwh8N2cf/aWaPeXUmjnTzJbEB2g==}
     peerDependencies:
@@ -998,6 +1006,9 @@ packages:
     resolution: {integrity: sha512-JyRpVnKwHij9hgPWolF6PK+HT3e2HSPjN11/h2OmKxq8GAdPGARFLv+97eZl0pvuvm0Kka/LpiLb5whXISBg7Q==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
+
+  '@capacitor/synapse@1.0.4':
+    resolution: {integrity: sha512-/C1FUo8/OkKuAT4nCIu/34ny9siNHr9qtFezu4kxm6GY1wNFxrCFWjfYx5C1tUhVGz3fxBABegupkpjXvjCHrw==}
 
   '@capacitor/text-zoom@7.0.2':
     resolution: {integrity: sha512-FrWrIWGjq7HDmlChdSxp9A05RLjtrMFNRdNOBYdyW47efnYpFy8stp51Ks/2T5jAov1J4Eqc493AHBh4orhm0Q==}
@@ -7076,6 +7087,11 @@ snapshots:
     dependencies:
       '@capacitor/core': 7.4.4
 
+  '@capacitor/filesystem@7.1.6(@capacitor/core@7.4.4)':
+    dependencies:
+      '@capacitor/core': 7.4.4
+      '@capacitor/synapse': 1.0.4
+
   '@capacitor/haptics@7.0.2(@capacitor/core@7.4.4)':
     dependencies:
       '@capacitor/core': 7.4.4
@@ -7099,6 +7115,8 @@ snapshots:
   '@capacitor/status-bar@7.0.3(@capacitor/core@7.4.4)':
     dependencies:
       '@capacitor/core': 7.4.4
+
+  '@capacitor/synapse@1.0.4': {}
 
   '@capacitor/text-zoom@7.0.2(@capacitor/core@7.4.4)':
     dependencies:
