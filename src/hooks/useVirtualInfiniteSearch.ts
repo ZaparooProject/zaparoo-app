@@ -55,7 +55,7 @@ export function useVirtualInfiniteSearch({
 
     const items: SearchResultGame[] = [];
     searchQuery.data.pages.forEach((page) => {
-      items.push(...page.results);
+      items.push(...(page.results ?? []));
     });
 
     return items;
