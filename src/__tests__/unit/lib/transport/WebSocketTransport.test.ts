@@ -101,6 +101,46 @@ describe("WebSocketTransport", () => {
       expect(transport.state).toBe("disconnected");
       expect(stateChanges).not.toContain("connecting");
     });
+
+    it("should provide user-friendly error for invalid URL (e.g., invalid IP address)", () => {
+      // Mock WebSocket class that throws DOMException for invalid URL (simulating browser behavior)
+      const mockError = new DOMException(
+        "The string did not match the expected pattern.",
+        "SyntaxError",
+      );
+
+      class MockWebSocketThatThrows {
+        constructor() {
+          throw mockError;
+        }
+      }
+      vi.stubGlobal("WebSocket", MockWebSocketThatThrows);
+
+      try {
+        const transport = new WebSocketTransport({
+          deviceId: "192.168.1.286",
+          url: "ws://192.168.1.286:7497/api/v0.1",
+        });
+
+        const onError = vi.fn();
+        // Set handlers BEFORE connecting
+        transport.setEventHandlers({ onError });
+
+        transport.connect();
+
+        // Should call onError with user-friendly message
+        expect(onError).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: "Invalid device address format",
+          }),
+        );
+
+        transport.destroy();
+      } finally {
+        // Always restore the original WebSocket
+        vi.unstubAllGlobals();
+      }
+    });
   });
 
   describe("disconnect and destroy", () => {

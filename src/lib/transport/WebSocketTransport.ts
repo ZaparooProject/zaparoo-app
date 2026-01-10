@@ -219,10 +219,25 @@ export class WebSocketTransport implements Transport {
       this.setupEventHandlers();
       this.startConnectionTimeout();
     } catch (error) {
-      logger.error(
-        `[Transport:${this.deviceId}] Failed to create WebSocket:`,
-        error,
-      );
+      // Check if this is an invalid URL error (e.g., invalid IP address like 192.168.1.286)
+      // These are user input errors, not application bugs, so we use warn instead of error
+      // to avoid polluting error tracking with non-actionable reports
+      const isInvalidUrlError =
+        error instanceof DOMException &&
+        error.message.includes("did not match the expected pattern");
+
+      if (isInvalidUrlError) {
+        logger.warn(
+          `[Transport:${this.deviceId}] Invalid device address format`,
+        );
+        // Provide a user-friendly error message
+        this.handlers.onError?.(new Error("Invalid device address format"));
+      } else {
+        logger.error(
+          `[Transport:${this.deviceId}] Failed to create WebSocket:`,
+          error,
+        );
+      }
       this.handleConnectionError();
     }
   }
