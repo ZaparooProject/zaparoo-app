@@ -41,7 +41,7 @@ function NfcUtils() {
     await nfcWriter.end();
   };
 
-  // Handle NFC operation completion - cleanup and tab switching
+  // Handle NFC operation completion - switch to read tab to show results
   useEffect(() => {
     const justCompleted =
       prevStatusRef.current === null && nfcWriter.status !== null;
@@ -49,9 +49,6 @@ function NfcUtils() {
 
     if (justCompleted) {
       logger.log(JSON.stringify(nfcWriter.result?.info.rawTag));
-
-      // Clean up the nfcWriter state after operation completes
-      nfcWriter.end();
 
       // Switch to read tab after operation to show results
       if (nfcWriter.result?.info?.tag || nfcWriter.result?.info?.rawTag) {
