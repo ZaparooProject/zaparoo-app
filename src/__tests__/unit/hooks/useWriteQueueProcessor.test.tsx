@@ -85,6 +85,7 @@ describe("useWriteQueueProcessor", () => {
       if (typeof selector === "function") {
         return selector({
           preferRemoteWriter: false,
+          nfcAvailable: true,
         });
       }
       return false;
@@ -96,6 +97,7 @@ describe("useWriteQueueProcessor", () => {
         writeQueue: "",
         setWriteQueue: mockSetWriteQueue,
         setWriteOpen: mockSetWriteOpen,
+        connected: true,
       };
       if (typeof selector === "function") {
         return selector(mockState);
@@ -127,12 +129,23 @@ describe("useWriteQueueProcessor", () => {
   });
 
   it("should process write queue when NFC is available on native platform", async () => {
-    // Setup: queue has content
+    // Setup: queue has content, nfcAvailable is true (cached from hydration)
+    vi.mocked(usePreferencesStore).mockImplementation((selector: any) => {
+      if (typeof selector === "function") {
+        return selector({
+          preferRemoteWriter: false,
+          nfcAvailable: true,
+        });
+      }
+      return false;
+    });
+
     vi.mocked(useStatusStore).mockImplementation((selector: any) => {
       const mockState = {
         writeQueue: "test-write-content",
         setWriteQueue: mockSetWriteQueue,
         setWriteOpen: mockSetWriteOpen,
+        connected: true,
       };
       if (typeof selector === "function") {
         return selector(mockState);
@@ -157,15 +170,27 @@ describe("useWriteQueueProcessor", () => {
     );
   });
 
-  it("should check remote writers when NFC unavailable", async () => {
-    vi.mocked(Nfc.isAvailable).mockResolvedValue({ nfc: false, hce: false });
+  it("should check remote writers when NFC unavailable and connected", async () => {
     vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
 
+    // NFC not available (cached)
+    vi.mocked(usePreferencesStore).mockImplementation((selector: any) => {
+      if (typeof selector === "function") {
+        return selector({
+          preferRemoteWriter: false,
+          nfcAvailable: false,
+        });
+      }
+      return false;
+    });
+
+    // Connected to device
     vi.mocked(useStatusStore).mockImplementation((selector: any) => {
       const mockState = {
         writeQueue: "test-content",
         setWriteQueue: mockSetWriteQueue,
         setWriteOpen: mockSetWriteOpen,
+        connected: true,
       };
       if (typeof selector === "function") {
         return selector(mockState);
@@ -187,14 +212,26 @@ describe("useWriteQueueProcessor", () => {
   });
 
   it("should show error when no write methods available", async () => {
-    vi.mocked(Nfc.isAvailable).mockResolvedValue({ nfc: false, hce: false });
     vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(false);
 
+    // NFC not available (cached)
+    vi.mocked(usePreferencesStore).mockImplementation((selector: any) => {
+      if (typeof selector === "function") {
+        return selector({
+          preferRemoteWriter: false,
+          nfcAvailable: false,
+        });
+      }
+      return false;
+    });
+
+    // Connected but no remote writer
     vi.mocked(useStatusStore).mockImplementation((selector: any) => {
       const mockState = {
         writeQueue: "test-content",
         setWriteQueue: mockSetWriteQueue,
         setWriteOpen: mockSetWriteOpen,
+        connected: true,
       };
       if (typeof selector === "function") {
         return selector(mockState);
@@ -216,15 +253,27 @@ describe("useWriteQueueProcessor", () => {
     expect(mockNfcWriter.write).not.toHaveBeenCalled();
   });
 
-  it("should check remote writers on non-native platforms", async () => {
+  it("should check remote writers on non-native platforms when connected", async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
     vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
+
+    // On web, nfcAvailable doesn't matter but we need connected
+    vi.mocked(usePreferencesStore).mockImplementation((selector: any) => {
+      if (typeof selector === "function") {
+        return selector({
+          preferRemoteWriter: false,
+          nfcAvailable: false,
+        });
+      }
+      return false;
+    });
 
     vi.mocked(useStatusStore).mockImplementation((selector: any) => {
       const mockState = {
         writeQueue: "web-content",
         setWriteQueue: mockSetWriteQueue,
         setWriteOpen: mockSetWriteOpen,
+        connected: true,
       };
       if (typeof selector === "function") {
         return selector(mockState);
@@ -249,11 +298,22 @@ describe("useWriteQueueProcessor", () => {
     // No active status
     mockNfcWriter.status = null;
 
+    vi.mocked(usePreferencesStore).mockImplementation((selector: any) => {
+      if (typeof selector === "function") {
+        return selector({
+          preferRemoteWriter: false,
+          nfcAvailable: true,
+        });
+      }
+      return false;
+    });
+
     vi.mocked(useStatusStore).mockImplementation((selector: any) => {
       const mockState = {
         writeQueue: "test-content",
         setWriteQueue: mockSetWriteQueue,
         setWriteOpen: mockSetWriteOpen,
+        connected: true,
       };
       if (typeof selector === "function") {
         return selector(mockState);
@@ -277,5 +337,47 @@ describe("useWriteQueueProcessor", () => {
     const { result } = renderHook(() => useWriteQueueProcessor());
 
     expect(result.current.reset).toBeInstanceOf(Function);
+  });
+
+  it("should NOT call remote writer API when not connected (avoids timeout)", async () => {
+    vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
+
+    // NFC not available
+    vi.mocked(usePreferencesStore).mockImplementation((selector: any) => {
+      if (typeof selector === "function") {
+        return selector({
+          preferRemoteWriter: false,
+          nfcAvailable: false,
+        });
+      }
+      return false;
+    });
+
+    // NOT connected - this should skip the API call
+    vi.mocked(useStatusStore).mockImplementation((selector: any) => {
+      const mockState = {
+        writeQueue: "test-content",
+        setWriteQueue: mockSetWriteQueue,
+        setWriteOpen: mockSetWriteOpen,
+        connected: false,
+      };
+      if (typeof selector === "function") {
+        return selector(mockState);
+      }
+      return mockState;
+    });
+
+    renderHook(() => useWriteQueueProcessor());
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+      await vi.runAllTimersAsync();
+    });
+
+    // Should NOT call the API when not connected (prevents timeout on cold start)
+    expect(CoreAPI.hasWriteCapableReader).not.toHaveBeenCalled();
+    // Should show error since no write method is available
+    expect(toast.error).toHaveBeenCalled();
+    expect(mockNfcWriter.write).not.toHaveBeenCalled();
   });
 });
