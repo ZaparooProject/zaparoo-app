@@ -56,6 +56,7 @@ export function DeviceConnectionCard({
             setValue={setAddress}
             saveValue={onAddressChange}
             saveDisabled={address === savedAddress}
+            autoComplete="off"
             onKeyUp={(e) => {
               if (e.key === "Enter" && address !== savedAddress) {
                 onAddressChange(address);

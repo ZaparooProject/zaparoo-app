@@ -21,6 +21,7 @@ export function TextInput(props: {
   ref?: React.RefObject<HTMLInputElement | null>;
   /** Error message to display below the input */
   error?: string;
+  autoComplete?: string;
 }) {
   const inputId = useId();
   const errorId = useId();
@@ -79,6 +80,7 @@ export function TextInput(props: {
             disabled={props.disabled}
             placeholder={props.placeholder}
             value={value}
+            autoComplete={props.autoComplete}
             onChange={(e) => {
               setValue(e.target.value);
               setModified(true);
