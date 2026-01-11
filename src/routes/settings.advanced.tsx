@@ -5,6 +5,7 @@ import { Capacitor } from "@capacitor/core";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
+import { SettingHelp } from "@/components/wui/SettingHelp";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -71,7 +72,15 @@ function AdvancedSettings() {
     >
       <div className="flex flex-col gap-5">
         <ToggleSwitch
-          label={t("settings.advanced.debugLogging")}
+          label={
+            <span className="flex items-center">
+              {t("settings.advanced.debugLogging")}
+              <SettingHelp
+                title={t("settings.advanced.debugLogging")}
+                description={t("settings.advanced.debugLoggingHelp")}
+              />
+            </span>
+          }
           value={data?.debugLogging ?? false}
           setValue={(v) => update.mutate({ debugLogging: v })}
           disabled={!connected}
@@ -79,7 +88,15 @@ function AdvancedSettings() {
         />
 
         <ToggleSwitch
-          label={t("settings.advanced.showFilenames")}
+          label={
+            <span className="flex items-center">
+              {t("settings.advanced.showFilenames")}
+              <SettingHelp
+                title={t("settings.advanced.showFilenames")}
+                description={t("settings.advanced.showFilenamesHelp")}
+              />
+            </span>
+          }
           value={showFilenames}
           setValue={setShowFilenames}
         />

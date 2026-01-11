@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import classNames from "classnames";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
+import { SettingHelp } from "@/components/wui/SettingHelp";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { PageFrame } from "@/components/PageFrame";
@@ -127,7 +128,13 @@ function ReadersSettings() {
       <div className="flex flex-col gap-3">
         {/* Scan Mode - from Core */}
         <div className="py-2">
-          <span id="scan-mode-label">{t("settings.readers.scanMode")}</span>
+          <span className="flex items-center">
+            <span id="scan-mode-label">{t("settings.readers.scanMode")}</span>
+            <SettingHelp
+              title={t("settings.readers.scanMode")}
+              description={t("settings.readers.scanModeHelp")}
+            />
+          </span>
           {isLoading ? (
             <div className="mt-2 flex flex-row">
               <Skeleton className="h-9 w-full rounded-s-full" />
@@ -227,14 +234,19 @@ function ReadersSettings() {
               </button>
             </div>
           )}
-          {coreSettings?.readersScanMode === "hold" && connected && (
-            <p className="pt-1 text-sm">{t("settings.insertHelp")}</p>
-          )}
         </div>
 
         {/* Continuous Scan - from App (always shown) */}
         <ToggleSwitch
-          label={t("settings.readers.continuousScan")}
+          label={
+            <span className="flex items-center">
+              {t("settings.readers.continuousScan")}
+              <SettingHelp
+                title={t("settings.readers.continuousScan")}
+                description={t("settings.readers.continuousScanHelp")}
+              />
+            </span>
+          }
           value={restartScan}
           setValue={setRestartScan}
         />
@@ -242,7 +254,15 @@ function ReadersSettings() {
         {/* Launch On Scan - from App (native only, Pro feature) */}
         {Capacitor.isNativePlatform() && connected && (
           <ToggleSwitch
-            label={t("settings.readers.launchOnScan")}
+            label={
+              <span className="flex items-center">
+                {t("settings.readers.launchOnScan")}
+                <SettingHelp
+                  title={t("settings.readers.launchOnScan")}
+                  description={t("settings.readers.launchOnScanHelp")}
+                />
+              </span>
+            }
             suffix={
               <ProBadge
                 onPress={() => setProPurchaseModalOpen(true)}
@@ -254,10 +274,18 @@ function ReadersSettings() {
           />
         )}
 
-        {/* Prefer Remote Writer - from App (native + NFC) */}
+        {/* Prefer External Reader - from App (native + NFC) */}
         {Capacitor.isNativePlatform() && nfcAvailable && (
           <ToggleSwitch
-            label={t("settings.readers.preferRemoteWriter")}
+            label={
+              <span className="flex items-center">
+                {t("settings.readers.preferExternalReader")}
+                <SettingHelp
+                  title={t("settings.readers.preferExternalReader")}
+                  description={t("settings.readers.preferExternalReaderHelp")}
+                />
+              </span>
+            }
             value={preferRemoteWriter}
             setValue={setPreferRemoteWriter}
           />
@@ -266,7 +294,15 @@ function ReadersSettings() {
         {/* Shake to Launch - from App (native + accelerometer, Pro feature) */}
         {Capacitor.isNativePlatform() && accelerometerAvailable && (
           <ToggleSwitch
-            label={t("settings.readers.shakeToLaunch")}
+            label={
+              <span className="flex items-center">
+                {t("settings.readers.shakeToLaunch")}
+                <SettingHelp
+                  title={t("settings.readers.shakeToLaunch")}
+                  description={t("settings.readers.shakeToLaunchHelp")}
+                />
+              </span>
+            }
             suffix={
               <ProBadge
                 onPress={() => setProPurchaseModalOpen(true)}
@@ -400,18 +436,34 @@ function ReadersSettings() {
             </>
           )}
 
-        {/* Sound Effects - from Core */}
+        {/* Audio Feedback - from Core */}
         <ToggleSwitch
-          label={t("settings.readers.soundEffects")}
+          label={
+            <span className="flex items-center">
+              {t("settings.readers.audioFeedback")}
+              <SettingHelp
+                title={t("settings.readers.audioFeedback")}
+                description={t("settings.readers.audioFeedbackHelp")}
+              />
+            </span>
+          }
           value={coreSettings?.audioScanFeedback ?? false}
           setValue={(v) => updateCoreSetting.mutate({ audioScanFeedback: v })}
           disabled={!connected}
           loading={isLoading}
         />
 
-        {/* Auto Detect - from Core */}
+        {/* Auto Detect Readers - from Core */}
         <ToggleSwitch
-          label={t("settings.readers.autoDetect")}
+          label={
+            <span className="flex items-center">
+              {t("settings.readers.autoDetectReaders")}
+              <SettingHelp
+                title={t("settings.readers.autoDetectReaders")}
+                description={t("settings.readers.autoDetectReadersHelp")}
+              />
+            </span>
+          }
           value={coreSettings?.readersAutoDetect ?? false}
           setValue={(v) => updateCoreSetting.mutate({ readersAutoDetect: v })}
           disabled={!connected}

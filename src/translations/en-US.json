@@ -290,7 +290,6 @@
       "modeLabel": "Scan mode",
       "tapMode": "Tap",
       "insertMode": "Hold",
-      "insertHelp": "Exits the media when tag is removed. Requires a separate NFC reader.",
       "updateDb": "Update media database",
       "updateDb.cancel": "Cancel",
       "updateDb.status.ready": "Database is ready",
@@ -326,13 +325,20 @@
       },
       "readers": {
         "title": "Readers",
-        "soundEffects": "Play sound effects on scan",
-        "autoDetect": "Auto-detect external NFC reader",
         "scanMode": "Scan mode",
+        "scanModeHelp": "**Tap:** Default mode. Media will launch on scan and token removals are not tracked.\n\n**Hold:** Media will launch on scan and exit when the token is removed from the reader. Only works with external readers, not in-app scanning.",
         "continuousScan": "Continuous scanning",
+        "continuousScanHelp": "When enabled, the in-app reader on the Zap page will keep scanning for tokens even after reading one.",
         "launchOnScan": "Launch on scan",
-        "preferRemoteWriter": "Prefer connected reader for writing",
-        "shakeToLaunch": "Shake to launch"
+        "launchOnScanHelp": "When a token is scanned using the in-app reader, it will be forwarded to the connected device, making the app work as a wireless reader. This is a Pro feature.",
+        "preferExternalReader": "Prefer external reader",
+        "preferExternalReaderHelp": "When enabled, writes will be forwarded to an external reader on the connected device instead of in this app.",
+        "shakeToLaunch": "Shake to launch",
+        "shakeToLaunchHelp": "Shake your phone to launch random media or run custom ZapScript. This is a Pro feature.",
+        "audioFeedback": "Audio feedback on scan",
+        "audioFeedbackHelp": "When enabled, the connected device will play audio when a token scan has succeeded or failed.",
+        "autoDetectReaders": "Auto-detect readers",
+        "autoDetectReadersHelp": "When enabled, the connected device will attempt to automatically detect and connect to any attached readers."
       },
       "playtime": {
         "title": "Playtime"
@@ -340,7 +346,9 @@
       "advanced": {
         "title": "Advanced",
         "debugLogging": "Debug logging",
+        "debugLoggingHelp": "Enables more verbose log files on the connected device. Can be useful for troubleshooting issues.",
         "showFilenames": "Show filenames for media",
+        "showFilenamesHelp": "For in-app search results, display media's full filename in the list instead of the cleaned up version. Can be useful if you use a lot of custom tags in your filenames.",
         "viewLogs": "View logs"
       },
       "core": {
@@ -353,6 +361,7 @@
         "playtime": {
           "title": "Playtime Limits",
           "enabled": "Enable playtime limits",
+          "enabledHelp": "Enforce limits on how long media can be played for on the connected device.\n\n**Daily limit:** Total amount of time media can be played for the day across all sessions. Resets daily.\n\n**Session limit:** Maximum amount of time media can be played at once.\n\n**Session reset timeout:** Amount of time required after a session has completed before a new session can start.",
           "dailyLimit": "Daily limit",
           "sessionLimit": "Session limit",
           "sessionReset": "Session reset timeout",

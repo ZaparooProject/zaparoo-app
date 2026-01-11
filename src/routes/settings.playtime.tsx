@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
+import { SettingHelp } from "@/components/wui/SettingHelp";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { PageFrame } from "@/components/PageFrame";
@@ -225,7 +226,15 @@ function PlaytimeSettings() {
     >
       <div className="flex flex-col gap-3">
         <ToggleSwitch
-          label={t("settings.core.playtime.enabled")}
+          label={
+            <span className="flex items-center">
+              {t("settings.core.playtime.enabled")}
+              <SettingHelp
+                title={t("settings.core.playtime.enabled")}
+                description={t("settings.core.playtime.enabledHelp")}
+              />
+            </span>
+          }
           value={limitsConfig?.enabled ?? false}
           setValue={handleEnabledToggle}
           disabled={!connected}
