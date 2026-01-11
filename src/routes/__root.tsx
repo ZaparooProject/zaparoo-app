@@ -1,4 +1,9 @@
-import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "@tanstack/react-router";
 import { App } from "@capacitor/app";
 import React, { useRef } from "react";
 import { SafeAreaHandler } from "@/lib/safeArea";
@@ -8,6 +13,23 @@ import { TourInitializer } from "@/components/TourInitializer";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { SkipLink } from "@/components/SkipLink";
 import { useStatusStore } from "@/lib/store";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { useShakeDetection } from "@/hooks/useShakeDetection";
+
+// Shake detection component - must be inside router context to access location
+function ShakeDetector() {
+  const { pathname } = useLocation();
+  const shakeEnabled = usePreferencesStore((state) => state.shakeEnabled);
+  const connected = useStatusStore((state) => state.connected);
+
+  useShakeDetection({
+    shakeEnabled,
+    connected,
+    pathname,
+  });
+
+  return null;
+}
 
 function BackHandler() {
   const navigate = useNavigate();
@@ -55,6 +77,7 @@ function RootLayout() {
       <SkipLink targetId="main-content" />
       <SafeAreaHandler />
       <BackHandler />
+      <ShakeDetector />
       <TourInitializer />
       <main
         id="main-content"

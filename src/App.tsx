@@ -24,7 +24,6 @@ import { useCameraAvailabilityCheck } from "./hooks/useCameraAvailabilityCheck";
 import { useAccelerometerAvailabilityCheck } from "./hooks/useAccelerometerAvailabilityCheck";
 import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
-import { useShakeDetection } from "./hooks/useShakeDetection";
 import { usePassiveNfcListener } from "./hooks/usePassiveNfcListener";
 import { initDeviceInfo } from "./lib/logger";
 import {
@@ -35,15 +34,8 @@ import {
 // Component to initialize queue processors and passive listeners after preferences hydrate
 // This ensures sessionManager.launchOnScan is set correctly before processing
 function QueueProcessors() {
-  const shakeEnabled = usePreferencesStore((state) => state.shakeEnabled);
-  const connected = useStatusStore((state) => state.connected);
-
   useRunQueueProcessor();
   useWriteQueueProcessor();
-  useShakeDetection({
-    shakeEnabled,
-    connected,
-  });
   // Listen for NFC intents on Android even when not in explicit scan mode
   usePassiveNfcListener();
   return null;
