@@ -62,6 +62,7 @@ export function TextInput(props: {
               "p-2",
               "px-3",
               "disabled:border-foreground-disabled",
+              "[&::-webkit-search-cancel-button]:appearance-none",
               {
                 "border-bd-input": !props.disabled && !props.error,
                 "border-red-500": props.error,
