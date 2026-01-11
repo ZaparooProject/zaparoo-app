@@ -524,6 +524,9 @@
       "connecting": "Connecting...",
       "reconnecting": "Reconnecting..."
     },
+    "deepLinks": {
+      "invalidUrl": "Invalid link format"
+    },
     "tour": {
       "stepIndicator": "{{current}}/{{total}}",
       "stepIndicatorAccessible": "Step {{current}} of {{total}}.",

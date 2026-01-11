@@ -112,7 +112,8 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
       });
     };
 
-    timeoutRef.current = setTimeout(checkNfcAndWrite, 1000);
+    // Process immediately - NFC availability is already checked during app hydration
+    checkNfcAndWrite();
 
     return () => {
       if (timeoutRef.current) {

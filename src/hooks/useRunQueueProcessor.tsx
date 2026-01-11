@@ -32,7 +32,7 @@ export function useRunQueueProcessor() {
 
       setRunQueue(null);
 
-      const maxRetries = 10;
+      const maxRetries = 15;
       const retryInterval = 500;
       let retryCount = 0;
 
