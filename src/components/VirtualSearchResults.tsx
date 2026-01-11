@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, RefObject } from "react";
+import React, { useCallback, useEffect, useMemo, RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link } from "@tanstack/react-router";
@@ -68,7 +68,20 @@ export function VirtualSearchResults({
     }
   }, [isLoading, hasSearched, onSearchComplete]);
 
-  // Calculate estimated item height based on whether tags are shown
+  // Build a set of names that appear more than once in results (duplicates)
+  const duplicateNames = useMemo(() => {
+    const nameCounts = new Map<string, number>();
+    for (const item of allItems) {
+      nameCounts.set(item.name, (nameCounts.get(item.name) ?? 0) + 1);
+    }
+    const duplicates = new Set<string>();
+    for (const [name, count] of nameCounts) {
+      if (count > 1) duplicates.add(name);
+    }
+    return duplicates;
+  }, [allItems]);
+
+  // Calculate estimated item height based on whether tags are shown and duplicates
   const estimateSize = useCallback(
     (index: number) => {
       if (index >= allItems.length) return 60; // Loading item
@@ -77,9 +90,13 @@ export function VirtualSearchResults({
       // Base height: 32px (pt-3 pb-5) + content + 1px border = total (gap handled by virtualizer)
       // Without tags: ~60px content + 32px padding + 1px border = 93px
       // With tags: ~80px content + 32px padding + 1px border = 113px
-      return item?.tags && item.tags.length > 0 ? 113 : 93;
+      const hasTags = item?.tags && item.tags.length > 0;
+      const isDuplicate = item ? duplicateNames.has(item.name) : false;
+      // Add ~18px for subtitle line when duplicate
+      const baseHeight = hasTags ? 113 : 93;
+      return isDuplicate ? baseHeight + 18 : baseHeight;
     },
-    [allItems],
+    [allItems, duplicateNames],
   );
 
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -272,6 +289,7 @@ export function VirtualSearchResults({
               ) : game ? (
                 <SearchResultItem
                   game={game}
+                  isDuplicate={duplicateNames.has(game.name)}
                   selectedResult={selectedResult}
                   setSelectedResult={setSelectedResult}
                   isLast={virtualItem.index === totalCount - 1}
@@ -288,6 +306,7 @@ export function VirtualSearchResults({
 
 interface SearchResultItemProps {
   game: SearchResultGame;
+  isDuplicate: boolean;
   selectedResult: SearchResultGame | null;
   setSelectedResult: (game: SearchResultGame | null) => void;
   isLast: boolean;
@@ -296,15 +315,23 @@ interface SearchResultItemProps {
 
 const SearchResultItem = React.memo(function SearchResultItem({
   game,
+  isDuplicate,
   selectedResult,
   setSelectedResult,
   isLast,
   index,
 }: SearchResultItemProps) {
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
+
+  // Primary display: filename if global pref enabled, otherwise clean name
   const displayName = showFilenames
     ? filenameFromPath(game.path) || game.name
     : game.name;
+
+  // For duplicates (when not using global filename pref), show filename as subtitle
+  const filename = filenameFromPath(game.path);
+  const showFilenameSubtitle =
+    isDuplicate && !showFilenames && filename && filename !== game.name;
 
   const handleGameSelect = () => {
     if (selectedResult && selectedResult.path === game.path) {
@@ -341,6 +368,9 @@ const SearchResultItem = React.memo(function SearchResultItem({
     >
       <div className="flex flex-col">
         <p className="font-semibold">{displayName}</p>
+        {showFilenameSubtitle && (
+          <p className="text-sm text-white/60">{filename}</p>
+        )}
         <p className="text-sm">{game.system.name}</p>
         <TagList tags={game.tags} maxMobile={2} maxDesktop={4} />
       </div>
