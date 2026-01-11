@@ -4,12 +4,6 @@ import { Capacitor } from "@capacitor/core";
 import { ScreenReader } from "@capacitor/screen-reader";
 import { useScreenReaderEnabled } from "../../../hooks/useScreenReaderEnabled";
 
-vi.mock("@capacitor/core", () => import("../../../__mocks__/@capacitor/core"));
-vi.mock(
-  "@capacitor/screen-reader",
-  () => import("../../../__mocks__/@capacitor/screen-reader"),
-);
-
 describe("useScreenReaderEnabled", () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -43,6 +43,16 @@ vi.mock("@uidotdev/usehooks", () => ({
   usePrevious: vi.fn(() => undefined),
 }));
 
+vi.mock("@capacitor/status-bar", () => ({
+  StatusBar: {
+    show: vi.fn(() => Promise.resolve()),
+    setStyle: vi.fn(() => Promise.resolve()),
+  },
+  Style: {
+    Dark: "DARK",
+  },
+}));
+
 vi.mock("@capacitor-firebase/authentication", () => ({
   FirebaseAuthentication: {
     addListener: (...args: unknown[]) => mockAddListener(...args),

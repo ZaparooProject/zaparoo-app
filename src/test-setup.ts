@@ -3,6 +3,30 @@ import { afterEach, beforeAll, afterAll, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { handlers } from "./test-utils/msw-handlers";
+
+// Mock Capacitor plugins - calling vi.mock WITHOUT a factory tells Vitest
+// to use the corresponding file in __mocks__ directory
+vi.mock("@capacitor/core");
+vi.mock("@capacitor/device");
+vi.mock("@capacitor/preferences");
+vi.mock("@capacitor/status-bar");
+vi.mock("@capacitor/haptics");
+vi.mock("@capacitor/app");
+vi.mock("@capacitor/text-zoom");
+vi.mock("@capacitor/share");
+vi.mock("@capacitor/screen-reader");
+vi.mock("@capacitor/clipboard");
+vi.mock("@capacitor/browser");
+vi.mock("@capacitor/filesystem");
+vi.mock("@capacitor-firebase/authentication");
+vi.mock("@capacitor-community/keep-awake");
+vi.mock("@capacitor-mlkit/barcode-scanning");
+vi.mock("@capawesome-team/capacitor-nfc");
+vi.mock("@capgo/capacitor-shake");
+vi.mock("@revenuecat/purchases-capacitor");
+vi.mock("capacitor-plugin-safe-area");
+vi.mock("capacitor-zeroconf");
+
 import { CoreAPI } from "./lib/coreApi";
 
 // Define global constants that Vite normally injects

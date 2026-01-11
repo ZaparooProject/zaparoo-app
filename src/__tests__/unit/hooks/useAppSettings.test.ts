@@ -4,10 +4,6 @@ import { useAppSettings } from "../../../hooks/useAppSettings";
 import { Preferences } from "@capacitor/preferences";
 // sessionManager is mocked in nfc mock
 
-vi.mock(
-  "@capacitor/preferences",
-  () => import("../../../__mocks__/@capacitor/preferences"),
-);
 vi.mock("../../../lib/nfc");
 
 describe("useAppSettings", () => {

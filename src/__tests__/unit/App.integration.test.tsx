@@ -142,6 +142,63 @@ vi.mock("@/components/SlideModalProvider", () => ({
   ),
 }));
 
+vi.mock("@capacitor/status-bar", () => ({
+  StatusBar: {
+    show: vi.fn(() => Promise.resolve()),
+    setStyle: vi.fn(() => Promise.resolve()),
+  },
+  Style: {
+    Dark: "DARK",
+  },
+}));
+
+vi.mock("@/lib/preferencesStore", () => {
+  const usePreferencesStore: any = vi.fn((selector) => {
+    const state = {
+      _hasHydrated: true,
+      _proAccessHydrated: true,
+      _nfcAvailabilityHydrated: true,
+      _cameraAvailabilityHydrated: true,
+      _accelerometerAvailabilityHydrated: true,
+      showFilenames: false,
+      shakeEnabled: false,
+      launcherAccess: false,
+    };
+    if (typeof selector === "function") {
+      return selector(state);
+    }
+    return state;
+  });
+
+  return { usePreferencesStore };
+});
+
+vi.mock("@/components/A11yAnnouncer", () => ({
+  A11yAnnouncerProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="a11y-provider">{children}</div>
+  ),
+  useAnnouncer: () => ({ announce: vi.fn() }),
+}));
+
+vi.mock("@/hooks/useProAccessCheck", () => ({ useProAccessCheck: vi.fn() }));
+vi.mock("@/hooks/useNfcAvailabilityCheck", () => ({
+  useNfcAvailabilityCheck: vi.fn(),
+}));
+vi.mock("@/hooks/useCameraAvailabilityCheck", () => ({
+  useCameraAvailabilityCheck: vi.fn(),
+}));
+vi.mock("@/hooks/useAccelerometerAvailabilityCheck", () => ({
+  useAccelerometerAvailabilityCheck: vi.fn(),
+}));
+vi.mock("@/hooks/useRunQueueProcessor", () => ({
+  useRunQueueProcessor: vi.fn(),
+}));
+vi.mock("@/hooks/useWriteQueueProcessor", () => ({
+  useWriteQueueProcessor: vi.fn(),
+}));
+vi.mock("@/hooks/useShakeDetection", () => ({ useShakeDetection: vi.fn() }));
+vi.mock("@/lib/logger", () => ({ initDeviceInfo: vi.fn() }));
+
 describe("App Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();

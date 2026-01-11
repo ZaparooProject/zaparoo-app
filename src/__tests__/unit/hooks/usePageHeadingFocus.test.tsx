@@ -4,12 +4,6 @@ import { usePageHeadingFocus } from "../../../hooks/usePageHeadingFocus";
 import { Capacitor } from "@capacitor/core";
 import { ScreenReader } from "@capacitor/screen-reader";
 
-vi.mock("@capacitor/core", () => import("../../../__mocks__/@capacitor/core"));
-vi.mock(
-  "@capacitor/screen-reader",
-  () => import("../../../__mocks__/@capacitor/screen-reader"),
-);
-
 describe("usePageHeadingFocus", () => {
   const originalTitle = document.title;
 
