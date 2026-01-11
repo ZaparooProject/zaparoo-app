@@ -26,6 +26,7 @@ vi.mock("../../../lib/coreApi", async (importOriginal) => {
     CoreAPI: {
       write: vi.fn(),
       hasWriteCapableReader: vi.fn(),
+      isConnected: vi.fn(),
       cancelWrite: vi.fn(),
       readersWriteCancel: vi.fn(),
     },
@@ -65,6 +66,7 @@ describe("useNfcWriter - Enhanced Functionality", () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     vi.mocked(Nfc.isAvailable).mockResolvedValue({ nfc: true, hce: false });
     vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(false);
+    vi.mocked(CoreAPI.isConnected).mockReturnValue(true);
     vi.mocked(CoreAPI.write).mockResolvedValue();
     vi.mocked(CoreAPI.readersWriteCancel).mockResolvedValue();
   });

@@ -992,6 +992,14 @@ class CoreApi {
     });
   }
 
+  /**
+   * Synchronously check if the transport is currently connected.
+   * Useful for determining write method without making async API calls.
+   */
+  isConnected(): boolean {
+    return this.transport?.isConnected ?? false;
+  }
+
   async hasWriteCapableReader(): Promise<boolean> {
     try {
       const response = await this.readers();

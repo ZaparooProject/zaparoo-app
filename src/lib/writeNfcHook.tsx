@@ -86,8 +86,31 @@ async function determineWriteMethod(
     return preferredMethod;
   }
 
-  // Auto-detection logic based on user preference and capabilities
   const isNativePlatform = Capacitor.isNativePlatform();
+  const isConnected = CoreAPI.isConnected();
+
+  // If not connected, only local NFC is available - don't make API calls that will hang
+  if (!isConnected) {
+    if (isNativePlatform) {
+      try {
+        const nfcAvailable = await Nfc.isAvailable();
+        if (nfcAvailable.nfc) {
+          return WriteMethod.LocalNFC;
+        }
+      } catch (error) {
+        logger.error("NFC availability check failed:", error, {
+          category: "nfc",
+          action: "determineWriteMethod",
+          severity: "warning",
+        });
+      }
+    }
+    // Not connected and no local NFC available - return RemoteReader
+    // which will fail gracefully when the write is attempted
+    return WriteMethod.RemoteReader;
+  }
+
+  // Connected - use full auto-detection logic with API calls
   const hasRemoteWriter = await CoreAPI.hasWriteCapableReader();
 
   // If user prefers remote writer and it's available, use it
