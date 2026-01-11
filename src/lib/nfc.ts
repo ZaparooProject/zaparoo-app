@@ -38,6 +38,10 @@ export const sessionManager = {
   setLaunchOnScan: (value: boolean) => {
     sessionManager.launchOnScan = value;
   },
+  isScanning: false,
+  setIsScanning: (value: boolean) => {
+    sessionManager.isScanning = value;
+  },
 };
 
 export interface Tag {
@@ -62,7 +66,7 @@ async function withNfcSession<T>(
     let listeners: PluginListenerHandle[] = [];
 
     const cleanup = async () => {
-      // Remove all listeners
+      sessionManager.setIsScanning(false);
       await Promise.all(listeners.map((listener) => listener.remove()));
       listeners = [];
     };
@@ -130,6 +134,7 @@ async function withNfcSession<T>(
           scanErrorHandle,
         );
 
+        sessionManager.setIsScanning(true);
         // Now it's safe to start the scan session
         await Nfc.startScanSession();
       } catch (setupError) {
@@ -160,7 +165,7 @@ export function int2char(v: number[]): string {
   return charId;
 }
 
-function readNfcEvent(event: NfcTagScannedEvent): Tag | null {
+export function readNfcEvent(event: NfcTagScannedEvent): Tag | null {
   if (!event.nfcTag || !event.nfcTag.id) {
     return null;
   }
