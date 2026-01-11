@@ -57,6 +57,14 @@ function ReadersSettings() {
     queryFn: () => CoreAPI.settings(),
   });
 
+  // Connected readers query - polls every 5 seconds while page is open
+  const { data: readersData, isPending: isReadersPending } = useQuery({
+    queryKey: ["readers"],
+    queryFn: () => CoreAPI.readers(),
+    enabled: connected,
+    refetchInterval: 5000,
+  });
+
   const updateCoreSetting = useMutation({
     mutationFn: (params: UpdateSettingsRequest) =>
       CoreAPI.settingsUpdate(params),
@@ -108,6 +116,7 @@ function ReadersSettings() {
 
   // Show loading skeletons when connecting or when connected but data is loading
   const isLoading = isConnecting || (connected && isPending);
+  const isReadersLoading = isConnecting || (connected && isReadersPending);
 
   return (
     <PageFrame
@@ -126,6 +135,41 @@ function ReadersSettings() {
       }
     >
       <div className="flex flex-col gap-3">
+        {/* Readers List */}
+        <div className="py-2">
+          <span className="text-foreground">
+            {t("settings.readers.connectedReaders")}
+          </span>
+          <div className="mt-2 flex flex-col gap-2">
+            {isReadersLoading ? (
+              <span className="text-foreground-disabled">{t("loading")}</span>
+            ) : !connected ? (
+              <span className="text-foreground-disabled">
+                {t("settings.readers.noReadersDetected")}
+              </span>
+            ) : readersData?.readers && readersData.readers.length > 0 ? (
+              readersData.readers.map((reader) => (
+                <div key={reader.id} className="flex items-center gap-2">
+                  <span
+                    className={classNames(
+                      "h-2 w-2 shrink-0 rounded-full",
+                      reader.connected ? "bg-green-500" : "bg-red-500",
+                    )}
+                    aria-hidden="true"
+                  />
+                  <span className="text-foreground">
+                    {reader.info || reader.id}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <span className="text-foreground-disabled">
+                {t("settings.readers.noReadersDetected")}
+              </span>
+            )}
+          </div>
+        </div>
+
         {/* Scan Mode - from Core */}
         <div className="py-2">
           <span className="flex items-center">

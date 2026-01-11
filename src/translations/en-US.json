@@ -338,7 +338,9 @@
         "audioFeedback": "Audio feedback on scan",
         "audioFeedbackHelp": "When enabled, the connected device will play audio when a token scan has succeeded or failed.",
         "autoDetectReaders": "Auto-detect readers",
-        "autoDetectReadersHelp": "When enabled, the connected device will attempt to automatically detect and connect to any attached readers."
+        "autoDetectReadersHelp": "When enabled, the connected device will attempt to automatically detect and connect to any attached readers.",
+        "connectedReaders": "Device Readers",
+        "noReadersDetected": "No readers found"
       },
       "playtime": {
         "title": "Playtime"
