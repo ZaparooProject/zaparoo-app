@@ -47,6 +47,29 @@ function getUserInitial(
   return "?";
 }
 
+/**
+ * Get the primary auth provider from user data
+ * Returns 'google', 'apple', 'password', or null
+ */
+function getAuthProvider(
+  providerData: { providerId: string }[] | undefined,
+): "google" | "apple" | "password" | null {
+  if (!providerData || providerData.length === 0) return null;
+
+  // Check provider IDs - prioritize OAuth providers over password
+  for (const provider of providerData) {
+    if (provider.providerId === "google.com") return "google";
+    if (provider.providerId === "apple.com") return "apple";
+  }
+
+  // Check for password provider
+  for (const provider of providerData) {
+    if (provider.providerId === "password") return "password";
+  }
+
+  return null;
+}
+
 function OnlinePage() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("online.title"));
@@ -238,10 +261,19 @@ function OnlinePage() {
         {loggedInUser !== null ? (
           // Logged in state
           <div className="flex flex-col items-center gap-4 py-4">
-            {/* Avatar */}
-            <div className="bg-button-pattern border-bd-filled flex h-20 w-20 items-center justify-center rounded-full border text-3xl font-semibold text-white">
-              {getUserInitial(loggedInUser.displayName, loggedInUser.email)}
-            </div>
+            {/* Avatar - use profile photo if available, otherwise initial */}
+            {loggedInUser.photoUrl ? (
+              <img
+                src={loggedInUser.photoUrl}
+                alt=""
+                className="border-bd-filled h-20 w-20 rounded-full border object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="bg-button-pattern border-bd-filled flex h-20 w-20 items-center justify-center rounded-full border text-3xl font-semibold text-white">
+                {getUserInitial(loggedInUser.displayName, loggedInUser.email)}
+              </div>
+            )}
 
             {/* User info */}
             <div className="flex flex-col items-center gap-1">
@@ -251,18 +283,70 @@ function OnlinePage() {
                 </span>
               )}
               <span className="text-muted-foreground text-sm">
-                {t("online.loggedInAs", { email: loggedInUser.email })}
+                {loggedInUser.email}
               </span>
+
+              {/* Auth provider indicator */}
+              {(() => {
+                const provider = getAuthProvider(loggedInUser.providerData);
+                if (provider === "google") {
+                  return (
+                    <span className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
+                      <GoogleIcon size="14" />
+                      {t("online.loggedInWithGoogle")}
+                    </span>
+                  );
+                }
+                if (provider === "apple") {
+                  return (
+                    <span className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
+                      <AppleIcon size="14" />
+                      {t("online.loggedInWithApple")}
+                    </span>
+                  );
+                }
+                return null;
+              })()}
             </div>
 
-            {/* Log out button */}
-            <Button
-              label={t("online.logout")}
-              variant="outline"
-              icon={<LogOutIcon size="20" />}
-              onClick={handleSignOut}
-              className="mt-2 w-full"
-            />
+            {/* Account actions */}
+            <div className="mt-2 flex w-full flex-col gap-3">
+              {/* Change password - only for email/password users */}
+              {getAuthProvider(loggedInUser.providerData) === "password" && (
+                <Button
+                  label={t("online.changePassword")}
+                  variant="outline"
+                  onClick={() => {
+                    if (loggedInUser.email) {
+                      FirebaseAuthentication.sendPasswordResetEmail({
+                        email: loggedInUser.email,
+                      })
+                        .then(() => {
+                          toast.success(t("online.resetEmailSent"));
+                        })
+                        .catch((e: Error) => {
+                          logger.error("Firebase password reset failed:", e, {
+                            category: "api",
+                            action: "sendPasswordResetEmail",
+                            severity: "warning",
+                          });
+                          toast.error(t("online.resetEmailFailed"));
+                        });
+                    }
+                  }}
+                  className="w-full"
+                />
+              )}
+
+              {/* Log out button */}
+              <Button
+                label={t("online.logout")}
+                variant="outline"
+                icon={<LogOutIcon size="20" />}
+                onClick={handleSignOut}
+                className="w-full"
+              />
+            </div>
           </div>
         ) : (
           // Not logged in state
@@ -341,22 +425,46 @@ function OnlinePage() {
                   <div className="bg-border h-px flex-1" />
                 </div>
 
-                <Button
-                  label={t("online.loginGoogle")}
-                  variant="outline"
-                  icon={<GoogleIcon size="20" />}
-                  onClick={handleGoogleSignIn}
-                  disabled={isLoading}
-                  className="w-full"
-                />
-                <Button
-                  label={t("online.loginApple")}
-                  variant="outline"
-                  icon={<AppleIcon size="20" />}
-                  onClick={handleAppleSignIn}
-                  disabled={isLoading}
-                  className="w-full"
-                />
+                {/* On iOS, show Apple first. On Android/other, show Google first */}
+                {Capacitor.getPlatform() === "ios" ? (
+                  <>
+                    <Button
+                      label={t("online.loginApple")}
+                      variant="outline"
+                      icon={<AppleIcon size="20" />}
+                      onClick={handleAppleSignIn}
+                      disabled={isLoading}
+                      className="w-full"
+                    />
+                    <Button
+                      label={t("online.loginGoogle")}
+                      variant="outline"
+                      icon={<GoogleIcon size="20" />}
+                      onClick={handleGoogleSignIn}
+                      disabled={isLoading}
+                      className="w-full"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      label={t("online.loginGoogle")}
+                      variant="outline"
+                      icon={<GoogleIcon size="20" />}
+                      onClick={handleGoogleSignIn}
+                      disabled={isLoading}
+                      className="w-full"
+                    />
+                    <Button
+                      label={t("online.loginApple")}
+                      variant="outline"
+                      icon={<AppleIcon size="20" />}
+                      onClick={handleAppleSignIn}
+                      disabled={isLoading}
+                      className="w-full"
+                    />
+                  </>
+                )}
               </>
             )}
           </div>

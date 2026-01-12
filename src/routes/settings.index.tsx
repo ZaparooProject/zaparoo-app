@@ -189,23 +189,18 @@ function Settings() {
           )}
 
           <div>
-            {loggedInUser !== null ? (
-              <div className="flex flex-col gap-3">
-                <Link to="/settings/online">
-                  <Button
-                    label={t("online.settingsManageButton")}
-                    className="w-full"
-                  />
-                </Link>
-              </div>
-            ) : (
-              <Link to="/settings/online">
-                <Button
-                  label={t("online.settingsLogInButton")}
-                  className="w-full"
-                />
-              </Link>
-            )}
+            <Link to="/settings/online">
+              <Button
+                label={
+                  loggedInUser !== null
+                    ? t("online.settingsLoggedInAs", {
+                        email: loggedInUser.email,
+                      })
+                    : t("online.settingsLogInButton")
+                }
+                className="w-full"
+              />
+            </Link>
           </div>
 
           <div className="flex flex-col">

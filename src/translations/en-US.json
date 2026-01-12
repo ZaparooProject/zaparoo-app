@@ -295,7 +295,11 @@
       "oauthNotAvailable": "Social login requires the Zaparoo app",
       "settingsManageButton": "Manage Zaparoo Online",
       "settingsLogInButton": "Log in to Zaparoo Online",
-      "loggedInAs": "Logged in as {{email}}"
+      "settingsLoggedInAs": "Logged in as {{email}}",
+      "loggedInAs": "Logged in as {{email}}",
+      "loggedInWithGoogle": "Logged in with Google",
+      "loggedInWithApple": "Logged in with Apple",
+      "changePassword": "Change password"
     },
     "settings": {
       "title": "Settings",
