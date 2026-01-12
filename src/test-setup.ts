@@ -26,6 +26,7 @@ vi.mock("@capgo/capacitor-shake");
 vi.mock("@revenuecat/purchases-capacitor");
 vi.mock("capacitor-plugin-safe-area");
 vi.mock("capacitor-zeroconf");
+vi.mock("@capacitor/network");
 
 import { CoreAPI } from "./lib/coreApi";
 

@@ -18,6 +18,7 @@ dependencies {
     implementation project(':capacitor-device')
     implementation project(':capacitor-filesystem')
     implementation project(':capacitor-haptics')
+    implementation project(':capacitor-network')
     implementation project(':capacitor-preferences')
     implementation project(':capacitor-screen-reader')
     implementation project(':capacitor-share')

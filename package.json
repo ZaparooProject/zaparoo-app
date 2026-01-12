@@ -36,6 +36,7 @@
     "@capacitor/filesystem": "^7.1.6",
     "@capacitor/haptics": "^7.0.2",
     "@capacitor/ios": "^7.4.4",
+    "@capacitor/network": "^7.0.3",
     "@capacitor/preferences": "^7.0.2",
     "@capacitor/screen-reader": "^7.0.2",
     "@capacitor/share": "^7.0.2",

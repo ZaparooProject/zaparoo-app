@@ -14,9 +14,10 @@ import {
   type ReactNode,
 } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { App } from "@capacitor/app";
+import { Network } from "@capacitor/network";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -40,6 +41,7 @@ import {
   CoreAPI,
   getDeviceAddress,
   getWsUrl,
+  isCancelled,
   type NotificationRequest,
 } from "@/lib/coreApi";
 import { useStatusStore, ConnectionState } from "@/lib/store";
@@ -310,6 +312,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // Fetch media information
     CoreAPI.media()
       .then((v) => {
+        // Skip processing if request was cancelled (stale, aborted, or connection reset)
+        if (isCancelled(v)) {
+          logger.log("Media request was cancelled, skipping");
+          return;
+        }
         try {
           setGamesIndex(v.database);
           const firstActive = v.active[0];
@@ -330,6 +337,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // Fetch tokens information
     CoreAPI.tokens()
       .then((v) => {
+        // Skip processing if request was cancelled (stale, aborted, or connection reset)
+        if (isCancelled(v)) {
+          logger.log("Tokens request was cancelled, skipping");
+          return;
+        }
         try {
           if (v.last) {
             setLastToken(v.last);
@@ -576,6 +588,36 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
+  // Network change detection (native platforms only)
+  // Triggers immediate reconnect when network is restored (e.g., WiFi reconnects)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let networkListener: PluginListenerHandle | null = null;
+
+    const setup = async () => {
+      networkListener = await Network.addListener(
+        "networkStatusChange",
+        (status) => {
+          logger.log(
+            `[ConnectionProvider] Network status changed: ${status.connected ? "connected" : "disconnected"} (${status.connectionType})`,
+          );
+          if (status.connected) {
+            connectionManager.immediateReconnectActive();
+          }
+        },
+      );
+    };
+
+    setup().catch((e) => {
+      logger.warn("[ConnectionProvider] Failed to setup network listener:", e);
+    });
+
+    return () => {
+      networkListener?.remove();
+    };
   }, []);
 
   // Memoize context value to prevent unnecessary re-renders of consumers

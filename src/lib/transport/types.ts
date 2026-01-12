@@ -66,11 +66,10 @@ export interface Transport {
   disconnect(): void;
 
   /**
-   * Send a message. Throws if not connected and message isn't queued.
+   * Send a message. Throws if not connected.
    * @param data - The message to send
-   * @param options - Send options
    */
-  send(data: string, options?: { queue?: boolean }): void;
+  send(data: string): void;
 
   /**
    * Immediately attempt reconnection (used for app resume).

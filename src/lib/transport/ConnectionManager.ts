@@ -198,23 +198,19 @@ export class ConnectionManager {
   /**
    * Send a message to the active device.
    */
-  sendToActive(data: string, options?: { queue?: boolean }): void {
+  sendToActive(data: string): void {
     const transport = this.getActiveTransport();
     if (!transport) {
       logger.warn("[ConnectionManager] Cannot send: no active device");
       return;
     }
-    transport.send(data, options);
+    transport.send(data);
   }
 
   /**
    * Send a message to a specific device.
    */
-  sendToDevice(
-    deviceId: string,
-    data: string,
-    options?: { queue?: boolean },
-  ): void {
+  sendToDevice(deviceId: string, data: string): void {
     const transport = this.transports.get(deviceId);
     if (!transport) {
       logger.warn(
@@ -222,7 +218,7 @@ export class ConnectionManager {
       );
       return;
     }
-    transport.send(data, options);
+    transport.send(data);
   }
 
   /**
@@ -251,7 +247,14 @@ export class ConnectionManager {
     logger.log("[ConnectionManager] Resuming all connections");
     this.isPaused = false;
     this.transports.forEach((transport) => {
-      transport.immediateReconnect();
+      if (transport.isConnected) {
+        // Resume heartbeat for connected transports to detect stale connections
+        // (e.g., device went away while app was in background)
+        transport.resumeHeartbeat();
+      } else {
+        // Try to reconnect disconnected transports
+        transport.immediateReconnect();
+      }
     });
   }
 
@@ -288,13 +291,11 @@ export class ConnectionManager {
           deviceId: config.deviceId,
           url: config.address,
           pingInterval: 15000,
-          pongTimeout: 15000,
-          reconnectInterval: 1000,
+          pongTimeout: 10000,
+          reconnectInterval: 2000,
           maxReconnectAttempts: Infinity,
-          reconnectBackoffMultiplier: 1.5,
-          maxReconnectInterval: 30000,
           pingMessage: "ping",
-          connectionTimeout: 10000,
+          connectionTimeout: 5000,
         });
 
       case "bluetooth":

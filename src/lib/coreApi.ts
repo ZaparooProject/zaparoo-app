@@ -53,6 +53,28 @@ interface ApiError {
   message: string;
 }
 
+/**
+ * Represents a cancelled API response (request was stale, aborted, or connection reset).
+ */
+export interface CancelledResponse {
+  cancelled: true;
+}
+
+/**
+ * Type guard to check if a response is a cancelled response.
+ * Use this to safely handle API responses that may have been cancelled.
+ */
+export function isCancelled<T>(
+  response: T | CancelledResponse,
+): response is CancelledResponse {
+  return (
+    response !== null &&
+    typeof response === "object" &&
+    "cancelled" in response &&
+    response.cancelled === true
+  );
+}
+
 interface ApiResponse {
   jsonrpc: string;
   id: string;
@@ -171,6 +193,12 @@ class CoreApi {
       freshRequests.forEach((queued) => {
         const { req, promiseHandlers, signal } = queued;
         const { resolve, reject } = promiseHandlers;
+
+        // Check if request was aborted while queued
+        if (signal?.aborted) {
+          resolve({ cancelled: true });
+          return;
+        }
 
         // Re-initialize promise handling for the now-sent request
         const poolEntry = {

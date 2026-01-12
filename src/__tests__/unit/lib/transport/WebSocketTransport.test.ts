@@ -170,29 +170,17 @@ describe("WebSocketTransport", () => {
     });
   });
 
-  describe("message queuing", () => {
-    it("should queue messages when disconnected", () => {
+  describe("send behavior", () => {
+    it("should throw when not connected", () => {
       const transport = new WebSocketTransport({
         deviceId: "test-device",
         url: "ws://localhost:7497",
       });
 
-      // Send before connecting - should queue (not throw)
-      expect(() => transport.send('{"method": "test"}')).not.toThrow();
-      expect(() => transport.send('{"method": "test2"}')).not.toThrow();
-
-      transport.destroy();
-    });
-
-    it("should throw when queue option is false and disconnected", () => {
-      const transport = new WebSocketTransport({
-        deviceId: "test-device",
-        url: "ws://localhost:7497",
-      });
-
-      expect(() =>
-        transport.send('{"method": "test"}', { queue: false }),
-      ).toThrow();
+      // Send before connecting - should throw (no queuing at transport level)
+      expect(() => transport.send('{"method": "test"}')).toThrow(
+        "Cannot send message: WebSocket not open",
+      );
 
       transport.destroy();
     });
