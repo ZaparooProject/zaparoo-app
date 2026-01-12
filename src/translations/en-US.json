@@ -437,7 +437,6 @@
         "showMore": "Show more",
         "showLess": "Show less"
       },
-      "deleteDevice": "Delete device",
       "accessibility": {
         "title": "Accessibility",
         "haptics": "Haptic feedback",
