@@ -166,13 +166,23 @@ function OnlinePage() {
         setIsLoading(false);
       })
       .catch((e: Error) => {
+        setIsLoading(false);
+        // Check if user cancelled the login - don't show error toast
+        const msg = e.message.toLowerCase();
+        if (
+          msg.includes("cancel") ||
+          msg.includes("popup_closed") ||
+          msg.includes("user_denied") ||
+          msg.includes("dismissed")
+        ) {
+          return;
+        }
         logger.error("Firebase Google login failed:", e, {
           category: "api",
           action: "signInWithGoogle",
           severity: "warning",
         });
         toast.error(t("online.loginFail"));
-        setIsLoading(false);
       });
   };
 
@@ -189,13 +199,23 @@ function OnlinePage() {
         setIsLoading(false);
       })
       .catch((e: Error) => {
+        setIsLoading(false);
+        // Check if user cancelled the login - don't show error toast
+        const msg = e.message.toLowerCase();
+        if (
+          msg.includes("cancel") ||
+          msg.includes("popup_closed") ||
+          msg.includes("user_denied") ||
+          msg.includes("dismissed")
+        ) {
+          return;
+        }
         logger.error("Firebase Apple login failed:", e, {
           category: "api",
           action: "signInWithApple",
           severity: "warning",
         });
         toast.error(t("online.loginFail"));
-        setIsLoading(false);
       });
   };
 
