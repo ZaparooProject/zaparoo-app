@@ -23,12 +23,25 @@ vi.mock("@capacitor-firebase/authentication", () => ({
         uid: "test-uid",
       },
     }),
+    createUserWithEmailAndPassword: vi.fn().mockResolvedValue({
+      user: {
+        email: "newuser@example.com",
+        uid: "new-uid",
+      },
+    }),
     signInWithGoogle: vi.fn().mockResolvedValue({
       user: {
         email: "google@example.com",
         uid: "google-uid",
       },
     }),
+    signInWithApple: vi.fn().mockResolvedValue({
+      user: {
+        email: "apple@example.com",
+        uid: "apple-uid",
+      },
+    }),
+    sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -43,6 +56,7 @@ vi.mock("lucide-react", () => ({
   ExternalLinkIcon: () => "ExternalLinkIcon",
   LogInIcon: () => "LogInIcon",
   LogOutIcon: () => "LogOutIcon",
+  UserPlusIcon: () => "UserPlusIcon",
 }));
 
 const mockSetLoggedInUser = vi.fn();
@@ -661,5 +675,300 @@ describe("Settings Online Route", () => {
     });
 
     consoleSpy.mockRestore();
+  });
+
+  it("should handle successful sign up", async () => {
+    const { FirebaseAuthentication } =
+      await import("@capacitor-firebase/authentication");
+
+    const TestComponent = () => {
+      const [onlineEmail] = React.useState("newuser@example.com");
+      const [onlinePassword] = React.useState("password123");
+      const [isLoading, setIsLoading] = React.useState(false);
+
+      const handleSignUp = () => {
+        setIsLoading(true);
+        FirebaseAuthentication.createUserWithEmailAndPassword({
+          email: onlineEmail,
+          password: onlinePassword,
+        })
+          .then((result) => {
+            if (result.user) {
+              toast.success("Account created successfully");
+            } else {
+              toast.error("Failed to create account");
+            }
+            mockSetLoggedInUser(result.user);
+            setIsLoading(false);
+          })
+          .catch((e: Error) => {
+            console.error(e);
+            toast.error("Failed to create account");
+            setIsLoading(false);
+          });
+      };
+
+      return (
+        <div>
+          <button
+            data-testid="signup-button"
+            onClick={handleSignUp}
+            disabled={!onlineEmail || !onlinePassword || isLoading}
+          >
+            Sign up
+          </button>
+        </div>
+      );
+    };
+
+    render(<TestComponent />);
+
+    const signupButton = screen.getByTestId("signup-button");
+    fireEvent.click(signupButton);
+
+    await waitFor(() => {
+      expect(
+        FirebaseAuthentication.createUserWithEmailAndPassword,
+      ).toHaveBeenCalledWith({
+        email: "newuser@example.com",
+        password: "password123",
+      });
+    });
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        "Account created successfully",
+      );
+      expect(mockSetLoggedInUser).toHaveBeenCalledWith({
+        email: "newuser@example.com",
+        uid: "new-uid",
+      });
+    });
+  });
+
+  it("should handle sign up with email already in use", async () => {
+    const { FirebaseAuthentication } =
+      await import("@capacitor-firebase/authentication");
+
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    vi.mocked(
+      FirebaseAuthentication.createUserWithEmailAndPassword,
+    ).mockRejectedValueOnce(new Error("email-already-in-use"));
+
+    const TestComponent = () => {
+      const handleSignUp = () => {
+        FirebaseAuthentication.createUserWithEmailAndPassword({
+          email: "existing@example.com",
+          password: "password123",
+        })
+          .then((result) => {
+            mockSetLoggedInUser(result.user);
+          })
+          .catch((e: Error) => {
+            console.error(e);
+            if (e.message.includes("email-already-in-use")) {
+              toast.error("An account with this email already exists");
+            } else {
+              toast.error("Failed to create account");
+            }
+          });
+      };
+
+      return (
+        <button data-testid="signup-button" onClick={handleSignUp}>
+          Sign up
+        </button>
+      );
+    };
+
+    render(<TestComponent />);
+
+    fireEvent.click(screen.getByTestId("signup-button"));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "An account with this email already exists",
+      );
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("should handle successful Apple Sign-In", async () => {
+    const TestComponent = () => {
+      const handleAppleLogin = () => {
+        FirebaseAuthentication.signInWithApple()
+          .then((result) => {
+            if (result.user) {
+              toast.success("Login successful!");
+            } else {
+              toast.error("Login failed!");
+            }
+            mockSetLoggedInUser(result.user);
+          })
+          .catch((e: Error) => {
+            console.error(e);
+            toast.error("Login failed!");
+            mockSetLoggedInUser(null);
+          });
+      };
+
+      return (
+        <button data-testid="apple-login-button" onClick={handleAppleLogin}>
+          Sign in with Apple
+        </button>
+      );
+    };
+
+    render(<TestComponent />);
+
+    const appleButton = screen.getByTestId("apple-login-button");
+    fireEvent.click(appleButton);
+
+    await waitFor(() => {
+      expect(FirebaseAuthentication.signInWithApple).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Login successful!");
+      expect(mockSetLoggedInUser).toHaveBeenCalledWith({
+        email: "apple@example.com",
+        uid: "apple-uid",
+      });
+    });
+  });
+
+  it("should handle password reset email", async () => {
+    const { FirebaseAuthentication } =
+      await import("@capacitor-firebase/authentication");
+
+    const TestComponent = () => {
+      const [email] = React.useState("test@example.com");
+
+      const handleForgotPassword = () => {
+        FirebaseAuthentication.sendPasswordResetEmail({
+          email: email,
+        })
+          .then(() => {
+            toast.success("Password reset email sent");
+          })
+          .catch((e: Error) => {
+            console.error(e);
+            toast.error("Failed to send reset email");
+          });
+      };
+
+      return (
+        <button data-testid="forgot-password" onClick={handleForgotPassword}>
+          Forgot password?
+        </button>
+      );
+    };
+
+    render(<TestComponent />);
+
+    fireEvent.click(screen.getByTestId("forgot-password"));
+
+    await waitFor(() => {
+      expect(
+        FirebaseAuthentication.sendPasswordResetEmail,
+      ).toHaveBeenCalledWith({
+        email: "test@example.com",
+      });
+    });
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Password reset email sent");
+    });
+  });
+
+  it("should handle failed password reset", async () => {
+    const { FirebaseAuthentication } =
+      await import("@capacitor-firebase/authentication");
+
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    vi.mocked(
+      FirebaseAuthentication.sendPasswordResetEmail,
+    ).mockRejectedValueOnce(new Error("User not found"));
+
+    const TestComponent = () => {
+      const handleForgotPassword = () => {
+        FirebaseAuthentication.sendPasswordResetEmail({
+          email: "nonexistent@example.com",
+        })
+          .then(() => {
+            toast.success("Password reset email sent");
+          })
+          .catch((e: Error) => {
+            console.error(e);
+            toast.error("Failed to send reset email");
+          });
+      };
+
+      return (
+        <button data-testid="forgot-password" onClick={handleForgotPassword}>
+          Forgot password?
+        </button>
+      );
+    };
+
+    render(<TestComponent />);
+
+    fireEvent.click(screen.getByTestId("forgot-password"));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Failed to send reset email");
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("should toggle between sign in and sign up modes", async () => {
+    const TestComponent = () => {
+      const [isSignUpMode, setIsSignUpMode] = React.useState(false);
+
+      return (
+        <div>
+          <button data-testid="auth-button" onClick={() => {}}>
+            {isSignUpMode ? "Sign up" : "Sign in"}
+          </button>
+          <button
+            data-testid="toggle-mode"
+            onClick={() => setIsSignUpMode(!isSignUpMode)}
+          >
+            {isSignUpMode
+              ? "Already have an account? Sign in"
+              : "Don't have an account? Sign up"}
+          </button>
+        </div>
+      );
+    };
+
+    render(<TestComponent />);
+
+    // Initially in sign in mode
+    expect(screen.getByTestId("auth-button")).toHaveTextContent("Sign in");
+    expect(screen.getByTestId("toggle-mode")).toHaveTextContent(
+      "Don't have an account? Sign up",
+    );
+
+    // Toggle to sign up mode
+    fireEvent.click(screen.getByTestId("toggle-mode"));
+
+    expect(screen.getByTestId("auth-button")).toHaveTextContent("Sign up");
+    expect(screen.getByTestId("toggle-mode")).toHaveTextContent(
+      "Already have an account? Sign in",
+    );
+
+    // Toggle back to sign in mode
+    fireEvent.click(screen.getByTestId("toggle-mode"));
+
+    expect(screen.getByTestId("auth-button")).toHaveTextContent("Sign in");
   });
 });

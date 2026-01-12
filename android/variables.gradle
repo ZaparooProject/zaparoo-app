@@ -15,4 +15,5 @@ ext {
     androidxEspressoCoreVersion = '3.6.1'
     cordovaAndroidVersion = '10.1.1'
     rgcfaIncludeGoogle = true
+    androidxCredentialsVersion = '1.3.0'
 }

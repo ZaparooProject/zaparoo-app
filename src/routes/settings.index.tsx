@@ -34,7 +34,7 @@ function Settings() {
     useProPurchase();
 
   const connectionError = useStatusStore((state) => state.connectionError);
-  // const loggedInUser = useStatusStore((state) => state.loggedInUser);
+  const loggedInUser = useStatusStore((state) => state.loggedInUser);
   const deviceHistory = useStatusStore((state) => state.deviceHistory);
   const setDeviceHistory = useStatusStore((state) => state.setDeviceHistory);
   const removeDeviceHistory = useStatusStore(
@@ -188,7 +188,7 @@ function Settings() {
             </div>
           )}
 
-          {/* <div>
+          <div>
             {loggedInUser !== null ? (
               <div className="flex flex-col gap-3">
                 <Link to="/settings/online">
@@ -201,12 +201,12 @@ function Settings() {
             ) : (
               <Link to="/settings/online">
                 <Button
-                  label={t("online.settingsSignInButton")}
+                  label={t("online.settingsLogInButton")}
                   className="w-full"
                 />
               </Link>
             )}
-          </div> */}
+          </div>
 
           <div className="flex flex-col">
             <label className="text-white">{t("settings.language")}</label>
