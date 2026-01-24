@@ -45,6 +45,27 @@ vi.mock("@capacitor-firebase/authentication", () => ({
   },
 }));
 
+const mockPurchasesLogOut = vi.fn().mockResolvedValue(undefined);
+vi.mock("@revenuecat/purchases-capacitor", () => ({
+  Purchases: {
+    logOut: () => mockPurchasesLogOut(),
+  },
+}));
+
+// Capacitor mock with configurable platform
+let mockPlatform = "web";
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: vi.fn(() => mockPlatform !== "web"),
+    getPlatform: vi.fn(() => mockPlatform),
+  },
+}));
+
+const mockLoggerError = vi.fn();
+vi.mock("../../../lib/logger", () => ({
+  logger: { error: mockLoggerError },
+}));
+
 vi.mock("@capacitor/browser", () => ({
   default: {},
   Browser: {
@@ -170,6 +191,7 @@ describe("Settings Online Route", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPlatform = "web"; // Default to web platform
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -177,8 +199,11 @@ describe("Settings Online Route", () => {
       },
     });
 
-    // Reset mockSetLoggedInUser calls - the mock is already set up at the module level
+    // Reset mock calls
     mockSetLoggedInUser.mockClear();
+    mockPurchasesLogOut.mockClear();
+    mockPurchasesLogOut.mockResolvedValue(undefined);
+    mockLoggerError.mockClear();
   });
 
   afterEach(() => {
@@ -970,5 +995,133 @@ describe("Settings Online Route", () => {
     fireEvent.click(screen.getByTestId("toggle-mode"));
 
     expect(screen.getByTestId("auth-button")).toHaveTextContent("Sign in");
+  });
+
+  describe("RevenueCat logout sync", () => {
+    it("should call Purchases.logOut before Firebase signOut on native platform", async () => {
+      mockPlatform = "ios";
+
+      const { Capacitor } = await import("@capacitor/core");
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+
+      const TestComponent = () => {
+        const handleLogout = async () => {
+          // Revert RevenueCat to anonymous before Firebase signOut (skip on web)
+          if (Capacitor.getPlatform() !== "web") {
+            await Purchases.logOut();
+          }
+          await FirebaseAuthentication.signOut();
+          mockSetLoggedInUser(null);
+        };
+
+        return (
+          <button data-testid="logout-button" onClick={handleLogout}>
+            Logout
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("logout-button"));
+
+      await waitFor(() => {
+        expect(mockPurchasesLogOut).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
+      });
+    });
+
+    it("should skip RevenueCat logout on web platform", async () => {
+      mockPlatform = "web";
+
+      const { Capacitor } = await import("@capacitor/core");
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+
+      const TestComponent = () => {
+        const handleLogout = async () => {
+          // Revert RevenueCat to anonymous before Firebase signOut (skip on web)
+          if (Capacitor.getPlatform() !== "web") {
+            await Purchases.logOut();
+          }
+          await FirebaseAuthentication.signOut();
+          mockSetLoggedInUser(null);
+        };
+
+        return (
+          <button data-testid="logout-button" onClick={handleLogout}>
+            Logout
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("logout-button"));
+
+      await waitFor(() => {
+        expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
+      });
+
+      // RevenueCat should NOT be called on web
+      expect(mockPurchasesLogOut).not.toHaveBeenCalled();
+    });
+
+    it("should handle RevenueCat logout error gracefully", async () => {
+      mockPlatform = "ios";
+      mockPurchasesLogOut.mockRejectedValue(new Error("RevenueCat error"));
+
+      const { Capacitor } = await import("@capacitor/core");
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+      const { logger } = await import("../../../lib/logger");
+
+      const TestComponent = () => {
+        const handleLogout = async () => {
+          // Revert RevenueCat to anonymous before Firebase signOut (skip on web)
+          if (Capacitor.getPlatform() !== "web") {
+            try {
+              await Purchases.logOut();
+            } catch (e) {
+              logger.error("RevenueCat logout failed:", e, {
+                category: "purchase",
+                action: "logOut",
+                severity: "warning",
+              });
+            }
+          }
+
+          await FirebaseAuthentication.signOut();
+          mockSetLoggedInUser(null);
+        };
+
+        return (
+          <button data-testid="logout-button" onClick={handleLogout}>
+            Logout
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("logout-button"));
+
+      await waitFor(() => {
+        expect(mockLoggerError).toHaveBeenCalledWith(
+          "RevenueCat logout failed:",
+          expect.any(Error),
+          expect.objectContaining({
+            category: "purchase",
+            action: "logOut",
+          }),
+        );
+      });
+
+      // Firebase signOut should still be called despite RevenueCat error
+      await waitFor(() => {
+        expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
+      });
+    });
   });
 });

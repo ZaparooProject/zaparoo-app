@@ -21,3 +21,12 @@ if (import.meta.env.DEV) {
     return res;
   });
 }
+
+export const onlineApi = client;
+
+export async function getSubscriptionStatus(): Promise<{
+  is_premium: boolean;
+}> {
+  const response = await client.get("/account/subscription");
+  return response.data;
+}

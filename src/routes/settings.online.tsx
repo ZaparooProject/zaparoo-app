@@ -2,6 +2,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useState, type KeyboardEvent } from "react";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
+import { Purchases } from "@revenuecat/purchases-capacitor";
 import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
 import { LogOutIcon, UserPlusIcon } from "lucide-react";
@@ -241,7 +242,20 @@ function OnlinePage() {
       });
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    // Revert RevenueCat to anonymous before Firebase signOut (skip on web)
+    if (Capacitor.getPlatform() !== "web") {
+      try {
+        await Purchases.logOut();
+      } catch (e) {
+        logger.error("RevenueCat logout failed:", e, {
+          category: "purchase",
+          action: "logOut",
+          severity: "warning",
+        });
+      }
+    }
+
     FirebaseAuthentication.signOut()
       .then(() => {
         setLoggedInUser(null);
