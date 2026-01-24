@@ -69,20 +69,17 @@ function Logs() {
       const decodedContent = atob(logsQuery.data.content);
       const lines = decodedContent.split("\n").filter((line) => line.trim());
 
-      return lines.map((line, index) => {
-        try {
-          const parsed = JSON.parse(line) as LogEntry;
-          return { ...parsed, _index: index };
-        } catch {
-          // If line isn't valid JSON, treat as plain text
-          return {
-            level: "info",
-            time: new Date().toISOString(),
-            message: line,
-            _index: index,
-          } as LogEntry & { _index: number };
-        }
-      });
+      return lines
+        .map((line, index) => {
+          try {
+            const parsed = JSON.parse(line) as LogEntry;
+            return { ...parsed, _index: index };
+          } catch {
+            // Filter out corrupt JSON lines
+            return null;
+          }
+        })
+        .filter((entry) => entry !== null);
     } catch {
       return [];
     }
