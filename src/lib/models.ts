@@ -325,3 +325,9 @@ export interface UpdateRequirementsRequest {
   accept_privacy?: boolean;
   age_verified?: boolean;
 }
+
+export interface DeleteAccountResponse {
+  message: string;
+  scheduled_deletion_at: string;
+  can_cancel_until: string;
+}

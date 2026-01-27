@@ -5,6 +5,7 @@ import type {
   RequirementsResponse,
   UpdateRequirementsRequest,
   PendingRequirement,
+  DeleteAccountResponse,
 } from "@/lib/models";
 
 const client = axios.create({
@@ -62,5 +63,19 @@ export async function updateRequirements(
   req: UpdateRequirementsRequest,
 ): Promise<RequirementsResponse> {
   const response = await client.post("/account/requirements", req);
+  return response.data;
+}
+
+export async function deleteAccount(
+  confirmation: string,
+): Promise<DeleteAccountResponse> {
+  const response = await client.delete("/account", {
+    data: { confirmation },
+  });
+  return response.data;
+}
+
+export async function cancelAccountDeletion(): Promise<{ message: string }> {
+  const response = await client.post("/account/cancel-deletion");
   return response.data;
 }

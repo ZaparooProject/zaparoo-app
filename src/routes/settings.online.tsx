@@ -6,7 +6,15 @@ import { Purchases } from "@revenuecat/purchases-capacitor";
 import { Browser } from "@capacitor/browser";
 import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
-import { LogOutIcon, UserPlusIcon, ExternalLinkIcon } from "lucide-react";
+import {
+  LogOutIcon,
+  UserPlusIcon,
+  ExternalLinkIcon,
+  Trash2Icon,
+  CheckCircleIcon,
+  AlertCircleIcon,
+} from "lucide-react";
+import type { AxiosError } from "axios";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,7 +26,17 @@ import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { BackIcon, GoogleIcon, AppleIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
-import { updateRequirements } from "@/lib/onlineApi";
+import {
+  updateRequirements,
+  deleteAccount,
+  cancelAccountDeletion,
+} from "@/lib/onlineApi";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/settings/online")({
   component: OnlinePage,
@@ -93,6 +111,13 @@ function OnlinePage() {
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [scheduledDeletion, setScheduledDeletion] = useState<string | null>(
+    null,
+  );
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const oauthAvailable = isOAuthAvailable();
 
@@ -354,6 +379,69 @@ function OnlinePage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteAccount(confirmText);
+      setScheduledDeletion(result.scheduled_deletion_at);
+      setDeleteModalOpen(false);
+      setConfirmText("");
+      toast.success(t("online.deleteAccountScheduled"));
+    } catch (e) {
+      const error = e as AxiosError<{ error?: { code?: string } }>;
+      const code = error.response?.data?.error?.code;
+
+      if (code === "confirmation_mismatch") {
+        toast.error(t("online.deleteConfirmationMismatch"));
+      } else if (code === "developer_has_active_media") {
+        toast.error(t("online.deleteHasActiveMedia"));
+      } else if (code === "deletion_already_scheduled") {
+        toast.error(t("online.deletionAlreadyScheduled"));
+      } else {
+        logger.error("Account deletion failed:", e, {
+          category: "api",
+          action: "deleteAccount",
+          severity: "error",
+        });
+        toast.error(t("online.deleteAccountFailed"));
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCancelDeletion = async () => {
+    setIsCancelling(true);
+    try {
+      await cancelAccountDeletion();
+      setScheduledDeletion(null);
+      toast.success(t("online.deletionCancelled"));
+    } catch (e) {
+      logger.error("Cancel deletion failed:", e, {
+        category: "api",
+        action: "cancelAccountDeletion",
+        severity: "error",
+      });
+      toast.error(t("online.cancelDeletionFailed"));
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      await FirebaseAuthentication.sendEmailVerification();
+      toast.success(t("online.verificationSent"));
+    } catch (e) {
+      logger.error("Failed to send verification email:", e, {
+        category: "api",
+        action: "sendEmailVerification",
+        severity: "warning",
+      });
+      toast.error(t("online.verificationFailed"));
+    }
+  };
+
   return (
     <PageFrame
       {...swipeHandlers}
@@ -418,6 +506,29 @@ function OnlinePage() {
                 }
                 return null;
               })()}
+
+              {/* Email verification indicator - only for email/password users */}
+              {getAuthProvider(loggedInUser.providerData) === "password" &&
+                (loggedInUser.emailVerified ? (
+                  <span className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
+                    <CheckCircleIcon size="14" className="text-success" />
+                    {t("online.emailVerified")}
+                  </span>
+                ) : (
+                  <div className="mt-1 flex flex-col items-center gap-1">
+                    <span className="flex items-center gap-1 text-xs text-amber-500">
+                      <AlertCircleIcon size="14" />
+                      {t("online.emailNotVerified")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleResendVerification}
+                      className="text-muted-foreground hover:text-foreground text-xs underline"
+                    >
+                      {t("online.resendVerification")}
+                    </button>
+                  </div>
+                ))}
             </div>
 
             {/* Account actions */}
@@ -468,6 +579,39 @@ function OnlinePage() {
                 onClick={handleSignOut}
                 className="w-full"
               />
+
+              {/* Delete account section */}
+              {scheduledDeletion ? (
+                <div className="border-error/30 bg-error/10 mt-2 rounded-lg border p-3">
+                  <p className="text-error text-sm font-medium">
+                    {t("online.deletionScheduledTitle")}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {t("online.deletionScheduledMessage", {
+                      date: new Date(scheduledDeletion).toLocaleDateString(),
+                    })}
+                  </p>
+                  <Button
+                    label={
+                      isCancelling
+                        ? t("spinner.cancelling")
+                        : t("online.cancelDeletion")
+                    }
+                    variant="outline"
+                    onClick={handleCancelDeletion}
+                    disabled={isCancelling}
+                    className="mt-3 w-full"
+                  />
+                </div>
+              ) : (
+                <Button
+                  label={t("online.deleteAccount")}
+                  variant="outline"
+                  icon={<Trash2Icon size="20" />}
+                  onClick={() => setDeleteModalOpen(true)}
+                  className="border-error text-error mt-2 w-full"
+                />
+              )}
             </div>
           </div>
         ) : (
@@ -653,6 +797,68 @@ function OnlinePage() {
           </div>
         )}
       </div>
+
+      {/* Delete account confirmation modal */}
+      <Dialog
+        open={deleteModalOpen}
+        onOpenChange={(open) => {
+          setDeleteModalOpen(open);
+          if (!open) setConfirmText("");
+        }}
+      >
+        <DialogContent
+          onOpenChange={(open) => {
+            setDeleteModalOpen(open);
+            if (!open) setConfirmText("");
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>{t("online.deleteAccountConfirmTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <p className="text-muted-foreground text-sm">
+              {t("online.deleteAccountConfirmMessage")}
+            </p>
+            <p className="text-muted-foreground text-sm">
+              {t("online.deleteAccountGracePeriod")}
+            </p>
+            <div>
+              <label className="text-sm text-white">
+                {t("online.deleteConfirmLabel")}
+              </label>
+              <input
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder="DELETE MY ACCOUNT"
+                className="border-bd-input bg-background text-foreground mt-1 w-full rounded-md border p-3"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                label={t("nav.cancel")}
+                onClick={() => {
+                  setDeleteModalOpen(false);
+                  setConfirmText("");
+                }}
+                className="flex-1"
+                disabled={isDeleting}
+              />
+              <Button
+                variant="outline"
+                intent="destructive"
+                label={
+                  isDeleting ? t("spinner.deleting") : t("online.deleteAccount")
+                }
+                onClick={handleDeleteAccount}
+                className="border-error text-error flex-1"
+                disabled={isDeleting || confirmText !== "DELETE MY ACCOUNT"}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageFrame>
   );
 }

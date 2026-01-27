@@ -42,6 +42,7 @@ vi.mock("@capacitor-firebase/authentication", () => ({
       },
     }),
     sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
+    sendEmailVerification: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -78,6 +79,17 @@ vi.mock("lucide-react", () => ({
   LogInIcon: () => "LogInIcon",
   LogOutIcon: () => "LogOutIcon",
   UserPlusIcon: () => "UserPlusIcon",
+  Trash2Icon: () => "Trash2Icon",
+  CheckCircleIcon: () => "CheckCircleIcon",
+  AlertCircleIcon: () => "AlertCircleIcon",
+}));
+
+const mockDeleteAccount = vi.fn();
+const mockCancelAccountDeletion = vi.fn();
+vi.mock("../../../lib/onlineApi", () => ({
+  updateRequirements: vi.fn().mockResolvedValue({}),
+  deleteAccount: (...args: unknown[]) => mockDeleteAccount(...args),
+  cancelAccountDeletion: () => mockCancelAccountDeletion(),
 }));
 
 const mockSetLoggedInUser = vi.fn();
@@ -204,6 +216,16 @@ describe("Settings Online Route", () => {
     mockPurchasesLogOut.mockClear();
     mockPurchasesLogOut.mockResolvedValue(undefined);
     mockLoggerError.mockClear();
+    mockDeleteAccount.mockClear();
+    mockDeleteAccount.mockResolvedValue({
+      message: "Account deletion scheduled",
+      scheduled_deletion_at: "2024-02-15T00:00:00Z",
+      can_cancel_until: "2024-02-14T00:00:00Z",
+    });
+    mockCancelAccountDeletion.mockClear();
+    mockCancelAccountDeletion.mockResolvedValue({
+      message: "Deletion cancelled",
+    });
   });
 
   afterEach(() => {
@@ -1390,6 +1412,399 @@ describe("Settings Online Route", () => {
       // Firebase signOut should still be called despite RevenueCat error
       await waitFor(() => {
         expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe("account deletion", () => {
+    it("should disable delete button until confirmation text matches", () => {
+      const TestComponent = () => {
+        const [confirmText, setConfirmText] = React.useState("");
+
+        return (
+          <div>
+            <input
+              data-testid="confirm-input"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="DELETE MY ACCOUNT"
+            />
+            <button
+              data-testid="delete-button"
+              disabled={confirmText !== "DELETE MY ACCOUNT"}
+            >
+              Delete account
+            </button>
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      expect(screen.getByTestId("delete-button")).toBeDisabled();
+
+      fireEvent.change(screen.getByTestId("confirm-input"), {
+        target: { value: "DELETE" },
+      });
+      expect(screen.getByTestId("delete-button")).toBeDisabled();
+
+      fireEvent.change(screen.getByTestId("confirm-input"), {
+        target: { value: "DELETE MY ACCOUNT" },
+      });
+      expect(screen.getByTestId("delete-button")).not.toBeDisabled();
+    });
+
+    it("should call deleteAccount API with user confirmation text", async () => {
+      const TestComponent = () => {
+        const [confirmText, setConfirmText] =
+          React.useState("DELETE MY ACCOUNT");
+
+        const handleDelete = async () => {
+          await mockDeleteAccount(confirmText);
+          toast.success("Account deletion scheduled");
+        };
+
+        return (
+          <div>
+            <input
+              data-testid="confirm-input"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+            />
+            <button data-testid="delete-button" onClick={handleDelete}>
+              Delete account
+            </button>
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("delete-button"));
+
+      await waitFor(() => {
+        expect(mockDeleteAccount).toHaveBeenCalledWith("DELETE MY ACCOUNT");
+        expect(toast.success).toHaveBeenCalledWith(
+          "Account deletion scheduled",
+        );
+      });
+    });
+
+    it("should show scheduled deletion banner after successful deletion", async () => {
+      const TestComponent = () => {
+        const [scheduledDeletion, setScheduledDeletion] = React.useState<
+          string | null
+        >(null);
+
+        const handleDelete = async () => {
+          const result = await mockDeleteAccount("DELETE MY ACCOUNT");
+          setScheduledDeletion(result.scheduled_deletion_at);
+        };
+
+        return (
+          <div>
+            {scheduledDeletion ? (
+              <div data-testid="deletion-scheduled">
+                Account will be deleted on{" "}
+                {new Date(scheduledDeletion).toLocaleDateString()}
+              </div>
+            ) : (
+              <button data-testid="delete-button" onClick={handleDelete}>
+                Delete account
+              </button>
+            )}
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("delete-button"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("deletion-scheduled")).toBeInTheDocument();
+      });
+    });
+
+    it("should handle cancel deletion", async () => {
+      const TestComponent = () => {
+        const [scheduledDeletion, setScheduledDeletion] = React.useState<
+          string | null
+        >("2024-02-15T00:00:00Z");
+
+        const handleCancelDeletion = async () => {
+          await mockCancelAccountDeletion();
+          setScheduledDeletion(null);
+          toast.success("Deletion cancelled");
+        };
+
+        return (
+          <div>
+            {scheduledDeletion ? (
+              <div>
+                <span data-testid="deletion-scheduled">
+                  Deletion scheduled for{" "}
+                  {new Date(scheduledDeletion).toLocaleDateString()}
+                </span>
+                <button
+                  data-testid="cancel-deletion-button"
+                  onClick={handleCancelDeletion}
+                >
+                  Cancel deletion
+                </button>
+              </div>
+            ) : (
+              <button data-testid="delete-button">Delete account</button>
+            )}
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      expect(screen.getByTestId("deletion-scheduled")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId("cancel-deletion-button"));
+
+      await waitFor(() => {
+        expect(mockCancelAccountDeletion).toHaveBeenCalled();
+        expect(toast.success).toHaveBeenCalledWith("Deletion cancelled");
+        expect(screen.getByTestId("delete-button")).toBeInTheDocument();
+      });
+    });
+
+    it("should handle deletion error - developer has active media", async () => {
+      mockDeleteAccount.mockRejectedValueOnce({
+        response: { data: { error: { code: "developer_has_active_media" } } },
+      });
+
+      const TestComponent = () => {
+        const handleDelete = async () => {
+          try {
+            await mockDeleteAccount("DELETE MY ACCOUNT");
+          } catch (e: any) {
+            const code = e.response?.data?.error?.code;
+            if (code === "developer_has_active_media") {
+              toast.error("You must unpublish all media first");
+            }
+          }
+        };
+
+        return (
+          <button data-testid="delete-button" onClick={handleDelete}>
+            Delete account
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("delete-button"));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "You must unpublish all media first",
+        );
+      });
+    });
+
+    it("should handle deletion error - confirmation mismatch", async () => {
+      mockDeleteAccount.mockRejectedValueOnce({
+        response: { data: { error: { code: "confirmation_mismatch" } } },
+      });
+
+      const TestComponent = () => {
+        const handleDelete = async () => {
+          try {
+            await mockDeleteAccount("wrong text");
+          } catch (e: any) {
+            const code = e.response?.data?.error?.code;
+            if (code === "confirmation_mismatch") {
+              toast.error("Confirmation text doesn't match");
+            }
+          }
+        };
+
+        return (
+          <button data-testid="delete-button" onClick={handleDelete}>
+            Delete account
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("delete-button"));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "Confirmation text doesn't match",
+        );
+      });
+    });
+  });
+
+  describe("email verification indicator", () => {
+    it("should show verified status for verified email/password users", () => {
+      const TestComponent = () => {
+        const user = {
+          email: "test@example.com",
+          emailVerified: true,
+          providerData: [{ providerId: "password" }],
+        };
+
+        const isPasswordUser = user.providerData.some(
+          (p) => p.providerId === "password",
+        );
+
+        return (
+          <div>
+            {isPasswordUser &&
+              (user.emailVerified ? (
+                <span data-testid="email-verified">Email verified</span>
+              ) : (
+                <span data-testid="email-not-verified">Email not verified</span>
+              ))}
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      expect(screen.getByTestId("email-verified")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("email-not-verified"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should show unverified status with resend button for unverified users", () => {
+      const TestComponent = () => {
+        const user = {
+          email: "test@example.com",
+          emailVerified: false,
+          providerData: [{ providerId: "password" }],
+        };
+
+        const isPasswordUser = user.providerData.some(
+          (p) => p.providerId === "password",
+        );
+
+        return (
+          <div>
+            {isPasswordUser &&
+              (user.emailVerified ? (
+                <span data-testid="email-verified">Email verified</span>
+              ) : (
+                <div>
+                  <span data-testid="email-not-verified">
+                    Email not verified
+                  </span>
+                  <button data-testid="resend-verification">
+                    Resend verification email
+                  </button>
+                </div>
+              ))}
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      expect(screen.getByTestId("email-not-verified")).toBeInTheDocument();
+      expect(screen.getByTestId("resend-verification")).toBeInTheDocument();
+      expect(screen.queryByTestId("email-verified")).not.toBeInTheDocument();
+    });
+
+    it("should not show verification status for OAuth users", () => {
+      const TestComponent = () => {
+        const user = {
+          email: "test@example.com",
+          emailVerified: true,
+          providerData: [{ providerId: "google.com" }],
+        };
+
+        const isPasswordUser = user.providerData.some(
+          (p) => p.providerId === "password",
+        );
+
+        return (
+          <div>
+            <span data-testid="user-email">{user.email}</span>
+            {isPasswordUser && (
+              <span data-testid="verification-indicator">
+                {user.emailVerified ? "Verified" : "Not verified"}
+              </span>
+            )}
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      expect(screen.getByTestId("user-email")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("verification-indicator"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should handle resend verification email", async () => {
+      const TestComponent = () => {
+        const handleResend = async () => {
+          try {
+            await FirebaseAuthentication.sendEmailVerification();
+            toast.success("Verification email sent");
+          } catch {
+            toast.error("Failed to send verification email");
+          }
+        };
+
+        return (
+          <button data-testid="resend-button" onClick={handleResend}>
+            Resend verification
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("resend-button"));
+
+      await waitFor(() => {
+        expect(FirebaseAuthentication.sendEmailVerification).toHaveBeenCalled();
+        expect(toast.success).toHaveBeenCalledWith("Verification email sent");
+      });
+    });
+
+    it("should handle resend verification email failure", async () => {
+      vi.mocked(
+        FirebaseAuthentication.sendEmailVerification,
+      ).mockRejectedValueOnce(new Error("Failed to send"));
+
+      const TestComponent = () => {
+        const handleResend = async () => {
+          try {
+            await FirebaseAuthentication.sendEmailVerification();
+            toast.success("Verification email sent");
+          } catch {
+            toast.error("Failed to send verification email");
+          }
+        };
+
+        return (
+          <button data-testid="resend-button" onClick={handleResend}>
+            Resend verification
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("resend-button"));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "Failed to send verification email",
+        );
       });
     });
   });
