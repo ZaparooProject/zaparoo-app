@@ -368,6 +368,60 @@ describe("Create Mappings Route", () => {
     });
   });
 
+  it("should gracefully handle barcode scan cancellation", async () => {
+    const { BarcodeScanner } =
+      await import("@capacitor-mlkit/barcode-scanning");
+
+    // Mock scan rejection (user cancelled)
+    vi.mocked(BarcodeScanner.scan).mockRejectedValueOnce(
+      new Error("scan canceled."),
+    );
+
+    const TestComponent = () => {
+      const [tokenId, setTokenId] = React.useState("");
+      const [errorOccurred, setErrorOccurred] = React.useState(false);
+
+      const handleBarcodeScan = () => {
+        BarcodeScanner.scan()
+          .then((res) => {
+            const barcode = res.barcodes[0];
+            if (barcode) {
+              setTokenId(barcode.rawValue);
+            }
+          })
+          .catch((error) => {
+            // Cancellation should be silently ignored
+            if (error.message.toLowerCase().includes("canceled")) {
+              return;
+            }
+            setErrorOccurred(true);
+          });
+      };
+
+      return (
+        <div>
+          <button data-testid="barcode-scan-button" onClick={handleBarcodeScan}>
+            Scan Barcode
+          </button>
+          <div data-testid="token-value">{tokenId}</div>
+          <div data-testid="error-state">{errorOccurred ? "error" : "ok"}</div>
+        </div>
+      );
+    };
+
+    render(<TestComponent />);
+
+    const barcodeButton = screen.getByTestId("barcode-scan-button");
+    fireEvent.click(barcodeButton);
+
+    await waitFor(() => {
+      // Token should remain empty after cancelled scan
+      expect(screen.getByTestId("token-value")).toHaveTextContent("");
+      // No error state should be triggered
+      expect(screen.getByTestId("error-state")).toHaveTextContent("ok");
+    });
+  });
+
   it("should save new mapping", async () => {
     const { CoreAPI } = await import("../../../lib/coreApi.ts");
     const mockNewMapping = vi.mocked(CoreAPI.newMapping);

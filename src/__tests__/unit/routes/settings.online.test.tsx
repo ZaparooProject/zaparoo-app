@@ -23,13 +23,48 @@ vi.mock("@capacitor-firebase/authentication", () => ({
         uid: "test-uid",
       },
     }),
+    createUserWithEmailAndPassword: vi.fn().mockResolvedValue({
+      user: {
+        email: "newuser@example.com",
+        uid: "new-uid",
+      },
+    }),
     signInWithGoogle: vi.fn().mockResolvedValue({
       user: {
         email: "google@example.com",
         uid: "google-uid",
       },
     }),
+    signInWithApple: vi.fn().mockResolvedValue({
+      user: {
+        email: "apple@example.com",
+        uid: "apple-uid",
+      },
+    }),
+    sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
+    sendEmailVerification: vi.fn().mockResolvedValue(undefined),
   },
+}));
+
+const mockPurchasesLogOut = vi.fn().mockResolvedValue(undefined);
+vi.mock("@revenuecat/purchases-capacitor", () => ({
+  Purchases: {
+    logOut: () => mockPurchasesLogOut(),
+  },
+}));
+
+// Capacitor mock with configurable platform
+let mockPlatform = "web";
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: vi.fn(() => mockPlatform !== "web"),
+    getPlatform: vi.fn(() => mockPlatform),
+  },
+}));
+
+const mockLoggerError = vi.fn();
+vi.mock("../../../lib/logger", () => ({
+  logger: { error: mockLoggerError },
 }));
 
 vi.mock("@capacitor/browser", () => ({
@@ -43,6 +78,18 @@ vi.mock("lucide-react", () => ({
   ExternalLinkIcon: () => "ExternalLinkIcon",
   LogInIcon: () => "LogInIcon",
   LogOutIcon: () => "LogOutIcon",
+  UserPlusIcon: () => "UserPlusIcon",
+  Trash2Icon: () => "Trash2Icon",
+  CheckCircleIcon: () => "CheckCircleIcon",
+  AlertCircleIcon: () => "AlertCircleIcon",
+}));
+
+const mockDeleteAccount = vi.fn();
+const mockCancelAccountDeletion = vi.fn();
+vi.mock("../../../lib/onlineApi", () => ({
+  updateRequirements: vi.fn().mockResolvedValue({}),
+  deleteAccount: (...args: unknown[]) => mockDeleteAccount(...args),
+  cancelAccountDeletion: () => mockCancelAccountDeletion(),
 }));
 
 const mockSetLoggedInUser = vi.fn();
@@ -156,6 +203,7 @@ describe("Settings Online Route", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPlatform = "web"; // Default to web platform
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -163,8 +211,21 @@ describe("Settings Online Route", () => {
       },
     });
 
-    // Reset mockSetLoggedInUser calls - the mock is already set up at the module level
+    // Reset mock calls
     mockSetLoggedInUser.mockClear();
+    mockPurchasesLogOut.mockClear();
+    mockPurchasesLogOut.mockResolvedValue(undefined);
+    mockLoggerError.mockClear();
+    mockDeleteAccount.mockClear();
+    mockDeleteAccount.mockResolvedValue({
+      message: "Account deletion scheduled",
+      scheduled_deletion_at: "2024-02-15T00:00:00Z",
+      can_cancel_until: "2024-02-14T00:00:00Z",
+    });
+    mockCancelAccountDeletion.mockClear();
+    mockCancelAccountDeletion.mockResolvedValue({
+      message: "Deletion cancelled",
+    });
   });
 
   afterEach(() => {
@@ -661,5 +722,1090 @@ describe("Settings Online Route", () => {
     });
 
     consoleSpy.mockRestore();
+  });
+
+  it("should handle successful sign up", async () => {
+    const { FirebaseAuthentication } =
+      await import("@capacitor-firebase/authentication");
+
+    const TestComponent = () => {
+      const [onlineEmail] = React.useState("newuser@example.com");
+      const [onlinePassword] = React.useState("password123");
+      const [isLoading, setIsLoading] = React.useState(false);
+
+      const handleSignUp = () => {
+        setIsLoading(true);
+        FirebaseAuthentication.createUserWithEmailAndPassword({
+          email: onlineEmail,
+          password: onlinePassword,
+        })
+          .then((result) => {
+            if (result.user) {
+              toast.success("Account created successfully");
+            } else {
+              toast.error("Failed to create account");
+            }
+            mockSetLoggedInUser(result.user);
+            setIsLoading(false);
+          })
+          .catch((e: Error) => {
+            console.error(e);
+            toast.error("Failed to create account");
+            setIsLoading(false);
+          });
+      };
+
+      return (
+        <div>
+          <button
+            data-testid="signup-button"
+            onClick={handleSignUp}
+            disabled={!onlineEmail || !onlinePassword || isLoading}
+          >
+            Sign up
+          </button>
+        </div>
+      );
+    };
+
+    render(<TestComponent />);
+
+    const signupButton = screen.getByTestId("signup-button");
+    fireEvent.click(signupButton);
+
+    await waitFor(() => {
+      expect(
+        FirebaseAuthentication.createUserWithEmailAndPassword,
+      ).toHaveBeenCalledWith({
+        email: "newuser@example.com",
+        password: "password123",
+      });
+    });
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        "Account created successfully",
+      );
+      expect(mockSetLoggedInUser).toHaveBeenCalledWith({
+        email: "newuser@example.com",
+        uid: "new-uid",
+      });
+    });
+  });
+
+  it("should handle sign up with email already in use", async () => {
+    const { FirebaseAuthentication } =
+      await import("@capacitor-firebase/authentication");
+
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    vi.mocked(
+      FirebaseAuthentication.createUserWithEmailAndPassword,
+    ).mockRejectedValueOnce(new Error("email-already-in-use"));
+
+    const TestComponent = () => {
+      const handleSignUp = () => {
+        FirebaseAuthentication.createUserWithEmailAndPassword({
+          email: "existing@example.com",
+          password: "password123",
+        })
+          .then((result) => {
+            mockSetLoggedInUser(result.user);
+          })
+          .catch((e: Error) => {
+            console.error(e);
+            if (e.message.includes("email-already-in-use")) {
+              toast.error("An account with this email already exists");
+            } else {
+              toast.error("Failed to create account");
+            }
+          });
+      };
+
+      return (
+        <button data-testid="signup-button" onClick={handleSignUp}>
+          Sign up
+        </button>
+      );
+    };
+
+    render(<TestComponent />);
+
+    fireEvent.click(screen.getByTestId("signup-button"));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "An account with this email already exists",
+      );
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("should handle successful Apple Sign-In", async () => {
+    const TestComponent = () => {
+      const handleAppleLogin = () => {
+        FirebaseAuthentication.signInWithApple()
+          .then((result) => {
+            if (result.user) {
+              toast.success("Login successful!");
+            } else {
+              toast.error("Login failed!");
+            }
+            mockSetLoggedInUser(result.user);
+          })
+          .catch((e: Error) => {
+            console.error(e);
+            toast.error("Login failed!");
+            mockSetLoggedInUser(null);
+          });
+      };
+
+      return (
+        <button data-testid="apple-login-button" onClick={handleAppleLogin}>
+          Sign in with Apple
+        </button>
+      );
+    };
+
+    render(<TestComponent />);
+
+    const appleButton = screen.getByTestId("apple-login-button");
+    fireEvent.click(appleButton);
+
+    await waitFor(() => {
+      expect(FirebaseAuthentication.signInWithApple).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Login successful!");
+      expect(mockSetLoggedInUser).toHaveBeenCalledWith({
+        email: "apple@example.com",
+        uid: "apple-uid",
+      });
+    });
+  });
+
+  it("should handle password reset email", async () => {
+    const { FirebaseAuthentication } =
+      await import("@capacitor-firebase/authentication");
+
+    const TestComponent = () => {
+      const [email] = React.useState("test@example.com");
+
+      const handleForgotPassword = () => {
+        FirebaseAuthentication.sendPasswordResetEmail({
+          email: email,
+        })
+          .then(() => {
+            toast.success("Password reset email sent");
+          })
+          .catch((e: Error) => {
+            console.error(e);
+            toast.error("Failed to send reset email");
+          });
+      };
+
+      return (
+        <button data-testid="forgot-password" onClick={handleForgotPassword}>
+          Forgot password?
+        </button>
+      );
+    };
+
+    render(<TestComponent />);
+
+    fireEvent.click(screen.getByTestId("forgot-password"));
+
+    await waitFor(() => {
+      expect(
+        FirebaseAuthentication.sendPasswordResetEmail,
+      ).toHaveBeenCalledWith({
+        email: "test@example.com",
+      });
+    });
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Password reset email sent");
+    });
+  });
+
+  it("should handle failed password reset", async () => {
+    const { FirebaseAuthentication } =
+      await import("@capacitor-firebase/authentication");
+
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    vi.mocked(
+      FirebaseAuthentication.sendPasswordResetEmail,
+    ).mockRejectedValueOnce(new Error("User not found"));
+
+    const TestComponent = () => {
+      const handleForgotPassword = () => {
+        FirebaseAuthentication.sendPasswordResetEmail({
+          email: "nonexistent@example.com",
+        })
+          .then(() => {
+            toast.success("Password reset email sent");
+          })
+          .catch((e: Error) => {
+            console.error(e);
+            toast.error("Failed to send reset email");
+          });
+      };
+
+      return (
+        <button data-testid="forgot-password" onClick={handleForgotPassword}>
+          Forgot password?
+        </button>
+      );
+    };
+
+    render(<TestComponent />);
+
+    fireEvent.click(screen.getByTestId("forgot-password"));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Failed to send reset email");
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("should toggle between sign in and sign up modes", async () => {
+    const TestComponent = () => {
+      const [isSignUpMode, setIsSignUpMode] = React.useState(false);
+
+      return (
+        <div>
+          <button data-testid="auth-button" onClick={() => {}}>
+            {isSignUpMode ? "Sign up" : "Sign in"}
+          </button>
+          <button
+            data-testid="toggle-mode"
+            onClick={() => setIsSignUpMode(!isSignUpMode)}
+          >
+            {isSignUpMode
+              ? "Already have an account? Sign in"
+              : "Don't have an account? Sign up"}
+          </button>
+        </div>
+      );
+    };
+
+    render(<TestComponent />);
+
+    // Initially in sign in mode
+    expect(screen.getByTestId("auth-button")).toHaveTextContent("Sign in");
+    expect(screen.getByTestId("toggle-mode")).toHaveTextContent(
+      "Don't have an account? Sign up",
+    );
+
+    // Toggle to sign up mode
+    fireEvent.click(screen.getByTestId("toggle-mode"));
+
+    expect(screen.getByTestId("auth-button")).toHaveTextContent("Sign up");
+    expect(screen.getByTestId("toggle-mode")).toHaveTextContent(
+      "Already have an account? Sign in",
+    );
+
+    // Toggle back to sign in mode
+    fireEvent.click(screen.getByTestId("toggle-mode"));
+
+    expect(screen.getByTestId("auth-button")).toHaveTextContent("Sign in");
+  });
+
+  describe("requirements auto-agree", () => {
+    it("should call updateRequirements after successful email login", async () => {
+      const mockUpdateRequirements = vi.fn().mockResolvedValue({
+        requirements: {
+          tos_accepted: true,
+          privacy_accepted: true,
+          age_verified: false,
+        },
+      });
+
+      const TestComponent = () => {
+        const handleLogin = async () => {
+          const result =
+            await FirebaseAuthentication.signInWithEmailAndPassword({
+              email: "test@example.com",
+              password: "password123",
+            });
+
+          if (result.user) {
+            // Auto-agree to TOS/Privacy on login
+            try {
+              await mockUpdateRequirements({
+                accept_tos: true,
+                accept_privacy: true,
+              });
+            } catch {
+              // Continue anyway
+            }
+            mockSetLoggedInUser(result.user);
+            toast.success("Login successful!");
+          }
+        };
+
+        return (
+          <button data-testid="login-button" onClick={handleLogin}>
+            Login
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("login-button"));
+
+      await waitFor(() => {
+        expect(mockUpdateRequirements).toHaveBeenCalledWith({
+          accept_tos: true,
+          accept_privacy: true,
+        });
+      });
+    });
+
+    it("should call updateRequirements with age_verified after signup", async () => {
+      const mockUpdateRequirements = vi.fn().mockResolvedValue({
+        requirements: {
+          tos_accepted: true,
+          privacy_accepted: true,
+          age_verified: true,
+        },
+      });
+
+      const TestComponent = () => {
+        const handleSignUp = async () => {
+          const result =
+            await FirebaseAuthentication.createUserWithEmailAndPassword({
+              email: "newuser@example.com",
+              password: "password123",
+            });
+
+          if (result.user) {
+            // Auto-agree to all requirements on signup
+            try {
+              await mockUpdateRequirements({
+                accept_tos: true,
+                accept_privacy: true,
+                age_verified: true,
+              });
+            } catch {
+              // Continue anyway
+            }
+            mockSetLoggedInUser(result.user);
+            toast.success("Account created!");
+          }
+        };
+
+        return (
+          <button data-testid="signup-button" onClick={handleSignUp}>
+            Sign up
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("signup-button"));
+
+      await waitFor(() => {
+        expect(mockUpdateRequirements).toHaveBeenCalledWith({
+          accept_tos: true,
+          accept_privacy: true,
+          age_verified: true,
+        });
+      });
+    });
+
+    it("should continue with login even if updateRequirements fails", async () => {
+      const mockUpdateRequirements = vi
+        .fn()
+        .mockRejectedValue(new Error("API error"));
+
+      const TestComponent = () => {
+        const handleLogin = async () => {
+          const result =
+            await FirebaseAuthentication.signInWithEmailAndPassword({
+              email: "test@example.com",
+              password: "password123",
+            });
+
+          if (result.user) {
+            try {
+              await mockUpdateRequirements({
+                accept_tos: true,
+                accept_privacy: true,
+              });
+            } catch {
+              // Continue anyway - modal will show if needed
+            }
+            mockSetLoggedInUser(result.user);
+            toast.success("Login successful!");
+          }
+        };
+
+        return (
+          <button data-testid="login-button" onClick={handleLogin}>
+            Login
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("login-button"));
+
+      await waitFor(() => {
+        // Login should still succeed
+        expect(mockSetLoggedInUser).toHaveBeenCalled();
+        expect(toast.success).toHaveBeenCalledWith("Login successful!");
+      });
+    });
+  });
+
+  describe("age confirmation checkbox", () => {
+    it("should disable signup button when age not confirmed", () => {
+      const TestComponent = () => {
+        const [ageConfirmed, setAgeConfirmed] = React.useState(false);
+        const [email] = React.useState("test@example.com");
+        const [password] = React.useState("password123");
+
+        return (
+          <div>
+            <input
+              type="checkbox"
+              data-testid="age-checkbox"
+              checked={ageConfirmed}
+              onChange={(e) => setAgeConfirmed(e.target.checked)}
+            />
+            <label>I confirm I am 13 years or older</label>
+            <button
+              data-testid="signup-button"
+              disabled={!email || !password || !ageConfirmed}
+            >
+              Sign up
+            </button>
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      expect(screen.getByTestId("signup-button")).toBeDisabled();
+
+      fireEvent.click(screen.getByTestId("age-checkbox"));
+
+      expect(screen.getByTestId("signup-button")).not.toBeDisabled();
+    });
+
+    it("should reset age confirmation when switching modes", () => {
+      const TestComponent = () => {
+        const [isSignUpMode, setIsSignUpMode] = React.useState(true);
+        const [ageConfirmed, setAgeConfirmed] = React.useState(true);
+
+        const handleToggleMode = () => {
+          setIsSignUpMode(!isSignUpMode);
+          setAgeConfirmed(false);
+        };
+
+        return (
+          <div>
+            {isSignUpMode && (
+              <input
+                type="checkbox"
+                data-testid="age-checkbox"
+                checked={ageConfirmed}
+                onChange={(e) => setAgeConfirmed(e.target.checked)}
+              />
+            )}
+            <button data-testid="toggle-mode" onClick={handleToggleMode}>
+              {isSignUpMode ? "Switch to login" : "Switch to signup"}
+            </button>
+            <span data-testid="age-state">
+              {ageConfirmed ? "confirmed" : "not-confirmed"}
+            </span>
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      // Initially in signup mode with age confirmed
+      expect(screen.getByTestId("age-checkbox")).toBeInTheDocument();
+      expect(screen.getByTestId("age-state")).toHaveTextContent("confirmed");
+
+      // Switch to login mode
+      fireEvent.click(screen.getByTestId("toggle-mode"));
+
+      // Age confirmation should be reset
+      expect(screen.getByTestId("age-state")).toHaveTextContent(
+        "not-confirmed",
+      );
+
+      // Switch back to signup
+      fireEvent.click(screen.getByTestId("toggle-mode"));
+
+      // Checkbox should be unchecked
+      expect(screen.getByTestId("age-checkbox")).not.toBeChecked();
+    });
+
+    it("should show error when trying to signup without age confirmation", async () => {
+      const TestComponent = () => {
+        const [ageConfirmed] = React.useState(false);
+
+        const handleSignUp = () => {
+          if (!ageConfirmed) {
+            toast.error(
+              "You must confirm you are 13 years or older to sign up",
+            );
+            return;
+          }
+        };
+
+        return (
+          <button data-testid="signup-button" onClick={handleSignUp}>
+            Sign up
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("signup-button"));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "You must confirm you are 13 years or older to sign up",
+        );
+      });
+    });
+  });
+
+  describe("RevenueCat logout sync", () => {
+    it("should call Purchases.logOut before Firebase signOut on native platform", async () => {
+      mockPlatform = "ios";
+
+      const { Capacitor } = await import("@capacitor/core");
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+
+      const TestComponent = () => {
+        const handleLogout = async () => {
+          // Revert RevenueCat to anonymous before Firebase signOut (skip on web)
+          if (Capacitor.getPlatform() !== "web") {
+            await Purchases.logOut();
+          }
+          await FirebaseAuthentication.signOut();
+          mockSetLoggedInUser(null);
+        };
+
+        return (
+          <button data-testid="logout-button" onClick={handleLogout}>
+            Logout
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("logout-button"));
+
+      await waitFor(() => {
+        expect(mockPurchasesLogOut).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
+      });
+    });
+
+    it("should skip RevenueCat logout on web platform", async () => {
+      mockPlatform = "web";
+
+      const { Capacitor } = await import("@capacitor/core");
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+
+      const TestComponent = () => {
+        const handleLogout = async () => {
+          // Revert RevenueCat to anonymous before Firebase signOut (skip on web)
+          if (Capacitor.getPlatform() !== "web") {
+            await Purchases.logOut();
+          }
+          await FirebaseAuthentication.signOut();
+          mockSetLoggedInUser(null);
+        };
+
+        return (
+          <button data-testid="logout-button" onClick={handleLogout}>
+            Logout
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("logout-button"));
+
+      await waitFor(() => {
+        expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
+      });
+
+      // RevenueCat should NOT be called on web
+      expect(mockPurchasesLogOut).not.toHaveBeenCalled();
+    });
+
+    it("should handle RevenueCat logout error gracefully", async () => {
+      mockPlatform = "ios";
+      mockPurchasesLogOut.mockRejectedValue(new Error("RevenueCat error"));
+
+      const { Capacitor } = await import("@capacitor/core");
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+      const { logger } = await import("../../../lib/logger");
+
+      const TestComponent = () => {
+        const handleLogout = async () => {
+          // Revert RevenueCat to anonymous before Firebase signOut (skip on web)
+          if (Capacitor.getPlatform() !== "web") {
+            try {
+              await Purchases.logOut();
+            } catch (e) {
+              logger.error("RevenueCat logout failed:", e, {
+                category: "purchase",
+                action: "logOut",
+                severity: "warning",
+              });
+            }
+          }
+
+          await FirebaseAuthentication.signOut();
+          mockSetLoggedInUser(null);
+        };
+
+        return (
+          <button data-testid="logout-button" onClick={handleLogout}>
+            Logout
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("logout-button"));
+
+      await waitFor(() => {
+        expect(mockLoggerError).toHaveBeenCalledWith(
+          "RevenueCat logout failed:",
+          expect.any(Error),
+          expect.objectContaining({
+            category: "purchase",
+            action: "logOut",
+          }),
+        );
+      });
+
+      // Firebase signOut should still be called despite RevenueCat error
+      await waitFor(() => {
+        expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe("account deletion", () => {
+    it("should disable delete button until confirmation text matches", () => {
+      const TestComponent = () => {
+        const [confirmText, setConfirmText] = React.useState("");
+
+        return (
+          <div>
+            <input
+              data-testid="confirm-input"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="DELETE MY ACCOUNT"
+            />
+            <button
+              data-testid="delete-button"
+              disabled={confirmText !== "DELETE MY ACCOUNT"}
+            >
+              Delete account
+            </button>
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      expect(screen.getByTestId("delete-button")).toBeDisabled();
+
+      fireEvent.change(screen.getByTestId("confirm-input"), {
+        target: { value: "DELETE" },
+      });
+      expect(screen.getByTestId("delete-button")).toBeDisabled();
+
+      fireEvent.change(screen.getByTestId("confirm-input"), {
+        target: { value: "DELETE MY ACCOUNT" },
+      });
+      expect(screen.getByTestId("delete-button")).not.toBeDisabled();
+    });
+
+    it("should call deleteAccount API with user confirmation text", async () => {
+      const TestComponent = () => {
+        const [confirmText, setConfirmText] =
+          React.useState("DELETE MY ACCOUNT");
+
+        const handleDelete = async () => {
+          await mockDeleteAccount(confirmText);
+          toast.success("Account deletion scheduled");
+        };
+
+        return (
+          <div>
+            <input
+              data-testid="confirm-input"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+            />
+            <button data-testid="delete-button" onClick={handleDelete}>
+              Delete account
+            </button>
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("delete-button"));
+
+      await waitFor(() => {
+        expect(mockDeleteAccount).toHaveBeenCalledWith("DELETE MY ACCOUNT");
+        expect(toast.success).toHaveBeenCalledWith(
+          "Account deletion scheduled",
+        );
+      });
+    });
+
+    it("should show scheduled deletion banner after successful deletion", async () => {
+      const TestComponent = () => {
+        const [scheduledDeletion, setScheduledDeletion] = React.useState<
+          string | null
+        >(null);
+
+        const handleDelete = async () => {
+          const result = await mockDeleteAccount("DELETE MY ACCOUNT");
+          setScheduledDeletion(result.scheduled_deletion_at);
+        };
+
+        return (
+          <div>
+            {scheduledDeletion ? (
+              <div data-testid="deletion-scheduled">
+                Account will be deleted on{" "}
+                {new Date(scheduledDeletion).toLocaleDateString()}
+              </div>
+            ) : (
+              <button data-testid="delete-button" onClick={handleDelete}>
+                Delete account
+              </button>
+            )}
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("delete-button"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("deletion-scheduled")).toBeInTheDocument();
+      });
+    });
+
+    it("should handle cancel deletion", async () => {
+      const TestComponent = () => {
+        const [scheduledDeletion, setScheduledDeletion] = React.useState<
+          string | null
+        >("2024-02-15T00:00:00Z");
+
+        const handleCancelDeletion = async () => {
+          await mockCancelAccountDeletion();
+          setScheduledDeletion(null);
+          toast.success("Deletion cancelled");
+        };
+
+        return (
+          <div>
+            {scheduledDeletion ? (
+              <div>
+                <span data-testid="deletion-scheduled">
+                  Deletion scheduled for{" "}
+                  {new Date(scheduledDeletion).toLocaleDateString()}
+                </span>
+                <button
+                  data-testid="cancel-deletion-button"
+                  onClick={handleCancelDeletion}
+                >
+                  Cancel deletion
+                </button>
+              </div>
+            ) : (
+              <button data-testid="delete-button">Delete account</button>
+            )}
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      expect(screen.getByTestId("deletion-scheduled")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId("cancel-deletion-button"));
+
+      await waitFor(() => {
+        expect(mockCancelAccountDeletion).toHaveBeenCalled();
+        expect(toast.success).toHaveBeenCalledWith("Deletion cancelled");
+        expect(screen.getByTestId("delete-button")).toBeInTheDocument();
+      });
+    });
+
+    it("should handle deletion error - developer has active media", async () => {
+      mockDeleteAccount.mockRejectedValueOnce({
+        response: { data: { error: { code: "developer_has_active_media" } } },
+      });
+
+      const TestComponent = () => {
+        const handleDelete = async () => {
+          try {
+            await mockDeleteAccount("DELETE MY ACCOUNT");
+          } catch (e: any) {
+            const code = e.response?.data?.error?.code;
+            if (code === "developer_has_active_media") {
+              toast.error("You must unpublish all media first");
+            }
+          }
+        };
+
+        return (
+          <button data-testid="delete-button" onClick={handleDelete}>
+            Delete account
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("delete-button"));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "You must unpublish all media first",
+        );
+      });
+    });
+
+    it("should handle deletion error - confirmation mismatch", async () => {
+      mockDeleteAccount.mockRejectedValueOnce({
+        response: { data: { error: { code: "confirmation_mismatch" } } },
+      });
+
+      const TestComponent = () => {
+        const handleDelete = async () => {
+          try {
+            await mockDeleteAccount("wrong text");
+          } catch (e: any) {
+            const code = e.response?.data?.error?.code;
+            if (code === "confirmation_mismatch") {
+              toast.error("Confirmation text doesn't match");
+            }
+          }
+        };
+
+        return (
+          <button data-testid="delete-button" onClick={handleDelete}>
+            Delete account
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("delete-button"));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "Confirmation text doesn't match",
+        );
+      });
+    });
+  });
+
+  describe("email verification indicator", () => {
+    it("should show verified status for verified email/password users", () => {
+      const TestComponent = () => {
+        const user = {
+          email: "test@example.com",
+          emailVerified: true,
+          providerData: [{ providerId: "password" }],
+        };
+
+        const isPasswordUser = user.providerData.some(
+          (p) => p.providerId === "password",
+        );
+
+        return (
+          <div>
+            {isPasswordUser &&
+              (user.emailVerified ? (
+                <span data-testid="email-verified">Email verified</span>
+              ) : (
+                <span data-testid="email-not-verified">Email not verified</span>
+              ))}
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      expect(screen.getByTestId("email-verified")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("email-not-verified"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should show unverified status with resend button for unverified users", () => {
+      const TestComponent = () => {
+        const user = {
+          email: "test@example.com",
+          emailVerified: false,
+          providerData: [{ providerId: "password" }],
+        };
+
+        const isPasswordUser = user.providerData.some(
+          (p) => p.providerId === "password",
+        );
+
+        return (
+          <div>
+            {isPasswordUser &&
+              (user.emailVerified ? (
+                <span data-testid="email-verified">Email verified</span>
+              ) : (
+                <div>
+                  <span data-testid="email-not-verified">
+                    Email not verified
+                  </span>
+                  <button data-testid="resend-verification">
+                    Resend verification email
+                  </button>
+                </div>
+              ))}
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      expect(screen.getByTestId("email-not-verified")).toBeInTheDocument();
+      expect(screen.getByTestId("resend-verification")).toBeInTheDocument();
+      expect(screen.queryByTestId("email-verified")).not.toBeInTheDocument();
+    });
+
+    it("should not show verification status for OAuth users", () => {
+      const TestComponent = () => {
+        const user = {
+          email: "test@example.com",
+          emailVerified: true,
+          providerData: [{ providerId: "google.com" }],
+        };
+
+        const isPasswordUser = user.providerData.some(
+          (p) => p.providerId === "password",
+        );
+
+        return (
+          <div>
+            <span data-testid="user-email">{user.email}</span>
+            {isPasswordUser && (
+              <span data-testid="verification-indicator">
+                {user.emailVerified ? "Verified" : "Not verified"}
+              </span>
+            )}
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      expect(screen.getByTestId("user-email")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("verification-indicator"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should handle resend verification email", async () => {
+      const TestComponent = () => {
+        const handleResend = async () => {
+          try {
+            await FirebaseAuthentication.sendEmailVerification();
+            toast.success("Verification email sent");
+          } catch {
+            toast.error("Failed to send verification email");
+          }
+        };
+
+        return (
+          <button data-testid="resend-button" onClick={handleResend}>
+            Resend verification
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("resend-button"));
+
+      await waitFor(() => {
+        expect(FirebaseAuthentication.sendEmailVerification).toHaveBeenCalled();
+        expect(toast.success).toHaveBeenCalledWith("Verification email sent");
+      });
+    });
+
+    it("should handle resend verification email failure", async () => {
+      vi.mocked(
+        FirebaseAuthentication.sendEmailVerification,
+      ).mockRejectedValueOnce(new Error("Failed to send"));
+
+      const TestComponent = () => {
+        const handleResend = async () => {
+          try {
+            await FirebaseAuthentication.sendEmailVerification();
+            toast.success("Verification email sent");
+          } catch {
+            toast.error("Failed to send verification email");
+          }
+        };
+
+        return (
+          <button data-testid="resend-button" onClick={handleResend}>
+            Resend verification
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("resend-button"));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "Failed to send verification email",
+        );
+      });
+    });
   });
 });

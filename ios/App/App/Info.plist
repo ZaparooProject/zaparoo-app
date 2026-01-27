@@ -42,6 +42,12 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Allows scanning of QR and barcodes for use with Zaparoo.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Allows discovering Zaparoo devices on your local network.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_zaparoo._tcp</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen.storyboard</string>
 	<key>UIMainStoryboardFile</key>

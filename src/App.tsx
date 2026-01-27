@@ -6,6 +6,7 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
+import { Purchases } from "@revenuecat/purchases-capacitor";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
@@ -16,6 +17,7 @@ import AppUrlListener from "./lib/deepLinks.tsx";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { useDataCache } from "./hooks/useDataCache";
 import { SlideModalProvider } from "./components/SlideModalProvider";
+import { RequirementsModal } from "./components/RequirementsModal";
 import { usePreferencesStore } from "./lib/preferencesStore";
 import { filenameFromPath } from "./lib/path";
 import { useProAccessCheck } from "./hooks/useProAccessCheck";
@@ -24,25 +26,21 @@ import { useCameraAvailabilityCheck } from "./hooks/useCameraAvailabilityCheck";
 import { useAccelerometerAvailabilityCheck } from "./hooks/useAccelerometerAvailabilityCheck";
 import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
-import { useShakeDetection } from "./hooks/useShakeDetection";
-import { initDeviceInfo } from "./lib/logger";
+import { usePassiveNfcListener } from "./hooks/usePassiveNfcListener";
+import { initDeviceInfo, logger } from "./lib/logger";
+import { getSubscriptionStatus } from "./lib/onlineApi";
 import {
   A11yAnnouncerProvider,
   useAnnouncer,
 } from "./components/A11yAnnouncer";
 
-// Component to initialize queue processors after preferences hydrate
+// Component to initialize queue processors and passive listeners after preferences hydrate
 // This ensures sessionManager.launchOnScan is set correctly before processing
 function QueueProcessors() {
-  const shakeEnabled = usePreferencesStore((state) => state.shakeEnabled);
-  const connected = useStatusStore((state) => state.connected);
-
   useRunQueueProcessor();
   useWriteQueueProcessor();
-  useShakeDetection({
-    shakeEnabled,
-    connected,
-  });
+  // Listen for NFC intents on Android even when not in explicit scan mode
+  usePassiveNfcListener();
   return null;
 }
 
@@ -224,12 +222,56 @@ export default function App() {
   useAccelerometerAvailabilityCheck();
 
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
+  const setLauncherAccess = usePreferencesStore(
+    (state) => state.setLauncherAccess,
+  );
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
 
-    FirebaseAuthentication.addListener("authStateChange", (change) => {
+    FirebaseAuthentication.addListener("authStateChange", async (change) => {
       setLoggedInUser(change.user);
+
+      // Sync RevenueCat identity with Firebase user (skip on web)
+      if (Capacitor.getPlatform() !== "web") {
+        try {
+          if (change.user) {
+            // Link RevenueCat to Firebase user - transfers anonymous purchases
+            const { customerInfo } = await Purchases.logIn({
+              appUserID: change.user.uid,
+            });
+            const hasAccess = !!customerInfo.entitlements.active.tapto_launcher;
+            setLauncherAccess(hasAccess);
+
+            // Also check API premium status (online subscription)
+            try {
+              const { is_premium } = await getSubscriptionStatus();
+              if (is_premium) {
+                setLauncherAccess(true);
+              }
+            } catch (e) {
+              logger.error("Failed to check subscription status:", e, {
+                category: "api",
+                action: "getSubscription",
+                severity: "warning",
+              });
+            }
+          } else {
+            // Revert to anonymous RevenueCat customer
+            await Purchases.logOut();
+            const { customerInfo } = await Purchases.getCustomerInfo();
+            const hasAccess = !!customerInfo.entitlements.active.tapto_launcher;
+            setLauncherAccess(hasAccess);
+          }
+        } catch (e) {
+          logger.error("RevenueCat login sync failed:", e, {
+            category: "purchase",
+            action: change.user ? "logIn" : "logOut",
+            severity: "warning",
+          });
+        }
+      }
+
       if (change.user) {
         FirebaseAuthentication.getIdToken().catch(() => {
           // Token refresh failed - will retry on next auth state change
@@ -242,7 +284,7 @@ export default function App() {
     return () => {
       cleanup?.();
     };
-  }, [setLoggedInUser]);
+  }, [setLoggedInUser, setLauncherAccess]);
 
   // Block rendering until preferences, Pro access, and hardware availability are hydrated to prevent layout shifts
   if (
@@ -297,6 +339,7 @@ export default function App() {
               <RouterProvider router={router} />
             </SlideModalProvider>
           </div>
+          <RequirementsModal />
         </ConnectionProvider>
       </A11yAnnouncerProvider>
     </>

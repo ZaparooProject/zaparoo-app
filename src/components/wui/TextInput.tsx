@@ -21,6 +21,7 @@ export function TextInput(props: {
   ref?: React.RefObject<HTMLInputElement | null>;
   /** Error message to display below the input */
   error?: string;
+  autoComplete?: string;
 }) {
   const inputId = useId();
   const errorId = useId();
@@ -61,6 +62,7 @@ export function TextInput(props: {
               "p-2",
               "px-3",
               "disabled:border-foreground-disabled",
+              "[&::-webkit-search-cancel-button]:appearance-none",
               {
                 "border-bd-input": !props.disabled && !props.error,
                 "border-red-500": props.error,
@@ -79,6 +81,7 @@ export function TextInput(props: {
             disabled={props.disabled}
             placeholder={props.placeholder}
             value={value}
+            autoComplete={props.autoComplete}
             onChange={(e) => {
               setValue(e.target.value);
               setModified(true);

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeftRightIcon } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { ArrowLeftRightIcon, SearchIcon } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
 import { CoreAPI, getDeviceAddress } from "@/lib/coreApi";
 import { Card } from "./wui/Card";
@@ -15,6 +16,7 @@ interface DeviceConnectionCardProps {
   connectionError: string;
   hasDeviceHistory: boolean;
   onHistoryClick: () => void;
+  onScanClick?: () => void;
 }
 
 export function DeviceConnectionCard({
@@ -24,6 +26,7 @@ export function DeviceConnectionCard({
   connectionError,
   hasDeviceHistory,
   onHistoryClick,
+  onScanClick,
 }: DeviceConnectionCardProps) {
   const { t } = useTranslation();
   const { isConnected } = useConnection();
@@ -53,6 +56,7 @@ export function DeviceConnectionCard({
             setValue={setAddress}
             saveValue={onAddressChange}
             saveDisabled={address === savedAddress}
+            autoComplete="off"
             onKeyUp={(e) => {
               if (e.key === "Enter" && address !== savedAddress) {
                 onAddressChange(address);
@@ -66,13 +70,24 @@ export function DeviceConnectionCard({
             connectedSubtitle={connectedSubtitle}
             connectedSubtitleLoading={isVersionLoading}
             action={
-              <Button
-                icon={<ArrowLeftRightIcon size="24" />}
-                variant="text"
-                onClick={onHistoryClick}
-                aria-label={t("settings.deviceHistory")}
-                disabled={!hasDeviceHistory}
-              />
+              <div className="flex items-center gap-1">
+                {/* Network scan button - only on native platforms */}
+                {Capacitor.isNativePlatform() && onScanClick && (
+                  <Button
+                    icon={<SearchIcon size="24" />}
+                    variant="text"
+                    onClick={onScanClick}
+                    aria-label={t("settings.networkScan.title")}
+                  />
+                )}
+                <Button
+                  icon={<ArrowLeftRightIcon size="24" />}
+                  variant="text"
+                  onClick={onHistoryClick}
+                  aria-label={t("settings.deviceHistory")}
+                  disabled={!hasDeviceHistory}
+                />
+              </div>
             }
           />
         </div>

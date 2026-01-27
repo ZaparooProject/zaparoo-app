@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
-import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { WriteAction, useNfcWriter, WriteMethod } from "@/lib/writeNfcHook";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -18,9 +17,12 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
   const writeQueue = useStatusStore((state) => state.writeQueue);
   const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
   const setWriteOpen = useStatusStore((state) => state.setWriteOpen);
+  const connected = useStatusStore((state) => state.connected);
   const preferRemoteWriter = usePreferencesStore(
     (state) => state.preferRemoteWriter,
   );
+  // Use cached NFC availability from app hydration to avoid async calls
+  const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
 
   const isProcessingRef = useRef(false);
@@ -53,22 +55,16 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
       try {
         let hasWriteCapability = false;
 
-        // Check local NFC if on native platform
-        if (Capacitor.isNativePlatform()) {
-          try {
-            const nfcAvailable = await Nfc.isAvailable();
-            hasWriteCapability = nfcAvailable.nfc;
-          } catch (error) {
-            logger.error("NFC availability check failed:", error, {
-              category: "nfc",
-              action: "checkAvailability",
-              severity: "warning",
-            });
-          }
+        // Use cached NFC availability (already checked during app hydration)
+        // This avoids an async Capacitor call that could delay processing
+        if (Capacitor.isNativePlatform() && nfcAvailable) {
+          hasWriteCapability = true;
         }
 
-        // Check remote readers if local NFC not available
-        if (!hasWriteCapability) {
+        // Only check remote readers if:
+        // 1. Local NFC is not available, AND
+        // 2. We're connected to a device (to avoid timeout on cold start)
+        if (!hasWriteCapability && connected) {
           hasWriteCapability = await CoreAPI.hasWriteCapableReader();
         }
 
@@ -112,7 +108,8 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
       });
     };
 
-    timeoutRef.current = setTimeout(checkNfcAndWrite, 1000);
+    // Process immediately - NFC availability is already checked during app hydration
+    checkNfcAndWrite();
 
     return () => {
       if (timeoutRef.current) {
@@ -120,7 +117,15 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
         timeoutRef.current = null;
       }
     };
-  }, [writeQueue, nfcWriter, t, setWriteQueue, setWriteOpen]);
+  }, [
+    writeQueue,
+    nfcWriter,
+    t,
+    setWriteQueue,
+    setWriteOpen,
+    nfcAvailable,
+    connected,
+  ]);
 
   const reset = () => {
     isProcessingRef.current = false;

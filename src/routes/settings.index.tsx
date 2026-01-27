@@ -8,6 +8,7 @@ import { Preferences } from "@capacitor/preferences";
 import { TrashIcon, Check } from "lucide-react";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { SlideModal } from "@/components/SlideModal.tsx";
+import { NetworkScanModal } from "@/components/NetworkScanModal";
 import { Button as SCNButton } from "@/components/ui/button";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import i18n from "@/i18n";
@@ -33,7 +34,7 @@ function Settings() {
     useProPurchase();
 
   const connectionError = useStatusStore((state) => state.connectionError);
-  // const loggedInUser = useStatusStore((state) => state.loggedInUser);
+  const loggedInUser = useStatusStore((state) => state.loggedInUser);
   const deviceHistory = useStatusStore((state) => state.deviceHistory);
   const setDeviceHistory = useStatusStore((state) => state.setDeviceHistory);
   const removeDeviceHistory = useStatusStore(
@@ -48,6 +49,7 @@ function Settings() {
 
   const [address, setAddress] = useState(getDeviceAddress());
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -96,6 +98,7 @@ function Settings() {
               connectionError={connectionError}
               hasDeviceHistory={deviceHistory.length > 0}
               onHistoryClick={() => setHistoryOpen(true)}
+              onScanClick={() => setScanOpen(true)}
             />
           </div>
 
@@ -136,6 +139,13 @@ function Settings() {
                 ))}
             </div>
           </SlideModal>
+
+          {/* Network Scan Modal */}
+          <NetworkScanModal
+            isOpen={scanOpen}
+            onClose={() => setScanOpen(false)}
+            onSelectDevice={handleDeviceAddressChange}
+          />
 
           <MediaDatabaseCard />
 
@@ -178,25 +188,23 @@ function Settings() {
             </div>
           )}
 
-          {/* <div>
-            {loggedInUser !== null ? (
-              <div className="flex flex-col gap-3">
-                <Link to="/settings/online">
-                  <Button
-                    label={t("online.settingsManageButton")}
-                    className="w-full"
-                  />
-                </Link>
-              </div>
-            ) : (
-              <Link to="/settings/online">
-                <Button
-                  label={t("online.settingsSignInButton")}
-                  className="w-full"
-                />
-              </Link>
+          <div>
+            <Link to="/settings/online">
+              <Button
+                label={
+                  loggedInUser !== null
+                    ? t("online.settingsManageButton")
+                    : t("online.settingsLogInButton")
+                }
+                className="w-full"
+              />
+            </Link>
+            {loggedInUser !== null && (
+              <p className="text-muted-foreground mt-1 text-center text-sm">
+                {loggedInUser.email}
+              </p>
             )}
-          </div> */}
+          </div>
 
           <div className="flex flex-col">
             <label className="text-white">{t("settings.language")}</label>

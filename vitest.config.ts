@@ -53,7 +53,7 @@ export default defineConfig({
         "node_modules/",
         "src/test-setup.ts",
         "src/test-utils/**",
-        "src/__mocks__/**",
+        "__mocks__/**",
         "src/__tests__/**",
         "**/*.d.ts",
         "**/*.config.ts",

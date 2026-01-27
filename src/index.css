@@ -281,6 +281,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-foreground-hint: var(--foreground-hint);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
@@ -337,6 +338,9 @@
   --secondary-foreground: hsl(0 0% 100%);
   --muted: hsl(210 22% 20%);
   --muted-foreground: hsl(215 32% 73%);
+  --foreground-hint: hsl(
+    0 0% 100% / 40%
+  ); /* subtle UI elements like help icons */
   --accent: hsl(195 88% 60%); /* wui primary */
   --accent-foreground: hsl(0 0% 100%);
   --destructive: hsl(0 60% 68%); /* wui error #e87171 */
@@ -372,6 +376,9 @@
   --secondary-foreground: hsl(0 0% 100%);
   --muted: hsl(210 22% 20%);
   --muted-foreground: hsl(215 32% 73%);
+  --foreground-hint: hsl(
+    0 0% 100% / 40%
+  ); /* subtle UI elements like help icons */
   --accent: hsl(195 88% 60%);
   --accent-foreground: hsl(0 0% 100%);
   --destructive: hsl(0 60% 68%); /* wui error */

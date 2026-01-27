@@ -14,6 +14,7 @@ vi.mock("@tanstack/react-router", () => ({
   createRootRoute: vi.fn((config) => config),
   Outlet: () => <div data-testid="outlet">Outlet</div>,
   useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: "/" }),
 }));
 
 vi.mock("@/lib/safeArea", () => ({

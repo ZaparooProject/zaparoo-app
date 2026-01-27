@@ -2,7 +2,10 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useMemo, useRef } from "react";
-import { Download, Copy, RefreshCw } from "lucide-react";
+import { Download, Copy, RefreshCw, Share2 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
 import { BackToTop } from "@/components/BackToTop";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
@@ -66,20 +69,17 @@ function Logs() {
       const decodedContent = atob(logsQuery.data.content);
       const lines = decodedContent.split("\n").filter((line) => line.trim());
 
-      return lines.map((line, index) => {
-        try {
-          const parsed = JSON.parse(line) as LogEntry;
-          return { ...parsed, _index: index };
-        } catch {
-          // If line isn't valid JSON, treat as plain text
-          return {
-            level: "info",
-            time: new Date().toISOString(),
-            message: line,
-            _index: index,
-          } as LogEntry & { _index: number };
-        }
-      });
+      return lines
+        .map((line, index) => {
+          try {
+            const parsed = JSON.parse(line) as LogEntry;
+            return { ...parsed, _index: index };
+          } catch {
+            // Filter out corrupt JSON lines
+            return null;
+          }
+        })
+        .filter((entry) => entry !== null);
     } catch {
       return [];
     }
@@ -115,25 +115,51 @@ function Logs() {
     });
   }, [logEntries, levelFilters, searchTerm]);
 
-  const downloadFile = () => {
+  const isNative = Capacitor.isNativePlatform();
+
+  const shareOrDownloadFile = async () => {
     if (!logsQuery.data) return;
 
     try {
       const decodedContent = atob(logsQuery.data.content);
-      const blob = new Blob([decodedContent], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = logsQuery.data.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      if (isNative) {
+        // On native platforms, write to cache and share
+        const filename = logsQuery.data.filename;
+        await Filesystem.writeFile({
+          path: filename,
+          data: decodedContent,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8,
+        });
+
+        const fileUri = await Filesystem.getUri({
+          path: filename,
+          directory: Directory.Cache,
+        });
+
+        await Share.share({
+          title: t("settings.logs.shareTitle"),
+          files: [fileUri.uri],
+          dialogTitle: t("settings.logs.shareTitle"),
+        });
+      } else {
+        // On web, use standard download approach
+        const blob = new Blob([decodedContent], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = logsQuery.data.filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
     } catch (error) {
-      logger.error("Failed to download log file:", error, {
+      logger.error("Failed to share/download log file:", error, {
         category: "storage",
-        action: "downloadLog",
+        action: "shareLog",
         severity: "warning",
       });
     }
@@ -234,9 +260,15 @@ function Logs() {
                   title={t("settings.logs.copy")}
                 />
                 <HeaderButton
-                  onClick={downloadFile}
-                  icon={<Download size="20" />}
-                  title={t("settings.logs.download")}
+                  onClick={shareOrDownloadFile}
+                  icon={
+                    isNative ? <Share2 size="20" /> : <Download size="20" />
+                  }
+                  title={
+                    isNative
+                      ? t("settings.logs.share")
+                      : t("settings.logs.download")
+                  }
                 />
               </>
             )}

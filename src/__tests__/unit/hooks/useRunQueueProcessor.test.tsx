@@ -235,8 +235,8 @@ describe("useRunQueueProcessor", () => {
 
     renderHook(() => useRunQueueProcessor());
 
-    // Advance through all 10 retries (500ms each = 5000ms total)
-    for (let i = 0; i < 11; i++) {
+    // Advance through all 15 retries (500ms each = 7500ms total)
+    for (let i = 0; i < 16; i++) {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(500);
       });

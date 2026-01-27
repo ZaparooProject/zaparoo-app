@@ -1,12 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-
-// IMPORTANT: Mock before imports to ensure proper module replacement
-vi.mock(
-  "@capacitor/preferences",
-  () => import("../../../__mocks__/@capacitor/preferences"),
-);
-vi.mock("@capacitor/core", () => import("../../../__mocks__/@capacitor/core"));
-
 import { getDeviceAddress, setDeviceAddress } from "../../../lib/coreApi";
 import { Capacitor } from "@capacitor/core";
 
@@ -70,9 +62,9 @@ describe("Device Address Storage", () => {
 
     const address = getDeviceAddress();
 
-    // In test environment, consistently returns localhost due to web platform fallback
-    // This tests the deterministic behavior regardless of platform detection complexity
-    expect(address).toBe("localhost");
+    // On native platform with no stored address, returns empty string
+    // (user must explicitly set a device address)
+    expect(address).toBe("");
   });
 
   it("should use window.location.hostname on web platform when no address stored", () => {

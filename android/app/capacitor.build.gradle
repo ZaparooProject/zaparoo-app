@@ -16,7 +16,9 @@ dependencies {
     implementation project(':capacitor-browser')
     implementation project(':capacitor-clipboard')
     implementation project(':capacitor-device')
+    implementation project(':capacitor-filesystem')
     implementation project(':capacitor-haptics')
+    implementation project(':capacitor-network')
     implementation project(':capacitor-preferences')
     implementation project(':capacitor-screen-reader')
     implementation project(':capacitor-share')
@@ -26,6 +28,7 @@ dependencies {
     implementation project(':capgo-capacitor-shake')
     implementation project(':revenuecat-purchases-capacitor')
     implementation project(':capacitor-plugin-safe-area')
+    implementation project(':capacitor-zeroconf')
 
 }
 

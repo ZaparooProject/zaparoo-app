@@ -83,12 +83,14 @@ import { ConnectionManager } from "../../../../lib/transport/ConnectionManager";
 interface MockTransport {
   deviceId: string;
   state: TransportState;
+  _state: TransportState; // Internal state for testing
   isConnected: boolean;
   hasEverConnected: boolean;
   send: ReturnType<typeof vi.fn>;
   destroy: ReturnType<typeof vi.fn>;
   immediateReconnect: ReturnType<typeof vi.fn>;
   pauseHeartbeat: ReturnType<typeof vi.fn>;
+  resumeHeartbeat: ReturnType<typeof vi.fn>;
   simulateMessage: (data: string) => void;
   simulateStateChange: (state: TransportState) => void;
 }
@@ -337,10 +339,7 @@ describe("ConnectionManager", () => {
 
       manager.sendToActive('{"method": "test"}');
 
-      expect(transport.send).toHaveBeenCalledWith(
-        '{"method": "test"}',
-        undefined,
-      );
+      expect(transport.send).toHaveBeenCalledWith('{"method": "test"}');
     });
 
     it("should not throw when no active device", () => {
@@ -367,7 +366,7 @@ describe("ConnectionManager", () => {
       expect(transport2.pauseHeartbeat).toHaveBeenCalled();
     });
 
-    it("should trigger immediate reconnect on all transports when resuming", () => {
+    it("should trigger immediate reconnect on disconnected transports when resuming", () => {
       const transport1 = manager.addDevice({
         deviceId: "device-1",
         type: "websocket",
@@ -379,10 +378,38 @@ describe("ConnectionManager", () => {
         address: "ws://localhost:7498",
       }) as unknown as MockTransport;
 
+      // Both are disconnected by default
       manager.resumeAll();
 
       expect(transport1.immediateReconnect).toHaveBeenCalled();
       expect(transport2.immediateReconnect).toHaveBeenCalled();
+    });
+
+    it("should resume heartbeat on connected transports when resuming", () => {
+      const transport1 = manager.addDevice({
+        deviceId: "device-1",
+        type: "websocket",
+        address: "ws://localhost:7497",
+      }) as unknown as MockTransport;
+      const transport2 = manager.addDevice({
+        deviceId: "device-2",
+        type: "websocket",
+        address: "ws://localhost:7498",
+      }) as unknown as MockTransport;
+
+      // Simulate transport1 connected, transport2 disconnected
+      transport1._state = "connected";
+      transport2._state = "disconnected";
+
+      manager.resumeAll();
+
+      // Connected transport should get resumeHeartbeat
+      expect(transport1.resumeHeartbeat).toHaveBeenCalled();
+      expect(transport1.immediateReconnect).not.toHaveBeenCalled();
+
+      // Disconnected transport should get immediateReconnect
+      expect(transport2.immediateReconnect).toHaveBeenCalled();
+      expect(transport2.resumeHeartbeat).not.toHaveBeenCalled();
     });
   });
 

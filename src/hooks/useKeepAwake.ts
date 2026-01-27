@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
-import { KeepAwake } from "@capacitor-community/keep-awake";
 import { logger } from "@/lib/logger";
 
 /**
@@ -13,20 +12,31 @@ export function useKeepAwake() {
     // KeepAwake is not supported on web builds
     if (!Capacitor.isNativePlatform()) return;
 
-    KeepAwake.keepAwake().catch((error) => {
-      logger.error("Failed to enable keep awake", error, {
-        category: "lifecycle",
-        action: "keepAwake",
-        severity: "warning",
+    let unmounted = false;
+
+    import("@capacitor-community/keep-awake").then(({ KeepAwake }) => {
+      // If already unmounted, don't activate keepAwake
+      if (unmounted) return;
+
+      KeepAwake.keepAwake().catch((error) => {
+        logger.error("Failed to enable keep awake", error, {
+          category: "lifecycle",
+          action: "keepAwake",
+          severity: "warning",
+        });
       });
     });
 
     return () => {
-      KeepAwake.allowSleep().catch((error) => {
-        logger.error("Failed to disable keep awake", error, {
-          category: "lifecycle",
-          action: "allowSleep",
-          severity: "warning",
+      unmounted = true;
+      // Call allowSleep directly - the import will be cached
+      import("@capacitor-community/keep-awake").then(({ KeepAwake }) => {
+        KeepAwake.allowSleep().catch((error) => {
+          logger.error("Failed to disable keep awake", error, {
+            category: "lifecycle",
+            action: "allowSleep",
+            severity: "warning",
+          });
         });
       });
     };

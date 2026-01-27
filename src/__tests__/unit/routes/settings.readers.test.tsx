@@ -1,523 +1,277 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+/* eslint-disable react/prop-types */
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "../../../test-utils";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
+import { mockReaderInfo } from "../../../test-utils/factories";
+import { ReaderInfo } from "../../../lib/models";
 
-// Mock dependencies
+// Mock CoreAPI
 const mockSettings = vi.fn();
 const mockSettingsUpdate = vi.fn();
+const mockReaders = vi.fn();
 
-vi.mock("@/lib/coreApi", () => ({
+vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
     settings: () => mockSettings(),
-    settingsUpdate: (params: any) => mockSettingsUpdate(params),
+    settingsUpdate: (params: unknown) => mockSettingsUpdate(params),
+    readers: () => mockReaders(),
   },
 }));
 
-vi.mock("@/hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({})),
-}));
-
-vi.mock("@/hooks/usePageHeadingFocus", () => ({
-  usePageHeadingFocus: vi.fn(),
-}));
-
-vi.mock("@/lib/store", () => ({
-  useStatusStore: vi.fn((selector) => {
-    const mockState = {
-      connected: true,
-      connectionState: "CONNECTED",
-    };
-    return selector(mockState);
-  }),
-  ConnectionState: {
-    IDLE: "IDLE",
-    CONNECTING: "CONNECTING",
-    CONNECTED: "CONNECTED",
-    RECONNECTING: "RECONNECTING",
-    ERROR: "ERROR",
-    DISCONNECTED: "DISCONNECTED",
-  },
-}));
-
-vi.mock("@/lib/preferencesStore", () => ({
-  usePreferencesStore: vi.fn((selector) => {
-    const mockState = {
-      nfcAvailable: true,
-      accelerometerAvailable: true,
-      restartScan: false,
-      launchOnScan: true,
-      launcherAccess: true,
-      preferRemoteWriter: false,
-      shakeEnabled: false,
-      shakeMode: "random",
-      shakeZapscript: "**launch.random:all",
-      setRestartScan: vi.fn(),
-      setLaunchOnScan: vi.fn(),
-      setPreferRemoteWriter: vi.fn(),
-      setShakeEnabled: vi.fn(),
-      setShakeMode: vi.fn(),
-      setShakeZapscript: vi.fn(),
-    };
-    return selector(mockState);
-  }),
-  selectAppSettings: vi.fn(),
-  selectShakeSettings: vi.fn(),
-}));
-
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        "settings.readers.title": "Readers Settings",
-        "settings.readers.scanMode": "Scan Mode",
-        "settings.tapMode": "Tap",
-        "settings.insertMode": "Insert",
-        "settings.insertHelp": "Hold tags on reader until removed",
-        "settings.readers.continuousScan": "Continuous Scan",
-        "settings.readers.launchOnScan": "Launch on Scan",
-        "settings.readers.preferRemoteWriter": "Prefer Remote Writer",
-        "settings.readers.shakeToLaunch": "Shake to Launch",
-        "settings.readers.soundEffects": "Sound Effects",
-        "settings.readers.autoDetect": "Auto Detect Readers",
-        "settings.app.shakeModeLabel": "Shake Mode",
-        "settings.app.shakeRandomMedia": "Random Media",
-        "settings.app.shakeCustom": "Custom",
-        "settings.app.shakeSelectSystem": "Select System",
-        "systemSelector.allSystems": "All Systems",
-        "nav.back": "Back",
-      };
-      return translations[key] || key;
-    },
-  }),
-}));
-
-vi.mock("@capacitor/core", () => ({
-  Capacitor: {
-    isNativePlatform: vi.fn(() => true),
-  },
-}));
-
-vi.mock("@tanstack/react-router", () => ({
-  createFileRoute: vi.fn(() => ({
-    component: vi.fn(),
-  })),
-  useRouter: () => ({
-    history: {
-      back: vi.fn(),
-    },
-  }),
-}));
-
-vi.mock("@/components/PageFrame", () => ({
-  PageFrame: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="page-frame">{children}</div>
-  ),
-}));
-
-vi.mock("@/components/wui/HeaderButton", () => ({
-  HeaderButton: ({ onClick, "aria-label": ariaLabel }: any) => (
-    <button onClick={onClick} aria-label={ariaLabel}>
-      Back
-    </button>
-  ),
-}));
-
-vi.mock("@/components/wui/ToggleSwitch", () => ({
-  ToggleSwitch: ({
-    label,
-    value,
-    setValue,
-    disabled,
-    loading,
-    suffix,
-  }: any) => (
-    <div data-testid={`toggle-${label}`}>
-      <label>{label}</label>
-      {suffix && <span data-testid="suffix">{suffix}</span>}
-      {loading ? (
-        <span data-testid="loading-skeleton">Loading...</span>
-      ) : (
-        <input
-          type="checkbox"
-          checked={value}
-          onChange={(e) => setValue(e.target.checked)}
-          disabled={disabled}
-        />
-      )}
-    </div>
-  ),
-}));
-
-vi.mock("@/components/ui/skeleton", () => ({
-  Skeleton: ({ className }: any) => (
-    <div className={className} data-testid="skeleton">
-      Loading...
-    </div>
-  ),
-}));
-
-vi.mock("@/components/ProPurchase", () => ({
-  useProPurchase: () => ({
-    PurchaseModal: () => <div data-testid="purchase-modal" />,
-    setProPurchaseModalOpen: vi.fn(),
-  }),
-}));
-
-vi.mock("@/components/ProBadge", () => ({
-  ProBadge: ({ show, onPress }: any) =>
-    show ? (
-      <button onClick={onPress} data-testid="pro-badge">
-        Pro
-      </button>
-    ) : null,
-}));
-
-vi.mock("@/components/SystemSelector", () => ({
-  SystemSelector: ({ isOpen, onClose, onSelect }: any) =>
-    isOpen ? (
-      <div data-testid="system-selector">
-        <button onClick={onClose}>Close</button>
-        <button onClick={() => onSelect(["nes"])}>Select NES</button>
-      </div>
-    ) : null,
-}));
-
-vi.mock("@/components/ZapScriptInput", () => ({
-  ZapScriptInput: ({ value, setValue }: any) => (
-    <textarea
-      data-testid="zapscript-input"
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-    />
-  ),
-}));
-
-describe("Settings Readers Route", () => {
-  let queryClient: QueryClient;
-
+describe("Settings Readers Route - Device Readers List", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
 
     mockSettings.mockResolvedValue({
       readersScanMode: "tap",
       audioScanFeedback: true,
-      readersAutoDetect: false,
+      readersAutoDetect: true,
     });
 
-    mockSettingsUpdate.mockResolvedValue({});
+    mockReaders.mockResolvedValue({ readers: [] });
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  const renderReadersSettings = (overrides: Record<string, any> = {}) => {
-    const defaults = {
-      connected: true,
-      scanMode: "tap" as "tap" | "hold",
-      restartScan: false,
-      launchOnScan: true,
-      preferRemoteWriter: false,
-      shakeEnabled: false,
-      shakeMode: "random" as "random" | "custom",
-      audioScanFeedback: true,
-      readersAutoDetect: false,
-      isNative: true,
-      nfcAvailable: true,
-      accelerometerAvailable: true,
-      launcherAccess: true,
-    };
-
-    const config = { ...defaults, ...overrides };
-
-    // Destructure before component to avoid ESLint prop-types false positive
-    const {
-      connected: initialConnected,
-      scanMode: initialScanMode,
-      restartScan: initialRestartScan,
-      launchOnScan: initialLaunchOnScan,
-      preferRemoteWriter: initialPreferRemoteWriter,
-      shakeEnabled: initialShakeEnabled,
-      shakeMode: initialShakeMode,
-      audioScanFeedback: initialAudioScanFeedback,
-      readersAutoDetect: initialReadersAutoDetect,
-      isNative,
-      nfcAvailable,
-      accelerometerAvailable,
-      launcherAccess,
-    } = config;
-
-    const ReadersSettingsTest = () => {
-      const [scanMode, setScanMode] = React.useState<"tap" | "hold">(
-        initialScanMode,
-      );
-      const [restartScan, setRestartScan] = React.useState(initialRestartScan);
-      const [launchOnScan, setLaunchOnScan] =
-        React.useState(initialLaunchOnScan);
-      const [preferRemoteWriter, setPreferRemoteWriter] = React.useState(
-        initialPreferRemoteWriter,
-      );
-      const [shakeEnabled, setShakeEnabled] =
-        React.useState(initialShakeEnabled);
-      const [shakeMode, setShakeMode] = React.useState<"random" | "custom">(
-        initialShakeMode,
-      );
-      const [shakeZapscript, setShakeZapscript] = React.useState(
-        "**launch.random:all",
-      );
-      const [audioScanFeedback, setAudioScanFeedback] = React.useState(
-        initialAudioScanFeedback,
-      );
-      const [readersAutoDetect, setReadersAutoDetect] = React.useState(
-        initialReadersAutoDetect,
-      );
-      const [systemPickerOpen, setSystemPickerOpen] = React.useState(false);
-
-      const connected = initialConnected;
-
-      const getSystemFromZapscript = () => {
-        if (
-          shakeMode === "random" &&
-          shakeZapscript.startsWith("**launch.random:")
-        ) {
-          return shakeZapscript.replace("**launch.random:", "");
-        }
-        return "";
-      };
-
-      const shakeSystem = getSystemFromZapscript();
-
-      return (
-        <div data-testid="readers-settings">
-          <h1>Readers Settings</h1>
-
-          <div data-testid="scan-mode-section">
-            <span id="scan-mode-label">Scan Mode</span>
-            <div
-              role="radiogroup"
-              aria-labelledby="scan-mode-label"
-              data-testid="scan-mode-buttons"
+  // Component that mirrors the readers list logic from settings.readers.tsx
+  const ReadersListTest = ({
+    connected = true,
+    isLoading = false,
+    readers = [] as ReaderInfo[],
+  }) => {
+    return (
+      <div data-testid="readers-section">
+        <span>Device Readers</span>
+        <div className="mt-2 flex flex-col gap-2">
+          {isLoading ? (
+            <span
+              className="text-foreground-disabled"
+              data-testid="readers-loading"
             >
-              <button
-                role="radio"
-                aria-checked={scanMode === "tap" && connected}
-                onClick={() => {
-                  setScanMode("tap");
-                  mockSettingsUpdate({ readersScanMode: "tap" });
-                }}
-                disabled={!connected}
-                data-testid="tap-mode-button"
-              >
-                Tap
-              </button>
-              <button
-                role="radio"
-                aria-checked={scanMode === "hold" && connected}
-                onClick={() => {
-                  setScanMode("hold");
-                  mockSettingsUpdate({ readersScanMode: "hold" });
-                }}
-                disabled={!connected}
-                data-testid="hold-mode-button"
-              >
-                Insert
-              </button>
-            </div>
-            {scanMode === "hold" && connected && (
-              <p data-testid="insert-mode-help">
-                Hold tags on reader until removed
-              </p>
-            )}
-          </div>
-
-          <div data-testid="continuous-scan-toggle">
-            <label>Continuous Scan</label>
-            <input
-              type="checkbox"
-              checked={restartScan}
-              onChange={(e) => setRestartScan(e.target.checked)}
-              data-testid="continuous-scan-checkbox"
-            />
-          </div>
-
-          {isNative && connected && (
-            <div data-testid="launch-on-scan-toggle">
-              <label>Launch on Scan</label>
-              {!launcherAccess && <span data-testid="pro-badge">Pro</span>}
-              <input
-                type="checkbox"
-                checked={launchOnScan}
-                onChange={(e) => setLaunchOnScan(e.target.checked)}
-                data-testid="launch-on-scan-checkbox"
-              />
-            </div>
-          )}
-
-          {isNative && nfcAvailable && (
-            <div data-testid="prefer-remote-writer-toggle">
-              <label>Prefer Remote Writer</label>
-              <input
-                type="checkbox"
-                checked={preferRemoteWriter}
-                onChange={(e) => setPreferRemoteWriter(e.target.checked)}
-                data-testid="prefer-remote-writer-checkbox"
-              />
-            </div>
-          )}
-
-          {isNative && accelerometerAvailable && (
-            <div data-testid="shake-to-launch-section">
-              <label>Shake to Launch</label>
-              {!launcherAccess && (
-                <span data-testid="shake-pro-badge">Pro</span>
-              )}
-              <input
-                type="checkbox"
-                checked={shakeEnabled}
-                onChange={(e) => setShakeEnabled(e.target.checked)}
-                disabled={!connected}
-                data-testid="shake-enabled-checkbox"
-              />
-            </div>
-          )}
-
-          {isNative && accelerometerAvailable && shakeEnabled && (
-            <div data-testid="shake-mode-section">
+              Loading...
+            </span>
+          ) : !connected ? (
+            <span
+              className="text-foreground-disabled"
+              data-testid="readers-no-connection"
+            >
+              No readers found
+            </span>
+          ) : readers.length > 0 ? (
+            readers.map((reader) => (
               <div
-                role="radiogroup"
-                aria-label="Shake Mode"
-                data-testid="shake-mode-buttons"
+                key={reader.id}
+                className="flex items-center gap-2"
+                data-testid={`reader-${reader.id}`}
               >
-                <button
-                  role="radio"
-                  aria-checked={shakeMode === "random" && connected}
-                  onClick={() => setShakeMode("random")}
-                  disabled={!connected}
-                  data-testid="shake-random-button"
-                >
-                  Random Media
-                </button>
-                <button
-                  role="radio"
-                  aria-checked={shakeMode === "custom" && connected}
-                  onClick={() => setShakeMode("custom")}
-                  disabled={!connected}
-                  data-testid="shake-custom-button"
-                >
-                  Custom
-                </button>
+                <span
+                  className={reader.connected ? "bg-green-500" : "bg-red-500"}
+                  data-testid={`reader-indicator-${reader.id}`}
+                  aria-hidden="true"
+                />
+                <span className="text-foreground">
+                  {reader.info || reader.id}
+                </span>
               </div>
-
-              {shakeMode === "random" && (
-                <div data-testid="shake-system-selector">
-                  <span data-testid="selected-system">
-                    {shakeSystem === "all" ? "All Systems" : shakeSystem || "-"}
-                  </span>
-                  <button
-                    onClick={() => setSystemPickerOpen(true)}
-                    disabled={!connected}
-                    data-testid="select-system-button"
-                  >
-                    Select System
-                  </button>
-                </div>
-              )}
-
-              {shakeMode === "custom" && (
-                <div data-testid="shake-zapscript-section">
-                  <textarea
-                    data-testid="shake-zapscript-input"
-                    value={shakeZapscript}
-                    onChange={(e) => setShakeZapscript(e.target.value)}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          <div data-testid="sound-effects-toggle">
-            <label>Sound Effects</label>
-            <input
-              type="checkbox"
-              checked={audioScanFeedback}
-              onChange={(e) => {
-                setAudioScanFeedback(e.target.checked);
-                mockSettingsUpdate({ audioScanFeedback: e.target.checked });
-              }}
-              disabled={!connected}
-              data-testid="sound-effects-checkbox"
-            />
-          </div>
-
-          <div data-testid="auto-detect-toggle">
-            <label>Auto Detect Readers</label>
-            <input
-              type="checkbox"
-              checked={readersAutoDetect}
-              onChange={(e) => {
-                setReadersAutoDetect(e.target.checked);
-                mockSettingsUpdate({ readersAutoDetect: e.target.checked });
-              }}
-              disabled={!connected}
-              data-testid="auto-detect-checkbox"
-            />
-          </div>
-
-          {systemPickerOpen && (
-            <div data-testid="system-selector-modal">
-              <button
-                onClick={() => setSystemPickerOpen(false)}
-                data-testid="close-system-selector"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  setShakeZapscript("**launch.random:nes");
-                  setSystemPickerOpen(false);
-                }}
-                data-testid="select-nes-button"
-              >
-                Select NES
-              </button>
-            </div>
+            ))
+          ) : (
+            <span
+              className="text-foreground-disabled"
+              data-testid="readers-empty"
+            >
+              No readers found
+            </span>
           )}
         </div>
-      );
-    };
-
-    return render(
-      <QueryClientProvider client={queryClient}>
-        <ReadersSettingsTest />
-      </QueryClientProvider>,
+      </div>
     );
   };
 
-  it("renders readers settings page", () => {
-    renderReadersSettings();
+  it("should show loading state while fetching readers", () => {
+    render(<ReadersListTest isLoading={true} />);
 
-    expect(screen.getByTestId("readers-settings")).toBeInTheDocument();
-    expect(screen.getByText("Readers Settings")).toBeInTheDocument();
+    expect(screen.getByTestId("readers-loading")).toBeInTheDocument();
+    expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
 
-  it("renders scan mode buttons", () => {
-    renderReadersSettings();
+  it("should show 'no readers found' when no readers are connected", () => {
+    render(<ReadersListTest connected={true} readers={[]} />);
 
-    expect(screen.getByTestId("scan-mode-section")).toBeInTheDocument();
+    expect(screen.getByTestId("readers-empty")).toBeInTheDocument();
+    expect(screen.getByText("No readers found")).toBeInTheDocument();
+  });
+
+  it("should show 'no readers found' when disconnected from Core", () => {
+    render(<ReadersListTest connected={false} />);
+
+    expect(screen.getByTestId("readers-no-connection")).toBeInTheDocument();
+  });
+
+  it("should display connected reader with green indicator", () => {
+    const reader = mockReaderInfo({
+      id: "pn532_1",
+      info: "PN532 NFC Reader",
+      connected: true,
+    });
+
+    render(<ReadersListTest readers={[reader]} />);
+
+    expect(screen.getByText("PN532 NFC Reader")).toBeInTheDocument();
+    expect(screen.getByTestId("reader-indicator-pn532_1")).toHaveClass(
+      "bg-green-500",
+    );
+  });
+
+  it("should display disconnected reader with red indicator", () => {
+    const reader = mockReaderInfo({
+      id: "acr122u_1",
+      info: "ACR122U Reader",
+      connected: false,
+    });
+
+    render(<ReadersListTest readers={[reader]} />);
+
+    expect(screen.getByText("ACR122U Reader")).toBeInTheDocument();
+    expect(screen.getByTestId("reader-indicator-acr122u_1")).toHaveClass(
+      "bg-red-500",
+    );
+  });
+
+  it("should display multiple readers", () => {
+    const readers = [
+      mockReaderInfo({
+        id: "pn532_1",
+        info: "PN532 NFC Reader",
+        connected: true,
+      }),
+      mockReaderInfo({
+        id: "acr122u_1",
+        info: "ACR122U USB Reader",
+        connected: true,
+      }),
+      mockReaderInfo({
+        id: "simple_1",
+        info: "Simple Serial Reader",
+        connected: false,
+      }),
+    ];
+
+    render(<ReadersListTest readers={readers} />);
+
+    expect(screen.getByText("PN532 NFC Reader")).toBeInTheDocument();
+    expect(screen.getByText("ACR122U USB Reader")).toBeInTheDocument();
+    expect(screen.getByText("Simple Serial Reader")).toBeInTheDocument();
+  });
+
+  it("should fallback to reader id when info is empty", () => {
+    const reader = mockReaderInfo({
+      id: "simple_serial_1",
+      info: "",
+      connected: true,
+    });
+
+    render(<ReadersListTest readers={[reader]} />);
+
+    expect(screen.getByText("simple_serial_1")).toBeInTheDocument();
+  });
+
+  it("should show section header", () => {
+    render(<ReadersListTest />);
+
+    expect(screen.getByText("Device Readers")).toBeInTheDocument();
+  });
+
+  it("should display mix of connected and disconnected readers correctly", () => {
+    const readers = [
+      mockReaderInfo({
+        id: "reader_1",
+        info: "Connected Reader",
+        connected: true,
+      }),
+      mockReaderInfo({
+        id: "reader_2",
+        info: "Disconnected Reader",
+        connected: false,
+      }),
+    ];
+
+    render(<ReadersListTest readers={readers} />);
+
+    expect(screen.getByTestId("reader-indicator-reader_1")).toHaveClass(
+      "bg-green-500",
+    );
+    expect(screen.getByTestId("reader-indicator-reader_2")).toHaveClass(
+      "bg-red-500",
+    );
+  });
+});
+
+describe("Settings Readers Route - Scan Mode", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const ScanModeTest = ({
+    connected = true,
+    scanMode = "tap" as "tap" | "hold",
+    onModeChange = vi.fn(),
+  }) => {
+    const [mode, setMode] = React.useState(scanMode);
+
+    const handleModeChange = (newMode: "tap" | "hold") => {
+      setMode(newMode);
+      onModeChange(newMode);
+      mockSettingsUpdate({ readersScanMode: newMode });
+    };
+
+    return (
+      <div data-testid="scan-mode-section">
+        <span id="scan-mode-label">Scan Mode</span>
+        <div role="radiogroup" aria-labelledby="scan-mode-label">
+          <button
+            role="radio"
+            aria-checked={mode === "tap" && connected}
+            onClick={() => handleModeChange("tap")}
+            disabled={!connected}
+            data-testid="tap-mode-button"
+          >
+            Tap
+          </button>
+          <button
+            role="radio"
+            aria-checked={mode === "hold" && connected}
+            onClick={() => handleModeChange("hold")}
+            disabled={!connected}
+            data-testid="hold-mode-button"
+          >
+            Hold
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  it("should render scan mode buttons", () => {
+    render(<ScanModeTest />);
+
     expect(screen.getByTestId("tap-mode-button")).toBeInTheDocument();
     expect(screen.getByTestId("hold-mode-button")).toBeInTheDocument();
   });
 
-  it("changes scan mode to hold", () => {
-    renderReadersSettings();
+  it("should show tap mode as selected by default", () => {
+    render(<ScanModeTest scanMode="tap" />);
+
+    const tapButton = screen.getByTestId("tap-mode-button");
+    expect(tapButton).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("should show hold mode as selected when set", () => {
+    render(<ScanModeTest scanMode="hold" />);
+
+    const holdButton = screen.getByTestId("hold-mode-button");
+    expect(holdButton).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("should call settings update when changing mode", () => {
+    render(<ScanModeTest />);
 
     const holdButton = screen.getByTestId("hold-mode-button");
     fireEvent.click(holdButton);
@@ -525,142 +279,81 @@ describe("Settings Readers Route", () => {
     expect(mockSettingsUpdate).toHaveBeenCalledWith({
       readersScanMode: "hold",
     });
-    expect(screen.getByTestId("insert-mode-help")).toBeInTheDocument();
   });
 
-  it("changes scan mode to tap", () => {
-    renderReadersSettings({ scanMode: "hold" });
+  it("should disable buttons when disconnected", () => {
+    render(<ScanModeTest connected={false} />);
 
-    const tapButton = screen.getByTestId("tap-mode-button");
-    fireEvent.click(tapButton);
+    expect(screen.getByTestId("tap-mode-button")).toBeDisabled();
+    expect(screen.getByTestId("hold-mode-button")).toBeDisabled();
+  });
+});
 
-    expect(mockSettingsUpdate).toHaveBeenCalledWith({ readersScanMode: "tap" });
+describe("Settings Readers Route - Core Settings Toggles", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it("shows insert mode help when in hold mode", () => {
-    renderReadersSettings({ scanMode: "hold" });
+  const CoreSettingsTest = ({
+    connected = true,
+    audioScanFeedback = true,
+    readersAutoDetect = true,
+  }) => {
+    const [audio, setAudio] = React.useState(audioScanFeedback);
+    const [autoDetect, setAutoDetect] = React.useState(readersAutoDetect);
 
-    expect(screen.getByTestId("insert-mode-help")).toBeInTheDocument();
-    expect(
-      screen.getByText("Hold tags on reader until removed"),
-    ).toBeInTheDocument();
+    return (
+      <div data-testid="core-settings">
+        <div data-testid="audio-feedback-toggle">
+          <label>
+            <input
+              type="checkbox"
+              checked={audio}
+              onChange={(e) => {
+                setAudio(e.target.checked);
+                mockSettingsUpdate({ audioScanFeedback: e.target.checked });
+              }}
+              disabled={!connected}
+              data-testid="audio-checkbox"
+            />
+            Audio Feedback
+          </label>
+        </div>
+        <div data-testid="auto-detect-toggle">
+          <label>
+            <input
+              type="checkbox"
+              checked={autoDetect}
+              onChange={(e) => {
+                setAutoDetect(e.target.checked);
+                mockSettingsUpdate({ readersAutoDetect: e.target.checked });
+              }}
+              disabled={!connected}
+              data-testid="auto-detect-checkbox"
+            />
+            Auto Detect Readers
+          </label>
+        </div>
+      </div>
+    );
+  };
+
+  it("should render audio feedback toggle", () => {
+    render(<CoreSettingsTest />);
+
+    expect(screen.getByTestId("audio-feedback-toggle")).toBeInTheDocument();
   });
 
-  it("renders continuous scan toggle", () => {
-    renderReadersSettings();
+  it("should render auto-detect readers toggle", () => {
+    render(<CoreSettingsTest />);
 
-    expect(screen.getByTestId("continuous-scan-toggle")).toBeInTheDocument();
+    expect(screen.getByTestId("auto-detect-toggle")).toBeInTheDocument();
   });
 
-  it("toggles continuous scan", () => {
-    renderReadersSettings();
+  it("should toggle audio feedback", () => {
+    render(<CoreSettingsTest audioScanFeedback={true} />);
 
-    const checkbox = screen.getByTestId("continuous-scan-checkbox");
-    fireEvent.click(checkbox);
-
-    expect(checkbox).toBeChecked();
-  });
-
-  it("renders launch on scan toggle on native platform", () => {
-    renderReadersSettings({ isNative: true });
-
-    expect(screen.getByTestId("launch-on-scan-toggle")).toBeInTheDocument();
-  });
-
-  it("toggles launch on scan", () => {
-    renderReadersSettings();
-
-    const checkbox = screen.getByTestId("launch-on-scan-checkbox");
-    fireEvent.click(checkbox);
-
-    expect(checkbox).not.toBeChecked();
-  });
-
-  it("renders prefer remote writer toggle when NFC is available", () => {
-    renderReadersSettings({ isNative: true, nfcAvailable: true });
-
-    expect(
-      screen.getByTestId("prefer-remote-writer-toggle"),
-    ).toBeInTheDocument();
-  });
-
-  it("toggles prefer remote writer", () => {
-    renderReadersSettings();
-
-    const checkbox = screen.getByTestId("prefer-remote-writer-checkbox");
-    fireEvent.click(checkbox);
-
-    expect(checkbox).toBeChecked();
-  });
-
-  it("renders shake to launch toggle when accelerometer is available", () => {
-    renderReadersSettings({ isNative: true, accelerometerAvailable: true });
-
-    expect(screen.getByTestId("shake-to-launch-section")).toBeInTheDocument();
-  });
-
-  it("toggles shake to launch", () => {
-    renderReadersSettings();
-
-    const checkbox = screen.getByTestId("shake-enabled-checkbox");
-    fireEvent.click(checkbox);
-
-    expect(checkbox).toBeChecked();
-  });
-
-  it("shows shake mode options when shake is enabled", () => {
-    renderReadersSettings({ shakeEnabled: true });
-
-    expect(screen.getByTestId("shake-mode-section")).toBeInTheDocument();
-    expect(screen.getByTestId("shake-random-button")).toBeInTheDocument();
-    expect(screen.getByTestId("shake-custom-button")).toBeInTheDocument();
-  });
-
-  it("shows system selector when shake mode is random", () => {
-    renderReadersSettings({ shakeEnabled: true, shakeMode: "random" });
-
-    expect(screen.getByTestId("shake-system-selector")).toBeInTheDocument();
-    expect(screen.getByTestId("select-system-button")).toBeInTheDocument();
-  });
-
-  it("shows zapscript input when shake mode is custom", () => {
-    renderReadersSettings({ shakeEnabled: true, shakeMode: "custom" });
-
-    expect(screen.getByTestId("shake-zapscript-section")).toBeInTheDocument();
-    expect(screen.getByTestId("shake-zapscript-input")).toBeInTheDocument();
-  });
-
-  it("opens system selector modal", () => {
-    renderReadersSettings({ shakeEnabled: true, shakeMode: "random" });
-
-    const selectButton = screen.getByTestId("select-system-button");
-    fireEvent.click(selectButton);
-
-    expect(screen.getByTestId("system-selector-modal")).toBeInTheDocument();
-  });
-
-  it("selects a system from system selector", () => {
-    renderReadersSettings({ shakeEnabled: true, shakeMode: "random" });
-
-    const selectButton = screen.getByTestId("select-system-button");
-    fireEvent.click(selectButton);
-
-    const selectNesButton = screen.getByTestId("select-nes-button");
-    fireEvent.click(selectNesButton);
-
-    expect(screen.getByTestId("selected-system")).toHaveTextContent("nes");
-  });
-
-  it("renders sound effects toggle", () => {
-    renderReadersSettings();
-
-    expect(screen.getByTestId("sound-effects-toggle")).toBeInTheDocument();
-  });
-
-  it("toggles sound effects", () => {
-    renderReadersSettings();
-
-    const checkbox = screen.getByTestId("sound-effects-checkbox");
+    const checkbox = screen.getByTestId("audio-checkbox");
     fireEvent.click(checkbox);
 
     expect(mockSettingsUpdate).toHaveBeenCalledWith({
@@ -668,91 +361,72 @@ describe("Settings Readers Route", () => {
     });
   });
 
-  it("renders auto detect toggle", () => {
-    renderReadersSettings();
-
-    expect(screen.getByTestId("auto-detect-toggle")).toBeInTheDocument();
-  });
-
-  it("toggles auto detect", () => {
-    renderReadersSettings();
+  it("should toggle auto-detect readers", () => {
+    render(<CoreSettingsTest readersAutoDetect={true} />);
 
     const checkbox = screen.getByTestId("auto-detect-checkbox");
     fireEvent.click(checkbox);
 
     expect(mockSettingsUpdate).toHaveBeenCalledWith({
-      readersAutoDetect: true,
+      readersAutoDetect: false,
     });
   });
 
-  it("disables controls when disconnected", () => {
-    renderReadersSettings({ connected: false });
+  it("should disable toggles when disconnected", () => {
+    render(<CoreSettingsTest connected={false} />);
 
-    expect(screen.getByTestId("tap-mode-button")).toBeDisabled();
-    expect(screen.getByTestId("hold-mode-button")).toBeDisabled();
-    expect(screen.getByTestId("sound-effects-checkbox")).toBeDisabled();
+    expect(screen.getByTestId("audio-checkbox")).toBeDisabled();
     expect(screen.getByTestId("auto-detect-checkbox")).toBeDisabled();
-  });
-
-  it("shows pro badge for launch on scan when no launcher access", () => {
-    renderReadersSettings({ launcherAccess: false });
-
-    expect(screen.getByTestId("pro-badge")).toBeInTheDocument();
-  });
-
-  it("shows pro badge for shake to launch when no launcher access", () => {
-    renderReadersSettings({ launcherAccess: false });
-
-    expect(screen.getByTestId("shake-pro-badge")).toBeInTheDocument();
   });
 });
 
-describe("getSystemFromZapscript helper", () => {
-  it("extracts system from random zapscript", () => {
-    const shakeMode = "random";
-    const shakeZapscript = "**launch.random:nes";
+describe("Settings Readers Route - App Settings", () => {
+  const AppSettingsTest = ({
+    restartScan = false,
+    onRestartScanChange = vi.fn(),
+  }) => {
+    const [restart, setRestart] = React.useState(restartScan);
 
-    const getSystemFromZapscript = () => {
-      if (
-        shakeMode === "random" &&
-        shakeZapscript.startsWith("**launch.random:")
-      ) {
-        return shakeZapscript.replace("**launch.random:", "");
-      }
-      return "";
-    };
+    return (
+      <div data-testid="app-settings">
+        <div data-testid="continuous-scan-toggle">
+          <label>
+            <input
+              type="checkbox"
+              checked={restart}
+              onChange={(e) => {
+                setRestart(e.target.checked);
+                onRestartScanChange(e.target.checked);
+              }}
+              data-testid="continuous-scan-checkbox"
+            />
+            Continuous Scanning
+          </label>
+        </div>
+      </div>
+    );
+  };
 
-    expect(getSystemFromZapscript()).toBe("nes");
+  it("should render continuous scan toggle", () => {
+    render(<AppSettingsTest />);
+
+    expect(screen.getByTestId("continuous-scan-toggle")).toBeInTheDocument();
   });
 
-  it("returns all for **launch.random:all", () => {
-    const shakeMode = "random";
-    const shakeZapscript = "**launch.random:all";
+  it("should toggle continuous scan", () => {
+    const onRestartScanChange = vi.fn();
+    render(<AppSettingsTest onRestartScanChange={onRestartScanChange} />);
 
-    const getSystemFromZapscript = () => {
-      if (
-        shakeMode === "random" &&
-        shakeZapscript.startsWith("**launch.random:")
-      ) {
-        return shakeZapscript.replace("**launch.random:", "");
-      }
-      return "";
-    };
+    const checkbox = screen.getByTestId("continuous-scan-checkbox");
+    fireEvent.click(checkbox);
 
-    expect(getSystemFromZapscript()).toBe("all");
+    expect(onRestartScanChange).toHaveBeenCalledWith(true);
   });
 
-  it("returns empty string for custom mode", () => {
-    const getSystemFromZapscript = (
-      mode: "random" | "custom",
-      zapscript: string,
-    ) => {
-      if (mode === "random" && zapscript.startsWith("**launch.random:")) {
-        return zapscript.replace("**launch.random:", "");
-      }
-      return "";
-    };
+  it("should show continuous scan as enabled when set", () => {
+    render(<AppSettingsTest restartScan={true} />);
 
-    expect(getSystemFromZapscript("custom", "custom script")).toBe("");
+    const checkbox = screen.getByTestId("continuous-scan-checkbox");
+    expect(checkbox).toBeChecked();
   });
 });

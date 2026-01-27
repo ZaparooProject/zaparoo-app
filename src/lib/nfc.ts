@@ -1,11 +1,17 @@
+import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import {
   Nfc,
   NfcTag,
   NfcTagScannedEvent,
   NfcUtils,
 } from "@capawesome-team/capacitor-nfc";
-import type { PluginListenerHandle } from "@capacitor/core";
 import { logger } from "./logger";
+import {
+  NfcCancelledError,
+  NfcUnformattedTagError,
+  NfcFormatError,
+  wrapNfcError,
+} from "./errors";
 
 export enum Status {
   Success,
@@ -32,6 +38,10 @@ export const sessionManager = {
   setLaunchOnScan: (value: boolean) => {
     sessionManager.launchOnScan = value;
   },
+  isScanning: false,
+  setIsScanning: (value: boolean) => {
+    sessionManager.isScanning = value;
+  },
 };
 
 export interface Tag {
@@ -56,7 +66,7 @@ async function withNfcSession<T>(
     let listeners: PluginListenerHandle[] = [];
 
     const cleanup = async () => {
-      // Remove all listeners
+      sessionManager.setIsScanning(false);
       await Promise.all(listeners.map((listener) => listener.remove()));
       listeners = [];
     };
@@ -99,9 +109,7 @@ async function withNfcSession<T>(
           "scanSessionCanceled",
           async () => {
             Nfc.stopScanSession();
-            await handleError(
-              new Error("NFC scan session was cancelled by user"),
-            );
+            await handleError(new NfcCancelledError());
           },
         );
 
@@ -126,6 +134,7 @@ async function withNfcSession<T>(
           scanErrorHandle,
         );
 
+        sessionManager.setIsScanning(true);
         // Now it's safe to start the scan session
         await Nfc.startScanSession();
       } catch (setupError) {
@@ -156,7 +165,7 @@ export function int2char(v: number[]): string {
   return charId;
 }
 
-function readNfcEvent(event: NfcTagScannedEvent): Tag | null {
+export function readNfcEvent(event: NfcTagScannedEvent): Tag | null {
   if (!event.nfcTag || !event.nfcTag.id) {
     return null;
   }
@@ -190,9 +199,7 @@ export async function readTag(): Promise<Result> {
     });
   } catch (error) {
     // Handle cancellation as a successful result with Cancelled status
-    // NOTE: This relies on error message string matching, which is fragile.
-    // If the native layer changes error messages, cancellations may be treated as exceptions.
-    if (error instanceof Error && error.message.includes("cancelled")) {
+    if (error instanceof NfcCancelledError) {
       return {
         status: Status.Cancelled,
         info: {
@@ -205,13 +212,100 @@ export async function readTag(): Promise<Result> {
   }
 }
 
+/**
+ * Checks if an error is related to NFC tag formatting failures.
+ * Used to show user-friendly error messages in the UI.
+ */
+export function isFormatRelatedError(error: unknown): boolean {
+  // Check typed error first
+  if (
+    error instanceof NfcFormatError ||
+    error instanceof NfcUnformattedTagError
+  ) {
+    return true;
+  }
+  // Fallback for native plugin errors we haven't wrapped yet
+  if (!(error instanceof Error)) return false;
+  const msg = error.message.toLowerCase();
+  return (
+    msg.includes("unknown error") ||
+    msg.includes("an unknown error has occurred") ||
+    msg.includes("only one tagtechnology") ||
+    msg.includes("format")
+  );
+}
+
 export async function writeTag(text: string): Promise<Result> {
   const record = createNdefTextRecord(text);
+  const maxFormatRetries = 3;
+  const formatRetryDelayMs = 500;
 
   try {
     return await withNfcSession<Result>(async (event) => {
-      await Nfc.write({ message: { records: [record] } });
-      logger.log("write success");
+      try {
+        await Nfc.write({ message: { records: [record] } });
+        logger.log("write success");
+      } catch (writeError) {
+        const wrappedError = wrapNfcError(writeError);
+        if (
+          wrappedError instanceof NfcUnformattedTagError &&
+          Capacitor.getPlatform() === "android"
+        ) {
+          logger.log("Tag not NDEF formatted, auto-formatting...");
+          let lastFormatError: unknown = null;
+
+          for (let attempt = 1; attempt <= maxFormatRetries; attempt++) {
+            try {
+              // Before retrying, try to close any stale TagTechnology connection.
+              // This may help in some cases, though it's not guaranteed due to
+              // a bug in the capacitor-nfc plugin where format() doesn't properly
+              // clean up its internal NdefFormatable connection on failure.
+              if (attempt > 1) {
+                try {
+                  await Nfc.close();
+                } catch {
+                  // Ignore close errors - connection may already be closed
+                }
+                await new Promise((resolve) =>
+                  setTimeout(resolve, formatRetryDelayMs),
+                );
+              }
+
+              await Nfc.format();
+              await Nfc.write({ message: { records: [record] } });
+              logger.log("Write after auto-format successful");
+              return {
+                status: Status.Success,
+                info: {
+                  rawTag: event.nfcTag,
+                  tag: readNfcEvent(event),
+                },
+              };
+            } catch (formatError) {
+              lastFormatError = formatError;
+              logger.log(
+                `Format attempt ${attempt} failed: ${formatError instanceof Error ? formatError.message : String(formatError)}`,
+              );
+            }
+          }
+
+          // All retries exhausted - log technical error for debugging
+          logger.error(
+            "NFC format/write failed after retries",
+            lastFormatError,
+            {
+              category: "nfc",
+              action: "writeTag",
+              stack:
+                lastFormatError instanceof Error
+                  ? lastFormatError.stack
+                  : undefined,
+            },
+          );
+          throw lastFormatError;
+        }
+        throw writeError;
+      }
       return {
         status: Status.Success,
         info: {
@@ -221,7 +315,7 @@ export async function writeTag(text: string): Promise<Result> {
       };
     });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("cancelled")) {
+    if (error instanceof NfcCancelledError) {
       return {
         status: Status.Cancelled,
         info: {
@@ -248,7 +342,7 @@ export async function formatTag(): Promise<Result> {
       };
     });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("cancelled")) {
+    if (error instanceof NfcCancelledError) {
       return {
         status: Status.Cancelled,
         info: {
@@ -275,7 +369,7 @@ export async function eraseTag(): Promise<Result> {
       };
     });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("cancelled")) {
+    if (error instanceof NfcCancelledError) {
       return {
         status: Status.Cancelled,
         info: {
@@ -301,7 +395,7 @@ export async function readRaw(): Promise<Result> {
       };
     });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("cancelled")) {
+    if (error instanceof NfcCancelledError) {
       return {
         status: Status.Cancelled,
         info: {
@@ -328,7 +422,7 @@ export async function makeReadOnly(): Promise<Result> {
       };
     });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("cancelled")) {
+    if (error instanceof NfcCancelledError) {
       return {
         status: Status.Cancelled,
         info: {

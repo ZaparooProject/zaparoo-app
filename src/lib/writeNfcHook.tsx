@@ -13,9 +13,11 @@ import {
   writeTag,
   Result,
   Status,
+  isFormatRelatedError,
 } from "./nfc";
 import { CoreAPI } from "./coreApi.ts";
 import { logger } from "./logger";
+import { NfcCancelledError, isCancellationError } from "./errors";
 
 interface WriteNfcHook {
   write: (action: WriteAction, text?: string) => Promise<void>;
@@ -84,8 +86,31 @@ async function determineWriteMethod(
     return preferredMethod;
   }
 
-  // Auto-detection logic based on user preference and capabilities
   const isNativePlatform = Capacitor.isNativePlatform();
+  const isConnected = CoreAPI.isConnected();
+
+  // If not connected, only local NFC is available - don't make API calls that will hang
+  if (!isConnected) {
+    if (isNativePlatform) {
+      try {
+        const nfcAvailable = await Nfc.isAvailable();
+        if (nfcAvailable.nfc) {
+          return WriteMethod.LocalNFC;
+        }
+      } catch (error) {
+        logger.error("NFC availability check failed:", error, {
+          category: "nfc",
+          action: "determineWriteMethod",
+          severity: "warning",
+        });
+      }
+    }
+    // Not connected and no local NFC available - return RemoteReader
+    // which will fail gracefully when the write is attempted
+    return WriteMethod.RemoteReader;
+  }
+
+  // Connected - use full auto-detection logic with API calls
   const hasRemoteWriter = await CoreAPI.hasWriteCapableReader();
 
   // If user prefers remote writer and it's available, use it
@@ -256,6 +281,11 @@ export function useNfcWriter(
         })
         .catch((e: Error) => {
           setWriting(false);
+          // Don't log user-initiated cancellations as errors
+          if (e instanceof NfcCancelledError || isCancellationError(e)) {
+            setStatus(Status.Cancelled);
+            return;
+          }
           logger.error("NFC write operation failed", e, {
             category: "nfc",
             action: action,
@@ -265,6 +295,11 @@ export function useNfcWriter(
           if (Capacitor.getPlatform() === "ios") {
             showMs += 4000;
           }
+          // Use user-friendly message for format-related errors on Android
+          const userMessage =
+            Capacitor.getPlatform() === "android" && isFormatRelatedError(e)
+              ? t("spinner.formatErrorRetry")
+              : e.message;
           toast.error(
             (to) => (
               // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
@@ -273,7 +308,7 @@ export function useNfcWriter(
                 onClick={() => toast.dismiss(to.id)}
               >
                 <span>{toastFailed}</span>
-                <span>{e.message}</span>
+                <span>{userMessage}</span>
               </span>
             ),
             {

@@ -9,6 +9,7 @@
 
 import Rollbar from "rollbar";
 import { Capacitor } from "@capacitor/core";
+import { isCancellationError } from "./errors";
 
 // Extended list of fields to scrub for PII protection
 const scrubFields = [
@@ -157,14 +158,23 @@ export const rollbarConfig: Rollbar.Configuration = {
 
   // Ignore user-initiated cancellations and connection errors
   checkIgnore: (_isUncaught, args) => {
-    const msg = String(args[0] || "").toLowerCase();
-    const errorMsg =
-      args[0] instanceof Error ? args[0].message.toLowerCase() : "";
+    const error = args[0];
+
+    // Check typed cancellation errors first (preferred - type-safe)
+    if (isCancellationError(error)) {
+      return true;
+    }
+
+    // Fallback to string matching for external/uncontrolled errors
+    const msg = String(error || "").toLowerCase();
+    const errorMsg = error instanceof Error ? error.message.toLowerCase() : "";
 
     // Patterns to ignore - these are expected operational errors, not bugs
     const ignorePatterns = [
-      // User-initiated
+      // User-initiated (fallback for external libraries)
+      "canceled",
       "cancelled",
+      "scan canceled", // MLKit barcode scanner cancellation message
       "aborted",
       // Connection/network errors - expected when device is off/unreachable
       "websocket",

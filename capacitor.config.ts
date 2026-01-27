@@ -26,7 +26,15 @@ const config: CapacitorConfig = {
     },
     FirebaseAuthentication: {
       skipNativeAuth: false,
-      providers: ["google.com"],
+      providers: ["google.com", "apple.com"],
+      // TODO: authDomain config is not working on Android due to a bug in
+      // @capacitor-firebase/authentication. The plugin's getFirebaseAuthenticationConfig()
+      // in FirebaseAuthenticationPlugin.java reads skipNativeAuth and providers, but does
+      // NOT read authDomain from config (even though FirebaseAuthentication.java has code
+      // to use it via setCustomAuthDomain). OAuth flows on Android will show
+      // firebaseapp.com instead of online.zaparoo.com until this is fixed upstream.
+      // See: https://github.com/capawesome-team/capacitor-firebase/pull/894
+      authDomain: "online.zaparoo.com",
     },
     StatusBar: {
       overlaysWebView: true,

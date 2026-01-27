@@ -10,6 +10,10 @@ import { runToken } from "@/lib/tokenOperations.tsx";
 import { logger } from "@/lib/logger";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
 import { useHaptics } from "@/hooks/useHaptics";
+import {
+  BarcodeScanCancelledError,
+  wrapBarcodeScannerError,
+} from "@/lib/errors";
 
 interface UseScanOperationsProps {
   connected: boolean;
@@ -161,14 +165,16 @@ export function useScanOperations({
         );
       })
       .catch((error) => {
+        // Wrap barcode scanner errors to get typed errors
+        const wrappedError = wrapBarcodeScannerError(error);
+
         // User canceling the scan is not an error
-        const message = error?.message?.toLowerCase() || "";
-        if (message.includes("canceled") || message.includes("cancelled")) {
+        if (wrappedError instanceof BarcodeScanCancelledError) {
           logger.debug("Barcode scan canceled by user");
           return;
         }
 
-        logger.error("Barcode scan error:", error, {
+        logger.error("Barcode scan error:", wrappedError, {
           category: "camera",
           action: "barcodeScan",
         });

@@ -13,6 +13,10 @@ import { CoreAPI } from "@/lib/coreApi.ts";
 import { useStatusStore } from "@/lib/store.ts";
 import { MappingResponse } from "@/lib/models.ts";
 import { logger } from "@/lib/logger";
+import {
+  wrapBarcodeScannerError,
+  BarcodeScanCancelledError,
+} from "@/lib/errors";
 import { Button } from "@/components/wui/Button";
 import { PageFrame } from "@/components/PageFrame";
 import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
@@ -168,23 +172,35 @@ function Mappings() {
               className="w-full"
               icon={<CameraIcon size={20} />}
               onClick={() => {
-                BarcodeScanner.scan().then((res) => {
-                  if (res.barcodes.length < 1) {
-                    return;
-                  }
-                  const barcode = res.barcodes[0];
-                  if (!barcode) return;
-                  setTokenId(barcode.rawValue);
-                  const existing = mappingExists(
-                    mappings.data?.mappings,
-                    barcode.rawValue,
-                  );
-                  if (existing !== null) {
-                    setScript(existing.script);
-                  } else {
-                    setScript("");
-                  }
-                });
+                BarcodeScanner.scan()
+                  .then((res) => {
+                    if (res.barcodes.length < 1) {
+                      return;
+                    }
+                    const barcode = res.barcodes[0];
+                    if (!barcode) return;
+                    setTokenId(barcode.rawValue);
+                    const existing = mappingExists(
+                      mappings.data?.mappings,
+                      barcode.rawValue,
+                    );
+                    if (existing !== null) {
+                      setScript(existing.script);
+                    } else {
+                      setScript("");
+                    }
+                  })
+                  .catch((error) => {
+                    const wrappedError = wrapBarcodeScannerError(error);
+                    // User canceling is expected, not an error
+                    if (wrappedError instanceof BarcodeScanCancelledError) {
+                      return;
+                    }
+                    logger.error("Barcode scan error:", wrappedError, {
+                      category: "camera",
+                      action: "barcodeScan",
+                    });
+                  });
               }}
               label={t("scan.cameraMode")}
             />

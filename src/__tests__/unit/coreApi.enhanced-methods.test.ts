@@ -134,6 +134,95 @@ describe("CoreAPI - Enhanced Methods", () => {
 
       expect(result).toBe(true);
     });
+
+    // Regression tests for handling malformed API responses
+    it("should return false when readers array is undefined", async () => {
+      // Simulates API returning response without readers property
+      const mockReadersResponse = {};
+
+      vi.spyOn(CoreAPI, "call" as any).mockResolvedValue(mockReadersResponse);
+
+      const result = await CoreAPI.hasWriteCapableReader();
+
+      expect(result).toBe(false);
+    });
+
+    it("should return false when readers is null", async () => {
+      const mockReadersResponse = { readers: null };
+
+      vi.spyOn(CoreAPI, "call" as any).mockResolvedValue(mockReadersResponse);
+
+      const result = await CoreAPI.hasWriteCapableReader();
+
+      expect(result).toBe(false);
+    });
+
+    it("should return false when readers is not an array", async () => {
+      const mockReadersResponse = { readers: "not-an-array" };
+
+      vi.spyOn(CoreAPI, "call" as any).mockResolvedValue(mockReadersResponse);
+
+      const result = await CoreAPI.hasWriteCapableReader();
+
+      expect(result).toBe(false);
+    });
+
+    it("should return false when response is null", async () => {
+      vi.spyOn(CoreAPI, "call" as any).mockResolvedValue(null);
+
+      const result = await CoreAPI.hasWriteCapableReader();
+
+      expect(result).toBe(false);
+    });
+
+    it("should return false when reader capabilities is undefined", async () => {
+      const mockReadersResponse = {
+        readers: [
+          {
+            id: "reader1",
+            info: "NFC Reader",
+            capabilities: undefined,
+            connected: true,
+          },
+        ],
+      };
+
+      vi.spyOn(CoreAPI, "call" as any).mockResolvedValue(mockReadersResponse);
+
+      const result = await CoreAPI.hasWriteCapableReader();
+
+      expect(result).toBe(false);
+    });
+
+    it("should return false when reader capabilities is not an array", async () => {
+      const mockReadersResponse = {
+        readers: [
+          {
+            id: "reader1",
+            info: "NFC Reader",
+            capabilities: "write", // string instead of array
+            connected: true,
+          },
+        ],
+      };
+
+      vi.spyOn(CoreAPI, "call" as any).mockResolvedValue(mockReadersResponse);
+
+      const result = await CoreAPI.hasWriteCapableReader();
+
+      expect(result).toBe(false);
+    });
+
+    it("should return true when readers array is empty", async () => {
+      const mockReadersResponse = { readers: [] };
+
+      vi.spyOn(CoreAPI, "call" as any).mockResolvedValue(mockReadersResponse);
+
+      const result = await CoreAPI.hasWriteCapableReader();
+
+      // Empty array means no write capable readers, but it's a valid response
+      expect(result).toBe(false);
+    });
   });
 
   describe("cancelWrite", () => {

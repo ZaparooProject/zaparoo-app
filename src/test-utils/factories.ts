@@ -10,6 +10,8 @@ import {
   PlayingResponse,
   MediaResponse,
   MappingType,
+  ReaderInfo,
+  ReadersResponse,
 } from "../lib/models";
 
 export const mockSystem = (overrides?: Partial<System>): System => ({
@@ -98,5 +100,31 @@ export const mockMappingResponse = (
   match: faker.lorem.words(2),
   pattern: faker.lorem.words(2),
   override: faker.lorem.words(2),
+  ...overrides,
+});
+
+export const mockReaderInfo = (
+  overrides?: Partial<ReaderInfo>,
+): ReaderInfo => ({
+  id: faker.helpers.arrayElement(["pn532_1", "acr122u_1", "simple_serial_1"]),
+  info: faker.helpers.arrayElement([
+    "PN532 NFC Reader",
+    "ACR122U USB Reader",
+    "Simple Serial Reader",
+  ]),
+  capabilities: faker.helpers.arrayElements(["read", "write"], {
+    min: 1,
+    max: 2,
+  }),
+  connected: faker.datatype.boolean(),
+  ...overrides,
+});
+
+export const mockReadersResponse = (
+  overrides?: Partial<ReadersResponse>,
+): ReadersResponse => ({
+  readers: faker.helpers.multiple(() => mockReaderInfo(), {
+    count: { min: 0, max: 3 },
+  }),
   ...overrides,
 });

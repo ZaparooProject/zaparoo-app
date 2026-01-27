@@ -1,11 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { Preferences } from "@capacitor/preferences";
 
-// Explicitly mock the Capacitor preferences to test our mock factory
-vi.mock(
-  "@capacitor/preferences",
-  () => import("../../__mocks__/@capacitor/preferences"),
-);
+// Capacitor preferences mock is provided by global test-setup.ts
 
 describe("Capacitor Mocks", () => {
   it("should use our custom Preferences mock", async () => {

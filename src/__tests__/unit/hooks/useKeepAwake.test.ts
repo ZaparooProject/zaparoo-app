@@ -42,11 +42,18 @@ describe("useKeepAwake", () => {
     const { unmount } = renderHook(() => useKeepAwake());
 
     expect(Capacitor.isNativePlatform).toHaveBeenCalled();
-    expect(KeepAwake.keepAwake).toHaveBeenCalled();
+
+    // Wait for the dynamic import to resolve
+    await vi.waitFor(() => {
+      expect(KeepAwake.keepAwake).toHaveBeenCalled();
+    });
 
     unmount();
 
-    expect(KeepAwake.allowSleep).toHaveBeenCalled();
+    // Wait for cleanup to execute
+    await vi.waitFor(() => {
+      expect(KeepAwake.allowSleep).toHaveBeenCalled();
+    });
   });
 
   it("should not call keepAwake on web platform", () => {
@@ -91,6 +98,11 @@ describe("useKeepAwake", () => {
     vi.mocked(KeepAwake.allowSleep).mockRejectedValue(allowSleepError);
 
     const { unmount } = renderHook(() => useKeepAwake());
+
+    // Wait for the dynamic import and keepAwake to resolve
+    await vi.waitFor(() => {
+      expect(KeepAwake.keepAwake).toHaveBeenCalled();
+    });
 
     unmount();
 

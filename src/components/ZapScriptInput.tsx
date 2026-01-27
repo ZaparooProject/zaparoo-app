@@ -63,6 +63,7 @@ export function ZapScriptInput(props: {
           placeholder={t("create.custom.textPlaceholder")}
           value={props.value}
           autoCapitalize="off"
+          autoComplete="off"
           onChange={(e) => {
             props.setValue(e.target.value);
           }}

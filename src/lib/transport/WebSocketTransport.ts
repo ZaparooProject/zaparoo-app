@@ -1,8 +1,8 @@
 /**
  * WebSocket transport implementation.
  *
- * Handles WebSocket connection with automatic reconnection, heartbeat,
- * and message queuing.
+ * Handles WebSocket connection with automatic reconnection and heartbeat.
+ * Message queuing is handled at the CoreAPI level, not here.
  */
 
 import { logger } from "../logger";
@@ -21,14 +21,10 @@ export interface WebSocketTransportConfig {
   pingInterval?: number;
   /** Timeout waiting for pong response (ms) */
   pongTimeout?: number;
-  /** Initial reconnect delay (ms) */
+  /** Reconnect delay (ms) */
   reconnectInterval?: number;
   /** Maximum number of reconnect attempts */
   maxReconnectAttempts?: number;
-  /** Backoff multiplier for reconnect delay */
-  reconnectBackoffMultiplier?: number;
-  /** Maximum reconnect delay (ms) */
-  maxReconnectInterval?: number;
   /** Ping message content */
   pingMessage?: string;
   /** Connection timeout (ms) */
@@ -41,12 +37,10 @@ const DEFAULT_CONFIG: Omit<
 > = {
   pingInterval: 15000,
   pongTimeout: 10000,
-  reconnectInterval: 1000,
+  reconnectInterval: 2000,
   maxReconnectAttempts: Infinity,
-  reconnectBackoffMultiplier: 1.5,
-  maxReconnectInterval: 30000,
   pingMessage: "ping",
-  connectionTimeout: 10000,
+  connectionTimeout: 5000,
 };
 
 export class WebSocketTransport implements Transport {
@@ -55,14 +49,13 @@ export class WebSocketTransport implements Transport {
   private handlers: TransportEventHandlers = {};
   private _state: TransportState = "disconnected";
   private reconnectAttempts = 0;
-  private pingTimer?: ReturnType<typeof setInterval>;
-  private pongTimer?: ReturnType<typeof setTimeout>;
+  private pingTimeoutId?: ReturnType<typeof setTimeout>;
+  private pongTimeoutId?: ReturnType<typeof setTimeout>;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
   private connectionTimer?: ReturnType<typeof setTimeout>;
   private isDestroyed = false;
-  private messageQueue: string[] = [];
-  private readonly MAX_QUEUE_SIZE = 100;
   private _hasConnectedBefore = false;
+  private heartbeatPaused = false;
 
   readonly deviceId: string;
 
@@ -128,20 +121,9 @@ export class WebSocketTransport implements Transport {
     this._state = "disconnected";
   }
 
-  send(data: string, options?: { queue?: boolean }): void {
-    const shouldQueue = options?.queue ?? true;
-
+  send(data: string): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(data);
-    } else if (shouldQueue) {
-      if (this.messageQueue.length >= this.MAX_QUEUE_SIZE) {
-        logger.warn(
-          `[Transport:${this.deviceId}] Message queue full. Discarding oldest message.`,
-        );
-        this.messageQueue.shift();
-      }
-      logger.debug(`[Transport:${this.deviceId}] Queuing message`);
-      this.messageQueue.push(data);
     } else {
       throw new Error(
         `Cannot send message: WebSocket not open (state: ${this.ws?.readyState})`,
@@ -159,8 +141,10 @@ export class WebSocketTransport implements Transport {
 
     if (this._state === "connected" && this.ws?.readyState === WebSocket.OPEN) {
       logger.log(
-        `[Transport:${this.deviceId}] Already connected, skipping reconnect`,
+        `[Transport:${this.deviceId}] Already connected, resuming heartbeat`,
       );
+      // Resume heartbeat to detect stale connections (e.g., device went away while app was in background)
+      this.resumeHeartbeat();
       return;
     }
 
@@ -191,13 +175,15 @@ export class WebSocketTransport implements Transport {
 
   pauseHeartbeat(): void {
     logger.debug(`[Transport:${this.deviceId}] Pausing heartbeat`);
-    this.stopHeartbeat();
+    this.heartbeatPaused = true;
+    this.heartReset();
   }
 
   resumeHeartbeat(): void {
     if (this._state === "connected" && this.ws?.readyState === WebSocket.OPEN) {
       logger.debug(`[Transport:${this.deviceId}] Resuming heartbeat`);
-      this.startHeartbeat();
+      this.heartbeatPaused = false;
+      this.heartCheck();
     }
   }
 
@@ -219,10 +205,25 @@ export class WebSocketTransport implements Transport {
       this.setupEventHandlers();
       this.startConnectionTimeout();
     } catch (error) {
-      logger.error(
-        `[Transport:${this.deviceId}] Failed to create WebSocket:`,
-        error,
-      );
+      // Check if this is an invalid URL error (e.g., invalid IP address like 192.168.1.286)
+      // These are user input errors, not application bugs, so we use warn instead of error
+      // to avoid polluting error tracking with non-actionable reports
+      const isInvalidUrlError =
+        error instanceof DOMException &&
+        error.message.includes("did not match the expected pattern");
+
+      if (isInvalidUrlError) {
+        logger.warn(
+          `[Transport:${this.deviceId}] Invalid device address format`,
+        );
+        // Provide a user-friendly error message
+        this.handlers.onError?.(new Error("Invalid device address format"));
+      } else {
+        logger.error(
+          `[Transport:${this.deviceId}] Failed to create WebSocket:`,
+          error,
+        );
+      }
       this.handleConnectionError();
     }
   }
@@ -237,14 +238,13 @@ export class WebSocketTransport implements Transport {
       this._hasConnectedBefore = true;
       this.setState("connected");
       this.startHeartbeat();
-      this.flushMessageQueue();
       this.handlers.onOpen?.();
     };
 
     this.ws.onclose = () => {
       logger.debug(`[Transport:${this.deviceId}] WebSocket closed`);
       this.clearConnectionTimeout();
-      this.stopHeartbeat();
+      this.heartReset();
       this.handlers.onClose?.();
       this.handleDisconnection();
     };
@@ -262,12 +262,11 @@ export class WebSocketTransport implements Transport {
     };
 
     this.ws.onmessage = (event) => {
-      // Reset heartbeat on any message
-      this.resetHeartbeat();
+      // Reset heartbeat cycle on any message - this proves connection is alive
+      this.heartCheck();
 
-      // Handle pong messages
+      // Handle pong messages - no further processing needed
       if (event.data === "pong") {
-        this.clearPongTimeout();
         return;
       }
 
@@ -309,17 +308,8 @@ export class WebSocketTransport implements Transport {
       return;
     }
 
-    // Calculate backoff delay with jitter
-    const baseDelay = this.config.reconnectInterval;
-    const backoffDelay =
-      baseDelay *
-      Math.pow(this.config.reconnectBackoffMultiplier, this.reconnectAttempts);
-    const cappedDelay = Math.min(
-      backoffDelay,
-      this.config.maxReconnectInterval,
-    );
-    const jitter = Math.random() * cappedDelay * 0.5;
-    const delay = Math.floor(cappedDelay + jitter);
+    // Use fixed interval for local network devices - no backoff needed
+    const delay = this.config.reconnectInterval;
 
     logger.debug(
       `[Transport:${this.deviceId}] Reconnect attempt ${this.reconnectAttempts + 1} in ${delay}ms`,
@@ -329,44 +319,66 @@ export class WebSocketTransport implements Transport {
       this.reconnectTimer = undefined;
       if (this.isDestroyed) return;
       this.reconnectAttempts++;
+      // Reset state to allow connect() to proceed
+      // This is necessary because after a failed initial connection,
+      // state is still "connecting" which would cause connect() to return early
+      if (this._hasConnectedBefore) {
+        this.setState("reconnecting");
+      } else {
+        this.setState("disconnected");
+      }
       this.connect();
     }, delay);
   }
 
-  private flushMessageQueue(): void {
-    if (this.messageQueue.length === 0) return;
-
-    logger.debug(
-      `[Transport:${this.deviceId}] Flushing ${this.messageQueue.length} queued messages`,
-    );
-    const messages = [...this.messageQueue];
-    this.messageQueue = [];
-
-    messages.forEach((message) => {
-      try {
-        if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(message);
-        } else {
-          this.messageQueue.push(message);
-        }
-      } catch (error) {
-        logger.error(
-          `[Transport:${this.deviceId}] Failed to send queued message:`,
-          error,
-        );
-        this.messageQueue.push(message);
-      }
-    });
+  /**
+   * Start the heartbeat cycle. Called on connection open and resume.
+   * Uses setTimeout-based approach from websocket-heartbeat-js for reliable disconnect detection.
+   */
+  private startHeartbeat(): void {
+    this.heartbeatPaused = false;
+    this.heartCheck();
   }
 
-  private startHeartbeat(): void {
-    this.stopHeartbeat();
+  /**
+   * Stop all heartbeat timers.
+   */
+  private stopHeartbeat(): void {
+    this.heartReset();
+  }
 
-    this.pingTimer = setInterval(() => {
+  /**
+   * Reset and restart the heartbeat cycle.
+   * Called on any message received to reset the ping timer.
+   */
+  private heartCheck(): void {
+    this.heartReset();
+    this.heartStart();
+  }
+
+  /**
+   * Start the ping timeout. After pingInterval, sends ping and starts pong timeout.
+   */
+  private heartStart(): void {
+    if (this.isDestroyed || this.heartbeatPaused) return;
+
+    this.pingTimeoutId = setTimeout(() => {
       if (this.ws?.readyState === WebSocket.OPEN) {
         try {
           this.ws.send(this.config.pingMessage);
-          this.startPongTimeout();
+
+          // Start pong timeout - if no response, force disconnect
+          this.pongTimeoutId = setTimeout(() => {
+            logger.warn(
+              `[Transport:${this.deviceId}] Pong timeout - forcing disconnect`,
+            );
+            // Close the WebSocket
+            this.ws?.close();
+            // Force disconnect handling immediately, don't wait for onclose event
+            // This ensures we detect dead connections even if browser doesn't fire onclose
+            this.stopHeartbeat();
+            this.handleDisconnection();
+          }, this.config.pongTimeout);
         } catch (error) {
           logger.error(
             `[Transport:${this.deviceId}] Failed to send ping:`,
@@ -378,34 +390,17 @@ export class WebSocketTransport implements Transport {
     }, this.config.pingInterval);
   }
 
-  private stopHeartbeat(): void {
-    if (this.pingTimer) {
-      clearInterval(this.pingTimer);
-      this.pingTimer = undefined;
+  /**
+   * Clear all heartbeat timers.
+   */
+  private heartReset(): void {
+    if (this.pingTimeoutId) {
+      clearTimeout(this.pingTimeoutId);
+      this.pingTimeoutId = undefined;
     }
-    this.clearPongTimeout();
-  }
-
-  private resetHeartbeat(): void {
-    // On message receive, just clear the pong timeout - the ping interval continues as normal.
-    // No need to restart the entire interval; that was causing unnecessary overhead.
-    this.clearPongTimeout();
-  }
-
-  private startPongTimeout(): void {
-    this.clearPongTimeout();
-    this.pongTimer = setTimeout(() => {
-      logger.warn(
-        `[Transport:${this.deviceId}] Pong timeout - closing connection`,
-      );
-      this.ws?.close();
-    }, this.config.pongTimeout);
-  }
-
-  private clearPongTimeout(): void {
-    if (this.pongTimer) {
-      clearTimeout(this.pongTimer);
-      this.pongTimer = undefined;
+    if (this.pongTimeoutId) {
+      clearTimeout(this.pongTimeoutId);
+      this.pongTimeoutId = undefined;
     }
   }
 
@@ -427,7 +422,7 @@ export class WebSocketTransport implements Transport {
   }
 
   private cleanup(): void {
-    this.stopHeartbeat();
+    this.heartReset();
     this.clearConnectionTimeout();
 
     if (this.reconnectTimer) {

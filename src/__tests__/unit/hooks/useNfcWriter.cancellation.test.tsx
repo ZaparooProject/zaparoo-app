@@ -36,6 +36,7 @@ vi.mock("../../../lib/coreApi", async (importOriginal) => {
       cancelWrite: vi.fn(),
       readersWriteCancel: vi.fn(),
       hasWriteCapableReader: vi.fn(),
+      isConnected: vi.fn(),
     },
   };
 });
@@ -72,6 +73,7 @@ describe("useNfcWriter Cancellation", () => {
     vi.clearAllMocks();
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
     vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
+    vi.mocked(CoreAPI.isConnected).mockReturnValue(true);
     vi.mocked(CoreAPI.write).mockResolvedValue();
     vi.mocked(CoreAPI.readersWriteCancel).mockResolvedValue();
   });

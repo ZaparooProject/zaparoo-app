@@ -26,6 +26,7 @@ const {
   mockEraseTag,
   mockMakeReadOnly,
   mockHasWriteCapableReader,
+  mockIsConnected,
   mockWrite,
   mockReadersWriteCancel,
   mockCancelWrite,
@@ -42,6 +43,7 @@ const {
   mockEraseTag: vi.fn(),
   mockMakeReadOnly: vi.fn(),
   mockHasWriteCapableReader: vi.fn().mockResolvedValue(false),
+  mockIsConnected: vi.fn().mockReturnValue(true),
   mockWrite: vi.fn().mockResolvedValue({}),
   mockReadersWriteCancel: vi.fn().mockResolvedValue(undefined),
   mockCancelWrite: vi.fn(),
@@ -90,6 +92,7 @@ vi.mock("../../../lib/nfc", () => ({
 vi.mock("../../../lib/coreApi.ts", () => ({
   CoreAPI: {
     hasWriteCapableReader: mockHasWriteCapableReader,
+    isConnected: mockIsConnected,
     write: mockWrite,
     readersWriteCancel: mockReadersWriteCancel,
     cancelWrite: mockCancelWrite,
@@ -123,11 +126,12 @@ describe("useNfcWriter", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Default to native platform with NFC available
+    // Default to native platform with NFC available and connected
     mockIsNativePlatform.mockReturnValue(true);
     mockGetPlatform.mockReturnValue("ios");
     mockNfcIsAvailable.mockResolvedValue({ nfc: true });
     mockHasWriteCapableReader.mockResolvedValue(false);
+    mockIsConnected.mockReturnValue(true);
 
     // Default successful operations
     mockReadRaw.mockResolvedValue({
@@ -438,6 +442,88 @@ describe("useNfcWriter", () => {
       unmount();
 
       expect(mockCancelSession).toHaveBeenCalled();
+    });
+  });
+
+  describe("offline write scenarios", () => {
+    it("should use LocalNFC when disconnected and NFC is available", async () => {
+      // Simulate disconnected state
+      mockIsConnected.mockReturnValue(false);
+      mockIsNativePlatform.mockReturnValue(true);
+      mockNfcIsAvailable.mockResolvedValue({ nfc: true });
+
+      const { result } = renderHook(() => useNfcWriter());
+
+      await act(async () => {
+        await result.current.write(WriteAction.Write, "test content");
+      });
+
+      // Should use local NFC write without calling hasWriteCapableReader
+      expect(mockWriteTag).toHaveBeenCalledWith("test content");
+      expect(mockHasWriteCapableReader).not.toHaveBeenCalled();
+      expect(mockWrite).not.toHaveBeenCalled();
+    });
+
+    it("should not call hasWriteCapableReader when disconnected", async () => {
+      mockIsConnected.mockReturnValue(false);
+      mockIsNativePlatform.mockReturnValue(true);
+      mockNfcIsAvailable.mockResolvedValue({ nfc: true });
+
+      const { result } = renderHook(() => useNfcWriter());
+
+      await act(async () => {
+        await result.current.write(WriteAction.Write, "test content");
+      });
+
+      // The key assertion: no API calls when disconnected
+      expect(mockHasWriteCapableReader).not.toHaveBeenCalled();
+    });
+
+    it("should fallback to RemoteReader when disconnected and NFC unavailable", async () => {
+      mockIsConnected.mockReturnValue(false);
+      mockIsNativePlatform.mockReturnValue(true);
+      mockNfcIsAvailable.mockResolvedValue({ nfc: false });
+
+      const { result } = renderHook(() => useNfcWriter());
+
+      await act(async () => {
+        await result.current.write(WriteAction.Write, "test content");
+      });
+
+      // Should attempt remote write (which will fail, but that's expected)
+      expect(mockWrite).toHaveBeenCalled();
+      expect(mockWriteTag).not.toHaveBeenCalled();
+    });
+
+    it("should fallback to RemoteReader when disconnected on non-native platform", async () => {
+      mockIsConnected.mockReturnValue(false);
+      mockIsNativePlatform.mockReturnValue(false);
+
+      const { result } = renderHook(() => useNfcWriter());
+
+      await act(async () => {
+        await result.current.write(WriteAction.Write, "test content");
+      });
+
+      // Should attempt remote write on web platform
+      expect(mockWrite).toHaveBeenCalled();
+      expect(mockWriteTag).not.toHaveBeenCalled();
+    });
+
+    it("should call hasWriteCapableReader when connected", async () => {
+      mockIsConnected.mockReturnValue(true);
+      mockIsNativePlatform.mockReturnValue(true);
+      mockNfcIsAvailable.mockResolvedValue({ nfc: true });
+      mockHasWriteCapableReader.mockResolvedValue(false);
+
+      const { result } = renderHook(() => useNfcWriter());
+
+      await act(async () => {
+        await result.current.write(WriteAction.Write, "test content");
+      });
+
+      // Should call hasWriteCapableReader when connected
+      expect(mockHasWriteCapableReader).toHaveBeenCalled();
     });
   });
 });

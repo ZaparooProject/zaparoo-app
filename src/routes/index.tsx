@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { useNfcWriter, WriteMethod } from "@/lib/writeNfcHook.tsx";
-import { Status } from "@/lib/nfc.ts";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
@@ -53,8 +52,8 @@ function Index() {
     setWriteQueue("");
   };
   useEffect(() => {
-    // Only auto-close on successful write completion
-    if (nfcWriter.status === Status.Success) {
+    // Auto-close modal on any completion (success, cancelled, or error)
+    if (nfcWriter.status !== null) {
       setWriteOpen(false);
     }
   }, [nfcWriter.status, setWriteOpen]);
