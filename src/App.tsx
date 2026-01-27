@@ -17,6 +17,7 @@ import AppUrlListener from "./lib/deepLinks.tsx";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { useDataCache } from "./hooks/useDataCache";
 import { SlideModalProvider } from "./components/SlideModalProvider";
+import { RequirementsModal } from "./components/RequirementsModal";
 import { usePreferencesStore } from "./lib/preferencesStore";
 import { filenameFromPath } from "./lib/path";
 import { useProAccessCheck } from "./hooks/useProAccessCheck";
@@ -338,6 +339,7 @@ export default function App() {
               <RouterProvider router={router} />
             </SlideModalProvider>
           </div>
+          <RequirementsModal />
         </ConnectionProvider>
       </A11yAnnouncerProvider>
     </>

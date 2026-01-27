@@ -284,3 +284,44 @@ export interface PlaytimeLimitWarningParams {
 export interface PlaytimeLimitReachedParams {
   reason: "daily" | "session";
 }
+
+// Online API Requirements
+export type RequirementType =
+  | "terms_acceptance"
+  | "age_verified"
+  | "email_verified";
+
+export interface PendingRequirement {
+  type: RequirementType;
+  description: string;
+  endpoint: string;
+}
+
+export interface RequirementsStatus {
+  email_verified: boolean;
+  tos_accepted: boolean;
+  privacy_accepted: boolean;
+  age_verified: boolean;
+}
+
+export interface RequiredVersions {
+  tos: string;
+  privacy: string;
+}
+
+export interface AcceptedVersions {
+  tos: string | null;
+  privacy: string | null;
+}
+
+export interface RequirementsResponse {
+  requirements: RequirementsStatus;
+  required_versions: RequiredVersions;
+  accepted_versions: AcceptedVersions;
+}
+
+export interface UpdateRequirementsRequest {
+  accept_tos?: boolean;
+  accept_privacy?: boolean;
+  age_verified?: boolean;
+}

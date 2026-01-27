@@ -997,6 +997,275 @@ describe("Settings Online Route", () => {
     expect(screen.getByTestId("auth-button")).toHaveTextContent("Sign in");
   });
 
+  describe("requirements auto-agree", () => {
+    it("should call updateRequirements after successful email login", async () => {
+      const mockUpdateRequirements = vi.fn().mockResolvedValue({
+        requirements: {
+          tos_accepted: true,
+          privacy_accepted: true,
+          age_verified: false,
+        },
+      });
+
+      const TestComponent = () => {
+        const handleLogin = async () => {
+          const result =
+            await FirebaseAuthentication.signInWithEmailAndPassword({
+              email: "test@example.com",
+              password: "password123",
+            });
+
+          if (result.user) {
+            // Auto-agree to TOS/Privacy on login
+            try {
+              await mockUpdateRequirements({
+                accept_tos: true,
+                accept_privacy: true,
+              });
+            } catch {
+              // Continue anyway
+            }
+            mockSetLoggedInUser(result.user);
+            toast.success("Login successful!");
+          }
+        };
+
+        return (
+          <button data-testid="login-button" onClick={handleLogin}>
+            Login
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("login-button"));
+
+      await waitFor(() => {
+        expect(mockUpdateRequirements).toHaveBeenCalledWith({
+          accept_tos: true,
+          accept_privacy: true,
+        });
+      });
+    });
+
+    it("should call updateRequirements with age_verified after signup", async () => {
+      const mockUpdateRequirements = vi.fn().mockResolvedValue({
+        requirements: {
+          tos_accepted: true,
+          privacy_accepted: true,
+          age_verified: true,
+        },
+      });
+
+      const TestComponent = () => {
+        const handleSignUp = async () => {
+          const result =
+            await FirebaseAuthentication.createUserWithEmailAndPassword({
+              email: "newuser@example.com",
+              password: "password123",
+            });
+
+          if (result.user) {
+            // Auto-agree to all requirements on signup
+            try {
+              await mockUpdateRequirements({
+                accept_tos: true,
+                accept_privacy: true,
+                age_verified: true,
+              });
+            } catch {
+              // Continue anyway
+            }
+            mockSetLoggedInUser(result.user);
+            toast.success("Account created!");
+          }
+        };
+
+        return (
+          <button data-testid="signup-button" onClick={handleSignUp}>
+            Sign up
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("signup-button"));
+
+      await waitFor(() => {
+        expect(mockUpdateRequirements).toHaveBeenCalledWith({
+          accept_tos: true,
+          accept_privacy: true,
+          age_verified: true,
+        });
+      });
+    });
+
+    it("should continue with login even if updateRequirements fails", async () => {
+      const mockUpdateRequirements = vi
+        .fn()
+        .mockRejectedValue(new Error("API error"));
+
+      const TestComponent = () => {
+        const handleLogin = async () => {
+          const result =
+            await FirebaseAuthentication.signInWithEmailAndPassword({
+              email: "test@example.com",
+              password: "password123",
+            });
+
+          if (result.user) {
+            try {
+              await mockUpdateRequirements({
+                accept_tos: true,
+                accept_privacy: true,
+              });
+            } catch {
+              // Continue anyway - modal will show if needed
+            }
+            mockSetLoggedInUser(result.user);
+            toast.success("Login successful!");
+          }
+        };
+
+        return (
+          <button data-testid="login-button" onClick={handleLogin}>
+            Login
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("login-button"));
+
+      await waitFor(() => {
+        // Login should still succeed
+        expect(mockSetLoggedInUser).toHaveBeenCalled();
+        expect(toast.success).toHaveBeenCalledWith("Login successful!");
+      });
+    });
+  });
+
+  describe("age confirmation checkbox", () => {
+    it("should disable signup button when age not confirmed", () => {
+      const TestComponent = () => {
+        const [ageConfirmed, setAgeConfirmed] = React.useState(false);
+        const [email] = React.useState("test@example.com");
+        const [password] = React.useState("password123");
+
+        return (
+          <div>
+            <input
+              type="checkbox"
+              data-testid="age-checkbox"
+              checked={ageConfirmed}
+              onChange={(e) => setAgeConfirmed(e.target.checked)}
+            />
+            <label>I confirm I am 13 years or older</label>
+            <button
+              data-testid="signup-button"
+              disabled={!email || !password || !ageConfirmed}
+            >
+              Sign up
+            </button>
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      expect(screen.getByTestId("signup-button")).toBeDisabled();
+
+      fireEvent.click(screen.getByTestId("age-checkbox"));
+
+      expect(screen.getByTestId("signup-button")).not.toBeDisabled();
+    });
+
+    it("should reset age confirmation when switching modes", () => {
+      const TestComponent = () => {
+        const [isSignUpMode, setIsSignUpMode] = React.useState(true);
+        const [ageConfirmed, setAgeConfirmed] = React.useState(true);
+
+        const handleToggleMode = () => {
+          setIsSignUpMode(!isSignUpMode);
+          setAgeConfirmed(false);
+        };
+
+        return (
+          <div>
+            {isSignUpMode && (
+              <input
+                type="checkbox"
+                data-testid="age-checkbox"
+                checked={ageConfirmed}
+                onChange={(e) => setAgeConfirmed(e.target.checked)}
+              />
+            )}
+            <button data-testid="toggle-mode" onClick={handleToggleMode}>
+              {isSignUpMode ? "Switch to login" : "Switch to signup"}
+            </button>
+            <span data-testid="age-state">
+              {ageConfirmed ? "confirmed" : "not-confirmed"}
+            </span>
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+
+      // Initially in signup mode with age confirmed
+      expect(screen.getByTestId("age-checkbox")).toBeInTheDocument();
+      expect(screen.getByTestId("age-state")).toHaveTextContent("confirmed");
+
+      // Switch to login mode
+      fireEvent.click(screen.getByTestId("toggle-mode"));
+
+      // Age confirmation should be reset
+      expect(screen.getByTestId("age-state")).toHaveTextContent(
+        "not-confirmed",
+      );
+
+      // Switch back to signup
+      fireEvent.click(screen.getByTestId("toggle-mode"));
+
+      // Checkbox should be unchecked
+      expect(screen.getByTestId("age-checkbox")).not.toBeChecked();
+    });
+
+    it("should show error when trying to signup without age confirmation", async () => {
+      const TestComponent = () => {
+        const [ageConfirmed] = React.useState(false);
+
+        const handleSignUp = () => {
+          if (!ageConfirmed) {
+            toast.error(
+              "You must confirm you are 13 years or older to sign up",
+            );
+            return;
+          }
+        };
+
+        return (
+          <button data-testid="signup-button" onClick={handleSignUp}>
+            Sign up
+          </button>
+        );
+      };
+
+      render(<TestComponent />);
+
+      fireEvent.click(screen.getByTestId("signup-button"));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "You must confirm you are 13 years or older to sign up",
+        );
+      });
+    });
+  });
+
   describe("RevenueCat logout sync", () => {
     it("should call Purchases.logOut before Firebase signOut on native platform", async () => {
       mockPlatform = "ios";

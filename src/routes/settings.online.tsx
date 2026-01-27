@@ -3,11 +3,14 @@ import { useTranslation } from "react-i18next";
 import { useState, type KeyboardEvent } from "react";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { Purchases } from "@revenuecat/purchases-capacitor";
+import { Browser } from "@capacitor/browser";
 import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
-import { LogOutIcon, UserPlusIcon } from "lucide-react";
+import { LogOutIcon, UserPlusIcon, ExternalLinkIcon } from "lucide-react";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { Button } from "@/components/wui/Button.tsx";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useStatusStore } from "@/lib/store.ts";
 import { PageFrame } from "@/components/PageFrame.tsx";
 import { HeaderButton } from "@/components/wui/HeaderButton";
@@ -15,6 +18,7 @@ import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { BackIcon, GoogleIcon, AppleIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { updateRequirements } from "@/lib/onlineApi";
 
 export const Route = createFileRoute("/settings/online")({
   component: OnlinePage,
@@ -87,145 +91,218 @@ function OnlinePage() {
   const [onlinePassword, setOnlinePassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const oauthAvailable = isOAuthAvailable();
 
-  const handleEmailAuth = () => {
+  const handleEmailAuth = async () => {
     if (!onlineEmail || !onlinePassword) return;
+
+    // Require age confirmation for signup
+    if (isSignUpMode && !ageConfirmed) {
+      setFormError(t("online.ageConfirmRequired"));
+      return;
+    }
+
+    setFormError(null);
 
     setIsLoading(true);
 
     if (isSignUpMode) {
       // Sign up flow
-      FirebaseAuthentication.createUserWithEmailAndPassword({
-        email: onlineEmail,
-        password: onlinePassword,
-      })
-        .then((result) => {
-          if (result.user) {
-            toast.success(t("online.signUpSuccess"));
-            setLoggedInUser(result.user);
-          } else {
-            toast.error(t("online.signUpFail"));
-          }
-          setIsLoading(false);
-        })
-        .catch((e: Error) => {
-          logger.error("Firebase email signup failed:", e, {
-            category: "api",
-            action: "createUserWithEmailAndPassword",
-            severity: "warning",
+      try {
+        const result =
+          await FirebaseAuthentication.createUserWithEmailAndPassword({
+            email: onlineEmail,
+            password: onlinePassword,
           });
 
-          // Handle specific error codes
-          if (e.message.includes("email-already-in-use")) {
-            toast.error(t("online.emailExists"));
-          } else if (e.message.includes("weak-password")) {
-            toast.error(t("online.weakPassword"));
-          } else {
-            toast.error(t("online.signUpFail"));
+        if (result.user) {
+          // Auto-agree to requirements on signup (includes age verification)
+          try {
+            await updateRequirements({
+              accept_tos: true,
+              accept_privacy: true,
+              age_verified: true,
+            });
+          } catch (e) {
+            logger.error("Failed to record terms acceptance:", e, {
+              category: "api",
+              action: "updateRequirements",
+              severity: "warning",
+            });
+            // Continue anyway - modal will show if needed
           }
-          setIsLoading(false);
+
+          setLoggedInUser(result.user);
+        } else {
+          toast.error(t("online.signUpFail"));
+        }
+      } catch (e) {
+        const error = e as Error;
+        logger.error("Firebase email signup failed:", error, {
+          category: "api",
+          action: "createUserWithEmailAndPassword",
+          severity: "warning",
         });
+
+        // Handle specific error codes
+        if (error.message.includes("email-already-in-use")) {
+          toast.error(t("online.emailExists"));
+        } else if (error.message.includes("weak-password")) {
+          toast.error(t("online.weakPassword"));
+        } else {
+          toast.error(t("online.signUpFail"));
+        }
+      } finally {
+        setIsLoading(false);
+      }
     } else {
       // Log in flow
-      FirebaseAuthentication.signInWithEmailAndPassword({
-        email: onlineEmail,
-        password: onlinePassword,
-      })
-        .then((result) => {
-          if (result.user) {
-            toast.success(t("online.loginSuccess"));
-            setLoggedInUser(result.user);
-          } else {
-            toast.error(t("online.loginWrong"));
-          }
-          setIsLoading(false);
-        })
-        .catch((e: Error) => {
-          logger.error("Firebase email login failed:", e, {
-            category: "api",
-            action: "signInWithEmail",
-            severity: "warning",
-          });
-          toast.error(t("online.loginWrong"));
-          setIsLoading(false);
+      try {
+        const result = await FirebaseAuthentication.signInWithEmailAndPassword({
+          email: onlineEmail,
+          password: onlinePassword,
         });
+
+        if (result.user) {
+          // Auto-agree to TOS/Privacy on login (no age verification for existing users)
+          try {
+            await updateRequirements({
+              accept_tos: true,
+              accept_privacy: true,
+            });
+          } catch (e) {
+            logger.error("Failed to record terms acceptance:", e, {
+              category: "api",
+              action: "updateRequirements",
+              severity: "warning",
+            });
+            // Continue anyway - modal will show if needed
+          }
+
+          setLoggedInUser(result.user);
+        } else {
+          toast.error(t("online.loginWrong"));
+        }
+      } catch (e) {
+        const error = e as Error;
+        logger.error("Firebase email login failed:", error, {
+          category: "api",
+          action: "signInWithEmail",
+          severity: "warning",
+        });
+        toast.error(t("online.loginWrong"));
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
-  const handleGoogleSignIn = () => {
+  const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    FirebaseAuthentication.signInWithGoogle()
-      .then((result) => {
-        if (result.user) {
-          toast.success(t("online.loginSuccess"));
-          setLoggedInUser(result.user);
-        } else {
-          toast.error(t("online.loginWrong"));
+    try {
+      const result = await FirebaseAuthentication.signInWithGoogle();
+
+      if (result.user) {
+        // Auto-agree to TOS/Privacy on OAuth login
+        try {
+          await updateRequirements({
+            accept_tos: true,
+            accept_privacy: true,
+          });
+        } catch (e) {
+          logger.error("Failed to record terms acceptance:", e, {
+            category: "api",
+            action: "updateRequirements",
+            severity: "warning",
+          });
+          // Continue anyway - modal will show if needed
         }
-        setIsLoading(false);
-      })
-      .catch((e: Error) => {
-        setIsLoading(false);
-        // Check if user cancelled the login - don't show error toast
-        const msg = e.message.toLowerCase();
-        if (
-          msg.includes("cancel") ||
-          msg.includes("popup_closed") ||
-          msg.includes("user_denied") ||
-          msg.includes("dismissed")
-        ) {
-          return;
-        }
-        logger.error("Firebase Google login failed:", e, {
-          category: "api",
-          action: "signInWithGoogle",
-          severity: "warning",
-        });
-        toast.error(t("online.loginFail"));
+
+        setLoggedInUser(result.user);
+      } else {
+        toast.error(t("online.loginWrong"));
+      }
+    } catch (e) {
+      const error = e as Error;
+      // Check if user cancelled the login - don't show error toast
+      const msg = error.message.toLowerCase();
+      if (
+        msg.includes("cancel") ||
+        msg.includes("popup_closed") ||
+        msg.includes("user_denied") ||
+        msg.includes("dismissed")
+      ) {
+        return;
+      }
+      logger.error("Firebase Google login failed:", error, {
+        category: "api",
+        action: "signInWithGoogle",
+        severity: "warning",
       });
+      toast.error(t("online.loginFail"));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleAppleSignIn = () => {
+  const handleAppleSignIn = async () => {
     setIsLoading(true);
-    FirebaseAuthentication.signInWithApple()
-      .then((result) => {
-        if (result.user) {
-          toast.success(t("online.loginSuccess"));
-          setLoggedInUser(result.user);
-        } else {
-          toast.error(t("online.loginWrong"));
+    try {
+      const result = await FirebaseAuthentication.signInWithApple();
+
+      if (result.user) {
+        // Auto-agree to TOS/Privacy on OAuth login
+        try {
+          await updateRequirements({
+            accept_tos: true,
+            accept_privacy: true,
+          });
+        } catch (e) {
+          logger.error("Failed to record terms acceptance:", e, {
+            category: "api",
+            action: "updateRequirements",
+            severity: "warning",
+          });
+          // Continue anyway - modal will show if needed
         }
-        setIsLoading(false);
-      })
-      .catch((e: Error) => {
-        setIsLoading(false);
-        // Check if user cancelled the login - don't show error toast
-        const msg = e.message.toLowerCase();
-        if (
-          msg.includes("cancel") ||
-          msg.includes("popup_closed") ||
-          msg.includes("user_denied") ||
-          msg.includes("dismissed")
-        ) {
-          return;
-        }
-        logger.error("Firebase Apple login failed:", e, {
-          category: "api",
-          action: "signInWithApple",
-          severity: "warning",
-        });
-        toast.error(t("online.loginFail"));
+
+        setLoggedInUser(result.user);
+      } else {
+        toast.error(t("online.loginWrong"));
+      }
+    } catch (e) {
+      const error = e as Error;
+      // Check if user cancelled the login - don't show error toast
+      const msg = error.message.toLowerCase();
+      if (
+        msg.includes("cancel") ||
+        msg.includes("popup_closed") ||
+        msg.includes("user_denied") ||
+        msg.includes("dismissed")
+      ) {
+        return;
+      }
+      logger.error("Firebase Apple login failed:", error, {
+        category: "api",
+        action: "signInWithApple",
+        severity: "warning",
       });
+      toast.error(t("online.loginFail"));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleForgotPassword = () => {
     if (!onlineEmail) {
-      toast.error(t("online.enterEmailFirst"));
+      setFormError(t("online.enterEmailFirst"));
       return;
     }
 
+    setFormError(null);
     FirebaseAuthentication.sendPasswordResetEmail({
       email: onlineEmail,
     })
@@ -345,6 +422,17 @@ function OnlinePage() {
 
             {/* Account actions */}
             <div className="mt-2 flex w-full flex-col gap-3">
+              {/* Dashboard button */}
+              <Button
+                label={t("online.dashboard")}
+                variant="outline"
+                icon={<ExternalLinkIcon size="20" />}
+                onClick={() =>
+                  Browser.open({ url: "https://online.zaparoo.com" })
+                }
+                className="w-full"
+              />
+
               {/* Change password - only for email/password users */}
               {getAuthProvider(loggedInUser.providerData) === "password" && (
                 <Button
@@ -385,6 +473,10 @@ function OnlinePage() {
         ) : (
           // Not logged in state
           <div className="flex flex-col gap-4">
+            <p className="text-muted-foreground text-center text-sm">
+              {t("online.description")}
+            </p>
+
             {/* Email input */}
             <TextInput
               label={t("online.email")}
@@ -424,12 +516,40 @@ function OnlinePage() {
               )}
             </div>
 
+            {/* Age confirmation - only in sign up mode */}
+            {isSignUpMode && (
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="age-confirm"
+                  checked={ageConfirmed}
+                  onCheckedChange={(checked) => {
+                    setAgeConfirmed(checked === true);
+                    if (checked === true) setFormError(null);
+                  }}
+                />
+                <Label
+                  htmlFor="age-confirm"
+                  className="text-sm leading-tight text-white"
+                >
+                  {t("online.ageConfirmLabel")}
+                </Label>
+              </div>
+            )}
+
+            {/* Inline form error */}
+            {formError && <p className="text-sm text-red-400">{formError}</p>}
+
             {/* Log in / Sign up Button */}
             <Button
               label={isSignUpMode ? t("online.signUp") : t("online.login")}
               icon={isSignUpMode ? <UserPlusIcon size="20" /> : undefined}
               onClick={handleEmailAuth}
-              disabled={!onlineEmail || !onlinePassword || isLoading}
+              disabled={
+                !onlineEmail ||
+                !onlinePassword ||
+                isLoading ||
+                (isSignUpMode && !ageConfirmed)
+              }
               className="w-full"
               intent="primary"
             />
@@ -441,7 +561,11 @@ function OnlinePage() {
                 : t("online.switchToSignUpPrefix")}
               <button
                 type="button"
-                onClick={() => setIsSignUpMode(!isSignUpMode)}
+                onClick={() => {
+                  setIsSignUpMode(!isSignUpMode);
+                  setAgeConfirmed(false);
+                  setFormError(null);
+                }}
                 className="text-white underline transition-colors hover:text-white/80"
               >
                 {isSignUpMode
@@ -501,6 +625,31 @@ function OnlinePage() {
                 )}
               </>
             )}
+
+            {/* TOS/Privacy agreement */}
+            <p className="text-muted-foreground text-center text-xs">
+              {isSignUpMode
+                ? t("online.agreementSignUp")
+                : t("online.agreementLogin")}{" "}
+              <a
+                href="https://zaparoo.com/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                {t("online.termsOfService")}
+              </a>{" "}
+              {t("online.and")}{" "}
+              <a
+                href="https://zaparoo.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                {t("online.privacyPolicy")}
+              </a>
+              .
+            </p>
           </div>
         )}
       </div>

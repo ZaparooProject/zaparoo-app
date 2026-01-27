@@ -193,14 +193,17 @@ function Settings() {
               <Button
                 label={
                   loggedInUser !== null
-                    ? t("online.settingsLoggedInAs", {
-                        email: loggedInUser.email,
-                      })
+                    ? t("online.settingsManageButton")
                     : t("online.settingsLogInButton")
                 }
                 className="w-full"
               />
             </Link>
+            {loggedInUser !== null && (
+              <p className="text-muted-foreground mt-1 text-center text-sm">
+                {loggedInUser.email}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col">
