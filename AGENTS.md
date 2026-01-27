@@ -18,8 +18,14 @@ This file provides guidance to AI agents when working with the Zaparoo App codeb
 - `pnpm lint:fix` - ESLint with auto-fix
 - `pnpm format` - Prettier formatting
 - `pnpm format:check` - Check Prettier formatting
+- `pnpm build:analyze` - Build with bundle size analyzer
 - `npx cap open ios` - Open iOS project in Xcode
 - `npx cap open android` - Open Android project in Android Studio
+
+### Live Updates
+
+- `pnpm live-update` - Build and push a signed live update to users (requires `live-update-private.pem`)
+- `pnpm live-update:list` - List deployed live update bundles
 
 ### Testing
 
@@ -39,6 +45,7 @@ This file provides guidance to AI agents when working with the Zaparoo App codeb
 - **Networking**: WebSocket + HTTP JSON-RPC with Zaparoo Core service
 - **Testing**: Vitest + React Testing Library + MSW
 - **i18n**: i18next with 7 supported languages
+- **CI/CD**: Capawesome Cloud (builds + live updates)
 
 ### Directory Structure
 
@@ -227,18 +234,25 @@ const platform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
 
 - `@capacitor/core` - Core platform API
 - `@capacitor/app` - App lifecycle, deep linking
-- `@capacitor/haptics` - Vibration/haptic feedback
+- `@capacitor/browser` - In-app browser
+- `@capacitor/clipboard` - Clipboard access
 - `@capacitor/device` - Device info
+- `@capacitor/filesystem` - File system access
+- `@capacitor/haptics` - Vibration/haptic feedback
+- `@capacitor/network` - Network status detection
 - `@capacitor/preferences` - Local storage (use instead of localStorage on native)
 - `@capacitor/screen-reader` - Screen reader detection
+- `@capacitor/share` - Native share sheet
 - `@capacitor/status-bar` - Status bar control
 - `@capacitor/text-zoom` - Text size accessibility
-- `@capacitor/share` - Native share sheet
-- `@capacitor-firebase/authentication` - Firebase auth
-- `@capawesome-team/capacitor-nfc` - NFC reading/writing
-- `@capacitor-mlkit/barcode-scanning` - Camera barcode scanning
 - `@capacitor-community/keep-awake` - Screen wake lock
+- `@capacitor-firebase/authentication` - Firebase auth
+- `@capacitor-mlkit/barcode-scanning` - Camera barcode scanning
+- `@capawesome-team/capacitor-nfc` - NFC reading/writing
+- `@capawesome/capacitor-live-update` - OTA live updates
 - `@capgo/capacitor-shake` - Shake detection
+- `capacitor-plugin-safe-area` - Safe area insets for notched devices
+- `capacitor-zeroconf` - Zeroconf/Bonjour network discovery
 
 ### Feature Availability Checks
 
@@ -653,3 +667,92 @@ const { hasProAccess, isLoading } = useProAccessCheck();
 5. **WebSocket Reconnection**: The transport handles reconnection automatically - don't manually reconnect
 6. **Safe Area Insets**: Use `safeInsets` from store for notched device padding
 7. **Touch vs Click**: wui components handle touch/scroll distinction - don't add extra click handlers
+
+## Live Updates
+
+The app uses Capawesome Cloud for over-the-air (OTA) updates, allowing JS/HTML/CSS changes to be pushed directly to users without app store review.
+
+### How It Works
+
+1. User opens app → syncs with Capawesome Cloud in background
+2. If update available → downloads new bundle
+3. User closes and reopens app → new version is active
+
+### Configuration
+
+Located in `capacitor.config.ts`:
+
+```typescript
+LiveUpdate: {
+  appId: "your-app-id",
+  autoUpdateStrategy: "background",
+  defaultChannel: "production",
+  readyTimeout: 10000,
+  publicKey: "-----BEGIN PUBLIC KEY-----...",
+}
+```
+
+### The `useLiveUpdate` Hook
+
+Called in `App.tsx` after successful render:
+
+- Calls `ready()` to signal the app loaded successfully (enables automatic rollback protection)
+- Syncs with update server in background
+
+If a bad update is pushed and the app crashes before `ready()` is called, the plugin automatically rolls back to the previous working version.
+
+### Pushing a Live Update
+
+```bash
+pnpm live-update
+```
+
+This builds the web assets and uploads a signed bundle to Capawesome Cloud.
+
+### When to Use Live Updates vs Store Release
+
+**Live Update** (instant, no review):
+
+- UI bug fixes
+- JavaScript logic fixes
+- New features using existing native plugins
+- Translation updates
+
+**Store Release** (requires app store review):
+
+- Adding/updating Capacitor plugins
+- Native code changes (Swift/Kotlin)
+- New iOS/Android permissions
+- Capacitor version upgrades
+
+### Code Signing
+
+Live updates are signed with a private key (`live-update-private.pem`, gitignored). The app verifies updates using the public key in the config. This prevents unauthorized code injection.
+
+## CI/CD with Capawesome Cloud
+
+The app uses Capawesome Cloud for building iOS and Android binaries.
+
+### Configuration Files
+
+- `capawesome.config.json` - Build commands and app configuration
+- `.npmrc` - GitHub Packages auth for `@capawesome-team/capacitor-nfc`
+
+### Build Process
+
+1. Push a git tag (e.g., `v1.9.2`)
+2. Capawesome Cloud builds iOS (IPA) and Android (AAB)
+3. Artifacts available for download or auto-submission to stores
+
+### Required Secrets in Capawesome Cloud
+
+| Secret                      | Purpose                                     |
+| --------------------------- | ------------------------------------------- |
+| `NPM_TOKEN`                 | GitHub Packages auth for private NFC plugin |
+| `FIREBASE_CREDS`            | Web Firebase config (`src/firebase.json`)   |
+| `GOOGLE_SERVICES_JSON`      | Android Firebase config                     |
+| `GOOGLE_SERVICE_INFO_PLIST` | iOS Firebase config (base64 encoded)        |
+| `VITE_GOOGLE_STORE_API`     | RevenueCat Android API key                  |
+| `VITE_APPLE_STORE_API`      | RevenueCat iOS API key                      |
+| `VITE_ROLLBAR_ACCESS_TOKEN` | Error tracking                              |
+| `LIVE_UPDATE_PRIVATE_KEY`   | Live update bundle signing                  |

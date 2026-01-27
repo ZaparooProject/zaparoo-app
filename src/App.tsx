@@ -27,6 +27,7 @@ import { useAccelerometerAvailabilityCheck } from "./hooks/useAccelerometerAvail
 import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
 import { usePassiveNfcListener } from "./hooks/usePassiveNfcListener";
+import { useLiveUpdate } from "./hooks/useLiveUpdate";
 import { initDeviceInfo, logger } from "./lib/logger";
 import { getSubscriptionStatus } from "./lib/onlineApi";
 import {
@@ -220,6 +221,8 @@ export default function App() {
   useNfcAvailabilityCheck();
   useCameraAvailabilityCheck();
   useAccelerometerAvailabilityCheck();
+  // Initialize live updates - must be called after app renders successfully
+  useLiveUpdate();
 
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
   const setLauncherAccess = usePreferencesStore(

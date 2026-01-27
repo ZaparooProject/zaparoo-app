@@ -1,7 +1,7 @@
 {
   "name": "zaparoo-app",
   "private": true,
-  "version": "1.9.1",
+  "version": "1.10.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,8 @@
     "sync": "pnpm exec cap sync",
     "build:server": "tsc --noEmit -p tsconfig.build.json && vite build && cross-env NODE_ENV=development cap sync",
     "build:analyze": "tsc --noEmit -p tsconfig.build.json && vite build --mode analyze",
+    "live-update": "pnpm build:web && pnpm exec capawesome apps:bundles:create --path dist --private-key live-update-private.pem",
+    "live-update:list": "pnpm exec capawesome apps:bundles:list",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -43,6 +45,7 @@
     "@capacitor/status-bar": "^7.0.3",
     "@capacitor/text-zoom": "^7.0.2",
     "@capawesome-team/capacitor-nfc": "7.3.0",
+    "@capawesome/capacitor-live-update": "^7.4.0",
     "@capgo/capacitor-shake": "^7.2.19",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-checkbox": "^1.3.3",
@@ -88,6 +91,7 @@
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^7.4.4",
+    "@capawesome/cli": "^4.0.1",
     "@eslint/js": "^9.39.1",
     "@faker-js/faker": "^10.1.0",
     "@tanstack/eslint-plugin-query": "^5.91.2",

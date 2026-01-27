@@ -208,7 +208,12 @@ vi.mock("@/hooks/usePassiveNfcListener", () => ({
 }));
 vi.mock("@/lib/logger", () => ({
   initDeviceInfo: vi.fn(),
-  logger: { error: mockLoggerError },
+  logger: {
+    log: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+    error: mockLoggerError,
+  },
 }));
 
 // Mock window.location

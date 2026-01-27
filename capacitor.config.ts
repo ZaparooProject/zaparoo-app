@@ -39,6 +39,14 @@ const config: CapacitorConfig = {
     StatusBar: {
       overlaysWebView: true,
     },
+    LiveUpdate: {
+      appId: "e96c260c-3271-4895-bff0-de9f8ca4d05a",
+      autoUpdateStrategy: "background",
+      defaultChannel: "production",
+      readyTimeout: 10000,
+      publicKey:
+        "-----BEGIN PUBLIC KEY-----MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9VF6x0L6R3Sq8Xk4NdNV6oR+Te7RyiaFaTsbsrzHrzWpk3g6WQrBCZoE2xSmvlTUeroEu4EW2JotftOmklkt7hRWKaxtwuCp6CwtUsBHmK9WWDdygSGqHUlotx+TMnLRKFrXsTVMPdbxfYkP2srsiNnL7CYjjdDn65xAHZ79JcR1k0JrCGgW5xDDsxeT54A8x+obtezMA8iIun1etmDeb03KHSshtkYVPmmBPjOxre9/zkjF12je6ZpsK3Vdt00HmN5sMCXvBVEv5ZKvsGDYpEXPZidIHvA/4So0FHnFT5PsGktYk/PLtirP7frA6v3xhj1Gwlr4ffnGTGHLqe4TJwIDAQAB-----END PUBLIC KEY-----",
+    },
   },
 };
 

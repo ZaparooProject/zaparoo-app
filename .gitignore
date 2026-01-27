@@ -6,6 +6,8 @@ firebase.json
 GoogleService-Info.plist
 google-services.json
 
+live-update-private.pem
+
 # Logs
 logs
 *.log

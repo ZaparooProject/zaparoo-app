@@ -50,6 +50,9 @@ project(':capacitor-text-zoom').projectDir = new File('../node_modules/.pnpm/@ca
 include ':capawesome-team-capacitor-nfc'
 project(':capawesome-team-capacitor-nfc').projectDir = new File('../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.3.0_@capacitor+core@7.4.4/node_modules/@capawesome-team/capacitor-nfc/android')
 
+include ':capawesome-capacitor-live-update'
+project(':capawesome-capacitor-live-update').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-live-update@7.4.0_@capacitor+core@7.4.4/node_modules/@capawesome/capacitor-live-update/android')
+
 include ':capgo-capacitor-shake'
 project(':capgo-capacitor-shake').projectDir = new File('../node_modules/.pnpm/@capgo+capacitor-shake@7.2.19_@capacitor+core@7.4.4/node_modules/@capgo/capacitor-shake/android')
 
