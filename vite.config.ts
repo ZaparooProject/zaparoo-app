@@ -5,6 +5,7 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import { visualizer } from "rollup-plugin-visualizer";
 import path from "path";
 import dotenv from "dotenv";
+import packageJson from "./package.json" with { type: "json" };
 
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 
@@ -60,6 +61,7 @@ export default defineConfig(({ command, mode }) => {
     define: {
       // Expose base path to runtime for TanStack Router basepath
       __APP_BASE_PATH__: JSON.stringify(base),
+      "import.meta.env.VITE_VERSION": JSON.stringify(packageJson.version),
     },
     resolve: {
       alias: {

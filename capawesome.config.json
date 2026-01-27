@@ -4,7 +4,7 @@
       {
         "appId": "e96c260c-3271-4895-bff0-de9f8ca4d05a",
         "dependencyInstallCommand": "npm install -g pnpm && pnpm install",
-        "webBuildCommand": "sh -c 'echo \"$FIREBASE_CREDS\" > ./src/firebase.json && echo \"$GOOGLE_SERVICES_JSON\" > ./android/app/google-services.json && echo \"$GOOGLE_SERVICE_INFO_PLIST\" | base64 -d > ./ios/App/App/GoogleService-Info.plist && VITE_VERSION=${CI_GIT_REFERENCE#v} pnpm build'"
+        "webBuildCommand": "sh -c 'echo \"$FIREBASE_CREDS\" > ./src/firebase.json && echo \"$GOOGLE_SERVICES_JSON\" > ./android/app/google-services.json && echo \"$GOOGLE_SERVICE_INFO_PLIST\" | base64 -d > ./ios/App/App/GoogleService-Info.plist && pnpm build'"
       }
     ]
   }
