@@ -455,22 +455,22 @@ describe("getWsUrl - Enhanced URL parsing", () => {
     expect(url).toBe("ws://[::1]:8080/api/v0.1");
   });
 
-  it("should validate port numbers", () => {
+  it("should strip invalid port and use default when port is out of range", () => {
     localStorage.setItem("deviceAddress", "192.168.1.100:99999"); // Invalid port
 
     const url = getWsUrl();
 
-    // Should treat as hostname, not host:port
-    expect(url).toBe("ws://192.168.1.100:99999:7497/api/v0.1");
+    // Should strip invalid port and use default
+    expect(url).toBe("ws://192.168.1.100:7497/api/v0.1");
   });
 
-  it("should handle hostnames with colons in them", () => {
+  it("should strip non-numeric port from hostname", () => {
     localStorage.setItem("deviceAddress", "my:host:name");
 
     const url = getWsUrl();
 
-    // Should treat as hostname without port parsing
-    expect(url).toBe("ws://my:host:name:7497/api/v0.1");
+    // Last segment "name" is not numeric, so strip and use default port
+    expect(url).toBe("ws://my:host:7497/api/v0.1");
   });
 
   it("should handle malformed addresses gracefully", () => {

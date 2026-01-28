@@ -8,350 +8,350 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as SettingsIndexRouteImport } from './routes/settings.index'
-import { Route as CreateIndexRouteImport } from './routes/create.index'
-import { Route as SettingsReadersRouteImport } from './routes/settings.readers'
-import { Route as SettingsPlaytimeRouteImport } from './routes/settings.playtime'
-import { Route as SettingsOnlineRouteImport } from './routes/settings.online'
-import { Route as SettingsLogsRouteImport } from './routes/settings.logs'
-import { Route as SettingsHelpRouteImport } from './routes/settings.help'
-import { Route as SettingsAdvancedRouteImport } from './routes/settings.advanced'
-import { Route as SettingsAccessibilityRouteImport } from './routes/settings.accessibility'
-import { Route as SettingsAboutRouteImport } from './routes/settings.about'
-import { Route as CreateTextRouteImport } from './routes/create.text'
-import { Route as CreateSearchRouteImport } from './routes/create.search'
-import { Route as CreateNfcRouteImport } from './routes/create.nfc'
-import { Route as CreateMappingsRouteImport } from './routes/create.mappings'
-import { Route as CreateCustomRouteImport } from './routes/create.custom'
+import { Route as rootRouteImport } from "./routes/__root";
+import { Route as IndexRouteImport } from "./routes/index";
+import { Route as SettingsIndexRouteImport } from "./routes/settings.index";
+import { Route as CreateIndexRouteImport } from "./routes/create.index";
+import { Route as SettingsReadersRouteImport } from "./routes/settings.readers";
+import { Route as SettingsPlaytimeRouteImport } from "./routes/settings.playtime";
+import { Route as SettingsOnlineRouteImport } from "./routes/settings.online";
+import { Route as SettingsLogsRouteImport } from "./routes/settings.logs";
+import { Route as SettingsHelpRouteImport } from "./routes/settings.help";
+import { Route as SettingsAdvancedRouteImport } from "./routes/settings.advanced";
+import { Route as SettingsAccessibilityRouteImport } from "./routes/settings.accessibility";
+import { Route as SettingsAboutRouteImport } from "./routes/settings.about";
+import { Route as CreateTextRouteImport } from "./routes/create.text";
+import { Route as CreateSearchRouteImport } from "./routes/create.search";
+import { Route as CreateNfcRouteImport } from "./routes/create.nfc";
+import { Route as CreateMappingsRouteImport } from "./routes/create.mappings";
+import { Route as CreateCustomRouteImport } from "./routes/create.custom";
 
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
-  id: '/settings/',
-  path: '/settings/',
+  id: "/settings/",
+  path: "/settings/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const CreateIndexRoute = CreateIndexRouteImport.update({
-  id: '/create/',
-  path: '/create/',
+  id: "/create/",
+  path: "/create/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SettingsReadersRoute = SettingsReadersRouteImport.update({
-  id: '/settings/readers',
-  path: '/settings/readers',
+  id: "/settings/readers",
+  path: "/settings/readers",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SettingsPlaytimeRoute = SettingsPlaytimeRouteImport.update({
-  id: '/settings/playtime',
-  path: '/settings/playtime',
+  id: "/settings/playtime",
+  path: "/settings/playtime",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SettingsOnlineRoute = SettingsOnlineRouteImport.update({
-  id: '/settings/online',
-  path: '/settings/online',
+  id: "/settings/online",
+  path: "/settings/online",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SettingsLogsRoute = SettingsLogsRouteImport.update({
-  id: '/settings/logs',
-  path: '/settings/logs',
+  id: "/settings/logs",
+  path: "/settings/logs",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SettingsHelpRoute = SettingsHelpRouteImport.update({
-  id: '/settings/help',
-  path: '/settings/help',
+  id: "/settings/help",
+  path: "/settings/help",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SettingsAdvancedRoute = SettingsAdvancedRouteImport.update({
-  id: '/settings/advanced',
-  path: '/settings/advanced',
+  id: "/settings/advanced",
+  path: "/settings/advanced",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SettingsAccessibilityRoute = SettingsAccessibilityRouteImport.update({
-  id: '/settings/accessibility',
-  path: '/settings/accessibility',
+  id: "/settings/accessibility",
+  path: "/settings/accessibility",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SettingsAboutRoute = SettingsAboutRouteImport.update({
-  id: '/settings/about',
-  path: '/settings/about',
+  id: "/settings/about",
+  path: "/settings/about",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const CreateTextRoute = CreateTextRouteImport.update({
-  id: '/create/text',
-  path: '/create/text',
+  id: "/create/text",
+  path: "/create/text",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const CreateSearchRoute = CreateSearchRouteImport.update({
-  id: '/create/search',
-  path: '/create/search',
+  id: "/create/search",
+  path: "/create/search",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const CreateNfcRoute = CreateNfcRouteImport.update({
-  id: '/create/nfc',
-  path: '/create/nfc',
+  id: "/create/nfc",
+  path: "/create/nfc",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const CreateMappingsRoute = CreateMappingsRouteImport.update({
-  id: '/create/mappings',
-  path: '/create/mappings',
+  id: "/create/mappings",
+  path: "/create/mappings",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const CreateCustomRoute = CreateCustomRouteImport.update({
-  id: '/create/custom',
-  path: '/create/custom',
+  id: "/create/custom",
+  path: "/create/custom",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/create/custom': typeof CreateCustomRoute
-  '/create/mappings': typeof CreateMappingsRoute
-  '/create/nfc': typeof CreateNfcRoute
-  '/create/search': typeof CreateSearchRoute
-  '/create/text': typeof CreateTextRoute
-  '/settings/about': typeof SettingsAboutRoute
-  '/settings/accessibility': typeof SettingsAccessibilityRoute
-  '/settings/advanced': typeof SettingsAdvancedRoute
-  '/settings/help': typeof SettingsHelpRoute
-  '/settings/logs': typeof SettingsLogsRoute
-  '/settings/online': typeof SettingsOnlineRoute
-  '/settings/playtime': typeof SettingsPlaytimeRoute
-  '/settings/readers': typeof SettingsReadersRoute
-  '/create': typeof CreateIndexRoute
-  '/settings': typeof SettingsIndexRoute
+  "/": typeof IndexRoute;
+  "/create/custom": typeof CreateCustomRoute;
+  "/create/mappings": typeof CreateMappingsRoute;
+  "/create/nfc": typeof CreateNfcRoute;
+  "/create/search": typeof CreateSearchRoute;
+  "/create/text": typeof CreateTextRoute;
+  "/settings/about": typeof SettingsAboutRoute;
+  "/settings/accessibility": typeof SettingsAccessibilityRoute;
+  "/settings/advanced": typeof SettingsAdvancedRoute;
+  "/settings/help": typeof SettingsHelpRoute;
+  "/settings/logs": typeof SettingsLogsRoute;
+  "/settings/online": typeof SettingsOnlineRoute;
+  "/settings/playtime": typeof SettingsPlaytimeRoute;
+  "/settings/readers": typeof SettingsReadersRoute;
+  "/create": typeof CreateIndexRoute;
+  "/settings": typeof SettingsIndexRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/create/custom': typeof CreateCustomRoute
-  '/create/mappings': typeof CreateMappingsRoute
-  '/create/nfc': typeof CreateNfcRoute
-  '/create/search': typeof CreateSearchRoute
-  '/create/text': typeof CreateTextRoute
-  '/settings/about': typeof SettingsAboutRoute
-  '/settings/accessibility': typeof SettingsAccessibilityRoute
-  '/settings/advanced': typeof SettingsAdvancedRoute
-  '/settings/help': typeof SettingsHelpRoute
-  '/settings/logs': typeof SettingsLogsRoute
-  '/settings/online': typeof SettingsOnlineRoute
-  '/settings/playtime': typeof SettingsPlaytimeRoute
-  '/settings/readers': typeof SettingsReadersRoute
-  '/create': typeof CreateIndexRoute
-  '/settings': typeof SettingsIndexRoute
+  "/": typeof IndexRoute;
+  "/create/custom": typeof CreateCustomRoute;
+  "/create/mappings": typeof CreateMappingsRoute;
+  "/create/nfc": typeof CreateNfcRoute;
+  "/create/search": typeof CreateSearchRoute;
+  "/create/text": typeof CreateTextRoute;
+  "/settings/about": typeof SettingsAboutRoute;
+  "/settings/accessibility": typeof SettingsAccessibilityRoute;
+  "/settings/advanced": typeof SettingsAdvancedRoute;
+  "/settings/help": typeof SettingsHelpRoute;
+  "/settings/logs": typeof SettingsLogsRoute;
+  "/settings/online": typeof SettingsOnlineRoute;
+  "/settings/playtime": typeof SettingsPlaytimeRoute;
+  "/settings/readers": typeof SettingsReadersRoute;
+  "/create": typeof CreateIndexRoute;
+  "/settings": typeof SettingsIndexRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/create/custom': typeof CreateCustomRoute
-  '/create/mappings': typeof CreateMappingsRoute
-  '/create/nfc': typeof CreateNfcRoute
-  '/create/search': typeof CreateSearchRoute
-  '/create/text': typeof CreateTextRoute
-  '/settings/about': typeof SettingsAboutRoute
-  '/settings/accessibility': typeof SettingsAccessibilityRoute
-  '/settings/advanced': typeof SettingsAdvancedRoute
-  '/settings/help': typeof SettingsHelpRoute
-  '/settings/logs': typeof SettingsLogsRoute
-  '/settings/online': typeof SettingsOnlineRoute
-  '/settings/playtime': typeof SettingsPlaytimeRoute
-  '/settings/readers': typeof SettingsReadersRoute
-  '/create/': typeof CreateIndexRoute
-  '/settings/': typeof SettingsIndexRoute
+  __root__: typeof rootRouteImport;
+  "/": typeof IndexRoute;
+  "/create/custom": typeof CreateCustomRoute;
+  "/create/mappings": typeof CreateMappingsRoute;
+  "/create/nfc": typeof CreateNfcRoute;
+  "/create/search": typeof CreateSearchRoute;
+  "/create/text": typeof CreateTextRoute;
+  "/settings/about": typeof SettingsAboutRoute;
+  "/settings/accessibility": typeof SettingsAccessibilityRoute;
+  "/settings/advanced": typeof SettingsAdvancedRoute;
+  "/settings/help": typeof SettingsHelpRoute;
+  "/settings/logs": typeof SettingsLogsRoute;
+  "/settings/online": typeof SettingsOnlineRoute;
+  "/settings/playtime": typeof SettingsPlaytimeRoute;
+  "/settings/readers": typeof SettingsReadersRoute;
+  "/create/": typeof CreateIndexRoute;
+  "/settings/": typeof SettingsIndexRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/'
-    | '/create/custom'
-    | '/create/mappings'
-    | '/create/nfc'
-    | '/create/search'
-    | '/create/text'
-    | '/settings/about'
-    | '/settings/accessibility'
-    | '/settings/advanced'
-    | '/settings/help'
-    | '/settings/logs'
-    | '/settings/online'
-    | '/settings/playtime'
-    | '/settings/readers'
-    | '/create'
-    | '/settings'
-  fileRoutesByTo: FileRoutesByTo
+    | "/"
+    | "/create/custom"
+    | "/create/mappings"
+    | "/create/nfc"
+    | "/create/search"
+    | "/create/text"
+    | "/settings/about"
+    | "/settings/accessibility"
+    | "/settings/advanced"
+    | "/settings/help"
+    | "/settings/logs"
+    | "/settings/online"
+    | "/settings/playtime"
+    | "/settings/readers"
+    | "/create"
+    | "/settings";
+  fileRoutesByTo: FileRoutesByTo;
   to:
-    | '/'
-    | '/create/custom'
-    | '/create/mappings'
-    | '/create/nfc'
-    | '/create/search'
-    | '/create/text'
-    | '/settings/about'
-    | '/settings/accessibility'
-    | '/settings/advanced'
-    | '/settings/help'
-    | '/settings/logs'
-    | '/settings/online'
-    | '/settings/playtime'
-    | '/settings/readers'
-    | '/create'
-    | '/settings'
+    | "/"
+    | "/create/custom"
+    | "/create/mappings"
+    | "/create/nfc"
+    | "/create/search"
+    | "/create/text"
+    | "/settings/about"
+    | "/settings/accessibility"
+    | "/settings/advanced"
+    | "/settings/help"
+    | "/settings/logs"
+    | "/settings/online"
+    | "/settings/playtime"
+    | "/settings/readers"
+    | "/create"
+    | "/settings";
   id:
-    | '__root__'
-    | '/'
-    | '/create/custom'
-    | '/create/mappings'
-    | '/create/nfc'
-    | '/create/search'
-    | '/create/text'
-    | '/settings/about'
-    | '/settings/accessibility'
-    | '/settings/advanced'
-    | '/settings/help'
-    | '/settings/logs'
-    | '/settings/online'
-    | '/settings/playtime'
-    | '/settings/readers'
-    | '/create/'
-    | '/settings/'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/"
+    | "/create/custom"
+    | "/create/mappings"
+    | "/create/nfc"
+    | "/create/search"
+    | "/create/text"
+    | "/settings/about"
+    | "/settings/accessibility"
+    | "/settings/advanced"
+    | "/settings/help"
+    | "/settings/logs"
+    | "/settings/online"
+    | "/settings/playtime"
+    | "/settings/readers"
+    | "/create/"
+    | "/settings/";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  CreateCustomRoute: typeof CreateCustomRoute
-  CreateMappingsRoute: typeof CreateMappingsRoute
-  CreateNfcRoute: typeof CreateNfcRoute
-  CreateSearchRoute: typeof CreateSearchRoute
-  CreateTextRoute: typeof CreateTextRoute
-  SettingsAboutRoute: typeof SettingsAboutRoute
-  SettingsAccessibilityRoute: typeof SettingsAccessibilityRoute
-  SettingsAdvancedRoute: typeof SettingsAdvancedRoute
-  SettingsHelpRoute: typeof SettingsHelpRoute
-  SettingsLogsRoute: typeof SettingsLogsRoute
-  SettingsOnlineRoute: typeof SettingsOnlineRoute
-  SettingsPlaytimeRoute: typeof SettingsPlaytimeRoute
-  SettingsReadersRoute: typeof SettingsReadersRoute
-  CreateIndexRoute: typeof CreateIndexRoute
-  SettingsIndexRoute: typeof SettingsIndexRoute
+  IndexRoute: typeof IndexRoute;
+  CreateCustomRoute: typeof CreateCustomRoute;
+  CreateMappingsRoute: typeof CreateMappingsRoute;
+  CreateNfcRoute: typeof CreateNfcRoute;
+  CreateSearchRoute: typeof CreateSearchRoute;
+  CreateTextRoute: typeof CreateTextRoute;
+  SettingsAboutRoute: typeof SettingsAboutRoute;
+  SettingsAccessibilityRoute: typeof SettingsAccessibilityRoute;
+  SettingsAdvancedRoute: typeof SettingsAdvancedRoute;
+  SettingsHelpRoute: typeof SettingsHelpRoute;
+  SettingsLogsRoute: typeof SettingsLogsRoute;
+  SettingsOnlineRoute: typeof SettingsOnlineRoute;
+  SettingsPlaytimeRoute: typeof SettingsPlaytimeRoute;
+  SettingsReadersRoute: typeof SettingsReadersRoute;
+  CreateIndexRoute: typeof CreateIndexRoute;
+  SettingsIndexRoute: typeof SettingsIndexRoute;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/': {
-      id: '/settings/'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/create/': {
-      id: '/create/'
-      path: '/create'
-      fullPath: '/create'
-      preLoaderRoute: typeof CreateIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/readers': {
-      id: '/settings/readers'
-      path: '/settings/readers'
-      fullPath: '/settings/readers'
-      preLoaderRoute: typeof SettingsReadersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/playtime': {
-      id: '/settings/playtime'
-      path: '/settings/playtime'
-      fullPath: '/settings/playtime'
-      preLoaderRoute: typeof SettingsPlaytimeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/online': {
-      id: '/settings/online'
-      path: '/settings/online'
-      fullPath: '/settings/online'
-      preLoaderRoute: typeof SettingsOnlineRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/logs': {
-      id: '/settings/logs'
-      path: '/settings/logs'
-      fullPath: '/settings/logs'
-      preLoaderRoute: typeof SettingsLogsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/help': {
-      id: '/settings/help'
-      path: '/settings/help'
-      fullPath: '/settings/help'
-      preLoaderRoute: typeof SettingsHelpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/advanced': {
-      id: '/settings/advanced'
-      path: '/settings/advanced'
-      fullPath: '/settings/advanced'
-      preLoaderRoute: typeof SettingsAdvancedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/accessibility': {
-      id: '/settings/accessibility'
-      path: '/settings/accessibility'
-      fullPath: '/settings/accessibility'
-      preLoaderRoute: typeof SettingsAccessibilityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/about': {
-      id: '/settings/about'
-      path: '/settings/about'
-      fullPath: '/settings/about'
-      preLoaderRoute: typeof SettingsAboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/create/text': {
-      id: '/create/text'
-      path: '/create/text'
-      fullPath: '/create/text'
-      preLoaderRoute: typeof CreateTextRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/create/search': {
-      id: '/create/search'
-      path: '/create/search'
-      fullPath: '/create/search'
-      preLoaderRoute: typeof CreateSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/create/nfc': {
-      id: '/create/nfc'
-      path: '/create/nfc'
-      fullPath: '/create/nfc'
-      preLoaderRoute: typeof CreateNfcRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/create/mappings': {
-      id: '/create/mappings'
-      path: '/create/mappings'
-      fullPath: '/create/mappings'
-      preLoaderRoute: typeof CreateMappingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/create/custom': {
-      id: '/create/custom'
-      path: '/create/custom'
-      fullPath: '/create/custom'
-      preLoaderRoute: typeof CreateCustomRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/": {
+      id: "/settings/";
+      path: "/settings";
+      fullPath: "/settings";
+      preLoaderRoute: typeof SettingsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/create/": {
+      id: "/create/";
+      path: "/create";
+      fullPath: "/create";
+      preLoaderRoute: typeof CreateIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/readers": {
+      id: "/settings/readers";
+      path: "/settings/readers";
+      fullPath: "/settings/readers";
+      preLoaderRoute: typeof SettingsReadersRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/playtime": {
+      id: "/settings/playtime";
+      path: "/settings/playtime";
+      fullPath: "/settings/playtime";
+      preLoaderRoute: typeof SettingsPlaytimeRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/online": {
+      id: "/settings/online";
+      path: "/settings/online";
+      fullPath: "/settings/online";
+      preLoaderRoute: typeof SettingsOnlineRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/logs": {
+      id: "/settings/logs";
+      path: "/settings/logs";
+      fullPath: "/settings/logs";
+      preLoaderRoute: typeof SettingsLogsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/help": {
+      id: "/settings/help";
+      path: "/settings/help";
+      fullPath: "/settings/help";
+      preLoaderRoute: typeof SettingsHelpRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/advanced": {
+      id: "/settings/advanced";
+      path: "/settings/advanced";
+      fullPath: "/settings/advanced";
+      preLoaderRoute: typeof SettingsAdvancedRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/accessibility": {
+      id: "/settings/accessibility";
+      path: "/settings/accessibility";
+      fullPath: "/settings/accessibility";
+      preLoaderRoute: typeof SettingsAccessibilityRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/about": {
+      id: "/settings/about";
+      path: "/settings/about";
+      fullPath: "/settings/about";
+      preLoaderRoute: typeof SettingsAboutRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/create/text": {
+      id: "/create/text";
+      path: "/create/text";
+      fullPath: "/create/text";
+      preLoaderRoute: typeof CreateTextRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/create/search": {
+      id: "/create/search";
+      path: "/create/search";
+      fullPath: "/create/search";
+      preLoaderRoute: typeof CreateSearchRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/create/nfc": {
+      id: "/create/nfc";
+      path: "/create/nfc";
+      fullPath: "/create/nfc";
+      preLoaderRoute: typeof CreateNfcRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/create/mappings": {
+      id: "/create/mappings";
+      path: "/create/mappings";
+      fullPath: "/create/mappings";
+      preLoaderRoute: typeof CreateMappingsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/create/custom": {
+      id: "/create/custom";
+      path: "/create/custom";
+      fullPath: "/create/custom";
+      preLoaderRoute: typeof CreateCustomRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
@@ -372,7 +372,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsReadersRoute: SettingsReadersRoute,
   CreateIndexRoute: CreateIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();

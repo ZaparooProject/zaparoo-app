@@ -1185,14 +1185,22 @@ export function getWsUrl() {
     const lastColonIndex = address.lastIndexOf(":");
     if (lastColonIndex > 0 && lastColonIndex < address.length - 1) {
       const potentialPort = address.substring(lastColonIndex + 1);
+      const potentialHost = address.substring(0, lastColonIndex);
+
       // Validate that what follows the colon is a valid port number
-      if (
-        /^\d+$/.test(potentialPort) &&
-        parseInt(potentialPort) > 0 &&
-        parseInt(potentialPort) <= 65535
-      ) {
-        host = address.substring(0, lastColonIndex);
-        port = potentialPort;
+      if (/^\d+$/.test(potentialPort)) {
+        const portNum = parseInt(potentialPort, 10);
+        if (portNum > 0 && portNum <= 65535) {
+          // Valid port - use it
+          host = potentialHost;
+          port = potentialPort;
+        } else {
+          // Invalid port number (out of range) - strip it and use default
+          host = potentialHost;
+        }
+      } else {
+        // Non-numeric port - strip it and use default
+        host = potentialHost;
       }
     }
 

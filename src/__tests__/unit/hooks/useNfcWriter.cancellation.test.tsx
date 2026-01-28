@@ -280,10 +280,16 @@ describe("useNfcWriter Cancellation", () => {
       });
 
       // Fast-forward time to simulate timeout period
-      vi.advanceTimersByTime(35000);
+      await act(async () => {
+        vi.advanceTimersByTime(35000);
+      });
 
       // Verify cancelWrite was called to prevent timeout
       expect(CoreAPI.cancelWrite).toHaveBeenCalledTimes(1);
+
+      // Verify no error status was set (timeout was prevented)
+      expect(result.current.status).toBeNull();
+      expect(result.current.writing).toBe(false);
 
       vi.useRealTimers();
     });

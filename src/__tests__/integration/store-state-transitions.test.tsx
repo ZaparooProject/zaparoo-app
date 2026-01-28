@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { ConnectionState, useStatusStore } from "../../lib/store";
 
-describe("Cold Start Behavior", () => {
+describe("Store State Transitions", () => {
   beforeEach(() => {
     // Reset store state before each test
     useStatusStore.setState({

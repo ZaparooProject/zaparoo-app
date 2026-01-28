@@ -51,17 +51,17 @@ describe("WriteModal", () => {
     expect(modalDialog).toHaveAttribute("aria-label", "spinner.holdTag");
   });
 
-  it("renders spinner with correct layout structure", () => {
-    const { container } = render(<WriteModal isOpen={true} close={vi.fn()} />);
+  it("renders modal with proper structure when open", () => {
+    render(<WriteModal isOpen={true} close={vi.fn()} />);
 
-    // Check for the main modal container
-    const modalContainer = container.querySelector(
-      ".z-30.flex.h-screen.w-screen",
-    );
-    expect(modalContainer).toBeInTheDocument();
+    // Check for modal dialog using semantic query
+    const modal = screen.getByRole("dialog");
+    expect(modal).toBeInTheDocument();
 
-    // Check for cancel button which is also present
-    const cancelButton = screen.getByText("nav.cancel");
-    expect(cancelButton).toBeInTheDocument();
+    // Check for spinner status indicator
+    expect(screen.getByRole("status")).toBeInTheDocument();
+
+    // Check for cancel button
+    expect(screen.getByText("nav.cancel")).toBeInTheDocument();
   });
 });

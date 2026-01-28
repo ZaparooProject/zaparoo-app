@@ -3,12 +3,15 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 
 /**
- * Integration tests for tour feature configuration.
+ * Configuration validation tests for the tour feature.
  *
- * These tests verify that required translation keys, CSS classes, and
- * configuration are in place for the tour feature to work correctly.
+ * These tests verify that required translation keys and CSS classes are
+ * properly defined. They catch missing configuration before runtime.
+ *
+ * Note: These are not behavioral integration tests - they validate static
+ * configuration files (translations, CSS) that the tour feature depends on.
  */
-describe("Tour Integration", () => {
+describe("Tour Configuration Validation", () => {
   describe("translations", () => {
     let translations: { translation: Record<string, unknown> };
 

@@ -311,25 +311,25 @@ describe("CoreAPI", () => {
       expect(wsUrl).toBe("ws://zaparoo.local:9090/api/v0.1");
     });
 
-    it("should use default port when colon is present but port is invalid", () => {
+    it("should strip invalid port and use default when port is non-numeric", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:abc");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:abc:7497/api/v0.1");
+      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
     });
 
-    it("should use default port when port is out of range", () => {
+    it("should strip invalid port and use default when port is out of range", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:70000");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:70000:7497/api/v0.1");
+      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
     });
 
-    it("should use default port when port is zero", () => {
+    it("should strip invalid port and use default when port is zero", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:0");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:0:7497/api/v0.1");
+      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
     });
 
     it("should handle IPv6-like addresses without port", () => {

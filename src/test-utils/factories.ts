@@ -60,9 +60,11 @@ export const mockTokenResponse = (
   };
 
   // Validate UID length after applying overrides
+  // Throw in test environment to catch invalid test data early
   if (result.uid && result.uid.length !== 14) {
-    console.warn(
-      `[Factory] mockTokenResponse: UID length is ${result.uid.length}, expected 14 hex chars`,
+    throw new Error(
+      `[Factory] mockTokenResponse: UID length is ${result.uid.length}, expected 14 hex chars. ` +
+        `This indicates invalid test data. Use a 14-character hex string for uid.`,
     );
   }
 
@@ -97,9 +99,11 @@ export const mockIndexResponse = (
   };
 
   // Validate currentStep <= totalSteps after applying overrides
+  // Throw in test environment to catch invalid test data early
   if (result.currentStep > result.totalSteps) {
-    console.warn(
-      `[Factory] mockIndexResponse: currentStep (${result.currentStep}) > totalSteps (${result.totalSteps})`,
+    throw new Error(
+      `[Factory] mockIndexResponse: currentStep (${result.currentStep}) > totalSteps (${result.totalSteps}). ` +
+        `This indicates invalid test data. Ensure currentStep <= totalSteps.`,
     );
   }
 

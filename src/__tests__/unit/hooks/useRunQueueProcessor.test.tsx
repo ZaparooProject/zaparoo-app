@@ -119,10 +119,6 @@ describe("useRunQueueProcessor", () => {
     vi.useRealTimers();
   });
 
-  it("should be importable without errors", () => {
-    expect(typeof useRunQueueProcessor).toBe("function");
-  });
-
   it("should not process when queue is empty", () => {
     renderHook(() => useRunQueueProcessor());
 

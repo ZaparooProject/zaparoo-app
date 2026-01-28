@@ -46,8 +46,8 @@ describe("CoreAPI Type Improvements", () => {
 
       // Test that these required fields exist in the API response
       // According to Zaparoo Core API spec, history entries should have type and data
-      expect((entry as any).type).toBe("nfc");
-      expect((entry as any).data).toBe("04a1b2c3");
+      expect(entry.type).toBe("nfc");
+      expect(entry.data).toBe("04a1b2c3");
       expect(entry.time).toBe("2024-09-24T17:49:42.938167429+08:00");
       expect(entry.uid).toBe("abc123");
       expect(entry.text).toBe("**launch.system:snes");
