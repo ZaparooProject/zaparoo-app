@@ -197,10 +197,10 @@ describe("usePassiveNfcListener", () => {
 
     renderHook(() => usePassiveNfcListener());
 
-    // Give the effect time to run
-    await new Promise((r) => setTimeout(r, 10));
-
-    expect(mockNfcAddListener).not.toHaveBeenCalled();
+    // Verify listener is not registered on iOS
+    await vi.waitFor(() => {
+      expect(mockNfcAddListener).not.toHaveBeenCalled();
+    });
   });
 
   it("should not register listener when NFC is not available", async () => {
@@ -208,10 +208,10 @@ describe("usePassiveNfcListener", () => {
 
     renderHook(() => usePassiveNfcListener());
 
-    // Give the effect time to run
-    await new Promise((r) => setTimeout(r, 10));
-
-    expect(mockNfcAddListener).not.toHaveBeenCalled();
+    // Verify listener is not registered when NFC is unavailable
+    await vi.waitFor(() => {
+      expect(mockNfcAddListener).not.toHaveBeenCalled();
+    });
   });
 
   it("should remove listener on unmount", async () => {

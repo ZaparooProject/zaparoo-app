@@ -238,7 +238,7 @@ describe("ConnectionProvider", () => {
         </ConnectionProvider>,
       );
 
-      expect(screen.getByTestId("isConnected").textContent).toBe("false");
+      expect(screen.getByTestId("isConnected")).toHaveTextContent("false");
     });
 
     it("should provide hasData as false initially", () => {
@@ -248,22 +248,28 @@ describe("ConnectionProvider", () => {
         </ConnectionProvider>,
       );
 
-      expect(screen.getByTestId("hasData").textContent).toBe("false");
+      expect(screen.getByTestId("hasData")).toHaveTextContent("false");
     });
   });
 });
 
 describe("useConnection hook", () => {
-  it("should return connection context values", () => {
+  it("should return connection context values with expected initial state", () => {
     renderWithProviders(
       <ConnectionProvider>
         <ConnectionConsumer />
       </ConnectionProvider>,
     );
 
-    expect(screen.getByTestId("isConnected")).toBeInTheDocument();
-    expect(screen.getByTestId("hasData")).toBeInTheDocument();
-    expect(screen.getByTestId("showConnecting")).toBeInTheDocument();
-    expect(screen.getByTestId("showReconnecting")).toBeInTheDocument();
+    // Verify connection state values are rendered correctly
+    // On initial render with a target address but no connection:
+    // - isConnected: false (not connected yet)
+    // - hasData: false (no data received)
+    // - showConnecting: true (have target address, attempting initial connection)
+    // - showReconnecting: false (haven't connected before, so not reconnecting)
+    expect(screen.getByTestId("isConnected")).toHaveTextContent("false");
+    expect(screen.getByTestId("hasData")).toHaveTextContent("false");
+    expect(screen.getByTestId("showConnecting")).toHaveTextContent("true");
+    expect(screen.getByTestId("showReconnecting")).toHaveTextContent("false");
   });
 });

@@ -184,8 +184,9 @@ describe("ReadTab", () => {
 
       // Click the copy button and verify clipboard is called
       fireEvent.click(copyButton as HTMLButtonElement);
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(mockWriteText).toHaveBeenCalledWith("04:12:34:56");
+      await waitFor(() => {
+        expect(mockWriteText).toHaveBeenCalledWith("04:12:34:56");
+      });
     });
 
     it("should handle clipboard write failures", async () => {

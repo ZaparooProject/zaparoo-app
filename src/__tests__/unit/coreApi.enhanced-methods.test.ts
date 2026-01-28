@@ -269,13 +269,13 @@ describe("CoreAPI - Enhanced Methods", () => {
       expect(mockResolve).toHaveBeenCalledWith({ cancelled: true });
       expect((CoreAPI as any).pendingWriteId).toBeNull();
 
-      // Wait for async operation
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Failed to send write cancel command:",
-        expect.any(Error),
-      );
+      // Wait for async readersWriteCancel rejection to be handled
+      await vi.waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          "Failed to send write cancel command:",
+          expect.any(Error),
+        );
+      });
 
       consoleErrorSpy.mockRestore();
     });

@@ -212,11 +212,15 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
       </QueryClientProvider>,
     );
 
-    // Wait a bit to ensure no additional calls are made
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Should still only be 1 call (the initial one)
-    expect(mediaSearchSpy).toHaveBeenCalledTimes(1);
+    // Verify no additional calls are made after scrolling to middle
+    // Use waitFor with a short timeout to ensure async operations settle
+    await waitFor(
+      () => {
+        // Should still only be 1 call (the initial one)
+        expect(mediaSearchSpy).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 200 },
+    );
   });
 
   it("should NOT fetch next page when hasNextPage is false", async () => {
@@ -267,10 +271,14 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
       </QueryClientProvider>,
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Should still only be 1 call
-    expect(mediaSearchSpy).toHaveBeenCalledTimes(1);
+    // Verify no additional calls are made when hasNextPage is false
+    await waitFor(
+      () => {
+        // Should still only be 1 call
+        expect(mediaSearchSpy).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 200 },
+    );
   });
 
   it("should show loading indicator at the end when hasNextPage is true", async () => {

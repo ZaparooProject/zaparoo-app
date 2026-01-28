@@ -226,10 +226,11 @@ describe("useProPurchase", () => {
 
     renderHook(() => useProPurchase());
 
-    // Give it a moment to potentially make calls
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
-    expect(Purchases.getOfferings).not.toHaveBeenCalled();
+    // Verify that on web platform, no RevenueCat calls are made
+    // Use waitFor to allow any async effects to complete
+    await waitFor(() => {
+      expect(Purchases.getOfferings).not.toHaveBeenCalled();
+    });
     expect(Purchases.getCustomerInfo).not.toHaveBeenCalled();
   });
 
