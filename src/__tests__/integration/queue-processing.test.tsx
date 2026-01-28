@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { useStatusStore } from "../../lib/store";
 import { usePreferencesStore } from "../../lib/preferencesStore";
 import { sessionManager } from "../../lib/nfc";
@@ -229,6 +230,71 @@ describe("Queue Processing Integration", () => {
 
       // Last one should win (queue is not actually a queue, it's a single slot)
       expect(useStatusStore.getState().runQueue?.value).toBe("third");
+    });
+  });
+
+  describe("Store Subscription Reactivity", () => {
+    it("should notify hook subscribers when run queue changes", async () => {
+      // Render a hook that subscribes to runQueue
+      const { result } = renderHook(() =>
+        useStatusStore((state) => state.runQueue),
+      );
+
+      // Initially null
+      expect(result.current).toBeNull();
+
+      // Update store outside of hook
+      act(() => {
+        useStatusStore.getState().setRunQueue({ value: "test", unsafe: false });
+      });
+
+      // Hook should receive update
+      await waitFor(() => {
+        expect(result.current).toEqual({ value: "test", unsafe: false });
+      });
+    });
+
+    it("should notify hook subscribers when write queue changes", async () => {
+      const { result } = renderHook(() =>
+        useStatusStore((state) => state.writeQueue),
+      );
+
+      expect(result.current).toBe("");
+
+      act(() => {
+        useStatusStore.getState().setWriteQueue("new-content");
+      });
+
+      await waitFor(() => {
+        expect(result.current).toBe("new-content");
+      });
+    });
+
+    it("should sync preferences to sessionManager reactively", async () => {
+      // Render hook that subscribes to launchOnScan
+      const { result } = renderHook(() =>
+        usePreferencesStore((state) => state.launchOnScan),
+      );
+
+      // Change preference and verify sessionManager updates
+      act(() => {
+        usePreferencesStore.getState().setLaunchOnScan(false);
+      });
+
+      await waitFor(() => {
+        expect(result.current).toBe(false);
+        expect(sessionManager.launchOnScan).toBe(false);
+      });
+
+      // Restore
+      act(() => {
+        usePreferencesStore.getState().setLaunchOnScan(true);
+      });
+
+      await waitFor(() => {
+        expect(result.current).toBe(true);
+        expect(sessionManager.launchOnScan).toBe(true);
+      });
     });
   });
 });

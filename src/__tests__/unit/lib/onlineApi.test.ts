@@ -5,19 +5,13 @@
  * - getSubscriptionStatus function
  * - getRequirements function
  * - updateRequirements function
- * - requirements_not_met interceptor
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 
 // Mock axios before importing the module
 const mockGet = vi.fn();
 const mockPost = vi.fn();
-const mockResponseInterceptors: Array<{
-  onFulfilled: (response: unknown) => unknown;
-  onRejected: (error: unknown) => unknown;
-}> = [];
 
 vi.mock("axios", () => ({
   default: {
@@ -29,9 +23,7 @@ vi.mock("axios", () => ({
           use: vi.fn(),
         },
         response: {
-          use: vi.fn((onFulfilled, onRejected) => {
-            mockResponseInterceptors.push({ onFulfilled, onRejected });
-          }),
+          use: vi.fn(),
         },
       },
     })),
@@ -48,12 +40,6 @@ vi.mock("@capacitor-firebase/authentication", () => ({
 describe("onlineApi", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockResponseInterceptors.length = 0;
-    // Reset the requirements store
-    useRequirementsStore.setState({
-      isOpen: false,
-      pendingRequirements: [],
-    });
   });
 
   afterEach(() => {
@@ -215,128 +201,6 @@ describe("onlineApi", () => {
       await expect(updateRequirements({ accept_tos: true })).rejects.toThrow(
         "Update failed",
       );
-    });
-  });
-
-  // Note: The requirements_not_met interceptor tests are skipped because testing
-  // module-level side effects (interceptor registration) is difficult with module
-  // caching. The interceptor behavior is tested through the RequirementsModal
-  // component integration tests instead.
-  describe.skip("requirements_not_met interceptor", () => {
-    it("should trigger requirements modal on requirements_not_met error", async () => {
-      // Import to register interceptors
-      await import("../../../lib/onlineApi");
-
-      // Get the error handler from the first interceptor (requirements interceptor)
-      expect(mockResponseInterceptors.length).toBeGreaterThan(0);
-      const errorHandler = mockResponseInterceptors[0]!.onRejected;
-
-      const mockError = {
-        response: {
-          data: {
-            error: {
-              code: "requirements_not_met",
-              requirements: [
-                {
-                  type: "terms_acceptance",
-                  description: "Accept terms",
-                  endpoint: "/account/requirements",
-                },
-              ],
-            },
-          },
-        },
-      };
-
-      // Call the error handler
-      try {
-        await errorHandler(mockError);
-      } catch {
-        // Expected to reject
-      }
-
-      // Check that the store was triggered
-      const state = useRequirementsStore.getState();
-      expect(state.isOpen).toBe(true);
-      expect(state.pendingRequirements).toHaveLength(1);
-      expect(state.pendingRequirements[0]!.type).toBe("terms_acceptance");
-    });
-
-    it("should not trigger modal for other errors", async () => {
-      await import("../../../lib/onlineApi");
-
-      const errorHandler = mockResponseInterceptors[0]!.onRejected;
-
-      const mockError = {
-        response: {
-          data: {
-            error: {
-              code: "some_other_error",
-              message: "Something went wrong",
-            },
-          },
-        },
-      };
-
-      try {
-        await errorHandler(mockError);
-      } catch {
-        // Expected to reject
-      }
-
-      const state = useRequirementsStore.getState();
-      expect(state.isOpen).toBe(false);
-    });
-
-    it("should not trigger modal when requirements array is empty", async () => {
-      await import("../../../lib/onlineApi");
-
-      const errorHandler = mockResponseInterceptors[0]!.onRejected;
-
-      const mockError = {
-        response: {
-          data: {
-            error: {
-              code: "requirements_not_met",
-              requirements: [],
-            },
-          },
-        },
-      };
-
-      try {
-        await errorHandler(mockError);
-      } catch {
-        // Expected to reject
-      }
-
-      const state = useRequirementsStore.getState();
-      expect(state.isOpen).toBe(false);
-    });
-
-    it("should not trigger modal when requirements is undefined", async () => {
-      await import("../../../lib/onlineApi");
-
-      const errorHandler = mockResponseInterceptors[0]!.onRejected;
-
-      const mockError = {
-        response: {
-          data: {
-            error: {
-              code: "requirements_not_met",
-            },
-          },
-        },
-      };
-
-      try {
-        await errorHandler(mockError);
-      } catch {
-        // Expected to reject
-      }
-
-      const state = useRequirementsStore.getState();
-      expect(state.isOpen).toBe(false);
     });
   });
 });

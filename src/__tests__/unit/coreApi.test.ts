@@ -2,6 +2,33 @@ import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
 import { CoreAPI } from "../../lib/coreApi";
 import type { HistoryResponseEntry, SearchParams } from "../../lib/models";
 
+/**
+ * Helper to simulate API response for CoreAPI tests.
+ * Uses setImmediate pattern to ensure the response is processed
+ * after the request is sent but before the promise times out.
+ */
+function simulateResponse(
+  mockSend: Mock,
+  result: unknown,
+  callIndex: number = 0,
+) {
+  // Use queueMicrotask to ensure the response is processed in the correct order
+  // This is more reliable than setTimeout(0) which can be flaky
+  queueMicrotask(() => {
+    if (mockSend.mock.calls[callIndex]) {
+      const request = JSON.parse(mockSend.mock.calls[callIndex]![0]);
+      const response = {
+        jsonrpc: "2.0",
+        id: request.id,
+        result,
+      };
+      CoreAPI.processReceived({
+        data: JSON.stringify(response),
+      } as MessageEvent);
+    }
+  });
+}
+
 describe("CoreAPI Type Improvements", () => {
   let mockSend: Mock;
 
@@ -27,19 +54,11 @@ describe("CoreAPI Type Improvements", () => {
         ],
       };
 
-      setTimeout(() => {
-        const request = JSON.parse(mockSend.mock.calls[0]![0]);
-        const response = {
-          jsonrpc: "2.0",
-          id: request.id,
-          result: historyResponse,
-        };
-        CoreAPI.processReceived({
-          data: JSON.stringify(response),
-        } as MessageEvent);
-      }, 0);
+      // Start the API call and simulate response
+      const resultPromise = CoreAPI.history();
+      simulateResponse(mockSend, historyResponse);
 
-      const result = await CoreAPI.history();
+      const result = await resultPromise;
 
       // This should compile if the HistoryResponseEntry interface has type and data fields
       const entry: HistoryResponseEntry = result.entries[0]!;
@@ -71,20 +90,27 @@ describe("CoreAPI Type Improvements", () => {
         maxResults: 50, // This should be supported according to Core API
       };
 
-      setTimeout(() => {
-        const request = JSON.parse(mockSend.mock.calls[0]![0]);
-        expect(request.params.maxResults).toBe(50);
-        const response = {
-          jsonrpc: "2.0",
-          id: request.id,
-          result: { results: [], total: 0 },
-        };
-        CoreAPI.processReceived({
-          data: JSON.stringify(response),
-        } as MessageEvent);
-      }, 0);
+      // Start the API call
+      const resultPromise = CoreAPI.mediaSearch(searchParams);
 
-      await CoreAPI.mediaSearch(searchParams);
+      // Use queueMicrotask to verify params after the request is sent
+      await new Promise<void>((resolve) => {
+        queueMicrotask(() => {
+          const request = JSON.parse(mockSend.mock.calls[0]![0]);
+          expect(request.params.maxResults).toBe(50);
+          // Simulate the response
+          CoreAPI.processReceived({
+            data: JSON.stringify({
+              jsonrpc: "2.0",
+              id: request.id,
+              result: { results: [], total: 0 },
+            }),
+          } as MessageEvent);
+          resolve();
+        });
+      });
+
+      await resultPromise;
     });
   });
 });

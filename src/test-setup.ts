@@ -28,6 +28,12 @@ vi.mock("capacitor-plugin-safe-area");
 vi.mock("capacitor-zeroconf");
 vi.mock("@capacitor/network");
 
+// Note: Logger is NOT mocked globally because:
+// 1. It has built-in production guards (isNative && isProduction && token)
+// 2. In test environment, Rollbar calls are already prevented
+// 3. Logger tests need the real implementation
+// Tests that need specific logger behavior can mock it locally.
+
 import { CoreAPI } from "./lib/coreApi";
 import { __resetPreferencesStorage } from "../__mocks__/@capacitor/preferences";
 

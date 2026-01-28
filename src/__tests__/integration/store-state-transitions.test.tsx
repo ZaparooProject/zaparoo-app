@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { ConnectionState, useStatusStore } from "../../lib/store";
 
 describe("Store State Transitions", () => {
@@ -61,5 +62,72 @@ describe("Store State Transitions", () => {
     );
     // RECONNECTING is treated as "connected enough" to show cached data and enable UI
     expect(reconnectingState.connected).toBe(true);
+  });
+
+  describe("Hook Reactivity", () => {
+    it("should notify components when connection state changes", async () => {
+      // Render hooks that subscribe to connection state
+      const { result: stateResult } = renderHook(() =>
+        useStatusStore((state) => state.connectionState),
+      );
+      const { result: connectedResult } = renderHook(() =>
+        useStatusStore((state) => state.connected),
+      );
+
+      // Initial state
+      expect(stateResult.current).toBe(ConnectionState.IDLE);
+      expect(connectedResult.current).toBe(false);
+
+      // Transition to CONNECTING
+      act(() => {
+        useStatusStore
+          .getState()
+          .setConnectionState(ConnectionState.CONNECTING);
+      });
+
+      await waitFor(() => {
+        expect(stateResult.current).toBe(ConnectionState.CONNECTING);
+        expect(connectedResult.current).toBe(false);
+      });
+
+      // Transition to CONNECTED
+      act(() => {
+        useStatusStore.getState().setConnectionState(ConnectionState.CONNECTED);
+      });
+
+      await waitFor(() => {
+        expect(stateResult.current).toBe(ConnectionState.CONNECTED);
+        expect(connectedResult.current).toBe(true);
+      });
+    });
+
+    it("should update multiple subscribers simultaneously", async () => {
+      // Simulate multiple components subscribing to the same state
+      const { result: hook1 } = renderHook(() =>
+        useStatusStore((state) => state.connected),
+      );
+      const { result: hook2 } = renderHook(() =>
+        useStatusStore((state) => state.connected),
+      );
+      const { result: hook3 } = renderHook(() =>
+        useStatusStore((state) => state.connectionState),
+      );
+
+      // All should start in initial state
+      expect(hook1.current).toBe(false);
+      expect(hook2.current).toBe(false);
+      expect(hook3.current).toBe(ConnectionState.IDLE);
+
+      // Single state change should update all subscribers
+      act(() => {
+        useStatusStore.getState().setConnectionState(ConnectionState.CONNECTED);
+      });
+
+      await waitFor(() => {
+        expect(hook1.current).toBe(true);
+        expect(hook2.current).toBe(true);
+        expect(hook3.current).toBe(ConnectionState.CONNECTED);
+      });
+    });
   });
 });
