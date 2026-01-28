@@ -4,7 +4,6 @@ import { Capacitor } from "@capacitor/core";
 import {
   Notification,
   SettingsResponse,
-  Method,
   UpdateSettingsRequest,
 } from "@/lib/models.ts";
 
@@ -186,11 +185,6 @@ describe("CoreAPI", () => {
     expect(sentData.method).toBe("media.active");
     expect(sentData.id).toBeDefined();
     expect(sentData.timestamp).toBeDefined();
-  });
-
-  it("should have MediaActive enum value", () => {
-    // Test that Method.MediaActive exists and equals "media.active"
-    expect(Method.MediaActive).toBe("media.active");
   });
 
   it("should call settingsReload method with correct JSON-RPC format", () => {

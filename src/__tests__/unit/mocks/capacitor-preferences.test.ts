@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { Preferences } from "@capacitor/preferences";
-import { __resetPreferencesStorage } from "../../../__mocks__/@capacitor/preferences";
+import { __resetPreferencesStorage } from "../../../../__mocks__/@capacitor/preferences";
 
 // Capacitor preferences mock is provided by global test-setup.ts
 // These tests verify the mock correctly simulates storage behavior

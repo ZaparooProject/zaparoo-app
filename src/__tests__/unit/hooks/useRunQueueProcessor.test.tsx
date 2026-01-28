@@ -51,46 +51,26 @@ const mockSetRunQueue = vi.fn();
 const mockSetLastToken = vi.fn();
 const mockSetProPurchaseModalOpen = vi.fn();
 
+// Mock store with both selector pattern and getState() support
 vi.mock("../../../lib/store", () => ({
-  useStatusStore: vi.fn((selector: (state: unknown) => unknown) => {
-    const state = {
-      runQueue: mockStoreState.runQueue,
-      setRunQueue: mockSetRunQueue,
-      setLastToken: mockSetLastToken,
-      setProPurchaseModalOpen: mockSetProPurchaseModalOpen,
-      connected: mockStoreState.connected,
-    };
-
-    // Handle getState calls
-    if (typeof selector === "function") {
+  useStatusStore: Object.assign(
+    vi.fn((selector: (state: unknown) => unknown) => {
+      const state = {
+        runQueue: mockStoreState.runQueue,
+        setRunQueue: mockSetRunQueue,
+        setLastToken: mockSetLastToken,
+        setProPurchaseModalOpen: mockSetProPurchaseModalOpen,
+        connected: mockStoreState.connected,
+      };
       return selector(state);
-    }
-    return state;
-  }),
-}));
-
-// We need to handle the getState().connected pattern
-vi.mock("../../../lib/store", async () => {
-  return {
-    useStatusStore: Object.assign(
-      vi.fn((selector: (state: unknown) => unknown) => {
-        const state = {
-          runQueue: mockStoreState.runQueue,
-          setRunQueue: mockSetRunQueue,
-          setLastToken: mockSetLastToken,
-          setProPurchaseModalOpen: mockSetProPurchaseModalOpen,
-          connected: mockStoreState.connected,
-        };
-        return selector(state);
+    }),
+    {
+      getState: () => ({
+        connected: mockStoreState.connected,
       }),
-      {
-        getState: () => ({
-          connected: mockStoreState.connected,
-        }),
-      },
-    ),
-  };
-});
+    },
+  ),
+}));
 
 vi.mock("../../../lib/preferencesStore", () => ({
   usePreferencesStore: vi.fn((selector: (state: unknown) => unknown) => {

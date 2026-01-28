@@ -1,7 +1,8 @@
 import { vi, type MockInstance } from "vitest";
 
-// Helper to wait for async operations
-export const waitFor = (ms: number) =>
+// Helper to delay for a specified duration (use for non-React async tests)
+// Note: For React component tests, prefer @testing-library/react's waitFor
+export const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
 // WebSocket readyState constants

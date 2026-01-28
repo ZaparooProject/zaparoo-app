@@ -48,6 +48,10 @@ vi.mock("@capacitor/device", () => ({
 vi.stubEnv("PROD", true);
 vi.stubEnv("VITE_ROLLBAR_ACCESS_TOKEN", "test-token");
 
+// Logger uses 60 second throttle window - we need to advance past it
+const THROTTLE_WINDOW_MS = 60_000;
+const PAST_THROTTLE_WINDOW_MS = THROTTLE_WINDOW_MS + 1_000;
+
 describe("Logger Rate Limiting", () => {
   let logger: typeof import("../../../lib/logger").logger;
   let rollbarPromise: typeof import("../../../lib/logger").rollbarPromise;
@@ -129,8 +133,8 @@ describe("Logger Rate Limiting", () => {
     });
     expect(mockRollbar.error).toHaveBeenCalledTimes(10);
 
-    // Advance time by 61 seconds
-    vi.advanceTimersByTime(61_000);
+    // Advance time past the throttle window
+    vi.advanceTimersByTime(PAST_THROTTLE_WINDOW_MS);
 
     // Now this should go through
     logger.error("Error after reset", {
@@ -152,7 +156,7 @@ describe("Logger Rate Limiting", () => {
     expect(mockRollbar.error).toHaveBeenCalledTimes(1);
 
     // Advance past throttle window
-    vi.advanceTimersByTime(61_000);
+    vi.advanceTimersByTime(PAST_THROTTLE_WINDOW_MS);
 
     // Should now go through
     logger.error("NFC error", { ...metadata });

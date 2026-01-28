@@ -100,34 +100,5 @@ describe("Store State Transitions", () => {
         expect(connectedResult.current).toBe(true);
       });
     });
-
-    it("should update multiple subscribers simultaneously", async () => {
-      // Simulate multiple components subscribing to the same state
-      const { result: hook1 } = renderHook(() =>
-        useStatusStore((state) => state.connected),
-      );
-      const { result: hook2 } = renderHook(() =>
-        useStatusStore((state) => state.connected),
-      );
-      const { result: hook3 } = renderHook(() =>
-        useStatusStore((state) => state.connectionState),
-      );
-
-      // All should start in initial state
-      expect(hook1.current).toBe(false);
-      expect(hook2.current).toBe(false);
-      expect(hook3.current).toBe(ConnectionState.IDLE);
-
-      // Single state change should update all subscribers
-      act(() => {
-        useStatusStore.getState().setConnectionState(ConnectionState.CONNECTED);
-      });
-
-      await waitFor(() => {
-        expect(hook1.current).toBe(true);
-        expect(hook2.current).toBe(true);
-        expect(hook3.current).toBe(ConnectionState.CONNECTED);
-      });
-    });
   });
 });

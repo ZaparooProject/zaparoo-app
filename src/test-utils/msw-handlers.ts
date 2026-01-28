@@ -137,13 +137,18 @@ export const handlers = [
             }),
           );
         } else {
-          // Generic success response for unhandled methods
+          // Return JSON-RPC error for unhandled methods to catch typos and missing handlers
+          console.warn(
+            `[MSW] Unhandled API method: "${message.method}" - add it to mockResponses or create a test-specific handler`,
+          );
           client.send(
             JSON.stringify({
               jsonrpc: "2.0",
               id: message.id,
-              timestamp: Date.now(),
-              result: { success: true },
+              error: {
+                code: -32601,
+                message: `Method not found: ${message.method}`,
+              },
             }),
           );
         }

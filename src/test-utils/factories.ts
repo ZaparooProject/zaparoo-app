@@ -122,17 +122,60 @@ export const mockMediaResponse = (
 
 export const mockMappingResponse = (
   overrides?: Partial<MappingResponse>,
-): MappingResponse => ({
-  id: faker.string.uuid(),
-  added: faker.date.recent().toISOString(),
-  label: faker.word.words(2),
-  enabled: faker.datatype.boolean(),
-  type: faker.helpers.arrayElement<MappingType>(["uid", "text", "data"]),
-  match: faker.lorem.words(2),
-  pattern: faker.lorem.words(2),
-  override: faker.lorem.words(2),
-  ...overrides,
-});
+): MappingResponse => {
+  const type =
+    overrides?.type ??
+    faker.helpers.arrayElement<MappingType>(["uid", "text", "data"]);
+
+  // Generate realistic match values based on mapping type
+  let match: string;
+  if (overrides?.match !== undefined) {
+    match = overrides.match;
+  } else if (type === "uid") {
+    // NFC UID format: 7 bytes hex
+    match = faker.string.hexadecimal({
+      length: 14,
+      casing: "lower",
+      prefix: "",
+    });
+  } else if (type === "data") {
+    // Data is hex bytes
+    match = faker.string.hexadecimal({
+      length: 16,
+      casing: "lower",
+      prefix: "",
+    });
+  } else {
+    // Text type: a token text string
+    match = `**launch.system:${faker.helpers.arrayElement(["nes", "snes", "genesis"])}`;
+  }
+
+  return {
+    id: faker.string.uuid(),
+    added: faker.date.recent().toISOString(),
+    label: faker.word.words(2),
+    enabled: faker.datatype.boolean(),
+    type,
+    match,
+    // Pattern is a regex pattern for matching
+    pattern: faker.helpers.arrayElement([
+      ".*mario.*",
+      "^zelda",
+      "sonic$",
+      ".*",
+      `^${faker.word.noun()}`,
+    ]),
+    // Override is a ZapScript command
+    override: faker.helpers.arrayElement([
+      "**launch.system:menu",
+      `**launch.random:${faker.helpers.arrayElement(["nes", "snes", "genesis"])}`,
+      `**mister.script:${faker.system.fileName()}`,
+      "**input.keyboard:esc",
+      "",
+    ]),
+    ...overrides,
+  };
+};
 
 export const mockReaderInfo = (
   overrides?: Partial<ReaderInfo>,

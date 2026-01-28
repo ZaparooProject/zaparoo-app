@@ -90,16 +90,9 @@ describe("Button", () => {
     ).toBeInTheDocument();
   });
 
-  it("should handle keyboard Enter to trigger click", () => {
-    const handleClick = vi.fn();
-    render(<Button label="Test button" onClick={handleClick} />);
-
-    const button = screen.getByRole("button", { name: "Test button" });
-    fireEvent.keyDown(button, { key: "Enter" });
-
-    // Native button elements handle Enter key automatically
-    expect(button).toBeInTheDocument();
-  });
+  // Note: Native <button> elements handle Enter/Space keyboard events automatically
+  // via browser behavior, which cannot be tested in testing-library/happy-dom.
+  // Keyboard accessibility is guaranteed by using the semantic <button> element.
 
   it("should support aria-label for accessibility", () => {
     render(<Button label="X" aria-label="Close dialog" />);
