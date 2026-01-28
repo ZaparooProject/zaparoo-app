@@ -50,7 +50,8 @@ export const mockTokenResponse = (
   overrides?: Partial<TokenResponse>,
 ): TokenResponse => ({
   type: faker.helpers.arrayElement(["ntag213", "ntag215", "ntag216"]),
-  uid: faker.string.hexadecimal({ length: 14 }).slice(2),
+  // NFC UIDs are 7 bytes (14 hex chars) for NTAG tags
+  uid: faker.string.hexadecimal({ length: 14, casing: "lower", prefix: "" }),
   text: faker.lorem.words(3),
   data: faker.string.alphanumeric(8),
   scanTime: faker.date.recent().toISOString(),
@@ -69,15 +70,23 @@ export const mockPlayingResponse = (
 
 export const mockIndexResponse = (
   overrides?: Partial<IndexResponse>,
-): IndexResponse => ({
-  exists: faker.datatype.boolean(),
-  indexing: faker.datatype.boolean(),
-  totalSteps: faker.number.int({ min: 1, max: 100 }),
-  currentStep: faker.number.int({ min: 1, max: 50 }),
-  currentStepDisplay: faker.lorem.words(2),
-  totalFiles: faker.number.int({ min: 10, max: 1000 }),
-  ...overrides,
-});
+): IndexResponse => {
+  // Ensure currentStep <= totalSteps
+  const totalSteps =
+    overrides?.totalSteps ?? faker.number.int({ min: 1, max: 100 });
+  const currentStep =
+    overrides?.currentStep ?? faker.number.int({ min: 0, max: totalSteps });
+
+  return {
+    exists: faker.datatype.boolean(),
+    indexing: faker.datatype.boolean(),
+    totalSteps,
+    currentStep,
+    currentStepDisplay: faker.lorem.words(2),
+    totalFiles: faker.number.int({ min: 10, max: 1000 }),
+    ...overrides,
+  };
+};
 
 export const mockMediaResponse = (
   overrides?: Partial<MediaResponse>,

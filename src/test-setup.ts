@@ -29,6 +29,7 @@ vi.mock("capacitor-zeroconf");
 vi.mock("@capacitor/network");
 
 import { CoreAPI } from "./lib/coreApi";
+import { __resetPreferencesStorage } from "../__mocks__/@capacitor/preferences";
 
 // Define global constants that Vite normally injects
 (globalThis as any).__APP_BASE_PATH__ = "/";
@@ -73,6 +74,8 @@ afterEach(() => {
   vi.useRealTimers();
   // Reset CoreAPI state to prevent accumulation across tests
   CoreAPI.reset();
+  // Reset Preferences storage between tests
+  __resetPreferencesStorage();
 });
 
 // Close server after all tests

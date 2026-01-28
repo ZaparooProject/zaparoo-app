@@ -1,7 +1,15 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { ConnectionState, useStatusStore } from "../../lib/store";
 
 describe("Cold Start Behavior", () => {
+  beforeEach(() => {
+    // Reset store state before each test
+    useStatusStore.setState({
+      connectionState: ConnectionState.IDLE,
+      connected: false,
+    });
+  });
+
   it("should initialize with proper connection state for optimized startup", () => {
     // Test that the store can be set to CONNECTING state instead of DISCONNECTED
     // This simulates the optimized cold start where we show "Connecting" immediately
@@ -25,16 +33,33 @@ describe("Cold Start Behavior", () => {
     expect(connectedState.connected).toBe(true); // Auto-synced by store
   });
 
-  it("should integrate with useDataCache for immediate data loading", () => {
-    // Test that App.tsx integration with useDataCache works
-    const { readFileSync } = require("fs");
-    const { resolve } = require("path");
+  it("should handle disconnection state transitions correctly", () => {
+    // Start from connected state
+    useStatusStore.getState().setConnectionState(ConnectionState.CONNECTED);
+    expect(useStatusStore.getState().connected).toBe(true);
 
-    const appPath = resolve(__dirname, "../../App.tsx");
-    const appSource = readFileSync(appPath, "utf-8");
+    // Simulate disconnection
+    useStatusStore.getState().setConnectionState(ConnectionState.DISCONNECTED);
 
-    // Verify App component imports and calls useDataCache
-    expect(appSource).toContain("useDataCache");
-    expect(appSource).toMatch(/useDataCache\(\)/);
+    const disconnectedState = useStatusStore.getState();
+    expect(disconnectedState.connectionState).toBe(
+      ConnectionState.DISCONNECTED,
+    );
+    expect(disconnectedState.connected).toBe(false);
+  });
+
+  it("should handle reconnecting state correctly", () => {
+    // Start from connected state
+    useStatusStore.getState().setConnectionState(ConnectionState.CONNECTED);
+
+    // Simulate reconnection attempt
+    useStatusStore.getState().setConnectionState(ConnectionState.RECONNECTING);
+
+    const reconnectingState = useStatusStore.getState();
+    expect(reconnectingState.connectionState).toBe(
+      ConnectionState.RECONNECTING,
+    );
+    // RECONNECTING is treated as "connected enough" to show cached data and enable UI
+    expect(reconnectingState.connected).toBe(true);
   });
 });
