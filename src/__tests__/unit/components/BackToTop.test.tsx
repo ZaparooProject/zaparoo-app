@@ -188,8 +188,19 @@ describe("BackToTop", () => {
   it("should handle missing scroll container gracefully", () => {
     const emptyRef = { current: null };
 
-    expect(() => {
-      render(<BackToTop scrollContainerRef={emptyRef} />);
-    }).not.toThrow();
+    // Should render without throwing
+    render(<BackToTop scrollContainerRef={emptyRef} />);
+
+    // Button should still be rendered but hidden
+    const button = screen.getByRole("button", { name: "backToTop" });
+    expect(button).toBeInTheDocument();
+    expect(button.parentElement).toHaveClass(
+      "opacity-0",
+      "pointer-events-none",
+    );
+
+    // Clicking should not throw even without a scroll container
+    fireEvent.click(button);
+    expect(button).toBeInTheDocument();
   });
 });

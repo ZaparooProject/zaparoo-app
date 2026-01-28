@@ -110,7 +110,7 @@ describe("ConnectionStatus", () => {
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
-  it("renders error state when connection error exists", () => {
+  it("renders disconnected state when address exists but not connected", () => {
     mockGetDeviceAddress.mockReturnValue("192.168.1.100");
     mockUseConnection.mockReturnValue({
       isConnected: false,
@@ -119,13 +119,10 @@ describe("ConnectionStatus", () => {
       hasData: false,
     });
 
-    // Error state is determined by having an address but not connected/connecting/reconnecting
-    // and the component receiving a connectionError prop (handled by DeviceConnectionCard)
-    // For ConnectionStatus on the Zap page, it shows disconnected state instead
+    // When there's an address but we're not connected/connecting/reconnecting,
+    // the component shows the disconnected state
     render(<ConnectionStatus />);
 
-    // When there's an address but we're not in any connecting state and not connected,
-    // this shows as disconnected
     expect(screen.getByText("settings.notConnected")).toBeInTheDocument();
   });
 

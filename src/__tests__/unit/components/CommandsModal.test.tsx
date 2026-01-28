@@ -97,7 +97,7 @@ describe("CommandsModal", () => {
     expect(screen.getByText("playlist.next")).toBeInTheDocument();
   });
 
-  it("should call onSelect when command is clicked", () => {
+  it("should call onSelect and close when command is clicked", () => {
     render(
       <CommandsModal isOpen={true} close={mockClose} onSelect={mockOnSelect} />,
     );
@@ -107,22 +107,36 @@ describe("CommandsModal", () => {
     fireEvent.click(launchSystemButton);
 
     expect(mockOnSelect).toHaveBeenCalledWith("**launch.system:");
+    expect(mockClose).toHaveBeenCalled();
   });
 
-  it("should call onSelect with correct command for different types", () => {
+  it("should call onSelect with correct command and close for different types", () => {
     render(
       <CommandsModal isOpen={true} close={mockClose} onSelect={mockOnSelect} />,
     );
 
-    // Test different command types
+    // Test stop command - calls onSelect and close
     fireEvent.click(screen.getByText("stop"));
     expect(mockOnSelect).toHaveBeenCalledWith("**stop");
+    expect(mockClose).toHaveBeenCalledTimes(1);
 
+    // Clear mocks for next test
+    mockOnSelect.mockClear();
+    mockClose.mockClear();
+
+    // Test input.coinp1 command
     fireEvent.click(screen.getByText("input.coinp1"));
     expect(mockOnSelect).toHaveBeenCalledWith("**input.coinp1:1");
+    expect(mockClose).toHaveBeenCalledTimes(1);
 
+    // Clear mocks for next test
+    mockOnSelect.mockClear();
+    mockClose.mockClear();
+
+    // Test delay command
     fireEvent.click(screen.getByText("delay"));
     expect(mockOnSelect).toHaveBeenCalledWith("**delay:");
+    expect(mockClose).toHaveBeenCalledTimes(1);
   });
 
   it("should not render when closed", () => {

@@ -79,10 +79,14 @@ describe("ToggleSwitch", () => {
       />,
     );
 
-    // The checkbox is disabled so click won't trigger onChange
     const checkbox = screen.getByRole("checkbox");
     expect(checkbox).toBeDisabled();
-    // With disabled, the onChange won't fire, so we just verify the state
+
+    // Click the disabled checkbox - should not trigger setValue or haptics
+    fireEvent.click(checkbox);
+
+    expect(mockSetValue).not.toHaveBeenCalled();
+    expect(mockImpact).not.toHaveBeenCalled();
   });
 
   it("renders suffix after label", () => {

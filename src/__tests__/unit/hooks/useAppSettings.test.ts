@@ -37,16 +37,19 @@ describe("useAppSettings", () => {
       preferRemoteWriter: true,
       shakeEnabled: false,
       shakeMode: "random" as const,
-      shakeZapscript: "",
+      shakeZapscript: "test-script",
     };
 
     const { result } = renderHook(() => useAppSettings({ initData }));
 
-    // Values should be initialized from initData, not loaded asynchronously
+    // Verify all 7 properties are initialized from initData
     expect(result.current.restartScan).toBe(true);
     expect(result.current.launchOnScan).toBe(false);
     expect(result.current.launcherAccess).toBe(true);
     expect(result.current.preferRemoteWriter).toBe(true);
+    expect(result.current.shakeEnabled).toBe(false);
+    expect(result.current.shakeMode).toBe("random");
+    expect(result.current.shakeZapscript).toBe("test-script");
   });
 
   it("should persist restartScan setting when changed", async () => {

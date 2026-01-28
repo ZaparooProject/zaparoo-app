@@ -222,9 +222,9 @@ describe("useProAccessCheck", () => {
       });
     });
 
-    it("should handle undefined entitlements by going to error path", async () => {
+    it("should handle undefined entitlements gracefully and set false", async () => {
       mockGetPlatform.mockReturnValue("ios");
-      // When active is undefined, accessing active.tapto_launcher throws
+      // When active is undefined, optional chaining should handle it gracefully
       mockGetCustomerInfo.mockResolvedValue({
         customerInfo: {
           entitlements: {
@@ -235,14 +235,29 @@ describe("useProAccessCheck", () => {
 
       renderHook(() => useProAccessCheck());
 
-      // This will throw when accessing undefined.tapto_launcher
-      // and go to the error handler, which marks as hydrated
+      // Should handle undefined safely and set launcherAccess to false
       await waitFor(() => {
-        expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
+        expect(mockSetLauncherAccess).toHaveBeenCalledWith(false);
       });
 
-      // Error path doesn't set launcherAccess (preserves cached value)
-      expect(mockSetLauncherAccess).not.toHaveBeenCalled();
+      expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
+    });
+
+    it("should handle completely missing entitlements object gracefully", async () => {
+      mockGetPlatform.mockReturnValue("ios");
+      // Completely missing entitlements should be handled safely
+      mockGetCustomerInfo.mockResolvedValue({
+        customerInfo: {},
+      });
+
+      renderHook(() => useProAccessCheck());
+
+      // Should handle missing entitlements safely and set launcherAccess to false
+      await waitFor(() => {
+        expect(mockSetLauncherAccess).toHaveBeenCalledWith(false);
+      });
+
+      expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
     });
   });
 });

@@ -48,15 +48,26 @@ export const mockWriteRequest = (
 
 export const mockTokenResponse = (
   overrides?: Partial<TokenResponse>,
-): TokenResponse => ({
-  type: faker.helpers.arrayElement(["ntag213", "ntag215", "ntag216"]),
-  // NFC UIDs are 7 bytes (14 hex chars) for NTAG tags
-  uid: faker.string.hexadecimal({ length: 14, casing: "lower", prefix: "" }),
-  text: faker.lorem.words(3),
-  data: faker.string.alphanumeric(8),
-  scanTime: faker.date.recent().toISOString(),
-  ...overrides,
-});
+): TokenResponse => {
+  const result = {
+    type: faker.helpers.arrayElement(["ntag213", "ntag215", "ntag216"]),
+    // NFC UIDs are 7 bytes (14 hex chars) for NTAG tags
+    uid: faker.string.hexadecimal({ length: 14, casing: "lower", prefix: "" }),
+    text: faker.lorem.words(3),
+    data: faker.string.alphanumeric(8),
+    scanTime: faker.date.recent().toISOString(),
+    ...overrides,
+  };
+
+  // Validate UID length after applying overrides
+  if (result.uid && result.uid.length !== 14) {
+    console.warn(
+      `[Factory] mockTokenResponse: UID length is ${result.uid.length}, expected 14 hex chars`,
+    );
+  }
+
+  return result;
+};
 
 export const mockPlayingResponse = (
   overrides?: Partial<PlayingResponse>,
@@ -71,21 +82,28 @@ export const mockPlayingResponse = (
 export const mockIndexResponse = (
   overrides?: Partial<IndexResponse>,
 ): IndexResponse => {
-  // Ensure currentStep <= totalSteps
-  const totalSteps =
-    overrides?.totalSteps ?? faker.number.int({ min: 1, max: 100 });
-  const currentStep =
-    overrides?.currentStep ?? faker.number.int({ min: 0, max: totalSteps });
+  // Generate base values
+  const baseTotalSteps = faker.number.int({ min: 1, max: 100 });
+  const baseCurrentStep = faker.number.int({ min: 0, max: baseTotalSteps });
 
-  return {
+  const result = {
     exists: faker.datatype.boolean(),
     indexing: faker.datatype.boolean(),
-    totalSteps,
-    currentStep,
+    totalSteps: baseTotalSteps,
+    currentStep: baseCurrentStep,
     currentStepDisplay: faker.lorem.words(2),
     totalFiles: faker.number.int({ min: 10, max: 1000 }),
     ...overrides,
   };
+
+  // Validate currentStep <= totalSteps after applying overrides
+  if (result.currentStep > result.totalSteps) {
+    console.warn(
+      `[Factory] mockIndexResponse: currentStep (${result.currentStep}) > totalSteps (${result.totalSteps})`,
+    );
+  }
+
+  return result;
 };
 
 export const mockMediaResponse = (

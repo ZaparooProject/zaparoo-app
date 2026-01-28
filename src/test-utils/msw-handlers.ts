@@ -66,8 +66,19 @@ export const handlers = [
             }),
           );
         }
-      } catch {
-        // Silently ignore parse errors in tests
+      } catch (error) {
+        // Log warning and return JSON-RPC error for debugging
+        console.warn("[MSW] Failed to parse WebSocket message:", error);
+        client.send(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id: null,
+            error: {
+              code: -32700,
+              message: "Parse error",
+            },
+          }),
+        );
       }
     });
   }),
