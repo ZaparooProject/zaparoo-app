@@ -164,6 +164,203 @@ For iOS/Android-specific behavior, create separate test files:
 5. Use `waitFor` for async operations
 6. Avoid testing implementation details - test behavior
 
+#### Writing Good Tests
+
+Good tests follow this structure:
+
+```typescript
+// 1. Import the REAL component from src/
+import { Button } from "@/components/wui/Button";
+
+// 2. Mock only EXTERNAL dependencies (APIs, native plugins, hooks)
+vi.mock("@/hooks/useHaptics", () => ({
+  useHaptics: () => ({ impact: vi.fn() }),
+}));
+
+describe("Button", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // 3. Test OBSERVABLE BEHAVIOR, not implementation
+  it("should call onClick when clicked", () => {
+    const handleClick = vi.fn();
+    render(<Button label="Submit" onClick={handleClick} />);
+
+    // 4. Use accessible queries
+    const button = screen.getByRole("button", { name: "Submit" });
+    fireEvent.click(button);
+
+    // 5. Assert on behavior, not DOM structure
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  // 6. Test both positive AND negative cases
+  it("should NOT call onClick when disabled", () => {
+    const handleClick = vi.fn();
+    render(<Button label="Submit" onClick={handleClick} disabled />);
+
+    fireEvent.click(screen.getByRole("button"));
+    expect(handleClick).not.toHaveBeenCalled();
+  });
+});
+```
+
+**Checklist for every test:**
+
+- [ ] Imports real component/hook from `src/`
+- [ ] Only mocks external dependencies
+- [ ] Uses `screen.getByRole()` or other accessible queries
+- [ ] Tests what users see/do, not internal state
+- [ ] Would fail if the feature actually broke
+- [ ] Has both positive and negative assertions where applicable
+- [ ] Uses factories from `test-utils/factories.ts` for mock data
+- [ ] Cleans up with `beforeEach`/`afterEach`
+
+#### Critical Anti-Patterns to Avoid
+
+The following patterns have caused significant test quality issues. **Do not use them.**
+
+**1. NEVER create fake components inside test files:**
+
+```typescript
+// ❌ BAD - Tests a fake component, provides zero coverage
+it("should render", () => {
+  const FakeComponent = () => <div>Fake</div>; // NEVER DO THIS
+  render(<FakeComponent />);
+});
+
+// ✅ GOOD - Tests the actual component
+import { RealComponent } from "@/components/RealComponent";
+it("should render", () => {
+  render(<RealComponent />);
+});
+```
+
+**2. Don't over-mock - if you mock everything, you're testing mocks:**
+
+```typescript
+// ❌ BAD - Mocks the component being tested
+vi.mock("@/components/Button", () => ({ Button: () => <button>Mock</button> }));
+
+// ✅ GOOD - Mock only external dependencies (APIs, native plugins)
+vi.mock("@capacitor/preferences", () => ({ Preferences: { get: vi.fn() } }));
+```
+
+**3. Use parameterized tests for repetitive patterns:**
+
+```typescript
+// ❌ BAD - Copy-paste tests (we had 21 identical tests!)
+it("handles error A", () => {
+  /* same pattern */
+});
+it("handles error B", () => {
+  /* same pattern */
+});
+
+// ✅ GOOD - Parameterized test
+const errorCases = [
+  ["error A", fnA],
+  ["error B", fnB],
+];
+it.each(errorCases)("handles %s", (name, fn) => {
+  /* single implementation */
+});
+```
+
+**4. Don't test TypeScript or library behavior:**
+
+```typescript
+// ❌ BAD - Tests TypeScript enums exist
+expect(ApiMethod.Run).toBe("run");
+
+// ❌ BAD - Tests Zustand library behavior
+const store = create(() => ({ count: 0 }));
+expect(store.getState().count).toBe(0);
+
+// ✅ GOOD - Test YOUR code's behavior using the library
+```
+
+**5. Don't test CSS classes or DOM structure:**
+
+```typescript
+// ❌ BAD - Implementation detail
+expect(document.querySelector(".lucide-icon")).toBeInTheDocument();
+
+// ✅ GOOD - Test accessible behavior
+expect(screen.getByRole("img", { name: "Warning" })).toBeInTheDocument();
+```
+
+**6. Never use hardcoded delays:**
+
+```typescript
+// ❌ BAD - Flaky, slow
+await new Promise((resolve) => setTimeout(resolve, 1000));
+
+// ✅ GOOD - Wait for actual condition
+await waitFor(() => expect(screen.getByText("Done")).toBeInTheDocument());
+```
+
+**7. Don't write placeholder tests:**
+
+```typescript
+// ❌ BAD - Provides no value
+it("should work", () => {
+  expect(true).toBe(true);
+});
+```
+
+**8. Don't test that imports exist:**
+
+```typescript
+// ❌ BAD - Tests nothing useful
+it("should export hook", () => {
+  expect(typeof useScanOperations).toBe("function");
+});
+```
+
+**9. Don't read and regex source files:**
+
+```typescript
+// ❌ BAD - Fragile, tests source text not behavior
+const source = fs.readFileSync("src/component.tsx", "utf8");
+expect(source).toMatch(/aria-label/);
+```
+
+**10. Don't duplicate test logic from source:**
+
+```typescript
+// ❌ BAD - Duplicates implementation, doesn't test it
+const calculateExpected = (a, b) => a + b; // Same as source
+expect(add(1, 2)).toBe(calculateExpected(1, 2));
+
+// ✅ GOOD - Test with known expected values
+expect(add(1, 2)).toBe(3);
+```
+
+**11. Avoid duplicate test suites** - if two describe blocks assert the same things, consolidate them.
+
+**12. Don't use `vi.doMock` after imports** - it won't work. Use `vi.mock` at top of file.
+
+**13. Never use `@ts-expect-error` to test invalid props** - TypeScript already prevents this at compile time.
+
+#### What Makes a Valid Test
+
+A test is valid if it:
+
+1. **Imports and renders REAL components** from `src/`
+2. **Tests observable behavior** (what users see/interact with)
+3. **Would fail if the feature broke** in production
+4. **Doesn't duplicate** another test's assertions
+
+A test is INVALID if it:
+
+1. Creates fake components inside the test file
+2. Mocks the component being tested
+3. Only tests mock implementations
+4. Tests CSS classes or internal DOM structure
+5. Duplicates another test with different wording
+
 ## Logging Requirements
 
 ### Logger Usage

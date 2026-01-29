@@ -96,7 +96,7 @@ describe("SimpleSystemSelect", () => {
           opt.textContent === "Super Nintendo",
       );
 
-      // NES comes before N64 which comes before SNES alphabetically
+      // N64 comes before NES which comes before SNES alphabetically
       expect(nintendoOptions[0]!.textContent).toBe("Nintendo 64");
       expect(nintendoOptions[1]!.textContent).toBe(
         "Nintendo Entertainment System",
