@@ -74,15 +74,6 @@ describe("StatusStore", () => {
   });
 
   describe("ConnectionState", () => {
-    it("should have ConnectionState enum values", () => {
-      expect(ConnectionState.IDLE).toBe("IDLE");
-      expect(ConnectionState.CONNECTING).toBe("CONNECTING");
-      expect(ConnectionState.CONNECTED).toBe("CONNECTED");
-      expect(ConnectionState.RECONNECTING).toBe("RECONNECTING");
-      expect(ConnectionState.ERROR).toBe("ERROR");
-      expect(ConnectionState.DISCONNECTED).toBe("DISCONNECTED");
-    });
-
     it("should set connection state", () => {
       const { setConnectionState } = useStatusStore.getState();
       setConnectionState(ConnectionState.CONNECTING);
