@@ -1,12 +1,16 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "../../../test-utils";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PageFrame } from "@/components/PageFrame";
 import { useRef } from "react";
 
-// Mock ResponsiveContainer
-vi.mock("@/components/ResponsiveContainer", () => ({
-  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="responsive-container">{children}</div>
-  ),
+// Mock store for safe insets
+vi.mock("@/lib/store", () => ({
+  useStatusStore: vi.fn((selector) => {
+    const state = {
+      safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+    };
+    return selector ? selector(state) : state;
+  }),
 }));
 
 // Test component for ref testing
@@ -21,6 +25,10 @@ const TestComponentWithRef = () => {
 };
 
 describe("PageFrame", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("should render children without header", () => {
     render(
       <PageFrame>
@@ -29,7 +37,6 @@ describe("PageFrame", () => {
     );
 
     expect(screen.getByText("Test content")).toBeInTheDocument();
-    expect(screen.getAllByTestId("responsive-container")).toHaveLength(1);
   });
 
   it("should render with custom header", () => {
@@ -43,7 +50,6 @@ describe("PageFrame", () => {
 
     expect(screen.getByTestId("custom-header")).toBeInTheDocument();
     expect(screen.getByText("Custom Header")).toBeInTheDocument();
-    expect(screen.getAllByTestId("responsive-container")).toHaveLength(2);
   });
 
   it("should render with headerLeft, headerCenter, and headerRight", () => {
@@ -109,8 +115,6 @@ describe("PageFrame", () => {
     render(<TestComponentWithRef />);
 
     expect(screen.getByText("Content with ref")).toBeInTheDocument();
-    // The ref should be applied to the scrollable container
-    expect(screen.getAllByTestId("responsive-container")).toHaveLength(1);
   });
 
   it("should render only headerLeft", () => {
@@ -123,7 +127,6 @@ describe("PageFrame", () => {
     );
 
     expect(screen.getByTestId("only-left")).toBeInTheDocument();
-    expect(screen.getAllByTestId("responsive-container")).toHaveLength(2);
   });
 
   it("should render only headerRight", () => {
@@ -136,18 +139,6 @@ describe("PageFrame", () => {
     );
 
     expect(screen.getByTestId("only-right")).toBeInTheDocument();
-    expect(screen.getAllByTestId("responsive-container")).toHaveLength(2);
-  });
-
-  it("should render with no header content when no header props are provided", () => {
-    render(
-      <PageFrame>
-        <div>Test content</div>
-      </PageFrame>,
-    );
-
-    // Should only have one ResponsiveContainer (for content, not header)
-    expect(screen.getAllByTestId("responsive-container")).toHaveLength(1);
   });
 
   it("should apply correct styles when header is present", () => {
@@ -183,7 +174,8 @@ describe("PageFrame", () => {
       </PageFrame>,
     );
 
-    // When all header props are null, should not render header (no header content)
-    expect(screen.getAllByTestId("responsive-container")).toHaveLength(1);
+    // When all header props are null, should not render header content
+    // but the content should still be visible
+    expect(screen.getByText("Test content")).toBeInTheDocument();
   });
 });

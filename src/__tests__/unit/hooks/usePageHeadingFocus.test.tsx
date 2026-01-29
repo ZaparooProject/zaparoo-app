@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor } from "../../../test-utils";
 import { usePageHeadingFocus } from "../../../hooks/usePageHeadingFocus";
 import { Capacitor } from "@capacitor/core";
 import { ScreenReader } from "@capacitor/screen-reader";

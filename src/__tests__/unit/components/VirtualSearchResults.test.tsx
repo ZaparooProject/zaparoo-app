@@ -1,9 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "../../../test-utils";
 import { vi, beforeEach, describe, it, expect } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { VirtualSearchResults } from "@/components/VirtualSearchResults";
 import { CoreAPI } from "@/lib/coreApi";
-import "@/test-setup";
 
 // Mock dependencies
 vi.mock("react-i18next", () => ({
@@ -39,8 +37,6 @@ vi.mock("@tanstack/react-virtual", () => ({
 }));
 
 describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
-  let queryClient: QueryClient;
-
   // Helper to create mock search results
   const createMockResults = (count: number, startIndex: number = 0) => {
     return Array.from({ length: count }, (_, i) => ({
@@ -59,11 +55,6 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
     mockGetVirtualItems.mockReturnValue([]);
   });
 
@@ -79,11 +70,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
       ...props,
     };
 
-    return render(
-      <QueryClientProvider client={queryClient}>
-        <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>,
-    );
+    return render(<VirtualSearchResults {...defaultProps} />);
   };
 
   it("should trigger fetchNextPage when scrolling near the end of current results", async () => {
@@ -111,11 +98,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
       scrollContainerRef: { current: document.createElement("div") },
     };
 
-    const { rerender } = render(
-      <QueryClientProvider client={queryClient}>
-        <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>,
-    );
+    const { rerender } = render(<VirtualSearchResults {...defaultProps} />);
 
     // Wait for initial data to load
     await waitFor(() => {
@@ -143,11 +126,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
     });
 
     // Re-render to trigger the effect with new virtualItems
-    rerender(
-      <QueryClientProvider client={queryClient}>
-        <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>,
-    );
+    rerender(<VirtualSearchResults {...defaultProps} />);
 
     // Wait for second page to be fetched
     await waitFor(
@@ -189,11 +168,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
       scrollContainerRef: { current: document.createElement("div") },
     };
 
-    const { rerender } = render(
-      <QueryClientProvider client={queryClient}>
-        <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>,
-    );
+    const { rerender } = render(<VirtualSearchResults {...defaultProps} />);
 
     await waitFor(() => {
       expect(mediaSearchSpy).toHaveBeenCalledTimes(1);
@@ -206,11 +181,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
       { index: 52, key: 52, start: 5200, size: 100 },
     ]);
 
-    rerender(
-      <QueryClientProvider client={queryClient}>
-        <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>,
-    );
+    rerender(<VirtualSearchResults {...defaultProps} />);
 
     // Verify no additional calls are made after scrolling to middle
     // Use waitFor with a short timeout to ensure async operations settle
@@ -248,11 +219,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
       scrollContainerRef: { current: document.createElement("div") },
     };
 
-    const { rerender } = render(
-      <QueryClientProvider client={queryClient}>
-        <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>,
-    );
+    const { rerender } = render(<VirtualSearchResults {...defaultProps} />);
 
     await waitFor(() => {
       expect(mediaSearchSpy).toHaveBeenCalledTimes(1);
@@ -265,11 +232,7 @@ describe("VirtualSearchResults - Infinite Scrolling Regression Tests", () => {
     ]);
 
     // Use rerender instead of creating a new render
-    rerender(
-      <QueryClientProvider client={queryClient}>
-        <VirtualSearchResults {...defaultProps} />
-      </QueryClientProvider>,
-    );
+    rerender(<VirtualSearchResults {...defaultProps} />);
 
     // Verify no additional calls are made when hasNextPage is false
     await waitFor(

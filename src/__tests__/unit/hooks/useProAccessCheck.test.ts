@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor } from "../../../test-utils";
 import { useProAccessCheck } from "../../../hooks/useProAccessCheck";
 
 // Create hoisted mocks

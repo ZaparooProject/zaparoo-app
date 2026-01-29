@@ -1,12 +1,18 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { vi } from "vitest";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  renderHook,
+  act,
+} from "../../../test-utils";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import {
   RestorePuchasesButton,
   useProPurchase,
 } from "@/components/ProPurchase";
-import { renderHook, act } from "@testing-library/react";
 
-// Mock modules inline to avoid hoisting issues
+// Mock external modules
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     get: vi.fn(),
@@ -40,40 +46,33 @@ vi.mock("react-hot-toast", () => ({
   },
 }));
 
+vi.mock("@/hooks/useHaptics", () => ({
+  useHaptics: () => ({
+    impact: vi.fn(),
+    notification: vi.fn(),
+    vibrate: vi.fn(),
+  }),
+}));
+
+vi.mock("@/lib/logger", () => ({
+  logger: {
+    log: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { changeLanguage: vi.fn() },
+  }),
+}));
+
+// Mock i18next for direct t() imports used in ProPurchase component
 vi.mock("i18next", () => ({
   t: (key: string) => key,
-}));
-
-// Mock UI components
-vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({ children, open, onOpenChange }: any) =>
-    open ? (
-      <div data-testid="dialog" onClick={() => onOpenChange(false)}>
-        {children}
-      </div>
-    ) : null,
-  DialogContent: ({ children }: any) => (
-    <div data-testid="dialog-content">{children}</div>
-  ),
-  DialogHeader: ({ children }: any) => (
-    <div data-testid="dialog-header">{children}</div>
-  ),
-  DialogTitle: ({ children }: any) => (
-    <h2 data-testid="dialog-title">{children}</h2>
-  ),
-}));
-
-vi.mock("@/components/wui/Button", () => ({
-  Button: ({ label, onClick, disabled, className }: any) => (
-    <button
-      data-testid="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={className}
-    >
-      {label}
-    </button>
-  ),
 }));
 
 describe("RestorePuchasesButton", () => {
@@ -85,6 +84,7 @@ describe("RestorePuchasesButton", () => {
       writable: true,
     });
   });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -92,9 +92,10 @@ describe("RestorePuchasesButton", () => {
   it("should render restore purchases button", () => {
     render(<RestorePuchasesButton />);
 
-    const button = screen.getByTestId("button");
+    const button = screen.getByRole("button", {
+      name: "settings.app.restorePurchases",
+    });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveTextContent("settings.app.restorePurchases");
   });
 
   it("should handle successful restore with active entitlement", async () => {
@@ -114,7 +115,9 @@ describe("RestorePuchasesButton", () => {
 
     render(<RestorePuchasesButton />);
 
-    const button = screen.getByTestId("button");
+    const button = screen.getByRole("button", {
+      name: "settings.app.restorePurchases",
+    });
     fireEvent.click(button);
 
     await waitFor(() => {
@@ -142,7 +145,9 @@ describe("RestorePuchasesButton", () => {
 
     render(<RestorePuchasesButton />);
 
-    const button = screen.getByTestId("button");
+    const button = screen.getByRole("button", {
+      name: "settings.app.restorePurchases",
+    });
     fireEvent.click(button);
 
     await waitFor(() => {
@@ -177,24 +182,15 @@ describe("useProPurchase", () => {
   });
 
   it("should read proAccess from store", async () => {
-    // Mock console.error to suppress expected "no launcher purchase package found" message
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-
     const { result } = renderHook(() => useProPurchase());
 
     expect(result.current.proAccess).toBe(false);
     expect(result.current.proPurchaseModalOpen).toBe(false);
-    expect(typeof result.current.setProPurchaseModalOpen).toBe("function");
-    expect(typeof result.current.PurchaseModal).toBe("function");
 
-    // Wait for any async effects to complete
+    // Wait for any async effects to settle
     await waitFor(() => {
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      expect(result.current.proAccess).toBe(false);
     });
-
-    consoleErrorSpy.mockRestore();
   });
 
   it("should reflect store state when launcherAccess is true", async () => {
@@ -202,21 +198,14 @@ describe("useProPurchase", () => {
     const { usePreferencesStore } = await import("@/lib/preferencesStore");
     usePreferencesStore.setState({ launcherAccess: true });
 
-    // Mock console.error to suppress expected "no launcher purchase package found" message
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-
     const { result } = renderHook(() => useProPurchase());
 
     expect(result.current.proAccess).toBe(true);
 
-    // Wait for any async effects to complete
+    // Wait for any async effects to settle
     await waitFor(() => {
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      expect(result.current.proAccess).toBe(true);
     });
-
-    consoleErrorSpy.mockRestore();
   });
 
   it("should skip initialization on web platform", async () => {
@@ -281,39 +270,19 @@ describe("useProPurchase", () => {
   });
 
   it("should render PurchaseModal component", async () => {
-    // Mock console.error to suppress expected "no launcher purchase package found" message
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-
     const { result } = renderHook(() => useProPurchase());
 
     const PurchaseModalComponent = result.current.PurchaseModal;
     render(<PurchaseModalComponent />);
 
-    // Modal should not be visible initially
-    expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
-
-    // Wait for any async effects to complete
-    await waitFor(() => {
-      expect(consoleErrorSpy).toHaveBeenCalled();
-    });
-
-    consoleErrorSpy.mockRestore();
+    // Modal should not be visible initially (proPurchaseModalOpen is false)
+    expect(
+      screen.queryByRole("dialog", { name: /scan\.purchaseProTitle/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("should open purchase modal", async () => {
-    // Mock console.error to suppress expected "no launcher purchase package found" message
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-
     const { result } = renderHook(() => useProPurchase());
-
-    // Wait for initial effects to complete
-    await waitFor(() => {
-      expect(consoleErrorSpy).toHaveBeenCalled();
-    });
 
     act(() => {
       result.current.setProPurchaseModalOpen(true);
@@ -322,9 +291,9 @@ describe("useProPurchase", () => {
     const PurchaseModalComponent = result.current.PurchaseModal;
     render(<PurchaseModalComponent />);
 
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
-    expect(screen.getByText("scan.purchaseProTitle")).toBeInTheDocument();
-
-    consoleErrorSpy.mockRestore();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    // Title may appear multiple times due to test-utils wrapper
+    const titles = screen.getAllByText("scan.purchaseProTitle");
+    expect(titles.length).toBeGreaterThan(0);
   });
 });

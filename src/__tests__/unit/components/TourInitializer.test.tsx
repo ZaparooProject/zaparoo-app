@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { renderHook } from "../../../test-utils";
 import { TourInitializer } from "../../../components/TourInitializer";
 import { usePreferencesStore } from "../../../lib/preferencesStore";
 import { useStatusStore } from "../../../lib/store";

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { usePreferencesStore } from "../../../lib/preferencesStore";
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook } from "../../../test-utils";
 
 // Mock Capacitor Preferences
 vi.mock("@capacitor/preferences", () => ({

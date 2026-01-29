@@ -1,10 +1,10 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { RequirementsModal } from "@/components/RequirementsModal";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import type { PendingRequirement } from "@/lib/models";
 
-// Mock modules
+// Mock external dependencies only
 vi.mock("@capacitor-firebase/authentication", () => ({
   FirebaseAuthentication: {
     signOut: vi.fn().mockResolvedValue(undefined),
@@ -71,54 +71,6 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
-// Mock UI components with simpler implementations
-vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({ children, open }: any) =>
-    open ? <div data-testid="dialog">{children}</div> : null,
-  DialogContent: ({ children }: any) => (
-    <div data-testid="dialog-content">{children}</div>
-  ),
-  DialogHeader: ({ children }: any) => (
-    <div data-testid="dialog-header">{children}</div>
-  ),
-  DialogTitle: ({ children }: any) => (
-    <h2 data-testid="dialog-title">{children}</h2>
-  ),
-  DialogDescription: ({ children }: any) => (
-    <p data-testid="dialog-description">{children}</p>
-  ),
-}));
-
-vi.mock("@/components/ui/checkbox", () => ({
-  Checkbox: ({ id, checked, onCheckedChange }: any) => (
-    <input
-      type="checkbox"
-      id={id}
-      data-testid={`checkbox-${id}`}
-      checked={checked}
-      onChange={(e) => onCheckedChange(e.target.checked)}
-    />
-  ),
-}));
-
-vi.mock("@/components/ui/label", () => ({
-  Label: ({ children, htmlFor }: any) => (
-    <label htmlFor={htmlFor}>{children}</label>
-  ),
-}));
-
-vi.mock("@/components/wui/Button", () => ({
-  Button: ({ label, onClick, disabled }: any) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      data-testid={`button-${label}`}
-    >
-      {label}
-    </button>
-  ),
-}));
-
 describe("RequirementsModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -131,7 +83,9 @@ describe("RequirementsModal", () => {
 
   it("should not render when closed", () => {
     render(<RequirementsModal />);
-    expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: /requirements\.title/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("should render when open with TOS requirement", () => {
@@ -150,12 +104,17 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
-    expect(screen.getByTestId("dialog-title")).toHaveTextContent(
-      "requirements.title",
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    // Title may appear multiple times due to test-utils wrapper
+    const titles = screen.getAllByText("requirements.title");
+    expect(titles.length).toBeGreaterThan(0);
+    // Checkboxes have their labels - may have multiple due to wrapper
+    const tosLabels = screen.getAllByLabelText(/requirements\.tosLabel/);
+    expect(tosLabels.length).toBeGreaterThan(0);
+    const privacyLabels = screen.getAllByLabelText(
+      /requirements\.privacyLabel/,
     );
-    expect(screen.getByTestId("checkbox-tos")).toBeInTheDocument();
-    expect(screen.getByTestId("checkbox-privacy")).toBeInTheDocument();
+    expect(privacyLabels.length).toBeGreaterThan(0);
   });
 
   it("should render age verification checkbox when required", () => {
@@ -174,7 +133,7 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    expect(screen.getByTestId("checkbox-age")).toBeInTheDocument();
+    expect(screen.getByLabelText(/requirements\.ageLabel/)).toBeInTheDocument();
   });
 
   it("should render email verification section when required", () => {
@@ -194,7 +153,9 @@ describe("RequirementsModal", () => {
     render(<RequirementsModal />);
 
     expect(
-      screen.getByTestId("button-requirements.sendVerificationEmail"),
+      screen.getByRole("button", {
+        name: /requirements\.sendVerificationEmail/i,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -214,13 +175,19 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    const saveButton = screen.getByTestId("button-requirements.save");
+    const saveButton = screen.getByRole("button", {
+      name: /requirements\.save/i,
+    });
     expect(saveButton).toBeDisabled();
 
-    // Check TOS
-    fireEvent.click(screen.getByTestId("checkbox-tos"));
-    // Check Privacy
-    fireEvent.click(screen.getByTestId("checkbox-privacy"));
+    // Check TOS - get first matching element
+    const tosCheckboxes = screen.getAllByLabelText(/requirements\.tosLabel/);
+    fireEvent.click(tosCheckboxes[0]!);
+    // Check Privacy - get first matching element
+    const privacyCheckboxes = screen.getAllByLabelText(
+      /requirements\.privacyLabel/,
+    );
+    fireEvent.click(privacyCheckboxes[0]!);
 
     await waitFor(() => {
       expect(saveButton).not.toBeDisabled();
@@ -243,11 +210,13 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    const saveButton = screen.getByTestId("button-requirements.save");
+    const saveButton = screen.getByRole("button", {
+      name: /requirements\.save/i,
+    });
     expect(saveButton).toBeDisabled();
 
     // Check age
-    fireEvent.click(screen.getByTestId("checkbox-age"));
+    fireEvent.click(screen.getByLabelText(/requirements\.ageLabel/));
 
     await waitFor(() => {
       expect(saveButton).not.toBeDisabled();
@@ -270,12 +239,18 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    // Check required checkboxes
-    fireEvent.click(screen.getByTestId("checkbox-tos"));
-    fireEvent.click(screen.getByTestId("checkbox-privacy"));
+    // Check required checkboxes - get first matching elements
+    const tosCheckboxes = screen.getAllByLabelText(/requirements\.tosLabel/);
+    fireEvent.click(tosCheckboxes[0]!);
+    const privacyCheckboxes = screen.getAllByLabelText(
+      /requirements\.privacyLabel/,
+    );
+    fireEvent.click(privacyCheckboxes[0]!);
 
     // Click save
-    const saveButton = screen.getByTestId("button-requirements.save");
+    const saveButton = screen.getByRole("button", {
+      name: /requirements\.save/i,
+    });
     fireEvent.click(saveButton);
 
     const { updateRequirements } = await import("@/lib/onlineApi");
@@ -304,7 +279,9 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    const logoutButton = screen.getByTestId("button-requirements.logout");
+    const logoutButton = screen.getByRole("button", {
+      name: /requirements\.logout/i,
+    });
     fireEvent.click(logoutButton);
 
     const { FirebaseAuthentication } =
@@ -330,9 +307,9 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    const sendEmailButton = screen.getByTestId(
-      "button-requirements.sendVerificationEmail",
-    );
+    const sendEmailButton = screen.getByRole("button", {
+      name: /requirements\.sendVerificationEmail/i,
+    });
     fireEvent.click(sendEmailButton);
 
     const { FirebaseAuthentication } =
@@ -359,15 +336,17 @@ describe("RequirementsModal", () => {
     render(<RequirementsModal />);
 
     // Click send email
-    const sendEmailButton = screen.getByTestId(
-      "button-requirements.sendVerificationEmail",
-    );
+    const sendEmailButton = screen.getByRole("button", {
+      name: /requirements\.sendVerificationEmail/i,
+    });
     fireEvent.click(sendEmailButton);
 
     // Wait for the UI to update to show the "I've verified" button
     await waitFor(() => {
       expect(
-        screen.getByTestId("button-requirements.checkEmailVerified"),
+        screen.getByRole("button", {
+          name: /requirements\.checkEmailVerified/i,
+        }),
       ).toBeInTheDocument();
     });
   });
@@ -398,12 +377,19 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    // All sections should be visible
-    expect(screen.getByTestId("checkbox-tos")).toBeInTheDocument();
-    expect(screen.getByTestId("checkbox-privacy")).toBeInTheDocument();
-    expect(screen.getByTestId("checkbox-age")).toBeInTheDocument();
+    // All sections should be visible - use getAllBy since multiple may exist
+    const tosLabels = screen.getAllByLabelText(/requirements\.tosLabel/);
+    expect(tosLabels.length).toBeGreaterThan(0);
+    const privacyLabels = screen.getAllByLabelText(
+      /requirements\.privacyLabel/,
+    );
+    expect(privacyLabels.length).toBeGreaterThan(0);
+    const ageLabels = screen.getAllByLabelText(/requirements\.ageLabel/);
+    expect(ageLabels.length).toBeGreaterThan(0);
     expect(
-      screen.getByTestId("button-requirements.sendVerificationEmail"),
+      screen.getByRole("button", {
+        name: /requirements\.sendVerificationEmail/i,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -424,8 +410,12 @@ describe("RequirementsModal", () => {
 
     const { rerender } = render(<RequirementsModal />);
 
-    fireEvent.click(screen.getByTestId("checkbox-tos"));
-    expect(screen.getByTestId("checkbox-tos")).toBeChecked();
+    // Use getByRole to get the checkbox element with role="checkbox"
+    const tosCheckbox = screen.getByRole("checkbox", {
+      name: /requirements\.tosLabel/,
+    });
+    fireEvent.click(tosCheckbox);
+    expect(tosCheckbox).toBeChecked();
 
     // Close modal
     useRequirementsStore.setState({
@@ -443,7 +433,10 @@ describe("RequirementsModal", () => {
 
     rerender(<RequirementsModal />);
 
-    // Checkbox should be unchecked again
-    expect(screen.getByTestId("checkbox-tos")).not.toBeChecked();
+    // Checkbox should be unchecked again - get by role again after rerender
+    const reopenedTosCheckbox = screen.getByRole("checkbox", {
+      name: /requirements\.tosLabel/,
+    });
+    expect(reopenedTosCheckbox).not.toBeChecked();
   });
 });

@@ -6,8 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "../../../test-utils";
 import { ConnectionProvider } from "../../../components/ConnectionProvider";
 import { useConnection } from "../../../hooks/useConnection";
 import { connectionManager } from "../../../lib/transport";
@@ -114,21 +113,11 @@ vi.mock("../../../components/A11yAnnouncer", () => ({
   useAnnouncer: () => ({
     announce: vi.fn(),
   }),
+  A11yAnnouncerProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 
-// Custom render that provides necessary providers
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: false },
-    mutations: { retry: false },
-  },
-});
-
-function renderWithProviders(ui: React.ReactElement) {
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-  );
-}
+// test-utils already provides QueryClientProvider, so we use render directly
 
 // Test component that uses the connection context
 function ConnectionConsumer() {
@@ -155,7 +144,7 @@ describe("ConnectionProvider", () => {
 
   describe("rendering", () => {
     it("should render children", () => {
-      renderWithProviders(
+      render(
         <ConnectionProvider>
           <div data-testid="child">Child content</div>
         </ConnectionProvider>,
@@ -165,7 +154,7 @@ describe("ConnectionProvider", () => {
     });
 
     it("should provide connection context to children", () => {
-      renderWithProviders(
+      render(
         <ConnectionProvider>
           <ConnectionConsumer />
         </ConnectionProvider>,
@@ -178,7 +167,7 @@ describe("ConnectionProvider", () => {
 
   describe("connection initialization", () => {
     it("should set up connection manager event handlers", () => {
-      renderWithProviders(
+      render(
         <ConnectionProvider>
           <div>Test</div>
         </ConnectionProvider>,
@@ -188,7 +177,7 @@ describe("ConnectionProvider", () => {
     });
 
     it("should add device with correct config", () => {
-      renderWithProviders(
+      render(
         <ConnectionProvider>
           <div>Test</div>
         </ConnectionProvider>,
@@ -202,7 +191,7 @@ describe("ConnectionProvider", () => {
     });
 
     it("should set active device after adding", () => {
-      renderWithProviders(
+      render(
         <ConnectionProvider>
           <div>Test</div>
         </ConnectionProvider>,
@@ -216,7 +205,7 @@ describe("ConnectionProvider", () => {
 
   describe("cleanup", () => {
     it("should remove device on unmount", () => {
-      const { unmount } = renderWithProviders(
+      const { unmount } = render(
         <ConnectionProvider>
           <div>Test</div>
         </ConnectionProvider>,
@@ -232,7 +221,7 @@ describe("ConnectionProvider", () => {
 
   describe("context values", () => {
     it("should provide default disconnected state", () => {
-      renderWithProviders(
+      render(
         <ConnectionProvider>
           <ConnectionConsumer />
         </ConnectionProvider>,
@@ -242,7 +231,7 @@ describe("ConnectionProvider", () => {
     });
 
     it("should provide hasData as false initially", () => {
-      renderWithProviders(
+      render(
         <ConnectionProvider>
           <ConnectionConsumer />
         </ConnectionProvider>,
@@ -255,7 +244,7 @@ describe("ConnectionProvider", () => {
 
 describe("useConnection hook", () => {
   it("should return connection context values with expected initial state", () => {
-    renderWithProviders(
+    render(
       <ConnectionProvider>
         <ConnectionConsumer />
       </ConnectionProvider>,

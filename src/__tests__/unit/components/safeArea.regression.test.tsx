@@ -9,7 +9,7 @@
  * Regression for: Safe area not working on iOS after refactor to Tailwind classes
  */
 
-import { render } from "@testing-library/react";
+import { render } from "../../../test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock store with specific safe inset values to verify they're used

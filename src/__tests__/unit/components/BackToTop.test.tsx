@@ -1,8 +1,7 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { useRef } from "react";
 import { vi, describe, it, expect } from "vitest";
 import { BackToTop } from "@/components/BackToTop";
-import "@/test-setup";
 
 // Mock lodash debounce
 vi.mock("lodash", () => ({

@@ -1,7 +1,6 @@
-import { render, screen } from "../../../../test-utils";
+import { render, screen, fireEvent } from "../../../../test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Card } from "../../../../components/wui/Card";
-import { fireEvent } from "@testing-library/react";
 
 describe("Card", () => {
   beforeEach(() => {

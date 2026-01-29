@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "../../../test-utils";
 import { useContext } from "react";
 import { SlideModalProvider } from "@/components/SlideModalProvider";
 import { SlideModalContext } from "@/hooks/useSlideModalManager";

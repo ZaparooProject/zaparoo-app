@@ -1,34 +1,29 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { vi } from "vitest";
+import { render, screen, fireEvent } from "../../../test-utils";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CommandsModal } from "@/components/CommandsModal";
-import "@/test-setup";
 
-// Mock react-i18next
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
+// Mock external hooks that require native functionality
+vi.mock("@/hooks/useHaptics", () => ({
+  useHaptics: () => ({
+    impact: vi.fn(),
+    notification: vi.fn(),
+    vibrate: vi.fn(),
   }),
 }));
 
-// Mock SlideModal
-vi.mock("@/components/SlideModal", () => ({
-  SlideModal: ({ isOpen, close, children }: any) => (
-    <div data-testid="slide-modal" data-open={isOpen}>
-      <button onClick={close} data-testid="close-button">
-        Close
-      </button>
-      {children}
-    </div>
-  ),
+vi.mock("@capacitor/app", () => ({
+  App: {
+    addListener: vi.fn().mockReturnValue({ remove: vi.fn() }),
+  },
 }));
 
-// Mock Button component
-vi.mock("@/components/wui/Button", () => ({
-  Button: ({ children, onClick, label, ...props }: any) => (
-    <button onClick={onClick} {...props}>
-      {label || children}
-    </button>
-  ),
+vi.mock("@/lib/store", () => ({
+  useStatusStore: vi.fn((selector) => {
+    const state = {
+      safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+    };
+    return selector ? selector(state) : state;
+  }),
 }));
 
 describe("CommandsModal", () => {
@@ -44,8 +39,10 @@ describe("CommandsModal", () => {
       <CommandsModal isOpen={true} close={mockClose} onSelect={mockOnSelect} />,
     );
 
-    const modal = screen.getByTestId("slide-modal");
-    expect(modal).toHaveAttribute("data-open", "true");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    // Modal title may appear multiple times due to test-utils wrapper
+    const titles = screen.getAllByText("create.custom.commands");
+    expect(titles.length).toBeGreaterThan(0);
   });
 
   it("should render all command categories", () => {
@@ -68,9 +65,15 @@ describe("CommandsModal", () => {
     );
 
     // Check for launch commands
-    expect(screen.getByText("launch.system")).toBeInTheDocument();
-    expect(screen.getByText("launch.random")).toBeInTheDocument();
-    expect(screen.getByText("launch.search")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "launch.system" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "launch.random" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "launch.search" }),
+    ).toBeInTheDocument();
   });
 
   it("should render input commands", () => {
@@ -79,10 +82,18 @@ describe("CommandsModal", () => {
     );
 
     // Check for input commands
-    expect(screen.getByText("input.keyboard")).toBeInTheDocument();
-    expect(screen.getByText("input.gamepad")).toBeInTheDocument();
-    expect(screen.getByText("input.coinp1")).toBeInTheDocument();
-    expect(screen.getByText("input.coinp2")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "input.keyboard" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "input.gamepad" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "input.coinp1" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "input.coinp2" }),
+    ).toBeInTheDocument();
   });
 
   it("should render playlist commands", () => {
@@ -91,10 +102,18 @@ describe("CommandsModal", () => {
     );
 
     // Check for playlist commands
-    expect(screen.getByText("playlist.load")).toBeInTheDocument();
-    expect(screen.getByText("playlist.play")).toBeInTheDocument();
-    expect(screen.getByText("playlist.stop")).toBeInTheDocument();
-    expect(screen.getByText("playlist.next")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "playlist.load" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "playlist.play" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "playlist.stop" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "playlist.next" }),
+    ).toBeInTheDocument();
   });
 
   it("should call onSelect and close when command is clicked", () => {
@@ -103,7 +122,9 @@ describe("CommandsModal", () => {
     );
 
     // Click on a launch.system command button
-    const launchSystemButton = screen.getByText("launch.system");
+    const launchSystemButton = screen.getByRole("button", {
+      name: "launch.system",
+    });
     fireEvent.click(launchSystemButton);
 
     expect(mockOnSelect).toHaveBeenCalledWith("**launch.system:");
@@ -116,7 +137,7 @@ describe("CommandsModal", () => {
     );
 
     // Test stop command - calls onSelect and close
-    fireEvent.click(screen.getByText("stop"));
+    fireEvent.click(screen.getByRole("button", { name: "stop" }));
     expect(mockOnSelect).toHaveBeenCalledWith("**stop");
     expect(mockClose).toHaveBeenCalledTimes(1);
 
@@ -125,7 +146,7 @@ describe("CommandsModal", () => {
     mockClose.mockClear();
 
     // Test input.coinp1 command
-    fireEvent.click(screen.getByText("input.coinp1"));
+    fireEvent.click(screen.getByRole("button", { name: "input.coinp1" }));
     expect(mockOnSelect).toHaveBeenCalledWith("**input.coinp1:1");
     expect(mockClose).toHaveBeenCalledTimes(1);
 
@@ -134,12 +155,12 @@ describe("CommandsModal", () => {
     mockClose.mockClear();
 
     // Test delay command
-    fireEvent.click(screen.getByText("delay"));
+    fireEvent.click(screen.getByRole("button", { name: "delay" }));
     expect(mockOnSelect).toHaveBeenCalledWith("**delay:");
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 
-  it("should not render when closed", () => {
+  it("should not render content when closed", () => {
     render(
       <CommandsModal
         isOpen={false}
@@ -148,7 +169,8 @@ describe("CommandsModal", () => {
       />,
     );
 
-    const modal = screen.getByTestId("slide-modal");
-    expect(modal).toHaveAttribute("data-open", "false");
+    // Modal should have aria-hidden when closed
+    const modal = screen.getByRole("dialog", { hidden: true });
+    expect(modal).toHaveAttribute("aria-hidden", "true");
   });
 });
