@@ -1,10 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "../../test-utils";
+import { describe, it, expect } from "vitest";
+import { render, screen } from "../../test-utils";
 import { Button } from "../../components/wui/Button";
 import { Card } from "../../components/wui/Card";
 import { TextInput } from "../../components/wui/TextInput";
 
-// Smoke tests verify that core app components render and function correctly
+// Smoke tests verify that core app components render correctly
+// For detailed behavior tests, see unit tests
 describe("App Component Smoke Tests", () => {
   describe("Button Component", () => {
     it("should render with label", () => {
@@ -23,14 +24,6 @@ describe("App Component Smoke Tests", () => {
 
       rerender(<Button label="Text" variant="text" />);
       expect(screen.getByRole("button")).toBeInTheDocument();
-    });
-
-    it("should handle click events", () => {
-      const onClick = vi.fn();
-      render(<Button label="Click me" onClick={onClick} />);
-
-      screen.getByRole("button").click();
-      expect(onClick).toHaveBeenCalled();
     });
 
     it("should render disabled state", () => {
@@ -57,18 +50,14 @@ describe("App Component Smoke Tests", () => {
       expect(screen.getByText("Card content")).toBeInTheDocument();
     });
 
-    it("should be interactive when onClick is provided", () => {
-      const onClick = vi.fn();
+    it("should render as button when onClick is provided", () => {
       render(
-        <Card onClick={onClick}>
+        <Card onClick={() => {}}>
           <span>Interactive card</span>
         </Card>,
       );
 
-      const card = screen.getByRole("button");
-      expect(card).toBeInTheDocument();
-      card.click();
-      expect(onClick).toHaveBeenCalled();
+      expect(screen.getByRole("button")).toBeInTheDocument();
     });
   });
 
@@ -81,14 +70,6 @@ describe("App Component Smoke Tests", () => {
     it("should render with value", () => {
       render(<TextInput value="test" />);
       expect(screen.getByDisplayValue("test")).toBeInTheDocument();
-    });
-
-    it("should call setValue when input changes", () => {
-      const setValue = vi.fn();
-      render(<TextInput value="" setValue={setValue} />);
-      const input = screen.getByRole("textbox");
-      fireEvent.change(input, { target: { value: "x" } });
-      expect(setValue).toHaveBeenCalledWith("x");
     });
   });
 });

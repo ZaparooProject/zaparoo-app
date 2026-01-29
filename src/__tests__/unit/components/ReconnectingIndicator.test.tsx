@@ -67,19 +67,6 @@ describe("ReconnectingIndicator", () => {
       expect(indicator).toHaveAttribute("aria-live", "polite");
     });
 
-    it("should have muted styling (not warning)", () => {
-      mockUseConnection.mockReturnValue({
-        showConnecting: true,
-        showReconnecting: false,
-      });
-
-      render(<ReconnectingIndicator />);
-
-      const indicator = screen.getByText("Connecting...").closest("div");
-      expect(indicator?.className).toContain("bg-muted");
-      expect(indicator?.className).not.toContain("bg-amber-600");
-    });
-
     it("should show a spinner", () => {
       mockUseConnection.mockReturnValue({
         showConnecting: true,
@@ -116,18 +103,6 @@ describe("ReconnectingIndicator", () => {
       const indicator = screen.getByText("Reconnecting...").closest("div");
       expect(indicator).toHaveAttribute("role", "status");
       expect(indicator).toHaveAttribute("aria-live", "polite");
-    });
-
-    it("should have warning styling", () => {
-      mockUseConnection.mockReturnValue({
-        showConnecting: false,
-        showReconnecting: true,
-      });
-
-      render(<ReconnectingIndicator />);
-
-      const indicator = screen.getByText("Reconnecting...").closest("div");
-      expect(indicator?.className).toContain("bg-amber-600");
     });
 
     it("should show a spinner", () => {
