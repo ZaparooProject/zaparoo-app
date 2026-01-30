@@ -69,7 +69,7 @@ describe("ToggleSwitch", () => {
     expect(mockImpact).toHaveBeenCalledWith("medium");
   });
 
-  it("does not call setValue when disabled", () => {
+  it("should be fully disabled when disabled prop is true", () => {
     render(
       <ToggleSwitch
         label="Test Label"
@@ -80,11 +80,12 @@ describe("ToggleSwitch", () => {
     );
 
     const checkbox = screen.getByRole("checkbox");
+
+    // Checkbox should have disabled attribute
     expect(checkbox).toBeDisabled();
 
-    // Click the disabled checkbox - should not trigger setValue or haptics
+    // Clicking disabled checkbox should not trigger any callbacks
     fireEvent.click(checkbox);
-
     expect(mockSetValue).not.toHaveBeenCalled();
     expect(mockImpact).not.toHaveBeenCalled();
   });
@@ -218,20 +219,6 @@ describe("ToggleSwitch", () => {
     expect(checkbox).toBeInTheDocument();
   });
 
-  it("marks checkbox as disabled when disabled prop is true", () => {
-    render(
-      <ToggleSwitch
-        label="Test Label"
-        value={false}
-        setValue={mockSetValue}
-        disabled={true}
-      />,
-    );
-
-    const checkbox = screen.getByRole("checkbox");
-    expect(checkbox).toBeDisabled();
-  });
-
   it("handles undefined value gracefully", () => {
     render(
       <ToggleSwitch
@@ -243,24 +230,5 @@ describe("ToggleSwitch", () => {
 
     const checkbox = screen.getByRole("checkbox");
     expect(checkbox).not.toBeChecked();
-  });
-
-  it("is properly disabled when disabled prop is set", () => {
-    render(
-      <ToggleSwitch
-        label="Test Label"
-        value={false}
-        setValue={mockSetValue}
-        disabled={true}
-      />,
-    );
-
-    const checkbox = screen.getByRole("checkbox");
-    expect(checkbox).toBeDisabled();
-
-    // When disabled, clicks won't trigger events
-    fireEvent.click(checkbox);
-    expect(mockSetValue).not.toHaveBeenCalled();
-    expect(mockImpact).not.toHaveBeenCalled();
   });
 });

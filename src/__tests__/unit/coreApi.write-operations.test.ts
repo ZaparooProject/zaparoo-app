@@ -21,7 +21,7 @@ Object.assign(mockWebSocket, {
 
 global.WebSocket = mockWebSocket as any;
 
-describe("CoreAPI - Enhanced Methods", () => {
+describe("CoreAPI Write Operations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Set up the send function

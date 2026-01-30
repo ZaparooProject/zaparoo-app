@@ -1,105 +1,94 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React from "react";
+import { ConnectionState } from "@/lib/store";
 
-// Mock dependencies
+// Mock CoreAPI
 const mockSettings = vi.fn();
 const mockSettingsUpdate = vi.fn();
-const mockSetPreferRemoteWriter = vi.fn();
-const mockRefetch = vi.fn();
 
-vi.mock("../../../lib/coreApi", () => ({
+vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
-    settings: mockSettings,
-    settingsUpdate: mockSettingsUpdate,
+    settings: () => mockSettings(),
+    settingsUpdate: (params: any) => mockSettingsUpdate(params),
   },
 }));
 
-vi.mock("../../../hooks/useAppSettings", () => ({
-  useAppSettings: vi.fn(() => ({
-    preferRemoteWriter: false,
-    setPreferRemoteWriter: mockSetPreferRemoteWriter,
-  })),
+// Mock stores
+const mockUseStatusStore = vi.fn();
+const mockUsePreferencesStore = vi.fn();
+
+vi.mock("@/lib/store", async (importOriginal) => {
+  const actual = (await importOriginal()) as any;
+  return {
+    ...actual,
+    useStatusStore: (selector: any) => mockUseStatusStore(selector),
+  };
+});
+
+vi.mock("@/lib/preferencesStore", () => ({
+  usePreferencesStore: (selector: any) => mockUsePreferencesStore(selector),
 }));
 
-vi.mock("../../../hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({})),
-}));
-
-vi.mock("../../../lib/store", () => ({
-  useStatusStore: vi.fn((selector) => {
-    const mockState = {
-      connected: true,
-    };
-    return selector(mockState);
-  }),
+// Mock router - use vi.hoisted to make variables accessible in mocks
+const { mockGoBack, componentRef } = vi.hoisted(() => ({
+  mockGoBack: vi.fn(),
+  componentRef: { current: null as any },
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
   return {
     ...actual,
-    useNavigate: vi.fn(() => vi.fn()),
-    createFileRoute: vi.fn(() => ({
-      useLoaderData: vi.fn(() => ({
-        restartScan: false,
-        launchOnScan: true,
-        launcherAccess: true,
-        preferRemoteWriter: false,
-      })),
-    })),
+    createFileRoute: () => (options: any) => {
+      componentRef.current = options.component;
+      return { options };
+    },
+    useRouter: () => ({ history: { back: mockGoBack } }),
+    Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+      <a href={to} data-testid="link">
+        {children}
+      </a>
+    ),
   };
 });
 
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: { [key: string]: string } = {
-        "settings.advanced.title": "Advanced Settings",
-        "settings.advanced.soundEffects": "Sound Effects",
-        "settings.advanced.autoDetect": "Auto Detect Readers",
-        "settings.advanced.debug": "Debug Logging",
-        "settings.advanced.preferRemoteWriter": "Prefer Remote Writer",
-        "settings.modeLabel": "Scan Mode",
-        "settings.tapMode": "Tap Mode",
-        "settings.insertMode": "Insert Mode",
-        "settings.insertHelp": "Hold tags on reader until removed",
-      };
-      return translations[key] || key;
-    },
-  }),
+// Mock hooks
+vi.mock("@/hooks/useSmartSwipe", () => ({
+  useSmartSwipe: () => ({}),
 }));
 
+vi.mock("@/hooks/usePageHeadingFocus", () => ({
+  usePageHeadingFocus: vi.fn(),
+}));
+
+// Mock Capacitor
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: vi.fn(() => false),
   },
 }));
 
-vi.mock("@capawesome-team/capacitor-nfc", () => ({
-  Nfc: {
-    isAvailable: vi.fn(() => Promise.resolve({ nfc: false })),
-  },
-}));
+// Import the route module to trigger createFileRoute which captures the component
+import "@/routes/settings.advanced";
 
-vi.mock("@capacitor/preferences", () => ({
-  Preferences: {
-    get: vi.fn().mockImplementation(({ key }) => {
-      const values: { [key: string]: string } = {
-        restartScan: "false",
-        launchOnScan: "true",
-        launcherAccess: "true",
-        preferRemoteWriter: "false",
-      };
-      return Promise.resolve({ value: values[key] || "false" });
-    }),
-  },
-}));
+// The component will be captured by the mock
+const getAdvancedSettings = () => componentRef.current;
 
 describe("Settings Advanced Route", () => {
   let queryClient: QueryClient;
 
+  const defaultStoreState = {
+    connected: true,
+    connectionState: ConnectionState.CONNECTED,
+    safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+  };
+
+  const defaultPreferencesState = {
+    showFilenames: false,
+    setShowFilenames: vi.fn(),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     queryClient = new QueryClient({
@@ -109,655 +98,196 @@ describe("Settings Advanced Route", () => {
       },
     });
 
-    // Mock default settings data
+    // Default mock implementations
     mockSettings.mockResolvedValue({
+      debugLogging: false,
       audioScanFeedback: true,
       readersAutoDetect: false,
-      debugLogging: false,
-      readersScanMode: "tap",
     });
-
     mockSettingsUpdate.mockResolvedValue({});
-    mockRefetch.mockResolvedValue({});
+
+    mockUseStatusStore.mockImplementation((selector) =>
+      selector(defaultStoreState),
+    );
+    mockUsePreferencesStore.mockImplementation((selector) =>
+      selector(defaultPreferencesState),
+    );
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    queryClient.clear();
   });
 
-  const renderAdvancedSettings = () => {
-    // Import the actual component
-    const AdvancedComponent = () => {
-      const [audioScanFeedback, setAudioScanFeedback] = React.useState(true);
-      const [readersAutoDetect, setReadersAutoDetect] = React.useState(false);
-      const [debugLogging, setDebugLogging] = React.useState(false);
-      const [readersScanMode, setReadersScanMode] = React.useState<
-        "tap" | "hold"
-      >("tap");
-      const [connected, setConnected] = React.useState(true);
-
-      return (
-        <div data-testid="advanced-settings">
-          <h1>Advanced Settings</h1>
-
-          <div data-testid="sound-effects-toggle">
-            <label>
-              <input
-                type="checkbox"
-                checked={audioScanFeedback}
-                onChange={(e) => {
-                  setAudioScanFeedback(e.target.checked);
-                  mockSettingsUpdate({ audioScanFeedback: e.target.checked });
-                }}
-                disabled={!connected}
-              />
-              Sound Effects
-            </label>
-          </div>
-
-          <div data-testid="auto-detect-toggle">
-            <label>
-              <input
-                type="checkbox"
-                checked={readersAutoDetect}
-                onChange={(e) => {
-                  setReadersAutoDetect(e.target.checked);
-                  mockSettingsUpdate({ readersAutoDetect: e.target.checked });
-                }}
-                disabled={!connected}
-              />
-              Auto Detect Readers
-            </label>
-          </div>
-
-          <div data-testid="debug-toggle">
-            <label>
-              <input
-                type="checkbox"
-                checked={debugLogging}
-                onChange={(e) => {
-                  setDebugLogging(e.target.checked);
-                  mockSettingsUpdate({ debugLogging: e.target.checked });
-                }}
-                disabled={!connected}
-              />
-              Debug Logging
-            </label>
-          </div>
-
-          <div data-testid="scan-mode-buttons">
-            <span>Scan Mode</span>
-            <button
-              data-testid="tap-mode-button"
-              onClick={() => {
-                setReadersScanMode("tap");
-                mockSettingsUpdate({ readersScanMode: "tap" });
-              }}
-              disabled={!connected}
-              className={readersScanMode === "tap" ? "active" : ""}
-            >
-              Tap Mode
-            </button>
-            <button
-              data-testid="hold-mode-button"
-              onClick={() => {
-                setReadersScanMode("hold");
-                mockSettingsUpdate({ readersScanMode: "hold" });
-              }}
-              disabled={!connected}
-              className={readersScanMode === "hold" ? "active" : ""}
-            >
-              Insert Mode
-            </button>
-          </div>
-
-          {readersScanMode === "hold" && connected && (
-            <p data-testid="insert-mode-help">
-              Hold tags on reader until removed
-            </p>
-          )}
-
-          <div data-testid="connection-status">
-            <button
-              onClick={() => setConnected(!connected)}
-              data-testid="toggle-connection"
-            >
-              {connected ? "Connected" : "Disconnected"}
-            </button>
-          </div>
-        </div>
-      );
-    };
-
+  const renderComponent = () => {
+    const AdvancedSettings = getAdvancedSettings();
     return render(
       <QueryClientProvider client={queryClient}>
-        <AdvancedComponent />
+        <AdvancedSettings />
       </QueryClientProvider>,
     );
   };
 
-  it("should render advanced settings page with all controls", async () => {
-    renderAdvancedSettings();
+  describe("rendering", () => {
+    it("should render the page title", async () => {
+      renderComponent();
 
-    expect(screen.getByTestId("advanced-settings")).toBeInTheDocument();
-    expect(screen.getByText("Advanced Settings")).toBeInTheDocument();
-    expect(screen.getByTestId("sound-effects-toggle")).toBeInTheDocument();
-    expect(screen.getByTestId("auto-detect-toggle")).toBeInTheDocument();
-    expect(screen.getByTestId("debug-toggle")).toBeInTheDocument();
-    expect(screen.getByTestId("scan-mode-buttons")).toBeInTheDocument();
-  });
+      await waitFor(() => {
+        expect(
+          screen.getByRole("heading", { name: "settings.advanced.title" }),
+        ).toBeInTheDocument();
+      });
+    });
 
-  it("should handle sound effects toggle", async () => {
-    renderAdvancedSettings();
+    it("should render debug logging toggle", async () => {
+      renderComponent();
 
-    const soundEffectsToggle = screen
-      .getByTestId("sound-effects-toggle")
-      .querySelector("input")!;
-    expect(soundEffectsToggle).toBeChecked();
+      await waitFor(() => {
+        expect(
+          screen.getByText("settings.advanced.debugLogging"),
+        ).toBeInTheDocument();
+      });
+    });
 
-    fireEvent.click(soundEffectsToggle);
+    it("should render show filenames toggle", async () => {
+      renderComponent();
 
-    expect(mockSettingsUpdate).toHaveBeenCalledWith({
-      audioScanFeedback: false,
+      await waitFor(() => {
+        expect(
+          screen.getByText("settings.advanced.showFilenames"),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should render view logs link when connected", async () => {
+      renderComponent();
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("settings.advanced.viewLogs"),
+        ).toBeInTheDocument();
+      });
     });
   });
 
-  it("should handle auto detect readers toggle", async () => {
-    renderAdvancedSettings();
+  describe("settings data loading", () => {
+    it("should call CoreAPI.settings on mount", async () => {
+      renderComponent();
 
-    const autoDetectToggle = screen
-      .getByTestId("auto-detect-toggle")
-      .querySelector("input")!;
-    expect(autoDetectToggle).not.toBeChecked();
+      await waitFor(() => {
+        expect(mockSettings).toHaveBeenCalled();
+      });
+    });
 
-    fireEvent.click(autoDetectToggle);
+    it("should display debug logging value from API", async () => {
+      mockSettings.mockResolvedValue({ debugLogging: true });
 
-    expect(mockSettingsUpdate).toHaveBeenCalledWith({
-      readersAutoDetect: true,
+      renderComponent();
+
+      await waitFor(() => {
+        const checkbox = screen.getByRole("checkbox", {
+          name: /settings.advanced.debugLogging/i,
+        });
+        expect(checkbox).toBeChecked();
+      });
     });
   });
 
-  it("should handle debug logging toggle", async () => {
-    renderAdvancedSettings();
+  describe("settings updates", () => {
+    it("should call settingsUpdate when debug logging is toggled", async () => {
+      mockSettings.mockResolvedValue({ debugLogging: false });
 
-    const debugToggle = screen
-      .getByTestId("debug-toggle")
-      .querySelector("input")!;
-    expect(debugToggle).not.toBeChecked();
+      renderComponent();
 
-    fireEvent.click(debugToggle);
+      // Wait for loading to complete (checkboxes to appear)
+      await waitFor(() => {
+        const checkboxes = screen.getAllByRole("checkbox");
+        expect(checkboxes.length).toBeGreaterThanOrEqual(2);
+      });
 
-    expect(mockSettingsUpdate).toHaveBeenCalledWith({ debugLogging: true });
-  });
+      // Get the first checkbox (debug logging toggle)
+      const checkboxes = screen.getAllByRole("checkbox");
+      const debugLoggingCheckbox = checkboxes[0]!;
+      fireEvent.click(debugLoggingCheckbox);
 
-  it("should handle scan mode changes", async () => {
-    renderAdvancedSettings();
-
-    const tapModeButton = screen.getByTestId("tap-mode-button");
-    const holdModeButton = screen.getByTestId("hold-mode-button");
-
-    expect(tapModeButton).toHaveClass("active");
-    expect(holdModeButton).not.toHaveClass("active");
-
-    // Switch to hold mode
-    fireEvent.click(holdModeButton);
-
-    expect(mockSettingsUpdate).toHaveBeenCalledWith({
-      readersScanMode: "hold",
+      await waitFor(() => {
+        expect(mockSettingsUpdate).toHaveBeenCalledWith({ debugLogging: true });
+      });
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId("insert-mode-help")).toBeInTheDocument();
-    });
-  });
+    it("should call setShowFilenames when show filenames is toggled", async () => {
+      const mockSetShowFilenames = vi.fn();
+      mockUsePreferencesStore.mockImplementation((selector) =>
+        selector({
+          showFilenames: false,
+          setShowFilenames: mockSetShowFilenames,
+        }),
+      );
 
-  it("should disable controls when disconnected", async () => {
-    renderAdvancedSettings();
+      renderComponent();
 
-    // Simulate disconnection
-    const disconnectButton = screen.getByTestId("toggle-connection");
-    fireEvent.click(disconnectButton);
+      // Wait for loading to complete (both checkboxes to appear)
+      await waitFor(() => {
+        const checkboxes = screen.getAllByRole("checkbox");
+        expect(checkboxes.length).toBeGreaterThanOrEqual(2);
+      });
 
-    await waitFor(() => {
-      const soundEffectsToggle = screen
-        .getByTestId("sound-effects-toggle")
-        .querySelector("input")!;
-      const autoDetectToggle = screen
-        .getByTestId("auto-detect-toggle")
-        .querySelector("input")!;
-      const debugToggle = screen
-        .getByTestId("debug-toggle")
-        .querySelector("input")!;
-      const tapModeButton = screen.getByTestId("tap-mode-button");
-      const holdModeButton = screen.getByTestId("hold-mode-button");
+      // Get the second checkbox (show filenames toggle)
+      const checkboxes = screen.getAllByRole("checkbox");
+      const showFilenamesCheckbox = checkboxes[1]!;
+      fireEvent.click(showFilenamesCheckbox);
 
-      expect(soundEffectsToggle).toBeDisabled();
-      expect(autoDetectToggle).toBeDisabled();
-      expect(debugToggle).toBeDisabled();
-      expect(tapModeButton).toBeDisabled();
-      expect(holdModeButton).toBeDisabled();
+      expect(mockSetShowFilenames).toHaveBeenCalledWith(true);
     });
   });
 
-  it("should hide insert mode help when not in hold mode", async () => {
-    renderAdvancedSettings();
+  describe("connection state", () => {
+    it("should disable debug logging toggle when disconnected", async () => {
+      mockUseStatusStore.mockImplementation((selector) =>
+        selector({
+          ...defaultStoreState,
+          connected: false,
+        }),
+      );
 
-    // Initially in tap mode, help should not be visible
-    expect(screen.queryByTestId("insert-mode-help")).not.toBeInTheDocument();
-  });
+      renderComponent();
 
-  it("should show insert mode help when in hold mode and connected", async () => {
-    renderAdvancedSettings();
+      await waitFor(() => {
+        const checkbox = screen.getByRole("checkbox", {
+          name: /settings.advanced.debugLogging/i,
+        });
+        expect(checkbox).toBeDisabled();
+      });
+    });
 
-    const holdModeButton = screen.getByTestId("hold-mode-button");
-    fireEvent.click(holdModeButton);
+    it("should show disabled view logs when disconnected", async () => {
+      mockUseStatusStore.mockImplementation((selector) =>
+        selector({
+          ...defaultStoreState,
+          connected: false,
+        }),
+      );
 
-    await waitFor(() => {
-      expect(screen.getByTestId("insert-mode-help")).toBeInTheDocument();
-      expect(
-        screen.getByText("Hold tags on reader until removed"),
-      ).toBeInTheDocument();
+      renderComponent();
+
+      await waitFor(() => {
+        // When disconnected, the link should not be rendered as a link
+        const viewLogsText = screen.getByText("settings.advanced.viewLogs");
+        expect(viewLogsText.closest("a")).toBeNull();
+      });
     });
   });
 
-  it("should handle preference remote writer setting", async () => {
-    // Mock native platform and NFC availability
-    const { Capacitor } = await import("@capacitor/core");
-    const { Nfc } = await import("@capawesome-team/capacitor-nfc");
+  describe("navigation", () => {
+    it("should navigate back when back button is clicked", async () => {
+      renderComponent();
 
-    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    vi.mocked(Nfc.isAvailable).mockResolvedValue({ nfc: true, hce: false });
+      await waitFor(() => {
+        expect(screen.getByLabelText("nav.back")).toBeInTheDocument();
+      });
 
-    // Enhanced component with remote writer preference
-    const ComponentWithRemoteWriter = () => {
-      const [preferRemoteWriter, setPreferRemoteWriter] = React.useState(false);
+      fireEvent.click(screen.getByLabelText("nav.back"));
 
-      return (
-        <div>
-          <div data-testid="prefer-remote-writer-toggle">
-            <label>
-              <input
-                type="checkbox"
-                checked={preferRemoteWriter}
-                onChange={(e) => {
-                  setPreferRemoteWriter(e.target.checked);
-                  mockSetPreferRemoteWriter(e.target.checked);
-                }}
-              />
-              Prefer Remote Writer
-            </label>
-          </div>
-        </div>
-      );
-    };
-
-    render(<ComponentWithRemoteWriter />);
-
-    const remoteWriterToggle = screen
-      .getByTestId("prefer-remote-writer-toggle")
-      .querySelector("input")!;
-    expect(remoteWriterToggle).not.toBeChecked();
-
-    fireEvent.click(remoteWriterToggle);
-
-    expect(mockSetPreferRemoteWriter).toHaveBeenCalledWith(true);
-  });
-
-  it("should handle loader data properly", async () => {
-    const loaderData = {
-      restartScan: false,
-      launchOnScan: true,
-      launcherAccess: true,
-      preferRemoteWriter: false,
-    };
-
-    // Mock the route loader by testing with the actual expected data structure
-    expect(loaderData).toEqual({
-      restartScan: false,
-      launchOnScan: true,
-      launcherAccess: true,
-      preferRemoteWriter: false,
+      expect(mockGoBack).toHaveBeenCalled();
     });
-  });
-
-  it("should handle settings query errors gracefully", async () => {
-    mockSettings.mockRejectedValue(new Error("Failed to fetch settings"));
-
-    const ComponentWithError = () => {
-      const [error, setError] = React.useState<Error | null>(null);
-
-      React.useEffect(() => {
-        mockSettings().catch((err: Error) => setError(err));
-      }, []);
-
-      return (
-        <div>
-          {error ? (
-            <div data-testid="settings-error">Error: {error.message}</div>
-          ) : (
-            <div data-testid="settings-loaded">Settings loaded</div>
-          )}
-        </div>
-      );
-    };
-
-    render(<ComponentWithError />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("settings-error")).toBeInTheDocument();
-      expect(
-        screen.getByText("Error: Failed to fetch settings"),
-      ).toBeInTheDocument();
-    });
-  });
-
-  it("should handle mutation errors gracefully", async () => {
-    mockSettingsUpdate.mockRejectedValue(new Error("Update failed"));
-
-    const ComponentWithUpdateError = () => {
-      const [error, setError] = React.useState<string | null>(null);
-
-      const handleUpdate = async () => {
-        try {
-          await mockSettingsUpdate({ audioScanFeedback: true });
-        } catch (err) {
-          setError((err as Error).message);
-        }
-      };
-
-      return (
-        <div>
-          <button onClick={handleUpdate} data-testid="update-button">
-            Update Settings
-          </button>
-          {error && <div data-testid="update-error">Update error: {error}</div>}
-        </div>
-      );
-    };
-
-    render(<ComponentWithUpdateError />);
-
-    const updateButton = screen.getByTestId("update-button");
-    fireEvent.click(updateButton);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("update-error")).toBeInTheDocument();
-      expect(
-        screen.getByText("Update error: Update failed"),
-      ).toBeInTheDocument();
-    });
-  });
-
-  it("should verify integration with query client", () => {
-    expect(queryClient).toBeInstanceOf(QueryClient);
-    expect(queryClient.getDefaultOptions().queries?.retry).toBe(false);
-    expect(queryClient.getDefaultOptions().mutations?.retry).toBe(false);
-  });
-});
-
-describe("Settings Advanced - Additional Coverage", () => {
-  let queryClient: QueryClient;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("renders show filenames toggle", () => {
-    const mockSetShowFilenames = vi.fn();
-    const ComponentWithShowFilenames = () => {
-      const [showFilenames, setShowFilenames] = React.useState(false);
-
-      return (
-        <div data-testid="advanced-settings-extra">
-          <div data-testid="show-filenames-toggle">
-            <label>
-              <input
-                type="checkbox"
-                checked={showFilenames}
-                onChange={(e) => {
-                  setShowFilenames(e.target.checked);
-                  mockSetShowFilenames(e.target.checked);
-                }}
-              />
-              Show Filenames
-            </label>
-          </div>
-        </div>
-      );
-    };
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <ComponentWithShowFilenames />
-      </QueryClientProvider>,
-    );
-
-    expect(screen.getByTestId("show-filenames-toggle")).toBeInTheDocument();
-  });
-
-  it("toggles show filenames setting", () => {
-    const mockSetShowFilenames = vi.fn();
-    const ComponentWithShowFilenames = () => {
-      const [showFilenames, setShowFilenames] = React.useState(false);
-
-      return (
-        <div data-testid="advanced-settings-extra">
-          <div data-testid="show-filenames-toggle">
-            <label>
-              <input
-                type="checkbox"
-                checked={showFilenames}
-                onChange={(e) => {
-                  setShowFilenames(e.target.checked);
-                  mockSetShowFilenames(e.target.checked);
-                }}
-                data-testid="show-filenames-checkbox"
-              />
-              Show Filenames
-            </label>
-          </div>
-        </div>
-      );
-    };
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <ComponentWithShowFilenames />
-      </QueryClientProvider>,
-    );
-
-    const checkbox = screen.getByTestId("show-filenames-checkbox");
-    fireEvent.click(checkbox);
-
-    expect(mockSetShowFilenames).toHaveBeenCalledWith(true);
-  });
-
-  it("renders view logs link when connected", () => {
-    const ComponentWithLogsLink = () => {
-      const connected = true;
-
-      return (
-        <div data-testid="advanced-settings-extra">
-          {connected ? (
-            <a href="/settings/logs" data-testid="view-logs-link">
-              View Logs
-            </a>
-          ) : (
-            <span
-              data-testid="view-logs-disabled"
-              className="text-foreground-disabled"
-            >
-              View Logs
-            </span>
-          )}
-        </div>
-      );
-    };
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <ComponentWithLogsLink />
-      </QueryClientProvider>,
-    );
-
-    expect(screen.getByTestId("view-logs-link")).toBeInTheDocument();
-  });
-
-  it("disables view logs when disconnected", () => {
-    const ComponentWithLogsLink = () => {
-      const connected = false;
-
-      return (
-        <div data-testid="advanced-settings-extra">
-          {connected ? (
-            <a href="/settings/logs" data-testid="view-logs-link">
-              View Logs
-            </a>
-          ) : (
-            <span
-              data-testid="view-logs-disabled"
-              className="text-foreground-disabled"
-            >
-              View Logs
-            </span>
-          )}
-        </div>
-      );
-    };
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <ComponentWithLogsLink />
-      </QueryClientProvider>,
-    );
-
-    expect(screen.queryByTestId("view-logs-link")).not.toBeInTheDocument();
-    expect(screen.getByTestId("view-logs-disabled")).toBeInTheDocument();
-  });
-
-  it("renders restore purchases button on native platform", async () => {
-    const { Capacitor } = await import("@capacitor/core");
-    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-
-    const ComponentWithRestorePurchases = () => {
-      const isNative = true;
-
-      return (
-        <div data-testid="advanced-settings-extra">
-          {isNative && (
-            <button data-testid="restore-purchases-button">
-              Restore Purchases
-            </button>
-          )}
-        </div>
-      );
-    };
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <ComponentWithRestorePurchases />
-      </QueryClientProvider>,
-    );
-
-    expect(screen.getByTestId("restore-purchases-button")).toBeInTheDocument();
-  });
-
-  it("handles loading state correctly", () => {
-    const ComponentWithLoading = () => {
-      const [isLoading, setIsLoading] = React.useState(true);
-
-      return (
-        <div data-testid="advanced-settings-loading">
-          {isLoading ? (
-            <div data-testid="loading-skeleton">Loading...</div>
-          ) : (
-            <div data-testid="settings-content">Settings Loaded</div>
-          )}
-          <button
-            onClick={() => setIsLoading(false)}
-            data-testid="finish-loading"
-          >
-            Finish Loading
-          </button>
-        </div>
-      );
-    };
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <ComponentWithLoading />
-      </QueryClientProvider>,
-    );
-
-    expect(screen.getByTestId("loading-skeleton")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId("finish-loading"));
-
-    expect(screen.getByTestId("settings-content")).toBeInTheDocument();
-  });
-
-  it("handles connection state transitions", () => {
-    const ComponentWithConnectionState = () => {
-      const [connectionState, setConnectionState] = React.useState("CONNECTED");
-      const isConnecting =
-        connectionState === "CONNECTING" || connectionState === "RECONNECTING";
-      const connected = connectionState === "CONNECTED";
-
-      return (
-        <div data-testid="connection-state-test">
-          <span data-testid="connection-state">{connectionState}</span>
-          <span data-testid="is-connecting">{isConnecting.toString()}</span>
-          <span data-testid="is-connected">{connected.toString()}</span>
-          <button
-            onClick={() => setConnectionState("CONNECTING")}
-            data-testid="set-connecting"
-          >
-            Set Connecting
-          </button>
-          <button
-            onClick={() => setConnectionState("RECONNECTING")}
-            data-testid="set-reconnecting"
-          >
-            Set Reconnecting
-          </button>
-          <button
-            onClick={() => setConnectionState("DISCONNECTED")}
-            data-testid="set-disconnected"
-          >
-            Set Disconnected
-          </button>
-        </div>
-      );
-    };
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <ComponentWithConnectionState />
-      </QueryClientProvider>,
-    );
-
-    expect(screen.getByTestId("is-connected")).toHaveTextContent("true");
-    expect(screen.getByTestId("is-connecting")).toHaveTextContent("false");
-
-    fireEvent.click(screen.getByTestId("set-connecting"));
-    expect(screen.getByTestId("is-connecting")).toHaveTextContent("true");
-    expect(screen.getByTestId("is-connected")).toHaveTextContent("false");
-
-    fireEvent.click(screen.getByTestId("set-reconnecting"));
-    expect(screen.getByTestId("is-connecting")).toHaveTextContent("true");
-
-    fireEvent.click(screen.getByTestId("set-disconnected"));
-    expect(screen.getByTestId("is-connecting")).toHaveTextContent("false");
-    expect(screen.getByTestId("is-connected")).toHaveTextContent("false");
   });
 });

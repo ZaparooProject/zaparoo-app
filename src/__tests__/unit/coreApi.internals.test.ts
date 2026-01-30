@@ -32,7 +32,7 @@ vi.mock("@capacitor/preferences", () => ({
   },
 }));
 
-describe("CoreAPI Coverage Improvements", () => {
+describe("CoreAPI Internals", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -346,6 +346,57 @@ describe("CoreAPI Coverage Improvements", () => {
       expect(debugSpy).toHaveBeenCalledWith("mappings delete", params);
 
       debugSpy.mockRestore();
+    });
+  });
+
+  describe("Queue and network error handling", () => {
+    it("should handle send errors during queue flush", async () => {
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      // Set up a disconnected state to queue requests
+      CoreAPI.setWsInstance({ isConnected: false, send: mockSend } as any);
+
+      // Queue a request
+      const requestPromise = CoreAPI.version();
+
+      // Now connect and mock send to fail during flush
+      mockSend.mockImplementation(() => {
+        throw new Error("Flush send failed");
+      });
+
+      CoreAPI.setWsInstance({ isConnected: true, send: mockSend } as any);
+
+      // The queued request should be rejected
+      await expect(requestPromise).rejects.toThrow();
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to send queued request during flush:",
+        expect.any(Error),
+      );
+      consoleSpy.mockRestore();
+    });
+
+    it("should handle network disconnection during API calls", async () => {
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      // Simulate network error
+      mockSend.mockImplementation(() => {
+        const networkError = new Error("Network Error");
+        networkError.name = "NetworkError";
+        throw networkError;
+      });
+
+      await expect(CoreAPI.version()).rejects.toThrow("Failed to send request");
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to send request:",
+        expect.any(Error),
+      );
+      consoleSpy.mockRestore();
     });
   });
 });

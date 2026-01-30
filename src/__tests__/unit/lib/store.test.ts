@@ -13,90 +13,49 @@ describe("StatusStore", () => {
     });
   });
 
-  it("should have default initial state", () => {
-    const state = useStatusStore.getState();
-    expect(state.connected).toBe(false);
-    expect(state.connectionError).toBe("");
-    expect(state.lastToken.uid).toBe("");
-    expect(state.playing.systemId).toBe("");
-    expect(state.deviceHistory).toEqual([]);
-  });
+  describe("device history business logic", () => {
+    it("should deduplicate devices when adding same address twice", () => {
+      const { addDeviceHistory } = useStatusStore.getState();
 
-  it("should update connection state", () => {
-    const { setConnected, setConnectionError } = useStatusStore.getState();
+      addDeviceHistory("192.168.1.100");
+      addDeviceHistory("192.168.1.100"); // Add same address again
 
-    setConnected(true);
-    expect(useStatusStore.getState().connected).toBe(true);
+      // Should only have one entry
+      expect(useStatusStore.getState().deviceHistory).toEqual([
+        { address: "192.168.1.100" },
+      ]);
+    });
 
-    setConnectionError("Test error");
-    expect(useStatusStore.getState().connectionError).toBe("Test error");
-  });
+    it("should add, remove, and clear device history", () => {
+      const { addDeviceHistory, removeDeviceHistory, clearDeviceHistory } =
+        useStatusStore.getState();
 
-  it("should manage device history", () => {
-    const { addDeviceHistory, removeDeviceHistory, clearDeviceHistory } =
-      useStatusStore.getState();
+      // Add devices
+      addDeviceHistory("192.168.1.100");
+      addDeviceHistory("192.168.1.200");
+      expect(useStatusStore.getState().deviceHistory).toHaveLength(2);
 
-    // Add a device
-    addDeviceHistory("192.168.1.100");
-    expect(useStatusStore.getState().deviceHistory).toEqual([
-      { address: "192.168.1.100" },
-    ]);
+      // Remove a device
+      removeDeviceHistory("192.168.1.100");
+      expect(useStatusStore.getState().deviceHistory).toEqual([
+        { address: "192.168.1.200" },
+      ]);
 
-    // Add another device
-    addDeviceHistory("192.168.1.200");
-    expect(useStatusStore.getState().deviceHistory).toEqual([
-      { address: "192.168.1.100" },
-      { address: "192.168.1.200" },
-    ]);
-
-    // Remove a device
-    removeDeviceHistory("192.168.1.100");
-    expect(useStatusStore.getState().deviceHistory).toEqual([
-      { address: "192.168.1.200" },
-    ]);
-
-    // Clear all devices
-    clearDeviceHistory();
-    expect(useStatusStore.getState().deviceHistory).toEqual([]);
-  });
-
-  it("should handle queue states correctly", () => {
-    const { setRunQueue, setWriteQueue } = useStatusStore.getState();
-
-    // Test run queue
-    const runQueueItem = { value: "test-uid", unsafe: false };
-    setRunQueue(runQueueItem);
-    expect(useStatusStore.getState().runQueue).toEqual(runQueueItem);
-
-    // Test write queue
-    setWriteQueue("test-write-data");
-    expect(useStatusStore.getState().writeQueue).toBe("test-write-data");
+      // Clear all devices
+      clearDeviceHistory();
+      expect(useStatusStore.getState().deviceHistory).toEqual([]);
+    });
   });
 
   describe("ConnectionState", () => {
-    it("should set connection state", () => {
-      const { setConnectionState } = useStatusStore.getState();
-      setConnectionState(ConnectionState.CONNECTING);
-
-      expect(useStatusStore.getState().connectionState).toBe(
-        ConnectionState.CONNECTING,
-      );
-    });
-
-    it("should set last connection time", () => {
-      const { setLastConnectionTime } = useStatusStore.getState();
-      const now = Date.now();
-      setLastConnectionTime(now);
-
-      expect(useStatusStore.getState().lastConnectionTime).toBe(now);
-    });
-
-    it("should provide backward compatible connected getter", () => {
+    it("should derive connected boolean from connectionState (backward compatibility)", () => {
       const { setConnectionState } = useStatusStore.getState();
 
+      // Only CONNECTED state should report as connected
       setConnectionState(ConnectionState.CONNECTED);
       expect(useStatusStore.getState().connected).toBe(true);
 
+      // All other states should report as disconnected
       setConnectionState(ConnectionState.CONNECTING);
       expect(useStatusStore.getState().connected).toBe(false);
 
