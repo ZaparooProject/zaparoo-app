@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, renderHook, screen } from "../../../test-utils";
+import { render, screen } from "../../../test-utils";
 import { renderHook as renderHookWithoutProviders } from "@testing-library/react";
 import { useSlideModalManager } from "../../../hooks/useSlideModalManager";
 import { SlideModalProvider } from "../../../components/SlideModalProvider";
@@ -19,9 +19,12 @@ describe("useSlideModalManager", () => {
 
   describe("with provider", () => {
     it("should register and unregister modals", () => {
-      const { result } = renderHook(() => useSlideModalManager(), {
-        wrapper: SlideModalProvider,
-      });
+      const { result } = renderHookWithoutProviders(
+        () => useSlideModalManager(),
+        {
+          wrapper: SlideModalProvider,
+        },
+      );
 
       const mockClose1 = vi.fn();
       const mockClose2 = vi.fn();
@@ -38,9 +41,12 @@ describe("useSlideModalManager", () => {
     });
 
     it("should unregister modals", () => {
-      const { result } = renderHook(() => useSlideModalManager(), {
-        wrapper: SlideModalProvider,
-      });
+      const { result } = renderHookWithoutProviders(
+        () => useSlideModalManager(),
+        {
+          wrapper: SlideModalProvider,
+        },
+      );
 
       const mockClose = vi.fn();
 
@@ -57,9 +63,12 @@ describe("useSlideModalManager", () => {
     });
 
     it("should handle closeAllExcept with no registered modals", () => {
-      const { result } = renderHook(() => useSlideModalManager(), {
-        wrapper: SlideModalProvider,
-      });
+      const { result } = renderHookWithoutProviders(
+        () => useSlideModalManager(),
+        {
+          wrapper: SlideModalProvider,
+        },
+      );
 
       // This should not throw an error
       expect(() => {

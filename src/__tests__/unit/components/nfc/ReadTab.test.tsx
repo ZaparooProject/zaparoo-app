@@ -56,8 +56,18 @@ describe("ReadTab", () => {
     it("should show empty state when no result", () => {
       render(<ReadTab result={null} onScan={mockOnScan} />);
 
-      // Component shows many more fields now: UID, content, and all technical/low-level fields
-      expect(screen.getAllByText("-").length).toBeGreaterThan(10);
+      // Key sections should be rendered with placeholder values
+      expect(
+        screen.getByText("create.nfc.readTab.tagInformation"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("create.nfc.readTab.technicalDetails"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("create.nfc.readTab.lowLevelTagData"),
+      ).toBeInTheDocument();
+      // UID and content fields should show "-" placeholders (using getAllByText since multiple exist)
+      expect(screen.getAllByText("-").length).toBeGreaterThan(0);
     });
 
     it("should render with tag result data", () => {
@@ -102,9 +112,14 @@ describe("ReadTab", () => {
 
       render(<ReadTab result={mockResult} onScan={mockOnScan} />);
 
-      // Look for share button by icon since it doesn't have text
-      const buttons = screen.getAllByRole("button");
-      expect(buttons.length).toBeGreaterThan(1); // Should have scan + share + copy buttons
+      // Share button should appear when tag data exists
+      expect(
+        screen.getByRole("button", { name: "create.nfc.readTab.shareTagData" }),
+      ).toBeInTheDocument();
+      // Scan button should also be present
+      expect(
+        screen.getByRole("button", { name: /scanTag/i }),
+      ).toBeInTheDocument();
     });
 
     it("should not render share button when no tag data", () => {
@@ -151,9 +166,13 @@ describe("ReadTab", () => {
 
       render(<ReadTab result={mockResult} onScan={mockOnScan} />);
 
-      // Look for show/hide raw data functionality
-      const toggleButtons = screen.getAllByRole("button");
-      expect(toggleButtons.length).toBeGreaterThan(1);
+      // Scan and share buttons should be present
+      expect(
+        screen.getByRole("button", { name: /scanTag/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "create.nfc.readTab.shareTagData" }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -287,17 +306,21 @@ describe("ReadTab", () => {
     });
   });
 
-  describe("content type icon rendering", () => {
+  describe("content type display", () => {
     const testCases = [
-      { text: "https://example.com", expectedIcon: "globe" },
-      { text: "http://test.com", expectedIcon: "globe" },
-      { text: "wifi:T:WPA;S:MyNetwork;P:password;;", expectedIcon: "wifi" },
-      { text: "user@example.com", expectedIcon: "message-circle" },
-      { text: "Plain text content", expectedIcon: "file-text" },
+      { text: "https://example.com", description: "URL" },
+      { text: "http://test.com", description: "HTTP URL" },
+      {
+        text: "wifi:T:WPA;S:MyNetwork;P:password;;",
+        description: "WiFi config",
+      },
+      { text: "user@example.com", description: "email address" },
+      { text: "Plain text content", description: "plain text" },
     ];
 
-    testCases.forEach(({ text, expectedIcon }) => {
-      it(`should show ${expectedIcon} icon for ${text.substring(0, 20)}...`, () => {
+    it.each(testCases)(
+      "should display $description content correctly",
+      ({ text }) => {
         const mockResult = {
           status: Status.Success,
           info: {
@@ -312,13 +335,12 @@ describe("ReadTab", () => {
         render(<ReadTab result={mockResult} onScan={mockOnScan} />);
 
         expect(screen.getByText(text)).toBeInTheDocument();
-        // The icon should be rendered (tested indirectly through the content being displayed)
-      });
-    });
+      },
+    );
   });
 
   describe("raw data display", () => {
-    it("should show raw data toggle when rawTag is available", () => {
+    it("should render low-level tag data section", () => {
       const mockResult = {
         status: Status.Success,
         info: {
@@ -332,14 +354,20 @@ describe("ReadTab", () => {
 
       render(<ReadTab result={mockResult} onScan={mockOnScan} />);
 
-      // Look for show/hide raw data button
-      const buttons = screen.getAllByRole("button");
-
-      // Should have raw data functionality available
-      expect(buttons.length).toBeGreaterThan(1);
+      // Low-level tag data section should be present
+      expect(
+        screen.getByText("create.nfc.readTab.lowLevelTagData"),
+      ).toBeInTheDocument();
+      // Scan and share buttons should be available
+      expect(
+        screen.getByRole("button", { name: /scanTag/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "create.nfc.readTab.shareTagData" }),
+      ).toBeInTheDocument();
     });
 
-    it("should toggle raw data visibility", () => {
+    it("should show hex toggle when NDEF records are available", () => {
       const mockResult = {
         status: Status.Success,
         info: {
@@ -347,19 +375,23 @@ describe("ReadTab", () => {
             uid: "04:12:34:56",
             text: "Test",
           },
-          rawTag: null,
+          rawTag: {
+            id: [4, 18, 52, 86],
+            message: {
+              records: [
+                { tnf: 1, type: [84], payload: [72, 101, 108, 108, 111] },
+              ],
+            },
+          },
         },
       };
 
       render(<ReadTab result={mockResult} onScan={mockOnScan} />);
 
-      // Find toggle button (eye icon)
-      const toggleButtons = screen
-        .getAllByRole("button")
-        .filter((btn) => btn.querySelector("svg"));
-
-      // Should have multiple buttons including the raw data toggle
-      expect(toggleButtons.length).toBeGreaterThan(0);
+      // Hex toggle button should appear when NDEF records exist
+      expect(
+        screen.getByRole("button", { name: /showHex|hideHex/i }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -367,11 +399,20 @@ describe("ReadTab", () => {
     it("should handle null result gracefully", () => {
       render(<ReadTab result={null} onScan={mockOnScan} />);
 
+      // All sections should render with placeholder values
       expect(
         screen.getByText("create.nfc.readTab.tagInformation"),
       ).toBeInTheDocument();
-      // Component shows many placeholder fields when no data
-      expect(screen.getAllByText("-").length).toBeGreaterThan(10);
+      expect(
+        screen.getByText("create.nfc.readTab.technicalDetails"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("create.nfc.readTab.lowLevelTagData"),
+      ).toBeInTheDocument();
+      // Scan button should be available
+      expect(
+        screen.getByRole("button", { name: /scanTag/i }),
+      ).toBeInTheDocument();
     });
 
     it("should handle result with missing tag data", () => {
@@ -385,11 +426,19 @@ describe("ReadTab", () => {
 
       render(<ReadTab result={mockResult} onScan={mockOnScan} />);
 
+      // All sections should render
       expect(
         screen.getByText("create.nfc.readTab.tagInformation"),
       ).toBeInTheDocument();
-      // Component shows many placeholder fields when no tag data
-      expect(screen.getAllByText("-").length).toBeGreaterThan(10);
+      expect(
+        screen.getByText("create.nfc.readTab.technicalDetails"),
+      ).toBeInTheDocument();
+      // Share button should NOT appear (no tag data)
+      expect(
+        screen.queryByRole("button", {
+          name: "create.nfc.readTab.shareTagData",
+        }),
+      ).not.toBeInTheDocument();
     });
 
     it("should handle result with partial tag data", () => {
@@ -406,9 +455,12 @@ describe("ReadTab", () => {
 
       render(<ReadTab result={mockResult} onScan={mockOnScan} />);
 
+      // UID should be displayed
       expect(screen.getByText("04:12:34:56")).toBeInTheDocument();
-      // Empty text should show as "-", plus many other technical field placeholders
-      expect(screen.getAllByText("-").length).toBeGreaterThan(5);
+      // Share button should appear (tag exists even with empty text)
+      expect(
+        screen.getByRole("button", { name: "create.nfc.readTab.shareTagData" }),
+      ).toBeInTheDocument();
     });
   });
 

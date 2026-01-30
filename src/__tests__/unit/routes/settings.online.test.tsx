@@ -555,7 +555,7 @@ describe("Settings Online Route", () => {
       const deleteButtons = screen.getAllByRole("button", {
         name: /online.deleteAccount/,
       });
-      const confirmDeleteButton = deleteButtons[deleteButtons.length - 1];
+      const confirmDeleteButton = deleteButtons[deleteButtons.length - 1]!;
       fireEvent.click(confirmDeleteButton);
 
       await waitFor(() => {

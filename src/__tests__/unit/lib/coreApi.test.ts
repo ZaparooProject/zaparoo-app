@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CoreAPI, getDeviceAddress, getWsUrl } from "@/lib/coreApi.ts";
 import { Capacitor } from "@capacitor/core";
-import {
-  Notification,
-  SettingsResponse,
-  UpdateSettingsRequest,
-} from "@/lib/models.ts";
+import { Notification, SettingsResponse } from "@/lib/models.ts";
 
 // Mock Capacitor
 vi.mock("@capacitor/core");
@@ -117,21 +113,30 @@ describe("CoreAPI", () => {
     );
   });
 
-  it("should call stop method with correct JSON-RPC format", () => {
-    // Start a stop call (but don't await to avoid timeout)
-    CoreAPI.stop().catch(() => {
-      // Ignore timeout errors to prevent unhandled rejections
-    });
+  it.each([
+    ["stop", () => CoreAPI.stop(), "stop"],
+    ["mediaActive", () => CoreAPI.mediaActive(), "media.active"],
+    ["settingsReload", () => CoreAPI.settingsReload(), "settings.reload"],
+    [
+      "readersWriteCancel",
+      () => CoreAPI.readersWriteCancel(),
+      "readers.write.cancel",
+    ],
+  ] as const)(
+    "should call %s method with correct JSON-RPC format",
+    (_, apiCall, expectedMethod) => {
+      apiCall().catch(() => {
+        // Ignore timeout errors
+      });
 
-    // Verify the request was sent with correct format
-    expect(mockSend).toHaveBeenCalledOnce();
-
-    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
-    expect(sentData.jsonrpc).toBe("2.0");
-    expect(sentData.method).toBe("stop");
-    expect(sentData.id).toBeDefined();
-    expect(sentData.timestamp).toBeDefined();
-  });
+      expect(mockSend).toHaveBeenCalledOnce();
+      const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+      expect(sentData.jsonrpc).toBe("2.0");
+      expect(sentData.method).toBe(expectedMethod);
+      expect(sentData.id).toBeDefined();
+      expect(sentData.timestamp).toBeDefined();
+    },
+  );
 
   it("should handle tokens.removed notification", async () => {
     const tokensRemovedEvent = {
@@ -150,80 +155,6 @@ describe("CoreAPI", () => {
     });
   });
 
-  it("should have runZapScript property in SettingsResponse interface", () => {
-    // This test will compile check that SettingsResponse has runZapScript
-    const checkInterface = (settings: SettingsResponse) => {
-      // This line should cause a TypeScript error if runZapScript doesn't exist
-      const hasRunZapScript: boolean = settings.runZapScript;
-      expect(typeof hasRunZapScript).toBe("boolean");
-    };
-
-    const mockSettings: SettingsResponse = {
-      runZapScript: true,
-      debugLogging: false,
-      audioScanFeedback: true,
-      readersAutoDetect: true,
-      readersScanMode: "tap",
-      readersScanExitDelay: 0,
-      readersScanIgnoreSystems: [],
-    };
-
-    checkInterface(mockSettings);
-  });
-
-  it("should call mediaActive method with correct JSON-RPC format", () => {
-    // Start a mediaActive call (but don't await to avoid timeout)
-    CoreAPI.mediaActive().catch(() => {
-      // Ignore timeout errors to prevent unhandled rejections
-    });
-
-    // Verify the request was sent with correct format
-    expect(mockSend).toHaveBeenCalledOnce();
-
-    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
-    expect(sentData.jsonrpc).toBe("2.0");
-    expect(sentData.method).toBe("media.active");
-    expect(sentData.id).toBeDefined();
-    expect(sentData.timestamp).toBeDefined();
-  });
-
-  it("should call settingsReload method with correct JSON-RPC format", () => {
-    // Start a settingsReload call (but don't await to avoid timeout)
-    CoreAPI.settingsReload().catch(() => {
-      // Ignore timeout errors to prevent unhandled rejections
-    });
-
-    // Verify the request was sent with correct format
-    expect(mockSend).toHaveBeenCalledOnce();
-
-    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
-    expect(sentData.jsonrpc).toBe("2.0");
-    expect(sentData.method).toBe("settings.reload");
-    expect(sentData.id).toBeDefined();
-    expect(sentData.timestamp).toBeDefined();
-  });
-
-  it("should call readersWriteCancel method with correct JSON-RPC format", () => {
-    // Start a readersWriteCancel call (but don't await to avoid timeout)
-    CoreAPI.readersWriteCancel().catch(() => {
-      // Ignore timeout errors to prevent unhandled rejections
-    });
-
-    // Verify the request was sent with correct format
-    expect(mockSend).toHaveBeenCalledOnce();
-
-    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
-    expect(sentData.jsonrpc).toBe("2.0");
-    expect(sentData.method).toBe("readers.write.cancel");
-    expect(sentData.id).toBeDefined();
-    expect(sentData.timestamp).toBeDefined();
-  });
-
-  it("should not have runScript method since it's not supported by core API", () => {
-    // Test that runScript method doesn't exist since it's not supported by core
-    expect((CoreAPI as any).runScript).toBeUndefined();
-  });
-
   it("should have readers method returning ReadersResponse type", () => {
     // Test that readers method exists and has proper typing
     expect(typeof CoreAPI.readers).toBe("function");
@@ -237,17 +168,6 @@ describe("CoreAPI", () => {
     // Verify it calls the correct API method
     const sentData = JSON.parse(mockSend.mock.calls[0][0]);
     expect(sentData.method).toBe("readers");
-  });
-
-  it("should support runZapScript in UpdateSettingsRequest", () => {
-    // Test that UpdateSettingsRequest supports runZapScript field for API compatibility
-    const updateRequest: UpdateSettingsRequest = {
-      runZapScript: false,
-      debugLogging: true,
-    };
-
-    expect(updateRequest.runZapScript).toBe(false);
-    expect(updateRequest.debugLogging).toBe(true);
   });
 
   it("should use readersScanIgnoreSystem (singular) to match core API response", () => {

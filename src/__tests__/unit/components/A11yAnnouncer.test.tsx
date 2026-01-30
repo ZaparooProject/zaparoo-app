@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act, renderHook } from "../../../test-utils";
+import { render, screen, act } from "../../../test-utils";
 import { renderHook as renderHookWithoutProviders } from "@testing-library/react";
 import {
   A11yAnnouncerProvider,
@@ -77,7 +77,9 @@ describe("A11yAnnouncer", () => {
         <A11yAnnouncerProvider>{children}</A11yAnnouncerProvider>
       );
 
-      const { result } = renderHook(() => useAnnouncer(), { wrapper });
+      const { result } = renderHookWithoutProviders(() => useAnnouncer(), {
+        wrapper,
+      });
 
       expect(result.current.announce).toBeDefined();
     });

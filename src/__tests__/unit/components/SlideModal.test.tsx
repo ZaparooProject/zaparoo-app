@@ -95,17 +95,12 @@ describe("SlideModal", () => {
 
   it("closes modal when overlay is clicked", () => {
     const closeMock = vi.fn();
-    const { container } = render(
-      <SlideModal {...mockProps} isOpen={true} close={closeMock} />,
-    );
+    render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
 
-    // Target the overlay div specifically (has aria-hidden="true")
-    const overlay = container.querySelector(
-      '.fixed.inset-0[aria-hidden="true"]',
-    );
+    const overlay = screen.getByTestId("modal-overlay");
     expect(overlay).toBeInTheDocument();
 
-    fireEvent.click(overlay!);
+    fireEvent.click(overlay);
 
     expect(closeMock).toHaveBeenCalled();
   });

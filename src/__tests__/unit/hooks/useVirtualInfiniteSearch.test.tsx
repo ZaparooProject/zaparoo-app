@@ -5,7 +5,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "../../../test-utils";
+import { waitFor } from "../../../test-utils";
+import { renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useVirtualInfiniteSearch } from "../../../hooks/useVirtualInfiniteSearch";
 import { SearchResultsResponse } from "../../../lib/models";

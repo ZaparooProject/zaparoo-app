@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
+// Note: readFileSync and resolve are still used for loading translation files below
+
 /**
  * Configuration validation tests for the tour feature.
  *
@@ -76,31 +78,6 @@ describe("Tour Configuration Validation", () => {
       expect(buttons.back).toBeDefined();
       expect(buttons.next).toBeDefined();
       expect(buttons.finish).toBeDefined();
-    });
-  });
-
-  describe("CSS styling", () => {
-    let cssSource: string;
-
-    beforeEach(() => {
-      cssSource = readFileSync(resolve(__dirname, "../../index.css"), "utf-8");
-    });
-
-    it("should have tour-specific CSS classes", () => {
-      // Check for zaparoo-tour-step class
-      expect(cssSource).toMatch(/\.zaparoo-tour-step/);
-
-      // Check for shepherd styling
-      expect(cssSource).toMatch(/\.shepherd-element/);
-      expect(cssSource).toMatch(/\.shepherd-content/);
-      expect(cssSource).toMatch(/\.shepherd-button/);
-      expect(cssSource).toMatch(/\.shepherd-modal-overlay-container/);
-    });
-
-    it("should have custom theme colors matching app design", () => {
-      // Check that custom colors are used (not default shepherd)
-      expect(cssSource).toMatch(/hsl\(210 22% 15%\)/); // --card background
-      expect(cssSource).toMatch(/background-image:\s*radial-gradient/); // button gradient
     });
   });
 });

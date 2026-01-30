@@ -301,8 +301,11 @@ describe("Settings Readers Route", () => {
       });
       fireEvent.click(holdButton);
 
-      expect(mockSettingsUpdate).toHaveBeenCalledWith({
-        readersScanMode: "hold",
+      // Wait for the async mutation to be called
+      await waitFor(() => {
+        expect(mockSettingsUpdate).toHaveBeenCalledWith({
+          readersScanMode: "hold",
+        });
       });
     });
   });
