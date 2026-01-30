@@ -81,13 +81,115 @@ src/
 
 ## Testing Requirements
 
-### Test Structure
+### Testing Philosophy
+
+#### The Testing Trophy Model
+
+Tests in this codebase follow the "Testing Trophy" model, which prioritizes integration tests for maximum return on investment:
+
+```
+        ╱╲
+       ╱  ╲        E2E / Smoke (few)
+      ╱────╲       Critical user journeys only
+     ╱      ╲
+    ╱ INTEG- ╲     Integration (most)
+   ╱  RATION  ╲    Highest confidence, test features as users experience them
+  ╱────────────╲
+ ╱    UNIT      ╲  Unit (some)
+╱________________╲ Pure logic, utilities, edge cases
+     STATIC        TypeScript + ESLint (foundation)
+```
+
+**Key Principle:** "The more your tests resemble the way your software is used, the more confidence they can give you." — Kent C. Dodds
+
+#### What Each Level Owns
+
+| Level       | Owns                                              | Examples                                              |
+| ----------- | ------------------------------------------------- | ----------------------------------------------------- |
+| Static      | Type errors, syntax, code style                   | TypeScript errors, ESLint violations                  |
+| Unit        | Pure functions, utilities, validators, edge cases | `formatDate()`, `validateEmail()`, store selectors    |
+| Integration | Component + state + API behavior                  | Form submission, modal interactions, search flows     |
+| Smoke       | Critical user journeys work                       | App loads, navigation works, core features accessible |
+
+#### Why Integration Tests Have Highest ROI
+
+1. **User-centric**: Tests the actual user experience, not internal implementation
+2. **Refactor-friendly**: Less brittle when implementation changes
+3. **Bug detection**: Catches integration bugs that unit tests miss
+4. **Confidence**: Proves multiple parts work together correctly
+5. **Maintenance**: Fewer tests needed to achieve same confidence
+
+### Test Organization
+
+#### Directory Structure
 
 Tests are organized by type with specific patterns:
 
-- **Unit tests**: `src/__tests__/unit/**/*.test.{ts,tsx}` - Test individual components, hooks, utilities
-- **Integration tests**: `src/__tests__/integration/**/*.test.tsx` - Test feature flows and interactions
+- **Unit tests**: `src/__tests__/unit/**/*.test.{ts,tsx}` - Individual components, hooks, utilities
+- **Integration tests**: `src/__tests__/integration/**/*.test.tsx` - Feature flows and interactions
 - **Smoke tests**: `src/__tests__/smoke/**/*.test.ts` - Basic sanity checks
+
+#### File Naming
+
+- `ComponentName.test.tsx` - General tests for a component
+- `ComponentName.ios.test.tsx` - iOS-specific tests
+- `hookName.test.ts` - Hook tests (non-JSX)
+- `utility.test.ts` - Utility function tests
+
+### Test Structure & Naming
+
+#### AAA Pattern (Arrange-Act-Assert)
+
+Every test should follow this structure for clarity:
+
+```typescript
+it("should show error when form is submitted empty", async () => {
+  // Arrange - Set up the test scenario
+  const user = userEvent.setup();
+  const onSubmit = vi.fn();
+  render(<LoginForm onSubmit={onSubmit} />);
+
+  // Act - Perform the action being tested
+  await user.click(screen.getByRole("button", { name: /submit/i }));
+
+  // Assert - Verify the expected outcome
+  expect(screen.getByRole("alert")).toHaveTextContent(/email is required/i);
+  expect(onSubmit).not.toHaveBeenCalled();
+});
+```
+
+#### Test Naming Conventions
+
+Use `should + verb` format that describes behavior from the user's perspective:
+
+```typescript
+// ✅ GOOD - Describes observable behavior
+it("should show error when email is invalid", () => {});
+it("should disable submit button while loading", () => {});
+it("should navigate to home after successful login", () => {});
+
+// ❌ BAD - Describes implementation details
+it("should set error state to true", () => {});
+it("should call validateEmail function", () => {});
+it("should update the DOM", () => {});
+```
+
+#### Describe Block Organization
+
+```typescript
+describe("LoginForm", () => {
+  // Group by feature or behavior
+  describe("validation", () => {
+    it("should show error when email is empty", () => {});
+    it("should show error when email format is invalid", () => {});
+  });
+
+  describe("submission", () => {
+    it("should call onSubmit with form data", () => {});
+    it("should show loading state while submitting", () => {});
+  });
+});
+```
 
 ### Test Setup
 
@@ -98,18 +200,276 @@ The test environment is configured in `vitest.config.ts` and `src/test-setup.ts`
 - **MSW handlers**: `src/test-utils/msw-handlers.ts` for API mocking
 - **Custom render**: `src/test-utils/index.tsx` wraps with providers (QueryClient, A11yAnnouncer, SlideModal)
 
-### Writing Tests
-
 #### Import from test-utils
 
 ```typescript
-import { render, screen } from "../../../test-utils";
+import { render, screen, waitFor } from "../../../test-utils";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 ```
 
-#### Use Factory Functions for Mock Data
+#### Automatic Cleanup
 
-Use `src/test-utils/factories.ts` to generate realistic test data:
+The setup automatically handles after each test:
+
+- `CoreAPI.reset()` - Reset API client state
+- `vi.clearAllTimers()` and `vi.useRealTimers()` - Timer cleanup
+- `server.resetHandlers()` - MSW handler reset
+- React Testing Library cleanup
+
+### Query Priority (React Testing Library)
+
+Use accessible queries in this priority order:
+
+| Priority | Query                  | Use Case                                                |
+| -------- | ---------------------- | ------------------------------------------------------- |
+| 1        | `getByRole`            | Best for accessibility - buttons, links, headings, etc. |
+| 2        | `getByLabelText`       | Form inputs with labels                                 |
+| 3        | `getByPlaceholderText` | Inputs without visible labels (less preferred)          |
+| 4        | `getByText`            | Non-interactive content, messages                       |
+| 5        | `getByDisplayValue`    | Current value of form elements                          |
+| 6        | `getByAltText`         | Images                                                  |
+| 7        | `getByTitle`           | Elements with title attribute (rarely needed)           |
+| 8        | `getByTestId`          | **Last resort only** - when no semantic query works     |
+
+#### Query Variants
+
+| Variant    | Returns           | Throws                          | Use Case                              |
+| ---------- | ----------------- | ------------------------------- | ------------------------------------- |
+| `getBy*`   | Element           | Yes, if not found               | Element should exist immediately      |
+| `queryBy*` | Element or `null` | No                              | Assert element does NOT exist         |
+| `findBy*`  | Promise<Element>  | Yes, if not found after timeout | Element appears after async operation |
+
+```typescript
+// ✅ Element should exist immediately
+const button = screen.getByRole("button", { name: /submit/i });
+
+// ✅ Assert element does NOT exist
+expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+// ✅ Wait for async content to appear
+const successMessage = await screen.findByText(/success/i);
+
+// ❌ BAD - getBy for async content (throws immediately if not found)
+const message = screen.getByText(/success/i); // Will fail before async completes
+```
+
+### User Interactions
+
+#### Always Use userEvent.setup()
+
+`userEvent` simulates real user behavior more accurately than `fireEvent`:
+
+```typescript
+it("should submit form on button click", async () => {
+  const user = userEvent.setup();
+  const handleSubmit = vi.fn();
+  render(<Form onSubmit={handleSubmit} />);
+
+  // Type in input (includes focus, keydown, keyup events)
+  await user.type(screen.getByLabelText(/email/i), "test@example.com");
+
+  // Click button (includes mousedown, mouseup, click events)
+  await user.click(screen.getByRole("button", { name: /submit/i }));
+
+  expect(handleSubmit).toHaveBeenCalledWith({ email: "test@example.com" });
+});
+```
+
+#### userEvent vs fireEvent
+
+| Aspect          | userEvent                           | fireEvent                                 |
+| --------------- | ----------------------------------- | ----------------------------------------- |
+| Realism         | Simulates full user interaction     | Directly triggers single DOM event        |
+| Focus handling  | Automatically manages focus         | Manual focus management needed            |
+| Keyboard events | Types character by character        | Single event                              |
+| Async           | Always async (requires await)       | Synchronous                               |
+| Use when        | Default choice for all interactions | userEvent doesn't support the interaction |
+
+```typescript
+// ✅ GOOD - userEvent for realistic interactions
+const user = userEvent.setup();
+await user.click(button);
+await user.type(input, "hello");
+await user.keyboard("{Enter}");
+
+// Use fireEvent only when necessary
+import { fireEvent } from "@testing-library/react";
+fireEvent.scroll(container, { target: { scrollY: 100 } }); // scroll not in userEvent
+```
+
+### Async Testing Patterns
+
+#### Proper waitFor Usage
+
+```typescript
+// ✅ GOOD - Wait for specific condition
+await waitFor(() => {
+  expect(screen.getByText("Loaded")).toBeInTheDocument();
+});
+
+// ✅ GOOD - Use findBy for appearing elements (simpler)
+const element = await screen.findByText("Loaded");
+
+// ✅ GOOD - waitFor with custom timeout
+await waitFor(
+  () => {
+    expect(mockFn).toHaveBeenCalled();
+  },
+  { timeout: 3000 },
+);
+
+// ❌ BAD - Empty waitFor (does nothing)
+await waitFor(() => {});
+
+// ❌ BAD - Side effects inside waitFor (runs multiple times!)
+await waitFor(() => {
+  fireEvent.click(button); // This will click multiple times
+  expect(result).toBe(true);
+});
+
+// ❌ BAD - Multiple assertions in waitFor (only first failure reported)
+await waitFor(() => {
+  expect(a).toBe(1);
+  expect(b).toBe(2); // Won't run if first fails
+});
+```
+
+#### Testing Loading States
+
+```typescript
+it("should show loading then content", async () => {
+  render(<AsyncComponent />);
+
+  // Loading state appears immediately
+  expect(screen.getByRole("progressbar")).toBeInTheDocument();
+
+  // Content appears after loading (findBy auto-waits up to 1000ms)
+  expect(await screen.findByText("Content loaded")).toBeInTheDocument();
+
+  // Loading indicator should be gone
+  expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+});
+```
+
+#### Testing Error States
+
+```typescript
+it("should show error when API fails", async () => {
+  // Override MSW handler for this test
+  server.use(
+    http.post("*/api", () => {
+      return HttpResponse.json(
+        { jsonrpc: "2.0", id: 1, error: { message: "Server error" } },
+        { status: 500 }
+      );
+    })
+  );
+
+  render(<DataComponent />);
+
+  // Wait for error to appear
+  expect(await screen.findByRole("alert")).toHaveTextContent(/error/i);
+});
+```
+
+### Zustand Store Testing
+
+#### Testing Components That Use Stores
+
+```typescript
+import { useStatusStore } from "@/lib/store";
+import { act } from "@testing-library/react";
+
+beforeEach(() => {
+  // Reset store to initial state before each test
+  useStatusStore.setState(useStatusStore.getInitialState());
+});
+
+it("should update UI when connection state changes", async () => {
+  render(<ConnectionStatus />);
+
+  // Initial disconnected state
+  expect(screen.getByText(/disconnected/i)).toBeInTheDocument();
+
+  // Update store state
+  act(() => {
+    useStatusStore.getState().setConnected(true);
+  });
+
+  // UI reflects the change
+  expect(screen.getByText(/connected/i)).toBeInTheDocument();
+});
+```
+
+#### Testing Store Selectors and Actions
+
+When testing store logic directly (rare - prefer testing through components):
+
+```typescript
+import { useStatusStore } from "@/lib/store";
+import { act } from "@testing-library/react";
+
+describe("useStatusStore", () => {
+  beforeEach(() => {
+    useStatusStore.setState(useStatusStore.getInitialState());
+  });
+
+  it("should add item to run queue", () => {
+    act(() => {
+      useStatusStore.getState().addToRunQueue({ text: "game.launch" });
+    });
+
+    expect(useStatusStore.getState().runQueue).toHaveLength(1);
+    expect(useStatusStore.getState().runQueue[0].text).toBe("game.launch");
+  });
+
+  it("should clear queue after processing", () => {
+    // Setup: add items to queue
+    act(() => {
+      useStatusStore.getState().addToRunQueue({ text: "item1" });
+      useStatusStore.getState().addToRunQueue({ text: "item2" });
+    });
+
+    // Action: clear queue
+    act(() => {
+      useStatusStore.getState().clearRunQueue();
+    });
+
+    // Assert: queue is empty
+    expect(useStatusStore.getState().runQueue).toHaveLength(0);
+  });
+});
+```
+
+#### Testing Preferences Store with Persistence
+
+```typescript
+import { usePreferencesStore } from "@/lib/preferencesStore";
+
+beforeEach(() => {
+  // Reset preferences to defaults
+  usePreferencesStore.setState({
+    ...usePreferencesStore.getInitialState(),
+    _hasHydrated: true, // Mark as hydrated for tests
+  });
+});
+
+it("should update preference and reflect in component", async () => {
+  render(<SettingsPanel />);
+
+  // Toggle a setting
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("switch", { name: /haptics/i }));
+
+  // Verify store was updated
+  expect(usePreferencesStore.getState().hapticsEnabled).toBe(false);
+});
+```
+
+### MSW Best Practices
+
+#### Use Factory Functions for Mock Data
 
 ```typescript
 import {
@@ -120,104 +480,355 @@ import {
 
 const token = mockTokenResponse({ uid: "specific-uid" }); // Override specific fields
 const version = mockVersionResponse();
+const media = mockMediaResponse({ name: "Super Mario Bros" });
 ```
 
 Available factories: `mockSystem`, `mockVersionResponse`, `mockLaunchRequest`, `mockWriteRequest`, `mockTokenResponse`, `mockPlayingResponse`, `mockIndexResponse`, `mockMediaResponse`, `mockMappingResponse`
 
-#### MSW for API Mocking
+#### Default vs Per-Test Handlers
 
-Handlers in `src/test-utils/msw-handlers.ts` mock JSON-RPC responses. Override for specific tests:
+Default handlers in `src/test-utils/msw-handlers.ts` provide happy-path responses. Override for specific test scenarios:
 
 ```typescript
 import { server } from "../../test-setup";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, delay } from "msw";
 
-server.use(
-  http.post("*/api", () => {
-    return HttpResponse.json({ jsonrpc: "2.0", id: 1, result: customResult });
-  }),
-);
+it("should show error on API failure", async () => {
+  // Override for this test only
+  server.use(
+    http.post("*/api", () => {
+      return HttpResponse.json(
+        { jsonrpc: "2.0", id: 1, error: { code: -32000, message: "Not found" } },
+        { status: 404 }
+      );
+    })
+  );
+
+  render(<DataComponent />);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/not found/i);
+});
 ```
 
-#### Test Cleanup
-
-The setup automatically handles:
-
-- `CoreAPI.reset()` after each test
-- Timer cleanup with `vi.clearAllTimers()` and `vi.useRealTimers()`
-- MSW handler reset with `server.resetHandlers()`
-- React Testing Library cleanup
-
-#### Platform-Specific Tests
-
-For iOS/Android-specific behavior, create separate test files:
-
-- `ComponentName.test.tsx` - General tests
-- `ComponentName.ios.test.tsx` - iOS-specific tests
-
-#### Testing Best Practices
-
-1. Query elements by role/label, not test IDs when possible
-2. Use `screen.getByRole("button", { name: "..." })` for buttons
-3. Translations are mocked to return keys - test for translation keys
-4. Reset Zustand stores in `beforeEach` if testing state changes
-5. Use `waitFor` for async operations
-6. Avoid testing implementation details - test behavior
-
-#### Writing Good Tests
-
-Good tests follow this structure:
+#### Testing Network States
 
 ```typescript
-// 1. Import the REAL component from src/
-import { Button } from "@/components/wui/Button";
+// Test loading state with delayed response
+it("should show loading indicator", async () => {
+  server.use(
+    http.post("*/api", async () => {
+      await delay(100); // Small delay to observe loading state
+      return HttpResponse.json({ jsonrpc: "2.0", id: 1, result: data });
+    })
+  );
 
-// 2. Mock only EXTERNAL dependencies (APIs, native plugins, hooks)
-vi.mock("@/hooks/useHaptics", () => ({
-  useHaptics: () => ({ impact: vi.fn() }),
-}));
+  render(<DataComponent />);
+  expect(screen.getByRole("progressbar")).toBeInTheDocument();
+  expect(await screen.findByText("Data loaded")).toBeInTheDocument();
+});
 
-describe("Button", () => {
+// Test network error / offline state
+it("should handle network failure", async () => {
+  server.use(
+    http.post("*/api", () => {
+      return HttpResponse.error(); // Simulates network failure
+    })
+  );
+
+  render(<DataComponent />);
+  expect(await screen.findByText(/connection failed/i)).toBeInTheDocument();
+});
+```
+
+### Flaky Test Prevention
+
+#### Common Causes and Solutions
+
+| Cause                         | Solution                                                |
+| ----------------------------- | ------------------------------------------------------- |
+| Race conditions               | Use `findBy*` queries, `waitFor`, proper async/await    |
+| Shared state between tests    | Reset stores and mocks in `beforeEach`                  |
+| Timer-dependent code          | Use `vi.useFakeTimers()` and `vi.advanceTimersByTime()` |
+| Random/non-deterministic data | Use factory functions with fixed values                 |
+| Animation timing              | Mock or disable animations; use `waitFor`               |
+| External dependencies         | Mock at module level, not inside tests                  |
+
+#### Timer Testing
+
+```typescript
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+it("should auto-hide toast after 3 seconds", async () => {
+  render(<Toast message="Hello" />);
+
+  // Toast is visible
+  expect(screen.getByText("Hello")).toBeInTheDocument();
+
+  // Advance time
+  act(() => {
+    vi.advanceTimersByTime(3000);
+  });
+
+  // Toast is gone
+  expect(screen.queryByText("Hello")).not.toBeInTheDocument();
+});
+
+it("should debounce search input", async () => {
+  const onSearch = vi.fn();
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+  render(<SearchInput onSearch={onSearch} debounceMs={300} />);
+
+  await user.type(screen.getByRole("searchbox"), "test");
+
+  // Not called yet (debounced)
+  expect(onSearch).not.toHaveBeenCalled();
+
+  // Advance past debounce time
+  act(() => {
+    vi.advanceTimersByTime(300);
+  });
+
+  expect(onSearch).toHaveBeenCalledWith("test");
+});
+```
+
+#### Avoiding Test Pollution
+
+```typescript
+describe("FeatureComponent", () => {
+  // Reset ALL shared state before each test
   beforeEach(() => {
     vi.clearAllMocks();
+    useStatusStore.setState(useStatusStore.getInitialState());
+    usePreferencesStore.setState({
+      ...usePreferencesStore.getInitialState(),
+      _hasHydrated: true,
+    });
   });
 
-  // 3. Test OBSERVABLE BEHAVIOR, not implementation
-  it("should call onClick when clicked", () => {
-    const handleClick = vi.fn();
-    render(<Button label="Submit" onClick={handleClick} />);
-
-    // 4. Use accessible queries
-    const button = screen.getByRole("button", { name: "Submit" });
-    fireEvent.click(button);
-
-    // 5. Assert on behavior, not DOM structure
-    expect(handleClick).toHaveBeenCalledTimes(1);
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  // 6. Test both positive AND negative cases
-  it("should NOT call onClick when disabled", () => {
-    const handleClick = vi.fn();
-    render(<Button label="Submit" onClick={handleClick} disabled />);
+  // Tests are now isolated...
+});
+```
 
-    fireEvent.click(screen.getByRole("button"));
-    expect(handleClick).not.toHaveBeenCalled();
+### Accessibility Testing
+
+#### Use Accessible Queries
+
+Accessible queries both test your UI and verify it's accessible:
+
+```typescript
+// ✅ Tests accessibility AND functionality
+const submitButton = screen.getByRole("button", { name: /submit/i });
+const emailInput = screen.getByLabelText(/email address/i);
+const errorMessage = screen.getByRole("alert");
+const navigation = screen.getByRole("navigation");
+const heading = screen.getByRole("heading", { level: 1 });
+
+// Common roles: button, link, textbox, checkbox, radio, combobox,
+//               listbox, option, dialog, alert, progressbar, tab, tabpanel
+```
+
+#### Testing ARIA States
+
+```typescript
+it("should have correct ARIA states", async () => {
+  render(<ExpandableSection title="Details" />);
+
+  const button = screen.getByRole("button", { name: /details/i });
+  const content = screen.getByRole("region");
+
+  // Initial collapsed state
+  expect(button).toHaveAttribute("aria-expanded", "false");
+  expect(content).not.toBeVisible();
+
+  // Expand
+  await userEvent.click(button);
+
+  // Expanded state
+  expect(button).toHaveAttribute("aria-expanded", "true");
+  expect(content).toBeVisible();
+});
+
+it("should indicate loading state accessibly", async () => {
+  render(<SubmitButton loading />);
+
+  const button = screen.getByRole("button");
+  expect(button).toHaveAttribute("aria-busy", "true");
+  expect(button).toBeDisabled();
+});
+```
+
+#### Testing Focus Management
+
+```typescript
+it("should focus first element when modal opens", async () => {
+  const user = userEvent.setup();
+  render(<ModalTrigger />);
+
+  await user.click(screen.getByRole("button", { name: /open modal/i }));
+
+  // Dialog should be present and focused (or first focusable element)
+  const dialog = screen.getByRole("dialog");
+  expect(dialog).toBeInTheDocument();
+
+  const closeButton = screen.getByRole("button", { name: /close/i });
+  expect(closeButton).toHaveFocus();
+});
+
+it("should return focus to trigger when modal closes", async () => {
+  const user = userEvent.setup();
+  render(<ModalTrigger />);
+
+  const openButton = screen.getByRole("button", { name: /open modal/i });
+  await user.click(openButton);
+
+  await user.click(screen.getByRole("button", { name: /close/i }));
+
+  expect(openButton).toHaveFocus();
+});
+```
+
+#### Testing Keyboard Navigation
+
+```typescript
+it("should support keyboard navigation", async () => {
+  const user = userEvent.setup();
+  render(<TabList tabs={["Tab 1", "Tab 2", "Tab 3"]} />);
+
+  const tab1 = screen.getByRole("tab", { name: "Tab 1" });
+  tab1.focus();
+
+  // Arrow right moves to next tab
+  await user.keyboard("{ArrowRight}");
+  expect(screen.getByRole("tab", { name: "Tab 2" })).toHaveFocus();
+
+  // Arrow left moves back
+  await user.keyboard("{ArrowLeft}");
+  expect(tab1).toHaveFocus();
+});
+```
+
+### Component Testing Patterns
+
+#### Testing Forms
+
+```typescript
+it("should validate and submit form", async () => {
+  const user = userEvent.setup();
+  const onSubmit = vi.fn();
+  render(<ContactForm onSubmit={onSubmit} />);
+
+  // Submit empty form - should show validation errors
+  await user.click(screen.getByRole("button", { name: /send/i }));
+
+  expect(screen.getByText(/name is required/i)).toBeInTheDocument();
+  expect(onSubmit).not.toHaveBeenCalled();
+
+  // Fill in valid data
+  await user.type(screen.getByLabelText(/name/i), "John Doe");
+  await user.type(screen.getByLabelText(/email/i), "john@example.com");
+  await user.type(screen.getByLabelText(/message/i), "Hello!");
+
+  // Submit - should succeed
+  await user.click(screen.getByRole("button", { name: /send/i }));
+
+  expect(onSubmit).toHaveBeenCalledWith({
+    name: "John Doe",
+    email: "john@example.com",
+    message: "Hello!",
   });
 });
 ```
 
-**Checklist for every test:**
+#### Testing Conditional Rendering
 
-- [ ] Imports real component/hook from `src/`
-- [ ] Only mocks external dependencies
-- [ ] Uses `screen.getByRole()` or other accessible queries
-- [ ] Tests what users see/do, not internal state
-- [ ] Would fail if the feature actually broke
-- [ ] Has both positive and negative assertions where applicable
-- [ ] Uses factories from `test-utils/factories.ts` for mock data
-- [ ] Cleans up with `beforeEach`/`afterEach`
+```typescript
+it("should show pro features only when user has access", () => {
+  const { rerender } = render(<FeaturePanel hasProAccess={false} />);
 
-#### Critical Anti-Patterns to Avoid
+  // Pro feature hidden
+  expect(screen.queryByText(/launch on scan/i)).not.toBeInTheDocument();
+  expect(screen.getByText(/upgrade to pro/i)).toBeInTheDocument();
+
+  // Rerender with pro access
+  rerender(<FeaturePanel hasProAccess={true} />);
+
+  // Pro feature visible
+  expect(screen.getByText(/launch on scan/i)).toBeInTheDocument();
+  expect(screen.queryByText(/upgrade to pro/i)).not.toBeInTheDocument();
+});
+```
+
+#### Testing Lists and Dynamic Content
+
+```typescript
+it("should render list items and handle removal", async () => {
+  const user = userEvent.setup();
+  const items = [
+    { id: "1", name: "Item 1" },
+    { id: "2", name: "Item 2" },
+  ];
+
+  render(<ItemList items={items} onRemove={vi.fn()} />);
+
+  // Verify all items rendered
+  expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  expect(screen.getByText("Item 1")).toBeInTheDocument();
+  expect(screen.getByText("Item 2")).toBeInTheDocument();
+
+  // Remove first item
+  const removeButtons = screen.getAllByRole("button", { name: /remove/i });
+  await user.click(removeButtons[0]);
+
+  // Verify callback called with correct id
+  expect(vi.fn()).toHaveBeenCalledWith("1");
+});
+```
+
+#### Testing Hooks
+
+```typescript
+import { renderHook, act } from "@testing-library/react";
+import { useCounter } from "@/hooks/useCounter";
+
+describe("useCounter", () => {
+  it("should increment counter", () => {
+    const { result } = renderHook(() => useCounter(0));
+
+    expect(result.current.count).toBe(0);
+
+    act(() => {
+      result.current.increment();
+    });
+
+    expect(result.current.count).toBe(1);
+  });
+
+  it("should respect max value", () => {
+    const { result } = renderHook(() => useCounter(0, { max: 5 }));
+
+    act(() => {
+      for (let i = 0; i < 10; i++) {
+        result.current.increment();
+      }
+    });
+
+    expect(result.current.count).toBe(5);
+  });
+});
+```
+
+### Critical Anti-Patterns to Avoid
 
 The following patterns have caused significant test quality issues. **Do not use them.**
 
@@ -260,11 +871,19 @@ it("handles error B", () => {
 
 // ✅ GOOD - Parameterized test
 const errorCases = [
-  ["error A", fnA],
-  ["error B", fnB],
-];
-it.each(errorCases)("handles %s", (name, fn) => {
-  /* single implementation */
+  ["invalid email", "bad@", /invalid email/i],
+  ["missing @", "test.com", /invalid email/i],
+  ["empty", "", /required/i],
+] as const;
+
+it.each(errorCases)("shows error for %s", async (_, input, expectedError) => {
+  const user = userEvent.setup();
+  render(<EmailInput />);
+
+  await user.type(screen.getByLabelText(/email/i), input);
+  await user.tab(); // Trigger validation
+
+  expect(screen.getByRole("alert")).toHaveTextContent(expectedError);
 });
 ```
 
@@ -344,7 +963,7 @@ expect(add(1, 2)).toBe(3);
 
 **13. Never use `@ts-expect-error` to test invalid props** - TypeScript already prevents this at compile time.
 
-#### What Makes a Valid Test
+### What Makes a Valid Test
 
 A test is valid if it:
 
@@ -360,6 +979,22 @@ A test is INVALID if it:
 3. Only tests mock implementations
 4. Tests CSS classes or internal DOM structure
 5. Duplicates another test with different wording
+
+### Test Checklist
+
+Before submitting tests, verify:
+
+- [ ] Imports real component/hook from `src/`
+- [ ] Only mocks external dependencies (APIs, native plugins, Capacitor)
+- [ ] Uses accessible queries (`getByRole`, `getByLabelText`, etc.)
+- [ ] Tests observable behavior, not implementation details
+- [ ] Would fail if the feature actually broke
+- [ ] Has both positive and negative assertions where applicable
+- [ ] Uses factories from `test-utils/factories.ts` for mock data
+- [ ] Properly cleans up with `beforeEach`/`afterEach`
+- [ ] Uses `userEvent.setup()` for user interactions
+- [ ] Uses `findBy*` or `waitFor` for async content
+- [ ] No hardcoded delays or sleeps
 
 ## Logging Requirements
 
