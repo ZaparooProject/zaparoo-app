@@ -88,13 +88,11 @@ describe("useNfcWriter Cancellation", () => {
         useNfcWriter(WriteMethod.Auto, false),
       );
 
-      // Mock write operation that doesn't resolve immediately
-      const writePromise = new Promise((resolve) => {
-        setTimeout(resolve, 1000);
-      });
-      vi.mocked(CoreAPI.write).mockReturnValue(writePromise as Promise<void>);
+      // Mock write operation that doesn't resolve immediately (simulates pending write)
+      vi.mocked(CoreAPI.write).mockReturnValue(new Promise(() => {}));
 
-      // Start write operation
+      // Start write operation - the hook's write() function returns after setting up
+      // the async operation, it doesn't wait for CoreAPI.write to complete
       await act(async () => {
         await result.current.write(WriteAction.Write, "test");
       });
@@ -239,10 +237,7 @@ describe("useNfcWriter Cancellation", () => {
 
       // Perform multiple rapid write/cancel sequences
       for (let i = 0; i < 3; i++) {
-        const writePromise = new Promise((resolve) => {
-          setTimeout(resolve, 100);
-        });
-        vi.mocked(CoreAPI.write).mockReturnValue(writePromise as Promise<void>);
+        vi.mocked(CoreAPI.write).mockResolvedValue();
 
         await act(async () => {
           await result.current.write(WriteAction.Write, `test${i}`);
@@ -321,26 +316,17 @@ describe("useNfcWriter Cancellation", () => {
     });
 
     it("should handle multiple rapid cancel operations without duplicate toasts", async () => {
+      // Get the already-mocked toast module
+      const toast = await import("react-hot-toast");
+      vi.mocked(toast.default.error).mockClear();
+
       const { result } = renderHook(() =>
         useNfcWriter(WriteMethod.Auto, false),
       );
-      const mockToastError = vi.fn();
-
-      // Mock toast.error to track calls
-      vi.doMock("react-hot-toast", () => ({
-        default: {
-          error: mockToastError,
-          success: vi.fn(),
-          dismiss: vi.fn(),
-        },
-      }));
 
       // Perform multiple rapid write/cancel sequences
       for (let i = 0; i < 3; i++) {
-        const writePromise = new Promise((resolve) => {
-          setTimeout(resolve, 50); // Small delay to simulate real write operation
-        });
-        vi.mocked(CoreAPI.write).mockReturnValue(writePromise as Promise<void>);
+        vi.mocked(CoreAPI.write).mockResolvedValue();
 
         await act(async () => {
           await result.current.write(WriteAction.Write, `test${i}`);
@@ -356,7 +342,7 @@ describe("useNfcWriter Cancellation", () => {
       }
 
       // Should not have triggered any error toasts
-      expect(mockToastError).not.toHaveBeenCalled();
+      expect(toast.default.error).not.toHaveBeenCalled();
     });
   });
 

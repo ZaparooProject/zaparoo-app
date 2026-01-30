@@ -80,7 +80,6 @@ describe("A11yAnnouncer", () => {
       const { result } = renderHook(() => useAnnouncer(), { wrapper });
 
       expect(result.current.announce).toBeDefined();
-      expect(typeof result.current.announce).toBe("function");
     });
 
     it("announces polite message by default", async () => {

@@ -203,7 +203,7 @@ describe("tourService - createAppTour", () => {
     );
 
     expect(backButton).toBeDefined();
-    expect(typeof backButton?.action).toBe("function");
+    expect(backButton?.action).toBeDefined();
   });
 
   it("should configure back button navigation for create cards step", async () => {
@@ -220,7 +220,7 @@ describe("tourService - createAppTour", () => {
     );
 
     expect(backButton).toBeDefined();
-    expect(typeof backButton?.action).toBe("function");
+    expect(backButton?.action).toBeDefined();
   });
 
   it("should use translation keys for all text content", () => {

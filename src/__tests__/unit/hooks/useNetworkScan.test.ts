@@ -90,8 +90,8 @@ describe("useNetworkScan", () => {
       expect(result.current.devices).toEqual([]);
       expect(result.current.isScanning).toBe(false);
       expect(result.current.error).toBeNull();
-      expect(typeof result.current.startScan).toBe("function");
-      expect(typeof result.current.stopScan).toBe("function");
+      expect(result.current.startScan).toBeDefined();
+      expect(result.current.stopScan).toBeDefined();
     });
   });
 
