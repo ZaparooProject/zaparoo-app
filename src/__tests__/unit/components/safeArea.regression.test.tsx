@@ -47,6 +47,18 @@ vi.mock("@/hooks/useConnection", () => ({
   }),
 }));
 
+// Mocks for BottomNav - declared at top level for proper hoisting
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+    <a href={to}>{children}</a>
+  ),
+  useLocation: () => ({ pathname: "/" }),
+}));
+
+vi.mock("@/hooks/useHaptics", () => ({
+  useHaptics: () => ({ impact: vi.fn() }),
+}));
+
 describe("Safe Area Regression Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -112,18 +124,7 @@ describe("Safe Area Regression Tests", () => {
 
   describe("BottomNav", () => {
     it("should include safe insets in height and padding", async () => {
-      // Need to mock additional dependencies for BottomNav
-      vi.doMock("@tanstack/react-router", () => ({
-        Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
-          <a href={to}>{children}</a>
-        ),
-        useLocation: () => ({ pathname: "/" }),
-      }));
-
-      vi.doMock("@/hooks/useHaptics", () => ({
-        useHaptics: () => ({ impact: vi.fn() }),
-      }));
-
+      // Mocks are declared at top level for proper hoisting
       const { BottomNav } = await import("@/components/BottomNav");
 
       const { container } = render(<BottomNav />);

@@ -205,11 +205,10 @@ describe("ReadTab", () => {
 
       render(<ReadTab result={mockResult} onScan={mockOnScan} />);
 
-      const copyButtons = screen
-        .getAllByRole("button")
-        .filter(
-          (btn) => btn.querySelector("svg") && btn.className.includes("px-2"),
-        );
+      // Find copy buttons by their accessible aria-label
+      const copyButtons = screen.getAllByRole("button", {
+        name: "Copy to clipboard",
+      });
 
       if (copyButtons[0]) {
         fireEvent.click(copyButtons[0]);
@@ -239,23 +238,20 @@ describe("ReadTab", () => {
 
       render(<ReadTab result={mockResult} onScan={mockOnScan} />);
 
-      // Find share button - it's the one with outline in class name (small button next to title)
-      const buttons = screen.getAllByRole("button");
-      const shareButton = buttons.find((btn) =>
-        btn.className.includes("bd-outline"),
+      // Find share button by its accessible aria-label
+      const shareButton = screen.getByRole("button", {
+        name: "create.nfc.readTab.shareTagData",
+      });
+
+      expect(shareButton).toBeInTheDocument();
+
+      await fireEvent.click(shareButton);
+      expect(Share.share).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "create.nfc.readTab.shareTitle",
+          text: expect.any(String),
+        }),
       );
-
-      expect(shareButton).toBeDefined();
-
-      if (shareButton) {
-        await fireEvent.click(shareButton);
-        expect(Share.share).toHaveBeenCalledWith(
-          expect.objectContaining({
-            title: "create.nfc.readTab.shareTitle",
-            text: expect.any(String),
-          }),
-        );
-      }
     });
 
     it("should show error toast when share fails", async () => {
@@ -276,21 +272,18 @@ describe("ReadTab", () => {
 
       render(<ReadTab result={mockResult} onScan={mockOnScan} />);
 
-      // Find share button - it's the one with outline in class name (small button next to title)
-      const buttons = screen.getAllByRole("button");
-      const shareButton = buttons.find((btn) =>
-        btn.className.includes("bd-outline"),
-      );
+      // Find share button by its accessible aria-label
+      const shareButton = screen.getByRole("button", {
+        name: "create.nfc.readTab.shareTagData",
+      });
 
-      expect(shareButton).toBeDefined();
+      expect(shareButton).toBeInTheDocument();
 
-      if (shareButton) {
-        await fireEvent.click(shareButton);
-        // Should show error toast
-        expect(toast.error).toHaveBeenCalledWith("shareFailed");
-        // Should NOT fallback to clipboard
-        expect(mockWriteText).not.toHaveBeenCalled();
-      }
+      await fireEvent.click(shareButton);
+      // Should show error toast
+      expect(toast.error).toHaveBeenCalledWith("shareFailed");
+      // Should NOT fallback to clipboard
+      expect(mockWriteText).not.toHaveBeenCalled();
     });
   });
 
@@ -439,12 +432,10 @@ describe("ReadTab", () => {
         screen.getByRole("button", { name: /scanTag/i }),
       ).toBeInTheDocument();
 
-      // Share button should be accessible - find by class since it's icon-only
-      const buttons = screen.getAllByRole("button");
-      const shareButton = buttons.find((btn) =>
-        btn.className.includes("outline"),
-      );
-      expect(shareButton).toBeDefined();
+      // Share button should be accessible by its aria-label
+      expect(
+        screen.getByRole("button", { name: "create.nfc.readTab.shareTagData" }),
+      ).toBeInTheDocument();
     });
 
     it("should support keyboard navigation", () => {

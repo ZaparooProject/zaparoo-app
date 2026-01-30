@@ -168,10 +168,6 @@ describe("usePassiveNfcListener", () => {
     );
   });
 
-  it("should be importable without errors", () => {
-    expect(typeof usePassiveNfcListener).toBe("function");
-  });
-
   it("should register listener on Android when NFC is available", async () => {
     renderHook(() => usePassiveNfcListener());
 

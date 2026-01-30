@@ -115,10 +115,6 @@ describe("useWriteQueueProcessor", () => {
     vi.useRealTimers();
   });
 
-  it("should be importable without errors", () => {
-    expect(typeof useWriteQueueProcessor).toBe("function");
-  });
-
   it("should not process when queue is empty", () => {
     renderHook(() => useWriteQueueProcessor());
 
