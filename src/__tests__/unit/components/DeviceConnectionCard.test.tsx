@@ -2,37 +2,24 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "../../../test-utils";
 import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
 
-// Mock dependencies
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        "settings.device": "Device Address",
-        "settings.deviceHistory": "Device History",
-      };
-      return translations[key] || key;
-    },
-  }),
-}));
-
+// Mock useConnection hook
+const mockUseConnection = vi.fn();
 vi.mock("@/hooks/useConnection", () => ({
-  useConnection: vi.fn(() => ({
-    isConnected: true,
-    isConnecting: false,
-    connectionError: null,
-  })),
+  useConnection: () => mockUseConnection(),
 }));
 
+// Mock coreApi
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
     version: vi.fn().mockResolvedValue({
       version: "1.0.0",
-      platform: "test-platform",
+      platform: "linux",
     }),
   },
   getDeviceAddress: vi.fn(() => "192.168.1.100"),
 }));
 
+// Mock TanStack Query
 vi.mock("@tanstack/react-query", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
   return {
@@ -47,26 +34,12 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
   };
 });
 
-vi.mock("@/components/ConnectionStatusDisplay", () => ({
-  ConnectionStatusDisplay: ({
-    connectionError,
-    connectedSubtitle,
-    action,
-  }: {
-    connectionError: string;
-    connectedSubtitle?: string;
-    action?: React.ReactNode;
-  }) => (
-    <div data-testid="connection-status">
-      {connectionError && (
-        <span data-testid="connection-error">{connectionError}</span>
-      )}
-      {connectedSubtitle && (
-        <span data-testid="connected-subtitle">{connectedSubtitle}</span>
-      )}
-      {action}
-    </div>
-  ),
+// Mock Capacitor
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: () => false,
+    getPlatform: () => "web",
+  },
 }));
 
 describe("DeviceConnectionCard", () => {
@@ -81,6 +54,11 @@ describe("DeviceConnectionCard", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseConnection.mockReturnValue({
+      isConnected: true,
+      showConnecting: false,
+      showReconnecting: false,
+    });
   });
 
   afterEach(() => {
@@ -98,7 +76,7 @@ describe("DeviceConnectionCard", () => {
   it("renders the device label", () => {
     render(<DeviceConnectionCard {...defaultProps} />);
 
-    expect(screen.getByText("Device Address")).toBeInTheDocument();
+    expect(screen.getByText("settings.device")).toBeInTheDocument();
   });
 
   it("calls setAddress when input changes", () => {
@@ -110,13 +88,20 @@ describe("DeviceConnectionCard", () => {
     expect(defaultProps.setAddress).toHaveBeenCalledWith("192.168.1.200");
   });
 
-  it("renders connection status display", () => {
+  it("renders connection status when connected", () => {
     render(<DeviceConnectionCard {...defaultProps} />);
 
-    expect(screen.getByTestId("connection-status")).toBeInTheDocument();
+    // ConnectionStatusDisplay shows "Connected" heading when connected
+    expect(screen.getByText("scan.connectedHeading")).toBeInTheDocument();
   });
 
   it("shows connection error when provided", () => {
+    mockUseConnection.mockReturnValue({
+      isConnected: false,
+      showConnecting: false,
+      showReconnecting: false,
+    });
+
     render(
       <DeviceConnectionCard
         {...defaultProps}
@@ -124,7 +109,7 @@ describe("DeviceConnectionCard", () => {
       />,
     );
 
-    expect(screen.getByTestId("connection-error")).toBeInTheDocument();
+    // ConnectionStatusDisplay shows error text
     expect(screen.getByText("Connection failed")).toBeInTheDocument();
   });
 
@@ -132,7 +117,7 @@ describe("DeviceConnectionCard", () => {
     render(<DeviceConnectionCard {...defaultProps} />);
 
     const historyButton = screen.getByRole("button", {
-      name: /device history/i,
+      name: /settings.deviceHistory/i,
     });
     expect(historyButton).toBeInTheDocument();
   });
@@ -141,7 +126,7 @@ describe("DeviceConnectionCard", () => {
     render(<DeviceConnectionCard {...defaultProps} />);
 
     const historyButton = screen.getByRole("button", {
-      name: /device history/i,
+      name: /settings.deviceHistory/i,
     });
     fireEvent.click(historyButton);
 
@@ -152,7 +137,7 @@ describe("DeviceConnectionCard", () => {
     render(<DeviceConnectionCard {...defaultProps} hasDeviceHistory={false} />);
 
     const historyButton = screen.getByRole("button", {
-      name: /device history/i,
+      name: /settings.deviceHistory/i,
     });
     expect(historyButton).toBeDisabled();
   });
@@ -162,12 +147,6 @@ describe("DeviceConnectionCard", () => {
 
     const input = screen.getByRole("textbox");
     expect(input).toBeInTheDocument();
-  });
-
-  it("displays connected subtitle when version data is available", () => {
-    render(<DeviceConnectionCard {...defaultProps} />);
-
-    expect(screen.getByTestId("connected-subtitle")).toBeInTheDocument();
   });
 
   it("handles empty address", () => {
@@ -182,5 +161,31 @@ describe("DeviceConnectionCard", () => {
 
     const input = screen.getByRole("textbox");
     expect(input).toHaveAttribute("placeholder", "192.168.1.23");
+  });
+
+  it("shows connecting state", () => {
+    mockUseConnection.mockReturnValue({
+      isConnected: false,
+      showConnecting: true,
+      showReconnecting: false,
+    });
+
+    render(<DeviceConnectionCard {...defaultProps} />);
+
+    // ConnectionStatusDisplay shows "Connecting..." when connecting
+    expect(screen.getByText("connection.connecting")).toBeInTheDocument();
+  });
+
+  it("shows reconnecting state", () => {
+    mockUseConnection.mockReturnValue({
+      isConnected: false,
+      showConnecting: false,
+      showReconnecting: true,
+    });
+
+    render(<DeviceConnectionCard {...defaultProps} />);
+
+    // ConnectionStatusDisplay shows "Reconnecting..." when reconnecting
+    expect(screen.getByText("connection.reconnecting")).toBeInTheDocument();
   });
 });

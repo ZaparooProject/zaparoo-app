@@ -1,16 +1,31 @@
-/* eslint-disable react/prop-types */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "../../../test-utils";
-import React from "react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { mockReaderInfo } from "../../../test-utils/factories";
-import { ReaderInfo } from "../../../lib/models";
+
+// Mock router - use vi.hoisted to make variables accessible in mocks
+const { componentRef, mockGoBack } = vi.hoisted(() => ({
+  componentRef: { current: null as any },
+  mockGoBack: vi.fn(),
+}));
+
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = (await importOriginal()) as any;
+  return {
+    ...actual,
+    createFileRoute: () => (options: any) => {
+      componentRef.current = options.component;
+      return { options };
+    },
+    useRouter: () => ({ history: { back: mockGoBack } }),
+  };
+});
 
 // Mock CoreAPI
 const mockSettings = vi.fn();
 const mockSettingsUpdate = vi.fn();
 const mockReaders = vi.fn();
 
-vi.mock("../../../lib/coreApi", () => ({
+vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
     settings: () => mockSettings(),
     settingsUpdate: (params: unknown) => mockSettingsUpdate(params),
@@ -18,7 +33,91 @@ vi.mock("../../../lib/coreApi", () => ({
   },
 }));
 
-describe("Settings Readers Route - Device Readers List", () => {
+// Mock store
+vi.mock("@/lib/store", async (importOriginal) => {
+  const actual = (await importOriginal()) as any;
+  return {
+    ...actual,
+    useStatusStore: (selector: any) =>
+      selector({
+        connected: true,
+        connectionState: "CONNECTED",
+        safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+        gamesIndex: {
+          indexing: false,
+          totalSteps: 100,
+          currentStep: 100,
+        },
+      }),
+    ConnectionState: {
+      IDLE: "IDLE",
+      CONNECTING: "CONNECTING",
+      CONNECTED: "CONNECTED",
+      RECONNECTING: "RECONNECTING",
+      ERROR: "ERROR",
+      DISCONNECTED: "DISCONNECTED",
+    },
+  };
+});
+
+// Mock preferences store
+vi.mock("@/lib/preferencesStore", () => ({
+  usePreferencesStore: vi.fn((selector) => {
+    const state = {
+      restartScan: false,
+      launchOnScan: false,
+      launcherAccess: false,
+      preferRemoteWriter: false,
+      shakeEnabled: false,
+      shakeMode: "random" as const,
+      shakeZapscript: "",
+      nfcAvailable: false,
+      accelerometerAvailable: false,
+      setRestartScan: vi.fn(),
+      setLaunchOnScan: vi.fn(),
+      setPreferRemoteWriter: vi.fn(),
+      setShakeEnabled: vi.fn(),
+      setShakeMode: vi.fn(),
+      setShakeZapscript: vi.fn(),
+    };
+    return selector(state);
+  }),
+  selectAppSettings: (state: any) => state,
+  selectShakeSettings: (state: any) => state,
+}));
+
+// Mock hooks
+vi.mock("@/hooks/useSmartSwipe", () => ({
+  useSmartSwipe: () => ({}),
+}));
+
+vi.mock("@/hooks/usePageHeadingFocus", () => ({
+  usePageHeadingFocus: vi.fn(),
+}));
+
+// Mock Capacitor (not native platform for most tests)
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: () => false,
+    getPlatform: () => "web",
+  },
+}));
+
+// Mock Pro purchase hook
+vi.mock("@/components/ProPurchase", () => ({
+  useProPurchase: () => ({
+    PurchaseModal: () => null,
+    setProPurchaseModalOpen: vi.fn(),
+  }),
+}));
+
+// Import the route module to trigger createFileRoute which captures the component
+import "@/routes/settings.readers";
+
+// The component will be captured by the mock
+const getReadersSettings = () => componentRef.current;
+
+describe("Settings Readers Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -29,404 +128,210 @@ describe("Settings Readers Route - Device Readers List", () => {
     });
 
     mockReaders.mockResolvedValue({ readers: [] });
+    mockSettingsUpdate.mockResolvedValue({});
   });
 
-  // Component that mirrors the readers list logic from settings.readers.tsx
-  const ReadersListTest = ({
-    connected = true,
-    isLoading = false,
-    readers = [] as ReaderInfo[],
-  }) => {
-    return (
-      <div data-testid="readers-section">
-        <span>Device Readers</span>
-        <div className="mt-2 flex flex-col gap-2">
-          {isLoading ? (
-            <span
-              className="text-foreground-disabled"
-              data-testid="readers-loading"
-            >
-              Loading...
-            </span>
-          ) : !connected ? (
-            <span
-              className="text-foreground-disabled"
-              data-testid="readers-no-connection"
-            >
-              No readers found
-            </span>
-          ) : readers.length > 0 ? (
-            readers.map((reader) => (
-              <div
-                key={reader.id}
-                className="flex items-center gap-2"
-                data-testid={`reader-${reader.id}`}
-              >
-                <span
-                  className={reader.connected ? "bg-green-500" : "bg-red-500"}
-                  data-testid={`reader-indicator-${reader.id}`}
-                  aria-hidden="true"
-                />
-                <span className="text-foreground">
-                  {reader.info || reader.id}
-                </span>
-              </div>
-            ))
-          ) : (
-            <span
-              className="text-foreground-disabled"
-              data-testid="readers-empty"
-            >
-              No readers found
-            </span>
-          )}
-        </div>
-      </div>
-    );
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const renderComponent = () => {
+    const ReadersSettings = getReadersSettings();
+    return render(<ReadersSettings />);
   };
 
-  it("should show loading state while fetching readers", () => {
-    render(<ReadersListTest isLoading={true} />);
+  describe("rendering", () => {
+    it("should render the page title", () => {
+      renderComponent();
 
-    expect(screen.getByTestId("readers-loading")).toBeInTheDocument();
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
-  });
-
-  it("should show 'no readers found' when no readers are connected", () => {
-    render(<ReadersListTest connected={true} readers={[]} />);
-
-    expect(screen.getByTestId("readers-empty")).toBeInTheDocument();
-    expect(screen.getByText("No readers found")).toBeInTheDocument();
-  });
-
-  it("should show 'no readers found' when disconnected from Core", () => {
-    render(<ReadersListTest connected={false} />);
-
-    expect(screen.getByTestId("readers-no-connection")).toBeInTheDocument();
-  });
-
-  it("should display connected reader with green indicator", () => {
-    const reader = mockReaderInfo({
-      id: "pn532_1",
-      info: "PN532 NFC Reader",
-      connected: true,
+      expect(
+        screen.getByRole("heading", { name: "settings.readers.title" }),
+      ).toBeInTheDocument();
     });
 
-    render(<ReadersListTest readers={[reader]} />);
+    it("should render back button", () => {
+      renderComponent();
 
-    expect(screen.getByText("PN532 NFC Reader")).toBeInTheDocument();
-    expect(screen.getByTestId("reader-indicator-pn532_1")).toHaveClass(
-      "bg-green-500",
-    );
-  });
-
-  it("should display disconnected reader with red indicator", () => {
-    const reader = mockReaderInfo({
-      id: "acr122u_1",
-      info: "ACR122U Reader",
-      connected: false,
+      expect(screen.getByLabelText("nav.back")).toBeInTheDocument();
     });
 
-    render(<ReadersListTest readers={[reader]} />);
+    it("should navigate back when back button clicked", () => {
+      renderComponent();
 
-    expect(screen.getByText("ACR122U Reader")).toBeInTheDocument();
-    expect(screen.getByTestId("reader-indicator-acr122u_1")).toHaveClass(
-      "bg-red-500",
-    );
+      fireEvent.click(screen.getByLabelText("nav.back"));
+      expect(mockGoBack).toHaveBeenCalled();
+    });
   });
 
-  it("should display multiple readers", () => {
-    const readers = [
-      mockReaderInfo({
+  describe("readers list", () => {
+    it("should show connected readers label", () => {
+      renderComponent();
+
+      expect(
+        screen.getByText("settings.readers.connectedReaders"),
+      ).toBeInTheDocument();
+    });
+
+    it("should show 'no readers detected' when no readers are connected", async () => {
+      mockReaders.mockResolvedValue({ readers: [] });
+      renderComponent();
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("settings.readers.noReadersDetected"),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should display connected reader", async () => {
+      const reader = mockReaderInfo({
         id: "pn532_1",
         info: "PN532 NFC Reader",
         connected: true,
-      }),
-      mockReaderInfo({
-        id: "acr122u_1",
-        info: "ACR122U USB Reader",
+      });
+      mockReaders.mockResolvedValue({ readers: [reader] });
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("PN532 NFC Reader")).toBeInTheDocument();
+      });
+    });
+
+    it("should display multiple readers", async () => {
+      const readers = [
+        mockReaderInfo({
+          id: "pn532_1",
+          info: "PN532 NFC Reader",
+          connected: true,
+        }),
+        mockReaderInfo({
+          id: "acr122u_1",
+          info: "ACR122U USB Reader",
+          connected: true,
+        }),
+      ];
+      mockReaders.mockResolvedValue({ readers });
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("PN532 NFC Reader")).toBeInTheDocument();
+        expect(screen.getByText("ACR122U USB Reader")).toBeInTheDocument();
+      });
+    });
+
+    it("should fallback to reader id when info is empty", async () => {
+      const reader = mockReaderInfo({
+        id: "simple_serial_1",
+        info: "",
         connected: true,
-      }),
-      mockReaderInfo({
-        id: "simple_1",
-        info: "Simple Serial Reader",
-        connected: false,
-      }),
-    ];
+      });
+      mockReaders.mockResolvedValue({ readers: [reader] });
+      renderComponent();
 
-    render(<ReadersListTest readers={readers} />);
-
-    expect(screen.getByText("PN532 NFC Reader")).toBeInTheDocument();
-    expect(screen.getByText("ACR122U USB Reader")).toBeInTheDocument();
-    expect(screen.getByText("Simple Serial Reader")).toBeInTheDocument();
-  });
-
-  it("should fallback to reader id when info is empty", () => {
-    const reader = mockReaderInfo({
-      id: "simple_serial_1",
-      info: "",
-      connected: true,
-    });
-
-    render(<ReadersListTest readers={[reader]} />);
-
-    expect(screen.getByText("simple_serial_1")).toBeInTheDocument();
-  });
-
-  it("should show section header", () => {
-    render(<ReadersListTest />);
-
-    expect(screen.getByText("Device Readers")).toBeInTheDocument();
-  });
-
-  it("should display mix of connected and disconnected readers correctly", () => {
-    const readers = [
-      mockReaderInfo({
-        id: "reader_1",
-        info: "Connected Reader",
-        connected: true,
-      }),
-      mockReaderInfo({
-        id: "reader_2",
-        info: "Disconnected Reader",
-        connected: false,
-      }),
-    ];
-
-    render(<ReadersListTest readers={readers} />);
-
-    expect(screen.getByTestId("reader-indicator-reader_1")).toHaveClass(
-      "bg-green-500",
-    );
-    expect(screen.getByTestId("reader-indicator-reader_2")).toHaveClass(
-      "bg-red-500",
-    );
-  });
-});
-
-describe("Settings Readers Route - Scan Mode", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  const ScanModeTest = ({
-    connected = true,
-    scanMode = "tap" as "tap" | "hold",
-    onModeChange = vi.fn(),
-  }) => {
-    const [mode, setMode] = React.useState(scanMode);
-
-    const handleModeChange = (newMode: "tap" | "hold") => {
-      setMode(newMode);
-      onModeChange(newMode);
-      mockSettingsUpdate({ readersScanMode: newMode });
-    };
-
-    return (
-      <div data-testid="scan-mode-section">
-        <span id="scan-mode-label">Scan Mode</span>
-        <div role="radiogroup" aria-labelledby="scan-mode-label">
-          <button
-            role="radio"
-            aria-checked={mode === "tap" && connected}
-            onClick={() => handleModeChange("tap")}
-            disabled={!connected}
-            data-testid="tap-mode-button"
-          >
-            Tap
-          </button>
-          <button
-            role="radio"
-            aria-checked={mode === "hold" && connected}
-            onClick={() => handleModeChange("hold")}
-            disabled={!connected}
-            data-testid="hold-mode-button"
-          >
-            Hold
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  it("should render scan mode buttons", () => {
-    render(<ScanModeTest />);
-
-    expect(screen.getByTestId("tap-mode-button")).toBeInTheDocument();
-    expect(screen.getByTestId("hold-mode-button")).toBeInTheDocument();
-  });
-
-  it("should show tap mode as selected by default", () => {
-    render(<ScanModeTest scanMode="tap" />);
-
-    const tapButton = screen.getByTestId("tap-mode-button");
-    expect(tapButton).toHaveAttribute("aria-checked", "true");
-  });
-
-  it("should show hold mode as selected when set", () => {
-    render(<ScanModeTest scanMode="hold" />);
-
-    const holdButton = screen.getByTestId("hold-mode-button");
-    expect(holdButton).toHaveAttribute("aria-checked", "true");
-  });
-
-  it("should call settings update when changing mode", () => {
-    render(<ScanModeTest />);
-
-    const holdButton = screen.getByTestId("hold-mode-button");
-    fireEvent.click(holdButton);
-
-    expect(mockSettingsUpdate).toHaveBeenCalledWith({
-      readersScanMode: "hold",
+      await waitFor(() => {
+        expect(screen.getByText("simple_serial_1")).toBeInTheDocument();
+      });
     });
   });
 
-  it("should disable buttons when disconnected", () => {
-    render(<ScanModeTest connected={false} />);
+  describe("scan mode", () => {
+    it("should render scan mode section", () => {
+      renderComponent();
 
-    expect(screen.getByTestId("tap-mode-button")).toBeDisabled();
-    expect(screen.getByTestId("hold-mode-button")).toBeDisabled();
-  });
-});
+      expect(screen.getByText("settings.readers.scanMode")).toBeInTheDocument();
+    });
 
-describe("Settings Readers Route - Core Settings Toggles", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    it("should render tap and hold mode buttons", async () => {
+      renderComponent();
 
-  const CoreSettingsTest = ({
-    connected = true,
-    audioScanFeedback = true,
-    readersAutoDetect = true,
-  }) => {
-    const [audio, setAudio] = React.useState(audioScanFeedback);
-    const [autoDetect, setAutoDetect] = React.useState(readersAutoDetect);
+      await waitFor(() => {
+        expect(
+          screen.getByRole("radio", { name: /settings.tapMode/i }),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole("radio", { name: /settings.insertMode/i }),
+        ).toBeInTheDocument();
+      });
+    });
 
-    return (
-      <div data-testid="core-settings">
-        <div data-testid="audio-feedback-toggle">
-          <label>
-            <input
-              type="checkbox"
-              checked={audio}
-              onChange={(e) => {
-                setAudio(e.target.checked);
-                mockSettingsUpdate({ audioScanFeedback: e.target.checked });
-              }}
-              disabled={!connected}
-              data-testid="audio-checkbox"
-            />
-            Audio Feedback
-          </label>
-        </div>
-        <div data-testid="auto-detect-toggle">
-          <label>
-            <input
-              type="checkbox"
-              checked={autoDetect}
-              onChange={(e) => {
-                setAutoDetect(e.target.checked);
-                mockSettingsUpdate({ readersAutoDetect: e.target.checked });
-              }}
-              disabled={!connected}
-              data-testid="auto-detect-checkbox"
-            />
-            Auto Detect Readers
-          </label>
-        </div>
-      </div>
-    );
-  };
+    it("should show tap mode as selected when set", async () => {
+      mockSettings.mockResolvedValue({
+        readersScanMode: "tap",
+        audioScanFeedback: true,
+        readersAutoDetect: true,
+      });
+      renderComponent();
 
-  it("should render audio feedback toggle", () => {
-    render(<CoreSettingsTest />);
+      await waitFor(() => {
+        const tapButton = screen.getByRole("radio", {
+          name: /settings.tapMode/i,
+        });
+        expect(tapButton).toHaveAttribute("aria-checked", "true");
+      });
+    });
 
-    expect(screen.getByTestId("audio-feedback-toggle")).toBeInTheDocument();
-  });
+    it("should show hold mode as selected when set", async () => {
+      mockSettings.mockResolvedValue({
+        readersScanMode: "hold",
+        audioScanFeedback: true,
+        readersAutoDetect: true,
+      });
+      renderComponent();
 
-  it("should render auto-detect readers toggle", () => {
-    render(<CoreSettingsTest />);
+      await waitFor(() => {
+        const holdButton = screen.getByRole("radio", {
+          name: /settings.insertMode/i,
+        });
+        expect(holdButton).toHaveAttribute("aria-checked", "true");
+      });
+    });
 
-    expect(screen.getByTestId("auto-detect-toggle")).toBeInTheDocument();
-  });
+    it("should call settings update when changing mode to hold", async () => {
+      renderComponent();
 
-  it("should toggle audio feedback", () => {
-    render(<CoreSettingsTest audioScanFeedback={true} />);
+      // Wait for buttons to be available
+      await waitFor(() => {
+        expect(
+          screen.getByRole("radio", { name: /settings.insertMode/i }),
+        ).toBeInTheDocument();
+      });
 
-    const checkbox = screen.getByTestId("audio-checkbox");
-    fireEvent.click(checkbox);
+      const holdButton = screen.getByRole("radio", {
+        name: /settings.insertMode/i,
+      });
+      fireEvent.click(holdButton);
 
-    expect(mockSettingsUpdate).toHaveBeenCalledWith({
-      audioScanFeedback: false,
+      expect(mockSettingsUpdate).toHaveBeenCalledWith({
+        readersScanMode: "hold",
+      });
     });
   });
 
-  it("should toggle auto-detect readers", () => {
-    render(<CoreSettingsTest readersAutoDetect={true} />);
+  describe("core settings toggles", () => {
+    it("should render audio feedback toggle", () => {
+      renderComponent();
 
-    const checkbox = screen.getByTestId("auto-detect-checkbox");
-    fireEvent.click(checkbox);
+      expect(
+        screen.getByText("settings.readers.audioFeedback"),
+      ).toBeInTheDocument();
+    });
 
-    expect(mockSettingsUpdate).toHaveBeenCalledWith({
-      readersAutoDetect: false,
+    it("should render auto-detect readers toggle", () => {
+      renderComponent();
+
+      expect(
+        screen.getByText("settings.readers.autoDetectReaders"),
+      ).toBeInTheDocument();
     });
   });
 
-  it("should disable toggles when disconnected", () => {
-    render(<CoreSettingsTest connected={false} />);
+  describe("app settings toggles", () => {
+    it("should render continuous scan toggle", () => {
+      renderComponent();
 
-    expect(screen.getByTestId("audio-checkbox")).toBeDisabled();
-    expect(screen.getByTestId("auto-detect-checkbox")).toBeDisabled();
-  });
-});
-
-describe("Settings Readers Route - App Settings", () => {
-  const AppSettingsTest = ({
-    restartScan = false,
-    onRestartScanChange = vi.fn(),
-  }) => {
-    const [restart, setRestart] = React.useState(restartScan);
-
-    return (
-      <div data-testid="app-settings">
-        <div data-testid="continuous-scan-toggle">
-          <label>
-            <input
-              type="checkbox"
-              checked={restart}
-              onChange={(e) => {
-                setRestart(e.target.checked);
-                onRestartScanChange(e.target.checked);
-              }}
-              data-testid="continuous-scan-checkbox"
-            />
-            Continuous Scanning
-          </label>
-        </div>
-      </div>
-    );
-  };
-
-  it("should render continuous scan toggle", () => {
-    render(<AppSettingsTest />);
-
-    expect(screen.getByTestId("continuous-scan-toggle")).toBeInTheDocument();
-  });
-
-  it("should toggle continuous scan", () => {
-    const onRestartScanChange = vi.fn();
-    render(<AppSettingsTest onRestartScanChange={onRestartScanChange} />);
-
-    const checkbox = screen.getByTestId("continuous-scan-checkbox");
-    fireEvent.click(checkbox);
-
-    expect(onRestartScanChange).toHaveBeenCalledWith(true);
-  });
-
-  it("should show continuous scan as enabled when set", () => {
-    render(<AppSettingsTest restartScan={true} />);
-
-    const checkbox = screen.getByTestId("continuous-scan-checkbox");
-    expect(checkbox).toBeChecked();
+      expect(
+        screen.getByText("settings.readers.continuousScan"),
+      ).toBeInTheDocument();
+    });
   });
 });

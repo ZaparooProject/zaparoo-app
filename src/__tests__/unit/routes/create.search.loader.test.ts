@@ -231,16 +231,11 @@ describe("Create Search Route Loader", () => {
       .mockResolvedValueOnce({ value: "snes" }) // searchSystem
       .mockResolvedValueOnce({ value: "[]" }); // searchTags
 
-    // Simulate a timeout
-    mockCoreApiSystems.mockImplementation(
-      () =>
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Request timeout")), 100),
-        ),
-    );
+    // Simulate immediate rejection (simpler than using timers)
+    mockCoreApiSystems.mockRejectedValue(new Error("Request timeout"));
 
     await expect(Route.options?.loader?.({} as any)).rejects.toThrow(
       "Request timeout",
     );
-  }, 200);
+  });
 });

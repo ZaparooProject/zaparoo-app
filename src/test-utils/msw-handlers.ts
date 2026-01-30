@@ -110,6 +110,75 @@ const mockResponses: Record<string, unknown> = {
     warnings: ["5m", "1m"],
     retention: 30,
   },
+
+  // Playtime limits update
+  "settings.playtime.limits.update": {
+    success: true,
+  },
+
+  // Media generation
+  "media.generate": {
+    success: true,
+    jobId: "test-job-id",
+  },
+
+  "media.generate.cancel": {
+    success: true,
+  },
+
+  "media.active": {
+    active: [],
+  },
+
+  "media.active.update": {
+    success: true,
+  },
+
+  // Settings management
+  "settings.update": {
+    success: true,
+  },
+
+  "settings.reload": {
+    success: true,
+  },
+
+  "settings.logs.download": {
+    success: true,
+    url: "https://example.com/logs.zip",
+  },
+
+  // Launchers
+  "launchers.refresh": {
+    success: true,
+  },
+
+  // Mappings
+  "mappings.new": {
+    success: true,
+    id: "new-mapping-id",
+  },
+
+  "mappings.delete": {
+    success: true,
+  },
+
+  "mappings.update": {
+    success: true,
+  },
+
+  "mappings.reload": {
+    success: true,
+  },
+
+  // Readers
+  "readers.write": {
+    success: true,
+  },
+
+  "readers.write.cancel": {
+    success: true,
+  },
 };
 
 export const handlers = [
