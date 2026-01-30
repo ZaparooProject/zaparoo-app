@@ -32,7 +32,20 @@ export const MediaIndexingToast = (props: {
               : gamesIndex.currentStepDisplay
             : t("toast.preparingDb")}
         </div>
-        <div className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid">
+        <div
+          role="progressbar"
+          aria-valuenow={
+            gamesIndex.currentStep && gamesIndex.totalSteps
+              ? Math.round(
+                  (gamesIndex.currentStep / gamesIndex.totalSteps) * 100,
+                )
+              : 0
+          }
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Database indexing progress"
+          className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
+        >
           <div
             className={classNames(
               "border-background bg-button-pattern h-[8px] rounded-full border border-solid",

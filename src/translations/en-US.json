@@ -374,6 +374,7 @@
       "updateDb.status.checking": "Checking database status...",
       "updateDb.selectSystemsTitle": "Select Systems to Update",
       "updateDb.allSystems": "All systems",
+      "updateDb.progressLabel": "Database update progress",
       "designer": "Zaparoo Designer",
       "getApp": "Get the Zaparoo App",
       "language": "Language",

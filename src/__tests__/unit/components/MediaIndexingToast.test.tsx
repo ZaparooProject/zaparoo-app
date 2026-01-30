@@ -136,13 +136,16 @@ describe("MediaIndexingToast", () => {
     expect(toast.dismiss).not.toHaveBeenCalled();
   });
 
-  it("should render progress bar", () => {
-    const { container } = render(
-      <MediaIndexingToast id="test-id" setHideToast={mockSetHideToast} />,
-    );
+  it("should render progress bar with correct progress value", () => {
+    render(<MediaIndexingToast id="test-id" setHideToast={mockSetHideToast} />);
 
-    // Progress bar is rendered as nested divs with specific height
-    const progressContainer = container.querySelector(".h-\\[10px\\]");
-    expect(progressContainer).toBeInTheDocument();
+    const progressBar = screen.getByRole("progressbar", {
+      name: "Database indexing progress",
+    });
+    expect(progressBar).toBeInTheDocument();
+    // 5/10 steps = 50%
+    expect(progressBar).toHaveAttribute("aria-valuenow", "50");
+    expect(progressBar).toHaveAttribute("aria-valuemin", "0");
+    expect(progressBar).toHaveAttribute("aria-valuemax", "100");
   });
 });

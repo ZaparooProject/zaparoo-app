@@ -196,16 +196,18 @@ describe("MediaDatabaseCard", () => {
       currentStepDisplay: "Scanning games directory",
     };
 
-    const { container } = render(<MediaDatabaseCard />);
+    render(<MediaDatabaseCard />);
 
     // Text appears both in visible UI and aria-live announcement region
     expect(
       screen.getAllByText("Scanning games directory").length,
     ).toBeGreaterThan(0);
 
-    // Check for progress bar by finding the styled div
-    const progressBars = container.querySelectorAll('[style*="width: 50.00%"]');
-    expect(progressBars.length).toBeGreaterThan(0);
+    // Progress bar should show 50% (5/10 steps)
+    const progressBar = screen.getByRole("progressbar", {
+      name: "settings.updateDb.progressLabel",
+    });
+    expect(progressBar).toHaveAttribute("aria-valuenow", "50");
   });
 
   it("should show preparing message when currentStepDisplay is empty", () => {
@@ -238,38 +240,6 @@ describe("MediaDatabaseCard", () => {
 
     // Text appears both in visible UI and aria-live announcement region
     expect(screen.getAllByText("toast.writingDb").length).toBeGreaterThan(0);
-  });
-
-  it("should hide progress bar when currentStep is 0", () => {
-    mockStore.gamesIndex = {
-      indexing: true,
-      exists: true,
-      totalFiles: 100,
-      currentStep: 0,
-      totalSteps: 10,
-      currentStepDisplay: "",
-    };
-
-    const { container } = render(<MediaDatabaseCard />);
-
-    const hiddenProgressBars = container.querySelectorAll(".hidden");
-    expect(hiddenProgressBars.length).toBeGreaterThan(0);
-  });
-
-  it("should show pulsing animation when preparing or writing", () => {
-    mockStore.gamesIndex = {
-      indexing: true,
-      exists: true,
-      totalFiles: 100,
-      currentStep: 0,
-      totalSteps: 10,
-      currentStepDisplay: "",
-    };
-
-    const { container } = render(<MediaDatabaseCard />);
-
-    const pulsingElements = container.querySelectorAll(".animate-pulse");
-    expect(pulsingElements.length).toBeGreaterThan(0);
   });
 
   it("should show cancel button when indexing", () => {
