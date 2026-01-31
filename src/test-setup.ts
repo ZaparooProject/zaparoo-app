@@ -36,6 +36,9 @@ vi.mock("@capacitor/network");
 
 import { CoreAPI } from "./lib/coreApi";
 import { __resetPreferencesStorage } from "../__mocks__/@capacitor/preferences";
+import { __resetZeroConfMock } from "../__mocks__/capacitor-zeroconf";
+import { __resetNfcMock } from "../__mocks__/@capawesome-team/capacitor-nfc";
+import { __resetDeviceCache } from "./hooks/useNetworkScan";
 
 // Define global constants that Vite normally injects
 (globalThis as any).__APP_BASE_PATH__ = "/";
@@ -82,6 +85,12 @@ afterEach(() => {
   CoreAPI.reset();
   // Reset Preferences storage between tests
   __resetPreferencesStorage();
+  // Reset ZeroConf mock state between tests
+  __resetZeroConfMock();
+  // Reset NFC mock state between tests
+  __resetNfcMock();
+  // Reset network scan device cache between tests
+  __resetDeviceCache();
 });
 
 // Close server after all tests
