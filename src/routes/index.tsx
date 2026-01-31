@@ -31,7 +31,8 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-function Index() {
+// Exported for testing
+export function Index() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("nav.index"));
   const { announce } = useAnnouncer();

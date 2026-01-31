@@ -81,7 +81,8 @@ interface LoaderData {
   systems: SystemsResponse;
 }
 
-function Search() {
+// Exported for testing
+export function Search() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.search.title"));
   const loaderData = Route.useLoaderData();

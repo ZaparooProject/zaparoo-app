@@ -1,23 +1,126 @@
 /**
- * Integration Test: Settings Logs Page Components
+ * Integration Test: Settings Logs Page
  *
- * Tests the logs page component interactions including:
+ * Tests the REAL Logs component from src/routes/settings.logs.tsx including:
  * - Log level filter toggles
  * - Search input filtering
  * - Entry count display
  * - Copy/share buttons
+ * - Log entry rendering
+ * - Disconnected state
  */
 
-import React from "react";
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, waitFor } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { ToggleChip } from "@/components/wui/ToggleChip";
-import { TextInput } from "@/components/wui/TextInput";
-import { HeaderButton } from "@/components/wui/HeaderButton";
-import { RefreshCw, Copy, Download, Share2 } from "lucide-react";
+
+// Mock the router
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    useRouter: vi.fn(() => ({
+      history: {
+        back: vi.fn(),
+      },
+    })),
+    createFileRoute: vi.fn(() => () => ({
+      component: null,
+    })),
+  };
+});
+
+// Mock CoreAPI
+vi.mock("@/lib/coreApi", () => ({
+  CoreAPI: {
+    settingsLogsDownload: vi.fn(),
+  },
+}));
+
+// Mock state that can be modified per-test
+const mockState = {
+  queryData: null as {
+    content: string;
+    filename: string;
+    size: number;
+  } | null,
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+};
+
+vi.mock("@tanstack/react-query", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    useQuery: vi.fn(() => ({
+      data: mockState.queryData,
+      isLoading: mockState.isLoading,
+      isError: mockState.isError,
+      refetch: mockState.refetch,
+    })),
+  };
+});
+
+// Mock useSmartSwipe
+vi.mock("@/hooks/useSmartSwipe", () => ({
+  useSmartSwipe: vi.fn(() => ({})),
+}));
+
+// Mock useHaptics
+vi.mock("@/hooks/useHaptics", () => ({
+  useHaptics: vi.fn(() => ({
+    impact: vi.fn(),
+    notification: vi.fn(),
+    vibrate: vi.fn(),
+  })),
+}));
+
+// Mock usePageHeadingFocus
+vi.mock("@/hooks/usePageHeadingFocus", () => ({
+  usePageHeadingFocus: vi.fn(),
+}));
+
+// Mock Capacitor
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: vi.fn(() => false),
+    getPlatform: vi.fn(() => "web"),
+  },
+}));
+
+// Mock clipboard (using configurable to allow userEvent to override)
+if (!navigator.clipboard) {
+  Object.defineProperty(navigator, "clipboard", {
+    value: {
+      writeText: vi.fn().mockResolvedValue(undefined),
+    },
+    writable: true,
+    configurable: true,
+  });
+}
+
+// Mock URL APIs
+global.URL.createObjectURL = vi.fn(() => "mock-url");
+global.URL.revokeObjectURL = vi.fn();
+
+// Helper to create base64 encoded log content
+function createMockLogContent(
+  entries: Array<{
+    level: string;
+    time: string;
+    message: string;
+    [key: string]: unknown;
+  }>,
+) {
+  const content = entries.map((e) => JSON.stringify(e)).join("\n");
+  return btoa(content);
+}
+
+// Import the REAL component after mocks are set up
+import { Logs } from "@/routes/settings.logs";
 
 describe("Settings Logs Integration", () => {
   beforeEach(() => {
@@ -39,53 +142,54 @@ describe("Settings Logs Integration", () => {
         error: true,
       },
     });
+
+    // Reset mock query state
+    mockState.queryData = null;
+    mockState.isLoading = false;
+    mockState.isError = false;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  describe("Log Level Filters", () => {
-    it("should render all level filter chips", () => {
-      const levelFilters = usePreferencesStore.getState().logLevelFilters;
-      const setLogLevelFilters = vi.fn();
+  describe("Page Structure", () => {
+    it("should render the logs page with header and title", () => {
+      render(<Logs />);
 
-      render(
-        <div className="flex flex-row flex-wrap gap-1.5">
-          <ToggleChip
-            label="Debug"
-            state={levelFilters.debug}
-            setState={(state) =>
-              setLogLevelFilters({ ...levelFilters, debug: state })
-            }
-            compact
-          />
-          <ToggleChip
-            label="Info"
-            state={levelFilters.info}
-            setState={(state) =>
-              setLogLevelFilters({ ...levelFilters, info: state })
-            }
-            compact
-          />
-          <ToggleChip
-            label="Warn"
-            state={levelFilters.warn}
-            setState={(state) =>
-              setLogLevelFilters({ ...levelFilters, warn: state })
-            }
-            compact
-          />
-          <ToggleChip
-            label="Error"
-            state={levelFilters.error}
-            setState={(state) =>
-              setLogLevelFilters({ ...levelFilters, error: state })
-            }
-            compact
-          />
-        </div>,
+      expect(
+        screen.getByRole("heading", { name: /settings.logs.title/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("should render back button in header", () => {
+      render(<Logs />);
+
+      expect(
+        screen.getByRole("button", { name: /nav.back/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("should render refresh button", () => {
+      render(<Logs />);
+
+      const refreshButton = screen.getByRole("button", {
+        name: /settings.logs.refresh/i,
+      });
+      expect(refreshButton).toBeInTheDocument();
+    });
+
+    it("should render search input with placeholder", () => {
+      render(<Logs />);
+
+      const searchInput = screen.getByPlaceholderText(
+        /settings.logs.searchPlaceholder/i,
       );
+      expect(searchInput).toBeInTheDocument();
+    });
+
+    it("should render all level filter chips", () => {
+      render(<Logs />);
 
       expect(
         screen.getByRole("button", { name: /debug/i }),
@@ -96,190 +200,21 @@ describe("Settings Logs Integration", () => {
         screen.getByRole("button", { name: /error/i }),
       ).toBeInTheDocument();
     });
-
-    it("should toggle level filter state when clicked", async () => {
-      const user = userEvent.setup();
-      let levelFilters = { debug: true, info: true, warn: true, error: true };
-      const setLogLevelFilters = vi.fn((newFilters) => {
-        levelFilters = newFilters;
-      });
-
-      render(
-        <ToggleChip
-          label="Debug"
-          state={levelFilters.debug}
-          setState={(state) =>
-            setLogLevelFilters({ ...levelFilters, debug: state })
-          }
-          compact
-        />,
-      );
-
-      const debugButton = screen.getByRole("button", { name: /debug/i });
-      await user.click(debugButton);
-
-      expect(setLogLevelFilters).toHaveBeenCalledWith({
-        debug: false,
-        info: true,
-        warn: true,
-        error: true,
-      });
-    });
-
-    it("should update preferences store when filter is toggled", async () => {
-      const user = userEvent.setup();
-
-      const FilterChip = () => {
-        const levelFilters = usePreferencesStore((s) => s.logLevelFilters);
-        const setLogLevelFilters = usePreferencesStore(
-          (s) => s.setLogLevelFilters,
-        );
-
-        return (
-          <ToggleChip
-            label="Debug"
-            state={levelFilters.debug}
-            setState={(state) =>
-              setLogLevelFilters({ ...levelFilters, debug: state })
-            }
-            compact
-          />
-        );
-      };
-
-      render(<FilterChip />);
-
-      const debugButton = screen.getByRole("button", { name: /debug/i });
-      expect(debugButton).toHaveAttribute("aria-pressed", "true");
-
-      await user.click(debugButton);
-
-      await waitFor(() => {
-        expect(usePreferencesStore.getState().logLevelFilters.debug).toBe(
-          false,
-        );
-      });
-    });
   });
 
-  describe("Search Input", () => {
-    it("should render search input with placeholder", () => {
-      render(
-        <TextInput
-          label=""
-          placeholder="settings.logs.searchPlaceholder"
-          value=""
-          setValue={vi.fn()}
-        />,
-      );
-
-      const input = screen.getByRole("textbox");
-      expect(input).toBeInTheDocument();
-      expect(input).toHaveAttribute(
-        "placeholder",
-        "settings.logs.searchPlaceholder",
-      );
-    });
-
-    it("should update search term when typing", async () => {
-      const user = userEvent.setup();
-      const setValue = vi.fn();
-
-      render(
-        <TextInput
-          label=""
-          placeholder="Search..."
-          value=""
-          setValue={setValue}
-        />,
-      );
-
-      const input = screen.getByRole("textbox");
-      await user.type(input, "error");
-
-      expect(setValue).toHaveBeenCalledTimes(5); // One for each character
-    });
-
-    it("should filter displayed items when search term is entered", async () => {
-      const user = userEvent.setup();
-
-      // Test component demonstrating search filtering pattern
-      const SearchableList = () => {
-        const [searchTerm, setSearchTerm] = React.useState("");
-        const items = [
-          { id: 1, message: "test message" },
-          { id: 2, message: "error occurred" },
-          { id: 3, message: "debug info" },
-        ];
-
-        const filtered = items.filter((item) =>
-          item.message.toLowerCase().includes(searchTerm.toLowerCase()),
-        );
-
-        return (
-          <div>
-            <TextInput
-              label="Search"
-              placeholder="Search..."
-              value={searchTerm}
-              setValue={setSearchTerm}
-            />
-            <ul>
-              {filtered.map((item) => (
-                <li key={item.id}>{item.message}</li>
-              ))}
-            </ul>
-          </div>
-        );
-      };
-
-      render(<SearchableList />);
-
-      // All items visible initially
-      expect(screen.getByText("test message")).toBeInTheDocument();
-      expect(screen.getByText("error occurred")).toBeInTheDocument();
-      expect(screen.getByText("debug info")).toBeInTheDocument();
-
-      // Type in search to filter
-      await user.type(screen.getByRole("textbox"), "error");
-
-      // Only matching item visible
-      expect(screen.queryByText("test message")).not.toBeInTheDocument();
-      expect(screen.getByText("error occurred")).toBeInTheDocument();
-      expect(screen.queryByText("debug info")).not.toBeInTheDocument();
-    });
-  });
-
-  describe("Action Buttons", () => {
-    it("should render refresh button", () => {
-      render(
-        <HeaderButton
-          onClick={vi.fn()}
-          disabled={false}
-          icon={<RefreshCw size="20" />}
-          title="settings.logs.refresh"
-        />,
-      );
-
-      const refreshButton = screen.getByRole("button", {
-        name: /settings.logs.refresh/i,
-      });
-      expect(refreshButton).toBeInTheDocument();
-      expect(refreshButton).not.toBeDisabled();
-    });
-
-    it("should disable refresh button when not connected", () => {
+  describe("Connected/Disconnected States", () => {
+    it("should show not connected message when disconnected", () => {
       useStatusStore.setState({ connected: false });
-      const connected = useStatusStore.getState().connected;
 
-      render(
-        <HeaderButton
-          onClick={vi.fn()}
-          disabled={!connected}
-          icon={<RefreshCw size="20" />}
-          title="settings.logs.refresh"
-        />,
-      );
+      render(<Logs />);
+
+      expect(screen.getByText(/notConnected/i)).toBeInTheDocument();
+    });
+
+    it("should disable refresh button when disconnected", () => {
+      useStatusStore.setState({ connected: false });
+
+      render(<Logs />);
 
       const refreshButton = screen.getByRole("button", {
         name: /settings.logs.refresh/i,
@@ -287,202 +222,463 @@ describe("Settings Logs Integration", () => {
       expect(refreshButton).toBeDisabled();
     });
 
-    it("should render copy button when data is available", () => {
-      render(
-        <HeaderButton
-          onClick={vi.fn()}
-          icon={<Copy size="20" />}
-          title="settings.logs.copy"
-        />,
-      );
+    it("should enable refresh button when connected", () => {
+      render(<Logs />);
 
-      const copyButton = screen.getByRole("button", {
-        name: /settings.logs.copy/i,
+      const refreshButton = screen.getByRole("button", {
+        name: /settings.logs.refresh/i,
       });
-      expect(copyButton).toBeInTheDocument();
-    });
-
-    it("should call copy handler when copy button is clicked", async () => {
-      const user = userEvent.setup();
-      const copyHandler = vi.fn();
-
-      render(
-        <HeaderButton
-          onClick={copyHandler}
-          icon={<Copy size="20" />}
-          title="settings.logs.copy"
-        />,
-      );
-
-      const copyButton = screen.getByRole("button", {
-        name: /settings.logs.copy/i,
-      });
-      await user.click(copyButton);
-
-      expect(copyHandler).toHaveBeenCalledTimes(1);
-    });
-
-    it("should render download button on web platform", () => {
-      render(
-        <HeaderButton
-          onClick={vi.fn()}
-          icon={<Download size="20" />}
-          title="settings.logs.download"
-        />,
-      );
-
-      const downloadButton = screen.getByRole("button", {
-        name: /settings.logs.download/i,
-      });
-      expect(downloadButton).toBeInTheDocument();
-    });
-
-    it("should render share button on native platform", () => {
-      render(
-        <HeaderButton
-          onClick={vi.fn()}
-          icon={<Share2 size="20" />}
-          title="settings.logs.share"
-        />,
-      );
-
-      const shareButton = screen.getByRole("button", {
-        name: /settings.logs.share/i,
-      });
-      expect(shareButton).toBeInTheDocument();
+      expect(refreshButton).not.toBeDisabled();
     });
   });
 
-  describe("Entry Count and Filtering Integration", () => {
-    // Test component that demonstrates real filtering with count display
-    const FilterableLogList = () => {
-      const levelFilters = usePreferencesStore((s) => s.logLevelFilters);
-      const setLogLevelFilters = usePreferencesStore(
-        (s) => s.setLogLevelFilters,
-      );
+  describe("Log Data Display", () => {
+    it("should render log entries when data is available", () => {
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          {
+            level: "info",
+            time: "2025-01-15T10:30:00Z",
+            message: "Test info message",
+          },
+          {
+            level: "error",
+            time: "2025-01-15T10:31:00Z",
+            message: "Test error message",
+          },
+        ]),
+        size: 100,
+      };
 
-      const allEntries = [
-        { level: "debug", message: "debug message 1" },
-        { level: "debug", message: "debug message 2" },
-        { level: "info", message: "info message" },
-        { level: "warn", message: "warn message" },
-        { level: "error", message: "error message" },
-      ];
+      render(<Logs />);
 
-      const filteredEntries = allEntries.filter((entry) => {
-        const levelKey = entry.level as keyof typeof levelFilters;
-        return levelFilters[levelKey] !== false;
-      });
-
-      return (
-        <div>
-          <div className="filters">
-            <ToggleChip
-              label="Debug"
-              state={levelFilters.debug}
-              setState={(state) =>
-                setLogLevelFilters({ ...levelFilters, debug: state })
-              }
-            />
-            <ToggleChip
-              label="Info"
-              state={levelFilters.info}
-              setState={(state) =>
-                setLogLevelFilters({ ...levelFilters, info: state })
-              }
-            />
-            <ToggleChip
-              label="Error"
-              state={levelFilters.error}
-              setState={(state) =>
-                setLogLevelFilters({ ...levelFilters, error: state })
-              }
-            />
-          </div>
-          <div data-testid="entry-count">
-            {filteredEntries.length === allEntries.length
-              ? `${allEntries.length} entries`
-              : `Showing ${filteredEntries.length} of ${allEntries.length} entries`}
-          </div>
-          <ul>
-            {filteredEntries.map((entry, index) => (
-              <li key={index} data-level={entry.level}>
-                {entry.message}
-              </li>
-            ))}
-          </ul>
-        </div>
-      );
-    };
-
-    it("should display total entry count when no filters applied", () => {
-      render(<FilterableLogList />);
-
-      expect(screen.getByTestId("entry-count")).toHaveTextContent("5 entries");
-      expect(screen.getAllByRole("listitem")).toHaveLength(5);
+      expect(screen.getByText(/Test info message/)).toBeInTheDocument();
+      expect(screen.getByText(/Test error message/)).toBeInTheDocument();
     });
 
-    it("should update entry count and visible items when debug filter is toggled off", async () => {
-      const user = userEvent.setup();
-      render(<FilterableLogList />);
+    it("should show entry count when data is available", () => {
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          { level: "info", time: "2025-01-15T10:30:00Z", message: "Message 1" },
+          {
+            level: "debug",
+            time: "2025-01-15T10:31:00Z",
+            message: "Message 2",
+          },
+          { level: "warn", time: "2025-01-15T10:32:00Z", message: "Message 3" },
+        ]),
+        size: 100,
+      };
 
-      // Initially all 5 entries visible (2 debug + 1 info + 1 warn + 1 error)
-      expect(screen.getAllByRole("listitem")).toHaveLength(5);
+      render(<Logs />);
+
+      expect(screen.getByText(/3 entries/)).toBeInTheDocument();
+    });
+
+    it("should show copy button when data is available", () => {
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          { level: "info", time: "2025-01-15T10:30:00Z", message: "Test" },
+        ]),
+        size: 50,
+      };
+
+      render(<Logs />);
+
+      expect(
+        screen.getByRole("button", { name: /settings.logs.copy/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("should show download button on web platform", () => {
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          { level: "info", time: "2025-01-15T10:30:00Z", message: "Test" },
+        ]),
+        size: 50,
+      };
+
+      render(<Logs />);
+
+      expect(
+        screen.getByRole("button", { name: /settings.logs.download/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("should show no entries found when connected but data has no matching entries", () => {
+      mockState.queryData = {
+        filename: "empty.log",
+        content: "",
+        size: 0,
+      };
+
+      render(<Logs />);
+
+      expect(
+        screen.getByText(/settings.logs.noEntriesFound/i),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("Search Functionality", () => {
+    it("should filter entries based on search term", async () => {
+      const user = userEvent.setup();
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          {
+            level: "info",
+            time: "2025-01-15T10:30:00Z",
+            message: "User logged in",
+          },
+          {
+            level: "error",
+            time: "2025-01-15T10:31:00Z",
+            message: "Connection failed",
+          },
+          {
+            level: "debug",
+            time: "2025-01-15T10:32:00Z",
+            message: "Debug trace",
+          },
+        ]),
+        size: 150,
+      };
+
+      render(<Logs />);
+
+      // Initially all entries visible
+      expect(screen.getByText(/User logged in/)).toBeInTheDocument();
+      expect(screen.getByText(/Connection failed/)).toBeInTheDocument();
+      expect(screen.getByText(/Debug trace/)).toBeInTheDocument();
+
+      // Type search term
+      const searchInput = screen.getByPlaceholderText(
+        /settings.logs.searchPlaceholder/i,
+      );
+      await user.type(searchInput, "Connection");
+
+      // Only matching entry visible
+      await waitFor(() => {
+        expect(screen.queryByText(/User logged in/)).not.toBeInTheDocument();
+        expect(screen.getByText(/Connection failed/)).toBeInTheDocument();
+        expect(screen.queryByText(/Debug trace/)).not.toBeInTheDocument();
+      });
+    });
+
+    it("should show filtered entry count when search term is active", async () => {
+      const user = userEvent.setup();
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          { level: "info", time: "2025-01-15T10:30:00Z", message: "Message A" },
+          { level: "info", time: "2025-01-15T10:31:00Z", message: "Message B" },
+          { level: "info", time: "2025-01-15T10:32:00Z", message: "Different" },
+        ]),
+        size: 100,
+      };
+
+      render(<Logs />);
+
+      const searchInput = screen.getByPlaceholderText(
+        /settings.logs.searchPlaceholder/i,
+      );
+      await user.type(searchInput, "Message");
+
+      await waitFor(() => {
+        expect(screen.getByText(/Showing 2 of 3 entries/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Level Filter Functionality", () => {
+    it("should toggle level filter state when clicked", async () => {
+      const user = userEvent.setup();
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          {
+            level: "debug",
+            time: "2025-01-15T10:30:00Z",
+            message: "Debug message",
+          },
+          {
+            level: "info",
+            time: "2025-01-15T10:31:00Z",
+            message: "Info message",
+          },
+        ]),
+        size: 100,
+      };
+
+      render(<Logs />);
+
+      // Both entries initially visible
+      expect(screen.getByText(/Debug message/)).toBeInTheDocument();
+      expect(screen.getByText(/Info message/)).toBeInTheDocument();
 
       // Toggle off debug filter
       const debugButton = screen.getByRole("button", { name: /debug/i });
       await user.click(debugButton);
 
-      // Should show filtered count and hide debug entries
+      // Debug entries should be filtered out
       await waitFor(() => {
-        expect(screen.getByTestId("entry-count")).toHaveTextContent(
-          "Showing 3 of 5 entries",
+        expect(usePreferencesStore.getState().logLevelFilters.debug).toBe(
+          false,
         );
       });
-      expect(screen.queryByText("debug message 1")).not.toBeInTheDocument();
-      expect(screen.queryByText("debug message 2")).not.toBeInTheDocument();
-      expect(screen.getByText("info message")).toBeInTheDocument();
-      expect(screen.getByText("error message")).toBeInTheDocument();
     });
 
-    it("should filter multiple log levels when multiple chips are toggled off", async () => {
+    it("should filter entries by level when filter is toggled off", async () => {
       const user = userEvent.setup();
-      render(<FilterableLogList />);
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          {
+            level: "debug",
+            time: "2025-01-15T10:30:00Z",
+            message: "Debug only message",
+          },
+          {
+            level: "info",
+            time: "2025-01-15T10:31:00Z",
+            message: "Info only message",
+          },
+          {
+            level: "error",
+            time: "2025-01-15T10:32:00Z",
+            message: "Error only message",
+          },
+        ]),
+        size: 150,
+      };
 
-      // Toggle off debug and info
-      await user.click(screen.getByRole("button", { name: /debug/i }));
-      await user.click(screen.getByRole("button", { name: /info/i }));
+      render(<Logs />);
 
+      // Toggle off debug filter
+      const debugButton = screen.getByRole("button", { name: /debug/i });
+      await user.click(debugButton);
+
+      // Debug entry should be hidden, others visible
       await waitFor(() => {
-        expect(screen.getByTestId("entry-count")).toHaveTextContent(
-          "Showing 2 of 5 entries",
-        );
+        expect(
+          screen.queryByText(/Debug only message/),
+        ).not.toBeInTheDocument();
       });
-      expect(screen.getAllByRole("listitem")).toHaveLength(2);
+      expect(screen.getByText(/Info only message/)).toBeInTheDocument();
+      expect(screen.getByText(/Error only message/)).toBeInTheDocument();
     });
 
-    it("should restore entries when filter is toggled back on", async () => {
+    it("should update entry count when filters are applied", async () => {
       const user = userEvent.setup();
-      render(<FilterableLogList />);
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          { level: "debug", time: "2025-01-15T10:30:00Z", message: "Debug 1" },
+          { level: "debug", time: "2025-01-15T10:31:00Z", message: "Debug 2" },
+          { level: "info", time: "2025-01-15T10:32:00Z", message: "Info 1" },
+          { level: "error", time: "2025-01-15T10:33:00Z", message: "Error 1" },
+        ]),
+        size: 200,
+      };
+
+      render(<Logs />);
+
+      // Initially shows 4 entries
+      expect(screen.getByText(/4 entries/)).toBeInTheDocument();
 
       // Toggle off debug
       const debugButton = screen.getByRole("button", { name: /debug/i });
       await user.click(debugButton);
 
+      // Should show filtered count
       await waitFor(() => {
-        expect(screen.queryByText("debug message 1")).not.toBeInTheDocument();
+        expect(screen.getByText(/Showing 2 of 4 entries/i)).toBeInTheDocument();
       });
+    });
+  });
 
-      // Toggle debug back on
-      await user.click(debugButton);
+  describe("Copy Functionality", () => {
+    it("should render copy button when data is available", () => {
+      const logContent = [
+        {
+          level: "info",
+          time: "2025-01-15T10:30:00Z",
+          message: "Test message",
+        },
+      ];
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent(logContent),
+        size: 100,
+      };
+
+      render(<Logs />);
+
+      // Verify copy button is present and clickable
+      const copyButton = screen.getByRole("button", {
+        name: /settings.logs.copy/i,
+      });
+      expect(copyButton).toBeInTheDocument();
+      expect(copyButton).not.toBeDisabled();
+    });
+  });
+
+  describe("Refresh Functionality", () => {
+    it("should call refetch when refresh button is clicked", async () => {
+      const user = userEvent.setup();
+
+      render(<Logs />);
+
+      const refreshButton = screen.getByRole("button", {
+        name: /settings.logs.refresh/i,
+      });
+      await user.click(refreshButton);
+
+      expect(mockState.refetch).toHaveBeenCalled();
+    });
+  });
+
+  describe("Message Truncation", () => {
+    it("should show 'show more' button for long messages", () => {
+      const longMessage = "A".repeat(250);
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          { level: "info", time: "2025-01-15T10:30:00Z", message: longMessage },
+        ]),
+        size: 300,
+      };
+
+      render(<Logs />);
+
+      expect(
+        screen.getByRole("button", { name: /settings.logs.showMore/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("should expand message when show more is clicked", async () => {
+      const user = userEvent.setup();
+      const longMessage = "B".repeat(250);
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          { level: "info", time: "2025-01-15T10:30:00Z", message: longMessage },
+        ]),
+        size: 300,
+      };
+
+      render(<Logs />);
+
+      const showMoreButton = screen.getByRole("button", {
+        name: /settings.logs.showMore/i,
+      });
+      await user.click(showMoreButton);
 
       await waitFor(() => {
-        expect(screen.getByText("debug message 1")).toBeInTheDocument();
-        expect(screen.getByText("debug message 2")).toBeInTheDocument();
-        expect(screen.getByTestId("entry-count")).toHaveTextContent(
-          "5 entries",
-        );
+        expect(
+          screen.getByRole("button", { name: /settings.logs.showLess/i }),
+        ).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("Log Level Styling", () => {
+    it("should render log entries with appropriate level badges", () => {
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          {
+            level: "error",
+            time: "2025-01-15T10:30:00Z",
+            message: "Error level test",
+          },
+          {
+            level: "warn",
+            time: "2025-01-15T10:31:00Z",
+            message: "Warn level test",
+          },
+          {
+            level: "info",
+            time: "2025-01-15T10:32:00Z",
+            message: "Info level test",
+          },
+          {
+            level: "debug",
+            time: "2025-01-15T10:33:00Z",
+            message: "Debug level test",
+          },
+        ]),
+        size: 200,
+      };
+
+      render(<Logs />);
+
+      // Check that log messages are rendered (level badges appear with filter chips)
+      // Using getAllByText since "Error" etc. appear in both filter chips and badges
+      expect(screen.getAllByText("Error").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Warn").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Info").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Debug").length).toBeGreaterThanOrEqual(1);
+
+      // Verify messages are displayed
+      expect(screen.getByText(/Error level test/)).toBeInTheDocument();
+      expect(screen.getByText(/Warn level test/)).toBeInTheDocument();
+      expect(screen.getByText(/Info level test/)).toBeInTheDocument();
+      expect(screen.getByText(/Debug level test/)).toBeInTheDocument();
+    });
+  });
+
+  describe("Additional Fields", () => {
+    it("should render additional fields in log entries", () => {
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          {
+            level: "error",
+            time: "2025-01-15T10:30:00Z",
+            message: "Error with context",
+            userId: "user123",
+            requestId: "req456",
+          },
+        ]),
+        size: 150,
+      };
+
+      render(<Logs />);
+
+      expect(screen.getByText(/userId:/)).toBeInTheDocument();
+      expect(screen.getByText(/requestId:/)).toBeInTheDocument();
+    });
+  });
+
+  describe("Error Handling", () => {
+    it("should show error message when fetch fails", () => {
+      mockState.isError = true;
+      mockState.queryData = null;
+
+      render(<Logs />);
+
+      expect(screen.getByText(/settings.logs.fetchError/i)).toBeInTheDocument();
+    });
+
+    it("should handle malformed log data gracefully", () => {
+      mockState.queryData = {
+        filename: "bad.log",
+        content: btoa("invalid json line\nmore invalid"),
+        size: 50,
+      };
+
+      // Should render without crashing
+      render(<Logs />);
+
+      expect(
+        screen.getByRole("heading", { name: /settings.logs.title/i }),
+      ).toBeInTheDocument();
     });
   });
 });

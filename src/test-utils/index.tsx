@@ -11,7 +11,7 @@ import { SlideModalProvider } from "../components/SlideModalProvider";
 import { A11yAnnouncerProvider } from "../components/A11yAnnouncer";
 
 // Create a test query client
-const createTestQueryClient = () =>
+export const createTestQueryClient = () =>
   new QueryClient({
     defaultOptions: {
       queries: {
@@ -34,6 +34,25 @@ function AllProviders({ children }: { children: React.ReactNode }) {
       </A11yAnnouncerProvider>
     </QueryClientProvider>
   );
+}
+
+/**
+ * Creates providers with a custom QueryClient for tests that need to control the client
+ */
+export function createProvidersWithQueryClient(queryClient: QueryClient) {
+  return function ProvidersWithClient({
+    children,
+  }: {
+    children: React.ReactNode;
+  }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <A11yAnnouncerProvider>
+          <SlideModalProvider>{children}</SlideModalProvider>
+        </A11yAnnouncerProvider>
+      </QueryClientProvider>
+    );
+  };
 }
 
 // Custom render function that wraps components with necessary providers
