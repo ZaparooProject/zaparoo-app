@@ -9,8 +9,8 @@ describe("RecentSearchesModal", () => {
     if (search.query) {
       return `Search: ${search.query}`;
     }
-    if (search.systemId) {
-      return `System: ${search.systemId}`;
+    if (search.system) {
+      return `System: ${search.system}`;
     }
     return "Unknown search";
   };
@@ -77,12 +77,14 @@ describe("RecentSearchesModal", () => {
     const recentSearches: RecentSearch[] = [
       {
         query: "mario",
-        systemId: null,
+        system: "",
+        tags: [],
         timestamp: new Date("2024-01-15T10:30:00").getTime(),
       },
       {
         query: "zelda",
-        systemId: "nes",
+        system: "nes",
+        tags: [],
         timestamp: new Date("2024-01-14T15:45:00").getTime(),
       },
     ];
@@ -138,7 +140,8 @@ describe("RecentSearchesModal", () => {
     const recentSearches: RecentSearch[] = [
       {
         query: "sonic",
-        systemId: "genesis",
+        system: "genesis",
+        tags: [],
         timestamp: Date.now(),
       },
     ];
@@ -184,7 +187,7 @@ describe("RecentSearchesModal", () => {
 
   describe("clear history", () => {
     const recentSearches: RecentSearch[] = [
-      { query: "test", systemId: null, timestamp: Date.now() },
+      { query: "test", system: "", tags: [], timestamp: Date.now() },
     ];
 
     it("should call onClearHistory when clear button clicked", async () => {
@@ -235,7 +238,7 @@ describe("RecentSearchesModal", () => {
       // Arrange
       const customDisplayText = vi.fn().mockReturnValue("Custom Display");
       const recentSearches: RecentSearch[] = [
-        { query: "test", systemId: null, timestamp: Date.now() },
+        { query: "test", system: "", tags: [], timestamp: Date.now() },
       ];
 
       // Act
@@ -255,7 +258,7 @@ describe("RecentSearchesModal", () => {
     it("should handle system-only searches", () => {
       // Arrange
       const recentSearches: RecentSearch[] = [
-        { query: null, systemId: "snes", timestamp: Date.now() },
+        { query: "", system: "snes", tags: [], timestamp: Date.now() },
       ];
 
       // Act
@@ -273,7 +276,7 @@ describe("RecentSearchesModal", () => {
 
   describe("accessibility", () => {
     const recentSearches: RecentSearch[] = [
-      { query: "mario", systemId: null, timestamp: Date.now() },
+      { query: "mario", system: "", tags: [], timestamp: Date.now() },
     ];
 
     it("should have search result aria-label on icon buttons", () => {

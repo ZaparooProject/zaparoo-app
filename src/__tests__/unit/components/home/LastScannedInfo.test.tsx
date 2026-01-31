@@ -11,8 +11,10 @@ describe("LastScannedInfo", () => {
   const createToken = (
     overrides: Partial<TokenResponse> = {},
   ): TokenResponse => ({
+    type: "",
     uid: "",
     text: "",
+    data: "",
     scanTime: new Date().toISOString(),
     ...overrides,
   });
@@ -247,7 +249,8 @@ describe("LastScannedInfo", () => {
       const copyButtons = screen.getAllByRole("button", {
         name: "Copy to clipboard",
       });
-      await user.click(copyButtons[0]);
+      expect(copyButtons[0]).toBeDefined();
+      await user.click(copyButtons[0]!);
 
       // Assert - On web platform (default in tests), uses navigator.clipboard
       // Since Capacitor.isNativePlatform() returns false by default in mocks

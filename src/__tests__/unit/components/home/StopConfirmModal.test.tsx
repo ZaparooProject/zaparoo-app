@@ -88,7 +88,8 @@ describe("StopConfirmModal", () => {
 
       // Act - Click one of the close buttons (modal has both mobile and desktop variants)
       const closeButtons = screen.getAllByRole("button", { name: "nav.close" });
-      await user.click(closeButtons[0]);
+      expect(closeButtons[0]).toBeDefined();
+      await user.click(closeButtons[0]!);
 
       // Assert
       expect(onClose).toHaveBeenCalled();

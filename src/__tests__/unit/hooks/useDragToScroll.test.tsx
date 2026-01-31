@@ -205,7 +205,7 @@ describe("useDragToScroll", () => {
 
       // Get the mousemove handler
       const mouseMoveHandler = addEventListenerSpy.mock.calls.find(
-        (call) => call[0] === "mousemove",
+        (call: [string, EventListener]) => call[0] === "mousemove",
       )?.[1] as EventListener;
 
       // Simulate mouse move
@@ -255,7 +255,7 @@ describe("useDragToScroll", () => {
 
       // Get the mouseup handler
       const mouseUpHandler = addEventListenerSpy.mock.calls.find(
-        (call) => call[0] === "mouseup",
+        (call: [string, EventListener]) => call[0] === "mouseup",
       )?.[1] as EventListener;
 
       // Simulate mouse up
@@ -363,7 +363,7 @@ describe("useDragToScroll", () => {
 
       // Act - end drag
       const mouseUpHandler = addEventListenerSpy.mock.calls.find(
-        (call) => call[0] === "mouseup",
+        (call: [string, EventListener]) => call[0] === "mouseup",
       )?.[1] as EventListener;
 
       act(() => {
@@ -412,7 +412,7 @@ describe("useDragToScroll", () => {
 
       // Get the mousemove handler
       const mouseMoveHandler = addEventListenerSpy.mock.calls.find(
-        (call) => call[0] === "mousemove",
+        (call: [string, EventListener]) => call[0] === "mousemove",
       )?.[1] as EventListener;
 
       // Simulate dragging right (should scroll left - decrease scrollLeft)

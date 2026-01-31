@@ -103,9 +103,8 @@ describe("SystemSelector", () => {
     useStatusStore.setState({
       ...useStatusStore.getState(),
       gamesIndex: {
+        exists: true,
         indexing: false,
-        currentSystem: "",
-        totalSystems: 0,
         totalSteps: 0,
         currentStep: 0,
       },
@@ -633,9 +632,8 @@ describe("SystemSelector", () => {
       useStatusStore.setState({
         ...useStatusStore.getState(),
         gamesIndex: {
+          exists: true,
           indexing: true,
-          currentSystem: "nes",
-          totalSystems: 10,
           totalSteps: 100,
           currentStep: 50,
         },
@@ -658,9 +656,8 @@ describe("SystemSelector", () => {
       useStatusStore.setState({
         ...useStatusStore.getState(),
         gamesIndex: {
+          exists: true,
           indexing: true,
-          currentSystem: "nes",
-          totalSystems: 10,
           totalSteps: 100,
           currentStep: 50,
         },
@@ -685,9 +682,8 @@ describe("SystemSelector", () => {
       useStatusStore.setState({
         ...useStatusStore.getState(),
         gamesIndex: {
+          exists: true,
           indexing: true,
-          currentSystem: "nes",
-          totalSystems: 10,
           totalSteps: 100,
           currentStep: 50,
         },
@@ -746,9 +742,8 @@ describe("SystemSelectorTrigger", () => {
     useStatusStore.setState({
       ...useStatusStore.getState(),
       gamesIndex: {
+        exists: true,
         indexing: false,
-        currentSystem: "",
-        totalSystems: 0,
         totalSteps: 0,
         currentStep: 0,
       },
@@ -892,9 +887,8 @@ describe("SystemSelectorTrigger", () => {
       useStatusStore.setState({
         ...useStatusStore.getState(),
         gamesIndex: {
+          exists: true,
           indexing: true,
-          currentSystem: "nes",
-          totalSystems: 10,
           totalSteps: 100,
           currentStep: 50,
         },
@@ -921,9 +915,8 @@ describe("SystemSelectorTrigger", () => {
       useStatusStore.setState({
         ...useStatusStore.getState(),
         gamesIndex: {
+          exists: true,
           indexing: true,
-          currentSystem: "nes",
-          totalSystems: 10,
           totalSteps: 100,
           currentStep: 50,
         },

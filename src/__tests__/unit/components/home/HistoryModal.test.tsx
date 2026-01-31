@@ -61,7 +61,8 @@ describe("HistoryModal", () => {
 
       // Act - Click one of the close buttons (modal has both mobile and desktop variants)
       const closeButtons = screen.getAllByRole("button", { name: "nav.close" });
-      await user.click(closeButtons[0]);
+      expect(closeButtons[0]).toBeDefined();
+      await user.click(closeButtons[0]!);
 
       // Assert
       expect(onClose).toHaveBeenCalled();
@@ -320,7 +321,8 @@ describe("HistoryModal", () => {
       const copyButtons = screen.getAllByRole("button", {
         name: "Copy to clipboard",
       });
-      await user.click(copyButtons[0]);
+      expect(copyButtons[0]).toBeDefined();
+      await user.click(copyButtons[0]!);
 
       // Assert - Button state changes to "Copied"
       expect(

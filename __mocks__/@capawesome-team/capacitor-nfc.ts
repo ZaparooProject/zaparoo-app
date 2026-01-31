@@ -1,11 +1,12 @@
 import { vi } from "vitest";
 
 // Store event listeners for simulating NFC events in tests
-type NfcEventCallback = (event: any) => void;
+type NfcEventCallback = (event?: unknown) => void;
 const listeners: Map<string, NfcEventCallback[]> = new Map();
 
 export const Nfc = {
   isSupported: vi.fn().mockResolvedValue({ nfc: true }),
+  isAvailable: vi.fn().mockResolvedValue({ nfc: true }),
   isEnabled: vi.fn().mockResolvedValue({ isEnabled: true }),
   openSettings: vi.fn().mockResolvedValue(undefined),
   checkPermissions: vi.fn().mockResolvedValue({ nfc: "granted" }),

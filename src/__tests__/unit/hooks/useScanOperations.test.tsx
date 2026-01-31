@@ -4,7 +4,20 @@ import { useScanOperations } from "@/hooks/useScanOperations";
 import { ScanResult } from "@/lib/models";
 import { sessionManager } from "@/lib/nfc";
 import { Capacitor } from "@capacitor/core";
-import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
+import {
+  BarcodeScanner,
+  Barcode,
+  BarcodeFormat,
+  BarcodeValueType,
+} from "@capacitor-mlkit/barcode-scanning";
+
+// Helper to create mock barcode with all required properties
+const createMockBarcode = (rawValue: string): Barcode => ({
+  rawValue,
+  displayValue: rawValue,
+  format: BarcodeFormat.QrCode,
+  valueType: BarcodeValueType.Text,
+});
 import {
   Nfc,
   __simulateTagScanned,
@@ -203,7 +216,8 @@ describe("useScanOperations", () => {
         expect(setLastToken).toHaveBeenCalled();
       });
 
-      const lastTokenCall = setLastToken.mock.calls[0][0];
+      expect(setLastToken.mock.calls[0]).toBeDefined();
+      const lastTokenCall = setLastToken.mock.calls[0]![0];
       expect(lastTokenCall.uid).toBe("04abc123def456");
       expect(lastTokenCall.text).toBe("**launch.system:nes");
     });
@@ -213,7 +227,7 @@ describe("useScanOperations", () => {
     it("should call barcode scanner", async () => {
       // Arrange
       vi.mocked(BarcodeScanner.scan).mockResolvedValue({
-        barcodes: [{ rawValue: "**launch.system:snes" }],
+        barcodes: [createMockBarcode("**launch.system:snes")],
       });
       const { result } = renderHook(() => useScanOperations(defaultProps));
 
@@ -229,7 +243,7 @@ describe("useScanOperations", () => {
     it("should process barcode value and call setLastToken", async () => {
       // Arrange
       vi.mocked(BarcodeScanner.scan).mockResolvedValue({
-        barcodes: [{ rawValue: "game:mario" }],
+        barcodes: [createMockBarcode("game:mario")],
       });
       const setLastToken = vi.fn();
       const { result } = renderHook(() =>
@@ -243,7 +257,8 @@ describe("useScanOperations", () => {
 
       // Assert
       expect(setLastToken).toHaveBeenCalled();
-      const lastTokenCall = setLastToken.mock.calls[0][0];
+      expect(setLastToken.mock.calls[0]).toBeDefined();
+      const lastTokenCall = setLastToken.mock.calls[0]![0];
       expect(lastTokenCall.uid).toBe("game:mario");
       expect(lastTokenCall.text).toBe("game:mario");
     });
@@ -251,7 +266,7 @@ describe("useScanOperations", () => {
     it("should handle write command barcodes", async () => {
       // Arrange
       vi.mocked(BarcodeScanner.scan).mockResolvedValue({
-        barcodes: [{ rawValue: "**write:Some NFC content" }],
+        barcodes: [createMockBarcode("**write:Some NFC content")],
       });
       const setWriteOpen = vi.fn();
       const setLastToken = vi.fn();
@@ -327,7 +342,8 @@ describe("useScanOperations", () => {
 
       // Assert
       expect(setLastToken).toHaveBeenCalled();
-      const lastTokenCall = setLastToken.mock.calls[0][0];
+      expect(setLastToken.mock.calls[0]).toBeDefined();
+      const lastTokenCall = setLastToken.mock.calls[0]![0];
       expect(lastTokenCall.uid).toBe("**stop");
       expect(lastTokenCall.text).toBe("**stop");
     });
