@@ -2,15 +2,24 @@
  * Unit tests for ConnectionProvider
  *
  * Tests the connection state management, device address initialization,
- * and connection lifecycle handling.
+ * connection lifecycle handling, and notification processing.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "../../../test-utils";
+import { render, screen, waitFor } from "../../../test-utils";
 import { ConnectionProvider } from "../../../components/ConnectionProvider";
 import { useConnection } from "../../../hooks/useConnection";
 import { connectionManager } from "../../../lib/transport";
+import { CoreAPI } from "../../../lib/coreApi";
 import type { TransportState } from "../../../lib/transport/types";
+import type { NotificationRequest } from "../../../lib/coreApi";
+
+// Capture event handlers for notification testing
+let capturedEventHandlers: {
+  onConnectionChange?: (deviceId: string, connection: unknown) => void;
+  onMessage?: (deviceId: string, event: unknown) => void;
+  onError?: (deviceId: string, error: Error) => void;
+} = {};
 
 // Mock dependencies
 vi.mock("../../../lib/transport", () => {
@@ -31,7 +40,9 @@ vi.mock("../../../lib/transport", () => {
 
   return {
     connectionManager: {
-      setEventHandlers: vi.fn(),
+      setEventHandlers: vi.fn((handlers) => {
+        capturedEventHandlers = handlers;
+      }),
       addDevice: vi.fn(() => mockTransport),
       removeDevice: vi.fn(),
       setActiveDevice: vi.fn(),
@@ -39,6 +50,7 @@ vi.mock("../../../lib/transport", () => {
       getActiveConnection: vi.fn(() => null),
       pauseAll: vi.fn(),
       resumeAll: vi.fn(),
+      immediateReconnectActive: vi.fn(),
     },
   };
 });
@@ -56,30 +68,57 @@ vi.mock("../../../lib/coreApi", () => ({
   getWsUrl: vi.fn(() => "ws://192.168.1.100:7497"),
 }));
 
-vi.mock("../../../lib/store", () => ({
-  useStatusStore: vi.fn((selector) => {
-    const state = {
-      targetDeviceAddress: "192.168.1.100:7497",
-      setTargetDeviceAddress: vi.fn(),
-      setConnectionState: vi.fn(),
-      setConnectionError: vi.fn(),
-      setPlaying: vi.fn(),
-      setGamesIndex: vi.fn(),
-      setLastToken: vi.fn(),
-      addDeviceHistory: vi.fn(),
-      setDeviceHistory: vi.fn(),
-    };
-    return selector(state);
+// Use vi.hoisted to define mock functions that can be used in vi.mock
+const { mockSetPlaying, mockSetLastToken, mockSetGamesIndex } = vi.hoisted(
+  () => ({
+    mockSetPlaying: vi.fn(),
+    mockSetLastToken: vi.fn(),
+    mockSetGamesIndex: vi.fn(),
   }),
-  ConnectionState: {
-    IDLE: "idle",
-    CONNECTING: "connecting",
-    CONNECTED: "connected",
-    RECONNECTING: "reconnecting",
-    DISCONNECTED: "disconnected",
-    ERROR: "error",
-  },
-}));
+);
+
+vi.mock("../../../lib/store", () => {
+  // Track gamesIndex state for change detection
+  const mockGamesIndexState = {
+    indexing: false,
+    optimizing: false,
+    exists: false,
+    totalMedia: 0,
+  };
+
+  return {
+    useStatusStore: Object.assign(
+      vi.fn((selector) => {
+        const state = {
+          targetDeviceAddress: "192.168.1.100:7497",
+          setTargetDeviceAddress: vi.fn(),
+          setConnectionState: vi.fn(),
+          setConnectionError: vi.fn(),
+          setPlaying: mockSetPlaying,
+          setGamesIndex: mockSetGamesIndex,
+          setLastToken: mockSetLastToken,
+          addDeviceHistory: vi.fn(),
+          setDeviceHistory: vi.fn(),
+          gamesIndex: mockGamesIndexState,
+        };
+        return selector(state);
+      }),
+      {
+        getState: () => ({
+          gamesIndex: mockGamesIndexState,
+        }),
+      },
+    ),
+    ConnectionState: {
+      IDLE: "idle",
+      CONNECTING: "connecting",
+      CONNECTED: "connected",
+      RECONNECTING: "reconnecting",
+      DISCONNECTED: "disconnected",
+      ERROR: "error",
+    },
+  };
+});
 
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
@@ -99,8 +138,16 @@ vi.mock("@capacitor/core", () => ({
   },
 }));
 
+// Use vi.hoisted for toast mock
+const { mockToast } = vi.hoisted(() => ({
+  mockToast: vi.fn(),
+}));
+
 vi.mock("react-hot-toast", () => ({
-  default: vi.fn(),
+  default: Object.assign(mockToast, {
+    error: vi.fn(),
+    dismiss: vi.fn(),
+  }),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -109,9 +156,14 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
+// Use vi.hoisted for announce mock
+const { mockAnnounce } = vi.hoisted(() => ({
+  mockAnnounce: vi.fn(),
+}));
+
 vi.mock("../../../components/A11yAnnouncer", () => ({
   useAnnouncer: () => ({
-    announce: vi.fn(),
+    announce: mockAnnounce,
   }),
   A11yAnnouncerProvider: ({ children }: { children: React.ReactNode }) =>
     children,
@@ -260,5 +312,237 @@ describe("useConnection hook", () => {
     expect(screen.getByTestId("hasData")).toHaveTextContent("false");
     expect(screen.getByTestId("showConnecting")).toHaveTextContent("true");
     expect(screen.getByTestId("showReconnecting")).toHaveTextContent("false");
+  });
+});
+
+describe("notification processing", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedEventHandlers = {};
+    // Clear hoisted mocks explicitly
+    mockSetPlaying.mockClear();
+    mockSetLastToken.mockClear();
+    mockSetGamesIndex.mockClear();
+    mockToast.mockClear();
+    mockAnnounce.mockClear();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("media.started", () => {
+    it("should update playing state when media starts", async () => {
+      const mediaStartedNotification: NotificationRequest = {
+        method: "media.started",
+        params: {
+          systemId: "snes",
+          systemName: "Super Nintendo",
+          mediaPath: "/games/mario.sfc",
+          mediaName: "Super Mario World",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        mediaStartedNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      // Simulate receiving a message
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(mockSetPlaying).toHaveBeenCalledWith({
+          systemId: "snes",
+          systemName: "Super Nintendo",
+          mediaPath: "/games/mario.sfc",
+          mediaName: "Super Mario World",
+        });
+      });
+    });
+  });
+
+  describe("media.stopped", () => {
+    it("should clear playing state when media stops", async () => {
+      const mediaStoppedNotification: NotificationRequest = {
+        method: "media.stopped",
+        params: {},
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        mediaStoppedNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(mockSetPlaying).toHaveBeenCalledWith({
+          systemId: "",
+          systemName: "",
+          mediaPath: "",
+          mediaName: "",
+        });
+      });
+    });
+  });
+
+  describe("tokens.added", () => {
+    it("should update last token state", async () => {
+      const tokenScannedNotification: NotificationRequest = {
+        method: "tokens.added",
+        params: {
+          uid: "ABC123",
+          text: "**launch:snes/mario.sfc",
+          data: "launch data",
+          scanTime: "2024-01-15T12:00:00Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        tokenScannedNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(mockSetLastToken).toHaveBeenCalledWith({
+          uid: "ABC123",
+          text: "**launch:snes/mario.sfc",
+          data: "launch data",
+          scanTime: "2024-01-15T12:00:00Z",
+        });
+      });
+    });
+  });
+
+  describe("playtime notifications", () => {
+    it("should show toast and announce when daily playtime limit reached", async () => {
+      const playtimeLimitReachedNotification: NotificationRequest = {
+        method: "playtime.limit.reached",
+        params: {
+          reason: "daily",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        playtimeLimitReachedNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(mockAnnounce).toHaveBeenCalled();
+        expect(mockToast).toHaveBeenCalled();
+      });
+    });
+
+    it("should show session limit message when session limit reached", async () => {
+      const playtimeLimitReachedNotification: NotificationRequest = {
+        method: "playtime.limit.reached",
+        params: {
+          reason: "session",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        playtimeLimitReachedNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(mockAnnounce).toHaveBeenCalled();
+        expect(mockToast).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe("media.indexing", () => {
+    it("should update games index state", async () => {
+      const mediaIndexingNotification: NotificationRequest = {
+        method: "media.indexing",
+        params: {
+          indexing: true,
+          optimizing: false,
+          exists: true,
+          totalMedia: 150,
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        mediaIndexingNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(mockSetGamesIndex).toHaveBeenCalledWith({
+          indexing: true,
+          optimizing: false,
+          exists: true,
+          totalMedia: 150,
+        });
+      });
+    });
+  });
+
+  describe("error handling", () => {
+    it("should not update state when processReceived returns null", async () => {
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(null);
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      // Handler completes synchronously after await, so we can assert immediately
+      expect(mockSetPlaying).not.toHaveBeenCalled();
+      expect(mockSetLastToken).not.toHaveBeenCalled();
+    });
   });
 });
