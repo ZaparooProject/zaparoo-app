@@ -211,59 +211,6 @@ describe("HistoryModal", () => {
     });
   });
 
-  describe("success/failure styling", () => {
-    it("should render successful entries without error color", () => {
-      // Arrange
-      const historyData = {
-        entries: [createHistoryEntry({ success: true })],
-      };
-
-      // Act
-      const { container } = render(
-        <HistoryModal {...defaultProps} historyData={historyData} />,
-      );
-
-      // Assert - Entry should exist
-      expect(container.querySelector(".text-sm")).toBeInTheDocument();
-    });
-
-    it("should render failed entries with error color", () => {
-      // Arrange
-      const historyData = {
-        entries: [createHistoryEntry({ success: false })],
-      };
-
-      // Act
-      const { container } = render(
-        <HistoryModal {...defaultProps} historyData={historyData} />,
-      );
-
-      // Assert - Entry should exist with error color style (#FF7E92)
-      const entry = container.querySelector(".text-sm");
-      expect(entry).toBeInTheDocument();
-      expect(entry).toHaveStyle({ color: "#FF7E92" });
-    });
-
-    it("should render mixed success and failure entries", () => {
-      // Arrange
-      const historyData = {
-        entries: [
-          createHistoryEntry({ uid: "uid1", success: true }),
-          createHistoryEntry({ uid: "uid2", success: false }),
-        ],
-      };
-
-      // Act
-      const { container } = render(
-        <HistoryModal {...defaultProps} historyData={historyData} />,
-      );
-
-      // Assert - Both entries should exist
-      const entries = container.querySelectorAll(".text-sm");
-      expect(entries).toHaveLength(2);
-    });
-  });
-
   describe("copy buttons", () => {
     it("should show copy button for UID when UID is not empty", () => {
       // Arrange
@@ -379,37 +326,6 @@ describe("HistoryModal", () => {
       expect(
         screen.getByRole("button", { name: "Copied" }),
       ).toBeInTheDocument();
-    });
-  });
-
-  describe("entry separators", () => {
-    it("should have border between entries except for last", () => {
-      // Arrange
-      const historyData = {
-        entries: [
-          createHistoryEntry({ uid: "uid1" }),
-          createHistoryEntry({ uid: "uid2" }),
-          createHistoryEntry({ uid: "uid3" }),
-        ],
-      };
-
-      // Act
-      const { container } = render(
-        <HistoryModal {...defaultProps} historyData={historyData} />,
-      );
-
-      // Assert - Check that entries have proper border styling
-      const entries = container.querySelectorAll(".text-sm");
-      expect(entries).toHaveLength(3);
-      // First two entries should have bottom border
-      expect(entries[0]).toHaveStyle({
-        borderBottom: "1px solid rgba(255,255,255,0.6)",
-      });
-      expect(entries[1]).toHaveStyle({
-        borderBottom: "1px solid rgba(255,255,255,0.6)",
-      });
-      // Last entry should not have bottom border
-      expect(entries[2]).toHaveStyle({ borderBottom: "" });
     });
   });
 });

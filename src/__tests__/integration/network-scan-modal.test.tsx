@@ -421,7 +421,7 @@ describe("NetworkScanModal", () => {
       expect(onSelectDevice).toHaveBeenCalledWith("192.168.1.100:9000");
     });
 
-    it("should stop scanning on device selection", async () => {
+    it("should close modal when device is selected", async () => {
       // Arrange
       const user = userEvent.setup();
       const onClose = vi.fn();
@@ -452,40 +452,6 @@ describe("NetworkScanModal", () => {
       await user.click(screen.getByText("MiSTer"));
 
       // Assert - modal closes when device is selected (which stops scanning)
-      expect(onClose).toHaveBeenCalled();
-    });
-
-    it("should close modal on device selection", async () => {
-      // Arrange
-      const user = userEvent.setup();
-      const onClose = vi.fn();
-
-      render(
-        <NetworkScanModal
-          isOpen={true}
-          onClose={onClose}
-          onSelectDevice={vi.fn()}
-        />,
-      );
-
-      await waitFor(() => {
-        expect(
-          screen.getByText("settings.networkScan.searching"),
-        ).toBeInTheDocument();
-      });
-
-      act(() => {
-        __simulateDeviceDiscovered(createMockService({ name: "MiSTer" }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText("MiSTer")).toBeInTheDocument();
-      });
-
-      // Act
-      await user.click(screen.getByText("MiSTer"));
-
-      // Assert
       expect(onClose).toHaveBeenCalled();
     });
   });

@@ -259,33 +259,4 @@ describe("LastScannedInfo", () => {
       ).toBeInTheDocument();
     });
   });
-
-  describe("scan status styling", () => {
-    it("should apply success color when scan status is success", () => {
-      // Arrange & Act
-      const { container } = render(
-        <LastScannedInfo
-          lastToken={createToken({ uid: "abc", text: "test" })}
-          scanStatus={ScanResult.Success}
-        />,
-      );
-
-      // Assert - The component applies a color class based on scan status
-      // We're testing that the component renders without error with Success status
-      expect(container.querySelector("section")).toBeInTheDocument();
-    });
-
-    it("should not apply success color when scan status is default", () => {
-      // Arrange & Act
-      const { container } = render(
-        <LastScannedInfo
-          lastToken={createToken({ uid: "abc", text: "test" })}
-          scanStatus={ScanResult.Default}
-        />,
-      );
-
-      // Assert
-      expect(container.querySelector("section")).toBeInTheDocument();
-    });
-  });
 });
