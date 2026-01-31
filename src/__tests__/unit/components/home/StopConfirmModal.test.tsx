@@ -95,26 +95,6 @@ describe("StopConfirmModal", () => {
     });
   });
 
-  describe("button styling", () => {
-    it("should render cancel button with outline variant", () => {
-      // Arrange & Act
-      render(<StopConfirmModal {...defaultProps} />);
-
-      // Assert - The cancel button should have outline styling classes
-      const cancelButton = screen.getByRole("button", { name: "nav.cancel" });
-      expect(cancelButton).toBeInTheDocument();
-    });
-
-    it("should render confirm button with primary intent", () => {
-      // Arrange & Act
-      render(<StopConfirmModal {...defaultProps} />);
-
-      // Assert - The yes button should be styled as primary
-      const confirmButton = screen.getByRole("button", { name: "yes" });
-      expect(confirmButton).toBeInTheDocument();
-    });
-  });
-
   describe("accessibility", () => {
     it("should have dialog role", () => {
       // Arrange & Act

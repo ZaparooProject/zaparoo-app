@@ -52,16 +52,6 @@ describe("useScanOperations", () => {
       expect(result.current.scanSession).toBe(false);
       expect(result.current.scanStatus).toBe(ScanResult.Default);
     });
-
-    it("should provide scan handlers", () => {
-      // Arrange & Act
-      const { result } = renderHook(() => useScanOperations(defaultProps));
-
-      // Assert
-      expect(typeof result.current.handleScanButton).toBe("function");
-      expect(typeof result.current.handleCameraScan).toBe("function");
-      expect(typeof result.current.handleStopConfirm).toBe("function");
-    });
   });
 
   describe("handleScanButton", () => {

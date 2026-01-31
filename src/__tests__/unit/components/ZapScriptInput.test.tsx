@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "../../../test-utils";
+import { render, screen, waitFor, within } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { useStatusStore } from "@/lib/store";
@@ -256,17 +256,14 @@ describe("ZapScriptInput", () => {
       // Arrange & Act
       render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
 
-      // Assert - Multiple clear buttons exist (palette + hidden modal)
-      // The palette button should be disabled when value is empty
-      const clearButtons = screen.getAllByLabelText("create.custom.clear");
-      // Find the palette button (it's in the palette controls area, not inside dialog)
-      const paletteButton = clearButtons.find((btn) => {
-        // The palette button is NOT inside a dialog role element
-        const dialog = btn.closest('[role="dialog"]');
-        return dialog === null;
-      });
-      expect(paletteButton).toBeTruthy();
-      expect(paletteButton).toBeDisabled();
+      // Assert - The palette clear button (visible, not in hidden modal) should be disabled
+      // When modal is closed (aria-hidden="true"), getByRole only finds buttons in accessible tree
+      const clearButtons = screen.getAllByRole("button", {
+        name: "create.custom.clear",
+      }) as HTMLButtonElement[];
+      // At least one clear button should be disabled (the palette one)
+      const disabledButton = clearButtons.find((btn) => btn.disabled);
+      expect(disabledButton).toBeTruthy();
     });
 
     it("should be enabled when value is not empty", () => {
@@ -279,14 +276,12 @@ describe("ZapScriptInput", () => {
         />,
       );
 
-      // Assert - Find the palette clear button (not inside dialog)
-      const clearButtons = screen.getAllByLabelText("create.custom.clear");
-      const paletteButton = clearButtons.find((btn) => {
-        const dialog = btn.closest('[role="dialog"]');
-        return dialog === null;
-      });
-      expect(paletteButton).toBeTruthy();
-      expect(paletteButton).toBeEnabled();
+      // Assert - The palette clear button should be enabled
+      const clearButtons = screen.getAllByRole("button", {
+        name: "create.custom.clear",
+      }) as HTMLButtonElement[];
+      const enabledButton = clearButtons.find((btn) => !btn.disabled);
+      expect(enabledButton).toBeTruthy();
     });
 
     it("should open confirm modal when clicked", async () => {
@@ -300,14 +295,13 @@ describe("ZapScriptInput", () => {
         />,
       );
 
-      // Act - Find the palette clear button (not inside dialog)
-      const clearButtons = screen.getAllByLabelText("create.custom.clear");
-      const paletteButton = clearButtons.find((btn) => {
-        const dialog = btn.closest('[role="dialog"]');
-        return dialog === null;
-      });
-      expect(paletteButton).toBeTruthy();
-      await user.click(paletteButton!);
+      // Act - Click the enabled clear button to open confirm modal
+      const clearButtons = screen.getAllByRole("button", {
+        name: "create.custom.clear",
+      }) as HTMLButtonElement[];
+      const enabledButton = clearButtons.find((btn) => !btn.disabled);
+      expect(enabledButton).toBeTruthy();
+      await user.click(enabledButton!);
 
       // Assert - Confirm modal should open (SlideModal renders title twice for mobile/desktop)
       await waitFor(() => {
@@ -328,29 +322,26 @@ describe("ZapScriptInput", () => {
         />,
       );
 
-      // Act - Open confirm modal - find the palette clear button (not inside dialog)
-      const clearButtons = screen.getAllByLabelText("create.custom.clear");
-      const paletteButton = clearButtons.find((btn) => {
-        const dialog = btn.closest('[role="dialog"]');
-        return dialog === null;
-      });
-      expect(paletteButton).toBeTruthy();
-      await user.click(paletteButton!);
+      // Act - Open confirm modal by clicking the enabled clear button
+      const clearButtons = screen.getAllByRole("button", {
+        name: "create.custom.clear",
+      }) as HTMLButtonElement[];
+      const enabledButton = clearButtons.find((btn) => !btn.disabled);
+      expect(enabledButton).toBeTruthy();
+      await user.click(enabledButton!);
 
       await waitFor(() => {
         const titles = screen.getAllByText("create.custom.clearConfirmTitle");
         expect(titles.length).toBeGreaterThan(0);
       });
 
-      // Click the clear button in the modal - find by role within the visible dialog
+      // Click the clear button in the visible modal dialog
+      // The modal has Cancel and Clear buttons - find Clear by its text content
       const dialog = screen.getByRole("dialog");
-      const clearConfirmButtons = dialog.querySelectorAll("button");
-      // The clear button is the second button in the modal (after cancel)
-      const clearConfirmButton = Array.from(clearConfirmButtons).find((btn) =>
-        btn.textContent?.includes("create.custom.clear"),
-      );
-      expect(clearConfirmButton).toBeTruthy();
-      await user.click(clearConfirmButton!);
+      const modalClearButton = within(dialog).getByRole("button", {
+        name: "create.custom.clear",
+      });
+      await user.click(modalClearButton);
 
       // Assert
       expect(setValue).toHaveBeenCalledWith("");

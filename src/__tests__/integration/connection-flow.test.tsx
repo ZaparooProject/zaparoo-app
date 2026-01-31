@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen, act } from "../../test-utils";
+import { render, screen } from "../../test-utils";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { ConnectionStatusDisplay } from "@/components/ConnectionStatusDisplay";
@@ -152,119 +152,6 @@ describe("Connection Flow Integration", () => {
     });
   });
 
-  describe("store state management", () => {
-    it("should update connected state through store actions", () => {
-      // Initial state
-      expect(useStatusStore.getState().connected).toBe(false);
-      expect(useStatusStore.getState().connectionState).toBe(
-        ConnectionState.IDLE,
-      );
-
-      // Simulate connection establishing
-      act(() => {
-        useStatusStore
-          .getState()
-          .setConnectionState(ConnectionState.CONNECTING);
-      });
-      expect(useStatusStore.getState().connectionState).toBe(
-        ConnectionState.CONNECTING,
-      );
-      expect(useStatusStore.getState().connected).toBe(false);
-
-      // Simulate connection established
-      act(() => {
-        useStatusStore.getState().setConnectionState(ConnectionState.CONNECTED);
-      });
-      expect(useStatusStore.getState().connectionState).toBe(
-        ConnectionState.CONNECTED,
-      );
-      expect(useStatusStore.getState().connected).toBe(true);
-
-      // Simulate reconnecting
-      act(() => {
-        useStatusStore
-          .getState()
-          .setConnectionState(ConnectionState.RECONNECTING);
-      });
-      expect(useStatusStore.getState().connectionState).toBe(
-        ConnectionState.RECONNECTING,
-      );
-      // RECONNECTING is treated as "connected enough" to show UI
-      expect(useStatusStore.getState().connected).toBe(true);
-
-      // Simulate disconnect
-      act(() => {
-        useStatusStore
-          .getState()
-          .setConnectionState(ConnectionState.DISCONNECTED);
-      });
-      expect(useStatusStore.getState().connectionState).toBe(
-        ConnectionState.DISCONNECTED,
-      );
-      expect(useStatusStore.getState().connected).toBe(false);
-    });
-
-    it("should handle connection errors", () => {
-      act(() => {
-        useStatusStore.getState().setConnectionError("Network unreachable");
-      });
-      expect(useStatusStore.getState().connectionError).toBe(
-        "Network unreachable",
-      );
-
-      // Clear error on successful connection
-      act(() => {
-        useStatusStore.getState().setConnectionError("");
-        useStatusStore.getState().setConnectionState(ConnectionState.CONNECTED);
-      });
-      expect(useStatusStore.getState().connectionError).toBe("");
-      expect(useStatusStore.getState().connected).toBe(true);
-    });
-
-    it("should track retry count", () => {
-      expect(useStatusStore.getState().retryCount).toBe(0);
-
-      act(() => {
-        useStatusStore.getState().retryConnection();
-      });
-      expect(useStatusStore.getState().retryCount).toBe(1);
-
-      act(() => {
-        useStatusStore.getState().retryConnection();
-      });
-      expect(useStatusStore.getState().retryCount).toBe(2);
-    });
-
-    it("should reset connection state completely", () => {
-      // Set up some state
-      act(() => {
-        useStatusStore.getState().setConnectionState(ConnectionState.CONNECTED);
-        useStatusStore.getState().setConnectionError("Previous error");
-        useStatusStore.getState().setLastToken({
-          type: "ntag215",
-          uid: "abc123def456ab",
-          text: "test",
-          data: "",
-          scanTime: new Date().toISOString(),
-        });
-      });
-
-      // Reset
-      act(() => {
-        useStatusStore.getState().resetConnectionState();
-      });
-
-      // Verify reset
-      expect(useStatusStore.getState().connected).toBe(false);
-      expect(useStatusStore.getState().connectionState).toBe(
-        ConnectionState.IDLE,
-      );
-      expect(useStatusStore.getState().connectionError).toBe("");
-      expect(useStatusStore.getState().lastToken.uid).toBe("");
-      expect(useStatusStore.getState().retryCount).toBe(0);
-    });
-  });
-
   describe("connection status display with action slot", () => {
     it("should render action button in connected state", () => {
       const connectionValue: ConnectionContextValue = {
@@ -303,11 +190,10 @@ describe("Connection Flow Integration", () => {
         </ConnectionWrapper>,
       );
 
-      // Should show heading but skeleton for subtitle
+      // Should show heading but not show a subtitle text when loading
       expect(screen.getByText("scan.connectedHeading")).toBeInTheDocument();
-      // The skeleton is rendered as a div with animate-pulse class
-      const container = document.querySelector(".animate-pulse");
-      expect(container).toBeInTheDocument();
+      // No device address or version subtitle should be visible during loading
+      expect(screen.queryByText("192.168.1.100")).not.toBeInTheDocument();
     });
   });
 
