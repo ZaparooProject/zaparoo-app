@@ -13,6 +13,7 @@ import { connectionManager } from "../../../lib/transport";
 import { CoreAPI } from "../../../lib/coreApi";
 import type { TransportState } from "../../../lib/transport/types";
 import type { NotificationRequest } from "../../../lib/coreApi";
+import { Notification } from "../../../lib/models";
 
 // Capture event handlers for notification testing
 let capturedEventHandlers: {
@@ -334,7 +335,7 @@ describe("notification processing", () => {
   describe("media.started", () => {
     it("should update playing state when media starts", async () => {
       const mediaStartedNotification: NotificationRequest = {
-        method: "media.started",
+        method: Notification.MediaStarted,
         params: {
           systemId: "snes",
           systemName: "Super Nintendo",
@@ -371,7 +372,7 @@ describe("notification processing", () => {
   describe("media.stopped", () => {
     it("should clear playing state when media stops", async () => {
       const mediaStoppedNotification: NotificationRequest = {
-        method: "media.stopped",
+        method: Notification.MediaStopped,
         params: {},
       };
 
@@ -402,7 +403,7 @@ describe("notification processing", () => {
   describe("tokens.added", () => {
     it("should update last token state", async () => {
       const tokenScannedNotification: NotificationRequest = {
-        method: "tokens.added",
+        method: Notification.TokensScanned,
         params: {
           uid: "ABC123",
           text: "**launch:snes/mario.sfc",
@@ -438,7 +439,7 @@ describe("notification processing", () => {
   describe("playtime notifications", () => {
     it("should show toast and announce when daily playtime limit reached", async () => {
       const playtimeLimitReachedNotification: NotificationRequest = {
-        method: "playtime.limit.reached",
+        method: Notification.PlaytimeLimitReached,
         params: {
           reason: "daily",
         },
@@ -465,7 +466,7 @@ describe("notification processing", () => {
 
     it("should show session limit message when session limit reached", async () => {
       const playtimeLimitReachedNotification: NotificationRequest = {
-        method: "playtime.limit.reached",
+        method: Notification.PlaytimeLimitReached,
         params: {
           reason: "session",
         },
@@ -494,7 +495,7 @@ describe("notification processing", () => {
   describe("media.indexing", () => {
     it("should update games index state", async () => {
       const mediaIndexingNotification: NotificationRequest = {
-        method: "media.indexing",
+        method: Notification.MediaIndexing,
         params: {
           indexing: true,
           optimizing: false,

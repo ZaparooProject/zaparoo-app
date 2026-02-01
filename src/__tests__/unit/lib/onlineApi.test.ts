@@ -258,14 +258,15 @@ describe("onlineApi", () => {
       mockDelete.mockResolvedValue({
         data: {
           message: "Account deletion scheduled",
-          deletion_scheduled_at: deletionDate,
+          scheduled_deletion_at: deletionDate,
+          can_cancel_until: "2024-01-22T00:00:00Z",
         },
       });
 
       const { deleteAccount } = await import("../../../lib/onlineApi");
       const result = await deleteAccount("DELETE MY ACCOUNT");
 
-      expect(result.deletion_scheduled_at).toBe(deletionDate);
+      expect(result.scheduled_deletion_at).toBe(deletionDate);
     });
 
     it("should throw error on network failure", async () => {
