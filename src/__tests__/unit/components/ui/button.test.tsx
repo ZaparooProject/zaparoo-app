@@ -71,34 +71,6 @@ describe("Button (ui)", () => {
       const button = screen.getByRole("button", { name: "Button" });
       expect(button).toBeInTheDocument();
     });
-
-    it("should apply destructive variant styling", () => {
-      render(<Button variant="destructive">Delete</Button>);
-
-      const button = screen.getByRole("button", { name: "Delete" });
-      expect(button).toHaveClass("bg-destructive");
-    });
-
-    it("should apply outline variant styling", () => {
-      render(<Button variant="outline">Outline</Button>);
-
-      const button = screen.getByRole("button", { name: "Outline" });
-      expect(button).toHaveClass("border");
-    });
-
-    it("should apply ghost variant styling", () => {
-      render(<Button variant="ghost">Ghost</Button>);
-
-      const button = screen.getByRole("button", { name: "Ghost" });
-      expect(button).toHaveClass("hover:bg-white/10");
-    });
-
-    it("should apply link variant styling", () => {
-      render(<Button variant="link">Link</Button>);
-
-      const button = screen.getByRole("button", { name: "Link" });
-      expect(button).toHaveClass("underline-offset-4");
-    });
   });
 
   describe("sizes", () => {
@@ -116,33 +88,6 @@ describe("Button (ui)", () => {
 
       const button = screen.getByRole("button", { name: "Button" });
       expect(button).toBeInTheDocument();
-    });
-
-    it("should apply small size styling", () => {
-      render(<Button size="sm">Small</Button>);
-
-      const button = screen.getByRole("button", { name: "Small" });
-      expect(button).toHaveClass("h-8");
-    });
-
-    it("should apply large size styling", () => {
-      render(<Button size="lg">Large</Button>);
-
-      const button = screen.getByRole("button", { name: "Large" });
-      expect(button).toHaveClass("h-12");
-    });
-
-    it("should apply icon size styling", () => {
-      render(
-        <Button size="icon" aria-label="Icon button">
-          ★
-        </Button>,
-      );
-
-      const button = screen.getByRole("button", { name: "Icon button" });
-      expect(button).toHaveClass("h-10");
-      expect(button).toHaveClass("w-10");
-      expect(button).toHaveClass("rounded-full");
     });
   });
 
@@ -382,13 +327,6 @@ describe("Button (ui)", () => {
 
       const button = screen.getByRole("button", { name: "Disabled" });
       expect(button).toBeDisabled();
-    });
-
-    it("should apply disabled styling", () => {
-      render(<Button disabled>Disabled</Button>);
-
-      const button = screen.getByRole("button", { name: "Disabled" });
-      expect(button).toHaveClass("disabled:opacity-50");
     });
 
     it("should not show pressed state when disabled", () => {

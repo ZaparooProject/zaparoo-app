@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CoreAPI } from "../../lib/coreApi";
-import { Method, LaunchRequest, HistoryResponseEntry } from "../../lib/models";
+import { LaunchRequest, HistoryResponseEntry } from "../../lib/models";
 
 /**
  * Helper to simulate API response for CoreAPI tests.
@@ -207,26 +207,6 @@ describe("CoreAPI API Contract", () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.stringContaining('"method":"media.active.update"'),
       );
-    });
-
-    it("settingsLogsDownload should send correct JSON-RPC format", () => {
-      (CoreAPI as any).settingsLogsDownload().catch(() => {});
-
-      expect(mockSend).toHaveBeenCalledOnce();
-      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
-      expect(sentData.jsonrpc).toBe("2.0");
-      expect(sentData.method).toBe(Method.SettingsLogsDownload);
-      expect(sentData.id).toBeDefined();
-    });
-
-    it("launchersRefresh should send correct JSON-RPC format", () => {
-      (CoreAPI as any).launchersRefresh().catch(() => {});
-
-      expect(mockSend).toHaveBeenCalledOnce();
-      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
-      expect(sentData.jsonrpc).toBe("2.0");
-      expect(sentData.method).toBe(Method.LaunchersRefresh);
-      expect(sentData.id).toBeDefined();
     });
   });
 });

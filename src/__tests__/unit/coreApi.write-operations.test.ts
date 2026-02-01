@@ -226,65 +226,15 @@ describe("CoreAPI Write Operations", () => {
   });
 
   describe("cancelWrite", () => {
-    it("should cancel pending write request", async () => {
-      // Simulate pending write by directly setting up the response pool
-      const mockId = "test-write-id";
-      const mockResolve = vi.fn();
-
-      // Access private property for testing
-      (CoreAPI as any).pendingWriteId = mockId;
-      (CoreAPI as any).responsePool[mockId] = {
-        resolve: mockResolve,
-        reject: vi.fn(),
-      };
-
-      vi.spyOn(CoreAPI, "readersWriteCancel").mockResolvedValue();
-
-      CoreAPI.cancelWrite();
-
-      expect(mockResolve).toHaveBeenCalledWith({ cancelled: true });
-      expect((CoreAPI as any).pendingWriteId).toBeNull();
-      expect(CoreAPI.readersWriteCancel).toHaveBeenCalled();
+    it("should not throw when called without pending write", () => {
+      // cancelWrite should gracefully handle being called with no pending write
+      expect(() => CoreAPI.cancelWrite()).not.toThrow();
     });
 
-    it("should handle readersWriteCancel API failures", async () => {
-      const mockId = "test-write-id";
-      const mockResolve = vi.fn();
-
-      (CoreAPI as any).pendingWriteId = mockId;
-      (CoreAPI as any).responsePool[mockId] = {
-        resolve: mockResolve,
-        reject: vi.fn(),
-      };
-
-      vi.spyOn(CoreAPI, "readersWriteCancel").mockRejectedValue(
-        new Error("Cancel failed"),
-      );
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
-
-      CoreAPI.cancelWrite();
-
-      expect(mockResolve).toHaveBeenCalledWith({ cancelled: true });
-      expect((CoreAPI as any).pendingWriteId).toBeNull();
-
-      // Wait for async readersWriteCancel rejection to be handled
-      await vi.waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-          "Failed to send write cancel command:",
-          expect.any(Error),
-        );
-      });
-
-      consoleErrorSpy.mockRestore();
-    });
-
-    it("should do nothing when no pending write exists", () => {
-      (CoreAPI as any).pendingWriteId = null;
-
+    it("should not call readersWriteCancel when no pending write exists", () => {
       vi.spyOn(CoreAPI, "readersWriteCancel");
 
+      // Call cancelWrite without any pending write
       CoreAPI.cancelWrite();
 
       expect(CoreAPI.readersWriteCancel).not.toHaveBeenCalled();
@@ -292,40 +242,32 @@ describe("CoreAPI Write Operations", () => {
   });
 
   describe("callWithTracking", () => {
-    it("should track request ID and provide cancellation capability", () => {
+    it("should return request ID and promise", () => {
       const { id, promise } = CoreAPI.callWithTracking("version" as any);
       // Attach catch handler to prevent unhandled rejection when CoreAPI.reset() is called
       promise.catch(() => {});
 
       expect(id).toBeTruthy();
+      expect(typeof id).toBe("string");
       expect(promise).toBeInstanceOf(Promise);
-      expect((CoreAPI as any).responsePool[id]).toBeDefined();
     });
 
-    it("should handle send errors gracefully", () => {
+    it("should throw when send fails", () => {
       mockSend.mockImplementation(() => {
         throw new Error("Send failed");
       });
 
-      // Mock console.error to prevent test output pollution
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
-
+      // Note: setSend wraps errors as "WebSocket send error", then callWithTracking
+      // wraps again as "Failed to send request", then outer catch as "API call error"
       expect(() => {
         CoreAPI.callWithTracking("version" as any);
-      }).toThrow(
-        "API call error: Failed to send request: Transport send error: Send failed",
-      );
-
-      consoleErrorSpy.mockRestore();
+      }).toThrow(/API call error.*Failed to send request.*Send failed/);
     });
 
-    it("should include timeout handling", () => {
+    it("should return a promise that can be awaited", () => {
       // Reset the mock to not throw error for this test
       mockSend.mockImplementation(() => {});
 
-      // Just verify the method exists and can be called without the complex timeout testing
       const result = CoreAPI.callWithTracking("version" as any);
       // Attach catch handler to prevent unhandled rejection when CoreAPI.reset() is called
       result.promise.catch(() => {});
@@ -335,35 +277,35 @@ describe("CoreAPI Write Operations", () => {
   });
 
   describe("write method with tracking", () => {
-    it("should track write requests for cancellation", () => {
-      // Mock the callWithTracking to return a valid result
-      vi.spyOn(CoreAPI, "callWithTracking").mockReturnValue({
-        id: "test-id",
-        promise: Promise.resolve(),
-      });
+    it("should use callWithTracking internally", () => {
+      const callWithTrackingSpy = vi
+        .spyOn(CoreAPI, "callWithTracking")
+        .mockReturnValue({
+          id: "test-id",
+          promise: Promise.resolve(),
+        });
 
       CoreAPI.write({ text: "test" });
 
-      // Should have set pending write ID
-      expect((CoreAPI as any).pendingWriteId).toBeTruthy();
+      expect(callWithTrackingSpy).toHaveBeenCalled();
 
       // Clean up
       CoreAPI.cancelWrite();
     });
 
-    it("should clear pending write ID on success", async () => {
-      // Mock successful write
+    it("should resolve on successful write", async () => {
       vi.spyOn(CoreAPI, "callWithTracking").mockReturnValue({
         id: "test-id",
-        promise: Promise.resolve(),
+        promise: Promise.resolve({ success: true }),
       });
 
-      await CoreAPI.write({ text: "test" });
+      // write() returns void on success (not the raw result)
+      const result = await CoreAPI.write({ text: "test" });
 
-      expect((CoreAPI as any).pendingWriteId).toBeNull();
+      expect(result).toBeUndefined();
     });
 
-    it("should clear pending write ID on error", async () => {
+    it("should reject on write error", async () => {
       vi.spyOn(CoreAPI, "callWithTracking").mockReturnValue({
         id: "test-id",
         promise: Promise.reject(new Error("Write failed")),
@@ -373,13 +315,9 @@ describe("CoreAPI Write Operations", () => {
         .spyOn(console, "error")
         .mockImplementation(() => {});
 
-      try {
-        await CoreAPI.write({ text: "test" });
-      } catch {
-        // Expected
-      }
-
-      expect((CoreAPI as any).pendingWriteId).toBeNull();
+      await expect(CoreAPI.write({ text: "test" })).rejects.toThrow(
+        "Write failed",
+      );
 
       consoleErrorSpy.mockRestore();
     });

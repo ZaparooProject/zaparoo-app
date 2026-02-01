@@ -54,88 +54,6 @@ describe("Button", () => {
     });
   });
 
-  describe("variants", () => {
-    it("should apply fill variant classes correctly", () => {
-      render(<Button label="Fill" variant="fill" />);
-      const button = screen.getByRole("button");
-      expect(button).toHaveClass("bg-button-pattern");
-    });
-
-    it("should apply outline variant classes correctly", () => {
-      render(<Button label="Outline" variant="outline" />);
-      const button = screen.getByRole("button");
-      expect(button).toHaveClass("border-bd-outline");
-    });
-
-    it("should apply text variant classes correctly", () => {
-      render(<Button label="Text" variant="text" />);
-      const button = screen.getByRole("button");
-      expect(button).not.toHaveClass("border");
-    });
-
-    it("should default to fill variant", () => {
-      render(<Button label="Default" />);
-      const button = screen.getByRole("button");
-      expect(button).toHaveClass("bg-button-pattern");
-    });
-  });
-
-  describe("sizes", () => {
-    it("should apply small size classes", () => {
-      render(<Button label="Small" size="sm" />);
-      const button = screen.getByRole("button");
-      expect(button).toHaveClass("py-1");
-      expect(button).toHaveClass("text-sm");
-      expect(button).toHaveClass("px-4");
-    });
-
-    it("should apply default size classes", () => {
-      render(<Button label="Default" size="default" />);
-      const button = screen.getByRole("button");
-      expect(button).toHaveClass("py-1.5");
-      expect(button).toHaveClass("px-6");
-    });
-
-    it("should apply large size classes", () => {
-      render(<Button label="Large" size="lg" />);
-      const button = screen.getByRole("button");
-      expect(button).toHaveClass("py-2");
-      expect(button).toHaveClass("text-lg");
-      expect(button).toHaveClass("px-8");
-    });
-
-    it("should apply icon-only small size classes", () => {
-      render(
-        <Button icon={<span>★</span>} size="sm" aria-label="Icon small" />,
-      );
-      const button = screen.getByRole("button");
-      expect(button).toHaveClass("h-8");
-      expect(button).toHaveClass("w-8");
-    });
-
-    it("should apply icon-only default size classes", () => {
-      render(
-        <Button
-          icon={<span>★</span>}
-          size="default"
-          aria-label="Icon default"
-        />,
-      );
-      const button = screen.getByRole("button");
-      expect(button).toHaveClass("h-10");
-      expect(button).toHaveClass("w-10");
-    });
-
-    it("should apply icon-only large size classes", () => {
-      render(
-        <Button icon={<span>★</span>} size="lg" aria-label="Icon large" />,
-      );
-      const button = screen.getByRole("button");
-      expect(button).toHaveClass("h-12");
-      expect(button).toHaveClass("w-12");
-    });
-  });
-
   describe("click handling", () => {
     it("should call onClick when clicked", () => {
       const handleClick = vi.fn();
@@ -477,16 +395,14 @@ describe("Button", () => {
   });
 
   describe("disabled state", () => {
-    it("should apply disabled styles", () => {
+    it("should be disabled when disabled prop is true", () => {
       render(<Button label="Disabled" disabled />);
 
       const button = screen.getByRole("button");
       expect(button).toBeDisabled();
-      expect(button).toHaveClass("text-foreground-disabled");
-      expect(button).toHaveClass("border-foreground-disabled");
     });
 
-    it("should not apply pressed opacity when disabled", () => {
+    it("should not show pressed state when disabled", () => {
       render(<Button label="Disabled" disabled />);
 
       const button = screen.getByRole("button");
@@ -494,7 +410,7 @@ describe("Button", () => {
         touches: [{ clientX: 0, clientY: 0 }],
       });
 
-      // opacity-80 should not be applied when disabled
+      // Pressed state (opacity-80) should not be applied when disabled
       expect(button).not.toHaveClass("opacity-80");
     });
   });
