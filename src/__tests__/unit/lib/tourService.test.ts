@@ -324,4 +324,242 @@ describe("tourService - createAppTour", () => {
 
     expect(hasStepIndicator).toBe(true);
   });
+
+  describe("beforeShowPromise navigation", () => {
+    it("should navigate to settings for device-address step", async () => {
+      const tour = createAppTour(mockNavigate, mockT, false);
+
+      const calls = vi.mocked(tour.addStep).mock.calls;
+      const deviceAddressStep = calls.find(
+        (call) => call[0].id === "device-address",
+      )?.[0] as any;
+
+      expect(deviceAddressStep?.beforeShowPromise).toBeDefined();
+
+      // Execute the beforeShowPromise
+      vi.useFakeTimers();
+      const promise = deviceAddressStep.beforeShowPromise();
+
+      // Use advanceTimersByTimeAsync to handle Promise chain + setTimeout
+      await vi.advanceTimersByTimeAsync(300);
+      await promise;
+      vi.useRealTimers();
+
+      expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings" });
+    });
+
+    it("should navigate to settings for media-database step when connected", async () => {
+      const tour = createAppTour(mockNavigate, mockT, true);
+
+      const calls = vi.mocked(tour.addStep).mock.calls;
+      const mediaDatabaseStep = calls.find(
+        (call) => call[0].id === "media-database",
+      )?.[0] as any;
+
+      expect(mediaDatabaseStep?.beforeShowPromise).toBeDefined();
+
+      vi.useFakeTimers();
+      const promise = mediaDatabaseStep.beforeShowPromise();
+      await vi.advanceTimersByTimeAsync(300);
+      await promise;
+      vi.useRealTimers();
+
+      expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings" });
+    });
+
+    it("should navigate to create for create-cards step", async () => {
+      const tour = createAppTour(mockNavigate, mockT, false);
+
+      const calls = vi.mocked(tour.addStep).mock.calls;
+      const createCardsStep = calls.find(
+        (call) => call[0].id === "create-cards",
+      )?.[0] as any;
+
+      expect(createCardsStep?.beforeShowPromise).toBeDefined();
+
+      vi.useFakeTimers();
+      const promise = createCardsStep.beforeShowPromise();
+      await vi.advanceTimersByTimeAsync(300);
+      await promise;
+      vi.useRealTimers();
+
+      expect(mockNavigate).toHaveBeenCalledWith({ to: "/create" });
+    });
+
+    it("should navigate to home for complete step", async () => {
+      const tour = createAppTour(mockNavigate, mockT, false);
+
+      const calls = vi.mocked(tour.addStep).mock.calls;
+      const completeStep = calls.find(
+        (call) => call[0].id === "complete",
+      )?.[0] as any;
+
+      expect(completeStep?.beforeShowPromise).toBeDefined();
+
+      vi.useFakeTimers();
+      const promise = completeStep.beforeShowPromise();
+      await vi.advanceTimersByTimeAsync(300);
+      await promise;
+      vi.useRealTimers();
+
+      expect(mockNavigate).toHaveBeenCalledWith({ to: "/" });
+    });
+  });
+
+  describe("back button navigation", () => {
+    it("should navigate to home and go back for device-address step back button", async () => {
+      const tour = createAppTour(mockNavigate, mockT, false);
+
+      const calls = vi.mocked(tour.addStep).mock.calls;
+      const deviceAddressStep = calls.find(
+        (call) => call[0].id === "device-address",
+      )?.[0] as any;
+
+      const backButton = deviceAddressStep?.buttons?.find(
+        (b: any) => b.secondary === true,
+      );
+
+      expect(backButton).toBeDefined();
+
+      vi.useFakeTimers();
+      backButton.action();
+
+      // Should hide tour first
+      expect(mockTourInstance.hide).toHaveBeenCalled();
+
+      vi.advanceTimersByTime(300);
+      vi.useRealTimers();
+
+      expect(mockNavigate).toHaveBeenCalledWith({ to: "/" });
+    });
+
+    it("should navigate to home and go back for media-database step back button when connected", async () => {
+      const tour = createAppTour(mockNavigate, mockT, true);
+
+      const calls = vi.mocked(tour.addStep).mock.calls;
+      const mediaDatabaseStep = calls.find(
+        (call) => call[0].id === "media-database",
+      )?.[0] as any;
+
+      const backButton = mediaDatabaseStep?.buttons?.find(
+        (b: any) => b.secondary === true,
+      );
+
+      expect(backButton).toBeDefined();
+
+      vi.useFakeTimers();
+      backButton.action();
+
+      expect(mockTourInstance.hide).toHaveBeenCalled();
+
+      vi.advanceTimersByTime(300);
+      vi.useRealTimers();
+
+      expect(mockNavigate).toHaveBeenCalledWith({ to: "/" });
+    });
+
+    it("should use tour.back directly for media-database step when not connected", () => {
+      const tour = createAppTour(mockNavigate, mockT, false);
+
+      const calls = vi.mocked(tour.addStep).mock.calls;
+      const mediaDatabaseStep = calls.find(
+        (call) => call[0].id === "media-database",
+      )?.[0] as any;
+
+      const backButton = mediaDatabaseStep?.buttons?.find(
+        (b: any) => b.secondary === true,
+      );
+
+      // When not connected, back button should directly call tour.back
+      expect(backButton?.action).toBe(tour.back);
+    });
+
+    it("should navigate to settings and go back for create-cards step back button", async () => {
+      const tour = createAppTour(mockNavigate, mockT, false);
+
+      const calls = vi.mocked(tour.addStep).mock.calls;
+      const createCardsStep = calls.find(
+        (call) => call[0].id === "create-cards",
+      )?.[0] as any;
+
+      const backButton = createCardsStep?.buttons?.find(
+        (b: any) => b.secondary === true,
+      );
+
+      expect(backButton).toBeDefined();
+
+      vi.useFakeTimers();
+      backButton.action();
+
+      expect(mockTourInstance.hide).toHaveBeenCalled();
+
+      vi.advanceTimersByTime(300);
+      vi.useRealTimers();
+
+      expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings" });
+    });
+  });
+
+  describe("step text formatting", () => {
+    it("should include screen reader accessible step indicator", () => {
+      createAppTour(mockNavigate, mockT, false);
+
+      expect(mockT).toHaveBeenCalledWith("tour.stepIndicatorAccessible", {
+        current: 1,
+        total: 5,
+      });
+      expect(mockT).toHaveBeenCalledWith("tour.stepIndicatorAccessible", {
+        current: 5,
+        total: 5,
+      });
+    });
+
+    it("should include screen reader accessible step indicator for connected tour", () => {
+      createAppTour(mockNavigate, mockT, true);
+
+      expect(mockT).toHaveBeenCalledWith("tour.stepIndicatorAccessible", {
+        current: 1,
+        total: 4,
+      });
+      expect(mockT).toHaveBeenCalledWith("tour.stepIndicatorAccessible", {
+        current: 4,
+        total: 4,
+      });
+    });
+  });
+
+  describe("step attachment positions", () => {
+    it("should attach device-address step to bottom", () => {
+      const tour = createAppTour(mockNavigate, mockT, false);
+
+      const calls = vi.mocked(tour.addStep).mock.calls;
+      const deviceAddressStep = calls.find(
+        (call) => call[0].id === "device-address",
+      )?.[0] as any;
+
+      expect(deviceAddressStep?.attachTo?.on).toBe("bottom");
+    });
+
+    it("should attach media-database step to top", () => {
+      const tour = createAppTour(mockNavigate, mockT, false);
+
+      const calls = vi.mocked(tour.addStep).mock.calls;
+      const mediaDatabaseStep = calls.find(
+        (call) => call[0].id === "media-database",
+      )?.[0] as any;
+
+      expect(mediaDatabaseStep?.attachTo?.on).toBe("top");
+    });
+
+    it("should attach create-cards step to bottom", () => {
+      const tour = createAppTour(mockNavigate, mockT, false);
+
+      const calls = vi.mocked(tour.addStep).mock.calls;
+      const createCardsStep = calls.find(
+        (call) => call[0].id === "create-cards",
+      )?.[0] as any;
+
+      expect(createCardsStep?.attachTo?.on).toBe("bottom");
+    });
+  });
 });

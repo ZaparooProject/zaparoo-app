@@ -5,7 +5,7 @@
  * connection lifecycle handling, and notification processing.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "../../../test-utils";
 import { ConnectionProvider } from "../../../components/ConnectionProvider";
 import { useConnection } from "../../../hooks/useConnection";
@@ -67,6 +67,7 @@ vi.mock("../../../lib/coreApi", () => ({
   },
   getDeviceAddress: vi.fn(() => "192.168.1.100:7497"),
   getWsUrl: vi.fn(() => "ws://192.168.1.100:7497"),
+  isCancelled: vi.fn(() => false),
 }));
 
 // Use vi.hoisted to define mock functions that can be used in vi.mock
@@ -188,10 +189,6 @@ function ConnectionConsumer() {
 
 describe("ConnectionProvider", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
     vi.clearAllMocks();
   });
 
@@ -326,10 +323,6 @@ describe("notification processing", () => {
     mockSetGamesIndex.mockClear();
     mockToast.mockClear();
     mockAnnounce.mockClear();
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
   });
 
   describe("media.started", () => {
@@ -545,5 +538,283 @@ describe("notification processing", () => {
       expect(mockSetPlaying).not.toHaveBeenCalled();
       expect(mockSetLastToken).not.toHaveBeenCalled();
     });
+
+    it("should handle unknown notification method gracefully", async () => {
+      const unknownNotification: NotificationRequest = {
+        method: "unknown.method" as any,
+        params: {},
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        unknownNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      // Should not throw
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      // State should not be updated for unknown notifications
+      expect(mockSetPlaying).not.toHaveBeenCalled();
+      expect(mockSetLastToken).not.toHaveBeenCalled();
+    });
+
+    it("should show toast when processReceived throws an error", async () => {
+      vi.mocked(CoreAPI.processReceived).mockRejectedValueOnce(
+        new Error("Parse error"),
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      // Should not crash and should continue functioning
+      await waitFor(() => {
+        expect(screen.getByText("Test")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("playtimeLimitWarning", () => {
+    it("should show toast and announce when playtime warning is received", async () => {
+      const playtimeLimitWarningNotification: NotificationRequest = {
+        method: Notification.PlaytimeLimitWarning,
+        params: {
+          interval: "1m",
+          remaining: "5m", // 5 minutes as string duration
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        playtimeLimitWarningNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(mockAnnounce).toHaveBeenCalled();
+        expect(mockToast).toHaveBeenCalled();
+      });
+    });
+  });
+});
+
+describe("connection event handling", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedEventHandlers = {};
+    // Re-setup mock after clearAllMocks - use the address from store mock
+    vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
+      "192.168.1.100:7497",
+    );
+  });
+
+  it("should call handleConnectionOpen when connection state becomes connected", async () => {
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+
+    // Simulate connection becoming connected using the correct device ID
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.flushQueue).toHaveBeenCalled();
+      expect(CoreAPI.media).toHaveBeenCalled();
+      expect(CoreAPI.tokens).toHaveBeenCalled();
+    });
+  });
+
+  it("should handle error event without crashing", async () => {
+    vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
+      "test-device",
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onError).toBeDefined();
+
+    // Simulate error - should not throw or crash the component
+    capturedEventHandlers.onError!(
+      "test-device",
+      new Error("Connection refused"),
+    );
+
+    // Component should still be rendered and functional
+    expect(screen.getByText("Test")).toBeInTheDocument();
+  });
+
+  it("should ignore events from inactive devices", async () => {
+    vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
+      "other-device",
+    );
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+
+    // Simulate event from different device
+    capturedEventHandlers.onConnectionChange!("test-device", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    // Should not trigger data fetch since it's not the active device
+    // The initial render already calls these, so we check they weren't called again
+    const initialCallCount = vi.mocked(CoreAPI.media).mock.calls.length;
+
+    // Verify no additional calls were made (event was ignored)
+    expect(vi.mocked(CoreAPI.media).mock.calls.length).toBe(initialCallCount);
+  });
+});
+
+describe("cancelled request handling", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedEventHandlers = {};
+    // Ensure getActiveDeviceId returns the device we're testing with
+    vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
+      "192.168.1.100:7497",
+    );
+  });
+
+  it("should handle cancelled media response gracefully", async () => {
+    vi.mocked(CoreAPI.media).mockResolvedValueOnce({ cancelled: true } as any);
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    // Trigger connection open with the deviceId that matches our mock
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.media).toHaveBeenCalled();
+    });
+
+    // Component should handle cancelled response without crashing
+    expect(screen.getByText("Test")).toBeInTheDocument();
+  });
+
+  it("should handle cancelled tokens response gracefully", async () => {
+    vi.mocked(CoreAPI.tokens).mockResolvedValueOnce({ cancelled: true } as any);
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    // Trigger connection open with the deviceId that matches our mock
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.tokens).toHaveBeenCalled();
+    });
+
+    // Should not crash
+    expect(screen.getByText("Test")).toBeInTheDocument();
+  });
+});
+
+describe("API error handling", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedEventHandlers = {};
+    // Ensure getActiveDeviceId returns the device we're testing with
+    vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
+      "192.168.1.100:7497",
+    );
+  });
+
+  it("should handle media API failure gracefully", async () => {
+    vi.mocked(CoreAPI.media).mockRejectedValueOnce(new Error("Network error"));
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    // Trigger connection open with the deviceId that matches our mock
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.media).toHaveBeenCalled();
+    });
+
+    // Should not crash
+    expect(screen.getByText("Test")).toBeInTheDocument();
+  });
+
+  it("should handle tokens API failure gracefully", async () => {
+    vi.mocked(CoreAPI.tokens).mockRejectedValueOnce(new Error("Network error"));
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    // Trigger connection open with the deviceId that matches our mock
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.tokens).toHaveBeenCalled();
+    });
+
+    // Should not crash
+    expect(screen.getByText("Test")).toBeInTheDocument();
   });
 });

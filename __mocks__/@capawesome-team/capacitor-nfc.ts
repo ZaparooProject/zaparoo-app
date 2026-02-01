@@ -97,7 +97,7 @@ export function __createMockNfcTag(uid: string, text: string): NfcTag {
 
   return {
     id: uidBytes,
-    techTypes: ["NDEF"],
+    techTypes: [NfcTagTechType.Ndef],
     message: {
       records: [
         {
@@ -124,10 +124,25 @@ export function __resetNfcMock(): void {
   vi.mocked(Nfc.erase).mockClear();
 }
 
+// Enum exports for tests that import enums
+export enum NfcTagTechType {
+  NfcA = "NFC_A",
+  NfcB = "NFC_B",
+  NfcF = "NFC_F",
+  NfcV = "NFC_V",
+  IsoDep = "ISO_DEP",
+  Ndef = "NDEF",
+  MifareClassic = "MIFARE_CLASSIC",
+  MifareDesfire = "MIFARE_DESFIRE",
+  MifarePlus = "MIFARE_PLUS",
+  MifareUltralight = "MIFARE_ULTRALIGHT",
+  NdefFormatable = "NDEF_FORMATABLE",
+}
+
 // Type exports for tests that import types
 export type NfcTag = {
   id: number[];
-  techTypes?: string[];
+  techTypes?: NfcTagTechType[];
   message?: {
     records: Array<{
       id?: number[];
