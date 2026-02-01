@@ -1199,7 +1199,18 @@ export function getWsUrl() {
   // Check if this looks like an unbracketed IPv6 address (multiple colons, not just host:port)
   const colonCount = (address.match(/:/g) || []).length;
   if (colonCount > 1) {
-    // Multiple colons - treat as IPv6, use default port
+    // Multiple colons - validate it looks like IPv6 (hex segments separated by colons)
+    // Valid segments are empty (for :: shorthand) or 1-4 hex characters
+    const segments = address.split(":");
+    const isValidIPv6 = segments.every(
+      (seg) => seg === "" || /^[0-9a-fA-F]{1,4}$/.test(seg),
+    );
+
+    if (!isValidIPv6) {
+      logger.warn(`Invalid address format (not valid IPv6): ${address}`);
+      return "";
+    }
+
     // Wrap in brackets for proper URL format
     return `ws://[${address}]:${port}/api/v0.1`;
   }

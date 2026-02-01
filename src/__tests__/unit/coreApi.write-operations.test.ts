@@ -402,13 +402,14 @@ describe("getWsUrl - Enhanced URL parsing", () => {
     expect(url).toBe("ws://192.168.1.100:7497/api/v0.1");
   });
 
-  it("should treat addresses with multiple colons as IPv6", () => {
+  it("should reject malformed addresses with multiple colons that aren't valid IPv6", () => {
     localStorage.setItem("deviceAddress", "my:host:name");
 
     const url = getWsUrl();
 
-    // Multiple colons are treated as IPv6 and wrapped in brackets
-    expect(url).toBe("ws://[my:host:name]:7497/api/v0.1");
+    // 'my:host:name' has multiple colons but isn't valid IPv6 (not hex segments)
+    // Should be rejected rather than wrapped in brackets
+    expect(url).toBe("");
   });
 
   it("should return empty string for malformed address with no host", () => {
