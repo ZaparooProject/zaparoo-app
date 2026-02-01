@@ -83,11 +83,40 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
   usePageHeadingFocus: vi.fn(),
 }));
 
+// Track native platform state for testing - hoisted to be available in vi.mock
+const { mockCapacitorState } = vi.hoisted(() => ({
+  mockCapacitorState: {
+    isNative: false,
+  },
+}));
+
 // Mock Capacitor
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
-    isNativePlatform: vi.fn(() => false),
-    getPlatform: vi.fn(() => "web"),
+    isNativePlatform: () => mockCapacitorState.isNative,
+    getPlatform: () => (mockCapacitorState.isNative ? "ios" : "web"),
+  },
+}));
+
+// Mock Capacitor Filesystem
+const mockFilesystemWrite = vi.fn().mockResolvedValue(undefined);
+const mockFilesystemGetUri = vi
+  .fn()
+  .mockResolvedValue({ uri: "file://cache/test.log" });
+vi.mock("@capacitor/filesystem", () => ({
+  Filesystem: {
+    writeFile: (...args: unknown[]) => mockFilesystemWrite(...args),
+    getUri: (...args: unknown[]) => mockFilesystemGetUri(...args),
+  },
+  Directory: { Cache: "CACHE" },
+  Encoding: { UTF8: "utf8" },
+}));
+
+// Mock Capacitor Share
+const mockShareShare = vi.fn().mockResolvedValue({ activityType: "share" });
+vi.mock("@capacitor/share", () => ({
+  Share: {
+    share: (...args: unknown[]) => mockShareShare(...args),
   },
 }));
 
@@ -147,6 +176,14 @@ describe("Settings Logs Integration", () => {
     mockState.queryData = null;
     mockState.isLoading = false;
     mockState.isError = false;
+
+    // Reset Capacitor native state
+    mockCapacitorState.isNative = false;
+
+    // Reset Capacitor mocks
+    mockFilesystemWrite.mockClear();
+    mockFilesystemGetUri.mockClear();
+    mockShareShare.mockClear();
   });
 
   afterEach(() => {
@@ -679,6 +716,215 @@ describe("Settings Logs Integration", () => {
       expect(
         screen.getByRole("heading", { name: /settings.logs.title/i }),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("Native Platform Share", () => {
+    it("should show share button on native platforms instead of download", () => {
+      mockCapacitorState.isNative = true;
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          { level: "info", time: "2025-01-15T10:30:00Z", message: "Test" },
+        ]),
+        size: 50,
+      };
+
+      render(<Logs />);
+
+      expect(
+        screen.getByRole("button", { name: /settings.logs.share/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /settings.logs.download/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should call native share API when share button is clicked", async () => {
+      mockCapacitorState.isNative = true;
+      const user = userEvent.setup();
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          {
+            level: "info",
+            time: "2025-01-15T10:30:00Z",
+            message: "Share test",
+          },
+        ]),
+        size: 100,
+      };
+
+      render(<Logs />);
+
+      const shareButton = screen.getByRole("button", {
+        name: /settings.logs.share/i,
+      });
+      await user.click(shareButton);
+
+      await waitFor(() => {
+        expect(mockFilesystemWrite).toHaveBeenCalled();
+        expect(mockShareShare).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe("Download Functionality", () => {
+    it("should trigger download when download button is clicked on web", async () => {
+      const user = userEvent.setup();
+      mockState.queryData = {
+        filename: "zaparoo.log",
+        content: createMockLogContent([
+          {
+            level: "info",
+            time: "2025-01-15T10:30:00Z",
+            message: "Download test",
+          },
+        ]),
+        size: 100,
+      };
+
+      // Mock document.createElement for link element
+      const mockClick = vi.fn();
+      let createdAnchor: HTMLAnchorElement | null = null;
+      const originalCreateElement = document.createElement.bind(document);
+
+      vi.spyOn(document, "createElement").mockImplementation(
+        (tagName: string) => {
+          if (tagName === "a") {
+            const anchor = originalCreateElement("a");
+            anchor.click = mockClick;
+            createdAnchor = anchor;
+            return anchor;
+          }
+          return originalCreateElement(tagName);
+        },
+      );
+
+      render(<Logs />);
+
+      const downloadButton = screen.getByRole("button", {
+        name: /settings.logs.download/i,
+      });
+      await user.click(downloadButton);
+
+      await waitFor(() => {
+        expect(mockClick).toHaveBeenCalled();
+        expect(createdAnchor?.download).toBe("zaparoo.log");
+      });
+    });
+  });
+
+  describe("Copy to Clipboard", () => {
+    it("should copy log content to clipboard when copy button is clicked", async () => {
+      const user = userEvent.setup();
+      const mockWriteText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText: mockWriteText },
+        writable: true,
+        configurable: true,
+      });
+
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          { level: "info", time: "2025-01-15T10:30:00Z", message: "Copy test" },
+        ]),
+        size: 100,
+      };
+
+      render(<Logs />);
+
+      const copyButton = screen.getByRole("button", {
+        name: /settings.logs.copy/i,
+      });
+      await user.click(copyButton);
+
+      await waitFor(() => {
+        expect(mockWriteText).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe("Loading State", () => {
+    it("should show loading state in refresh button title", () => {
+      mockState.isLoading = true;
+
+      render(<Logs />);
+
+      // The refresh button title should indicate loading
+      const refreshButton = screen.getByRole("button", { name: /loading/i });
+      expect(refreshButton).toBeInTheDocument();
+    });
+
+    it("should disable refresh button while loading", () => {
+      mockState.isLoading = true;
+
+      render(<Logs />);
+
+      const refreshButton = screen.getByRole("button", { name: /loading/i });
+      expect(refreshButton).toBeDisabled();
+    });
+  });
+
+  describe("Field Value Expansion", () => {
+    it("should show show more button for long field values", () => {
+      const longValue = "x".repeat(250);
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          {
+            level: "info",
+            time: "2025-01-15T10:30:00Z",
+            message: "Test",
+            customField: longValue,
+          },
+        ]),
+        size: 400,
+      };
+
+      render(<Logs />);
+
+      expect(screen.getByText(/customField:/)).toBeInTheDocument();
+      // Should have show more buttons (one for message potentially, one for field)
+      const showMoreButtons = screen.getAllByRole("button", {
+        name: /settings.logs.showMore/i,
+      });
+      expect(showMoreButtons.length).toBeGreaterThan(0);
+    });
+
+    it("should expand field value when show more is clicked", async () => {
+      const user = userEvent.setup();
+      const longValue = "y".repeat(250);
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          {
+            level: "info",
+            time: "2025-01-15T10:30:00Z",
+            message: "Short msg",
+            expandableField: longValue,
+          },
+        ]),
+        size: 400,
+      };
+
+      render(<Logs />);
+
+      expect(screen.getByText(/expandableField:/)).toBeInTheDocument();
+
+      // Find and click the show more button
+      const showMoreButton = screen.getByRole("button", {
+        name: /settings.logs.showMore/i,
+      });
+      await user.click(showMoreButton);
+
+      // Should now show "show less" button
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /settings.logs.showLess/i }),
+        ).toBeInTheDocument();
+      });
     });
   });
 });
