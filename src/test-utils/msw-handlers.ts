@@ -243,3 +243,100 @@ export const handlers = [
  * Export mock responses for tests that need to verify expected values
  */
 export { mockResponses };
+
+/**
+ * Creates a WebSocket handler that returns custom responses for specific methods.
+ * Use with server.use() to override default responses in tests.
+ *
+ * @param overrides - Object mapping method names to their responses or errors
+ * @example
+ * // Return error for media.search
+ * server.use(createMethodOverrideHandler({
+ *   "media.search": { error: { code: -32000, message: "Database unavailable" } }
+ * }));
+ *
+ * // Return custom success response
+ * server.use(createMethodOverrideHandler({
+ *   "media.search": { result: { results: [...], total: 5, pagination: {...} } }
+ * }));
+ */
+export function createMethodOverrideHandler(
+  overrides: Record<
+    string,
+    | { result: unknown }
+    | { error: { code: number; message: string; data?: unknown } }
+  >,
+) {
+  return ws
+    .link("ws://*/api/v0.1")
+    .addEventListener("connection", ({ client }) => {
+      client.addEventListener("message", (event) => {
+        if (event.data === "ping") {
+          client.send("pong");
+          return;
+        }
+
+        try {
+          const message = JSON.parse(event.data.toString());
+          const override = overrides[message.method];
+
+          if (override) {
+            if ("error" in override) {
+              client.send(
+                JSON.stringify({
+                  jsonrpc: "2.0",
+                  id: message.id,
+                  error: override.error,
+                }),
+              );
+            } else {
+              client.send(
+                JSON.stringify({
+                  jsonrpc: "2.0",
+                  id: message.id,
+                  timestamp: Date.now(),
+                  result: override.result,
+                }),
+              );
+            }
+            return;
+          }
+
+          // Fall through to default response handling
+          const result = mockResponses[message.method];
+          if (result !== undefined) {
+            client.send(
+              JSON.stringify({
+                jsonrpc: "2.0",
+                id: message.id,
+                timestamp: Date.now(),
+                result,
+              }),
+            );
+          } else {
+            client.send(
+              JSON.stringify({
+                jsonrpc: "2.0",
+                id: message.id,
+                error: {
+                  code: -32601,
+                  message: `Method not found: ${message.method}`,
+                },
+              }),
+            );
+          }
+        } catch {
+          client.send(
+            JSON.stringify({
+              jsonrpc: "2.0",
+              id: null,
+              error: {
+                code: -32700,
+                message: "Parse error",
+              },
+            }),
+          );
+        }
+      });
+    });
+}
