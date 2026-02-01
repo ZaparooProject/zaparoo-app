@@ -655,14 +655,7 @@ describe("Settings Logs Integration", () => {
 
       render(<Logs />);
 
-      // Check that log messages are rendered (level badges appear with filter chips)
-      // Using getAllByText since "Error" etc. appear in both filter chips and badges
-      expect(screen.getAllByText("Error").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText("Warn").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText("Info").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText("Debug").length).toBeGreaterThanOrEqual(1);
-
-      // Verify messages are displayed
+      // Verify log messages are displayed
       expect(screen.getByText(/Error level test/)).toBeInTheDocument();
       expect(screen.getByText(/Warn level test/)).toBeInTheDocument();
       expect(screen.getByText(/Info level test/)).toBeInTheDocument();

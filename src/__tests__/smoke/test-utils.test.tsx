@@ -17,18 +17,20 @@ describe("App Component Smoke Tests", () => {
 
     it("should render with different variants", () => {
       const { rerender } = render(<Button label="Fill" variant="fill" />);
-      expect(screen.getByRole("button")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Fill" })).toBeInTheDocument();
 
       rerender(<Button label="Outline" variant="outline" />);
-      expect(screen.getByRole("button")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Outline" }),
+      ).toBeInTheDocument();
 
       rerender(<Button label="Text" variant="text" />);
-      expect(screen.getByRole("button")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Text" })).toBeInTheDocument();
     });
 
     it("should render disabled state", () => {
       render(<Button label="Disabled" disabled />);
-      expect(screen.getByRole("button")).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Disabled" })).toBeDisabled();
     });
 
     it("should support icon-only buttons with aria-label", () => {
@@ -57,7 +59,9 @@ describe("App Component Smoke Tests", () => {
         </Card>,
       );
 
-      expect(screen.getByRole("button")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Interactive card" }),
+      ).toBeInTheDocument();
     });
   });
 

@@ -99,6 +99,8 @@ const mockResponses: Record<string, unknown> = {
     state: "reset",
     sessionActive: false,
     limitsEnabled: false,
+    sessionDuration: "0s",
+    dailyUsageToday: "0s",
   },
 
   // Playtime limits
