@@ -414,7 +414,17 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       return;
     }
 
-    const wsUrl = getWsUrl();
+    let wsUrl: string;
+    try {
+      wsUrl = getWsUrl();
+    } catch (e) {
+      logger.error("Failed to construct WebSocket URL:", e);
+      setConnectionState(ConnectionState.ERROR);
+      setConnectionError(
+        e instanceof Error ? e.message : "Invalid configuration",
+      );
+      return;
+    }
     if (!wsUrl) {
       setConnectionState(ConnectionState.ERROR);
       setConnectionError("Invalid WebSocket URL");

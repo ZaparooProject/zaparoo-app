@@ -35,6 +35,9 @@ vi.mock("@capacitor/preferences", () => ({
 describe("CoreAPI Internals", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset mock implementations (not just call history)
+    mockLocalStorage.getItem.mockReset();
+    mockLocalStorage.setItem.mockReset();
 
     Object.defineProperty(window, "localStorage", {
       value: mockLocalStorage,
@@ -55,15 +58,13 @@ describe("CoreAPI Internals", () => {
   });
 
   describe("Storage error handling", () => {
-    it("should return empty string when localStorage fails in getDeviceAddress", () => {
+    it("should throw when localStorage fails in getDeviceAddress", () => {
       // Make localStorage.getItem throw an error
       mockLocalStorage.getItem.mockImplementation(() => {
         throw new Error("localStorage failed");
       });
 
-      const result = getDeviceAddress();
-
-      expect(result).toBe("");
+      expect(() => getDeviceAddress()).toThrow("localStorage failed");
     });
 
     it("should not throw when localStorage fails in setDeviceAddress", () => {
@@ -86,19 +87,19 @@ describe("CoreAPI Internals", () => {
       expect(() => setDeviceAddress("test-address")).not.toThrow();
     });
 
-    it("should return empty string when getWsUrl encounters an error", () => {
+    it("should throw when getWsUrl encounters an error", () => {
       // Mock String.prototype.lastIndexOf to throw an error during URL construction
       const originalLastIndexOf = String.prototype.lastIndexOf;
       String.prototype.lastIndexOf = vi.fn(() => {
         throw new Error("String operation error");
       });
 
-      const result = getWsUrl();
-
-      expect(result).toBe("");
-
-      // Restore mock
-      String.prototype.lastIndexOf = originalLastIndexOf;
+      try {
+        expect(() => getWsUrl()).toThrow("String operation error");
+      } finally {
+        // Restore mock
+        String.prototype.lastIndexOf = originalLastIndexOf;
+      }
     });
   });
 

@@ -213,7 +213,7 @@ describe("CoreAPI Write Operations", () => {
       expect(result).toBe(false);
     });
 
-    it("should return true when readers array is empty", async () => {
+    it("should return false when readers array is empty", async () => {
       const mockReadersResponse = { readers: [] };
 
       vi.spyOn(CoreAPI, "call" as any).mockResolvedValue(mockReadersResponse);
@@ -411,13 +411,13 @@ describe("getWsUrl - Enhanced URL parsing", () => {
     expect(url).toBe("ws://[my:host:name]:7497/api/v0.1");
   });
 
-  it("should handle malformed addresses gracefully", () => {
+  it("should return empty string for malformed address with no host", () => {
     localStorage.setItem("deviceAddress", ":8080"); // No host
 
     const url = getWsUrl();
 
-    // Malformed address - colon at position 0 isn't parsed, address used as-is
-    expect(url).toBe("ws://:8080:7497/api/v0.1");
+    // Malformed address starting with colon returns empty string
+    expect(url).toBe("");
   });
 
   it("should handle trailing colon by stripping it", () => {
