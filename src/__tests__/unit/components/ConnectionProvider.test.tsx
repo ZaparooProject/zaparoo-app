@@ -140,6 +140,12 @@ vi.mock("@capacitor/core", () => ({
   },
 }));
 
+vi.mock("@capacitor/network", () => ({
+  Network: {
+    addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
+  },
+}));
+
 // Use vi.hoisted for toast mock
 const { mockToast } = vi.hoisted(() => ({
   mockToast: vi.fn(),
@@ -818,3 +824,166 @@ describe("API error handling", () => {
     expect(screen.getByText("Test")).toBeInTheDocument();
   });
 });
+
+describe("app lifecycle handling", () => {
+  let resumeCallback: (() => void) | null = null;
+  let pauseCallback: (() => void) | null = null;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    resumeCallback = null;
+    pauseCallback = null;
+
+    // Capture the callbacks passed to App.addListener
+    const { App } = await import("@capacitor/app");
+    vi.mocked(App.addListener).mockImplementation(
+      async (eventName: any, callback: any) => {
+        if (eventName === "resume") {
+          resumeCallback = callback;
+        } else if (eventName === "pause") {
+          pauseCallback = callback;
+        }
+        return { remove: vi.fn() };
+      },
+    );
+  });
+
+  it("should call connectionManager.resumeAll when app resumes", async () => {
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    // Wait for listeners to be set up
+    await waitFor(() => {
+      expect(resumeCallback).not.toBeNull();
+    });
+
+    // Simulate app resume
+    resumeCallback!();
+
+    expect(connectionManager.resumeAll).toHaveBeenCalled();
+  });
+
+  it("should call connectionManager.pauseAll when app pauses", async () => {
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    // Wait for listeners to be set up
+    await waitFor(() => {
+      expect(pauseCallback).not.toBeNull();
+    });
+
+    // Simulate app pause
+    pauseCallback!();
+
+    expect(connectionManager.pauseAll).toHaveBeenCalled();
+  });
+
+  it("should clean up app lifecycle listeners on unmount", async () => {
+    const removeResume = vi.fn();
+    const removePause = vi.fn();
+
+    const { App } = await import("@capacitor/app");
+    vi.mocked(App.addListener).mockImplementation(async (eventName: string) => {
+      if (eventName === "resume") {
+        return { remove: removeResume };
+      } else if (eventName === "pause") {
+        return { remove: removePause };
+      }
+      return { remove: vi.fn() };
+    });
+
+    const { unmount } = render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    // Allow listeners to be registered
+    await waitFor(() => {
+      expect(App.addListener).toHaveBeenCalledWith(
+        "resume",
+        expect.any(Function),
+      );
+    });
+    expect(App.addListener).toHaveBeenCalledWith("pause", expect.any(Function));
+
+    unmount();
+
+    // Cleanup should be called
+    await waitFor(() => {
+      expect(removeResume).toHaveBeenCalled();
+    });
+    expect(removePause).toHaveBeenCalled();
+  });
+});
+
+describe("browser visibility handling (web platform)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should call connectionManager.resumeAll when tab becomes visible", async () => {
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    // Simulate visibility change to visible
+    Object.defineProperty(document, "visibilityState", {
+      value: "visible",
+      writable: true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    await waitFor(() => {
+      expect(connectionManager.resumeAll).toHaveBeenCalled();
+    });
+  });
+
+  it("should call connectionManager.pauseAll when tab becomes hidden", async () => {
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    // Simulate visibility change to hidden
+    Object.defineProperty(document, "visibilityState", {
+      value: "hidden",
+      writable: true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    await waitFor(() => {
+      expect(connectionManager.pauseAll).toHaveBeenCalled();
+    });
+  });
+
+  it("should clean up visibility listener on unmount", async () => {
+    const removeEventListenerSpy = vi.spyOn(document, "removeEventListener");
+
+    const { unmount } = render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    unmount();
+
+    expect(removeEventListenerSpy).toHaveBeenCalledWith(
+      "visibilitychange",
+      expect.any(Function),
+    );
+  });
+});
+
+// Note: Network status handling tests require native platform which is mocked as false.
+// These tests would require a separate test file with different mock configuration
+// or are covered in integration tests.

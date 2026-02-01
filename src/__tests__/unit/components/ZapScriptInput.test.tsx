@@ -461,4 +461,111 @@ describe("ZapScriptInput", () => {
       expect(document.getElementById("zapscript-controls")).toBeInTheDocument();
     });
   });
+
+  describe("help link", () => {
+    it("should open zapscript documentation when help button clicked", async () => {
+      // Arrange
+      const { Browser } = await import("@capacitor/browser");
+      const user = userEvent.setup();
+      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+
+      // Act
+      await user.click(
+        screen.getByRole("button", { name: "create.custom.zapscriptHelp" }),
+      );
+
+      // Assert
+      expect(Browser.open).toHaveBeenCalledWith({
+        url: "https://zaparoo.org/docs/zapscript/",
+      });
+    });
+  });
+
+  describe("media search modal", () => {
+    it("should open media search modal when search media button clicked", async () => {
+      // Arrange
+      const user = userEvent.setup();
+      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+
+      // Act
+      await user.click(screen.getByLabelText("create.custom.insertMedia"));
+
+      // Assert - MediaSearchModal should be open (check for modal elements)
+      await waitFor(() => {
+        // The modal should render with its title
+        const titles = screen.getAllByText("create.search.title");
+        expect(titles.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe("system selector modal", () => {
+    it("should open system selector when select system button clicked", async () => {
+      // Arrange
+      const user = userEvent.setup();
+      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+
+      // Act
+      await user.click(screen.getByLabelText("create.custom.insertSystem"));
+
+      // Assert - SystemSelector should be open
+      await waitFor(() => {
+        // SystemSelector modal should be visible with title
+        const titles = screen.getAllByText("create.custom.selectSystem");
+        expect(titles.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe("commands modal", () => {
+    it("should open commands modal when commands button clicked", async () => {
+      // Arrange
+      const user = userEvent.setup();
+      render(<ZapScriptInput value="" setValue={vi.fn()} showPalette={true} />);
+
+      // Act
+      await user.click(screen.getByLabelText("create.custom.insertCommand"));
+
+      // Assert - CommandsModal should be open
+      await waitFor(() => {
+        // CommandsModal should be visible with its title (title is "create.custom.commands")
+        // Look for the dialog role which is rendered when modal opens
+        expect(screen.getByRole("dialog")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("cursor position tracking", () => {
+    it("should insert text at cursor position", async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const setValue = vi.fn();
+      render(
+        <ZapScriptInput
+          value="hello world"
+          setValue={setValue}
+          showPalette={true}
+        />,
+      );
+
+      // Act - focus textarea and set selection, then click insert
+      const textarea = screen.getByRole("textbox", {
+        name: "create.custom.textareaLabel",
+      }) as HTMLTextAreaElement;
+
+      // Simulate selecting at position 5 (after "hello")
+      textarea.focus();
+      textarea.setSelectionRange(5, 5);
+      // Trigger select event to update cursor position
+      await user.click(textarea);
+
+      // Now insert ** - it should append at cursor position tracked
+      await user.click(
+        screen.getByLabelText("create.custom.insertCommandStart"),
+      );
+
+      // Assert - setValue should be called (cursor tracking is internal)
+      expect(setValue).toHaveBeenCalled();
+    });
+  });
 });

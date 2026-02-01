@@ -188,4 +188,82 @@ describe("DeviceConnectionCard", () => {
     // ConnectionStatusDisplay shows "Reconnecting..." when reconnecting
     expect(screen.getByText("connection.reconnecting")).toBeInTheDocument();
   });
+
+  describe("keyboard interaction", () => {
+    it("should call onAddressChange when Enter is pressed with changed address", () => {
+      const onAddressChange = vi.fn();
+      render(
+        <DeviceConnectionCard
+          {...defaultProps}
+          address="192.168.1.200"
+          onAddressChange={onAddressChange}
+        />,
+      );
+
+      const input = screen.getByRole("textbox");
+      fireEvent.keyUp(input, { key: "Enter" });
+
+      expect(onAddressChange).toHaveBeenCalledWith("192.168.1.200");
+    });
+
+    it("should not call onAddressChange when Enter is pressed with same address", () => {
+      const onAddressChange = vi.fn();
+      // savedAddress from mock is "192.168.1.100"
+      render(
+        <DeviceConnectionCard
+          {...defaultProps}
+          address="192.168.1.100"
+          onAddressChange={onAddressChange}
+        />,
+      );
+
+      const input = screen.getByRole("textbox");
+      fireEvent.keyUp(input, { key: "Enter" });
+
+      expect(onAddressChange).not.toHaveBeenCalled();
+    });
+
+    it("should not call onAddressChange for other keys", () => {
+      const onAddressChange = vi.fn();
+      render(
+        <DeviceConnectionCard
+          {...defaultProps}
+          address="192.168.1.200"
+          onAddressChange={onAddressChange}
+        />,
+      );
+
+      const input = screen.getByRole("textbox");
+      fireEvent.keyUp(input, { key: "Tab" });
+      fireEvent.keyUp(input, { key: "Escape" });
+
+      expect(onAddressChange).not.toHaveBeenCalled();
+    });
+  });
+
+  // Note: Network scan button tests require modifying Capacitor.isNativePlatform mock
+  // which is set at module level. These tests are covered in integration tests.
+  describe("network scan button", () => {
+    it("should not show network scan button on web platform by default", () => {
+      // Default mock returns false for isNativePlatform
+      const onScanClick = vi.fn();
+      render(
+        <DeviceConnectionCard {...defaultProps} onScanClick={onScanClick} />,
+      );
+
+      expect(
+        screen.queryByRole("button", { name: /settings.networkScan.title/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should not show network scan button when onScanClick is not provided", () => {
+      render(
+        <DeviceConnectionCard {...defaultProps} onScanClick={undefined} />,
+      );
+
+      expect(
+        screen.queryByRole("button", { name: /settings.networkScan.title/i }),
+      ).not.toBeInTheDocument();
+    });
+  });
 });

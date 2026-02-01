@@ -480,4 +480,148 @@ describe("VirtualSearchResults", () => {
       expect(container).toBeInTheDocument();
     });
   });
+
+  describe("result selection", () => {
+    it("should call setSelectedResult when result is clicked", async () => {
+      const mediaSearchSpy = vi.spyOn(CoreAPI, "mediaSearch");
+      const mockResults = createMockResults(2);
+      mediaSearchSpy.mockResolvedValueOnce({
+        results: mockResults,
+        total: 2,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+
+      mockGetVirtualItems.mockReturnValue([
+        { index: 0, key: 0, start: 0, size: 100 },
+        { index: 1, key: 1, start: 100, size: 100 },
+      ]);
+
+      const setSelectedResult = vi.fn();
+      renderComponent({ setSelectedResult });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("result-0")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId("result-0"));
+
+      expect(setSelectedResult).toHaveBeenCalledWith(mockResults[0]);
+    });
+
+    it("should deselect when clicking the same result again", async () => {
+      const mediaSearchSpy = vi.spyOn(CoreAPI, "mediaSearch");
+      const mockResults = createMockResults(1);
+      mediaSearchSpy.mockResolvedValueOnce({
+        results: mockResults,
+        total: 1,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+
+      mockGetVirtualItems.mockReturnValue([
+        { index: 0, key: 0, start: 0, size: 100 },
+      ]);
+
+      const setSelectedResult = vi.fn();
+      renderComponent({
+        setSelectedResult,
+        selectedResult: mockResults[0], // Already selected
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("result-0")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId("result-0"));
+
+      expect(setSelectedResult).toHaveBeenCalledWith(null);
+    });
+
+    it("should handle keyboard Enter to select result", async () => {
+      const mediaSearchSpy = vi.spyOn(CoreAPI, "mediaSearch");
+      const mockResults = createMockResults(1);
+      mediaSearchSpy.mockResolvedValueOnce({
+        results: mockResults,
+        total: 1,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+
+      mockGetVirtualItems.mockReturnValue([
+        { index: 0, key: 0, start: 0, size: 100 },
+      ]);
+
+      const setSelectedResult = vi.fn();
+      renderComponent({ setSelectedResult });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("result-0")).toBeInTheDocument();
+      });
+
+      fireEvent.keyDown(screen.getByTestId("result-0"), { key: "Enter" });
+
+      expect(setSelectedResult).toHaveBeenCalledWith(mockResults[0]);
+    });
+
+    it("should handle keyboard Space to select result", async () => {
+      const mediaSearchSpy = vi.spyOn(CoreAPI, "mediaSearch");
+      const mockResults = createMockResults(1);
+      mediaSearchSpy.mockResolvedValueOnce({
+        results: mockResults,
+        total: 1,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+
+      mockGetVirtualItems.mockReturnValue([
+        { index: 0, key: 0, start: 0, size: 100 },
+      ]);
+
+      const setSelectedResult = vi.fn();
+      renderComponent({ setSelectedResult });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("result-0")).toBeInTheDocument();
+      });
+
+      fireEvent.keyDown(screen.getByTestId("result-0"), { key: " " });
+
+      expect(setSelectedResult).toHaveBeenCalledWith(mockResults[0]);
+    });
+  });
+
+  // Note: "duplicate names handling" and "showFilenames preference" tests
+  // require the full hook data flow which is complex to mock with the virtualizer.
+  // These behaviors are tested in integration tests instead.
+
+  describe("empty state without query", () => {
+    it("should show simple no results message when query is empty", async () => {
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValue({
+        results: [],
+        total: 0,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+
+      renderComponent({ query: "", searchSystem: "all", searchTags: [] });
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("create.search.noResultsFoundSimple"),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should show filter removal suggestion when filters active but no query", async () => {
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValue({
+        results: [],
+        total: 0,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+
+      renderComponent({ query: "", searchSystem: "snes", searchTags: [] });
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("create.search.tryRemovingFiltersOnly"),
+        ).toBeInTheDocument();
+      });
+    });
+  });
 });

@@ -439,4 +439,113 @@ describe("RequirementsModal", () => {
     });
     expect(reopenedTosCheckbox).not.toBeChecked();
   });
+
+  describe("email verification check flow", () => {
+    it("should show check button after sending verification email", async () => {
+      const requirements: PendingRequirement[] = [
+        {
+          type: "email_verified",
+          description: "Verify email",
+          endpoint: "/account/requirements",
+        },
+      ];
+
+      useRequirementsStore.setState({
+        isOpen: true,
+        pendingRequirements: requirements,
+      });
+
+      render(<RequirementsModal />);
+
+      // Send email first
+      const sendEmailButton = screen.getByRole("button", {
+        name: /requirements\.sendVerificationEmail/i,
+      });
+      fireEvent.click(sendEmailButton);
+
+      // Wait for the "I've verified" button to appear
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", {
+            name: /requirements\.checkEmailVerified/i,
+          }),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should call Firebase reload when check button is clicked", async () => {
+      const requirements: PendingRequirement[] = [
+        {
+          type: "email_verified",
+          description: "Verify email",
+          endpoint: "/account/requirements",
+        },
+      ];
+
+      useRequirementsStore.setState({
+        isOpen: true,
+        pendingRequirements: requirements,
+      });
+
+      const { FirebaseAuthentication } =
+        await import("@capacitor-firebase/authentication");
+
+      render(<RequirementsModal />);
+
+      // Send email first
+      const sendEmailButton = screen.getByRole("button", {
+        name: /requirements\.sendVerificationEmail/i,
+      });
+      fireEvent.click(sendEmailButton);
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", {
+            name: /requirements\.checkEmailVerified/i,
+          }),
+        ).toBeInTheDocument();
+      });
+
+      // Click check email verified
+      const checkButton = screen.getByRole("button", {
+        name: /requirements\.checkEmailVerified/i,
+      });
+      fireEvent.click(checkButton);
+
+      // Wait for Firebase reload to be called
+      await waitFor(() => {
+        expect(FirebaseAuthentication.reload).toHaveBeenCalled();
+      });
+    });
+
+    it("should show resend email option after sending", async () => {
+      const requirements: PendingRequirement[] = [
+        {
+          type: "email_verified",
+          description: "Verify email",
+          endpoint: "/account/requirements",
+        },
+      ];
+
+      useRequirementsStore.setState({
+        isOpen: true,
+        pendingRequirements: requirements,
+      });
+
+      render(<RequirementsModal />);
+
+      // Send email first
+      const sendEmailButton = screen.getByRole("button", {
+        name: /requirements\.sendVerificationEmail/i,
+      });
+      fireEvent.click(sendEmailButton);
+
+      // Should show resend email button
+      await waitFor(() => {
+        expect(
+          screen.getByText("requirements.resendEmail"),
+        ).toBeInTheDocument();
+      });
+    });
+  });
 });
