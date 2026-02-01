@@ -121,9 +121,17 @@ describe("CoreAPI URL Functions", () => {
       expect(url).toBe("ws://192.168.1.100:7497/api/v0.1");
     });
 
-    // TODO: IPv6 address handling is broken - "::1" is misinterpreted.
-    // Users should use bracketed format [::1] for IPv6 addresses.
-    // A future fix should properly parse IPv6 addresses.
+    it("should handle unbracketed IPv6 by wrapping in brackets", () => {
+      localStorage.setItem("deviceAddress", "::1");
+      const url = getWsUrl();
+      expect(url).toBe("ws://[::1]:7497/api/v0.1");
+    });
+
+    it("should handle bracketed IPv6 with port", () => {
+      localStorage.setItem("deviceAddress", "[::1]:8080");
+      const url = getWsUrl();
+      expect(url).toBe("ws://[::1]:8080/api/v0.1");
+    });
 
     it("should handle common loopback addresses", () => {
       localStorage.setItem("deviceAddress", "127.0.0.1");
@@ -146,7 +154,10 @@ describe("CoreAPI URL Functions", () => {
       expect(url).toBe("ws://192.168.1.100:1/api/v0.1");
     });
 
-    // TODO: Trailing colon handling is broken - "192.168.1.100:" results in double colon.
-    // A future fix should strip trailing colons before adding the port.
+    it("should handle trailing colon gracefully", () => {
+      localStorage.setItem("deviceAddress", "192.168.1.100:");
+      const url = getWsUrl();
+      expect(url).toBe("ws://192.168.1.100:7497/api/v0.1");
+    });
   });
 });

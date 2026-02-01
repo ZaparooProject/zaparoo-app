@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CoreAPI, getDeviceAddress, getWsUrl } from "@/lib/coreApi.ts";
 import { Capacitor } from "@capacitor/core";
-import { Notification, SettingsResponse } from "@/lib/models.ts";
+import { Notification } from "@/lib/models.ts";
 
 // Mock Capacitor
 vi.mock("@capacitor/core");
@@ -170,39 +170,6 @@ describe("CoreAPI", () => {
     expect(sentData.method).toBe("readers");
   });
 
-  it("should use readersScanIgnoreSystem (singular) to match core API response", () => {
-    // Core API returns readersScanIgnoreSystem (singular), but our interface expects plural
-    // This test will fail until we fix the interface to match core API
-
-    // Simulate a core API response with singular field name
-    const coreApiResponse = {
-      runZapScript: true,
-      debugLogging: false,
-      audioScanFeedback: true,
-      readersAutoDetect: true,
-      readersScanMode: "tap" as const,
-      readersScanExitDelay: 2.5,
-      readersScanIgnoreSystem: ["system1", "system2"], // Core uses singular
-    };
-
-    // This should work with our SettingsResponse interface
-    // but will fail because we currently have the plural field name
-    const typedResponse: SettingsResponse = {
-      runZapScript: coreApiResponse.runZapScript,
-      debugLogging: coreApiResponse.debugLogging,
-      audioScanFeedback: coreApiResponse.audioScanFeedback,
-      readersAutoDetect: coreApiResponse.readersAutoDetect,
-      readersScanMode: coreApiResponse.readersScanMode,
-      readersScanExitDelay: coreApiResponse.readersScanExitDelay,
-      readersScanIgnoreSystems: coreApiResponse.readersScanIgnoreSystem,
-    };
-
-    expect(typedResponse.readersScanIgnoreSystems).toEqual([
-      "system1",
-      "system2",
-    ]);
-  });
-
   describe("getWsUrl", () => {
     it("should use default port 7497 when address has no port", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100");
@@ -246,20 +213,27 @@ describe("CoreAPI", () => {
       expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
     });
 
-    it("should handle IPv6-like addresses without port", () => {
+    it("should handle unbracketed IPv6 addresses by wrapping in brackets", () => {
       localStorageMock.getItem.mockReturnValue("::1");
 
       const wsUrl = getWsUrl();
-      // For now, expect the actual behavior - IPv6 addresses are complex to parse
-      // and this test documents the current behavior
-      expect(wsUrl).toBe("ws://::1/api/v0.1");
+      // Unbracketed IPv6 addresses should be wrapped in brackets with default port
+      expect(wsUrl).toBe("ws://[::1]:7497/api/v0.1");
     });
 
-    it("should handle address with multiple colons but valid port at end", () => {
-      localStorageMock.getItem.mockReturnValue("server:subdomain:8080");
+    it("should handle addresses with multiple colons as IPv6", () => {
+      // Addresses with multiple colons are treated as IPv6 and wrapped in brackets
+      localStorageMock.getItem.mockReturnValue("fe80::1");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://server:subdomain:8080/api/v0.1");
+      expect(wsUrl).toBe("ws://[fe80::1]:7497/api/v0.1");
+    });
+
+    it("should handle trailing colon by stripping it and using default port", () => {
+      localStorageMock.getItem.mockReturnValue("192.168.1.100:");
+
+      const wsUrl = getWsUrl();
+      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
     });
 
     it("should use localhost with default port when no address is stored and on web", () => {

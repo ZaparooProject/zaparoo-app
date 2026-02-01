@@ -402,13 +402,13 @@ describe("getWsUrl - Enhanced URL parsing", () => {
     expect(url).toBe("ws://192.168.1.100:7497/api/v0.1");
   });
 
-  it("should strip non-numeric port from hostname", () => {
+  it("should treat addresses with multiple colons as IPv6", () => {
     localStorage.setItem("deviceAddress", "my:host:name");
 
     const url = getWsUrl();
 
-    // Last segment "name" is not numeric, so strip and use default port
-    expect(url).toBe("ws://my:host:7497/api/v0.1");
+    // Multiple colons are treated as IPv6 and wrapped in brackets
+    expect(url).toBe("ws://[my:host:name]:7497/api/v0.1");
   });
 
   it("should handle malformed addresses gracefully", () => {
@@ -416,15 +416,17 @@ describe("getWsUrl - Enhanced URL parsing", () => {
 
     const url = getWsUrl();
 
-    expect(url).toBe("ws://:8080:7497/api/v0.1"); // Actual behavior - adds default port
+    // Malformed address - colon at position 0 isn't parsed, address used as-is
+    expect(url).toBe("ws://:8080:7497/api/v0.1");
   });
 
-  it("should handle empty port after colon", () => {
+  it("should handle trailing colon by stripping it", () => {
     localStorage.setItem("deviceAddress", "192.168.1.100:");
 
     const url = getWsUrl();
 
-    expect(url).toBe("ws://192.168.1.100::7497/api/v0.1");
+    // Trailing colon is stripped and default port is used
+    expect(url).toBe("ws://192.168.1.100:7497/api/v0.1");
   });
 
   it("should handle errors gracefully", () => {

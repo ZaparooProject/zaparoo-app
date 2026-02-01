@@ -1176,30 +1176,64 @@ export function getWsUrl() {
   try {
     const address = getDeviceAddress();
 
-    // Parse host and port from address
+    // Handle empty address
+    if (!address) {
+      return "";
+    }
+
     let host = address;
     let port = "7497"; // default port
 
-    // Check if address contains a port (format: host:port)
-    // For IPv6 addresses, we need to be more careful about colons
+    // Check if this is a bracketed IPv6 address (e.g., [::1] or [::1]:8080)
+    if (address.startsWith("[")) {
+      const closeBracket = address.indexOf("]");
+      if (closeBracket > 0) {
+        host = address.substring(0, closeBracket + 1); // Include brackets
+        const afterBracket = address.substring(closeBracket + 1);
+        if (afterBracket.startsWith(":") && afterBracket.length > 1) {
+          const potentialPort = afterBracket.substring(1);
+          if (/^\d+$/.test(potentialPort)) {
+            const portNum = parseInt(potentialPort, 10);
+            if (portNum > 0 && portNum <= 65535) {
+              port = potentialPort;
+            }
+          }
+        }
+      }
+      return `ws://${host}:${port}/api/v0.1`;
+    }
+
+    // Check if this looks like an unbracketed IPv6 address (multiple colons, not just host:port)
+    const colonCount = (address.match(/:/g) || []).length;
+    if (colonCount > 1) {
+      // Multiple colons - treat as IPv6, use default port
+      // Wrap in brackets for proper URL format
+      return `ws://[${address}]:${port}/api/v0.1`;
+    }
+
+    // Handle IPv4 or hostname with optional port
     const lastColonIndex = address.lastIndexOf(":");
-    if (lastColonIndex > 0 && lastColonIndex < address.length - 1) {
+
+    // Check for trailing colon (e.g., "192.168.1.100:")
+    if (lastColonIndex === address.length - 1) {
+      // Trailing colon - strip it and use default port
+      host = address.substring(0, lastColonIndex);
+      return `ws://${host}:${port}/api/v0.1`;
+    }
+
+    if (lastColonIndex > 0) {
       const potentialPort = address.substring(lastColonIndex + 1);
       const potentialHost = address.substring(0, lastColonIndex);
 
-      // Validate that what follows the colon is a valid port number
       if (/^\d+$/.test(potentialPort)) {
         const portNum = parseInt(potentialPort, 10);
         if (portNum > 0 && portNum <= 65535) {
-          // Valid port - use it
           host = potentialHost;
           port = potentialPort;
         } else {
-          // Invalid port number (out of range) - strip it and use default
           host = potentialHost;
         }
       } else {
-        // Non-numeric port - strip it and use default
         host = potentialHost;
       }
     }
