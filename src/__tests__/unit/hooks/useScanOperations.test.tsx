@@ -11,6 +11,13 @@ import {
   BarcodeValueType,
 } from "@capacitor-mlkit/barcode-scanning";
 
+import {
+  Nfc,
+  __simulateTagScanned,
+  __simulateScanCanceled,
+  __createMockNfcTag,
+} from "../../../../__mocks__/@capawesome-team/capacitor-nfc";
+
 // Helper to create mock barcode with all required properties
 const createMockBarcode = (rawValue: string): Barcode => ({
   rawValue,
@@ -18,12 +25,6 @@ const createMockBarcode = (rawValue: string): Barcode => ({
   format: BarcodeFormat.QrCode,
   valueType: BarcodeValueType.Text,
 });
-import {
-  Nfc,
-  __simulateTagScanned,
-  __simulateScanCanceled,
-  __createMockNfcTag,
-} from "../../../../__mocks__/@capawesome-team/capacitor-nfc";
 
 // Note: Internal modules (@/lib/nfc, @/lib/tokenOperations, @/lib/errors, etc.)
 // are NOT mocked. They run with their real implementation using globally mocked
@@ -441,6 +442,201 @@ describe("useScanOperations", () => {
         expect(setLastToken).toHaveBeenCalled();
       });
       expect(setProPurchaseModalOpen).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("scan restart behavior", () => {
+    it("should restart scan when shouldRestart is true and scan succeeds", async () => {
+      // Arrange
+      sessionManager.shouldRestart = true;
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      // Act - Start scan
+      await act(async () => {
+        result.current.handleScanButton();
+        await vi.advanceTimersByTimeAsync(10);
+      });
+
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(1);
+
+      // Simulate successful tag scan
+      await act(async () => {
+        __simulateTagScanned(__createMockNfcTag("04abc123def456", "game:test"));
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      // Assert - Should restart scan (on Android, immediately)
+      await vi.waitFor(() => {
+        expect(Nfc.startScanSession).toHaveBeenCalledTimes(2);
+      });
+
+      // Session should remain active
+      expect(result.current.scanSession).toBe(true);
+    });
+
+    it("should delay restart on iOS platform", async () => {
+      // Arrange
+      vi.mocked(Capacitor.getPlatform).mockReturnValue("ios");
+      sessionManager.shouldRestart = true;
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      // Act - Start scan
+      await act(async () => {
+        result.current.handleScanButton();
+        await vi.advanceTimersByTimeAsync(10);
+      });
+
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(1);
+
+      // Simulate successful tag scan
+      await act(async () => {
+        __simulateTagScanned(__createMockNfcTag("04abc123def456", "game:test"));
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      // Assert - Should NOT have restarted yet (iOS has 4s delay)
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(1);
+
+      // Advance past iOS delay
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4000);
+      });
+
+      // Now should have restarted
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(2);
+    });
+
+    it("should not restart scan when session is cancelled", async () => {
+      // Arrange
+      sessionManager.shouldRestart = true;
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      // Start scan
+      await act(async () => {
+        result.current.handleScanButton();
+        await vi.advanceTimersByTimeAsync(10);
+      });
+
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(1);
+
+      // Simulate cancellation
+      await act(async () => {
+        __simulateScanCanceled();
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      // Assert - Should NOT restart (cancelled status)
+      await vi.waitFor(() => {
+        expect(result.current.scanSession).toBe(false);
+      });
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("error handling", () => {
+    it("should set error status when NFC scan fails", async () => {
+      // Arrange - Mock Nfc to simulate an error during scan
+      vi.mocked(Nfc.startScanSession).mockRejectedValueOnce(
+        new Error("NFC hardware error"),
+      );
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      // Act
+      await act(async () => {
+        result.current.handleScanButton();
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      // Assert
+      await vi.waitFor(() => {
+        expect(result.current.scanStatus).toBe(ScanResult.Error);
+      });
+      expect(result.current.scanSession).toBe(false);
+    });
+
+    it("should reset error status after timeout", async () => {
+      // Arrange
+      vi.mocked(Nfc.startScanSession).mockRejectedValueOnce(
+        new Error("NFC hardware error"),
+      );
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      // Act
+      await act(async () => {
+        result.current.handleScanButton();
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      await vi.waitFor(() => {
+        expect(result.current.scanStatus).toBe(ScanResult.Error);
+      });
+
+      // Advance past timeout (3000ms)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+
+      // Assert
+      expect(result.current.scanStatus).toBe(ScanResult.Default);
+    });
+
+    it("should handle barcode scanner errors gracefully", async () => {
+      // Arrange - Non-cancellation error
+      vi.mocked(BarcodeScanner.scan).mockRejectedValue(
+        new Error("Camera permission denied"),
+      );
+      const setLastToken = vi.fn();
+      const { result } = renderHook(() =>
+        useScanOperations({ ...defaultProps, setLastToken }),
+      );
+
+      // Act - Should not throw
+      await act(async () => {
+        await result.current.handleCameraScan();
+      });
+
+      // Assert - Error handled, no token set
+      expect(setLastToken).not.toHaveBeenCalled();
+    });
+
+    it("should ignore empty write command barcodes", async () => {
+      // Arrange - **write: with no content after
+      vi.mocked(BarcodeScanner.scan).mockResolvedValue({
+        barcodes: [createMockBarcode("**write:")],
+      });
+      const setWriteOpen = vi.fn();
+      const setLastToken = vi.fn();
+      const { result } = renderHook(() =>
+        useScanOperations({ ...defaultProps, setWriteOpen, setLastToken }),
+      );
+
+      // Act
+      await act(async () => {
+        await result.current.handleCameraScan();
+      });
+
+      // Assert - Should not open write modal for empty content
+      expect(setWriteOpen).not.toHaveBeenCalled();
+      expect(setLastToken).not.toHaveBeenCalled();
+    });
+
+    it("should ignore undefined barcode in results", async () => {
+      // Arrange - First barcode is undefined (edge case)
+      vi.mocked(BarcodeScanner.scan).mockResolvedValue({
+        barcodes: [undefined as unknown as Barcode],
+      });
+      const setLastToken = vi.fn();
+      const { result } = renderHook(() =>
+        useScanOperations({ ...defaultProps, setLastToken }),
+      );
+
+      // Act
+      await act(async () => {
+        await result.current.handleCameraScan();
+      });
+
+      // Assert - Should handle gracefully
+      expect(setLastToken).not.toHaveBeenCalled();
     });
   });
 });
