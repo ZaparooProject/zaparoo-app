@@ -5,33 +5,46 @@
  * - getSubscriptionStatus function
  * - getRequirements function
  * - updateRequirements function
- * - requirements_not_met interceptor
+ * - deleteAccount function
+ * - cancelAccountDeletion function
+ * - Response interceptor for requirements_not_met errors
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 
 // Mock axios before importing the module
 const mockGet = vi.fn();
 const mockPost = vi.fn();
-const mockResponseInterceptors: Array<{
-  onFulfilled: (response: unknown) => unknown;
-  onRejected: (error: unknown) => unknown;
-}> = [];
+const mockDelete = vi.fn();
+
+// Capture interceptor callbacks for testing
+let responseInterceptorSuccess: ((response: unknown) => unknown) | null = null;
+let responseInterceptorError: ((error: unknown) => Promise<never>) | null =
+  null;
 
 vi.mock("axios", () => ({
   default: {
     create: vi.fn(() => ({
       get: mockGet,
       post: mockPost,
+      delete: mockDelete,
       interceptors: {
         request: {
           use: vi.fn(),
         },
         response: {
-          use: vi.fn((onFulfilled, onRejected) => {
-            mockResponseInterceptors.push({ onFulfilled, onRejected });
-          }),
+          use: vi.fn(
+            (
+              successFn: (response: unknown) => unknown,
+              errorFn: (error: unknown) => Promise<never>,
+            ) => {
+              // Capture the first (non-dev) interceptor callbacks
+              if (!responseInterceptorSuccess) {
+                responseInterceptorSuccess = successFn;
+                responseInterceptorError = errorFn;
+              }
+            },
+          ),
         },
       },
     })),
@@ -45,15 +58,19 @@ vi.mock("@capacitor-firebase/authentication", () => ({
   },
 }));
 
+// Mock useRequirementsStore
+const mockTrigger = vi.fn();
+vi.mock("@/hooks/useRequirementsModal", () => ({
+  useRequirementsStore: {
+    getState: () => ({
+      trigger: mockTrigger,
+    }),
+  },
+}));
+
 describe("onlineApi", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockResponseInterceptors.length = 0;
-    // Reset the requirements store
-    useRequirementsStore.setState({
-      isOpen: false,
-      pendingRequirements: [],
-    });
   });
 
   afterEach(() => {
@@ -218,81 +235,161 @@ describe("onlineApi", () => {
     });
   });
 
-  // Note: The requirements_not_met interceptor tests are skipped because testing
-  // module-level side effects (interceptor registration) is difficult with module
-  // caching. The interceptor behavior is tested through the RequirementsModal
-  // component integration tests instead.
-  describe.skip("requirements_not_met interceptor", () => {
-    it("should trigger requirements modal on requirements_not_met error", async () => {
-      // Import to register interceptors
-      await import("../../../lib/onlineApi");
+  describe("deleteAccount", () => {
+    it("should send DELETE request with confirmation", async () => {
+      mockDelete.mockResolvedValue({
+        data: {
+          message: "Account scheduled for deletion",
+          deletion_scheduled_at: "2024-01-15T00:00:00Z",
+        },
+      });
 
-      // Get the error handler from the first interceptor (requirements interceptor)
-      expect(mockResponseInterceptors.length).toBeGreaterThan(0);
-      const errorHandler = mockResponseInterceptors[0]!.onRejected;
+      const { deleteAccount } = await import("../../../lib/onlineApi");
+      const result = await deleteAccount("DELETE MY ACCOUNT");
+
+      expect(mockDelete).toHaveBeenCalledWith("/account", {
+        data: { confirmation: "DELETE MY ACCOUNT" },
+      });
+      expect(result.message).toBe("Account scheduled for deletion");
+    });
+
+    it("should return deletion response on success", async () => {
+      const deletionDate = "2024-01-15T00:00:00Z";
+      mockDelete.mockResolvedValue({
+        data: {
+          message: "Account deletion scheduled",
+          scheduled_deletion_at: deletionDate,
+          can_cancel_until: "2024-01-22T00:00:00Z",
+        },
+      });
+
+      const { deleteAccount } = await import("../../../lib/onlineApi");
+      const result = await deleteAccount("DELETE MY ACCOUNT");
+
+      expect(result.scheduled_deletion_at).toBe(deletionDate);
+    });
+
+    it("should throw error on network failure", async () => {
+      const networkError = new Error("Network error");
+      mockDelete.mockRejectedValue(networkError);
+
+      const { deleteAccount } = await import("../../../lib/onlineApi");
+
+      await expect(deleteAccount("DELETE MY ACCOUNT")).rejects.toThrow(
+        "Network error",
+      );
+    });
+
+    it("should throw error on API error response", async () => {
+      const apiError = new Error("Request failed with status code 400");
+      mockDelete.mockRejectedValue(apiError);
+
+      const { deleteAccount } = await import("../../../lib/onlineApi");
+
+      await expect(deleteAccount("WRONG CONFIRMATION")).rejects.toThrow(
+        "Request failed with status code 400",
+      );
+    });
+  });
+
+  describe("cancelAccountDeletion", () => {
+    it("should send POST request to cancel deletion", async () => {
+      mockPost.mockResolvedValue({
+        data: { message: "Account deletion cancelled" },
+      });
+
+      const { cancelAccountDeletion } = await import("../../../lib/onlineApi");
+      const result = await cancelAccountDeletion();
+
+      expect(mockPost).toHaveBeenCalledWith("/account/cancel-deletion");
+      expect(result.message).toBe("Account deletion cancelled");
+    });
+
+    it("should return success message on cancellation", async () => {
+      mockPost.mockResolvedValue({
+        data: { message: "Deletion cancelled successfully" },
+      });
+
+      const { cancelAccountDeletion } = await import("../../../lib/onlineApi");
+      const result = await cancelAccountDeletion();
+
+      expect(result).toEqual({ message: "Deletion cancelled successfully" });
+    });
+
+    it("should throw error on network failure", async () => {
+      const networkError = new Error("Network error");
+      mockPost.mockRejectedValue(networkError);
+
+      const { cancelAccountDeletion } = await import("../../../lib/onlineApi");
+
+      await expect(cancelAccountDeletion()).rejects.toThrow("Network error");
+    });
+
+    it("should throw error when no pending deletion exists", async () => {
+      const apiError = new Error("Request failed with status code 404");
+      mockPost.mockRejectedValue(apiError);
+
+      const { cancelAccountDeletion } = await import("../../../lib/onlineApi");
+
+      await expect(cancelAccountDeletion()).rejects.toThrow(
+        "Request failed with status code 404",
+      );
+    });
+  });
+
+  describe("response interceptor", () => {
+    beforeEach(async () => {
+      // Import the module to trigger interceptor registration
+      await import("../../../lib/onlineApi");
+    });
+
+    it("should trigger requirements modal when error code is requirements_not_met", async () => {
+      const mockRequirements = [
+        { type: "tos_acceptance", message: "Please accept terms of service" },
+        { type: "age_verification", message: "Please verify your age" },
+      ];
 
       const mockError = {
         response: {
           data: {
             error: {
               code: "requirements_not_met",
-              requirements: [
-                {
-                  type: "terms_acceptance",
-                  description: "Accept terms",
-                  endpoint: "/account/requirements",
-                },
-              ],
+              requirements: mockRequirements,
             },
           },
         },
       };
 
-      // Call the error handler
-      try {
-        await errorHandler(mockError);
-      } catch {
-        // Expected to reject
-      }
+      // Call the interceptor error handler
+      expect(responseInterceptorError).not.toBeNull();
+      await expect(responseInterceptorError!(mockError)).rejects.toBe(
+        mockError,
+      );
 
-      // Check that the store was triggered
-      const state = useRequirementsStore.getState();
-      expect(state.isOpen).toBe(true);
-      expect(state.pendingRequirements).toHaveLength(1);
-      expect(state.pendingRequirements[0]!.type).toBe("terms_acceptance");
+      expect(mockTrigger).toHaveBeenCalledWith(mockRequirements);
     });
 
-    it("should not trigger modal for other errors", async () => {
-      await import("../../../lib/onlineApi");
-
-      const errorHandler = mockResponseInterceptors[0]!.onRejected;
-
+    it("should not trigger requirements modal for other errors", async () => {
       const mockError = {
         response: {
           data: {
             error: {
-              code: "some_other_error",
-              message: "Something went wrong",
+              code: "unauthorized",
+              message: "Invalid token",
             },
           },
         },
       };
 
-      try {
-        await errorHandler(mockError);
-      } catch {
-        // Expected to reject
-      }
+      expect(responseInterceptorError).not.toBeNull();
+      await expect(responseInterceptorError!(mockError)).rejects.toBe(
+        mockError,
+      );
 
-      const state = useRequirementsStore.getState();
-      expect(state.isOpen).toBe(false);
+      expect(mockTrigger).not.toHaveBeenCalled();
     });
 
-    it("should not trigger modal when requirements array is empty", async () => {
-      await import("../../../lib/onlineApi");
-
-      const errorHandler = mockResponseInterceptors[0]!.onRejected;
-
+    it("should not trigger requirements modal when requirements array is empty", async () => {
       const mockError = {
         response: {
           data: {
@@ -304,39 +401,62 @@ describe("onlineApi", () => {
         },
       };
 
-      try {
-        await errorHandler(mockError);
-      } catch {
-        // Expected to reject
-      }
+      expect(responseInterceptorError).not.toBeNull();
+      await expect(responseInterceptorError!(mockError)).rejects.toBe(
+        mockError,
+      );
 
-      const state = useRequirementsStore.getState();
-      expect(state.isOpen).toBe(false);
+      expect(mockTrigger).not.toHaveBeenCalled();
     });
 
-    it("should not trigger modal when requirements is undefined", async () => {
-      await import("../../../lib/onlineApi");
-
-      const errorHandler = mockResponseInterceptors[0]!.onRejected;
+    it("should still reject the promise after triggering requirements", async () => {
+      const mockRequirements = [
+        { type: "email_verification", message: "Please verify email" },
+      ];
 
       const mockError = {
         response: {
           data: {
             error: {
               code: "requirements_not_met",
+              requirements: mockRequirements,
             },
           },
         },
       };
 
-      try {
-        await errorHandler(mockError);
-      } catch {
-        // Expected to reject
-      }
+      expect(responseInterceptorError).not.toBeNull();
 
-      const state = useRequirementsStore.getState();
-      expect(state.isOpen).toBe(false);
+      // The interceptor should both trigger the modal AND reject the promise
+      await expect(responseInterceptorError!(mockError)).rejects.toBe(
+        mockError,
+      );
+
+      // Verify the trigger was called
+      expect(mockTrigger).toHaveBeenCalledTimes(1);
+    });
+
+    it("should pass through successful responses unchanged", () => {
+      const mockResponse = { data: { success: true } };
+
+      expect(responseInterceptorSuccess).not.toBeNull();
+      const result = responseInterceptorSuccess!(mockResponse);
+
+      expect(result).toBe(mockResponse);
+    });
+
+    it("should handle errors without response data gracefully", async () => {
+      const mockError = {
+        message: "Network Error",
+        // No response property
+      };
+
+      expect(responseInterceptorError).not.toBeNull();
+      await expect(responseInterceptorError!(mockError)).rejects.toBe(
+        mockError,
+      );
+
+      expect(mockTrigger).not.toHaveBeenCalled();
     });
   });
 });

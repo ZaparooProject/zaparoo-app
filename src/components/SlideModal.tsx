@@ -97,6 +97,7 @@ export function SlideModal(props: {
     <>
       {/* Overlay - click to dismiss, hidden from screen readers */}
       <div
+        data-testid="modal-overlay"
         className="fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 ease-in-out"
         style={{
           opacity: props.isOpen ? 1 : 0,

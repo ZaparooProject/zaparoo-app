@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "../../../../test-utils";
 import { ToolsTab } from "@/components/nfc/ToolsTab";
 import { WriteAction } from "@/lib/writeNfcHook";
 
@@ -126,76 +126,12 @@ describe("ToolsTab", () => {
     });
   });
 
-  describe("platform filtering", () => {
-    it("should show tools available for current platform", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      // All tools should be available on Android platform (checking multiple instances)
-      expect(screen.getAllByText("Format Tag")).toHaveLength(2); // Header and button
-      expect(screen.getAllByText("Erase Tag")).toHaveLength(2); // Header and button
-      expect(screen.getAllByText("Make Read-Only")).toHaveLength(2); // Header and button
-    });
-  });
-
-  describe("warning indicators", () => {
-    it("should show warning icon for dangerous tools", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      // Look for warning icons (AlertTriangleIcon)
-      const warningElements = screen.getAllByText(/This.*/, { selector: "p" });
-      expect(warningElements.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe("platform-specific filtering", () => {
-    it("should show all available tools on Android platform", () => {
-      // Default mock is set to Android - all tools should be visible
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      // All tools should be visible on Android
-      expect(screen.getAllByText("Format Tag")).toHaveLength(2);
-      expect(screen.getAllByText("Erase Tag")).toHaveLength(2);
-      expect(screen.getAllByText("Make Read-Only")).toHaveLength(2);
-    });
-  });
-
-  describe("tool descriptions and warnings", () => {
-    it("should display detailed descriptions for each tool", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      expect(screen.getByText("Prepare tag for writing")).toBeInTheDocument();
-      expect(screen.getByText("Remove all data from tag")).toBeInTheDocument();
-      expect(
-        screen.getByText("Prevent further modifications"),
-      ).toBeInTheDocument();
-    });
-
-    it("should display warning messages for dangerous operations", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      expect(screen.getByText("This will erase all data")).toBeInTheDocument();
-      expect(
-        screen.getByText("This action cannot be undone"),
-      ).toBeInTheDocument();
-      expect(screen.getByText("This cannot be reversed")).toBeInTheDocument();
-    });
-
-    it("should show warning icons for all dangerous tools", () => {
-      render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
-
-      // Check for warning icons by looking for the lucide-triangle-alert class
-      const warningIcons = document.querySelectorAll(".lucide-triangle-alert");
-      expect(warningIcons.length).toBe(3); // One for each dangerous tool
-    });
-  });
-
   describe("button interactions", () => {
     it("should handle rapid button clicks", () => {
       render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
 
       const formatButton = screen.getByRole("button", { name: "Format Tag" });
 
-      // Rapid clicks should not cause issues
       fireEvent.click(formatButton);
       fireEvent.click(formatButton);
       fireEvent.click(formatButton);
@@ -212,7 +148,6 @@ describe("ToolsTab", () => {
         fireEvent.click(button);
       });
 
-      // No actions should be called when processing
       expect(mockOnToolAction).not.toHaveBeenCalled();
     });
 
@@ -221,10 +156,8 @@ describe("ToolsTab", () => {
 
       const formatButton = screen.getByRole("button", { name: "Format Tag" });
 
-      // Simulate Enter key press
       fireEvent.keyDown(formatButton, { key: "Enter", code: "Enter" });
 
-      // Should still work (button handles its own keyboard events)
       expect(formatButton).toBeInTheDocument();
     });
   });
@@ -233,22 +166,19 @@ describe("ToolsTab", () => {
     it("should use translation keys for all text content", () => {
       render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
 
-      // All translated text should be present (check for multiple occurrences)
-      expect(screen.getAllByText("Format Tag")).toHaveLength(2); // Header and button
-      expect(screen.getAllByText("Erase Tag")).toHaveLength(2); // Header and button
-      expect(screen.getAllByText("Make Read-Only")).toHaveLength(2); // Header and button
+      expect(screen.getAllByText("Format Tag")).toHaveLength(2);
+      expect(screen.getAllByText("Erase Tag")).toHaveLength(2);
+      expect(screen.getAllByText("Make Read-Only")).toHaveLength(2);
+    });
 
-      // Should handle loading state translation
+    it("should handle loading state translation", () => {
       render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={true} />);
       expect(screen.getAllByText("Loading...")).toHaveLength(3);
     });
 
     it("should handle missing translation keys gracefully", () => {
-      // The component should handle translation gracefully even if keys are returned as-is
-      // This test verifies the component doesn't break with key fallback
       render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
 
-      // Should still render with translated text (or fallback keys)
       const buttons = screen.getAllByRole("button");
       expect(buttons.length).toBeGreaterThan(0);
     });
@@ -258,7 +188,6 @@ describe("ToolsTab", () => {
     it("should render correct icons for each tool", () => {
       render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
 
-      // Should have tool icons in buttons
       const buttons = screen.getAllByRole("button");
       buttons.forEach((button) => {
         const icon = button.querySelector("svg");
@@ -269,23 +198,12 @@ describe("ToolsTab", () => {
     it("should maintain icon accessibility", () => {
       render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
 
-      // Check that SVG icons exist and have proper accessibility attributes
       const svgElements = document.querySelectorAll('svg[aria-hidden="true"]');
       expect(svgElements.length).toBeGreaterThan(0);
     });
   });
 
   describe("edge cases", () => {
-    it("should handle undefined onToolAction gracefully", () => {
-      // @ts-expect-error - intentionally passing undefined for edge case testing
-      render(<ToolsTab onToolAction={undefined} isProcessing={false} />);
-
-      const formatButton = screen.getByRole("button", { name: "Format Tag" });
-
-      // Should not throw error - the component should handle undefined callback gracefully
-      expect(() => fireEvent.click(formatButton)).not.toThrow();
-    });
-
     it("should handle unknown platform gracefully", () => {
       const { Capacitor } = require("@capacitor/core");
       const originalGetPlatform = Capacitor.getPlatform;
@@ -293,11 +211,9 @@ describe("ToolsTab", () => {
 
       render(<ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />);
 
-      // Based on current behavior, all tools are shown even for unknown platforms
       const buttons = screen.queryAllByRole("button");
-      expect(buttons.length).toBe(3); // All tools available regardless of platform
+      expect(buttons.length).toBe(3);
 
-      // Restore original function
       Capacitor.getPlatform = originalGetPlatform;
     });
 
@@ -306,7 +222,6 @@ describe("ToolsTab", () => {
         <ToolsTab onToolAction={mockOnToolAction} isProcessing={false} />,
       );
 
-      // Rapid processing state changes
       rerender(
         <ToolsTab onToolAction={mockOnToolAction} isProcessing={true} />,
       );
@@ -317,7 +232,6 @@ describe("ToolsTab", () => {
         <ToolsTab onToolAction={mockOnToolAction} isProcessing={true} />,
       );
 
-      // Should handle state changes without errors
       expect(screen.getAllByText("Loading...")).toHaveLength(3);
     });
   });

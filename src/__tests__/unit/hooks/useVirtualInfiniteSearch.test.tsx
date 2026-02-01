@@ -5,7 +5,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { waitFor } from "../../../test-utils";
+import { renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useVirtualInfiniteSearch } from "../../../hooks/useVirtualInfiniteSearch";
 import { SearchResultsResponse } from "../../../lib/models";
@@ -50,7 +51,7 @@ function createWrapper() {
 
 describe("useVirtualInfiniteSearch", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   describe("basic functionality", () => {
@@ -213,6 +214,119 @@ describe("useVirtualInfiniteSearch", () => {
       expect(result.current.allItems).toHaveLength(1);
       expect(result.current.allItems[0]?.name).toBe("Game 1");
     });
+  });
+
+  describe("error handling", () => {
+    // Note: The hook uses retry: 3 with exponential backoff (1s, 2s, 4s).
+    // Tests need longer timeouts to wait for all retries to complete before
+    // isError becomes true. Total retry time is ~7-8 seconds.
+
+    it("should set isError to true when API call fails", async () => {
+      const networkError = new Error("Network error");
+      mockCoreAPI.mediaSearch.mockImplementation(() =>
+        Promise.reject(networkError),
+      );
+
+      const { result } = renderHook(
+        () =>
+          useVirtualInfiniteSearch({
+            query: "mario",
+            systems: ["nes"],
+            enabled: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(
+        () => {
+          expect(result.current.isError).toBe(true);
+        },
+        { timeout: 10000 },
+      );
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.allItems).toEqual([]);
+    }, 15000); // Test timeout must be longer than waitFor timeout
+
+    it("should provide error object when API call fails", async () => {
+      const testError = new Error("API unavailable");
+      mockCoreAPI.mediaSearch.mockImplementation(() =>
+        Promise.reject(testError),
+      );
+
+      const { result } = renderHook(
+        () =>
+          useVirtualInfiniteSearch({
+            query: "mario",
+            systems: ["nes"],
+            enabled: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(
+        () => {
+          expect(result.current.isError).toBe(true);
+        },
+        { timeout: 10000 },
+      );
+
+      expect(result.current.error).toBe(testError);
+    }, 15000);
+
+    it("should allow refetch after error", async () => {
+      const testError = new Error("Temporary error");
+      let callCount = 0;
+
+      // First 4 calls fail (initial + 3 retries), then succeed
+      mockCoreAPI.mediaSearch.mockImplementation(() => {
+        callCount++;
+        if (callCount <= 4) {
+          return Promise.reject(testError);
+        }
+        return Promise.resolve({
+          results: [
+            {
+              name: "Game 1",
+              path: "/games/game1.nes",
+              system: { id: "nes", name: "NES" },
+              tags: [],
+            },
+          ],
+          total: 1,
+        });
+      });
+
+      const { result } = renderHook(
+        () =>
+          useVirtualInfiniteSearch({
+            query: "mario",
+            systems: ["nes"],
+            enabled: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      // Wait for error state (after all retries)
+      await waitFor(
+        () => {
+          expect(result.current.isError).toBe(true);
+        },
+        { timeout: 10000 },
+      );
+
+      // Trigger refetch
+      await result.current.refetch();
+
+      // Should now have data
+      await waitFor(
+        () => {
+          expect(result.current.isError).toBe(false);
+          expect(result.current.allItems).toHaveLength(1);
+        },
+        { timeout: 10000 },
+      );
+    }, 25000); // Needs extra time for both error cycle and refetch
   });
 
   describe("pagination", () => {

@@ -1,7 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "../../test-utils";
 import { vi, beforeEach, describe, it, expect } from "vitest";
 import App from "@/App";
-import "@/test-setup";
 
 // Mock window.location for i18n
 Object.defineProperty(window, "location", {
@@ -207,8 +206,9 @@ describe("App Integration", () => {
   it("should render App component with all providers", () => {
     render(<App />);
 
-    // Verify the SlideModalProvider is rendered (new import)
-    expect(screen.getByTestId("slide-modal-provider")).toBeInTheDocument();
+    // Verify the SlideModalProvider is rendered (may have multiple from test-utils wrapper)
+    const slideModalProviders = screen.getAllByTestId("slide-modal-provider");
+    expect(slideModalProviders.length).toBeGreaterThan(0);
 
     // Verify RouterProvider is rendered
     expect(screen.getByTestId("router")).toBeInTheDocument();

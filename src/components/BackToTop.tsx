@@ -61,6 +61,7 @@ export function BackToTop({
           ? "pointer-events-auto opacity-100"
           : "pointer-events-none opacity-0"
       }`}
+      aria-hidden={!isVisible}
       style={{
         zIndex: 30,
         transform: "translateZ(0)",

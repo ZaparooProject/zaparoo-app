@@ -28,11 +28,10 @@ export function useProAccessCheck() {
     // Check customer info from RevenueCat
     Purchases.getCustomerInfo()
       .then((info) => {
-        if (info.customerInfo.entitlements.active.tapto_launcher) {
-          setLauncherAccess(true);
-        } else {
-          setLauncherAccess(false);
-        }
+        // Use optional chaining for safe access to nested entitlements
+        const hasProAccess =
+          !!info.customerInfo?.entitlements?.active?.tapto_launcher;
+        setLauncherAccess(hasProAccess);
         setProAccessHydrated(true);
       })
       .catch((e) => {

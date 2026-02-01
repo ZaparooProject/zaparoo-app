@@ -1,12 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CoreAPI, getDeviceAddress, getWsUrl } from "@/lib/coreApi.ts";
 import { Capacitor } from "@capacitor/core";
-import {
-  Notification,
-  SettingsResponse,
-  Method,
-  UpdateSettingsRequest,
-} from "@/lib/models.ts";
+import { Notification } from "@/lib/models.ts";
 
 // Mock Capacitor
 vi.mock("@capacitor/core");
@@ -118,21 +113,30 @@ describe("CoreAPI", () => {
     );
   });
 
-  it("should call stop method with correct JSON-RPC format", () => {
-    // Start a stop call (but don't await to avoid timeout)
-    CoreAPI.stop().catch(() => {
-      // Ignore timeout errors to prevent unhandled rejections
-    });
+  it.each([
+    ["stop", () => CoreAPI.stop(), "stop"],
+    ["mediaActive", () => CoreAPI.mediaActive(), "media.active"],
+    ["settingsReload", () => CoreAPI.settingsReload(), "settings.reload"],
+    [
+      "readersWriteCancel",
+      () => CoreAPI.readersWriteCancel(),
+      "readers.write.cancel",
+    ],
+  ] as const)(
+    "should call %s method with correct JSON-RPC format",
+    (_, apiCall, expectedMethod) => {
+      apiCall().catch(() => {
+        // Ignore timeout errors
+      });
 
-    // Verify the request was sent with correct format
-    expect(mockSend).toHaveBeenCalledOnce();
-
-    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
-    expect(sentData.jsonrpc).toBe("2.0");
-    expect(sentData.method).toBe("stop");
-    expect(sentData.id).toBeDefined();
-    expect(sentData.timestamp).toBeDefined();
-  });
+      expect(mockSend).toHaveBeenCalledOnce();
+      const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+      expect(sentData.jsonrpc).toBe("2.0");
+      expect(sentData.method).toBe(expectedMethod);
+      expect(sentData.id).toBeDefined();
+      expect(sentData.timestamp).toBeDefined();
+    },
+  );
 
   it("should handle tokens.removed notification", async () => {
     const tokensRemovedEvent = {
@@ -151,85 +155,6 @@ describe("CoreAPI", () => {
     });
   });
 
-  it("should have runZapScript property in SettingsResponse interface", () => {
-    // This test will compile check that SettingsResponse has runZapScript
-    const checkInterface = (settings: SettingsResponse) => {
-      // This line should cause a TypeScript error if runZapScript doesn't exist
-      const hasRunZapScript: boolean = settings.runZapScript;
-      expect(typeof hasRunZapScript).toBe("boolean");
-    };
-
-    const mockSettings: SettingsResponse = {
-      runZapScript: true,
-      debugLogging: false,
-      audioScanFeedback: true,
-      readersAutoDetect: true,
-      readersScanMode: "tap",
-      readersScanExitDelay: 0,
-      readersScanIgnoreSystems: [],
-    };
-
-    checkInterface(mockSettings);
-  });
-
-  it("should call mediaActive method with correct JSON-RPC format", () => {
-    // Start a mediaActive call (but don't await to avoid timeout)
-    CoreAPI.mediaActive().catch(() => {
-      // Ignore timeout errors to prevent unhandled rejections
-    });
-
-    // Verify the request was sent with correct format
-    expect(mockSend).toHaveBeenCalledOnce();
-
-    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
-    expect(sentData.jsonrpc).toBe("2.0");
-    expect(sentData.method).toBe("media.active");
-    expect(sentData.id).toBeDefined();
-    expect(sentData.timestamp).toBeDefined();
-  });
-
-  it("should have MediaActive enum value", () => {
-    // Test that Method.MediaActive exists and equals "media.active"
-    expect(Method.MediaActive).toBe("media.active");
-  });
-
-  it("should call settingsReload method with correct JSON-RPC format", () => {
-    // Start a settingsReload call (but don't await to avoid timeout)
-    CoreAPI.settingsReload().catch(() => {
-      // Ignore timeout errors to prevent unhandled rejections
-    });
-
-    // Verify the request was sent with correct format
-    expect(mockSend).toHaveBeenCalledOnce();
-
-    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
-    expect(sentData.jsonrpc).toBe("2.0");
-    expect(sentData.method).toBe("settings.reload");
-    expect(sentData.id).toBeDefined();
-    expect(sentData.timestamp).toBeDefined();
-  });
-
-  it("should call readersWriteCancel method with correct JSON-RPC format", () => {
-    // Start a readersWriteCancel call (but don't await to avoid timeout)
-    CoreAPI.readersWriteCancel().catch(() => {
-      // Ignore timeout errors to prevent unhandled rejections
-    });
-
-    // Verify the request was sent with correct format
-    expect(mockSend).toHaveBeenCalledOnce();
-
-    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
-    expect(sentData.jsonrpc).toBe("2.0");
-    expect(sentData.method).toBe("readers.write.cancel");
-    expect(sentData.id).toBeDefined();
-    expect(sentData.timestamp).toBeDefined();
-  });
-
-  it("should not have runScript method since it's not supported by core API", () => {
-    // Test that runScript method doesn't exist since it's not supported by core
-    expect((CoreAPI as any).runScript).toBeUndefined();
-  });
-
   it("should have readers method returning ReadersResponse type", () => {
     // Test that readers method exists and has proper typing
     expect(typeof CoreAPI.readers).toBe("function");
@@ -243,50 +168,6 @@ describe("CoreAPI", () => {
     // Verify it calls the correct API method
     const sentData = JSON.parse(mockSend.mock.calls[0][0]);
     expect(sentData.method).toBe("readers");
-  });
-
-  it("should support runZapScript in UpdateSettingsRequest", () => {
-    // Test that UpdateSettingsRequest supports runZapScript field for API compatibility
-    const updateRequest: UpdateSettingsRequest = {
-      runZapScript: false,
-      debugLogging: true,
-    };
-
-    expect(updateRequest.runZapScript).toBe(false);
-    expect(updateRequest.debugLogging).toBe(true);
-  });
-
-  it("should use readersScanIgnoreSystem (singular) to match core API response", () => {
-    // Core API returns readersScanIgnoreSystem (singular), but our interface expects plural
-    // This test will fail until we fix the interface to match core API
-
-    // Simulate a core API response with singular field name
-    const coreApiResponse = {
-      runZapScript: true,
-      debugLogging: false,
-      audioScanFeedback: true,
-      readersAutoDetect: true,
-      readersScanMode: "tap" as const,
-      readersScanExitDelay: 2.5,
-      readersScanIgnoreSystem: ["system1", "system2"], // Core uses singular
-    };
-
-    // This should work with our SettingsResponse interface
-    // but will fail because we currently have the plural field name
-    const typedResponse: SettingsResponse = {
-      runZapScript: coreApiResponse.runZapScript,
-      debugLogging: coreApiResponse.debugLogging,
-      audioScanFeedback: coreApiResponse.audioScanFeedback,
-      readersAutoDetect: coreApiResponse.readersAutoDetect,
-      readersScanMode: coreApiResponse.readersScanMode,
-      readersScanExitDelay: coreApiResponse.readersScanExitDelay,
-      readersScanIgnoreSystems: coreApiResponse.readersScanIgnoreSystem,
-    };
-
-    expect(typedResponse.readersScanIgnoreSystems).toEqual([
-      "system1",
-      "system2",
-    ]);
   });
 
   describe("getWsUrl", () => {
@@ -311,41 +192,48 @@ describe("CoreAPI", () => {
       expect(wsUrl).toBe("ws://zaparoo.local:9090/api/v0.1");
     });
 
-    it("should use default port when colon is present but port is invalid", () => {
+    it("should strip invalid port and use default when port is non-numeric", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:abc");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:abc:7497/api/v0.1");
+      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
     });
 
-    it("should use default port when port is out of range", () => {
+    it("should strip invalid port and use default when port is out of range", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:70000");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:70000:7497/api/v0.1");
+      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
     });
 
-    it("should use default port when port is zero", () => {
+    it("should strip invalid port and use default when port is zero", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:0");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:0:7497/api/v0.1");
+      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
     });
 
-    it("should handle IPv6-like addresses without port", () => {
+    it("should handle unbracketed IPv6 addresses by wrapping in brackets", () => {
       localStorageMock.getItem.mockReturnValue("::1");
 
       const wsUrl = getWsUrl();
-      // For now, expect the actual behavior - IPv6 addresses are complex to parse
-      // and this test documents the current behavior
-      expect(wsUrl).toBe("ws://::1/api/v0.1");
+      // Unbracketed IPv6 addresses should be wrapped in brackets with default port
+      expect(wsUrl).toBe("ws://[::1]:7497/api/v0.1");
     });
 
-    it("should handle address with multiple colons but valid port at end", () => {
-      localStorageMock.getItem.mockReturnValue("server:subdomain:8080");
+    it("should handle addresses with multiple colons as IPv6", () => {
+      // Addresses with multiple colons are treated as IPv6 and wrapped in brackets
+      localStorageMock.getItem.mockReturnValue("fe80::1");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://server:subdomain:8080/api/v0.1");
+      expect(wsUrl).toBe("ws://[fe80::1]:7497/api/v0.1");
+    });
+
+    it("should handle trailing colon by stripping it and using default port", () => {
+      localStorageMock.getItem.mockReturnValue("192.168.1.100:");
+
+      const wsUrl = getWsUrl();
+      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
     });
 
     it("should use localhost with default port when no address is stored and on web", () => {

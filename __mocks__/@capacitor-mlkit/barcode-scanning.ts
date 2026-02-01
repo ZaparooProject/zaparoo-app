@@ -33,6 +33,22 @@ export const BarcodeFormat = {
   UpcE: "UPC_E",
 };
 
+export const BarcodeValueType = {
+  CalendarEvent: "CALENDAR_EVENT",
+  ContactInfo: "CONTACT_INFO",
+  DriversLicense: "DRIVERS_LICENSE",
+  Email: "EMAIL",
+  Geo: "GEO",
+  Isbn: "ISBN",
+  Phone: "PHONE",
+  Product: "PRODUCT",
+  Sms: "SMS",
+  Text: "TEXT",
+  Unknown: "UNKNOWN",
+  Url: "URL",
+  Wifi: "WIFI",
+};
+
 export const LensFacing = {
   Front: "FRONT",
   Back: "BACK",

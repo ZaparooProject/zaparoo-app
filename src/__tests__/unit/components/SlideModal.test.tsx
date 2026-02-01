@@ -1,35 +1,63 @@
-import { describe, it, expect, vi } from "vitest";
-import React from "react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "../../../test-utils";
 import { SlideModal } from "../../../components/SlideModal";
 
-// Mock useSmartSwipe
-vi.mock("../../../hooks/useSmartSwipe", () => ({
-  useSmartSwipe: vi.fn(() => ({})),
+// Mock store for safe insets
+vi.mock("@/lib/store", () => ({
+  useStatusStore: vi.fn((selector) => {
+    const state = {
+      safeInsets: {
+        top: "44px",
+        bottom: "34px",
+        left: "0px",
+        right: "0px",
+      },
+    };
+    return selector ? selector(state) : state;
+  }),
 }));
 
-// Mock useSlideModalManager
-vi.mock("../../../hooks/useSlideModalManager", () => ({
-  useSlideModalManager: vi.fn(() => ({
-    registerModal: vi.fn(),
-    unregisterModal: vi.fn(),
-    closeAllExcept: vi.fn(),
-  })),
-  SlideModalContext: {
-    Provider: ({ children }: { children: React.ReactNode }) => children,
+// Mock Capacitor plugins used by hooks
+vi.mock("@capacitor/haptics", () => ({
+  Haptics: {
+    impact: vi.fn(),
+    notification: vi.fn(),
+    vibrate: vi.fn(),
+  },
+  ImpactStyle: {
+    Light: "LIGHT",
+    Medium: "MEDIUM",
+    Heavy: "HEAVY",
+  },
+  NotificationType: {
+    Success: "SUCCESS",
+    Warning: "WARNING",
+    Error: "ERROR",
   },
 }));
 
-// Mock store
-vi.mock("../../../lib/store", () => ({
-  useStatusStore: vi.fn(() => ({
-    safeInsets: {
-      top: "44px",
-      bottom: "34px",
-      left: "0px",
-      right: "0px",
-    },
-  })),
+vi.mock("@capacitor/app", () => ({
+  App: {
+    addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
+    removeAllListeners: vi.fn(),
+  },
+}));
+
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: () => false,
+    getPlatform: () => "web",
+  },
+}));
+
+// Mock preferences store for useHaptics
+vi.mock("@/lib/preferencesStore", () => ({
+  usePreferencesStore: vi.fn((selector) => {
+    const state = {
+      hapticsEnabled: false,
+    };
+    return selector ? selector(state) : state;
+  }),
 }));
 
 describe("SlideModal", () => {
@@ -40,6 +68,14 @@ describe("SlideModal", () => {
     children: <div>Test Content</div>,
   };
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("renders modal when open", () => {
     render(<SlideModal {...mockProps} isOpen={true} />);
 
@@ -49,19 +85,22 @@ describe("SlideModal", () => {
     expect(screen.getByText("Test Content")).toBeInTheDocument();
   });
 
+  it("renders modal dialog with proper role", () => {
+    render(<SlideModal {...mockProps} isOpen={true} />);
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+  });
+
   it("closes modal when overlay is clicked", () => {
     const closeMock = vi.fn();
-    const { container } = render(
-      <SlideModal {...mockProps} isOpen={true} close={closeMock} />,
-    );
+    render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
 
-    // Target the overlay div specifically (has bg-black/50 class and aria-hidden)
-    const overlay = container.querySelector(
-      '.fixed.inset-0[aria-hidden="true"]',
-    );
+    const overlay = screen.getByTestId("modal-overlay");
     expect(overlay).toBeInTheDocument();
 
-    fireEvent.click(overlay!);
+    fireEvent.click(overlay);
 
     expect(closeMock).toHaveBeenCalled();
   });
@@ -71,11 +110,41 @@ describe("SlideModal", () => {
     render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
 
     // There are two close buttons (drag handle on mobile, X button on desktop)
-    // Get all and click the first one (drag handle)
     const closeButtons = screen.getAllByRole("button", { name: "nav.close" });
     expect(closeButtons.length).toBe(2);
     fireEvent.click(closeButtons[0]!);
 
     expect(closeMock).toHaveBeenCalled();
+  });
+
+  it("does not show content when closed", () => {
+    render(<SlideModal {...mockProps} isOpen={false} />);
+
+    // Dialog should be hidden
+    const dialog = screen.getByRole("dialog", { hidden: true });
+    expect(dialog).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("renders with custom className", () => {
+    render(
+      <SlideModal {...mockProps} isOpen={true} className="custom-class" />,
+    );
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveClass("custom-class");
+  });
+
+  it("renders footer when provided", () => {
+    render(
+      <SlideModal
+        {...mockProps}
+        isOpen={true}
+        footer={<button>Footer Button</button>}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Footer Button" }),
+    ).toBeInTheDocument();
   });
 });

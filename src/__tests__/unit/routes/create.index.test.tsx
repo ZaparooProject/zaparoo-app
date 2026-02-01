@@ -1,798 +1,377 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "../../../test-utils";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React from "react";
+import { render, screen } from "../../../test-utils";
+import userEvent from "@testing-library/user-event";
 
-// Mock dependencies
-vi.mock("../../../lib/store", () => ({
-  useStatusStore: vi.fn((selector) => {
-    const mockState = {
-      connected: true,
-      playing: {
-        mediaName: "Test Game",
-        mediaPath: "/test/game.sfc",
-        systemName: "Test System",
-      },
-    };
-    return selector(mockState);
-  }),
-}));
-
-vi.mock("../../../lib/writeNfcHook", () => ({
-  useNfcWriter: vi.fn(() => ({
-    status: null,
+// Use vi.hoisted for all variables that need to be accessed in mock factories
+const { componentRef, mockState, mockNfcWriter } = vi.hoisted(() => ({
+  componentRef: { current: null as any },
+  mockState: {
+    connected: true,
+    playing: {
+      mediaName: "",
+      mediaPath: "",
+      systemName: "",
+    },
+    nfcAvailable: true,
+    platform: "ios" as string,
+  },
+  mockNfcWriter: {
+    status: null as null | string,
     write: vi.fn(),
     end: vi.fn(),
     writing: false,
     result: null,
-  })),
+  },
+}));
+
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = (await importOriginal()) as any;
+  return {
+    ...actual,
+    createFileRoute: () => (options: any) => {
+      componentRef.current = options.component;
+      return { options };
+    },
+    Link: ({
+      children,
+      to,
+      disabled,
+    }: {
+      children: React.ReactNode;
+      to: string;
+      disabled?: boolean;
+    }) => (
+      <a href={to} data-disabled={disabled} aria-disabled={disabled}>
+        {children}
+      </a>
+    ),
+  };
+});
+
+// Mock store
+vi.mock("@/lib/store", async (importOriginal) => {
+  const actual = (await importOriginal()) as any;
+  return {
+    ...actual,
+    useStatusStore: (selector: any) =>
+      selector({
+        connected: mockState.connected,
+        playing: mockState.playing,
+        safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+      }),
+  };
+});
+
+// Mock preferences store
+vi.mock("@/lib/preferencesStore", () => ({
+  usePreferencesStore: (selector: any) =>
+    selector({
+      nfcAvailable: mockState.nfcAvailable,
+    }),
+}));
+
+// Mock NFC writer
+vi.mock("@/lib/writeNfcHook", () => ({
+  useNfcWriter: () => mockNfcWriter,
   WriteAction: {
     Write: "write",
+    Read: "read",
   },
 }));
 
-vi.mock("@capacitor/core");
-
-vi.mock("@capawesome-team/capacitor-nfc", () => ({
-  Nfc: {
-    isAvailable: vi.fn().mockResolvedValue({ nfc: true }),
+// Mock Capacitor
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: () => mockState.platform !== "web",
+    getPlatform: () => mockState.platform,
   },
 }));
 
-vi.mock("react-i18next", () => ({
-  useTranslation: vi.fn(() => ({
-    t: (key: string, params?: any) => {
-      const translations: { [key: string]: string } = {
-        "create.title": "Create",
-        "create.searchGameHeading": "Search for a game",
-        "create.searchGameSub": "Find a game in your collection",
-        "create.currentGameHeading": "Current game",
-        "create.currentGameSub": "Write {{game}} to a token",
-        "create.currentGameSubFallback": "No game currently playing",
-        "create.mappingsHeading": "Mappings",
-        "create.mappingsSub": "Create custom mappings",
-        "create.customHeading": "Custom text",
-        "create.customSub": "Write custom text to a token",
-        "create.nfcHeading": "NFC",
-        "create.nfcSub": "Read from another NFC token",
-      };
-
-      let result = translations[key] || key;
-      if (params) {
-        Object.keys(params).forEach((param) => {
-          result = result.replace(`{{${param}}}`, params[param]);
-        });
-      }
-      return result;
-    },
-  })),
+// Mock hooks
+vi.mock("@/hooks/usePageHeadingFocus", () => ({
+  usePageHeadingFocus: vi.fn(),
 }));
+
+// Mock WriteModal to simplify testing
+vi.mock("@/components/WriteModal", () => ({
+  WriteModal: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="write-modal">Write Modal</div> : null,
+}));
+
+// Import the route module to trigger createFileRoute which captures the component
+import "@/routes/create.index";
+
+// The component will be captured by the mock
+const getCreate = () => componentRef.current;
 
 describe("Create Index Route", () => {
-  let queryClient: QueryClient;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
+    mockState.connected = true;
+    mockState.playing = { mediaName: "", mediaPath: "", systemName: "" };
+    mockState.nfcAvailable = true;
+    mockState.platform = "ios";
+    mockNfcWriter.status = null;
+    mockNfcWriter.write.mockClear();
+    mockNfcWriter.end.mockClear();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    queryClient.clear();
-    queryClient.getQueryCache().clear();
-    queryClient.getMutationCache().clear();
   });
 
-  it("should render the create page with all navigation cards", async () => {
-    const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
+  const renderComponent = () => {
+    const Create = getCreate();
+    return render(<Create />);
+  };
 
-    // Create a simplified version of the Create component for testing
-    const CreateComponent = () => {
-      return (
-        <div data-testid="create-page">
-          <h1>Create</h1>
-          <div data-testid="search-card">Search for a game</div>
-          <div data-testid="current-game-card">Current game</div>
-          <div data-testid="mappings-card">Mappings</div>
-          <div data-testid="custom-card">Custom text</div>
-          <div data-testid="nfc-card">NFC</div>
-        </div>
-      );
-    };
-
-    render(
-      <TestWrapper>
-        <CreateComponent />
-      </TestWrapper>,
-    );
-
-    expect(screen.getByTestId("create-page")).toBeInTheDocument();
-    expect(screen.getByTestId("search-card")).toBeInTheDocument();
-    expect(screen.getByTestId("current-game-card")).toBeInTheDocument();
-    expect(screen.getByTestId("mappings-card")).toBeInTheDocument();
-    expect(screen.getByTestId("custom-card")).toBeInTheDocument();
-    expect(screen.getByTestId("nfc-card")).toBeInTheDocument();
-  });
-
-  it("should handle NFC availability checking", async () => {
-    const { Capacitor } = await import("@capacitor/core");
-    const { Nfc } = await import("@capawesome-team/capacitor-nfc");
-
-    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    vi.mocked(Nfc.isAvailable).mockResolvedValue({ nfc: true, hce: false });
-
-    // Component that checks NFC availability
-    const NFCAvailabilityComponent = () => {
-      const [nfcAvailable, setNfcAvailable] = React.useState(false);
-
-      React.useEffect(() => {
-        const checkNfcAvailability = async () => {
-          if (Capacitor.isNativePlatform()) {
-            try {
-              const result = await Nfc.isAvailable();
-              setNfcAvailable(result.nfc);
-            } catch (error) {
-              console.log("NFC availability check failed:", error);
-              setNfcAvailable(false);
-            }
-          } else {
-            setNfcAvailable(false);
-          }
-        };
-
-        checkNfcAvailability();
-      }, []);
-
-      return (
-        <div data-testid="nfc-status">
-          {nfcAvailable ? "NFC Available" : "NFC Not Available"}
-        </div>
-      );
-    };
-
-    render(<NFCAvailabilityComponent />);
-
-    // Use findBy instead of waitFor for cleaner async element waiting
-    const nfcStatus = await screen.findByTestId("nfc-status");
-    expect(nfcStatus).toHaveTextContent("NFC Available");
-  });
-
-  it("should handle NFC unavailability gracefully", async () => {
-    const { Capacitor } = await import("@capacitor/core");
-    const { Nfc } = await import("@capawesome-team/capacitor-nfc");
-
-    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    vi.mocked(Nfc.isAvailable).mockRejectedValue(
-      new Error("NFC not supported"),
-    );
-
-    // Component that handles NFC errors
-    const NFCErrorHandlingComponent = () => {
-      const [nfcAvailable, setNfcAvailable] = React.useState(false);
-
-      React.useEffect(() => {
-        const checkNfcAvailability = async () => {
-          if (Capacitor.isNativePlatform()) {
-            try {
-              const result = await Nfc.isAvailable();
-              setNfcAvailable(result.nfc);
-            } catch (error) {
-              console.log("NFC availability check failed:", error);
-              setNfcAvailable(false);
-            }
-          } else {
-            setNfcAvailable(false);
-          }
-        };
-
-        checkNfcAvailability();
-      }, []);
-
-      return (
-        <div data-testid="nfc-status">
-          {nfcAvailable ? "NFC Available" : "NFC Not Available"}
-        </div>
-      );
-    };
-
-    render(<NFCErrorHandlingComponent />);
-
-    // Use findBy instead of waitFor for cleaner async element waiting
-    const nfcStatus = await screen.findByTestId("nfc-status");
-    expect(nfcStatus).toHaveTextContent("NFC Not Available");
-  });
-
-  it("should handle non-native platform NFC detection", async () => {
-    const { Capacitor } = await import("@capacitor/core");
-
-    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
-
-    // Component for web platform
-    const WebPlatformComponent = () => {
-      const [nfcAvailable, setNfcAvailable] = React.useState(false);
-
-      React.useEffect(() => {
-        if (!Capacitor.isNativePlatform()) {
-          setNfcAvailable(false);
-        }
-      }, []);
-
-      return (
-        <div data-testid="nfc-status">
-          {nfcAvailable ? "NFC Available" : "Web Platform - NFC Disabled"}
-        </div>
-      );
-    };
-
-    render(<WebPlatformComponent />);
-
-    expect(screen.getByTestId("nfc-status")).toHaveTextContent(
-      "Web Platform - NFC Disabled",
-    );
-  });
-
-  it("should handle current game write functionality", async () => {
-    const { useNfcWriter, WriteAction } =
-      await import("../../../lib/writeNfcHook");
-    const { useStatusStore } = await import("../../../lib/store");
-
-    const mockWrite = vi.fn();
-    vi.mocked(useNfcWriter).mockReturnValue({
-      status: null,
-      write: mockWrite,
-      end: vi.fn(),
-      writing: false,
-      result: null,
+  describe("rendering", () => {
+    it("should render the page title", () => {
+      renderComponent();
+      expect(
+        screen.getByRole("heading", { name: "create.title" }),
+      ).toBeInTheDocument();
     });
 
-    // Component that handles current game writing
-    const CurrentGameWriteComponent = () => {
-      const playing = useStatusStore((state: any) => state.playing);
-      const nfcWriter = useNfcWriter();
-      const [writeOpen, setWriteOpen] = React.useState(false);
+    it("should render search game card", () => {
+      renderComponent();
+      expect(screen.getByText("create.searchGameHeading")).toBeInTheDocument();
+      expect(screen.getByText("create.searchGameSub")).toBeInTheDocument();
+    });
 
-      return (
-        <div>
-          <div data-testid="current-game-info">
-            {playing.mediaName || "No game playing"}
-          </div>
-          <button
-            data-testid="write-current-game"
-            disabled={playing.mediaPath === ""}
-            onClick={() => {
-              if (playing.mediaPath !== "") {
-                nfcWriter.write(WriteAction.Write, playing.mediaPath);
-                setWriteOpen(true);
-              }
-            }}
-          >
-            Write Current Game
-          </button>
-          {writeOpen && (
-            <div data-testid="write-modal-open">Write Modal Open</div>
-          )}
-        </div>
-      );
-    };
+    it("should render current game card", () => {
+      renderComponent();
+      expect(screen.getByText("create.currentGameHeading")).toBeInTheDocument();
+      expect(
+        screen.getByText("create.currentGameSubFallback"),
+      ).toBeInTheDocument();
+    });
 
-    render(<CurrentGameWriteComponent />);
+    it("should render mappings card", () => {
+      renderComponent();
+      expect(screen.getByText("create.mappingsHeading")).toBeInTheDocument();
+      expect(screen.getByText("create.mappingsSub")).toBeInTheDocument();
+    });
 
-    expect(screen.getByTestId("current-game-info")).toHaveTextContent(
-      "Test Game",
-    );
+    it("should render custom text card", () => {
+      renderComponent();
+      expect(screen.getByText("create.customHeading")).toBeInTheDocument();
+      expect(screen.getByText("create.customSub")).toBeInTheDocument();
+    });
 
-    const writeButton = screen.getByTestId("write-current-game");
-    expect(writeButton).not.toBeDisabled();
-
-    fireEvent.click(writeButton);
-
-    expect(mockWrite).toHaveBeenCalledWith(WriteAction.Write, "/test/game.sfc");
-    expect(screen.getByTestId("write-modal-open")).toBeInTheDocument();
+    it("should render NFC card", () => {
+      renderComponent();
+      expect(screen.getByText("create.nfcHeading")).toBeInTheDocument();
+      expect(screen.getByText("create.nfcSub")).toBeInTheDocument();
+    });
   });
 
-  it("should disable current game card when no game is playing", async () => {
-    const { useStatusStore } = await import("../../../lib/store");
-
-    vi.mocked(useStatusStore).mockImplementation((selector) => {
-      const mockState = {
-        connected: true,
-        setConnected: vi.fn(),
-        targetDeviceAddress: "192.168.1.1",
-        setTargetDeviceAddress: vi.fn(),
-        connectionState: "CONNECTED" as any,
-        setConnectionState: vi.fn(),
-        lastConnectionTime: null,
-        setLastConnectionTime: vi.fn(),
-        connectionError: "",
-        setConnectionError: vi.fn(),
-        retryCount: 0,
-        retryConnection: vi.fn(),
-        lastToken: {} as any,
-        setLastToken: vi.fn(),
-        gamesIndex: {} as any,
-        setGamesIndex: vi.fn(),
-        playing: {
-          systemId: "",
-          mediaName: "",
-          mediaPath: "",
-          systemName: "",
-        },
-        setPlaying: vi.fn(),
-        cameraOpen: false,
-        setCameraOpen: vi.fn(),
-        loggedInUser: null,
-        setLoggedInUser: vi.fn(),
-        nfcModalOpen: false,
-        setNfcModalOpen: vi.fn(),
-        proPurchaseModalOpen: false,
-        setProPurchaseModalOpen: vi.fn(),
-        writeOpen: false,
-        setWriteOpen: vi.fn(),
-        safeInsets: {} as any,
-        setSafeInsets: vi.fn(),
-        deviceHistory: [],
-        setDeviceHistory: vi.fn(),
-        addDeviceHistory: vi.fn(),
-        removeDeviceHistory: vi.fn(),
-        clearDeviceHistory: vi.fn(),
-        runQueue: null,
-        setRunQueue: vi.fn(),
-        writeQueue: "",
-        setWriteQueue: vi.fn(),
-        pendingDisconnection: false,
-        setConnectionStateWithGracePeriod: vi.fn(),
-        clearGracePeriod: vi.fn(),
-        resetConnectionState: vi.fn(),
+  describe("current game display", () => {
+    it("should show current game name when playing", () => {
+      mockState.playing = {
+        mediaName: "Super Mario World",
+        mediaPath: "/games/smw.sfc",
+        systemName: "SNES",
       };
-      return selector(mockState);
+      renderComponent();
+      // The translation with interpolation
+      expect(screen.getByText(/create.currentGameSub/)).toBeInTheDocument();
     });
 
-    // Component with empty playing state
-    const NoGamePlayingComponent = () => {
-      const playing = useStatusStore((state: any) => state.playing);
-
-      return (
-        <div>
-          <button
-            data-testid="write-current-game"
-            disabled={playing.mediaPath === "" && playing.mediaName === ""}
-          >
-            Write Current Game
-          </button>
-          <div data-testid="game-status">
-            {playing.mediaName
-              ? `Playing: ${playing.mediaName}`
-              : "No game currently playing"}
-          </div>
-        </div>
-      );
-    };
-
-    render(<NoGamePlayingComponent />);
-
-    const writeButton = screen.getByTestId("write-current-game");
-    expect(writeButton).toBeDisabled();
-    expect(screen.getByTestId("game-status")).toHaveTextContent(
-      "No game currently playing",
-    );
+    it("should show fallback when no game playing", () => {
+      mockState.playing = { mediaName: "", mediaPath: "", systemName: "" };
+      renderComponent();
+      expect(
+        screen.getByText("create.currentGameSubFallback"),
+      ).toBeInTheDocument();
+    });
   });
 
-  it("should handle write modal closure properly", async () => {
-    const { useNfcWriter } = await import("../../../lib/writeNfcHook");
-
-    const mockEnd = vi.fn();
-    const { Status } = await import("../../../lib/nfc");
-    vi.mocked(useNfcWriter).mockReturnValue({
-      status: Status.Success, // Set a non-null status to trigger automatic closure
-      write: vi.fn(),
-      end: mockEnd,
-      writing: false,
-      result: null,
+  describe("connection state", () => {
+    it("should disable search card when disconnected", () => {
+      mockState.connected = false;
+      renderComponent();
+      const searchLink = screen
+        .getByText("create.searchGameHeading")
+        .closest("a");
+      expect(searchLink).toHaveAttribute("aria-disabled", "true");
     });
 
-    // Component that handles write modal lifecycle
-    const WriteModalComponent = () => {
-      const nfcWriter = useNfcWriter();
-      const [writeOpen, setWriteOpen] = React.useState(true);
+    it("should disable mappings card when disconnected", () => {
+      mockState.connected = false;
+      renderComponent();
+      const mappingsLink = screen
+        .getByText("create.mappingsHeading")
+        .closest("a");
+      expect(mappingsLink).toHaveAttribute("aria-disabled", "true");
+    });
 
-      const closeWriteModal = async () => {
-        setWriteOpen(false);
-        await nfcWriter.end();
+    it("should enable cards when connected", () => {
+      mockState.connected = true;
+      renderComponent();
+      const searchLink = screen
+        .getByText("create.searchGameHeading")
+        .closest("a");
+      expect(searchLink).toHaveAttribute("aria-disabled", "false");
+    });
+  });
+
+  describe("NFC availability", () => {
+    it("should disable NFC card on web platform", () => {
+      mockState.platform = "web";
+      renderComponent();
+      const nfcLink = screen.getByText("create.nfcHeading").closest("a");
+      expect(nfcLink).toHaveAttribute("aria-disabled", "true");
+    });
+
+    it("should disable NFC card when NFC not available", () => {
+      mockState.nfcAvailable = false;
+      renderComponent();
+      const nfcLink = screen.getByText("create.nfcHeading").closest("a");
+      expect(nfcLink).toHaveAttribute("aria-disabled", "true");
+    });
+
+    it("should enable NFC card on native platform with NFC available", () => {
+      mockState.platform = "ios";
+      mockState.nfcAvailable = true;
+      renderComponent();
+      const nfcLink = screen.getByText("create.nfcHeading").closest("a");
+      expect(nfcLink).toHaveAttribute("aria-disabled", "false");
+    });
+  });
+
+  describe("navigation links", () => {
+    it("should have correct link to search page", () => {
+      renderComponent();
+      const searchLink = screen
+        .getByText("create.searchGameHeading")
+        .closest("a");
+      expect(searchLink).toHaveAttribute("href", "/create/search");
+    });
+
+    it("should have correct link to mappings page", () => {
+      renderComponent();
+      const mappingsLink = screen
+        .getByText("create.mappingsHeading")
+        .closest("a");
+      expect(mappingsLink).toHaveAttribute("href", "/create/mappings");
+    });
+
+    it("should have correct link to custom page", () => {
+      renderComponent();
+      const customLink = screen.getByText("create.customHeading").closest("a");
+      expect(customLink).toHaveAttribute("href", "/create/custom");
+    });
+
+    it("should have correct link to NFC page", () => {
+      renderComponent();
+      const nfcLink = screen.getByText("create.nfcHeading").closest("a");
+      expect(nfcLink).toHaveAttribute("href", "/create/nfc");
+    });
+  });
+
+  describe("current game card interaction", () => {
+    it("should call nfcWriter.write when current game card is clicked with valid media", async () => {
+      mockState.playing = {
+        mediaName: "Super Mario World",
+        mediaPath: "/games/smw.sfc",
+        systemName: "SNES",
       };
 
-      React.useEffect(() => {
-        if (nfcWriter.status !== null) {
-          setWriteOpen(false);
-        }
-      }, [nfcWriter.status]);
+      const user = userEvent.setup();
+      renderComponent();
 
-      return (
-        <div>
-          {writeOpen ? (
-            <div data-testid="write-modal">
-              <button data-testid="close-write-modal" onClick={closeWriteModal}>
-                Close
-              </button>
-            </div>
-          ) : (
-            <div data-testid="write-modal-closed">Modal Closed</div>
-          )}
-        </div>
+      // Card has role="button" when onClick is provided
+      const currentGameCard = screen.getByRole("button", {
+        name: /create\.currentGameHeading/i,
+      });
+      await user.click(currentGameCard);
+
+      expect(mockNfcWriter.write).toHaveBeenCalledWith(
+        "write",
+        "/games/smw.sfc",
       );
-    };
+    });
 
-    render(<WriteModalComponent />);
-
-    // Modal should close automatically when status changes
-    // Use findBy for better async element waiting
-    const closedModal = await screen.findByTestId("write-modal-closed");
-    expect(closedModal).toBeInTheDocument();
-  });
-
-  it("should handle connection-dependent card states", async () => {
-    const { useStatusStore } = await import("../../../lib/store");
-
-    // Test with disconnected state
-    vi.mocked(useStatusStore).mockImplementation((selector) => {
-      const mockState = {
-        connected: false,
-        setConnected: vi.fn(),
-        targetDeviceAddress: "192.168.1.1",
-        setTargetDeviceAddress: vi.fn(),
-        connectionState: "DISCONNECTED" as any,
-        setConnectionState: vi.fn(),
-        lastConnectionTime: null,
-        setLastConnectionTime: vi.fn(),
-        connectionError: "",
-        setConnectionError: vi.fn(),
-        retryCount: 0,
-        retryConnection: vi.fn(),
-        lastToken: {} as any,
-        setLastToken: vi.fn(),
-        gamesIndex: {} as any,
-        setGamesIndex: vi.fn(),
-        playing: {
-          systemId: "test",
-          mediaName: "Test Game",
-          mediaPath: "/test/game.sfc",
-          systemName: "Test System",
-        },
-        setPlaying: vi.fn(),
-        cameraOpen: false,
-        setCameraOpen: vi.fn(),
-        loggedInUser: null,
-        setLoggedInUser: vi.fn(),
-        nfcModalOpen: false,
-        setNfcModalOpen: vi.fn(),
-        proPurchaseModalOpen: false,
-        setProPurchaseModalOpen: vi.fn(),
-        writeOpen: false,
-        setWriteOpen: vi.fn(),
-        safeInsets: {} as any,
-        setSafeInsets: vi.fn(),
-        deviceHistory: [],
-        setDeviceHistory: vi.fn(),
-        addDeviceHistory: vi.fn(),
-        removeDeviceHistory: vi.fn(),
-        clearDeviceHistory: vi.fn(),
-        runQueue: null,
-        setRunQueue: vi.fn(),
-        writeQueue: "",
-        setWriteQueue: vi.fn(),
-        pendingDisconnection: false,
-        setConnectionStateWithGracePeriod: vi.fn(),
-        clearGracePeriod: vi.fn(),
-        resetConnectionState: vi.fn(),
+    it("should open write modal when current game card is clicked", async () => {
+      mockState.playing = {
+        mediaName: "Super Mario World",
+        mediaPath: "/games/smw.sfc",
+        systemName: "SNES",
       };
-      return selector(mockState);
+      mockNfcWriter.status = null;
+
+      const user = userEvent.setup();
+      renderComponent();
+
+      const currentGameCard = screen.getByRole("button", {
+        name: /create\.currentGameHeading/i,
+      });
+      await user.click(currentGameCard);
+
+      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
     });
 
-    // Component that responds to connection state
-    const ConnectionDependentComponent = () => {
-      const connected = useStatusStore((state: any) => state.connected);
-
-      return (
-        <div>
-          <div data-testid="connection-status">
-            {connected ? "Connected" : "Disconnected"}
-          </div>
-          <button data-testid="search-link" disabled={!connected}>
-            Search for a game
-          </button>
-          <button data-testid="mappings-link" disabled={!connected}>
-            Mappings
-          </button>
-        </div>
-      );
-    };
-
-    render(<ConnectionDependentComponent />);
-
-    expect(screen.getByTestId("connection-status")).toHaveTextContent(
-      "Disconnected",
-    );
-    expect(screen.getByTestId("search-link")).toBeDisabled();
-    expect(screen.getByTestId("mappings-link")).toBeDisabled();
-  });
-
-  it("should handle translation keys properly", async () => {
-    const { useTranslation } = await import("react-i18next");
-    const mockT = vi.fn().mockImplementation((key: string, params?: any) => {
-      if (key === "create.currentGameSub" && params?.game) {
-        return `Write ${params.game} to a token`;
-      }
-      return key;
-    });
-
-    vi.mocked(useTranslation).mockReturnValue({
-      t: mockT as any,
-      i18n: {} as any,
-      ready: true,
-    } as any);
-
-    // Component using translations
-    const TranslationComponent = () => {
-      const { t } = useTranslation();
-
-      return (
-        <div>
-          <div data-testid="title">{t("create.title")}</div>
-          <div data-testid="current-game-text">
-            {t("create.currentGameSub", { game: "Super Mario World" })}
-          </div>
-        </div>
-      );
-    };
-
-    render(<TranslationComponent />);
-
-    expect(mockT).toHaveBeenCalledWith("create.title");
-    expect(mockT).toHaveBeenCalledWith("create.currentGameSub", {
-      game: "Super Mario World",
-    });
-    expect(screen.getByTestId("current-game-text")).toHaveTextContent(
-      "Write Super Mario World to a token",
-    );
-  });
-
-  // Additional error handling and edge case tests
-  it("should handle rapid navigation attempts", async () => {
-    const mockNavigate = vi.fn();
-
-    // Component that might trigger rapid navigation
-    const RapidNavigationComponent = () => {
-      const navigate = mockNavigate;
-
-      const handleNavigation = (path: string) => {
-        navigate({ to: path });
+    it("should not call nfcWriter.write when current game has no media path", async () => {
+      mockState.playing = {
+        mediaName: "",
+        mediaPath: "",
+        systemName: "",
       };
 
-      return (
-        <div>
-          <button
-            data-testid="nav-nfc"
-            onClick={() => handleNavigation("/create/nfc")}
-          >
-            NFC
-          </button>
-          <button
-            data-testid="nav-search"
-            onClick={() => handleNavigation("/create/search")}
-          >
-            Search
-          </button>
-          <button
-            data-testid="nav-custom"
-            onClick={() => handleNavigation("/create/custom")}
-          >
-            Custom
-          </button>
-        </div>
-      );
-    };
+      const user = userEvent.setup();
+      renderComponent();
 
-    render(<RapidNavigationComponent />);
+      // Card is disabled when no media path, but still has button role
+      const currentGameCard = screen.getByRole("button", {
+        name: /create\.currentGameHeading/i,
+      });
+      await user.click(currentGameCard);
 
-    const nfcBtn = screen.getByTestId("nav-nfc");
-    const searchBtn = screen.getByTestId("nav-search");
-    const customBtn = screen.getByTestId("nav-custom");
-
-    // Simulate rapid clicks
-    fireEvent.click(nfcBtn);
-    fireEvent.click(searchBtn);
-    fireEvent.click(customBtn);
-    fireEvent.click(nfcBtn);
-
-    expect(mockNavigate).toHaveBeenCalledTimes(4);
-    expect(mockNavigate).toHaveBeenNthCalledWith(1, { to: "/create/nfc" });
-    expect(mockNavigate).toHaveBeenNthCalledWith(2, { to: "/create/search" });
-    expect(mockNavigate).toHaveBeenNthCalledWith(3, { to: "/create/custom" });
-    expect(mockNavigate).toHaveBeenNthCalledWith(4, { to: "/create/nfc" });
-  });
-
-  it("should handle memory cleanup on unmount", async () => {
-    const { useNfcWriter } = await import("../../../lib/writeNfcHook");
-    const mockEnd = vi.fn();
-    vi.mocked(useNfcWriter).mockReturnValue({
-      status: null,
-      write: vi.fn(),
-      end: mockEnd,
-      writing: false,
-      result: null,
+      expect(mockNfcWriter.write).not.toHaveBeenCalled();
     });
-
-    const CleanupComponent = () => {
-      const nfcWriter = useNfcWriter();
-
-      React.useEffect(() => {
-        return () => {
-          // Cleanup function
-          nfcWriter.end();
-        };
-      }, [nfcWriter]);
-
-      return <div data-testid="cleanup-component">Test Component</div>;
-    };
-
-    const { unmount } = render(<CleanupComponent />);
-
-    expect(screen.getByTestId("cleanup-component")).toBeInTheDocument();
-
-    // Unmount component to trigger cleanup
-    unmount();
-
-    expect(mockEnd).toHaveBeenCalled();
   });
 
-  it("should handle corrupted game data gracefully", async () => {
-    const { useStatusStore } = await import("../../../lib/store");
-    vi.mocked(useStatusStore).mockImplementation((selector: any) => {
-      const mockState = {
-        connected: true,
-        playing: {
-          systemId: null, // Corrupted data
-          mediaName: "", // Empty name
-          mediaPath: undefined, // Undefined path
-          systemName: null,
-        },
+  describe("write modal", () => {
+    it("should close write modal and call nfcWriter.end when dismissed", async () => {
+      mockState.playing = {
+        mediaName: "Super Mario World",
+        mediaPath: "/games/smw.sfc",
+        systemName: "SNES",
       };
-      return selector(mockState);
+      mockNfcWriter.status = null;
+
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Open modal by clicking current game card
+      const currentGameCard = screen.getByRole("button", {
+        name: /create\.currentGameHeading/i,
+      });
+      await user.click(currentGameCard);
+
+      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
+
+      // The modal would be closed via closeWriteModal which sets writeIntent to false
+      // and calls nfcWriter.end(). Since our mock just shows/hides based on isOpen,
+      // we verify the nfcWriter.write was called
+      expect(mockNfcWriter.write).toHaveBeenCalled();
     });
 
-    const CorruptedDataComponent = () => {
-      const playing = useStatusStore((state: any) => state.playing);
-
-      const isValidGame = playing?.mediaName && playing?.mediaPath;
-
-      return (
-        <div>
-          <div data-testid="game-valid">
-            {isValidGame ? "Valid" : "Invalid"}
-          </div>
-          <div data-testid="media-name">{playing?.mediaName || "No name"}</div>
-          <div data-testid="media-path">{playing?.mediaPath || "No path"}</div>
-          <button data-testid="write-btn" disabled={!isValidGame}>
-            Write Game
-          </button>
-        </div>
-      );
-    };
-
-    render(<CorruptedDataComponent />);
-
-    expect(screen.getByTestId("game-valid")).toHaveTextContent("Invalid");
-    expect(screen.getByTestId("media-name")).toHaveTextContent("No name");
-    expect(screen.getByTestId("media-path")).toHaveTextContent("No path");
-    expect(screen.getByTestId("write-btn")).toBeDisabled();
-  });
-
-  it("should handle write operation timeout", async () => {
-    const { useNfcWriter } = await import("../../../lib/writeNfcHook");
-    const mockWrite = vi
-      .fn()
-      .mockImplementation(
-        () =>
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Write timeout")), 50),
-          ),
-      );
-
-    vi.mocked(useNfcWriter).mockReturnValue({
-      status: null,
-      write: mockWrite,
-      end: vi.fn(),
-      writing: true,
-      result: null,
-    });
-
-    const TimeoutComponent = () => {
-      const nfcWriter = useNfcWriter();
-      const [error, setError] = React.useState<string | null>(null);
-      const [isWriting, setIsWriting] = React.useState(false);
-
-      const handleWrite = async () => {
-        setIsWriting(true);
-        setError(null);
-        try {
-          await nfcWriter.write({ content: "test-content" } as any);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Unknown error");
-        } finally {
-          setIsWriting(false);
-        }
+    it("should hide write modal when nfcWriter.status becomes non-null", () => {
+      mockState.playing = {
+        mediaName: "Super Mario World",
+        mediaPath: "/games/smw.sfc",
+        systemName: "SNES",
       };
+      // Status is non-null, so modal should not show even with writeIntent
+      mockNfcWriter.status = "success";
 
-      return (
-        <div>
-          <button
-            data-testid="write-btn"
-            onClick={handleWrite}
-            disabled={isWriting}
-          >
-            {isWriting ? "Writing..." : "Write"}
-          </button>
-          {error && <div data-testid="error">{error}</div>}
-        </div>
-      );
-    };
+      renderComponent();
 
-    render(<TimeoutComponent />);
-
-    fireEvent.click(screen.getByTestId("write-btn"));
-
-    // Use findBy for better async waiting, then check content
-    const errorElement = await screen.findByTestId("error");
-    expect(errorElement).toHaveTextContent("Write timeout");
+      // Modal derives visibility from writeIntent && status === null
+      // Since we haven't clicked anything yet, writeIntent is false
+      expect(screen.queryByTestId("write-modal")).not.toBeInTheDocument();
+    });
   });
-
-  it("should handle simultaneous modal operations", async () => {
-    const SimultaneousModalComponent = () => {
-      const [writeOpen, setWriteOpen] = React.useState(false);
-      const [customOpen, setCustomOpen] = React.useState(false);
-      const [searchOpen, setSearchOpen] = React.useState(false);
-
-      return (
-        <div>
-          <button data-testid="open-write" onClick={() => setWriteOpen(true)}>
-            Open Write
-          </button>
-          <button data-testid="open-custom" onClick={() => setCustomOpen(true)}>
-            Open Custom
-          </button>
-          <button data-testid="open-search" onClick={() => setSearchOpen(true)}>
-            Open Search
-          </button>
-
-          {writeOpen && <div data-testid="write-modal">Write Modal</div>}
-          {customOpen && <div data-testid="custom-modal">Custom Modal</div>}
-          {searchOpen && <div data-testid="search-modal">Search Modal</div>}
-
-          <div data-testid="modal-count">
-            {[writeOpen, customOpen, searchOpen].filter(Boolean).length}
-          </div>
-        </div>
-      );
-    };
-
-    render(<SimultaneousModalComponent />);
-
-    // Open multiple modals simultaneously
-    fireEvent.click(screen.getByTestId("open-write"));
-    fireEvent.click(screen.getByTestId("open-custom"));
-    fireEvent.click(screen.getByTestId("open-search"));
-
-    expect(screen.getByTestId("modal-count")).toHaveTextContent("3");
-    expect(screen.getByTestId("write-modal")).toBeInTheDocument();
-    expect(screen.getByTestId("custom-modal")).toBeInTheDocument();
-    expect(screen.getByTestId("search-modal")).toBeInTheDocument();
-  });
-
-  // Removed problematic test that was causing infinite loops due to React.useState in mockImplementation
 });

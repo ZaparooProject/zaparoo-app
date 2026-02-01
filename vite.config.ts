@@ -29,7 +29,11 @@ export default defineConfig(({ command, mode }) => {
   const outDir = isCoreBuild ? "dist-core" : "dist";
 
   const plugins = [
-    tanstackRouter({ autoCodeSplitting: true }),
+    tanstackRouter({
+      autoCodeSplitting: true,
+      quoteStyle: "double",
+      semicolons: true,
+    }),
     react(),
     legacy({
       targets: [

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SimpleSystemSelect } from "@/components/SimpleSystemSelect";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
@@ -30,38 +29,16 @@ const mockSystems = {
 };
 
 describe("SimpleSystemSelect", () => {
-  let queryClient: QueryClient;
-
   beforeEach(() => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
-
     vi.mocked(CoreAPI.systems).mockResolvedValue(mockSystems);
     vi.mocked(useStatusStore).mockReturnValue({
       gamesIndex: { indexing: false, exists: true },
     });
   });
 
-  const renderComponent = (props: {
-    value: string;
-    onSelect: (systemId: string) => void;
-    placeholder?: string;
-    includeAllOption?: boolean;
-    className?: string;
-  }) => {
-    return render(
-      <QueryClientProvider client={queryClient}>
-        <SimpleSystemSelect {...props} />
-      </QueryClientProvider>,
-    );
-  };
-
   it("renders a select element", () => {
     const onSelect = vi.fn();
-    renderComponent({ value: "", onSelect });
+    render(<SimpleSystemSelect value="" onSelect={onSelect} />);
 
     const select = screen.getByRole("combobox");
     expect(select).toBeInTheDocument();
@@ -69,7 +46,7 @@ describe("SimpleSystemSelect", () => {
 
   it("displays grouped systems by category", async () => {
     const onSelect = vi.fn();
-    renderComponent({ value: "", onSelect });
+    render(<SimpleSystemSelect value="" onSelect={onSelect} />);
 
     await waitFor(() => {
       // Check optgroups exist
@@ -85,7 +62,7 @@ describe("SimpleSystemSelect", () => {
 
   it("sorts systems alphabetically within categories", async () => {
     const onSelect = vi.fn();
-    renderComponent({ value: "", onSelect });
+    render(<SimpleSystemSelect value="" onSelect={onSelect} />);
 
     await waitFor(() => {
       const options = screen.getAllByRole("option");
@@ -96,7 +73,7 @@ describe("SimpleSystemSelect", () => {
           opt.textContent === "Super Nintendo",
       );
 
-      // NES comes before N64 which comes before SNES alphabetically
+      // N64 comes before NES which comes before SNES alphabetically
       expect(nintendoOptions[0]!.textContent).toBe("Nintendo 64");
       expect(nintendoOptions[1]!.textContent).toBe(
         "Nintendo Entertainment System",
@@ -108,7 +85,7 @@ describe("SimpleSystemSelect", () => {
   it("calls onSelect when a system is selected", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
-    renderComponent({ value: "", onSelect });
+    render(<SimpleSystemSelect value="" onSelect={onSelect} />);
 
     // Wait for the options to actually load (not just the combobox to exist)
     await waitFor(() => {
@@ -125,7 +102,13 @@ describe("SimpleSystemSelect", () => {
 
   it("displays placeholder option when provided", () => {
     const onSelect = vi.fn();
-    renderComponent({ value: "", onSelect, placeholder: "Select a system" });
+    render(
+      <SimpleSystemSelect
+        value=""
+        onSelect={onSelect}
+        placeholder="Select a system"
+      />,
+    );
 
     const placeholder = screen.getByRole("option", { name: "Select a system" });
     expect(placeholder).toBeInTheDocument();
@@ -133,7 +116,13 @@ describe("SimpleSystemSelect", () => {
 
   it("includes 'All Systems' option when includeAllOption is true", async () => {
     const onSelect = vi.fn();
-    renderComponent({ value: "", onSelect, includeAllOption: true });
+    render(
+      <SimpleSystemSelect
+        value=""
+        onSelect={onSelect}
+        includeAllOption={true}
+      />,
+    );
 
     await waitFor(() => {
       const allOption = screen.getByRole("option", {
@@ -145,7 +134,13 @@ describe("SimpleSystemSelect", () => {
 
   it("does not include 'All Systems' option when includeAllOption is false", async () => {
     const onSelect = vi.fn();
-    renderComponent({ value: "", onSelect, includeAllOption: false });
+    render(
+      <SimpleSystemSelect
+        value=""
+        onSelect={onSelect}
+        includeAllOption={false}
+      />,
+    );
 
     await waitFor(() => {
       expect(screen.getByRole("combobox")).toBeInTheDocument();
@@ -159,7 +154,7 @@ describe("SimpleSystemSelect", () => {
 
   it("displays selected value", async () => {
     const onSelect = vi.fn();
-    renderComponent({ value: "snes", onSelect });
+    render(<SimpleSystemSelect value="snes" onSelect={onSelect} />);
 
     await waitFor(() => {
       const select = screen.getByRole("combobox") as HTMLSelectElement;
@@ -173,7 +168,7 @@ describe("SimpleSystemSelect", () => {
     });
 
     const onSelect = vi.fn();
-    renderComponent({ value: "", onSelect });
+    render(<SimpleSystemSelect value="" onSelect={onSelect} />);
 
     const select = screen.getByRole("combobox");
     expect(select).toBeDisabled();
@@ -183,7 +178,7 @@ describe("SimpleSystemSelect", () => {
     vi.mocked(CoreAPI.systems).mockReturnValue(new Promise(() => {})); // Never resolves
 
     const onSelect = vi.fn();
-    renderComponent({ value: "", onSelect });
+    render(<SimpleSystemSelect value="" onSelect={onSelect} />);
 
     const select = screen.getByRole("combobox");
     expect(select).toBeDisabled();
@@ -193,7 +188,7 @@ describe("SimpleSystemSelect", () => {
     vi.mocked(CoreAPI.systems).mockReturnValue(new Promise(() => {}));
 
     const onSelect = vi.fn();
-    renderComponent({ value: "", onSelect });
+    render(<SimpleSystemSelect value="" onSelect={onSelect} />);
 
     const loadingOption = screen.getByRole("option", { name: "loading" });
     expect(loadingOption).toBeInTheDocument();
@@ -201,7 +196,13 @@ describe("SimpleSystemSelect", () => {
 
   it("applies custom className", () => {
     const onSelect = vi.fn();
-    renderComponent({ value: "", onSelect, className: "custom-class" });
+    render(
+      <SimpleSystemSelect
+        value=""
+        onSelect={onSelect}
+        className="custom-class"
+      />,
+    );
 
     const select = screen.getByRole("combobox");
     expect(select).toHaveClass("custom-class");

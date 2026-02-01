@@ -17,7 +17,8 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useShakeDetection } from "@/hooks/useShakeDetection";
 
 // Shake detection component - must be inside router context to access location
-function ShakeDetector() {
+// Exported for testing
+export function ShakeDetector() {
   const { pathname } = useLocation();
   const shakeEnabled = usePreferencesStore((state) => state.shakeEnabled);
   const connected = useStatusStore((state) => state.connected);
@@ -31,7 +32,8 @@ function ShakeDetector() {
   return null;
 }
 
-function BackHandler() {
+// Exported for testing
+export function BackHandler() {
   const navigate = useNavigate();
 
   useBackButtonHandler(
@@ -68,7 +70,8 @@ function BackHandler() {
   return null;
 }
 
-function RootLayout() {
+// Exported for testing
+export function RootLayout() {
   const mainRef = useRef<HTMLElement>(null);
   const safeInsets = useStatusStore((state) => state.safeInsets);
 

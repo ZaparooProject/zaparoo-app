@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act } from "../../../test-utils";
 import type { NfcTagScannedEvent } from "@capawesome-team/capacitor-nfc";
 
 // Create hoisted mocks - must use vi.hoisted for all mocks used in vi.mock factories
@@ -168,10 +168,6 @@ describe("usePassiveNfcListener", () => {
     );
   });
 
-  it("should be importable without errors", () => {
-    expect(typeof usePassiveNfcListener).toBe("function");
-  });
-
   it("should register listener on Android when NFC is available", async () => {
     renderHook(() => usePassiveNfcListener());
 
@@ -197,10 +193,10 @@ describe("usePassiveNfcListener", () => {
 
     renderHook(() => usePassiveNfcListener());
 
-    // Give the effect time to run
-    await new Promise((r) => setTimeout(r, 10));
-
-    expect(mockNfcAddListener).not.toHaveBeenCalled();
+    // Verify listener is not registered on iOS
+    await vi.waitFor(() => {
+      expect(mockNfcAddListener).not.toHaveBeenCalled();
+    });
   });
 
   it("should not register listener when NFC is not available", async () => {
@@ -208,10 +204,10 @@ describe("usePassiveNfcListener", () => {
 
     renderHook(() => usePassiveNfcListener());
 
-    // Give the effect time to run
-    await new Promise((r) => setTimeout(r, 10));
-
-    expect(mockNfcAddListener).not.toHaveBeenCalled();
+    // Verify listener is not registered when NFC is unavailable
+    await vi.waitFor(() => {
+      expect(mockNfcAddListener).not.toHaveBeenCalled();
+    });
   });
 
   it("should remove listener on unmount", async () => {

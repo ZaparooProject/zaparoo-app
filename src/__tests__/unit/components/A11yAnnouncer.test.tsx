@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act } from "../../../test-utils";
-import { renderHook } from "@testing-library/react";
+import { renderHook as renderHookWithoutProviders } from "@testing-library/react";
 import {
   A11yAnnouncerProvider,
   useAnnouncer,
@@ -64,8 +64,9 @@ describe("A11yAnnouncer", () => {
         .spyOn(console, "error")
         .mockImplementation(() => {});
 
+      // Use renderHook without providers to test error case
       expect(() => {
-        renderHook(() => useAnnouncer());
+        renderHookWithoutProviders(() => useAnnouncer());
       }).toThrow("useAnnouncer must be used within A11yAnnouncerProvider");
 
       consoleSpy.mockRestore();
@@ -76,10 +77,11 @@ describe("A11yAnnouncer", () => {
         <A11yAnnouncerProvider>{children}</A11yAnnouncerProvider>
       );
 
-      const { result } = renderHook(() => useAnnouncer(), { wrapper });
+      const { result } = renderHookWithoutProviders(() => useAnnouncer(), {
+        wrapper,
+      });
 
       expect(result.current.announce).toBeDefined();
-      expect(typeof result.current.announce).toBe("function");
     });
 
     it("announces polite message by default", async () => {

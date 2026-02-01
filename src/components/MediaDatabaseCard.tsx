@@ -93,7 +93,13 @@ export function MediaDatabaseCard() {
             <span>{t("settings.updateDb.status.optimizing")}</span>
             {/* No spinner for optimizing - only throbbing bar */}
           </div>
-          <div className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid">
+          <div
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={t("settings.updateDb.status.optimizing")}
+            className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
+          >
             <div
               className="border-background bg-button-pattern h-[8px] animate-pulse rounded-full border border-solid"
               style={{ width: "100%" }}
@@ -130,7 +136,22 @@ export function MediaDatabaseCard() {
                   <LoadingSpinner size={16} className="text-muted-foreground" />
                 )}
             </div>
-            <div className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid">
+            <div
+              role="progressbar"
+              aria-valuenow={
+                hasDetailedProgress &&
+                gamesIndex.currentStep &&
+                gamesIndex.totalSteps
+                  ? Math.round(
+                      (gamesIndex.currentStep / gamesIndex.totalSteps) * 100,
+                    )
+                  : 0
+              }
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={t("settings.updateDb.progressLabel")}
+              className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
+            >
               <div
                 className={classNames(
                   "border-background bg-button-pattern h-[8px] rounded-full border border-solid",

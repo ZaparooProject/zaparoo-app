@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file provides guidance to AI agents when working with the Zaparoo App codebase.
+Guidance for AI agents working with the Zaparoo App codebase.
 
 ## Commands
 
@@ -11,27 +11,24 @@ This file provides guidance to AI agents when working with the Zaparoo App codeb
 - `pnpm build` - TypeScript compile + Vite build + Capacitor sync (production)
 - `pnpm build:web` - Build web version only (no Capacitor sync)
 - `pnpm build:core` - Build for embedded Core mode
-- `pnpm build:server` - Build with dev server URL enabled
 - `pnpm sync` - Sync web app with mobile platforms
-- `pnpm typecheck` - TypeScript type checking without emitting files
-- `pnpm lint` - ESLint checking
-- `pnpm lint:fix` - ESLint with auto-fix
-- `pnpm format` - Prettier formatting
-- `pnpm format:check` - Check Prettier formatting
-- `pnpm build:analyze` - Build with bundle size analyzer
-- `npx cap open ios` - Open iOS project in Xcode
-- `npx cap open android` - Open Android project in Android Studio
-
-### Live Updates
-
-- `pnpm live-update` - Build and push a signed live update to users (requires `live-update-private.pem`)
-- `pnpm live-update:list` - List deployed live update bundles
+- `pnpm typecheck` - TypeScript type checking
+- `pnpm lint` / `pnpm lint:fix` - ESLint checking/fixing
+- `pnpm format` / `pnpm format:check` - Prettier formatting
+- `npx cap open ios` / `npx cap open android` - Open native projects
 
 ### Testing
 
 - `pnpm test` - Run Vitest tests
 - `pnpm test:coverage` - Run tests with coverage report
 - `pnpm test:ui` - Run tests with Vitest UI
+
+### Live Updates
+
+- `pnpm live-update` - Build and push signed live update (requires `live-update-private.pem`)
+- `pnpm live-update:list` - List deployed bundles
+
+---
 
 ## Architecture
 
@@ -40,31 +37,31 @@ This file provides guidance to AI agents when working with the Zaparoo App codeb
 - **Frontend**: React 19 + TypeScript + Vite
 - **Mobile**: Capacitor 7 (cross-platform iOS/Android)
 - **Routing**: TanStack Router with file-based routing
-- **State**: Zustand stores (`src/lib/store.ts`, `src/lib/preferencesStore.ts`)
+- **State**: Zustand (`src/lib/store.ts`, `src/lib/preferencesStore.ts`)
 - **Styling**: TailwindCSS 4 with custom CSS variables
-- **Networking**: WebSocket + HTTP JSON-RPC with Zaparoo Core service
+- **Networking**: WebSocket + HTTP JSON-RPC with Zaparoo Core
 - **Testing**: Vitest + React Testing Library + MSW
-- **i18n**: i18next with 7 supported languages
-- **CI/CD**: Capawesome Cloud (builds + live updates)
+- **i18n**: i18next (7 languages)
+- **CI/CD**: Capawesome Cloud
 
 ### Directory Structure
 
 ```
 src/
   components/        # React components
-    ui/              # shadcn/ui-based components (accordion, button, dialog, etc.)
-    wui/             # Custom Zaparoo UI components (Button, Card, TextInput, etc.)
+    ui/              # shadcn/ui-based components
+    wui/             # Custom Zaparoo UI components
     home/            # Home page components
     nfc/             # NFC-related components
   hooks/             # Custom React hooks
   lib/               # Core utilities, API clients, store, models
-    transport/       # WebSocket transport layer
+    transport/       # WebSocket transport layer (ConnectionManager, WebSocketTransport, types)
   routes/            # TanStack Router file-based routes
-  translations/      # i18n JSON files (en-US, zh-CN, ko-KR, fr-FR, nl-NL, ja-JP, de-DE)
+  translations/      # i18n JSON files
   __tests__/         # Test suites
     unit/            # Unit tests
     integration/     # Integration tests
-    smoke/           # Smoke tests
+    validation/      # Configuration validation tests
   test-utils/        # Test helpers, factories, MSW handlers
   __mocks__/         # Capacitor plugin mocks
 ```
@@ -77,400 +74,139 @@ src/
 - `src/lib/logger.ts` - Logging utility with Rollbar integration
 - `src/lib/nfc.ts` - NFC operations with session management
 - `src/lib/models.ts` - TypeScript interfaces and API method enums
+- `src/lib/transport/ConnectionManager.ts` - WebSocket connection management
 - `src/i18n.ts` - i18next configuration
 
-## Testing Requirements
+---
 
-### Test Structure
+## Testing
 
-Tests are organized by type with specific patterns:
+**Full guide:** [docs/testing.md](docs/testing.md)
 
-- **Unit tests**: `src/__tests__/unit/**/*.test.{ts,tsx}` - Test individual components, hooks, utilities
-- **Integration tests**: `src/__tests__/integration/**/*.test.tsx` - Test feature flows and interactions
-- **Smoke tests**: `src/__tests__/smoke/**/*.test.ts` - Basic sanity checks
+### Quick Reference
 
-### Test Setup
+- Follow **Testing Trophy**: prioritize integration tests over unit tests
+- Use **AAA pattern**: Arrange-Act-Assert
+- Use `should + verb` naming: `it("should show error when email is invalid")`
+- Import from `test-utils`: `import { render, screen, waitFor } from "../../../test-utils"`
+- Always use `userEvent.setup()` for interactions
+- Use `findBy*` for async content, `queryBy*` to assert absence
+- Use accessible queries: `getByRole` > `getByLabelText` > `getByText` > `getByTestId`
+- Factory: `mockReaderInfo()` from `test-utils/factories.ts`
 
-The test environment is configured in `vitest.config.ts` and `src/test-setup.ts`:
+### Critical Anti-Patterns
 
-- **Environment**: happy-dom
-- **Global mocks**: i18n (returns keys as-is), WebSocket, matchMedia, IntersectionObserver
-- **MSW handlers**: `src/test-utils/msw-handlers.ts` for API mocking
-- **Custom render**: `src/test-utils/index.tsx` wraps with providers (QueryClient, A11yAnnouncer, SlideModal)
+1. **Never create fake components** inside test files - import real ones
+2. **Don't mock the component being tested** - only mock external deps
+3. **Use `it.each`** for repetitive test patterns
+4. **Never use hardcoded delays** - use `waitFor` or `findBy*`
+5. **Don't test CSS classes** - test accessible behavior
 
-### Writing Tests
+### Test Checklist
 
-#### Import from test-utils
+- [ ] Imports real component from `src/`
+- [ ] Uses accessible queries
+- [ ] Tests observable behavior
+- [ ] Uses `userEvent.setup()` for interactions
+- [ ] Uses `findBy*` or `waitFor` for async
 
-```typescript
-import { render, screen } from "../../../test-utils";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-```
+---
 
-#### Use Factory Functions for Mock Data
-
-Use `src/test-utils/factories.ts` to generate realistic test data:
-
-```typescript
-import {
-  mockTokenResponse,
-  mockVersionResponse,
-  mockMediaResponse,
-} from "../../../test-utils/factories";
-
-const token = mockTokenResponse({ uid: "specific-uid" }); // Override specific fields
-const version = mockVersionResponse();
-```
-
-Available factories: `mockSystem`, `mockVersionResponse`, `mockLaunchRequest`, `mockWriteRequest`, `mockTokenResponse`, `mockPlayingResponse`, `mockIndexResponse`, `mockMediaResponse`, `mockMappingResponse`
-
-#### MSW for API Mocking
-
-Handlers in `src/test-utils/msw-handlers.ts` mock JSON-RPC responses. Override for specific tests:
-
-```typescript
-import { server } from "../../test-setup";
-import { http, HttpResponse } from "msw";
-
-server.use(
-  http.post("*/api", () => {
-    return HttpResponse.json({ jsonrpc: "2.0", id: 1, result: customResult });
-  }),
-);
-```
-
-#### Test Cleanup
-
-The setup automatically handles:
-
-- `CoreAPI.reset()` after each test
-- Timer cleanup with `vi.clearAllTimers()` and `vi.useRealTimers()`
-- MSW handler reset with `server.resetHandlers()`
-- React Testing Library cleanup
-
-#### Platform-Specific Tests
-
-For iOS/Android-specific behavior, create separate test files:
-
-- `ComponentName.test.tsx` - General tests
-- `ComponentName.ios.test.tsx` - iOS-specific tests
-
-#### Testing Best Practices
-
-1. Query elements by role/label, not test IDs when possible
-2. Use `screen.getByRole("button", { name: "..." })` for buttons
-3. Translations are mocked to return keys - test for translation keys
-4. Reset Zustand stores in `beforeEach` if testing state changes
-5. Use `waitFor` for async operations
-6. Avoid testing implementation details - test behavior
-
-## Logging Requirements
-
-### Logger Usage
-
-Use `src/lib/logger.ts` for all logging:
+## Logging
 
 ```typescript
 import { logger } from "@/lib/logger";
 
-// Development only (stripped in production)
-logger.log("General info");
-logger.debug("Debug details");
-logger.warn("Warning message");
-
-// Always logged + reports to Rollbar in production
-logger.error("Error message", error);
-
-// With metadata for better error tracking
-logger.error("NFC write failed", error, {
+logger.log("General info"); // Dev only
+logger.debug("Debug details"); // Dev only
+logger.warn("Warning message"); // Dev only
+logger.error("Error", error, {
+  // Always + Rollbar in prod
   category: "nfc",
   action: "write",
   severity: "warning",
 });
 ```
 
-### Error Categories
+**Categories:** `nfc`, `storage`, `purchase`, `api`, `camera`, `accelerometer`, `queue`, `connection`, `share`, `lifecycle`, `websocket`, `general`
 
-Use appropriate categories for error classification:
+**Severities:** `critical`, `error`, `warning`, `info`, `debug`
 
-- `nfc` - NFC operations
-- `storage` - Preferences/storage operations
-- `purchase` - RevenueCat/Pro purchases
-- `api` - Core API calls
-- `camera` - Barcode scanning
-- `accelerometer` - Shake detection
-- `queue` - Run/write queue processing
-- `connection` - WebSocket connection
-- `share` - Share functionality
-- `lifecycle` - App lifecycle events
-- `websocket` - WebSocket transport
-- `general` - Default category
+---
 
-### Severity Levels
+## Platform & Capacitor
 
-- `critical` - App-breaking errors
-- `error` - Recoverable errors (default)
-- `warning` - Unexpected but handled
-- `info` - Informational
-- `debug` - Debug-level details
-
-## Capacitor & Platform Patterns
+**Full guide:** [docs/capacitor.md](docs/capacitor.md)
 
 ### Platform Detection
 
 ```typescript
 import { Capacitor } from "@capacitor/core";
 
-// Check if running on native platform (iOS/Android)
 if (Capacitor.isNativePlatform()) {
-  // Native-only code
+  /* native only */
 }
-
-// Get specific platform
 const platform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
 ```
 
-### Capacitor Plugins Used
+### Plugins Used
 
-- `@capacitor/core` - Core platform API
-- `@capacitor/app` - App lifecycle, deep linking
-- `@capacitor/browser` - In-app browser
-- `@capacitor/clipboard` - Clipboard access
-- `@capacitor/device` - Device info
-- `@capacitor/filesystem` - File system access
-- `@capacitor/haptics` - Vibration/haptic feedback
-- `@capacitor/network` - Network status detection
-- `@capacitor/preferences` - Local storage (use instead of localStorage on native)
-- `@capacitor/screen-reader` - Screen reader detection
-- `@capacitor/share` - Native share sheet
-- `@capacitor/status-bar` - Status bar control
-- `@capacitor/text-zoom` - Text size accessibility
-- `@capacitor-community/keep-awake` - Screen wake lock
-- `@capacitor-firebase/authentication` - Firebase auth
-- `@capacitor-mlkit/barcode-scanning` - Camera barcode scanning
-- `@capawesome-team/capacitor-nfc` - NFC reading/writing
-- `@capawesome/capacitor-live-update` - OTA live updates
-- `@capgo/capacitor-shake` - Shake detection
-- `capacitor-plugin-safe-area` - Safe area insets for notched devices
-- `capacitor-zeroconf` - Zeroconf/Bonjour network discovery
+`@capacitor/core`, `@capacitor/app`, `@capacitor/browser`, `@capacitor/clipboard`, `@capacitor/device`, `@capacitor/filesystem`, `@capacitor/haptics`, `@capacitor/network`, `@capacitor/preferences`, `@capacitor/screen-reader`, `@capacitor/share`, `@capacitor/status-bar`, `@capacitor/text-zoom`, `@capacitor-community/keep-awake`, `@capacitor-firebase/authentication`, `@capacitor-mlkit/barcode-scanning`, `@capawesome-team/capacitor-nfc`, `@capawesome/capacitor-live-update`, `@capgo/capacitor-shake`, `capacitor-plugin-safe-area`, `capacitor-zeroconf`
 
-### Feature Availability Checks
-
-Always check feature availability before use. Hooks handle this pattern:
-
-- `useNfcAvailabilityCheck()` - Checks NFC support at startup
-- `useCameraAvailabilityCheck()` - Checks camera/barcode scanner
-- `useAccelerometerAvailabilityCheck()` - Checks shake detection
-
-Results are cached in `preferencesStore`:
+### Feature Availability
 
 ```typescript
+// Hooks check availability at startup, cache in preferencesStore
 const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
 const cameraAvailable = usePreferencesStore((state) => state.cameraAvailable);
 ```
 
-### NFC Session Management
+Hooks: `useNfcAvailabilityCheck()`, `useCameraAvailabilityCheck()`, `useAccelerometerAvailabilityCheck()`
 
-Use `withNfcSession()` helper for proper cleanup:
+### Key Patterns
 
-```typescript
-// From src/lib/nfc.ts - listeners are automatically cleaned up
-await withNfcSession<Result>(async (event) => {
-  // Handle tag scan
-  return result;
-});
-```
+- **NFC**: Use `withNfcSession()` from `src/lib/nfc.ts` for auto-cleanup
+- **Haptics**: Use `useHaptics()` hook - respects user preference
+- **Storage**: Use Capacitor `Preferences`, not localStorage
+- **Safe Area**: Use `safeInsets` from `useStatusStore`
 
-Key patterns:
-
-- Register all listeners before starting scan (prevents race conditions)
-- Store listener handles for cleanup
-- Distinguish user cancellation from errors (check error message for "cancelled")
-- Call `Nfc.stopScanSession()` to cancel - do NOT call `removeAllListeners()`
-
-### Haptic Feedback
-
-Use the `useHaptics` hook:
-
-```typescript
-const { impact, notification, vibrate } = useHaptics();
-
-// Button press feedback
-impact("light"); // or "medium", "heavy"
-
-// Notification feedback
-notification("success"); // or "warning", "error"
-
-// Simple vibration
-vibrate(300); // duration in ms
-```
-
-The hook respects user's haptics preference and gracefully handles unsupported platforms.
-
-### Storage
-
-Use Capacitor Preferences, not localStorage:
-
-```typescript
-import { Preferences } from "@capacitor/preferences";
-
-// Set
-await Preferences.set({ key: "myKey", value: JSON.stringify(data) });
-
-// Get
-const { value } = await Preferences.get({ key: "myKey" });
-const data = value ? JSON.parse(value) : defaultValue;
-```
-
-For app settings, use `preferencesStore` which handles persistence automatically.
+---
 
 ## Internationalization (i18n)
 
-### Supported Languages
+**Languages:** en-US (default), en-GB, fr-FR, zh-CN, ko-KR, ja-JP, nl-NL, de-DE
 
-- English: `en-US` (default), `en`, `en-GB`
-- French: `fr-FR`, `fr`
-- Chinese: `zh-CN`, `zh`
-- Korean: `ko-KR`, `ko`
-- Japanese: `ja-JP`, `ja`
-- Dutch: `nl-NL`, `nl`
-- German: `de-DE`
-
-### Translation Files
-
-Located in `src/translations/*.json`. Structure uses nested objects:
-
-```json
-{
-  "translation": {
-    "nav": {
-      "back": "Back",
-      "cancel": "Cancel"
-    },
-    "spinner": {
-      "scanning": "Scanning"
-    }
-  }
-}
-```
-
-### Usage
+**Files:** `src/translations/*.json`
 
 ```typescript
 import { useTranslation } from "react-i18next";
-
 const { t } = useTranslation();
 
-// Simple key
-t("nav.back");
-
-// With interpolation
-t("error", { msg: "Something went wrong" });
-// Translation: "Error: {{msg}}"
-
-// Pluralization
-t("duration.hours", { count: 5 });
-// Uses "hours_one" for count=1, "hours_other" for count>1
+t("nav.back"); // Simple key
+t("error", { msg: "Failed" }); // Interpolation
+t("duration.hours", { count: 5 }); // Pluralization
 ```
 
-### Adding New Translations
+**Adding translations:** Only update `src/translations/en-US.json`
 
-1. Add key to `src/translations/en-US.json`
-2. ONLY update English translations, never other languages unless asked
+**In tests:** Translations return keys as-is - test for keys
 
-### In Tests
-
-Translations are mocked to return keys as-is. Test for translation keys:
-
-```typescript
-expect(screen.getByText("nav.back")).toBeInTheDocument();
-```
-
-## Component Patterns
-
-### Component Library
-
-Two UI component libraries:
-
-- `src/components/ui/` - shadcn/ui components (Radix-based)
-- `src/components/wui/` - Custom Zaparoo components
-
-### wui Component Conventions
-
-- Use `memo()` and `forwardRef()` for performance and ref support
-- Use `classnames` for conditional Tailwind classes
-- Support accessibility props: `aria-label`, `aria-expanded`, `aria-controls`
-- Use semantic `intent` prop for haptic feedback: `"default"` | `"primary"` | `"destructive"`
-
-### Button Pattern
-
-```tsx
-<Button
-  label="Submit"
-  variant="fill" // "fill" | "outline" | "text"
-  size="default" // "sm" | "default" | "lg"
-  intent="primary" // For haptic feedback intensity
-  icon={<Icon />}
-  disabled={isDisabled}
-  aria-label="Submit form"
-  onClick={handleClick}
-/>
-```
-
-### Card Pattern
-
-```tsx
-<Card
-  onClick={handleClick} // Makes card interactive (button semantics)
-  disabled={isDisabled}
->
-  {children}
-</Card>
-```
-
-### Touch Handling
-
-Interactive components track touch movement to distinguish taps from scrolls:
-
-- Store `touchStartPos` on touch start
-- Check if moved >10px during touch move
-- Only trigger click if `!hasMoved`
-
-### Styling
-
-- Use Tailwind CSS classes
-- Custom CSS variables for colors: `bg-button-pattern`, `bg-card-pattern`
-- Focus visible styles: `focus-visible:ring-2 focus-visible:ring-white/50`
-- Touch manipulation: `touch-manipulation` class
+---
 
 ## State Management
 
 ### Main Store (`useStatusStore`)
 
-Connection and runtime state:
-
 ```typescript
 import { useStatusStore } from "@/lib/store";
 
-// Subscribe to specific state
 const connected = useStatusStore((state) => state.connected);
-const connectionState = useStatusStore((state) => state.connectionState);
-
-// Actions
 const setConnected = useStatusStore((state) => state.setConnected);
 ```
 
-Key state:
-
-- `connected`, `connectionState`, `connectionError` - Connection status
-- `targetDeviceAddress` - Current device IP
-- `lastToken`, `gamesIndex`, `playing` - Core API data
-- `runQueue`, `writeQueue` - Operation queues
-- `deviceHistory` - Previous device connections
+**Key state:** `connected`, `connectionState`, `connectionError`, `targetDeviceAddress`, `lastToken`, `gamesIndex`, `playing`, `runQueue`, `writeQueue`, `deviceHistory`, `safeInsets`
 
 ### Preferences Store (`usePreferencesStore`)
-
-Persisted settings with Capacitor Preferences:
 
 ```typescript
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -479,39 +215,36 @@ const launchOnScan = usePreferencesStore((state) => state.launchOnScan);
 const setLaunchOnScan = usePreferencesStore((state) => state.setLaunchOnScan);
 ```
 
-Key settings:
-
-- `restartScan`, `launchOnScan` - Scan behavior
-- `shakeEnabled`, `shakeMode`, `shakeZapscript` - Shake to launch
-- `hapticsEnabled`, `textZoomLevel` - Accessibility
-- `tourCompleted` - Onboarding state
-- `nfcAvailable`, `cameraAvailable`, `accelerometerAvailable` - Feature flags
+**Key settings:** `restartScan`, `launchOnScan`, `shakeEnabled`, `shakeMode`, `hapticsEnabled`, `textZoomLevel`, `tourCompleted`, `nfcAvailable`, `cameraAvailable`
 
 ### Hydration
 
-Wait for store hydration before showing UI that depends on persisted state:
-
 ```typescript
 const hasHydrated = usePreferencesStore((state) => state._hasHydrated);
-
-if (!hasHydrated) {
-  return <LoadingState />;
-}
+if (!hasHydrated) return <LoadingState />;
 ```
+
+### Store Testing
+
+```typescript
+beforeEach(() => {
+  // Reset to known state - stores don't have getInitialState()
+  useStatusStore.setState({
+    connected: false,
+    runQueue: null,
+    // ... set all needed state
+  });
+});
+```
+
+---
 
 ## API Communication
 
 ### JSON-RPC Protocol
 
-All Core API communication uses JSON-RPC 2.0:
-
 ```typescript
-{
-  jsonrpc: "2.0",
-  id: requestId,
-  method: "media.search",
-  params: { query: "mario" }
-}
+{ jsonrpc: "2.0", id: requestId, method: "media.search", params: { query: "mario" } }
 ```
 
 ### CoreAPI Client
@@ -519,44 +252,62 @@ All Core API communication uses JSON-RPC 2.0:
 ```typescript
 import { CoreAPI } from "@/lib/coreApi";
 
-// Make API calls
 const result = await CoreAPI.getVersion();
 const searchResults = await CoreAPI.searchMedia({ query: "mario" });
-
-// Reset state (call after tests)
-CoreAPI.reset();
+CoreAPI.reset(); // Call in test cleanup
 ```
 
 ### WebSocket Transport
 
-Located in `src/lib/transport/WebSocketTransport.ts`:
-
-- Automatic reconnection with exponential backoff (1s initial, 1.5x multiplier, 30s max)
-- Heartbeat ping/pong every 15s with 10s timeout
-- Message queuing (up to 100) while disconnected
-- State machine: disconnected -> connecting -> connected -> reconnecting
+- Auto-reconnection: 1s initial, 1.5x multiplier, 30s max
+- Heartbeat: 15s ping/pong, 10s timeout
+- Message queuing: up to 100 while disconnected
+- States: disconnected → connecting → connected → reconnecting
 
 ### Queue System
 
-Two queues for operations:
+- `runQueue` - Game launch commands (`useRunQueueProcessor`)
+- `writeQueue` - NFC write operations (`useWriteQueueProcessor`)
 
-- `runQueue` - Game launch commands (processed by `useRunQueueProcessor`)
-- `writeQueue` - NFC write operations (processed by `useWriteQueueProcessor`)
+```typescript
+// Set queue item
+useStatusStore.getState().setRunQueue({ value: "game.launch", unsafe: false });
+// Clear queue
+useStatusStore.getState().setRunQueue(null);
+```
 
-Queues handle offline scenarios - requests are queued and flushed when connected.
+---
+
+## Component Patterns
+
+### Libraries
+
+- `src/components/ui/` - shadcn/ui components (Radix-based)
+- `src/components/wui/` - Custom Zaparoo components
+
+### wui Conventions
+
+- Use `memo()` and `forwardRef()`
+- Use `classnames` for conditional Tailwind
+- Support `aria-label`, `aria-expanded`, `aria-controls`
+- Use `intent` prop for haptic feedback: `"default"` | `"primary"` | `"destructive"`
+
+### Button/Card
+
+```tsx
+<Button label="Submit" variant="fill" size="default" intent="primary" onClick={handle} />
+<Card onClick={handle} disabled={isDisabled}>{children}</Card>
+```
+
+### Styling
+
+- Tailwind CSS classes
+- CSS variables: `bg-button-pattern`, `bg-card-pattern`
+- Focus: `focus-visible:ring-2 focus-visible:ring-white/50`
+
+---
 
 ## Error Handling
-
-### Error Boundaries
-
-`src/components/ErrorComponent.tsx` displays errors with:
-
-- Error message and stack trace
-- Diagnostic info: app version, platform, device, timestamp
-- Copy button for error details
-- Reload button
-
-### Error Patterns
 
 ```typescript
 try {
@@ -565,194 +316,78 @@ try {
   logger.error("Operation failed", error, {
     category: "api",
     action: "riskyOperation",
-    severity: "error",
   });
-
-  // Show user-friendly message
   showRateLimitedErrorToast(t("error", { msg: error.message }));
 }
 ```
 
-### Toast Rate Limiting
+- **Error boundary:** `src/components/ErrorComponent.tsx`
+- **Toast rate limiting:** `showRateLimitedErrorToast()` - 2s cooldown
 
-Use `showRateLimitedErrorToast()` to prevent toast spam:
-
-```typescript
-import { showRateLimitedErrorToast } from "@/lib/toastUtils";
-
-// 2 second cooldown between error toasts
-showRateLimitedErrorToast("Error message");
-```
+---
 
 ## Accessibility
 
 ### Required Patterns
 
-1. **Skip Links**: Use `<SkipLink />` for keyboard navigation
-2. **Page Heading Focus**: Use `usePageHeadingFocus()` hook for route changes
-3. **Screen Reader Announcements**: Use `A11yAnnouncerProvider` and `useA11yAnnounce()`
-4. **Semantic HTML**: Use proper roles and ARIA attributes
-5. **Keyboard Navigation**: All interactive elements must be keyboard accessible
+- **Skip Links:** `<SkipLink />`
+- **Page Heading Focus:** `usePageHeadingFocus()`
+- **Announcements:** `A11yAnnouncerProvider`, `useA11yAnnounce()`
+- **Screen Reader:** `useScreenReaderEnabled()`
+- **Text Zoom:** `textZoomLevel` in preferencesStore
 
-### Screen Reader Detection
-
-```typescript
-import { useScreenReaderEnabled } from "@/hooks/useScreenReaderEnabled";
-
-const isScreenReaderEnabled = useScreenReaderEnabled();
-```
-
-### Text Zoom
-
-Support text zoom for accessibility:
-
-```typescript
-const textZoomLevel = usePreferencesStore((state) => state.textZoomLevel);
-// Applied via Capacitor TextZoom plugin on native
-```
+---
 
 ## Code Style
 
-### Imports
+- **Imports:** Use `@/` alias for src directory
+- **TypeScript:** Strict mode, no `any` without justification
+- **Async:** Prefer async/await, handle errors explicitly
+- **Hooks:** Prefix with `use`, extract to `src/hooks/`
+- **Naming:** Components PascalCase, hooks camelCase with `use`, tests `.test.tsx`
 
-Use path alias `@/` for src directory:
-
-```typescript
-import { logger } from "@/lib/logger";
-import { useHaptics } from "@/hooks/useHaptics";
-```
-
-### TypeScript
-
-- Use strict TypeScript - no `any` without justification
-- Define interfaces for component props
-- Use enums from `src/lib/models.ts` for API methods
-
-### Async/Await
-
-Prefer async/await over raw promises. Handle errors explicitly.
-
-### Hooks
-
-- Prefix with `use`
-- Extract complex logic into custom hooks in `src/hooks/`
-- Use `useCallback` for functions passed to children
-- Use `useMemo` for expensive computations
-
-### File Naming
-
-- Components: PascalCase (`Button.tsx`)
-- Hooks: camelCase with use prefix (`useHaptics.ts`)
-- Utils/lib: camelCase (`logger.ts`)
-- Tests: Match source file + `.test.tsx` suffix
-
-## Pro Features
-
-Pro features are gated behind RevenueCat subscription. The primary Pro feature is "Launch on scan" which allows the phone to act as a wireless reader.
-
-Check Pro access:
-
-```typescript
-import { useProAccessCheck } from "@/hooks/useProAccessCheck";
-
-const { hasProAccess, isLoading } = useProAccessCheck();
-```
+---
 
 ## Common Gotchas
 
-1. **NFC Cancellation**: Detected by checking `error.message.includes("cancelled")` - fragile but necessary
-2. **Platform Checks**: Always check `Capacitor.isNativePlatform()` before using native features
-3. **Store Hydration**: Wait for `_hasHydrated` before rendering UI that depends on persisted state
-4. **Translation Keys**: In tests, translations return keys - test for keys not translated strings
-5. **WebSocket Reconnection**: The transport handles reconnection automatically - don't manually reconnect
+1. **NFC Cancellation**: Check `error.message.includes("cancelled")` - fragile but necessary
+2. **Platform Checks**: Always check `Capacitor.isNativePlatform()` before native features
+3. **Store Hydration**: Wait for `_hasHydrated` before rendering persisted-state UI
+4. **Translation Keys**: In tests, translations return keys - test for keys not strings
+5. **WebSocket Reconnection**: Transport handles this automatically - don't manually reconnect
 6. **Safe Area Insets**: Use `safeInsets` from store for notched device padding
-7. **Touch vs Click**: wui components handle touch/scroll distinction - don't add extra click handlers
+7. **Touch vs Click**: wui components handle touch/scroll distinction internally
 
-## Live Updates
+---
 
-The app uses Capawesome Cloud for over-the-air (OTA) updates, allowing JS/HTML/CSS changes to be pushed directly to users without app store review.
+## Live Updates & CI/CD
 
-### How It Works
+**Full guide:** [docs/deployment.md](docs/deployment.md)
 
-1. User opens app → syncs with Capawesome Cloud in background
-2. If update available → downloads new bundle
-3. User closes and reopens app → new version is active
+### When to Use
 
-### Configuration
+| Change Type                                                   | Method                           |
+| ------------------------------------------------------------- | -------------------------------- |
+| UI/JS fixes, translations, new features with existing plugins | Live Update (`pnpm live-update`) |
+| New plugins, native code, new permissions, Capacitor upgrades | Store Release (push git tag)     |
 
-Located in `capacitor.config.ts`:
+### Process
+
+- **Live Update:** `pnpm live-update` builds, signs, and uploads bundle
+- **Store Build:** Push git tag (e.g., `v1.9.2`) triggers Capawesome Cloud build
+- **Rollback:** App auto-rolls back if crash before `ready()` called
+
+### Secrets (Capawesome Cloud)
+
+`NPM_TOKEN`, `FIREBASE_CREDS`, `GOOGLE_SERVICES_JSON`, `GOOGLE_SERVICE_INFO_PLIST`, `VITE_GOOGLE_STORE_API`, `VITE_APPLE_STORE_API`, `VITE_ROLLBAR_ACCESS_TOKEN`, `LIVE_UPDATE_PRIVATE_KEY`
+
+---
+
+## Pro Features
+
+Pro features gated by RevenueCat. Primary feature: "Launch on scan" (phone as wireless reader).
 
 ```typescript
-LiveUpdate: {
-  appId: "your-app-id",
-  autoUpdateStrategy: "background",
-  defaultChannel: "production",
-  readyTimeout: 10000,
-  publicKey: "-----BEGIN PUBLIC KEY-----...",
-}
+import { useProAccessCheck } from "@/hooks/useProAccessCheck";
+const { hasProAccess, isLoading } = useProAccessCheck();
 ```
-
-### The `useLiveUpdate` Hook
-
-Called in `App.tsx` after successful render:
-
-- Calls `ready()` to signal the app loaded successfully (enables automatic rollback protection)
-- Syncs with update server in background
-
-If a bad update is pushed and the app crashes before `ready()` is called, the plugin automatically rolls back to the previous working version.
-
-### Pushing a Live Update
-
-```bash
-pnpm live-update
-```
-
-This builds the web assets and uploads a signed bundle to Capawesome Cloud.
-
-### When to Use Live Updates vs Store Release
-
-**Live Update** (instant, no review):
-
-- UI bug fixes
-- JavaScript logic fixes
-- New features using existing native plugins
-- Translation updates
-
-**Store Release** (requires app store review):
-
-- Adding/updating Capacitor plugins
-- Native code changes (Swift/Kotlin)
-- New iOS/Android permissions
-- Capacitor version upgrades
-
-### Code Signing
-
-Live updates are signed with a private key (`live-update-private.pem`, gitignored). The app verifies updates using the public key in the config. This prevents unauthorized code injection.
-
-## CI/CD with Capawesome Cloud
-
-The app uses Capawesome Cloud for building iOS and Android binaries.
-
-### Configuration Files
-
-- `capawesome.config.json` - Build commands and app configuration
-- `.npmrc` - GitHub Packages auth for `@capawesome-team/capacitor-nfc`
-
-### Build Process
-
-1. Push a git tag (e.g., `v1.9.2`)
-2. Capawesome Cloud builds iOS (IPA) and Android (AAB)
-3. Artifacts available for download or auto-submission to stores
-
-### Required Secrets in Capawesome Cloud
-
-| Secret                      | Purpose                                     |
-| --------------------------- | ------------------------------------------- |
-| `NPM_TOKEN`                 | GitHub Packages auth for private NFC plugin |
-| `FIREBASE_CREDS`            | Web Firebase config (`src/firebase.json`)   |
-| `GOOGLE_SERVICES_JSON`      | Android Firebase config                     |
-| `GOOGLE_SERVICE_INFO_PLIST` | iOS Firebase config (base64 encoded)        |
-| `VITE_GOOGLE_STORE_API`     | RevenueCat Android API key                  |
-| `VITE_APPLE_STORE_API`      | RevenueCat iOS API key                      |
-| `VITE_ROLLBAR_ACCESS_TOKEN` | Error tracking                              |
-| `LIVE_UPDATE_PRIVATE_KEY`   | Live update bundle signing                  |

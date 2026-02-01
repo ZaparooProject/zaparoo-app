@@ -32,7 +32,8 @@ export const Route = createFileRoute("/settings/logs")({
   component: Logs,
 });
 
-function Logs() {
+// Exported for testing
+export function Logs() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("settings.logs.title"));
   const router = useRouter();

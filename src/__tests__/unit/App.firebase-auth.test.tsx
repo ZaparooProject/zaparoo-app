@@ -1,7 +1,6 @@
-import { render, waitFor, act } from "@testing-library/react";
+import { render, waitFor, act } from "../../test-utils";
 import { vi, beforeEach, describe, it, expect } from "vitest";
 import React from "react";
-import "@/test-setup";
 
 // Store mock functions
 const mockSetLoggedInUser = vi.fn();
@@ -347,12 +346,10 @@ describe("Firebase Auth Integration", () => {
 
     unmount();
 
-    // Give time for cleanup
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 50));
+    // Wait for cleanup to be called
+    await waitFor(() => {
+      expect(mockRemove).toHaveBeenCalled();
     });
-
-    expect(mockRemove).toHaveBeenCalled();
   });
 
   describe("RevenueCat sync", () => {

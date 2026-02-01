@@ -9,6 +9,14 @@ const ZAPAROO_SERVICE_DOMAIN = "local.";
 // Session cache for discovered devices (persists across hook instances until app restart)
 let deviceCache: DiscoveredDevice[] = [];
 
+/**
+ * Reset the device cache. Used for testing to prevent cache pollution between tests.
+ * @internal
+ */
+export function __resetDeviceCache(): void {
+  deviceCache = [];
+}
+
 export interface DiscoveredDevice {
   /** Instance name (usually hostname) */
   name: string;

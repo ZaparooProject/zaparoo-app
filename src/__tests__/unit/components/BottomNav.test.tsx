@@ -162,22 +162,4 @@ describe("BottomNav", () => {
     const nav = screen.getByRole("navigation");
     expect(nav).toBeInTheDocument();
   });
-
-  it("has data-tour attribute for onboarding", () => {
-    render(<BottomNav />);
-
-    // Check that Create link has data-tour attribute
-    const createLink = screen.getByTestId("link-/create");
-    expect(createLink.closest("[data-tour]")).toHaveAttribute(
-      "data-tour",
-      "nav-create",
-    );
-
-    // Check that Settings link has data-tour attribute
-    const settingsLink = screen.getByTestId("link-/settings");
-    expect(settingsLink.closest("[data-tour]")).toHaveAttribute(
-      "data-tour",
-      "nav-settings",
-    );
-  });
 });

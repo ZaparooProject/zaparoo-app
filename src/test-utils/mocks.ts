@@ -3,34 +3,71 @@ import { vi } from "vitest";
 /**
  * Mock AbortController for test environments that don't have native support.
  * Provides full signal handling with event listeners and abort functionality.
+ * Implements the EventTarget interface for proper signal behavior.
  */
 export class MockAbortController {
   signal: {
     aborted: boolean;
+    reason: unknown;
     addEventListener: (
       type: string,
       listener: () => void,
-      options?: any,
+      options?:
+        | { once?: boolean; passive?: boolean; signal?: AbortSignal }
+        | boolean,
     ) => void;
     removeEventListener: (type: string, listener: () => void) => void;
+    dispatchEvent: (event: Event) => boolean;
+    throwIfAborted: () => void;
+    onabort: ((this: AbortSignal, ev: Event) => unknown) | null;
   };
 
-  private _listeners: (() => void)[] = [];
+  private _listeners: Map<string, Set<() => void>> = new Map();
 
   constructor() {
     this.signal = {
       aborted: false,
-      addEventListener: vi.fn((_type: string, listener: () => void) => {
-        this._listeners.push(listener);
+      reason: undefined,
+      onabort: null,
+      addEventListener: vi.fn((type: string, listener: () => void) => {
+        if (!this._listeners.has(type)) {
+          this._listeners.set(type, new Set());
+        }
+        this._listeners.get(type)!.add(listener);
       }),
-      removeEventListener: vi.fn(),
+      removeEventListener: vi.fn((type: string, listener: () => void) => {
+        const listeners = this._listeners.get(type);
+        if (listeners) {
+          listeners.delete(listener);
+        }
+      }),
+      dispatchEvent: vi.fn((event: Event) => {
+        const listeners = this._listeners.get(event.type);
+        if (listeners) {
+          listeners.forEach((listener) => listener());
+        }
+        return true;
+      }),
+      throwIfAborted: () => {
+        if (this.signal.aborted) {
+          throw this.signal.reason;
+        }
+      },
     };
   }
 
-  abort() {
+  abort(reason?: unknown) {
     this.signal.aborted = true;
-    // Call all registered listeners
-    this._listeners.forEach((listener: () => void) => listener());
+    this.signal.reason = reason ?? new DOMException("Aborted", "AbortError");
+    // Call all registered abort listeners
+    const abortListeners = this._listeners.get("abort");
+    if (abortListeners) {
+      abortListeners.forEach((listener) => listener());
+    }
+    // Call onabort handler if set
+    if (this.signal.onabort) {
+      this.signal.onabort.call(this.signal as AbortSignal, new Event("abort"));
+    }
   }
 }
 

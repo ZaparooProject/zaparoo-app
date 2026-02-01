@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { render, waitFor } from "../../../test-utils";
 import type { URLOpenListenerEvent } from "@capacitor/app";
 
 // Create hoisted mocks
@@ -417,9 +417,13 @@ describe("AppUrlListener", () => {
     });
   });
 
-  it("should render null (no visible UI)", () => {
+  it("should render without visible UI elements", () => {
     const { container } = render(<AppUrlListener />);
 
-    expect(container.firstChild).toBeNull();
+    // AppUrlListener returns null, but the test wrapper adds accessibility elements
+    // Verify no visible content is rendered by checking for text content
+    // The only content should be from the test wrapper (A11yAnnouncer)
+    const visibleText = container.textContent;
+    expect(visibleText).toBe("");
   });
 });

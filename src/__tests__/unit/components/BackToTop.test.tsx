@@ -1,7 +1,7 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { useRef } from "react";
+import { vi, describe, it, expect } from "vitest";
 import { BackToTop } from "@/components/BackToTop";
-import "@/test-setup";
 
 // Mock lodash debounce
 vi.mock("lodash", () => ({
@@ -61,25 +61,32 @@ describe("BackToTop", () => {
   it("should render the back to top button", () => {
     render(<TestWrapper />);
 
-    const button = screen.getByRole("button", { name: "backToTop" });
+    // Use hidden: true to find button inside aria-hidden container
+    const button = screen.getByRole("button", {
+      name: "backToTop",
+      hidden: true,
+    });
     expect(button).toBeInTheDocument();
   });
 
   it("should be hidden by default when scroll position is 0", () => {
     render(<TestWrapper />);
 
-    const button = screen.getByRole("button", { name: "backToTop" });
-    expect(button.parentElement).toHaveClass(
-      "opacity-0",
-      "pointer-events-none",
-    );
+    const button = screen.getByRole("button", {
+      name: "backToTop",
+      hidden: true,
+    });
+    expect(button.parentElement).toHaveAttribute("aria-hidden", "true");
   });
 
   it("should show when scrolled past threshold", async () => {
     render(<TestWrapper />);
 
     const container = screen.getByTestId("scroll-container");
-    const button = screen.getByRole("button", { name: "backToTop" });
+    const button = screen.getByRole("button", {
+      name: "backToTop",
+      hidden: true,
+    });
 
     // Mock scrollTop property
     Object.defineProperty(container, "scrollTop", {
@@ -91,10 +98,7 @@ describe("BackToTop", () => {
     fireEvent.scroll(container);
 
     await waitFor(() => {
-      expect(button.parentElement).toHaveClass(
-        "opacity-100",
-        "pointer-events-auto",
-      );
+      expect(button.parentElement).toHaveAttribute("aria-hidden", "false");
     });
   });
 
@@ -102,7 +106,10 @@ describe("BackToTop", () => {
     render(<TestWrapper threshold={500} />);
 
     const container = screen.getByTestId("scroll-container");
-    const button = screen.getByRole("button", { name: "backToTop" });
+    const button = screen.getByRole("button", {
+      name: "backToTop",
+      hidden: true,
+    });
 
     // Scroll to just below custom threshold
     Object.defineProperty(container, "scrollTop", {
@@ -113,10 +120,7 @@ describe("BackToTop", () => {
     fireEvent.scroll(container);
 
     await waitFor(() => {
-      expect(button.parentElement).toHaveClass(
-        "opacity-0",
-        "pointer-events-none",
-      );
+      expect(button.parentElement).toHaveAttribute("aria-hidden", "true");
     });
 
     // Scroll past custom threshold
@@ -128,10 +132,7 @@ describe("BackToTop", () => {
     fireEvent.scroll(container);
 
     await waitFor(() => {
-      expect(button.parentElement).toHaveClass(
-        "opacity-100",
-        "pointer-events-auto",
-      );
+      expect(button.parentElement).toHaveAttribute("aria-hidden", "false");
     });
   });
 
@@ -139,7 +140,10 @@ describe("BackToTop", () => {
     render(<TestWrapper />);
 
     const container = screen.getByTestId("scroll-container");
-    const button = screen.getByRole("button", { name: "backToTop" });
+    const button = screen.getByRole("button", {
+      name: "backToTop",
+      hidden: true,
+    });
 
     // Mock scrollTo method
     const scrollToSpy = vi.fn();
@@ -157,7 +161,10 @@ describe("BackToTop", () => {
     render(<TestWrapper />);
 
     const container = screen.getByTestId("scroll-container");
-    const button = screen.getByRole("button", { name: "backToTop" });
+    const button = screen.getByRole("button", {
+      name: "backToTop",
+      hidden: true,
+    });
 
     // First scroll down
     Object.defineProperty(container, "scrollTop", {
@@ -167,7 +174,7 @@ describe("BackToTop", () => {
     fireEvent.scroll(container);
 
     await waitFor(() => {
-      expect(button.parentElement).toHaveClass("opacity-100");
+      expect(button.parentElement).toHaveAttribute("aria-hidden", "false");
     });
 
     // Then scroll back to top
@@ -178,18 +185,26 @@ describe("BackToTop", () => {
     fireEvent.scroll(container);
 
     await waitFor(() => {
-      expect(button.parentElement).toHaveClass(
-        "opacity-0",
-        "pointer-events-none",
-      );
+      expect(button.parentElement).toHaveAttribute("aria-hidden", "true");
     });
   });
 
   it("should handle missing scroll container gracefully", () => {
     const emptyRef = { current: null };
 
-    expect(() => {
-      render(<BackToTop scrollContainerRef={emptyRef} />);
-    }).not.toThrow();
+    // Should render without throwing
+    render(<BackToTop scrollContainerRef={emptyRef} />);
+
+    // Button should still be rendered but hidden (use hidden: true to find it)
+    const button = screen.getByRole("button", {
+      name: "backToTop",
+      hidden: true,
+    });
+    expect(button).toBeInTheDocument();
+    expect(button.parentElement).toHaveAttribute("aria-hidden", "true");
+
+    // Clicking should not throw even without a scroll container
+    fireEvent.click(button);
+    expect(button).toBeInTheDocument();
   });
 });

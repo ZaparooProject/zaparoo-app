@@ -27,8 +27,20 @@ vi.mock("@revenuecat/purchases-capacitor");
 vi.mock("capacitor-plugin-safe-area");
 vi.mock("capacitor-zeroconf");
 vi.mock("@capacitor/network");
+vi.mock("@capawesome/capacitor-live-update");
+
+// Note: Logger is NOT mocked globally because:
+// 1. It has built-in production guards (isNative && isProduction && token)
+// 2. In test environment, Rollbar calls are already prevented
+// 3. Logger tests need the real implementation
+// Tests that need specific logger behavior can mock it locally.
 
 import { CoreAPI } from "./lib/coreApi";
+import { __resetPreferencesStorage } from "../__mocks__/@capacitor/preferences";
+import { __resetZeroConfMock } from "../__mocks__/capacitor-zeroconf";
+import { __resetNfcMock } from "../__mocks__/@capawesome-team/capacitor-nfc";
+import { __resetLiveUpdateMock } from "../__mocks__/@capawesome/capacitor-live-update";
+import { __resetDeviceCache } from "./hooks/useNetworkScan";
 
 // Define global constants that Vite normally injects
 (globalThis as any).__APP_BASE_PATH__ = "/";
@@ -73,6 +85,16 @@ afterEach(() => {
   vi.useRealTimers();
   // Reset CoreAPI state to prevent accumulation across tests
   CoreAPI.reset();
+  // Reset Preferences storage between tests
+  __resetPreferencesStorage();
+  // Reset ZeroConf mock state between tests
+  __resetZeroConfMock();
+  // Reset NFC mock state between tests
+  __resetNfcMock();
+  // Reset LiveUpdate mock state between tests
+  __resetLiveUpdateMock();
+  // Reset network scan device cache between tests
+  __resetDeviceCache();
 });
 
 // Close server after all tests
