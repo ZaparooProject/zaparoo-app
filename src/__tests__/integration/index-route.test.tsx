@@ -108,13 +108,24 @@ vi.mock("@/lib/writeNfcHook", () => ({
   },
 }));
 
+// Use vi.hoisted for pro purchase mock
+const { mockSetProPurchaseModalOpen, mockProPurchaseState } = vi.hoisted(
+  () => ({
+    mockSetProPurchaseModalOpen: vi.fn(),
+    mockProPurchaseState: {
+      proAccess: false,
+      proPurchaseModalOpen: false,
+    },
+  }),
+);
+
 // Mock useProPurchase
 vi.mock("@/components/ProPurchase", () => ({
   useProPurchase: vi.fn(() => ({
-    proAccess: false,
+    proAccess: mockProPurchaseState.proAccess,
     PurchaseModal: () => null,
-    proPurchaseModalOpen: false,
-    setProPurchaseModalOpen: vi.fn(),
+    proPurchaseModalOpen: mockProPurchaseState.proPurchaseModalOpen,
+    setProPurchaseModalOpen: mockSetProPurchaseModalOpen,
   })),
 }));
 
@@ -122,6 +133,22 @@ vi.mock("@/components/ProPurchase", () => ({
 vi.mock("@/hooks/usePageHeadingFocus", () => ({
   usePageHeadingFocus: vi.fn(),
 }));
+
+// Use vi.hoisted for announcer mock
+const { mockAnnounce } = vi.hoisted(() => ({
+  mockAnnounce: vi.fn(),
+}));
+
+// Mock useAnnouncer but keep the Provider
+vi.mock("@/components/A11yAnnouncer", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    useAnnouncer: vi.fn(() => ({
+      announce: mockAnnounce,
+    })),
+  };
+});
 
 // Mock useKeepAwake
 vi.mock("@/hooks/useKeepAwake", () => ({
@@ -160,10 +187,15 @@ vi.mock("@/lib/nfc", () => ({
   cancelSession: vi.fn(),
 }));
 
+// Use vi.hoisted for Capacitor mock
+const { mockIsNativePlatform } = vi.hoisted(() => ({
+  mockIsNativePlatform: vi.fn(() => true),
+}));
+
 // Mock Capacitor
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
-    isNativePlatform: vi.fn(() => true),
+    isNativePlatform: mockIsNativePlatform,
     getPlatform: vi.fn(() => "ios"),
   },
 }));
@@ -236,6 +268,17 @@ describe("Index Route Integration", () => {
 
     mockHistoryQueryState.data = undefined;
     mockHistoryQueryState.refetch.mockClear();
+
+    // Reset pro purchase mock state
+    mockProPurchaseState.proAccess = false;
+    mockProPurchaseState.proPurchaseModalOpen = false;
+    mockSetProPurchaseModalOpen.mockClear();
+
+    // Reset Capacitor mock
+    mockIsNativePlatform.mockReturnValue(true);
+
+    // Reset announcer mock
+    mockAnnounce.mockClear();
 
     localStorage.setItem("deviceAddress", "192.168.1.100");
   });
@@ -913,6 +956,171 @@ describe("Index Route Integration", () => {
         name: /scan.historyTitle/i,
       });
       expect(historyButton).toHaveAttribute("aria-label");
+    });
+  });
+
+  describe("A11y Page Announcements", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should not announce on non-native platform", async () => {
+      mockIsNativePlatform.mockReturnValue(false);
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      // Advance past the announcement delay
+      act(() => {
+        vi.advanceTimersByTime(600);
+      });
+
+      // Should not call announce on non-native platform
+      expect(mockAnnounce).not.toHaveBeenCalled();
+    });
+
+    it("should announce NFC scan instruction when NFC is available", async () => {
+      usePreferencesStore.setState({
+        nfcAvailable: true,
+        cameraAvailable: true,
+      });
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      // Advance past the announcement delay
+      act(() => {
+        vi.advanceTimersByTime(600);
+      });
+
+      // Should announce NFC instruction
+      expect(mockAnnounce).toHaveBeenCalledWith("spinner.pressToScan");
+    });
+
+    it("should announce camera option when NFC is not available but camera is", async () => {
+      usePreferencesStore.setState({
+        nfcAvailable: false,
+        cameraAvailable: true,
+      });
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      // Advance past the announcement delay
+      act(() => {
+        vi.advanceTimersByTime(600);
+      });
+
+      // Should announce camera option
+      expect(mockAnnounce).toHaveBeenCalledWith("scan.cameraAvailable");
+    });
+
+    it("should announce page name when neither NFC nor camera is available", async () => {
+      usePreferencesStore.setState({
+        nfcAvailable: false,
+        cameraAvailable: false,
+      });
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      // Advance past the announcement delay
+      act(() => {
+        vi.advanceTimersByTime(600);
+      });
+
+      // Should announce page name
+      expect(mockAnnounce).toHaveBeenCalledWith("nav.index");
+    });
+
+    it("should only announce once on mount", async () => {
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      // Advance past the announcement delay
+      act(() => {
+        vi.advanceTimersByTime(600);
+      });
+
+      expect(mockAnnounce).toHaveBeenCalledTimes(1);
+
+      // Advance more time - should not announce again
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      expect(mockAnnounce).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Modal Timing", () => {
+    it("should close pro purchase modal when history is clicked while it's open", async () => {
+      const user = userEvent.setup();
+      mockProPurchaseState.proPurchaseModalOpen = true;
+      mockHistoryQueryState.data = { entries: [] };
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      const historyButton = screen.getByRole("button", {
+        name: /scan.historyTitle/i,
+      });
+
+      // Click history button while pro modal is open
+      await user.click(historyButton);
+
+      // Should close pro purchase modal first
+      expect(mockSetProPurchaseModalOpen).toHaveBeenCalledWith(false);
+    });
+
+    it("should open history modal normally when pro purchase modal is not open", async () => {
+      const user = userEvent.setup();
+      mockProPurchaseState.proPurchaseModalOpen = false;
+      mockHistoryQueryState.data = { entries: [] };
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      const historyButton = screen.getByRole("button", {
+        name: /scan.historyTitle/i,
+      });
+
+      // Click history button
+      await user.click(historyButton);
+
+      // Should open history modal
+      await waitFor(() => {
+        const dialog = screen.getByRole("dialog");
+        expect(dialog).toHaveAttribute("aria-hidden", "false");
+      });
+
+      // Should not have interacted with pro purchase modal at all
+      expect(mockSetProPurchaseModalOpen).not.toHaveBeenCalled();
     });
   });
 });

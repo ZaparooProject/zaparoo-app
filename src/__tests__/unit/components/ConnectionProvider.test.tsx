@@ -147,13 +147,14 @@ vi.mock("@capacitor/network", () => ({
 }));
 
 // Use vi.hoisted for toast mock
-const { mockToast } = vi.hoisted(() => ({
+const { mockToast, mockToastError } = vi.hoisted(() => ({
   mockToast: vi.fn(),
+  mockToastError: vi.fn(),
 }));
 
 vi.mock("react-hot-toast", () => ({
   default: Object.assign(mockToast, {
-    error: vi.fn(),
+    error: mockToastError,
     dismiss: vi.fn(),
   }),
 }));
@@ -984,6 +985,206 @@ describe("browser visibility handling (web platform)", () => {
   });
 });
 
-// Note: Network status handling tests require native platform which is mocked as false.
-// These tests would require a separate test file with different mock configuration
-// or are covered in integration tests.
+describe("edge cases", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedEventHandlers = {};
+  });
+
+  describe("stale connection events", () => {
+    it("should ignore connection events from non-active devices", async () => {
+      vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
+        "other-device-address",
+      );
+
+      render(
+        <ConnectionProvider>
+          <ConnectionConsumer />
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+
+      // Simulate event from a different device (not the active one)
+      capturedEventHandlers.onConnectionChange!("stale-device", {
+        state: "connected",
+        hasData: true,
+        hasConnectedBefore: true,
+      });
+
+      // Should not trigger any data fetch since it's not from active device
+      // Initial render may call these once, but they shouldn't be called again
+      const callCountAfterEvent = vi.mocked(CoreAPI.media).mock.calls.length;
+
+      // Simulate another event from wrong device
+      capturedEventHandlers.onConnectionChange!("another-stale-device", {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+
+      // Call count should remain the same
+      expect(vi.mocked(CoreAPI.media).mock.calls.length).toBe(
+        callCountAfterEvent,
+      );
+    });
+  });
+});
+
+describe("network status handling (native platform)", () => {
+  let networkListener: { remove: () => Promise<void> } | null = null;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    networkListener = null;
+
+    // Mock Capacitor as native platform
+    const { Capacitor } = await import("@capacitor/core");
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+
+    // Capture the network status listener
+    const { Network } = await import("@capacitor/network");
+    vi.mocked(Network.addListener).mockImplementation(async () => {
+      networkListener = { remove: vi.fn().mockResolvedValue(undefined) };
+      return networkListener;
+    });
+  });
+
+  it("should set up network listener on native platform", async () => {
+    const { Network } = await import("@capacitor/network");
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(Network.addListener).toHaveBeenCalledWith(
+        "networkStatusChange",
+        expect.any(Function),
+      );
+    });
+  });
+
+  it("should clean up network listener on unmount", async () => {
+    const { Network } = await import("@capacitor/network");
+    const removeListener = vi.fn();
+    vi.mocked(Network.addListener).mockResolvedValue({
+      remove: removeListener,
+    });
+
+    const { unmount } = render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(Network.addListener).toHaveBeenCalled();
+    });
+
+    unmount();
+
+    await waitFor(() => {
+      expect(removeListener).toHaveBeenCalled();
+    });
+  });
+
+  it("should trigger immediate reconnect when network reconnects", async () => {
+    const { Network } = await import("@capacitor/network");
+    let networkCallback:
+      | ((status: { connected: boolean; connectionType: string }) => void)
+      | null = null;
+
+    vi.mocked(Network.addListener).mockImplementation(
+      async (_eventName: any, callback: any) => {
+        networkCallback = callback;
+        return { remove: vi.fn() };
+      },
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(networkCallback).not.toBeNull();
+    });
+
+    // Simulate network reconnection
+    networkCallback!({ connected: true, connectionType: "wifi" });
+
+    expect(connectionManager.immediateReconnectActive).toHaveBeenCalled();
+  });
+
+  it("should not trigger reconnect when network disconnects", async () => {
+    const { Network } = await import("@capacitor/network");
+    let networkCallback:
+      | ((status: { connected: boolean; connectionType: string }) => void)
+      | null = null;
+
+    vi.mocked(Network.addListener).mockImplementation(
+      async (_eventName: any, callback: any) => {
+        networkCallback = callback;
+        return { remove: vi.fn() };
+      },
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(networkCallback).not.toBeNull();
+    });
+
+    // Clear previous calls
+    vi.mocked(connectionManager.immediateReconnectActive).mockClear();
+
+    // Simulate network disconnection
+    networkCallback!({ connected: false, connectionType: "none" });
+
+    expect(connectionManager.immediateReconnectActive).not.toHaveBeenCalled();
+  });
+});
+
+describe("processNotification error handling", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    capturedEventHandlers = {};
+    mockToast.mockClear();
+    mockToastError.mockClear();
+    // Reset toast rate limiter to ensure toast shows
+    const { resetToastRateLimiter } = await import("@/lib/toastUtils");
+    resetToastRateLimiter();
+  });
+
+  it("should show error toast when message processing throws", async () => {
+    // Make processReceived throw to trigger error handling
+    vi.mocked(CoreAPI.processReceived).mockRejectedValue(
+      new Error("Processing failed"),
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onMessage).toBeDefined();
+    await capturedEventHandlers.onMessage!("test-device", {});
+
+    // Should show error toast (toast.error is called by showRateLimitedErrorToast)
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
+    });
+
+    // Component should not crash
+    expect(screen.getByText("Test")).toBeInTheDocument();
+  });
+});
