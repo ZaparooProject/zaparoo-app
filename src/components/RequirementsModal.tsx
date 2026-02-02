@@ -4,13 +4,11 @@ import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { Capacitor } from "@capacitor/core";
 import { LogOutIcon, ExternalLinkIcon, MailIcon } from "lucide-react";
-import toast from "react-hot-toast";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -92,7 +90,6 @@ export function RequirementsModal() {
       } else {
         // All requirements met, close modal
         close();
-        toast.success(t("requirements.verified"));
       }
     } catch (e) {
       logger.error("Failed to update requirements:", e, {
@@ -165,6 +162,8 @@ export function RequirementsModal() {
     try {
       // Reload user to get latest verification status
       await FirebaseAuthentication.reload();
+      // Force refresh the ID token so the API gets the updated email_verified claim
+      await FirebaseAuthentication.getIdToken({ forceRefresh: true });
       const result = await FirebaseAuthentication.getCurrentUser();
 
       if (result.user?.emailVerified) {
@@ -188,7 +187,6 @@ export function RequirementsModal() {
 
         if (allPendingMet) {
           close();
-          toast.success(t("requirements.verified"));
         } else {
           // Update local user state
           setLoggedInUser(result.user);
@@ -239,17 +237,12 @@ export function RequirementsModal() {
 
         <DialogHeader>
           <DialogTitle>{t("requirements.title")}</DialogTitle>
-          <DialogDescription>{t("requirements.description")}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4">
           {/* Legal Agreements Section */}
           {needsTos && (
             <div className="flex flex-col gap-3">
-              <h3 className="text-sm font-medium text-white/70">
-                {t("requirements.legalAgreements")}
-              </h3>
-
               {/* Terms of Service */}
               <div className="flex items-start gap-3">
                 <Checkbox
@@ -300,49 +293,31 @@ export function RequirementsModal() {
             </div>
           )}
 
-          {/* Age Verification Section */}
+          {/* Age Verification */}
           {needsAge && (
-            <div className="flex flex-col gap-3">
-              <h3 className="text-sm font-medium text-white/70">
-                {t("requirements.ageVerification")}
-              </h3>
-
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="age"
-                  checked={ageChecked}
-                  onCheckedChange={(checked) => setAgeChecked(checked === true)}
-                />
-                <Label
-                  htmlFor="age"
-                  className="text-sm leading-tight text-white"
-                >
-                  {t("requirements.ageLabel")}
-                </Label>
-              </div>
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="age"
+                checked={ageChecked}
+                onCheckedChange={(checked) => setAgeChecked(checked === true)}
+              />
+              <Label htmlFor="age" className="text-sm leading-tight text-white">
+                {t("requirements.ageLabel")}
+              </Label>
             </div>
           )}
 
-          {/* Email Verification Section */}
+          {/* Email Verification */}
           {needsEmailVerification && (
-            <div className="flex flex-col gap-3">
-              <h3 className="text-sm font-medium text-white/70">
-                {t("requirements.emailVerification")}
-              </h3>
-
+            <div className="flex flex-col gap-2">
               {!emailSent ? (
-                <>
-                  <p className="text-muted-foreground text-sm">
-                    {t("requirements.emailDescription")}
-                  </p>
-                  <Button
-                    label={t("requirements.sendVerificationEmail")}
-                    icon={<MailIcon size={18} />}
-                    variant="outline"
-                    onClick={handleSendVerificationEmail}
-                    className="w-full"
-                  />
-                </>
+                <Button
+                  label={t("requirements.sendVerificationEmail")}
+                  icon={<MailIcon size={18} />}
+                  variant="outline"
+                  onClick={handleSendVerificationEmail}
+                  className="w-full"
+                />
               ) : (
                 <>
                   <p className="text-muted-foreground text-sm">

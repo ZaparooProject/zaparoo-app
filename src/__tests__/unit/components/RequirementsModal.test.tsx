@@ -11,6 +11,7 @@ vi.mock("@capacitor-firebase/authentication", () => ({
     signOut: vi.fn().mockResolvedValue(undefined),
     sendEmailVerification: vi.fn().mockResolvedValue(undefined),
     reload: vi.fn().mockResolvedValue(undefined),
+    getIdToken: vi.fn().mockResolvedValue({ token: "mock-token" }),
     getCurrentUser: vi.fn().mockResolvedValue({ user: null }),
   },
 }));
@@ -25,13 +26,6 @@ vi.mock("@capacitor/core", () => ({
   Capacitor: {
     getPlatform: vi.fn().mockReturnValue("ios"),
     isNativePlatform: vi.fn().mockReturnValue(true),
-  },
-}));
-
-vi.mock("react-hot-toast", () => ({
-  default: {
-    success: vi.fn(),
-    error: vi.fn(),
   },
 }));
 
@@ -569,7 +563,6 @@ describe("RequirementsModal", () => {
       const { FirebaseAuthentication } =
         await import("@capacitor-firebase/authentication");
       const { getRequirements } = await import("@/lib/onlineApi");
-      const toast = await import("react-hot-toast");
 
       // Mock email as verified
       vi.mocked(FirebaseAuthentication.getCurrentUser).mockResolvedValue({
@@ -603,15 +596,10 @@ describe("RequirementsModal", () => {
       });
       await user.click(checkButton);
 
-      // Modal should close and show success toast
+      // Modal should close
       await waitFor(() => {
-        expect(toast.default.success).toHaveBeenCalledWith(
-          "requirements.verified",
-        );
+        expect(useRequirementsStore.getState().isOpen).toBe(false);
       });
-
-      // Verify the store was updated to close the modal
-      expect(useRequirementsStore.getState().isOpen).toBe(false);
     });
 
     it("should NOT close modal when email is verified but other pending requirements remain", async () => {
@@ -638,7 +626,6 @@ describe("RequirementsModal", () => {
       const { FirebaseAuthentication } =
         await import("@capacitor-firebase/authentication");
       const { getRequirements } = await import("@/lib/onlineApi");
-      const toast = await import("react-hot-toast");
 
       // Mock email as verified
       vi.mocked(FirebaseAuthentication.getCurrentUser).mockResolvedValue({
@@ -678,10 +665,7 @@ describe("RequirementsModal", () => {
         ).toBeInTheDocument();
       });
 
-      // Modal should still be open (success toast for full verification should NOT be called)
-      expect(toast.default.success).not.toHaveBeenCalledWith(
-        "requirements.verified",
-      );
+      // Modal should still be open (other requirements still pending)
       expect(useRequirementsStore.getState().isOpen).toBe(true);
     });
   });

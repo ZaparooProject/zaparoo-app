@@ -11,8 +11,6 @@ import {
   UserPlusIcon,
   ExternalLinkIcon,
   Trash2Icon,
-  CheckCircleIcon,
-  AlertCircleIcon,
 } from "lucide-react";
 import type { AxiosError } from "axios";
 import { TextInput } from "@/components/wui/TextInput.tsx";
@@ -428,20 +426,6 @@ function OnlinePage() {
     }
   };
 
-  const handleResendVerification = async () => {
-    try {
-      await FirebaseAuthentication.sendEmailVerification();
-      toast.success(t("online.verificationSent"));
-    } catch (e) {
-      logger.error("Failed to send verification email:", e, {
-        category: "api",
-        action: "sendEmailVerification",
-        severity: "warning",
-      });
-      toast.error(t("online.verificationFailed"));
-    }
-  };
-
   return (
     <PageFrame
       {...swipeHandlers}
@@ -506,29 +490,6 @@ function OnlinePage() {
                 }
                 return null;
               })()}
-
-              {/* Email verification indicator - only for email/password users */}
-              {getAuthProvider(loggedInUser.providerData) === "password" &&
-                (loggedInUser.emailVerified ? (
-                  <span className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
-                    <CheckCircleIcon size="14" className="text-success" />
-                    {t("online.emailVerified")}
-                  </span>
-                ) : (
-                  <div className="mt-1 flex flex-col items-center gap-1">
-                    <span className="flex items-center gap-1 text-xs text-amber-500">
-                      <AlertCircleIcon size="14" />
-                      {t("online.emailNotVerified")}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleResendVerification}
-                      className="text-muted-foreground hover:text-foreground text-xs underline"
-                    >
-                      {t("online.resendVerification")}
-                    </button>
-                  </div>
-                ))}
             </div>
 
             {/* Account actions */}
