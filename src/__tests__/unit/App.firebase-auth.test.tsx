@@ -6,6 +6,7 @@ import React from "react";
 const mockSetLoggedInUser = vi.fn();
 const mockSetLauncherAccess = vi.fn();
 const mockGetIdToken = vi.fn();
+const mockReload = vi.fn();
 const mockAddListener = vi.fn();
 const mockRemove = vi.fn();
 
@@ -69,7 +70,8 @@ vi.mock("@capacitor/status-bar", () => ({
 vi.mock("@capacitor-firebase/authentication", () => ({
   FirebaseAuthentication: {
     addListener: (...args: unknown[]) => mockAddListener(...args),
-    getIdToken: () => mockGetIdToken(),
+    getIdToken: (...args: unknown[]) => mockGetIdToken(...args),
+    reload: () => mockReload(),
   },
 }));
 
@@ -230,6 +232,7 @@ describe("Firebase Auth Integration", () => {
       Promise.resolve({ remove: mockRemove }),
     );
     mockGetIdToken.mockResolvedValue({ token: "mock-token" });
+    mockReload.mockResolvedValue(undefined);
 
     // Default RevenueCat mocks
     mockPurchasesLogIn.mockResolvedValue({
@@ -350,6 +353,72 @@ describe("Firebase Auth Integration", () => {
     await waitFor(() => {
       expect(mockRemove).toHaveBeenCalled();
     });
+  });
+
+  // Regression test: Ensures token is refreshed on auth state change to get
+  // latest claims (e.g., email_verified). Without this, users who verified
+  // their email externally would see the requirements modal on app restart
+  // because the cached token still had email_verified=false.
+  it("should refresh token with forceRefresh on auth state change to get latest claims", async () => {
+    mockPlatform = "ios";
+    const callOrder: string[] = [];
+
+    let authCallback: ((change: { user: unknown }) => void) | null = null;
+    mockAddListener.mockImplementation(
+      (_event: string, callback: (change: { user: unknown }) => void) => {
+        authCallback = callback;
+        return Promise.resolve({ remove: mockRemove });
+      },
+    );
+
+    mockReload.mockImplementation(() => {
+      callOrder.push("reload");
+      return Promise.resolve();
+    });
+
+    mockGetIdToken.mockImplementation(() => {
+      callOrder.push("getIdToken");
+      return Promise.resolve({ token: "mock-token" });
+    });
+
+    mockGetSubscriptionStatus.mockImplementation(() => {
+      callOrder.push("getSubscriptionStatus");
+      return Promise.resolve({ is_premium: false });
+    });
+
+    const App = (await import("@/App")).default;
+    render(<App />);
+
+    await waitFor(() => {
+      expect(authCallback).not.toBeNull();
+    });
+
+    // Trigger auth state change with a user
+    const mockUser = { uid: "123", email: "test@example.com" };
+    await act(async () => {
+      authCallback!({ user: mockUser });
+    });
+
+    // Verify reload and getIdToken were called
+    expect(mockReload).toHaveBeenCalled();
+    expect(mockGetIdToken).toHaveBeenCalledWith({ forceRefresh: true });
+
+    // Wait for the calls to complete
+    await waitFor(() => {
+      expect(callOrder.length).toBeGreaterThanOrEqual(2);
+    });
+
+    // Verify the order: reload -> getIdToken -> API calls
+    const reloadIndex = callOrder.indexOf("reload");
+    const getIdTokenIndex = callOrder.indexOf("getIdToken");
+    const apiCallIndex = callOrder.indexOf("getSubscriptionStatus");
+
+    expect(callOrder).toContain("reload");
+    expect(callOrder).toContain("getIdToken");
+    expect(reloadIndex).toBeLessThan(getIdTokenIndex);
+    if (apiCallIndex !== -1) {
+      expect(getIdTokenIndex).toBeLessThan(apiCallIndex);
+    }
   });
 
   describe("RevenueCat sync", () => {

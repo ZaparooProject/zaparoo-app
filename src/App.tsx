@@ -233,6 +233,18 @@ export default function App() {
     let cleanup: (() => void) | undefined;
 
     FirebaseAuthentication.addListener("authStateChange", async (change) => {
+      // Refresh user data and token to get latest claims (e.g., email_verified)
+      // This must happen before any API calls that depend on token claims
+      if (change.user) {
+        try {
+          await FirebaseAuthentication.reload();
+          await FirebaseAuthentication.getIdToken({ forceRefresh: true });
+        } catch (e) {
+          // Token refresh failed - continue with possibly stale token
+          logger.debug("Token refresh on auth state change failed:", e);
+        }
+      }
+
       setLoggedInUser(change.user);
 
       // Sync RevenueCat identity with Firebase user (skip on web)
@@ -273,12 +285,6 @@ export default function App() {
             severity: "warning",
           });
         }
-      }
-
-      if (change.user) {
-        FirebaseAuthentication.getIdToken().catch(() => {
-          // Token refresh failed - will retry on next auth state change
-        });
       }
     }).then((handle) => {
       cleanup = () => handle.remove();
