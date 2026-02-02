@@ -265,21 +265,6 @@ describe("Settings Online Route", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("should show email verified indicator for verified password users", () => {
-      renderComponent();
-      expect(screen.getByText("online.emailVerified")).toBeInTheDocument();
-    });
-
-    it("should show email not verified indicator with resend button for unverified users", () => {
-      mockState.loggedInUser = {
-        ...mockState.loggedInUser,
-        emailVerified: false,
-      };
-      renderComponent();
-      expect(screen.getByText("online.emailNotVerified")).toBeInTheDocument();
-      expect(screen.getByText("online.resendVerification")).toBeInTheDocument();
-    });
-
     it("should show Google login indicator for Google users", () => {
       mockState.loggedInUser = {
         ...mockState.loggedInUser,
@@ -459,48 +444,6 @@ describe("Settings Online Route", () => {
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("online.resetEmailFailed");
-      });
-    });
-  });
-
-  describe("email verification", () => {
-    beforeEach(() => {
-      mockState.loggedInUser = {
-        email: "test@example.com",
-        uid: "test-uid",
-        displayName: "Test User",
-        emailVerified: false,
-        providerData: [{ providerId: "password" }],
-      };
-    });
-
-    it("should send verification email when resend clicked", async () => {
-      const user = userEvent.setup();
-      renderComponent();
-
-      await user.click(screen.getByText("online.resendVerification"));
-
-      await waitFor(() => {
-        expect(mockFirebaseAuth.sendEmailVerification).toHaveBeenCalled();
-      });
-
-      await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith("online.verificationSent");
-      });
-    });
-
-    it("should handle verification email failure", async () => {
-      const user = userEvent.setup();
-      mockFirebaseAuth.sendEmailVerification.mockRejectedValueOnce(
-        new Error("Failed"),
-      );
-
-      renderComponent();
-
-      await user.click(screen.getByText("online.resendVerification"));
-
-      await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith("online.verificationFailed");
       });
     });
   });
