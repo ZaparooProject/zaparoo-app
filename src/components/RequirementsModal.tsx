@@ -168,14 +168,25 @@ export function RequirementsModal() {
       const result = await FirebaseAuthentication.getCurrentUser();
 
       if (result.user?.emailVerified) {
-        // Re-check requirements - if all met, modal will close
-        const requirements = await getRequirements();
-        if (
-          requirements.requirements.email_verified &&
-          requirements.requirements.tos_accepted &&
-          requirements.requirements.privacy_accepted &&
-          requirements.requirements.age_verified
-        ) {
+        // Re-check requirements - if all pending ones are now met, modal will close
+        const response = await getRequirements();
+        const req = response.requirements;
+
+        // Check if all originally pending requirements are now satisfied
+        const allPendingMet = pendingRequirements.every((r) => {
+          switch (r.type) {
+            case "email_verified":
+              return req.email_verified;
+            case "terms_acceptance":
+              return req.tos_accepted && req.privacy_accepted;
+            case "age_verified":
+              return req.age_verified;
+            default:
+              return true;
+          }
+        });
+
+        if (allPendingMet) {
           close();
           toast.success(t("requirements.verified"));
         } else {
@@ -205,7 +216,7 @@ export function RequirementsModal() {
     } finally {
       setEmailVerifying(false);
     }
-  }, [close, setLoggedInUser, t]);
+  }, [close, pendingRequirements, setLoggedInUser, t]);
 
   const openExternalLink = (url: string) => {
     window.open(url, "_blank", "noopener,noreferrer");

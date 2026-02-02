@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { RequirementsModal } from "@/components/RequirementsModal";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import type { PendingRequirement } from "@/lib/models";
@@ -546,6 +547,142 @@ describe("RequirementsModal", () => {
           screen.getByText("requirements.resendEmail"),
         ).toBeInTheDocument();
       });
+    });
+
+    // Regression test: Modal should close when only email verification was pending,
+    // even if other requirements (TOS, privacy, age) are false in the API response
+    it("should close modal when email is verified and it was the only pending requirement", async () => {
+      const user = userEvent.setup();
+      const requirements: PendingRequirement[] = [
+        {
+          type: "email_verified",
+          description: "Verify email",
+          endpoint: "/account/requirements",
+        },
+      ];
+
+      useRequirementsStore.setState({
+        isOpen: true,
+        pendingRequirements: requirements,
+      });
+
+      const { FirebaseAuthentication } =
+        await import("@capacitor-firebase/authentication");
+      const { getRequirements } = await import("@/lib/onlineApi");
+      const toast = await import("react-hot-toast");
+
+      // Mock email as verified
+      vi.mocked(FirebaseAuthentication.getCurrentUser).mockResolvedValue({
+        user: { emailVerified: true } as never,
+      });
+
+      // Mock API response where only email_verified is true,
+      // other requirements are false (the bug scenario)
+      vi.mocked(getRequirements).mockResolvedValue({
+        requirements: {
+          email_verified: true,
+          tos_accepted: false,
+          privacy_accepted: false,
+          age_verified: false,
+        },
+        required_versions: { tos: "1.0", privacy: "1.0" },
+        accepted_versions: { tos: null, privacy: null },
+      });
+
+      render(<RequirementsModal />);
+
+      // Send email first
+      const sendEmailButton = screen.getByRole("button", {
+        name: /requirements\.sendVerificationEmail/i,
+      });
+      await user.click(sendEmailButton);
+
+      // Click check email verified
+      const checkButton = await screen.findByRole("button", {
+        name: /requirements\.checkEmailVerified/i,
+      });
+      await user.click(checkButton);
+
+      // Modal should close and show success toast
+      await waitFor(() => {
+        expect(toast.default.success).toHaveBeenCalledWith(
+          "requirements.verified",
+        );
+      });
+
+      // Verify the store was updated to close the modal
+      expect(useRequirementsStore.getState().isOpen).toBe(false);
+    });
+
+    it("should NOT close modal when email is verified but other pending requirements remain", async () => {
+      const user = userEvent.setup();
+      // This tests the case where both email and TOS are pending
+      const requirements: PendingRequirement[] = [
+        {
+          type: "email_verified",
+          description: "Verify email",
+          endpoint: "/account/requirements",
+        },
+        {
+          type: "terms_acceptance",
+          description: "Accept terms",
+          endpoint: "/account/requirements",
+        },
+      ];
+
+      useRequirementsStore.setState({
+        isOpen: true,
+        pendingRequirements: requirements,
+      });
+
+      const { FirebaseAuthentication } =
+        await import("@capacitor-firebase/authentication");
+      const { getRequirements } = await import("@/lib/onlineApi");
+      const toast = await import("react-hot-toast");
+
+      // Mock email as verified
+      vi.mocked(FirebaseAuthentication.getCurrentUser).mockResolvedValue({
+        user: { emailVerified: true } as never,
+      });
+
+      // Email is verified but TOS is not accepted
+      vi.mocked(getRequirements).mockResolvedValue({
+        requirements: {
+          email_verified: true,
+          tos_accepted: false,
+          privacy_accepted: false,
+          age_verified: false,
+        },
+        required_versions: { tos: "1.0", privacy: "1.0" },
+        accepted_versions: { tos: null, privacy: null },
+      });
+
+      render(<RequirementsModal />);
+
+      // Send email first
+      const sendEmailButton = screen.getByRole("button", {
+        name: /requirements\.sendVerificationEmail/i,
+      });
+      await user.click(sendEmailButton);
+
+      // Click check email verified
+      const checkButton = await screen.findByRole("button", {
+        name: /requirements\.checkEmailVerified/i,
+      });
+      await user.click(checkButton);
+
+      // Should show email verified message but NOT close modal
+      await waitFor(() => {
+        expect(
+          screen.getByText("requirements.emailVerified"),
+        ).toBeInTheDocument();
+      });
+
+      // Modal should still be open (success toast for full verification should NOT be called)
+      expect(toast.default.success).not.toHaveBeenCalledWith(
+        "requirements.verified",
+      );
+      expect(useRequirementsStore.getState().isOpen).toBe(true);
     });
   });
 });
