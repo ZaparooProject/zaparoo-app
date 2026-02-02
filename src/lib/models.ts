@@ -161,6 +161,7 @@ export interface HistoryResponse {
 export interface SettingsResponse {
   runZapScript: boolean;
   debugLogging: boolean;
+  errorReporting: boolean;
   audioScanFeedback: boolean;
   readersAutoDetect: boolean;
   readersScanMode: "tap" | "hold" | "insert";
@@ -170,6 +171,7 @@ export interface SettingsResponse {
 
 export interface UpdateSettingsRequest {
   debugLogging?: boolean;
+  errorReporting?: boolean;
   audioScanFeedback?: boolean;
   readersAutoDetect?: boolean;
   readersScanMode?: "tap" | "hold" | "insert";

@@ -6,7 +6,8 @@ coverage:
         threshold: 5%
     patch:
       default:
-        target: auto
+        target: 80%
+        informational: false
 
 ignore:
   - "**/*.test.ts"
