@@ -378,6 +378,16 @@ try {
 | UI/JS fixes, translations, new features with existing plugins | Live Update (`pnpm live-update`) |
 | New plugins, native code, new permissions, Capacitor upgrades | Store Release (push git tag)     |
 
+### Version Bumping (Required for Store Releases)
+
+Before creating a store release, **all three locations must be updated**:
+
+| File                                    | Fields                                         | Notes                                                                                                     |
+| --------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `package.json`                          | `version`                                      | Semantic version (e.g., `1.10.0`)                                                                         |
+| `android/app/build.gradle`              | `versionCode`, `versionName`                   | `versionCode` must increment every build (integer), `versionName` matches package.json                    |
+| `ios/App/App.xcodeproj/project.pbxproj` | `MARKETING_VERSION`, `CURRENT_PROJECT_VERSION` | `MARKETING_VERSION` matches package.json, `CURRENT_PROJECT_VERSION` increments per upload of same version |
+
 ### Process
 
 - **Live Update:** `pnpm live-update` builds, signs, and uploads bundle
