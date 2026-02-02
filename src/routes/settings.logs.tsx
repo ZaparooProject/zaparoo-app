@@ -1,11 +1,20 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useMemo, useRef } from "react";
-import { Download, Copy, RefreshCw, Share2 } from "lucide-react";
+import {
+  Download,
+  Copy,
+  RefreshCw,
+  Share2,
+  Upload,
+  Loader2,
+} from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
+import { Clipboard } from "@capacitor/clipboard";
+import toast from "react-hot-toast";
 import { BackToTop } from "@/components/BackToTop";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
@@ -18,6 +27,8 @@ import { BackIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { ToggleChip } from "@/components/wui/ToggleChip";
 import { logger } from "@/lib/logger";
+import { uploadLogs } from "@/lib/logsApi";
+import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
 interface LogEntry {
@@ -181,6 +192,32 @@ export function Logs() {
     }
   };
 
+  const uploadMutation = useMutation({
+    mutationFn: async () => {
+      const decodedContent = atob(logsQuery.data!.content);
+      return uploadLogs(decodedContent);
+    },
+    onSuccess: async (url) => {
+      try {
+        if (isNative) {
+          await Clipboard.write({ string: url });
+        } else {
+          await navigator.clipboard.writeText(url);
+        }
+        toast.success(t("settings.logs.uploadSuccess"));
+      } catch (error) {
+        logger.error("Failed to copy URL to clipboard:", error, {
+          category: "storage",
+          action: "copyUploadUrl",
+          severity: "warning",
+        });
+      }
+    },
+    onError: () => {
+      showRateLimitedErrorToast(t("settings.logs.uploadError"));
+    },
+  });
+
   const formatTimestamp = (timeStr: string) => {
     try {
       const date = new Date(timeStr);
@@ -259,6 +296,17 @@ export function Logs() {
                   onClick={copyToClipboard}
                   icon={<Copy size="20" />}
                   title={t("settings.logs.copy")}
+                />
+                <HeaderButton
+                  onClick={() => uploadMutation.mutate()}
+                  icon={
+                    uploadMutation.isPending ? (
+                      <Loader2 size="20" className="animate-spin" />
+                    ) : (
+                      <Upload size="20" />
+                    )
+                  }
+                  title={t("settings.logs.upload")}
                 />
                 <HeaderButton
                   onClick={shareOrDownloadFile}
