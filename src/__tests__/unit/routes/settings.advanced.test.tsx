@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectionState } from "@/lib/store";
 
@@ -139,6 +140,16 @@ describe("Settings Advanced Route", () => {
       });
     });
 
+    it("should render error reporting toggle", async () => {
+      renderComponent();
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("settings.advanced.errorReporting"),
+        ).toBeInTheDocument();
+      });
+    });
+
     it("should render debug logging toggle", async () => {
       renderComponent();
 
@@ -241,6 +252,119 @@ describe("Settings Advanced Route", () => {
       fireEvent.click(showFilenamesCheckbox);
 
       expect(mockSetShowFilenames).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe("error reporting", () => {
+    it("should show confirmation modal when enabling error reporting", async () => {
+      const user = userEvent.setup();
+      mockSettings.mockResolvedValue({
+        debugLogging: false,
+        errorReporting: false,
+      });
+
+      renderComponent();
+
+      const toggle = await screen.findByRole("checkbox", {
+        name: /settings.advanced.errorReporting/i,
+      });
+      await user.click(toggle);
+
+      // Modal should appear
+      await waitFor(() => {
+        expect(
+          screen.getAllByText("settings.advanced.errorReportingConfirmTitle")
+            .length,
+        ).toBeGreaterThan(0);
+        expect(
+          screen.getByText("settings.advanced.errorReportingConfirmText"),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should enable error reporting when confirmed", async () => {
+      const user = userEvent.setup();
+      mockSettings.mockResolvedValue({
+        debugLogging: false,
+        errorReporting: false,
+      });
+
+      renderComponent();
+
+      const toggle = await screen.findByRole("checkbox", {
+        name: /settings.advanced.errorReporting/i,
+      });
+      await user.click(toggle);
+
+      // Wait for modal and click confirm
+      const confirmButton = await screen.findByText("yes");
+      await user.click(confirmButton);
+
+      await waitFor(() => {
+        expect(mockSettingsUpdate).toHaveBeenCalledWith({
+          errorReporting: true,
+        });
+      });
+    });
+
+    it("should not enable error reporting when cancelled", async () => {
+      const user = userEvent.setup();
+      mockSettings.mockResolvedValue({
+        debugLogging: false,
+        errorReporting: false,
+      });
+
+      renderComponent();
+
+      const toggle = await screen.findByRole("checkbox", {
+        name: /settings.advanced.errorReporting/i,
+      });
+      await user.click(toggle);
+
+      // Wait for modal and click cancel
+      const cancelButton = await screen.findByText("nav.cancel");
+      await user.click(cancelButton);
+
+      // No update should be called when cancelled
+      expect(mockSettingsUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should disable error reporting without confirmation", async () => {
+      const user = userEvent.setup();
+      mockSettings.mockResolvedValue({
+        debugLogging: false,
+        errorReporting: true,
+      });
+
+      renderComponent();
+
+      const toggle = await screen.findByRole("checkbox", {
+        name: /settings.advanced.errorReporting/i,
+      });
+      await user.click(toggle);
+
+      // Should directly call update without showing modal
+      await waitFor(() => {
+        expect(mockSettingsUpdate).toHaveBeenCalledWith({
+          errorReporting: false,
+        });
+      });
+    });
+
+    it("should disable error reporting toggle when disconnected", async () => {
+      mockUseStatusStore.mockImplementation((selector) =>
+        selector({
+          ...defaultStoreState,
+          connected: false,
+        }),
+      );
+
+      renderComponent();
+
+      const toggle = await screen.findByRole("checkbox", {
+        name: /settings.advanced.errorReporting/i,
+      });
+      expect(toggle).toBeDisabled();
     });
   });
 
