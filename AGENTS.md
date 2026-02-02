@@ -348,6 +348,13 @@ try {
 
 ---
 
+## Pull Requests
+
+- **No test plans:** Do not include test plan sections in PR descriptions
+- **Summary only:** Keep PR descriptions concise with a brief summary of changes
+
+---
+
 ## Common Gotchas
 
 1. **NFC Cancellation**: Check `error.message.includes("cancelled")` - fragile but necessary
