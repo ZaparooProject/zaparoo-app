@@ -101,6 +101,7 @@ describe("Settings Advanced Route", () => {
     // Default mock implementations
     mockSettings.mockResolvedValue({
       debugLogging: false,
+      errorReporting: false,
       audioScanFeedback: true,
       readersAutoDetect: false,
     });
@@ -194,19 +195,22 @@ describe("Settings Advanced Route", () => {
 
   describe("settings updates", () => {
     it("should call settingsUpdate when debug logging is toggled", async () => {
-      mockSettings.mockResolvedValue({ debugLogging: false });
+      mockSettings.mockResolvedValue({
+        debugLogging: false,
+        errorReporting: false,
+      });
 
       renderComponent();
 
       // Wait for loading to complete (checkboxes to appear)
       await waitFor(() => {
         const checkboxes = screen.getAllByRole("checkbox");
-        expect(checkboxes.length).toBeGreaterThanOrEqual(2);
+        expect(checkboxes.length).toBeGreaterThanOrEqual(3);
       });
 
-      // Get the first checkbox (debug logging toggle)
+      // Get the second checkbox (debug logging toggle - after error reporting)
       const checkboxes = screen.getAllByRole("checkbox");
-      const debugLoggingCheckbox = checkboxes[0]!;
+      const debugLoggingCheckbox = checkboxes[1]!;
       fireEvent.click(debugLoggingCheckbox);
 
       await waitFor(() => {
@@ -225,15 +229,15 @@ describe("Settings Advanced Route", () => {
 
       renderComponent();
 
-      // Wait for loading to complete (both checkboxes to appear)
+      // Wait for loading to complete (all checkboxes to appear)
       await waitFor(() => {
         const checkboxes = screen.getAllByRole("checkbox");
-        expect(checkboxes.length).toBeGreaterThanOrEqual(2);
+        expect(checkboxes.length).toBeGreaterThanOrEqual(3);
       });
 
-      // Get the second checkbox (show filenames toggle)
+      // Get the third checkbox (show filenames toggle - after error reporting and debug logging)
       const checkboxes = screen.getAllByRole("checkbox");
-      const showFilenamesCheckbox = checkboxes[1]!;
+      const showFilenamesCheckbox = checkboxes[2]!;
       fireEvent.click(showFilenamesCheckbox);
 
       expect(mockSetShowFilenames).toHaveBeenCalledWith(true);

@@ -423,6 +423,10 @@
       },
       "advanced": {
         "title": "Advanced",
+        "errorReporting": "Error reporting",
+        "errorReportingHelp": "Enable anonymous error reporting to help identify and fix bugs faster. Reports are anonymized and sent via Sentry. No personal data is collected.",
+        "errorReportingConfirmTitle": "Enable error reporting?",
+        "errorReportingConfirmText": "Error reports help us fix bugs faster. Reports are anonymized and sent via Sentry. No personal data is collected.",
         "debugLogging": "Debug logging",
         "debugLoggingHelp": "Enables more verbose log files on the connected device. Can be useful for troubleshooting issues.",
         "showFilenames": "Show filenames for media",
