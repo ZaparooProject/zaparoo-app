@@ -26,7 +26,6 @@ Guidance for AI agents working with the Zaparoo App codebase.
 ### Live Updates
 
 - `pnpm live-update` - Build and push signed live update (requires `live-update-private.pem`)
-- `pnpm live-update:list` - List deployed bundles
 
 ---
 
