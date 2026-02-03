@@ -83,6 +83,7 @@ export function Index() {
     setLastToken,
     setProPurchaseModalOpen,
     setWriteOpen,
+    nfcWriter,
   });
 
   const history = useQuery({

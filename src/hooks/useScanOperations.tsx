@@ -5,7 +5,7 @@ import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
 import toast from "react-hot-toast";
 import { cancelSession, readTag, sessionManager, Status } from "@/lib/nfc";
 import { ScanResult, TokenResponse } from "@/lib/models";
-import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { WriteAction, WriteNfcHook } from "@/lib/writeNfcHook";
 import { runToken } from "@/lib/tokenOperations.tsx";
 import { logger } from "@/lib/logger";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
@@ -17,12 +17,12 @@ import {
 
 interface UseScanOperationsProps {
   connected: boolean;
-  /** Whether we have received data from the server (indicates prior connection) */
   hasData: boolean;
   launcherAccess: boolean;
   setLastToken: (token: TokenResponse) => void;
   setProPurchaseModalOpen: (open: boolean) => void;
   setWriteOpen: (open: boolean) => void;
+  nfcWriter: WriteNfcHook;
 }
 
 export function useScanOperations({
@@ -32,9 +32,9 @@ export function useScanOperations({
   setLastToken,
   setProPurchaseModalOpen,
   setWriteOpen,
+  nfcWriter,
 }: UseScanOperationsProps) {
   const { t } = useTranslation();
-  const nfcWriter = useNfcWriter();
   const { announce } = useAnnouncer();
   const { impact, notification } = useHaptics();
   const [scanSession, setScanSession] = useState(false);

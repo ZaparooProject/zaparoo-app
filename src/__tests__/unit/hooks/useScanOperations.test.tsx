@@ -31,6 +31,14 @@ const createMockBarcode = (rawValue: string): Barcode => ({
 // Capacitor plugins (Nfc, BarcodeScanner, Haptics).
 
 describe("useScanOperations", () => {
+  const mockNfcWriter = {
+    write: vi.fn().mockResolvedValue(undefined),
+    end: vi.fn().mockResolvedValue(undefined),
+    writing: false,
+    result: null,
+    status: null,
+  };
+
   const defaultProps = {
     connected: true,
     hasData: true,
@@ -38,6 +46,7 @@ describe("useScanOperations", () => {
     setLastToken: vi.fn(),
     setProPurchaseModalOpen: vi.fn(),
     setWriteOpen: vi.fn(),
+    nfcWriter: mockNfcWriter,
   };
 
   beforeEach(() => {
