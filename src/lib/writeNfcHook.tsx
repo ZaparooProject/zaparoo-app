@@ -19,7 +19,7 @@ import { CoreAPI } from "./coreApi.ts";
 import { logger } from "./logger";
 import { NfcCancelledError, isCancellationError } from "./errors";
 
-interface WriteNfcHook {
+export interface WriteNfcHook {
   write: (action: WriteAction, text?: string) => Promise<void>;
   end: () => Promise<void>;
   writing: boolean;
