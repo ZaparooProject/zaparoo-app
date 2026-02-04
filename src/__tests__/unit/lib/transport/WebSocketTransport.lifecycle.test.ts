@@ -701,6 +701,68 @@ describe("WebSocketTransport lifecycle", () => {
 
       transport.destroy();
     });
+
+    it("should cancel pending immediate reconnect when called multiple times", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+      });
+
+      transport.connect();
+      MockWebSocket.getLatest()!.simulateOpen();
+      MockWebSocket.getLatest()!.simulateClose();
+
+      const instancesAfterClose = MockWebSocket.instances.length;
+
+      // Trigger immediate reconnect twice in quick succession
+      // This simulates both app resume and network status change firing
+      transport.immediateReconnect();
+      vi.advanceTimersByTime(100); // Advance partway through first 500ms delay
+      transport.immediateReconnect(); // Second call should cancel first timer
+
+      // Advance past first timer's original deadline (500ms from first call)
+      vi.advanceTimersByTime(400);
+
+      // Should not have created a new WebSocket yet (first timer was cancelled)
+      expect(MockWebSocket.instances.length).toBe(instancesAfterClose);
+
+      // Advance remaining time for second timer (500ms from second call, minus 400ms already advanced)
+      vi.advanceTimersByTime(100);
+
+      // Now should have created exactly one new WebSocket
+      expect(MockWebSocket.instances.length).toBe(instancesAfterClose + 1);
+
+      transport.destroy();
+    });
+
+    it("should be cancelled by pauseHeartbeat", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+      });
+
+      transport.connect();
+      MockWebSocket.getLatest()!.simulateOpen();
+      MockWebSocket.getLatest()!.simulateClose();
+
+      const instancesAfterClose = MockWebSocket.instances.length;
+
+      // Trigger immediate reconnect
+      transport.immediateReconnect();
+      vi.advanceTimersByTime(100); // Advance partway through 500ms delay
+
+      // Pause heartbeat (simulating app going to background again)
+      // This should cancel the pending immediate reconnect
+      transport.pauseHeartbeat();
+
+      // Advance past the original reconnect deadline
+      vi.advanceTimersByTime(500);
+
+      // Should not have created a new WebSocket (timer was cancelled)
+      expect(MockWebSocket.instances.length).toBe(instancesAfterClose);
+
+      transport.destroy();
+    });
   });
 
   describe("send", () => {

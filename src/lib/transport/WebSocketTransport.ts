@@ -52,6 +52,7 @@ export class WebSocketTransport implements Transport {
   private pingTimeoutId?: ReturnType<typeof setTimeout>;
   private pongTimeoutId?: ReturnType<typeof setTimeout>;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
+  private immediateReconnectTimer?: ReturnType<typeof setTimeout>;
   private connectionTimer?: ReturnType<typeof setTimeout>;
   private isDestroyed = false;
   private _hasConnectedBefore = false;
@@ -155,6 +156,13 @@ export class WebSocketTransport implements Transport {
       this.reconnectTimer = undefined;
     }
 
+    // Clear any pending immediate reconnect timer to prevent race conditions
+    // when multiple reconnection triggers fire in quick succession
+    if (this.immediateReconnectTimer) {
+      clearTimeout(this.immediateReconnectTimer);
+      this.immediateReconnectTimer = undefined;
+    }
+
     this.reconnectAttempts = 0;
     this.cleanup();
 
@@ -167,7 +175,9 @@ export class WebSocketTransport implements Transport {
     }
 
     // Brief delay to allow network stack to be ready after app resume
-    setTimeout(() => {
+    // Track this timeout so it can be cancelled by subsequent calls
+    this.immediateReconnectTimer = setTimeout(() => {
+      this.immediateReconnectTimer = undefined;
       if (this.isDestroyed) return;
       this.connect();
     }, 500);
@@ -177,6 +187,12 @@ export class WebSocketTransport implements Transport {
     logger.debug(`[Transport:${this.deviceId}] Pausing heartbeat`);
     this.heartbeatPaused = true;
     this.heartReset();
+
+    // Cancel any pending immediate reconnect to prevent connections opening in background
+    if (this.immediateReconnectTimer) {
+      clearTimeout(this.immediateReconnectTimer);
+      this.immediateReconnectTimer = undefined;
+    }
   }
 
   resumeHeartbeat(): void {
@@ -428,6 +444,11 @@ export class WebSocketTransport implements Transport {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = undefined;
+    }
+
+    if (this.immediateReconnectTimer) {
+      clearTimeout(this.immediateReconnectTimer);
+      this.immediateReconnectTimer = undefined;
     }
 
     if (this.ws) {
