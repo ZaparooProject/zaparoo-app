@@ -255,7 +255,19 @@ export default function App() {
             const { customerInfo } = await Purchases.logIn({
               appUserID: change.user.uid,
             });
-            const hasAccess = !!customerInfo.entitlements.active.tapto_launcher;
+            let hasAccess = !!customerInfo.entitlements.active?.tapto_launcher;
+
+            // Restore purchases to transfer any orphaned purchases from anonymous user
+            if (!hasAccess) {
+              try {
+                await Purchases.restorePurchases();
+                const restored = await Purchases.getCustomerInfo();
+                hasAccess =
+                  !!restored.customerInfo.entitlements.active?.tapto_launcher;
+              } catch (e) {
+                logger.warn("Auto-restore after login failed:", e);
+              }
+            }
             setLauncherAccess(hasAccess);
 
             // Also check API premium status (online subscription)
@@ -275,7 +287,8 @@ export default function App() {
             // Revert to anonymous RevenueCat customer
             await Purchases.logOut();
             const { customerInfo } = await Purchases.getCustomerInfo();
-            const hasAccess = !!customerInfo.entitlements.active.tapto_launcher;
+            const hasAccess =
+              !!customerInfo.entitlements.active?.tapto_launcher;
             setLauncherAccess(hasAccess);
           }
         } catch (e) {

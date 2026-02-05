@@ -458,6 +458,7 @@
         "preferRemoteWriter": "Prefer connected reader for writing",
         "restorePurchases": "Restore purchases",
         "restoreSuccess": "Purchases have been restored",
+        "restoreNotFound": "No purchases found to restore",
         "restoreFail": "Failed to restore purchases",
         "shakeToLaunch": "Shake to launch",
         "proFeature": "Pro",
