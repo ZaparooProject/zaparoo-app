@@ -155,7 +155,100 @@ describe("RestorePuchasesButton", () => {
     });
 
     const toast = await import("react-hot-toast");
-    expect(toast.default.error).toHaveBeenCalled();
+    expect(toast.default.error).toHaveBeenCalledWith(
+      "settings.app.restoreFail",
+    );
+  });
+
+  it("should show not found toast when restore succeeds but no entitlement exists", async () => {
+    const mockCustomerInfo = {
+      customerInfo: {
+        entitlements: {
+          active: {}, // No tapto_launcher entitlement
+        },
+      },
+    } as any;
+
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.restorePurchases).mockResolvedValue({} as any);
+    vi.mocked(Purchases.getCustomerInfo).mockResolvedValue(mockCustomerInfo);
+
+    render(<RestorePuchasesButton />);
+
+    const button = screen.getByRole("button", {
+      name: "settings.app.restorePurchases",
+    });
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(Purchases.restorePurchases).toHaveBeenCalled();
+      expect(Purchases.getCustomerInfo).toHaveBeenCalled();
+    });
+
+    const toast = await import("react-hot-toast");
+    expect(toast.default.error).toHaveBeenCalledWith(
+      "settings.app.restoreNotFound",
+    );
+  });
+
+  it("should handle undefined entitlements.active gracefully", async () => {
+    const mockCustomerInfo = {
+      customerInfo: {
+        entitlements: {
+          active: undefined,
+        },
+      },
+    } as any;
+
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.restorePurchases).mockResolvedValue({} as any);
+    vi.mocked(Purchases.getCustomerInfo).mockResolvedValue(mockCustomerInfo);
+
+    render(<RestorePuchasesButton />);
+
+    const button = screen.getByRole("button", {
+      name: "settings.app.restorePurchases",
+    });
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(Purchases.restorePurchases).toHaveBeenCalled();
+      expect(Purchases.getCustomerInfo).toHaveBeenCalled();
+    });
+
+    const toast = await import("react-hot-toast");
+    // Should show "not found" toast, not crash
+    expect(toast.default.error).toHaveBeenCalledWith(
+      "settings.app.restoreNotFound",
+    );
+  });
+
+  it("should handle missing entitlements object gracefully", async () => {
+    const mockCustomerInfo = {
+      customerInfo: {}, // No entitlements at all
+    } as any;
+
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.restorePurchases).mockResolvedValue({} as any);
+    vi.mocked(Purchases.getCustomerInfo).mockResolvedValue(mockCustomerInfo);
+
+    render(<RestorePuchasesButton />);
+
+    const button = screen.getByRole("button", {
+      name: "settings.app.restorePurchases",
+    });
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(Purchases.restorePurchases).toHaveBeenCalled();
+      expect(Purchases.getCustomerInfo).toHaveBeenCalled();
+    });
+
+    const toast = await import("react-hot-toast");
+    // Should show "not found" toast, not crash
+    expect(toast.default.error).toHaveBeenCalledWith(
+      "settings.app.restoreNotFound",
+    );
   });
 });
 

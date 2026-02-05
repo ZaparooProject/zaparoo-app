@@ -32,15 +32,18 @@ export const RestorePuchasesButton = () => {
           logger.log("Restore purchases - customer info:", {
             entitlements: info.customerInfo.entitlements,
             activeEntitlements: Object.keys(
-              info.customerInfo.entitlements.active || {},
+              info.customerInfo.entitlements?.active || {},
             ),
             hasTaptoLauncher:
-              !!info.customerInfo.entitlements.active?.tapto_launcher,
+              !!info.customerInfo.entitlements?.active?.tapto_launcher,
           });
-          if (info.customerInfo.entitlements.active.tapto_launcher) {
+          if (info.customerInfo.entitlements?.active?.tapto_launcher) {
             setLauncherAccess(true);
             notification("success");
             toast.success(t("settings.app.restoreSuccess"));
+          } else {
+            // No active Pro entitlement found - inform user
+            toast.error(t("settings.app.restoreNotFound"));
           }
         } catch (e) {
           logger.error("restore purchases error", e, {
@@ -162,7 +165,7 @@ export const useProPurchase = () => {
     // Fallback if not hydrated yet (shouldn't happen normally)
     Purchases.getCustomerInfo()
       .then((info) => {
-        if (info.customerInfo.entitlements.active.tapto_launcher) {
+        if (info.customerInfo.entitlements?.active?.tapto_launcher) {
           setProAccess(true);
         } else {
           setProAccess(false);
