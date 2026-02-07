@@ -799,4 +799,207 @@ describe("WebSocketTransport lifecycle", () => {
       transport.destroy();
     });
   });
+
+  describe("stale WebSocket cleanup", () => {
+    it("should null old WebSocket handlers when createWebSocket creates a new instance", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+        reconnectInterval: 100,
+      });
+
+      transport.connect();
+      const ws1 = MockWebSocket.getLatest()!;
+      ws1.simulateOpen();
+
+      // Disconnect to trigger reconnect
+      ws1.simulateClose();
+
+      // Wait for reconnect to create a new WebSocket
+      vi.advanceTimersByTime(100);
+
+      const ws2 = MockWebSocket.getLatest()!;
+      expect(ws2).not.toBe(ws1);
+
+      // Old WebSocket handlers should be nulled
+      expect(ws1.onopen).toBeNull();
+      expect(ws1.onclose).toBeNull();
+      expect(ws1.onerror).toBeNull();
+      expect(ws1.onmessage).toBeNull();
+
+      transport.destroy();
+    });
+
+    it("should not create parallel WebSockets from repeated reconnection failures", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+        reconnectInterval: 100,
+      });
+
+      transport.connect();
+      const ws1 = MockWebSocket.getLatest()!;
+      ws1.simulateOpen();
+
+      // Simulate connection drop
+      ws1.simulateClose();
+
+      // Each reconnect attempt should only create one new WebSocket
+      for (let i = 0; i < 5; i++) {
+        vi.advanceTimersByTime(100);
+        const ws = MockWebSocket.getLatest()!;
+        // Fail the connection
+        ws.simulateClose();
+      }
+
+      // initial(1) + 5 created in loop iterations = 6 total
+      // The key assertion: no parallel WebSockets from duplicate timers
+      // Each iteration should create exactly one new WebSocket
+      expect(MockWebSocket.instances.length).toBe(6);
+
+      // All old instances should have nulled handlers
+      for (let i = 0; i < MockWebSocket.instances.length - 1; i++) {
+        expect(MockWebSocket.instances[i]!.onopen).toBeNull();
+        expect(MockWebSocket.instances[i]!.onclose).toBeNull();
+      }
+
+      transport.destroy();
+    });
+  });
+
+  describe("pauseHeartbeat and reconnection", () => {
+    it("should clear reconnectTimer when pauseHeartbeat is called", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+        reconnectInterval: 2000,
+      });
+
+      transport.connect();
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+
+      // Disconnect - this schedules a reconnect timer
+      ws.simulateClose();
+      expect(transport.state).toBe("reconnecting");
+
+      const instancesAfterClose = MockWebSocket.instances.length;
+
+      // Pause heartbeat (app goes to background) - should clear reconnect timer
+      transport.pauseHeartbeat();
+
+      // Advance past the reconnect interval
+      vi.advanceTimersByTime(3000);
+
+      // No new WebSocket should have been created
+      expect(MockWebSocket.instances.length).toBe(instancesAfterClose);
+
+      transport.destroy();
+    });
+
+    it("should block scheduleReconnect when heartbeatPaused is true", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+        reconnectInterval: 100,
+      });
+
+      transport.connect();
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+
+      // Pause heartbeat first (simulating app going to background)
+      transport.pauseHeartbeat();
+
+      const instancesBeforeClose = MockWebSocket.instances.length;
+
+      // Now the WebSocket dies while paused
+      // Manually trigger onclose (simulating network drop in background)
+      ws.simulateClose();
+
+      // Advance time well past reconnect interval
+      vi.advanceTimersByTime(1000);
+
+      // No new WebSocket should have been created because heartbeat is paused
+      expect(MockWebSocket.instances.length).toBe(instancesBeforeClose);
+
+      transport.destroy();
+    });
+
+    it("should reconnect successfully after pause, WS death, and resume", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+        reconnectInterval: 100,
+      });
+
+      transport.connect();
+      const ws1 = MockWebSocket.getLatest()!;
+      ws1.simulateOpen();
+      expect(transport.state).toBe("connected");
+
+      // App goes to background
+      transport.pauseHeartbeat();
+
+      // WebSocket dies while backgrounded
+      ws1.simulateClose();
+
+      // Advance time - no reconnection should happen
+      vi.advanceTimersByTime(500);
+      const instancesWhilePaused = MockWebSocket.instances.length;
+      expect(instancesWhilePaused).toBe(1); // Still just the original
+
+      // App comes to foreground - immediateReconnect triggers
+      transport.immediateReconnect();
+
+      // Advance past the 500ms delay
+      vi.advanceTimersByTime(500);
+
+      // Should have created a new WebSocket
+      expect(MockWebSocket.instances.length).toBe(2);
+
+      // New connection succeeds
+      const ws2 = MockWebSocket.getLatest()!;
+      ws2.simulateOpen();
+      expect(transport.state).toBe("connected");
+
+      transport.destroy();
+    });
+  });
+
+  describe("pong timeout", () => {
+    it("should not create duplicate reconnections from pong timeout", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+        pingInterval: 1000,
+        pongTimeout: 500,
+        reconnectInterval: 100,
+      });
+
+      transport.connect();
+      const ws1 = MockWebSocket.getLatest()!;
+      ws1.simulateOpen();
+
+      // Trigger ping
+      vi.advanceTimersByTime(1000);
+      expect(ws1.sentMessages).toContain("ping");
+
+      // Let pong timeout fire (closes WS and triggers handleDisconnection)
+      vi.advanceTimersByTime(500);
+
+      // Old WS handlers should be nulled (closeWebSocket was called)
+      expect(ws1.onclose).toBeNull();
+      expect(ws1.onopen).toBeNull();
+
+      // Wait for reconnect
+      vi.advanceTimersByTime(100);
+
+      // Should have exactly 2 WebSocket instances (original + 1 reconnect)
+      // Not 3 (which would happen if onclose also triggered a separate reconnection)
+      expect(MockWebSocket.instances.length).toBe(2);
+
+      transport.destroy();
+    });
+  });
 });

@@ -188,7 +188,12 @@ export class WebSocketTransport implements Transport {
     this.heartbeatPaused = true;
     this.heartReset();
 
-    // Cancel any pending immediate reconnect to prevent connections opening in background
+    // Cancel any pending reconnect timers to prevent connections opening in background
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
+    }
+
     if (this.immediateReconnectTimer) {
       clearTimeout(this.immediateReconnectTimer);
       this.immediateReconnectTimer = undefined;
@@ -215,7 +220,26 @@ export class WebSocketTransport implements Transport {
     }
   }
 
+  private closeWebSocket(): void {
+    if (this.ws) {
+      this.ws.onopen = null;
+      this.ws.onclose = null;
+      this.ws.onerror = null;
+      this.ws.onmessage = null;
+      if (
+        this.ws.readyState === WebSocket.OPEN ||
+        this.ws.readyState === WebSocket.CONNECTING
+      ) {
+        this.ws.close();
+      }
+      this.ws = null;
+    }
+  }
+
   private createWebSocket(): void {
+    // Close any existing WebSocket to prevent stale handlers from corrupting state
+    this.closeWebSocket();
+
     try {
       this.ws = new WebSocket(this.config.url);
       this.setupEventHandlers();
@@ -311,6 +335,11 @@ export class WebSocketTransport implements Transport {
   }
 
   private scheduleReconnect(): void {
+    // Don't schedule reconnects while heartbeat is paused (app backgrounded)
+    if (this.heartbeatPaused) {
+      return;
+    }
+
     if (
       this.isDestroyed ||
       this.reconnectAttempts >= this.config.maxReconnectAttempts
@@ -388,10 +417,9 @@ export class WebSocketTransport implements Transport {
             logger.warn(
               `[Transport:${this.deviceId}] Pong timeout - forcing disconnect`,
             );
-            // Close the WebSocket
-            this.ws?.close();
-            // Force disconnect handling immediately, don't wait for onclose event
-            // This ensures we detect dead connections even if browser doesn't fire onclose
+            // Close and null handlers before triggering disconnect to prevent
+            // onclose from firing a duplicate handleDisconnection()
+            this.closeWebSocket();
             this.stopHeartbeat();
             this.handleDisconnection();
           }, this.config.pongTimeout);
@@ -451,19 +479,6 @@ export class WebSocketTransport implements Transport {
       this.immediateReconnectTimer = undefined;
     }
 
-    if (this.ws) {
-      this.ws.onopen = null;
-      this.ws.onclose = null;
-      this.ws.onerror = null;
-      this.ws.onmessage = null;
-
-      if (
-        this.ws.readyState === WebSocket.OPEN ||
-        this.ws.readyState === WebSocket.CONNECTING
-      ) {
-        this.ws.close();
-      }
-      this.ws = null;
-    }
+    this.closeWebSocket();
   }
 }
