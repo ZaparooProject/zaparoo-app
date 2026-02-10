@@ -255,9 +255,22 @@ describe("Settings Readers Integration", () => {
         expect(launchOnScanLabel).toBeInTheDocument();
       });
 
+      it("should disable launch on scan toggle without pro access", () => {
+        usePreferencesStore.setState({ launcherAccess: false });
+        renderComponent();
+
+        const toggle = screen.getByRole("checkbox", {
+          name: /settings.readers.launchOnScan/i,
+        });
+        expect(toggle).toBeDisabled();
+      });
+
       it("should toggle launch on scan setting", async () => {
         const user = userEvent.setup();
-        usePreferencesStore.setState({ launchOnScan: false });
+        usePreferencesStore.setState({
+          launchOnScan: false,
+          launcherAccess: true,
+        });
 
         renderComponent();
 
@@ -351,7 +364,10 @@ describe("Settings Readers Integration", () => {
 
     it("should enable shake when toggle is clicked", async () => {
       const user = userEvent.setup();
-      usePreferencesStore.setState({ shakeEnabled: false });
+      usePreferencesStore.setState({
+        shakeEnabled: false,
+        launcherAccess: true,
+      });
 
       renderComponent();
 
@@ -361,6 +377,16 @@ describe("Settings Readers Integration", () => {
       await user.click(toggle);
 
       expect(usePreferencesStore.getState().shakeEnabled).toBe(true);
+    });
+
+    it("should disable shake toggle without pro access", () => {
+      usePreferencesStore.setState({ launcherAccess: false });
+      renderComponent();
+
+      const toggle = screen.getByRole("checkbox", {
+        name: /settings.readers.shakeToLaunch/i,
+      });
+      expect(toggle).toBeDisabled();
     });
 
     it("should disable shake toggle when disconnected", () => {
