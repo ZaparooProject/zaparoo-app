@@ -315,6 +315,8 @@ function ReadersSettings() {
             }
             value={launchOnScan}
             setValue={setLaunchOnScan}
+            disabled={!launcherAccess}
+            onDisabledClick={() => setProPurchaseModalOpen(true)}
           />
         )}
 
@@ -355,7 +357,10 @@ function ReadersSettings() {
             }
             value={shakeEnabled}
             setValue={setShakeEnabled}
-            disabled={!connected}
+            disabled={!connected || !launcherAccess}
+            onDisabledClick={
+              !launcherAccess ? () => setProPurchaseModalOpen(true) : undefined
+            }
             loading={isLoading}
           />
         )}
