@@ -36,7 +36,10 @@ dist-ssr
 
 .claude/
 CLAUDE.md
+.dir-locals.el
 .opencode/
+.playwright-cli/
+.playwright-screenshots/
 
 coverage/
 
