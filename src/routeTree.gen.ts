@@ -122,8 +122,8 @@ export interface FileRoutesByFullPath {
   "/settings/online": typeof SettingsOnlineRoute;
   "/settings/playtime": typeof SettingsPlaytimeRoute;
   "/settings/readers": typeof SettingsReadersRoute;
-  "/create": typeof CreateIndexRoute;
-  "/settings": typeof SettingsIndexRoute;
+  "/create/": typeof CreateIndexRoute;
+  "/settings/": typeof SettingsIndexRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
@@ -179,8 +179,8 @@ export interface FileRouteTypes {
     | "/settings/online"
     | "/settings/playtime"
     | "/settings/readers"
-    | "/create"
-    | "/settings";
+    | "/create/"
+    | "/settings/";
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/"
@@ -250,14 +250,14 @@ declare module "@tanstack/react-router" {
     "/settings/": {
       id: "/settings/";
       path: "/settings";
-      fullPath: "/settings";
+      fullPath: "/settings/";
       preLoaderRoute: typeof SettingsIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/create/": {
       id: "/create/";
       path: "/create";
-      fullPath: "/create";
+      fullPath: "/create/";
       preLoaderRoute: typeof CreateIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };

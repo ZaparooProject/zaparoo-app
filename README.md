@@ -13,7 +13,7 @@ Zaparoo App is released under the [GPLv3 license](./LICENSE) including its paid 
 ## Dependencies
 
 - [Node.js](https://nodejs.org/)
-- [pnpm](https://pnpm.io/)
+- [npm](https://www.npmjs.com/)
 - Android Studio (if building for Android)
 - Xcode (if building for iOS)
 
@@ -21,26 +21,26 @@ This project also depends on the Capacitor plugin [Capawesome NFC](https://capaw
 
 ## Development
 
-After checking out, run `pnpm install` to install dependencies.
+After checking out, run `npm install` to install dependencies.
 
 Optionally, copy `src/firebase.json.example` to `src/firebase.json` and fill in your Firebase config to enable auth features. The app will build and run without it.
 
-| Command              | Description                                       |
-| -------------------- | ------------------------------------------------- |
-| `pnpm dev`           | Start development server                          |
-| `pnpm build`         | Production build and sync with mobile platforms   |
-| `pnpm build:web`     | Production build for web only (no Capacitor sync) |
-| `pnpm build:core`    | Build for embedding in Zaparoo Core web interface |
-| `pnpm sync`          | Sync web build with mobile platforms              |
-| `pnpm test`          | Run tests                                         |
-| `pnpm test:coverage` | Run tests with coverage report                    |
-| `pnpm lint`          | Run ESLint                                        |
-| `pnpm typecheck`     | Run TypeScript type checking                      |
+| Command                 | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `npm run dev`           | Start development server                          |
+| `npm run build`         | Production build and sync with mobile platforms   |
+| `npm run build:web`     | Production build for web only (no Capacitor sync) |
+| `npm run build:core`    | Build for embedding in Zaparoo Core web interface |
+| `npm run sync`          | Sync web build with mobile platforms              |
+| `npm run test`          | Run tests                                         |
+| `npm run test:coverage` | Run tests with coverage report                    |
+| `npm run lint`          | Run ESLint                                        |
+| `npm run typecheck`     | Run TypeScript type checking                      |
 
 To build and run on a mobile device:
 
-1. Run `pnpm build` to build the web app and sync with mobile app code.
-2. Run `pnpm cap open ios` or `pnpm cap open android` to launch the appropriate mobile app IDE.
+1. Run `npm run build` to build the web app and sync with mobile app code.
+2. Run `npm run cap open ios` or `npm run cap open android` to launch the appropriate mobile app IDE.
 
 See the Capacitor [iOS](https://capacitorjs.com/docs/ios) and [Android](https://capacitorjs.com/docs/android) documentation for information about setting up your app IDE environment correctly if you have issues.
 

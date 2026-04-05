@@ -2,5 +2,5 @@ android/
 ios/
 node_modules/
 dist/
-pnpm-lock.yaml
+package-lock.json
 src/routeTree.gen.ts

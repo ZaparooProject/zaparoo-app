@@ -6,26 +6,26 @@ Guidance for AI agents working with the Zaparoo App codebase.
 
 ### Development
 
-- `pnpm dev` - Start development server with Vite
-- `pnpm dev:server` - Start with dev server mode (requires `DEV_SERVER_IP` in `.env`)
-- `pnpm build` - TypeScript compile + Vite build + Capacitor sync (production)
-- `pnpm build:web` - Build web version only (no Capacitor sync)
-- `pnpm build:core` - Build for embedded Core mode
-- `pnpm sync` - Sync web app with mobile platforms
-- `pnpm typecheck` - TypeScript type checking
-- `pnpm lint` / `pnpm lint:fix` - ESLint checking/fixing
-- `pnpm format` / `pnpm format:check` - Prettier formatting
+- `npm run dev` - Start development server with Vite
+- `npm run dev:server` - Start with dev server mode (requires `DEV_SERVER_IP` in `.env`)
+- `npm run build` - TypeScript compile + Vite build + Capacitor sync (production)
+- `npm run build:web` - Build web version only (no Capacitor sync)
+- `npm run build:core` - Build for embedded Core mode
+- `npm run sync` - Sync web app with mobile platforms
+- `npm run typecheck` - TypeScript type checking
+- `npm run lint` / `npm run lint:fix` - ESLint checking/fixing
+- `npm run format` / `npm run format:check` - Prettier formatting
 - `npx cap open ios` / `npx cap open android` - Open native projects
 
 ### Testing
 
-- `pnpm test` - Run Vitest tests
-- `pnpm test:coverage` - Run tests with coverage report
-- `pnpm test:ui` - Run tests with Vitest UI
+- `npm run test` - Run Vitest tests
+- `npm run test:coverage` - Run tests with coverage report
+- `npm run test:ui` - Run tests with Vitest UI
 
 ### Live Updates
 
-- `pnpm live-update` - Build and push signed live update (requires `live-update-private.pem`)
+- `npm run live-update` - Build and push signed live update (requires `live-update-private.pem`)
 
 ---
 
@@ -372,10 +372,10 @@ try {
 
 ### When to Use
 
-| Change Type                                                   | Method                           |
-| ------------------------------------------------------------- | -------------------------------- |
-| UI/JS fixes, translations, new features with existing plugins | Live Update (`pnpm live-update`) |
-| New plugins, native code, new permissions, Capacitor upgrades | Store Release (push git tag)     |
+| Change Type                                                   | Method                              |
+| ------------------------------------------------------------- | ----------------------------------- |
+| UI/JS fixes, translations, new features with existing plugins | Live Update (`npm run live-update`) |
+| New plugins, native code, new permissions, Capacitor upgrades | Store Release (push git tag)        |
 
 ### Version Bumping (Required for Store Releases)
 
@@ -389,7 +389,7 @@ Before creating a store release, **all three locations must be updated**:
 
 ### Process
 
-- **Live Update:** `pnpm live-update` builds, signs, and uploads bundle
+- **Live Update:** `npm run live-update` builds, signs, and uploads bundle
 - **Store Build:** Push git tag (e.g., `v1.9.2`) triggers Capawesome Cloud build
 - **Rollback:** App auto-rolls back if crash before `ready()` called
 
