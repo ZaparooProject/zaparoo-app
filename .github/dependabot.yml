@@ -1,9 +1,17 @@
 version: 2
+registries:
+  capawesome-github-packages:
+    type: npm-registry
+    url: https://npm.pkg.github.com
+    token: ${{ secrets.NPM_TOKEN }}
+    replaces-base: false
 updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
+    registries:
+      - capawesome-github-packages
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
