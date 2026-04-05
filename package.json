@@ -38,7 +38,7 @@
     "@capacitor/haptics": "^7.0.2",
     "@capacitor/ios": "^7.4.4",
     "@capacitor/network": "^7.0.3",
-    "@capacitor/preferences": "^7.0.2",
+    "@capacitor/preferences": "^8.0.1",
     "@capacitor/screen-reader": "^7.0.2",
     "@capacitor/share": "^7.0.2",
     "@capacitor/status-bar": "^7.0.3",
