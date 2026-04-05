@@ -25,7 +25,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@capacitor-community/keep-awake": "^7.1.0",
+    "@capacitor-community/keep-awake": "^8.0.0",
     "@capacitor-firebase/authentication": "^7.4.0",
     "@capacitor-mlkit/barcode-scanning": "^7.4.0",
     "@capacitor/android": "^7.4.4",
