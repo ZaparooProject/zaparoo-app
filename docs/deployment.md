@@ -39,19 +39,19 @@ If a bad update crashes the app before `ready()` is called, the plugin automatic
 ### Pushing a Live Update
 
 ```bash
-pnpm live-update
+npm run live-update
 ```
 
 This command:
 
-1. Builds the web assets (`pnpm build:web`)
+1. Builds the web assets (`npm run build:web`)
 2. Signs the bundle with `live-update-private.pem`
 3. Uploads to Capawesome Cloud
 
 ### Listing Deployed Updates
 
 ```bash
-pnpm live-update:list
+npm run live-update:list
 ```
 
 ---
@@ -101,7 +101,7 @@ The app uses Capawesome Cloud for building iOS and Android binaries.
 ### Configuration Files
 
 - `capawesome.config.json` - Build commands and app configuration
-- `.npmrc` - GitHub Packages auth for `@capawesome-team/capacitor-nfc`
+- `capawesome.config.json` — Build commands (injects GitHub Packages auth via `NPM_TOKEN`)
 
 ### Build Process
 
@@ -147,8 +147,8 @@ const apiKey = import.meta.env.VITE_APPLE_STORE_API;
 ### Development Builds
 
 ```bash
-pnpm build:server  # Build with dev server URL enabled
-pnpm dev:server    # Start dev server mode
+npm run build:server  # Build with dev server URL enabled
+npm run dev:server    # Start dev server mode
 ```
 
 Requires `DEV_SERVER_IP` in `.env` file.
@@ -156,15 +156,15 @@ Requires `DEV_SERVER_IP` in `.env` file.
 ### Production Builds
 
 ```bash
-pnpm build        # Full production build with Capacitor sync
-pnpm build:web    # Web assets only (no Capacitor sync)
-pnpm build:core   # Build for embedded Core mode
+npm run build        # Full production build with Capacitor sync
+npm run build:web    # Web assets only (no Capacitor sync)
+npm run build:core   # Build for embedded Core mode
 ```
 
 ### Syncing with Native Projects
 
 ```bash
-pnpm sync         # Sync web app with mobile platforms
+npm run sync         # Sync web app with mobile platforms
 npx cap open ios  # Open iOS project in Xcode
 npx cap open android  # Open Android project in Android Studio
 ```

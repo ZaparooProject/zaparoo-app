@@ -93,27 +93,13 @@ export default defineConfig(({ command, mode }) => {
               return;
             }
 
-            // Extract the package name from the path (handles pnpm's .pnpm structure)
-            // e.g., "node_modules/.pnpm/firebase@11.0.0/node_modules/firebase/..." -> "firebase"
+            // Extract the package name from the path
             // e.g., "node_modules/react/..." -> "react"
-            let packageName: string;
-            if (id.includes("node_modules/.pnpm/")) {
-              // pnpm structure: get the package name after .pnpm/
-              const pnpmPart = id.split("node_modules/.pnpm/")[1];
-              // Handle scoped packages: @scope+package@version -> @scope/package
-              const nameWithVersion = pnpmPart.split("/")[0];
-              // Remove version suffix (@x.x.x)
-              packageName = nameWithVersion
-                .replace(/@[\d.]+.*$/, "")
-                .replace(/\+/g, "/");
-            } else {
-              // Standard node_modules structure
-              const parts = id.split("node_modules/")[1].split("/");
-              // Handle scoped packages (@org/package)
-              packageName = parts[0].startsWith("@")
-                ? `${parts[0]}/${parts[1]}`
-                : parts[0];
-            }
+            // e.g., "node_modules/@scope/package/..." -> "@scope/package"
+            const parts = id.split("node_modules/").pop()!.split("/");
+            const packageName = parts[0].startsWith("@")
+              ? `${parts[0]}/${parts[1]}`
+              : parts[0];
 
             // Group large, stable packages into their own chunks
             if (

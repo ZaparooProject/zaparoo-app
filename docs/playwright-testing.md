@@ -6,7 +6,7 @@ Guide for using `playwright-cli` to do LLM-driven exploratory testing of the Zap
 
 ### Prerequisites
 
-- Dev server running: `pnpm dev` (serves on `http://localhost:8100`)
+- Dev server running: `npm run dev` (serves on `http://localhost:8100`)
 - A Zaparoo Core device accessible on the network (e.g. `10.0.0.107`)
 
 ### Opening a Browser Session
