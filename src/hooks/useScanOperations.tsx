@@ -135,7 +135,7 @@ export function useScanOperations({
         }
 
         const barcode = res.barcodes[0];
-        if (!barcode) return;
+        if (!barcode?.rawValue) return;
 
         // Heavy haptic feedback to confirm barcode was scanned
         impact("heavy");
