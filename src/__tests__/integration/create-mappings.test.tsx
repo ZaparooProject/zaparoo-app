@@ -757,6 +757,30 @@ describe("Create Mappings Route", () => {
       });
     });
 
+    it("should not update fields when barcode has undefined rawValue", async () => {
+      // @capacitor-mlkit/barcode-scanning v8 made Barcode.rawValue optional.
+      mockBarcodeScan.mockResolvedValue({
+        barcodes: [{ displayValue: "ignored" }],
+      });
+
+      const user = userEvent.setup();
+      renderComponent();
+
+      const tokenInput = screen.getByRole("textbox", {
+        name: /create\.mappings\.tokenId/i,
+      });
+      await user.type(tokenInput, "EXISTING");
+
+      await user.click(
+        screen.getByRole("button", { name: /scan\.cameraMode/i }),
+      );
+
+      // Token ID should remain unchanged
+      await waitFor(() => {
+        expect(tokenInput).toHaveValue("EXISTING");
+      });
+    });
+
     it("should silently handle user cancellation", async () => {
       // Simulate user cancelling the scanner
       mockBarcodeScan.mockRejectedValue(new BarcodeScanCancelledError());
