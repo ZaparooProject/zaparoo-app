@@ -647,5 +647,27 @@ describe("useScanOperations", () => {
       // Assert - Should handle gracefully
       expect(setLastToken).not.toHaveBeenCalled();
     });
+
+    it("should ignore barcode with undefined rawValue", async () => {
+      // Arrange - Barcode object exists but rawValue is missing.
+      // @capacitor-mlkit/barcode-scanning v8 made Barcode.rawValue optional.
+      vi.mocked(BarcodeScanner.scan).mockResolvedValue({
+        barcodes: [{ displayValue: "ignored" } as Barcode],
+      });
+      const setWriteOpen = vi.fn();
+      const setLastToken = vi.fn();
+      const { result } = renderHook(() =>
+        useScanOperations({ ...defaultProps, setWriteOpen, setLastToken }),
+      );
+
+      // Act
+      await act(async () => {
+        await result.current.handleCameraScan();
+      });
+
+      // Assert - Should handle gracefully without launching or opening write modal
+      expect(setLastToken).not.toHaveBeenCalled();
+      expect(setWriteOpen).not.toHaveBeenCalled();
+    });
   });
 });

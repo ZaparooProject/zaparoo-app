@@ -20,6 +20,7 @@ export default defineConfig(
     "coverage/**",
     "android/**",
     "ios/**",
+    ".claude/worktrees/**",
     "*.config.{js,ts}",
     "vite.config.ts",
     "vitest.config.ts",

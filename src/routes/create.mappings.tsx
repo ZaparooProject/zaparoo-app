@@ -178,7 +178,7 @@ function Mappings() {
                       return;
                     }
                     const barcode = res.barcodes[0];
-                    if (!barcode) return;
+                    if (!barcode?.rawValue) return;
                     setTokenId(barcode.rawValue);
                     const existing = mappingExists(
                       mappings.data?.mappings,
