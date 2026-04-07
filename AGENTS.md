@@ -34,7 +34,7 @@ Guidance for AI agents working with the Zaparoo App codebase.
 ### Tech Stack
 
 - **Frontend**: React 19 + TypeScript + Vite
-- **Mobile**: Capacitor 7 (cross-platform iOS/Android)
+- **Mobile**: Capacitor 8 (cross-platform iOS/Android)
 - **Routing**: TanStack Router with file-based routing
 - **State**: Zustand (`src/lib/store.ts`, `src/lib/preferencesStore.ts`)
 - **Styling**: TailwindCSS 4 with custom CSS variables

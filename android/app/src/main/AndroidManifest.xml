@@ -8,7 +8,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
@@ -64,8 +64,6 @@
 
     <!-- To get access to the NFC hardware. -->
     <uses-permission android:name="android.permission.NFC" />
-    <!-- The minimum SDK version that your application can support. -->
-    <uses-sdk android:minSdkVersion="10" />
     <!-- NFC is optional - app can function without it using remote reader. -->
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
 
