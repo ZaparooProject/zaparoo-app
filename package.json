@@ -89,7 +89,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.3.0",
-    "@capawesome/cli": "^4.0.1",
+    "@capawesome/cli": "^4.8.0",
     "@eslint/js": "^9.39.1",
     "@faker-js/faker": "^10.1.0",
     "@tanstack/eslint-plugin-query": "^5.91.2",
