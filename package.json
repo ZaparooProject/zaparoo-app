@@ -79,7 +79,7 @@
     "react-swipeable": "^7.0.2",
     "regenerator-runtime": "0.14.1",
     "rollbar": "^2.26.5",
-    "shepherd.js": "^14.5.1",
+    "shepherd.js": "^15.2.2",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "use-debounce": "^10.0.6",
