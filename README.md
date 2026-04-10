@@ -2,13 +2,14 @@
 
 [![Tests](https://github.com/ZaparooProject/zaparoo-app/actions/workflows/test.yml/badge.svg)](https://github.com/ZaparooProject/zaparoo-app/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/ZaparooProject/zaparoo-app/graph/badge.svg)](https://codecov.io/gh/ZaparooProject/zaparoo-app)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Privacy Policy](https://img.shields.io/badge/Privacy_Policy-zaparoo.org-green.svg)](https://zaparoo.org/app-privacy/)
 
-Zaparoo App is the primary user interface for the [Zaparoo Core](https://github.com/ZaparooProject/zaparoo-core) service. It's a React web app built on Capacitor, which is deployed as a phone app on iOS/Android and embedded in Zaparoo Core as a web interface.
+Zaparoo App is the primary user interface for the [Zaparoo Core](https://github.com/ZaparooProject/zaparoo-core) service. It's a React/TypeScript web app built on Capacitor, which is deployed as a phone app on iOS/Android and embedded in Zaparoo Core as a web interface.
 
 <a href="https://apps.apple.com/us/app/zaparoo/id6480331015"><img src="assets/app-store-badge.png" alt="Download iOS App" title="Download iOS App" height="40"></a>&nbsp;&nbsp;<a href="https://play.google.com/store/apps/details?id=dev.wizzo.tapto"><img src="assets/google-play-badge.png" alt="Download Android App" title="Download Android App" height="40"></a>
 
-Zaparoo App is released under the [GPLv3 license](./LICENSE) including its paid features. You're free to do with it what you like under the conditions of the license and trademarks, but we ask in good faith to avoid redistributing the built app with these paid features enabled, as they're used to support development of the project.
+Zaparoo App is released under the [Apache 2.0 license](./LICENSE) including its paid features. You're free to do with it what you like under the conditions of the license and trademarks, but we ask in good faith to avoid redistributing the built app with these paid features enabled, as they're used to support development of the project.
 
 ## Dependencies
 
@@ -17,7 +18,7 @@ Zaparoo App is released under the [GPLv3 license](./LICENSE) including its paid 
 - Android Studio (if building for Android)
 - Xcode (if building for iOS)
 
-This project also depends on the Capacitor plugin [Capawesome NFC](https://capawesome.io/plugins/nfc/) which requires a license. Please contact [wizzo](https://github.com/wizzomafizzo) for a development copy of this plugin or remove it from the code after checking out.
+This project also depends on the Capacitor plugin [Capawesome NFC](https://capawesome.io/plugins/nfc/) which requires a license. Please contact [wizzo](https://github.com/wizzomafizzo) for a development copy of this plugin. The app will compile and run without it. NFC features are automatically disabled at runtime if the plugin is not present.
 
 ## Development
 
@@ -52,18 +53,13 @@ When you make additions or changes to any text in the app, be mindful those chan
 
 ### Pro Features
 
-When you contribute to the app, you accept that the app contains some paid features (Pro features) which may include your own contributions if they overlap in functionality. If this is the case, you agree that payments to enable the Pro version will still go to the Zaparoo Project even if they include your own work. You will be notified during the Pull Request process if this may be the case.
+When you contribute to the app, you accept that the app contains some paid features (Pro features) which may include your own contributions if they overlap in functionality. If this is the case, you agree that payments to enable the Pro version will still go to Wizzo Pty Ltd even if they include your own work. You will be notified during the Pull Request process if this may be the case.
 
-If you're not comfortable with this arrangement or would like to avoid overlap, Pro features are strictly defined as:
-
-- Any feature that enables the app to act as a reader. That is, any feature which triggers the `run` Zaparoo API command namespace, excluding those which are used to preview the result of a command.
-- Cosmetic features such as app icons and themes.
-
-All other features of the Zaparoo App are free.
+Pro features are strictly defined as any feature that enables the app to act as a reader using phone hardware sensors. All other features of the Zaparoo App are free.
 
 ## Contributors
 
-All contributors to the app will be included here and in the About page of the app itself. Contributors may also request a license key for the Pro version.
+All contributors to the app will be included here and in the About page of the app itself. Contributors may also request a license for the Pro version.
 
 - [Tim Wilsie](https://github.com/timwilsie)
 - [wizzo](https://github.com/wizzomafizzo)
