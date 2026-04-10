@@ -2,13 +2,13 @@
 
 [![Tests](https://github.com/ZaparooProject/zaparoo-app/actions/workflows/test.yml/badge.svg)](https://github.com/ZaparooProject/zaparoo-app/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/ZaparooProject/zaparoo-app/graph/badge.svg)](https://codecov.io/gh/ZaparooProject/zaparoo-app)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Zaparoo App is the primary user interface for the [Zaparoo Core](https://github.com/ZaparooProject/zaparoo-core) service. It's a React web app built on Capacitor, which is deployed as a phone app on iOS/Android and embedded in Zaparoo Core as a web interface.
 
 <a href="https://apps.apple.com/us/app/zaparoo/id6480331015"><img src="assets/app-store-badge.png" alt="Download iOS App" title="Download iOS App" height="40"></a>&nbsp;&nbsp;<a href="https://play.google.com/store/apps/details?id=dev.wizzo.tapto"><img src="assets/google-play-badge.png" alt="Download Android App" title="Download Android App" height="40"></a>
 
-Zaparoo App is released under the [GPLv3 license](./LICENSE) including its paid features. You're free to do with it what you like under the conditions of the license and trademarks, but we ask in good faith to avoid redistributing the built app with these paid features enabled, as they're used to support development of the project.
+Zaparoo App is released under the [Apache 2.0 license](./LICENSE) including its paid features. You're free to do with it what you like under the conditions of the license and trademarks, but we ask in good faith to avoid redistributing the built app with these paid features enabled, as they're used to support development of the project.
 
 ## Dependencies
 
