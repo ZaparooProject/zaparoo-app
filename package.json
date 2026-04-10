@@ -76,7 +76,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hot-toast": "^2.6.0",
-    "react-i18next": "^16.3.5",
+    "react-i18next": "^17.0.2",
     "react-swipeable": "^7.0.2",
     "regenerator-runtime": "0.14.1",
     "rollbar": "^3.1.0",
