@@ -37,14 +37,6 @@ export default defineConfig({
     testTimeout: 10000,
     hookTimeout: 10000,
 
-    deps: {
-      optimizer: {
-        client: {
-          enabled: true,
-        },
-      },
-    },
-
     css: false,
 
     coverage: {

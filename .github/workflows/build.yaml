@@ -12,6 +12,9 @@ on:
     tags:
       - "v*.*.*"
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: true
@@ -20,12 +23,16 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: 20
           cache: "npm"
@@ -35,10 +42,10 @@ jobs:
         run: echo '${{ secrets.FIREBASE_CREDS }}' > ./src/firebase.json
       - name: Write release version
         run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          echo Version: $VERSION
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "VITE_VERSION=$VERSION" >> $GITHUB_ENV
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Version: $VERSION"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "VITE_VERSION=$VERSION" >> "$GITHUB_ENV"
       - name: Install dependencies
         run: npm ci
       - name: Production build
@@ -54,15 +61,31 @@ jobs:
       - name: Package release tarballs
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          tar czvf zaparoo_app-web-${VERSION}.tar.gz -C ./dist .
-          tar czvf zaparoo_app-web-core-${VERSION}.tar.gz -C ./dist-core .
+          tar czvf "zaparoo_app-web-${VERSION}.tar.gz" -C ./dist .
+          tar czvf "zaparoo_app-web-core-${VERSION}.tar.gz" -C ./dist-core .
+      - name: Generate SBOM
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          format: spdx-json
+          output-file: sbom.spdx.json
+      - name: Attest build provenance
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
+        with:
+          subject-path: 'zaparoo_app-web-*.tar.gz'
+      - name: Attest SBOM
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
+        with:
+          subject-path: 'zaparoo_app-web-*.tar.gz'
+          sbom-path: sbom.spdx.json
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: zaparoo_app-web-*.tar.gz
+          files: |
+            zaparoo_app-web-*.tar.gz
+            sbom.spdx.json
           fail_on_unmatched_files: true
           make_latest: false
-
-permissions:
-  contents: write
