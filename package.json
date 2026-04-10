@@ -61,7 +61,7 @@
     "@tanstack/react-router": "^1.139.12",
     "@tanstack/react-virtual": "^3.13.12",
     "@uidotdev/usehooks": "^2.4.1",
-    "axios": "^1.13.2",
+    "axios": "^1.15.0",
     "capacitor-plugin-safe-area": "^5.0.0",
     "capacitor-zeroconf": "^4.0.0",
     "class-variance-authority": "^0.7.1",
