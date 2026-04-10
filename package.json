@@ -1,6 +1,7 @@
 {
   "name": "zaparoo-app",
   "private": true,
+  "license": "Apache-2.0",
   "version": "1.10.2",
   "type": "module",
   "scripts": {
