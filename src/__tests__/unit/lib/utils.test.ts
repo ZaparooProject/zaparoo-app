@@ -1,10 +1,58 @@
 import { describe, it, expect, vi } from "vitest";
 import {
+  compareStrings,
   parseDuration,
   formatDuration,
   formatDurationDisplay,
   formatDurationAccessible,
 } from "@/lib/utils";
+
+describe("compareStrings", () => {
+  it("should sort defined strings correctly", () => {
+    expect(compareStrings("a", "b")).toBeLessThan(0);
+    expect(compareStrings("b", "a")).toBeGreaterThan(0);
+    expect(compareStrings("a", "a")).toBe(0);
+  });
+
+  it("should treat undefined first argument as empty string", () => {
+    expect(compareStrings(undefined, "a")).toBeLessThan(0);
+  });
+
+  it("should treat undefined second argument as empty string", () => {
+    expect(compareStrings("a", undefined)).toBeGreaterThan(0);
+  });
+
+  it("should treat null as empty string", () => {
+    expect(compareStrings(null, "a")).toBeLessThan(0);
+    expect(compareStrings("a", null)).toBeGreaterThan(0);
+  });
+
+  it("should return 0 when both are undefined", () => {
+    expect(compareStrings(undefined, undefined)).toBe(0);
+  });
+
+  it("should return 0 when both are null", () => {
+    expect(compareStrings(null, null)).toBe(0);
+  });
+
+  it("should return 0 for mixed null and undefined", () => {
+    expect(compareStrings(null, undefined)).toBe(0);
+    expect(compareStrings(undefined, null)).toBe(0);
+  });
+
+  it("should return 0 for empty string vs undefined", () => {
+    expect(compareStrings("", undefined)).toBe(0);
+    expect(compareStrings(undefined, "")).toBe(0);
+  });
+
+  it("should not throw for any combination of null, undefined, string", () => {
+    expect(() => compareStrings(undefined, undefined)).not.toThrow();
+    expect(() => compareStrings(null, null)).not.toThrow();
+    expect(() => compareStrings(undefined, null)).not.toThrow();
+    expect(() => compareStrings(undefined, "x")).not.toThrow();
+    expect(() => compareStrings("x", undefined)).not.toThrow();
+  });
+});
 
 describe("parseDuration", () => {
   it("returns zero for empty or zero input", () => {

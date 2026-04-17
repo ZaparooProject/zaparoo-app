@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
+import { compareStrings } from "@/lib/utils";
 import { useStatusStore } from "@/lib/store";
 
 interface SimpleSystemSelectProps {
@@ -48,10 +49,10 @@ export function SimpleSystemSelect({
 
   // Sort categories alphabetically and systems within each category
   const sortedCategories = Object.entries(groupedSystems)
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => compareStrings(a, b))
     .map(([category, systems]) => ({
       category,
-      systems: systems.sort((a, b) => a.name.localeCompare(b.name)),
+      systems: systems.sort((a, b) => compareStrings(a.name, b.name)),
     }));
 
   const handleChange = (e: { target: { value: string } }) => {

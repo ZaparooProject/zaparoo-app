@@ -14,6 +14,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, waitFor, act } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
+import { useQuery } from "@tanstack/react-query";
 import { useStatusStore } from "@/lib/store";
 import {
   SystemSelector,
@@ -209,6 +210,35 @@ describe("SystemSelector", () => {
       expect(
         screen.queryByRole("radio", { name: "Sega Genesis" }),
       ).not.toBeInTheDocument();
+    });
+
+    it("should sort multiple non-priority categories alphabetically after priority ones", () => {
+      // Arrange - override query to include two extra non-priority categories
+      vi.mocked(useQuery).mockReturnValueOnce({
+        data: {
+          systems: [
+            ...mockSystems,
+            { id: "dos", name: "DOS Games", category: "PC" },
+            { id: "arcade", name: "Street Fighter II", category: "Arcade" },
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useQuery>);
+
+      // Act
+      render(<SystemSelector {...defaultProps} />);
+
+      // Assert - "Arcade" and "PC" (non-priority) should appear in alphabetical order
+      const tabs = screen.getAllByRole("tab");
+      const tabNames = tabs.map((tab) => tab.textContent ?? "");
+      const arcadeIndex = tabNames.findIndex((n) => n.includes("Arcade"));
+      const pcIndex = tabNames.findIndex((n) => n.includes("PC"));
+
+      expect(arcadeIndex).toBeGreaterThan(0);
+      expect(pcIndex).toBeGreaterThan(0);
+      expect(arcadeIndex).toBeLessThan(pcIndex); // "Arcade" < "PC" alphabetically
     });
 
     it("should prioritize Nintendo, Sony, Sega, Atari categories", () => {

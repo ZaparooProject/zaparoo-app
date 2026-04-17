@@ -172,6 +172,39 @@ describe("TagSelector", () => {
       });
     });
 
+    it("should sort multiple non-priority types alphabetically after priority ones", async () => {
+      // Arrange - two non-priority types ("zone" > "arcade" alphabetically)
+      vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
+        tags: [
+          { tag: "Action", type: "genre" },
+          { tag: "1990", type: "year" },
+          { tag: "Zebra Tag", type: "zone" },
+          { tag: "Alpha Tag", type: "arcade" },
+        ],
+      });
+
+      // Act
+      render(<TagSelector {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /tagSelector\.type\.genre/i }),
+        ).toBeInTheDocument();
+      });
+
+      // Assert - "arcade" should appear before "zone" (alphabetical among non-priority types)
+      const triggers = screen.getAllByRole("button", {
+        name: /tagSelector\.type\./i,
+      });
+      const typeNames = triggers.map((t) => t.textContent ?? "");
+      const arcadeIndex = typeNames.findIndex((n) => n.includes("arcade"));
+      const zoneIndex = typeNames.findIndex((n) => n.includes("zone"));
+
+      expect(arcadeIndex).toBeGreaterThan(-1);
+      expect(zoneIndex).toBeGreaterThan(-1);
+      expect(arcadeIndex).toBeLessThan(zoneIndex); // "arcade" < "zone" alphabetically
+    });
+
     it("should sort types with priority (genre, year, series, publisher first)", async () => {
       // Arrange
       vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
