@@ -28,6 +28,7 @@ import {
   updateRequirements,
   deleteAccount,
   cancelAccountDeletion,
+  NotSignedInError,
 } from "@/lib/onlineApi";
 import {
   Dialog,
@@ -389,6 +390,12 @@ function OnlinePage() {
       setConfirmText("");
       toast.success(t("online.deleteAccountScheduled"));
     } catch (e) {
+      if (e instanceof NotSignedInError) {
+        setDeleteModalOpen(false);
+        setConfirmText("");
+        toast.error(t("online.notSignedInError"));
+        return;
+      }
       const error = e as AxiosError<{ error?: { code?: string } }>;
       const code = error.response?.data?.error?.code;
 
@@ -418,6 +425,10 @@ function OnlinePage() {
       setScheduledDeletion(null);
       toast.success(t("online.deletionCancelled"));
     } catch (e) {
+      if (e instanceof NotSignedInError) {
+        toast.error(t("online.notSignedInError"));
+        return;
+      }
       logger.error("Cancel deletion failed:", e, {
         category: "api",
         action: "cancelAccountDeletion",

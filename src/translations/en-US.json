@@ -313,6 +313,7 @@
       "deletionAlreadyScheduled": "Account deletion is already scheduled",
       "deleteAccountScheduled": "Account deletion scheduled",
       "deleteAccountFailed": "Failed to delete account",
+      "notSignedInError": "You're no longer signed in. Please sign in again.",
       "deletionScheduledTitle": "Account deletion scheduled",
       "deletionScheduledMessage": "Your account will be deleted on {{date}}",
       "cancelDeletion": "Cancel deletion",
