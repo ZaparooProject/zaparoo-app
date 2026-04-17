@@ -3,6 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { logger } from "@/lib/logger";
+import { purchasesReady } from "@/lib/purchasesSetup";
 
 /**
  * Hook to check Pro access status from RevenueCat on app startup.
@@ -25,8 +26,9 @@ export function useProAccessCheck() {
       return;
     }
 
-    // Check customer info from RevenueCat
-    Purchases.getCustomerInfo()
+    // Wait for Purchases.configure() to complete before querying customer info
+    purchasesReady
+      .then(() => Purchases.getCustomerInfo())
       .then((info) => {
         // Use optional chaining for safe access to nested entitlements
         const hasProAccess =

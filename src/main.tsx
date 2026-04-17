@@ -11,6 +11,7 @@ import App from "./App";
 import { ThemeProvider } from "./components/theme-provider";
 import { ErrorComponent } from "./components/ErrorComponent";
 import { logger } from "./lib/logger";
+import { resolvePurchasesReady } from "./lib/purchasesSetup";
 
 // Firebase config is optional - auth features will be disabled without it
 const firebaseConfigs = import.meta.glob<Record<string, string>>(
@@ -51,14 +52,32 @@ const onDeviceReady = async () => {
     });
   }
 
-  if (Capacitor.getPlatform() === "ios") {
-    await Purchases.configure({ apiKey: import.meta.env.VITE_APPLE_STORE_API });
-  } else if (Capacitor.getPlatform() === "android") {
-    await Purchases.configure({
-      apiKey: import.meta.env.VITE_GOOGLE_STORE_API,
+  try {
+    if (Capacitor.getPlatform() === "ios") {
+      await Purchases.configure({
+        apiKey: import.meta.env.VITE_APPLE_STORE_API,
+      });
+    } else if (Capacitor.getPlatform() === "android") {
+      await Purchases.configure({
+        apiKey: import.meta.env.VITE_GOOGLE_STORE_API,
+      });
+    }
+  } catch (e) {
+    logger.error("Purchases configure failed:", e, {
+      category: "purchase",
+      action: "configure",
+      severity: "error",
     });
+  } finally {
+    resolvePurchasesReady();
   }
 };
+
+// Web platform skips RC entirely — resolve immediately so awaits don't hang
+if (!Capacitor.isNativePlatform()) {
+  resolvePurchasesReady();
+}
+
 document.addEventListener("deviceready", onDeviceReady, false);
 
 // App content wrapped in theme and query providers

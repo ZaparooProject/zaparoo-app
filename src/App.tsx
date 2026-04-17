@@ -30,6 +30,7 @@ import { usePassiveNfcListener } from "./hooks/usePassiveNfcListener";
 import { useLiveUpdate } from "./hooks/useLiveUpdate";
 import { initDeviceInfo, logger } from "./lib/logger";
 import { getSubscriptionStatus } from "./lib/onlineApi";
+import { purchasesReady } from "./lib/purchasesSetup";
 import {
   A11yAnnouncerProvider,
   useAnnouncer,
@@ -249,6 +250,7 @@ export default function App() {
 
       // Sync RevenueCat identity with Firebase user (skip on web)
       if (Capacitor.getPlatform() !== "web") {
+        await purchasesReady;
         try {
           if (change.user) {
             // Link RevenueCat to Firebase user - transfers anonymous purchases
@@ -284,8 +286,11 @@ export default function App() {
               });
             }
           } else {
-            // Revert to anonymous RevenueCat customer
-            await Purchases.logOut();
+            // Revert to anonymous RevenueCat customer — only if not already anonymous
+            const { isAnonymous } = await Purchases.isAnonymous();
+            if (!isAnonymous) {
+              await Purchases.logOut();
+            }
             const { customerInfo } = await Purchases.getCustomerInfo();
             const hasAccess =
               !!customerInfo.entitlements.active?.tapto_launcher;

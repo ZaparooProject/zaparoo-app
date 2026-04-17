@@ -65,6 +65,7 @@ vi.mock("@capacitor-firebase/authentication", () => ({
 vi.mock("@revenuecat/purchases-capacitor", () => ({
   Purchases: {
     logOut: () => mockPurchasesLogOut(),
+    isAnonymous: vi.fn().mockResolvedValue({ isAnonymous: false }),
   },
 }));
 
@@ -358,6 +359,30 @@ describe("Settings Online Route", () => {
         expect(mockPurchasesLogOut).toHaveBeenCalled();
         expect(mockFirebaseAuth.signOut).toHaveBeenCalled();
       });
+
+      expect(mockPurchasesLogOut.mock.invocationCallOrder[0]!).toBeLessThan(
+        mockFirebaseAuth.signOut.mock.invocationCallOrder[0]!,
+      );
+    });
+
+    it("should not call Purchases.logOut when RC user is already anonymous on native platform", async () => {
+      const user = userEvent.setup();
+      mockState.platform = "ios";
+
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+      vi.mocked(Purchases.isAnonymous).mockResolvedValueOnce({
+        isAnonymous: true,
+      });
+
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "online.logout" }));
+
+      await waitFor(() => {
+        expect(mockFirebaseAuth.signOut).toHaveBeenCalled();
+      });
+
+      expect(mockPurchasesLogOut).not.toHaveBeenCalled();
     });
 
     it("should skip RevenueCat logout on web platform", async () => {

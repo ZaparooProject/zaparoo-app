@@ -197,6 +197,7 @@ vi.mock("@/hooks/useWriteQueueProcessor", () => ({
 }));
 vi.mock("@/hooks/useShakeDetection", () => ({ useShakeDetection: vi.fn() }));
 vi.mock("@/lib/logger", () => ({ initDeviceInfo: vi.fn() }));
+vi.mock("@/lib/purchasesSetup", () => ({ purchasesReady: Promise.resolve() }));
 
 describe("App Integration", () => {
   beforeEach(() => {
