@@ -6,6 +6,7 @@ import { Search, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
+import { compareStrings } from "@/lib/utils";
 import { useStatusStore } from "@/lib/store";
 import { TagInfo } from "@/lib/models";
 import { useAnnouncer } from "./A11yAnnouncer";
@@ -99,12 +100,12 @@ export function TagSelector({
       }
       if (aPriority !== -1) return -1;
       if (bPriority !== -1) return 1;
-      return a.localeCompare(b);
+      return compareStrings(a, b);
     });
 
     // Sort tags within each group
     Object.keys(grouped).forEach((type) => {
-      grouped[type]!.sort((a, b) => a.tag.localeCompare(b.tag));
+      grouped[type]!.sort((a, b) => compareStrings(a.tag, b.tag));
     });
 
     // Apply search filter if needed

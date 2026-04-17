@@ -6,6 +6,7 @@ import { Search, Check, X } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
+import { compareStrings } from "@/lib/utils";
 import { useStatusStore } from "@/lib/store";
 import { useSmartTabs } from "@/hooks/useSmartTabs";
 import { useAnnouncer } from "./A11yAnnouncer";
@@ -114,7 +115,7 @@ export function SystemSelector({
       }
       if (aPriority !== -1) return -1;
       if (bPriority !== -1) return 1;
-      return a.localeCompare(b);
+      return compareStrings(a, b);
     });
 
     // Filter systems based on search and category
@@ -137,7 +138,7 @@ export function SystemSelector({
     }
 
     // Sort filtered systems by name
-    filtered.sort((a, b) => a.name.localeCompare(b.name));
+    filtered.sort((a, b) => compareStrings(a.name, b.name));
 
     return { filteredSystems: filtered, categories };
   }, [systemsData, debouncedSearchQuery, selectedCategory]);
