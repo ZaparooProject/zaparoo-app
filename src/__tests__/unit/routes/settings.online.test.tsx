@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import toast from "react-hot-toast";
+import { NotSignedInError } from "@/lib/onlineApi";
 
 // Use vi.hoisted for all variables that need to be accessed in mock factories
 const {
@@ -84,12 +85,16 @@ vi.mock("@capacitor/browser", () => ({
   },
 }));
 
-// Mock onlineApi
-vi.mock("@/lib/onlineApi", () => ({
-  updateRequirements: (...args: unknown[]) => mockUpdateRequirements(...args),
-  deleteAccount: (...args: unknown[]) => mockDeleteAccount(...args),
-  cancelAccountDeletion: () => mockCancelAccountDeletion(),
-}));
+// Mock onlineApi — spread actual module so non-function exports (e.g. NotSignedInError) are real
+vi.mock("@/lib/onlineApi", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    updateRequirements: (...args: unknown[]) => mockUpdateRequirements(...args),
+    deleteAccount: (...args: unknown[]) => mockDeleteAccount(...args),
+    cancelAccountDeletion: () => mockCancelAccountDeletion(),
+  };
+});
 
 // Mock store
 vi.mock("@/lib/store", async (importOriginal) => {
@@ -1042,6 +1047,35 @@ describe("Settings Online Route", () => {
         );
       });
     });
+
+    it("should close modal and show not-signed-in toast when auth is stale during delete", async () => {
+      const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
+      mockDeleteAccount.mockRejectedValueOnce(new NotSignedInError());
+
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", { name: "online.deleteAccount" }),
+      );
+
+      const confirmInput = screen.getByPlaceholderText("DELETE MY ACCOUNT");
+      await user.type(confirmInput, "DELETE MY ACCOUNT");
+
+      const deleteButtons = screen.getAllByRole("button", {
+        name: /online.deleteAccount/,
+      });
+      await user.click(deleteButtons[deleteButtons.length - 1]!);
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("online.notSignedInError");
+      });
+
+      expect(
+        screen.queryByText("online.deleteAccountConfirmTitle"),
+      ).not.toBeInTheDocument();
+      expect(logger.error).not.toHaveBeenCalled();
+    });
   });
 
   describe("scheduled deletion cancellation", () => {
@@ -1081,6 +1115,44 @@ describe("Settings Online Route", () => {
           "online.deleteAccountScheduled",
         );
       });
+    });
+
+    it("should show not-signed-in toast without logging error when auth is stale during cancel", async () => {
+      const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
+
+      mockDeleteAccount.mockResolvedValueOnce({
+        scheduled_deletion_at: "2024-02-15T00:00:00Z",
+      });
+      mockCancelAccountDeletion.mockRejectedValueOnce(new NotSignedInError());
+
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", { name: "online.deleteAccount" }),
+      );
+      const confirmInput = screen.getByPlaceholderText("DELETE MY ACCOUNT");
+      await user.type(confirmInput, "DELETE MY ACCOUNT");
+      const deleteButtons = screen.getAllByRole("button", {
+        name: /online.deleteAccount/,
+      });
+      await user.click(deleteButtons[deleteButtons.length - 1]!);
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: "online.cancelDeletion" }),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: "online.cancelDeletion" }),
+      );
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("online.notSignedInError");
+      });
+
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
     it("should handle cancel deletion failure", async () => {
