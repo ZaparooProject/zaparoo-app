@@ -1071,10 +1071,15 @@ describe("Settings Online Route", () => {
         expect(toast.error).toHaveBeenCalledWith("online.notSignedInError");
       });
 
-      expect(
-        screen.queryByText("online.deleteAccountConfirmTitle"),
-      ).not.toBeInTheDocument();
-      expect(logger.error).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(
+          screen.queryByText("online.deleteAccountConfirmTitle"),
+        ).not.toBeInTheDocument();
+      });
+
+      await waitFor(() => {
+        expect(logger.error).not.toHaveBeenCalled();
+      });
     });
   });
 

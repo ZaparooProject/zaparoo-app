@@ -11,7 +11,18 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { type InternalAxiosRequestConfig } from "axios";
+import {
+  type GetCurrentUserResult,
+  type GetIdTokenResult,
+  type User,
+} from "@capacitor-firebase/authentication";
 import { useStatusStore } from "../../../lib/store";
+
+type PartialStoreState = Pick<
+  ReturnType<typeof useStatusStore.getState>,
+  "loggedInUser" | "setLoggedInUser"
+>;
 
 // Mock axios before importing the module
 const mockGet = vi.fn();
@@ -483,20 +494,22 @@ describe("onlineApi", () => {
       ({ FirebaseAuthentication } =
         await import("@capacitor-firebase/authentication"));
       vi.mocked(useStatusStore.getState).mockReturnValue({
-        loggedInUser: { uid: "test-uid" },
+        loggedInUser: { uid: "test-uid" } as User,
         setLoggedInUser: vi.fn(),
-      } as any);
+      } satisfies PartialStoreState as unknown as ReturnType<
+        typeof useStatusStore.getState
+      >);
     });
 
     it("should set Authorization header when user is signed in", async () => {
       vi.mocked(FirebaseAuthentication.getCurrentUser).mockResolvedValueOnce({
-        user: { uid: "test-uid" } as any,
-      });
+        user: { uid: "test-uid" } as User,
+      } satisfies GetCurrentUserResult);
       vi.mocked(FirebaseAuthentication.getIdToken).mockResolvedValueOnce({
         token: "test-token",
-      });
+      } satisfies GetIdTokenResult);
 
-      const config = { headers: {} } as any;
+      const config = { headers: {} } as InternalAxiosRequestConfig;
       await authRequestInterceptor(config);
 
       expect(config.headers["Authorization"]).toBe("Bearer test-token");
@@ -505,38 +518,60 @@ describe("onlineApi", () => {
     it("should throw NotSignedInError when no user is signed in", async () => {
       vi.mocked(FirebaseAuthentication.getCurrentUser).mockResolvedValueOnce({
         user: null,
-      });
+      } satisfies GetCurrentUserResult);
 
       await expect(
-        authRequestInterceptor({ headers: {} } as any),
+        authRequestInterceptor({} as InternalAxiosRequestConfig),
       ).rejects.toBeInstanceOf(NotSignedInError);
     });
 
     it("should sync store to null when no user is signed in", async () => {
       vi.mocked(FirebaseAuthentication.getCurrentUser).mockResolvedValueOnce({
         user: null,
-      });
+      } satisfies GetCurrentUserResult);
 
       const mockSetLoggedInUser = vi.fn();
       vi.mocked(useStatusStore.getState).mockReturnValueOnce({
-        loggedInUser: { uid: "test-uid" },
+        loggedInUser: { uid: "test-uid" } as User,
         setLoggedInUser: mockSetLoggedInUser,
-      } as any);
+      } satisfies PartialStoreState as unknown as ReturnType<
+        typeof useStatusStore.getState
+      >);
 
       await expect(
-        authRequestInterceptor({ headers: {} } as any),
+        authRequestInterceptor({} as InternalAxiosRequestConfig),
       ).rejects.toThrow();
 
       expect(mockSetLoggedInUser).toHaveBeenCalledWith(null);
     });
 
+    it("should not sync store when loggedInUser is already null", async () => {
+      vi.mocked(FirebaseAuthentication.getCurrentUser).mockResolvedValueOnce({
+        user: null,
+      } satisfies GetCurrentUserResult);
+
+      const mockSetLoggedInUser = vi.fn();
+      vi.mocked(useStatusStore.getState).mockReturnValueOnce({
+        loggedInUser: null,
+        setLoggedInUser: mockSetLoggedInUser,
+      } satisfies PartialStoreState as unknown as ReturnType<
+        typeof useStatusStore.getState
+      >);
+
+      await expect(
+        authRequestInterceptor({} as InternalAxiosRequestConfig),
+      ).rejects.toThrow();
+
+      expect(mockSetLoggedInUser).not.toHaveBeenCalled();
+    });
+
     it("should not call getIdToken when no user is signed in", async () => {
       vi.mocked(FirebaseAuthentication.getCurrentUser).mockResolvedValueOnce({
         user: null,
-      });
+      } satisfies GetCurrentUserResult);
 
       await expect(
-        authRequestInterceptor({ headers: {} } as any),
+        authRequestInterceptor({} as InternalAxiosRequestConfig),
       ).rejects.toThrow();
 
       expect(FirebaseAuthentication.getIdToken).not.toHaveBeenCalled();
