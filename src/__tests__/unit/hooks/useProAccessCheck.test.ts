@@ -35,6 +35,11 @@ vi.mock("@revenuecat/purchases-capacitor", () => ({
   },
 }));
 
+// purchasesReady resolves immediately in tests
+vi.mock("@/lib/purchasesSetup", () => ({
+  purchasesReady: Promise.resolve(),
+}));
+
 // Mock logger
 vi.mock("../../../lib/logger", () => ({
   logger: mockLogger,
@@ -258,6 +263,62 @@ describe("useProAccessCheck", () => {
       });
 
       expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe("purchasesReady gating", () => {
+    afterEach(() => {
+      vi.resetModules();
+    });
+
+    it("should not call getCustomerInfo before purchasesReady resolves", async () => {
+      vi.resetModules();
+
+      let resolveReady!: () => void;
+      const deferredReady = new Promise<void>((resolve) => {
+        resolveReady = resolve;
+      });
+
+      const mockGetCustomerInfoDeferred = vi.fn().mockResolvedValue({
+        customerInfo: { entitlements: { active: {} } },
+      });
+      const mockSetLauncherAccessDeferred = vi.fn();
+      const mockSetProAccessHydratedDeferred = vi.fn();
+
+      vi.doMock("@/lib/purchasesSetup", () => ({
+        purchasesReady: deferredReady,
+      }));
+      vi.doMock("@capacitor/core", () => ({
+        Capacitor: { getPlatform: vi.fn().mockReturnValue("ios") },
+      }));
+      vi.doMock("@revenuecat/purchases-capacitor", () => ({
+        Purchases: { getCustomerInfo: mockGetCustomerInfoDeferred },
+      }));
+      vi.doMock("@/lib/preferencesStore", () => ({
+        usePreferencesStore: vi.fn((selector: (s: unknown) => unknown) =>
+          selector({
+            setLauncherAccess: mockSetLauncherAccessDeferred,
+            setProAccessHydrated: mockSetProAccessHydratedDeferred,
+          }),
+        ),
+      }));
+      vi.doMock("@/lib/logger", () => ({
+        logger: { log: vi.fn(), error: vi.fn() },
+      }));
+
+      const { useProAccessCheck: hookFresh } =
+        await import("@/hooks/useProAccessCheck");
+      const { renderHook, waitFor } = await import("@testing-library/react");
+
+      renderHook(() => hookFresh());
+
+      expect(mockGetCustomerInfoDeferred).not.toHaveBeenCalled();
+
+      resolveReady();
+
+      await waitFor(() => {
+        expect(mockGetCustomerInfoDeferred).toHaveBeenCalled();
+      });
     });
   });
 });

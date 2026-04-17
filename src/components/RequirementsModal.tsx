@@ -112,7 +112,10 @@ export function RequirementsModal() {
     // Revert RevenueCat to anonymous before Firebase signOut (skip on web)
     if (Capacitor.getPlatform() !== "web") {
       try {
-        await Purchases.logOut();
+        const { isAnonymous } = await Purchases.isAnonymous();
+        if (!isAnonymous) {
+          await Purchases.logOut();
+        }
       } catch (e) {
         logger.error("RevenueCat logout failed:", e, {
           category: "purchase",

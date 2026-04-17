@@ -19,6 +19,7 @@ vi.mock("@capacitor-firebase/authentication", () => ({
 vi.mock("@revenuecat/purchases-capacitor", () => ({
   Purchases: {
     logOut: vi.fn().mockResolvedValue(undefined),
+    isAnonymous: vi.fn().mockResolvedValue({ isAnonymous: false }),
   },
 }));
 
@@ -284,6 +285,40 @@ describe("RequirementsModal", () => {
     await waitFor(() => {
       expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
     });
+  });
+
+  it("should not call Purchases.logOut when RC user is already anonymous", async () => {
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.isAnonymous).mockResolvedValueOnce({
+      isAnonymous: true,
+    });
+
+    const requirements: PendingRequirement[] = [
+      {
+        type: "terms_acceptance",
+        description: "Accept terms",
+        endpoint: "/account/requirements",
+      },
+    ];
+
+    useRequirementsStore.setState({
+      isOpen: true,
+      pendingRequirements: requirements,
+    });
+
+    render(<RequirementsModal />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /requirements\.logout/i }),
+    );
+
+    const { FirebaseAuthentication } =
+      await import("@capacitor-firebase/authentication");
+    await waitFor(() => {
+      expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
+    });
+
+    expect(Purchases.logOut).not.toHaveBeenCalled();
   });
 
   it("should send verification email when button clicked", async () => {

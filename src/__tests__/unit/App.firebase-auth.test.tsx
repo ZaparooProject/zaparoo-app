@@ -80,7 +80,13 @@ vi.mock("@revenuecat/purchases-capacitor", () => ({
     logIn: (...args: unknown[]) => mockPurchasesLogIn(...args),
     logOut: () => mockPurchasesLogOut(),
     getCustomerInfo: () => mockPurchasesGetCustomerInfo(),
+    isAnonymous: vi.fn().mockResolvedValue({ isAnonymous: false }),
   },
+}));
+
+// purchasesReady resolves immediately in tests
+vi.mock("@/lib/purchasesSetup", () => ({
+  purchasesReady: Promise.resolve(),
 }));
 
 vi.mock("@/lib/onlineApi", () => ({
@@ -598,6 +604,45 @@ describe("Firebase Auth Integration", () => {
       });
 
       expect(mockPurchasesLogOut).toHaveBeenCalled();
+      expect(mockPurchasesGetCustomerInfo).toHaveBeenCalled();
+    });
+
+    it("should not call Purchases.logOut when RC user is already anonymous on sign out", async () => {
+      mockPlatform = "ios";
+
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+      vi.mocked(Purchases.isAnonymous).mockResolvedValueOnce({
+        isAnonymous: true,
+      });
+
+      mockPurchasesGetCustomerInfo.mockResolvedValue({
+        customerInfo: { entitlements: { active: {} } },
+      });
+
+      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
+        null;
+      mockAddListener.mockImplementation(
+        (
+          _event: string,
+          callback: (change: { user: unknown }) => Promise<void>,
+        ) => {
+          authCallback = callback;
+          return Promise.resolve({ remove: mockRemove });
+        },
+      );
+
+      const App = (await import("@/App")).default;
+      render(<App />);
+
+      await waitFor(() => {
+        expect(authCallback).not.toBeNull();
+      });
+
+      await act(async () => {
+        await authCallback!({ user: null });
+      });
+
+      expect(mockPurchasesLogOut).not.toHaveBeenCalled();
       expect(mockPurchasesGetCustomerInfo).toHaveBeenCalled();
     });
 
