@@ -225,7 +225,7 @@ describe("SystemSelector", () => {
         isLoading: false,
         isError: false,
         refetch: vi.fn(),
-      } as ReturnType<typeof useQuery>);
+      } as unknown as ReturnType<typeof useQuery>);
 
       // Act
       render(<SystemSelector {...defaultProps} />);
