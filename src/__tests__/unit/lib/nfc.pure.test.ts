@@ -120,15 +120,14 @@ describe("NFC Pure Functions", () => {
     });
 
     it("should extract text from NDEF text record with language code prefix", () => {
-      // NDEF text record format: [encoding byte, lang code bytes, text bytes]
-      // encoding byte = 2 means UTF-8 with 2-byte language code
       const event: NfcTagScannedEvent = {
         nfcTag: {
           id: [4, 123, 45, 67],
           message: {
             records: [
               {
-                tnf: 1, // NFC Forum well-known type
+                tnf: 1, // TypeNameFormat.WellKnown
+                type: [0x54], // 'T' = text record
                 payload: [2, 101, 110, 72, 101, 108, 108, 111], // 2, "en", "Hello"
               },
             ],
@@ -143,16 +142,44 @@ describe("NFC Pure Functions", () => {
       });
     });
 
-    it("should handle NDEF record without language code prefix", () => {
-      // Payload that doesn't start with 2 (language code byte)
+    it("should extract text from NDEF text record with 3-char language code", () => {
+      // Status byte 0x03 = UTF-8, language code length 3 (e.g. "eng")
+      const enc = new TextEncoder();
+      const langBytes = Array.from(enc.encode("eng"));
+      const textBytes = Array.from(enc.encode("Hi"));
       const event: NfcTagScannedEvent = {
         nfcTag: {
           id: [1, 2, 3, 4],
           message: {
             records: [
               {
-                tnf: 1, // NFC Forum well-known type
-                payload: [84, 101, 115, 116], // "Test" without prefix
+                tnf: 1,
+                type: [0x54],
+                payload: [3, ...langBytes, ...textBytes],
+              },
+            ],
+          },
+        },
+      };
+
+      const result = readNfcEvent(event);
+      expect(result).toEqual({
+        uid: "01020304",
+        text: "Hi",
+      });
+    });
+
+    it("should fall back to raw bytes for well-known record with unrecognised 1-byte type", () => {
+      // tnf=1 with a type byte that is not 'T' (0x54) or 'U' (0x55) → int2char fallback
+      const event: NfcTagScannedEvent = {
+        nfcTag: {
+          id: [1, 2, 3, 4],
+          message: {
+            records: [
+              {
+                tnf: 1, // TypeNameFormat.WellKnown
+                type: [0x50], // unknown 1-byte type → falls back to int2char
+                payload: [84, 101, 115, 116], // "Test"
               },
             ],
           },
@@ -166,15 +193,41 @@ describe("NFC Pure Functions", () => {
       });
     });
 
-    it("should handle short payload gracefully", () => {
+    it("should fall back to raw bytes for non-WellKnown TNF", () => {
+      // tnf: 2 = MimeMedia — hits the outer else branch → int2char fallback
+      const event: NfcTagScannedEvent = {
+        nfcTag: {
+          id: [1, 2, 3, 4],
+          message: {
+            records: [
+              {
+                tnf: 2, // TypeNameFormat.MimeMedia
+                type: [0x74, 0x65, 0x78, 0x74], // "text"
+                payload: [72, 105], // "Hi"
+              },
+            ],
+          },
+        },
+      };
+
+      const result = readNfcEvent(event);
+      expect(result).toEqual({
+        uid: "01020304",
+        text: "Hi",
+      });
+    });
+
+    it("should handle short text payload gracefully", () => {
+      // Status byte claims 2-char lang code but there is no more data → empty text
       const event: NfcTagScannedEvent = {
         nfcTag: {
           id: [1, 2],
           message: {
             records: [
               {
-                tnf: 1, // NFC Forum well-known type
-                payload: [2], // Only encoding byte, no text
+                tnf: 1,
+                type: [0x54],
+                payload: [2], // status byte only, no lang code or text
               },
             ],
           },
@@ -184,7 +237,132 @@ describe("NFC Pure Functions", () => {
       const result = readNfcEvent(event);
       expect(result).toEqual({
         uid: "0102",
-        text: "\u0002", // Single byte as char
+        text: "",
+      });
+    });
+
+    it("should decode NDEF URI record with https:// identifier code", () => {
+      const enc = new TextEncoder();
+      const uriBytes = Array.from(enc.encode("zpr.au/xyz"));
+      const event: NfcTagScannedEvent = {
+        nfcTag: {
+          id: [1, 2, 3, 4],
+          message: {
+            records: [
+              {
+                tnf: 1, // TypeNameFormat.WellKnown
+                type: [0x55], // 'U' = URI record
+                payload: [0x04, ...uriBytes], // 0x04 = https://
+              },
+            ],
+          },
+        },
+      };
+
+      const result = readNfcEvent(event);
+      expect(result).toEqual({
+        uid: "01020304",
+        text: "https://zpr.au/xyz",
+      });
+    });
+
+    it("should decode NDEF URI record with http://www. identifier code", () => {
+      const enc = new TextEncoder();
+      const uriBytes = Array.from(enc.encode("example.com/page"));
+      const event: NfcTagScannedEvent = {
+        nfcTag: {
+          id: [1, 2, 3, 4],
+          message: {
+            records: [
+              {
+                tnf: 1,
+                type: [0x55],
+                payload: [0x01, ...uriBytes], // 0x01 = http://www.
+              },
+            ],
+          },
+        },
+      };
+
+      const result = readNfcEvent(event);
+      expect(result).toEqual({
+        uid: "01020304",
+        text: "http://www.example.com/page",
+      });
+    });
+
+    it("should decode NDEF URI record with no prefix (identifier code 0x00)", () => {
+      const enc = new TextEncoder();
+      const uriBytes = Array.from(enc.encode("custom://thing"));
+      const event: NfcTagScannedEvent = {
+        nfcTag: {
+          id: [1, 2, 3, 4],
+          message: {
+            records: [
+              {
+                tnf: 1,
+                type: [0x55],
+                payload: [0x00, ...uriBytes], // 0x00 = no prefix
+              },
+            ],
+          },
+        },
+      };
+
+      const result = readNfcEvent(event);
+      expect(result).toEqual({
+        uid: "01020304",
+        text: "custom://thing",
+      });
+    });
+
+    it("should use empty prefix for unknown URI identifier code", () => {
+      // 0xFF is not in the NFC Forum URI identifier table → identifierCode: undefined → prefix ""
+      const enc = new TextEncoder();
+      const uriBytes = Array.from(enc.encode("example.com"));
+      const event: NfcTagScannedEvent = {
+        nfcTag: {
+          id: [1, 2, 3, 4],
+          message: {
+            records: [
+              {
+                tnf: 1,
+                type: [0x55],
+                payload: [0xff, ...uriBytes],
+              },
+            ],
+          },
+        },
+      };
+
+      const result = readNfcEvent(event);
+      expect(result).toEqual({
+        uid: "01020304",
+        text: "example.com",
+      });
+    });
+
+    it("should produce prefix-only text when URI body is empty", () => {
+      // payload contains only the identifier byte, no URI characters
+      const event: NfcTagScannedEvent = {
+        nfcTag: {
+          id: [1, 2, 3, 4],
+          message: {
+            records: [
+              {
+                tnf: 1,
+                type: [0x55],
+                payload: [0x04], // 0x04 = https://, no URI body
+              },
+            ],
+          },
+        },
+      };
+
+      const result = readNfcEvent(event);
+      expect(result).toEqual({
+        uid: "01020304",
+        text: "https://",
       });
     });
   });

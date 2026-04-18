@@ -4,6 +4,8 @@ import {
   NfcTag,
   NfcTagScannedEvent,
   NfcUtils,
+  RecordTypeDefinition,
+  TypeNameFormat,
 } from "@capawesome-team/capacitor-nfc";
 import { logger } from "./logger";
 import {
@@ -175,11 +177,32 @@ export function readNfcEvent(event: NfcTagScannedEvent): Tag | null {
     const ndef = event.nfcTag.message.records[0];
 
     if (ndef?.payload) {
-      let bs = ndef.payload;
-      if (bs.length > 3 && bs[0] == 2) {
-        bs = bs.slice(3);
+      const utils = new NfcUtils();
+
+      if (ndef.tnf === TypeNameFormat.WellKnown) {
+        const { type: recordType } = utils.mapBytesToRecordTypeDefinition({
+          bytes: ndef.type ?? [],
+        });
+
+        if (recordType === RecordTypeDefinition.Text) {
+          text = utils.getTextFromNdefTextRecord({ record: ndef }).text ?? "";
+        } else if (recordType === RecordTypeDefinition.Uri) {
+          const { identifierCode } = utils.getIdentifierCodeFromNdefUriRecord({
+            record: ndef,
+          });
+          const prefix =
+            identifierCode === undefined
+              ? ""
+              : (utils.mapUriIdentifierCodeToString({ identifierCode })
+                  ?.prefix ?? "");
+          const { uri } = utils.getUriFromNdefUriRecord({ record: ndef });
+          text = prefix + (uri ?? "");
+        } else {
+          text = int2char(ndef.payload);
+        }
+      } else {
+        text = int2char(ndef.payload);
       }
-      text = int2char(bs);
     }
   }
 
