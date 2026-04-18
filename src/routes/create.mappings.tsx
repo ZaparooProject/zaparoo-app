@@ -19,7 +19,8 @@ import {
 } from "@/lib/errors";
 import { Button } from "@/components/wui/Button";
 import { PageFrame } from "@/components/PageFrame";
-import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 import { WriteModal } from "@/components/WriteModal";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -48,7 +49,10 @@ function Mappings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.mappings.title"));
   const connected = useStatusStore((state) => state.connected);
-  const nfcWriter = useNfcWriter();
+  const preferRemoteWriter = usePreferencesStore(
+    (state) => state.preferRemoteWriter,
+  );
+  const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);
   const writeOpen = writeIntent && nfcWriter.status === null;

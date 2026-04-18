@@ -78,6 +78,11 @@ vi.mock("@/lib/writeNfcHook", () => ({
     end: mockNfcEnd,
     status: null,
   }),
+  WriteMethod: {
+    Auto: "auto",
+    LocalNFC: "local",
+    RemoteReader: "remote",
+  },
   WriteAction: {
     Write: "write",
   },
