@@ -80,16 +80,15 @@ const {
   };
 });
 
-// Mock the NFC plugin
-vi.mock("@capawesome-team/capacitor-nfc", () => {
-  // Create a persistent mock for NfcUtils that can be instantiated
-  class MockNfcUtils {
-    createNdefTextRecord() {
-      return { record: { payload: [] } };
-    }
-  }
+// Mock the NFC plugin — keep real NfcUtils, TypeNameFormat, RecordTypeDefinition
+// (pure JS, no native code) and only replace the Nfc singleton.
+vi.mock("@capawesome-team/capacitor-nfc", async () => {
+  const actual = await vi.importActual<
+    typeof import("@capawesome-team/capacitor-nfc")
+  >("@capawesome-team/capacitor-nfc");
 
   return {
+    ...actual,
     Nfc: {
       addListener: mockAddListener,
       startScanSession: mockStartScanSession,
@@ -101,10 +100,6 @@ vi.mock("@capawesome-team/capacitor-nfc", () => {
       connect: mockConnect,
       close: mockClose,
       isSupported: mockIsSupported,
-    },
-    NfcUtils: MockNfcUtils,
-    NfcTagTechType: {
-      NdefFormatable: "NDEF_FORMATABLE",
     },
   };
 });
@@ -720,6 +715,8 @@ describe("nfc", () => {
           message: {
             records: [
               {
+                tnf: 1, // TypeNameFormat.WellKnown
+                type: [0x54], // 'T' = text record
                 payload: [2, 101, 110, 72, 101, 108, 108, 111], // 2 + "en" + "Hello"
               },
             ],
@@ -784,6 +781,37 @@ describe("nfc", () => {
       const result = await readPromise;
 
       expect(result.info.tag).toBeNull();
+    });
+
+    it("should decode NDEF URI record with https:// identifier code", async () => {
+      const readPromise = readTag();
+
+      await vi.waitFor(() => {
+        expect(mockState.nfcTagScannedCallback).not.toBeNull();
+      });
+
+      const enc = new TextEncoder();
+      const uriBytes = Array.from(enc.encode("zpr.au/xyz"));
+
+      mockState.nfcTagScannedCallback?.({
+        nfcTag: {
+          id: [170, 187, 204, 221],
+          message: {
+            records: [
+              {
+                tnf: 1, // TypeNameFormat.WellKnown
+                type: [0x55], // 'U' = URI record
+                payload: [0x04, ...uriBytes], // 0x04 = https://
+              },
+            ],
+          },
+        },
+      } as unknown as NfcTagScannedEvent);
+
+      const result = await readPromise;
+
+      expect(result.info.tag?.text).toBe("https://zpr.au/xyz");
+      expect(result.info.tag?.uid).toBe("aabbccdd");
     });
   });
 });
