@@ -104,6 +104,11 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
 // Mock useNfcWriter with trackable mock - hoisted below
 vi.mock("@/lib/writeNfcHook", () => ({
   useNfcWriter: vi.fn(() => mockNfcWriter),
+  WriteMethod: {
+    Auto: "auto",
+    LocalNFC: "local",
+    RemoteReader: "remote",
+  },
   WriteAction: {
     Write: "write",
   },

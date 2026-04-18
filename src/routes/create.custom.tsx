@@ -8,7 +8,7 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { WriteModal } from "@/components/WriteModal";
-import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
 import { PageFrame } from "@/components/PageFrame";
 import { usePreferencesStore, selectCustomText } from "@/lib/preferencesStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -23,7 +23,10 @@ function CustomText() {
   const { customText, setCustomText } = usePreferencesStore(
     useShallow(selectCustomText),
   );
-  const nfcWriter = useNfcWriter();
+  const preferRemoteWriter = usePreferencesStore(
+    (state) => state.preferRemoteWriter,
+  );
+  const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);
   const writeOpen = writeIntent && nfcWriter.status === null;

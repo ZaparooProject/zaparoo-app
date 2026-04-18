@@ -11,7 +11,8 @@ import { logger } from "@/lib/logger";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useHaptics } from "@/hooks/useHaptics";
 import { WriteModal } from "@/components/WriteModal";
-import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { BackIcon } from "@/lib/images";
@@ -27,7 +28,10 @@ export const Route = createFileRoute("/create/nfc")({
 function NfcUtils() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.nfc.title"));
-  const nfcWriter = useNfcWriter();
+  const preferRemoteWriter = usePreferencesStore(
+    (state) => state.preferRemoteWriter,
+  );
+  const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   const { impact } = useHaptics();
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);

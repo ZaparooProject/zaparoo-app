@@ -148,6 +148,11 @@ vi.mock("react-hot-toast", () => ({
 // Mock NFC writer hook
 vi.mock("@/lib/writeNfcHook", () => ({
   useNfcWriter: () => mockNfcWriter,
+  WriteMethod: {
+    Auto: "auto",
+    LocalNFC: "local",
+    RemoteReader: "remote",
+  },
   WriteAction: {
     Write: "write",
     Read: "read",

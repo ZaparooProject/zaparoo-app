@@ -14,6 +14,13 @@ import { sessionManager } from "./nfc";
  * page loads.
  */
 
+// Blocks writes to storage until the initial hydration read completes.
+// Without this, synchronous state updates that fire before the async
+// Preferences.get() resolves (e.g. web-platform availability checks in
+// useNfcAvailabilityCheck) trigger a persist write with default values,
+// clobbering the stored state (e.g. tourCompleted: true → false).
+let _storageWritesEnabled = false;
+
 // Custom storage adapter for Capacitor Preferences
 const capacitorPreferencesStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
@@ -21,6 +28,7 @@ const capacitorPreferencesStorage: StateStorage = {
     return result.value;
   },
   setItem: async (name: string, value: string): Promise<void> => {
+    if (!_storageWritesEnabled) return;
     await Preferences.set({ key: name, value });
   },
   removeItem: async (name: string): Promise<void> => {
@@ -243,6 +251,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
 
       // Callback when hydration completes
       onRehydrateStorage: () => (state) => {
+        _storageWritesEnabled = true;
         if (state) {
           // Initialize sessionManager with hydrated values
           sessionManager.setShouldRestart(state.restartScan);

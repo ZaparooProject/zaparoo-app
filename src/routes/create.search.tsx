@@ -18,7 +18,7 @@ import {
   HistoryIcon,
   DeviceIcon,
 } from "@/lib/images";
-import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
 import { SearchResultGame, SystemsResponse } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { filenameFromPath } from "@/lib/path";
@@ -146,7 +146,10 @@ export function Search() {
   // Check if search has valid parameters
   const canSearch = connected && gamesIndex.exists && !gamesIndex.indexing;
 
-  const nfcWriter = useNfcWriter();
+  const preferRemoteWriter = usePreferencesStore(
+    (state) => state.preferRemoteWriter,
+  );
+  const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   const [writeOpen, setWriteOpen] = useState(false);
   const closeWriteModal = async () => {
     setWriteOpen(false);
