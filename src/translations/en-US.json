@@ -378,6 +378,10 @@
       },
       "connectionFailed": "Unable to connect to device",
       "notConnected": "Not connected",
+      "coreOutdated": {
+        "title": "Core update recommended (v{{version}}+)",
+        "description": "The connected device is running an older version of Zaparoo Core. The following features are unavailable:"
+      },
       "enterDeviceAddress": "Enter a device address",
       "deleteDevice": "Remove device from history",
       "about": {
@@ -598,6 +602,9 @@
     "connection": {
       "connecting": "Connecting...",
       "reconnecting": "Reconnecting..."
+    },
+    "features": {
+      "requiresCoreVersion": "Requires Zaparoo Core v{{version}} or later"
     },
     "deepLinks": {
       "invalidUrl": "Invalid link format"

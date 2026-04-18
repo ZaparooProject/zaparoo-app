@@ -73,12 +73,12 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
         with:
-          subject-path: 'zaparoo_app-web-*.tar.gz'
+          subject-path: "zaparoo_app-web-*.tar.gz"
       - name: Attest SBOM
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
         with:
-          subject-path: 'zaparoo_app-web-*.tar.gz'
+          subject-path: "zaparoo_app-web-*.tar.gz"
           sbom-path: sbom.spdx.json
       - name: Create release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v2

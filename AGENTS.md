@@ -354,6 +354,50 @@ try {
 
 ---
 
+## Core Version Gating
+
+The app must gracefully degrade when connected to older Core versions during migration periods. This is handled client-side via semver comparison — no Core changes required.
+
+### Key files
+
+- `src/lib/coreVersion.ts` — semver helpers: `isDevelopmentVersion`, `parseVersion`, `compareVersions`, `satisfies`
+- `src/lib/featureGates.ts` — **registry of gated features** (edit this to gate new features)
+- `src/hooks/useCoreFeature.ts` — React hook returning `{ available, requiredVersion, marquee }`
+- `src/components/GatedFeature.tsx` — wrapper component
+- `src/components/CoreOutdatedNotice.tsx` — settings page notice (auto-shown when any gate fails)
+
+### How to gate a new feature
+
+1. Add an entry to `FEATURE_GATES` in `src/lib/featureGates.ts`:
+
+```ts
+export const FEATURE_GATES: Record<string, FeatureGate> = {
+  screenshot: {
+    since: "2.6.0",
+    marquee: true,
+    labelKey: "features.screenshot",
+  },
+};
+```
+
+- `since` — minimum Core version (semver)
+- `marquee` — `true`: show disabled with tooltip; `false`: hide silently
+- `labelKey` — i18n key used in the outdated notice list
+
+2. Add the translation key to `src/translations/en-US.json` under `"features"`.
+
+3. Wrap UI in `<GatedFeature featureId="screenshot">` or call `useCoreFeature("screenshot")` directly.
+
+### Dev build handling
+
+Versions matching `DEVELOPMENT`, empty string, or containing `-dev`/`-rc`/`-beta`/`-alpha` are treated as dev builds and **pass all gates automatically**. This mirrors Core's `config.IsDevelopmentVersion` semantics.
+
+### Store state
+
+`coreVersion` and `corePlatform` are fetched once per connect in `ConnectionProvider.handleConnectionOpen` and stored in `useStatusStore`. They are cleared by `resetConnectionState()` on device switch. Do not maintain a separate version query in components — read from the store.
+
+---
+
 ## Common Gotchas
 
 1. **NFC Cancellation**: Check `error.message.includes("cancelled")` - fragile but necessary

@@ -212,6 +212,9 @@
   .text-error {
     color: var(--color-error);
   }
+  .text-warning {
+    color: var(--color-warning);
+  }
   .text-primary {
     color: var(--color-primary);
   }
@@ -326,6 +329,7 @@
   --color-primary: #3faeec;
   --color-success: #36d24f;
   --color-error: #e87171;
+  --color-warning: #facc15;
   --color-border-filled: rgba(255, 255, 255, 0.4);
   --color-border-outline: #b4bbd9;
   --color-border-input: #9197ae;

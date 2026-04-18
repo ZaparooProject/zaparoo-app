@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
 import { Capacitor } from "@capacitor/core";
 import { ArrowLeftRightIcon, SearchIcon } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
-import { CoreAPI, getDeviceAddress } from "@/lib/coreApi";
+import { getDeviceAddress } from "@/lib/coreApi";
+import { useStatusStore } from "@/lib/store";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 import { TextInput } from "./wui/TextInput";
@@ -31,17 +31,21 @@ export function DeviceConnectionCard({
   const { t } = useTranslation();
   const { isConnected } = useConnection();
 
-  // Fetch version info when connected
   const savedAddress = getDeviceAddress();
-  const { data: version, isLoading: isVersionLoading } = useQuery({
-    queryKey: ["version", savedAddress],
-    queryFn: () => CoreAPI.version(),
-    enabled: isConnected && !!savedAddress,
-  });
+  const coreVersion = useStatusStore((state) => state.coreVersion);
+  const corePlatform = useStatusStore((state) => state.corePlatform);
+  const coreVersionPending = useStatusStore(
+    (state) => state.coreVersionPending,
+  );
 
-  // Settings page shows version/platform info as subtitle
-  const connectedSubtitle = version
-    ? `${version.platform} (${/^\d+\.\d+\.\d+/.test(version.version) ? "v" : ""}${version.version})`
+  const versionLabel =
+    coreVersion !== null
+      ? `${/^\d+\.\d+\.\d+/.test(coreVersion) ? "v" : ""}${coreVersion}`
+      : undefined;
+  const connectedSubtitle = versionLabel
+    ? corePlatform
+      ? `${corePlatform} (${versionLabel})`
+      : versionLabel
     : undefined;
 
   return (
@@ -68,7 +72,7 @@ export function DeviceConnectionCard({
           <ConnectionStatusDisplay
             connectionError={connectionError}
             connectedSubtitle={connectedSubtitle}
-            connectedSubtitleLoading={isVersionLoading}
+            connectedSubtitleLoading={isConnected && coreVersionPending}
             action={
               <div className="flex items-center gap-1">
                 {/* Network scan button - only on native platforms */}

@@ -19,6 +19,7 @@ import { ExternalIcon, NextIcon } from "@/lib/images";
 import { getDeviceAddress, setDeviceAddress, CoreAPI } from "@/lib/coreApi.ts";
 import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
 import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
+import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
 
 export const Route = createFileRoute("/settings/")({
   component: Settings,
@@ -101,6 +102,8 @@ function Settings() {
               onScanClick={() => setScanOpen(true)}
             />
           </div>
+
+          <CoreOutdatedNotice />
 
           {/* Device History Modal */}
           <SlideModal
