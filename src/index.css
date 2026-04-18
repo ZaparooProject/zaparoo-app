@@ -14,6 +14,13 @@
     color: var(--color-foreground);
   }
 
+  /* Prevent iOS WebView from auto-zooming when form controls are focused */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
   /* Style native select dropdown arrow for dark theme (especially iOS) */
   select {
     color-scheme: dark;
