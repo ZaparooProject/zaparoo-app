@@ -303,11 +303,13 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     CoreAPI.version()
       .then((v) => {
         if (isCancelled(v)) {
+          // Don't clear pending — a new connection will manage its own pending state
           logger.log("Version request was cancelled, skipping");
           return;
         }
         setCoreVersion(v.version);
         setCorePlatform(v.platform);
+        setCoreVersionPending(false);
       })
       .catch((e) => {
         logger.error("Failed to get Core version:", e, {
@@ -317,8 +319,6 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         });
         setCoreVersion(null);
         setCorePlatform(null);
-      })
-      .finally(() => {
         setCoreVersionPending(false);
       });
 

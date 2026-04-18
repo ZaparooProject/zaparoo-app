@@ -36,8 +36,10 @@ export function compareVersions(a: string, b: string): -1 | 0 | 1 {
 // Returns true when `current` is at or above `minimum`.
 // null current → false (unknown version, conservatively deny).
 // Dev build → true (dev builds pass every gate).
+// Malformed minimum → false (bad gate definition, conservatively deny).
 export function satisfies(current: string | null, minimum: string): boolean {
   if (current === null) return false;
   if (isDevelopmentVersion(current)) return true;
+  if (!parseVersion(minimum)) return false;
   return compareVersions(current, minimum) >= 0;
 }

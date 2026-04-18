@@ -93,4 +93,10 @@ describe("satisfies", () => {
     expect(satisfies("2.5.0", "2.5.1")).toBe(false);
     expect(satisfies("1.99.99", "2.0.0")).toBe(false);
   });
+
+  it("should return false when minimum is malformed", () => {
+    expect(satisfies("2.5.0", "bad")).toBe(false);
+    expect(satisfies("2.5.0", "")).toBe(false);
+    expect(satisfies("2.5.0", "DEVELOPMENT")).toBe(false);
+  });
 });
