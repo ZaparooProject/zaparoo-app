@@ -83,6 +83,13 @@ interface StatusState {
   writeQueue: string;
   setWriteQueue: (writeQueue: string) => void;
 
+  coreVersion: string | null;
+  corePlatform: string | null;
+  setCoreVersion: (version: string | null) => void;
+  setCorePlatform: (platform: string | null) => void;
+  coreVersionPending: boolean;
+  setCoreVersionPending: (pending: boolean) => void;
+
   resetConnectionState: () => void;
 }
 
@@ -196,6 +203,13 @@ export const useStatusStore = create<StatusState>()((set) => ({
   writeQueue: "",
   setWriteQueue: (writeQueue) => set({ writeQueue }),
 
+  coreVersion: null,
+  corePlatform: null,
+  setCoreVersion: (version) => set({ coreVersion: version }),
+  setCorePlatform: (platform) => set({ corePlatform: platform }),
+  coreVersionPending: false,
+  setCoreVersionPending: (pending) => set({ coreVersionPending: pending }),
+
   resetConnectionState: () => {
     // Reset all connection-related state
     set({
@@ -223,6 +237,9 @@ export const useStatusStore = create<StatusState>()((set) => ({
         mediaName: "",
         mediaPath: "",
       },
+      coreVersion: null,
+      corePlatform: null,
+      coreVersionPending: false,
     });
   },
 }));

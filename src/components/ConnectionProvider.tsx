@@ -82,6 +82,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setLastToken,
     addDeviceHistory,
     setDeviceHistory,
+    setCoreVersion,
+    setCorePlatform,
+    setCoreVersionPending,
   } = useStatusStore(
     useShallow((state) => ({
       targetDeviceAddress: state.targetDeviceAddress,
@@ -93,6 +96,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setLastToken: state.setLastToken,
       addDeviceHistory: state.addDeviceHistory,
       setDeviceHistory: state.setDeviceHistory,
+      setCoreVersion: state.setCoreVersion,
+      setCorePlatform: state.setCorePlatform,
+      setCoreVersionPending: state.setCoreVersionPending,
     })),
   );
 
@@ -292,6 +298,30 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // Flush any queued API requests
     CoreAPI.flushQueue();
 
+    // Fetch Core version for feature gating
+    setCoreVersionPending(true);
+    CoreAPI.version()
+      .then((v) => {
+        if (isCancelled(v)) {
+          logger.log("Version request was cancelled, skipping");
+          return;
+        }
+        setCoreVersion(v.version);
+        setCorePlatform(v.platform);
+      })
+      .catch((e) => {
+        logger.error("Failed to get Core version:", e, {
+          category: "api",
+          action: "version",
+          severity: "warning",
+        });
+        setCoreVersion(null);
+        setCorePlatform(null);
+      })
+      .finally(() => {
+        setCoreVersionPending(false);
+      });
+
     // Load device history
     Preferences.get({ key: "deviceHistory" })
       .then((v) => {
@@ -365,6 +395,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setGamesIndex,
     setPlaying,
     setLastToken,
+    setCoreVersion,
+    setCorePlatform,
+    setCoreVersionPending,
     t,
   ]);
 

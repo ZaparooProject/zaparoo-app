@@ -11,6 +11,7 @@ import { ConnectionProvider } from "../../../components/ConnectionProvider";
 import { useConnection } from "../../../hooks/useConnection";
 import { connectionManager } from "../../../lib/transport";
 import { CoreAPI } from "../../../lib/coreApi";
+import { useStatusStore } from "@/lib/store";
 import type { TransportState } from "../../../lib/transport/types";
 import type { NotificationRequest } from "../../../lib/coreApi";
 import { Notification } from "../../../lib/models";
@@ -64,67 +65,17 @@ vi.mock("../../../lib/coreApi", () => ({
     processReceived: vi.fn().mockResolvedValue(null),
     media: vi.fn().mockResolvedValue({ database: {}, active: [] }),
     tokens: vi.fn().mockResolvedValue({ last: null }),
+    version: vi.fn().mockResolvedValue({ version: "2.5.0", platform: "test" }),
   },
   getDeviceAddress: vi.fn(() => "192.168.1.100:7497"),
   getWsUrl: vi.fn(() => "ws://192.168.1.100:7497"),
   isCancelled: vi.fn(() => false),
 }));
 
-// Use vi.hoisted to define mock functions that can be used in vi.mock
-const { mockSetPlaying, mockSetLastToken, mockSetGamesIndex } = vi.hoisted(
-  () => ({
-    mockSetPlaying: vi.fn(),
-    mockSetLastToken: vi.fn(),
-    mockSetGamesIndex: vi.fn(),
-  }),
-);
-
-vi.mock("../../../lib/store", () => {
-  // Track gamesIndex state for change detection
-  const mockGamesIndexState = {
-    indexing: false,
-    optimizing: false,
-    exists: false,
-    totalMedia: 0,
-  };
-
-  return {
-    useStatusStore: Object.assign(
-      vi.fn((selector) => {
-        const state = {
-          targetDeviceAddress: "192.168.1.100:7497",
-          setTargetDeviceAddress: vi.fn(),
-          setConnectionState: vi.fn(),
-          setConnectionError: vi.fn(),
-          setPlaying: mockSetPlaying,
-          setGamesIndex: mockSetGamesIndex,
-          setLastToken: mockSetLastToken,
-          addDeviceHistory: vi.fn(),
-          setDeviceHistory: vi.fn(),
-          gamesIndex: mockGamesIndexState,
-        };
-        return selector(state);
-      }),
-      {
-        getState: () => ({
-          gamesIndex: mockGamesIndexState,
-        }),
-      },
-    ),
-    ConnectionState: {
-      IDLE: "idle",
-      CONNECTING: "connecting",
-      CONNECTED: "connected",
-      RECONNECTING: "reconnecting",
-      DISCONNECTED: "disconnected",
-      ERROR: "error",
-    },
-  };
-});
-
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     get: vi.fn().mockResolvedValue({ value: null }),
+    set: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -194,9 +145,18 @@ function ConnectionConsumer() {
   );
 }
 
+// Pre-set targetDeviceAddress to skip the async polling initialization
+function resetStore() {
+  useStatusStore.setState({
+    ...useStatusStore.getInitialState(),
+    targetDeviceAddress: "192.168.1.100:7497",
+  });
+}
+
 describe("ConnectionProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetStore();
   });
 
   describe("rendering", () => {
@@ -300,6 +260,11 @@ describe("ConnectionProvider", () => {
 });
 
 describe("useConnection hook", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetStore();
+  });
+
   it("should return connection context values with expected initial state", () => {
     render(
       <ConnectionProvider>
@@ -324,10 +289,7 @@ describe("notification processing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
-    // Clear hoisted mocks explicitly
-    mockSetPlaying.mockClear();
-    mockSetLastToken.mockClear();
-    mockSetGamesIndex.mockClear();
+    resetStore();
     mockToast.mockClear();
     mockAnnounce.mockClear();
   });
@@ -359,7 +321,7 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       await waitFor(() => {
-        expect(mockSetPlaying).toHaveBeenCalledWith({
+        expect(useStatusStore.getState().playing).toEqual({
           systemId: "snes",
           systemName: "Super Nintendo",
           mediaPath: "/games/mario.sfc",
@@ -390,7 +352,7 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       await waitFor(() => {
-        expect(mockSetPlaying).toHaveBeenCalledWith({
+        expect(useStatusStore.getState().playing).toEqual({
           systemId: "",
           systemName: "",
           mediaPath: "",
@@ -426,7 +388,7 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       await waitFor(() => {
-        expect(mockSetLastToken).toHaveBeenCalledWith({
+        expect(useStatusStore.getState().lastToken).toEqual({
           uid: "ABC123",
           text: "**launch:snes/mario.sfc",
           data: "launch data",
@@ -518,7 +480,7 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       await waitFor(() => {
-        expect(mockSetGamesIndex).toHaveBeenCalledWith({
+        expect(useStatusStore.getState().gamesIndex).toMatchObject({
           indexing: true,
           optimizing: false,
           exists: true,
@@ -532,6 +494,8 @@ describe("notification processing", () => {
     it("should not update state when processReceived returns null", async () => {
       vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(null);
 
+      const initialState = useStatusStore.getInitialState();
+
       render(
         <ConnectionProvider>
           <div>Test</div>
@@ -541,9 +505,11 @@ describe("notification processing", () => {
       expect(capturedEventHandlers.onMessage).toBeDefined();
       await capturedEventHandlers.onMessage!("test-device", {});
 
-      // Handler completes synchronously after await, so we can assert immediately
-      expect(mockSetPlaying).not.toHaveBeenCalled();
-      expect(mockSetLastToken).not.toHaveBeenCalled();
+      // State should remain at initial values
+      expect(useStatusStore.getState().playing).toEqual(initialState.playing);
+      expect(useStatusStore.getState().lastToken).toEqual(
+        initialState.lastToken,
+      );
     });
 
     it("should handle unknown notification method gracefully", async () => {
@@ -567,8 +533,11 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       // State should not be updated for unknown notifications
-      expect(mockSetPlaying).not.toHaveBeenCalled();
-      expect(mockSetLastToken).not.toHaveBeenCalled();
+      const initialState = useStatusStore.getInitialState();
+      expect(useStatusStore.getState().playing).toEqual(initialState.playing);
+      expect(useStatusStore.getState().lastToken).toEqual(
+        initialState.lastToken,
+      );
     });
 
     it("should show toast when processReceived throws an error", async () => {
@@ -627,6 +596,7 @@ describe("connection event handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
+    resetStore();
     // Re-setup mock after clearAllMocks - use the address from store mock
     vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
       "192.168.1.100:7497",
@@ -653,6 +623,34 @@ describe("connection event handling", () => {
       expect(CoreAPI.flushQueue).toHaveBeenCalled();
       expect(CoreAPI.media).toHaveBeenCalled();
       expect(CoreAPI.tokens).toHaveBeenCalled();
+      expect(CoreAPI.version).toHaveBeenCalled();
+      expect(useStatusStore.getState().coreVersion).toBe("2.5.0");
+      expect(useStatusStore.getState().corePlatform).toBe("test");
+      expect(useStatusStore.getState().coreVersionPending).toBe(false);
+    });
+  });
+
+  it("should set coreVersion to null when version fetch fails", async () => {
+    vi.mocked(CoreAPI.version).mockRejectedValueOnce(
+      new Error("Network error"),
+    );
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().coreVersion).toBeNull();
+      expect(useStatusStore.getState().corePlatform).toBeNull();
+      expect(useStatusStore.getState().coreVersionPending).toBe(false);
     });
   });
 
@@ -712,6 +710,7 @@ describe("cancelled request handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
+    resetStore();
     // Ensure getActiveDeviceId returns the device we're testing with
     vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
       "192.168.1.100:7497",
@@ -743,7 +742,9 @@ describe("cancelled request handling", () => {
   });
 
   it("should handle cancelled tokens response gracefully", async () => {
-    vi.mocked(CoreAPI.tokens).mockResolvedValueOnce({ cancelled: true } as any);
+    vi.mocked(CoreAPI.tokens).mockResolvedValueOnce({
+      cancelled: true,
+    } as any);
 
     render(
       <ConnectionProvider>
@@ -771,6 +772,7 @@ describe("API error handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
+    resetStore();
     // Ensure getActiveDeviceId returns the device we're testing with
     vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
       "192.168.1.100:7497",
@@ -834,6 +836,7 @@ describe("app lifecycle handling", () => {
     vi.clearAllMocks();
     resumeCallback = null;
     pauseCallback = null;
+    resetStore();
 
     // Capture the callbacks passed to App.addListener
     const { App } = await import("@capacitor/app");
@@ -927,6 +930,7 @@ describe("app lifecycle handling", () => {
 describe("browser visibility handling (web platform)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetStore();
   });
 
   it("should call connectionManager.resumeAll when tab becomes visible", async () => {
@@ -989,6 +993,7 @@ describe("edge cases", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
+    resetStore();
   });
 
   describe("stale connection events", () => {
@@ -1037,6 +1042,7 @@ describe("network status handling (native platform)", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     networkListener = null;
+    resetStore();
 
     // Mock Capacitor as native platform
     const { Capacitor } = await import("@capacitor/core");
@@ -1157,6 +1163,7 @@ describe("processNotification error handling", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
+    resetStore();
     mockToast.mockClear();
     mockToastError.mockClear();
     // Reset toast rate limiter to ensure toast shows
