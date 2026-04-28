@@ -18,6 +18,7 @@ import { Button } from "@/components/wui/Button";
 import { ExternalIcon, NextIcon } from "@/lib/images";
 import { getDeviceAddress, setDeviceAddress, CoreAPI } from "@/lib/coreApi.ts";
 import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
+import { MediaScrapeCard } from "@/components/MediaScrapeCard";
 import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
 import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
 
@@ -151,6 +152,8 @@ function Settings() {
           />
 
           <MediaDatabaseCard />
+
+          <MediaScrapeCard />
 
           <div>
             <Button
