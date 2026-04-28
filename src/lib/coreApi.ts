@@ -1166,6 +1166,47 @@ export function setDeviceAddress(addr: string) {
   }
 }
 
+/** Parse a device address into host and numeric port. Handles IPv4, hostname, and IPv6. */
+export function parseDeviceAddress(address: string): {
+  host: string;
+  port: number;
+} {
+  const DEFAULT_PORT = 7497;
+  if (!address) return { host: "", port: DEFAULT_PORT };
+
+  // Bracketed IPv6: [::1] or [::1]:8080
+  if (address.startsWith("[")) {
+    const closeBracket = address.indexOf("]");
+    if (closeBracket > 0) {
+      const host = address.substring(0, closeBracket + 1);
+      const afterBracket = address.substring(closeBracket + 1);
+      if (afterBracket.startsWith(":") && afterBracket.length > 1) {
+        const portNum = parseInt(afterBracket.substring(1), 10);
+        if (portNum > 0 && portNum <= 65535) return { host, port: portNum };
+      }
+      return { host, port: DEFAULT_PORT };
+    }
+  }
+
+  // Unbracketed IPv6 (multiple colons, no port)
+  const colonCount = (address.match(/:/g) || []).length;
+  if (colonCount > 1) return { host: address, port: DEFAULT_PORT };
+
+  // IPv4 or hostname with optional port
+  const lastColon = address.lastIndexOf(":");
+  if (lastColon > 0) {
+    const potentialPort = address.substring(lastColon + 1);
+    if (/^\d+$/.test(potentialPort)) {
+      const portNum = parseInt(potentialPort, 10);
+      if (portNum > 0 && portNum <= 65535) {
+        return { host: address.substring(0, lastColon), port: portNum };
+      }
+    }
+  }
+
+  return { host: address, port: DEFAULT_PORT };
+}
+
 export function getWsUrl() {
   const address = getDeviceAddress();
 

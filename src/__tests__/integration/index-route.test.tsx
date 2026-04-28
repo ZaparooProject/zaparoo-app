@@ -1,7 +1,7 @@
 /**
  * Integration Test: Index Route (Home Page)
  *
- * Tests the REAL Index component from src/routes/index.tsx including:
+ * Tests the REAL Index component from src/routes/-pages/Index.tsx including:
  * - Page structure and accessibility
  * - Connection status display
  * - Scan controls visibility based on NFC/camera availability
@@ -201,7 +201,7 @@ vi.mock("@capacitor/core", () => ({
 }));
 
 // Import the REAL component after mocks are set up
-import { Index } from "@/routes/index";
+import { Index } from "@/routes/-pages/Index";
 
 // Helper to provide connection context
 function TestWrapper({
@@ -217,6 +217,7 @@ function TestWrapper({
     hasData: true,
     showConnecting: false,
     showReconnecting: false,
+    openPairingModal: () => {},
   };
 
   return (
@@ -445,6 +446,7 @@ describe("Index Route Integration", () => {
         hasData: false,
         showConnecting: false,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       render(
@@ -921,6 +923,7 @@ describe("Index Route Integration", () => {
         hasData: false,
         showConnecting: false,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       rerender(

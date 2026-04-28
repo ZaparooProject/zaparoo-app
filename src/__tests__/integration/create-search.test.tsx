@@ -1,7 +1,7 @@
 /**
  * Integration Test: Create Search Page
  *
- * Tests the REAL Search component from src/routes/create.search.tsx including:
+ * Tests the REAL Search component from src/routes/-pages/Search.tsx including:
  * - Search form input handling
  * - System selector interactions
  * - Tag selector interactions
@@ -30,7 +30,7 @@ const mockLoaderData = {
   } as SystemsResponse,
 };
 
-// Mock the router with Route.useLoaderData
+// Mock the router with getRouteApi.useLoaderData
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
@@ -40,16 +40,9 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
         back: vi.fn(),
       },
     })),
-    createFileRoute: vi.fn(() => {
-      // createFileRoute returns a function that returns the Route object
-      return () => {
-        const route = {
-          component: null,
-          useLoaderData: () => mockLoaderData,
-        };
-        return route;
-      };
-    }),
+    getRouteApi: vi.fn(() => ({
+      useLoaderData: () => mockLoaderData,
+    })),
   };
 });
 
@@ -293,7 +286,7 @@ const { mockClipboardWriteText } = vi.hoisted(() => ({
 }));
 
 // Import the REAL component after mocks are set up
-import { Search } from "@/routes/create.search";
+import { Search } from "@/routes/-pages/Search";
 
 describe("Create Search Integration", () => {
   beforeEach(() => {

@@ -44,6 +44,7 @@ vi.mock("@/hooks/useConnection", () => ({
   useConnection: () => ({
     showConnecting: false,
     showReconnecting: true,
+    openPairingModal: () => {},
   }),
 }));
 

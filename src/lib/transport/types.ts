@@ -5,6 +5,8 @@
  * enabling multi-device connections and transport-agnostic communication.
  */
 
+import type { StoredCredentials } from "../crypto/credentials";
+
 /**
  * Possible states of a transport connection.
  */
@@ -13,6 +15,17 @@ export type TransportState =
   | "connecting"
   | "connected"
   | "reconnecting";
+
+/**
+ * Encryption configuration for a transport.
+ * When provided and credentials exist, the transport requires an encrypted session.
+ * Without credentials, plaintext is attempted; if the server demands encryption
+ * (-32002), the connection fails so the consumer can prompt for pairing.
+ */
+export interface TransportEncryptionConfig {
+  /** Lazily read on each connect so reconnects always see the latest credentials. */
+  getCredentials: () => Promise<StoredCredentials | null>;
+}
 
 /**
  * Configuration for creating a transport.
@@ -24,6 +37,8 @@ export interface TransportConfig {
   type: "websocket" | "bluetooth";
   /** Connection address (IP:port for WS, device ID for BT) */
   address: string;
+  /** Optional encryption config */
+  encryption?: TransportEncryptionConfig;
 }
 
 /**
@@ -40,6 +55,16 @@ export interface TransportEventHandlers {
   onMessage?: (event: MessageEvent) => void;
   /** Called when the transport state changes */
   onStateChange?: (state: TransportState) => void;
+  /** Called once when the first encrypted frame is successfully decrypted. */
+  onEncryptedHandshakeOk?: () => void;
+  /** Called when the transport commits to a plaintext session (no credentials, server doesn't demand encryption). */
+  onPlaintextMode?: () => void;
+  /** Called when the server returned -32002 (encryption required, must pair). */
+  onEncryptionRequired?: () => void;
+  /** Called when the server returned -32001 (unsupported encryption version). */
+  onUnsupportedVersion?: () => void;
+  /** Called when the server rejects our stored credentials (-32002 in encrypted mode). */
+  onCredentialsRevoked?: () => void;
 }
 
 /**

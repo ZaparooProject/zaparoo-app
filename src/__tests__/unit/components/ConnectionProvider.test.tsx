@@ -200,11 +200,16 @@ describe("ConnectionProvider", () => {
         </ConnectionProvider>,
       );
 
-      expect(connectionManager.addDevice).toHaveBeenCalledWith({
-        deviceId: "192.168.1.100:7497",
-        type: "websocket",
-        address: "ws://192.168.1.100:7497",
-      });
+      expect(connectionManager.addDevice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deviceId: "192.168.1.100:7497",
+          type: "websocket",
+          address: "ws://192.168.1.100:7497",
+          encryption: expect.objectContaining({
+            getCredentials: expect.any(Function),
+          }),
+        }),
+      );
     });
 
     it("should set active device after adding", () => {

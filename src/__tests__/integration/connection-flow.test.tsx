@@ -66,6 +66,7 @@ describe("Connection Flow Integration", () => {
         hasData: false,
         showConnecting: false,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       render(
@@ -84,6 +85,7 @@ describe("Connection Flow Integration", () => {
         hasData: false,
         showConnecting: true,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       render(
@@ -102,6 +104,7 @@ describe("Connection Flow Integration", () => {
         hasData: true,
         showConnecting: false,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       render(
@@ -121,6 +124,7 @@ describe("Connection Flow Integration", () => {
         hasData: true,
         showConnecting: false,
         showReconnecting: true,
+        openPairingModal: () => {},
       };
 
       render(
@@ -139,6 +143,7 @@ describe("Connection Flow Integration", () => {
         hasData: false,
         showConnecting: false,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       render(
@@ -160,6 +165,7 @@ describe("Connection Flow Integration", () => {
         hasData: true,
         showConnecting: false,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       render(
@@ -182,6 +188,7 @@ describe("Connection Flow Integration", () => {
         hasData: true,
         showConnecting: false,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       render(
@@ -212,6 +219,7 @@ describe("Connection Flow Integration", () => {
         hasData: false,
         showConnecting: false,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       render(
@@ -239,6 +247,7 @@ describe("Connection Flow Integration", () => {
         hasData: false,
         showConnecting: true,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       render(

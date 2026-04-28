@@ -54,6 +54,7 @@ describe("ConnectionStatus", () => {
       isConnected: false,
       showConnecting: false,
       showReconnecting: false,
+      openPairingModal: () => {},
       hasData: false,
     });
   });
@@ -72,6 +73,7 @@ describe("ConnectionStatus", () => {
       isConnected: true,
       showConnecting: false,
       showReconnecting: false,
+      openPairingModal: () => {},
       hasData: true,
     });
 
@@ -87,6 +89,7 @@ describe("ConnectionStatus", () => {
       isConnected: false,
       showConnecting: true,
       showReconnecting: false,
+      openPairingModal: () => {},
       hasData: false,
     });
 
@@ -101,6 +104,7 @@ describe("ConnectionStatus", () => {
       isConnected: false,
       showConnecting: false,
       showReconnecting: true,
+      openPairingModal: () => {},
       hasData: true,
     });
 
@@ -116,6 +120,7 @@ describe("ConnectionStatus", () => {
       isConnected: false,
       showConnecting: false,
       showReconnecting: false,
+      openPairingModal: () => {},
       hasData: false,
     });
 
@@ -131,6 +136,7 @@ describe("ConnectionStatus", () => {
       isConnected: true,
       showConnecting: false,
       showReconnecting: false,
+      openPairingModal: () => {},
       hasData: true,
     });
 

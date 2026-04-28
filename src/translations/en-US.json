@@ -601,13 +601,44 @@
     },
     "connection": {
       "connecting": "Connecting...",
-      "reconnecting": "Reconnecting..."
+      "reconnecting": "Reconnecting...",
+      "pairingRequired": "Pairing required",
+      "encrypted": "Encrypted connection",
+      "unencrypted": "Unencrypted connection"
     },
     "features": {
       "requiresCoreVersion": "Requires Zaparoo Core v{{version}} or later"
     },
     "deepLinks": {
       "invalidUrl": "Invalid link format"
+    },
+    "pairing": {
+      "title": "Pair with Device",
+      "description": "Enter the 6-digit PIN shown on your device.",
+      "noAddress": "Set a device address in Settings before pairing.",
+      "pinLabel": "PIN",
+      "pinPlaceholder": "000000",
+      "clientNameLabel": "Device name",
+      "startPairing": "Pair",
+      "pairing": "Pairing...",
+      "success": "Paired successfully",
+      "openPairing": "Pair with device",
+      "connectionError": {
+        "encryptionRequired": "This device requires pairing.",
+        "credentialsRevoked": "Pairing was lost. Please pair again.",
+        "unsupportedVersion": "This device uses an unsupported encryption version."
+      },
+      "error": {
+        "wrong_pin": "Wrong PIN, try again",
+        "pin_expired": "PIN expired, restart pairing on your device",
+        "limit_reached": "Too many attempts, restart pairing on your device",
+        "rate_limited": "Too many requests, try again in a moment",
+        "session_unknown": "Pairing session not found, restart pairing on your device",
+        "server_hmac_bad": "Security check failed",
+        "malformed": "Pairing failed, try again",
+        "network": "Network error, check your connection and try again",
+        "unknown": "Pairing failed, try again"
+      }
     },
     "tour": {
       "stepIndicator": "{{current}}/{{total}}",

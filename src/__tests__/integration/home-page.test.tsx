@@ -48,6 +48,7 @@ const connectedContext: ConnectionContextValue = {
   hasData: true,
   showConnecting: false,
   showReconnecting: false,
+  openPairingModal: () => {},
 };
 
 describe("Home Page Integration", () => {
@@ -492,6 +493,7 @@ describe("Home Page Integration", () => {
         hasData: false,
         showConnecting: false,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       render(

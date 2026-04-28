@@ -6,8 +6,10 @@
  */
 
 import { logger } from "../logger";
+import { EncryptedSession } from "../crypto/session";
 import type {
   Transport,
+  TransportEncryptionConfig,
   TransportEventHandlers,
   TransportState,
 } from "./types";
@@ -29,11 +31,19 @@ export interface WebSocketTransportConfig {
   pingMessage?: string;
   /** Connection timeout (ms) */
   connectionTimeout?: number;
+  /** Optional encryption config */
+  encryption?: TransportEncryptionConfig;
 }
+
+// JSON-RPC error codes from the Zaparoo Core encryption spec.
+const ENCRYPTION_REQUIRED_CODE = -32002;
+const UNSUPPORTED_VERSION_CODE = -32001;
+
+type EncMode = "idle" | "trying-encrypted" | "encrypted-verified" | "plaintext";
 
 const DEFAULT_CONFIG: Omit<
   Required<WebSocketTransportConfig>,
-  "deviceId" | "url"
+  "deviceId" | "url" | "encryption"
 > = {
   pingInterval: 15000,
   pongTimeout: 10000,
@@ -45,7 +55,9 @@ const DEFAULT_CONFIG: Omit<
 
 export class WebSocketTransport implements Transport {
   private ws: WebSocket | null = null;
-  private config: Required<WebSocketTransportConfig>;
+  private config: Required<Omit<WebSocketTransportConfig, "encryption">> & {
+    encryption?: TransportEncryptionConfig;
+  };
   private handlers: TransportEventHandlers = {};
   private _state: TransportState = "disconnected";
   private reconnectAttempts = 0;
@@ -58,12 +70,24 @@ export class WebSocketTransport implements Transport {
   private _hasConnectedBefore = false;
   private heartbeatPaused = false;
 
+  // Encryption state for the current connect cycle.
+  private encMode: EncMode = "idle";
+  private session: EncryptedSession | null = null;
+  private outboundQueue: string[] = [];
+  private drainInFlight = false;
+  // Set to true when an encryption-related signal (revoked creds, -32002, -32001)
+  // closes the connection. Suppresses the auto-reconnect loop until the consumer
+  // resolves the issue (e.g. pairs) and triggers an explicit immediateReconnect().
+  private encryptionBlocked = false;
+
   readonly deviceId: string;
 
   constructor(config: WebSocketTransportConfig) {
+    const { encryption, ...rest } = config;
     this.config = {
       ...DEFAULT_CONFIG,
-      ...config,
+      ...rest,
+      encryption,
     };
     this.deviceId = config.deviceId;
   }
@@ -100,6 +124,10 @@ export class WebSocketTransport implements Transport {
       return;
     }
 
+    // Any explicit connect attempt clears the encryption block — the caller
+    // is asserting they want to try again (e.g. fresh credentials available).
+    this.encryptionBlocked = false;
+
     // Use "reconnecting" state if we've connected before, "connecting" for first connection
     // This prevents state flickering during reconnection loops
     if (this._hasConnectedBefore && this._state !== "reconnecting") {
@@ -123,12 +151,19 @@ export class WebSocketTransport implements Transport {
   }
 
   send(data: string): void {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(data);
-    } else {
+    if (this.ws?.readyState !== WebSocket.OPEN) {
       throw new Error(
         `Cannot send message: WebSocket not open (state: ${this.ws?.readyState})`,
       );
+    }
+    if (
+      this.encMode === "trying-encrypted" ||
+      this.encMode === "encrypted-verified"
+    ) {
+      this.outboundQueue.push(data);
+      this.kickDrain();
+    } else {
+      this.ws.send(data);
     }
   }
 
@@ -148,6 +183,9 @@ export class WebSocketTransport implements Transport {
       this.resumeHeartbeat();
       return;
     }
+
+    // An explicit reconnect (e.g. after pairing) clears the encryption block.
+    this.encryptionBlocked = false;
 
     logger.log(`[Transport:${this.deviceId}] Immediate reconnect triggered`);
 
@@ -276,15 +314,24 @@ export class WebSocketTransport implements Transport {
       this.clearConnectionTimeout();
       this.reconnectAttempts = 0;
       this._hasConnectedBefore = true;
-      this.setState("connected");
-      this.startHeartbeat();
-      this.handlers.onOpen?.();
+      // setState and startHeartbeat are deferred to initEncryption() so that
+      // encMode is set before any consumer can call send().
+      void this.initEncryption();
     };
 
     this.ws.onclose = () => {
       logger.debug(`[Transport:${this.deviceId}] WebSocket closed`);
       this.clearConnectionTimeout();
       this.heartReset();
+      // Silent close while attempting encrypted handshake — server likely
+      // doesn't speak our encryption protocol. Surface as an error and stop.
+      if (this.encMode === "trying-encrypted") {
+        this.handlers.onError?.(new Error("Encrypted handshake failed"));
+        this.failConnectionForEncryption(
+          "silent close during encrypted handshake",
+        );
+        return;
+      }
       this.handlers.onClose?.();
       this.handleDisconnection();
     };
@@ -292,8 +339,6 @@ export class WebSocketTransport implements Transport {
     this.ws.onerror = (event: Event) => {
       logger.error(`[Transport:${this.deviceId}] WebSocket error:`, event);
       this.clearConnectionTimeout();
-      // WebSocket error events don't expose details for security reasons,
-      // but we can check if it's an ErrorEvent which may have a message
       const errorEvent = event as ErrorEvent;
       const message =
         errorEvent.message || `Failed to connect to ${this.config.url}`;
@@ -302,17 +347,250 @@ export class WebSocketTransport implements Transport {
     };
 
     this.ws.onmessage = (event) => {
-      // Reset heartbeat cycle on any message - this proves connection is alive
+      // Any frame proves the connection is alive.
       this.heartCheck();
 
-      // Handle pong messages - no further processing needed
-      if (event.data === "pong") {
+      if (
+        this.encMode === "trying-encrypted" ||
+        this.encMode === "encrypted-verified"
+      ) {
+        void this.handleEncryptedMessage(event);
+      } else {
+        this.handlePlaintextMessage(event);
+      }
+    };
+  }
+
+  // ── Encryption helpers ──────────────────────────────────────────────────
+
+  private async initEncryption(): Promise<void> {
+    const enc = this.config.encryption;
+
+    if (!enc) {
+      this.encMode = "plaintext";
+      this.setState("connected");
+      this.startHeartbeat();
+      this.handlers.onOpen?.();
+      this.handlers.onPlaintextMode?.();
+      return;
+    }
+
+    try {
+      const creds = await enc.getCredentials();
+      if (!creds) {
+        // No stored credentials — try plaintext. Server may reject with -32002
+        // (encryption required), in which case we fail and prompt for pairing.
+        this.encMode = "plaintext";
+        this.setState("connected");
+        this.startHeartbeat();
+        this.handlers.onOpen?.();
+        this.handlers.onPlaintextMode?.();
         return;
       }
 
-      this.handlers.onMessage?.(event);
-    };
+      // Defensive: persisted creds could be corrupted on disk. Treat malformed
+      // hex as revoked so the consumer wipes them and prompts for re-pairing
+      // instead of looping on the same broken value.
+      if (
+        creds.pairingKey.length === 0 ||
+        creds.pairingKey.length % 2 !== 0 ||
+        !/^[0-9a-fA-F]+$/.test(creds.pairingKey)
+      ) {
+        logger.error(
+          `[Transport:${this.deviceId}] Stored pairingKey is malformed`,
+          undefined,
+          { category: "crypto", action: "init-failed" },
+        );
+        this.handlers.onCredentialsRevoked?.();
+        this.failConnectionForEncryption("malformed pairing key");
+        return;
+      }
+      const pairingKeyHex = creds.pairingKey.match(/.{2}/g) ?? [];
+      const pairingKeyBytes = new Uint8Array(
+        pairingKeyHex.map((h) => Number.parseInt(h, 16)),
+      );
+      this.session = await EncryptedSession.create(
+        creds.authToken,
+        pairingKeyBytes,
+      );
+      this.encMode = "trying-encrypted";
+      logger.debug(
+        `[Transport:${this.deviceId}] Encrypted session created (authToken: ${creds.authToken.slice(0, 8)}…)`,
+        { category: "crypto", action: "session-created" },
+      );
+    } catch (err) {
+      logger.error(
+        `[Transport:${this.deviceId}] Failed to init encryption:`,
+        err,
+        {
+          category: "crypto",
+          action: "init-failed",
+        },
+      );
+      // Local crypto setup failed — surface as a connection error.
+      this.handlers.onError?.(new Error("Failed to initialise encryption"));
+      this.handleConnectionError();
+      return;
+    }
+
+    this.setState("connected");
+    this.startHeartbeat();
+    this.handlers.onOpen?.();
   }
+
+  private async handleEncryptedMessage(event: MessageEvent): Promise<void> {
+    const raw = event.data as string;
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      logger.warn(
+        `[Transport:${this.deviceId}] Non-JSON frame in encrypted mode`,
+        {
+          category: "crypto",
+          action: "parse-error",
+        },
+      );
+      return;
+    }
+
+    // Plaintext protocol errors can arrive even on an encrypted connection.
+    const code = (parsed as { error?: { code?: number } }).error?.code;
+    if (code === UNSUPPORTED_VERSION_CODE) {
+      logger.warn(
+        `[Transport:${this.deviceId}] Unsupported encryption version (-32001)`,
+        {
+          category: "crypto",
+          action: "unsupported-version",
+        },
+      );
+      this.handlers.onUnsupportedVersion?.();
+      this.failConnectionForEncryption("unsupported encryption version");
+      return;
+    }
+    if (code === ENCRYPTION_REQUIRED_CODE) {
+      // Server doesn't recognise our auth token — credentials are revoked.
+      logger.warn(
+        `[Transport:${this.deviceId}] Credentials rejected in encrypted mode (-32002)`,
+        { category: "crypto", action: "credentials-revoked" },
+      );
+      this.handlers.onCredentialsRevoked?.();
+      this.failConnectionForEncryption("credentials revoked");
+      return;
+    }
+
+    // Decrypt the frame.
+    if (typeof parsed.e === "string" && this.session) {
+      let plaintext: string;
+      try {
+        plaintext = await this.session.decrypt(parsed.e);
+      } catch (err) {
+        logger.warn(`[Transport:${this.deviceId}] Decryption failed:`, err, {
+          category: "crypto",
+          action: "decrypt-failed",
+        });
+        // Either the handshake never verified or an established session
+        // produced a bad frame — both are fatal in the binary model.
+        this.handlers.onError?.(new Error("Encrypted handshake failed"));
+        this.failConnectionForEncryption("decrypt failure");
+        return;
+      }
+
+      // Success.
+      if (this.encMode === "trying-encrypted") {
+        this.encMode = "encrypted-verified";
+        logger.debug(`[Transport:${this.deviceId}] Encrypted handshake OK`, {
+          category: "crypto",
+          action: "handshake-ok",
+        });
+        this.handlers.onEncryptedHandshakeOk?.();
+      }
+
+      // Intercept heartbeat pong in decrypted payload.
+      if (plaintext === "pong") return;
+
+      this.handlers.onMessage?.(
+        new MessageEvent("message", { data: plaintext }),
+      );
+    }
+  }
+
+  private handlePlaintextMessage(event: MessageEvent): void {
+    const raw = event.data as string;
+
+    // Intercept heartbeat pong.
+    if (raw === "pong") return;
+
+    // Detect encryption-required or unsupported-version signals.
+    try {
+      const parsed = JSON.parse(raw) as { error?: { code?: number } };
+      const code = parsed.error?.code;
+      if (code === ENCRYPTION_REQUIRED_CODE) {
+        logger.warn(
+          `[Transport:${this.deviceId}] Encryption required (-32002)`,
+          { category: "crypto", action: "encryption-required" },
+        );
+        this.handlers.onEncryptionRequired?.();
+        this.failConnectionForEncryption("encryption required");
+        return;
+      }
+      if (code === UNSUPPORTED_VERSION_CODE) {
+        this.handlers.onUnsupportedVersion?.();
+        this.failConnectionForEncryption("unsupported encryption version");
+        return;
+      }
+    } catch {
+      // Non-JSON (e.g. raw "pong" already handled above) — fall through.
+    }
+
+    this.handlers.onMessage?.(event);
+  }
+
+  // Encryption-related failure: stop the connection and suppress the
+  // auto-reconnect loop. The consumer (ConnectionProvider) drives recovery
+  // via PairingModal + immediateReconnect once the user pairs.
+  private failConnectionForEncryption(reason: string): void {
+    logger.warn(
+      `[Transport:${this.deviceId}] Encryption-blocked disconnect: ${reason}`,
+      { category: "crypto", action: "encryption-blocked" },
+    );
+    this.encryptionBlocked = true;
+    this.cleanup();
+    this.setState("disconnected");
+    this.handlers.onClose?.();
+  }
+
+  private kickDrain(): void {
+    if (this.drainInFlight || !this.session) return;
+    this.drainInFlight = true;
+    void this.drain();
+  }
+
+  private async drain(): Promise<void> {
+    while (this.outboundQueue.length > 0) {
+      if (this.ws?.readyState !== WebSocket.OPEN) {
+        this.drainInFlight = false;
+        return;
+      }
+      const item = this.outboundQueue.shift()!;
+      try {
+        const frame = await this.session!.encryptAndFrame(item);
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          this.ws.send(frame);
+        }
+      } catch (err) {
+        logger.error(`[Transport:${this.deviceId}] Encrypt failed:`, err, {
+          category: "crypto",
+          action: "encrypt-failed",
+        });
+        this.handleConnectionError();
+        break;
+      }
+    }
+    this.drainInFlight = false;
+  }
+
+  // ── End encryption helpers ───────────────────────────────────────────────
 
   private handleDisconnection(): void {
     if (this.isDestroyed) return;
@@ -337,6 +615,13 @@ export class WebSocketTransport implements Transport {
   private scheduleReconnect(): void {
     // Don't schedule reconnects while heartbeat is paused (app backgrounded)
     if (this.heartbeatPaused) {
+      return;
+    }
+
+    // Don't loop on encryption-blocked failures — wait for the consumer
+    // to drive recovery (e.g. via PairingModal + immediateReconnect).
+    if (this.encryptionBlocked) {
+      this.setState("disconnected");
       return;
     }
 
@@ -410,7 +695,7 @@ export class WebSocketTransport implements Transport {
     this.pingTimeoutId = setTimeout(() => {
       if (this.ws?.readyState === WebSocket.OPEN) {
         try {
-          this.ws.send(this.config.pingMessage);
+          this.send(this.config.pingMessage);
 
           // Start pong timeout - if no response, force disconnect
           this.pongTimeoutId = setTimeout(() => {
@@ -480,5 +765,11 @@ export class WebSocketTransport implements Transport {
     }
 
     this.closeWebSocket();
+
+    // Reset encryption state for next connect cycle.
+    this.session = null;
+    this.outboundQueue = [];
+    this.drainInFlight = false;
+    this.encMode = "idle";
   }
 }

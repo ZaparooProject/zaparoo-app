@@ -58,6 +58,7 @@ describe("DeviceConnectionCard", () => {
       isConnected: true,
       showConnecting: false,
       showReconnecting: false,
+      openPairingModal: () => {},
     });
   });
 
@@ -100,6 +101,7 @@ describe("DeviceConnectionCard", () => {
       isConnected: false,
       showConnecting: false,
       showReconnecting: false,
+      openPairingModal: () => {},
     });
 
     render(
@@ -168,6 +170,7 @@ describe("DeviceConnectionCard", () => {
       isConnected: false,
       showConnecting: true,
       showReconnecting: false,
+      openPairingModal: () => {},
     });
 
     render(<DeviceConnectionCard {...defaultProps} />);
@@ -181,6 +184,7 @@ describe("DeviceConnectionCard", () => {
       isConnected: false,
       showConnecting: false,
       showReconnecting: true,
+      openPairingModal: () => {},
     });
 
     render(<DeviceConnectionCard {...defaultProps} />);

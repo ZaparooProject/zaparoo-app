@@ -350,24 +350,24 @@ export default function App() {
         }}
       />
       <A11yAnnouncerProvider>
-        <ConnectionProvider>
-          <ToastAnnouncer />
-          <NowPlayingToast />
-          <MediaFinishedToastHandler />
-          <ReconnectingIndicator />
-          <div
-            className="app-frame h-screen w-screen"
-            style={{
-              background: "var(--color-background)",
-              color: "var(--color-foreground)",
-            }}
-          >
-            <SlideModalProvider>
+        <SlideModalProvider>
+          <ConnectionProvider>
+            <ToastAnnouncer />
+            <NowPlayingToast />
+            <MediaFinishedToastHandler />
+            <ReconnectingIndicator />
+            <div
+              className="app-frame h-screen w-screen"
+              style={{
+                background: "var(--color-background)",
+                color: "var(--color-foreground)",
+              }}
+            >
               <RouterProvider router={router} />
-            </SlideModalProvider>
-          </div>
-          <RequirementsModal />
-        </ConnectionProvider>
+            </div>
+            <RequirementsModal />
+          </ConnectionProvider>
+        </SlideModalProvider>
       </A11yAnnouncerProvider>
     </>
   );

@@ -17,6 +17,16 @@ export function TextInput(props: {
   saveDisabled?: boolean;
   clearable?: boolean;
   type?: string;
+  inputMode?:
+    | "none"
+    | "text"
+    | "tel"
+    | "url"
+    | "email"
+    | "numeric"
+    | "decimal"
+    | "search";
+  maxLength?: number;
   onKeyUp?: KeyboardEventHandler<HTMLInputElement>;
   ref?: React.RefObject<HTMLInputElement | null>;
   /** Error message to display below the input */
@@ -51,6 +61,8 @@ export function TextInput(props: {
             id={inputId}
             ref={props.ref}
             type={type}
+            inputMode={props.inputMode}
+            maxLength={props.maxLength}
             aria-invalid={!!props.error}
             aria-describedby={props.error ? errorId : undefined}
             className={classNames(

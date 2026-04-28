@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { ArrowLeftRightIcon, SearchIcon } from "lucide-react";
+import { ArrowLeftRightIcon, KeyRoundIcon, SearchIcon } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
 import { getDeviceAddress } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
@@ -29,7 +29,7 @@ export function DeviceConnectionCard({
   onScanClick,
 }: DeviceConnectionCardProps) {
   const { t } = useTranslation();
-  const { isConnected } = useConnection();
+  const { isConnected, openPairingModal } = useConnection();
 
   const savedAddress = getDeviceAddress();
   const coreVersion = useStatusStore((state) => state.coreVersion);
@@ -37,6 +37,7 @@ export function DeviceConnectionCard({
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
+  const pairingRequired = useStatusStore((state) => state.pairingRequired);
 
   const versionLabel =
     coreVersion !== null
@@ -75,6 +76,14 @@ export function DeviceConnectionCard({
             connectedSubtitleLoading={isConnected && coreVersionPending}
             action={
               <div className="flex items-center gap-1">
+                {pairingRequired && (
+                  <Button
+                    icon={<KeyRoundIcon size="24" />}
+                    variant="text"
+                    onClick={openPairingModal}
+                    aria-label={t("pairing.openPairing")}
+                  />
+                )}
                 {/* Network scan button - only on native platforms */}
                 {Capacitor.isNativePlatform() && onScanClick && (
                   <Button

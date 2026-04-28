@@ -45,12 +45,14 @@ import {
   type NotificationRequest,
 } from "@/lib/coreApi";
 import { useStatusStore, ConnectionState } from "@/lib/store";
+import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
 import { formatDurationDisplay, formatDurationAccessible } from "@/lib/utils";
 import {
   ConnectionContext,
   type ConnectionContextValue,
 } from "@/hooks/useConnection";
 import { useAnnouncer } from "./A11yAnnouncer";
+import { PairingModal } from "./PairingModal";
 
 interface ConnectionProviderProps {
   children: ReactNode;
@@ -63,6 +65,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const isInitialized = useRef(false);
   // Track current connection to prevent stale events from old connections
   const currentConnectionId = useRef<string | null>(null);
+  // Pairing modal is auto-opened when the transport reports the server requires
+  // encryption (or rejects our credentials). Closed on success or user dismiss.
+  const [pairingOpen, setPairingOpen] = useState(false);
 
   // Refs for stable callback references - prevents effect re-run on callback changes
   const handleConnectionOpenRef = useRef<() => void>(() => {});
@@ -85,6 +90,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setCoreVersion,
     setCorePlatform,
     setCoreVersionPending,
+    setEncryptionState,
+    setPairingRequired,
   } = useStatusStore(
     useShallow((state) => ({
       targetDeviceAddress: state.targetDeviceAddress,
@@ -99,6 +106,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setCoreVersion: state.setCoreVersion,
       setCorePlatform: state.setCorePlatform,
       setCoreVersionPending: state.setCoreVersionPending,
+      setEncryptionState: state.setEncryptionState,
+      setPairingRequired: state.setPairingRequired,
     })),
   );
 
@@ -441,6 +450,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   useEffect(() => {
     // Reset local connection state when device changes so UI doesn't show stale data
     setLocalConnection(null);
+    setEncryptionState("unknown");
+    setPairingOpen(false);
 
     if (targetDeviceAddress === "") {
       setConnectionState(ConnectionState.DISCONNECTED);
@@ -536,6 +547,56 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           );
         }
       },
+      onEncryptedHandshakeOk: () => {
+        setEncryptionState("encrypted");
+        setPairingRequired(false);
+      },
+      onPlaintextMode: () => {
+        setEncryptionState("plaintext");
+        setPairingRequired(false);
+      },
+      onEncryptionRequired: () => {
+        // Server demands encryption but we have no credentials — open the
+        // pairing modal so the user can pair. Connection stays failed until
+        // pairing succeeds and triggers an immediate reconnect.
+        setEncryptionState("plaintext");
+        setPairingRequired(true);
+        setConnectionError(
+          tRef.current("pairing.connectionError.encryptionRequired"),
+        );
+        setPairingOpen(true);
+      },
+      onUnsupportedVersion: () => {
+        setEncryptionState("plaintext");
+        setConnectionError(
+          tRef.current("pairing.connectionError.unsupportedVersion"),
+        );
+      },
+      onCredentialsRevoked: () => {
+        // Server rejected our stored credentials — clear them and prompt
+        // the user to pair again.
+        const deviceKey = normalizeDeviceKey(targetDeviceAddress);
+        credentialStore.delete(deviceKey).catch((err) => {
+          logger.error("Failed to delete revoked credentials", err, {
+            category: "storage",
+            action: "deleteCredentials",
+          });
+        });
+        const updated = useStatusStore
+          .getState()
+          .deviceHistory.map((entry) =>
+            entry.address === targetDeviceAddress
+              ? { ...entry, paired: undefined }
+              : entry,
+          );
+        setDeviceHistory(updated);
+        setEncryptionState("plaintext");
+        setPairingRequired(true);
+        setConnectionError(
+          tRef.current("pairing.connectionError.credentialsRevoked"),
+        );
+        setPairingOpen(true);
+      },
     });
 
     // Add device and set as active
@@ -543,6 +604,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       deviceId: targetDeviceAddress,
       type: "websocket",
       address: wsUrl,
+      encryption: {
+        getCredentials: () =>
+          credentialStore.get(normalizeDeviceKey(targetDeviceAddress)),
+      },
     });
 
     connectionManager.setActiveDevice(targetDeviceAddress);
@@ -582,6 +647,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     targetDeviceAddress,
     setConnectionState,
     setConnectionError,
+    setEncryptionState,
+    setPairingRequired,
+    setDeviceHistory,
     mapTransportState,
     // Note: handleConnectionOpen, processNotification, and t are accessed via refs
     // to prevent this effect from re-running when those callbacks change
@@ -663,6 +731,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     };
   }, []);
 
+  const openPairingModal = useCallback(() => {
+    setPairingOpen(true);
+  }, []);
+
   // Memoize context value to prevent unnecessary re-renders of consumers
   const contextValue = useMemo<ConnectionContextValue>(
     () => ({
@@ -671,13 +743,26 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       hasData,
       showConnecting,
       showReconnecting,
+      openPairingModal,
     }),
-    [localConnection, isConnected, hasData, showConnecting, showReconnecting],
+    [
+      localConnection,
+      isConnected,
+      hasData,
+      showConnecting,
+      showReconnecting,
+      openPairingModal,
+    ],
   );
 
   return (
     <ConnectionContext.Provider value={contextValue}>
       {children}
+      <PairingModal
+        isOpen={pairingOpen}
+        close={() => setPairingOpen(false)}
+        address={targetDeviceAddress}
+      />
     </ConnectionContext.Provider>
   );
 }

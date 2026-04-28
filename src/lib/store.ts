@@ -3,6 +3,8 @@ import { User } from "@capacitor-firebase/authentication";
 import { Preferences } from "@capacitor/preferences";
 import { IndexResponse, PlayingResponse, TokenResponse } from "./models";
 import { SafeAreaInsets } from "./safeArea";
+import { credentialStore, normalizeDeviceKey } from "./crypto/credentials";
+import { logger } from "./logger";
 
 const defaultSafeAreaInsets: SafeAreaInsets = {
   top: "0px",
@@ -22,7 +24,10 @@ export enum ConnectionState {
 
 export interface DeviceHistoryEntry {
   address: string;
+  paired?: { clientId: string; pairedAt: number; label?: string };
 }
+
+export type EncryptionState = "unknown" | "plaintext" | "encrypted";
 
 interface StatusState {
   connected: boolean;
@@ -89,6 +94,12 @@ interface StatusState {
   setCorePlatform: (platform: string | null) => void;
   coreVersionPending: boolean;
   setCoreVersionPending: (pending: boolean) => void;
+
+  encryptionState: EncryptionState;
+  setEncryptionState: (state: EncryptionState) => void;
+
+  pairingRequired: boolean;
+  setPairingRequired: (required: boolean) => void;
 
   resetConnectionState: () => void;
 }
@@ -187,6 +198,14 @@ export const useStatusStore = create<StatusState>()((set) => ({
         key: "deviceHistory",
         value: JSON.stringify(devices),
       }).catch(() => {});
+      // Removing a device clears any stored pairing — encryption credentials
+      // and the device entry are managed as one unit.
+      credentialStore.delete(normalizeDeviceKey(address)).catch((err) => {
+        logger.error("Failed to delete credentials for removed device", err, {
+          category: "storage",
+          action: "deleteCredentials",
+        });
+      });
       return {
         deviceHistory: devices,
       };
@@ -196,7 +215,21 @@ export const useStatusStore = create<StatusState>()((set) => ({
       key: "deviceHistory",
       value: JSON.stringify([]),
     }).catch(() => {});
-    set({ deviceHistory: [] });
+    set((state) => {
+      // Wipe credentials for every removed device.
+      for (const entry of state.deviceHistory) {
+        credentialStore
+          .delete(normalizeDeviceKey(entry.address))
+          .catch((err) => {
+            logger.error(
+              "Failed to delete credentials during clearDeviceHistory",
+              err,
+              { category: "storage", action: "deleteCredentials" },
+            );
+          });
+      }
+      return { deviceHistory: [] };
+    });
   },
   runQueue: null,
   setRunQueue: (runQueue) => set({ runQueue }),
@@ -209,6 +242,12 @@ export const useStatusStore = create<StatusState>()((set) => ({
   setCorePlatform: (platform) => set({ corePlatform: platform }),
   coreVersionPending: false,
   setCoreVersionPending: (pending) => set({ coreVersionPending: pending }),
+
+  encryptionState: "unknown",
+  setEncryptionState: (state) => set({ encryptionState: state }),
+
+  pairingRequired: false,
+  setPairingRequired: (required) => set({ pairingRequired: required }),
 
   resetConnectionState: () => {
     // Reset all connection-related state
@@ -240,6 +279,8 @@ export const useStatusStore = create<StatusState>()((set) => ({
       coreVersion: null,
       corePlatform: null,
       coreVersionPending: false,
+      encryptionState: "unknown",
+      pairingRequired: false,
     });
   },
 }));
