@@ -35,6 +35,7 @@ import {
   PlayingResponse,
   PlaytimeLimitReachedParams,
   PlaytimeLimitWarningParams,
+  ScrapingStatusNotification,
   TokenResponse,
 } from "@/lib/models";
 import {
@@ -79,6 +80,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setConnectionError,
     setPlaying,
     setGamesIndex,
+    setScrapingStatus,
     setLastToken,
     addDeviceHistory,
     setDeviceHistory,
@@ -93,6 +95,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setConnectionError: state.setConnectionError,
       setPlaying: state.setPlaying,
       setGamesIndex: state.setGamesIndex,
+      setScrapingStatus: state.setScrapingStatus,
       setLastToken: state.setLastToken,
       addDeviceHistory: state.addDeviceHistory,
       setDeviceHistory: state.setDeviceHistory,
@@ -192,6 +195,13 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             break;
           }
 
+          case Notification.MediaScraping: {
+            const params = notification.params as ScrapingStatusNotification;
+            logger.log("mediaScraping", params);
+            setScrapingStatus(params);
+            break;
+          }
+
           case Notification.TokensScanned: {
             const params = notification.params as TokenResponse;
             logger.log("activeToken", params);
@@ -288,7 +298,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         toast.error(t("error", { msg: "Error processing notification" }));
       }
     },
-    [setPlaying, setGamesIndex, setLastToken, queryClient, t, announce],
+    [setPlaying, setGamesIndex, setScrapingStatus, setLastToken, queryClient, t, announce],
   );
 
   // Handle connection open - fetch initial data

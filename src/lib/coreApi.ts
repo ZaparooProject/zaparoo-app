@@ -10,6 +10,7 @@ import {
   LogDownloadResponse,
   MediaActiveUpdateRequest,
   MediaResponse,
+  MediaScrapeParams,
   MediaTagsResponse,
   Method,
   Notification,
@@ -17,6 +18,7 @@ import {
   PlaytimeLimitsUpdateRequest,
   PlaytimeStatus,
   ReadersResponse,
+  ScrapersResponse,
   SearchParams,
   SearchResultsResponse,
   SettingsResponse,
@@ -761,6 +763,56 @@ class CoreApi {
         })
         .catch((error) => {
           logger.error("Media generate cancel API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  scrapers(): Promise<ScrapersResponse> {
+    return new Promise<ScrapersResponse>((resolve, reject) => {
+      this.call(Method.Scrapers)
+        .then((result) => {
+          try {
+            const response = result as ScrapersResponse;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing scrapers response:", e);
+            reject(
+              new Error(
+                `Failed to process scrapers response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logger.error("Scrapers API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  mediaScrape(params: MediaScrapeParams): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MediaScrape, params)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Media scrape API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  mediaScrapeCancel(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MediaScrapeCancel)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Media scrape cancel API call failed:", error);
           reject(error);
         });
     });

@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { User } from "@capacitor-firebase/authentication";
 import { Preferences } from "@capacitor/preferences";
-import { IndexResponse, PlayingResponse, TokenResponse } from "./models";
+import {
+  IndexResponse,
+  PlayingResponse,
+  ScrapingStatusNotification,
+  TokenResponse,
+} from "./models";
 import { SafeAreaInsets } from "./safeArea";
 
 const defaultSafeAreaInsets: SafeAreaInsets = {
@@ -49,6 +54,9 @@ interface StatusState {
 
   gamesIndex: IndexResponse;
   setGamesIndex: (index: IndexResponse) => void;
+
+  scrapingStatus: ScrapingStatusNotification | null;
+  setScrapingStatus: (status: ScrapingStatusNotification | null) => void;
 
   playing: PlayingResponse;
   setPlaying: (playing: PlayingResponse) => void;
@@ -132,6 +140,9 @@ export const useStatusStore = create<StatusState>()((set) => ({
     totalFiles: 0,
   },
   setGamesIndex: (index) => set({ gamesIndex: index }),
+
+  scrapingStatus: null,
+  setScrapingStatus: (status) => set({ scrapingStatus: status }),
 
   playing: {
     systemId: "",
@@ -231,6 +242,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
         currentStepDisplay: "",
         totalFiles: 0,
       },
+      scrapingStatus: null,
       playing: {
         systemId: "",
         systemName: "",
