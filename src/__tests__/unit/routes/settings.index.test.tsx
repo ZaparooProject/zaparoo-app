@@ -94,7 +94,6 @@ vi.mock("@/components/MediaDatabaseCard", () => ({
 
 vi.mock("@/components/DeviceConnectionCard", () => ({
   DeviceConnectionCard: ({
-    onHistoryClick,
     onScanClick,
     onAddressChange,
   }: {
@@ -102,14 +101,9 @@ vi.mock("@/components/DeviceConnectionCard", () => ({
     setAddress: (address: string) => void;
     onAddressChange: (address: string) => void;
     connectionError: string;
-    hasDeviceHistory: boolean;
-    onHistoryClick: () => void;
     onScanClick: () => void;
   }) => (
     <div data-testid="device-connection-card">
-      <button onClick={onHistoryClick} data-testid="history-button">
-        History
-      </button>
       <button onClick={onScanClick} data-testid="scan-button">
         Scan
       </button>
@@ -260,24 +254,6 @@ describe("Settings Index Route", () => {
   });
 
   describe("modals", () => {
-    it("should open device history modal when history button is clicked", async () => {
-      mockUseStatusStore.mockImplementation((selector) =>
-        selector({
-          ...defaultStoreState,
-          deviceHistory: [{ address: "192.168.1.200" }],
-        }),
-      );
-
-      renderComponent();
-
-      fireEvent.click(screen.getByTestId("history-button"));
-
-      await waitFor(() => {
-        // SlideModal renders title in a <p> element, not a heading
-        expect(screen.getByRole("dialog")).toBeInTheDocument();
-      });
-    });
-
     it("should open network scan modal when scan button is clicked", async () => {
       renderComponent();
 

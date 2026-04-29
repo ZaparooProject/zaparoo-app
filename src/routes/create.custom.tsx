@@ -17,7 +17,7 @@ export const Route = createFileRoute("/create/custom")({
   component: CustomText,
 });
 
-function CustomText() {
+export function CustomText() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.custom.title"));
   const { customText, setCustomText } = usePreferencesStore(

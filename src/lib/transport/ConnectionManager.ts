@@ -23,6 +23,16 @@ export interface ConnectionManagerEventHandlers {
   onActiveDeviceChange?: (deviceId: string | null) => void;
   /** Called when a connection error occurs */
   onError?: (deviceId: string, error: Error) => void;
+  /** Called when the encrypted handshake is verified for a device. */
+  onEncryptedHandshakeOk?: (deviceId: string) => void;
+  /** Called when the transport commits to plaintext for a device. */
+  onPlaintextMode?: (deviceId: string) => void;
+  /** Called when the server requires pairing (-32002, no creds). */
+  onEncryptionRequired?: (deviceId: string) => void;
+  /** Called when the server returned -32001 (unsupported version). */
+  onUnsupportedVersion?: (deviceId: string) => void;
+  /** Called when the server doesn't recognise our credentials. */
+  onCredentialsRevoked?: (deviceId: string) => void;
 }
 
 export class ConnectionManager {
@@ -94,6 +104,15 @@ export class ConnectionManager {
         this.connections.set(config.deviceId, { ...connection });
         this.handlers.onConnectionChange?.(config.deviceId, { ...connection });
       },
+      onEncryptedHandshakeOk: () =>
+        this.handlers.onEncryptedHandshakeOk?.(config.deviceId),
+      onPlaintextMode: () => this.handlers.onPlaintextMode?.(config.deviceId),
+      onEncryptionRequired: () =>
+        this.handlers.onEncryptionRequired?.(config.deviceId),
+      onUnsupportedVersion: () =>
+        this.handlers.onUnsupportedVersion?.(config.deviceId),
+      onCredentialsRevoked: () =>
+        this.handlers.onCredentialsRevoked?.(config.deviceId),
     };
 
     transport.setEventHandlers(transportHandlers);
@@ -269,6 +288,15 @@ export class ConnectionManager {
   }
 
   /**
+   * Clear the encryption-blocked state on the active device. Call this after
+   * resolving the encryption issue (e.g. successful pairing) before invoking
+   * immediateReconnectActive() so the reconnect actually proceeds.
+   */
+  clearEncryptionBlockActive(): void {
+    this.getActiveTransport()?.clearEncryptionBlock();
+  }
+
+  /**
    * Destroy all connections and clean up.
    */
   destroy(): void {
@@ -296,6 +324,7 @@ export class ConnectionManager {
           maxReconnectAttempts: Infinity,
           pingMessage: "ping",
           connectionTimeout: 5000,
+          encryption: config.encryption,
         });
 
       case "bluetooth":

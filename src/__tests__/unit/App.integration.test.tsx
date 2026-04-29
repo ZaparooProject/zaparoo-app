@@ -120,6 +120,7 @@ vi.mock("@/components/ConnectionProvider", () => ({
     isConnected: true,
     hasData: false,
     showReconnecting: false,
+    openPairingModal: () => {},
   }),
 }));
 

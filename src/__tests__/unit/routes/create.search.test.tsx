@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "../../../test-utils";
-import { Search } from "@/routes/create.search";
+import { Search } from "@/routes/-pages/Search";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 
 // Mock route
 vi.mock("@tanstack/react-router", () => ({
-  createFileRoute: () => () => ({
+  getRouteApi: () => ({
     useLoaderData: () => ({
       systemQuery: "all",
       tagQuery: [],

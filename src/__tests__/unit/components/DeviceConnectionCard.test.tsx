@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "../../../test-utils";
 import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
+import { useStatusStore } from "@/lib/store";
 
 // Mock useConnection hook
 const mockUseConnection = vi.fn();
@@ -42,14 +43,31 @@ vi.mock("@capacitor/core", () => ({
   },
 }));
 
+// Mock TanStack Router Link
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    to,
+    "aria-label": ariaLabel,
+    className,
+  }: {
+    children: React.ReactNode;
+    to: string;
+    "aria-label"?: string;
+    className?: string;
+  }) => (
+    <a href={to} aria-label={ariaLabel} className={className}>
+      {children}
+    </a>
+  ),
+}));
+
 describe("DeviceConnectionCard", () => {
   const defaultProps = {
     address: "192.168.1.100",
     setAddress: vi.fn(),
     onAddressChange: vi.fn(),
     connectionError: "",
-    hasDeviceHistory: true,
-    onHistoryClick: vi.fn(),
   };
 
   beforeEach(() => {
@@ -58,6 +76,13 @@ describe("DeviceConnectionCard", () => {
       isConnected: true,
       showConnecting: false,
       showReconnecting: false,
+      openPairingModal: () => {},
+    });
+    // Seed encryptionState so connected-state assertions don't hit the
+    // "verifying" UI gate (encryptionState === "unknown" -> connecting).
+    useStatusStore.setState({
+      encryptionState: "plaintext",
+      pairingRequired: false,
     });
   });
 
@@ -100,6 +125,7 @@ describe("DeviceConnectionCard", () => {
       isConnected: false,
       showConnecting: false,
       showReconnecting: false,
+      openPairingModal: () => {},
     });
 
     render(
@@ -113,33 +139,14 @@ describe("DeviceConnectionCard", () => {
     expect(screen.getByText("Connection failed")).toBeInTheDocument();
   });
 
-  it("shows device history button", () => {
+  it("renders a link to the device history page", () => {
     render(<DeviceConnectionCard {...defaultProps} />);
 
-    const historyButton = screen.getByRole("button", {
+    const historyLink = screen.getByRole("link", {
       name: /settings.deviceHistory/i,
     });
-    expect(historyButton).toBeInTheDocument();
-  });
-
-  it("calls onHistoryClick when history button is clicked", () => {
-    render(<DeviceConnectionCard {...defaultProps} />);
-
-    const historyButton = screen.getByRole("button", {
-      name: /settings.deviceHistory/i,
-    });
-    fireEvent.click(historyButton);
-
-    expect(defaultProps.onHistoryClick).toHaveBeenCalled();
-  });
-
-  it("disables history button when no device history", () => {
-    render(<DeviceConnectionCard {...defaultProps} hasDeviceHistory={false} />);
-
-    const historyButton = screen.getByRole("button", {
-      name: /settings.deviceHistory/i,
-    });
-    expect(historyButton).toBeDisabled();
+    expect(historyLink).toBeInTheDocument();
+    expect(historyLink).toHaveAttribute("href", "/settings/devices");
   });
 
   it("has device address input accessible", () => {
@@ -168,6 +175,7 @@ describe("DeviceConnectionCard", () => {
       isConnected: false,
       showConnecting: true,
       showReconnecting: false,
+      openPairingModal: () => {},
     });
 
     render(<DeviceConnectionCard {...defaultProps} />);
@@ -181,6 +189,7 @@ describe("DeviceConnectionCard", () => {
       isConnected: false,
       showConnecting: false,
       showReconnecting: true,
+      openPairingModal: () => {},
     });
 
     render(<DeviceConnectionCard {...defaultProps} />);

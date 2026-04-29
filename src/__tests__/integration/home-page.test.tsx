@@ -48,13 +48,16 @@ const connectedContext: ConnectionContextValue = {
   hasData: true,
   showConnecting: false,
   showReconnecting: false,
+  openPairingModal: () => {},
 };
 
 describe("Home Page Integration", () => {
   beforeEach(() => {
-    // Reset stores to initial state
+    // Seed a deterministic baseline for every store field these tests touch
+    // so prior-test mutations cannot leak in. encryptionState: "plaintext"
+    // keeps connected-state assertions out of the verifying UI gate
+    // (encryptionState === "unknown" -> connecting).
     useStatusStore.setState({
-      ...useStatusStore.getState(),
       connected: true,
       connectionState: ConnectionState.CONNECTED,
       connectionError: "",
@@ -65,6 +68,8 @@ describe("Home Page Integration", () => {
         mediaName: "",
         mediaPath: "",
       },
+      encryptionState: "plaintext",
+      pairingRequired: false,
     });
     usePreferencesStore.setState({
       ...usePreferencesStore.getState(),
@@ -492,6 +497,7 @@ describe("Home Page Integration", () => {
         hasData: false,
         showConnecting: false,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       render(

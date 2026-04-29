@@ -104,7 +104,8 @@ export default defineConfig(({ command, mode }) => {
             // Group large, stable packages into their own chunks
             if (
               packageName === "firebase" ||
-              packageName.startsWith("@firebase/")
+              packageName.startsWith("@firebase/") ||
+              packageName.startsWith("@capacitor-firebase/")
             ) {
               return "vendor-firebase";
             }
@@ -121,7 +122,9 @@ export default defineConfig(({ command, mode }) => {
             }
 
             if (
-              packageName.startsWith("@capacitor") ||
+              packageName.startsWith("@capacitor/") ||
+              packageName.startsWith("@capacitor-community/") ||
+              packageName.startsWith("@capacitor-mlkit/") ||
               packageName.startsWith("@capawesome") ||
               packageName.startsWith("@capgo/") ||
               packageName.startsWith("@revenuecat/")

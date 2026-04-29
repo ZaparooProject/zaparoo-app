@@ -47,6 +47,126 @@ describe("StatusStore", () => {
     });
   });
 
+  describe("updateDeviceHistoryMeta", () => {
+    const seedEntry = (overrides: Record<string, unknown> = {}) => {
+      useStatusStore.setState({
+        deviceHistory: [{ address: "192.168.1.100", ...overrides }],
+      });
+    };
+
+    it("is a no-op when the address does not exist", () => {
+      useStatusStore.setState({ deviceHistory: [] });
+      useStatusStore
+        .getState()
+        .updateDeviceHistoryMeta("ghost", { name: "Nope" });
+      expect(useStatusStore.getState().deviceHistory).toEqual([]);
+    });
+
+    describe("source: auto (default)", () => {
+      it("merges platform, version, and lastConnectedAt", () => {
+        seedEntry();
+        useStatusStore.getState().updateDeviceHistoryMeta("192.168.1.100", {
+          platform: "linux",
+          version: "1.2.3",
+          lastConnectedAt: 12345,
+        });
+        const entry = useStatusStore.getState().deviceHistory[0]!;
+        expect(entry.platform).toBe("linux");
+        expect(entry.version).toBe("1.2.3");
+        expect(entry.lastConnectedAt).toBe(12345);
+      });
+
+      it("sets name when no custom name is set", () => {
+        seedEntry();
+        useStatusStore
+          .getState()
+          .updateDeviceHistoryMeta("192.168.1.100", { name: "Office" });
+        expect(useStatusStore.getState().deviceHistory[0]!.name).toBe("Office");
+      });
+
+      it("preserves a custom name (nameIsCustom=true)", () => {
+        seedEntry({ name: "My Pixel", nameIsCustom: true });
+        useStatusStore
+          .getState()
+          .updateDeviceHistoryMeta("192.168.1.100", { name: "Auto Name" });
+        expect(useStatusStore.getState().deviceHistory[0]!.name).toBe(
+          "My Pixel",
+        );
+      });
+
+      it("ignores an empty-string name without overwriting an existing one", () => {
+        seedEntry({ name: "Living Room" });
+        useStatusStore
+          .getState()
+          .updateDeviceHistoryMeta("192.168.1.100", { name: "" });
+        expect(useStatusStore.getState().deviceHistory[0]!.name).toBe(
+          "Living Room",
+        );
+      });
+    });
+
+    describe("source: manual", () => {
+      it("sets a name and marks nameIsCustom", () => {
+        seedEntry();
+        useStatusStore
+          .getState()
+          .updateDeviceHistoryMeta(
+            "192.168.1.100",
+            { name: "Bedroom" },
+            { source: "manual" },
+          );
+        const entry = useStatusStore.getState().deviceHistory[0]!;
+        expect(entry.name).toBe("Bedroom");
+        expect(entry.nameIsCustom).toBe(true);
+      });
+
+      it("clears the custom name when name is empty string", () => {
+        seedEntry({ name: "Bedroom", nameIsCustom: true });
+        useStatusStore
+          .getState()
+          .updateDeviceHistoryMeta(
+            "192.168.1.100",
+            { name: "" },
+            { source: "manual" },
+          );
+        const entry = useStatusStore.getState().deviceHistory[0]!;
+        expect(entry.name).toBeUndefined();
+        expect(entry.nameIsCustom).toBe(false);
+      });
+
+      it("clears the custom name when name is undefined and present in meta", () => {
+        seedEntry({ name: "Bedroom", nameIsCustom: true });
+        useStatusStore
+          .getState()
+          .updateDeviceHistoryMeta(
+            "192.168.1.100",
+            { name: undefined },
+            { source: "manual" },
+          );
+        const entry = useStatusStore.getState().deviceHistory[0]!;
+        expect(entry.name).toBeUndefined();
+        expect(entry.nameIsCustom).toBe(false);
+      });
+
+      it("merges platform/version/lastConnectedAt without touching name when name is absent", () => {
+        seedEntry({ name: "Existing", nameIsCustom: true });
+        useStatusStore
+          .getState()
+          .updateDeviceHistoryMeta(
+            "192.168.1.100",
+            { platform: "darwin", version: "2.0.0", lastConnectedAt: 99 },
+            { source: "manual" },
+          );
+        const entry = useStatusStore.getState().deviceHistory[0]!;
+        expect(entry.name).toBe("Existing");
+        expect(entry.nameIsCustom).toBe(true);
+        expect(entry.platform).toBe("darwin");
+        expect(entry.version).toBe("2.0.0");
+        expect(entry.lastConnectedAt).toBe(99);
+      });
+    });
+  });
+
   describe("ConnectionState", () => {
     it("should derive connected boolean from connectionState (backward compatibility)", () => {
       const { setConnectionState } = useStatusStore.getState();

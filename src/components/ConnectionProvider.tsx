@@ -45,12 +45,14 @@ import {
   type NotificationRequest,
 } from "@/lib/coreApi";
 import { useStatusStore, ConnectionState } from "@/lib/store";
+import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
 import { formatDurationDisplay, formatDurationAccessible } from "@/lib/utils";
 import {
   ConnectionContext,
   type ConnectionContextValue,
 } from "@/hooks/useConnection";
 import { useAnnouncer } from "./A11yAnnouncer";
+import { PairingModal } from "./PairingModal";
 
 interface ConnectionProviderProps {
   children: ReactNode;
@@ -63,6 +65,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const isInitialized = useRef(false);
   // Track current connection to prevent stale events from old connections
   const currentConnectionId = useRef<string | null>(null);
+  // Pairing modal is auto-opened when the transport reports the server requires
+  // encryption (or rejects our credentials). Closed on success or user dismiss.
+  const [pairingOpen, setPairingOpen] = useState(false);
 
   // Refs for stable callback references - prevents effect re-run on callback changes
   const handleConnectionOpenRef = useRef<() => void>(() => {});
@@ -82,9 +87,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setLastToken,
     addDeviceHistory,
     setDeviceHistory,
+    updateDeviceHistoryMeta,
     setCoreVersion,
     setCorePlatform,
     setCoreVersionPending,
+    setEncryptionState,
+    setPairingRequired,
   } = useStatusStore(
     useShallow((state) => ({
       targetDeviceAddress: state.targetDeviceAddress,
@@ -96,9 +104,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setLastToken: state.setLastToken,
       addDeviceHistory: state.addDeviceHistory,
       setDeviceHistory: state.setDeviceHistory,
+      updateDeviceHistoryMeta: state.updateDeviceHistoryMeta,
       setCoreVersion: state.setCoreVersion,
       setCorePlatform: state.setCorePlatform,
       setCoreVersionPending: state.setCoreVersionPending,
+      setEncryptionState: state.setEncryptionState,
+      setPairingRequired: state.setPairingRequired,
     })),
   );
 
@@ -298,31 +309,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // Flush any queued API requests
     CoreAPI.flushQueue();
 
-    // Fetch Core version for feature gating
+    // Hydrate device history from Preferences first, THEN call version() and
+    // merge platform/version metadata in .finally(). Do not parallelise: a
+    // late setDeviceHistory(stored) would wholesale overwrite the
+    // freshly-merged metadata from updateDeviceHistoryMeta().
     setCoreVersionPending(true);
-    CoreAPI.version()
-      .then((v) => {
-        if (isCancelled(v)) {
-          // Don't clear pending — a new connection will manage its own pending state
-          logger.log("Version request was cancelled, skipping");
-          return;
-        }
-        setCoreVersion(v.version);
-        setCorePlatform(v.platform);
-        setCoreVersionPending(false);
-      })
-      .catch((e) => {
-        logger.error("Failed to get Core version:", e, {
-          category: "api",
-          action: "version",
-          severity: "warning",
-        });
-        setCoreVersion(null);
-        setCorePlatform(null);
-        setCoreVersionPending(false);
-      });
-
-    // Load device history
     Preferences.get({ key: "deviceHistory" })
       .then((v) => {
         try {
@@ -337,6 +328,38 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       })
       .catch((e) => {
         logger.error("Failed to get device history:", e);
+      })
+      .finally(() => {
+        // Fetch Core version for feature gating, then persist platform/version
+        // on the device-history entry so the device list can render them
+        // between connects. lastConnectedAt powers the "recently used"
+        // sort/subtitle (no UI yet, but stored for free).
+        CoreAPI.version()
+          .then((res) => {
+            if (isCancelled(res)) {
+              // Don't clear pending — a new connection will manage its own pending state
+              logger.log("Version request was cancelled, skipping");
+              return;
+            }
+            setCoreVersion(res.version);
+            setCorePlatform(res.platform);
+            setCoreVersionPending(false);
+            updateDeviceHistoryMeta(getDeviceAddress(), {
+              platform: res.platform,
+              version: res.version,
+              lastConnectedAt: Date.now(),
+            });
+          })
+          .catch((e) => {
+            logger.error("Failed to get Core version:", e, {
+              category: "api",
+              action: "version",
+              severity: "warning",
+            });
+            setCoreVersion(null);
+            setCorePlatform(null);
+            setCoreVersionPending(false);
+          });
       });
 
     // Fetch media information
@@ -392,6 +415,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setConnectionError,
     setDeviceHistory,
     addDeviceHistory,
+    updateDeviceHistoryMeta,
     setGamesIndex,
     setPlaying,
     setLastToken,
@@ -441,6 +465,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   useEffect(() => {
     // Reset local connection state when device changes so UI doesn't show stale data
     setLocalConnection(null);
+    setEncryptionState("unknown");
+    setPairingRequired(false);
+    setPairingOpen(false);
 
     if (targetDeviceAddress === "") {
       setConnectionState(ConnectionState.DISCONNECTED);
@@ -490,6 +517,19 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           // Note: useState always triggers re-render when called with a new object reference
           setLocalConnection(connection);
 
+          // Each new connect attempt starts unverified — clear stale signals
+          // from a prior attempt so the UI gate in ConnectionStatusDisplay shows
+          // "connecting" until the server confirms the encryption mode. Reset
+          // only on "connecting" (the start of a fresh socket attempt). The
+          // transient "reconnecting" state that fires between disconnect and
+          // the next connect must NOT reset, because onEncryptionRequired sets
+          // pairingRequired=true just before the close — wiping it during
+          // "reconnecting" prevents the pair UI from ever rendering.
+          if (connection.state === "connecting") {
+            setEncryptionState("unknown");
+            setPairingRequired(false);
+          }
+
           // Handle connection open - always re-fetch data to prevent stale state
           if (connection.state === "connected") {
             // Guard against stale connection events from old connections
@@ -536,6 +576,56 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           );
         }
       },
+      onEncryptedHandshakeOk: () => {
+        setEncryptionState("encrypted");
+        setPairingRequired(false);
+      },
+      onPlaintextMode: () => {
+        setEncryptionState("plaintext");
+        setPairingRequired(false);
+      },
+      onEncryptionRequired: () => {
+        // Server demands encryption but we have no credentials — open the
+        // pairing modal so the user can pair. Connection stays failed until
+        // pairing succeeds and triggers an immediate reconnect.
+        setEncryptionState("plaintext");
+        setPairingRequired(true);
+        setConnectionError(
+          tRef.current("pairing.connectionError.encryptionRequired"),
+        );
+        setPairingOpen(true);
+      },
+      onUnsupportedVersion: () => {
+        setEncryptionState("plaintext");
+        setConnectionError(
+          tRef.current("pairing.connectionError.unsupportedVersion"),
+        );
+      },
+      onCredentialsRevoked: () => {
+        // Server rejected our stored credentials — clear them and prompt
+        // the user to pair again.
+        const deviceKey = normalizeDeviceKey(targetDeviceAddress);
+        credentialStore.delete(deviceKey).catch((err) => {
+          logger.error("Failed to delete revoked credentials", err, {
+            category: "storage",
+            action: "deleteCredentials",
+          });
+        });
+        const updated = useStatusStore
+          .getState()
+          .deviceHistory.map((entry) =>
+            entry.address === targetDeviceAddress
+              ? { ...entry, paired: undefined }
+              : entry,
+          );
+        setDeviceHistory(updated);
+        setEncryptionState("plaintext");
+        setPairingRequired(true);
+        setConnectionError(
+          tRef.current("pairing.connectionError.credentialsRevoked"),
+        );
+        setPairingOpen(true);
+      },
     });
 
     // Add device and set as active
@@ -543,6 +633,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       deviceId: targetDeviceAddress,
       type: "websocket",
       address: wsUrl,
+      encryption: {
+        getCredentials: () =>
+          credentialStore.get(normalizeDeviceKey(targetDeviceAddress)),
+      },
     });
 
     connectionManager.setActiveDevice(targetDeviceAddress);
@@ -582,6 +676,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     targetDeviceAddress,
     setConnectionState,
     setConnectionError,
+    setEncryptionState,
+    setPairingRequired,
+    setDeviceHistory,
     mapTransportState,
     // Note: handleConnectionOpen, processNotification, and t are accessed via refs
     // to prevent this effect from re-running when those callbacks change
@@ -663,6 +760,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     };
   }, []);
 
+  const openPairingModal = useCallback(() => {
+    setPairingOpen(true);
+  }, []);
+
   // Memoize context value to prevent unnecessary re-renders of consumers
   const contextValue = useMemo<ConnectionContextValue>(
     () => ({
@@ -671,13 +772,26 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       hasData,
       showConnecting,
       showReconnecting,
+      openPairingModal,
     }),
-    [localConnection, isConnected, hasData, showConnecting, showReconnecting],
+    [
+      localConnection,
+      isConnected,
+      hasData,
+      showConnecting,
+      showReconnecting,
+      openPairingModal,
+    ],
   );
 
   return (
     <ConnectionContext.Provider value={contextValue}>
       {children}
+      <PairingModal
+        isOpen={pairingOpen}
+        close={() => setPairingOpen(false)}
+        address={targetDeviceAddress}
+      />
     </ConnectionContext.Provider>
   );
 }
