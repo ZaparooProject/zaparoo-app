@@ -125,11 +125,14 @@ global.IntersectionObserver = class IntersectionObserver {
   disconnect() {}
 } as any;
 
-// Platform detection mock
-Object.defineProperty(navigator, "platform", {
-  writable: true,
-  value: "MacIntel",
-});
+// Platform detection mock (only when navigator exists — Node-environment test
+// files like session.test.ts run without one, and Node < 21 has no global).
+if (typeof navigator !== "undefined") {
+  Object.defineProperty(navigator, "platform", {
+    writable: true,
+    value: "MacIntel",
+  });
+}
 
 // WebSocket mock for happy-dom environment
 global.WebSocket = class MockWebSocket {
