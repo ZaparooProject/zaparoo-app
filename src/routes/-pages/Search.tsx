@@ -180,14 +180,30 @@ export function Search() {
       (systems.length === 1 ? systems[0] : undefined) ?? "all";
     setQuerySystem(selectedSystem);
     setSelectedResult(null);
-    await Preferences.set({ key: "searchSystem", value: selectedSystem });
+    try {
+      await Preferences.set({ key: "searchSystem", value: selectedSystem });
+    } catch (err) {
+      logger.warn("Failed to persist search filter", err, {
+        category: "storage",
+        action: "handleSystemSelect",
+        severity: "warning",
+      });
+    }
   };
 
   // Handle tag selection from selector
   const handleTagSelect = async (tags: string[]) => {
     setQueryTags(tags);
     setSelectedResult(null);
-    await Preferences.set({ key: "searchTags", value: JSON.stringify(tags) });
+    try {
+      await Preferences.set({ key: "searchTags", value: JSON.stringify(tags) });
+    } catch (err) {
+      logger.warn("Failed to persist search filter", err, {
+        category: "storage",
+        action: "handleTagSelect",
+        severity: "warning",
+      });
+    }
   };
 
   // Clear all filters (system and tags) but keep search query
@@ -195,10 +211,18 @@ export function Search() {
     setQuerySystem("all");
     setQueryTags([]);
     setSelectedResult(null);
-    await Promise.all([
-      Preferences.set({ key: "searchSystem", value: "all" }),
-      Preferences.set({ key: "searchTags", value: JSON.stringify([]) }),
-    ]);
+    try {
+      await Promise.all([
+        Preferences.set({ key: "searchSystem", value: "all" }),
+        Preferences.set({ key: "searchTags", value: JSON.stringify([]) }),
+      ]);
+    } catch (err) {
+      logger.warn("Failed to persist search filter", err, {
+        category: "storage",
+        action: "handleClearFilters",
+        severity: "warning",
+      });
+    }
   };
 
   // Handle selecting a recent search to prefill the form and execute search
@@ -526,14 +550,26 @@ export function Search() {
               icon={<CreateIcon size="20" />}
               intent="primary"
               disabled={!selectedResult}
-              onClick={() => {
-                if (selectedResult) {
-                  const textToWrite =
-                    writeMode === "zapScript" && selectedResult.zapScript
-                      ? selectedResult.zapScript
-                      : selectedResult.path;
-                  nfcWriter.write(WriteAction.Write, textToWrite);
+              onClick={async () => {
+                if (!selectedResult) return;
+                const textToWrite =
+                  writeMode === "zapScript" && selectedResult.zapScript
+                    ? selectedResult.zapScript
+                    : selectedResult.path;
+                try {
+                  await nfcWriter.write(WriteAction.Write, textToWrite);
                   setWriteOpen(true);
+                } catch (err) {
+                  logger.error("NFC write failed", err, {
+                    category: "nfc",
+                    action: "writeFromSearch",
+                    severity: "error",
+                  });
+                  showRateLimitedErrorToast(
+                    t("error", {
+                      msg: err instanceof Error ? err.message : String(err),
+                    }),
+                  );
                 }
               }}
               className="w-full"

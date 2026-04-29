@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { PairingModal } from "@/components/PairingModal";
 import { performPairing, PairingError } from "@/lib/crypto/pairing";
 import { credentialStore } from "@/lib/crypto/credentials";
+import { Capacitor } from "@capacitor/core";
 import { Device } from "@capacitor/device";
 import { useStatusStore } from "@/lib/store";
 
@@ -54,6 +55,9 @@ function setStoreHistory(address: string) {
 describe("PairingModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default to native platform so Device.getInfo is exercised. Individual
+    // tests can override this for the web-fallback path.
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     setStoreHistory("192.168.1.10:7497");
     mockedDeviceGetInfo.mockResolvedValue({
       name: "Pixel 8",

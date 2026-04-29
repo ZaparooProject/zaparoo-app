@@ -44,36 +44,44 @@ export function Devices() {
   // Only seed when the in-memory store is empty so we never clobber newer
   // metadata that ConnectionProvider may have already written.
   useEffect(() => {
-    if (useStatusStore.getState().deviceHistory.length > 0) return;
-    Preferences.get({ key: "deviceHistory" })
-      .then((v) => {
-        if (!v.value) return;
+    let cancelled = false;
+    (async () => {
+      if (useStatusStore.getState().deviceHistory.length > 0) return;
+      try {
+        const v = await Preferences.get({ key: "deviceHistory" });
+        if (cancelled || !v.value) return;
         if (useStatusStore.getState().deviceHistory.length > 0) return;
-        try {
-          setDeviceHistory(JSON.parse(v.value));
-        } catch (e) {
-          logger.error("Failed to parse stored deviceHistory", e, {
-            category: "storage",
-            action: "hydrateDeviceHistory",
-            severity: "warning",
-          });
-        }
-      })
-      .catch(() => {});
+        setDeviceHistory(JSON.parse(v.value));
+      } catch (err) {
+        logger.error("Failed to hydrate deviceHistory", err, {
+          category: "storage",
+          action: "hydrateDeviceHistory",
+          severity: "warning",
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [setDeviceHistory]);
 
   useEffect(() => {
     let cancelled = false;
-    credentialStore
-      .list()
-      .then((entries) => {
+    (async () => {
+      try {
+        const entries = await credentialStore.list();
         if (cancelled) return;
         setPairedKeys(new Set(entries.map((e) => e.deviceKey)));
-      })
-      .catch(() => {
+      } catch (err) {
         if (cancelled) return;
+        logger.warn("Failed to list paired credentials", err, {
+          category: "storage",
+          action: "listCredentials",
+          severity: "warning",
+        });
         setPairedKeys(new Set());
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };

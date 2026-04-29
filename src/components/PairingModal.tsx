@@ -59,19 +59,25 @@ export function PairingModal({
     // Prefill a sensible identifier when the modal opens so the user can see
     // what's about to be sent and edit it before pairing.
     let cancelled = false;
-    Device.getInfo()
-      .then((info) => {
-        if (cancelled) return;
-        const name = info.name || info.model || "Unknown";
-        const suggested = name.slice(0, 120);
-        setClientName((current) => (current ? current : suggested));
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setClientName((current) =>
-          current ? current : `Zaparoo App ${safePlatform()}`,
-        );
-      });
+    if (Capacitor.isNativePlatform()) {
+      Device.getInfo()
+        .then((info) => {
+          if (cancelled) return;
+          const name = info.name || info.model || "Unknown";
+          const suggested = name.slice(0, 120);
+          setClientName((current) => (current ? current : suggested));
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setClientName((current) =>
+            current ? current : `Zaparoo App ${safePlatform()}`,
+          );
+        });
+    } else {
+      setClientName((current) =>
+        current ? current : `Zaparoo App ${safePlatform()}`,
+      );
+    }
     return () => {
       cancelled = true;
     };
@@ -111,7 +117,6 @@ export function PairingModal({
       setDeviceHistory(updated);
       toast.success(t("pairing.success"));
       connectionManager.clearEncryptionBlockActive();
-      connectionManager.immediateReconnectActive();
       onSuccess?.();
       close();
     } catch (e) {

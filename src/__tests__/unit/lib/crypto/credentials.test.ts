@@ -80,23 +80,23 @@ describe("SecureCredentialStore", () => {
     await SecureStorage.clear();
   });
 
-  it("set then get returns the credentials", async () => {
+  it("should return credentials after set and get", async () => {
     await store.set("192.168.1.50", creds);
     const result = await store.get("192.168.1.50");
     expect(result).toEqual(creds);
   });
 
-  it("get returns null when key does not exist", async () => {
+  it("should return null for non-existent key", async () => {
     expect(await store.get("unknown-device")).toBeNull();
   });
 
-  it("delete removes the key", async () => {
+  it("should remove key on delete", async () => {
     await store.set("192.168.1.50", creds);
     await store.delete("192.168.1.50");
     expect(await store.get("192.168.1.50")).toBeNull();
   });
 
-  it("list returns all stored credentials", async () => {
+  it("should list all stored credentials", async () => {
     const creds2: StoredCredentials = { ...creds, clientId: "other-client" };
     await store.set("device1", creds);
     await store.set("device2", creds2);
@@ -106,11 +106,21 @@ describe("SecureCredentialStore", () => {
     expect(keys).toEqual(["device1", "device2"]);
   });
 
-  it("overwrites existing credentials on set", async () => {
+  it("should overwrite existing credentials on set", async () => {
     await store.set("192.168.1.50", creds);
     const updated = { ...creds, clientId: "new-client" };
     await store.set("192.168.1.50", updated);
     const result = await store.get("192.168.1.50");
     expect(result?.clientId).toBe("new-client");
+  });
+
+  it("should await setKeyPrefix before set/get when called immediately after construction", async () => {
+    // The constructor kicks off setKeyPrefix asynchronously; without awaiting
+    // initPromise inside set/get, an immediate set could race the prefix
+    // assignment in the mock and read/write under the wrong prefix.
+    const fresh = new SecureCredentialStore();
+    await fresh.set("immediate-key", creds);
+    const result = await fresh.get("immediate-key");
+    expect(result).toEqual(creds);
   });
 });

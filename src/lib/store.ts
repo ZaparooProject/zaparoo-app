@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import { User } from "@capacitor-firebase/authentication";
 import { Preferences } from "@capacitor/preferences";
+import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
+import { logger } from "@/lib/logger";
 import { IndexResponse, PlayingResponse, TokenResponse } from "./models";
 import { SafeAreaInsets } from "./safeArea";
-import { credentialStore, normalizeDeviceKey } from "./crypto/credentials";
-import { logger } from "./logger";
 
 const defaultSafeAreaInsets: SafeAreaInsets = {
   top: "0px",
@@ -235,6 +235,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
         logger.error("Failed to delete credentials for removed device", err, {
           category: "storage",
           action: "deleteCredentials",
+          severity: "error",
         });
       });
       return {
@@ -261,7 +262,11 @@ export const useStatusStore = create<StatusState>()((set) => ({
             logger.error(
               "Failed to delete credentials during clearDeviceHistory",
               err,
-              { category: "storage", action: "deleteCredentials" },
+              {
+                category: "storage",
+                action: "deleteCredentials",
+                severity: "error",
+              },
             );
           });
       }

@@ -184,6 +184,71 @@ describe("performPairing", () => {
     );
   });
 
+  describe("malformed response shape", () => {
+    it("should throw PairingError('malformed') when /pair/start session is not a string", async () => {
+      server.use(
+        http.post(START_URL, () =>
+          HttpResponse.json({
+            session: 123,
+            pake: base64Encode(MOCK_MSG_B),
+          }),
+        ),
+      );
+
+      await expect(
+        performPairing(HOST, PORT, PIN, CLIENT_NAME),
+      ).rejects.toMatchObject({
+        kind: "malformed",
+      });
+    });
+
+    it("should throw PairingError('malformed') when /pair/finish confirm is missing", async () => {
+      server.use(
+        http.post(START_URL, () =>
+          HttpResponse.json({
+            session: SESSION_ID,
+            pake: base64Encode(MOCK_MSG_B),
+          }),
+        ),
+        http.post(FINISH_URL, () =>
+          HttpResponse.json({
+            authToken: AUTH_TOKEN,
+            clientId: CLIENT_ID,
+            // confirm intentionally omitted
+          }),
+        ),
+      );
+
+      await expect(
+        performPairing(HOST, PORT, PIN, CLIENT_NAME),
+      ).rejects.toMatchObject({
+        kind: "malformed",
+      });
+    });
+  });
+
+  describe("fetch timeout", () => {
+    it("should abort and surface as PairingError('network') after retries when /pair/start hangs", async () => {
+      vi.useFakeTimers();
+      try {
+        server.use(
+          http.post(
+            START_URL,
+            () => new Promise<Response>(() => {}), // never resolves
+          ),
+        );
+
+        const promise = performPairing(HOST, PORT, PIN, CLIENT_NAME);
+        const settled = promise.catch((e) => e);
+        await vi.runAllTimersAsync();
+        const error = await settled;
+        expect(error).toMatchObject({ kind: "network" });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
   describe("server HMAC mismatch", () => {
     it("should throw PairingError('server_hmac_bad') when server HMAC is wrong", async () => {
       server.use(

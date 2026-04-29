@@ -4,9 +4,9 @@
 import { expand, extract } from "@noble/hashes/hkdf.js";
 import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
-import { base64Decode, base64Encode } from "./base64";
-import { buildHmacTranscript } from "./hmacTranscript";
-import { PakeClient } from "./pake";
+import { base64Decode, base64Encode } from "@/lib/crypto/base64";
+import { buildHmacTranscript } from "@/lib/crypto/hmacTranscript";
+import { PakeClient } from "@/lib/crypto/pake";
 
 export interface PairingResult {
   authToken: string;
@@ -46,17 +46,69 @@ const HTTP_ERROR_KINDS: Record<number, PairingErrorKind> = {
   429: "rate_limited",
 };
 
+// Bracket IPv6 hosts in URLs (mirrors coreApi.ts:getWsUrl).
+function formatHost(h: string): string {
+  return h.includes(":") && !h.startsWith("[") ? `[${h}]` : h;
+}
+
+// Validators for /pair/start and /pair/finish JSON shapes. We can't trust the
+// network — fall back to PairingError("malformed") on any unexpected shape.
+function parseStartResult(json: unknown): { session: string; pake: string } {
+  if (
+    typeof json !== "object" ||
+    json === null ||
+    typeof (json as { session?: unknown }).session !== "string" ||
+    typeof (json as { pake?: unknown }).pake !== "string"
+  ) {
+    throw new PairingError("malformed", "Invalid /pair/start response shape");
+  }
+  return json as { session: string; pake: string };
+}
+
+function parseFinishResult(json: unknown): {
+  authToken: string;
+  clientId: string;
+  confirm: string;
+} {
+  if (
+    typeof json !== "object" ||
+    json === null ||
+    typeof (json as { authToken?: unknown }).authToken !== "string" ||
+    typeof (json as { clientId?: unknown }).clientId !== "string" ||
+    typeof (json as { confirm?: unknown }).confirm !== "string"
+  ) {
+    throw new PairingError("malformed", "Invalid /pair/finish response shape");
+  }
+  return json as { authToken: string; clientId: string; confirm: string };
+}
+
 // The server limits /api/pair/* at 1 req/sec per IP. /pair/start consumes the
 // token, so /pair/finish may immediately 429 — retry with a 1100ms gap.
+// Each attempt has its own AbortController so one slow attempt can't hang the
+// whole flow indefinitely.
 async function fetchWithRetry(
   url: string,
   init: Parameters<typeof fetch>[1],
   maxAttempts = 4,
+  timeoutMs = 10000,
 ): Promise<Response> {
   for (let attempt = 1; ; attempt++) {
     if (attempt > 1) await new Promise((r) => setTimeout(r, 1100));
-    const resp = await fetch(url, init);
-    if (resp.status !== 429 || attempt >= maxAttempts) return resp;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const resp = await fetch(url, { ...init, signal: controller.signal });
+      if (resp.status !== 429 || attempt >= maxAttempts) return resp;
+    } catch (err) {
+      // Only retry on AbortError (per-attempt timeout) so genuine network
+      // failures surface immediately.
+      const isAbort =
+        err instanceof Error &&
+        (err.name === "AbortError" || err.name === "TimeoutError");
+      if (!isAbort || attempt >= maxAttempts) throw err;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }
 
@@ -81,7 +133,7 @@ export async function performPairing(
   // msgA must be captured before update() — the HMAC transcript uses the original wire bytes.
   const msgA = client.bytes();
 
-  const startUrl = `http://${host}:${port}/api/pair/start`;
+  const startUrl = `http://${formatHost(host)}:${port}/api/pair/start`;
   let startResp: Response;
   try {
     startResp = await fetchWithRetry(startUrl, {
@@ -105,10 +157,7 @@ export async function performPairing(
     );
   }
 
-  const startResult = (await startResp.json()) as {
-    session: string;
-    pake: string;
-  };
+  const startResult = parseStartResult(await startResp.json());
   // msgB must be the exact decoded bytes from the server response.
   const msgB = base64Decode(startResult.pake);
 
@@ -132,7 +181,7 @@ export async function performPairing(
   );
   const clientHmac = hmac(sha256, confirmKeyA, clientTranscript);
 
-  const finishUrl = `http://${host}:${port}/api/pair/finish`;
+  const finishUrl = `http://${formatHost(host)}:${port}/api/pair/finish`;
   let finishResp: Response;
   try {
     finishResp = await fetchWithRetry(finishUrl, {
@@ -159,11 +208,7 @@ export async function performPairing(
     );
   }
 
-  const finishResult = (await finishResp.json()) as {
-    authToken: string;
-    clientId: string;
-    confirm: string;
-  };
+  const finishResult = parseFinishResult(await finishResp.json());
 
   const serverTranscript = buildHmacTranscript(
     "server",

@@ -58,14 +58,19 @@ describe("ConnectionStatus", () => {
       openPairingModal: () => {},
       hasData: false,
     });
-    // Seed every store field the component (transitively) reads so previous
-    // tests can't leak state in. encryptionState is "plaintext" so the
-    // "connected" gate doesn't hold the display in "connecting".
-    useStatusStore.setState({
-      connectionError: "",
-      encryptionState: "plaintext",
-      pairingRequired: false,
-    });
+    // Reset the store to its initial state, then layer per-test overrides on
+    // top — prevents state leaking across tests via the shared store.
+    // encryptionState is "plaintext" so the "connected" gate doesn't hold the
+    // display in "connecting".
+    useStatusStore.setState(
+      {
+        ...useStatusStore.getInitialState(),
+        connectionError: "",
+        encryptionState: "plaintext",
+        pairingRequired: false,
+      },
+      true,
+    );
   });
 
   it("renders disconnected state when no address is saved", () => {

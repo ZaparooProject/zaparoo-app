@@ -121,6 +121,7 @@ export class PakeClient {
   sessionKey(): Uint8Array {
     if (!this.K)
       throw new Error("Session key not yet derived — call update() first");
-    return this.K;
+    // Defensive copy: callers must not mutate the stored key.
+    return new Uint8Array(this.K);
   }
 }

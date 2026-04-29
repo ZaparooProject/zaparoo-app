@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
+import { logger } from "@/lib/logger";
 import { useNfcWriter, WriteMethod } from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { WriteModal } from "@/components/WriteModal.tsx";
@@ -41,9 +42,18 @@ export function Index() {
   const setWriteOpen = useStatusStore((state) => state.setWriteOpen);
   const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
   const closeWriteModal = async () => {
-    setWriteOpen(false);
-    await nfcWriter.end();
-    setWriteQueue("");
+    try {
+      await nfcWriter.end();
+    } catch (err) {
+      logger.error("Failed to end NFC writer session", err, {
+        category: "nfc",
+        action: "closeWriteModal",
+        severity: "error",
+      });
+    } finally {
+      setWriteOpen(false);
+      setWriteQueue("");
+    }
   };
   useEffect(() => {
     // Auto-close modal on any completion (success, cancelled, or error)

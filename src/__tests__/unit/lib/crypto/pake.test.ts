@@ -107,6 +107,21 @@ describe("PakeClient", () => {
     );
   });
 
+  it("should return a defensive copy from sessionKey()", () => {
+    const client = new PakeClient("123456", fixedAlpha);
+    // Inject a derived key directly — bypasses needing a real server response
+    // (a valid Y point requires server-side curve math).
+    (client as unknown as { K: Uint8Array }).K = new Uint8Array(32).fill(7);
+
+    const first = client.sessionKey();
+    first.fill(0);
+    const second = client.sessionKey();
+
+    // Mutating the returned key must not affect the stored K.
+    expect(second[0]).toBe(7);
+    expect(second).not.toBe(first);
+  });
+
   it("should reject a server Y point that is not on the P-256 curve", () => {
     // (1, 1) parses as integers but does not satisfy y^2 = x^3 - 3x + b on P-256,
     // so YPoint.assertValidity() must throw — guarding against invalid-curve attacks.

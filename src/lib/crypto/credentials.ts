@@ -1,5 +1,5 @@
 import { SecureStorage } from "@aparajita/capacitor-secure-storage";
-import { logger } from "../logger";
+import { logger } from "@/lib/logger";
 
 const KEY_PREFIX = "zaparoo:creds:";
 const DEFAULT_PORT = "7497";
@@ -34,11 +34,16 @@ export function normalizeDeviceKey(address: string): string {
 }
 
 export class SecureCredentialStore implements CredentialStore {
+  // setKeyPrefix is async; awaiting this in every method ensures no read/write
+  // races against an unfinished constructor.
+  private readonly initPromise: Promise<void>;
+
   constructor() {
-    void SecureStorage.setKeyPrefix(KEY_PREFIX);
+    this.initPromise = SecureStorage.setKeyPrefix(KEY_PREFIX);
   }
 
   async get(deviceKey: string): Promise<StoredCredentials | null> {
+    await this.initPromise;
     try {
       const value = await SecureStorage.get(deviceKey, false);
       if (value == null) return null;
@@ -54,6 +59,7 @@ export class SecureCredentialStore implements CredentialStore {
   }
 
   async set(deviceKey: string, creds: StoredCredentials): Promise<void> {
+    await this.initPromise;
     return SecureStorage.set(
       deviceKey,
       creds as unknown as Record<string, unknown>,
@@ -61,12 +67,14 @@ export class SecureCredentialStore implements CredentialStore {
   }
 
   async delete(deviceKey: string): Promise<boolean> {
+    await this.initPromise;
     return SecureStorage.remove(deviceKey);
   }
 
   async list(): Promise<
     Array<{ deviceKey: string; creds: StoredCredentials }>
   > {
+    await this.initPromise;
     const keys = await SecureStorage.keys();
     const results: Array<{ deviceKey: string; creds: StoredCredentials }> = [];
     for (const key of keys) {

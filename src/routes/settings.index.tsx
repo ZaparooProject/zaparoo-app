@@ -9,6 +9,7 @@ import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { NetworkScanModal } from "@/components/NetworkScanModal";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useSelectDevice } from "@/hooks/useSelectDevice";
+import type { ScanDeviceSelection } from "@/hooks/useSelectDevice";
 import i18n from "@/i18n";
 import { PageFrame } from "@/components/PageFrame";
 import { useStatusStore } from "@/lib/store";
@@ -54,12 +55,7 @@ export function Settings() {
     setAddress(newAddress);
   };
 
-  const handleScanDeviceSelect = (device: {
-    address: string;
-    name?: string;
-    platform?: string;
-    version?: string;
-  }) => {
+  const handleScanDeviceSelect = (device: ScanDeviceSelection) => {
     selectScanDevice(device);
     setAddress(device.address);
   };
