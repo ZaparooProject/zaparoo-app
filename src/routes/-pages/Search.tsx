@@ -91,6 +91,10 @@ export function Search() {
       return;
     }
 
+    // Clear any prior selection so the detail modal closes and write/copy/run
+    // can't act on a stale row that may not be in the new result set.
+    setSelectedResult(null);
+
     setIsSearching(true);
     setSearchParams({
       query: query,
@@ -128,7 +132,15 @@ export function Search() {
   const [writeOpen, setWriteOpen] = useState(false);
   const closeWriteModal = async () => {
     setWriteOpen(false);
-    await nfcWriter.end();
+    try {
+      await nfcWriter.end();
+    } catch (err) {
+      logger.error("Failed to end NFC writer session", err, {
+        category: "nfc",
+        action: "closeWriteModal",
+        severity: "error",
+      });
+    }
   };
 
   // Close modal when NFC operation completes

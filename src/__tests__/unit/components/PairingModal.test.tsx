@@ -281,10 +281,9 @@ describe("PairingModal", () => {
         />,
       );
 
+      // Typing 6 digits triggers PinInput.onComplete → handlePair, so do not
+      // also click the submit button — that's a duplicate submission path.
       await user.type(screen.getByLabelText("pairing.pinLabel"), "111111");
-      await user.click(
-        screen.getByRole("button", { name: "pairing.startPairing" }),
-      );
 
       await waitFor(() => {
         const entry = useStatusStore
@@ -295,6 +294,8 @@ describe("PairingModal", () => {
           pairedAt: expect.any(Number),
         });
       });
+
+      expect(mockedPerformPairing).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -313,14 +314,13 @@ describe("PairingModal", () => {
         />,
       );
 
+      // Single submission path via PinInput.onComplete (the 6th digit fires it).
       await user.type(screen.getByLabelText("pairing.pinLabel"), "000000");
-      await user.click(
-        screen.getByRole("button", { name: "pairing.startPairing" }),
-      );
 
       expect(
         await screen.findByText("pairing.error.wrong_pin"),
       ).toBeInTheDocument();
+      expect(mockedPerformPairing).toHaveBeenCalledTimes(1);
     });
 
     it("should display unknown error key for non-PairingError exceptions", async () => {
@@ -335,14 +335,13 @@ describe("PairingModal", () => {
         />,
       );
 
+      // Single submission path via PinInput.onComplete (the 6th digit fires it).
       await user.type(screen.getByLabelText("pairing.pinLabel"), "999999");
-      await user.click(
-        screen.getByRole("button", { name: "pairing.startPairing" }),
-      );
 
       expect(
         await screen.findByText("pairing.error.unknown"),
       ).toBeInTheDocument();
+      expect(mockedPerformPairing).toHaveBeenCalledTimes(1);
     });
 
     it("should not call close or onSuccess when pairing fails", async () => {
@@ -362,13 +361,12 @@ describe("PairingModal", () => {
         />,
       );
 
+      // Single submission path via PinInput.onComplete (the 6th digit fires it).
       await user.type(screen.getByLabelText("pairing.pinLabel"), "555555");
-      await user.click(
-        screen.getByRole("button", { name: "pairing.startPairing" }),
-      );
 
       await screen.findByText("pairing.error.network");
 
+      expect(mockedPerformPairing).toHaveBeenCalledTimes(1);
       expect(close).not.toHaveBeenCalled();
       expect(onSuccess).not.toHaveBeenCalled();
     });

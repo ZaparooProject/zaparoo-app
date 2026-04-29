@@ -37,38 +37,55 @@ export class SecureCredentialStore implements CredentialStore {
   // setKeyPrefix is async; awaiting this in every method ensures no read/write
   // races against an unfinished constructor.
   private readonly initPromise: Promise<void>;
+  // Per-device-key operation queue. Guarantees that a delete cannot resolve
+  // after a later set on the same key, even when callers fire them in parallel
+  // (e.g., removeDeviceHistory + a re-pair flow on the same address).
+  private readonly keyLocks = new Map<string, Promise<unknown>>();
 
   constructor() {
     this.initPromise = SecureStorage.setKeyPrefix(KEY_PREFIX);
   }
 
+  private enqueue<T>(deviceKey: string, op: () => Promise<T>): Promise<T> {
+    const prev = this.keyLocks.get(deviceKey) ?? Promise.resolve();
+    // Run `op` after `prev` settles either way; a prior failure must not
+    // poison the chain for the next caller.
+    const next = prev.then(op, op);
+    this.keyLocks.set(
+      deviceKey,
+      next.catch(() => undefined),
+    );
+    return next;
+  }
+
   async get(deviceKey: string): Promise<StoredCredentials | null> {
     await this.initPromise;
-    try {
-      const value = await SecureStorage.get(deviceKey, false);
-      if (value == null) return null;
-      return value as unknown as StoredCredentials;
-    } catch (err) {
-      logger.error("SecureStorage.get failed", err, {
-        category: "storage",
-        action: "getCredentials",
-        severity: "error",
-      });
-      return null;
-    }
+    return this.enqueue(deviceKey, async () => {
+      try {
+        const value = await SecureStorage.get(deviceKey, false);
+        if (value == null) return null;
+        return value as unknown as StoredCredentials;
+      } catch (err) {
+        logger.error("SecureStorage.get failed", err, {
+          category: "storage",
+          action: "getCredentials",
+          severity: "error",
+        });
+        return null;
+      }
+    });
   }
 
   async set(deviceKey: string, creds: StoredCredentials): Promise<void> {
     await this.initPromise;
-    return SecureStorage.set(
-      deviceKey,
-      creds as unknown as Record<string, unknown>,
+    return this.enqueue(deviceKey, () =>
+      SecureStorage.set(deviceKey, creds as unknown as Record<string, unknown>),
     );
   }
 
   async delete(deviceKey: string): Promise<boolean> {
     await this.initPromise;
-    return SecureStorage.remove(deviceKey);
+    return this.enqueue(deviceKey, () => SecureStorage.remove(deviceKey));
   }
 
   async list(): Promise<

@@ -72,6 +72,12 @@ export function Index() {
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
+  // Holds the deferred history-modal toggle that fires after the pro-purchase
+  // modal closes. Tracked so we can cancel a pending toggle on unmount or
+  // when another toggle arrives before the timer fires.
+  const historyToggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const {
     scanSession,
@@ -121,6 +127,15 @@ export function Index() {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (historyToggleTimerRef.current !== null) {
+        clearTimeout(historyToggleTimerRef.current);
+        historyToggleTimerRef.current = null;
+      }
+    };
+  }, []);
+
   // Announce page context for screen reader users on page load (once only)
   const hasAnnouncedRef = useRef(false);
   useEffect(() => {
@@ -162,9 +177,14 @@ export function Index() {
             icon={<HistoryIcon size="32" />}
             state={historyOpen}
             setState={(s) => {
+              if (historyToggleTimerRef.current !== null) {
+                clearTimeout(historyToggleTimerRef.current);
+                historyToggleTimerRef.current = null;
+              }
               if (!historyOpen && proPurchaseModalOpen) {
                 setProPurchaseModalOpen(false);
-                setTimeout(() => {
+                historyToggleTimerRef.current = setTimeout(() => {
+                  historyToggleTimerRef.current = null;
                   setHistoryOpen(s);
                 }, 150);
               } else {

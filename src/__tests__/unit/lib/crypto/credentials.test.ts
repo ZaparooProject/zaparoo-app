@@ -1,37 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SecureStorage } from "@aparajita/capacitor-secure-storage";
 import {
   normalizeDeviceKey,
   SecureCredentialStore,
 } from "@/lib/crypto/credentials";
 import type { StoredCredentials } from "@/lib/crypto/credentials";
 
-// Mock the plugin so tests don't require native binaries.
-vi.mock("@aparajita/capacitor-secure-storage", () => {
-  const store = new Map<string, unknown>();
-  let prefix = "capacitor-storage_";
-  return {
-    SecureStorage: {
-      setKeyPrefix: vi.fn(async (p: string) => {
-        prefix = p;
-      }),
-      get: vi.fn(async (key: string) => store.get(`${prefix}${key}`) ?? null),
-      set: vi.fn(async (key: string, value: unknown) => {
-        store.set(`${prefix}${key}`, value);
-      }),
-      remove: vi.fn(async (key: string) => {
-        const had = store.has(`${prefix}${key}`);
-        store.delete(`${prefix}${key}`);
-        return had;
-      }),
-      keys: vi.fn(async () =>
-        [...store.keys()]
-          .filter((k) => k.startsWith(prefix))
-          .map((k) => k.slice(prefix.length)),
-      ),
-      clear: vi.fn(async () => store.clear()),
-    },
-  };
-});
+// SecureStorage is auto-mocked from __mocks__/@aparajita/capacitor-secure-storage.ts
+// (registered globally in src/test-setup.ts).
 
 const creds: StoredCredentials = {
   authToken: "550e8400-e29b-41d4-a716-446655440000",
@@ -75,8 +51,6 @@ describe("SecureCredentialStore", () => {
 
   beforeEach(async () => {
     store = new SecureCredentialStore();
-    const { SecureStorage } =
-      await import("@aparajita/capacitor-secure-storage");
     await SecureStorage.clear();
   });
 
@@ -122,5 +96,27 @@ describe("SecureCredentialStore", () => {
     await fresh.set("immediate-key", creds);
     const result = await fresh.get("immediate-key");
     expect(result).toEqual(creds);
+  });
+
+  it("should serialize delete and set on the same key in submission order", async () => {
+    // Without per-key serialization, a slow delete fired before a fast set
+    // could resolve last and wipe the just-written credentials. The store
+    // must enqueue same-key ops so set runs only after delete resolves.
+    const events: string[] = [];
+
+    vi.mocked(SecureStorage.remove).mockImplementationOnce(async () => {
+      await new Promise((r) => setTimeout(r, 30));
+      events.push("remove-resolved");
+      return true;
+    });
+    vi.mocked(SecureStorage.set).mockImplementationOnce(async () => {
+      events.push("set-invoked");
+    });
+
+    const fresh = new SecureCredentialStore();
+    const deletePromise = fresh.delete("race-key");
+    const setPromise = fresh.set("race-key", creds);
+    await Promise.all([deletePromise, setPromise]);
+    expect(events).toEqual(["remove-resolved", "set-invoked"]);
   });
 });
