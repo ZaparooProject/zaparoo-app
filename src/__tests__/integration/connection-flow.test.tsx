@@ -43,6 +43,10 @@ describe("Connection Flow Integration", () => {
       targetDeviceAddress: "",
       lastConnectionTime: null,
       retryCount: 0,
+      // Seed encryptionState as plaintext so connected-state assertions don't
+      // hit the verifying UI gate (encryptionState === "unknown" -> connecting).
+      encryptionState: "plaintext",
+      pairingRequired: false,
     });
     usePreferencesStore.setState({
       ...usePreferencesStore.getState(),
@@ -260,6 +264,189 @@ describe("Connection Flow Integration", () => {
 
       // Clean up
       localStorage.removeItem("deviceAddress");
+    });
+  });
+
+  // Regression test for the green-flash + stuck-reconnecting bug.
+  // Drives the full pair-then-reconnect lifecycle by progressing context +
+  // store state through each phase the consumer would see in production.
+  describe("encrypted device pair-then-reconnect lifecycle", () => {
+    it("never shows green Connected during initial encryption verification", () => {
+      // Phase 1: WebSocket has just opened, transport reports connected, but
+      // the consumer has not yet learned the encryption mode.
+      useStatusStore.setState({
+        encryptionState: "unknown",
+        pairingRequired: false,
+      });
+
+      const value: ConnectionContextValue = {
+        activeConnection: null,
+        isConnected: true,
+        hasData: false,
+        showConnecting: false,
+        showReconnecting: false,
+        openPairingModal: () => {},
+      };
+
+      const { rerender } = render(
+        <ConnectionWrapper value={value}>
+          <ConnectionStatusDisplay />
+        </ConnectionWrapper>,
+      );
+
+      // Gate must hold UI in "Connecting" — no green flash.
+      expect(screen.getByText("connection.connecting")).toBeInTheDocument();
+      expect(
+        screen.queryByText("scan.connectedHeading"),
+      ).not.toBeInTheDocument();
+
+      // Phase 2: server replied with -32002. ConnectionProvider sets
+      // encryptionState=plaintext + pairingRequired=true, then transport
+      // disconnects.
+      useStatusStore.setState({
+        encryptionState: "plaintext",
+        pairingRequired: true,
+      });
+
+      rerender(
+        <ConnectionWrapper
+          value={{
+            ...value,
+            isConnected: false,
+            showReconnecting: false,
+          }}
+        >
+          <ConnectionStatusDisplay />
+        </ConnectionWrapper>,
+      );
+
+      expect(
+        screen.getByText("connection.pairingRequired"),
+      ).toBeInTheDocument();
+
+      // Phase 3: pairing succeeds. ConnectionProvider's onConnectionChange
+      // resets encryptionState=unknown + pairingRequired=false when transport
+      // transitions to "connecting" (the start of the post-pair reconnect).
+      // Without this reset the UI would still show "Pairing required" and
+      // never resolve. Either showReconnecting or showConnecting can be true
+      // here depending on transport history; the gate handles both.
+      useStatusStore.setState({
+        encryptionState: "unknown",
+        pairingRequired: false,
+      });
+
+      rerender(
+        <ConnectionWrapper
+          value={{
+            ...value,
+            isConnected: false,
+            showReconnecting: true,
+          }}
+        >
+          <ConnectionStatusDisplay />
+        </ConnectionWrapper>,
+      );
+
+      expect(screen.getByText("connection.reconnecting")).toBeInTheDocument();
+
+      // Phase 4: WebSocket reopens with creds, transport reports connected,
+      // encrypted handshake still in flight.
+      rerender(
+        <ConnectionWrapper
+          value={{
+            ...value,
+            isConnected: true,
+            showReconnecting: true,
+          }}
+        >
+          <ConnectionStatusDisplay />
+        </ConnectionWrapper>,
+      );
+
+      // Gate keeps UI in "Reconnecting" — still no green flash.
+      expect(screen.getByText("connection.reconnecting")).toBeInTheDocument();
+      expect(
+        screen.queryByText("scan.connectedHeading"),
+      ).not.toBeInTheDocument();
+
+      // Phase 5: encrypted handshake confirmed. ConnectionProvider sets
+      // encryptionState=encrypted + pairingRequired=false.
+      useStatusStore.setState({
+        encryptionState: "encrypted",
+        pairingRequired: false,
+      });
+
+      rerender(
+        <ConnectionWrapper
+          value={{
+            ...value,
+            isConnected: true,
+            hasData: true,
+            showReconnecting: false,
+          }}
+        >
+          <ConnectionStatusDisplay />
+        </ConnectionWrapper>,
+      );
+
+      expect(screen.getByText("scan.connectedHeading")).toBeInTheDocument();
+      expect(screen.getByLabelText("connection.encrypted")).toBeInTheDocument();
+    });
+
+    // Regression: a previous fix attempt reset pairingRequired on every
+    // "reconnecting" transition, which wiped the signal before the UI could
+    // render — leaving the user stuck in "Reconnecting…" with no Pair button.
+    // The fix moved the reset to fire only on "connecting", and short-circuited
+    // the transport's handleDisconnection on encryptionBlocked so a spurious
+    // "reconnecting" event is never emitted in the -32002 flow. This test
+    // verifies the consumer-visible behaviour: when -32002 is received and
+    // the transport goes straight to disconnected, "Pairing required" shows.
+    it("shows Pairing required after -32002 and survives a spurious reconnecting event", () => {
+      // Transport went connected → disconnected (no "reconnecting" emitted).
+      // ConnectionProvider's onEncryptionRequired set the signals before the
+      // close fired, so the store now reflects the pair-required state.
+      useStatusStore.setState({
+        encryptionState: "plaintext",
+        pairingRequired: true,
+      });
+
+      const value: ConnectionContextValue = {
+        activeConnection: null,
+        isConnected: false,
+        hasData: false,
+        showConnecting: false,
+        showReconnecting: false,
+        openPairingModal: () => {},
+      };
+
+      const { rerender } = render(
+        <ConnectionWrapper value={value}>
+          <ConnectionStatusDisplay />
+        </ConnectionWrapper>,
+      );
+
+      expect(
+        screen.getByText("connection.pairingRequired"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("connection.reconnecting"),
+      ).not.toBeInTheDocument();
+
+      // Even if a future regression caused the transport to emit a transient
+      // "reconnecting" event, deriveUIState's precedence (pairingRequired
+      // outranks reconnecting) must keep the Pair UI visible.
+      rerender(
+        <ConnectionWrapper value={{ ...value, showReconnecting: true }}>
+          <ConnectionStatusDisplay />
+        </ConnectionWrapper>,
+      );
+
+      expect(
+        screen.getByText("connection.pairingRequired"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("connection.reconnecting"),
+      ).not.toBeInTheDocument();
     });
   });
 });

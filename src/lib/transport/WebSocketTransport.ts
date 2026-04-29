@@ -75,6 +75,10 @@ export class WebSocketTransport implements Transport {
   private session: EncryptedSession | null = null;
   private outboundQueue: string[] = [];
   private drainInFlight = false;
+  // True once the server has answered a plaintext request without a -32002/-32001
+  // error. Until then we keep the consumer's encryption-state UI in "unknown" so
+  // it can avoid the green-flash before -32002 arrives on encryption-required cores.
+  private plaintextVerified = false;
   // Set to true when an encryption-related signal (revoked creds, -32002, -32001)
   // closes the connection. Suppresses the auto-reconnect loop until the consumer
   // resolves the issue (e.g. pairs) and triggers an explicit immediateReconnect().
@@ -124,9 +128,15 @@ export class WebSocketTransport implements Transport {
       return;
     }
 
-    // Any explicit connect attempt clears the encryption block — the caller
-    // is asserting they want to try again (e.g. fresh credentials available).
-    this.encryptionBlocked = false;
+    // Don't reconnect while encryption-blocked. Lifecycle callers (app resume,
+    // visibilitychange, network change) must respect the block — only the
+    // consumer can clear it via clearEncryptionBlock() after pairing.
+    if (this.encryptionBlocked) {
+      logger.debug(
+        `[Transport:${this.deviceId}] connect() ignored: encryption-blocked`,
+      );
+      return;
+    }
 
     // Use "reconnecting" state if we've connected before, "connecting" for first connection
     // This prevents state flickering during reconnection loops
@@ -184,8 +194,15 @@ export class WebSocketTransport implements Transport {
       return;
     }
 
-    // An explicit reconnect (e.g. after pairing) clears the encryption block.
-    this.encryptionBlocked = false;
+    // Don't reconnect while encryption-blocked. The pairing flow clears the
+    // block explicitly via clearEncryptionBlock(); lifecycle-driven calls
+    // (resumeAll, network change) must not re-trigger the same -32002 loop.
+    if (this.encryptionBlocked) {
+      logger.debug(
+        `[Transport:${this.deviceId}] immediateReconnect() ignored: encryption-blocked`,
+      );
+      return;
+    }
 
     logger.log(`[Transport:${this.deviceId}] Immediate reconnect triggered`);
 
@@ -244,6 +261,15 @@ export class WebSocketTransport implements Transport {
       this.heartbeatPaused = false;
       this.heartCheck();
     }
+  }
+
+  clearEncryptionBlock(): void {
+    if (this.encryptionBlocked) {
+      logger.debug(
+        `[Transport:${this.deviceId}] Encryption block cleared by consumer`,
+      );
+    }
+    this.encryptionBlocked = false;
   }
 
   // Private methods
@@ -332,6 +358,34 @@ export class WebSocketTransport implements Transport {
         );
         return;
       }
+      // Silent close in plaintext mode before the server confirmed it accepts
+      // plaintext. Most likely the server requires encryption but the -32002
+      // frame was lost (server-side marshal failure, native WS plugin
+      // dispatching close before message, or a Core build that just hangs up).
+      // Surface as an encryption-required signal so the user gets a Pair
+      // button instead of an infinite reconnect loop. Only do this when the
+      // consumer wired up encryption credentials — otherwise this is a vanilla
+      // disconnect (e.g. server crashed) and the existing reconnect path is
+      // right.
+      if (
+        this.encMode === "plaintext" &&
+        !this.plaintextVerified &&
+        this.config.encryption !== undefined
+      ) {
+        logger.warn(
+          `[Transport:${this.deviceId}] Silent close in plaintext mode without a verified reply — assuming encryption required`,
+          {
+            category: "websocket",
+            action: "silent-close-plaintext",
+            severity: "warning",
+          },
+        );
+        this.handlers.onEncryptionRequired?.();
+        this.failConnectionForEncryption(
+          "silent close before plaintext verified",
+        );
+        return;
+      }
       this.handlers.onClose?.();
       this.handleDisconnection();
     };
@@ -366,25 +420,55 @@ export class WebSocketTransport implements Transport {
   private async initEncryption(): Promise<void> {
     const enc = this.config.encryption;
 
+    // Each new WebSocket session starts unverified. Routine onclose/reconnect
+    // cycles do not run cleanup(), so reset here to ensure the consumer
+    // re-verifies the encryption mode after a reconnect.
+    this.plaintextVerified = false;
+
+    // Set encMode synchronously so an immediate close (server hangs up before
+    // creds finish loading) is correctly attributed to the silent-close-
+    // plaintext branch in ws.onclose, instead of falling through to
+    // handleDisconnection's reconnect loop with no pairing UI ever surfacing.
+    // Upgraded to "trying-encrypted" below if creds load successfully.
+    this.encMode = "plaintext";
+
     if (!enc) {
-      this.encMode = "plaintext";
       this.setState("connected");
       this.startHeartbeat();
       this.handlers.onOpen?.();
-      this.handlers.onPlaintextMode?.();
+      // onPlaintextMode deferred — fires from handlePlaintextMessage after the
+      // first non-error reply confirms the server speaks plaintext.
       return;
     }
 
+    // Capture the WS at the start so we can detect a close-during-await: the
+    // consumer's getCredentials() hits the Capacitor Preferences bridge, which
+    // can take real ms on Android. If the server closes during that window,
+    // ws.onclose runs and drives recovery; this stale init must NOT clobber
+    // that with a setState("connected") on a dead socket.
+    const wsAtStart = this.ws;
+
     try {
       const creds = await enc.getCredentials();
+
+      if (
+        this.isDestroyed ||
+        this.ws !== wsAtStart ||
+        this.ws?.readyState !== WebSocket.OPEN ||
+        this.encryptionBlocked
+      ) {
+        return;
+      }
+
       if (!creds) {
         // No stored credentials — try plaintext. Server may reject with -32002
         // (encryption required), in which case we fail and prompt for pairing.
-        this.encMode = "plaintext";
+        // encMode already "plaintext" from above.
         this.setState("connected");
         this.startHeartbeat();
         this.handlers.onOpen?.();
-        this.handlers.onPlaintextMode?.();
+        // onPlaintextMode deferred — fires from handlePlaintextMessage after
+        // the first non-error reply confirms plaintext is accepted.
         return;
       }
 
@@ -413,6 +497,17 @@ export class WebSocketTransport implements Transport {
         creds.authToken,
         pairingKeyBytes,
       );
+
+      // Same close-during-await guard for the second await.
+      if (
+        this.isDestroyed ||
+        this.ws !== wsAtStart ||
+        this.ws?.readyState !== WebSocket.OPEN ||
+        this.encryptionBlocked
+      ) {
+        return;
+      }
+
       this.encMode = "trying-encrypted";
       logger.debug(
         `[Transport:${this.deviceId}] Encrypted session created (authToken: ${creds.authToken.slice(0, 8)}…)`,
@@ -427,6 +522,9 @@ export class WebSocketTransport implements Transport {
           action: "init-failed",
         },
       );
+      if (this.isDestroyed || this.ws !== wsAtStart || this.encryptionBlocked) {
+        return;
+      }
       // Local crypto setup failed — surface as a connection error.
       this.handlers.onError?.(new Error("Failed to initialise encryption"));
       this.handleConnectionError();
@@ -543,6 +641,14 @@ export class WebSocketTransport implements Transport {
       // Non-JSON (e.g. raw "pong" already handled above) — fall through.
     }
 
+    // First non-error plaintext reply confirms the server accepts plaintext.
+    // Until this point, the consumer keeps encryption-state UI in "unknown"
+    // so the green Connected indicator does not flash before a possible -32002.
+    if (!this.plaintextVerified && this.encMode === "plaintext") {
+      this.plaintextVerified = true;
+      this.handlers.onPlaintextMode?.();
+    }
+
     this.handlers.onMessage?.(event);
   }
 
@@ -594,6 +700,14 @@ export class WebSocketTransport implements Transport {
 
   private handleDisconnection(): void {
     if (this.isDestroyed) return;
+    // If we've already given up due to an encryption block, stay disconnected.
+    // Emitting "reconnecting" here would mislead consumers — recovery requires
+    // the user to pair, not an internal retry, and a transient "reconnecting"
+    // event clobbers any pairingRequired UI state the consumer just set.
+    if (this.encryptionBlocked) {
+      this.setState("disconnected");
+      return;
+    }
     // Only use "reconnecting" state if we've successfully connected before
     // Otherwise stay in "connecting" state for initial connection attempts
     if (this._hasConnectedBefore) {
@@ -604,6 +718,10 @@ export class WebSocketTransport implements Transport {
 
   private handleConnectionError(): void {
     if (this.isDestroyed) return;
+    if (this.encryptionBlocked) {
+      this.setState("disconnected");
+      return;
+    }
     // Only use "reconnecting" state if we've successfully connected before
     // Otherwise stay in "connecting" state for initial connection attempts
     if (this._hasConnectedBefore) {
@@ -771,5 +889,6 @@ export class WebSocketTransport implements Transport {
     this.outboundQueue = [];
     this.drainInFlight = false;
     this.encMode = "idle";
+    this.plaintextVerified = false;
   }
 }

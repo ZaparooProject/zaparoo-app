@@ -61,9 +61,8 @@ export function PairingModal({
     Device.getInfo()
       .then((info) => {
         if (cancelled) return;
-        const platform = safePlatform();
         const name = info.name || info.model || "Unknown";
-        const suggested = `${name} (Zaparoo App ${platform})`.slice(0, 120);
+        const suggested = name.slice(0, 120);
         setClientName((current) => (current ? current : suggested));
       })
       .catch(() => {
@@ -110,6 +109,7 @@ export function PairingModal({
       );
       setDeviceHistory(updated);
       toast.success(t("pairing.success"));
+      connectionManager.clearEncryptionBlockActive();
       connectionManager.immediateReconnectActive();
       onSuccess?.();
       close();

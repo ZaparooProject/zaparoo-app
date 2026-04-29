@@ -1,22 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
-import { TrashIcon, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
-import { SlideModal } from "@/components/SlideModal.tsx";
 import { NetworkScanModal } from "@/components/NetworkScanModal";
-import { Button as SCNButton } from "@/components/ui/button";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { useSelectDevice } from "@/hooks/useSelectDevice";
 import i18n from "@/i18n";
 import { PageFrame } from "@/components/PageFrame";
 import { useStatusStore } from "@/lib/store";
 import { Button } from "@/components/wui/Button";
 import { ExternalIcon, NextIcon } from "@/lib/images";
-import { getDeviceAddress, setDeviceAddress, CoreAPI } from "@/lib/coreApi.ts";
+import { getDeviceAddress } from "@/lib/coreApi.ts";
 import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
 import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
 import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
@@ -36,23 +34,12 @@ function Settings() {
 
   const connectionError = useStatusStore((state) => state.connectionError);
   const loggedInUser = useStatusStore((state) => state.loggedInUser);
-  const deviceHistory = useStatusStore((state) => state.deviceHistory);
   const setDeviceHistory = useStatusStore((state) => state.setDeviceHistory);
-  const removeDeviceHistory = useStatusStore(
-    (state) => state.removeDeviceHistory,
-  );
-  const resetConnectionState = useStatusStore(
-    (state) => state.resetConnectionState,
-  );
-  const setTargetDeviceAddress = useStatusStore(
-    (state) => state.setTargetDeviceAddress,
-  );
 
   const [address, setAddress] = useState(getDeviceAddress());
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
 
-  const queryClient = useQueryClient();
+  const { selectDevice, selectScanDevice } = useSelectDevice();
 
   useEffect(() => {
     Preferences.get({ key: "deviceHistory" }).then((v) => {
@@ -63,22 +50,18 @@ function Settings() {
   }, [setDeviceHistory]);
 
   const handleDeviceAddressChange = (newAddress: string) => {
-    // Skip if address hasn't actually changed - prevents resetting connection
-    // state when user edits and reverts to same value
-    if (newAddress === getDeviceAddress()) {
-      return;
-    }
-
-    setDeviceAddress(newAddress);
-    resetConnectionState();
-    setTargetDeviceAddress(newAddress); // Update store to trigger WebSocket reconnection
-    CoreAPI.reset();
-    queryClient.invalidateQueries();
+    selectDevice(newAddress);
     setAddress(newAddress);
+  };
 
-    // Clear saved search filters since they may not exist on the new device
-    Preferences.remove({ key: "searchSystem" });
-    Preferences.remove({ key: "searchTags" });
+  const handleScanDeviceSelect = (device: {
+    address: string;
+    name?: string;
+    platform?: string;
+    version?: string;
+  }) => {
+    selectScanDevice(device);
+    setAddress(device.address);
   };
 
   return (
@@ -97,57 +80,17 @@ function Settings() {
               setAddress={setAddress}
               onAddressChange={handleDeviceAddressChange}
               connectionError={connectionError}
-              hasDeviceHistory={deviceHistory.length > 0}
-              onHistoryClick={() => setHistoryOpen(true)}
               onScanClick={() => setScanOpen(true)}
             />
           </div>
 
           <CoreOutdatedNotice />
 
-          {/* Device History Modal */}
-          <SlideModal
-            isOpen={historyOpen}
-            close={() => setHistoryOpen(false)}
-            title={t("settings.deviceHistory")}
-          >
-            <div className="flex flex-col gap-3 pt-2">
-              {deviceHistory
-                .sort((a, b) => (a.address > b.address ? 1 : -1))
-                .map((entry) => (
-                  <div
-                    key={entry.address}
-                    className="flex flex-row items-center justify-between gap-3"
-                  >
-                    <SCNButton
-                      className="w-full"
-                      onClick={() => {
-                        handleDeviceAddressChange(entry.address);
-                        setHistoryOpen(false);
-                      }}
-                      variant="outline"
-                    >
-                      {entry.address}
-                    </SCNButton>
-                    <SCNButton
-                      variant="ghost"
-                      size="icon"
-                      color="danger"
-                      onClick={() => removeDeviceHistory(entry.address)}
-                      aria-label={t("settings.deleteDevice")}
-                    >
-                      <TrashIcon size="20" />
-                    </SCNButton>
-                  </div>
-                ))}
-            </div>
-          </SlideModal>
-
           {/* Network Scan Modal */}
           <NetworkScanModal
             isOpen={scanOpen}
             onClose={() => setScanOpen(false)}
-            onSelectDevice={handleDeviceAddressChange}
+            onSelectDevice={handleScanDeviceSelect}
           />
 
           <MediaDatabaseCard />

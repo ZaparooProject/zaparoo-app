@@ -66,6 +66,10 @@ describe("Home Page Integration", () => {
         mediaName: "",
         mediaPath: "",
       },
+      // Seed encryptionState so connected-state assertions don't hit the
+      // verifying UI gate (encryptionState === "unknown" -> connecting).
+      encryptionState: "plaintext",
+      pairingRequired: false,
     });
     usePreferencesStore.setState({
       ...usePreferencesStore.getState(),

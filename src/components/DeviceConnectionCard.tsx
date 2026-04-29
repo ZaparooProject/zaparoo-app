@@ -1,8 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
+import { Link } from "@tanstack/react-router";
 import { ArrowLeftRightIcon, KeyRoundIcon, SearchIcon } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
 import { getDeviceAddress } from "@/lib/coreApi";
+import { normalizeDeviceKey } from "@/lib/crypto/credentials";
 import { useStatusStore } from "@/lib/store";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
@@ -14,8 +16,6 @@ interface DeviceConnectionCardProps {
   setAddress: (address: string) => void;
   onAddressChange: (address: string) => void;
   connectionError: string;
-  hasDeviceHistory: boolean;
-  onHistoryClick: () => void;
   onScanClick?: () => void;
 }
 
@@ -24,8 +24,6 @@ export function DeviceConnectionCard({
   setAddress,
   onAddressChange,
   connectionError,
-  hasDeviceHistory,
-  onHistoryClick,
   onScanClick,
 }: DeviceConnectionCardProps) {
   const { t } = useTranslation();
@@ -38,6 +36,12 @@ export function DeviceConnectionCard({
     (state) => state.coreVersionPending,
   );
   const pairingRequired = useStatusStore((state) => state.pairingRequired);
+  const deviceHistory = useStatusStore((state) => state.deviceHistory);
+
+  const savedKey = savedAddress ? normalizeDeviceKey(savedAddress) : "";
+  const currentEntry = savedKey
+    ? deviceHistory.find((e) => normalizeDeviceKey(e.address) === savedKey)
+    : undefined;
 
   const versionLabel =
     coreVersion !== null
@@ -74,6 +78,7 @@ export function DeviceConnectionCard({
             connectionError={connectionError}
             connectedSubtitle={connectedSubtitle}
             connectedSubtitleLoading={isConnected && coreVersionPending}
+            connectedName={currentEntry?.name}
             action={
               <div className="flex items-center gap-1">
                 {pairingRequired && (
@@ -93,13 +98,13 @@ export function DeviceConnectionCard({
                     aria-label={t("settings.networkScan.title")}
                   />
                 )}
-                <Button
-                  icon={<ArrowLeftRightIcon size="24" />}
-                  variant="text"
-                  onClick={onHistoryClick}
+                <Link
+                  to="/settings/devices"
                   aria-label={t("settings.deviceHistory")}
-                  disabled={!hasDeviceHistory}
-                />
+                  className="focus-visible:ring-background flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 text-white transition-all duration-100 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
+                >
+                  <ArrowLeftRightIcon size="24" />
+                </Link>
               </div>
             }
           />

@@ -36,6 +36,8 @@ export interface ConnectionStatusDisplayProps {
   connectedSubtitle?: string;
   /** Whether connected subtitle is still loading (shows skeleton) */
   connectedSubtitleLoading?: boolean;
+  /** Optional second subtitle line for connected state (e.g., user-chosen device name). */
+  connectedName?: string;
   /** Optional action slot (e.g., settings button, history button) */
   action?: ReactNode;
   /** Optional className for the outer container */
@@ -50,6 +52,7 @@ export function ConnectionStatusDisplay({
   connectionError,
   connectedSubtitle,
   connectedSubtitleLoading,
+  connectedName,
   action,
   className,
 }: ConnectionStatusDisplayProps) {
@@ -62,6 +65,15 @@ export function ConnectionStatusDisplay({
   // Derive UI state from connection context
   const deriveUIState = (): ConnectionUIState => {
     if (!savedAddress) return "disconnected";
+    // The transport flips to "connected" when the WebSocket opens, before the
+    // server has confirmed the encryption mode. Hold the UI in connecting/
+    // reconnecting until the consumer learns the mode (encryptionState is set
+    // by onPlaintextMode after the first non-error reply, or by
+    // onEncryptedHandshakeOk after first decrypt). Prevents a green flash
+    // before -32002 surfaces on encryption-required cores.
+    if (isConnected && encryptionState === "unknown") {
+      return showReconnecting ? "reconnecting" : "connecting";
+    }
     if (isConnected) return "connected";
     // Pairing-required outranks reconnecting/error so the user sees the real
     // blocker instead of a generic "Reconnecting..." spinner that won't resolve
@@ -168,6 +180,11 @@ export function ConnectionStatusDisplay({
               {config.subtitle}
             </p>
           )
+        )}
+        {uiState === "connected" && connectedName && (
+          <p className={`truncate text-sm ${config.subtitleColorClass}`}>
+            {connectedName}
+          </p>
         )}
       </div>
 

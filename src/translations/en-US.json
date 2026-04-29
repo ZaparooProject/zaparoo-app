@@ -383,7 +383,24 @@
         "description": "The connected device is running an older version of Zaparoo Core. The following features are unavailable:"
       },
       "enterDeviceAddress": "Enter a device address",
-      "deleteDevice": "Remove device from history",
+      "deviceHistoryEmpty": "No saved devices yet.",
+      "deviceDetails": "Device details",
+      "activeDevice": "Active device",
+      "deviceDetail": {
+        "nameLabel": "Device name",
+        "infoHeading": "Info",
+        "address": "Address: {{value}}",
+        "platform": "Platform: {{value}}",
+        "version": "Version: {{value}}",
+        "lastConnected": "Last connected: {{when}}",
+        "neverConnected": "Last connected: never",
+        "useThisDevice": "Use this device",
+        "forget": "Forget device",
+        "forgetTitle": "Forget this device?",
+        "forgetBody": "This will remove it from your saved devices and erase the pairing credentials.",
+        "forgetCancel": "Cancel",
+        "forgetConfirm": "Forget device"
+      },
       "about": {
         "title": "About",
         "version": "Version: {{version}}",

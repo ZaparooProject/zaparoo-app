@@ -288,6 +288,15 @@ export class ConnectionManager {
   }
 
   /**
+   * Clear the encryption-blocked state on the active device. Call this after
+   * resolving the encryption issue (e.g. successful pairing) before invoking
+   * immediateReconnectActive() so the reconnect actually proceeds.
+   */
+  clearEncryptionBlockActive(): void {
+    this.getActiveTransport()?.clearEncryptionBlock();
+  }
+
+  /**
    * Destroy all connections and clean up.
    */
   destroy(): void {

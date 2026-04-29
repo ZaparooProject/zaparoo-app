@@ -24,8 +24,17 @@ export enum ConnectionState {
 
 export interface DeviceHistoryEntry {
   address: string;
+  name?: string;
+  nameIsCustom?: boolean;
+  platform?: string;
+  version?: string;
+  lastConnectedAt?: number;
   paired?: { clientId: string; pairedAt: number; label?: string };
 }
+
+export type DeviceHistoryMeta = Partial<
+  Pick<DeviceHistoryEntry, "name" | "platform" | "version" | "lastConnectedAt">
+>;
 
 export type EncryptionState = "unknown" | "plaintext" | "encrypted";
 
@@ -81,6 +90,11 @@ interface StatusState {
   addDeviceHistory: (address: string) => void;
   removeDeviceHistory: (address: string) => void;
   clearDeviceHistory: () => void;
+  updateDeviceHistoryMeta: (
+    address: string,
+    meta: DeviceHistoryMeta,
+    opts?: { source?: "auto" | "manual" },
+  ) => void;
 
   runQueue: { value: string; unsafe: boolean } | null;
   setRunQueue: (runQueue: { value: string; unsafe: boolean } | null) => void;
@@ -177,9 +191,14 @@ export const useStatusStore = create<StatusState>()((set) => ({
     set({ deviceHistory: history }),
   addDeviceHistory: (address) =>
     set((state) => {
+      // Preserve any existing metadata (name, platform, version, paired, etc.)
+      // — re-adding on reconnect must not wipe fields populated by earlier paths.
+      const existing = state.deviceHistory.find(
+        (entry) => entry.address === address,
+      );
       const devices = [
         ...state.deviceHistory.filter((entry) => entry.address !== address),
-        { address },
+        existing ? { ...existing, address } : { address },
       ];
       Preferences.set({
         key: "deviceHistory",
@@ -231,6 +250,49 @@ export const useStatusStore = create<StatusState>()((set) => ({
       return { deviceHistory: [] };
     });
   },
+  updateDeviceHistoryMeta: (address, meta, opts) =>
+    set((state) => {
+      const idx = state.deviceHistory.findIndex(
+        (entry) => entry.address === address,
+      );
+      const existing = state.deviceHistory[idx];
+      if (!existing) return {};
+      const source = opts?.source ?? "auto";
+      const next: DeviceHistoryEntry = { ...existing };
+      if (source === "auto") {
+        if (meta.platform !== undefined) next.platform = meta.platform;
+        if (meta.version !== undefined) next.version = meta.version;
+        if (meta.lastConnectedAt !== undefined)
+          next.lastConnectedAt = meta.lastConnectedAt;
+        // Auto callers (e.g. ZeroConf scan with an unset service name) may
+        // pass `""` — treat that as "no information" rather than overwriting
+        // a previously-good name with a blank.
+        if (meta.name && !existing.nameIsCustom) {
+          next.name = meta.name;
+        }
+      } else {
+        if (meta.platform !== undefined) next.platform = meta.platform;
+        if (meta.version !== undefined) next.version = meta.version;
+        if (meta.lastConnectedAt !== undefined)
+          next.lastConnectedAt = meta.lastConnectedAt;
+        if ("name" in meta) {
+          if (meta.name === undefined || meta.name === "") {
+            next.name = undefined;
+            next.nameIsCustom = false;
+          } else {
+            next.name = meta.name;
+            next.nameIsCustom = true;
+          }
+        }
+      }
+      const devices = [...state.deviceHistory];
+      devices[idx] = next;
+      Preferences.set({
+        key: "deviceHistory",
+        value: JSON.stringify(devices),
+      }).catch(() => {});
+      return { deviceHistory: devices };
+    }),
   runQueue: null,
   setRunQueue: (runQueue) => set({ runQueue }),
   writeQueue: "",

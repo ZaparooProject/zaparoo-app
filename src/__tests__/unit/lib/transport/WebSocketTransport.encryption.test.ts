@@ -268,6 +268,47 @@ describe("WebSocketTransport encryption", () => {
       transport.destroy();
     });
 
+    it("should not transition through 'reconnecting' after -32002 — goes directly to disconnected", async () => {
+      const states: string[] = [];
+      const onEncryptionRequired = vi.fn();
+      const transport = makeTransport(false);
+      transport.setEventHandlers({
+        onStateChange: (s) => states.push(s),
+        onEncryptionRequired,
+      });
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      // Sanity: we should have seen connecting → connected by now.
+      expect(states).toContain("connecting");
+      expect(states).toContain("connected");
+
+      // Snapshot the index so we can isolate transitions AFTER -32002 arrives.
+      const indexBefore32002 = states.length;
+
+      // Server replies -32002. The transport closes the WS as part of
+      // failConnectionForEncryption, which triggers onclose → handleDisconnection.
+      // Without the fix, handleDisconnection would emit a transient "reconnecting"
+      // before scheduleReconnect bails on encryptionBlocked. With the fix, it
+      // short-circuits to "disconnected" and never lies to consumers.
+      ws.simulateMessage(
+        JSON.stringify({ jsonrpc: "2.0", error: { code: -32002 } }),
+      );
+      await flushPromises();
+
+      const transitionsAfter = states.slice(indexBefore32002);
+      expect(onEncryptionRequired).toHaveBeenCalledTimes(1);
+      expect(transitionsAfter).not.toContain("reconnecting");
+      expect(transport.state).toBe("disconnected");
+      // Auto-reconnect must not loop on encryption-blocked failures.
+      expect(MockWebSocket.instances).toHaveLength(1);
+
+      transport.destroy();
+    });
+
     it("should fire onCredentialsRevoked when -32002 arrives in encrypted mode", async () => {
       const onCredentialsRevoked = vi.fn();
       const transport = makeTransport(true);
@@ -289,6 +330,79 @@ describe("WebSocketTransport encryption", () => {
       transport.destroy();
     });
 
+    it("should fire onEncryptionRequired and stop reconnecting when WS closes silently in plaintext mode before any reply", async () => {
+      const onEncryptionRequired = vi.fn();
+      const transport = makeTransport(false); // no creds → plaintext
+      transport.setEventHandlers({ onEncryptionRequired });
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      // Server closes without sending -32002 (buggy Core / lost frame / native
+      // WS race). Without the silent-close-plaintext branch, the transport
+      // would loop in reconnect with no pairing UI ever surfacing.
+      ws.simulateClose(1006, "");
+      await flushPromises();
+
+      expect(onEncryptionRequired).toHaveBeenCalledTimes(1);
+      expect(transport.state).toBe("disconnected");
+      // Auto-reconnect must not loop on this defensive encryption-blocked path.
+      expect(MockWebSocket.instances).toHaveLength(1);
+
+      transport.destroy();
+    });
+
+    it("should NOT fire onEncryptionRequired on silent close after plaintext was already verified", async () => {
+      const onEncryptionRequired = vi.fn();
+      const transport = makeTransport(false);
+      transport.setEventHandlers({ onEncryptionRequired });
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      // First reply succeeds → plaintextVerified flips true.
+      ws.simulateMessage(
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: { ok: true } }),
+      );
+      await flushPromises();
+
+      // Now the server crashes / network drops.
+      ws.simulateClose(1006, "");
+      await flushPromises();
+
+      expect(onEncryptionRequired).not.toHaveBeenCalled();
+      // Normal post-connect close → transport schedules a reconnect.
+      expect(transport.state).toBe("reconnecting");
+
+      transport.destroy();
+    });
+
+    it("should NOT fire onEncryptionRequired when transport has no encryption config", async () => {
+      const onEncryptionRequired = vi.fn();
+      const transport = new WebSocketTransport({
+        deviceId: "no-enc",
+        url: "ws://localhost:7497",
+        // encryption omitted entirely
+      });
+      transport.setEventHandlers({ onEncryptionRequired });
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      ws.simulateClose(1006, "");
+      await flushPromises();
+
+      expect(onEncryptionRequired).not.toHaveBeenCalled();
+
+      transport.destroy();
+    });
+
     it("should fire onUnsupportedVersion and disconnect on -32001", async () => {
       const onUnsupportedVersion = vi.fn();
       const transport = makeTransport(false); // plaintext path
@@ -305,6 +419,169 @@ describe("WebSocketTransport encryption", () => {
 
       expect(onUnsupportedVersion).toHaveBeenCalledTimes(1);
       expect(transport.state).toBe("disconnected");
+
+      transport.destroy();
+    });
+
+    it("should ignore immediateReconnect while encryption-blocked until clearEncryptionBlock is called", async () => {
+      vi.useFakeTimers();
+      try {
+        const transport = makeTransport(false); // no creds → plaintext
+        transport.connect();
+
+        const ws = MockWebSocket.getLatest()!;
+        ws.simulateOpen();
+        // Flush the encryption init Promise chain (no timers needed).
+        await vi.advanceTimersByTimeAsync(0);
+
+        ws.simulateMessage(
+          JSON.stringify({ jsonrpc: "2.0", error: { code: -32002 } }),
+        );
+        await vi.advanceTimersByTimeAsync(0);
+        expect(transport.state).toBe("disconnected");
+        expect(MockWebSocket.instances).toHaveLength(1);
+
+        // Lifecycle event (App resume / visibilitychange / network change) —
+        // must be a no-op while blocked. immediateReconnect's 500 ms setTimeout
+        // is never scheduled, so even after advancing past it no new WS opens.
+        transport.immediateReconnect();
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(MockWebSocket.instances).toHaveLength(1);
+        expect(transport.state).toBe("disconnected");
+
+        // Consumer pairs successfully → clears block → reconnect proceeds.
+        transport.clearEncryptionBlock();
+        transport.immediateReconnect();
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(MockWebSocket.instances.length).toBeGreaterThan(1);
+
+        transport.destroy();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("should ignore connect() while encryption-blocked", async () => {
+      const transport = makeTransport(false);
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      ws.simulateMessage(
+        JSON.stringify({ jsonrpc: "2.0", error: { code: -32002 } }),
+      );
+      await flushPromises();
+      expect(transport.state).toBe("disconnected");
+      expect(MockWebSocket.instances).toHaveLength(1);
+
+      // A stray connect() call (e.g. from a re-entry path) must respect the
+      // block — no new socket, no transition to connecting/reconnecting.
+      transport.connect();
+      await flushPromises();
+      expect(MockWebSocket.instances).toHaveLength(1);
+      expect(transport.state).toBe("disconnected");
+
+      transport.destroy();
+    });
+
+    it("should allow the next connect to proceed after clearEncryptionBlock", async () => {
+      const transport = makeTransport(false);
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      ws.simulateMessage(
+        JSON.stringify({ jsonrpc: "2.0", error: { code: -32002 } }),
+      );
+      await flushPromises();
+      expect(MockWebSocket.instances).toHaveLength(1);
+
+      transport.clearEncryptionBlock();
+      transport.connect();
+      await flushPromises();
+
+      expect(MockWebSocket.instances).toHaveLength(2);
+
+      transport.destroy();
+    });
+  });
+
+  describe("close-during-creds-load race (Android Preferences bridge)", () => {
+    it("routes close-before-creds-resolve through silent-close-plaintext", async () => {
+      const onEncryptionRequired = vi.fn();
+      // Creds resolve only when we explicitly call resolveCreds — simulates
+      // a slow Capacitor Preferences bridge call that hasn't returned yet.
+      let resolveCreds!: (v: null) => void;
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+        encryption: {
+          getCredentials: () =>
+            new Promise<null>((r) => {
+              resolveCreds = r;
+            }),
+        },
+      });
+      transport.setEventHandlers({ onEncryptionRequired });
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      // No flushPromises — initEncryption is parked on the creds promise.
+      // encMode was set to "plaintext" synchronously in initEncryption, so
+      // an onclose right now must hit the silent-close-plaintext branch.
+
+      ws.simulateClose(1006, "");
+      await flushPromises();
+
+      expect(onEncryptionRequired).toHaveBeenCalledTimes(1);
+      expect(transport.state).toBe("disconnected");
+      expect(MockWebSocket.instances).toHaveLength(1);
+
+      // Resolve creds AFTER the close — the stale init must bail out and
+      // not clobber the disconnected state with a setState("connected").
+      resolveCreds(null);
+      await flushPromises();
+      expect(transport.state).toBe("disconnected");
+      expect(MockWebSocket.instances).toHaveLength(1);
+
+      transport.destroy();
+    });
+
+    it("does not call onOpen when getCredentials resolves after the WS already closed", async () => {
+      const onOpen = vi.fn();
+      const states: string[] = [];
+      let resolveCreds!: (v: typeof mockCreds) => void;
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+        encryption: {
+          getCredentials: () =>
+            new Promise<typeof mockCreds>((r) => {
+              resolveCreds = r;
+            }),
+        },
+      });
+      transport.setEventHandlers({
+        onOpen,
+        onStateChange: (s) => states.push(s),
+      });
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      ws.simulateClose(1006, "");
+      await flushPromises();
+
+      resolveCreds(mockCreds);
+      await flushPromises();
+
+      expect(onOpen).not.toHaveBeenCalled();
+      expect(states[states.length - 1]).toBe("disconnected");
 
       transport.destroy();
     });
@@ -342,7 +619,7 @@ describe("WebSocketTransport encryption", () => {
   });
 
   describe("plaintext mode signal", () => {
-    it("should fire onPlaintextMode when no credentials are stored", async () => {
+    it("should NOT fire onPlaintextMode on socket open (deferred until first non-error reply)", async () => {
       const onPlaintextMode = vi.fn();
       const transport = makeTransport(false);
       transport.setEventHandlers({ onPlaintextMode });
@@ -351,8 +628,119 @@ describe("WebSocketTransport encryption", () => {
       MockWebSocket.getLatest()!.simulateOpen();
       await flushPromises();
 
-      expect(onPlaintextMode).toHaveBeenCalledTimes(1);
+      expect(onPlaintextMode).not.toHaveBeenCalled();
       expect(transport.state).toBe("connected");
+
+      transport.destroy();
+    });
+
+    it("should fire onPlaintextMode after first non-error plaintext reply", async () => {
+      const onPlaintextMode = vi.fn();
+      const transport = makeTransport(false);
+      transport.setEventHandlers({ onPlaintextMode });
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      expect(onPlaintextMode).not.toHaveBeenCalled();
+
+      ws.simulateMessage(
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: { ok: true } }),
+      );
+      await flushPromises();
+
+      expect(onPlaintextMode).toHaveBeenCalledTimes(1);
+
+      transport.destroy();
+    });
+
+    it("should NOT fire onPlaintextMode if first reply is -32002 encryption required", async () => {
+      const onPlaintextMode = vi.fn();
+      const onEncryptionRequired = vi.fn();
+      const transport = makeTransport(false);
+      transport.setEventHandlers({ onPlaintextMode, onEncryptionRequired });
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      ws.simulateMessage(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          error: { code: -32002, message: "Encryption required" },
+        }),
+      );
+      await flushPromises();
+
+      expect(onPlaintextMode).not.toHaveBeenCalled();
+      expect(onEncryptionRequired).toHaveBeenCalledTimes(1);
+
+      transport.destroy();
+    });
+
+    it("should fire onPlaintextMode at most once per attempt", async () => {
+      const onPlaintextMode = vi.fn();
+      const transport = makeTransport(false);
+      transport.setEventHandlers({ onPlaintextMode });
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      ws.simulateMessage(
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: { ok: true } }),
+      );
+      ws.simulateMessage(
+        JSON.stringify({ jsonrpc: "2.0", id: 2, result: { ok: true } }),
+      );
+      ws.simulateMessage(
+        JSON.stringify({ jsonrpc: "2.0", id: 3, result: { ok: true } }),
+      );
+      await flushPromises();
+
+      expect(onPlaintextMode).toHaveBeenCalledTimes(1);
+
+      transport.destroy();
+    });
+
+    it("should reset plaintextVerified on cleanup so reconnect re-verifies", async () => {
+      const onPlaintextMode = vi.fn();
+      const transport = makeTransport(false);
+      transport.setEventHandlers({ onPlaintextMode });
+      transport.connect();
+
+      let ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+      ws.simulateMessage(
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: { ok: true } }),
+      );
+      await flushPromises();
+
+      expect(onPlaintextMode).toHaveBeenCalledTimes(1);
+
+      // Simulate disconnect + reconnect
+      ws.simulateClose(1000, "");
+      await flushPromises();
+      transport.connect();
+      ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      // Still 1 — verification reset, but no message yet
+      expect(onPlaintextMode).toHaveBeenCalledTimes(1);
+
+      ws.simulateMessage(
+        JSON.stringify({ jsonrpc: "2.0", id: 2, result: { ok: true } }),
+      );
+      await flushPromises();
+
+      expect(onPlaintextMode).toHaveBeenCalledTimes(2);
 
       transport.destroy();
     });

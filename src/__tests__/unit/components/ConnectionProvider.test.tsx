@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Preferences } from "@capacitor/preferences";
 import { render, screen, waitFor } from "../../../test-utils";
 import { ConnectionProvider } from "../../../components/ConnectionProvider";
 import { useConnection } from "../../../hooks/useConnection";
@@ -632,6 +633,74 @@ describe("connection event handling", () => {
       expect(useStatusStore.getState().coreVersion).toBe("2.5.0");
       expect(useStatusStore.getState().corePlatform).toBe("test");
       expect(useStatusStore.getState().coreVersionPending).toBe(false);
+    });
+  });
+
+  it("should merge platform, version, and lastConnectedAt into deviceHistory entry", async () => {
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+
+    const before = Date.now();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      const entry = useStatusStore
+        .getState()
+        .deviceHistory.find((e) => e.address === "192.168.1.100:7497");
+      expect(entry).toBeDefined();
+      expect(entry!.platform).toBe("test");
+      expect(entry!.version).toBe("2.5.0");
+      expect(typeof entry!.lastConnectedAt).toBe("number");
+      expect(entry!.lastConnectedAt!).toBeGreaterThanOrEqual(before);
+    });
+  });
+
+  it("should preserve fresh metadata when stored deviceHistory hydrates from Preferences", async () => {
+    // Pre-existing history on disk has no metadata. The fix sequences the two
+    // chains so the version() merge runs after Preferences.get hydrates state
+    // — this test guards against regressing back to a parallel race where the
+    // stored hydrate would clobber the merged metadata.
+    const stored = JSON.stringify([
+      { address: "192.168.1.100:7497", name: "Old Name" },
+      { address: "10.0.0.1:7497" },
+    ]);
+    vi.mocked(Preferences.get).mockResolvedValueOnce({ value: stored });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+
+    const before = Date.now();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      const history = useStatusStore.getState().deviceHistory;
+      const entry = history.find((e) => e.address === "192.168.1.100:7497");
+      // Stored entry is preserved (name retained), AND fresh metadata merged.
+      expect(entry?.name).toBe("Old Name");
+      expect(entry?.platform).toBe("test");
+      expect(entry?.version).toBe("2.5.0");
+      expect(typeof entry?.lastConnectedAt).toBe("number");
+      expect(entry!.lastConnectedAt!).toBeGreaterThanOrEqual(before);
+      // Other stored entries are not lost.
+      expect(history.find((e) => e.address === "10.0.0.1:7497")).toBeDefined();
     });
   });
 

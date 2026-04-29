@@ -30,6 +30,7 @@ vi.mock("@/lib/crypto/credentials", () => ({
 vi.mock("@/lib/transport", () => ({
   connectionManager: {
     immediateReconnectActive: vi.fn(),
+    clearEncryptionBlockActive: vi.fn(),
   },
 }));
 
@@ -135,7 +136,7 @@ describe("PairingModal", () => {
       ) as HTMLInputElement;
 
       await waitFor(() => {
-        expect(clientNameInput.value).toBe("Pixel 8 (Zaparoo App web)");
+        expect(clientNameInput.value).toBe("Pixel 8");
       });
     });
 
@@ -164,7 +165,7 @@ describe("PairingModal", () => {
       ) as HTMLInputElement;
 
       await waitFor(() => {
-        expect(clientNameInput.value).toBe("iPhone15,3 (Zaparoo App web)");
+        expect(clientNameInput.value).toBe("iPhone15,3");
       });
     });
 

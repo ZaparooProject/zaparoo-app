@@ -87,6 +87,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setLastToken,
     addDeviceHistory,
     setDeviceHistory,
+    updateDeviceHistoryMeta,
     setCoreVersion,
     setCorePlatform,
     setCoreVersionPending,
@@ -103,6 +104,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setLastToken: state.setLastToken,
       addDeviceHistory: state.addDeviceHistory,
       setDeviceHistory: state.setDeviceHistory,
+      updateDeviceHistoryMeta: state.updateDeviceHistoryMeta,
       setCoreVersion: state.setCoreVersion,
       setCorePlatform: state.setCorePlatform,
       setCoreVersionPending: state.setCoreVersionPending,
@@ -307,31 +309,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // Flush any queued API requests
     CoreAPI.flushQueue();
 
-    // Fetch Core version for feature gating
+    // Hydrate device history from Preferences first, THEN call version() and
+    // merge platform/version metadata in .finally(). Do not parallelise: a
+    // late setDeviceHistory(stored) would wholesale overwrite the
+    // freshly-merged metadata from updateDeviceHistoryMeta().
     setCoreVersionPending(true);
-    CoreAPI.version()
-      .then((v) => {
-        if (isCancelled(v)) {
-          // Don't clear pending — a new connection will manage its own pending state
-          logger.log("Version request was cancelled, skipping");
-          return;
-        }
-        setCoreVersion(v.version);
-        setCorePlatform(v.platform);
-        setCoreVersionPending(false);
-      })
-      .catch((e) => {
-        logger.error("Failed to get Core version:", e, {
-          category: "api",
-          action: "version",
-          severity: "warning",
-        });
-        setCoreVersion(null);
-        setCorePlatform(null);
-        setCoreVersionPending(false);
-      });
-
-    // Load device history
     Preferences.get({ key: "deviceHistory" })
       .then((v) => {
         try {
@@ -346,6 +328,38 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       })
       .catch((e) => {
         logger.error("Failed to get device history:", e);
+      })
+      .finally(() => {
+        // Fetch Core version for feature gating, then persist platform/version
+        // on the device-history entry so the device list can render them
+        // between connects. lastConnectedAt powers the "recently used"
+        // sort/subtitle (no UI yet, but stored for free).
+        CoreAPI.version()
+          .then((res) => {
+            if (isCancelled(res)) {
+              // Don't clear pending — a new connection will manage its own pending state
+              logger.log("Version request was cancelled, skipping");
+              return;
+            }
+            setCoreVersion(res.version);
+            setCorePlatform(res.platform);
+            setCoreVersionPending(false);
+            updateDeviceHistoryMeta(getDeviceAddress(), {
+              platform: res.platform,
+              version: res.version,
+              lastConnectedAt: Date.now(),
+            });
+          })
+          .catch((e) => {
+            logger.error("Failed to get Core version:", e, {
+              category: "api",
+              action: "version",
+              severity: "warning",
+            });
+            setCoreVersion(null);
+            setCorePlatform(null);
+            setCoreVersionPending(false);
+          });
       });
 
     // Fetch media information
@@ -401,6 +415,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setConnectionError,
     setDeviceHistory,
     addDeviceHistory,
+    updateDeviceHistoryMeta,
     setGamesIndex,
     setPlaying,
     setLastToken,
@@ -451,6 +466,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // Reset local connection state when device changes so UI doesn't show stale data
     setLocalConnection(null);
     setEncryptionState("unknown");
+    setPairingRequired(false);
     setPairingOpen(false);
 
     if (targetDeviceAddress === "") {
@@ -500,6 +516,19 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           // Update local connection state for context consumers
           // Note: useState always triggers re-render when called with a new object reference
           setLocalConnection(connection);
+
+          // Each new connect attempt starts unverified — clear stale signals
+          // from a prior attempt so the UI gate in ConnectionStatusDisplay shows
+          // "connecting" until the server confirms the encryption mode. Reset
+          // only on "connecting" (the start of a fresh socket attempt). The
+          // transient "reconnecting" state that fires between disconnect and
+          // the next connect must NOT reset, because onEncryptionRequired sets
+          // pairingRequired=true just before the close — wiping it during
+          // "reconnecting" prevents the pair UI from ever rendering.
+          if (connection.state === "connecting") {
+            setEncryptionState("unknown");
+            setPairingRequired(false);
+          }
 
           // Handle connection open - always re-fetch data to prevent stale state
           if (connection.state === "connected") {

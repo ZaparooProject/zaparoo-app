@@ -17,6 +17,7 @@ import { Route as SettingsPlaytimeRouteImport } from "./routes/settings.playtime
 import { Route as SettingsOnlineRouteImport } from "./routes/settings.online";
 import { Route as SettingsLogsRouteImport } from "./routes/settings.logs";
 import { Route as SettingsHelpRouteImport } from "./routes/settings.help";
+import { Route as SettingsDevicesRouteImport } from "./routes/settings.devices";
 import { Route as SettingsAdvancedRouteImport } from "./routes/settings.advanced";
 import { Route as SettingsAccessibilityRouteImport } from "./routes/settings.accessibility";
 import { Route as SettingsAboutRouteImport } from "./routes/settings.about";
@@ -25,6 +26,7 @@ import { Route as CreateSearchRouteImport } from "./routes/create.search";
 import { Route as CreateNfcRouteImport } from "./routes/create.nfc";
 import { Route as CreateMappingsRouteImport } from "./routes/create.mappings";
 import { Route as CreateCustomRouteImport } from "./routes/create.custom";
+import { Route as SettingsDevicesAddressRouteImport } from "./routes/settings.devices_.$address";
 
 const IndexRoute = IndexRouteImport.update({
   id: "/",
@@ -64,6 +66,11 @@ const SettingsLogsRoute = SettingsLogsRouteImport.update({
 const SettingsHelpRoute = SettingsHelpRouteImport.update({
   id: "/settings/help",
   path: "/settings/help",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsDevicesRoute = SettingsDevicesRouteImport.update({
+  id: "/settings/devices",
+  path: "/settings/devices",
   getParentRoute: () => rootRouteImport,
 } as any);
 const SettingsAdvancedRoute = SettingsAdvancedRouteImport.update({
@@ -106,6 +113,11 @@ const CreateCustomRoute = CreateCustomRouteImport.update({
   path: "/create/custom",
   getParentRoute: () => rootRouteImport,
 } as any);
+const SettingsDevicesAddressRoute = SettingsDevicesAddressRouteImport.update({
+  id: "/settings/devices_/$address",
+  path: "/settings/devices/$address",
+  getParentRoute: () => rootRouteImport,
+} as any);
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
@@ -117,6 +129,7 @@ export interface FileRoutesByFullPath {
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
+  "/settings/devices": typeof SettingsDevicesRoute;
   "/settings/help": typeof SettingsHelpRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/online": typeof SettingsOnlineRoute;
@@ -124,6 +137,7 @@ export interface FileRoutesByFullPath {
   "/settings/readers": typeof SettingsReadersRoute;
   "/create/": typeof CreateIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
+  "/settings/devices/$address": typeof SettingsDevicesAddressRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
@@ -135,6 +149,7 @@ export interface FileRoutesByTo {
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
+  "/settings/devices": typeof SettingsDevicesRoute;
   "/settings/help": typeof SettingsHelpRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/online": typeof SettingsOnlineRoute;
@@ -142,6 +157,7 @@ export interface FileRoutesByTo {
   "/settings/readers": typeof SettingsReadersRoute;
   "/create": typeof CreateIndexRoute;
   "/settings": typeof SettingsIndexRoute;
+  "/settings/devices/$address": typeof SettingsDevicesAddressRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -154,6 +170,7 @@ export interface FileRoutesById {
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
+  "/settings/devices": typeof SettingsDevicesRoute;
   "/settings/help": typeof SettingsHelpRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/online": typeof SettingsOnlineRoute;
@@ -161,6 +178,7 @@ export interface FileRoutesById {
   "/settings/readers": typeof SettingsReadersRoute;
   "/create/": typeof CreateIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
+  "/settings/devices_/$address": typeof SettingsDevicesAddressRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -174,13 +192,15 @@ export interface FileRouteTypes {
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
+    | "/settings/devices"
     | "/settings/help"
     | "/settings/logs"
     | "/settings/online"
     | "/settings/playtime"
     | "/settings/readers"
     | "/create/"
-    | "/settings/";
+    | "/settings/"
+    | "/settings/devices/$address";
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/"
@@ -192,13 +212,15 @@ export interface FileRouteTypes {
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
+    | "/settings/devices"
     | "/settings/help"
     | "/settings/logs"
     | "/settings/online"
     | "/settings/playtime"
     | "/settings/readers"
     | "/create"
-    | "/settings";
+    | "/settings"
+    | "/settings/devices/$address";
   id:
     | "__root__"
     | "/"
@@ -210,13 +232,15 @@ export interface FileRouteTypes {
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
+    | "/settings/devices"
     | "/settings/help"
     | "/settings/logs"
     | "/settings/online"
     | "/settings/playtime"
     | "/settings/readers"
     | "/create/"
-    | "/settings/";
+    | "/settings/"
+    | "/settings/devices_/$address";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -229,6 +253,7 @@ export interface RootRouteChildren {
   SettingsAboutRoute: typeof SettingsAboutRoute;
   SettingsAccessibilityRoute: typeof SettingsAccessibilityRoute;
   SettingsAdvancedRoute: typeof SettingsAdvancedRoute;
+  SettingsDevicesRoute: typeof SettingsDevicesRoute;
   SettingsHelpRoute: typeof SettingsHelpRoute;
   SettingsLogsRoute: typeof SettingsLogsRoute;
   SettingsOnlineRoute: typeof SettingsOnlineRoute;
@@ -236,6 +261,7 @@ export interface RootRouteChildren {
   SettingsReadersRoute: typeof SettingsReadersRoute;
   CreateIndexRoute: typeof CreateIndexRoute;
   SettingsIndexRoute: typeof SettingsIndexRoute;
+  SettingsDevicesAddressRoute: typeof SettingsDevicesAddressRoute;
 }
 
 declare module "@tanstack/react-router" {
@@ -296,6 +322,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof SettingsHelpRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/settings/devices": {
+      id: "/settings/devices";
+      path: "/settings/devices";
+      fullPath: "/settings/devices";
+      preLoaderRoute: typeof SettingsDevicesRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/settings/advanced": {
       id: "/settings/advanced";
       path: "/settings/advanced";
@@ -352,6 +385,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof CreateCustomRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/settings/devices_/$address": {
+      id: "/settings/devices_/$address";
+      path: "/settings/devices/$address";
+      fullPath: "/settings/devices/$address";
+      preLoaderRoute: typeof SettingsDevicesAddressRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
@@ -365,6 +405,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsAccessibilityRoute: SettingsAccessibilityRoute,
   SettingsAdvancedRoute: SettingsAdvancedRoute,
+  SettingsDevicesRoute: SettingsDevicesRoute,
   SettingsHelpRoute: SettingsHelpRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsOnlineRoute: SettingsOnlineRoute,
@@ -372,6 +413,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsReadersRoute: SettingsReadersRoute,
   CreateIndexRoute: CreateIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
+  SettingsDevicesAddressRoute: SettingsDevicesAddressRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

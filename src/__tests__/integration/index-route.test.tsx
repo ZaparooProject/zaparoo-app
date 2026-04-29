@@ -245,6 +245,10 @@ describe("Index Route Integration", () => {
       },
       writeOpen: false,
       proPurchaseModalOpen: false,
+      // Seed encryptionState so connected-state assertions don't hit the
+      // verifying UI gate (encryptionState === "unknown" -> connecting).
+      encryptionState: "plaintext",
+      pairingRequired: false,
     });
 
     usePreferencesStore.setState({

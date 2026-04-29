@@ -102,6 +102,15 @@ export interface Transport {
   immediateReconnect(): void;
 
   /**
+   * Clear the encryption-blocked state. The consumer must call this after
+   * resolving the cause of the block (e.g. successful pairing). Until it is
+   * called, connect()/immediateReconnect() are no-ops to prevent lifecycle
+   * events (app resume, visibilitychange, network change) from looping the
+   * client through the same -32002 rejection on every wake.
+   */
+  clearEncryptionBlock(): void;
+
+  /**
    * Pause heartbeat (used when tab/app is hidden).
    */
   pauseHeartbeat(): void;
