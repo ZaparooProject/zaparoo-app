@@ -107,7 +107,17 @@ export function Index() {
 
   useEffect(() => {
     return () => {
-      cancelSession();
+      void (async () => {
+        try {
+          await cancelSession();
+        } catch (err) {
+          logger.error("Failed to cancel NFC session on unmount", err, {
+            category: "nfc",
+            action: "cancelSession",
+            severity: "warning",
+          });
+        }
+      })();
     };
   }, []);
 

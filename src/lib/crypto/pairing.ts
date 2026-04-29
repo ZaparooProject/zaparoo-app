@@ -157,12 +157,24 @@ export async function performPairing(
     );
   }
 
-  const startResult = parseStartResult(await startResp.json());
-  // msgB must be the exact decoded bytes from the server response.
-  const msgB = base64Decode(startResult.pake);
-
-  client.update(msgB);
-  const sessionKey = client.sessionKey();
+  let startResult: { session: string; pake: string };
+  let msgB: Uint8Array;
+  let sessionKey: Uint8Array;
+  try {
+    startResult = parseStartResult(await startResp.json());
+    // msgB must be the exact decoded bytes from the server response.
+    msgB = base64Decode(startResult.pake);
+    client.update(msgB);
+    sessionKey = client.sessionKey();
+  } catch (err) {
+    if (err instanceof PairingError) throw err;
+    throw new PairingError(
+      "malformed",
+      err instanceof Error
+        ? `Failed to process /pair/start response: ${err.message}`
+        : "Failed to process /pair/start response",
+    );
+  }
 
   // HKDF salt = msgA || msgB (raw wire bytes).
   const hkdfSalt = new Uint8Array(msgA.length + msgB.length);
@@ -208,7 +220,20 @@ export async function performPairing(
     );
   }
 
-  const finishResult = parseFinishResult(await finishResp.json());
+  let finishResult: { authToken: string; clientId: string; confirm: string };
+  let serverHmac: Uint8Array;
+  try {
+    finishResult = parseFinishResult(await finishResp.json());
+    serverHmac = base64Decode(finishResult.confirm);
+  } catch (err) {
+    if (err instanceof PairingError) throw err;
+    throw new PairingError(
+      "malformed",
+      err instanceof Error
+        ? `Failed to process /pair/finish response: ${err.message}`
+        : "Failed to process /pair/finish response",
+    );
+  }
 
   const serverTranscript = buildHmacTranscript(
     "server",
@@ -217,7 +242,6 @@ export async function performPairing(
     msgB,
   );
   const expectedServerHmac = hmac(sha256, confirmKeyB, serverTranscript);
-  const serverHmac = base64Decode(finishResult.confirm);
 
   if (!constantTimeEqual(expectedServerHmac, serverHmac)) {
     throw new PairingError(

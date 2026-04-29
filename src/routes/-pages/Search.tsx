@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
+import { Capacitor } from "@capacitor/core";
 import classNames from "classnames";
 import { Folder, FileCode, Tag, Copy } from "lucide-react";
 import { VirtualSearchResults } from "@/components/VirtualSearchResults.tsx";
@@ -138,17 +139,24 @@ export function Search() {
   }, [nfcWriter]);
 
   useEffect(() => {
-    CoreAPI.media()
-      .then((s) => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const s = await CoreAPI.media();
+        if (cancelled) return;
         setGamesIndex(s.database);
-      })
-      .catch((e) => {
+      } catch (e) {
+        if (cancelled) return;
         logger.error("Failed to fetch media index:", e, {
           category: "api",
           action: "media",
           severity: "error",
         });
-      });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [setGamesIndex]);
 
   // Set default write mode when selected result changes
@@ -235,13 +243,21 @@ export function Search() {
     setSelectedResult(null);
 
     // Save preferences to match the selected search
-    await Promise.all([
-      Preferences.set({ key: "searchSystem", value: recentSearch.system }),
-      Preferences.set({
-        key: "searchTags",
-        value: JSON.stringify(recentSearch.tags),
-      }),
-    ]);
+    try {
+      await Promise.all([
+        Preferences.set({ key: "searchSystem", value: recentSearch.system }),
+        Preferences.set({
+          key: "searchTags",
+          value: JSON.stringify(recentSearch.tags),
+        }),
+      ]);
+    } catch (err) {
+      logger.warn("Failed to persist search filter", err, {
+        category: "storage",
+        action: "handleRecentSearchSelect",
+        severity: "warning",
+      });
+    }
 
     // Automatically execute the search
     if (connected && gamesIndex.exists && !gamesIndex.indexing) {
@@ -581,18 +597,32 @@ export function Search() {
                 variant="outline"
                 disabled={!selectedResult}
                 onClick={async () => {
-                  if (selectedResult) {
-                    const textToCopy =
-                      writeMode === "zapScript" && selectedResult.zapScript
-                        ? selectedResult.zapScript
-                        : selectedResult.path;
-                    try {
-                      await navigator.clipboard.writeText(textToCopy);
-                    } catch {
-                      // Fallback for native
-                      const { Clipboard } =
-                        await import("@capacitor/clipboard");
-                      await Clipboard.write({ string: textToCopy });
+                  if (!selectedResult) return;
+                  const textToCopy =
+                    writeMode === "zapScript" && selectedResult.zapScript
+                      ? selectedResult.zapScript
+                      : selectedResult.path;
+                  try {
+                    await navigator.clipboard.writeText(textToCopy);
+                  } catch (webErr) {
+                    if (Capacitor.isNativePlatform()) {
+                      try {
+                        const { Clipboard } =
+                          await import("@capacitor/clipboard");
+                        await Clipboard.write({ string: textToCopy });
+                      } catch (nativeErr) {
+                        logger.error("Failed to copy to clipboard", nativeErr, {
+                          category: "share",
+                          action: "copyResult",
+                          severity: "error",
+                        });
+                      }
+                    } else {
+                      logger.error("Failed to copy to clipboard", webErr, {
+                        category: "share",
+                        action: "copyResult",
+                        severity: "error",
+                      });
                     }
                   }
                 }}

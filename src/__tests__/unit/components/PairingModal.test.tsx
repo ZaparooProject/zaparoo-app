@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "../../../test-utils";
+import { render, screen, waitFor } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { PairingModal } from "@/components/PairingModal";
 import { performPairing, PairingError } from "@/lib/crypto/pairing";

@@ -3,7 +3,7 @@
 
 import { p256 } from "@noble/curves/nist.js";
 import { sha256 } from "@noble/hashes/sha2.js";
-import { bigintToBytes, bytesToScalar } from "./bigint";
+import { bigintToBytes, bytesToScalar } from "@/lib/crypto/bigint";
 
 type Point = ReturnType<typeof p256.Point.fromAffine>;
 

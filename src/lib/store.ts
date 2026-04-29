@@ -33,7 +33,10 @@ export interface DeviceHistoryEntry {
 }
 
 export type DeviceHistoryMeta = Partial<
-  Pick<DeviceHistoryEntry, "name" | "platform" | "version" | "lastConnectedAt">
+  Pick<
+    DeviceHistoryEntry,
+    "name" | "platform" | "version" | "lastConnectedAt" | "paired"
+  >
 >;
 
 export type EncryptionState = "unknown" | "plaintext" | "encrypted";
@@ -308,6 +311,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
           }
         }
       }
+      if ("paired" in meta) next.paired = meta.paired;
       const devices = [...state.deviceHistory];
       devices[idx] = next;
       Preferences.set({

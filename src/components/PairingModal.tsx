@@ -36,8 +36,9 @@ export function PairingModal({
   onSuccess,
 }: PairingModalProps) {
   const { t } = useTranslation();
-  const deviceHistory = useStatusStore((s) => s.deviceHistory);
-  const setDeviceHistory = useStatusStore((s) => s.setDeviceHistory);
+  const updateDeviceHistoryMeta = useStatusStore(
+    (s) => s.updateDeviceHistoryMeta,
+  );
 
   const [pin, setPin] = useState("");
   const [clientName, setClientName] = useState("");
@@ -109,12 +110,11 @@ export function PairingModal({
         clientId: result.clientId,
         pairedAt,
       });
-      const updated = deviceHistory.map((e) =>
-        e.address === address
-          ? { ...e, paired: { clientId: result.clientId, pairedAt } }
-          : e,
+      updateDeviceHistoryMeta(
+        address,
+        { paired: { clientId: result.clientId, pairedAt } },
+        { source: "manual" },
       );
-      setDeviceHistory(updated);
       toast.success(t("pairing.success"));
       connectionManager.clearEncryptionBlockActive();
       onSuccess?.();
