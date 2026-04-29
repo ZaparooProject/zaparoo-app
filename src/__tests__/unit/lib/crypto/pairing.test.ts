@@ -212,22 +212,32 @@ describe("performPairing", () => {
 
   describe("rate limiting", () => {
     it("should retry up to 3 times on 429 then throw PairingError('rate_limited')", async () => {
-      let callCount = 0;
-      server.use(
-        http.post(START_URL, () => {
-          callCount++;
-          return new HttpResponse(null, { status: 429 });
-        }),
-      );
+      vi.useFakeTimers();
+      try {
+        let callCount = 0;
+        server.use(
+          http.post(START_URL, () => {
+            callCount++;
+            return new HttpResponse(null, { status: 429 });
+          }),
+        );
 
-      await expect(
-        performPairing(HOST, PORT, PIN, CLIENT_NAME),
-      ).rejects.toMatchObject({
-        kind: "rate_limited",
-        httpStatus: 429,
-      });
-      // fetchWithRetry: attempt 0 + retries up to maxRetries=3 = 4 total
-      expect(callCount).toBe(4);
-    }, 15000); // extended timeout for retry delays
+        const promise = performPairing(HOST, PORT, PIN, CLIENT_NAME);
+        // Attach a no-op catch immediately so the rejection isn't observed as
+        // unhandled while we drive the fake-timer backoff loop below.
+        const settled = promise.catch((e) => e);
+        // Drain all backoff timers + interleaved microtasks instantly.
+        await vi.runAllTimersAsync();
+        const error = await settled;
+        expect(error).toMatchObject({
+          kind: "rate_limited",
+          httpStatus: 429,
+        });
+        // fetchWithRetry: 4 total attempts (initial + 3 retries on 429).
+        expect(callCount).toBe(4);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

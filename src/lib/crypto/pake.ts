@@ -72,7 +72,12 @@ export class PakeClient {
   }
 
   update(serverBytes: Uint8Array): void {
-    const q = JSON.parse(new TextDecoder().decode(serverBytes)) as PakeWire;
+    let q: PakeWire;
+    try {
+      q = JSON.parse(new TextDecoder().decode(serverBytes)) as PakeWire;
+    } catch (err) {
+      throw new Error("Failed to parse PAKE server message", { cause: err });
+    }
 
     if (q.role !== 1) throw new Error("Expected server role 1");
     if (!q.yx || q.yx === "0" || !q.yy || q.yy === "0")

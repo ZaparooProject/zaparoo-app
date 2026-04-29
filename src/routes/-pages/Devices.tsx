@@ -41,15 +41,22 @@ export function Devices() {
 
   // Hydrate from Preferences in case the user reaches this page before
   // ConnectionProvider has populated deviceHistory (e.g. offline deep-link).
+  // Only seed when the in-memory store is empty so we never clobber newer
+  // metadata that ConnectionProvider may have already written.
   useEffect(() => {
+    if (useStatusStore.getState().deviceHistory.length > 0) return;
     Preferences.get({ key: "deviceHistory" })
       .then((v) => {
-        if (v.value) {
-          try {
-            setDeviceHistory(JSON.parse(v.value));
-          } catch (e) {
-            logger.error("Failed to parse stored deviceHistory", e);
-          }
+        if (!v.value) return;
+        if (useStatusStore.getState().deviceHistory.length > 0) return;
+        try {
+          setDeviceHistory(JSON.parse(v.value));
+        } catch (e) {
+          logger.error("Failed to parse stored deviceHistory", e, {
+            category: "storage",
+            action: "hydrateDeviceHistory",
+            severity: "warning",
+          });
         }
       })
       .catch(() => {});

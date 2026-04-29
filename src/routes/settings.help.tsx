@@ -12,7 +12,7 @@ export const Route = createFileRoute("/settings/help")({
   component: Help,
 });
 
-function Help() {
+export function Help() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("settings.help.title"));
   const router = useRouter();

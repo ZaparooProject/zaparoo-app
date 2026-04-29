@@ -41,29 +41,29 @@ const creds: StoredCredentials = {
 };
 
 describe("normalizeDeviceKey", () => {
-  it("lowercases host", () => {
+  it("should lowercase host", () => {
     expect(normalizeDeviceKey("MyDevice.local")).toBe("mydevice.local");
   });
 
-  it("strips default port 7497", () => {
+  it("should strip default port 7497", () => {
     expect(normalizeDeviceKey("192.168.1.50:7497")).toBe("192.168.1.50");
   });
 
-  it("keeps non-default port", () => {
+  it("should keep non-default port", () => {
     expect(normalizeDeviceKey("192.168.1.50:8080")).toBe("192.168.1.50:8080");
   });
 
-  it("strips ws:// scheme", () => {
+  it("should strip ws:// scheme", () => {
     expect(normalizeDeviceKey("ws://192.168.1.50:7497")).toBe("192.168.1.50");
   });
 
-  it("strips trailing path", () => {
+  it("should strip trailing path", () => {
     expect(normalizeDeviceKey("ws://192.168.1.50:7497/api/v0.1")).toBe(
       "192.168.1.50",
     );
   });
 
-  it("treats same address variants as equal", () => {
+  it("should treat same address variants as equal", () => {
     const base = normalizeDeviceKey("192.168.1.50");
     expect(normalizeDeviceKey("192.168.1.50:7497")).toBe(base);
     expect(normalizeDeviceKey("ws://192.168.1.50:7497/api/v0.1")).toBe(base);

@@ -271,7 +271,7 @@ describe("Connection Flow Integration", () => {
   // Drives the full pair-then-reconnect lifecycle by progressing context +
   // store state through each phase the consumer would see in production.
   describe("encrypted device pair-then-reconnect lifecycle", () => {
-    it("never shows green Connected during initial encryption verification", () => {
+    it("should never show green Connected during initial encryption verification", () => {
       // Phase 1: WebSocket has just opened, transport reports connected, but
       // the consumer has not yet learned the encryption mode.
       useStatusStore.setState({
@@ -401,7 +401,7 @@ describe("Connection Flow Integration", () => {
     // "reconnecting" event is never emitted in the -32002 flow. This test
     // verifies the consumer-visible behaviour: when -32002 is received and
     // the transport goes straight to disconnected, "Pairing required" shows.
-    it("shows Pairing required after -32002 and survives a spurious reconnecting event", () => {
+    it("should show Pairing required after -32002 and survive a spurious reconnecting event", () => {
       // Transport went connected → disconnected (no "reconnecting" emitted).
       // ConnectionProvider's onEncryptionRequired set the signals before the
       // close fired, so the store now reflects the pair-required state.

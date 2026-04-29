@@ -45,7 +45,7 @@ const mappingExists = (mappings: MappingResponse[] | undefined, id: string) => {
   return null;
 };
 
-function Mappings() {
+export function Mappings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.mappings.title"));
   const connected = useStatusStore((state) => state.connected);

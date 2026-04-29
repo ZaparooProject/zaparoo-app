@@ -143,7 +143,7 @@ describe("Settings Device Detail Route", () => {
     );
   };
 
-  it("renders the entry's metadata", () => {
+  it("should render the entry's metadata", () => {
     renderRoute();
 
     expect(screen.getAllByText("Living Room").length).toBeGreaterThan(0);

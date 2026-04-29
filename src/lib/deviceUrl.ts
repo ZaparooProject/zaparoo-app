@@ -10,10 +10,17 @@ export function encodeDeviceAddress(address: string): string {
 }
 
 export function decodeDeviceAddress(encoded: string): string {
+  if (!/^[A-Za-z0-9\-_]+$/.test(encoded)) {
+    throw new Error("Invalid device address encoding");
+  }
   const padded = encoded.replace(/-/g, "+").replace(/_/g, "/");
   const padding = (4 - (padded.length % 4)) % 4;
-  const bin = atob(padded + "=".repeat(padding));
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new TextDecoder().decode(bytes);
+  try {
+    const bin = atob(padded + "=".repeat(padding));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  } catch (err) {
+    throw new Error("Invalid device address encoding", { cause: err });
+  }
 }

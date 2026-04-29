@@ -483,7 +483,7 @@ export class WebSocketTransport implements Transport {
         logger.error(
           `[Transport:${this.deviceId}] Stored pairingKey is malformed`,
           undefined,
-          { category: "crypto", action: "init-failed" },
+          { category: "crypto", action: "init-failed", severity: "error" },
         );
         this.handlers.onCredentialsRevoked?.();
         this.failConnectionForEncryption("malformed pairing key");

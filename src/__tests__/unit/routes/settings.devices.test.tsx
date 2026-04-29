@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { encodeDeviceAddress } from "@/lib/deviceUrl";
+import { useStatusStore } from "@/lib/store";
 
 const { componentRef, mockNavigate, mockGoBack, mockSelectDevice } = vi.hoisted(
   () => ({
@@ -87,31 +88,26 @@ vi.mock("@/lib/crypto/credentials", () => ({
       .replace(/\/$/, ""),
 }));
 
-const mockUseStatusStore = vi.fn();
-vi.mock("@/lib/store", async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
-  return {
-    ...actual,
-    useStatusStore: (selector: any) => mockUseStatusStore(selector),
-  };
-});
-
 import "@/routes/settings.devices";
 
 const getDevices = () => componentRef.current;
 
+type DeviceEntry = {
+  address: string;
+  name?: string;
+  platform?: string;
+  version?: string;
+};
+
+const seedDeviceHistory = (deviceHistory: DeviceEntry[]) => {
+  useStatusStore.setState({
+    deviceHistory,
+    safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+  });
+};
+
 describe("Settings Devices Route", () => {
   let queryClient: QueryClient;
-
-  const baseStoreState = {
-    deviceHistory: [] as Array<{
-      address: string;
-      name?: string;
-      platform?: string;
-      version?: string;
-    }>,
-    safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
-  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -122,9 +118,7 @@ describe("Settings Devices Route", () => {
       },
     });
     mockCredentialList.mockResolvedValue([]);
-    mockUseStatusStore.mockImplementation((selector) =>
-      selector(baseStoreState),
-    );
+    seedDeviceHistory([]);
   });
 
   afterEach(() => {
@@ -140,7 +134,7 @@ describe("Settings Devices Route", () => {
     );
   };
 
-  it("renders the empty state when no devices are saved", async () => {
+  it("should render the empty state when no devices are saved", async () => {
     renderRoute();
     await waitFor(() => {
       expect(
@@ -149,17 +143,12 @@ describe("Settings Devices Route", () => {
     });
   });
 
-  it("renders one row per device entry, sorted alphabetically", async () => {
-    mockUseStatusStore.mockImplementation((selector) =>
-      selector({
-        ...baseStoreState,
-        deviceHistory: [
-          { address: "192.168.1.10", name: "Zulu" },
-          { address: "192.168.1.11", name: "Alpha" },
-          { address: "192.168.1.12", name: "Mike" },
-        ],
-      }),
-    );
+  it("should render one row per device entry, sorted alphabetically", async () => {
+    seedDeviceHistory([
+      { address: "192.168.1.10", name: "Zulu" },
+      { address: "192.168.1.11", name: "Alpha" },
+      { address: "192.168.1.12", name: "Mike" },
+    ]);
 
     renderRoute();
 
@@ -171,16 +160,11 @@ describe("Settings Devices Route", () => {
     });
   });
 
-  it("marks the currently connected device as active", async () => {
-    mockUseStatusStore.mockImplementation((selector) =>
-      selector({
-        ...baseStoreState,
-        deviceHistory: [
-          { address: "192.168.1.10", name: "Active" },
-          { address: "192.168.1.11", name: "Other" },
-        ],
-      }),
-    );
+  it("should mark the currently connected device as active", async () => {
+    seedDeviceHistory([
+      { address: "192.168.1.10", name: "Active" },
+      { address: "192.168.1.11", name: "Other" },
+    ]);
 
     renderRoute();
 
@@ -191,18 +175,12 @@ describe("Settings Devices Route", () => {
     });
   });
 
-  it("shows the lock icon only on rows with stored credentials", async () => {
+  it("should show the lock icon only on rows with stored credentials", async () => {
     mockCredentialList.mockResolvedValue([{ deviceKey: "192.168.1.11" }]);
-
-    mockUseStatusStore.mockImplementation((selector) =>
-      selector({
-        ...baseStoreState,
-        deviceHistory: [
-          { address: "192.168.1.10", name: "Unpaired" },
-          { address: "192.168.1.11", name: "Paired" },
-        ],
-      }),
-    );
+    seedDeviceHistory([
+      { address: "192.168.1.10", name: "Unpaired" },
+      { address: "192.168.1.11", name: "Paired" },
+    ]);
 
     renderRoute();
 
@@ -212,14 +190,9 @@ describe("Settings Devices Route", () => {
     });
   });
 
-  it("calls selectDevice and navigates back to /settings on row tap", async () => {
+  it("should call selectDevice and navigate back to /settings on row tap", async () => {
     const user = userEvent.setup();
-    mockUseStatusStore.mockImplementation((selector) =>
-      selector({
-        ...baseStoreState,
-        deviceHistory: [{ address: "192.168.1.20", name: "Pick me" }],
-      }),
-    );
+    seedDeviceHistory([{ address: "192.168.1.20", name: "Pick me" }]);
 
     renderRoute();
 
@@ -229,13 +202,8 @@ describe("Settings Devices Route", () => {
     expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings" });
   });
 
-  it("renders an info link per row pointing to /settings/devices/$address", async () => {
-    mockUseStatusStore.mockImplementation((selector) =>
-      selector({
-        ...baseStoreState,
-        deviceHistory: [{ address: "192.168.1.30", name: "With Info" }],
-      }),
-    );
+  it("should render an info link per row pointing to /settings/devices/$address", async () => {
+    seedDeviceHistory([{ address: "192.168.1.30", name: "With Info" }]);
 
     renderRoute();
 
@@ -248,7 +216,7 @@ describe("Settings Devices Route", () => {
     });
   });
 
-  it("calls history.back when the back button is clicked", async () => {
+  it("should call history.back when the back button is clicked", async () => {
     const user = userEvent.setup();
     renderRoute();
 

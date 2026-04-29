@@ -54,7 +54,14 @@ export function DeviceDetail() {
 
   const initialName = entry?.name ?? "";
   const [draftName, setDraftName] = useState(initialName);
+  const [trackedAddress, setTrackedAddress] = useState(entry?.address);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // Reset the draft when navigating between different device entries.
+  if (entry?.address !== trackedAddress) {
+    setTrackedAddress(entry?.address);
+    setDraftName(initialName);
+  }
 
   useEffect(() => {
     if (!entry) {

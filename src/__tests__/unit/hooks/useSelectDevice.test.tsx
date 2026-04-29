@@ -59,7 +59,7 @@ describe("useSelectDevice", () => {
   });
 
   describe("selectDevice", () => {
-    it("short-circuits when the new address equals the current address", () => {
+    it("should short-circuit when the new address equals the current address", () => {
       const { result } = renderHook(() => useSelectDevice());
 
       act(() => result.current.selectDevice("192.168.1.10:7497"));
@@ -71,7 +71,7 @@ describe("useSelectDevice", () => {
       expect(mockPreferencesRemove).not.toHaveBeenCalled();
     });
 
-    it("resets connection, target, API state, and search filters when switching devices", () => {
+    it("should reset connection, target, API state, and search filters when switching devices", () => {
       const { result } = renderHook(() => useSelectDevice());
 
       act(() => result.current.selectDevice("10.0.0.5:7497"));
@@ -90,7 +90,7 @@ describe("useSelectDevice", () => {
   });
 
   describe("selectScanDevice", () => {
-    it("captures scan metadata immediately after selecting a new device", () => {
+    it("should capture scan metadata immediately after selecting a new device", () => {
       const { result } = renderHook(() => useSelectDevice());
 
       act(() =>
@@ -114,7 +114,7 @@ describe("useSelectDevice", () => {
       );
     });
 
-    it("still records metadata when the scan device matches the current address", () => {
+    it("should still record metadata when the scan device matches the current address", () => {
       // selectDevice short-circuits, but selectScanDevice still wants to capture
       // freshly-discovered metadata onto the existing history entry.
       const { result } = renderHook(() => useSelectDevice());

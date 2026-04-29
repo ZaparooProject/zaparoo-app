@@ -9,6 +9,7 @@ import { VirtualSearchResults } from "@/components/VirtualSearchResults.tsx";
 import { BackToTop } from "@/components/BackToTop.tsx";
 import { TagBadge } from "@/components/TagBadge.tsx";
 import { logger } from "@/lib/logger";
+import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import {
   BackIcon,
@@ -96,12 +97,19 @@ export function Search() {
       tags: queryTags,
     });
 
-    // Add to recent searches
-    await addRecentSearch({
-      query: query,
-      system: querySystem,
-      tags: queryTags,
-    });
+    try {
+      await addRecentSearch({
+        query: query,
+        system: querySystem,
+        tags: queryTags,
+      });
+    } catch (e) {
+      logger.warn("Failed to record recent search", e, {
+        category: "storage",
+        action: "addRecentSearch",
+        severity: "warning",
+      });
+    }
   };
 
   const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
@@ -135,7 +143,11 @@ export function Search() {
         setGamesIndex(s.database);
       })
       .catch((e) => {
-        logger.error("Failed to fetch media index:", e);
+        logger.error("Failed to fetch media index:", e, {
+          category: "api",
+          action: "media",
+          severity: "error",
+        });
       });
   }, [setGamesIndex]);
 
@@ -260,7 +272,7 @@ export function Search() {
             clearable={true}
             disabled={!connected || !gamesIndex.exists || gamesIndex.indexing}
             onKeyUp={(e) => {
-              if (e.key === "Enter" || e.keyCode === 13) {
+              if (e.key === "Enter") {
                 e.currentTarget.blur();
                 if (canSearch) {
                   performSearch();
@@ -555,16 +567,28 @@ export function Search() {
                 icon={<PlayIcon size="20" />}
                 variant="outline"
                 disabled={!selectedResult || !connected}
-                onClick={() => {
-                  if (selectedResult) {
-                    const textToRun =
-                      writeMode === "zapScript" && selectedResult.zapScript
-                        ? selectedResult.zapScript
-                        : selectedResult.path;
-                    CoreAPI.run({
+                onClick={async () => {
+                  if (!selectedResult) return;
+                  const textToRun =
+                    writeMode === "zapScript" && selectedResult.zapScript
+                      ? selectedResult.zapScript
+                      : selectedResult.path;
+                  try {
+                    await CoreAPI.run({
                       uid: "",
                       text: textToRun,
                     });
+                  } catch (e) {
+                    logger.error("CoreAPI.run failed", e, {
+                      category: "api",
+                      action: "run",
+                      severity: "error",
+                    });
+                    showRateLimitedErrorToast(
+                      t("error", {
+                        msg: e instanceof Error ? e.message : String(e),
+                      }),
+                    );
                   }
                 }}
                 className="flex-1"

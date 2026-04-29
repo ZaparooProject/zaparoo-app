@@ -19,7 +19,7 @@ export const Route = createFileRoute("/create/search")({
         savedTags = JSON.parse(tagPreference.value);
       }
     } catch (e) {
-      logger.error("Failed to parse saved tags preference:", e, {
+      logger.warn("Failed to parse saved tags preference:", e, {
         category: "storage",
         action: "get",
         key: "searchTags",

@@ -85,13 +85,15 @@ export function Index() {
     enabled: historyOpen,
   });
 
+  useKeepAwake();
+
+  // Force a fresh fetch each time the modal is opened so the user always sees
+  // the latest scans, not a cached snapshot from a prior open.
   useEffect(() => {
     if (historyOpen) {
       history.refetch();
     }
-  }, [history, historyOpen]);
-
-  useKeepAwake();
+  }, [historyOpen, history]);
 
   useEffect(() => {
     return () => {

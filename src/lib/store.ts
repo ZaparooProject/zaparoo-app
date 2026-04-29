@@ -203,7 +203,13 @@ export const useStatusStore = create<StatusState>()((set) => ({
       Preferences.set({
         key: "deviceHistory",
         value: JSON.stringify(devices),
-      }).catch(() => {});
+      }).catch((err) => {
+        logger.warn("Preferences.set failed saving deviceHistory", err, {
+          category: "storage",
+          action: "addDeviceHistory",
+          severity: "warning",
+        });
+      });
       return {
         deviceHistory: devices,
       };
@@ -216,7 +222,13 @@ export const useStatusStore = create<StatusState>()((set) => ({
       Preferences.set({
         key: "deviceHistory",
         value: JSON.stringify(devices),
-      }).catch(() => {});
+      }).catch((err) => {
+        logger.warn("Preferences.set failed saving deviceHistory", err, {
+          category: "storage",
+          action: "removeDeviceHistory",
+          severity: "warning",
+        });
+      });
       // Removing a device clears any stored pairing — encryption credentials
       // and the device entry are managed as one unit.
       credentialStore.delete(normalizeDeviceKey(address)).catch((err) => {
@@ -233,7 +245,13 @@ export const useStatusStore = create<StatusState>()((set) => ({
     Preferences.set({
       key: "deviceHistory",
       value: JSON.stringify([]),
-    }).catch(() => {});
+    }).catch((err) => {
+      logger.warn("Preferences.set failed saving deviceHistory", err, {
+        category: "storage",
+        action: "clearDeviceHistory",
+        severity: "warning",
+      });
+    });
     set((state) => {
       // Wipe credentials for every removed device.
       for (const entry of state.deviceHistory) {
@@ -290,7 +308,13 @@ export const useStatusStore = create<StatusState>()((set) => ({
       Preferences.set({
         key: "deviceHistory",
         value: JSON.stringify(devices),
-      }).catch(() => {});
+      }).catch((err) => {
+        logger.warn("Preferences.set failed saving deviceHistory", err, {
+          category: "storage",
+          action: "updateDeviceHistoryMeta",
+          severity: "warning",
+        });
+      });
       return { deviceHistory: devices };
     }),
   runQueue: null,

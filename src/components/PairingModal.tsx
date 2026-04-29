@@ -12,6 +12,7 @@ import { performPairing, PairingError } from "@/lib/crypto/pairing";
 import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
 import { useStatusStore } from "@/lib/store";
 import { connectionManager } from "@/lib/transport";
+import { logger } from "@/lib/logger";
 
 function safePlatform(): string {
   try {
@@ -115,8 +116,20 @@ export function PairingModal({
       close();
     } catch (e) {
       if (e instanceof PairingError) {
+        logger.error("Pairing failed", e, {
+          category: "connection",
+          action: "pair",
+          severity: "error",
+          kind: e.kind,
+        });
         setError(t(`pairing.error.${e.kind}`));
       } else {
+        logger.error("Pairing failed with unknown error", e, {
+          category: "connection",
+          action: "pair",
+          severity: "error",
+          kind: "unknown",
+        });
         setError(t("pairing.error.unknown"));
       }
     } finally {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "../../../../test-utils";
 import { ConnectionStatus } from "../../../../components/home/ConnectionStatus";
-import { useStatusStore } from "../../../../lib/store";
+import { useStatusStore } from "@/lib/store";
 
 // Mock coreApi
 const mockGetDeviceAddress = vi.fn(() => "192.168.1.100");
@@ -58,9 +58,11 @@ describe("ConnectionStatus", () => {
       openPairingModal: () => {},
       hasData: false,
     });
-    // Seed encryptionState so the "connected" UI gate doesn't hold the display
-    // in "connecting" while these tests assert the connected-state rendering.
+    // Seed every store field the component (transitively) reads so previous
+    // tests can't leak state in. encryptionState is "plaintext" so the
+    // "connected" gate doesn't hold the display in "connecting".
     useStatusStore.setState({
+      connectionError: "",
       encryptionState: "plaintext",
       pairingRequired: false,
     });

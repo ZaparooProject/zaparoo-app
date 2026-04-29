@@ -53,9 +53,11 @@ const connectedContext: ConnectionContextValue = {
 
 describe("Home Page Integration", () => {
   beforeEach(() => {
-    // Reset stores to initial state
+    // Seed a deterministic baseline for every store field these tests touch
+    // so prior-test mutations cannot leak in. encryptionState: "plaintext"
+    // keeps connected-state assertions out of the verifying UI gate
+    // (encryptionState === "unknown" -> connecting).
     useStatusStore.setState({
-      ...useStatusStore.getState(),
       connected: true,
       connectionState: ConnectionState.CONNECTED,
       connectionError: "",
@@ -66,8 +68,6 @@ describe("Home Page Integration", () => {
         mediaName: "",
         mediaPath: "",
       },
-      // Seed encryptionState so connected-state assertions don't hit the
-      // verifying UI gate (encryptionState === "unknown" -> connecting).
       encryptionState: "plaintext",
       pairingRequired: false,
     });

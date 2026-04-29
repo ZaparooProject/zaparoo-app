@@ -164,7 +164,7 @@ export function Logs() {
         URL.revokeObjectURL(url);
       }
     } catch (error) {
-      logger.error("Failed to share/download log file:", error, {
+      logger.warn("Failed to share/download log file:", error, {
         category: "storage",
         action: "shareLog",
         severity: "warning",
@@ -177,9 +177,13 @@ export function Logs() {
 
     try {
       const decodedContent = atob(logsQuery.data.content);
-      await navigator.clipboard.writeText(decodedContent);
+      if (isNative) {
+        await Clipboard.write({ string: decodedContent });
+      } else {
+        await navigator.clipboard.writeText(decodedContent);
+      }
     } catch (error) {
-      logger.error("Failed to copy to clipboard:", error, {
+      logger.warn("Failed to copy to clipboard:", error, {
         category: "storage",
         action: "copyLog",
         severity: "warning",
@@ -201,7 +205,7 @@ export function Logs() {
         }
         toast.success(t("settings.logs.uploadSuccess"));
       } catch (error) {
-        logger.error("Failed to copy URL to clipboard:", error, {
+        logger.warn("Failed to copy URL to clipboard:", error, {
           category: "storage",
           action: "copyUploadUrl",
           severity: "warning",

@@ -5,14 +5,14 @@ describe("PakeClient", () => {
   const fixedAlpha = new Uint8Array(32);
   fixedAlpha[31] = 42;
 
-  it("constructs with a PIN and produces bytes", () => {
+  it("should construct with a PIN and produce bytes", () => {
     const client = new PakeClient("123456", fixedAlpha);
     const bytes = client.bytes();
     expect(bytes).toBeInstanceOf(Uint8Array);
     expect(bytes.length).toBeGreaterThan(0);
   });
 
-  it("serializes to valid JSON with expected fields", () => {
+  it("should serialize to valid JSON with expected fields", () => {
     const client = new PakeClient("123456", fixedAlpha);
     const parsed = JSON.parse(new TextDecoder().decode(client.bytes()));
 
@@ -27,7 +27,7 @@ describe("PakeClient", () => {
     expect(parsed.yy).toBe("0");
   });
 
-  it("produces different X values for different PINs", () => {
+  it("should produce different X values for different PINs", () => {
     const c1 = new PakeClient("123456", fixedAlpha);
     const c2 = new PakeClient("654321", fixedAlpha);
     const p1 = JSON.parse(new TextDecoder().decode(c1.bytes()));
@@ -35,7 +35,7 @@ describe("PakeClient", () => {
     expect(p1.xx).not.toBe(p2.xx);
   });
 
-  it("produces different X values for different random bytes", () => {
+  it("should produce different X values for different random bytes", () => {
     const a1 = new Uint8Array(32);
     a1[31] = 1;
     const a2 = new Uint8Array(32);
@@ -49,12 +49,12 @@ describe("PakeClient", () => {
     expect(p1.xx).not.toBe(p2.xx);
   });
 
-  it("throws when calling sessionKey before update", () => {
+  it("should throw when calling sessionKey before update", () => {
     const client = new PakeClient("123456", fixedAlpha);
     expect(() => client.sessionKey()).toThrow("call update() first");
   });
 
-  it("throws when server message has same role", () => {
+  it("should throw when server message has same role", () => {
     const client = new PakeClient("123456", fixedAlpha);
     const fakeServer = JSON.stringify({
       role: 0,
@@ -72,7 +72,7 @@ describe("PakeClient", () => {
     );
   });
 
-  it("bytes() produces known-answer output for fixed inputs (regression guard)", () => {
+  it("should produce known-answer bytes() output for fixed inputs (regression guard)", () => {
     // Golden values captured 2026-04-19 with @noble/curves on P-256.
     // A change here means the PAKE wire format changed — check Go interop.
     const client = new PakeClient("123456", fixedAlpha);
@@ -89,7 +89,7 @@ describe("PakeClient", () => {
     );
   });
 
-  it("throws when server message has zero Y values", () => {
+  it("should throw when server message has zero Y values", () => {
     const client = new PakeClient("123456", fixedAlpha);
     const fakeServer = JSON.stringify({
       role: 1,
@@ -107,7 +107,7 @@ describe("PakeClient", () => {
     );
   });
 
-  it("rejects a server Y point that is not on the P-256 curve", () => {
+  it("should reject a server Y point that is not on the P-256 curve", () => {
     // (1, 1) parses as integers but does not satisfy y^2 = x^3 - 3x + b on P-256,
     // so YPoint.assertValidity() must throw — guarding against invalid-curve attacks.
     const client = new PakeClient("123456", fixedAlpha);
@@ -122,6 +122,8 @@ describe("PakeClient", () => {
       yx: "1",
       yy: "1",
     });
-    expect(() => client.update(new TextEncoder().encode(fakeServer))).toThrow();
+    expect(() =>
+      client.update(new TextEncoder().encode(fakeServer)),
+    ).toThrowError(/invalid|point|curve|assertValidity/i);
   });
 });

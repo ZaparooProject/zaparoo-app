@@ -47,16 +47,16 @@ const HTTP_ERROR_KINDS: Record<number, PairingErrorKind> = {
 };
 
 // The server limits /api/pair/* at 1 req/sec per IP. /pair/start consumes the
-// token, so /pair/finish may immediately 429 — retry up to 3x with a 1100ms gap.
+// token, so /pair/finish may immediately 429 — retry with a 1100ms gap.
 async function fetchWithRetry(
   url: string,
   init: Parameters<typeof fetch>[1],
-  maxRetries = 3,
+  maxAttempts = 4,
 ): Promise<Response> {
-  for (let attempt = 0; ; attempt++) {
-    if (attempt > 0) await new Promise((r) => setTimeout(r, 1100));
+  for (let attempt = 1; ; attempt++) {
+    if (attempt > 1) await new Promise((r) => setTimeout(r, 1100));
     const resp = await fetch(url, init);
-    if (resp.status !== 429 || attempt >= maxRetries) return resp;
+    if (resp.status !== 429 || attempt >= maxAttempts) return resp;
   }
 }
 

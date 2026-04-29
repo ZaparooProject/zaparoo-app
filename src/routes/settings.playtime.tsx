@@ -25,7 +25,7 @@ export const Route = createFileRoute("/settings/playtime")({
   component: PlaytimeSettings,
 });
 
-function PlaytimeSettings() {
+export function PlaytimeSettings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("settings.playtime.title"));
   const connected = useStatusStore((state) => state.connected);

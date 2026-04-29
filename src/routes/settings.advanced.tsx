@@ -23,7 +23,7 @@ export const Route = createFileRoute("/settings/advanced")({
   component: AdvancedSettings,
 });
 
-function AdvancedSettings() {
+export function AdvancedSettings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("settings.advanced.title"));
   const connected = useStatusStore((state) => state.connected);

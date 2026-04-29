@@ -23,7 +23,7 @@ export const Route = createFileRoute("/settings/")({
   component: Settings,
 });
 
-function Settings() {
+export function Settings() {
   const { t } = useTranslation();
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
     t("settings.title"),

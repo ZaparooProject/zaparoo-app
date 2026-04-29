@@ -1,4 +1,6 @@
-// Binary-safe base64 encode/decode without relying on atob/btoa string encoding.
+// Binary-safe base64 encode/decode. Wraps atob/btoa with a Latin-1 charcode
+// loop so arbitrary 0–255 byte values round-trip correctly (the naive
+// atob/btoa contract is otherwise UTF-16-string-shaped and corrupts binary).
 
 export function base64Encode(bytes: Uint8Array): string {
   let binary = "";

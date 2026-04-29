@@ -47,6 +47,7 @@ export class SecureCredentialStore implements CredentialStore {
       logger.error("SecureStorage.get failed", err, {
         category: "storage",
         action: "getCredentials",
+        severity: "error",
       });
       return null;
     }
@@ -81,6 +82,7 @@ export class SecureCredentialStore implements CredentialStore {
         logger.error("SecureStorage.get failed for key in list()", err, {
           category: "storage",
           action: "listCredentials",
+          severity: "error",
         });
       }
     }
