@@ -12,7 +12,7 @@ import { ConnectionProvider } from "../../../components/ConnectionProvider";
 import { useConnection } from "../../../hooks/useConnection";
 import { connectionManager } from "../../../lib/transport";
 import { CoreAPI } from "../../../lib/coreApi";
-import { useStatusStore } from "@/lib/store";
+import { ConnectionState, useStatusStore } from "@/lib/store";
 import type { TransportState } from "../../../lib/transport/types";
 import type { NotificationRequest } from "../../../lib/coreApi";
 import { Notification } from "../../../lib/models";
@@ -815,6 +815,90 @@ describe("cancelled request handling", () => {
     expect(screen.getByText("Test")).toBeInTheDocument();
   });
 
+  it("should retry media() once after a cancelled response on initial connect", async () => {
+    // Reconnect can race with the transport coming back up; the first call may
+    // resolve as cancelled (request reset). We schedule one delayed retry —
+    // without it the settings card and store stay stale until the next
+    // notification arrives.
+    const { isCancelled } = await import("../../../lib/coreApi");
+    vi.mocked(isCancelled)
+      .mockReturnValueOnce(true) // first call: cancelled, schedules retry
+      .mockReturnValue(false); // retry: not cancelled, processed normally
+    vi.mocked(CoreAPI.media)
+      .mockResolvedValueOnce({ cancelled: true } as any)
+      .mockResolvedValueOnce({
+        database: { exists: true, indexing: false },
+        active: [],
+      } as any);
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    try {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+
+      await waitFor(() => {
+        expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+      });
+
+      // Advance past the 500ms scheduled retry.
+      await vi.advanceTimersByTimeAsync(600);
+
+      await waitFor(() => {
+        expect(CoreAPI.media).toHaveBeenCalledTimes(2);
+      });
+    } finally {
+      vi.useRealTimers();
+      vi.mocked(isCancelled).mockReturnValue(false);
+    }
+  });
+
+  it("should clear a pending media retry timer on unmount", async () => {
+    // If the user switches devices while a retry is pending the timer must
+    // not fire and write stale data into the new connection's store.
+    const { isCancelled } = await import("../../../lib/coreApi");
+    vi.mocked(isCancelled).mockReturnValueOnce(true);
+    vi.mocked(CoreAPI.media).mockResolvedValueOnce({ cancelled: true } as any);
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    try {
+      const { unmount } = render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+
+      await waitFor(() => {
+        expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+      });
+
+      unmount();
+
+      // Even after the retry window, no second call — the cleanup cleared it.
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      vi.mocked(isCancelled).mockReturnValue(false);
+    }
+  });
+
   it("should handle cancelled tokens response gracefully", async () => {
     vi.mocked(CoreAPI.tokens).mockResolvedValueOnce({
       cancelled: true,
@@ -843,7 +927,7 @@ describe("cancelled request handling", () => {
 });
 
 describe("API error handling", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
     resetStore();
@@ -851,6 +935,9 @@ describe("API error handling", () => {
     vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
       "192.168.1.100:7497",
     );
+    // Reset rate limiter so toast assertions aren't masked by inter-test cooldown.
+    const { resetToastRateLimiter } = await import("@/lib/toastUtils");
+    resetToastRateLimiter();
   });
 
   it("should handle media API failure gracefully", async () => {
@@ -899,6 +986,102 @@ describe("API error handling", () => {
 
     // Should not crash
     expect(screen.getByText("Test")).toBeInTheDocument();
+  });
+
+  it("should show error toast when media fetch fails while CONNECTED", async () => {
+    vi.mocked(CoreAPI.media).mockRejectedValueOnce(new Error("Network error"));
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(String));
+    });
+  });
+
+  it("should suppress error toast when media fetch fails after RECONNECTING", async () => {
+    // Reject after we flip to RECONNECTING — simulates a transport flap that
+    // rejects pending requests via CoreAPI.reset() while reconnect is in flight.
+    let rejectMedia: (e: Error) => void = () => {};
+    vi.mocked(CoreAPI.media).mockReturnValueOnce(
+      new Promise<never>((_, rej) => {
+        rejectMedia = rej;
+      }),
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.media).toHaveBeenCalled();
+    });
+
+    // Flip the store to RECONNECTING before resolving the rejection.
+    useStatusStore.setState({
+      connectionState: ConnectionState.RECONNECTING,
+      connected: true,
+    });
+    rejectMedia(new Error("Request cancelled: connection reset"));
+
+    // Give the catch handler a chance to run.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  it("should suppress error toast when tokens fetch fails after RECONNECTING", async () => {
+    let rejectTokens: (e: Error) => void = () => {};
+    vi.mocked(CoreAPI.tokens).mockReturnValueOnce(
+      new Promise<never>((_, rej) => {
+        rejectTokens = rej;
+      }),
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.tokens).toHaveBeenCalled();
+    });
+
+    useStatusStore.setState({
+      connectionState: ConnectionState.RECONNECTING,
+      connected: true,
+    });
+    rejectTokens(new Error("Request cancelled: connection reset"));
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 });
 

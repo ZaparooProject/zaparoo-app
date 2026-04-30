@@ -7,6 +7,7 @@ export enum Method {
   MediaSearch = "media.search",
   MediaGenerate = "media.generate",
   MediaGenerateCancel = "media.generate.cancel",
+  MediaGenerateResume = "media.generate.resume",
   MediaActive = "media.active",
   MediaActiveUpdate = "media.active.update",
   MediaTags = "media.tags",
@@ -192,6 +193,7 @@ export interface IndexResponse {
   exists: boolean;
   indexing: boolean;
   optimizing?: boolean;
+  paused?: boolean;
   totalSteps?: number;
   currentStep?: number;
   currentStepDisplay?: string;

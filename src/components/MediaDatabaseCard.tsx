@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useStatusStore } from "@/lib/store";
+import { ConnectionState, useStatusStore } from "@/lib/store";
 import { CoreAPI } from "@/lib/coreApi";
 import { DatabaseIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
@@ -15,21 +15,35 @@ export function MediaDatabaseCard() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const connected = useStatusStore((state) => state.connected);
+  const connectionState = useStatusStore((state) => state.connectionState);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
+  const isLiveConnected = connectionState === ConnectionState.CONNECTED;
   const [cancelRequested, setCancelRequested] = useState(false);
+  const [resumeRequested, setResumeRequested] = useState(false);
   const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
 
+  const isPaused = gamesIndex.paused === true;
+
   // Derive isCancelling: true only if we requested cancel AND indexing is still happening
   const isCancelling = cancelRequested && gamesIndex.indexing;
+  // Derive isResuming: true only if we requested resume AND indexing is still paused
+  const isResuming = resumeRequested && isPaused;
 
-  // Reset cancel request when indexing stops (syncing with external Zustand store state)
+  // Reset cancel/resume request when state changes (syncing with external Zustand store state)
   useEffect(() => {
     if (!gamesIndex.indexing && cancelRequested) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing local UI state with external store
       setCancelRequested(false);
     }
   }, [gamesIndex.indexing, cancelRequested]);
+
+  useEffect(() => {
+    if ((!isPaused || !gamesIndex.indexing) && resumeRequested) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing local UI state with external store
+      setResumeRequested(false);
+    }
+  }, [isPaused, gamesIndex.indexing, resumeRequested]);
 
   // Fetch real-time database status
   const { data: mediaStatus, isLoading } = useQuery({
@@ -79,10 +93,33 @@ export function MediaDatabaseCard() {
     }
   };
 
+  const handleResumeUpdate = async () => {
+    setResumeRequested(true);
+    try {
+      await CoreAPI.mediaGenerateResume();
+      queryClient.invalidateQueries({ queryKey: ["media"] });
+    } catch (error) {
+      logger.error("Failed to resume media generation:", error, {
+        category: "api",
+        action: "mediaGenerateResume",
+        severity: "warning",
+      });
+      setResumeRequested(false);
+    }
+  };
+
   // Check various states from both store and API
   const isOptimizing =
     gamesIndex.optimizing || mediaStatus?.database?.optimizing;
   const isIndexing = gamesIndex.indexing || mediaStatus?.database?.indexing;
+
+  // Display string for the current step. Core sends `currentStepDisplay` for
+  // every phase (folder discovery, per-system loop, writing, indexes, caches);
+  // empty/undefined means we haven't received the first notification yet.
+  const stepText =
+    gamesIndex.currentStepDisplay && gamesIndex.currentStepDisplay !== ""
+      ? gamesIndex.currentStepDisplay
+      : t("toast.preparingDb");
 
   const renderStatus = () => {
     // Check optimization status first - this takes priority
@@ -111,42 +148,37 @@ export function MediaDatabaseCard() {
 
     // Show progress when indexing (either from store or API)
     if (isIndexing) {
-      // Prefer gamesIndex data if available (has detailed progress), otherwise use generic preparing state
-      const hasDetailedProgress =
-        gamesIndex.indexing &&
-        gamesIndex.totalSteps &&
-        gamesIndex.totalSteps > 0;
+      const totalSteps = gamesIndex.totalSteps ?? 0;
+      const currentStep = gamesIndex.currentStep ?? 0;
+      const hasDetailedProgress = Boolean(
+        gamesIndex.indexing && totalSteps > 0,
+      );
+      const isSystemStep =
+        hasDetailedProgress && currentStep > 0 && currentStep < totalSteps;
+      const progressPercent = hasDetailedProgress
+        ? Math.round((currentStep / totalSteps) * 100)
+        : 0;
 
       return (
         <div className="mt-3 space-y-3">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span>
-                {hasDetailedProgress && gamesIndex.currentStepDisplay
-                  ? gamesIndex.currentStep === gamesIndex.totalSteps
-                    ? t("toast.writingDb")
-                    : gamesIndex.currentStepDisplay
-                  : t("toast.preparingDb")}
-              </span>
-              {/* Only show spinner for system-specific steps (not preparing/writing) */}
-              {isIndexing &&
-                hasDetailedProgress &&
-                gamesIndex.currentStepDisplay &&
-                gamesIndex.currentStep !== gamesIndex.totalSteps && (
-                  <LoadingSpinner size={16} className="text-muted-foreground" />
-                )}
+              <span>{stepText}</span>
+              {/* Only show spinner for system-specific steps (not phase steps) */}
+              {isSystemStep && isLiveConnected && !isPaused ? (
+                <LoadingSpinner size={16} className="text-muted-foreground" />
+              ) : null}
             </div>
+            {(isPaused || !isLiveConnected) && (
+              <div className="text-muted-foreground text-xs">
+                {isPaused
+                  ? t("settings.updateDb.status.paused")
+                  : t("settings.updateDb.status.reconnecting")}
+              </div>
+            )}
             <div
               role="progressbar"
-              aria-valuenow={
-                hasDetailedProgress &&
-                gamesIndex.currentStep &&
-                gamesIndex.totalSteps
-                  ? Math.round(
-                      (gamesIndex.currentStep / gamesIndex.totalSteps) * 100,
-                    )
-                  : 0
-              }
+              aria-valuenow={progressPercent}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-label={t("settings.updateDb.progressLabel")}
@@ -156,34 +188,39 @@ export function MediaDatabaseCard() {
                 className={classNames(
                   "border-background bg-button-pattern h-[8px] rounded-full border border-solid",
                   {
-                    hidden: hasDetailedProgress && gamesIndex.currentStep === 0,
+                    hidden: hasDetailedProgress && currentStep === 0,
                     "animate-pulse":
-                      !hasDetailedProgress ||
-                      gamesIndex.currentStep === 0 ||
-                      gamesIndex.currentStep === gamesIndex.totalSteps,
+                      isLiveConnected &&
+                      !isPaused &&
+                      (!hasDetailedProgress || !isSystemStep),
                   },
                 )}
                 style={{
-                  width:
-                    hasDetailedProgress &&
-                    gamesIndex.currentStep &&
-                    gamesIndex.totalSteps
-                      ? gamesIndex.currentStep === gamesIndex.totalSteps
-                        ? "100%" // Use static 100% to avoid iOS animation glitch
-                        : `${((gamesIndex.currentStep / gamesIndex.totalSteps) * 100).toFixed(2)}%`
-                      : "100%",
+                  width: hasDetailedProgress
+                    ? currentStep === 0
+                      ? "0%"
+                      : currentStep >= totalSteps
+                        ? "100%"
+                        : `${((currentStep / totalSteps) * 100).toFixed(2)}%`
+                    : "100%",
                 }}
               />
             </div>
           </div>
           <Button
             label={
-              isCancelling ? t("cancelling") : t("settings.updateDb.cancel")
+              isPaused
+                ? isResuming
+                  ? t("resuming")
+                  : t("settings.updateDb.resume")
+                : isCancelling
+                  ? t("cancelling")
+                  : t("settings.updateDb.cancel")
             }
             variant="outline"
             className="w-full"
-            disabled={!connected || isCancelling}
-            onClick={handleCancelUpdate}
+            disabled={!connected || (isPaused ? isResuming : isCancelling)}
+            onClick={isPaused ? handleResumeUpdate : handleCancelUpdate}
           />
         </div>
       );
@@ -247,16 +284,13 @@ export function MediaDatabaseCard() {
   const getStatusText = (): string => {
     if (isOptimizing) return t("settings.updateDb.status.optimizing");
     if (isIndexing) {
-      const hasDetailedProgress =
-        gamesIndex.indexing &&
-        gamesIndex.totalSteps &&
-        gamesIndex.totalSteps > 0;
-      if (hasDetailedProgress && gamesIndex.currentStepDisplay) {
-        return gamesIndex.currentStep === gamesIndex.totalSteps
-          ? t("toast.writingDb")
-          : gamesIndex.currentStepDisplay;
+      if (isPaused) {
+        return `${stepText} — ${t("settings.updateDb.status.paused")}`;
       }
-      return t("toast.preparingDb");
+      if (!isLiveConnected) {
+        return `${stepText} — ${t("settings.updateDb.status.reconnecting")}`;
+      }
+      return stepText;
     }
     return "";
   };
