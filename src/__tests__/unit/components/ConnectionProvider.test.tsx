@@ -815,6 +815,90 @@ describe("cancelled request handling", () => {
     expect(screen.getByText("Test")).toBeInTheDocument();
   });
 
+  it("should retry media() once after a cancelled response on initial connect", async () => {
+    // Reconnect can race with the transport coming back up; the first call may
+    // resolve as cancelled (request reset). We schedule one delayed retry —
+    // without it the settings card and store stay stale until the next
+    // notification arrives.
+    const { isCancelled } = await import("../../../lib/coreApi");
+    vi.mocked(isCancelled)
+      .mockReturnValueOnce(true) // first call: cancelled, schedules retry
+      .mockReturnValue(false); // retry: not cancelled, processed normally
+    vi.mocked(CoreAPI.media)
+      .mockResolvedValueOnce({ cancelled: true } as any)
+      .mockResolvedValueOnce({
+        database: { exists: true, indexing: false },
+        active: [],
+      } as any);
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    try {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+
+      await waitFor(() => {
+        expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+      });
+
+      // Advance past the 500ms scheduled retry.
+      await vi.advanceTimersByTimeAsync(600);
+
+      await waitFor(() => {
+        expect(CoreAPI.media).toHaveBeenCalledTimes(2);
+      });
+    } finally {
+      vi.useRealTimers();
+      vi.mocked(isCancelled).mockReturnValue(false);
+    }
+  });
+
+  it("should clear a pending media retry timer on unmount", async () => {
+    // If the user switches devices while a retry is pending the timer must
+    // not fire and write stale data into the new connection's store.
+    const { isCancelled } = await import("../../../lib/coreApi");
+    vi.mocked(isCancelled).mockReturnValueOnce(true);
+    vi.mocked(CoreAPI.media).mockResolvedValueOnce({ cancelled: true } as any);
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    try {
+      const { unmount } = render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+
+      await waitFor(() => {
+        expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+      });
+
+      unmount();
+
+      // Even after the retry window, no second call — the cleanup cleared it.
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      vi.mocked(isCancelled).mockReturnValue(false);
+    }
+  });
+
   it("should handle cancelled tokens response gracefully", async () => {
     vi.mocked(CoreAPI.tokens).mockResolvedValueOnce({
       cancelled: true,

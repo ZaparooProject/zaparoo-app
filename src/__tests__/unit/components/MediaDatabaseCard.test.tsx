@@ -377,6 +377,41 @@ describe("MediaDatabaseCard", () => {
     expect(CoreAPI.mediaGenerateResume).toHaveBeenCalledOnce();
   });
 
+  it("should re-enable the Resume button after a failed resume so user can retry", async () => {
+    mockStore.gamesIndex = {
+      indexing: true,
+      exists: false,
+      totalFiles: 0,
+      currentStep: 2,
+      totalSteps: 11,
+      currentStepDisplay: "Atari 2600",
+      paused: true,
+    };
+    const { CoreAPI } = await import("../../../lib/coreApi");
+    vi.mocked(CoreAPI.mediaGenerateResume).mockRejectedValue(
+      new Error("Network error"),
+    );
+
+    render(<MediaDatabaseCard />);
+
+    const resumeButton = screen.getByRole("button", {
+      name: /settings\.updateDb\.resume/i,
+    });
+    fireEvent.click(resumeButton);
+
+    // Once the rejection settles, the button must return to "Resume" (enabled),
+    // not stay stuck in "Resuming…" — otherwise the user can't try again.
+    await vi.waitFor(() => {
+      expect(CoreAPI.mediaGenerateResume).toHaveBeenCalledOnce();
+    });
+    await vi.waitFor(() => {
+      const button = screen.getByRole("button", {
+        name: /settings\.updateDb\.resume/i,
+      });
+      expect(button).not.toBeDisabled();
+    });
+  });
+
   it("should show Reconnecting indicator when reconnecting mid-index", () => {
     // Real reconnect path: store.connected stays true during RECONNECTING
     // (see src/lib/store.ts) — only connectionState distinguishes the live

@@ -75,6 +75,16 @@ describe("CoreAPI API Contract", () => {
       const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
       expect(sentData.method).toBe("settings");
     });
+
+    it("mediaGenerateResume should send correct JSON-RPC format", async () => {
+      const promise = CoreAPI.mediaGenerateResume();
+      simulateResponse(mockSend, null);
+      await promise;
+
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("media.generate.resume");
+      expect(sentData.params).toBeUndefined();
+    });
   });
 
   describe("Error Handling", () => {
