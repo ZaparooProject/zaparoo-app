@@ -65,6 +65,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const isInitialized = useRef(false);
   // Track current connection to prevent stale events from old connections
   const currentConnectionId = useRef<string | null>(null);
+  // Pending media-fetch retry; cleared on cleanup so a stale connection
+  // can't write its state into the freshly-mounted one.
+  const mediaRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Pairing modal is auto-opened when the transport reports the server requires
   // encryption (or rejects our credentials). Closed on success or user dismiss.
   const [pairingOpen, setPairingOpen] = useState(false);
@@ -362,30 +365,66 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           });
       });
 
-    // Fetch media information
-    CoreAPI.media()
-      .then((v) => {
-        // Skip processing if request was cancelled (stale, aborted, or connection reset)
-        if (isCancelled(v)) {
-          logger.log("Media request was cancelled, skipping");
-          return;
-        }
-        try {
-          setGamesIndex(v.database);
-          const firstActive = v.active[0];
-          if (firstActive) {
-            setPlaying(firstActive);
+    // Fetch media information so the in-memory gamesIndex reflects whatever
+    // state Core is in right now (e.g. an indexing run that started while we
+    // were disconnected). Also drop any cached ["media"] query so the settings
+    // card refetches.
+    queryClient.invalidateQueries({ queryKey: ["media"] });
+
+    const fetchMediaState = (retryDelayMs: number) => {
+      const scheduledFor = currentConnectionId.current;
+      CoreAPI.media()
+        .then((v) => {
+          if (isCancelled(v)) {
+            logger.log("Media request was cancelled, retrying once");
+            // The first call after a reconnect can race with the transport
+            // re-coming up; one delayed retry is enough to catch up.
+            if (retryDelayMs > 0) {
+              if (mediaRetryTimer.current) {
+                clearTimeout(mediaRetryTimer.current);
+              }
+              mediaRetryTimer.current = setTimeout(() => {
+                mediaRetryTimer.current = null;
+                // Bail if the connection has changed under us — otherwise
+                // we'd write a stale connection's state into a newer one.
+                if (currentConnectionId.current !== scheduledFor) {
+                  return;
+                }
+                fetchMediaState(0);
+              }, retryDelayMs);
+            }
+            return;
           }
-        } catch (e) {
-          logger.error("Error processing media data:", e);
-          toast.error(t("error", { msg: "Failed to process media data" }));
-        }
-      })
-      .catch((e) => {
-        logger.error("Failed to get media information:", e);
-        // Use rate-limited toast to prevent spam on connection issues
-        showRateLimitedErrorToast(t("error", { msg: "Failed to fetch media" }));
-      });
+          try {
+            setGamesIndex(v.database);
+            const firstActive = v.active[0];
+            if (firstActive) {
+              setPlaying(firstActive);
+            }
+          } catch (e) {
+            logger.error("Error processing media data:", e);
+            toast.error(t("error", { msg: "Failed to process media data" }));
+          }
+        })
+        .catch((e) => {
+          logger.error("Failed to get media information:", e);
+          // Suppress the toast unless we're actually live-connected — the
+          // connection-state UI already conveys reconnect/disconnect, and
+          // WS transport flapping makes these rejections common. (Note: the
+          // store's `connected` flag stays true during RECONNECTING, so we
+          // intentionally check `connectionState` here, not `connected`.)
+          if (
+            useStatusStore.getState().connectionState ===
+            ConnectionState.CONNECTED
+          ) {
+            showRateLimitedErrorToast(
+              t("error", { msg: "Failed to fetch media" }),
+            );
+          }
+        });
+    };
+
+    fetchMediaState(500);
 
     // Fetch tokens information
     CoreAPI.tokens()
@@ -406,10 +445,14 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       })
       .catch((e) => {
         logger.error("Failed to get tokens information:", e);
-        // Use rate-limited toast to prevent spam on connection issues
-        showRateLimitedErrorToast(
-          t("error", { msg: "Failed to fetch tokens" }),
-        );
+        if (
+          useStatusStore.getState().connectionState ===
+          ConnectionState.CONNECTED
+        ) {
+          showRateLimitedErrorToast(
+            t("error", { msg: "Failed to fetch tokens" }),
+          );
+        }
       });
   }, [
     setConnectionError,
@@ -422,6 +465,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setCoreVersion,
     setCorePlatform,
     setCoreVersionPending,
+    queryClient,
     t,
   ]);
 
@@ -666,6 +710,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       // Clear connection ID if it's still ours (prevents race with new connection)
       if (currentConnectionId.current === connectionId) {
         currentConnectionId.current = null;
+      }
+      // Drop any pending media retry so it can't fire against the next connection.
+      if (mediaRetryTimer.current) {
+        clearTimeout(mediaRetryTimer.current);
+        mediaRetryTimer.current = null;
       }
       // Reset CoreAPI to clear any pending requests for this connection
       CoreAPI.reset();

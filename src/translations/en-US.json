@@ -6,6 +6,7 @@
     "error": "Error: {{msg}}",
     "loading": "Loading...",
     "cancelling": "Cancelling...",
+    "resuming": "Resuming...",
     "shareFailed": "Failed to share",
     "errorBoundary": {
       "title": "Oops, something really bad happened!",
@@ -61,7 +62,6 @@
     "toast": {
       "updateDbHeading": "Updating media database",
       "preparingDb": "Preparing database",
-      "writingDb": "Writing database to disk",
       "hideLabel": "Hide",
       "updatedDb": "Media database updated",
       "filesFound": "{{count}} items scanned",
@@ -357,8 +357,11 @@
       "insertMode": "Hold",
       "updateDb": "Update media database",
       "updateDb.cancel": "Cancel",
+      "updateDb.resume": "Resume",
       "updateDb.status.ready": "Database is ready",
       "updateDb.status.optimizing": "Optimizing database (ready to use)",
+      "updateDb.status.paused": "Paused",
+      "updateDb.status.reconnecting": "Reconnecting...",
       "updateDb.status.mediaCount": "Database ready: {{formattedCount}} media titles",
       "updateDb.status.noConnection": "Not connected",
       "updateDb.status.checking": "Checking database status...",

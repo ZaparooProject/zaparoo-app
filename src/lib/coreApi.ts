@@ -766,6 +766,19 @@ class CoreApi {
     });
   }
 
+  mediaGenerateResume(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MediaGenerateResume)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Media generate resume API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
   systems(): Promise<SystemsResponse> {
     return new Promise<SystemsResponse>((resolve, reject) => {
       this.call(Method.Systems)
