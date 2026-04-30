@@ -1,27 +1,22 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowDownIcon, CameraIcon, NfcIcon, SaveIcon } from "lucide-react";
-import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
+import { PlusIcon, RefreshCwIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { TextInput } from "@/components/wui/TextInput.tsx";
-import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
-import { BackIcon, ClearIcon } from "@/lib/images.tsx";
+import { BackIcon } from "@/lib/images.tsx";
 import { HeaderButton } from "@/components/wui/HeaderButton.tsx";
 import { CoreAPI } from "@/lib/coreApi.ts";
 import { useStatusStore } from "@/lib/store.ts";
-import { MappingResponse } from "@/lib/models.ts";
 import { logger } from "@/lib/logger";
-import {
-  wrapBarcodeScannerError,
-  BarcodeScanCancelledError,
-} from "@/lib/errors";
 import { Button } from "@/components/wui/Button";
 import { PageFrame } from "@/components/PageFrame";
-import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
-import { usePreferencesStore } from "@/lib/preferencesStore";
-import { WriteModal } from "@/components/WriteModal";
+import { MappingRow } from "@/components/MappingRow";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
@@ -29,39 +24,15 @@ export const Route = createFileRoute("/create/mappings")({
   component: Mappings,
 });
 
-const mappingExists = (mappings: MappingResponse[] | undefined, id: string) => {
-  if (mappings === undefined) {
-    return null;
-  }
-
-  for (const mapping of mappings) {
-    if (mapping.type == "uid" && mapping.pattern === id) {
-      return {
-        id: mapping.id,
-        script: mapping.override,
-      };
-    }
-  }
-  return null;
-};
-
 export function Mappings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.mappings.title"));
   const connected = useStatusStore((state) => state.connected);
-  const preferRemoteWriter = usePreferencesStore(
-    (state) => state.preferRemoteWriter,
-  );
-  const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
-  // Track user intent to open modal; actual visibility derived from NFC status
-  const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = writeIntent && nfcWriter.status === null;
-  const [tokenId, setTokenId] = useState<string>("");
-  const [script, setScript] = useState<string>("");
-  // Track previous status to detect completion
-  const prevStatusRef = useRef(nfcWriter.status);
   const router = useRouter();
+  const navigate = useNavigate();
   const goBack = () => router.history.back();
+  const [search, setSearch] = useState("");
+  const [reloading, setReloading] = useState(false);
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
@@ -73,191 +44,136 @@ export function Mappings() {
     queryFn: () => CoreAPI.mappings(),
   });
 
-  // Handle NFC read completion - populate form fields when operation completes
-  useEffect(() => {
-    const justCompleted =
-      prevStatusRef.current === null && nfcWriter.status !== null;
-    prevStatusRef.current = nfcWriter.status;
+  const sortedMappings = useMemo(() => {
+    const list = mappings.data?.mappings ?? [];
+    return [...list].sort((a, b) => {
+      const aKey = (a.label || a.pattern || "").toLowerCase();
+      const bKey = (b.label || b.pattern || "").toLowerCase();
+      return aKey.localeCompare(bKey);
+    });
+  }, [mappings.data]);
 
-    // Populate form fields from NFC read result
-    /* eslint-disable react-hooks/set-state-in-effect -- Intentional: populating form after async NFC operation */
-    if (justCompleted && nfcWriter.result?.info.tag?.uid) {
-      const uid = nfcWriter.result.info.tag.uid;
-      setTokenId(uid);
-      const existing = mappingExists(mappings.data?.mappings, uid);
-      if (existing !== null) {
-        setScript(existing.script);
-      } else {
-        setScript("");
-      }
-    }
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [nfcWriter.result, nfcWriter.status, mappings.data]);
+  const filteredMappings = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (query === "") return sortedMappings;
+    return sortedMappings.filter((m) => {
+      return (
+        m.label.toLowerCase().includes(query) ||
+        m.pattern.toLowerCase().includes(query) ||
+        m.override.toLowerCase().includes(query)
+      );
+    });
+  }, [sortedMappings, search]);
 
-  const closeWriteModal = async () => {
-    setWriteIntent(false);
-    await nfcWriter.end();
+  const goToNew = () => {
+    navigate({ to: "/create/mappings/new" });
   };
 
-  const saveMapping = () => {
-    logger.log("saveMapping:", mappings.data?.mappings);
-    const existing = mappingExists(mappings.data?.mappings, tokenId);
-    if (existing !== null) {
-      CoreAPI.updateMapping({
-        id: parseInt(existing.id, 10),
-        label: "",
-        enabled: true,
-        type: "uid",
-        match: "exact",
-        pattern: tokenId,
-        override: script,
-      }).then(() => {
-        toast.success(t("create.mappings.savedSuccess"));
-        setTokenId("");
-        setScript("");
+  const goToEdit = (id: string) => {
+    navigate({
+      to: "/create/mappings/edit/$id",
+      params: { id },
+    });
+  };
+
+  const reloadConfig = async () => {
+    if (!connected || reloading) return;
+    setReloading(true);
+    try {
+      await CoreAPI.mappingsReload();
+      toast.success(t("create.mappings.list.reloadedSuccess"));
+      await mappings.refetch();
+    } catch (error) {
+      logger.error("Failed to reload mappings", error, {
+        category: "api",
+        action: "mappingsReload",
       });
-    } else {
-      CoreAPI.newMapping({
-        label: "",
-        enabled: true,
-        type: "uid",
-        match: "exact",
-        pattern: tokenId,
-        override: script,
-      }).then(() => {
-        toast.success(t("create.mappings.savedSuccess"));
-        setTokenId("");
-        setScript("");
-      });
+      toast.error(t("create.mappings.list.reloadFailed"));
+    } finally {
+      setReloading(false);
     }
   };
 
-  if (mappings.isLoading || mappings.isError) {
-    return <></>;
-  }
+  const isEmpty = !mappings.isLoading && sortedMappings.length === 0;
 
   return (
-    <>
-      <PageFrame
-        {...swipeHandlers}
-        headerLeft={
-          <HeaderButton
-            onClick={goBack}
-            icon={<BackIcon size="24" />}
-            aria-label={t("nav.back")}
-          />
-        }
-        headerCenter={
-          <h1 className="text-foreground text-xl">
-            {t("create.mappings.title")}
-          </h1>
-        }
-      >
-        <div className="flex flex-col gap-3">
-          <div>
-            <TextInput
-              value={tokenId}
-              setValue={(v) => setTokenId(v)}
-              label={t("create.mappings.tokenId")}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
+    <PageFrame
+      {...swipeHandlers}
+      headerLeft={
+        <HeaderButton
+          onClick={goBack}
+          icon={<BackIcon size="24" />}
+          aria-label={t("nav.back")}
+        />
+      }
+      headerCenter={
+        <h1 className="text-foreground text-xl">
+          {t("create.mappings.title")}
+        </h1>
+      }
+      headerRight={
+        <HeaderButton
+          onClick={reloadConfig}
+          icon={<RefreshCwIcon size={24} />}
+          aria-label={t("create.mappings.list.reload")}
+          disabled={!connected || reloading}
+        />
+      }
+    >
+      <div className="flex flex-col gap-3">
+        {isEmpty ? (
+          <div className="flex flex-col items-center gap-3 py-8 text-center">
+            <p className="text-foreground font-medium">
+              {t("create.mappings.list.empty")}
+            </p>
+            <p className="text-muted-foreground text-sm">
+              {t("create.mappings.list.emptyDescription")}
+            </p>
             <Button
-              className="w-full"
-              icon={<NfcIcon size={20} />}
-              onClick={() => {
-                nfcWriter.write(WriteAction.Read);
-                setWriteIntent(true);
-              }}
-              label={t("scan.nfcMode")}
+              icon={<PlusIcon size={20} />}
+              label={t("create.mappings.list.newMapping")}
+              intent="primary"
+              onClick={goToNew}
             />
+          </div>
+        ) : (
+          <>
+            {sortedMappings.length > 0 && (
+              <TextInput
+                value={search}
+                setValue={setSearch}
+                placeholder={t("create.mappings.list.searchPlaceholder")}
+                clearable
+                inputMode="search"
+                type="search"
+              />
+            )}
             <Button
+              icon={<PlusIcon size={20} />}
+              label={t("create.mappings.list.newMapping")}
+              intent="primary"
+              onClick={goToNew}
               className="w-full"
-              icon={<CameraIcon size={20} />}
-              onClick={() => {
-                BarcodeScanner.scan()
-                  .then((res) => {
-                    if (res.barcodes.length < 1) {
-                      return;
-                    }
-                    const barcode = res.barcodes[0];
-                    if (!barcode?.rawValue) return;
-                    setTokenId(barcode.rawValue);
-                    const existing = mappingExists(
-                      mappings.data?.mappings,
-                      barcode.rawValue,
-                    );
-                    if (existing !== null) {
-                      setScript(existing.script);
-                    } else {
-                      setScript("");
-                    }
-                  })
-                  .catch((error) => {
-                    const wrappedError = wrapBarcodeScannerError(error);
-                    // User canceling is expected, not an error
-                    if (wrappedError instanceof BarcodeScanCancelledError) {
-                      return;
-                    }
-                    logger.error("Barcode scan error:", wrappedError, {
-                      category: "camera",
-                      action: "barcodeScan",
-                    });
-                  });
-              }}
-              label={t("scan.cameraMode")}
             />
-          </div>
-
-          <div className="flex flex-row items-center justify-center">
-            <ArrowDownIcon size={50} />
-          </div>
-
-          <ZapScriptInput
-            value={script}
-            setValue={setScript}
-            showPalette
-            rows={4}
-          />
-
-          <Button
-            icon={<SaveIcon size={20} />}
-            label={t("create.mappings.saveMapping")}
-            disabled={!tokenId || !script || !connected}
-            onClick={() => {
-              if (tokenId && script && connected) {
-                saveMapping();
-                mappings.refetch();
-              }
-            }}
-          />
-
-          <Button
-            variant="text"
-            icon={<ClearIcon size="20" />}
-            label={t("create.mappings.clearMapping")}
-            disabled={
-              !mappingExists(mappings.data?.mappings, tokenId) ||
-              !connected ||
-              !tokenId
-            }
-            onClick={() => {
-              const existing = mappingExists(mappings.data?.mappings, tokenId);
-              if (existing && connected && tokenId) {
-                CoreAPI.deleteMapping({ id: parseInt(existing.id, 10) }).then(
-                  () => {
-                    setTokenId("");
-                    setScript("");
-                    mappings.refetch();
-                  },
-                );
-              }
-            }}
-          />
-        </div>
-      </PageFrame>
-      <WriteModal isOpen={writeOpen} close={closeWriteModal} />
-    </>
+            {filteredMappings.length === 0 ? (
+              <p className="text-muted-foreground py-4 text-center text-sm">
+                {t("create.mappings.list.searchEmpty")}
+              </p>
+            ) : (
+              <div className="flex flex-col">
+                {filteredMappings.map((mapping, i) => (
+                  <MappingRow
+                    key={mapping.id}
+                    mapping={mapping}
+                    onTap={() => goToEdit(mapping.id)}
+                    isLast={i === filteredMappings.length - 1}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </PageFrame>
   );
 }

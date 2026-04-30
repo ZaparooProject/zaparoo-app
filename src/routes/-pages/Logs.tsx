@@ -26,6 +26,7 @@ import { TextInput } from "@/components/wui/TextInput";
 import { BackIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { ToggleChip } from "@/components/wui/ToggleChip";
+import { Badge, type BadgeVariant } from "@/components/wui/Badge";
 import { logger } from "@/lib/logger";
 import { uploadLogs } from "@/lib/logsApi";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
@@ -226,19 +227,17 @@ export function Logs() {
     }
   };
 
-  const getLevelColor = (level: string) => {
+  const getLevelVariant = (level: string): BadgeVariant => {
     switch (level.toLowerCase()) {
       case "error":
-        return "text-red-500 bg-red-50 border-red-200";
+        return "error";
       case "warn":
       case "warning":
-        return "text-yellow-600 bg-yellow-50 border-yellow-200";
+        return "warning";
       case "info":
-        return "text-blue-500 bg-blue-50 border-blue-200";
-      case "debug":
-        return "text-gray-500 bg-gray-50 border-gray-200";
+        return "info";
       default:
-        return "text-gray-600 bg-gray-50 border-gray-200";
+        return "default";
     }
   };
 
@@ -416,12 +415,10 @@ export function Logs() {
                     }}
                   >
                     <div className="mb-2 flex flex-row items-center gap-2 font-sans">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-medium ${getLevelColor(entry.level)}`}
-                      >
+                      <Badge variant={getLevelVariant(entry.level)}>
                         {entry.level.charAt(0).toUpperCase() +
                           entry.level.slice(1)}
-                      </span>
+                      </Badge>
                       <span className="text-muted-foreground text-xs">
                         {formatTimestamp(entry.time)}
                       </span>
