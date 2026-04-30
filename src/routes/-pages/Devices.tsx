@@ -116,7 +116,7 @@ export function Devices() {
     >
       <div className="flex flex-col gap-3 pt-2">
         {sortedHistory.length === 0 ? (
-          <p className="text-foreground-muted py-4 text-center text-sm">
+          <p className="text-muted-foreground py-4 text-center text-sm">
             {t("settings.deviceHistoryEmpty")}
           </p>
         ) : (

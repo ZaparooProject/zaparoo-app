@@ -68,8 +68,8 @@ export function NetworkScanModal({
         {/* Scanning indicator */}
         {isScanning && devices.length === 0 && (
           <div className="flex flex-col items-center justify-center gap-3 py-8">
-            <Loader2 className="text-foreground-muted h-8 w-8 animate-spin" />
-            <p className="text-foreground-muted">
+            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground">
               {t("settings.networkScan.searching")}
             </p>
           </div>
@@ -103,8 +103,8 @@ export function NetworkScanModal({
         {/* Scanning indicator when we have results */}
         {isScanning && devices.length > 0 && (
           <div className="flex items-center justify-center gap-2 py-2">
-            <Loader2 className="text-foreground-muted h-4 w-4 animate-spin" />
-            <p className="text-foreground-muted text-sm">
+            <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+            <p className="text-muted-foreground text-sm">
               {t("settings.networkScan.stillSearching")}
             </p>
           </div>
@@ -113,7 +113,7 @@ export function NetworkScanModal({
         {/* No devices found - only shows if scan fails to start */}
         {!isScanning && !error && devices.length === 0 && (
           <div className="flex flex-col items-center justify-center gap-2 py-8">
-            <p className="text-foreground-muted">
+            <p className="text-muted-foreground">
               {t("settings.networkScan.noDevices")}
             </p>
           </div>

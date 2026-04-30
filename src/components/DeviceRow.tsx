@@ -54,11 +54,11 @@ export function DeviceRow({
           </div>
           {entry.name && (
             <div className="flex items-center justify-between gap-2">
-              <span className="text-foreground-muted truncate text-sm">
+              <span className="text-muted-foreground truncate text-sm">
                 {entry.address}
               </span>
               {entry.platform && (
-                <span className="text-foreground-muted shrink-0 text-sm">
+                <span className="text-muted-foreground shrink-0 text-sm">
                   {entry.platform}
                 </span>
               )}
@@ -66,11 +66,11 @@ export function DeviceRow({
           )}
           {entry.version && (
             <div className="flex items-center justify-between gap-2">
-              <span className="text-foreground-muted text-xs">
+              <span className="text-muted-foreground text-xs">
                 {t("settings.networkScan.version", { version: entry.version })}
               </span>
               {!entry.name && entry.platform && (
-                <span className="text-foreground-muted shrink-0 text-sm">
+                <span className="text-muted-foreground shrink-0 text-sm">
                   {entry.platform}
                 </span>
               )}

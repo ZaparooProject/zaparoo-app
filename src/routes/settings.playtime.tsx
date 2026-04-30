@@ -13,6 +13,7 @@ import { BackIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { TextInput } from "@/components/wui/TextInput";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge, type BadgeVariant } from "@/components/wui/Badge";
 import {
   formatDuration,
   formatDurationDisplay,
@@ -184,15 +185,15 @@ export function PlaytimeSettings() {
     updateMutation.mutate({ enabled });
   };
 
-  const getStateBadgeColor = (state: string) => {
+  const getStateBadgeVariant = (state: string): BadgeVariant => {
     switch (state) {
       case "active":
-        return "bg-green-500/20 text-green-400";
+        return "success";
       case "cooldown":
-        return "bg-yellow-500/20 text-yellow-400";
+        return "warning";
       case "reset":
       default:
-        return "bg-gray-500/20 text-gray-400";
+        return "default";
     }
   };
 
@@ -253,14 +254,13 @@ export function PlaytimeSettings() {
                 {isStatusPending ? (
                   <Skeleton className="h-5 w-16" />
                 ) : (
-                  <span
-                    className={classNames(
-                      "rounded-full px-2 py-0.5 text-xs",
-                      getStateBadgeColor(playtimeStatus?.state ?? "reset"),
+                  <Badge
+                    variant={getStateBadgeVariant(
+                      playtimeStatus?.state ?? "reset",
                     )}
                   >
                     {getStateLabel(playtimeStatus?.state ?? "reset")}
-                  </span>
+                  </Badge>
                 )}
               </div>
               <div className="flex justify-between text-sm">

@@ -232,6 +232,9 @@
   .border-bd-input {
     border-color: var(--color-border-input);
   }
+  .border-error {
+    border-color: var(--color-error);
+  }
 
   /* Backgrounds */
   .bg-bd-outline {

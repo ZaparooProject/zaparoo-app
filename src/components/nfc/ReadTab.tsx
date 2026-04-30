@@ -5,6 +5,7 @@ import { Share } from "@capacitor/share";
 import toast from "react-hot-toast";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/wui/Button";
+import { Badge } from "@/components/wui/Badge";
 import { CopyButton } from "@/components/CopyButton";
 import { Result } from "@/lib/nfc";
 import { logger } from "@/lib/logger";
@@ -103,17 +104,11 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
             <Label>{t("create.nfc.readTab.writable")}</Label>
             <div className="mt-1 text-sm">
               {rawTag?.isWritable !== undefined ? (
-                <span
-                  className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                    rawTag.isWritable
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                  }`}
-                >
+                <Badge variant={rawTag.isWritable ? "success" : "error"}>
                   {rawTag.isWritable
                     ? t("create.nfc.readTab.yes")
                     : t("create.nfc.readTab.no")}
-                </span>
+                </Badge>
               ) : (
                 <span className="text-foreground-secondary">-</span>
               )}
@@ -133,17 +128,11 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
             <Label>{t("create.nfc.readTab.canMakeReadOnly")}</Label>
             <div className="mt-1 text-sm">
               {rawTag?.canMakeReadOnly !== undefined ? (
-                <span
-                  className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                    rawTag.canMakeReadOnly
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                  }`}
-                >
+                <Badge variant={rawTag.canMakeReadOnly ? "success" : "error"}>
                   {rawTag.canMakeReadOnly
                     ? t("create.nfc.readTab.yes")
                     : t("create.nfc.readTab.no")}
-                </span>
+                </Badge>
               ) : (
                 <span className="text-foreground-secondary">-</span>
               )}
@@ -164,12 +153,9 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
             <div className="mt-1 flex flex-wrap gap-1">
               {rawTag?.techTypes ? (
                 rawTag.techTypes.map((tech, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800"
-                  >
+                  <Badge key={index} variant="info">
                     {tech}
-                  </span>
+                  </Badge>
                 ))
               ) : (
                 <span className="text-foreground-secondary">-</span>
