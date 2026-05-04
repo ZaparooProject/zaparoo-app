@@ -162,6 +162,7 @@ export function Settings() {
                   nl: "nl-NL",
                   ja: "ja-JP",
                   de: "de-DE",
+                  es: "es-ES",
                 };
                 return baseToLocale[lang] ?? lang;
               })()}
@@ -172,6 +173,7 @@ export function Settings() {
               <option value="en-US">English (US)</option>
               <option value="fr-FR">Français</option>
               <option value="nl-NL">Nederlands</option>
+              <option value="es-ES">Spanish</option>
               <option value="zh-CN">中文</option>
               <option value="ja-JP">日本語</option>
               <option value="ko-KR">한국어</option>
