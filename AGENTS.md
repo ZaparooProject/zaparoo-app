@@ -173,7 +173,7 @@ Hooks: `useNfcAvailabilityCheck()`, `useCameraAvailabilityCheck()`, `useAccelero
 
 ## Internationalization (i18n)
 
-**Languages:** en-US (default), en-GB, fr-FR, zh-CN, ko-KR, ja-JP, nl-NL, de-DE
+**Languages:** en-US (default), en-GB, fr-FR, zh-CN, ko-KR, ja-JP, nl-NL, de-DE, es-ES
 
 **Files:** `src/translations/*.json`
 

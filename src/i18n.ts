@@ -8,6 +8,7 @@ import fr_FR from "./translations/fr-FR.json";
 import nl_NL from "./translations/nl-NL.json";
 import ja_JP from "./translations/ja-JP.json";
 import de_DE from "./translations/de-DE.json";
+import es_ES from "./translations/es-ES.json";
 
 const resources = {
   en: en_US,
@@ -24,6 +25,8 @@ const resources = {
   ja: ja_JP,
   "ja-JP": ja_JP,
   "de-DE": de_DE,
+  "es-ES": es_ES,
+  es: es_ES,
 };
 
 i18n
