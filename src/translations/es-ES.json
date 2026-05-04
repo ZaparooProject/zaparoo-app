@@ -15,7 +15,7 @@
       "reload": "Recargar Aplicación"
     },
     "notConnected": "Sin conectar al dispositivo",
-    "yes": "Si",
+    "yes": "Sí",
     "none": "Ninguno",
     "duration": {
       "hours_one": "{{count}} hora",
@@ -368,7 +368,7 @@
       "ageConfirmLabel": "Tengo 13 años o más.",
       "ageConfirmRequired": "Se requiere confirmación de edad",
       "agreementLogin": "Al pulsar iniciar sesión, acepta nuestros",
-      "agreementSignUp": "By pressing sign up or log in, you agree to our",
+      "agreementSignUp": "Al pulsar registrarse o acceder, acepta nuestros",
       "termsOfService": "Términos de Servicio",
       "privacyPolicy": "Política de Privacidad",
       "and": "y"
@@ -404,7 +404,7 @@
       "updateDb": "Actualizar base de datos multimedia",
       "updateDb.cancel": "Cancelar",
       "updateDb.resume": "Reanudar",
-      "updateDb.status.ready": "La base de datos esta lista",
+      "updateDb.status.ready": "La base de datos está lista",
       "updateDb.status.optimizing": "Optimizando base de datos (preparada para su uso)",
       "updateDb.status.paused": "Pausado",
       "updateDb.status.reconnecting": "Reconectando...",
@@ -413,7 +413,7 @@
       "updateDb.status.checking": "Comprobando el estado de la base de datos...",
       "updateDb.selectSystemsTitle": "Seleccione los Sistemas a Actualizar",
       "updateDb.allSystems": "Todos los sistemas",
-      "updateDb.progressLabel": "Database update progress",
+      "updateDb.progressLabel": "Progreso de actualización de la base de datos",
       "designer": "Zaparoo Designer",
       "getApp": "Obtén la App de Zaparoo",
       "language": "Idioma",
@@ -476,7 +476,7 @@
         "autoDetectReaders": "Auto-detectar lectores",
         "autoDetectReadersHelp": "Cuando está habilitada, el dispositivo conectado intentará detectar y conectarse automáticamente a cualquier lector conectado.",
         "connectedReaders": "Dispositivos Lectores",
-        "noReadersDetected": "No se han encontrados lectores"
+        "noReadersDetected": "No se han encontrado lectores"
       },
       "playtime": {
         "title": "Tiempo de juego"
@@ -550,7 +550,7 @@
         "copy": "Copiar al Portapapeles",
         "upload": "Subir",
         "uploadSuccess": "URL copiada al portapapeles",
-        "uploadError": "Failed to upload logs",
+        "uploadError": "Fallo al subir los logs",
         "filename": "Nombre de Archivo",
         "fileSize": "Tamaño de Archivo",
         "searchPlaceholder": "Filtrar logs...",
@@ -612,7 +612,7 @@
       "clearSearch": "Limpiar búsqueda",
       "allTypes": "Todos los tipos",
       "noResults": "No se han encontrado etiquetas",
-      "noTags": "No hay disponible etiquetas",
+      "noTags": "No hay etiquetas disponibles",
       "selectedCount": "{{count}} etiquetas seleccionadas",
       "multipleSelected": "{{count}} etiquetas seleccionadas",
       "clearAll": "Limpiar todo",
