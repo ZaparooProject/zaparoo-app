@@ -21,7 +21,12 @@ import { Network } from "@capacitor/network";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import { Clock, AlertTriangle } from "lucide-react";
+import {
+  Clock,
+  AlertTriangle,
+  OctagonAlert,
+  TriangleAlert,
+} from "lucide-react";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import {
   connectionManager,
@@ -31,12 +36,15 @@ import {
 import { logger } from "@/lib/logger";
 import {
   IndexResponse,
+  InboxMessage,
+  InboxSeverity,
   Notification,
   PlayingResponse,
   PlaytimeLimitReachedParams,
   PlaytimeLimitWarningParams,
   TokenResponse,
 } from "@/lib/models";
+import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import {
   CoreAPI,
   getDeviceAddress,
@@ -96,6 +104,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setCoreVersionPending,
     setEncryptionState,
     setPairingRequired,
+    addInboxMessage,
+    setInboxMessages,
+    setInboxModalOpen,
   } = useStatusStore(
     useShallow((state) => ({
       targetDeviceAddress: state.targetDeviceAddress,
@@ -113,6 +124,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setCoreVersionPending: state.setCoreVersionPending,
       setEncryptionState: state.setEncryptionState,
       setPairingRequired: state.setPairingRequired,
+      addInboxMessage: state.addInboxMessage,
+      setInboxMessages: state.setInboxMessages,
+      setInboxModalOpen: state.setInboxModalOpen,
     })),
   );
 
@@ -256,6 +270,54 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             break;
           }
 
+          case Notification.InboxAdded: {
+            const inboxMessage = notification.params as InboxMessage;
+            const coreVersion = useStatusStore.getState().coreVersion;
+            if (!isCoreFeatureAvailable("inbox", coreVersion)) {
+              break;
+            }
+            addInboxMessage(inboxMessage);
+            if (inboxMessage.severity >= InboxSeverity.Warning) {
+              const severityIconNode =
+                inboxMessage.severity === InboxSeverity.Error ? (
+                  <span className="text-error pr-1 pl-1">
+                    <OctagonAlert size={20} />
+                  </span>
+                ) : (
+                  <span className="pr-1 pl-1 text-amber-400">
+                    <TriangleAlert size={20} />
+                  </span>
+                );
+              toast(
+                (to) => (
+                  <span
+                    className="flex grow flex-col"
+                    onClick={() => {
+                      toast.dismiss(to.id);
+                      setInboxModalOpen(true);
+                    }}
+                    onKeyUp={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        toast.dismiss(to.id);
+                        setInboxModalOpen(true);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-hidden="true"
+                  >
+                    {inboxMessage.title}
+                  </span>
+                ),
+                {
+                  icon: severityIconNode,
+                  duration: 6000,
+                },
+              );
+            }
+            break;
+          }
+
           case Notification.PlaytimeLimitReached: {
             const reachedParams =
               notification.params as PlaytimeLimitReachedParams;
@@ -302,12 +364,23 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         toast.error(t("error", { msg: "Error processing notification" }));
       }
     },
-    [setPlaying, setGamesIndex, setLastToken, queryClient, t, announce],
+    [
+      setPlaying,
+      setGamesIndex,
+      setLastToken,
+      queryClient,
+      t,
+      announce,
+      addInboxMessage,
+      setInboxModalOpen,
+    ],
   );
 
   // Handle connection open - fetch initial data
   const handleConnectionOpen = useCallback(() => {
     setConnectionError("");
+    setInboxMessages([]);
+    setInboxModalOpen(false);
 
     // Flush any queued API requests
     CoreAPI.flushQueue();
@@ -352,6 +425,26 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               version: res.version,
               lastConnectedAt: Date.now(),
             });
+            if (isCoreFeatureAvailable("inbox", res.version)) {
+              CoreAPI.inbox()
+                .then((inboxRes) => {
+                  if (isCancelled(inboxRes)) {
+                    logger.log("Inbox request was cancelled, skipping");
+                    return;
+                  }
+                  setInboxMessages(inboxRes.messages);
+                })
+                .catch((err) => {
+                  logger.error("Failed to fetch inbox:", err, {
+                    category: "api",
+                    action: "inbox",
+                    severity: "warning",
+                  });
+                });
+            } else {
+              setInboxMessages([]);
+              setInboxModalOpen(false);
+            }
           })
           .catch((e) => {
             logger.error("Failed to get Core version:", e, {
@@ -465,6 +558,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setCoreVersion,
     setCorePlatform,
     setCoreVersionPending,
+    setInboxMessages,
+    setInboxModalOpen,
     queryClient,
     t,
   ]);

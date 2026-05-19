@@ -5,7 +5,9 @@ import { logger } from "./logger.ts";
 import {
   AddMappingRequest,
   AllMappingsResponse,
+  DeleteInboxRequest,
   HistoryResponse,
+  InboxResponse,
   LaunchRequest,
   LogDownloadResponse,
   MediaActiveUpdateRequest,
@@ -1150,6 +1152,56 @@ class CoreApi {
         })
         .catch((error) => {
           logger.error("Playtime limits update API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  inbox(): Promise<InboxResponse> {
+    return new Promise<InboxResponse>((resolve, reject) => {
+      this.call(Method.Inbox)
+        .then((result) => {
+          try {
+            const response = result as InboxResponse;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing inbox response:", e);
+            reject(
+              new Error(
+                `Failed to process inbox response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logger.error("Inbox API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  inboxDelete(params: DeleteInboxRequest): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.InboxDelete, params)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Inbox delete API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  inboxClear(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.InboxClear)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Inbox clear API call failed:", error);
           reject(error);
         });
     });

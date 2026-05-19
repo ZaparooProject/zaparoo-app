@@ -12,6 +12,7 @@ import { TagInfo } from "@/lib/models";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
+import { EmptyState } from "./wui/EmptyState";
 import { BackToTop } from "./BackToTop";
 import {
   Accordion,
@@ -315,13 +316,15 @@ export function TagSelector({
               </span>
             </div>
           ) : allTags.length === 0 ? (
-            <div className="flex h-32 items-center justify-center">
-              <span className="text-muted-foreground">
-                {debouncedSearchQuery
-                  ? t("tagSelector.noResults")
-                  : t("tagSelector.noTags")}
-              </span>
-            </div>
+            debouncedSearchQuery ? (
+              <EmptyState
+                className="h-32"
+                title={t("tagSelector.noResults")}
+                description={t("tagSelector.noResultsHint")}
+              />
+            ) : (
+              <EmptyState className="h-32" title={t("tagSelector.noTags")} />
+            )
           ) : debouncedSearchQuery ? (
             // Search results - show virtualized list of all matching tags
             <div

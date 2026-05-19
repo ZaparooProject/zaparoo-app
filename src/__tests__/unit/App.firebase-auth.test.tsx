@@ -109,6 +109,13 @@ vi.mock("@/lib/store", () => {
       connected: true,
       playing: { mediaName: "", systemId: "", mediaPath: "" },
       safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+      inboxMessages: [],
+      inboxModalOpen: false,
+      setInboxModalOpen: vi.fn(),
+      removeInboxMessage: vi.fn(),
+      setInboxMessages: vi.fn(),
+      coreVersion: null as string | null,
+      coreVersionPending: false,
     };
     if (typeof selector === "function") {
       return selector(mockState);
@@ -120,6 +127,9 @@ vi.mock("@/lib/store", () => {
     playing: { mediaName: "", systemId: "", mediaPath: "" },
     gamesIndex: { exists: true, indexing: false, totalFiles: 0 },
     safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+    inboxMessages: [],
+    coreVersion: null,
+    coreVersionPending: false,
   });
 
   return { useStatusStore };
@@ -185,6 +195,10 @@ vi.mock("@/components/SlideModalProvider", () => ({
   SlideModalProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="slide-modal-provider">{children}</div>
   ),
+}));
+
+vi.mock("@/components/InboxModal", () => ({
+  InboxModal: () => <div data-testid="inbox-modal" />,
 }));
 
 vi.mock("@/components/A11yAnnouncer", () => ({

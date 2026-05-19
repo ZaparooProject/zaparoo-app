@@ -193,12 +193,33 @@
       transform: scale(1);
     }
   }
+
+  /* Amber halo + slow throb used to flag pending notifications. Distinct from
+     the cyan glow used for active-nav state. The base filter is the brightest
+     point of the throb so users with prefers-reduced-motion still see a
+     readable static halo (the global reduce-motion rule freezes the
+     animation). */
+  @keyframes amber-throb {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.3));
+    }
+    50% {
+      filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.9));
+    }
+  }
 }
 
 @layer utilities {
   /* Custom utility classes */
   .bg-transparent {
     background: transparent !important;
+  }
+
+  .attention-throb {
+    filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.7));
+    animation: amber-throb 1.8s ease-in-out infinite;
+    will-change: filter;
   }
 
   [type="search"] {

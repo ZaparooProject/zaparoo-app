@@ -19,6 +19,8 @@ import { getDeviceAddress } from "@/lib/coreApi.ts";
 import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
 import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
 import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
+import { GatedFeature } from "@/components/GatedFeature";
+import { InboxButton } from "@/components/InboxButton";
 
 export const Route = createFileRoute("/settings/")({
   component: Settings,
@@ -67,6 +69,11 @@ export function Settings() {
           <h1 ref={headingRef} className="text-foreground text-xl">
             {t("settings.title")}
           </h1>
+        }
+        headerRight={
+          <GatedFeature featureId="inbox">
+            <InboxButton />
+          </GatedFeature>
         }
       >
         <div className="flex flex-col gap-5">

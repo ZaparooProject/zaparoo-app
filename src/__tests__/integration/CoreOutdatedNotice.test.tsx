@@ -49,7 +49,7 @@ describe("CoreOutdatedNotice", () => {
   });
 
   it("should not render when Core version meets all gates", () => {
-    useStatusStore.setState({ coreVersion: "2.5.0" });
+    useStatusStore.setState({ coreVersion: "999.0.0" });
     render(<CoreOutdatedNotice />);
     expect(
       screen.queryByText("settings.coreOutdated.title"),

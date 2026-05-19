@@ -9,6 +9,7 @@ import { Card } from "@/components/wui/Card.tsx";
 import { NextIcon, SettingsIcon, WarningIcon } from "@/lib/images.tsx";
 import { LoadingSpinner } from "@/components/ui/loading-spinner.tsx";
 import { Button } from "@/components/wui/Button.tsx";
+import { EmptyState } from "@/components/wui/EmptyState.tsx";
 import { TagList } from "@/components/TagList.tsx";
 
 export function SearchResults(props: {
@@ -87,17 +88,17 @@ export function SearchResults(props: {
   // Show initial state when no search has been performed
   if (!props.hasSearched && !props.resp) {
     return (
-      <div className="text-center text-white/60">
-        <p className="mb-2 text-lg">{t("create.search.startSearching")}</p>
-        <p className="text-sm">{t("create.search.startSearchingHint")}</p>
-      </div>
+      <EmptyState
+        title={t("create.search.startSearching")}
+        description={t("create.search.startSearchingHint")}
+      />
     );
   }
 
   // Show loading spinner when searching
   if (props.loading) {
     return (
-      <div className="flex items-center justify-center gap-2 text-white/60">
+      <div className="text-muted-foreground flex items-center justify-center gap-2">
         <LoadingSpinner size={16} className="text-primary" />
         <span>{t("create.search.loading")}</span>
       </div>
@@ -141,21 +142,19 @@ export function SearchResults(props: {
     }
 
     return (
-      <div className="text-center">
-        <p className="mb-3 text-white">{mainMessage}</p>
-        {suggestionMessage && (
-          <p className="mb-3 text-sm text-white/70">{suggestionMessage}</p>
-        )}
-        {hasActiveFilters && props.onClearFilters && (
-          <div className="mt-2 flex justify-center">
+      <EmptyState
+        title={mainMessage}
+        description={suggestionMessage || undefined}
+        action={
+          hasActiveFilters && props.onClearFilters ? (
             <Button
               label={t("create.search.clearFilters")}
               onClick={props.onClearFilters}
               variant="outline"
             />
-          </div>
-        )}
-      </div>
+          ) : undefined
+        }
+      />
     );
   }
 

@@ -14,6 +14,7 @@ import { encodeDeviceAddress } from "@/lib/deviceUrl";
 import { logger } from "@/lib/logger";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
+import { EmptyState } from "@/components/wui/EmptyState";
 import { BackIcon } from "@/lib/images";
 import { DeviceRow } from "@/components/DeviceRow";
 
@@ -116,9 +117,7 @@ export function Devices() {
     >
       <div className="flex flex-col gap-3 pt-2">
         {sortedHistory.length === 0 ? (
-          <p className="text-muted-foreground py-4 text-center text-sm">
-            {t("settings.deviceHistoryEmpty")}
-          </p>
+          <EmptyState size="compact" title={t("settings.deviceHistoryEmpty")} />
         ) : (
           sortedHistory.map((entry) => (
             <DeviceRow

@@ -5,6 +5,7 @@ import { SearchIcon } from "@/lib/images";
 import { SlideModal } from "./SlideModal";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
+import { EmptyState } from "./wui/EmptyState";
 
 interface RecentSearchesModalProps {
   isOpen: boolean;
@@ -43,12 +44,10 @@ export function RecentSearchesModal({
     >
       <div className="flex flex-col gap-3 pt-2">
         {recentSearches.length === 0 ? (
-          <div className="text-muted-foreground py-8 text-center">
-            <p>{t("create.search.noRecentSearches")}</p>
-            <p className="mt-2 text-sm">
-              {t("create.search.noRecentSearchesHint")}
-            </p>
-          </div>
+          <EmptyState
+            title={t("create.search.noRecentSearches")}
+            description={t("create.search.noRecentSearchesHint")}
+          />
         ) : (
           <>
             <div className="flex flex-col gap-2">

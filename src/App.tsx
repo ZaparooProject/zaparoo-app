@@ -18,6 +18,7 @@ import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { useDataCache } from "./hooks/useDataCache";
 import { SlideModalProvider } from "./components/SlideModalProvider";
 import { RequirementsModal } from "./components/RequirementsModal";
+import { InboxModal } from "./components/InboxModal";
 import { usePreferencesStore } from "./lib/preferencesStore";
 import { filenameFromPath } from "./lib/path";
 import { useProAccessCheck } from "./hooks/useProAccessCheck";
@@ -366,6 +367,7 @@ export default function App() {
               <RouterProvider router={router} />
             </div>
             <RequirementsModal />
+            <InboxModal />
           </ConnectionProvider>
         </SlideModalProvider>
       </A11yAnnouncerProvider>

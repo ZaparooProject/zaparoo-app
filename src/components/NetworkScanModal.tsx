@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useNetworkScan, DiscoveredDevice } from "@/hooks/useNetworkScan";
 import { SlideModal } from "./SlideModal";
 import { DeviceRow } from "./DeviceRow";
+import { EmptyState } from "./wui/EmptyState";
 
 export interface SelectedScanDevice {
   address: string;
@@ -112,11 +113,7 @@ export function NetworkScanModal({
 
         {/* No devices found - only shows if scan fails to start */}
         {!isScanning && !error && devices.length === 0 && (
-          <div className="flex flex-col items-center justify-center gap-2 py-8">
-            <p className="text-muted-foreground">
-              {t("settings.networkScan.noDevices")}
-            </p>
-          </div>
+          <EmptyState title={t("settings.networkScan.noDevices")} />
         )}
       </div>
     </SlideModal>
