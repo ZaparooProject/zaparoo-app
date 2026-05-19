@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useStatusStore, ConnectionState } from "../../../lib/store";
+import { mockInboxMessage } from "../../../test-utils/factories";
 
 describe("StatusStore", () => {
   beforeEach(() => {
@@ -184,6 +185,61 @@ describe("StatusStore", () => {
 
       setConnectionState(ConnectionState.ERROR);
       expect(useStatusStore.getState().connected).toBe(false);
+    });
+  });
+
+  describe("inbox slice", () => {
+    beforeEach(() => {
+      useStatusStore.setState({ inboxMessages: [], inboxModalOpen: false });
+    });
+
+    it("should set inbox messages wholesale", () => {
+      const messages = [
+        mockInboxMessage({ id: 1 }),
+        mockInboxMessage({ id: 2 }),
+      ];
+      useStatusStore.getState().setInboxMessages(messages);
+      expect(useStatusStore.getState().inboxMessages).toEqual(messages);
+    });
+
+    it("should prepend new messages with addInboxMessage", () => {
+      const first = mockInboxMessage({ id: 1 });
+      const second = mockInboxMessage({ id: 2 });
+      useStatusStore.getState().setInboxMessages([first]);
+      useStatusStore.getState().addInboxMessage(second);
+      expect(useStatusStore.getState().inboxMessages.map((m) => m.id)).toEqual([
+        2, 1,
+      ]);
+    });
+
+    it("should dedupe by id when adding a message that already exists", () => {
+      const original = mockInboxMessage({ id: 7, title: "old" });
+      const replacement = mockInboxMessage({ id: 7, title: "new" });
+      useStatusStore.getState().setInboxMessages([original]);
+      useStatusStore.getState().addInboxMessage(replacement);
+      const messages = useStatusStore.getState().inboxMessages;
+      expect(messages).toHaveLength(1);
+      expect(messages[0]!.title).toBe("new");
+    });
+
+    it("should remove a message by id", () => {
+      const a = mockInboxMessage({ id: 1 });
+      const b = mockInboxMessage({ id: 2 });
+      useStatusStore.getState().setInboxMessages([a, b]);
+      useStatusStore.getState().removeInboxMessage(1);
+      expect(useStatusStore.getState().inboxMessages.map((m) => m.id)).toEqual([
+        2,
+      ]);
+    });
+
+    it("should reset inbox state when resetConnectionState is called", () => {
+      useStatusStore.setState({
+        inboxMessages: [mockInboxMessage({ id: 99 })],
+        inboxModalOpen: true,
+      });
+      useStatusStore.getState().resetConnectionState();
+      expect(useStatusStore.getState().inboxMessages).toEqual([]);
+      expect(useStatusStore.getState().inboxModalOpen).toBe(false);
     });
   });
 

@@ -24,13 +24,21 @@ vi.mock("@/lib/store", () => {
   const useStatusStore: any = vi.fn((selector) => {
     const mockState = {
       safeInsets: mockSafeInsets,
+      inboxMessages: [],
+      coreVersion: null as string | null,
+      coreVersionPending: false,
     };
     if (typeof selector === "function") {
       return selector(mockState);
     }
     return mockState;
   });
-  useStatusStore.getState = () => ({ safeInsets: mockSafeInsets });
+  useStatusStore.getState = () => ({
+    safeInsets: mockSafeInsets,
+    inboxMessages: [],
+    coreVersion: null,
+    coreVersionPending: false,
+  });
   return { useStatusStore };
 });
 

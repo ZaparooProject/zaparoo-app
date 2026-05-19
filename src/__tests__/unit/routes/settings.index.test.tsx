@@ -151,6 +151,10 @@ describe("Settings Index Route", () => {
     resetConnectionState: vi.fn(),
     setTargetDeviceAddress: vi.fn(),
     safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+    inboxMessages: [],
+    setInboxModalOpen: vi.fn(),
+    coreVersion: null as string | null,
+    coreVersionPending: false,
   };
 
   beforeEach(() => {

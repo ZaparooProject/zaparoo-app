@@ -15,7 +15,7 @@ import { CoreAPI } from "../../../lib/coreApi";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import type { TransportState } from "../../../lib/transport/types";
 import type { NotificationRequest } from "../../../lib/coreApi";
-import { Notification } from "../../../lib/models";
+import { InboxSeverity, Notification } from "../../../lib/models";
 
 // Capture event handlers for notification testing
 let capturedEventHandlers: {
@@ -67,6 +67,7 @@ vi.mock("../../../lib/coreApi", () => ({
     media: vi.fn().mockResolvedValue({ database: {}, active: [] }),
     tokens: vi.fn().mockResolvedValue({ last: null }),
     version: vi.fn().mockResolvedValue({ version: "2.5.0", platform: "test" }),
+    inbox: vi.fn().mockResolvedValue({ messages: [] }),
   },
   getDeviceAddress: vi.fn(() => "192.168.1.100:7497"),
   getWsUrl: vi.fn(() => "ws://192.168.1.100:7497"),
@@ -404,6 +405,107 @@ describe("notification processing", () => {
     });
   });
 
+  describe("inbox.added", () => {
+    it("should add inbox message when the feature gate is available", async () => {
+      useStatusStore.setState({ coreVersion: "2.8.0" });
+      const inboxNotification: NotificationRequest = {
+        method: Notification.InboxAdded,
+        params: {
+          id: 11,
+          title: "New warning",
+          severity: InboxSeverity.Info,
+          createdAt: "2026-05-19T10:00:00.000Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        inboxNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().inboxMessages).toEqual([
+          inboxNotification.params,
+        ]);
+      });
+    });
+
+    it("should ignore inbox message when the feature gate is unavailable", async () => {
+      useStatusStore.setState({ coreVersion: "2.7.0" });
+      const inboxNotification: NotificationRequest = {
+        method: Notification.InboxAdded,
+        params: {
+          id: 12,
+          title: "Unsupported message",
+          severity: InboxSeverity.Warning,
+          createdAt: "2026-05-19T10:00:00.000Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        inboxNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      expect(useStatusStore.getState().inboxMessages).toEqual([]);
+      expect(mockToast).not.toHaveBeenCalled();
+    });
+
+    it("should show warning toast that opens the inbox", async () => {
+      useStatusStore.setState({ coreVersion: "2.8.0" });
+      const inboxNotification: NotificationRequest = {
+        method: Notification.InboxAdded,
+        params: {
+          id: 13,
+          title: "Action needed",
+          severity: InboxSeverity.Warning,
+          createdAt: "2026-05-19T10:00:00.000Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        inboxNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalled();
+      });
+
+      const toastRenderer = mockToast.mock.calls[0]![0] as (to: {
+        id: string;
+      }) => React.ReactNode;
+      render(<>{toastRenderer({ id: "toast-1" })}</>);
+      screen.getByRole("button", { name: "Action needed" }).click();
+
+      expect(useStatusStore.getState().inboxModalOpen).toBe(true);
+    });
+  });
+
   describe("playtime notifications", () => {
     it("should show toast and announce when daily playtime limit reached", async () => {
       const playtimeLimitReachedNotification: NotificationRequest = {
@@ -633,6 +735,78 @@ describe("connection event handling", () => {
       expect(useStatusStore.getState().coreVersion).toBe("2.5.0");
       expect(useStatusStore.getState().corePlatform).toBe("test");
       expect(useStatusStore.getState().coreVersionPending).toBe(false);
+    });
+  });
+
+  it("should fetch inbox messages when connected Core supports inbox", async () => {
+    const messages = [
+      {
+        id: 21,
+        title: "Fetched message",
+        severity: InboxSeverity.Info,
+        createdAt: "2026-05-19T10:00:00.000Z",
+      },
+    ];
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "2.8.0",
+      platform: "test",
+    });
+    vi.mocked(CoreAPI.inbox).mockResolvedValueOnce({ messages });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.inbox).toHaveBeenCalled();
+      expect(useStatusStore.getState().inboxMessages).toEqual(messages);
+    });
+  });
+
+  it("should clear stale inbox state when connected Core does not support inbox", async () => {
+    useStatusStore.setState({
+      inboxMessages: [
+        {
+          id: 22,
+          title: "Stale message",
+          severity: InboxSeverity.Warning,
+          createdAt: "2026-05-19T10:00:00.000Z",
+        },
+      ],
+      inboxModalOpen: true,
+    });
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "2.7.0",
+      platform: "test",
+    });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().coreVersion).toBe("2.7.0");
+      expect(CoreAPI.inbox).not.toHaveBeenCalled();
+      expect(useStatusStore.getState().inboxMessages).toEqual([]);
+      expect(useStatusStore.getState().inboxModalOpen).toBe(false);
     });
   });
 

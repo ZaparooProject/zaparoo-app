@@ -9,6 +9,7 @@ import { CoreAPI } from "@/lib/coreApi";
 import { compareStrings } from "@/lib/utils";
 import { useStatusStore } from "@/lib/store";
 import { useSmartTabs } from "@/hooks/useSmartTabs";
+import { EmptyState } from "@/components/wui/EmptyState";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
@@ -345,13 +346,18 @@ export function SystemSelector({
                 <span className="text-muted-foreground">{t("loading")}</span>
               </div>
             ) : filteredSystems.length === 0 ? (
-              <div className="flex h-32 items-center justify-center">
-                <span className="text-muted-foreground">
-                  {debouncedSearchQuery
-                    ? t("systemSelector.noResults")
-                    : t("systemSelector.noSystems")}
-                </span>
-              </div>
+              debouncedSearchQuery ? (
+                <EmptyState
+                  className="h-32"
+                  title={t("systemSelector.noResults")}
+                  description={t("systemSelector.noResultsHint")}
+                />
+              ) : (
+                <EmptyState
+                  className="h-32"
+                  title={t("systemSelector.noSystems")}
+                />
+              )
             ) : (
               <>
                 {/* Add "All Systems" option for single/insert mode */}

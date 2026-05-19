@@ -599,6 +599,7 @@
       "allSystems": "All systems",
       "allCategories": "All",
       "noResults": "No systems found",
+      "noResultsHint": "Try a shorter query or clear the search.",
       "noSystems": "No systems available",
       "selectedCount": "{{count}} systems selected",
       "multipleSelected": "{{count}} systems selected",
@@ -612,6 +613,7 @@
       "clearSearch": "Clear search",
       "allTypes": "All types",
       "noResults": "No tags found",
+      "noResultsHint": "Try a shorter query or clear the search.",
       "noTags": "No tags available",
       "selectedCount": "{{count}} tags selected",
       "multipleSelected": "{{count}} tags selected",
@@ -673,7 +675,24 @@
       "unencrypted": "Unencrypted connection"
     },
     "features": {
-      "requiresCoreVersion": "Requires Zaparoo Core v{{version}} or later"
+      "requiresCoreVersion": "Requires Zaparoo Core v{{version}} or later",
+      "inbox": "Notifications"
+    },
+    "inbox": {
+      "title": "Notifications",
+      "empty": "No notifications",
+      "openLabel": "Open notifications",
+      "openLabelWithCount": "Open notifications ({{count}} unread)",
+      "deleteOne": "Delete notification",
+      "clearAll": "Clear all",
+      "confirmClear": "Clear all notifications?",
+      "confirmClearYes": "Clear all",
+      "confirmClearNo": "Cancel",
+      "severity": {
+        "info": "Info",
+        "warning": "Warning",
+        "error": "Error"
+      }
     },
     "deepLinks": {
       "invalidUrl": "Invalid link format"

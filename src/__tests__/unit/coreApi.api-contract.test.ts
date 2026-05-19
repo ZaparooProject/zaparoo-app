@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CoreAPI } from "../../lib/coreApi";
-import { LaunchRequest, HistoryResponseEntry } from "../../lib/models";
+import {
+  HistoryResponseEntry,
+  InboxSeverity,
+  LaunchRequest,
+} from "../../lib/models";
 
 /**
  * Helper to simulate API response for CoreAPI tests.
@@ -217,6 +221,47 @@ describe("CoreAPI API Contract", () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.stringContaining('"method":"media.active.update"'),
       );
+    });
+
+    it("inbox should send correct JSON-RPC format and resolve messages", async () => {
+      const inboxResponse = {
+        messages: [
+          {
+            id: 1,
+            title: "Update available",
+            severity: InboxSeverity.Info,
+            createdAt: "2026-05-19T10:00:00.000Z",
+          },
+        ],
+      };
+
+      const resultPromise = CoreAPI.inbox();
+      simulateResponse(mockSend, inboxResponse);
+
+      await expect(resultPromise).resolves.toEqual(inboxResponse);
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("inbox");
+      expect(sentData.params).toBeUndefined();
+    });
+
+    it("inboxDelete should send id param and resolve", async () => {
+      const resultPromise = CoreAPI.inboxDelete({ id: 42 });
+      simulateResponse(mockSend, null);
+
+      await expect(resultPromise).resolves.toBeUndefined();
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("inbox.delete");
+      expect(sentData.params).toEqual({ id: 42 });
+    });
+
+    it("inboxClear should send correct JSON-RPC format and resolve", async () => {
+      const resultPromise = CoreAPI.inboxClear();
+      simulateResponse(mockSend, null);
+
+      await expect(resultPromise).resolves.toBeUndefined();
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("inbox.clear");
+      expect(sentData.params).toBeUndefined();
     });
   });
 });

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { memo } from "react";
+import { EmptyState } from "@/components/wui/EmptyState";
 import { SlideModal } from "../SlideModal";
 import { CopyButton } from "../CopyButton";
 import { errorColor } from "../ScanSpinner";
@@ -29,9 +30,13 @@ export const HistoryModal = memo(function HistoryModal({
 }: HistoryModalProps) {
   const { t } = useTranslation();
 
+  const isEmpty =
+    !!historyData && (!historyData.entries || historyData.entries.length === 0);
+
   return (
     <SlideModal isOpen={isOpen} close={onClose} title={t("scan.historyTitle")}>
-      {historyData && (
+      {isEmpty && <EmptyState title={t("scan.history.empty")} />}
+      {historyData && !isEmpty && (
         <div>
           {historyData.entries &&
             historyData.entries.map((item, i) => (

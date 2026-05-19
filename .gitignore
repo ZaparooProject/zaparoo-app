@@ -38,6 +38,7 @@ dist-ssr
 CLAUDE.md
 .dir-locals.el
 .opencode/
+.pi/
 .playwright-cli/
 .playwright-screenshots/
 .mcp.json

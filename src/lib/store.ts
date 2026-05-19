@@ -3,7 +3,12 @@ import { User } from "@capacitor-firebase/authentication";
 import { Preferences } from "@capacitor/preferences";
 import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
 import { logger } from "@/lib/logger";
-import { IndexResponse, PlayingResponse, TokenResponse } from "./models";
+import {
+  IndexResponse,
+  InboxMessage,
+  PlayingResponse,
+  TokenResponse,
+} from "./models";
 import { SafeAreaInsets } from "./safeArea";
 
 const defaultSafeAreaInsets: SafeAreaInsets = {
@@ -117,6 +122,14 @@ interface StatusState {
 
   pairingRequired: boolean;
   setPairingRequired: (required: boolean) => void;
+
+  inboxMessages: InboxMessage[];
+  setInboxMessages: (messages: InboxMessage[]) => void;
+  addInboxMessage: (message: InboxMessage) => void;
+  removeInboxMessage: (id: number) => void;
+
+  inboxModalOpen: boolean;
+  setInboxModalOpen: (open: boolean) => void;
 
   resetConnectionState: () => void;
 }
@@ -344,6 +357,22 @@ export const useStatusStore = create<StatusState>()((set) => ({
   pairingRequired: false,
   setPairingRequired: (required) => set({ pairingRequired: required }),
 
+  inboxMessages: [],
+  setInboxMessages: (messages) => set({ inboxMessages: messages }),
+  addInboxMessage: (message) =>
+    set((state) => {
+      // Dedupe by id — Core's category upsert can re-emit the same id.
+      const filtered = state.inboxMessages.filter((m) => m.id !== message.id);
+      return { inboxMessages: [message, ...filtered] };
+    }),
+  removeInboxMessage: (id) =>
+    set((state) => ({
+      inboxMessages: state.inboxMessages.filter((m) => m.id !== id),
+    })),
+
+  inboxModalOpen: false,
+  setInboxModalOpen: (open) => set({ inboxModalOpen: open }),
+
   resetConnectionState: () => {
     // Reset all connection-related state
     set({
@@ -376,6 +405,8 @@ export const useStatusStore = create<StatusState>()((set) => ({
       coreVersionPending: false,
       encryptionState: "unknown",
       pairingRequired: false,
+      inboxMessages: [],
+      inboxModalOpen: false,
     });
   },
 }));

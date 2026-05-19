@@ -59,6 +59,9 @@ describe("CoreAPI Error Handling Coverage", () => {
     ["mediaActive", () => CoreAPI.mediaActive()],
     ["readers", () => CoreAPI.readers()],
     ["readersWriteCancel", () => CoreAPI.readersWriteCancel()],
+    ["inbox", () => CoreAPI.inbox()],
+    ["inboxDelete", () => CoreAPI.inboxDelete({ id: 1 })],
+    ["inboxClear", () => CoreAPI.inboxClear()],
   ];
 
   describe.each(errorTestCases)(

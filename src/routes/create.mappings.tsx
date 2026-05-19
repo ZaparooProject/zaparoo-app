@@ -15,6 +15,7 @@ import { CoreAPI } from "@/lib/coreApi.ts";
 import { useStatusStore } from "@/lib/store.ts";
 import { logger } from "@/lib/logger";
 import { Button } from "@/components/wui/Button";
+import { EmptyState } from "@/components/wui/EmptyState";
 import { PageFrame } from "@/components/PageFrame";
 import { MappingRow } from "@/components/MappingRow";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
@@ -122,20 +123,18 @@ export function Mappings() {
     >
       <div className="flex flex-col gap-3">
         {isEmpty ? (
-          <div className="flex flex-col items-center gap-3 py-8 text-center">
-            <p className="text-foreground font-medium">
-              {t("create.mappings.list.empty")}
-            </p>
-            <p className="text-muted-foreground text-sm">
-              {t("create.mappings.list.emptyDescription")}
-            </p>
-            <Button
-              icon={<PlusIcon size={20} />}
-              label={t("create.mappings.list.newMapping")}
-              intent="primary"
-              onClick={goToNew}
-            />
-          </div>
+          <EmptyState
+            title={t("create.mappings.list.empty")}
+            description={t("create.mappings.list.emptyDescription")}
+            action={
+              <Button
+                icon={<PlusIcon size={20} />}
+                label={t("create.mappings.list.newMapping")}
+                intent="primary"
+                onClick={goToNew}
+              />
+            }
+          />
         ) : (
           <>
             {sortedMappings.length > 0 && (
@@ -156,9 +155,10 @@ export function Mappings() {
               className="w-full"
             />
             {filteredMappings.length === 0 ? (
-              <p className="text-muted-foreground py-4 text-center text-sm">
-                {t("create.mappings.list.searchEmpty")}
-              </p>
+              <EmptyState
+                size="compact"
+                title={t("create.mappings.list.searchEmpty")}
+              />
             ) : (
               <div className="flex flex-col">
                 {filteredMappings.map((mapping, i) => (

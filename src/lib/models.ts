@@ -29,6 +29,9 @@ export enum Method {
   Playtime = "playtime",
   PlaytimeLimits = "settings.playtime.limits",
   PlaytimeLimitsUpdate = "settings.playtime.limits.update",
+  Inbox = "inbox",
+  InboxDelete = "inbox.delete",
+  InboxClear = "inbox.clear",
 }
 
 export enum Notification {
@@ -42,6 +45,7 @@ export enum Notification {
   MediaIndexing = "media.indexing",
   PlaytimeLimitWarning = "playtime.limit.warning",
   PlaytimeLimitReached = "playtime.limit.reached",
+  InboxAdded = "inbox.added",
 }
 
 export interface VersionResponse {
@@ -334,4 +338,28 @@ export interface DeleteAccountResponse {
   message: string;
   scheduled_deletion_at: string;
   can_cancel_until: string;
+}
+
+export enum InboxSeverity {
+  Info = 0,
+  Warning = 1,
+  Error = 2,
+}
+
+export interface InboxMessage {
+  id: number;
+  title: string;
+  body?: string;
+  severity: InboxSeverity;
+  category?: string;
+  profileId?: number;
+  createdAt: string;
+}
+
+export interface InboxResponse {
+  messages: InboxMessage[];
+}
+
+export interface DeleteInboxRequest {
+  id: number;
 }
