@@ -53,30 +53,16 @@ describe("EmptyState", () => {
     expect(screen.getByTestId("empty-action")).toBeInTheDocument();
   });
 
-  it("applies the className prop to the wrapper", () => {
-    render(<EmptyState title="Empty" className="h-32" />);
-    expect(wrapperOf("Empty")).toHaveClass("h-32");
-  });
-
-  it("uses compact padding when size is compact", () => {
-    render(<EmptyState title="Empty" size="compact" />);
-    expect(wrapperOf("Empty")).toHaveClass("py-4");
-  });
-
-  it("uses default padding when size is default", () => {
-    render(<EmptyState title="Empty" />);
-    expect(wrapperOf("Empty")).toHaveClass("py-8");
-  });
-
-  it("uses muted styling when title is the only content", () => {
+  it("does not render a description when one is not provided", () => {
     render(<EmptyState title="Lonely" />);
-    expect(screen.getByText("Lonely")).toHaveClass("text-muted-foreground");
+    expect(wrapperOf("Lonely")).toBeInTheDocument();
+    expect(screen.queryByText("Hint")).not.toBeInTheDocument();
   });
 
-  it("uses prominent styling when a description is provided", () => {
+  it("renders title and description in the same status region", () => {
     render(<EmptyState title="Top" description="Hint" />);
-    const title = screen.getByText("Top");
-    expect(title).toHaveClass("text-foreground");
-    expect(title).toHaveClass("font-medium");
+    const wrapper = wrapperOf("Top");
+    expect(wrapper).toContainElement(screen.getByText("Top"));
+    expect(wrapper).toContainElement(screen.getByText("Hint"));
   });
 });

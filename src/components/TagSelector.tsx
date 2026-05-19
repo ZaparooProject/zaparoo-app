@@ -9,10 +9,10 @@ import { CoreAPI } from "@/lib/coreApi";
 import { compareStrings } from "@/lib/utils";
 import { useStatusStore } from "@/lib/store";
 import { TagInfo } from "@/lib/models";
+import { EmptyState } from "@/components/wui/EmptyState";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
-import { EmptyState } from "./wui/EmptyState";
 import { BackToTop } from "./BackToTop";
 import {
   Accordion,

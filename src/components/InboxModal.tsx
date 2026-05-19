@@ -117,6 +117,7 @@ export function InboxModal() {
         logger.error("Failed to delete inbox message", err, {
           category: "api",
           action: "inbox.delete",
+          severity: "error",
         });
         showRateLimitedErrorToast(
           t("error", { msg: err?.message || "Inbox delete failed" }),
@@ -134,6 +135,7 @@ export function InboxModal() {
         logger.error("Failed to clear inbox", err, {
           category: "api",
           action: "inbox.clear",
+          severity: "error",
         });
         showRateLimitedErrorToast(
           t("error", { msg: err?.message || "Inbox clear failed" }),

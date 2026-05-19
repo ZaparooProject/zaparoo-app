@@ -9,6 +9,7 @@ import { mockInboxMessage } from "../../test-utils/factories";
 
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
+    reset: vi.fn(),
     inboxDelete: vi.fn().mockResolvedValue(null),
     inboxClear: vi.fn().mockResolvedValue(null),
   },
@@ -17,6 +18,7 @@ vi.mock("@/lib/coreApi", () => ({
 describe("InboxModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    CoreAPI.reset();
     useStatusStore.setState({
       inboxMessages: [],
       inboxModalOpen: false,
@@ -42,6 +44,9 @@ describe("InboxModal", () => {
     });
     render(<InboxModal />);
     expect(screen.getByText("Update available")).toBeInTheDocument();
+    expect(
+      screen.getByText(new Date(message.createdAt).toLocaleString()),
+    ).toBeInTheDocument();
   });
 
   it("should expand a message body when the row is tapped", async () => {
@@ -84,6 +89,29 @@ describe("InboxModal", () => {
     });
   });
 
+  it("should keep the message when delete fails", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.inboxDelete).mockRejectedValueOnce(
+      new Error("Delete failed"),
+    );
+    const message = mockInboxMessage({ id: 43, title: "Still here" });
+    useStatusStore.setState({
+      inboxModalOpen: true,
+      inboxMessages: [message],
+    });
+    render(<InboxModal />);
+
+    const deleteButtons = screen.getAllByRole("button", {
+      name: /inbox\.deleteOne/i,
+    });
+    await user.click(deleteButtons[0]!);
+
+    await waitFor(() => {
+      expect(CoreAPI.inboxDelete).toHaveBeenCalledWith({ id: 43 });
+    });
+    expect(useStatusStore.getState().inboxMessages).toEqual([message]);
+  });
+
   it("should show confirm step before clearing all", async () => {
     const user = userEvent.setup();
     useStatusStore.setState({
@@ -111,6 +139,32 @@ describe("InboxModal", () => {
     await waitFor(() => {
       expect(useStatusStore.getState().inboxMessages).toEqual([]);
     });
+  });
+
+  it("should keep messages when clear all fails", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.inboxClear).mockRejectedValueOnce(
+      new Error("Clear failed"),
+    );
+    const messages = [mockInboxMessage({ id: 1 }), mockInboxMessage({ id: 2 })];
+    useStatusStore.setState({
+      inboxModalOpen: true,
+      inboxMessages: messages,
+    });
+    render(<InboxModal />);
+
+    await user.click(
+      screen.getAllByRole("button", { name: /inbox\.clearAll/i })[0]!,
+    );
+    await user.click(
+      screen.getAllByRole("button", { name: /inbox\.confirmClearYes/i })[0]!,
+    );
+
+    await waitFor(() => {
+      expect(CoreAPI.inboxClear).toHaveBeenCalled();
+    });
+    expect(useStatusStore.getState().inboxMessages).toEqual(messages);
+    expect(screen.getAllByText("inbox.confirmClear").length).toBeGreaterThan(0);
   });
 
   it("should cancel the clear-all confirm", async () => {

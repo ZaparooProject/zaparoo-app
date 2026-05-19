@@ -1166,7 +1166,11 @@ class CoreApi {
             logger.debug(response);
             resolve(response);
           } catch (e) {
-            logger.error("Error processing inbox response:", e);
+            logger.error("Error processing inbox response:", e, {
+              category: "api",
+              action: "inbox.process",
+              severity: "error",
+            });
             reject(
               new Error(
                 `Failed to process inbox response: ${e instanceof Error ? e.message : String(e)}`,
@@ -1175,7 +1179,11 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Inbox API call failed:", error);
+          logger.error("Inbox API call failed:", error, {
+            category: "api",
+            action: "inbox.fetch",
+            severity: "error",
+          });
           reject(error);
         });
     });
@@ -1188,7 +1196,11 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Inbox delete API call failed:", error);
+          logger.error("Inbox delete API call failed:", error, {
+            category: "api",
+            action: "inbox.delete",
+            severity: "error",
+          });
           reject(error);
         });
     });
@@ -1201,7 +1213,11 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Inbox clear API call failed:", error);
+          logger.error("Inbox clear API call failed:", error, {
+            category: "api",
+            action: "inbox.clear",
+            severity: "error",
+          });
           reject(error);
         });
     });

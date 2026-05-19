@@ -304,7 +304,6 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
                     }}
                     role="button"
                     tabIndex={0}
-                    aria-hidden="true"
                   >
                     {inboxMessage.title}
                   </span>

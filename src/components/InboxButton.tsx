@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import classNames from "classnames";
 import { Bell } from "lucide-react";
 import { useStatusStore } from "@/lib/store";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -24,7 +25,7 @@ export function InboxButton() {
       icon={<Bell size={24} aria-hidden="true" />}
       title={label}
       aria-label={label}
-      className={hasUnread ? "attention-throb" : undefined}
+      className={classNames({ "attention-throb": hasUnread })}
     />
   );
 }

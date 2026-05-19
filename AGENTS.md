@@ -145,7 +145,7 @@ docs/                focused guides for Capacitor, deployment, and testing
 - Import test helpers from `test-utils`:
 
   ```ts
-  import { render, screen, waitFor } from "../../../test-utils";
+  import { render, screen, waitFor } from "@/test-utils";
   ```
 
 - Prefer integration tests over narrow unit tests when behavior crosses component or store boundaries.

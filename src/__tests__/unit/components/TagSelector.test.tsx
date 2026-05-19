@@ -267,6 +267,31 @@ describe("TagSelector", () => {
         // Since we're mocking useVirtualizer, it will show all items
       });
     });
+
+    it("should show no-results title and hint when search has no matches", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
+        tags: createMockTags(),
+      });
+
+      render(<TagSelector {...defaultProps} />);
+
+      const searchInput = await screen.findByPlaceholderText(
+        "tagSelector.searchPlaceholder",
+      );
+      await user.type(searchInput, "NoMatchingTag");
+
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("tagSelector.noResults")).toBeInTheDocument();
+        expect(
+          screen.getByText("tagSelector.noResultsHint"),
+        ).toBeInTheDocument();
+      });
+    });
   });
 
   describe("tag selection", () => {

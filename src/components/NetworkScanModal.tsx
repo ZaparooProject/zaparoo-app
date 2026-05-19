@@ -2,9 +2,9 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
 import { useNetworkScan, DiscoveredDevice } from "@/hooks/useNetworkScan";
+import { EmptyState } from "@/components/wui/EmptyState";
 import { SlideModal } from "./SlideModal";
 import { DeviceRow } from "./DeviceRow";
-import { EmptyState } from "./wui/EmptyState";
 
 export interface SelectedScanDevice {
   address: string;

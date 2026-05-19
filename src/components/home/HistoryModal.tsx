@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { memo } from "react";
+import { EmptyState } from "@/components/wui/EmptyState";
 import { SlideModal } from "../SlideModal";
 import { CopyButton } from "../CopyButton";
 import { errorColor } from "../ScanSpinner";
-import { EmptyState } from "../wui/EmptyState";
 
 interface HistoryEntry {
   uid: string;
