@@ -86,6 +86,10 @@ function About() {
             <span>Ze Conehead</span>
             <span>German/Deutsch</span>
           </div>
+          <div className="flex flex-row justify-between">
+            <span>Carlos R.</span>
+            <span>Spanish/Español</span>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3">
