@@ -10,6 +10,7 @@ import { Card } from "@/components/wui/Card.tsx";
 import { NextIcon, SettingsIcon, WarningIcon } from "@/lib/images.tsx";
 import { LoadingSpinner } from "@/components/ui/loading-spinner.tsx";
 import { Button } from "@/components/wui/Button.tsx";
+import { EmptyState } from "@/components/wui/EmptyState.tsx";
 import { useVirtualInfiniteSearch } from "@/hooks/useVirtualInfiniteSearch";
 import { TagList } from "@/components/TagList.tsx";
 
@@ -174,17 +175,18 @@ export function VirtualSearchResults({
   // Show initial state when no search has been performed
   if (!hasSearched) {
     return (
-      <div className="mt-6 text-center text-white/60">
-        <p className="mb-2 text-lg">{t("create.search.startSearching")}</p>
-        <p className="text-sm">{t("create.search.startSearchingHint")}</p>
-      </div>
+      <EmptyState
+        className="mt-6"
+        title={t("create.search.startSearching")}
+        description={t("create.search.startSearchingHint")}
+      />
     );
   }
 
   // Show loading spinner when searching initially
   if (isLoading || isSearching) {
     return (
-      <div className="mt-6 flex items-center justify-center gap-2 text-white/60">
+      <div className="text-muted-foreground mt-6 flex items-center justify-center gap-2">
         <LoadingSpinner size={16} className="text-primary" />
         <span>{t("create.search.loading")}</span>
       </div>
@@ -230,21 +232,20 @@ export function VirtualSearchResults({
     }
 
     return (
-      <div className="mt-6 text-center">
-        <p className="mb-3 text-white">{mainMessage}</p>
-        {suggestionMessage && (
-          <p className="mb-3 text-sm text-white/70">{suggestionMessage}</p>
-        )}
-        {hasActiveFilters && onClearFilters && (
-          <div className="mt-2 flex justify-center">
+      <EmptyState
+        className="mt-6"
+        title={mainMessage}
+        description={suggestionMessage || undefined}
+        action={
+          hasActiveFilters && onClearFilters ? (
             <Button
               label={t("create.search.clearFilters")}
               onClick={onClearFilters}
               variant="outline"
             />
-          </div>
-        )}
-      </div>
+          ) : undefined
+        }
+      />
     );
   }
 
@@ -282,7 +283,7 @@ export function VirtualSearchResults({
               }}
             >
               {isLoading ? (
-                <div className="flex items-center justify-center gap-2 text-white/60">
+                <div className="text-muted-foreground flex items-center justify-center gap-2">
                   <LoadingSpinner size={16} className="text-primary" />
                   <span>{t("create.search.loading")}</span>
                 </div>

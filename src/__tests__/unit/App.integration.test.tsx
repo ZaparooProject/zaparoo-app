@@ -83,6 +83,13 @@ vi.mock("@/lib/store", () => {
     connected: true,
     playing: { mediaName: "", systemId: "", mediaPath: "" },
     safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+    inboxMessages: [],
+    inboxModalOpen: false,
+    setInboxModalOpen: vi.fn(),
+    removeInboxMessage: vi.fn(),
+    setInboxMessages: vi.fn(),
+    coreVersion: null,
+    coreVersionPending: false,
   };
 
   const useStatusStore: any = vi.fn((selector) => {
@@ -134,6 +141,10 @@ vi.mock("@/lib/deepLinks", () => ({
 
 vi.mock("@/components/MediaFinishedToast", () => ({
   MediaFinishedToast: () => <div data-testid="media-finished-toast" />,
+}));
+
+vi.mock("@/components/InboxModal", () => ({
+  InboxModal: () => <div data-testid="inbox-modal" />,
 }));
 
 vi.mock("@/components/SlideModalProvider", () => ({

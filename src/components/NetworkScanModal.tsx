@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
 import { useNetworkScan, DiscoveredDevice } from "@/hooks/useNetworkScan";
+import { EmptyState } from "@/components/wui/EmptyState";
 import { SlideModal } from "./SlideModal";
 import { DeviceRow } from "./DeviceRow";
 
@@ -112,11 +113,7 @@ export function NetworkScanModal({
 
         {/* No devices found - only shows if scan fails to start */}
         {!isScanning && !error && devices.length === 0 && (
-          <div className="flex flex-col items-center justify-center gap-2 py-8">
-            <p className="text-muted-foreground">
-              {t("settings.networkScan.noDevices")}
-            </p>
-          </div>
+          <EmptyState title={t("settings.networkScan.noDevices")} />
         )}
       </div>
     </SlideModal>

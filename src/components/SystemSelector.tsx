@@ -9,6 +9,7 @@ import { CoreAPI } from "@/lib/coreApi";
 import { compareStrings } from "@/lib/utils";
 import { useStatusStore } from "@/lib/store";
 import { useSmartTabs } from "@/hooks/useSmartTabs";
+import { EmptyState } from "@/components/wui/EmptyState";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
@@ -30,6 +31,7 @@ interface SystemSelectorProps {
   title?: string;
   includeAllOption?: boolean;
   defaultSelection?: string; // When selectedSystems is empty, what should be shown as selected (e.g., "all" or undefined for nothing)
+  allowedSystemIds?: string[];
 }
 
 interface GroupedSystems {
@@ -47,6 +49,7 @@ export function SystemSelector({
   title,
   includeAllOption = false,
   defaultSelection,
+  allowedSystemIds,
 }: SystemSelectorProps) {
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
@@ -88,7 +91,12 @@ export function SystemSelector({
       return { filteredSystems: [], categories: [] };
     }
 
-    const systems = systemsData.systems;
+    const systems =
+      allowedSystemIds === undefined
+        ? systemsData.systems
+        : systemsData.systems.filter((system) =>
+            allowedSystemIds.includes(system.id),
+          );
 
     // Group systems by category
     const grouped: GroupedSystems = {};
@@ -141,7 +149,7 @@ export function SystemSelector({
     filtered.sort((a, b) => compareStrings(a.name, b.name));
 
     return { filteredSystems: filtered, categories };
-  }, [systemsData, debouncedSearchQuery, selectedCategory]);
+  }, [systemsData, allowedSystemIds, debouncedSearchQuery, selectedCategory]);
 
   // Handle system selection
   const handleSystemSelect = useCallback(
@@ -345,13 +353,18 @@ export function SystemSelector({
                 <span className="text-muted-foreground">{t("loading")}</span>
               </div>
             ) : filteredSystems.length === 0 ? (
-              <div className="flex h-32 items-center justify-center">
-                <span className="text-muted-foreground">
-                  {debouncedSearchQuery
-                    ? t("systemSelector.noResults")
-                    : t("systemSelector.noSystems")}
-                </span>
-              </div>
+              debouncedSearchQuery ? (
+                <EmptyState
+                  className="h-32"
+                  title={t("systemSelector.noResults")}
+                  description={t("systemSelector.noResultsHint")}
+                />
+              ) : (
+                <EmptyState
+                  className="h-32"
+                  title={t("systemSelector.noSystems")}
+                />
+              )
             ) : (
               <>
                 {/* Add "All Systems" option for single/insert mode */}

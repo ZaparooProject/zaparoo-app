@@ -27,6 +27,7 @@ import { BackIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { ToggleChip } from "@/components/wui/ToggleChip";
 import { Badge, type BadgeVariant } from "@/components/wui/Badge";
+import { EmptyState } from "@/components/wui/EmptyState";
 import { logger } from "@/lib/logger";
 import { uploadLogs } from "@/lib/logsApi";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
@@ -498,16 +499,10 @@ export function Logs() {
             </div>
           )}
 
-          {!connected && (
-            <div className="text-muted-foreground py-8 text-center text-sm">
-              {t("notConnected")}
-            </div>
-          )}
+          {!connected && <EmptyState title={t("notConnected")} />}
 
           {connected && logsQuery.data && filteredEntries.length === 0 && (
-            <div className="text-muted-foreground py-8 text-center text-sm">
-              {t("settings.logs.noEntriesFound")}
-            </div>
+            <EmptyState title={t("settings.logs.noEntriesFound")} />
           )}
         </div>
       </PageFrame>

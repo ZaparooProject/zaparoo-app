@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { SystemSelector } from "@/components/SystemSelector";
 import { Button } from "@/components/wui/Button";
+import { EmptyState } from "@/components/wui/EmptyState";
 import { useProPurchase } from "@/components/ProPurchase";
 import { ProBadge } from "@/components/ProBadge";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/settings/readers")({
   component: ReadersSettings,
 });
 
-export function ReadersSettings() {
+function ReadersSettings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("settings.readers.title"));
   const connected = useStatusStore((state) => state.connected);
@@ -142,11 +143,12 @@ export function ReadersSettings() {
           </span>
           <div className="mt-2 flex flex-col gap-2">
             {isReadersLoading ? (
-              <span className="text-foreground-disabled">{t("loading")}</span>
+              <span className="text-muted-foreground">{t("loading")}</span>
             ) : !connected ? (
-              <span className="text-foreground-disabled">
-                {t("settings.readers.noReadersDetected")}
-              </span>
+              <EmptyState
+                size="compact"
+                title={t("settings.readers.noReadersDetected")}
+              />
             ) : readersData?.readers && readersData.readers.length > 0 ? (
               readersData.readers.map((reader) => (
                 <div key={reader.id} className="flex items-center gap-2">
@@ -163,9 +165,10 @@ export function ReadersSettings() {
                 </div>
               ))
             ) : (
-              <span className="text-foreground-disabled">
-                {t("settings.readers.noReadersDetected")}
-              </span>
+              <EmptyState
+                size="compact"
+                title={t("settings.readers.noReadersDetected")}
+              />
             )}
           </div>
         </div>

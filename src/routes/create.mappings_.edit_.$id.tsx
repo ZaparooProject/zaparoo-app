@@ -8,7 +8,7 @@ export const Route = createFileRoute("/create/mappings_/edit_/$id")({
   component: EditMapping,
 });
 
-export function EditMapping() {
+function EditMapping() {
   const { id } = Route.useParams();
   const { t } = useTranslation();
   const navigate = useNavigate();

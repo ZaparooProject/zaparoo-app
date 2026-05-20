@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { ReaderInfo } from "../lib/models";
+import { InboxMessage, InboxSeverity, ReaderInfo } from "../lib/models";
 
 export const mockReaderInfo = (
   overrides?: Partial<ReaderInfo>,
@@ -15,5 +15,20 @@ export const mockReaderInfo = (
     max: 2,
   }),
   connected: faker.datatype.boolean(),
+  ...overrides,
+});
+
+export const mockInboxMessage = (
+  overrides?: Partial<InboxMessage>,
+): InboxMessage => ({
+  id: faker.number.int({ min: 1, max: 1_000_000 }),
+  title: faker.lorem.sentence(),
+  body: faker.lorem.paragraph(),
+  severity: faker.helpers.arrayElement([
+    InboxSeverity.Info,
+    InboxSeverity.Warning,
+    InboxSeverity.Error,
+  ]),
+  createdAt: faker.date.recent().toISOString(),
   ...overrides,
 });

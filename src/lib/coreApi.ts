@@ -5,11 +5,16 @@ import { logger } from "./logger.ts";
 import {
   AddMappingRequest,
   AllMappingsResponse,
+  DeleteInboxRequest,
   HistoryResponse,
+  InboxResponse,
   LaunchRequest,
   LogDownloadResponse,
   MediaActiveUpdateRequest,
   MediaResponse,
+  MediaScrapeCancelResponse,
+  MediaScrapeParams,
+  MediaScrapeResumeResponse,
   MediaTagsResponse,
   Method,
   Notification,
@@ -17,6 +22,8 @@ import {
   PlaytimeLimitsUpdateRequest,
   PlaytimeStatus,
   ReadersResponse,
+  ScrapersResponse,
+  ScrapingStatusNotification,
   SearchParams,
   SearchResultsResponse,
   SettingsResponse,
@@ -779,6 +786,151 @@ class CoreApi {
     });
   }
 
+  scrapers(): Promise<ScrapersResponse> {
+    return new Promise<ScrapersResponse>((resolve, reject) => {
+      this.call(Method.Scrapers)
+        .then((result) => {
+          try {
+            const response = result as ScrapersResponse;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing scrapers response:", e, {
+              category: "coreApi",
+              action: "scrapers",
+              severity: "error",
+            });
+            reject(
+              new Error(
+                `Failed to process scrapers response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logger.error("Scrapers API call failed:", error, {
+            category: "coreApi",
+            action: "scrapers",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
+
+  mediaScrape(params: MediaScrapeParams): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MediaScrape, params)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Media scrape API call failed:", error, {
+            category: "coreApi",
+            action: "mediaScrape",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
+
+  mediaScrapeStatus(): Promise<ScrapingStatusNotification> {
+    return new Promise<ScrapingStatusNotification>((resolve, reject) => {
+      this.call(Method.MediaScrapeStatus)
+        .then((result) => {
+          try {
+            const response = result as ScrapingStatusNotification;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing media scrape status response:", e, {
+              category: "coreApi",
+              action: "mediaScrapeStatus",
+              severity: "error",
+            });
+            reject(
+              new Error(
+                `Failed to process media scrape status response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logger.error("Media scrape status API call failed:", error, {
+            category: "coreApi",
+            action: "mediaScrapeStatus",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
+
+  mediaScrapeCancel(): Promise<MediaScrapeCancelResponse> {
+    return new Promise<MediaScrapeCancelResponse>((resolve, reject) => {
+      this.call(Method.MediaScrapeCancel)
+        .then((result) => {
+          try {
+            const response = result as MediaScrapeCancelResponse;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing media scrape cancel response:", e, {
+              category: "coreApi",
+              action: "mediaScrapeCancel",
+              severity: "error",
+            });
+            reject(
+              new Error(
+                `Failed to process media scrape cancel response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logger.error("Media scrape cancel API call failed:", error, {
+            category: "coreApi",
+            action: "mediaScrapeCancel",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
+
+  mediaScrapeResume(): Promise<MediaScrapeResumeResponse> {
+    return new Promise<MediaScrapeResumeResponse>((resolve, reject) => {
+      this.call(Method.MediaScrapeResume)
+        .then((result) => {
+          try {
+            const response = result as MediaScrapeResumeResponse;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing media scrape resume response:", e, {
+              category: "coreApi",
+              action: "mediaScrapeResume",
+              severity: "error",
+            });
+            reject(
+              new Error(
+                `Failed to process media scrape resume response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logger.error("Media scrape resume API call failed:", error, {
+            category: "coreApi",
+            action: "mediaScrapeResume",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
+
   systems(): Promise<SystemsResponse> {
     return new Promise<SystemsResponse>((resolve, reject) => {
       this.call(Method.Systems)
@@ -1150,6 +1302,72 @@ class CoreApi {
         })
         .catch((error) => {
           logger.error("Playtime limits update API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  inbox(): Promise<InboxResponse> {
+    return new Promise<InboxResponse>((resolve, reject) => {
+      this.call(Method.Inbox)
+        .then((result) => {
+          try {
+            const response = result as InboxResponse;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing inbox response:", e, {
+              category: "api",
+              action: "inbox.process",
+              severity: "error",
+            });
+            reject(
+              new Error(
+                `Failed to process inbox response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logger.error("Inbox API call failed:", error, {
+            category: "api",
+            action: "inbox.fetch",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
+
+  inboxDelete(params: DeleteInboxRequest): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.InboxDelete, params)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Inbox delete API call failed:", error, {
+            category: "api",
+            action: "inbox.delete",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
+
+  inboxClear(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.InboxClear)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Inbox clear API call failed:", error, {
+            category: "api",
+            action: "inbox.clear",
+            severity: "error",
+          });
           reject(error);
         });
     });

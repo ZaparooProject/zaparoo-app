@@ -1,453 +1,173 @@
-# AGENTS.md
+# Zaparoo App Agent Guide
 
-Guidance for AI agents working with the Zaparoo App codebase.
+Zaparoo App is a mobile-first React 19 + TypeScript + Vite application for Zaparoo Core. It runs on web, iOS, and Android through Capacitor 8, and talks to Core over WebSocket JSON-RPC.
 
 ## Commands
 
+`package.json` is the source of truth for scripts. Common commands:
+
 ### Development
 
-- `npm run dev` - Start development server with Vite
-- `npm run dev:server` - Start with dev server mode (requires `DEV_SERVER_IP` in `.env`)
-- `npm run build` - TypeScript compile + Vite build + Capacitor sync (production)
-- `npm run build:web` - Build web version only (no Capacitor sync)
-- `npm run build:core` - Build for embedded Core mode
-- `npm run sync` - Sync web app with mobile platforms
-- `npm run typecheck` - TypeScript type checking
-- `npm run lint` / `npm run lint:fix` - ESLint checking/fixing
-- `npm run format` / `npm run format:check` - Prettier formatting
-- `npx cap open ios` / `npx cap open android` - Open native projects
+- `npm run dev` — start the Vite dev server. Ask before running because it is long-lived.
+- `npm run dev:server` — start dev mode with `NODE_ENV=development`; requires `DEV_SERVER_IP` in `.env`. Ask before running because it is long-lived.
+- `npm run preview` — preview a production build locally. Ask before running because it is long-lived.
 
-### Testing
+### Validation
 
-- `npm run test` - Run Vitest tests
-- `npm run test:coverage` - Run tests with coverage report
-- `npm run test:ui` - Run tests with Vitest UI
+- `npm run typecheck` — TypeScript check with `tsconfig.test.json`.
+- `npm run lint` — run ESLint.
+- `npm run lint:fix` — run ESLint autofixes.
+- `npm run format:check` — check Prettier formatting.
+- `npm run format` — apply Prettier formatting.
+- `npm run test` — run Vitest.
+- `npm run test:coverage` — run Vitest with coverage.
 
-### Live Updates
+### Build, sync, and native
 
-- `npm run live-update` - Build and push signed live update (requires `live-update-private.pem`)
+- `npm run build` — production build, then Capacitor sync.
+- `npm run build:web` — web-only production build.
+- `npm run build:core` — embedded Core build mode.
+- `npm run build:server` — development server build, then Capacitor sync.
+- `npm run build:analyze` — analyzer build.
+- `npm run sync` — Capacitor sync only.
+- `npm run live-update` — signed live update upload; requires `live-update-private.pem`.
+- `npx cap open ios` / `npx cap open android` — open native projects.
 
----
+## Project layout
 
-## Architecture
-
-### Tech Stack
-
-- **Frontend**: React 19 + TypeScript + Vite
-- **Mobile**: Capacitor 8 (cross-platform iOS/Android)
-- **Routing**: TanStack Router with file-based routing
-- **State**: Zustand (`src/lib/store.ts`, `src/lib/preferencesStore.ts`)
-- **Styling**: TailwindCSS 4 with custom CSS variables
-- **Networking**: WebSocket + HTTP JSON-RPC with Zaparoo Core
-- **Testing**: Vitest + React Testing Library + MSW
-- **i18n**: i18next (7 languages)
-- **CI/CD**: Capawesome Cloud
-
-### Directory Structure
-
-```
+```text
 src/
-  components/        # React components
-    ui/              # shadcn/ui-based components
-    wui/             # Custom Zaparoo UI components
-    home/            # Home page components
-    nfc/             # NFC-related components
-  hooks/             # Custom React hooks
-  lib/               # Core utilities, API clients, store, models
-    transport/       # WebSocket transport layer (ConnectionManager, WebSocketTransport, types)
-  routes/            # TanStack Router file-based routes
-  translations/      # i18n JSON files
-  __tests__/         # Test suites
-    unit/            # Unit tests
-    integration/     # Integration tests
-    validation/      # Configuration validation tests
-  test-utils/        # Test helpers, factories, MSW handlers
-  __mocks__/         # Capacitor plugin mocks
+  components/        React components
+    ui/              shadcn/ui Radix-based primitives
+    wui/             custom Zaparoo UI components
+    home/            home-page components
+    nfc/             NFC components
+  hooks/             custom React hooks
+  lib/               core utilities, stores, API, transport, crypto
+  routes/            TanStack Router file-based routes
+  translations/      i18next JSON files
+  __tests__/         unit, integration, and validation tests
+  test-utils/        render helpers, MSW handlers, factories
+  __mocks__/         Capacitor plugin mocks
+docs/                focused guides for Capacitor, deployment, and testing
 ```
 
-### Key Files
+## Boundaries
 
-- `src/lib/store.ts` - Main Zustand store for connection/app state
-- `src/lib/preferencesStore.ts` - Persisted preferences with Capacitor storage
-- `src/lib/coreApi.ts` - JSON-RPC API client for Zaparoo Core
-- `src/lib/logger.ts` - Logging utility with Rollbar integration
-- `src/lib/nfc.ts` - NFC operations with session management
-- `src/lib/models.ts` - TypeScript interfaces and API method enums
-- `src/lib/transport/ConnectionManager.ts` - WebSocket connection management
-- `src/i18n.ts` - i18next configuration
+### Always
 
----
+- Edit existing files when possible; do not create new files speculatively.
+- Use the `@/` alias for imports from `src/`.
+- Use Capacitor `Preferences` for persisted state; never use `localStorage`.
+- Log errors with `logger.error(msg, err, { category, action, severity })`.
+- Add new UI strings to `src/translations/en-US.json` only; other locales fall back.
+- Keep TypeScript strict. Do not use `any`.
 
-## Testing
+### Ask first
 
-**Full guide:** [docs/testing.md](docs/testing.md)
+- Adding a Capacitor plugin, because it forces a native rebuild and store release.
+- Bumping the app version; see `docs/deployment.md` because three files must change in lockstep.
+- Refactors that touch many files or shared infrastructure.
+- Force-pushes, branch deletes, force-resets, hook bypasses, or anything that overwrites others' work.
+- Starting long-running local servers.
 
-### Quick Reference
+### Never
 
-- Follow **Testing Trophy**: prioritize integration tests over unit tests
-- Use **AAA pattern**: Arrange-Act-Assert
-- Use `should + verb` naming: `it("should show error when email is invalid")`
-- Import from `test-utils`: `import { render, screen, waitFor } from "../../../test-utils"`
-- Always use `userEvent.setup()` for interactions
-- Use `findBy*` for async content, `queryBy*` to assert absence
-- Use accessible queries: `getByRole` > `getByLabelText` > `getByText` > `getByTestId`
-- Factory: `mockReaderInfo()` from `test-utils/factories.ts`
+- Skip pre-commit hooks with `--no-verify` or commit secrets.
+- Dismiss lint, type, or test failures as pre-existing; fix them or report the blocker.
+- Mock the component under test, build fake components inside test files, or use hardcoded delays. Use `findBy*` and `waitFor` for async UI.
+- Reconnect the WebSocket manually; the transport owns reconnect behavior.
+- Test CSS classes; test accessible behavior instead.
 
-### Critical Anti-Patterns
+## State
 
-1. **Never create fake components** inside test files - import real ones
-2. **Don't mock the component being tested** - only mock external deps
-3. **Use `it.each`** for repetitive test patterns
-4. **Never use hardcoded delays** - use `waitFor` or `findBy*`
-5. **Don't test CSS classes** - test accessible behavior
+- Primary app state lives in `useStatusStore` at `src/lib/store.ts`.
+- Persisted preferences and capability flags live in `usePreferencesStore` at `src/lib/preferencesStore.ts`.
+- Wait for `_hasHydrated` before rendering UI that depends on persisted preferences.
+- Read `coreVersion` from the store; do not pass it through props.
+- `runQueue` is `{ value: string; unsafe: boolean } | null`. `writeQueue` is a plain `string`.
+- For tests, reset stores with `useStatusStore.setState({ ... })` in `beforeEach`; there is no `getInitialState()`.
 
-### Test Checklist
+## API and transport
 
-- [ ] Imports real component from `src/`
-- [ ] Uses accessible queries
-- [ ] Tests observable behavior
-- [ ] Uses `userEvent.setup()` for interactions
-- [ ] Uses `findBy*` or `waitFor` for async
+- `CoreAPI` in `src/lib/coreApi.ts` is the JSON-RPC client over WebSocket. Check that file for the current method inventory.
+- Call `CoreAPI.reset()` between tests.
+- Transport code in `src/lib/transport/` owns auto-reconnect, heartbeat, and offline queueing.
+- Queues are processed by `useRunQueueProcessor` and `useWriteQueueProcessor`.
 
----
+## Feature gating
+
+- Add feature gates to `FEATURE_GATES` in `src/lib/featureGates.ts` with `since`, `marquee`, and `labelKey`.
+- Add the `labelKey` to `src/translations/en-US.json` under `features`.
+- Wrap gated UI in `<GatedFeature featureId="...">` or use `useCoreFeature(id)`.
+- Dev versions (`-dev`, `-rc`, `-beta`, `-alpha`, or empty) pass all gates.
 
 ## Logging
 
-```typescript
-import { logger } from "@/lib/logger";
-
-logger.log("General info"); // Dev only
-logger.debug("Debug details"); // Dev only
-logger.warn("Warning message"); // Dev only
-logger.error("Error", error, {
-  // Always + Rollbar in prod
-  category: "nfc",
-  action: "write",
-  severity: "warning",
-});
-```
-
-**Categories:** `nfc`, `storage`, `purchase`, `api`, `camera`, `accelerometer`, `queue`, `connection`, `share`, `lifecycle`, `websocket`, `general`
-
-**Severities:** `critical`, `error`, `warning`, `info`, `debug`
-
----
-
-## Platform & Capacitor
-
-**Full guide:** [docs/capacitor.md](docs/capacitor.md)
-
-### Platform Detection
-
-```typescript
-import { Capacitor } from "@capacitor/core";
-
-if (Capacitor.isNativePlatform()) {
-  /* native only */
-}
-const platform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
-```
-
-### Plugins Used
-
-`@capacitor/core`, `@capacitor/app`, `@capacitor/browser`, `@capacitor/clipboard`, `@capacitor/device`, `@capacitor/filesystem`, `@capacitor/haptics`, `@capacitor/network`, `@capacitor/preferences`, `@capacitor/screen-reader`, `@capacitor/share`, `@capacitor/status-bar`, `@capacitor/text-zoom`, `@capacitor-community/keep-awake`, `@capacitor-firebase/authentication`, `@capacitor-mlkit/barcode-scanning`, `@capawesome-team/capacitor-nfc`, `@capawesome/capacitor-live-update`, `@capgo/capacitor-shake`, `capacitor-plugin-safe-area`, `capacitor-zeroconf`
-
-### Feature Availability
-
-```typescript
-// Hooks check availability at startup, cache in preferencesStore
-const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
-const cameraAvailable = usePreferencesStore((state) => state.cameraAvailable);
-```
-
-Hooks: `useNfcAvailabilityCheck()`, `useCameraAvailabilityCheck()`, `useAccelerometerAvailabilityCheck()`
-
-### Key Patterns
-
-- **NFC**: Use `withNfcSession()` from `src/lib/nfc.ts` for auto-cleanup
-- **Haptics**: Use `useHaptics()` hook - respects user preference
-- **Storage**: Use Capacitor `Preferences`, not localStorage
-- **Safe Area**: Use `safeInsets` from `useStatusStore`
-
----
-
-## Internationalization (i18n)
-
-**Languages:** en-US (default), en-GB, fr-FR, zh-CN, ko-KR, ja-JP, nl-NL, de-DE, es-ES
-
-**Files:** `src/translations/*.json`
-
-```typescript
-import { useTranslation } from "react-i18next";
-const { t } = useTranslation();
-
-t("nav.back"); // Simple key
-t("error", { msg: "Failed" }); // Interpolation
-t("duration.hours", { count: 5 }); // Pluralization
-```
-
-**Adding translations:** Only update `src/translations/en-US.json`
-
-**In tests:** Translations return keys as-is - test for keys
-
----
-
-## State Management
-
-### Main Store (`useStatusStore`)
-
-```typescript
-import { useStatusStore } from "@/lib/store";
-
-const connected = useStatusStore((state) => state.connected);
-const setConnected = useStatusStore((state) => state.setConnected);
-```
-
-**Key state:** `connected`, `connectionState`, `connectionError`, `targetDeviceAddress`, `lastToken`, `gamesIndex`, `playing`, `runQueue`, `writeQueue`, `deviceHistory`, `safeInsets`
-
-### Preferences Store (`usePreferencesStore`)
-
-```typescript
-import { usePreferencesStore } from "@/lib/preferencesStore";
-
-const launchOnScan = usePreferencesStore((state) => state.launchOnScan);
-const setLaunchOnScan = usePreferencesStore((state) => state.setLaunchOnScan);
-```
-
-**Key settings:** `restartScan`, `launchOnScan`, `shakeEnabled`, `shakeMode`, `hapticsEnabled`, `textZoomLevel`, `tourCompleted`, `nfcAvailable`, `cameraAvailable`
-
-### Hydration
-
-```typescript
-const hasHydrated = usePreferencesStore((state) => state._hasHydrated);
-if (!hasHydrated) return <LoadingState />;
-```
-
-### Store Testing
-
-```typescript
-beforeEach(() => {
-  // Reset to known state - stores don't have getInitialState()
-  useStatusStore.setState({
-    connected: false,
-    runQueue: null,
-    // ... set all needed state
-  });
-});
-```
-
----
-
-## API Communication
-
-### JSON-RPC Protocol
-
-```typescript
-{ jsonrpc: "2.0", id: requestId, method: "media.search", params: { query: "mario" } }
-```
-
-### CoreAPI Client
-
-```typescript
-import { CoreAPI } from "@/lib/coreApi";
-
-const result = await CoreAPI.getVersion();
-const searchResults = await CoreAPI.searchMedia({ query: "mario" });
-CoreAPI.reset(); // Call in test cleanup
-```
-
-### WebSocket Transport
-
-- Auto-reconnection: 1s initial, 1.5x multiplier, 30s max
-- Heartbeat: 15s ping/pong, 10s timeout
-- Message queuing: up to 100 while disconnected
-- States: disconnected → connecting → connected → reconnecting
-
-### Queue System
-
-- `runQueue` - Game launch commands (`useRunQueueProcessor`)
-- `writeQueue` - NFC write operations (`useWriteQueueProcessor`)
-
-```typescript
-// Set queue item
-useStatusStore.getState().setRunQueue({ value: "game.launch", unsafe: false });
-// Clear queue
-useStatusStore.getState().setRunQueue(null);
-```
-
----
-
-## Component Patterns
-
-### Libraries
-
-- `src/components/ui/` - shadcn/ui components (Radix-based)
-- `src/components/wui/` - Custom Zaparoo components
-
-### wui Conventions
-
-- Use `memo()` and `forwardRef()`
-- Use `classnames` for conditional Tailwind
-- Support `aria-label`, `aria-expanded`, `aria-controls`
-- Use `intent` prop for haptic feedback: `"default"` | `"primary"` | `"destructive"`
-
-### Button/Card
-
-```tsx
-<Button label="Submit" variant="fill" size="default" intent="primary" onClick={handle} />
-<Card onClick={handle} disabled={isDisabled}>{children}</Card>
-```
-
-### Styling
-
-- Tailwind CSS classes
-- CSS variables: `bg-button-pattern`, `bg-card-pattern`
-- Focus: `focus-visible:ring-2 focus-visible:ring-white/50`
-
----
-
-## Error Handling
-
-```typescript
-try {
-  await riskyOperation();
-} catch (error) {
-  logger.error("Operation failed", error, {
-    category: "api",
-    action: "riskyOperation",
-  });
-  showRateLimitedErrorToast(t("error", { msg: error.message }));
-}
-```
-
-- **Error boundary:** `src/components/ErrorComponent.tsx`
-- **Toast rate limiting:** `showRateLimitedErrorToast()` - 2s cooldown
-
----
+- `logger.log`, `logger.debug`, and `logger.warn` are dev-only. `logger.error` always logs and reports to Rollbar in native production builds.
+- Categories: `nfc`, `storage`, `purchase`, `api`, `camera`, `accelerometer`, `queue`, `connection`, `share`, `lifecycle`, `websocket`, `general`.
+- Severities: `critical`, `error`, `warning`, `info`, `debug`.
+
+## Platform and Capacitor
+
+- Guard native-only calls with `Capacitor.isNativePlatform()`.
+- Capability hooks hydrate cached flags in `usePreferencesStore`; read those cached flags in components.
+- NFC operations should use high-level helpers from `src/lib/nfc.ts`: `readTag`, `writeTag`, `formatTag`, `eraseTag`, and `readRaw`. They wrap session lifecycle internally.
+- Use `useHaptics()` for haptics. It respects user preferences, and `wui` components trigger haptics through their `intent` prop.
+- Use `safeInsets` from `useStatusStore` for notch and cutout padding.
+- See `docs/capacitor.md` for the full plugin list and platform patterns.
+
+## Internationalization
+
+- Source of truth: `src/translations/en-US.json`.
+- Spanish translations are available in `src/translations/es-ES.json`; continue adding new UI strings to `en-US` only.
+- Do not edit generated or fallback locale files unless explicitly requested.
+- In tests, `t()` returns the key. Assert against keys, not human strings.
+
+## Components
+
+- shadcn/ui components live under `src/components/ui/`.
+- Custom Zaparoo components live under `src/components/wui/`. Prefer them over inline JSX.
+- Before adding or changing UI, inspect nearby screens and reuse their layout, typography, spacing, and component patterns.
+- Do not invent new card styles, label treatments, badges, stat blocks, or loading affordances unless explicitly requested. If the existing design language does not cover the state, stop and ask before introducing a new visual pattern.
+- Use `<EmptyState>` for empty placeholders so they stay consistent.
+- Use `classnames` for conditional Tailwind classes.
+- Use focus rings such as `focus-visible:ring-2 focus-visible:ring-white/50`.
 
 ## Accessibility
 
-### Required Patterns
+- Add `<SkipLink />` at the top of new pages.
+- Use `usePageHeadingFocus()` for page headings.
+- Use `<A11yAnnouncerProvider>` and `useAnnouncer()` for live announcements.
+- Use `useScreenReaderEnabled()` for screen-reader-aware behavior.
+- Honor `textZoomLevel` from `usePreferencesStore`.
 
-- **Skip Links:** `<SkipLink />`
-- **Page Heading Focus:** `usePageHeadingFocus()`
-- **Announcements:** `A11yAnnouncerProvider`, `useA11yAnnounce()`
-- **Screen Reader:** `useScreenReaderEnabled()`
-- **Text Zoom:** `textZoomLevel` in preferencesStore
+## Testing
 
----
+- Vitest + React Testing Library + MSW are used for tests.
+- Import test helpers from `test-utils`:
 
-## Code Style
+  ```ts
+  import { render, screen, waitFor } from "@/test-utils";
+  ```
 
-- **Imports:** Use `@/` alias for src directory
-- **TypeScript:** Strict mode, no `any` without justification
-- **Async:** Prefer async/await, handle errors explicitly
-- **Hooks:** Prefix with `use`, extract to `src/hooks/`
-- **Naming:** Components PascalCase, hooks camelCase with `use`, tests `.test.tsx`
+- Prefer integration tests over narrow unit tests when behavior crosses component or store boundaries.
+- Use the AAA pattern and `should + verb` test names.
+- Use accessible queries in this order: `getByRole`, `getByLabelText`, `getByText`, then `getByTestId`.
+- Use `userEvent.setup()` for interactions.
+- Use `findBy*` and `waitFor` for async behavior.
+- Use factories from `src/test-utils/factories.ts`, such as `mockReaderInfo()`.
+- See `docs/testing.md` for the full testing guide and `docs/playwright-testing.md` for visual and end-to-end testing.
 
----
+## Pull requests
 
-## Pull Requests
+- Keep the summary concise.
+- Do not include a separate test plan section.
+- For a store release, bump version fields in the three files documented in `docs/deployment.md`.
 
-- **No test plans:** Do not include test plan sections in PR descriptions
-- **Summary only:** Keep PR descriptions concise with a brief summary of changes
+## Pointer docs
 
----
-
-## Core Version Gating
-
-The app must gracefully degrade when connected to older Core versions during migration periods. This is handled client-side via semver comparison — no Core changes required.
-
-### Key files
-
-- `src/lib/coreVersion.ts` — semver helpers: `isDevelopmentVersion`, `parseVersion`, `compareVersions`, `satisfies`
-- `src/lib/featureGates.ts` — **registry of gated features** (edit this to gate new features)
-- `src/hooks/useCoreFeature.ts` — React hook returning `{ available, requiredVersion, marquee }`
-- `src/components/GatedFeature.tsx` — wrapper component
-- `src/components/CoreOutdatedNotice.tsx` — settings page notice (auto-shown when any gate fails)
-
-### How to gate a new feature
-
-1. Add an entry to `FEATURE_GATES` in `src/lib/featureGates.ts`:
-
-```ts
-export const FEATURE_GATES: Record<string, FeatureGate> = {
-  screenshot: {
-    since: "2.6.0",
-    marquee: true,
-    labelKey: "features.screenshot",
-  },
-};
-```
-
-- `since` — minimum Core version (semver)
-- `marquee` — `true`: show disabled with tooltip; `false`: hide silently
-- `labelKey` — i18n key used in the outdated notice list
-
-2. Add the translation key to `src/translations/en-US.json` under `"features"`.
-
-3. Wrap UI in `<GatedFeature featureId="screenshot">` or call `useCoreFeature("screenshot")` directly.
-
-### Dev build handling
-
-Versions matching `DEVELOPMENT`, empty string, or containing `-dev`/`-rc`/`-beta`/`-alpha` are treated as dev builds and **pass all gates automatically**. This mirrors Core's `config.IsDevelopmentVersion` semantics.
-
-### Store state
-
-`coreVersion` and `corePlatform` are fetched once per connect in `ConnectionProvider.handleConnectionOpen` and stored in `useStatusStore`. They are cleared by `resetConnectionState()` on device switch. Do not maintain a separate version query in components — read from the store.
-
----
-
-## Common Gotchas
-
-1. **NFC Cancellation**: Check `error.message.includes("cancelled")` - fragile but necessary
-2. **Platform Checks**: Always check `Capacitor.isNativePlatform()` before native features
-3. **Store Hydration**: Wait for `_hasHydrated` before rendering persisted-state UI
-4. **Translation Keys**: In tests, translations return keys - test for keys not strings
-5. **WebSocket Reconnection**: Transport handles this automatically - don't manually reconnect
-6. **Safe Area Insets**: Use `safeInsets` from store for notched device padding
-7. **Touch vs Click**: wui components handle touch/scroll distinction internally
-
----
-
-## Live Updates & CI/CD
-
-**Full guide:** [docs/deployment.md](docs/deployment.md)
-
-### When to Use
-
-| Change Type                                                   | Method                              |
-| ------------------------------------------------------------- | ----------------------------------- |
-| UI/JS fixes, translations, new features with existing plugins | Live Update (`npm run live-update`) |
-| New plugins, native code, new permissions, Capacitor upgrades | Store Release (push git tag)        |
-
-### Version Bumping (Required for Store Releases)
-
-Before creating a store release, **all three locations must be updated**:
-
-| File                                    | Fields                                         | Notes                                                                                                     |
-| --------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `package.json`                          | `version`                                      | Semantic version (e.g., `1.10.0`)                                                                         |
-| `android/app/build.gradle`              | `versionCode`, `versionName`                   | `versionCode` must increment every build (integer), `versionName` matches package.json                    |
-| `ios/App/App.xcodeproj/project.pbxproj` | `MARKETING_VERSION`, `CURRENT_PROJECT_VERSION` | `MARKETING_VERSION` matches package.json, `CURRENT_PROJECT_VERSION` increments per upload of same version |
-
-### Process
-
-- **Live Update:** `npm run live-update` builds, signs, and uploads bundle
-- **Store Build:** Push git tag (e.g., `v1.9.2`) triggers Capawesome Cloud build
-- **Rollback:** App auto-rolls back if crash before `ready()` called
-
-### Secrets (Capawesome Cloud)
-
-`NPM_TOKEN`, `FIREBASE_CREDS`, `GOOGLE_SERVICES_JSON`, `GOOGLE_SERVICE_INFO_PLIST`, `VITE_GOOGLE_STORE_API`, `VITE_APPLE_STORE_API`, `VITE_ROLLBAR_ACCESS_TOKEN`, `LIVE_UPDATE_PRIVATE_KEY`
-
----
-
-## Pro Features
-
-Pro features gated by RevenueCat. Primary feature: "Launch on scan" (phone as wireless reader).
-
-```typescript
-import { useProAccessCheck } from "@/hooks/useProAccessCheck";
-const { hasProAccess, isLoading } = useProAccessCheck();
-```
+- `docs/capacitor.md` — Capacitor plugins, NFC, haptics, storage, and safe-area patterns.
+- `docs/deployment.md` — live updates, store releases, version bumps, and Capawesome Cloud secrets.
+- `docs/testing.md` — Testing Trophy, AAA, anti-patterns, and factories.
+- `docs/playwright-testing.md` — visual and end-to-end test flows.
