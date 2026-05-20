@@ -21,12 +21,14 @@ import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
 import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
 import { GatedFeature } from "@/components/GatedFeature";
 import { InboxButton } from "@/components/InboxButton";
+import { isCoreFeatureAvailable } from "@/lib/featureGates";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export const Route = createFileRoute("/settings/")({
   component: Settings,
 });
 
-export function Settings() {
+function Settings() {
   const { t } = useTranslation();
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
     t("settings.title"),
@@ -37,7 +39,16 @@ export function Settings() {
 
   const connectionError = useStatusStore((state) => state.connectionError);
   const loggedInUser = useStatusStore((state) => state.loggedInUser);
+  const coreVersion = useStatusStore((state) => state.coreVersion);
+  const coreVersionPending = useStatusStore(
+    (state) => state.coreVersionPending,
+  );
+  const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
   const setDeviceHistory = useStatusStore((state) => state.setDeviceHistory);
+  const showMediaScraper =
+    coreVersion !== null &&
+    !coreVersionPending &&
+    isCoreFeatureAvailable("mediaScrapers", coreVersion);
 
   const [address, setAddress] = useState(getDeviceAddress());
   const [scanOpen, setScanOpen] = useState(false);
@@ -212,6 +223,26 @@ export function Settings() {
                 <NextIcon size="20" />
               </span>
             </Link>
+
+            {showMediaScraper && (
+              <Link
+                to="/settings/scraper"
+                className="flex min-h-[48px] flex-row items-center justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <span>{t("settings.scraper.title")}</span>
+                  {scrapingStatus?.scraping === true ? (
+                    <LoadingSpinner
+                      size={16}
+                      className="text-muted-foreground"
+                    />
+                  ) : null}
+                </span>
+                <span aria-hidden="true">
+                  <NextIcon size="20" />
+                </span>
+              </Link>
+            )}
 
             {Capacitor.isNativePlatform() && (
               <Link

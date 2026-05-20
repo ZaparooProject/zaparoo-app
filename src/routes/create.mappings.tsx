@@ -25,7 +25,7 @@ export const Route = createFileRoute("/create/mappings")({
   component: Mappings,
 });
 
-export function Mappings() {
+function Mappings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.mappings.title"));
   const connected = useStatusStore((state) => state.connected);

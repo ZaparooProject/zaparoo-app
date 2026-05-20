@@ -7,6 +7,7 @@ import {
   IndexResponse,
   InboxMessage,
   PlayingResponse,
+  ScrapingStatusNotification,
   TokenResponse,
 } from "./models";
 import { SafeAreaInsets } from "./safeArea";
@@ -71,6 +72,9 @@ interface StatusState {
 
   gamesIndex: IndexResponse;
   setGamesIndex: (index: IndexResponse) => void;
+
+  scrapingStatus: ScrapingStatusNotification | null;
+  setScrapingStatus: (status: ScrapingStatusNotification | null) => void;
 
   playing: PlayingResponse;
   setPlaying: (playing: PlayingResponse) => void;
@@ -173,6 +177,9 @@ export const useStatusStore = create<StatusState>()((set) => ({
     totalFiles: 0,
   },
   setGamesIndex: (index) => set({ gamesIndex: index }),
+
+  scrapingStatus: null,
+  setScrapingStatus: (status) => set({ scrapingStatus: status }),
 
   playing: {
     systemId: "",
@@ -394,6 +401,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
         currentStepDisplay: "",
         totalFiles: 0,
       },
+      scrapingStatus: null,
       playing: {
         systemId: "",
         systemName: "",

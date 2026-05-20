@@ -17,6 +17,7 @@ export function MediaDatabaseCard() {
   const connected = useStatusStore((state) => state.connected);
   const connectionState = useStatusStore((state) => state.connectionState);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
+  const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
   const isLiveConnected = connectionState === ConnectionState.CONNECTED;
   const [cancelRequested, setCancelRequested] = useState(false);
   const [resumeRequested, setResumeRequested] = useState(false);
@@ -24,6 +25,7 @@ export function MediaDatabaseCard() {
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
 
   const isPaused = gamesIndex.paused === true;
+  const isScraping = scrapingStatus?.scraping === true;
 
   // Derive isCancelling: true only if we requested cancel AND indexing is still happening
   const isCancelling = cancelRequested && gamesIndex.indexing;
@@ -311,15 +313,21 @@ export function MediaDatabaseCard() {
             placeholder={t("settings.updateDb.allSystems")}
             mode="multi"
             onClick={() => setSystemSelectorOpen(true)}
-            disabled={!connected}
+            disabled={!connected || isScraping}
           />
+
+          {isScraping ? (
+            <div className="text-muted-foreground text-sm">
+              {t("settings.updateDb.blockedByScrape")}
+            </div>
+          ) : null}
 
           <div data-tour="update-database">
             <Button
               label={t("settings.updateDb")}
               icon={<DatabaseIcon size="20" />}
               className="w-full"
-              disabled={!connected || isIndexing || isOptimizing}
+              disabled={!connected || isIndexing || isOptimizing || isScraping}
               onClick={handleUpdateDatabase}
             />
           </div>

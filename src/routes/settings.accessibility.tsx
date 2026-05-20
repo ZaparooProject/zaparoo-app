@@ -23,7 +23,7 @@ const TEXT_ZOOM_PRESETS = [
   { key: "extraLarge", value: 1.3 },
 ] as const;
 
-export function AccessibilitySettings() {
+function AccessibilitySettings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("settings.accessibility.title"));
 

@@ -42,6 +42,7 @@ import {
   PlayingResponse,
   PlaytimeLimitReachedParams,
   PlaytimeLimitWarningParams,
+  ScrapingStatusNotification,
   TokenResponse,
 } from "@/lib/models";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
@@ -95,6 +96,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setConnectionError,
     setPlaying,
     setGamesIndex,
+    setScrapingStatus,
     setLastToken,
     addDeviceHistory,
     setDeviceHistory,
@@ -115,6 +117,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setConnectionError: state.setConnectionError,
       setPlaying: state.setPlaying,
       setGamesIndex: state.setGamesIndex,
+      setScrapingStatus: state.setScrapingStatus,
       setLastToken: state.setLastToken,
       addDeviceHistory: state.addDeviceHistory,
       setDeviceHistory: state.setDeviceHistory,
@@ -216,6 +219,20 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             ) {
               logger.log("Database state changed, invalidating media query");
               queryClient.invalidateQueries({ queryKey: ["media"] });
+            }
+            break;
+          }
+
+          case Notification.MediaScraping: {
+            const params = notification.params as ScrapingStatusNotification;
+            logger.log("mediaScraping", params);
+            setScrapingStatus(params);
+            if (params.done || !params.scraping) {
+              queryClient.invalidateQueries({ queryKey: ["media"] });
+              queryClient.invalidateQueries({ queryKey: ["tags"] });
+              queryClient.invalidateQueries({
+                queryKey: ["infiniteMediaSearch"],
+              });
             }
             break;
           }
@@ -366,6 +383,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     [
       setPlaying,
       setGamesIndex,
+      setScrapingStatus,
       setLastToken,
       queryClient,
       t,
@@ -424,6 +442,27 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               version: res.version,
               lastConnectedAt: Date.now(),
             });
+            if (isCoreFeatureAvailable("mediaScrapers", res.version)) {
+              CoreAPI.mediaScrapeStatus()
+                .then((statusRes) => {
+                  if (isCancelled(statusRes)) {
+                    logger.log(
+                      "Media scrape status request was cancelled, skipping",
+                    );
+                    return;
+                  }
+                  setScrapingStatus(statusRes);
+                })
+                .catch((err) => {
+                  logger.error("Failed to fetch media scrape status:", err, {
+                    category: "api",
+                    action: "mediaScrapeStatus",
+                    severity: "warning",
+                  });
+                });
+            } else {
+              setScrapingStatus(null);
+            }
             if (isCoreFeatureAvailable("inbox", res.version)) {
               CoreAPI.inbox()
                 .then((inboxRes) => {
@@ -557,6 +596,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setCoreVersion,
     setCorePlatform,
     setCoreVersionPending,
+    setScrapingStatus,
     setInboxMessages,
     setInboxModalOpen,
     queryClient,

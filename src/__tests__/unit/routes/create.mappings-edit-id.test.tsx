@@ -1,20 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, waitFor } from "../../../test-utils";
 
-const { mockNavigate, mockToastError, mockParams } = vi.hoisted(() => ({
-  mockNavigate: vi.fn(),
-  mockToastError: vi.fn(),
-  mockParams: { current: { id: "" } },
-}));
+const { componentRef, mockNavigate, mockToastError, mockParams } = vi.hoisted(
+  () => ({
+    componentRef: { current: null as any },
+    mockNavigate: vi.fn(),
+    mockToastError: vi.fn(),
+    mockParams: { current: { id: "" } },
+  }),
+);
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
   return {
     ...actual,
-    createFileRoute: () => (options: any) => ({
-      options,
-      useParams: () => mockParams.current,
-    }),
+    createFileRoute: () => (options: any) => {
+      componentRef.current = options.component;
+      return {
+        options,
+        useParams: () => mockParams.current,
+      };
+    },
     useNavigate: () => mockNavigate,
   };
 });
@@ -32,7 +38,9 @@ vi.mock("@/routes/-pages/MappingEditor", () => ({
   MappingEditor: (props: { id?: number }) => mockMappingEditor(props),
 }));
 
-import { EditMapping } from "@/routes/create.mappings_.edit_.$id";
+import "@/routes/create.mappings_.edit_.$id";
+
+const getEditMapping = () => componentRef.current;
 
 describe("EditMapping route wrapper", () => {
   beforeEach(() => {
@@ -45,6 +53,7 @@ describe("EditMapping route wrapper", () => {
 
   it("should render MappingEditor with parsed numeric id when id is valid", () => {
     mockParams.current = { id: "42" };
+    const EditMapping = getEditMapping();
     render(<EditMapping />);
     expect(mockMappingEditor).toHaveBeenCalledWith({ id: 42 });
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -53,6 +62,7 @@ describe("EditMapping route wrapper", () => {
 
   it("should redirect to list with toast when id is non-numeric", async () => {
     mockParams.current = { id: "abc" };
+    const EditMapping = getEditMapping();
     render(<EditMapping />);
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith({
@@ -68,6 +78,7 @@ describe("EditMapping route wrapper", () => {
 
   it("should redirect when id is zero", async () => {
     mockParams.current = { id: "0" };
+    const EditMapping = getEditMapping();
     render(<EditMapping />);
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith({
@@ -83,6 +94,7 @@ describe("EditMapping route wrapper", () => {
 
   it("should redirect when id is negative", async () => {
     mockParams.current = { id: "-5" };
+    const EditMapping = getEditMapping();
     render(<EditMapping />);
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith({
@@ -98,6 +110,7 @@ describe("EditMapping route wrapper", () => {
 
   it("should redirect when id is empty string", async () => {
     mockParams.current = { id: "" };
+    const EditMapping = getEditMapping();
     render(<EditMapping />);
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith({

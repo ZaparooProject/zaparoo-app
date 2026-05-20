@@ -45,4 +45,10 @@ describe("isCoreFeatureAvailable", () => {
     expect(isCoreFeatureAvailable("testFeature", "2.4.9")).toBe(false);
     expect(isCoreFeatureAvailable("testFeature", "1.0.0")).toBe(false);
   });
+
+  it("should gate media scrapers behind Core 2.12.0", () => {
+    expect(FEATURE_GATES.mediaScrapers?.since).toBe("2.12.0");
+    expect(isCoreFeatureAvailable("mediaScrapers", "2.11.9")).toBe(false);
+    expect(isCoreFeatureAvailable("mediaScrapers", "2.12.0")).toBe(true);
+  });
 });

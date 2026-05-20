@@ -31,6 +31,7 @@ interface SystemSelectorProps {
   title?: string;
   includeAllOption?: boolean;
   defaultSelection?: string; // When selectedSystems is empty, what should be shown as selected (e.g., "all" or undefined for nothing)
+  allowedSystemIds?: string[];
 }
 
 interface GroupedSystems {
@@ -48,6 +49,7 @@ export function SystemSelector({
   title,
   includeAllOption = false,
   defaultSelection,
+  allowedSystemIds,
 }: SystemSelectorProps) {
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
@@ -89,7 +91,11 @@ export function SystemSelector({
       return { filteredSystems: [], categories: [] };
     }
 
-    const systems = systemsData.systems;
+    const systems = allowedSystemIds?.length
+      ? systemsData.systems.filter((system) =>
+          allowedSystemIds.includes(system.id),
+        )
+      : systemsData.systems;
 
     // Group systems by category
     const grouped: GroupedSystems = {};
@@ -142,7 +148,7 @@ export function SystemSelector({
     filtered.sort((a, b) => compareStrings(a.name, b.name));
 
     return { filteredSystems: filtered, categories };
-  }, [systemsData, debouncedSearchQuery, selectedCategory]);
+  }, [systemsData, allowedSystemIds, debouncedSearchQuery, selectedCategory]);
 
   // Handle system selection
   const handleSystemSelect = useCallback(

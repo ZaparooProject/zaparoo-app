@@ -92,7 +92,7 @@ function getAuthProvider(
   return null;
 }
 
-export function OnlinePage() {
+function OnlinePage() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("online.title"));
   const router = useRouter();

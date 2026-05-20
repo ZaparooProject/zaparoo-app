@@ -5,6 +5,6 @@ export const Route = createFileRoute("/create/mappings_/new")({
   component: NewMapping,
 });
 
-export function NewMapping() {
+function NewMapping() {
   return <MappingEditor />;
 }

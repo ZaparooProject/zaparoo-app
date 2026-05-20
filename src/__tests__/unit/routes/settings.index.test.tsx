@@ -155,6 +155,7 @@ describe("Settings Index Route", () => {
     setInboxModalOpen: vi.fn(),
     coreVersion: null as string | null,
     coreVersionPending: false,
+    scrapingStatus: null,
   };
 
   beforeEach(() => {
@@ -243,6 +244,49 @@ describe("Settings Index Route", () => {
       expect(screen.getByText("中文")).toBeInTheDocument();
       expect(screen.getByText("日本語")).toBeInTheDocument();
       expect(screen.getByText("한국어")).toBeInTheDocument();
+    });
+
+    it("should show scraper row for supported Core versions", () => {
+      mockUseStatusStore.mockImplementation((selector) =>
+        selector({
+          ...defaultStoreState,
+          coreVersion: "2.12.0",
+          coreVersionPending: false,
+        }),
+      );
+
+      renderComponent();
+
+      expect(
+        screen.getByText("settings.scraper.title").closest("a"),
+      ).toHaveAttribute("href", "/settings/scraper");
+    });
+
+    it("should show a spinner on the scraper row while scraping", () => {
+      mockUseStatusStore.mockImplementation((selector) =>
+        selector({
+          ...defaultStoreState,
+          coreVersion: "2.12.0",
+          coreVersionPending: false,
+          scrapingStatus: {
+            processed: 0,
+            total: 0,
+            matched: 0,
+            skipped: 0,
+            totalScraped: 0,
+            scraping: true,
+            done: false,
+            paused: false,
+          },
+        }),
+      );
+
+      renderComponent();
+
+      const scraperLink = screen
+        .getByText("settings.scraper.title")
+        .closest("a");
+      expect(scraperLink?.querySelector(".animate-spin")).toBeInTheDocument();
     });
   });
 
