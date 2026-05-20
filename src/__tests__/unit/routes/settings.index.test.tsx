@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "../../../test-utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Mock CoreAPI
@@ -258,7 +264,7 @@ describe("Settings Index Route", () => {
       renderComponent();
 
       expect(
-        screen.getByText("settings.scraper.title").closest("a"),
+        screen.getByRole("link", { name: "settings.scraper.title" }),
       ).toHaveAttribute("href", "/settings/scraper");
     });
 
@@ -283,10 +289,10 @@ describe("Settings Index Route", () => {
 
       renderComponent();
 
-      const scraperLink = screen
-        .getByText("settings.scraper.title")
-        .closest("a");
-      expect(scraperLink?.querySelector(".animate-spin")).toBeInTheDocument();
+      const scraperLink = screen.getByRole("link", {
+        name: "settings.scraper.title Loading",
+      });
+      expect(within(scraperLink).getByRole("status")).toBeInTheDocument();
     });
   });
 

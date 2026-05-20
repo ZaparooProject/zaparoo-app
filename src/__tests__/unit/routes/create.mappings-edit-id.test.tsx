@@ -1,9 +1,19 @@
+import type { ComponentType, RefObject } from "react";
+import type { Mock } from "vitest";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, waitFor } from "../../../test-utils";
 
+type RouteParams = { id: string };
+type RouteOptions = { component: ComponentType };
+
 const { componentRef, mockNavigate, mockToastError, mockParams } = vi.hoisted(
-  () => ({
-    componentRef: { current: null as any },
+  (): {
+    componentRef: RefObject<ComponentType | null>;
+    mockNavigate: Mock;
+    mockToastError: Mock;
+    mockParams: RefObject<RouteParams>;
+  } => ({
+    componentRef: { current: null },
     mockNavigate: vi.fn(),
     mockToastError: vi.fn(),
     mockParams: { current: { id: "" } },
@@ -11,10 +21,11 @@ const { componentRef, mockNavigate, mockToastError, mockParams } = vi.hoisted(
 );
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
+  const actual =
+    await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
-    createFileRoute: () => (options: any) => {
+    createFileRoute: () => (options: RouteOptions) => {
       componentRef.current = options.component;
       return {
         options,
@@ -40,7 +51,12 @@ vi.mock("@/routes/-pages/MappingEditor", () => ({
 
 import "@/routes/create.mappings_.edit_.$id";
 
-const getEditMapping = () => componentRef.current;
+const getEditMapping = () => {
+  if (!componentRef.current) {
+    throw new Error("EditMapping component was not captured");
+  }
+  return componentRef.current;
+};
 
 describe("EditMapping route wrapper", () => {
   beforeEach(() => {

@@ -454,6 +454,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
                   setScrapingStatus(statusRes);
                 })
                 .catch((err) => {
+                  setScrapingStatus(null);
                   logger.error("Failed to fetch media scrape status:", err, {
                     category: "api",
                     action: "mediaScrapeStatus",

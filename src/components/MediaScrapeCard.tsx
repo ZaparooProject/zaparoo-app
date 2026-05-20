@@ -109,11 +109,11 @@ export function MediaScrapeCard() {
   );
 
   const allowedSystemIds = useMemo(
-    () => selectedScraperInfo?.supportedSystems ?? [],
+    () => selectedScraperInfo?.supportedSystems ?? undefined,
     [selectedScraperInfo],
   );
   const eligibleSystemsData = useMemo(() => {
-    if (!systemsData || allowedSystemIds.length === 0) return systemsData;
+    if (!systemsData || allowedSystemIds === undefined) return systemsData;
     return {
       systems: systemsData.systems.filter((system) =>
         allowedSystemIds.includes(system.id),
@@ -122,7 +122,7 @@ export function MediaScrapeCard() {
   }, [systemsData, allowedSystemIds]);
 
   useEffect(() => {
-    if (allowedSystemIds.length === 0 || selectedSystems.length === 0) return;
+    if (allowedSystemIds === undefined || selectedSystems.length === 0) return;
     const nextSelectedSystems = selectedSystems.filter((systemId) =>
       allowedSystemIds.includes(systemId),
     );
@@ -139,9 +139,13 @@ export function MediaScrapeCard() {
   const handleScrape = async () => {
     const totalSystems = eligibleSystemsData?.systems?.length ?? 0;
     const systemsToScrape =
-      selectedSystems.length > 0 && selectedSystems.length < totalSystems
-        ? selectedSystems
-        : undefined;
+      allowedSystemIds !== undefined
+        ? selectedSystems.length > 0
+          ? selectedSystems
+          : allowedSystemIds
+        : selectedSystems.length > 0 && selectedSystems.length < totalSystems
+          ? selectedSystems
+          : undefined;
 
     setScrapingStatus(null);
     setStartRequested(true);

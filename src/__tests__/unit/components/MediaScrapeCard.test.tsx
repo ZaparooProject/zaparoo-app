@@ -121,6 +121,74 @@ describe("MediaScrapeCard", () => {
     await waitFor(() => {
       expect(CoreAPI.mediaScrape).toHaveBeenCalledWith({
         scraperId: "gamelist.xml",
+        systems: ["snes"],
+        force: false,
+      });
+    });
+  });
+
+  it("should not offer systems when the scraper supports none", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.scrapers).mockResolvedValueOnce({
+      scrapers: [
+        {
+          id: "empty-scraper",
+          name: "Empty scraper",
+          supportedSystems: [],
+        },
+      ],
+    });
+
+    render(<MediaScrapeCard />);
+
+    await screen.findByRole("option", { name: "Empty scraper" });
+    await user.selectOptions(
+      screen.getByRole("combobox", {
+        name: "settings.scrapeMedia.scraperPlaceholder",
+      }),
+      "empty-scraper",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "settings.scrapeMedia" }),
+    );
+
+    await waitFor(() => {
+      expect(CoreAPI.mediaScrape).toHaveBeenCalledWith({
+        scraperId: "empty-scraper",
+        systems: [],
+        force: false,
+      });
+    });
+  });
+
+  it("should treat omitted scraper support as all systems", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.scrapers).mockResolvedValueOnce({
+      scrapers: [
+        {
+          id: "legacy-scraper",
+          name: "Legacy scraper",
+          supportedSystems: undefined as unknown as string[],
+        },
+      ],
+    });
+
+    render(<MediaScrapeCard />);
+
+    await screen.findByRole("option", { name: "Legacy scraper" });
+    await user.selectOptions(
+      screen.getByRole("combobox", {
+        name: "settings.scrapeMedia.scraperPlaceholder",
+      }),
+      "legacy-scraper",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "settings.scrapeMedia" }),
+    );
+
+    await waitFor(() => {
+      expect(CoreAPI.mediaScrape).toHaveBeenCalledWith({
+        scraperId: "legacy-scraper",
         systems: undefined,
         force: false,
       });

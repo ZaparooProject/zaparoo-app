@@ -91,11 +91,12 @@ export function SystemSelector({
       return { filteredSystems: [], categories: [] };
     }
 
-    const systems = allowedSystemIds?.length
-      ? systemsData.systems.filter((system) =>
-          allowedSystemIds.includes(system.id),
-        )
-      : systemsData.systems;
+    const systems =
+      allowedSystemIds === undefined
+        ? systemsData.systems
+        : systemsData.systems.filter((system) =>
+            allowedSystemIds.includes(system.id),
+          );
 
     // Group systems by category
     const grouped: GroupedSystems = {};

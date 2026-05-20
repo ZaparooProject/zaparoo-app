@@ -933,6 +933,47 @@ describe("connection event handling", () => {
     });
   });
 
+  it("should clear stale scraper status when fetching scraper status fails", async () => {
+    useStatusStore.setState({
+      scrapingStatus: {
+        scraperId: "gamelist.xml",
+        processed: 1,
+        total: 2,
+        matched: 1,
+        skipped: 0,
+        totalScraped: 12,
+        scraping: true,
+        done: false,
+        paused: false,
+      },
+    });
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "2.12.0",
+      platform: "test",
+    });
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockRejectedValueOnce(
+      new Error("status failed"),
+    );
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.mediaScrapeStatus).toHaveBeenCalled();
+      expect(useStatusStore.getState().scrapingStatus).toBeNull();
+    });
+  });
+
   it("should merge platform, version, and lastConnectedAt into deviceHistory entry", async () => {
     render(
       <ConnectionProvider>

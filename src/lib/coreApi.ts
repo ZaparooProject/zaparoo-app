@@ -795,7 +795,11 @@ class CoreApi {
             logger.debug(response);
             resolve(response);
           } catch (e) {
-            logger.error("Error processing scrapers response:", e);
+            logger.error("Error processing scrapers response:", e, {
+              category: "coreApi",
+              action: "scrapers",
+              severity: "error",
+            });
             reject(
               new Error(
                 `Failed to process scrapers response: ${e instanceof Error ? e.message : String(e)}`,
@@ -804,7 +808,11 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Scrapers API call failed:", error);
+          logger.error("Scrapers API call failed:", error, {
+            category: "coreApi",
+            action: "scrapers",
+            severity: "error",
+          });
           reject(error);
         });
     });
@@ -817,7 +825,11 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Media scrape API call failed:", error);
+          logger.error("Media scrape API call failed:", error, {
+            category: "coreApi",
+            action: "mediaScrape",
+            severity: "error",
+          });
           reject(error);
         });
     });
@@ -832,7 +844,11 @@ class CoreApi {
             logger.debug(response);
             resolve(response);
           } catch (e) {
-            logger.error("Error processing media scrape status response:", e);
+            logger.error("Error processing media scrape status response:", e, {
+              category: "coreApi",
+              action: "mediaScrapeStatus",
+              severity: "error",
+            });
             reject(
               new Error(
                 `Failed to process media scrape status response: ${e instanceof Error ? e.message : String(e)}`,
@@ -841,7 +857,11 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Media scrape status API call failed:", error);
+          logger.error("Media scrape status API call failed:", error, {
+            category: "coreApi",
+            action: "mediaScrapeStatus",
+            severity: "error",
+          });
           reject(error);
         });
     });
@@ -856,7 +876,11 @@ class CoreApi {
             logger.debug(response);
             resolve(response);
           } catch (e) {
-            logger.error("Error processing media scrape cancel response:", e);
+            logger.error("Error processing media scrape cancel response:", e, {
+              category: "coreApi",
+              action: "mediaScrapeCancel",
+              severity: "error",
+            });
             reject(
               new Error(
                 `Failed to process media scrape cancel response: ${e instanceof Error ? e.message : String(e)}`,
@@ -865,7 +889,11 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Media scrape cancel API call failed:", error);
+          logger.error("Media scrape cancel API call failed:", error, {
+            category: "coreApi",
+            action: "mediaScrapeCancel",
+            severity: "error",
+          });
           reject(error);
         });
     });
@@ -880,7 +908,11 @@ class CoreApi {
             logger.debug(response);
             resolve(response);
           } catch (e) {
-            logger.error("Error processing media scrape resume response:", e);
+            logger.error("Error processing media scrape resume response:", e, {
+              category: "coreApi",
+              action: "mediaScrapeResume",
+              severity: "error",
+            });
             reject(
               new Error(
                 `Failed to process media scrape resume response: ${e instanceof Error ? e.message : String(e)}`,
@@ -889,7 +921,11 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Media scrape resume API call failed:", error);
+          logger.error("Media scrape resume API call failed:", error, {
+            category: "coreApi",
+            action: "mediaScrapeResume",
+            severity: "error",
+          });
           reject(error);
         });
     });
