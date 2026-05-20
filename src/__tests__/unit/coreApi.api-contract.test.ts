@@ -89,6 +89,91 @@ describe("CoreAPI API Contract", () => {
       expect(sentData.method).toBe("media.generate.resume");
       expect(sentData.params).toBeUndefined();
     });
+
+    it("scrapers should return available scraper metadata", async () => {
+      const promise = CoreAPI.scrapers();
+      simulateResponse(mockSend, {
+        scrapers: [
+          {
+            id: "gamelist.xml",
+            name: "ES gamelist.xml",
+            supportedSystems: ["snes"],
+          },
+        ],
+      });
+
+      await expect(promise).resolves.toEqual({
+        scrapers: [
+          {
+            id: "gamelist.xml",
+            name: "ES gamelist.xml",
+            supportedSystems: ["snes"],
+          },
+        ],
+      });
+      expect(JSON.parse(mockSend.mock.calls[0]![0]).method).toBe("scrapers");
+    });
+
+    it("mediaScrape should send selected scraper parameters", async () => {
+      const promise = CoreAPI.mediaScrape({
+        scraperId: "gamelist.xml",
+        systems: ["snes"],
+        force: true,
+      });
+      simulateResponse(mockSend, null);
+      await promise;
+
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("media.scrape");
+      expect(sentData.params).toEqual({
+        scraperId: "gamelist.xml",
+        systems: ["snes"],
+        force: true,
+      });
+    });
+
+    it("mediaScrapeStatus should return scraper progress", async () => {
+      const status = {
+        scraperId: "gamelist.xml",
+        systemId: "snes",
+        processed: 1,
+        total: 2,
+        matched: 1,
+        skipped: 0,
+        totalScraped: 12,
+        scraping: true,
+        done: false,
+        paused: false,
+      };
+      const promise = CoreAPI.mediaScrapeStatus();
+      simulateResponse(mockSend, status);
+
+      await expect(promise).resolves.toEqual(status);
+      expect(JSON.parse(mockSend.mock.calls[0]![0]).method).toBe(
+        "media.scrape.status",
+      );
+    });
+
+    it("mediaScrapeCancel and resume should return Core messages", async () => {
+      const cancelPromise = CoreAPI.mediaScrapeCancel();
+      simulateResponse(mockSend, { message: "scraping cancelled" });
+      await expect(cancelPromise).resolves.toEqual({
+        message: "scraping cancelled",
+      });
+
+      const resumePromise = CoreAPI.mediaScrapeResume();
+      simulateResponse(mockSend, { message: "Media scraping resumed" }, 1);
+      await expect(resumePromise).resolves.toEqual({
+        message: "Media scraping resumed",
+      });
+
+      expect(JSON.parse(mockSend.mock.calls[0]![0]).method).toBe(
+        "media.scrape.cancel",
+      );
+      expect(JSON.parse(mockSend.mock.calls[1]![0]).method).toBe(
+        "media.scrape.resume",
+      );
+    });
   });
 
   describe("Error Handling", () => {

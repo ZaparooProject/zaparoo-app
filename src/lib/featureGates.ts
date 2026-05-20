@@ -16,6 +16,11 @@ type FeatureGate = { since: string; marquee: boolean; labelKey: string };
 //   screenshot: { since: "2.0.0", marquee: true, labelKey: "features.screenshot" },
 export const FEATURE_GATES: Record<string, FeatureGate> = {
   inbox: { since: "2.8.0", marquee: false, labelKey: "features.inbox" },
+  mediaScrapers: {
+    since: "2.12.0",
+    marquee: false,
+    labelKey: "features.mediaScrapers",
+  },
 };
 
 export type FeatureId = keyof typeof FEATURE_GATES;

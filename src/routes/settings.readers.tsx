@@ -32,7 +32,7 @@ export const Route = createFileRoute("/settings/readers")({
   component: ReadersSettings,
 });
 
-export function ReadersSettings() {
+function ReadersSettings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("settings.readers.title"));
   const connected = useStatusStore((state) => state.connected);

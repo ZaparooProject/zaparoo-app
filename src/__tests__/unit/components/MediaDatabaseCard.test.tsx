@@ -49,6 +49,7 @@ const { ConnectionState, mockStore } = vi.hoisted(() => {
     connectionState: ConnectionState.CONNECTED as string,
     gamesIndex: {
       indexing: false,
+      optimizing: false,
       exists: true,
       totalFiles: 100,
       currentStep: 0,
@@ -56,6 +57,7 @@ const { ConnectionState, mockStore } = vi.hoisted(() => {
       currentStepDisplay: "",
     } as {
       indexing: boolean;
+      optimizing?: boolean;
       exists: boolean;
       totalFiles: number;
       currentStep: number;
@@ -63,6 +65,7 @@ const { ConnectionState, mockStore } = vi.hoisted(() => {
       currentStepDisplay: string;
       paused?: boolean;
     },
+    scrapingStatus: null as { scraping: boolean } | null,
     safeInsets: {
       top: "0px",
       bottom: "0px",
@@ -86,12 +89,14 @@ describe("MediaDatabaseCard", () => {
     mockStore.connectionState = ConnectionState.CONNECTED;
     mockStore.gamesIndex = {
       indexing: false,
+      optimizing: false,
       exists: true,
       totalFiles: 100,
       currentStep: 0,
       totalSteps: 0,
       currentStepDisplay: "",
     };
+    mockStore.scrapingStatus = null;
 
     // Default mock - database exists and ready
     vi.mocked(CoreAPI.media).mockResolvedValue({
@@ -141,6 +146,19 @@ describe("MediaDatabaseCard", () => {
       (button) => !button.textContent?.includes("settings.updateDb.allSystems"),
     );
     expect(updateButton).toBeDisabled();
+  });
+
+  it("should explain why database updates are disabled while scraping", () => {
+    mockStore.scrapingStatus = { scraping: true };
+
+    render(<MediaDatabaseCard />);
+
+    expect(
+      screen.getByRole("button", { name: "settings.updateDb" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText("settings.updateDb.blockedByScrape"),
+    ).toBeInTheDocument();
   });
 
   it("should call CoreAPI.mediaGenerate when button is clicked", async () => {

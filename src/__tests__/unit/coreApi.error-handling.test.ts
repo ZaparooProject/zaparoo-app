@@ -62,6 +62,15 @@ describe("CoreAPI Error Handling Coverage", () => {
     ["inbox", () => CoreAPI.inbox()],
     ["inboxDelete", () => CoreAPI.inboxDelete({ id: 1 })],
     ["inboxClear", () => CoreAPI.inboxClear()],
+    ["scrapers", () => CoreAPI.scrapers()],
+    [
+      "mediaScrape",
+      () =>
+        CoreAPI.mediaScrape({ scraperId: "gamelist.xml", systems: ["snes"] }),
+    ],
+    ["mediaScrapeStatus", () => CoreAPI.mediaScrapeStatus()],
+    ["mediaScrapeCancel", () => CoreAPI.mediaScrapeCancel()],
+    ["mediaScrapeResume", () => CoreAPI.mediaScrapeResume()],
   ];
 
   describe.each(errorTestCases)(

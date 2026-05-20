@@ -25,7 +25,7 @@ export const Route = createFileRoute("/create/nfc")({
   component: NfcUtils,
 });
 
-export function NfcUtils() {
+function NfcUtils() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.nfc.title"));
   const preferRemoteWriter = usePreferencesStore(

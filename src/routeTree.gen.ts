@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from "./routes/__root";
 import { Route as IndexRouteImport } from "./routes/index";
 import { Route as SettingsIndexRouteImport } from "./routes/settings.index";
 import { Route as CreateIndexRouteImport } from "./routes/create.index";
+import { Route as SettingsScraperRouteImport } from "./routes/settings.scraper";
 import { Route as SettingsReadersRouteImport } from "./routes/settings.readers";
 import { Route as SettingsPlaytimeRouteImport } from "./routes/settings.playtime";
 import { Route as SettingsOnlineRouteImport } from "./routes/settings.online";
@@ -43,6 +44,11 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
 const CreateIndexRoute = CreateIndexRouteImport.update({
   id: "/create/",
   path: "/create/",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsScraperRoute = SettingsScraperRouteImport.update({
+  id: "/settings/scraper",
+  path: "/settings/scraper",
   getParentRoute: () => rootRouteImport,
 } as any);
 const SettingsReadersRoute = SettingsReadersRouteImport.update({
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   "/settings/online": typeof SettingsOnlineRoute;
   "/settings/playtime": typeof SettingsPlaytimeRoute;
   "/settings/readers": typeof SettingsReadersRoute;
+  "/settings/scraper": typeof SettingsScraperRoute;
   "/create/": typeof CreateIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
   "/create/mappings/new": typeof CreateMappingsNewRoute;
@@ -169,6 +176,7 @@ export interface FileRoutesByTo {
   "/settings/online": typeof SettingsOnlineRoute;
   "/settings/playtime": typeof SettingsPlaytimeRoute;
   "/settings/readers": typeof SettingsReadersRoute;
+  "/settings/scraper": typeof SettingsScraperRoute;
   "/create": typeof CreateIndexRoute;
   "/settings": typeof SettingsIndexRoute;
   "/create/mappings/new": typeof CreateMappingsNewRoute;
@@ -192,6 +200,7 @@ export interface FileRoutesById {
   "/settings/online": typeof SettingsOnlineRoute;
   "/settings/playtime": typeof SettingsPlaytimeRoute;
   "/settings/readers": typeof SettingsReadersRoute;
+  "/settings/scraper": typeof SettingsScraperRoute;
   "/create/": typeof CreateIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
   "/create/mappings_/new": typeof CreateMappingsNewRoute;
@@ -216,6 +225,7 @@ export interface FileRouteTypes {
     | "/settings/online"
     | "/settings/playtime"
     | "/settings/readers"
+    | "/settings/scraper"
     | "/create/"
     | "/settings/"
     | "/create/mappings/new"
@@ -238,6 +248,7 @@ export interface FileRouteTypes {
     | "/settings/online"
     | "/settings/playtime"
     | "/settings/readers"
+    | "/settings/scraper"
     | "/create"
     | "/settings"
     | "/create/mappings/new"
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | "/settings/online"
     | "/settings/playtime"
     | "/settings/readers"
+    | "/settings/scraper"
     | "/create/"
     | "/settings/"
     | "/create/mappings_/new"
@@ -283,6 +295,7 @@ export interface RootRouteChildren {
   SettingsOnlineRoute: typeof SettingsOnlineRoute;
   SettingsPlaytimeRoute: typeof SettingsPlaytimeRoute;
   SettingsReadersRoute: typeof SettingsReadersRoute;
+  SettingsScraperRoute: typeof SettingsScraperRoute;
   CreateIndexRoute: typeof CreateIndexRoute;
   SettingsIndexRoute: typeof SettingsIndexRoute;
   CreateMappingsNewRoute: typeof CreateMappingsNewRoute;
@@ -311,6 +324,13 @@ declare module "@tanstack/react-router" {
       path: "/create";
       fullPath: "/create/";
       preLoaderRoute: typeof CreateIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/scraper": {
+      id: "/settings/scraper";
+      path: "/settings/scraper";
+      fullPath: "/settings/scraper";
+      preLoaderRoute: typeof SettingsScraperRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/settings/readers": {
@@ -451,6 +471,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsOnlineRoute: SettingsOnlineRoute,
   SettingsPlaytimeRoute: SettingsPlaytimeRoute,
   SettingsReadersRoute: SettingsReadersRoute,
+  SettingsScraperRoute: SettingsScraperRoute,
   CreateIndexRoute: CreateIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   CreateMappingsNewRoute: CreateMappingsNewRoute,

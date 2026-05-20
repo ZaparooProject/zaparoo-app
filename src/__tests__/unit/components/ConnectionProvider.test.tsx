@@ -68,6 +68,16 @@ vi.mock("../../../lib/coreApi", () => ({
     tokens: vi.fn().mockResolvedValue({ last: null }),
     version: vi.fn().mockResolvedValue({ version: "2.5.0", platform: "test" }),
     inbox: vi.fn().mockResolvedValue({ messages: [] }),
+    mediaScrapeStatus: vi.fn().mockResolvedValue({
+      processed: 0,
+      total: 0,
+      matched: 0,
+      skipped: 0,
+      totalScraped: 0,
+      scraping: false,
+      done: false,
+      paused: false,
+    }),
   },
   getDeviceAddress: vi.fn(() => "192.168.1.100:7497"),
   getWsUrl: vi.fn(() => "ws://192.168.1.100:7497"),
@@ -598,6 +608,54 @@ describe("notification processing", () => {
     });
   });
 
+  describe("media.scraping", () => {
+    it("should update scraper status state", async () => {
+      const mediaScrapingNotification: NotificationRequest = {
+        method: Notification.MediaScraping,
+        params: {
+          scraperId: "gamelist.xml",
+          systemId: "snes",
+          processed: 42,
+          total: 100,
+          matched: 38,
+          skipped: 4,
+          totalScraped: 1200,
+          scraping: true,
+          done: false,
+          paused: true,
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        mediaScrapingNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().scrapingStatus).toMatchObject({
+          scraperId: "gamelist.xml",
+          systemId: "snes",
+          processed: 42,
+          total: 100,
+          matched: 38,
+          skipped: 4,
+          totalScraped: 1200,
+          scraping: true,
+          done: false,
+          paused: true,
+        });
+      });
+    });
+  });
+
   describe("error handling", () => {
     it("should not update state when processReceived returns null", async () => {
       vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(null);
@@ -807,6 +865,112 @@ describe("connection event handling", () => {
       expect(CoreAPI.inbox).not.toHaveBeenCalled();
       expect(useStatusStore.getState().inboxMessages).toEqual([]);
       expect(useStatusStore.getState().inboxModalOpen).toBe(false);
+    });
+  });
+
+  it("should fetch scraper status when connected Core supports media scrapers", async () => {
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "2.12.0",
+      platform: "test",
+    });
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockResolvedValueOnce({
+      scraperId: "gamelist.xml",
+      processed: 1,
+      total: 2,
+      matched: 1,
+      skipped: 0,
+      totalScraped: 12,
+      scraping: true,
+      done: false,
+      paused: false,
+    });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.mediaScrapeStatus).toHaveBeenCalled();
+      expect(useStatusStore.getState().scrapingStatus).toMatchObject({
+        scraperId: "gamelist.xml",
+        scraping: true,
+        totalScraped: 12,
+      });
+    });
+  });
+
+  it("should not fetch scraper status when connected Core is below media scraper gate", async () => {
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "2.11.9",
+      platform: "test",
+    });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().coreVersion).toBe("2.11.9");
+      expect(CoreAPI.mediaScrapeStatus).not.toHaveBeenCalled();
+    });
+  });
+
+  it("should clear stale scraper status when fetching scraper status fails", async () => {
+    useStatusStore.setState({
+      scrapingStatus: {
+        scraperId: "gamelist.xml",
+        processed: 1,
+        total: 2,
+        matched: 1,
+        skipped: 0,
+        totalScraped: 12,
+        scraping: true,
+        done: false,
+        paused: false,
+      },
+    });
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "2.12.0",
+      platform: "test",
+    });
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockRejectedValueOnce(
+      new Error("status failed"),
+    );
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.mediaScrapeStatus).toHaveBeenCalled();
+      expect(useStatusStore.getState().scrapingStatus).toBeNull();
     });
   });
 

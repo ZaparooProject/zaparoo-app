@@ -17,7 +17,7 @@ export const Route = createFileRoute("/create/")({
   component: Create,
 });
 
-export function Create() {
+function Create() {
   const { t } = useTranslation();
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t("create.title"));
   const connected = useStatusStore((state) => state.connected);
