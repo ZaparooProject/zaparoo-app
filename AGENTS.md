@@ -120,6 +120,7 @@ docs/                focused guides for Capacitor, deployment, and testing
 ## Internationalization
 
 - Source of truth: `src/translations/en-US.json`.
+- Spanish translations are available in `src/translations/es-ES.json`; continue adding new UI strings to `en-US` only.
 - Do not edit generated or fallback locale files unless explicitly requested.
 - In tests, `t()` returns the key. Assert against keys, not human strings.
 
