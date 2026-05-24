@@ -413,6 +413,23 @@ describe("Index Route Integration", () => {
 
       expect(mockScanOperationsState.handleCameraScan).toHaveBeenCalledTimes(1);
     });
+
+    it("should open controls modal when remote controls button is clicked", async () => {
+      const user = userEvent.setup();
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: /scan.remoteKeyboard/i }),
+      );
+
+      expect(
+        screen.getByRole("dialog", { name: "remoteKeyboard.title" }),
+      ).toBeInTheDocument();
+    });
   });
 
   describe("Connection Status", () => {

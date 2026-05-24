@@ -18,6 +18,7 @@ import "react-simple-keyboard/build/css/index.css";
 import { SlideModal } from "@/components/SlideModal";
 import { Segmented } from "@/components/wui/Segmented";
 import { CoreAPI } from "@/lib/coreApi";
+import { logger } from "@/lib/logger";
 import { useStatusStore } from "@/lib/store";
 
 type KeyboardLayoutName = "default" | "shift" | "symbols" | "fn";
@@ -230,8 +231,13 @@ export function RemoteKeyboardModal(props: {
     sendQueueRef.current = sendQueueRef.current
       .catch(() => undefined)
       .then(() => CoreAPI.inputKeyboard({ keys }))
-      .catch(() => {
+      .catch((error) => {
         const message = t("remoteKeyboard.sendError");
+        logger.error(message, error, {
+          category: "api",
+          action: "remoteKeyboard.send",
+          severity: "error",
+        });
         setError(message);
         toast.error(message);
       });
@@ -264,8 +270,13 @@ export function RemoteKeyboardModal(props: {
       .then((result) => {
         setScreenshot(result);
       })
-      .catch(() => {
+      .catch((error) => {
         const message = t("remoteKeyboard.screenshotError");
+        logger.error(message, error, {
+          category: "api",
+          action: "remoteKeyboard.screenshot",
+          severity: "error",
+        });
         setError(message);
         toast.error(message);
       })

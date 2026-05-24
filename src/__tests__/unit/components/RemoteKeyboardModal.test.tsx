@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useStatusStore } from "@/lib/store";
 import { RemoteKeyboardModal } from "@/components/RemoteKeyboardModal";
 import { CoreAPI } from "@/lib/coreApi";
+import toast from "react-hot-toast";
 
 interface KeyboardMockProps {
   layout: Record<string, string[]>;
@@ -38,6 +39,7 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
+    reset: vi.fn(),
     inputKeyboard: vi.fn().mockResolvedValue(undefined),
     screenshot: vi.fn().mockResolvedValue({
       path: "/media/fat/screenshots/MiSTer.png",
@@ -50,6 +52,7 @@ vi.mock("@/lib/coreApi", () => ({
 describe("RemoteKeyboardModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    CoreAPI.reset();
     useStatusStore.setState({ connected: true, corePlatform: null });
   });
 
@@ -201,6 +204,56 @@ describe("RemoteKeyboardModal", () => {
     expect(
       screen.queryByAltText("remoteKeyboard.screenshotAlt"),
     ).not.toBeInTheDocument();
+  });
+
+  it("should show loading state while capturing screenshot", async () => {
+    const user = userEvent.setup();
+    let resolveScreenshot: (
+      value: Awaited<ReturnType<typeof CoreAPI.screenshot>>,
+    ) => void;
+    vi.mocked(CoreAPI.screenshot).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveScreenshot = resolve;
+      }),
+    );
+
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+
+    const screenshotButton = screen.getByRole("button", {
+      name: "remoteKeyboard.screenshotAction",
+    });
+    await user.click(screenshotButton);
+
+    expect(screenshotButton).toBeDisabled();
+    expect(screenshotButton).toHaveAttribute("aria-busy", "true");
+
+    resolveScreenshot!({
+      path: "/media/fat/screenshots/loading.png",
+      data: "iVBORw0KGgo=",
+      size: 12,
+    });
+
+    await waitFor(() => {
+      expect(screenshotButton).not.toBeDisabled();
+    });
+  });
+
+  it("should show an error when screenshot capture fails", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.screenshot).mockRejectedValueOnce(new Error("failed"));
+
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "remoteKeyboard.screenshotAction",
+      }),
+    );
+
+    expect(
+      await screen.findByText("remoteKeyboard.screenshotError"),
+    ).toBeInTheDocument();
+    expect(toast.error).toHaveBeenCalledWith("remoteKeyboard.screenshotError");
   });
 
   it("should send literal key presses from keyboard mode", async () => {

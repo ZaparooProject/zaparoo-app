@@ -55,7 +55,9 @@ export function Segmented<T extends string>({
 
   return (
     <div className="flex flex-col">
-      <label className={labelHidden ? "sr-only" : "mb-1 block"}>{label}</label>
+      <label className={classNames("mb-1 block", { "sr-only": labelHidden })}>
+        {label}
+      </label>
       <div
         role="radiogroup"
         aria-label={label}

@@ -177,6 +177,48 @@ describe("CoreAPI", () => {
     expect(sentData.params).toEqual({ buttons: "^^vv<><>BA{start}" });
   });
 
+  it("should resolve screenshot responses", async () => {
+    const promise = CoreAPI.screenshot();
+
+    expect(mockSend).toHaveBeenCalledOnce();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    expect(sentData.method).toBe("screenshot");
+    expect(sentData.params).toBeUndefined();
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: sentData.id,
+        result: {
+          path: "/media/fat/screenshots/MiSTer.png",
+          data: "iVBORw0KGgo=",
+          size: 12,
+        },
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    await expect(promise).resolves.toEqual({
+      path: "/media/fat/screenshots/MiSTer.png",
+      data: "iVBORw0KGgo=",
+      size: 12,
+    });
+  });
+
+  it("should reject invalid screenshot responses", async () => {
+    const promise = CoreAPI.screenshot();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: sentData.id,
+        result: { path: "/tmp/screenshot.png", data: "abc" },
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    await expect(promise).rejects.toThrow("Invalid screenshot response");
+  });
+
   it("should not queue input methods while disconnected", async () => {
     CoreAPI.setWsInstance({ isConnected: false, send: mockSend });
 
