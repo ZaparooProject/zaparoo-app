@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "../../../../test-utils";
+import userEvent from "@testing-library/user-event";
 import { ScanControls } from "../../../../components/home/ScanControls";
 import { ScanResult } from "../../../../lib/models";
 import { Capacitor } from "@capacitor/core";
@@ -68,6 +69,29 @@ describe("ScanControls", () => {
     });
     expect(cameraButton).toBeInTheDocument();
     expect(cameraButton).not.toBeDisabled();
+  });
+
+  it("renders remote keyboard button when handler is provided", async () => {
+    const user = userEvent.setup();
+    const onRemoteKeyboard = vi.fn();
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+
+    render(
+      <ScanControls
+        {...mockProps}
+        connected
+        onRemoteKeyboard={onRemoteKeyboard}
+      />,
+    );
+
+    const keyboardButton = screen.getByRole("button", {
+      name: /scan\.remoteKeyboard/i,
+    });
+    expect(keyboardButton).toBeInTheDocument();
+
+    await user.click(keyboardButton);
+
+    expect(onRemoteKeyboard).toHaveBeenCalledTimes(1);
   });
 
   it("does not render scan spinner on web platform", () => {

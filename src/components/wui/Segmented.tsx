@@ -3,6 +3,7 @@ import { useRef, type KeyboardEvent } from "react";
 
 interface SegmentedProps<T extends string> {
   label: string;
+  labelHidden?: boolean;
   help?: string;
   options: { value: T; label: string }[];
   value: T;
@@ -11,6 +12,7 @@ interface SegmentedProps<T extends string> {
 
 export function Segmented<T extends string>({
   label,
+  labelHidden = false,
   help,
   options,
   value,
@@ -53,7 +55,7 @@ export function Segmented<T extends string>({
 
   return (
     <div className="flex flex-col">
-      <label className="mb-1 block">{label}</label>
+      <label className={labelHidden ? "sr-only" : "mb-1 block"}>{label}</label>
       <div
         role="radiogroup"
         aria-label={label}

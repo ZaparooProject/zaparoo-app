@@ -20,6 +20,7 @@ import { LastScannedInfo } from "@/components/home/LastScannedInfo";
 import { NowPlayingInfo } from "@/components/home/NowPlayingInfo";
 import { HistoryModal } from "@/components/home/HistoryModal";
 import { StopConfirmModal } from "@/components/home/StopConfirmModal";
+import { RemoteKeyboardModal } from "@/components/RemoteKeyboardModal";
 import { useScanOperations } from "@/hooks/useScanOperations";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -72,6 +73,7 @@ export function Index() {
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
+  const [remoteKeyboardOpen, setRemoteKeyboardOpen] = useState(false);
   // Holds the deferred history-modal toggle that fires after the pro-purchase
   // modal closes. Tracked so we can cancel a pending toggle on unmount or
   // when another toggle arrives before the timer fires.
@@ -201,6 +203,8 @@ export function Index() {
           scanStatus={scanStatus}
           onScanButton={handleScanButton}
           onCameraScan={handleCameraScan}
+          connected={connected}
+          onRemoteKeyboard={() => setRemoteKeyboardOpen(true)}
         />
 
         <div>
@@ -224,6 +228,10 @@ export function Index() {
         historyData={history.data}
       />
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
+      <RemoteKeyboardModal
+        isOpen={remoteKeyboardOpen}
+        close={() => setRemoteKeyboardOpen(false)}
+      />
       <PurchaseModal />
       <StopConfirmModal
         isOpen={stopConfirmOpen}

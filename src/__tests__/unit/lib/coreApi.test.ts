@@ -155,6 +155,38 @@ describe("CoreAPI", () => {
     });
   });
 
+  it("should send input.keyboard with keys params", () => {
+    CoreAPI.inputKeyboard({ keys: "abc{enter}" }).catch(() => {
+      // Ignore timeout errors
+    });
+
+    expect(mockSend).toHaveBeenCalledOnce();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    expect(sentData.method).toBe("input.keyboard");
+    expect(sentData.params).toEqual({ keys: "abc{enter}" });
+  });
+
+  it("should send input.gamepad with buttons params", () => {
+    CoreAPI.inputGamepad({ buttons: "^^vv<><>BA{start}" }).catch(() => {
+      // Ignore timeout errors
+    });
+
+    expect(mockSend).toHaveBeenCalledOnce();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    expect(sentData.method).toBe("input.gamepad");
+    expect(sentData.params).toEqual({ buttons: "^^vv<><>BA{start}" });
+  });
+
+  it("should not queue input methods while disconnected", async () => {
+    CoreAPI.setWsInstance({ isConnected: false, send: mockSend });
+
+    await expect(CoreAPI.inputKeyboard({ keys: "a" })).rejects.toThrow(
+      "Request requires active connection",
+    );
+
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
   it("should have readers method returning ReadersResponse type", () => {
     // Test that readers method exists and has proper typing
     expect(typeof CoreAPI.readers).toBe("function");
