@@ -155,6 +155,80 @@ describe("CoreAPI", () => {
     });
   });
 
+  it("should send input.keyboard with keys params", () => {
+    CoreAPI.inputKeyboard({ keys: "abc{enter}" }).catch(() => {
+      // Ignore timeout errors
+    });
+
+    expect(mockSend).toHaveBeenCalledOnce();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    expect(sentData.method).toBe("input.keyboard");
+    expect(sentData.params).toEqual({ keys: "abc{enter}" });
+  });
+
+  it("should send input.gamepad with buttons params", () => {
+    CoreAPI.inputGamepad({ buttons: "^^vv<><>BA{start}" }).catch(() => {
+      // Ignore timeout errors
+    });
+
+    expect(mockSend).toHaveBeenCalledOnce();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    expect(sentData.method).toBe("input.gamepad");
+    expect(sentData.params).toEqual({ buttons: "^^vv<><>BA{start}" });
+  });
+
+  it("should resolve screenshot responses", async () => {
+    const promise = CoreAPI.screenshot();
+
+    expect(mockSend).toHaveBeenCalledOnce();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    expect(sentData.method).toBe("screenshot");
+    expect(sentData.params).toBeUndefined();
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: sentData.id,
+        result: {
+          path: "/media/fat/screenshots/MiSTer.png",
+          data: "iVBORw0KGgo=",
+          size: 12,
+        },
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    await expect(promise).resolves.toEqual({
+      path: "/media/fat/screenshots/MiSTer.png",
+      data: "iVBORw0KGgo=",
+      size: 12,
+    });
+  });
+
+  it("should reject invalid screenshot responses", async () => {
+    const promise = CoreAPI.screenshot();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: sentData.id,
+        result: { path: "/tmp/screenshot.png", data: "abc" },
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    await expect(promise).rejects.toThrow("Invalid screenshot response");
+  });
+
+  it("should not queue input methods while disconnected", async () => {
+    CoreAPI.setWsInstance({ isConnected: false, send: mockSend });
+
+    await expect(CoreAPI.inputKeyboard({ keys: "a" })).rejects.toThrow(
+      "Request requires active connection",
+    );
+
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
   it("should have readers method returning ReadersResponse type", () => {
     // Test that readers method exists and has proper typing
     expect(typeof CoreAPI.readers).toBe("function");

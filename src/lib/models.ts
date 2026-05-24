@@ -37,6 +37,9 @@ export enum Method {
   MediaScrapeStatus = "media.scrape.status",
   MediaScrapeCancel = "media.scrape.cancel",
   MediaScrapeResume = "media.scrape.resume",
+  InputKeyboard = "input.keyboard",
+  InputGamepad = "input.gamepad",
+  Screenshot = "screenshot",
 }
 
 export enum Notification {
@@ -69,6 +72,20 @@ export interface LaunchRequest {
 
 export interface WriteRequest {
   text: string;
+}
+
+export interface InputKeyboardRequest {
+  keys: string;
+}
+
+export interface InputGamepadRequest {
+  buttons: string;
+}
+
+export interface ScreenshotResponse {
+  path: string;
+  data: string;
+  size: number;
 }
 
 export interface SearchParams {

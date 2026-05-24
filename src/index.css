@@ -660,6 +660,190 @@
   }
 }
 
+.remote-keyboard-pad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.remote-keyboard-dpad {
+  display: grid;
+  grid-template-areas:
+    ". up ."
+    "left ok right"
+    ". down .";
+  grid-template-columns: repeat(3, 4rem);
+  grid-template-rows: repeat(3, 3.5rem);
+  gap: 0.35rem;
+}
+
+.remote-keyboard-pad-button,
+.remote-keyboard-pad-action {
+  border: 1px solid hsl(0 0% 100% / 13%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.7rem;
+  background: hsl(210 22% 15% / 80%);
+  color: hsl(0 0% 100%);
+  font-size: 1rem;
+  font-weight: 600;
+  transition:
+    opacity 0.1s,
+    transform 0.1s;
+}
+
+.remote-keyboard-pad-button:active,
+.remote-keyboard-pad-action:active {
+  transform: scale(0.96);
+  opacity: 0.8;
+}
+
+.remote-keyboard-pad-button:focus-visible,
+.remote-keyboard-pad-action:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px hsl(0 0% 100% / 50%),
+    0 0 0 4px hsl(var(--background));
+}
+
+.remote-keyboard-pad-up {
+  grid-area: up;
+}
+
+.remote-keyboard-pad-left {
+  grid-area: left;
+}
+
+.remote-keyboard-pad-ok {
+  grid-area: ok;
+  min-width: 4rem;
+}
+
+.remote-keyboard-pad-right {
+  grid-area: right;
+}
+
+.remote-keyboard-pad-down {
+  grid-area: down;
+}
+
+.remote-keyboard-pad-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.remote-keyboard-pad-action {
+  min-height: 3.5rem;
+  min-width: 4rem;
+  padding: 0 0.875rem;
+}
+
+.remote-keyboard-pad-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+.remote-keyboard-screenshot-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.remote-keyboard-screenshot-image {
+  max-height: 22rem;
+  width: 100%;
+  border: 1px solid hsl(0 0% 100% / 13%);
+  border-radius: 0.7rem;
+  background: hsl(0 0% 0% / 45%);
+  object-fit: contain;
+}
+
+.remote-keyboard-screenshot-path {
+  overflow-wrap: anywhere;
+  color: hsl(0 0% 100% / 75%);
+  font-size: 0.8rem;
+}
+
+.remote-keyboard-screenshot-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.remote-keyboard-screenshot-control {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid hsl(0 0% 100% / 13%);
+  border-radius: 0.7rem;
+  background: hsl(210 22% 15% / 80%);
+  color: hsl(0 0% 100%);
+  font-weight: 600;
+}
+
+.remote-keyboard-screenshot-control:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px hsl(0 0% 100% / 50%),
+    0 0 0 4px hsl(var(--background));
+}
+
+.remote-keyboard-wrapper .remote-keyboard {
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-row {
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-row .hg-button:not(:last-child) {
+  margin-right: 0;
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-row:not(:last-child) {
+  margin-bottom: 0.25rem;
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-button {
+  min-height: 2.5rem;
+  border: 1px solid hsl(0 0% 100% / 13%);
+  border-radius: 0.7rem;
+  background: hsl(210 22% 15% / 80%);
+  color: hsl(0 0% 100%);
+  box-shadow: none;
+  font-size: 1rem;
+  font-weight: 600;
+  transition:
+    opacity 0.1s,
+    transform 0.1s;
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-button:active {
+  transform: scale(0.96);
+  opacity: 0.8;
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px hsl(0 0% 100% / 50%),
+    0 0 0 4px hsl(var(--background));
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-button-space {
+  max-width: none;
+}
+
 /* Accessibility: Respect user's reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   *,

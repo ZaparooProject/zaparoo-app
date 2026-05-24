@@ -106,7 +106,8 @@
       "completeIntro": "Let's Zaparoo",
       "statusScanning": "Scanning for NFC tag",
       "statusSuccess": "Tag scanned successfully",
-      "statusError": "Tag scan failed"
+      "statusError": "Tag scan failed",
+      "remoteKeyboard": "Controls"
     },
     "create": {
       "title": "Create a New Tag",
@@ -712,7 +713,8 @@
     "features": {
       "requiresCoreVersion": "Requires Zaparoo Core v{{version}} or later",
       "inbox": "Notifications",
-      "mediaScrapers": "Scraper"
+      "mediaScrapers": "Scraper",
+      "remoteInput": "Remote input"
     },
     "inbox": {
       "title": "Notifications",
@@ -732,6 +734,32 @@
     },
     "deepLinks": {
       "invalidUrl": "Invalid link format"
+    },
+    "remoteKeyboard": {
+      "title": "Controls",
+      "mode": "Input mode",
+      "remoteMode": "Remote",
+      "keyboardMode": "Keyboard",
+      "up": "Up",
+      "down": "Down",
+      "left": "Left",
+      "right": "Right",
+      "ok": "OK",
+      "back": "Back",
+      "osd": "OSD",
+      "menu": "Menu",
+      "context": "Context",
+      "start": "Start",
+      "select": "Select",
+      "minus": "-",
+      "equals": "=",
+      "sendError": "Could not send keyboard input",
+      "screenshotAction": "Screenshot",
+      "screenshotAlt": "Captured platform screenshot",
+      "screenshotDownload": "Download",
+      "screenshotClear": "Clear",
+      "screenshotError": "Could not capture screenshot",
+      "disconnected": "Connect to a device before sending input"
     },
     "pairing": {
       "title": "Pair with Device",

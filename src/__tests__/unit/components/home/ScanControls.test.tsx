@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "../../../../test-utils";
+import userEvent from "@testing-library/user-event";
 import { ScanControls } from "../../../../components/home/ScanControls";
 import { ScanResult } from "../../../../lib/models";
+import { useStatusStore } from "../../../../lib/store";
 import { Capacitor } from "@capacitor/core";
 
 // Mock Capacitor
@@ -35,6 +37,7 @@ describe("ScanControls", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useStatusStore.setState({ coreVersion: null, coreVersionPending: false });
   });
 
   it("renders scan spinner when on native platform", () => {
@@ -68,6 +71,50 @@ describe("ScanControls", () => {
     });
     expect(cameraButton).toBeInTheDocument();
     expect(cameraButton).not.toBeDisabled();
+  });
+
+  it("renders remote keyboard button when handler is provided", async () => {
+    const user = userEvent.setup();
+    const onRemoteKeyboard = vi.fn();
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+
+    render(
+      <ScanControls
+        {...mockProps}
+        connected
+        onRemoteKeyboard={onRemoteKeyboard}
+      />,
+    );
+
+    const keyboardButton = screen.getByRole("button", {
+      name: /scan\.remoteKeyboard/i,
+    });
+    expect(keyboardButton).toBeInTheDocument();
+
+    await user.click(keyboardButton);
+
+    expect(onRemoteKeyboard).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables remote keyboard button when Core is too old", () => {
+    const onRemoteKeyboard = vi.fn();
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+    useStatusStore.setState({
+      coreVersion: "2.9.0",
+      coreVersionPending: false,
+    });
+
+    render(
+      <ScanControls
+        {...mockProps}
+        connected
+        onRemoteKeyboard={onRemoteKeyboard}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /scan\.remoteKeyboard/i }),
+    ).toBeDisabled();
   });
 
   it("does not render scan spinner on web platform", () => {

@@ -8,6 +8,8 @@ import {
   DeleteInboxRequest,
   HistoryResponse,
   InboxResponse,
+  InputGamepadRequest,
+  InputKeyboardRequest,
   LaunchRequest,
   LogDownloadResponse,
   MediaActiveUpdateRequest,
@@ -26,6 +28,7 @@ import {
   ScrapingStatusNotification,
   SearchParams,
   SearchResultsResponse,
+  ScreenshotResponse,
   SettingsResponse,
   SystemsResponse,
   TokensResponse,
@@ -295,6 +298,22 @@ class CoreApi {
     // Reset WebSocket manager (will be set by new connection)
     this.transport = null;
     this.send = () => logger.warn("WebSocket send is not initialized");
+  }
+
+  private callConnected(
+    method: Method,
+    params?: unknown,
+    signal?: AbortSignal,
+  ): Promise<unknown> {
+    if (signal?.aborted) {
+      return Promise.resolve({ cancelled: true });
+    }
+
+    if (!this.transport?.isConnected) {
+      return Promise.reject(new Error("Request requires active connection"));
+    }
+
+    return this.call(method, params, signal);
   }
 
   call(
@@ -629,6 +648,71 @@ class CoreApi {
         })
         .catch((error) => {
           logger.error("Run API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  inputKeyboard(params: InputKeyboardRequest): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.callConnected(Method.InputKeyboard, params)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Input keyboard API call failed:", error, {
+            category: "api",
+            action: "inputKeyboard",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
+
+  inputGamepad(params: InputGamepadRequest): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.callConnected(Method.InputGamepad, params)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Input gamepad API call failed:", error, {
+            category: "api",
+            action: "inputGamepad",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
+
+  screenshot(): Promise<ScreenshotResponse> {
+    return new Promise<ScreenshotResponse>((resolve, reject) => {
+      this.callConnected(Method.Screenshot)
+        .then((response) => {
+          if (
+            response &&
+            typeof response === "object" &&
+            "path" in response &&
+            "data" in response &&
+            "size" in response &&
+            typeof response.path === "string" &&
+            typeof response.data === "string" &&
+            typeof response.size === "number"
+          ) {
+            resolve(response as ScreenshotResponse);
+            return;
+          }
+
+          reject(new Error("Invalid screenshot response"));
+        })
+        .catch((error) => {
+          logger.error("Screenshot API call failed:", error, {
+            category: "api",
+            action: "screenshot",
+            severity: "error",
+          });
           reject(error);
         });
     });
