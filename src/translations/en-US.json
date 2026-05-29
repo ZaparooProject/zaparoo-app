@@ -757,8 +757,11 @@
       "screenshotAction": "Screenshot",
       "screenshotAlt": "Captured platform screenshot",
       "screenshotDownload": "Download",
+      "screenshotShare": "Share",
+      "screenshotShareTitle": "Zaparoo Screenshot",
       "screenshotClear": "Clear",
       "screenshotError": "Could not capture screenshot",
+      "screenshotShareError": "Could not share screenshot",
       "disconnected": "Connect to a device before sending input"
     },
     "pairing": {

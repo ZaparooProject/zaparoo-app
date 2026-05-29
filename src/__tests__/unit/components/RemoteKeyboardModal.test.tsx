@@ -4,6 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { useStatusStore } from "@/lib/store";
 import { RemoteKeyboardModal } from "@/components/RemoteKeyboardModal";
 import { CoreAPI } from "@/lib/coreApi";
+import { Capacitor } from "@capacitor/core";
+import { Directory, Filesystem } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
 import toast from "react-hot-toast";
 
 interface KeyboardMockProps {
@@ -52,6 +55,7 @@ vi.mock("@/lib/coreApi", () => ({
 describe("RemoteKeyboardModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
     CoreAPI.reset();
     useStatusStore.setState({ connected: true, corePlatform: null });
   });
@@ -192,6 +196,9 @@ describe("RemoteKeyboardModal", () => {
       "data:image/png;base64,iVBORw0KGgo=",
     );
     expect(
+      screen.queryByText("/media/fat/screenshots/MiSTer.png"),
+    ).not.toBeInTheDocument();
+    expect(
       screen.getByRole("link", {
         name: "remoteKeyboard.screenshotDownload",
       }),
@@ -204,6 +211,105 @@ describe("RemoteKeyboardModal", () => {
     expect(
       screen.queryByAltText("remoteKeyboard.screenshotAlt"),
     ).not.toBeInTheDocument();
+  });
+
+  it("should share screenshots on native platforms", async () => {
+    const user = userEvent.setup();
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "remoteKeyboard.screenshotAction",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(CoreAPI.screenshot).toHaveBeenCalled();
+    });
+    expect(
+      screen.getByRole("button", {
+        name: "remoteKeyboard.screenshotShare",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", {
+        name: "remoteKeyboard.screenshotDownload",
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "remoteKeyboard.screenshotShare",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(Filesystem.writeFile).toHaveBeenCalledWith({
+        path: "MiSTer.png",
+        data: "iVBORw0KGgo=",
+        directory: Directory.Cache,
+      });
+    });
+    expect(Filesystem.getUri).toHaveBeenCalledWith({
+      path: "MiSTer.png",
+      directory: Directory.Cache,
+    });
+    expect(Share.share).toHaveBeenCalledWith({
+      title: "remoteKeyboard.screenshotShareTitle",
+      dialogTitle: "remoteKeyboard.screenshotShareTitle",
+      files: ["file:///mock/path/file.txt"],
+    });
+  });
+
+  it("should not show an error when native screenshot share is cancelled", async () => {
+    const user = userEvent.setup();
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(Share.share).mockRejectedValueOnce(new Error("Share canceled"));
+
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "remoteKeyboard.screenshotAction",
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: "remoteKeyboard.screenshotShare",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(Share.share).toHaveBeenCalled();
+    });
+    expect(toast.error).not.toHaveBeenCalledWith(
+      "remoteKeyboard.screenshotShareError",
+    );
+  });
+
+  it("should show an error when native screenshot share fails", async () => {
+    const user = userEvent.setup();
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(Share.share).mockRejectedValueOnce(new Error("failed"));
+
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "remoteKeyboard.screenshotAction",
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: "remoteKeyboard.screenshotShare",
+      }),
+    );
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "remoteKeyboard.screenshotShareError",
+    );
   });
 
   it("should show loading state while capturing screenshot", async () => {
