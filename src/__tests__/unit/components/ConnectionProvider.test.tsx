@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Preferences } from "@capacitor/preferences";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "../../../test-utils";
 import { ConnectionProvider } from "../../../components/ConnectionProvider";
 import { useConnection } from "../../../hooks/useConnection";
@@ -312,7 +313,19 @@ describe("notification processing", () => {
   });
 
   describe("media.started", () => {
-    it("should update playing state when media starts", async () => {
+    it("should update playing state and clear staged token when media starts", async () => {
+      useStatusStore.setState({
+        stagedToken: {
+          ready: true,
+          token: {
+            type: "ntag",
+            uid: "STAGED",
+            text: "**launch:nes/zelda.nes",
+            data: "",
+            scanTime: "2024-01-15T11:00:00Z",
+          },
+        },
+      });
       const mediaStartedNotification: NotificationRequest = {
         method: Notification.MediaStarted,
         params: {
@@ -344,12 +357,25 @@ describe("notification processing", () => {
           mediaPath: "/games/mario.sfc",
           mediaName: "Super Mario World",
         });
+        expect(useStatusStore.getState().stagedToken).toBeNull();
       });
     });
   });
 
   describe("media.stopped", () => {
-    it("should clear playing state when media stops", async () => {
+    it("should clear playing state and staged token when media stops", async () => {
+      useStatusStore.setState({
+        stagedToken: {
+          ready: true,
+          token: {
+            type: "ntag",
+            uid: "STAGED",
+            text: "**launch:nes/zelda.nes",
+            data: "",
+            scanTime: "2024-01-15T11:00:00Z",
+          },
+        },
+      });
       const mediaStoppedNotification: NotificationRequest = {
         method: Notification.MediaStopped,
         params: {},
@@ -375,6 +401,7 @@ describe("notification processing", () => {
           mediaPath: "",
           mediaName: "",
         });
+        expect(useStatusStore.getState().stagedToken).toBeNull();
       });
     });
   });
@@ -412,6 +439,230 @@ describe("notification processing", () => {
           scanTime: "2024-01-15T12:00:00Z",
         });
       });
+    });
+
+    it("should set active tokens and clear staged token", async () => {
+      useStatusStore.setState({
+        stagedToken: {
+          ready: false,
+          token: {
+            type: "ntag",
+            uid: "STAGED",
+            text: "**launch:nes/zelda.nes",
+            data: "",
+            scanTime: "2024-01-15T11:00:00Z",
+          },
+        },
+      });
+      const tokenScannedNotification: NotificationRequest = {
+        method: Notification.TokensScanned,
+        params: {
+          type: "ntag",
+          uid: "ABC123",
+          text: "**launch:snes/mario.sfc",
+          data: "launch data",
+          scanTime: "2024-01-15T12:00:00Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        tokenScannedNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().activeTokens).toEqual([
+          tokenScannedNotification.params,
+        ]);
+        expect(useStatusStore.getState().stagedToken).toBeNull();
+      });
+    });
+  });
+
+  describe("token staging notifications", () => {
+    it("should store staged token as waiting", async () => {
+      const stagedNotification: NotificationRequest = {
+        method: Notification.TokensStaged,
+        params: {
+          type: "ntag",
+          uid: "STAGED",
+          text: "**launch:nes/zelda.nes",
+          data: "",
+          scanTime: "2024-01-15T11:00:00Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        stagedNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().stagedToken).toEqual({
+          token: stagedNotification.params,
+          ready: false,
+        });
+        expect(mockAnnounce).toHaveBeenCalledWith(
+          "tokenStaging.stagedAnnounce",
+          "assertive",
+        );
+      });
+    });
+
+    it("should mark staged token ready", async () => {
+      const readyNotification: NotificationRequest = {
+        method: Notification.TokensStagedReady,
+        params: {
+          type: "ntag",
+          uid: "STAGED",
+          text: "**launch:nes/zelda.nes",
+          data: "",
+          scanTime: "2024-01-15T11:00:00Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        readyNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().stagedToken).toEqual({
+          token: readyNotification.params,
+          ready: true,
+        });
+        expect(mockAnnounce).toHaveBeenCalledWith(
+          "tokenStaging.readyAnnounce",
+          "assertive",
+        );
+      });
+    });
+
+    it("should clear active tokens on token removal while preserving staged and last tokens", async () => {
+      const lastToken = {
+        type: "ntag",
+        uid: "LAST",
+        text: "**launch:snes/mario.sfc",
+        data: "",
+        scanTime: "2024-01-15T12:00:00Z",
+      };
+      const stagedToken = {
+        type: "ntag",
+        uid: "STAGED",
+        text: "**launch:nes/zelda.nes",
+        data: "",
+        scanTime: "2024-01-15T11:00:00Z",
+      };
+      useStatusStore.setState({
+        lastToken,
+        activeTokens: [lastToken],
+        stagedToken: { token: stagedToken, ready: true },
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.TokensRemoved,
+        params: undefined,
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().activeTokens).toEqual([]);
+        expect(useStatusStore.getState().stagedToken).toEqual({
+          token: stagedToken,
+          ready: true,
+        });
+        expect(useStatusStore.getState().lastToken).toEqual(lastToken);
+      });
+    });
+  });
+
+  describe("reader notifications", () => {
+    it("should invalidate readers query on reader added", async () => {
+      const invalidateSpy = vi.spyOn(
+        QueryClient.prototype,
+        "invalidateQueries",
+      );
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.ReadersConnected,
+        params: { driver: "pn532", path: "/dev/ttyUSB0", connected: true },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["readers"] });
+      });
+      invalidateSpy.mockRestore();
+    });
+
+    it("should invalidate readers query and clear active state on reader removed", async () => {
+      const invalidateSpy = vi.spyOn(
+        QueryClient.prototype,
+        "invalidateQueries",
+      );
+      const token = {
+        type: "ntag",
+        uid: "ACTIVE",
+        text: "**launch:snes/mario.sfc",
+        data: "",
+        scanTime: "2024-01-15T12:00:00Z",
+      };
+      useStatusStore.setState({
+        activeTokens: [token],
+        stagedToken: { token, ready: false },
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.ReadersDisconnected,
+        params: { driver: "pn532", path: "/dev/ttyUSB0", connected: false },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["readers"] });
+        expect(useStatusStore.getState().activeTokens).toEqual([]);
+        expect(useStatusStore.getState().stagedToken).toBeNull();
+      });
+      invalidateSpy.mockRestore();
     });
   });
 

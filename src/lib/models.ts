@@ -1,5 +1,6 @@
 export enum Method {
   Run = "run",
+  Confirm = "confirm",
   Stop = "stop",
   Tokens = "tokens",
   History = "tokens.history",
@@ -48,6 +49,8 @@ export enum Notification {
   TokensLaunching = "running",
   TokensScanned = "tokens.added",
   TokensRemoved = "tokens.removed",
+  TokensStaged = "tokens.staged",
+  TokensStagedReady = "tokens.staged.ready",
   MediaStarted = "media.started",
   MediaStopped = "media.stopped",
   MediaIndexing = "media.indexing",
@@ -55,6 +58,7 @@ export enum Notification {
   PlaytimeLimitReached = "playtime.limit.reached",
   InboxAdded = "inbox.added",
   MediaScraping = "media.scraping",
+  ClientsPaired = "clients.paired",
 }
 
 export interface VersionResponse {
@@ -195,6 +199,10 @@ export interface SettingsResponse {
   readersScanMode: "tap" | "hold" | "insert";
   readersScanExitDelay: number;
   readersScanIgnoreSystems: string[];
+  launchGuardEnabled?: boolean;
+  launchGuardTimeout?: number;
+  launchGuardDelay?: number;
+  launchGuardRequireConfirm?: boolean;
 }
 
 export interface UpdateSettingsRequest {
@@ -214,6 +222,7 @@ export interface TokenResponse {
   text: string;
   data: string;
   scanTime: string;
+  readerId?: string;
 }
 
 export interface IndexResponse {

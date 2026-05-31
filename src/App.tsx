@@ -9,6 +9,7 @@ import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { InboxModal } from "@/components/InboxModal";
+import { StagedTokenModal } from "@/components/home/StagedTokenModal";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
 import { DatabaseIcon, PlayIcon } from "./lib/images";
@@ -368,6 +369,7 @@ export default function App() {
             </div>
             <RequirementsModal />
             <InboxModal />
+            <StagedTokenModal />
           </ConnectionProvider>
         </SlideModalProvider>
       </A11yAnnouncerProvider>

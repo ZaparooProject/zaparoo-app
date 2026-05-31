@@ -75,6 +75,18 @@
     "accessibility": {
       "skipToContent": "Skip to main content"
     },
+    "tokenStaging": {
+      "title": "Confirm staged token?",
+      "waitingDescription": "This token is waiting for confirmation.",
+      "readyDescription": "This token is ready to confirm.",
+      "tokenValue": "Token value",
+      "confirm": "Confirm",
+      "dismiss": "Hide",
+      "confirmError": "Could not confirm staged token",
+      "expiredError": "Confirmation expired. Scan the token again.",
+      "stagedAnnounce": "A token is waiting for confirmation.",
+      "readyAnnounce": "A staged token is ready to confirm."
+    },
     "scan": {
       "cameraMode": "Camera",
       "cameraAvailable": "Use camera to scan",

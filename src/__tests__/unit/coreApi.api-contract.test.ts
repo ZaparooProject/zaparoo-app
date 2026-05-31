@@ -283,6 +283,16 @@ describe("CoreAPI API Contract", () => {
   });
 
   describe("Additional Method JSON-RPC Format", () => {
+    it("confirm should send correct JSON-RPC format and resolve", async () => {
+      const resultPromise = CoreAPI.confirm();
+      simulateResponse(mockSend, null);
+
+      await expect(resultPromise).resolves.toBeUndefined();
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("confirm");
+      expect(sentData.params).toBeUndefined();
+    });
+
     it("mappingsReload should send correct JSON-RPC format", () => {
       CoreAPI.mappingsReload().catch(() => {});
 

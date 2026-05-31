@@ -58,6 +58,16 @@ interface ApiRequest {
   params: unknown;
 }
 
+export class CoreApiError extends Error {
+  constructor(
+    message: string,
+    public readonly code: number,
+  ) {
+    super(message);
+    this.name = "CoreApiError";
+  }
+}
+
 interface ApiError {
   code: number;
   message: string;
@@ -585,7 +595,7 @@ class CoreApi {
         }
 
         if (res.error) {
-          promise.reject(new Error(res.error.message));
+          promise.reject(new CoreApiError(res.error.message, res.error.code));
           delete this.responsePool[res.id];
 
           // Clear pendingWriteId if this error response is for the pending write
@@ -648,6 +658,19 @@ class CoreApi {
         })
         .catch((error) => {
           logger.error("Run API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  confirm(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.Confirm)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Confirm API call failed:", error);
           reject(error);
         });
     });
