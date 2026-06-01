@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
 import { MediaScrapeCard } from "@/components/MediaScrapeCard";
 import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
 import { PageFrame } from "@/components/PageFrame";
@@ -8,13 +9,13 @@ import { BackIcon } from "@/lib/images";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
-export const Route = createFileRoute("/settings/scraper")({
-  component: ScraperSettings,
+export const Route = createFileRoute("/settings/media")({
+  component: MediaSettings,
 });
 
-function ScraperSettings() {
+function MediaSettings() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("settings.scraper.title"));
+  usePageHeadingFocus(t("settings.media.title"));
   const router = useRouter();
   const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
@@ -33,13 +34,12 @@ function ScraperSettings() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">
-          {t("settings.scraper.title")}
-        </h1>
+        <h1 className="text-foreground text-xl">{t("settings.media.title")}</h1>
       }
     >
       <div className="flex flex-col gap-5">
         <CoreOutdatedNotice />
+        <MediaDatabaseCard />
         <MediaScrapeCard />
       </div>
     </PageFrame>

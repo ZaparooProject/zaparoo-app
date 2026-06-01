@@ -80,6 +80,7 @@ The only time `goto` is appropriate is for the initial page load or if you inten
 | `/settings`               | Settings         | Device connection, media database, language       |
 | `/settings/readers`       | Readers          | Device readers, scan mode, chat/AI config         |
 | `/settings/play-controls` | Play Controls    | Playtime limits and launch guard configuration    |
+| `/settings/media`         | Manage Media     | Database update and metadata scraper controls     |
 | `/settings/advanced`      | Advanced         | Debug logging, error reporting, view logs         |
 | `/settings/logs`          | Logs             | Filterable log viewer                             |
 | `/settings/help`          | Help             | Documentation and community links                 |

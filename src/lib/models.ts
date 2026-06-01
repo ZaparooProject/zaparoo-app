@@ -467,9 +467,26 @@ export interface MediaScrapeResumeResponse {
  *
  * Mirrors Go struct: ScrapingStatusResponse (pkg/api/models/responses.go).
  */
+export interface ScrapeSystemProgress {
+  systemId: string;
+  systemName?: string;
+  processed: number;
+  total: number;
+  matched: number;
+  skipped: number;
+}
+
 export interface ScrapingStatusNotification {
   /** ID of the scraper that is running, e.g. "gamelist.xml". */
   scraperId?: string;
+  /** 1-based current system step in the overall scrape run. */
+  currentStep?: number;
+  /** Display name for the current overall step. */
+  currentStepDisplay?: string;
+  /** Total system steps in the overall scrape run. */
+  totalSteps?: number;
+  /** Current system progress, when Core provides the structured payload. */
+  currentSystem?: ScrapeSystemProgress;
   /** System currently being scraped. Omitted between system transitions. */
   systemId?: string;
   /** Number of source records processed so far. */

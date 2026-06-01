@@ -435,12 +435,14 @@
       "scrapeMedia.scraperPlaceholder": "Select a scraper",
       "scrapeMedia.allSystems": "All systems",
       "scrapeMedia.selectSystemsTitle": "Select systems to scrape",
-      "scrapeMedia.progressLabel": "Scrape progress",
+      "scrapeMedia.overallProgressLabel": "Overall scrape progress",
+      "scrapeMedia.progressLabel": "Current system scrape progress",
       "scrapeMedia.preparing": "Preparing scrape",
       "scrapeMedia.activeTitle": "Scraping media",
       "scrapeMedia.activeDescription": "Scraping metadata for the current system",
       "scrapeMedia.lastScrapeTitle": "Last scrape",
       "scrapeMedia.currentSystem": "Current system",
+      "scrapeMedia.systemProgressCount": "{{current}} / {{total}} systems",
       "scrapeMedia.processedCount": "{{processed}} / {{total}} processed",
       "scrapeMedia.statsLabel": "Scrape stats",
       "scrapeMedia.matchedLabel": "Matched",
@@ -459,8 +461,8 @@
       "scrapeMedia.status.totalScraped": "{{formattedCount}} media records scraped",
       "scrapeMedia.force": "Re-scrape already scraped media",
       "scrapeMedia.resume": "Resume",
-      "scraper": {
-        "title": "Scraper"
+      "media": {
+        "title": "Manage Media"
       },
       "designer": "Zaparoo Designer",
       "getApp": "Get the Zaparoo App",

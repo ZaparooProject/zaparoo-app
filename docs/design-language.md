@@ -15,7 +15,7 @@ Use these before creating or changing UI:
 - App shell: `src/components/PageFrame.tsx`, `src/components/ResponsiveContainer.tsx`, `src/components/BottomNav.tsx`, `BackToTop.tsx`, `ReconnectingIndicator.tsx`
 - WUI primitives: `src/components/wui/Button.tsx`, `HeaderButton.tsx`, `Card.tsx`, `ToggleSwitch.tsx`, `TextInput.tsx`, `Badge.tsx`, `EmptyState.tsx`, `Segmented.tsx`, `ToggleChip.tsx`, `SettingHelp.tsx`
 - Modals: `src/components/SlideModal.tsx`, `ConfirmClearModal.tsx`, `PairingModal.tsx`, `WriteModal.tsx`, `RequirementsModal.tsx`, `ProPurchase.tsx`, `home/StopConfirmModal.tsx`, `home/StagedTokenModal.tsx`
-- Settings screens: `src/routes/settings.index.tsx`, `settings.readers.tsx`, `settings.advanced.tsx`, `settings.accessibility.tsx`, `settings.scraper.tsx`, `settings.play-controls.tsx`, `settings.about.tsx`, `settings.help.tsx`, `settings.online.tsx`, `src/routes/-pages/Devices.tsx`, `DeviceDetail.tsx`, `Logs.tsx`
+- Settings screens: `src/routes/settings.index.tsx`, `settings.readers.tsx`, `settings.advanced.tsx`, `settings.accessibility.tsx`, `settings.media.tsx`, `settings.play-controls.tsx`, `settings.about.tsx`, `settings.help.tsx`, `settings.online.tsx`, `src/routes/-pages/Devices.tsx`, `DeviceDetail.tsx`, `Logs.tsx`
 - Create/search flows: `src/routes/create.index.tsx`, `create.custom.tsx`, `create.nfc.tsx`, `create.mappings.tsx`, `src/routes/-pages/Search.tsx`, `MappingEditor.tsx`, `ZapScriptInput.tsx`
 - Home: `src/routes/-pages/Index.tsx`, `src/components/home/*`
 - Lists/selectors: `MappingRow.tsx`, `VirtualSearchResults.tsx`, `SystemSelector.tsx`, `TagSelector.tsx`, `SimpleSystemSelect.tsx`, `DeviceRow.tsx`, `NetworkScanModal.tsx`, `InboxModal.tsx`
@@ -88,7 +88,7 @@ Do not add page-level max widths or safe-area padding manually when `PageFrame` 
 Common page content stacks:
 
 - Simple settings pages: `flex flex-col gap-5`
-  - Settings index, Advanced, Accessibility, Scraper.
+  - Settings index, Advanced, Accessibility, Manage Media.
 - Dense settings/control pages: `flex flex-col gap-3`
   - Readers, Play Controls, Create landing.
 - Form/editor pages: `flex flex-col gap-4`

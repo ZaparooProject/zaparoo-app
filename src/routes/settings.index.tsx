@@ -22,7 +22,6 @@ import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
 import { GatedFeature } from "@/components/GatedFeature";
 import { InboxButton } from "@/components/InboxButton";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export const Route = createFileRoute("/settings/")({
   component: Settings,
@@ -43,7 +42,6 @@ function Settings() {
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
-  const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
   const setDeviceHistory = useStatusStore((state) => state.setDeviceHistory);
   const showMediaScraper =
     coreVersion !== null &&
@@ -108,17 +106,6 @@ function Settings() {
           />
 
           <MediaDatabaseCard />
-
-          <div>
-            <Button
-              label={t("settings.designer")}
-              className="w-full"
-              icon={<ExternalIcon size="20" />}
-              onClick={() =>
-                Browser.open({ url: "https://design.zaparoo.org" })
-              }
-            />
-          </div>
 
           {!Capacitor.isNativePlatform() && (
             <div>
@@ -206,15 +193,17 @@ function Settings() {
               {t("settings.moreSettings")}
             </h2>
 
-            <Link
-              to="/settings/readers"
-              className="flex min-h-[48px] flex-row items-center justify-between"
-            >
-              <p>{t("settings.readers.title")}</p>
-              <span aria-hidden="true">
-                <NextIcon size="20" />
-              </span>
-            </Link>
+            {showMediaScraper && (
+              <Link
+                to="/settings/media"
+                className="flex min-h-[48px] flex-row items-center justify-between"
+              >
+                <span>{t("settings.media.title")}</span>
+                <span aria-hidden="true">
+                  <NextIcon size="20" />
+                </span>
+              </Link>
+            )}
 
             <Link
               to="/settings/play-controls"
@@ -226,25 +215,15 @@ function Settings() {
               </span>
             </Link>
 
-            {showMediaScraper && (
-              <Link
-                to="/settings/scraper"
-                className="flex min-h-[48px] flex-row items-center justify-between"
-              >
-                <span className="flex items-center gap-2">
-                  <span>{t("settings.scraper.title")}</span>
-                  {scrapingStatus?.scraping === true ? (
-                    <LoadingSpinner
-                      size={16}
-                      className="text-muted-foreground"
-                    />
-                  ) : null}
-                </span>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Link>
-            )}
+            <Link
+              to="/settings/readers"
+              className="flex min-h-[48px] flex-row items-center justify-between"
+            >
+              <p>{t("settings.readers.title")}</p>
+              <span aria-hidden="true">
+                <NextIcon size="20" />
+              </span>
+            </Link>
 
             {Capacitor.isNativePlatform() && (
               <Link

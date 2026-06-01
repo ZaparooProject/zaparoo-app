@@ -108,10 +108,12 @@ export function MediaScrapeCard() {
     [scrapersData, scrapingStatus?.scraperId],
   );
 
-  const allowedSystemIds = useMemo(
-    () => selectedScraperInfo?.supportedSystems ?? undefined,
-    [selectedScraperInfo],
-  );
+  const allowedSystemIds = useMemo(() => {
+    const supportedSystems = selectedScraperInfo?.supportedSystems;
+    return supportedSystems && supportedSystems.length > 0
+      ? supportedSystems
+      : undefined;
+  }, [selectedScraperInfo]);
   const eligibleSystemsData = useMemo(() => {
     if (!systemsData || allowedSystemIds === undefined) return systemsData;
     return {
@@ -139,13 +141,9 @@ export function MediaScrapeCard() {
   const handleScrape = async () => {
     const totalSystems = eligibleSystemsData?.systems?.length ?? 0;
     const systemsToScrape =
-      allowedSystemIds !== undefined
-        ? selectedSystems.length > 0
-          ? selectedSystems
-          : allowedSystemIds
-        : selectedSystems.length > 0 && selectedSystems.length < totalSystems
-          ? selectedSystems
-          : undefined;
+      selectedSystems.length > 0 && selectedSystems.length < totalSystems
+        ? selectedSystems
+        : allowedSystemIds;
 
     setScrapingStatus(null);
     setStartRequested(true);
@@ -202,7 +200,10 @@ export function MediaScrapeCard() {
     }
     if (isScraping) {
       const step =
-        scrapingStatus?.systemId ?? t("settings.scrapeMedia.preparing");
+        scrapingStatus?.currentSystem?.systemName ??
+        scrapingStatus?.currentStepDisplay ??
+        scrapingStatus?.systemId ??
+        t("settings.scrapeMedia.preparing");
       if (isPaused) {
         return `${step}, ${t("settings.scrapeMedia.status.paused")}`;
       }
@@ -255,17 +256,36 @@ export function MediaScrapeCard() {
     }
 
     if (isScraping && scrapingStatus) {
-      const hasProgress = scrapingStatus.total > 0;
-      const progressPct = hasProgress
-        ? (scrapingStatus.processed / scrapingStatus.total) * 100
+      const currentSystemProgress = scrapingStatus.currentSystem ?? {
+        systemId: scrapingStatus.systemId ?? "",
+        systemName: undefined,
+        processed: scrapingStatus.processed,
+        total: scrapingStatus.total,
+        matched: scrapingStatus.matched,
+        skipped: scrapingStatus.skipped,
+      };
+      const hasSystemProgress = currentSystemProgress.total > 0;
+      const systemProgressPct = hasSystemProgress
+        ? (currentSystemProgress.processed / currentSystemProgress.total) * 100
         : 0;
-      const roundedProgressPct = Math.round(progressPct);
+      const roundedSystemProgressPct = Math.round(systemProgressPct);
+      const totalSteps = scrapingStatus.totalSteps ?? 0;
+      const currentStep = scrapingStatus.currentStep ?? 0;
+      const hasOverallProgress = totalSteps > 0 && currentStep > 0;
+      const overallProgressPct = hasOverallProgress
+        ? (currentStep / totalSteps) * 100
+        : 0;
+      const roundedOverallProgressPct = Math.round(overallProgressPct);
       const currentSystem =
-        scrapingStatus.systemId ?? t("settings.scrapeMedia.preparing");
-      const formattedProcessed = scrapingStatus.processed.toLocaleString();
-      const formattedTotal = scrapingStatus.total.toLocaleString();
-      const formattedMatched = scrapingStatus.matched.toLocaleString();
-      const formattedSkipped = scrapingStatus.skipped.toLocaleString();
+        currentSystemProgress.systemName ??
+        scrapingStatus.currentStepDisplay ??
+        currentSystemProgress.systemId ??
+        t("settings.scrapeMedia.preparing");
+      const formattedProcessed =
+        currentSystemProgress.processed.toLocaleString();
+      const formattedTotal = currentSystemProgress.total.toLocaleString();
+      const formattedMatched = currentSystemProgress.matched.toLocaleString();
+      const formattedSkipped = currentSystemProgress.skipped.toLocaleString();
       const formattedScraped = scrapingStatus.totalScraped.toLocaleString();
       const scraperName =
         activeScraperInfo?.name ??
@@ -305,41 +325,90 @@ export function MediaScrapeCard() {
               )}
             </div>
 
-            <div className="space-y-3">
-              <div
-                role="progressbar"
-                aria-valuenow={roundedProgressPct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={t("settings.scrapeMedia.progressLabel")}
-                className="border-bd-filled bg-background h-5 w-full rounded-full border border-solid"
-              >
+            <div className="space-y-4">
+              <div className="space-y-2">
                 <div
-                  className={classNames(
-                    "border-background bg-button-pattern h-[18px] rounded-full border border-solid",
-                    {
-                      hidden: hasProgress && scrapingStatus.processed === 0,
-                      "animate-pulse":
-                        isLiveConnected &&
-                        !isPaused &&
-                        (!hasProgress || scrapingStatus.processed === 0),
-                    },
-                  )}
-                  style={{
-                    width: hasProgress ? `${progressPct.toFixed(2)}%` : "100%",
-                  }}
-                />
+                  role="progressbar"
+                  aria-valuenow={roundedOverallProgressPct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={t("settings.scrapeMedia.overallProgressLabel")}
+                  className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
+                >
+                  <div
+                    className={classNames(
+                      "border-background bg-button-pattern h-[8px] rounded-full border border-solid",
+                      {
+                        hidden: hasOverallProgress && currentStep === 0,
+                        "animate-pulse":
+                          isLiveConnected && !isPaused && !hasOverallProgress,
+                      },
+                    )}
+                    style={{
+                      width: hasOverallProgress
+                        ? `${overallProgressPct.toFixed(2)}%`
+                        : "100%",
+                    }}
+                  />
+                </div>
+                <div className="text-muted-foreground flex items-center justify-between text-sm">
+                  <span>
+                    {hasOverallProgress
+                      ? t("settings.scrapeMedia.systemProgressCount", {
+                          current: currentStep.toLocaleString(),
+                          total: totalSteps.toLocaleString(),
+                        })
+                      : t("settings.scrapeMedia.preparing")}
+                  </span>
+                  <span>
+                    {hasOverallProgress ? `${roundedOverallProgressPct}%` : ""}
+                  </span>
+                </div>
               </div>
-              <div className="text-muted-foreground flex items-center justify-between text-sm">
-                <span>
-                  {hasProgress
-                    ? t("settings.scrapeMedia.processedCount", {
-                        processed: formattedProcessed,
-                        total: formattedTotal,
-                      })
-                    : t("settings.scrapeMedia.preparing")}
-                </span>
-                <span>{hasProgress ? `${roundedProgressPct}%` : ""}</span>
+
+              <div className="space-y-3">
+                <div
+                  role="progressbar"
+                  aria-valuenow={roundedSystemProgressPct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={t("settings.scrapeMedia.progressLabel")}
+                  className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
+                >
+                  <div
+                    className={classNames(
+                      "border-background bg-button-pattern h-[8px] rounded-full border border-solid",
+                      {
+                        hidden:
+                          hasSystemProgress &&
+                          currentSystemProgress.processed === 0,
+                        "animate-pulse":
+                          isLiveConnected &&
+                          !isPaused &&
+                          (!hasSystemProgress ||
+                            currentSystemProgress.processed === 0),
+                      },
+                    )}
+                    style={{
+                      width: hasSystemProgress
+                        ? `${systemProgressPct.toFixed(2)}%`
+                        : "100%",
+                    }}
+                  />
+                </div>
+                <div className="text-muted-foreground flex items-center justify-between text-sm">
+                  <span>
+                    {hasSystemProgress
+                      ? t("settings.scrapeMedia.processedCount", {
+                          processed: formattedProcessed,
+                          total: formattedTotal,
+                        })
+                      : t("settings.scrapeMedia.preparing")}
+                  </span>
+                  <span>
+                    {hasSystemProgress ? `${roundedSystemProgressPct}%` : ""}
+                  </span>
+                </div>
               </div>
             </div>
           </section>
