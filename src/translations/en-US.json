@@ -526,6 +526,9 @@
         "connectedReaders": "Device Readers",
         "noReadersDetected": "No readers found"
       },
+      "playControls": {
+        "title": "Play Controls"
+      },
       "playtime": {
         "title": "Playtime"
       },
@@ -570,6 +573,16 @@
           "cooldownRemaining": "Cooldown ends in",
           "warningToast": "{{remaining}} of playtime remaining",
           "reachedToast": "{{type}} reached"
+        },
+        "launchGuard": {
+          "title": "Launch Guard",
+          "enabled": "Enable launch guard",
+          "enabledHelp": "When media is playing, disruptive scanned tokens are staged instead of launched immediately.",
+          "requireConfirm": "Require App confirmation",
+          "requireConfirmHelp": "Show a confirmation prompt in the App before launching a staged token. When disabled, tapping the same token again confirms it.",
+          "timeout": "Confirmation timeout",
+          "delay": "Confirmation delay",
+          "seconds": "Seconds"
         }
       },
       "app": {

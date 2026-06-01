@@ -217,10 +217,10 @@ function Settings() {
             </Link>
 
             <Link
-              to="/settings/playtime"
+              to="/settings/play-controls"
               className="flex min-h-[48px] flex-row items-center justify-between"
             >
-              <p>{t("settings.playtime.title")}</p>
+              <p>{t("settings.playControls.title")}</p>
               <span aria-hidden="true">
                 <NextIcon size="20" />
               </span>

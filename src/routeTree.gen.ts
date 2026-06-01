@@ -14,7 +14,7 @@ import { Route as SettingsIndexRouteImport } from "./routes/settings.index";
 import { Route as CreateIndexRouteImport } from "./routes/create.index";
 import { Route as SettingsScraperRouteImport } from "./routes/settings.scraper";
 import { Route as SettingsReadersRouteImport } from "./routes/settings.readers";
-import { Route as SettingsPlaytimeRouteImport } from "./routes/settings.playtime";
+import { Route as SettingsPlayControlsRouteImport } from "./routes/settings.play-controls";
 import { Route as SettingsOnlineRouteImport } from "./routes/settings.online";
 import { Route as SettingsLogsRouteImport } from "./routes/settings.logs";
 import { Route as SettingsHelpRouteImport } from "./routes/settings.help";
@@ -56,9 +56,9 @@ const SettingsReadersRoute = SettingsReadersRouteImport.update({
   path: "/settings/readers",
   getParentRoute: () => rootRouteImport,
 } as any);
-const SettingsPlaytimeRoute = SettingsPlaytimeRouteImport.update({
-  id: "/settings/playtime",
-  path: "/settings/playtime",
+const SettingsPlayControlsRoute = SettingsPlayControlsRouteImport.update({
+  id: "/settings/play-controls",
+  path: "/settings/play-controls",
   getParentRoute: () => rootRouteImport,
 } as any);
 const SettingsOnlineRoute = SettingsOnlineRouteImport.update({
@@ -151,7 +151,7 @@ export interface FileRoutesByFullPath {
   "/settings/help": typeof SettingsHelpRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/online": typeof SettingsOnlineRoute;
-  "/settings/playtime": typeof SettingsPlaytimeRoute;
+  "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
   "/settings/scraper": typeof SettingsScraperRoute;
   "/create/": typeof CreateIndexRoute;
@@ -174,7 +174,7 @@ export interface FileRoutesByTo {
   "/settings/help": typeof SettingsHelpRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/online": typeof SettingsOnlineRoute;
-  "/settings/playtime": typeof SettingsPlaytimeRoute;
+  "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
   "/settings/scraper": typeof SettingsScraperRoute;
   "/create": typeof CreateIndexRoute;
@@ -198,7 +198,7 @@ export interface FileRoutesById {
   "/settings/help": typeof SettingsHelpRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/online": typeof SettingsOnlineRoute;
-  "/settings/playtime": typeof SettingsPlaytimeRoute;
+  "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
   "/settings/scraper": typeof SettingsScraperRoute;
   "/create/": typeof CreateIndexRoute;
@@ -223,7 +223,7 @@ export interface FileRouteTypes {
     | "/settings/help"
     | "/settings/logs"
     | "/settings/online"
-    | "/settings/playtime"
+    | "/settings/play-controls"
     | "/settings/readers"
     | "/settings/scraper"
     | "/create/"
@@ -246,7 +246,7 @@ export interface FileRouteTypes {
     | "/settings/help"
     | "/settings/logs"
     | "/settings/online"
-    | "/settings/playtime"
+    | "/settings/play-controls"
     | "/settings/readers"
     | "/settings/scraper"
     | "/create"
@@ -269,7 +269,7 @@ export interface FileRouteTypes {
     | "/settings/help"
     | "/settings/logs"
     | "/settings/online"
-    | "/settings/playtime"
+    | "/settings/play-controls"
     | "/settings/readers"
     | "/settings/scraper"
     | "/create/"
@@ -293,7 +293,7 @@ export interface RootRouteChildren {
   SettingsHelpRoute: typeof SettingsHelpRoute;
   SettingsLogsRoute: typeof SettingsLogsRoute;
   SettingsOnlineRoute: typeof SettingsOnlineRoute;
-  SettingsPlaytimeRoute: typeof SettingsPlaytimeRoute;
+  SettingsPlayControlsRoute: typeof SettingsPlayControlsRoute;
   SettingsReadersRoute: typeof SettingsReadersRoute;
   SettingsScraperRoute: typeof SettingsScraperRoute;
   CreateIndexRoute: typeof CreateIndexRoute;
@@ -340,11 +340,11 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof SettingsReadersRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    "/settings/playtime": {
-      id: "/settings/playtime";
-      path: "/settings/playtime";
-      fullPath: "/settings/playtime";
-      preLoaderRoute: typeof SettingsPlaytimeRouteImport;
+    "/settings/play-controls": {
+      id: "/settings/play-controls";
+      path: "/settings/play-controls";
+      fullPath: "/settings/play-controls";
+      preLoaderRoute: typeof SettingsPlayControlsRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/settings/online": {
@@ -469,7 +469,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsHelpRoute: SettingsHelpRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsOnlineRoute: SettingsOnlineRoute,
-  SettingsPlaytimeRoute: SettingsPlaytimeRoute,
+  SettingsPlayControlsRoute: SettingsPlayControlsRoute,
   SettingsReadersRoute: SettingsReadersRoute,
   SettingsScraperRoute: SettingsScraperRoute,
   CreateIndexRoute: CreateIndexRoute,

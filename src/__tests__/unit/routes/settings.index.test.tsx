@@ -222,8 +222,8 @@ describe("Settings Index Route", () => {
         screen.getByText("settings.readers.title").closest("a"),
       ).toHaveAttribute("href", "/settings/readers");
       expect(
-        screen.getByText("settings.playtime.title").closest("a"),
-      ).toHaveAttribute("href", "/settings/playtime");
+        screen.getByText("settings.playControls.title").closest("a"),
+      ).toHaveAttribute("href", "/settings/play-controls");
       expect(
         screen.getByText("settings.advanced.title").closest("a"),
       ).toHaveAttribute("href", "/settings/advanced");

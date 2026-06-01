@@ -214,6 +214,10 @@ export interface UpdateSettingsRequest {
   readersScanExitDelay?: number;
   readersScanIgnoreSystems?: string[];
   runZapScript?: boolean;
+  launchGuardEnabled?: boolean;
+  launchGuardTimeout?: number;
+  launchGuardDelay?: number;
+  launchGuardRequireConfirm?: boolean;
 }
 
 export interface TokenResponse {
