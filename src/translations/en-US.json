@@ -429,6 +429,15 @@
       "updateDb.selectSystemsTitle": "Select Systems to Update",
       "updateDb.allSystems": "All systems",
       "updateDb.progressLabel": "Database update progress",
+      "updateDb.cleanOrphans": "Clean missing media",
+      "updateDb.cleanOrphansPending": "Cleaning...",
+      "updateDb.cleanOrphansPendingStatus": "Cleaning missing media. This can take a minute.",
+      "updateDb.cleanOrphansConfirmTitle": "Clean missing media?",
+      "updateDb.cleanOrphansConfirmDescription": "This removes database entries for files that are already marked missing. Update the media database first if you recently changed files.",
+      "updateDb.cleanOrphansConfirmAction": "Clean",
+      "updateDb.cleanOrphansSuccess": "Removed {{count}} missing media entries",
+      "updateDb.cleanOrphansNone": "No missing media entries found",
+      "updateDb.cleanOrphansError": "Clean missing media failed",
       "scrapeMedia": "Scrape media metadata",
       "scrapeMedia.cancel": "Cancel",
       "scrapeMedia.starting": "Starting...",
@@ -462,7 +471,9 @@
       "scrapeMedia.force": "Re-scrape already scraped media",
       "scrapeMedia.resume": "Resume",
       "media": {
-        "title": "Manage Media"
+        "title": "Manage Media",
+        "databaseTitle": "Media database",
+        "scraperTitle": "Metadata scraper"
       },
       "designer": "Zaparoo Designer",
       "getApp": "Get the Zaparoo App",
@@ -554,7 +565,7 @@
         "nfcDriver": "NFC driver connection string",
         "insertModeBlocklist": "Insert mode core blocklist",
         "playtime": {
-          "title": "Playtime Limits",
+          "title": "Playtime limits",
           "enabled": "Enable playtime limits",
           "enabledHelp": "Enforce limits on how long media can be played for on the connected device.\n\n**Daily limit:** Total amount of time media can be played for the day across all sessions. Resets daily.\n\n**Session limit:** Maximum amount of time media can be played at once.\n\n**Session reset timeout:** Amount of time required after a session has completed before a new session can start.",
           "dailyLimit": "Daily limit",
@@ -577,7 +588,7 @@
           "reachedToast": "{{type}} reached"
         },
         "launchGuard": {
-          "title": "Launch Guard",
+          "title": "Launch guard",
           "enabled": "Enable launch guard",
           "enabledHelp": "When media is playing, disruptive scanned tokens are staged instead of launched immediately.",
           "requireConfirm": "Require App confirmation",
@@ -741,6 +752,7 @@
       "requiresCoreVersion": "Requires Zaparoo Core v{{version}} or later",
       "inbox": "Notifications",
       "mediaScrapers": "Scraper",
+      "mediaCleanOrphans": "Clean missing media",
       "remoteInput": "Remote input"
     },
     "inbox": {

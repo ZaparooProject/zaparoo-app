@@ -39,8 +39,30 @@ function MediaSettings() {
     >
       <div className="flex flex-col gap-5">
         <CoreOutdatedNotice />
-        <MediaDatabaseCard />
-        <MediaScrapeCard />
+        <section
+          className="flex flex-col gap-3"
+          aria-labelledby="media-database-heading"
+        >
+          <h2
+            id="media-database-heading"
+            className="text-foreground text-lg font-semibold"
+          >
+            {t("settings.media.databaseTitle")}
+          </h2>
+          <MediaDatabaseCard variant="plain" showMaintenanceActions />
+        </section>
+        <section
+          className="flex flex-col gap-3"
+          aria-labelledby="media-scraper-heading"
+        >
+          <h2
+            id="media-scraper-heading"
+            className="text-foreground text-lg font-semibold"
+          >
+            {t("settings.media.scraperTitle")}
+          </h2>
+          <MediaScrapeCard />
+        </section>
       </div>
     </PageFrame>
   );

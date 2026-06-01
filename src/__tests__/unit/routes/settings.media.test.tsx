@@ -33,7 +33,18 @@ vi.mock("@/components/CoreOutdatedNotice", () => ({
 }));
 
 vi.mock("@/components/MediaDatabaseCard", () => ({
-  MediaDatabaseCard: () => <div>Media database card</div>,
+  MediaDatabaseCard: ({
+    showMaintenanceActions,
+    variant,
+  }: {
+    showMaintenanceActions?: boolean;
+    variant?: string;
+  }) => (
+    <div>
+      Media database card {showMaintenanceActions ? "maintenance" : ""}{" "}
+      {variant}
+    </div>
+  ),
 }));
 
 vi.mock("@/components/MediaScrapeCard", () => ({
@@ -63,7 +74,15 @@ describe("Settings Media Route", () => {
       screen.getByRole("heading", { name: "settings.media.title" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Core outdated notice")).toBeInTheDocument();
-    expect(screen.getByText("Media database card")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "settings.media.databaseTitle" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "settings.media.scraperTitle" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Media database card maintenance plain"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Media scrape card")).toBeInTheDocument();
   });
 });

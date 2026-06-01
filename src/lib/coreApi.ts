@@ -14,6 +14,7 @@ import {
   LogDownloadResponse,
   MediaActiveUpdateRequest,
   MediaResponse,
+  MediaCleanOrphansResponse,
   MediaScrapeCancelResponse,
   MediaScrapeParams,
   MediaScrapeResumeResponse,
@@ -888,6 +889,38 @@ class CoreApi {
         })
         .catch((error) => {
           logger.error("Media generate resume API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  mediaCleanOrphans(): Promise<MediaCleanOrphansResponse> {
+    return new Promise<MediaCleanOrphansResponse>((resolve, reject) => {
+      this.call(Method.MediaCleanOrphans)
+        .then((result) => {
+          try {
+            const response = result as MediaCleanOrphansResponse;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing media clean orphans response:", e, {
+              category: "coreApi",
+              action: "mediaCleanOrphans",
+              severity: "error",
+            });
+            reject(
+              new Error(
+                `Failed to process media clean orphans response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logger.error("Media clean orphans API call failed:", error, {
+            category: "coreApi",
+            action: "mediaCleanOrphans",
+            severity: "error",
+          });
           reject(error);
         });
     });

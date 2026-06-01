@@ -9,6 +9,7 @@ export enum Method {
   MediaGenerate = "media.generate",
   MediaGenerateCancel = "media.generate.cancel",
   MediaGenerateResume = "media.generate.resume",
+  MediaCleanOrphans = "media.clean.orphans",
   MediaActive = "media.active",
   MediaActiveUpdate = "media.active.update",
   MediaTags = "media.tags",
@@ -453,6 +454,10 @@ export interface MediaScrapeCancelResponse {
 /** Response for media.scrape.resume. */
 export interface MediaScrapeResumeResponse {
   message: string;
+}
+
+export interface MediaCleanOrphansResponse {
+  deleted: number;
 }
 
 // ---------------------------------------------------------------------------

@@ -46,6 +46,8 @@ Font is Open Sans from `src/index.css`. Use existing Tailwind classes; do not in
 
 Common hierarchy:
 
+- Page/nav titles use Title Case: `Manage Media`, `Play Controls`, `Create a New Tag`.
+- Section headings and field labels use sentence case: `Media database`, `Metadata scraper`, `Playtime limits`, `Session reset timeout`.
 - Page title in header: `text-foreground text-xl`.
   - Seen across settings, create, search, logs, devices.
 - Slide modal title: centered `text-lg` inside `SlideModal`.
@@ -408,7 +410,7 @@ Do not create a new picker UI for systems/tags.
 
 ### SlideModal
 
-Use `SlideModal` for app bottom-sheet modals.
+Use `SlideModal` as the default modal for app flows: bottom sheets, selectors, action confirmations, and multi-step content. Prefer it unless the nearest existing flow already uses a different modal type.
 
 Visual behavior:
 
@@ -426,20 +428,21 @@ Do not implement one-off bottom-sheet shells.
 
 ### Dialog modals and full-screen write state
 
-Not every modal is a `SlideModal`:
+`Dialog` is not the default for new app actions. Reserve shadcn `Dialog` for existing small/help/system-specific flows:
 
 - `SettingHelp`, `ProPurchase`, `RequirementsModal`, and `NFCModal` use shadcn `Dialog`.
 - `WriteModal` is a special full-screen fixed overlay with scan spinner and cancel button, not a bottom sheet.
 
-Copy the existing modal type for the same job. Do not move help/purchase/write flows into `SlideModal` unless redesigning those flows deliberately.
+Copy the existing modal type for the same job. For new action confirmations, use `SlideModal` unless matching a strong existing Dialog precedent. Do not move help/purchase/write flows into `SlideModal` unless redesigning those flows deliberately.
 
 ### Confirm modals
 
-Confirm modal content is simple, but not one single template:
+Confirm modal content is simple, but not one single template. New action confirmations should generally use `SlideModal` with concise text and equal-width buttons.
 
 - `StopConfirmModal`: centered paragraph, `flex flex-col gap-4 p-4`, buttons row `justify-center gap-4`, cancel outline + confirm primary.
 - Advanced error reporting confirmation matches the `StopConfirmModal` centered paragraph/buttons pattern.
 - `ConfirmClearModal` and mapping delete confirmation use `py-4`, a `flex gap-2` equal-width button row, and destructive outline styling with `border-error text-error`.
+- Manage Media clean confirmation uses `SlideModal`, muted description text, and a `flex gap-2` equal-width button row.
 
 Match the existing confirmation type closest to the action. Destructive actions use visible error styling, not `intent="destructive"` alone.
 

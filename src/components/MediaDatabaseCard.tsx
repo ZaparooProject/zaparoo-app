@@ -1,28 +1,45 @@
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { CoreAPI } from "@/lib/coreApi";
 import { DatabaseIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
+import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 import { SystemSelector, SystemSelectorTrigger } from "./SystemSelector";
 import { LoadingSpinner } from "./ui/loading-spinner";
+import { SlideModal } from "./SlideModal";
 
-export function MediaDatabaseCard() {
+interface MediaDatabaseCardProps {
+  showMaintenanceActions?: boolean;
+  variant?: "card" | "plain";
+}
+
+export function MediaDatabaseCard({
+  showMaintenanceActions = false,
+  variant = "card",
+}: MediaDatabaseCardProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const connected = useStatusStore((state) => state.connected);
   const connectionState = useStatusStore((state) => state.connectionState);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
+  const cleanOrphansFeature = useCoreFeature("mediaCleanOrphans");
   const isLiveConnected = connectionState === ConnectionState.CONNECTED;
   const [cancelRequested, setCancelRequested] = useState(false);
   const [resumeRequested, setResumeRequested] = useState(false);
   const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
+  const [cleanConfirmOpen, setCleanConfirmOpen] = useState(false);
+  const [cleanDeletedCount, setCleanDeletedCount] = useState<number | null>(
+    null,
+  );
+  const [cleanError, setCleanError] = useState<string | null>(null);
 
   const isPaused = gamesIndex.paused === true;
   const isScraping = scrapingStatus?.scraping === true;
@@ -114,6 +131,43 @@ export function MediaDatabaseCard() {
   const isOptimizing =
     gamesIndex.optimizing || mediaStatus?.database?.optimizing;
   const isIndexing = gamesIndex.indexing || mediaStatus?.database?.indexing;
+
+  const cleanMutation = useMutation({
+    mutationFn: () => CoreAPI.mediaCleanOrphans(),
+    onSuccess: (response) => {
+      setCleanDeletedCount(response.deleted);
+      setCleanError(null);
+      queryClient.invalidateQueries({ queryKey: ["media"] });
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
+      queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] });
+    },
+    onError: (err) => {
+      const message =
+        err instanceof Error
+          ? err.message
+          : t("settings.updateDb.cleanOrphansError");
+      setCleanError(message);
+      logger.error("Failed to clean media orphans", err, {
+        category: "api",
+        action: "mediaCleanOrphans",
+        severity: "error",
+      });
+      showRateLimitedErrorToast(t("error", { msg: message }));
+    },
+  });
+
+  const isCleaning = cleanMutation.isPending;
+  const showCleanAction =
+    showMaintenanceActions && cleanOrphansFeature.available;
+  const cleanDisabled =
+    !connected || isIndexing || isOptimizing || isScraping || isCleaning;
+
+  const handleCleanConfirm = () => {
+    setCleanConfirmOpen(false);
+    setCleanDeletedCount(null);
+    setCleanError(null);
+    cleanMutation.mutate();
+  };
 
   // Display string for the current step. Core sends `currentStepDisplay` for
   // every phase (folder discovery, per-system loop, writing, indexes, caches);
@@ -297,6 +351,76 @@ export function MediaDatabaseCard() {
     return "";
   };
 
+  const content = (
+    <div className="space-y-3">
+      {/* System selector for choosing which systems to update */}
+      <SystemSelectorTrigger
+        selectedSystems={selectedSystems}
+        systemsData={systemsData}
+        placeholder={t("settings.updateDb.allSystems")}
+        mode="multi"
+        onClick={() => setSystemSelectorOpen(true)}
+        disabled={!connected || isScraping || isCleaning}
+      />
+
+      {isScraping ? (
+        <div className="text-muted-foreground text-sm">
+          {t("settings.updateDb.blockedByScrape")}
+        </div>
+      ) : null}
+
+      <div data-tour="update-database">
+        <Button
+          label={t("settings.updateDb")}
+          icon={<DatabaseIcon size="20" />}
+          className="w-full"
+          disabled={
+            !connected || isIndexing || isOptimizing || isScraping || isCleaning
+          }
+          onClick={handleUpdateDatabase}
+        />
+      </div>
+
+      {renderStatus()}
+
+      {showCleanAction ? (
+        <div className="space-y-2 pt-1">
+          <Button
+            label={
+              isCleaning
+                ? t("settings.updateDb.cleanOrphansPending")
+                : t("settings.updateDb.cleanOrphans")
+            }
+            variant="outline"
+            intent="destructive"
+            className="w-full"
+            disabled={cleanDisabled}
+            onClick={() => setCleanConfirmOpen(true)}
+          />
+          {isCleaning ? (
+            <p className="text-muted-foreground text-sm">
+              {t("settings.updateDb.cleanOrphansPendingStatus")}
+            </p>
+          ) : null}
+          {cleanError ? (
+            <p className="text-error text-sm">
+              {t("error", { msg: cleanError })}
+            </p>
+          ) : null}
+          {cleanDeletedCount !== null ? (
+            <p className="text-muted-foreground text-sm">
+              {cleanDeletedCount > 0
+                ? t("settings.updateDb.cleanOrphansSuccess", {
+                    count: cleanDeletedCount,
+                  })
+                : t("settings.updateDb.cleanOrphansNone")}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
     <>
       {/* Screen reader announcement for database update progress */}
@@ -304,37 +428,36 @@ export function MediaDatabaseCard() {
         {getStatusText()}
       </div>
 
-      <Card>
-        <div className="space-y-3">
-          {/* System selector for choosing which systems to update */}
-          <SystemSelectorTrigger
-            selectedSystems={selectedSystems}
-            systemsData={systemsData}
-            placeholder={t("settings.updateDb.allSystems")}
-            mode="multi"
-            onClick={() => setSystemSelectorOpen(true)}
-            disabled={!connected || isScraping}
-          />
+      {variant === "card" ? <Card>{content}</Card> : content}
 
-          {isScraping ? (
-            <div className="text-muted-foreground text-sm">
-              {t("settings.updateDb.blockedByScrape")}
-            </div>
-          ) : null}
-
-          <div data-tour="update-database">
+      <SlideModal
+        isOpen={cleanConfirmOpen}
+        close={() => setCleanConfirmOpen(false)}
+        title={t("settings.updateDb.cleanOrphansConfirmTitle")}
+      >
+        <div className="flex flex-col gap-4 py-4">
+          <p className="text-muted-foreground text-sm">
+            {t("settings.updateDb.cleanOrphansConfirmDescription")}
+          </p>
+          <div className="flex gap-2">
             <Button
-              label={t("settings.updateDb")}
-              icon={<DatabaseIcon size="20" />}
-              className="w-full"
-              disabled={!connected || isIndexing || isOptimizing || isScraping}
-              onClick={handleUpdateDatabase}
+              label={t("nav.cancel")}
+              variant="outline"
+              className="flex-1"
+              disabled={isCleaning}
+              onClick={() => setCleanConfirmOpen(false)}
+            />
+            <Button
+              label={t("settings.updateDb.cleanOrphansConfirmAction")}
+              variant="outline"
+              intent="destructive"
+              className="border-error text-error flex-1"
+              disabled={isCleaning}
+              onClick={handleCleanConfirm}
             />
           </div>
-
-          {renderStatus()}
         </div>
-      </Card>
+      </SlideModal>
 
       <SystemSelector
         isOpen={systemSelectorOpen}
