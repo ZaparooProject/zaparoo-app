@@ -12,6 +12,8 @@ import {
   NfcCancelledError,
   NfcUnformattedTagError,
   NfcFormatError,
+  NfcTransientError,
+  isExpectedNfcError,
   wrapNfcError,
 } from "./errors";
 
@@ -96,13 +98,21 @@ async function withNfcSession<T>(
               Nfc.stopScanSession();
               await handleSuccess(result);
             } catch (error) {
-              logger.error("NFC operation error:", error, {
-                category: "nfc",
-                action: "nfcTagScanned",
-                stack: error instanceof Error ? error.stack : undefined,
-              });
+              const wrappedError = wrapNfcError(error);
+              if (isExpectedNfcError(wrappedError)) {
+                logger.debug("Expected NFC operation failure:", wrappedError);
+              } else {
+                logger.error("NFC operation error:", wrappedError, {
+                  category: "nfc",
+                  action: "nfcTagScanned",
+                  stack:
+                    wrappedError instanceof Error
+                      ? wrappedError.stack
+                      : undefined,
+                });
+              }
               Nfc.stopScanSession();
-              await handleError(error);
+              await handleError(wrappedError);
             }
           },
         );
@@ -118,14 +128,22 @@ async function withNfcSession<T>(
         const scanErrorHandle = await Nfc.addListener(
           "scanSessionError",
           async (err) => {
-            logger.error("NFC scan session error:", err, {
-              category: "nfc",
-              action: "scanSessionError",
-              message: err.message,
-              stack: err instanceof Error ? err.stack : undefined,
-            });
+            const wrappedError = wrapNfcError(err);
+            if (isExpectedNfcError(wrappedError)) {
+              logger.debug("Expected NFC scan session failure:", wrappedError);
+            } else {
+              logger.error("NFC scan session error:", wrappedError, {
+                category: "nfc",
+                action: "scanSessionError",
+                message: wrappedError.message,
+                stack:
+                  wrappedError instanceof Error
+                    ? wrappedError.stack
+                    : undefined,
+              });
+            }
             Nfc.stopScanSession();
-            await handleError(err);
+            await handleError(wrappedError);
           },
         );
 
@@ -140,9 +158,10 @@ async function withNfcSession<T>(
         // Now it's safe to start the scan session
         await Nfc.startScanSession();
       } catch (setupError) {
+        const wrappedError = wrapNfcError(setupError);
         // If setup fails (e.g., NFC not enabled), clean up and reject
         await cleanup();
-        reject(setupError);
+        reject(wrappedError);
       }
     };
 
@@ -305,29 +324,35 @@ export async function writeTag(text: string): Promise<Result> {
                 },
               };
             } catch (formatError) {
-              lastFormatError = formatError;
+              const wrappedFormatError = wrapNfcError(formatError);
+              lastFormatError = wrappedFormatError;
               logger.log(
-                `Format attempt ${attempt} failed: ${formatError instanceof Error ? formatError.message : String(formatError)}`,
+                `Format attempt ${attempt} failed: ${wrappedFormatError.message}`,
               );
             }
           }
 
           // All retries exhausted - log technical error for debugging
-          logger.error(
-            "NFC format/write failed after retries",
-            lastFormatError,
-            {
-              category: "nfc",
-              action: "writeTag",
-              stack:
-                lastFormatError instanceof Error
-                  ? lastFormatError.stack
-                  : undefined,
-            },
-          );
-          throw lastFormatError;
+          const wrappedFormatError = wrapNfcError(lastFormatError);
+          if (wrappedFormatError instanceof NfcTransientError) {
+            logger.debug(
+              "Expected NFC format/write failure:",
+              wrappedFormatError,
+            );
+          } else {
+            logger.error(
+              "NFC format/write failed after retries",
+              wrappedFormatError,
+              {
+                category: "nfc",
+                action: "writeTag",
+                stack: wrappedFormatError.stack,
+              },
+            );
+          }
+          throw wrappedFormatError;
         }
-        throw writeError;
+        throw wrapNfcError(writeError);
       }
       return {
         status: Status.Success,

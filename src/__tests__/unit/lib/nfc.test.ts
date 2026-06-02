@@ -113,10 +113,13 @@ vi.mock("@capacitor/core", () => ({
 vi.mock("../../../lib/logger", () => ({
   logger: {
     log: vi.fn(),
+    debug: vi.fn(),
     error: vi.fn(),
   },
 }));
 
+import { logger } from "../../../lib/logger";
+import { NfcTransientError } from "../../../lib/errors";
 import {
   int2hex,
   int2char,
@@ -151,6 +154,8 @@ describe("nfc", () => {
     mockClose.mockClear();
     mockIsSupported.mockClear();
     mockGetPlatform.mockClear();
+    vi.mocked(logger.debug).mockClear();
+    vi.mocked(logger.error).mockClear();
 
     // Reset mocks to default resolved values (important for tests that override them)
     mockWrite.mockResolvedValue(undefined);
@@ -377,6 +382,43 @@ describe("nfc", () => {
       });
     });
 
+    it("should not log expected scan session errors as errors", async () => {
+      const readPromise = readTag();
+
+      await vi.waitFor(() => {
+        expect(mockState.scanSessionErrorCallback).not.toBeNull();
+      });
+
+      mockState.scanSessionErrorCallback?.(new Error("Tag was lost."));
+
+      await expect(readPromise).rejects.toBeInstanceOf(NfcTransientError);
+      expect(logger.debug).toHaveBeenCalledWith(
+        "Expected NFC scan session failure:",
+        expect.any(NfcTransientError),
+      );
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it("should log unexpected scan session errors as errors", async () => {
+      const readPromise = readTag();
+
+      await vi.waitFor(() => {
+        expect(mockState.scanSessionErrorCallback).not.toBeNull();
+      });
+
+      mockState.scanSessionErrorCallback?.(new Error("NFC hardware error"));
+
+      await expect(readPromise).rejects.toThrow("NFC hardware error");
+      expect(logger.error).toHaveBeenCalledWith(
+        "NFC scan session error:",
+        expect.any(Error),
+        expect.objectContaining({
+          category: "nfc",
+          action: "scanSessionError",
+        }),
+      );
+    });
+
     it("should stop scan session on successful scan", async () => {
       const readPromise = readTag();
 
@@ -508,6 +550,27 @@ describe("nfc", () => {
       expect(mockFormat).not.toHaveBeenCalled();
     });
 
+    it("should not log transient write errors as errors", async () => {
+      mockWrite.mockRejectedValueOnce(new Error("Tag was lost."));
+
+      const writePromise = writeTag("test content");
+
+      await vi.waitFor(() => {
+        expect(mockState.nfcTagScannedCallback).not.toBeNull();
+      });
+
+      mockState.nfcTagScannedCallback?.({
+        nfcTag: { id: [1, 2, 3, 4] },
+      } as NfcTagScannedEvent);
+
+      await expect(writePromise).rejects.toBeInstanceOf(NfcTransientError);
+      expect(logger.debug).toHaveBeenCalledWith(
+        "Expected NFC operation failure:",
+        expect.any(NfcTransientError),
+      );
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
     it("should propagate format errors after retries exhausted", async () => {
       mockWrite.mockRejectedValue(
         new Error("The NFC tag has not yet been formatted as NDEF."),
@@ -528,6 +591,39 @@ describe("nfc", () => {
       await expect(writePromise).rejects.toThrow("Format failed");
       // Verify all 3 retries were attempted
       expect(mockFormat).toHaveBeenCalledTimes(3);
+      expect(logger.error).toHaveBeenCalledWith(
+        "NFC format/write failed after retries",
+        expect.any(Error),
+        expect.objectContaining({
+          category: "nfc",
+          action: "writeTag",
+        }),
+      );
+    });
+
+    it("should not log transient format retry failures as errors", async () => {
+      mockWrite.mockRejectedValue(
+        new Error("The NFC tag has not yet been formatted as NDEF."),
+      );
+      mockFormat.mockRejectedValue(new Error("Tag was lost."));
+
+      const writePromise = writeTag("test content");
+
+      await vi.waitFor(() => {
+        expect(mockState.nfcTagScannedCallback).not.toBeNull();
+      });
+
+      mockState.nfcTagScannedCallback?.({
+        nfcTag: { id: [1, 2, 3, 4] },
+      } as NfcTagScannedEvent);
+
+      await expect(writePromise).rejects.toBeInstanceOf(NfcTransientError);
+      expect(mockFormat).toHaveBeenCalledTimes(3);
+      expect(logger.debug).toHaveBeenCalledWith(
+        "Expected NFC format/write failure:",
+        expect.any(NfcTransientError),
+      );
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
     it("should retry on unknown error during format and succeed", async () => {
