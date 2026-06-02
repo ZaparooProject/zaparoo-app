@@ -25,6 +25,7 @@ const {
   mockFormatTag,
   mockEraseTag,
   mockMakeReadOnly,
+  mockIsFormatRelatedError,
   mockHasWriteCapableReader,
   mockIsConnected,
   mockWrite,
@@ -42,6 +43,7 @@ const {
   mockFormatTag: vi.fn(),
   mockEraseTag: vi.fn(),
   mockMakeReadOnly: vi.fn(),
+  mockIsFormatRelatedError: vi.fn().mockReturnValue(false),
   mockHasWriteCapableReader: vi.fn().mockResolvedValue(false),
   mockIsConnected: vi.fn().mockReturnValue(true),
   mockWrite: vi.fn().mockResolvedValue({}),
@@ -54,6 +56,7 @@ const {
   },
   mockLogger: {
     log: vi.fn(),
+    debug: vi.fn(),
     error: vi.fn(),
   },
 }));
@@ -81,6 +84,7 @@ vi.mock("../../../lib/nfc", () => ({
   formatTag: mockFormatTag,
   eraseTag: mockEraseTag,
   makeReadOnly: mockMakeReadOnly,
+  isFormatRelatedError: mockIsFormatRelatedError,
   Status: {
     Success: 0,
     Error: 1,
@@ -132,6 +136,7 @@ describe("useNfcWriter", () => {
     mockNfcIsAvailable.mockResolvedValue({ nfc: true });
     mockHasWriteCapableReader.mockResolvedValue(false);
     mockIsConnected.mockReturnValue(true);
+    mockIsFormatRelatedError.mockReturnValue(false);
 
     // Default successful operations
     mockReadRaw.mockResolvedValue({
@@ -388,6 +393,50 @@ describe("useNfcWriter", () => {
       });
 
       expect(mockToast.error).toHaveBeenCalled();
+    });
+
+    it("should not log expected transient write failures as errors", async () => {
+      mockWriteTag.mockRejectedValue(new Error("Tag was lost."));
+
+      const { result } = renderHook(() => useNfcWriter());
+
+      await act(async () => {
+        await result.current.write(WriteAction.Write, "content");
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe(Status.Error);
+      });
+
+      expect(mockToast.error).toHaveBeenCalled();
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "Expected NFC write operation failure",
+        expect.any(Error),
+      );
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it("should log unexpected write failures as errors", async () => {
+      mockWriteTag.mockRejectedValue(new Error("Write failed"));
+
+      const { result } = renderHook(() => useNfcWriter());
+
+      await act(async () => {
+        await result.current.write(WriteAction.Write, "content");
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe(Status.Error);
+      });
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        "NFC write operation failed",
+        expect.any(Error),
+        expect.objectContaining({
+          category: "nfc",
+          action: WriteAction.Write,
+        }),
+      );
     });
   });
 

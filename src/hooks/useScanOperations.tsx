@@ -12,6 +12,7 @@ import { useAnnouncer } from "@/components/A11yAnnouncer";
 import { useHaptics } from "@/hooks/useHaptics";
 import {
   BarcodeScanCancelledError,
+  isExpectedNfcError,
   wrapBarcodeScannerError,
 } from "@/lib/errors";
 
@@ -97,10 +98,14 @@ export function useScanOperations({
       .catch((error) => {
         setScanStatus(ScanResult.Error);
         setScanSession(false);
-        logger.error("NFC scan failed", error, {
-          category: "nfc",
-          action: "doScan",
-        });
+        if (isExpectedNfcError(error)) {
+          logger.debug("Expected NFC scan failure", error);
+        } else {
+          logger.error("NFC scan failed", error, {
+            category: "nfc",
+            action: "doScan",
+          });
+        }
         toast.error(t("scan.scanError"));
         setTimeout(() => {
           setScanStatus(ScanResult.Default);

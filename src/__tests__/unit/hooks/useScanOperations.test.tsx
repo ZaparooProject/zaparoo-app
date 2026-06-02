@@ -15,10 +15,21 @@ import {
   Nfc,
   __simulateTagScanned,
   __simulateScanCanceled,
+  __simulateScanError,
   __createMockNfcTag,
 } from "../../../../__mocks__/@capawesome-team/capacitor-nfc";
 
 // Helper to create mock barcode with all required properties
+const mockLogger = vi.hoisted(() => ({
+  log: vi.fn(),
+  debug: vi.fn(),
+  error: vi.fn(),
+}));
+
+vi.mock("@/lib/logger", () => ({
+  logger: mockLogger,
+}));
+
 const createMockBarcode = (rawValue: string): Barcode => ({
   rawValue,
   displayValue: rawValue,
@@ -587,6 +598,56 @@ describe("useScanOperations", () => {
 
       // Assert
       expect(result.current.scanStatus).toBe(ScanResult.Default);
+    });
+
+    it("should not log expected transient NFC scan failures as errors", async () => {
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      await act(async () => {
+        result.current.handleScanButton();
+        await vi.advanceTimersByTimeAsync(10);
+      });
+
+      await act(async () => {
+        __simulateScanError({ message: "Tag was lost." });
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      await vi.waitFor(() => {
+        expect(result.current.scanStatus).toBe(ScanResult.Error);
+      });
+      expect(result.current.scanSession).toBe(false);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        "Expected NFC scan failure",
+        expect.any(Error),
+      );
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it("should log unexpected NFC scan failures as errors", async () => {
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      await act(async () => {
+        result.current.handleScanButton();
+        await vi.advanceTimersByTimeAsync(10);
+      });
+
+      await act(async () => {
+        __simulateScanError({ message: "NFC hardware error" });
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      await vi.waitFor(() => {
+        expect(result.current.scanStatus).toBe(ScanResult.Error);
+      });
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        "NFC scan failed",
+        expect.any(Error),
+        expect.objectContaining({
+          category: "nfc",
+          action: "doScan",
+        }),
+      );
     });
 
     it("should handle barcode scanner errors gracefully", async () => {
