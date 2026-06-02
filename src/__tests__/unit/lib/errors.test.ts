@@ -14,6 +14,8 @@ import {
   BarcodeScanCancelledError,
   PurchaseCancelledError,
   isCancellationError,
+  isExpectedEmailAuthError,
+  isExpectedRevenueCatLogoutError,
   isNfcError,
   wrapNfcError,
   wrapBarcodeScannerError,
@@ -257,6 +259,76 @@ describe("errors", () => {
       expect(isNfcError(null)).toBe(false);
       expect(isNfcError(undefined)).toBe(false);
       expect(isNfcError("error string")).toBe(false);
+    });
+  });
+
+  describe("isExpectedEmailAuthError", () => {
+    it("should return true for expected Firebase email auth message tokens", () => {
+      for (const token of [
+        "auth/invalid-credential",
+        "wrong-password",
+        "user-not-found",
+        "invalid-email",
+        "email-already-in-use",
+        "weak-password",
+      ]) {
+        expect(isExpectedEmailAuthError(new Error(`Firebase: ${token}`))).toBe(
+          true,
+        );
+      }
+    });
+
+    it("should return true for structured Firebase email auth codes", () => {
+      for (const code of [
+        "auth/invalid-credential",
+        "auth/wrong-password",
+        "auth/user-not-found",
+        "auth/invalid-email",
+        "auth/email-already-in-use",
+        "auth/weak-password",
+      ]) {
+        expect(isExpectedEmailAuthError({ code })).toBe(true);
+      }
+    });
+
+    it("should return false for unexpected auth failures", () => {
+      for (const error of [
+        new Error("network-request-failed"),
+        { code: "auth/internal-error" },
+        { code: "auth/too-many-requests" },
+        { message: "missing Firebase configuration" },
+        null,
+        undefined,
+      ]) {
+        expect(isExpectedEmailAuthError(error)).toBe(false);
+      }
+    });
+  });
+
+  describe("isExpectedRevenueCatLogoutError", () => {
+    it("should return true for expected anonymous-user logout states", () => {
+      for (const error of [
+        new Error("Cannot log out anonymous app user"),
+        new Error("Current user is already anonymous"),
+        { message: "No current user" },
+        { code: "credentials_unavailable" },
+        { userInfo: { readableErrorCode: "missing credentials" } },
+      ]) {
+        expect(isExpectedRevenueCatLogoutError(error)).toBe(true);
+      }
+    });
+
+    it("should return false for unexpected RevenueCat failures", () => {
+      for (const error of [
+        new Error("network connection lost"),
+        { code: "configuration_error" },
+        { message: "backend unavailable" },
+        { message: "failed to fetch customer info" },
+        null,
+        undefined,
+      ]) {
+        expect(isExpectedRevenueCatLogoutError(error)).toBe(false);
+      }
     });
   });
 

@@ -33,6 +33,7 @@ import { useLiveUpdate } from "./hooks/useLiveUpdate";
 import { initDeviceInfo, logger } from "./lib/logger";
 import { getSubscriptionStatus } from "./lib/onlineApi";
 import { purchasesReady } from "./lib/purchasesSetup";
+import { isExpectedRevenueCatLogoutError } from "./lib/errors";
 import {
   A11yAnnouncerProvider,
   useAnnouncer,
@@ -289,9 +290,15 @@ export default function App() {
             }
           } else {
             // Revert to anonymous RevenueCat customer — only if not already anonymous
-            const { isAnonymous } = await Purchases.isAnonymous();
-            if (!isAnonymous) {
-              await Purchases.logOut();
+            try {
+              const { isAnonymous } = await Purchases.isAnonymous();
+              if (!isAnonymous) {
+                await Purchases.logOut();
+              }
+            } catch (e) {
+              if (!isExpectedRevenueCatLogoutError(e)) {
+                throw e;
+              }
             }
             const { customerInfo } = await Purchases.getCustomerInfo();
             const hasAccess =

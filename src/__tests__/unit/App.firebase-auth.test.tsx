@@ -661,6 +661,80 @@ describe("Firebase Auth Integration", () => {
       expect(mockPurchasesGetCustomerInfo).toHaveBeenCalled();
     });
 
+    it("should ignore expected RevenueCat logout state errors on sign out", async () => {
+      mockPlatform = "ios";
+      mockPurchasesLogOut.mockRejectedValueOnce(
+        new Error("Cannot log out anonymous app user"),
+      );
+      mockPurchasesGetCustomerInfo.mockResolvedValue({
+        customerInfo: { entitlements: { active: {} } },
+      });
+
+      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
+        null;
+      mockAddListener.mockImplementation(
+        (
+          _event: string,
+          callback: (change: { user: unknown }) => Promise<void>,
+        ) => {
+          authCallback = callback;
+          return Promise.resolve({ remove: mockRemove });
+        },
+      );
+
+      const App = (await import("@/App")).default;
+      render(<App />);
+
+      await waitFor(() => {
+        expect(authCallback).not.toBeNull();
+      });
+
+      await act(async () => {
+        await authCallback!({ user: null });
+      });
+
+      expect(mockPurchasesGetCustomerInfo).toHaveBeenCalled();
+      expect(mockLoggerError).not.toHaveBeenCalled();
+    });
+
+    it("should report unexpected RevenueCat logout errors on sign out", async () => {
+      mockPlatform = "ios";
+      const error = new Error("network connection lost");
+      mockPurchasesLogOut.mockRejectedValueOnce(error);
+
+      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
+        null;
+      mockAddListener.mockImplementation(
+        (
+          _event: string,
+          callback: (change: { user: unknown }) => Promise<void>,
+        ) => {
+          authCallback = callback;
+          return Promise.resolve({ remove: mockRemove });
+        },
+      );
+
+      const App = (await import("@/App")).default;
+      render(<App />);
+
+      await waitFor(() => {
+        expect(authCallback).not.toBeNull();
+      });
+
+      await act(async () => {
+        await authCallback!({ user: null });
+      });
+
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        "RevenueCat login sync failed:",
+        error,
+        expect.objectContaining({
+          category: "purchase",
+          action: "logOut",
+        }),
+      );
+    });
+
     it("should handle RevenueCat login failure gracefully", async () => {
       mockPlatform = "ios";
 

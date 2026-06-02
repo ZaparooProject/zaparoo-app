@@ -86,6 +86,104 @@ export class PurchaseCancelledError extends ZaparooError {
 }
 
 // =============================================================================
+// Auth and RevenueCat State Errors
+// =============================================================================
+
+const EXPECTED_EMAIL_AUTH_TOKENS = [
+  "auth/invalid-credential",
+  "invalid-credential",
+  "auth/wrong-password",
+  "wrong-password",
+  "auth/user-not-found",
+  "user-not-found",
+  "auth/invalid-email",
+  "invalid-email",
+  "auth/email-already-in-use",
+  "email-already-in-use",
+  "auth/weak-password",
+  "weak-password",
+];
+
+const EXPECTED_REVENUECAT_LOGOUT_TOKENS = [
+  "already anonymous",
+  "current user is anonymous",
+  "anonymous app user",
+  "cannot log out anonymous",
+  "can't log out anonymous",
+  "cannot logout anonymous",
+  "can't logout anonymous",
+  "no current user",
+  "credentials unavailable",
+  "credentials_unavailable",
+  "credential unavailable",
+  "credential_unavailable",
+  "missing credentials",
+  "no credentials",
+];
+
+function collectErrorSearchStrings(error: unknown): string[] {
+  const strings: string[] = [];
+  const visited = new Set<unknown>();
+
+  const collect = (value: unknown): void => {
+    if (value == null || visited.has(value)) return;
+
+    if (typeof value === "string") {
+      strings.push(value.toLowerCase());
+      return;
+    }
+
+    if (typeof value !== "object") return;
+
+    visited.add(value);
+    if (value instanceof Error) {
+      strings.push(value.name.toLowerCase(), value.message.toLowerCase());
+    }
+
+    const record = value as Record<string, unknown>;
+    for (const key of [
+      "code",
+      "name",
+      "message",
+      "readableErrorCode",
+      "underlyingErrorMessage",
+      "localizedDescription",
+      "domain",
+      "userInfo",
+      "error",
+    ]) {
+      collect(record[key]);
+    }
+  };
+
+  collect(error);
+  return strings;
+}
+
+function includesAnyToken(error: unknown, tokens: readonly string[]): boolean {
+  const searchStrings = collectErrorSearchStrings(error);
+  return tokens.some((token) =>
+    searchStrings.some((searchString) => searchString.includes(token)),
+  );
+}
+
+/**
+ * Check if Firebase email auth failed for expected user-facing reasons.
+ * These are login/signup states, not production monitoring events.
+ */
+export function isExpectedEmailAuthError(error: unknown): boolean {
+  return includesAnyToken(error, EXPECTED_EMAIL_AUTH_TOKENS);
+}
+
+/**
+ * Check if RevenueCat logout failed because auth state already moved anonymous.
+ * These races are expected during sign-out and should not report to monitoring.
+ */
+export function isExpectedRevenueCatLogoutError(error: unknown): boolean {
+  return includesAnyToken(error, EXPECTED_REVENUECAT_LOGOUT_TOKENS);
+}
+
+// =============================================================================
 // Type Guards
 // =============================================================================
 

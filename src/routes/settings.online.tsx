@@ -25,6 +25,10 @@ import { BackIcon, GoogleIcon, AppleIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import {
+  isExpectedEmailAuthError,
+  isExpectedRevenueCatLogoutError,
+} from "@/lib/errors";
+import {
   updateRequirements,
   deleteAccount,
   cancelAccountDeletion,
@@ -165,11 +169,13 @@ function OnlinePage() {
         }
       } catch (e) {
         const error = e as Error;
-        logger.error("Firebase email signup failed:", error, {
-          category: "api",
-          action: "createUserWithEmailAndPassword",
-          severity: "warning",
-        });
+        if (!isExpectedEmailAuthError(e)) {
+          logger.error("Firebase email signup failed:", error, {
+            category: "api",
+            action: "createUserWithEmailAndPassword",
+            severity: "warning",
+          });
+        }
 
         // Handle specific error codes
         if (error.message.includes("email-already-in-use")) {
@@ -212,11 +218,13 @@ function OnlinePage() {
         }
       } catch (e) {
         const error = e as Error;
-        logger.error("Firebase email login failed:", error, {
-          category: "api",
-          action: "signInWithEmail",
-          severity: "warning",
-        });
+        if (!isExpectedEmailAuthError(e)) {
+          logger.error("Firebase email login failed:", error, {
+            category: "api",
+            action: "signInWithEmail",
+            severity: "warning",
+          });
+        }
         toast.error(t("online.loginWrong"));
       } finally {
         setIsLoading(false);
@@ -352,11 +360,13 @@ function OnlinePage() {
           await Purchases.logOut();
         }
       } catch (e) {
-        logger.error("RevenueCat logout failed:", e, {
-          category: "purchase",
-          action: "logOut",
-          severity: "warning",
-        });
+        if (!isExpectedRevenueCatLogoutError(e)) {
+          logger.error("RevenueCat logout failed:", e, {
+            category: "purchase",
+            action: "logOut",
+            severity: "warning",
+          });
+        }
       }
     }
 

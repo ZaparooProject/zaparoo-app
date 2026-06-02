@@ -17,6 +17,7 @@ import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import { updateRequirements, getRequirements } from "@/lib/onlineApi";
 import { useStatusStore } from "@/lib/store";
 import { logger } from "@/lib/logger";
+import { isExpectedRevenueCatLogoutError } from "@/lib/errors";
 
 const TOS_URL = "https://zaparoo.com/terms";
 const PRIVACY_URL = "https://zaparoo.com/privacy";
@@ -117,11 +118,13 @@ export function RequirementsModal() {
           await Purchases.logOut();
         }
       } catch (e) {
-        logger.error("RevenueCat logout failed:", e, {
-          category: "purchase",
-          action: "logOut",
-          severity: "warning",
-        });
+        if (!isExpectedRevenueCatLogoutError(e)) {
+          logger.error("RevenueCat logout failed:", e, {
+            category: "purchase",
+            action: "logOut",
+            severity: "warning",
+          });
+        }
       }
     }
 
