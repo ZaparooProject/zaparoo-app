@@ -278,6 +278,8 @@ describe("Search Component", () => {
     useStatusStore.setState({
       ...useStatusStore.getInitialState(),
       connected: true,
+      coreVersion: "2.7.0",
+      coreVersionPending: false,
       gamesIndex: { exists: true, indexing: false },
     });
     usePreferencesStore.setState({
@@ -427,6 +429,26 @@ describe("Search Component", () => {
         tags: [],
       });
     });
+
+    it("should ignore selected tags when Core stops supporting media tags", () => {
+      render(<Search />);
+
+      fireEvent.click(screen.getByTestId("tag-selector-trigger"));
+      fireEvent.click(screen.getByRole("button", { name: "Select Action" }));
+      useStatusStore.setState({ coreVersion: "2.6.2" });
+      fireEvent.change(screen.getByLabelText("create.search.gameInput"), {
+        target: { value: "mario" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: "create.search.searchButton" }),
+      );
+
+      expect(mockAddRecentSearch).toHaveBeenCalledWith({
+        query: "mario",
+        system: "all",
+        tags: [],
+      });
+    });
   });
 
   describe("system selector", () => {
@@ -507,6 +529,16 @@ describe("Search Component", () => {
       expect(screen.getByTestId("tag-selector-trigger")).toHaveTextContent(
         "action",
       );
+    });
+
+    it("should hide tag selector when Core does not support media tags", () => {
+      useStatusStore.setState({ coreVersion: "2.6.2" });
+
+      render(<Search />);
+
+      expect(
+        screen.queryByTestId("tag-selector-trigger"),
+      ).not.toBeInTheDocument();
     });
   });
 

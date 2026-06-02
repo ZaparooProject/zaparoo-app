@@ -26,6 +26,11 @@ export const FEATURE_GATES: Record<string, FeatureGate> = {
     marquee: false,
     labelKey: "features.mediaCleanOrphans",
   },
+  mediaTags: {
+    since: "2.7.0",
+    marquee: false,
+    labelKey: "features.mediaTags",
+  },
   remoteInput: {
     since: "2.10.0",
     marquee: true,

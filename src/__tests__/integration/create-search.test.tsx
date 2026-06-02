@@ -310,6 +310,8 @@ describe("Create Search Integration", () => {
       ...useStatusStore.getInitialState(),
       connected: true,
       connectionState: ConnectionState.CONNECTED,
+      coreVersion: "2.7.0",
+      coreVersionPending: false,
       gamesIndex: {
         exists: true,
         indexing: false,
@@ -1020,6 +1022,16 @@ describe("Create Search Integration", () => {
           "platformer, action",
         );
       });
+    });
+
+    it("should hide tag selector when Core does not support media tags", () => {
+      useStatusStore.setState({ coreVersion: "2.6.2" });
+
+      render(<Search />);
+
+      expect(
+        screen.queryByTestId("tag-selector-trigger"),
+      ).not.toBeInTheDocument();
     });
   });
 
