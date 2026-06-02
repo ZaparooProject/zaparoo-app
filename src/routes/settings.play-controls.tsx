@@ -139,11 +139,15 @@ function PlayControlsSettings() {
     }
 
     dailyTimeoutRef.current = setTimeout(() => {
+      if (!limitsConfig) return;
+
       const daily = formatDuration({
         hours: parseInt(dailyHours) || 0,
         minutes: parseInt(dailyMinutes) || 0,
       });
-      updateMutation.mutate({ daily });
+      if (daily !== limitsConfig.daily) {
+        updateMutation.mutate({ daily });
+      }
     }, 500);
 
     return () => {
@@ -162,11 +166,15 @@ function PlayControlsSettings() {
     }
 
     sessionTimeoutRef.current = setTimeout(() => {
+      if (!limitsConfig) return;
+
       const session = formatDuration({
         hours: parseInt(sessionHours) || 0,
         minutes: parseInt(sessionMinutes) || 0,
       });
-      updateMutation.mutate({ session });
+      if (session !== limitsConfig.session) {
+        updateMutation.mutate({ session });
+      }
     }, 500);
 
     return () => {
@@ -185,12 +193,16 @@ function PlayControlsSettings() {
     }
 
     resetTimeoutRef.current = setTimeout(() => {
+      if (!limitsConfig) return;
+
       const resetMins = parseInt(resetMinutes) || 0;
       const sessionReset = formatDuration({
         hours: Math.floor(resetMins / 60),
         minutes: resetMins % 60,
       });
-      updateMutation.mutate({ sessionReset });
+      if (sessionReset !== limitsConfig.sessionReset) {
+        updateMutation.mutate({ sessionReset });
+      }
     }, 500);
 
     return () => {

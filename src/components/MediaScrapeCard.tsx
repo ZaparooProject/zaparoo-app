@@ -271,7 +271,7 @@ export function MediaScrapeCard() {
       const roundedSystemProgressPct = Math.round(systemProgressPct);
       const totalSteps = scrapingStatus.totalSteps ?? 0;
       const currentStep = scrapingStatus.currentStep ?? 0;
-      const hasOverallProgress = totalSteps > 0 && currentStep > 0;
+      const hasOverallProgress = totalSteps > 0;
       const overallProgressPct = hasOverallProgress
         ? (currentStep / totalSteps) * 100
         : 0;

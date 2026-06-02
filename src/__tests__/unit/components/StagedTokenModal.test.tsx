@@ -4,10 +4,11 @@ import toast from "react-hot-toast";
 import { act, render, screen, waitFor } from "@/test-utils";
 import { StagedTokenModal } from "@/components/home/StagedTokenModal";
 import { CoreAPI } from "@/lib/coreApi";
-import { useStatusStore } from "@/lib/store";
+import { ConnectionState, useStatusStore } from "@/lib/store";
 
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
+    reset: vi.fn(),
     confirm: vi.fn().mockResolvedValue(undefined),
     settings: vi.fn().mockResolvedValue({ launchGuardTimeout: 15 }),
   },
@@ -39,7 +40,6 @@ const stagedToken = {
 
 function setStagedToken(ready = false) {
   useStatusStore.setState({
-    ...useStatusStore.getInitialState(),
     stagedToken: { token: stagedToken, ready },
   });
 }
@@ -47,6 +47,7 @@ function setStagedToken(ready = false) {
 describe("StagedTokenModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    CoreAPI.reset();
     vi.mocked(CoreAPI.settings).mockResolvedValue({
       runZapScript: false,
       debugLogging: false,
@@ -58,7 +59,11 @@ describe("StagedTokenModal", () => {
       readersScanIgnoreSystems: [],
       launchGuardTimeout: 15,
     });
-    useStatusStore.setState(useStatusStore.getInitialState());
+    useStatusStore.setState({
+      connected: false,
+      connectionState: ConnectionState.IDLE,
+      stagedToken: null,
+    });
   });
 
   afterEach(() => {
