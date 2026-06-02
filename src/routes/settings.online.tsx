@@ -25,6 +25,7 @@ import { BackIcon, GoogleIcon, AppleIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import {
+  collectErrorSearchStrings,
   isExpectedEmailAuthError,
   isExpectedRevenueCatLogoutError,
 } from "@/lib/errors";
@@ -64,39 +65,10 @@ const SIGNUP_EMAIL_AUTH_ERROR_TOKENS = [
   "auth/weak-password",
 ] as const;
 
-function collectEmailAuthErrorStrings(error: unknown): string[] {
-  const strings: string[] = [];
-  const visited = new Set<unknown>();
-
-  const collect = (value: unknown): void => {
-    if (value == null || visited.has(value)) return;
-
-    if (typeof value === "string") {
-      strings.push(value.toLowerCase());
-      return;
-    }
-
-    if (typeof value !== "object") return;
-
-    visited.add(value);
-    if (value instanceof Error) {
-      strings.push(value.name.toLowerCase(), value.message.toLowerCase());
-    }
-
-    const record = value as Record<string, unknown>;
-    for (const key of ["code", "readableErrorCode", "message", "error"]) {
-      collect(record[key]);
-    }
-  };
-
-  collect(error);
-  return strings;
-}
-
 function getExpectedSignupEmailAuthErrorToken(error: unknown): string | null {
   if (!isExpectedEmailAuthError(error)) return null;
 
-  const searchStrings = collectEmailAuthErrorStrings(error);
+  const searchStrings = collectErrorSearchStrings(error);
   return (
     SIGNUP_EMAIL_AUTH_ERROR_TOKENS.find((token) =>
       searchStrings.some((searchString) => searchString.includes(token)),

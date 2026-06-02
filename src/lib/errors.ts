@@ -121,7 +121,7 @@ const EXPECTED_REVENUECAT_LOGOUT_TOKENS = [
   "no credentials",
 ];
 
-function collectErrorSearchStrings(error: unknown): string[] {
+export function collectErrorSearchStrings(error: unknown): string[] {
   const strings: string[] = [];
   const visited = new Set<unknown>();
 
