@@ -14,6 +14,7 @@ import {
   LogDownloadResponse,
   MediaActiveUpdateRequest,
   MediaResponse,
+  MediaCleanOrphansResponse,
   MediaScrapeCancelResponse,
   MediaScrapeParams,
   MediaScrapeResumeResponse,
@@ -56,6 +57,16 @@ interface ApiRequest {
   timestamp: number;
   method: string;
   params: unknown;
+}
+
+export class CoreApiError extends Error {
+  constructor(
+    message: string,
+    public readonly code: number,
+  ) {
+    super(message);
+    this.name = "CoreApiError";
+  }
 }
 
 interface ApiError {
@@ -585,7 +596,7 @@ class CoreApi {
         }
 
         if (res.error) {
-          promise.reject(new Error(res.error.message));
+          promise.reject(new CoreApiError(res.error.message, res.error.code));
           delete this.responsePool[res.id];
 
           // Clear pendingWriteId if this error response is for the pending write
@@ -648,6 +659,19 @@ class CoreApi {
         })
         .catch((error) => {
           logger.error("Run API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  confirm(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.Confirm)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Confirm API call failed:", error);
           reject(error);
         });
     });
@@ -865,6 +889,38 @@ class CoreApi {
         })
         .catch((error) => {
           logger.error("Media generate resume API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  mediaCleanOrphans(): Promise<MediaCleanOrphansResponse> {
+    return new Promise<MediaCleanOrphansResponse>((resolve, reject) => {
+      this.call(Method.MediaCleanOrphans)
+        .then((result) => {
+          try {
+            const response = result as MediaCleanOrphansResponse;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing media clean orphans response:", e, {
+              category: "coreApi",
+              action: "mediaCleanOrphans",
+              severity: "error",
+            });
+            reject(
+              new Error(
+                `Failed to process media clean orphans response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logger.error("Media clean orphans API call failed:", error, {
+            category: "coreApi",
+            action: "mediaCleanOrphans",
+            severity: "error",
+          });
           reject(error);
         });
     });

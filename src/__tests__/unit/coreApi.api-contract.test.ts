@@ -90,6 +90,16 @@ describe("CoreAPI API Contract", () => {
       expect(sentData.params).toBeUndefined();
     });
 
+    it("mediaCleanOrphans should return deleted count", async () => {
+      const promise = CoreAPI.mediaCleanOrphans();
+      simulateResponse(mockSend, { deleted: 12 });
+
+      await expect(promise).resolves.toEqual({ deleted: 12 });
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("media.clean.orphans");
+      expect(sentData.params).toBeUndefined();
+    });
+
     it("scrapers should return available scraper metadata", async () => {
       const promise = CoreAPI.scrapers();
       simulateResponse(mockSend, {
@@ -283,6 +293,16 @@ describe("CoreAPI API Contract", () => {
   });
 
   describe("Additional Method JSON-RPC Format", () => {
+    it("confirm should send correct JSON-RPC format and resolve", async () => {
+      const resultPromise = CoreAPI.confirm();
+      simulateResponse(mockSend, null);
+
+      await expect(resultPromise).resolves.toBeUndefined();
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("confirm");
+      expect(sentData.params).toBeUndefined();
+    });
+
     it("mappingsReload should send correct JSON-RPC format", () => {
       CoreAPI.mappingsReload().catch(() => {});
 

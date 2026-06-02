@@ -70,21 +70,22 @@ The only time `goto` is appropriate is for the initial page load or if you inten
 
 ### App Routes
 
-| Route                | Page             | Notes                                             |
-| -------------------- | ---------------- | ------------------------------------------------- |
-| `/`                  | Home (Zap)       | Connection status, last scanned, now playing      |
-| `/create`            | Create a New Tag | Links to sub-pages, "Current media" button        |
-| `/create/search`     | Search for Media | Search box, system/tag filters, results list      |
-| `/create/custom`     | Custom ZapScript | Text editor with command palette                  |
-| `/create/mappings`   | Add a Mapping    | Token ID input, NFC/Camera scan, ZapScript editor |
-| `/settings`          | Settings         | Device connection, media database, language       |
-| `/settings/readers`  | Readers          | Device readers, scan mode, chat/AI config         |
-| `/settings/playtime` | Playtime         | Playtime limits configuration                     |
-| `/settings/advanced` | Advanced         | Debug logging, error reporting, view logs         |
-| `/settings/logs`     | Logs             | Filterable log viewer                             |
-| `/settings/help`     | Help             | Documentation and community links                 |
-| `/settings/about`    | About            | Version, credits, translations                    |
-| `/settings/online`   | Zaparoo Online   | Login form                                        |
+| Route                     | Page             | Notes                                             |
+| ------------------------- | ---------------- | ------------------------------------------------- |
+| `/`                       | Home (Zap)       | Connection status, last scanned, now playing      |
+| `/create`                 | Create a New Tag | Links to sub-pages, "Current media" button        |
+| `/create/search`          | Search for Media | Search box, system/tag filters, results list      |
+| `/create/custom`          | Custom ZapScript | Text editor with command palette                  |
+| `/create/mappings`        | Add a Mapping    | Token ID input, NFC/Camera scan, ZapScript editor |
+| `/settings`               | Settings         | Device connection, media database, language       |
+| `/settings/readers`       | Readers          | Device readers, scan mode, chat/AI config         |
+| `/settings/play-controls` | Play Controls    | Playtime limits and launch guard configuration    |
+| `/settings/media`         | Manage Media     | Database update and metadata scraper controls     |
+| `/settings/advanced`      | Advanced         | Debug logging, error reporting, view logs         |
+| `/settings/logs`          | Logs             | Filterable log viewer                             |
+| `/settings/help`          | Help             | Documentation and community links                 |
+| `/settings/about`         | About            | Version, credits, translations                    |
+| `/settings/online`        | Zaparoo Online   | Login form                                        |
 
 ### Bottom Navigation Bar
 

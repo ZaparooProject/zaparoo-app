@@ -147,6 +147,10 @@ vi.mock("@/components/InboxModal", () => ({
   InboxModal: () => <div data-testid="inbox-modal" />,
 }));
 
+vi.mock("@/components/home/StagedTokenModal", () => ({
+  StagedTokenModal: () => <div data-testid="staged-token-modal" />,
+}));
+
 vi.mock("@/components/SlideModalProvider", () => ({
   SlideModalProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="slide-modal-provider">{children}</div>
@@ -232,6 +236,7 @@ describe("App Integration", () => {
     // Verify ConnectionProvider is rendered
     expect(screen.getByTestId("connection-provider")).toBeInTheDocument();
     expect(screen.getByTestId("deep-links")).toBeInTheDocument();
+    expect(screen.getByTestId("staged-token-modal")).toBeInTheDocument();
   });
 
   it("should use useDataCache hook", () => {

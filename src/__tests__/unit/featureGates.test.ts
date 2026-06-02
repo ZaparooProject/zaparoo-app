@@ -51,4 +51,10 @@ describe("isCoreFeatureAvailable", () => {
     expect(isCoreFeatureAvailable("mediaScrapers", "2.11.9")).toBe(false);
     expect(isCoreFeatureAvailable("mediaScrapers", "2.12.0")).toBe(true);
   });
+
+  it("should gate media orphan cleanup behind Core 2.12.0", () => {
+    expect(FEATURE_GATES.mediaCleanOrphans?.since).toBe("2.12.0");
+    expect(isCoreFeatureAvailable("mediaCleanOrphans", "2.11.9")).toBe(false);
+    expect(isCoreFeatureAvailable("mediaCleanOrphans", "2.12.0")).toBe(true);
+  });
 });

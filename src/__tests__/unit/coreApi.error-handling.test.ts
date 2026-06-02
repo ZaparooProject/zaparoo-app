@@ -69,6 +69,7 @@ describe("CoreAPI Error Handling Coverage", () => {
         CoreAPI.mediaScrape({ scraperId: "gamelist.xml", systems: ["snes"] }),
     ],
     ["mediaScrapeStatus", () => CoreAPI.mediaScrapeStatus()],
+    ["mediaCleanOrphans", () => CoreAPI.mediaCleanOrphans()],
     ["mediaScrapeCancel", () => CoreAPI.mediaScrapeCancel()],
     ["mediaScrapeResume", () => CoreAPI.mediaScrapeResume()],
   ];

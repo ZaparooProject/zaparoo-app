@@ -763,12 +763,6 @@
   object-fit: contain;
 }
 
-.remote-keyboard-screenshot-path {
-  overflow-wrap: anywhere;
-  color: hsl(0 0% 100% / 75%);
-  font-size: 0.8rem;
-}
-
 .remote-keyboard-screenshot-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

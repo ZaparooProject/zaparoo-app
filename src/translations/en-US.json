@@ -75,6 +75,18 @@
     "accessibility": {
       "skipToContent": "Skip to main content"
     },
+    "tokenStaging": {
+      "title": "Confirm staged token?",
+      "waitingDescription": "This token is waiting for confirmation.",
+      "readyDescription": "This token is ready to confirm.",
+      "tokenValue": "Token value",
+      "confirm": "Confirm",
+      "dismiss": "Hide",
+      "confirmError": "Could not confirm staged token",
+      "expiredError": "Confirmation expired. Scan the token again.",
+      "stagedAnnounce": "A token is waiting for confirmation.",
+      "readyAnnounce": "A staged token is ready to confirm."
+    },
     "scan": {
       "cameraMode": "Camera",
       "cameraAvailable": "Use camera to scan",
@@ -417,18 +429,29 @@
       "updateDb.selectSystemsTitle": "Select Systems to Update",
       "updateDb.allSystems": "All systems",
       "updateDb.progressLabel": "Database update progress",
+      "updateDb.cleanOrphans": "Clean missing media",
+      "updateDb.cleanOrphansPending": "Cleaning...",
+      "updateDb.cleanOrphansPendingStatus": "Cleaning missing media. This can take a minute.",
+      "updateDb.cleanOrphansConfirmTitle": "Clean missing media?",
+      "updateDb.cleanOrphansConfirmDescription": "This removes database entries for files that are already marked missing. Update the media database first if you recently changed files.",
+      "updateDb.cleanOrphansConfirmAction": "Clean",
+      "updateDb.cleanOrphansSuccess": "Removed {{count}} missing media entries",
+      "updateDb.cleanOrphansNone": "No missing media entries found",
+      "updateDb.cleanOrphansError": "Clean missing media failed",
       "scrapeMedia": "Scrape media metadata",
       "scrapeMedia.cancel": "Cancel",
       "scrapeMedia.starting": "Starting...",
       "scrapeMedia.scraperPlaceholder": "Select a scraper",
       "scrapeMedia.allSystems": "All systems",
       "scrapeMedia.selectSystemsTitle": "Select systems to scrape",
-      "scrapeMedia.progressLabel": "Scrape progress",
+      "scrapeMedia.overallProgressLabel": "Overall scrape progress",
+      "scrapeMedia.progressLabel": "Current system scrape progress",
       "scrapeMedia.preparing": "Preparing scrape",
       "scrapeMedia.activeTitle": "Scraping media",
       "scrapeMedia.activeDescription": "Scraping metadata for the current system",
       "scrapeMedia.lastScrapeTitle": "Last scrape",
       "scrapeMedia.currentSystem": "Current system",
+      "scrapeMedia.systemProgressCount": "{{current}} / {{total}} systems",
       "scrapeMedia.processedCount": "{{processed}} / {{total}} processed",
       "scrapeMedia.statsLabel": "Scrape stats",
       "scrapeMedia.matchedLabel": "Matched",
@@ -447,8 +470,10 @@
       "scrapeMedia.status.totalScraped": "{{formattedCount}} media records scraped",
       "scrapeMedia.force": "Re-scrape already scraped media",
       "scrapeMedia.resume": "Resume",
-      "scraper": {
-        "title": "Scraper"
+      "media": {
+        "title": "Manage Media",
+        "databaseTitle": "Media database",
+        "scraperTitle": "Metadata scraper"
       },
       "designer": "Zaparoo Designer",
       "getApp": "Get the Zaparoo App",
@@ -514,6 +539,9 @@
         "connectedReaders": "Device Readers",
         "noReadersDetected": "No readers found"
       },
+      "playControls": {
+        "title": "Play Controls"
+      },
       "playtime": {
         "title": "Playtime"
       },
@@ -537,7 +565,7 @@
         "nfcDriver": "NFC driver connection string",
         "insertModeBlocklist": "Insert mode core blocklist",
         "playtime": {
-          "title": "Playtime Limits",
+          "title": "Playtime limits",
           "enabled": "Enable playtime limits",
           "enabledHelp": "Enforce limits on how long media can be played for on the connected device.\n\n**Daily limit:** Total amount of time media can be played for the day across all sessions. Resets daily.\n\n**Session limit:** Maximum amount of time media can be played at once.\n\n**Session reset timeout:** Amount of time required after a session has completed before a new session can start.",
           "dailyLimit": "Daily limit",
@@ -558,6 +586,16 @@
           "cooldownRemaining": "Cooldown ends in",
           "warningToast": "{{remaining}} of playtime remaining",
           "reachedToast": "{{type}} reached"
+        },
+        "launchGuard": {
+          "title": "Launch guard",
+          "enabled": "Enable launch guard",
+          "enabledHelp": "When media is playing, disruptive scanned tokens are staged instead of launched immediately.",
+          "requireConfirm": "Require App confirmation",
+          "requireConfirmHelp": "Show a confirmation prompt in the App before launching a staged token. When disabled, tapping the same token again confirms it.",
+          "timeout": "Confirmation timeout",
+          "delay": "Confirmation delay",
+          "seconds": "Seconds"
         }
       },
       "app": {
@@ -714,6 +752,7 @@
       "requiresCoreVersion": "Requires Zaparoo Core v{{version}} or later",
       "inbox": "Notifications",
       "mediaScrapers": "Scraper",
+      "mediaCleanOrphans": "Clean missing media",
       "remoteInput": "Remote input"
     },
     "inbox": {
@@ -757,8 +796,11 @@
       "screenshotAction": "Screenshot",
       "screenshotAlt": "Captured platform screenshot",
       "screenshotDownload": "Download",
+      "screenshotShare": "Share",
+      "screenshotShareTitle": "Zaparoo Screenshot",
       "screenshotClear": "Clear",
       "screenshotError": "Could not capture screenshot",
+      "screenshotShareError": "Could not share screenshot",
       "disconnected": "Connect to a device before sending input"
     },
     "pairing": {

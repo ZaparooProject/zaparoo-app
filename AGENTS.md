@@ -128,8 +128,8 @@ docs/                focused guides for Capacitor, deployment, and testing
 
 - shadcn/ui components live under `src/components/ui/`.
 - Custom Zaparoo components live under `src/components/wui/`. Prefer them over inline JSX.
-- Before adding or changing UI, inspect nearby screens and reuse their layout, typography, spacing, and component patterns.
-- Do not invent new card styles, label treatments, badges, stat blocks, or loading affordances unless explicitly requested. If the existing design language does not cover the state, stop and ask before introducing a new visual pattern.
+- Before adding or changing UI, read `docs/design-language.md`, then inspect the nearest sibling screens/components and copy their layout, typography, spacing, states, and component patterns exactly.
+- Do not invent new card styles, label treatments, badges, stat blocks, helper text, descriptions, icons, loading affordances, or other visual flair unless explicitly requested. If the existing design language does not cover the state, stop and ask before introducing a new visual pattern.
 - Use `<EmptyState>` for empty placeholders so they stay consistent.
 - Use `classnames` for conditional Tailwind classes.
 - Use focus rings such as `focus-visible:ring-2 focus-visible:ring-white/50`.

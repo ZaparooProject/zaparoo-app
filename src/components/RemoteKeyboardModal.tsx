@@ -1,6 +1,9 @@
 import { useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
+import { Capacitor } from "@capacitor/core";
+import { Directory, Filesystem } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
 import {
   Camera,
   ChevronDown,
@@ -10,6 +13,7 @@ import {
   Download,
   House,
   Loader2,
+  Share2,
   Undo2,
   X,
 } from "lucide-react";
@@ -149,6 +153,11 @@ function getScreenshotFileName(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? "zaparoo-screenshot.png";
 }
 
+function isShareCancel(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return /cancel(?:ed|led)?/i.test(error.message);
+}
+
 function getRemoteActions(platform: string | null): RemoteAction[] {
   const normalizedPlatform = platform?.toLowerCase() ?? "";
 
@@ -213,6 +222,7 @@ export function RemoteKeyboardModal(props: {
   const [capturingScreenshot, setCapturingScreenshot] = useState(false);
   const sendQueueRef = useRef<Promise<void>>(Promise.resolve());
 
+  const isNative = Capacitor.isNativePlatform();
   const remoteActions = getRemoteActions(corePlatform);
   const modeOptions: { value: RemoteKeyboardMode; label: string }[] = [
     { value: "remote", label: t("remoteKeyboard.remoteMode") },
@@ -281,6 +291,38 @@ export function RemoteKeyboardModal(props: {
         toast.error(message);
       })
       .finally(() => setCapturingScreenshot(false));
+  };
+
+  const shareScreenshot = async () => {
+    if (!screenshot) return;
+
+    try {
+      const filename = getScreenshotFileName(screenshot.path);
+      await Filesystem.writeFile({
+        path: filename,
+        data: screenshot.data,
+        directory: Directory.Cache,
+      });
+      const fileUri = await Filesystem.getUri({
+        path: filename,
+        directory: Directory.Cache,
+      });
+      await Share.share({
+        title: t("remoteKeyboard.screenshotShareTitle"),
+        dialogTitle: t("remoteKeyboard.screenshotShareTitle"),
+        files: [fileUri.uri],
+      });
+    } catch (error) {
+      if (isShareCancel(error)) return;
+
+      const message = t("remoteKeyboard.screenshotShareError");
+      logger.error(message, error, {
+        category: "share",
+        action: "remoteKeyboard.screenshotShare",
+        severity: "warning",
+      });
+      toast.error(message);
+    }
   };
 
   const screenshotUrl = screenshot
@@ -392,18 +434,26 @@ export function RemoteKeyboardModal(props: {
                   alt={t("remoteKeyboard.screenshotAlt")}
                   className="remote-keyboard-screenshot-image"
                 />
-                <p className="remote-keyboard-screenshot-path">
-                  {screenshot.path}
-                </p>
                 <div className="remote-keyboard-screenshot-actions">
-                  <a
-                    className="remote-keyboard-screenshot-control"
-                    href={screenshotUrl}
-                    download={getScreenshotFileName(screenshot.path)}
-                  >
-                    <Download size={20} aria-hidden="true" />
-                    {t("remoteKeyboard.screenshotDownload")}
-                  </a>
+                  {isNative ? (
+                    <button
+                      type="button"
+                      className="remote-keyboard-screenshot-control"
+                      onClick={shareScreenshot}
+                    >
+                      <Share2 size={20} aria-hidden="true" />
+                      {t("remoteKeyboard.screenshotShare")}
+                    </button>
+                  ) : (
+                    <a
+                      className="remote-keyboard-screenshot-control"
+                      href={screenshotUrl}
+                      download={getScreenshotFileName(screenshot.path)}
+                    >
+                      <Download size={20} aria-hidden="true" />
+                      {t("remoteKeyboard.screenshotDownload")}
+                    </a>
+                  )}
                   <button
                     type="button"
                     className="remote-keyboard-screenshot-control"

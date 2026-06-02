@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { render, screen, fireEvent } from "../../../test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MediaDatabaseCard } from "../../../components/MediaDatabaseCard";
@@ -9,7 +10,9 @@ vi.mock("../../../lib/coreApi", () => ({
     mediaGenerate: vi.fn(),
     mediaGenerateCancel: vi.fn(),
     mediaGenerateResume: vi.fn(),
+    mediaCleanOrphans: vi.fn(),
     media: vi.fn(),
+    systems: vi.fn(),
   },
 }));
 
@@ -66,6 +69,8 @@ const { ConnectionState, mockStore } = vi.hoisted(() => {
       paused?: boolean;
     },
     scrapingStatus: null as { scraping: boolean } | null,
+    coreVersion: "2.12.0" as string | null,
+    coreVersionPending: false,
     safeInsets: {
       top: "0px",
       bottom: "0px",
@@ -97,12 +102,16 @@ describe("MediaDatabaseCard", () => {
       currentStepDisplay: "",
     };
     mockStore.scrapingStatus = null;
+    mockStore.coreVersion = "2.12.0";
+    mockStore.coreVersionPending = false;
 
     // Default mock - database exists and ready
     vi.mocked(CoreAPI.media).mockResolvedValue({
       database: { exists: true, indexing: false },
       active: [],
     });
+    vi.mocked(CoreAPI.systems).mockResolvedValue({ systems: [] });
+    vi.mocked(CoreAPI.mediaCleanOrphans).mockResolvedValue({ deleted: 0 });
   });
 
   it("should render update button when not indexing", () => {
@@ -159,6 +168,115 @@ describe("MediaDatabaseCard", () => {
     expect(
       screen.getByText("settings.updateDb.blockedByScrape"),
     ).toBeInTheDocument();
+  });
+
+  it("should hide clean missing media action by default", () => {
+    render(<MediaDatabaseCard />);
+
+    expect(
+      screen.queryByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should hide clean missing media action for unsupported Core versions", () => {
+    mockStore.coreVersion = "2.11.9";
+
+    render(<MediaDatabaseCard showMaintenanceActions />);
+
+    expect(
+      screen.queryByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should confirm before cleaning missing media", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.mediaCleanOrphans).mockResolvedValue({ deleted: 3 });
+
+    render(<MediaDatabaseCard showMaintenanceActions />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    );
+    expect(
+      screen.getByRole("dialog", {
+        name: "settings.updateDb.cleanOrphansConfirmTitle",
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphansConfirmAction",
+      }),
+    );
+
+    await vi.waitFor(() => {
+      expect(CoreAPI.mediaCleanOrphans).toHaveBeenCalledOnce();
+    });
+    expect(
+      await screen.findByText("settings.updateDb.cleanOrphansSuccess"),
+    ).toBeInTheDocument();
+  });
+
+  it("should show when no missing media entries are found", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.mediaCleanOrphans).mockResolvedValue({ deleted: 0 });
+
+    render(<MediaDatabaseCard showMaintenanceActions />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphansConfirmAction",
+      }),
+    );
+
+    expect(
+      await screen.findByText("settings.updateDb.cleanOrphansNone"),
+    ).toBeInTheDocument();
+  });
+
+  it("should show clean missing media errors inline", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.mediaCleanOrphans).mockRejectedValue(
+      new Error("clean timed out"),
+    );
+
+    render(<MediaDatabaseCard showMaintenanceActions />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphansConfirmAction",
+      }),
+    );
+
+    expect(await screen.findByText("error")).toBeInTheDocument();
+  });
+
+  it("should disable clean missing media while scraping", () => {
+    mockStore.scrapingStatus = { scraping: true };
+
+    render(<MediaDatabaseCard showMaintenanceActions />);
+
+    expect(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    ).toBeDisabled();
   });
 
   it("should call CoreAPI.mediaGenerate when button is clicked", async () => {

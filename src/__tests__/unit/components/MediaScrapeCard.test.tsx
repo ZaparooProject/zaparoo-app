@@ -127,7 +127,7 @@ describe("MediaScrapeCard", () => {
     });
   });
 
-  it("should not offer systems when the scraper supports none", async () => {
+  it("should treat empty scraper support as all systems", async () => {
     const user = userEvent.setup();
     vi.mocked(CoreAPI.scrapers).mockResolvedValueOnce({
       scrapers: [
@@ -155,7 +155,7 @@ describe("MediaScrapeCard", () => {
     await waitFor(() => {
       expect(CoreAPI.mediaScrape).toHaveBeenCalledWith({
         scraperId: "empty-scraper",
-        systems: [],
+        systems: undefined,
         force: false,
       });
     });
@@ -278,6 +278,98 @@ describe("MediaScrapeCard", () => {
         name: "settings.scrapeMedia.scraperPlaceholder",
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it("should render overall and current-system progress from the new payload", async () => {
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockResolvedValueOnce({
+      scraperId: "gamelist.xml",
+      systemId: "snes",
+      currentStep: 2,
+      totalSteps: 4,
+      currentStepDisplay: "Super Nintendo",
+      currentSystem: {
+        systemId: "snes",
+        systemName: "Super Nintendo",
+        processed: 25,
+        total: 100,
+        matched: 20,
+        skipped: 5,
+      },
+      processed: 25,
+      total: 100,
+      matched: 20,
+      skipped: 5,
+      totalScraped: 12,
+      scraping: true,
+      done: false,
+      paused: false,
+    });
+
+    render(<MediaScrapeCard />);
+
+    expect(
+      await screen.findByRole("progressbar", {
+        name: "settings.scrapeMedia.overallProgressLabel",
+      }),
+    ).toHaveAttribute("aria-valuenow", "50");
+    expect(
+      screen.getByRole("progressbar", {
+        name: "settings.scrapeMedia.progressLabel",
+      }),
+    ).toHaveAttribute("aria-valuenow", "25");
+    expect(screen.getAllByText("Super Nintendo").length).toBeGreaterThan(0);
+  });
+
+  it("should show overall progress count while the first system is preparing", async () => {
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockResolvedValueOnce({
+      scraperId: "gamelist.xml",
+      systemId: "snes",
+      currentStep: 0,
+      totalSteps: 4,
+      currentStepDisplay: "Preparing",
+      processed: 0,
+      total: 100,
+      matched: 0,
+      skipped: 0,
+      totalScraped: 0,
+      scraping: true,
+      done: false,
+      paused: false,
+    });
+
+    render(<MediaScrapeCard />);
+
+    expect(
+      await screen.findByRole("progressbar", {
+        name: "settings.scrapeMedia.overallProgressLabel",
+      }),
+    ).toHaveAttribute("aria-valuenow", "0");
+    expect(
+      screen.getByText("settings.scrapeMedia.systemProgressCount"),
+    ).toBeInTheDocument();
+  });
+
+  it("should render current-system progress from the legacy payload", async () => {
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockResolvedValueOnce({
+      scraperId: "gamelist.xml",
+      systemId: "snes",
+      processed: 3,
+      total: 6,
+      matched: 2,
+      skipped: 1,
+      totalScraped: 12,
+      scraping: true,
+      done: false,
+      paused: false,
+    });
+
+    render(<MediaScrapeCard />);
+
+    expect(
+      await screen.findByRole("progressbar", {
+        name: "settings.scrapeMedia.progressLabel",
+      }),
+    ).toHaveAttribute("aria-valuenow", "50");
   });
 
   it("should keep the form visible when showing completed scrape stats", async () => {

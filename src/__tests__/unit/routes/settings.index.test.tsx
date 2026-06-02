@@ -209,21 +209,14 @@ describe("Settings Index Route", () => {
       expect(screen.getByTestId("media-database-card")).toBeInTheDocument();
     });
 
-    it("should render the designer button", () => {
-      renderComponent();
-      expect(
-        screen.getByRole("button", { name: "settings.designer" }),
-      ).toBeInTheDocument();
-    });
-
     it("should render navigation links to settings subpages", () => {
       renderComponent();
       expect(
         screen.getByText("settings.readers.title").closest("a"),
       ).toHaveAttribute("href", "/settings/readers");
       expect(
-        screen.getByText("settings.playtime.title").closest("a"),
-      ).toHaveAttribute("href", "/settings/playtime");
+        screen.getByText("settings.playControls.title").closest("a"),
+      ).toHaveAttribute("href", "/settings/play-controls");
       expect(
         screen.getByText("settings.advanced.title").closest("a"),
       ).toHaveAttribute("href", "/settings/advanced");
@@ -252,7 +245,7 @@ describe("Settings Index Route", () => {
       expect(screen.getByText("한국어")).toBeInTheDocument();
     });
 
-    it("should show scraper row for supported Core versions", () => {
+    it("should show manage media row for supported Core versions", () => {
       mockUseStatusStore.mockImplementation((selector) =>
         selector({
           ...defaultStoreState,
@@ -264,11 +257,11 @@ describe("Settings Index Route", () => {
       renderComponent();
 
       expect(
-        screen.getByRole("link", { name: "settings.scraper.title" }),
-      ).toHaveAttribute("href", "/settings/scraper");
+        screen.getByRole("link", { name: "settings.media.title" }),
+      ).toHaveAttribute("href", "/settings/media");
     });
 
-    it("should show a spinner on the scraper row while scraping", () => {
+    it("should not show a spinner on the manage media row while scraping", () => {
       mockUseStatusStore.mockImplementation((selector) =>
         selector({
           ...defaultStoreState,
@@ -289,10 +282,10 @@ describe("Settings Index Route", () => {
 
       renderComponent();
 
-      const scraperLink = screen.getByRole("link", {
-        name: "settings.scraper.title Loading",
+      const mediaLink = screen.getByRole("link", {
+        name: "settings.media.title",
       });
-      expect(within(scraperLink).getByRole("status")).toBeInTheDocument();
+      expect(within(mediaLink).queryByRole("status")).not.toBeInTheDocument();
     });
   });
 
@@ -350,20 +343,6 @@ describe("Settings Index Route", () => {
 
       await waitFor(() => {
         expect(invalidateQueriesSpy).toHaveBeenCalled();
-      });
-    });
-  });
-
-  describe("designer button", () => {
-    it("should open designer URL when clicked", async () => {
-      renderComponent();
-
-      fireEvent.click(
-        screen.getByRole("button", { name: "settings.designer" }),
-      );
-
-      expect(mockBrowserOpen).toHaveBeenCalledWith({
-        url: "https://design.zaparoo.org",
       });
     });
   });

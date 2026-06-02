@@ -98,6 +98,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setGamesIndex,
     setScrapingStatus,
     setLastToken,
+    setActiveTokens,
+    clearActiveTokens,
+    setStagedToken,
+    clearStagedToken,
     addDeviceHistory,
     setDeviceHistory,
     updateDeviceHistoryMeta,
@@ -119,6 +123,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setGamesIndex: state.setGamesIndex,
       setScrapingStatus: state.setScrapingStatus,
       setLastToken: state.setLastToken,
+      setActiveTokens: state.setActiveTokens,
+      clearActiveTokens: state.clearActiveTokens,
+      setStagedToken: state.setStagedToken,
+      clearStagedToken: state.clearStagedToken,
       addDeviceHistory: state.addDeviceHistory,
       setDeviceHistory: state.setDeviceHistory,
       updateDeviceHistoryMeta: state.updateDeviceHistoryMeta,
@@ -189,6 +197,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             const params = notification.params as PlayingResponse;
             logger.log("media.started", params);
             setPlaying(params);
+            clearStagedToken();
             break;
           }
 
@@ -200,6 +209,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               mediaPath: "",
               mediaName: "",
             });
+            clearStagedToken();
             break;
           }
 
@@ -241,6 +251,41 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             const params = notification.params as TokenResponse;
             logger.log("activeToken", params);
             setLastToken(params);
+            setActiveTokens([params]);
+            clearStagedToken();
+            break;
+          }
+
+          case Notification.TokensRemoved: {
+            logger.log("tokens.removed");
+            clearActiveTokens();
+            break;
+          }
+
+          case Notification.TokensStaged: {
+            const params = notification.params as TokenResponse;
+            logger.log("tokens.staged", params);
+            setStagedToken({ token: params, ready: false });
+            announce(t("tokenStaging.stagedAnnounce"), "assertive");
+            break;
+          }
+
+          case Notification.TokensStagedReady: {
+            const params = notification.params as TokenResponse;
+            logger.log("tokens.staged.ready", params);
+            setStagedToken({ token: params, ready: true });
+            announce(t("tokenStaging.readyAnnounce"), "assertive");
+            break;
+          }
+
+          case Notification.ReadersConnected:
+          case Notification.ReadersDisconnected: {
+            logger.log(notification.method, notification.params);
+            queryClient.invalidateQueries({ queryKey: ["readers"] });
+            if (notification.method === Notification.ReadersDisconnected) {
+              clearActiveTokens();
+              clearStagedToken();
+            }
             break;
           }
 
@@ -372,6 +417,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             break;
           }
 
+          case Notification.TokensLaunching: {
+            logger.debug("running notification ignored", notification.params);
+            break;
+          }
+
           default:
             logger.warn("Unknown notification method:", notification.method);
         }
@@ -385,6 +435,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setGamesIndex,
       setScrapingStatus,
       setLastToken,
+      setActiveTokens,
+      clearActiveTokens,
+      setStagedToken,
+      clearStagedToken,
       queryClient,
       t,
       announce,
@@ -567,6 +621,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           return;
         }
         try {
+          setActiveTokens(v.active ?? []);
           if (v.last) {
             setLastToken(v.last);
           }
@@ -594,6 +649,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setGamesIndex,
     setPlaying,
     setLastToken,
+    setActiveTokens,
     setCoreVersion,
     setCorePlatform,
     setCoreVersionPending,

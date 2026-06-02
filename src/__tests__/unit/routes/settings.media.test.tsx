@@ -32,33 +32,57 @@ vi.mock("@/components/CoreOutdatedNotice", () => ({
   CoreOutdatedNotice: () => <div>Core outdated notice</div>,
 }));
 
+vi.mock("@/components/MediaDatabaseCard", () => ({
+  MediaDatabaseCard: ({
+    showMaintenanceActions,
+    variant,
+  }: {
+    showMaintenanceActions?: boolean;
+    variant?: string;
+  }) => (
+    <div>
+      Media database card {showMaintenanceActions ? "maintenance" : ""}{" "}
+      {variant}
+    </div>
+  ),
+}));
+
 vi.mock("@/components/MediaScrapeCard", () => ({
   MediaScrapeCard: () => <div>Media scrape card</div>,
 }));
 
-import "@/routes/settings.scraper";
+import "@/routes/settings.media";
 
-const getScraperSettings = () => {
+const getMediaSettings = () => {
   if (!componentRef.current) {
-    throw new Error("ScraperSettings component was not captured");
+    throw new Error("MediaSettings component was not captured");
   }
   return componentRef.current;
 };
 
-describe("Settings Scraper Route", () => {
+describe("Settings Media Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should render the scraper settings page content", () => {
-    const ScraperSettings = getScraperSettings();
+  it("should render the media settings page content", () => {
+    const MediaSettings = getMediaSettings();
 
-    render(<ScraperSettings />);
+    render(<MediaSettings />);
 
     expect(
-      screen.getByRole("heading", { name: "settings.scraper.title" }),
+      screen.getByRole("heading", { name: "settings.media.title" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Core outdated notice")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "settings.media.databaseTitle" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "settings.media.scraperTitle" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Media database card maintenance plain"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Media scrape card")).toBeInTheDocument();
   });
 });

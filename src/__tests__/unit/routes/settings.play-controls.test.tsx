@@ -23,12 +23,16 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 const mockPlaytimeLimits = vi.fn();
 const mockPlaytime = vi.fn();
 const mockPlaytimeLimitsUpdate = vi.fn();
+const mockSettings = vi.fn();
+const mockSettingsUpdate = vi.fn();
 
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
     playtimeLimits: () => mockPlaytimeLimits(),
     playtime: () => mockPlaytime(),
     playtimeLimitsUpdate: (params: any) => mockPlaytimeLimitsUpdate(params),
+    settings: () => mockSettings(),
+    settingsUpdate: (params: any) => mockSettingsUpdate(params),
   },
 }));
 
@@ -69,12 +73,12 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
 }));
 
 // Import the route module to trigger createFileRoute which captures the component
-import "@/routes/settings.playtime";
+import "@/routes/settings.play-controls";
 
 // The component will be captured by the mock
-const getPlaytimeSettings = () => componentRef.current;
+const getPlayControlsSettings = () => componentRef.current;
 
-describe("Settings Playtime Route", () => {
+describe("Settings Play Controls Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -94,6 +98,23 @@ describe("Settings Playtime Route", () => {
     });
 
     mockPlaytimeLimitsUpdate.mockResolvedValue({});
+
+    mockSettings.mockResolvedValue({
+      runZapScript: false,
+      debugLogging: false,
+      errorReporting: false,
+      audioScanFeedback: false,
+      readersAutoDetect: false,
+      readersScanMode: "tap",
+      readersScanExitDelay: 0,
+      readersScanIgnoreSystems: [],
+      launchGuardEnabled: true,
+      launchGuardTimeout: 15,
+      launchGuardDelay: 0,
+      launchGuardRequireConfirm: true,
+    });
+
+    mockSettingsUpdate.mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -101,8 +122,8 @@ describe("Settings Playtime Route", () => {
   });
 
   const renderComponent = () => {
-    const PlaytimeSettings = getPlaytimeSettings();
-    return render(<PlaytimeSettings />);
+    const PlayControlsSettings = getPlayControlsSettings();
+    return render(<PlayControlsSettings />);
   };
 
   describe("rendering", () => {
@@ -110,7 +131,7 @@ describe("Settings Playtime Route", () => {
       renderComponent();
 
       expect(
-        screen.getByRole("heading", { name: "settings.playtime.title" }),
+        screen.getByRole("heading", { name: "settings.playControls.title" }),
       ).toBeInTheDocument();
     });
 
@@ -142,7 +163,51 @@ describe("Settings Playtime Route", () => {
 
       // Wait for the checkbox to appear (not loading skeleton)
       await waitFor(() => {
-        expect(screen.getByRole("checkbox")).toBeInTheDocument();
+        expect(screen.getAllByRole("checkbox").length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe("launch guard controls", () => {
+    it("should render Launch Guard controls", async () => {
+      renderComponent();
+
+      expect(
+        await screen.findByText("settings.core.launchGuard.title"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("settings.core.launchGuard.enabled"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("settings.core.launchGuard.requireConfirm"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("settings.core.launchGuard.timeout"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("settings.core.launchGuard.delay"),
+      ).toBeInTheDocument();
+    });
+
+    it("should call settings update when Launch Guard is toggled", async () => {
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getAllByRole("checkbox").length).toBeGreaterThanOrEqual(
+          3,
+        );
+      });
+
+      const launchGuardToggle = screen
+        .getAllByLabelText("settings.core.launchGuard.enabled")
+        .find((element) => element.tagName === "INPUT");
+      expect(launchGuardToggle).toBeDefined();
+      fireEvent.click(launchGuardToggle!);
+
+      await waitFor(() => {
+        expect(mockSettingsUpdate).toHaveBeenCalledWith({
+          launchGuardEnabled: false,
+        });
       });
     });
   });
@@ -187,6 +252,53 @@ describe("Settings Playtime Route", () => {
 
       await waitFor(() => {
         expect(mockPlaytimeLimits).toHaveBeenCalled();
+      });
+    });
+
+    it("should call settings API", async () => {
+      renderComponent();
+
+      await waitFor(() => {
+        expect(mockSettings).toHaveBeenCalled();
+      });
+    });
+
+    it("should not persist unchanged synced limits", async () => {
+      renderComponent();
+
+      await screen.findByDisplayValue("2");
+      await new Promise((resolve) => setTimeout(resolve, 650));
+
+      expect(mockPlaytimeLimitsUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should persist changed playtime limits", async () => {
+      renderComponent();
+
+      fireEvent.change(await screen.findByDisplayValue("2"), {
+        target: { value: "3" },
+      });
+      fireEvent.change(await screen.findByDisplayValue("1"), {
+        target: { value: "2" },
+      });
+      fireEvent.change(await screen.findByDisplayValue("30"), {
+        target: { value: "45" },
+      });
+
+      await waitFor(() => {
+        expect(mockPlaytimeLimitsUpdate).toHaveBeenCalledWith({
+          daily: "3h",
+        });
+      });
+      await waitFor(() => {
+        expect(mockPlaytimeLimitsUpdate).toHaveBeenCalledWith({
+          session: "2h",
+        });
+      });
+      await waitFor(() => {
+        expect(mockPlaytimeLimitsUpdate).toHaveBeenCalledWith({
+          sessionReset: "45m",
+        });
       });
     });
   });
