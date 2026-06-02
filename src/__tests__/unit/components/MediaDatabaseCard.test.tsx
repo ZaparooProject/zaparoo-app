@@ -245,6 +245,28 @@ describe("MediaDatabaseCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("should show clean missing media errors inline", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.mediaCleanOrphans).mockRejectedValue(
+      new Error("clean timed out"),
+    );
+
+    render(<MediaDatabaseCard showMaintenanceActions />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphansConfirmAction",
+      }),
+    );
+
+    expect(await screen.findByText("error")).toBeInTheDocument();
+  });
+
   it("should disable clean missing media while scraping", () => {
     mockStore.scrapingStatus = { scraping: true };
 

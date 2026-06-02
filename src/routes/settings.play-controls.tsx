@@ -145,7 +145,7 @@ function PlayControlsSettings() {
         hours: parseInt(dailyHours) || 0,
         minutes: parseInt(dailyMinutes) || 0,
       });
-      if (daily !== limitsConfig.daily) {
+      if (daily !== formatDuration(parseDuration(limitsConfig.daily))) {
         updateMutation.mutate({ daily });
       }
     }, 500);
@@ -172,7 +172,7 @@ function PlayControlsSettings() {
         hours: parseInt(sessionHours) || 0,
         minutes: parseInt(sessionMinutes) || 0,
       });
-      if (session !== limitsConfig.session) {
+      if (session !== formatDuration(parseDuration(limitsConfig.session))) {
         updateMutation.mutate({ session });
       }
     }, 500);
@@ -200,7 +200,10 @@ function PlayControlsSettings() {
         hours: Math.floor(resetMins / 60),
         minutes: resetMins % 60,
       });
-      if (sessionReset !== limitsConfig.sessionReset) {
+      if (
+        sessionReset !==
+        formatDuration(parseDuration(limitsConfig.sessionReset))
+      ) {
         updateMutation.mutate({ sessionReset });
       }
     }, 500);

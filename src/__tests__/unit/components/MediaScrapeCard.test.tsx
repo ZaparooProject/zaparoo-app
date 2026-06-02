@@ -320,6 +320,35 @@ describe("MediaScrapeCard", () => {
     expect(screen.getAllByText("Super Nintendo").length).toBeGreaterThan(0);
   });
 
+  it("should show overall progress count while the first system is preparing", async () => {
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockResolvedValueOnce({
+      scraperId: "gamelist.xml",
+      systemId: "snes",
+      currentStep: 0,
+      totalSteps: 4,
+      currentStepDisplay: "Preparing",
+      processed: 0,
+      total: 100,
+      matched: 0,
+      skipped: 0,
+      totalScraped: 0,
+      scraping: true,
+      done: false,
+      paused: false,
+    });
+
+    render(<MediaScrapeCard />);
+
+    expect(
+      await screen.findByRole("progressbar", {
+        name: "settings.scrapeMedia.overallProgressLabel",
+      }),
+    ).toHaveAttribute("aria-valuenow", "0");
+    expect(
+      screen.getByText("settings.scrapeMedia.systemProgressCount"),
+    ).toBeInTheDocument();
+  });
+
   it("should render current-system progress from the legacy payload", async () => {
     vi.mocked(CoreAPI.mediaScrapeStatus).mockResolvedValueOnce({
       scraperId: "gamelist.xml",

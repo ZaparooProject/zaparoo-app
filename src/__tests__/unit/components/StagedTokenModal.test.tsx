@@ -70,6 +70,12 @@ describe("StagedTokenModal", () => {
     vi.useRealTimers();
   });
 
+  it("should not render without a staged token", () => {
+    render(<StagedTokenModal />);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("should render waiting staged-token copy", () => {
     setStagedToken(false);
 

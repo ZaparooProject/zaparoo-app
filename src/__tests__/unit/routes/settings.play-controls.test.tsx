@@ -262,5 +262,44 @@ describe("Settings Play Controls Route", () => {
         expect(mockSettings).toHaveBeenCalled();
       });
     });
+
+    it("should not persist unchanged synced limits", async () => {
+      renderComponent();
+
+      await screen.findByDisplayValue("2");
+      await new Promise((resolve) => setTimeout(resolve, 650));
+
+      expect(mockPlaytimeLimitsUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should persist changed playtime limits", async () => {
+      renderComponent();
+
+      fireEvent.change(await screen.findByDisplayValue("2"), {
+        target: { value: "3" },
+      });
+      fireEvent.change(await screen.findByDisplayValue("1"), {
+        target: { value: "2" },
+      });
+      fireEvent.change(await screen.findByDisplayValue("30"), {
+        target: { value: "45" },
+      });
+
+      await waitFor(() => {
+        expect(mockPlaytimeLimitsUpdate).toHaveBeenCalledWith({
+          daily: "3h",
+        });
+      });
+      await waitFor(() => {
+        expect(mockPlaytimeLimitsUpdate).toHaveBeenCalledWith({
+          session: "2h",
+        });
+      });
+      await waitFor(() => {
+        expect(mockPlaytimeLimitsUpdate).toHaveBeenCalledWith({
+          sessionReset: "45m",
+        });
+      });
+    });
   });
 });
