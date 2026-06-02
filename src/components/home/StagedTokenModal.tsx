@@ -106,9 +106,11 @@ export function StagedTokenModal() {
     }
   };
 
+  if (!stagedToken) return null;
+
   return (
     <SlideModal
-      isOpen={stagedToken !== null}
+      isOpen
       close={clearStagedToken}
       title={t("tokenStaging.title")}
       fixedHeight="auto"

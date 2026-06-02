@@ -430,34 +430,36 @@ export function MediaDatabaseCard({
 
       {variant === "card" ? <Card>{content}</Card> : content}
 
-      <SlideModal
-        isOpen={cleanConfirmOpen}
-        close={() => setCleanConfirmOpen(false)}
-        title={t("settings.updateDb.cleanOrphansConfirmTitle")}
-      >
-        <div className="flex flex-col gap-4 py-4">
-          <p className="text-muted-foreground text-sm">
-            {t("settings.updateDb.cleanOrphansConfirmDescription")}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              label={t("nav.cancel")}
-              variant="outline"
-              className="flex-1"
-              disabled={isCleaning}
-              onClick={() => setCleanConfirmOpen(false)}
-            />
-            <Button
-              label={t("settings.updateDb.cleanOrphansConfirmAction")}
-              variant="outline"
-              intent="destructive"
-              className="border-error text-error flex-1"
-              disabled={isCleaning}
-              onClick={handleCleanConfirm}
-            />
+      {showCleanAction ? (
+        <SlideModal
+          isOpen={cleanConfirmOpen}
+          close={() => setCleanConfirmOpen(false)}
+          title={t("settings.updateDb.cleanOrphansConfirmTitle")}
+        >
+          <div className="flex flex-col gap-4 py-4">
+            <p className="text-muted-foreground text-sm">
+              {t("settings.updateDb.cleanOrphansConfirmDescription")}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                label={t("nav.cancel")}
+                variant="outline"
+                className="flex-1"
+                disabled={isCleaning}
+                onClick={() => setCleanConfirmOpen(false)}
+              />
+              <Button
+                label={t("settings.updateDb.cleanOrphansConfirmAction")}
+                variant="outline"
+                intent="destructive"
+                className="border-error text-error flex-1"
+                disabled={isCleaning}
+                onClick={handleCleanConfirm}
+              />
+            </div>
           </div>
-        </div>
-      </SlideModal>
+        </SlideModal>
+      ) : null}
 
       <SystemSelector
         isOpen={systemSelectorOpen}
