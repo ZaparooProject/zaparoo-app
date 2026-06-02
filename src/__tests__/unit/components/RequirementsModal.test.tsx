@@ -344,7 +344,8 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    fireEvent.click(
+    const user = userEvent.setup();
+    await user.click(
       screen.getByRole("button", { name: /requirements\.logout/i }),
     );
 
@@ -378,7 +379,8 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    fireEvent.click(
+    const user = userEvent.setup();
+    await user.click(
       screen.getByRole("button", { name: /requirements\.logout/i }),
     );
 

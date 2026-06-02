@@ -57,6 +57,53 @@ function isOAuthAvailable(): boolean {
   return window.location.hostname === "zaparoo.app";
 }
 
+const SIGNUP_EMAIL_AUTH_ERROR_TOKENS = [
+  "email-already-in-use",
+  "auth/email-already-in-use",
+  "weak-password",
+  "auth/weak-password",
+] as const;
+
+function collectEmailAuthErrorStrings(error: unknown): string[] {
+  const strings: string[] = [];
+  const visited = new Set<unknown>();
+
+  const collect = (value: unknown): void => {
+    if (value == null || visited.has(value)) return;
+
+    if (typeof value === "string") {
+      strings.push(value.toLowerCase());
+      return;
+    }
+
+    if (typeof value !== "object") return;
+
+    visited.add(value);
+    if (value instanceof Error) {
+      strings.push(value.name.toLowerCase(), value.message.toLowerCase());
+    }
+
+    const record = value as Record<string, unknown>;
+    for (const key of ["code", "readableErrorCode", "message", "error"]) {
+      collect(record[key]);
+    }
+  };
+
+  collect(error);
+  return strings;
+}
+
+function getExpectedSignupEmailAuthErrorToken(error: unknown): string | null {
+  if (!isExpectedEmailAuthError(error)) return null;
+
+  const searchStrings = collectEmailAuthErrorStrings(error);
+  return (
+    SIGNUP_EMAIL_AUTH_ERROR_TOKENS.find((token) =>
+      searchStrings.some((searchString) => searchString.includes(token)),
+    ) ?? null
+  );
+}
+
 /**
  * Get user's display initial for avatar
  */
@@ -168,19 +215,19 @@ function OnlinePage() {
           toast.error(t("online.signUpFail"));
         }
       } catch (e) {
-        const error = e as Error;
-        if (!isExpectedEmailAuthError(e)) {
-          logger.error("Firebase email signup failed:", error, {
+        const isExpectedEmailError = isExpectedEmailAuthError(e);
+        const emailAuthErrorToken = getExpectedSignupEmailAuthErrorToken(e);
+        if (!isExpectedEmailError) {
+          logger.error("Firebase email signup failed:", e, {
             category: "api",
             action: "createUserWithEmailAndPassword",
             severity: "warning",
           });
         }
 
-        // Handle specific error codes
-        if (error.message.includes("email-already-in-use")) {
+        if (emailAuthErrorToken?.includes("email-already-in-use")) {
           toast.error(t("online.emailExists"));
-        } else if (error.message.includes("weak-password")) {
+        } else if (emailAuthErrorToken?.includes("weak-password")) {
           toast.error(t("online.weakPassword"));
         } else {
           toast.error(t("online.signUpFail"));
