@@ -9,6 +9,7 @@ import { describe, it, expect } from "vitest";
 import {
   ZaparooError,
   NfcCancelledError,
+  NfcTransientError,
   NfcUnformattedTagError,
   NfcFormatError,
   BarcodeScanCancelledError,
@@ -17,6 +18,8 @@ import {
   isExpectedEmailAuthError,
   isExpectedRevenueCatLogoutError,
   isNfcError,
+  isExpectedNfcError,
+  isTransientNfcError,
   wrapNfcError,
   wrapBarcodeScannerError,
   wrapPurchaseError,
@@ -75,6 +78,34 @@ describe("errors", () => {
       const error = new NfcCancelledError();
 
       expect(error.name).toBe("NfcCancelledError");
+    });
+  });
+
+  describe("NfcTransientError", () => {
+    it("should extend ZaparooError", () => {
+      const error = new NfcTransientError();
+
+      expect(error).toBeInstanceOf(ZaparooError);
+      expect(error).toBeInstanceOf(Error);
+    });
+
+    it("should use default message when not provided", () => {
+      const error = new NfcTransientError();
+
+      expect(error.message).toBe("NFC tag was lost during operation");
+    });
+
+    it("should store original error", () => {
+      const originalError = new Error("Tag was lost");
+      const error = new NfcTransientError("Wrapped error", originalError);
+
+      expect(error.originalError).toBe(originalError);
+    });
+
+    it("should set correct name property", () => {
+      const error = new NfcTransientError();
+
+      expect(error.name).toBe("NfcTransientError");
     });
   });
 
@@ -237,6 +268,10 @@ describe("errors", () => {
       expect(isNfcError(new NfcCancelledError())).toBe(true);
     });
 
+    it("should return true for NfcTransientError", () => {
+      expect(isNfcError(new NfcTransientError())).toBe(true);
+    });
+
     it("should return true for NfcUnformattedTagError", () => {
       expect(isNfcError(new NfcUnformattedTagError())).toBe(true);
     });
@@ -332,6 +367,33 @@ describe("errors", () => {
     });
   });
 
+  describe("isExpectedNfcError", () => {
+    it("should return true for expected NFC errors", () => {
+      expect(isExpectedNfcError(new NfcCancelledError())).toBe(true);
+      expect(isExpectedNfcError(new NfcTransientError())).toBe(true);
+      expect(isExpectedNfcError(new NfcUnformattedTagError())).toBe(true);
+      expect(isExpectedNfcError(new NfcFormatError())).toBe(true);
+    });
+
+    it("should wrap native expected NFC messages before checking", () => {
+      expect(isExpectedNfcError(new Error("Tag was lost."))).toBe(true);
+      expect(isExpectedNfcError({ message: "No NFC tag was detected." })).toBe(
+        true,
+      );
+    });
+
+    it("should return false for unexpected errors", () => {
+      expect(isExpectedNfcError(new Error("Permission denied"))).toBe(false);
+    });
+  });
+
+  describe("isTransientNfcError", () => {
+    it("should return true only for NfcTransientError", () => {
+      expect(isTransientNfcError(new NfcTransientError())).toBe(true);
+      expect(isTransientNfcError(new NfcFormatError())).toBe(false);
+    });
+  });
+
   describe("wrapNfcError", () => {
     it("should wrap unformatted tag error with 'not yet been formatted as ndef'", () => {
       const originalError = new Error(
@@ -360,6 +422,34 @@ describe("errors", () => {
       const wrapped = wrapNfcError(originalError);
 
       expect(wrapped).toBeInstanceOf(NfcUnformattedTagError);
+    });
+
+    it("should wrap transient tag-loss errors", () => {
+      const messages = [
+        "No NFC tag was detected.",
+        "The tag is not connected.",
+        "Tag was lost.",
+        "android.nfc.TagLostException",
+        "Tag is out of date.",
+        "Stale tag handle",
+        "Could not connect to tag.",
+        "Session invalidated unexpectedly.",
+        "Reader session invalidated.",
+        "Connection lost.",
+      ];
+
+      for (const message of messages) {
+        expect(wrapNfcError(new Error(message))).toBeInstanceOf(
+          NfcTransientError,
+        );
+      }
+    });
+
+    it("should preserve message from plain plugin event objects", () => {
+      const wrapped = wrapNfcError({ message: "Tag was lost." });
+
+      expect(wrapped).toBeInstanceOf(NfcTransientError);
+      expect(wrapped.message).toBe("Tag was lost.");
     });
 
     it("should wrap format error with 'unknown error'", () => {

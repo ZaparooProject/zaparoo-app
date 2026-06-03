@@ -753,6 +753,7 @@
       "inbox": "Notifications",
       "mediaScrapers": "Scraper",
       "mediaCleanOrphans": "Clean missing media",
+      "mediaTags": "Media tags",
       "remoteInput": "Remote input"
     },
     "inbox": {
