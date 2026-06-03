@@ -1,6 +1,8 @@
-import { render, screen } from "../../test-utils";
+import { render, screen, waitFor } from "../../test-utils";
 import { vi, beforeEach, describe, it, expect } from "vitest";
 import App from "@/App";
+import { isNativePluginAvailable } from "@/lib/capacitorBridge";
+import { logger } from "@/lib/logger";
 
 // Mock window.location for i18n
 Object.defineProperty(window, "location", {
@@ -43,12 +45,18 @@ vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: vi.fn(() => false),
     getPlatform: vi.fn(() => "web"),
+    isPluginAvailable: vi.fn(() => true),
   },
   registerPlugin: vi.fn(),
 }));
 
 vi.mock("@uidotdev/usehooks", () => ({
   usePrevious: vi.fn(() => undefined),
+}));
+
+vi.mock("@/lib/capacitorBridge", () => ({
+  isNativePluginAvailable: vi.fn(() => true),
+  isPluginAvailable: vi.fn(() => true),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => {
@@ -212,12 +220,16 @@ vi.mock("@/hooks/useWriteQueueProcessor", () => ({
   useWriteQueueProcessor: vi.fn(),
 }));
 vi.mock("@/hooks/useShakeDetection", () => ({ useShakeDetection: vi.fn() }));
-vi.mock("@/lib/logger", () => ({ initDeviceInfo: vi.fn() }));
+vi.mock("@/lib/logger", () => ({
+  initDeviceInfo: vi.fn(),
+  logger: { warn: vi.fn(), debug: vi.fn(), log: vi.fn(), error: vi.fn() },
+}));
 vi.mock("@/lib/purchasesSetup", () => ({ purchasesReady: Promise.resolve() }));
 
 describe("App Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(isNativePluginAvailable).mockReturnValue(true);
   });
 
   it("should render App component with all providers", () => {
@@ -251,5 +263,38 @@ describe("App Integration", () => {
 
     // Verify ConnectionProvider is rendered
     expect(screen.getByTestId("connection-provider")).toBeInTheDocument();
+  });
+
+  it("should skip StatusBar setup when native plugin is unavailable", async () => {
+    const { Capacitor } = await import("@capacitor/core");
+    const { StatusBar } = await import("@capacitor/status-bar");
+
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(isNativePluginAvailable).mockImplementation(
+      (pluginName: string) => pluginName !== "StatusBar",
+    );
+
+    render(<App />);
+
+    expect(StatusBar.show).not.toHaveBeenCalled();
+    expect(StatusBar.setStyle).not.toHaveBeenCalled();
+  });
+
+  it("should log non-critical StatusBar setup failures", async () => {
+    const { Capacitor } = await import("@capacitor/core");
+    const { StatusBar } = await import("@capacitor/status-bar");
+    const error = new Error("StatusBar unavailable");
+
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(StatusBar.show).mockRejectedValueOnce(error);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(logger.warn).toHaveBeenCalledWith(
+        "StatusBar setup failed:",
+        error,
+      );
+    });
   });
 });

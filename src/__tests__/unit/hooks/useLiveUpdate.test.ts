@@ -14,6 +14,10 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
+vi.mock("@/lib/capacitorBridge", () => ({
+  isNativePluginAvailable: vi.fn(() => true),
+}));
+
 describe("useLiveUpdate", () => {
   beforeEach(() => {
     vi.clearAllMocks();

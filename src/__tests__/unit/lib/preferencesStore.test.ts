@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { Preferences } from "@capacitor/preferences";
 import { usePreferencesStore } from "../../../lib/preferencesStore";
-import { act, renderHook } from "../../../test-utils";
+import { act, renderHook, waitFor } from "../../../test-utils";
+import { isPluginAvailable } from "../../../lib/capacitorBridge";
 
 // Mock Capacitor Preferences
 vi.mock("@capacitor/preferences", () => ({
@@ -9,6 +11,14 @@ vi.mock("@capacitor/preferences", () => ({
     set: vi.fn().mockResolvedValue(undefined),
     remove: vi.fn().mockResolvedValue(undefined),
   },
+}));
+
+vi.mock("../../../lib/capacitorBridge", () => ({
+  isCapacitorPluginUnavailableError: vi.fn((error: unknown) =>
+    error instanceof Error ? error.message.includes("not implemented") : false,
+  ),
+  isNativePluginAvailable: vi.fn(() => true),
+  isPluginAvailable: vi.fn(() => true),
 }));
 
 // Mock sessionManager
@@ -22,6 +32,7 @@ vi.mock("../../../lib/nfc", () => ({
 describe("usePreferencesStore", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(isPluginAvailable).mockReturnValue(true);
     // Reset store state between tests
     usePreferencesStore.setState({
       restartScan: false,
@@ -37,6 +48,35 @@ describe("usePreferencesStore", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe("Capacitor Preferences bridge guards", () => {
+    it("should hydrate with defaults without reading storage when Preferences is unavailable", async () => {
+      vi.mocked(isPluginAvailable).mockReturnValue(false);
+
+      await usePreferencesStore.persist.rehydrate();
+
+      expect(Preferences.get).not.toHaveBeenCalled();
+      expect(usePreferencesStore.getState()._hasHydrated).toBe(true);
+    });
+
+    it("should skip persistence writes when Preferences is unavailable", async () => {
+      vi.mocked(isPluginAvailable).mockImplementation(
+        (pluginName: string) => pluginName !== "Preferences",
+      );
+      vi.mocked(Preferences.set).mockClear();
+
+      const { result } = renderHook(() => usePreferencesStore());
+
+      act(() => {
+        result.current.setShowFilenames(true);
+      });
+
+      await waitFor(() => {
+        expect(result.current.showFilenames).toBe(true);
+      });
+      expect(Preferences.set).not.toHaveBeenCalled();
+    });
   });
 
   describe("shake mode business logic", () => {
