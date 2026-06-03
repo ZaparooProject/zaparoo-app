@@ -96,13 +96,18 @@ function normalizeMessageData(data: unknown): string {
 }
 
 function createSanitizedDataPreview(data: string): string {
-  return Array.from(data)
-    .map((char) => {
-      const codePoint = char.codePointAt(0) ?? 0;
-      return codePoint <= 31 || codePoint === 127 ? " " : char;
-    })
-    .join("")
-    .slice(0, 200);
+  let preview = "";
+
+  for (let index = 0; index < data.length && preview.length < 200; ) {
+    const codePoint = data.codePointAt(index) ?? 0;
+    const charLength = codePoint > 0xffff ? 2 : 1;
+    const char = data.slice(index, index + charLength);
+
+    preview += codePoint <= 31 || codePoint === 127 ? " " : char;
+    index += charLength;
+  }
+
+  return preview;
 }
 
 function extractJsonRpcIdFromMalformedData(data: string): string | null {
@@ -658,15 +663,6 @@ class CoreApi {
             rawData.length,
             createSanitizedDataPreview(rawData),
           );
-          logger.error("Malformed Core JSON response:", error, {
-            category: "api",
-            action: "parseJSON",
-            severity: "warning",
-            requestId,
-            dataLength: error.dataLength,
-            dataPreview: error.dataPreview,
-          });
-
           if (requestId) {
             const pendingResponse = this.responsePool[requestId];
             if (pendingResponse) {
