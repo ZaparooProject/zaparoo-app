@@ -87,19 +87,11 @@ describe("CoreAPI Internals", () => {
       expect(() => setDeviceAddress("test-address")).not.toThrow();
     });
 
-    it("should throw when getWsUrl encounters an error", () => {
-      // Mock String.prototype.lastIndexOf to throw an error during URL construction
-      const originalLastIndexOf = String.prototype.lastIndexOf;
-      String.prototype.lastIndexOf = vi.fn(() => {
-        throw new Error("String operation error");
-      });
+    it("should not throw for invalid saved device address", () => {
+      mockLocalStorage.getItem.mockReturnValue("192.168.1.286");
 
-      try {
-        expect(() => getWsUrl()).toThrow("String operation error");
-      } finally {
-        // Restore mock
-        String.prototype.lastIndexOf = originalLastIndexOf;
-      }
+      expect(() => getWsUrl()).not.toThrow();
+      expect(getWsUrl()).toBe("");
     });
   });
 

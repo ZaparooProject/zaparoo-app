@@ -16,6 +16,7 @@ interface DeviceConnectionCardProps {
   setAddress: (address: string) => void;
   onAddressChange: (address: string) => void;
   connectionError: string;
+  addressError?: string;
   onScanClick?: () => void;
 }
 
@@ -24,6 +25,7 @@ export function DeviceConnectionCard({
   setAddress,
   onAddressChange,
   connectionError,
+  addressError,
   onScanClick,
 }: DeviceConnectionCardProps) {
   const { t } = useTranslation();
@@ -66,6 +68,7 @@ export function DeviceConnectionCard({
             saveValue={onAddressChange}
             saveDisabled={address === savedAddress}
             autoComplete="off"
+            error={addressError}
             onKeyUp={(e) => {
               if (e.key === "Enter" && address !== savedAddress) {
                 onAddressChange(address);

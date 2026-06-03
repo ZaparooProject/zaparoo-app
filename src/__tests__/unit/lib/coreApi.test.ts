@@ -327,25 +327,25 @@ describe("CoreAPI", () => {
       expect(wsUrl).toBe("ws://zaparoo.local:9090/api/v0.1");
     });
 
-    it("should strip invalid port and use default when port is non-numeric", () => {
+    it("should reject non-numeric port", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:abc");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
+      expect(wsUrl).toBe("");
     });
 
-    it("should strip invalid port and use default when port is out of range", () => {
+    it("should reject port that is out of range", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:70000");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
+      expect(wsUrl).toBe("");
     });
 
-    it("should strip invalid port and use default when port is zero", () => {
+    it("should reject zero port", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:0");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
+      expect(wsUrl).toBe("");
     });
 
     it("should handle unbracketed IPv6 addresses by wrapping in brackets", () => {
@@ -364,11 +364,11 @@ describe("CoreAPI", () => {
       expect(wsUrl).toBe("ws://[fe80::1]:7497/api/v0.1");
     });
 
-    it("should handle trailing colon by stripping it and using default port", () => {
+    it("should reject trailing colon", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
+      expect(wsUrl).toBe("");
     });
 
     it("should use localhost with default port when no address is stored and on web", () => {

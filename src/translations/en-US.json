@@ -416,6 +416,8 @@
       "title": "Settings",
       "moreSettings": "More settings",
       "device": "Device address",
+      "deviceAddressRequired": "Enter a device address",
+      "deviceAddressInvalid": "Enter a valid hostname, IP address, or host:port.",
       "modeLabel": "Scan mode",
       "tapMode": "Tap",
       "insertMode": "Hold",

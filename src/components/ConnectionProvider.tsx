@@ -49,9 +49,9 @@ import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import {
   CoreAPI,
   getDeviceAddress,
-  getWsUrl,
   isCancelled,
   isExpectedMediaDatabaseError,
+  validateDeviceAddress,
   type NotificationRequest,
 } from "@/lib/coreApi";
 import {
@@ -719,22 +719,18 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       return;
     }
 
-    let wsUrl: string;
-    try {
-      wsUrl = getWsUrl();
-    } catch (e) {
-      logger.error("Failed to construct WebSocket URL:", e);
-      setConnectionState(ConnectionState.ERROR);
-      setConnectionError(
-        e instanceof Error ? e.message : "Invalid configuration",
+    const addressResult = validateDeviceAddress(targetDeviceAddress);
+    if (!addressResult.ok) {
+      logger.warn(
+        `[ConnectionProvider] Invalid device address: ${targetDeviceAddress}`,
       );
-      return;
-    }
-    if (!wsUrl) {
       setConnectionState(ConnectionState.ERROR);
-      setConnectionError("Invalid WebSocket URL");
+      setConnectionError(tRef.current(addressResult.errorKey));
       return;
     }
+
+    const wsUrl = addressResult.wsUrl;
+    const deviceAddress = addressResult.address;
 
     // Generate unique ID for this connection session to prevent stale events
     // Use crypto.randomUUID if available, fallback for older Android WebViews
@@ -748,7 +744,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     CoreAPI.reset();
 
     logger.log(
-      `[ConnectionProvider] Setting up connection to: ${targetDeviceAddress} (id: ${connectionId.slice(0, 8)})`,
+      `[ConnectionProvider] Setting up connection to: ${deviceAddress} (id: ${connectionId.slice(0, 8)})`,
     );
 
     // Setup connection manager event handlers
@@ -849,7 +845,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       onCredentialsRevoked: () => {
         // Server rejected our stored credentials — clear them and prompt
         // the user to pair again.
-        const deviceKey = normalizeDeviceKey(targetDeviceAddress);
+        const deviceKey = normalizeDeviceKey(deviceAddress);
         credentialStore.delete(deviceKey).catch((err) => {
           logger.error("Failed to delete revoked credentials", err, {
             category: "storage",
@@ -859,7 +855,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         const updated = useStatusStore
           .getState()
           .deviceHistory.map((entry) =>
-            entry.address === targetDeviceAddress
+            entry.address === deviceAddress
               ? { ...entry, paired: undefined }
               : entry,
           );
@@ -875,16 +871,16 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
     // Add device and set as active
     const transport = connectionManager.addDevice({
-      deviceId: targetDeviceAddress,
+      deviceId: deviceAddress,
       type: "websocket",
       address: wsUrl,
       encryption: {
         getCredentials: () =>
-          credentialStore.get(normalizeDeviceKey(targetDeviceAddress)),
+          credentialStore.get(normalizeDeviceKey(deviceAddress)),
       },
     });
 
-    connectionManager.setActiveDevice(targetDeviceAddress);
+    connectionManager.setActiveDevice(deviceAddress);
 
     // Create a compatibility wrapper for CoreAPI
     const transportWrapper = {
@@ -919,7 +915,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       }
       // Reset CoreAPI to clear any pending requests for this connection
       CoreAPI.reset();
-      connectionManager.removeDevice(targetDeviceAddress);
+      connectionManager.removeDevice(deviceAddress);
       setConnectionState(ConnectionState.DISCONNECTED);
     };
   }, [

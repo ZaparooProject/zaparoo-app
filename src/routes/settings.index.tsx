@@ -49,6 +49,7 @@ function Settings() {
     isCoreFeatureAvailable("mediaScrapers", coreVersion);
 
   const [address, setAddress] = useState(getDeviceAddress());
+  const [addressError, setAddressError] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
 
   const { selectDevice, selectScanDevice } = useSelectDevice();
@@ -61,14 +62,31 @@ function Settings() {
     });
   }, [setDeviceHistory]);
 
-  const handleDeviceAddressChange = (newAddress: string) => {
-    selectDevice(newAddress);
+  const handleAddressInputChange = (newAddress: string) => {
     setAddress(newAddress);
+    if (addressError) setAddressError("");
+  };
+
+  const handleDeviceAddressChange = (newAddress: string) => {
+    const result = selectDevice(newAddress);
+    if (!result.ok) {
+      setAddressError(t(result.errorKey));
+      return;
+    }
+
+    setAddress(result.address);
+    setAddressError("");
   };
 
   const handleScanDeviceSelect = (device: ScanDeviceSelection) => {
-    selectScanDevice(device);
-    setAddress(device.address);
+    const result = selectScanDevice(device);
+    if (!result.ok) {
+      setAddressError(t(result.errorKey));
+      return;
+    }
+
+    setAddress(result.address);
+    setAddressError("");
   };
 
   return (
@@ -89,9 +107,10 @@ function Settings() {
           <div data-tour="device-address">
             <DeviceConnectionCard
               address={address}
-              setAddress={setAddress}
+              setAddress={handleAddressInputChange}
               onAddressChange={handleDeviceAddressChange}
               connectionError={connectionError}
+              addressError={addressError}
               onScanClick={() => setScanOpen(true)}
             />
           </div>

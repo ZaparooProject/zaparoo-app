@@ -5,6 +5,7 @@
  * Routes messages to the active transport and handles lifecycle events.
  */
 
+import { isInvalidDeviceAddressError } from "../coreApi";
 import { logger } from "../logger";
 import type {
   Transport,
@@ -84,10 +85,17 @@ export class ConnectionManager {
         // State will be updated by onStateChange
       },
       onError: (error) => {
-        logger.error(
-          `[ConnectionManager] Device ${config.deviceId} error:`,
-          error,
-        );
+        if (isInvalidDeviceAddressError(error)) {
+          logger.warn(
+            `[ConnectionManager] Device ${config.deviceId} invalid address`,
+            error,
+          );
+        } else {
+          logger.error(
+            `[ConnectionManager] Device ${config.deviceId} error:`,
+            error,
+          );
+        }
         this.handlers.onError?.(config.deviceId, error);
       },
       onMessage: (event) => {

@@ -5,6 +5,7 @@
  * Message queuing is handled at the CoreAPI level, not here.
  */
 
+import { InvalidDeviceAddressError } from "../coreApi";
 import { logger } from "../logger";
 import { EncryptedSession } from "../crypto/session";
 import type {
@@ -320,8 +321,7 @@ export class WebSocketTransport implements Transport {
         logger.warn(
           `[Transport:${this.deviceId}] Invalid device address format`,
         );
-        // Provide a user-friendly error message
-        this.handlers.onError?.(new Error("Invalid device address format"));
+        this.handlers.onError?.(new InvalidDeviceAddressError());
       } else {
         logger.error(
           `[Transport:${this.deviceId}] Failed to create WebSocket:`,

@@ -131,7 +131,8 @@ describe("WebSocketTransport", () => {
         // Should call onError with user-friendly message
         expect(onError).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: "Invalid device address format",
+            message: "Invalid device address",
+            name: "InvalidDeviceAddressError",
           }),
         );
 
