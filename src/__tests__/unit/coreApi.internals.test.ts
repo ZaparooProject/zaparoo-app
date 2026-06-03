@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   CoreAPI,
+  MalformedCoreResponseError,
   getDeviceAddress,
   setDeviceAddress,
   getWsUrl,
@@ -124,6 +125,16 @@ describe("CoreAPI Internals", () => {
       await expect(CoreAPI.processReceived(messageEvent)).rejects.toThrow(
         "Not a valid JSON-RPC payload.",
       );
+    });
+
+    it("should classify malformed JSON as a recoverable Core response error", async () => {
+      const messageEvent = new MessageEvent("message", {
+        data: '{"jsonrpc":"2.0","result":',
+      });
+
+      await expect(
+        CoreAPI.processReceived(messageEvent),
+      ).rejects.toBeInstanceOf(MalformedCoreResponseError);
     });
 
     it("should process notifications and return method/params", async () => {

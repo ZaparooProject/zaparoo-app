@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   CoreAPI,
   CoreApiError,
+  MalformedCoreResponseError,
   getDeviceAddress,
   getWsUrl,
   isExpectedMediaDatabaseError,
@@ -167,11 +168,25 @@ describe("CoreAPI", () => {
     expect(result).toBeNull();
   });
 
-  it("should handle invalid JSON in processReceived", async () => {
+  it("should reject unknown malformed JSON in processReceived", async () => {
     const invalidJsonEvent = { data: "invalid json" } as MessageEvent;
-    await expect(CoreAPI.processReceived(invalidJsonEvent)).rejects.toThrow(
-      "Error parsing JSON response",
-    );
+
+    await expect(
+      CoreAPI.processReceived(invalidJsonEvent),
+    ).rejects.toBeInstanceOf(MalformedCoreResponseError);
+  });
+
+  it("should reject matching pending requests for malformed JSON responses", async () => {
+    const promise = CoreAPI.version();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+
+    await expect(
+      CoreAPI.processReceived({
+        data: `{"jsonrpc":"2.0","id":"${sentData.id}","result":{"version":`,
+      } as MessageEvent),
+    ).resolves.toBeNull();
+
+    await expect(promise).rejects.toBeInstanceOf(MalformedCoreResponseError);
   });
 
   it.each([

@@ -69,6 +69,52 @@ export class CoreApiError extends Error {
   }
 }
 
+export class MalformedCoreResponseError extends Error {
+  constructor(
+    public readonly parseMessage: string,
+    public readonly requestId: string | null,
+    public readonly dataLength: number,
+    public readonly dataPreview: string,
+  ) {
+    super(`Malformed Core JSON response: ${parseMessage}`);
+    this.name = "MalformedCoreResponseError";
+  }
+}
+
+export function isMalformedCoreResponseError(
+  error: unknown,
+): error is MalformedCoreResponseError {
+  return error instanceof MalformedCoreResponseError;
+}
+
+function normalizeMessageData(data: unknown): string {
+  if (typeof data === "string") return data;
+  if (data instanceof ArrayBuffer) {
+    return new TextDecoder().decode(data);
+  }
+  return String(data);
+}
+
+function createSanitizedDataPreview(data: string): string {
+  let preview = "";
+
+  for (let index = 0; index < data.length && preview.length < 200; ) {
+    const codePoint = data.codePointAt(index) ?? 0;
+    const charLength = codePoint > 0xffff ? 2 : 1;
+    const char = data.slice(index, index + charLength);
+
+    preview += codePoint <= 31 || codePoint === 127 ? " " : char;
+    index += charLength;
+  }
+
+  return preview;
+}
+
+function extractJsonRpcIdFromMalformedData(data: string): string | null {
+  const match = data.match(/"id"\s*:\s*"([^"\\\r\n]{1,128})"/);
+  return match?.[1] ?? null;
+}
+
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
@@ -104,6 +150,18 @@ function logMediaApiFailure(
   error: unknown,
   severity: "error" | "warning" = "error",
 ): void {
+  if (isMalformedCoreResponseError(error)) {
+    logger.warn(`${label}:`, error, {
+      category: "api",
+      action,
+      severity: "warning",
+      requestId: error.requestId,
+      dataLength: error.dataLength,
+      dataPreview: error.dataPreview,
+    });
+    return;
+  }
+
   if (isExpectedMediaDatabaseError(error)) {
     logger.warn(`${label}:`, error, {
       category: "api",
@@ -592,21 +650,36 @@ class CoreApi {
           return;
         }
 
+        const rawData = normalizeMessageData(msg.data);
         let res: ApiResponse;
         try {
-          res = JSON.parse(msg.data);
+          res = JSON.parse(rawData);
         } catch (e) {
-          logger.error("Could not parse JSON:", msg.data, e, {
-            category: "api",
-            action: "parseJSON",
-            severity: "critical",
-            dataPreview: String(msg.data).slice(0, 100),
-          });
-          reject(
-            new Error(
-              `Error parsing JSON response: ${e instanceof Error ? e.message : String(e)}`,
-            ),
+          const parseMessage = e instanceof Error ? e.message : String(e);
+          const requestId = extractJsonRpcIdFromMalformedData(rawData);
+          const error = new MalformedCoreResponseError(
+            parseMessage,
+            requestId,
+            rawData.length,
+            createSanitizedDataPreview(rawData),
           );
+          if (requestId) {
+            const pendingResponse = this.responsePool[requestId];
+            if (pendingResponse) {
+              if (pendingResponse.timeoutId) {
+                clearTimeout(pendingResponse.timeoutId);
+              }
+              pendingResponse.reject(error);
+              delete this.responsePool[requestId];
+              if (requestId === this.pendingWriteId) {
+                this.pendingWriteId = null;
+              }
+              resolve(null);
+              return;
+            }
+          }
+
+          reject(error);
           return;
         }
 

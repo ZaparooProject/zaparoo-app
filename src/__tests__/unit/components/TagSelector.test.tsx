@@ -16,7 +16,7 @@ import { render, screen, waitFor, act } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { TagSelector, TagSelectorTrigger } from "@/components/TagSelector";
 import { useStatusStore } from "@/lib/store";
-import { CoreAPI } from "@/lib/coreApi";
+import { CoreAPI, MalformedCoreResponseError } from "@/lib/coreApi";
 import { TagInfo } from "@/lib/models";
 
 // Mock CoreAPI
@@ -24,6 +24,17 @@ vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
     mediaTags: vi.fn(),
     reset: vi.fn(),
+  },
+  MalformedCoreResponseError: class MalformedCoreResponseError extends Error {
+    constructor(
+      public readonly parseMessage: string,
+      public readonly requestId: string | null,
+      public readonly dataLength: number,
+      public readonly dataPreview: string,
+    ) {
+      super(`Malformed Core JSON response: ${parseMessage}`);
+      this.name = "MalformedCoreResponseError";
+    }
   },
 }));
 
@@ -115,6 +126,26 @@ describe("TagSelector", () => {
     it("should render error state when tags API fails", async () => {
       // Arrange
       vi.mocked(CoreAPI.mediaTags).mockRejectedValue(new Error("API Error"));
+
+      // Act
+      render(<TagSelector {...defaultProps} />);
+
+      // Assert
+      await waitFor(() => {
+        expect(screen.getByText("tagSelector.unavailable")).toBeInTheDocument();
+      });
+    });
+
+    it("should render error state when tags response is malformed", async () => {
+      // Arrange
+      vi.mocked(CoreAPI.mediaTags).mockRejectedValue(
+        new MalformedCoreResponseError(
+          "Unexpected end of JSON input",
+          null,
+          42,
+          "{",
+        ),
+      );
 
       // Act
       render(<TagSelector {...defaultProps} />);
