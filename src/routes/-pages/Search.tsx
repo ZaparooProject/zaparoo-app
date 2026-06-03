@@ -85,6 +85,21 @@ export function Search() {
     !coreVersionPending &&
     isCoreFeatureAvailable("mediaTags", coreVersion);
   const effectiveQueryTags = mediaTagsAvailable ? queryTags : [];
+  const browseAllSearchAvailable =
+    connected &&
+    !coreVersionPending &&
+    isCoreFeatureAvailable("mediaBrowseAllSearch", coreVersion);
+  const hasSearchConstraint = (
+    searchQuery: string,
+    system: string,
+    tags: string[],
+  ) => searchQuery.trim().length > 0 || system !== "all" || tags.length > 0;
+  const baseSearchReady =
+    connected && gamesIndex.exists && !gamesIndex.indexing;
+  const canSearch =
+    baseSearchReady &&
+    (browseAllSearchAvailable ||
+      hasSearchConstraint(query, querySystem, effectiveQueryTags));
 
   // Recent searches hook
   const {
@@ -96,7 +111,7 @@ export function Search() {
 
   // Manual search function
   const performSearch = async () => {
-    if (!connected || !gamesIndex.exists || gamesIndex.indexing) {
+    if (!canSearch) {
       return;
     }
 
@@ -130,9 +145,6 @@ export function Search() {
     null,
   );
   const [writeMode, setWriteMode] = useState<"path" | "zapScript">("zapScript");
-
-  // Check if search has valid parameters
-  const canSearch = connected && gamesIndex.exists && !gamesIndex.indexing;
 
   const preferRemoteWriter = usePreferencesStore(
     (state) => state.preferRemoteWriter,
@@ -279,7 +291,15 @@ export function Search() {
     }
 
     // Automatically execute the search
-    if (connected && gamesIndex.exists && !gamesIndex.indexing) {
+    if (
+      baseSearchReady &&
+      (browseAllSearchAvailable ||
+        hasSearchConstraint(
+          recentSearch.query,
+          recentSearch.system,
+          searchTags,
+        ))
+    ) {
       setIsSearching(true);
       setSearchParams({
         query: recentSearch.query,

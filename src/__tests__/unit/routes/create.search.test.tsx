@@ -278,7 +278,7 @@ describe("Search Component", () => {
     useStatusStore.setState({
       ...useStatusStore.getInitialState(),
       connected: true,
-      coreVersion: "2.7.0",
+      coreVersion: "2.10.0",
       coreVersionPending: false,
       gamesIndex: { exists: true, indexing: false },
     });
@@ -362,6 +362,56 @@ describe("Search Component", () => {
         name: "create.search.searchButton",
       });
       expect(searchButton).not.toBeDisabled();
+    });
+
+    it("should disable empty all-systems search when Core does not support browse-all", () => {
+      useStatusStore.setState({ coreVersion: "2.9.1" });
+      render(<Search />);
+
+      const searchButton = screen.getByRole("button", {
+        name: "create.search.searchButton",
+      });
+      expect(searchButton).toBeDisabled();
+    });
+
+    it("should allow query search when Core does not support browse-all", () => {
+      useStatusStore.setState({ coreVersion: "2.9.1" });
+      render(<Search />);
+
+      const input = screen.getByLabelText("create.search.gameInput");
+      fireEvent.change(input, { target: { value: "mario" } });
+
+      const searchButton = screen.getByRole("button", {
+        name: "create.search.searchButton",
+      });
+      expect(searchButton).not.toBeDisabled();
+      fireEvent.click(searchButton);
+
+      expect(mockAddRecentSearch).toHaveBeenCalledWith({
+        query: "mario",
+        system: "all",
+        tags: [],
+      });
+    });
+
+    it("should allow system-filtered empty search when Core does not support browse-all", () => {
+      useStatusStore.setState({ coreVersion: "2.9.1" });
+      render(<Search />);
+
+      fireEvent.click(screen.getByTestId("system-selector-trigger"));
+      fireEvent.click(screen.getByRole("button", { name: "Select SNES" }));
+
+      const searchButton = screen.getByRole("button", {
+        name: "create.search.searchButton",
+      });
+      expect(searchButton).not.toBeDisabled();
+      fireEvent.click(searchButton);
+
+      expect(mockAddRecentSearch).toHaveBeenCalledWith({
+        query: "",
+        system: "snes",
+        tags: [],
+      });
     });
 
     it("should disable search button when not connected", () => {

@@ -754,6 +754,7 @@
       "mediaScrapers": "Scraper",
       "mediaCleanOrphans": "Clean missing media",
       "mediaTags": "Media tags",
+      "mediaBrowseAllSearch": "Browse all media search",
       "remoteInput": "Remote input"
     },
     "inbox": {

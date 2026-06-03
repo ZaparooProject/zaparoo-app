@@ -310,7 +310,7 @@ describe("Create Search Integration", () => {
       ...useStatusStore.getInitialState(),
       connected: true,
       connectionState: ConnectionState.CONNECTED,
-      coreVersion: "2.7.0",
+      coreVersion: "2.10.0",
       coreVersionPending: false,
       gamesIndex: {
         exists: true,
