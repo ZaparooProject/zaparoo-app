@@ -181,11 +181,11 @@ export const useProPurchase = () => {
   const [launcherPackage, setLauncherPackage] =
     useState<PurchasesPackage | null>(null);
   const [offeringsStatus, setOfferingsStatus] = useState<OfferingsStatus>(() =>
-    Capacitor.getPlatform() === "web" ? "unsupported" : "loading",
+    Capacitor.isNativePlatform() ? "loading" : "unsupported",
   );
 
   useEffect(() => {
-    if (Capacitor.getPlatform() === "web") {
+    if (!Capacitor.isNativePlatform()) {
       logger.log("web platform, skipping purchases");
       return;
     }
@@ -203,9 +203,14 @@ export const useProPurchase = () => {
 
         setLauncherPackage(null);
         setOfferingsStatus("missing");
-        logger.warn(
+        logger.error(
           "RevenueCat offerings returned no packages",
           getOfferingDiagnostics(offerings),
+          {
+            category: "purchase",
+            action: "getOfferings",
+            severity: "warning",
+          },
         );
       })
       .catch((e) => {

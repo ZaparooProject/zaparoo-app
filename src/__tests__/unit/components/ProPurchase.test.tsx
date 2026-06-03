@@ -11,6 +11,15 @@ import {
   RestorePuchasesButton,
   useProPurchase,
 } from "@/components/ProPurchase";
+import {
+  PACKAGE_TYPE,
+  PRODUCT_CATEGORY,
+  PRODUCT_TYPE,
+  type PurchasesOffering,
+  type PurchasesOfferings,
+  type PurchasesPackage,
+  type PurchasesStoreProduct,
+} from "@revenuecat/purchases-capacitor";
 
 // Mock external modules
 vi.mock("@capacitor/preferences", () => ({
@@ -30,6 +39,15 @@ vi.mock("@capacitor/core", () => ({
 }));
 
 vi.mock("@revenuecat/purchases-capacitor", () => ({
+  PACKAGE_TYPE: {
+    LIFETIME: "LIFETIME",
+  },
+  PRODUCT_CATEGORY: {
+    NON_SUBSCRIPTION: "NON_SUBSCRIPTION",
+  },
+  PRODUCT_TYPE: {
+    NON_CONSUMABLE: "NON_CONSUMABLE",
+  },
   Purchases: {
     restorePurchases: vi.fn(),
     getCustomerInfo: vi.fn(),
@@ -84,6 +102,77 @@ vi.mock("react-i18next", () => ({
 vi.mock("i18next", () => ({
   t: mockT,
 }));
+
+const presentedOfferingContext = {
+  offeringIdentifier: "current",
+  placementIdentifier: null,
+  targetingContext: null,
+} as const;
+
+function createProduct(): PurchasesStoreProduct {
+  return {
+    identifier: "tapto_launcher",
+    description: "TapTo Launcher",
+    title: "TapTo Launcher",
+    price: 6.99,
+    priceString: "$6.99",
+    pricePerWeek: null,
+    pricePerMonth: null,
+    pricePerYear: null,
+    pricePerWeekString: null,
+    pricePerMonthString: null,
+    pricePerYearString: null,
+    currencyCode: "USD",
+    introPrice: null,
+    discounts: null,
+    productCategory: PRODUCT_CATEGORY.NON_SUBSCRIPTION,
+    productType: PRODUCT_TYPE.NON_CONSUMABLE,
+    subscriptionPeriod: null,
+    defaultOption: null,
+    subscriptionOptions: null,
+    presentedOfferingIdentifier: "current",
+    presentedOfferingContext,
+  };
+}
+
+function createPackage(): PurchasesPackage {
+  return {
+    identifier: "$rc_lifetime",
+    packageType: PACKAGE_TYPE.LIFETIME,
+    product: createProduct(),
+    offeringIdentifier: "current",
+    presentedOfferingContext,
+    webCheckoutUrl: null,
+  };
+}
+
+function createOffering(
+  availablePackages: PurchasesPackage[] = [],
+): PurchasesOffering {
+  return {
+    identifier: "current",
+    serverDescription: "Current offering",
+    metadata: {},
+    availablePackages,
+    lifetime: null,
+    annual: null,
+    sixMonth: null,
+    threeMonth: null,
+    twoMonth: null,
+    monthly: null,
+    weekly: null,
+    webCheckoutUrl: null,
+  };
+}
+
+function createOfferings(
+  current: PurchasesOffering | null = createOffering(),
+): PurchasesOfferings {
+  return {
+    current,
+    all: current ? { [current.identifier]: current } : {},
+  };
+}
 
 describe("RestorePuchasesButton", () => {
   beforeAll(() => {
@@ -275,11 +364,7 @@ describe("useProPurchase", () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     // Set up default mock returns for the hook
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
-    vi.mocked(Purchases.getOfferings).mockResolvedValue({
-      current: {
-        availablePackages: [],
-      },
-    } as any);
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(createOfferings());
     vi.mocked(Purchases.getCustomerInfo).mockResolvedValue({
       customerInfo: {
         entitlements: {
@@ -320,6 +405,7 @@ describe("useProPurchase", () => {
     const { Capacitor } = await import("@capacitor/core");
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     vi.mocked(Capacitor.getPlatform).mockReturnValue("web");
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
 
     renderHook(() => useProPurchase());
 
@@ -342,17 +428,7 @@ describe("useProPurchase", () => {
       launcherAccess: false,
     });
 
-    const mockOfferings = {
-      current: {
-        availablePackages: [
-          {
-            product: {
-              priceString: "$6.99",
-            },
-          },
-        ],
-      },
-    } as any;
+    const mockOfferings = createOfferings(createOffering([createPackage()]));
 
     const mockCustomerInfo = {
       customerInfo: {
@@ -377,26 +453,15 @@ describe("useProPurchase", () => {
     });
   });
 
-  it("should show unavailable state and warn when offerings have no packages", async () => {
+  it("should show unavailable state and report when offerings have no packages", async () => {
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     const { logger } = await import("@/lib/logger");
-    vi.mocked(Purchases.getOfferings).mockResolvedValue({
-      current: {
-        identifier: "current",
-        availablePackages: [],
-      },
-      all: {
-        current: {
-          identifier: "current",
-          availablePackages: [],
-        },
-      },
-    } as any);
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(createOfferings());
 
     const { result } = renderHook(() => useProPurchase());
 
     await waitFor(() => {
-      expect(logger.warn).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         "RevenueCat offerings returned no packages",
         expect.objectContaining({
           platform: "ios",
@@ -404,11 +469,13 @@ describe("useProPurchase", () => {
           packageCount: 0,
           offeringIdentifiers: ["current"],
         }),
+        {
+          category: "purchase",
+          action: "getOfferings",
+          severity: "warning",
+        },
       );
     });
-    expect(logger.error).not.toHaveBeenCalledWith(
-      "RevenueCat offerings returned no packages",
-    );
 
     act(() => {
       result.current.setProPurchaseModalOpen(true);
@@ -460,18 +527,9 @@ describe("useProPurchase", () => {
 
   it("should show fetched package price and enable purchase action", async () => {
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
-    vi.mocked(Purchases.getOfferings).mockResolvedValue({
-      current: {
-        availablePackages: [
-          {
-            product: {
-              priceString: "$6.99",
-            },
-          },
-        ],
-      },
-      all: {},
-    } as any);
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
 
     const { result } = renderHook(() => useProPurchase());
 
@@ -496,6 +554,7 @@ describe("useProPurchase", () => {
     const { Capacitor } = await import("@capacitor/core");
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     vi.mocked(Capacitor.getPlatform).mockReturnValue("web");
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
 
     const { result } = renderHook(() => useProPurchase());
 
