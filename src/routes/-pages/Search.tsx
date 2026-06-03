@@ -10,7 +10,7 @@ import { BackToTop } from "@/components/BackToTop.tsx";
 import { TagBadge } from "@/components/TagBadge.tsx";
 import { logger } from "@/lib/logger";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
-import { CoreAPI } from "@/lib/coreApi.ts";
+import { CoreAPI, isExpectedMediaDatabaseError } from "@/lib/coreApi";
 import {
   BackIcon,
   CreateIcon,
@@ -28,7 +28,7 @@ import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useHaptics } from "@/hooks/useHaptics";
-import { useStatusStore } from "@/lib/store";
+import { DEFAULT_GAMES_INDEX, useStatusStore } from "@/lib/store";
 import { TextInput } from "@/components/wui/TextInput";
 import { WriteModal } from "@/components/WriteModal";
 import { PageFrame } from "@/components/PageFrame";
@@ -180,6 +180,10 @@ export function Search() {
         setGamesIndex(s.database);
       } catch (e) {
         if (cancelled) return;
+        if (isExpectedMediaDatabaseError(e)) {
+          setGamesIndex(DEFAULT_GAMES_INDEX);
+          return;
+        }
         logger.error("Failed to fetch media index:", e, {
           category: "api",
           action: "media",

@@ -83,6 +83,14 @@ vi.mock("../../../lib/coreApi", () => ({
   getDeviceAddress: vi.fn(() => "192.168.1.100:7497"),
   getWsUrl: vi.fn(() => "ws://192.168.1.100:7497"),
   isCancelled: vi.fn(() => false),
+  isExpectedMediaDatabaseError: (error: unknown) => {
+    if (!(error instanceof Error)) return false;
+    const msg = error.message.toLowerCase();
+    return (
+      msg.includes("no such table: dbconfig") ||
+      msg.includes("method not found")
+    );
+  },
 }));
 
 vi.mock("@capacitor/preferences", () => ({
@@ -1551,6 +1559,33 @@ describe("API error handling", () => {
 
     // Should not crash
     expect(screen.getByText("Test")).toBeInTheDocument();
+  });
+
+  it("should degrade expected media database setup errors without toast", async () => {
+    vi.mocked(CoreAPI.media).mockRejectedValueOnce(
+      new Error("failed to get optimization status: no such table: DBConfig"),
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().gamesIndex).toMatchObject({
+        exists: false,
+        indexing: false,
+        optimizing: false,
+      });
+    });
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 
   it("should handle tokens API failure gracefully", async () => {

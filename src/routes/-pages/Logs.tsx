@@ -16,7 +16,7 @@ import { Share } from "@capacitor/share";
 import { Clipboard } from "@capacitor/clipboard";
 import toast from "react-hot-toast";
 import { BackToTop } from "@/components/BackToTop";
-import { CoreAPI } from "@/lib/coreApi.ts";
+import { CoreAPI } from "@/lib/coreApi";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useStatusStore } from "@/lib/store";

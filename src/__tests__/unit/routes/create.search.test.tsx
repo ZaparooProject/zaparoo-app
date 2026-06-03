@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "../../../test-utils";
 import { Search } from "@/routes/-pages/Search";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+import { CoreAPI } from "@/lib/coreApi";
 
 // Mock route
 vi.mock("@tanstack/react-router", () => ({
@@ -37,6 +38,26 @@ vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     set: vi.fn(),
     get: vi.fn().mockResolvedValue({ value: null }),
+  },
+}));
+
+// Mock CoreAPI
+vi.mock("@/lib/coreApi", () => ({
+  CoreAPI: {
+    media: vi.fn().mockResolvedValue({
+      database: { exists: true, indexing: false },
+      active: [],
+    }),
+    run: vi.fn().mockResolvedValue(undefined),
+  },
+  isExpectedMediaDatabaseError: (error: unknown) => {
+    const msg = String(
+      error instanceof Error ? error.message : error,
+    ).toLowerCase();
+    return (
+      msg.includes("no such table: dbconfig") ||
+      msg.includes("method not found")
+    );
   },
 }));
 
@@ -287,6 +308,10 @@ describe("Search Component", () => {
       _hasHydrated: true,
       showFilenames: false,
     });
+    vi.mocked(CoreAPI.media).mockResolvedValue({
+      database: { exists: true, indexing: false },
+      active: [],
+    });
   });
 
   afterEach(() => {
@@ -446,6 +471,18 @@ describe("Search Component", () => {
         name: "create.search.searchButton",
       });
       expect(searchButton).toBeDisabled();
+    });
+
+    it("should show database warning after expected media setup error", async () => {
+      vi.mocked(CoreAPI.media).mockRejectedValueOnce(
+        new Error("failed to get optimization status: no such table: DBConfig"),
+      );
+
+      render(<Search />);
+
+      await vi.waitFor(() => {
+        expect(useStatusStore.getState().gamesIndex.exists).toBe(false);
+      });
     });
 
     it("should perform search when search button is clicked", () => {

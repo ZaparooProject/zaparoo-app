@@ -69,6 +69,57 @@ export class CoreApiError extends Error {
   }
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return String(error);
+}
+
+export function isUnsupportedMediaApiError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    (error instanceof CoreApiError && error.code === -32601) ||
+    message.includes("method not found") ||
+    message === "query or system is required"
+  );
+}
+
+export function isMissingMediaDatabaseSetupError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes("no such table: dbconfig") ||
+    message.includes("failed to get optimization status during indexing check")
+  );
+}
+
+export function isExpectedMediaDatabaseError(error: unknown): boolean {
+  return (
+    isUnsupportedMediaApiError(error) || isMissingMediaDatabaseSetupError(error)
+  );
+}
+
+function logMediaApiFailure(
+  label: string,
+  action: string,
+  error: unknown,
+  severity: "error" | "warning" = "error",
+): void {
+  if (isExpectedMediaDatabaseError(error)) {
+    logger.warn(`${label}:`, error, {
+      category: "api",
+      action,
+      severity: "warning",
+    });
+    return;
+  }
+
+  logger.error(`${label}:`, error, {
+    category: "api",
+    action,
+    severity,
+  });
+}
+
 interface ApiError {
   code: number;
   message: string;
@@ -824,7 +875,11 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Media search API call failed:", error);
+          logMediaApiFailure(
+            "Media search API call failed",
+            "mediaSearch",
+            error,
+          );
           reject(error);
         });
     });
@@ -849,7 +904,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Media tags API call failed:", error);
+          logMediaApiFailure("Media tags API call failed", "mediaTags", error);
           reject(error);
         });
     });
@@ -862,7 +917,11 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Media generate API call failed:", error);
+          logMediaApiFailure(
+            "Media generate API call failed",
+            "mediaGenerate",
+            error,
+          );
           reject(error);
         });
     });
@@ -875,7 +934,12 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Media generate cancel API call failed:", error);
+          logMediaApiFailure(
+            "Media generate cancel API call failed",
+            "mediaGenerateCancel",
+            error,
+            "warning",
+          );
           reject(error);
         });
     });
@@ -888,7 +952,12 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Media generate resume API call failed:", error);
+          logMediaApiFailure(
+            "Media generate resume API call failed",
+            "mediaGenerateResume",
+            error,
+            "warning",
+          );
           reject(error);
         });
     });
@@ -916,11 +985,11 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Media clean orphans API call failed:", error, {
-            category: "coreApi",
-            action: "mediaCleanOrphans",
-            severity: "error",
-          });
+          logMediaApiFailure(
+            "Media clean orphans API call failed",
+            "mediaCleanOrphans",
+            error,
+          );
           reject(error);
         });
     });
@@ -948,11 +1017,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Scrapers API call failed:", error, {
-            category: "coreApi",
-            action: "scrapers",
-            severity: "error",
-          });
+          logMediaApiFailure("Scrapers API call failed", "scrapers", error);
           reject(error);
         });
     });
@@ -965,11 +1030,11 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Media scrape API call failed:", error, {
-            category: "coreApi",
-            action: "mediaScrape",
-            severity: "error",
-          });
+          logMediaApiFailure(
+            "Media scrape API call failed",
+            "mediaScrape",
+            error,
+          );
           reject(error);
         });
     });
@@ -997,11 +1062,12 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Media scrape status API call failed:", error, {
-            category: "coreApi",
-            action: "mediaScrapeStatus",
-            severity: "error",
-          });
+          logMediaApiFailure(
+            "Media scrape status API call failed",
+            "mediaScrapeStatus",
+            error,
+            "warning",
+          );
           reject(error);
         });
     });
@@ -1029,11 +1095,12 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Media scrape cancel API call failed:", error, {
-            category: "coreApi",
-            action: "mediaScrapeCancel",
-            severity: "error",
-          });
+          logMediaApiFailure(
+            "Media scrape cancel API call failed",
+            "mediaScrapeCancel",
+            error,
+            "warning",
+          );
           reject(error);
         });
     });
@@ -1061,11 +1128,12 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Media scrape resume API call failed:", error, {
-            category: "coreApi",
-            action: "mediaScrapeResume",
-            severity: "error",
-          });
+          logMediaApiFailure(
+            "Media scrape resume API call failed",
+            "mediaScrapeResume",
+            error,
+            "warning",
+          );
           reject(error);
         });
     });
@@ -1230,7 +1298,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Media API call failed:", error);
+          logMediaApiFailure("Media API call failed", "media", error);
           reject(error);
         });
     });
@@ -1280,7 +1348,11 @@ class CoreApi {
           resolve(result as MediaResponse["active"]);
         })
         .catch((error) => {
-          logger.error("Media active API call failed:", error);
+          logMediaApiFailure(
+            "Media active API call failed",
+            "mediaActive",
+            error,
+          );
           reject(error);
         });
     });
@@ -1293,7 +1365,11 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Media active update API call failed:", error);
+          logMediaApiFailure(
+            "Media active update API call failed",
+            "mediaActiveUpdate",
+            error,
+          );
           reject(error);
         });
     });

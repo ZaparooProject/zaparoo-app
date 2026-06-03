@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI, getDeviceAddress, getWsUrl } from "@/lib/coreApi.ts";
+import {
+  CoreAPI,
+  CoreApiError,
+  getDeviceAddress,
+  getWsUrl,
+  isExpectedMediaDatabaseError,
+  isMissingMediaDatabaseSetupError,
+  isUnsupportedMediaApiError,
+} from "@/lib/coreApi";
 import { Capacitor } from "@capacitor/core";
 import { Notification } from "@/lib/models.ts";
 
@@ -25,6 +33,59 @@ Object.defineProperty(window, "location", {
     hostname: "localhost",
   },
   writable: true,
+});
+
+describe("media API error classification", () => {
+  it("should recognize unsupported media API errors case-insensitively", () => {
+    expect(isUnsupportedMediaApiError(new Error("Method not found"))).toBe(
+      true,
+    );
+    expect(isUnsupportedMediaApiError("METHOD NOT FOUND")).toBe(true);
+  });
+
+  it("should recognize JSON-RPC method-not-found codes", () => {
+    expect(
+      isUnsupportedMediaApiError(new CoreApiError("No method", -32601)),
+    ).toBe(true);
+    expect(
+      isUnsupportedMediaApiError(new CoreApiError("Other failure", -32000)),
+    ).toBe(false);
+  });
+
+  it("should only match exact missing query/system contract errors", () => {
+    expect(isUnsupportedMediaApiError("query or system is required")).toBe(
+      true,
+    );
+    expect(
+      isUnsupportedMediaApiError(
+        "query or system is required for old endpoint",
+      ),
+    ).toBe(false);
+  });
+
+  it("should recognize missing media database setup errors", () => {
+    expect(
+      isMissingMediaDatabaseSetupError(
+        new Error("failed to get optimization status: no such table: DBConfig"),
+      ),
+    ).toBe(true);
+    expect(
+      isMissingMediaDatabaseSetupError(
+        "failed to get optimization status during indexing check",
+      ),
+    ).toBe(true);
+    expect(isMissingMediaDatabaseSetupError(null)).toBe(false);
+  });
+
+  it("should classify unsupported and missing setup failures as expected", () => {
+    expect(isExpectedMediaDatabaseError(new Error("Method not found"))).toBe(
+      true,
+    );
+    expect(
+      isExpectedMediaDatabaseError(new Error("no such table: DBConfig")),
+    ).toBe(true);
+    expect(isExpectedMediaDatabaseError(new Error("network down"))).toBe(false);
+  });
 });
 
 describe("CoreAPI", () => {

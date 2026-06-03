@@ -4,9 +4,14 @@ import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { ConnectionState, useStatusStore } from "@/lib/store";
-import { CoreAPI } from "@/lib/coreApi";
+import {
+  CoreAPI,
+  isExpectedMediaDatabaseError,
+  isMissingMediaDatabaseSetupError,
+} from "@/lib/coreApi";
 import { DatabaseIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
+import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
@@ -29,6 +34,10 @@ export function MediaDatabaseCard({
   const connectionState = useStatusStore((state) => state.connectionState);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
+  const coreVersion = useStatusStore((state) => state.coreVersion);
+  const coreVersionPending = useStatusStore(
+    (state) => state.coreVersionPending,
+  );
   const cleanOrphansFeature = useCoreFeature("mediaCleanOrphans");
   const isLiveConnected = connectionState === ConnectionState.CONNECTED;
   const [cancelRequested, setCancelRequested] = useState(false);
@@ -40,9 +49,16 @@ export function MediaDatabaseCard({
     null,
   );
   const [cleanError, setCleanError] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   const isPaused = gamesIndex.paused === true;
   const isScraping = scrapingStatus?.scraping === true;
+  const mediaGenerateAvailable =
+    coreVersion !== null &&
+    !coreVersionPending &&
+    isCoreFeatureAvailable("mediaGenerate", coreVersion);
+  const mediaGenerateUnsupported =
+    coreVersion !== null && !coreVersionPending && !mediaGenerateAvailable;
 
   // Derive isCancelling: true only if we requested cancel AND indexing is still happening
   const isCancelling = cancelRequested && gamesIndex.indexing;
@@ -65,7 +81,11 @@ export function MediaDatabaseCard({
   }, [isPaused, gamesIndex.indexing, resumeRequested]);
 
   // Fetch real-time database status
-  const { data: mediaStatus, isLoading } = useQuery({
+  const {
+    data: mediaStatus,
+    isLoading,
+    error: mediaStatusError,
+  } = useQuery({
     queryKey: ["media"],
     queryFn: () => CoreAPI.media(),
     enabled: connected,
@@ -80,7 +100,9 @@ export function MediaDatabaseCard({
     enabled: connected,
   });
 
-  const handleUpdateDatabase = () => {
+  const handleUpdateDatabase = async () => {
+    if (!mediaGenerateAvailable) return;
+
     // If no systems selected or all systems selected, pass undefined (all systems)
     const systemsToUpdate =
       selectedSystems.length === 0 ||
@@ -89,12 +111,38 @@ export function MediaDatabaseCard({
         ? undefined
         : selectedSystems;
 
-    CoreAPI.mediaGenerate(
-      systemsToUpdate ? { systems: systemsToUpdate } : undefined,
-    );
+    setGenerateError(null);
+    try {
+      await CoreAPI.mediaGenerate(
+        systemsToUpdate ? { systems: systemsToUpdate } : undefined,
+      );
+      queryClient.invalidateQueries({ queryKey: ["media"] });
+    } catch (error) {
+      if (isMissingMediaDatabaseSetupError(error)) {
+        setGenerateError(t("settings.updateDb.status.setupMissing"));
+        return;
+      }
+
+      if (isExpectedMediaDatabaseError(error)) {
+        setGenerateError(
+          error instanceof Error
+            ? error.message
+            : t("settings.updateDb.startError"),
+        );
+        return;
+      }
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : t("settings.updateDb.startError");
+      setGenerateError(message);
+      showRateLimitedErrorToast(t("error", { msg: message }));
+    }
   };
 
   const handleCancelUpdate = async () => {
+    setGenerateError(null);
     setCancelRequested(true);
     try {
       await CoreAPI.mediaGenerateCancel();
@@ -102,6 +150,16 @@ export function MediaDatabaseCard({
       // when the indexing status updates from the WebSocket notification
       queryClient.invalidateQueries({ queryKey: ["media"] });
     } catch (error) {
+      if (isExpectedMediaDatabaseError(error)) {
+        setGenerateError(
+          error instanceof Error
+            ? error.message
+            : t("settings.updateDb.startError"),
+        );
+        setCancelRequested(false);
+        return;
+      }
+
       logger.error("Failed to cancel media generation:", error, {
         category: "api",
         action: "mediaGenerateCancel",
@@ -113,11 +171,22 @@ export function MediaDatabaseCard({
   };
 
   const handleResumeUpdate = async () => {
+    setGenerateError(null);
     setResumeRequested(true);
     try {
       await CoreAPI.mediaGenerateResume();
       queryClient.invalidateQueries({ queryKey: ["media"] });
     } catch (error) {
+      if (isExpectedMediaDatabaseError(error)) {
+        setGenerateError(
+          error instanceof Error
+            ? error.message
+            : t("settings.updateDb.startError"),
+        );
+        setResumeRequested(false);
+        return;
+      }
+
       logger.error("Failed to resume media generation:", error, {
         category: "api",
         action: "mediaGenerateResume",
@@ -142,11 +211,15 @@ export function MediaDatabaseCard({
       queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] });
     },
     onError: (err) => {
-      const message =
-        err instanceof Error
+      const message = isMissingMediaDatabaseSetupError(err)
+        ? t("settings.updateDb.status.setupMissing")
+        : err instanceof Error
           ? err.message
           : t("settings.updateDb.cleanOrphansError");
       setCleanError(message);
+      if (isExpectedMediaDatabaseError(err)) {
+        return;
+      }
       logger.error("Failed to clean media orphans", err, {
         category: "api",
         action: "mediaCleanOrphans",
@@ -275,7 +348,11 @@ export function MediaDatabaseCard({
             }
             variant="outline"
             className="w-full"
-            disabled={!connected || (isPaused ? isResuming : isCancelling)}
+            disabled={
+              !connected ||
+              !mediaGenerateAvailable ||
+              (isPaused ? isResuming : isCancelling)
+            }
             onClick={isPaused ? handleResumeUpdate : handleCancelUpdate}
           />
         </div>
@@ -291,11 +368,27 @@ export function MediaDatabaseCard({
       );
     }
 
+    if (mediaGenerateUnsupported) {
+      return (
+        <div className="text-muted-foreground mt-3 text-sm">
+          {t("settings.updateDb.status.unsupported")}
+        </div>
+      );
+    }
+
     // Show loading state while fetching database status
     if (isLoading) {
       return (
         <div className="text-muted-foreground mt-3 text-sm">
           {t("settings.updateDb.status.checking")}
+        </div>
+      );
+    }
+
+    if (isMissingMediaDatabaseSetupError(mediaStatusError)) {
+      return (
+        <div className="text-muted-foreground mt-3 text-sm">
+          {t("settings.updateDb.status.setupMissing")}
         </div>
       );
     }
@@ -360,7 +453,9 @@ export function MediaDatabaseCard({
         placeholder={t("settings.updateDb.allSystems")}
         mode="multi"
         onClick={() => setSystemSelectorOpen(true)}
-        disabled={!connected || isScraping || isCleaning}
+        disabled={
+          !connected || !mediaGenerateAvailable || isScraping || isCleaning
+        }
       />
 
       {isScraping ? (
@@ -375,13 +470,24 @@ export function MediaDatabaseCard({
           icon={<DatabaseIcon size="20" />}
           className="w-full"
           disabled={
-            !connected || isIndexing || isOptimizing || isScraping || isCleaning
+            !connected ||
+            !mediaGenerateAvailable ||
+            isIndexing ||
+            isOptimizing ||
+            isScraping ||
+            isCleaning
           }
           onClick={handleUpdateDatabase}
         />
       </div>
 
       {renderStatus()}
+
+      {generateError ? (
+        <p className="text-error text-sm">
+          {t("error", { msg: generateError })}
+        </p>
+      ) : null}
 
       {showCleanAction ? (
         <div className="space-y-2 pt-1">

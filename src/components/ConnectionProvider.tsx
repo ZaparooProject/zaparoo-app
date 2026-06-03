@@ -51,9 +51,14 @@ import {
   getDeviceAddress,
   getWsUrl,
   isCancelled,
+  isExpectedMediaDatabaseError,
   type NotificationRequest,
 } from "@/lib/coreApi";
-import { useStatusStore, ConnectionState } from "@/lib/store";
+import {
+  DEFAULT_GAMES_INDEX,
+  useStatusStore,
+  ConnectionState,
+} from "@/lib/store";
 import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
 import { formatDurationDisplay, formatDurationAccessible } from "@/lib/utils";
 import {
@@ -593,6 +598,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           }
         })
         .catch((e) => {
+          if (isExpectedMediaDatabaseError(e)) {
+            setGamesIndex(DEFAULT_GAMES_INDEX);
+            return;
+          }
+
           logger.error("Failed to get media information:", e);
           // Suppress the toast unless we're actually live-connected — the
           // connection-state UI already conveys reconnect/disconnect, and

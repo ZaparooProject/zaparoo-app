@@ -21,6 +21,11 @@ export const FEATURE_GATES: Record<string, FeatureGate> = {
     marquee: false,
     labelKey: "features.mediaScrapers",
   },
+  mediaGenerate: {
+    since: "2.7.0",
+    marquee: false,
+    labelKey: "features.mediaGenerate",
+  },
   mediaCleanOrphans: {
     since: "2.12.0",
     marquee: false,

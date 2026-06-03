@@ -9,7 +9,7 @@ import { WriteModal } from "@/components/WriteModal.tsx";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
 import logoImage from "@/assets/lockup.webp";
 import { cancelSession } from "@/lib/nfc";
-import { CoreAPI } from "@/lib/coreApi.ts";
+import { CoreAPI } from "@/lib/coreApi";
 import { HistoryIcon } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
 import { ToggleChip } from "@/components/wui/ToggleChip";

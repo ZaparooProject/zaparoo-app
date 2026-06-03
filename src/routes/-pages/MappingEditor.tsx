@@ -11,7 +11,7 @@ import { ToggleSwitch } from "@/components/wui/ToggleSwitch.tsx";
 import { Segmented } from "@/components/wui/Segmented.tsx";
 import { BackIcon } from "@/lib/images.tsx";
 import { HeaderButton } from "@/components/wui/HeaderButton.tsx";
-import { CoreAPI } from "@/lib/coreApi.ts";
+import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store.ts";
 import { MappingType } from "@/lib/models.ts";
 import { logger } from "@/lib/logger";
