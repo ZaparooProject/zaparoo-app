@@ -1,7 +1,13 @@
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
-import { CoreAPI, getDeviceAddress, setDeviceAddress } from "@/lib/coreApi";
+import {
+  CoreAPI,
+  getDeviceAddress,
+  setDeviceAddress,
+  validateDeviceAddress,
+  type DeviceAddressValidationResult,
+} from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
 
 export interface ScanDeviceSelection {
@@ -23,12 +29,15 @@ export function useSelectDevice() {
   );
 
   const selectDevice = useCallback(
-    (newAddress: string) => {
-      if (newAddress === getDeviceAddress()) return;
+    (newAddress: string): DeviceAddressValidationResult => {
+      const result = validateDeviceAddress(newAddress);
+      if (!result.ok) return result;
 
-      setDeviceAddress(newAddress);
+      if (result.address === getDeviceAddress()) return result;
+
+      setDeviceAddress(result.address);
       resetConnectionState();
-      setTargetDeviceAddress(newAddress);
+      setTargetDeviceAddress(result.address);
       CoreAPI.reset();
       queryClient.invalidateQueries();
 
@@ -36,22 +45,28 @@ export function useSelectDevice() {
       // don't fire requests against unknown systems/tags on first load.
       Preferences.remove({ key: "searchSystem" }).catch(() => {});
       Preferences.remove({ key: "searchTags" }).catch(() => {});
+
+      return result;
     },
     [queryClient, resetConnectionState, setTargetDeviceAddress],
   );
 
   const selectScanDevice = useCallback(
     (device: ScanDeviceSelection) => {
-      selectDevice(device.address);
+      const result = selectDevice(device.address);
+      if (!result.ok) return result;
+
       // Capture metadata immediately. The version() RPC populates these fields
       // post-connect, but if the user disconnects first we still want a
       // populated row to show in the device list.
-      addDeviceHistory(device.address);
-      updateDeviceHistoryMeta(device.address, {
+      addDeviceHistory(result.address);
+      updateDeviceHistoryMeta(result.address, {
         name: device.name,
         platform: device.platform,
         version: device.version,
       });
+
+      return result;
     },
     [addDeviceHistory, selectDevice, updateDeviceHistoryMeta],
   );

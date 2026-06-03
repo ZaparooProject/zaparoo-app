@@ -82,6 +82,26 @@ vi.mock("../../../lib/coreApi", () => ({
   },
   getDeviceAddress: vi.fn(() => "192.168.1.100:7497"),
   getWsUrl: vi.fn(() => "ws://192.168.1.100:7497"),
+  validateDeviceAddress: vi.fn((address: string) => {
+    if (address.includes("286")) {
+      return {
+        ok: false,
+        errorKey: "settings.deviceAddressInvalid",
+        message: "Invalid device address",
+      };
+    }
+
+    const [host = address, portInput] = address.split(":");
+    const port = portInput ? Number(portInput) : 7497;
+
+    return {
+      ok: true,
+      address,
+      host,
+      port,
+      wsUrl: `ws://${host}:${port}/api/v0.1`,
+    };
+  }),
   isCancelled: vi.fn(() => false),
   isExpectedMediaDatabaseError: (error: unknown) => {
     if (!(error instanceof Error)) return false;
@@ -225,11 +245,33 @@ describe("ConnectionProvider", () => {
         expect.objectContaining({
           deviceId: "192.168.1.100:7497",
           type: "websocket",
-          address: "ws://192.168.1.100:7497",
+          address: "ws://192.168.1.100:7497/api/v0.1",
           encryption: expect.objectContaining({
             getCredentials: expect.any(Function),
           }),
         }),
+      );
+    });
+
+    it("should not create a transport for invalid target address", () => {
+      useStatusStore.setState({
+        ...useStatusStore.getInitialState(),
+        targetDeviceAddress: "192.168.1.286",
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(connectionManager.addDevice).not.toHaveBeenCalled();
+      expect(connectionManager.setActiveDevice).not.toHaveBeenCalled();
+      expect(useStatusStore.getState().connectionState).toBe(
+        ConnectionState.ERROR,
+      );
+      expect(useStatusStore.getState().connectionError).toBe(
+        "settings.deviceAddressInvalid",
       );
     });
 

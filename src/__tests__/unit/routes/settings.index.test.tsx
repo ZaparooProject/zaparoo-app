@@ -15,6 +15,23 @@ vi.mock("@/lib/coreApi", () => ({
   },
   getDeviceAddress: vi.fn(() => "192.168.1.100"),
   setDeviceAddress: vi.fn(),
+  validateDeviceAddress: vi.fn((address: string) => {
+    if (address.includes("286")) {
+      return {
+        ok: false,
+        errorKey: "settings.deviceAddressInvalid",
+        message: "Invalid device address",
+      };
+    }
+
+    return {
+      ok: true,
+      address,
+      host: address.split(":")[0] ?? address,
+      port: 7497,
+      wsUrl: `ws://${address}/api/v0.1`,
+    };
+  }),
 }));
 
 // Mock stores
@@ -100,16 +117,22 @@ vi.mock("@/components/MediaDatabaseCard", () => ({
 
 vi.mock("@/components/DeviceConnectionCard", () => ({
   DeviceConnectionCard: ({
+    address,
+    setAddress,
     onScanClick,
     onAddressChange,
+    addressError,
   }: {
     address: string;
     setAddress: (address: string) => void;
     onAddressChange: (address: string) => void;
     connectionError: string;
+    addressError?: string;
     onScanClick: () => void;
   }) => (
     <div data-testid="device-connection-card">
+      <span data-testid="address-value">{address}</span>
+      {addressError && <span role="alert">{addressError}</span>}
       <button onClick={onScanClick} data-testid="scan-button">
         Scan
       </button>
@@ -118,6 +141,21 @@ vi.mock("@/components/DeviceConnectionCard", () => ({
         data-testid="change-address"
       >
         Change Address
+      </button>
+      <button
+        onClick={() => onAddressChange("192.168.1.286")}
+        data-testid="invalid-address"
+      >
+        Invalid Address
+      </button>
+      <button
+        onClick={() => {
+          setAddress("192.168.1.201");
+          onAddressChange("192.168.1.201");
+        }}
+        data-testid="valid-address"
+      >
+        Valid Address
       </button>
     </div>
   ),
@@ -344,6 +382,49 @@ describe("Settings Index Route", () => {
       await waitFor(() => {
         expect(invalidateQueriesSpy).toHaveBeenCalled();
       });
+    });
+
+    it("should show validation message and not select invalid address", async () => {
+      const mockResetConnectionState = vi.fn();
+      const mockSetTargetDeviceAddress = vi.fn();
+
+      mockUseStatusStore.mockImplementation((selector) =>
+        selector({
+          ...defaultStoreState,
+          resetConnectionState: mockResetConnectionState,
+          setTargetDeviceAddress: mockSetTargetDeviceAddress,
+        }),
+      );
+
+      renderComponent();
+
+      fireEvent.click(screen.getByTestId("invalid-address"));
+
+      expect(
+        await screen.findByText("settings.deviceAddressInvalid"),
+      ).toBeInTheDocument();
+      expect(mockResetConnectionState).not.toHaveBeenCalled();
+      expect(mockSetTargetDeviceAddress).not.toHaveBeenCalled();
+    });
+
+    it("should clear validation message after a valid address", async () => {
+      renderComponent();
+
+      fireEvent.click(screen.getByTestId("invalid-address"));
+      expect(
+        await screen.findByText("settings.deviceAddressInvalid"),
+      ).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId("valid-address"));
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText("settings.deviceAddressInvalid"),
+        ).not.toBeInTheDocument();
+      });
+      expect(screen.getByTestId("address-value")).toHaveTextContent(
+        "192.168.1.201",
+      );
     });
   });
 

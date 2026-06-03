@@ -393,13 +393,12 @@ describe("getWsUrl - Enhanced URL parsing", () => {
     expect(url).toBe("ws://[::1]:8080/api/v0.1");
   });
 
-  it("should strip invalid port and use default when port is out of range", () => {
-    localStorage.setItem("deviceAddress", "192.168.1.100:99999"); // Invalid port
+  it("should reject port that is out of range", () => {
+    localStorage.setItem("deviceAddress", "192.168.1.100:99999");
 
     const url = getWsUrl();
 
-    // Should strip invalid port and use default
-    expect(url).toBe("ws://192.168.1.100:7497/api/v0.1");
+    expect(url).toBe("");
   });
 
   it("should reject malformed addresses with multiple colons that aren't valid IPv6", () => {
@@ -421,13 +420,12 @@ describe("getWsUrl - Enhanced URL parsing", () => {
     expect(url).toBe("");
   });
 
-  it("should handle trailing colon by stripping it", () => {
+  it("should reject trailing colon", () => {
     localStorage.setItem("deviceAddress", "192.168.1.100:");
 
     const url = getWsUrl();
 
-    // Trailing colon is stripped and default port is used
-    expect(url).toBe("ws://192.168.1.100:7497/api/v0.1");
+    expect(url).toBe("");
   });
 
   it("should handle errors gracefully", () => {

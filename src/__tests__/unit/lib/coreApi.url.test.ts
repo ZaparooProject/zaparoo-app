@@ -5,7 +5,12 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { getWsUrl, getDeviceAddress, setDeviceAddress } from "@/lib/coreApi";
+import {
+  getWsUrl,
+  getDeviceAddress,
+  setDeviceAddress,
+  validateDeviceAddress,
+} from "@/lib/coreApi";
 
 describe("CoreAPI URL Functions", () => {
   beforeEach(() => {
@@ -88,37 +93,39 @@ describe("CoreAPI URL Functions", () => {
       expect(url).toBe("ws://mydevice.local:9000/api/v0.1");
     });
 
-    it("should use default port for invalid port number (out of range)", () => {
+    it("should use wss for secure stored URLs", () => {
+      localStorage.setItem("deviceAddress", "wss://mydevice.local:9000");
+
+      const url = getWsUrl();
+      expect(url).toBe("wss://mydevice.local:9000/api/v0.1");
+    });
+
+    it("should reject invalid port number (out of range)", () => {
       localStorage.setItem("deviceAddress", "192.168.1.100:99999");
 
       const url = getWsUrl();
-      // Port 99999 is out of valid range (1-65535), should fall back to default
-      expect(url).toBe("ws://192.168.1.100:7497/api/v0.1");
+      expect(url).toBe("");
     });
 
-    it("should use default port for zero port", () => {
+    it("should reject zero port", () => {
       localStorage.setItem("deviceAddress", "192.168.1.100:0");
 
       const url = getWsUrl();
-      // Port 0 is invalid, should fall back to default
-      expect(url).toBe("ws://192.168.1.100:7497/api/v0.1");
+      expect(url).toBe("");
     });
 
-    it("should use default port for negative port", () => {
-      // This is an edge case - the regex won't match negative numbers
+    it("should reject negative port", () => {
       localStorage.setItem("deviceAddress", "192.168.1.100:-1");
 
       const url = getWsUrl();
-      // Non-numeric port after colon, strips it and uses default
-      expect(url).toBe("ws://192.168.1.100:7497/api/v0.1");
+      expect(url).toBe("");
     });
 
-    it("should use default port for non-numeric port", () => {
+    it("should reject non-numeric port", () => {
       localStorage.setItem("deviceAddress", "192.168.1.100:abc");
 
       const url = getWsUrl();
-      // Non-numeric value after colon
-      expect(url).toBe("ws://192.168.1.100:7497/api/v0.1");
+      expect(url).toBe("");
     });
 
     it("should handle unbracketed IPv6 by wrapping in brackets", () => {
@@ -154,10 +161,71 @@ describe("CoreAPI URL Functions", () => {
       expect(url).toBe("ws://192.168.1.100:1/api/v0.1");
     });
 
-    it("should handle trailing colon gracefully", () => {
+    it("should reject trailing colon", () => {
       localStorage.setItem("deviceAddress", "192.168.1.100:");
       const url = getWsUrl();
-      expect(url).toBe("ws://192.168.1.100:7497/api/v0.1");
+      expect(url).toBe("");
+    });
+
+    it("should reject invalid IPv4 octets before WebSocket construction", () => {
+      localStorage.setItem("deviceAddress", "192.168.1.286");
+      const url = getWsUrl();
+      expect(url).toBe("");
+    });
+
+    it("should reject addresses without a host", () => {
+      localStorage.setItem("deviceAddress", ":8080");
+      const url = getWsUrl();
+      expect(url).toBe("");
+    });
+  });
+
+  describe("validateDeviceAddress", () => {
+    it("should trim and normalize valid addresses", () => {
+      const result = validateDeviceAddress(" 192.168.1.100:8080 ");
+      expect(result).toEqual({
+        ok: true,
+        address: "192.168.1.100:8080",
+        host: "192.168.1.100",
+        port: 8080,
+        wsUrl: "ws://192.168.1.100:8080/api/v0.1",
+      });
+    });
+
+    it("should normalize pasted Core API URLs", () => {
+      const result = validateDeviceAddress(
+        "http://mydevice.local:9000/api/v0.1",
+      );
+      expect(result).toEqual({
+        ok: true,
+        address: "http://mydevice.local:9000",
+        host: "mydevice.local",
+        port: 9000,
+        wsUrl: "ws://mydevice.local:9000/api/v0.1",
+      });
+    });
+
+    it("should preserve secure URL schemes", () => {
+      const result = validateDeviceAddress(
+        "https://mydevice.local:9000/api/v0.1",
+      );
+      expect(result).toEqual({
+        ok: true,
+        address: "https://mydevice.local:9000",
+        host: "mydevice.local",
+        port: 9000,
+        wsUrl: "wss://mydevice.local:9000/api/v0.1",
+      });
+    });
+
+    it("should reject malformed IPv6", () => {
+      const result = validateDeviceAddress("2001:::1");
+      expect(result.ok).toBe(false);
+    });
+
+    it("should reject URL paths beyond the Core API endpoint", () => {
+      const result = validateDeviceAddress("http://mydevice.local/other");
+      expect(result.ok).toBe(false);
     });
   });
 });
