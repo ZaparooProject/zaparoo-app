@@ -43,7 +43,13 @@ export default defineConfig(({ command, mode }) => {
         "ios >= 11",
         "android >= 49",
       ],
-      additionalLegacyPolyfills: ["regenerator-runtime/runtime"],
+      additionalLegacyPolyfills: [
+        "regenerator-runtime/runtime",
+        "abortcontroller-polyfill/dist/polyfill-patch-fetch",
+      ],
+      additionalModernPolyfills: [
+        "abortcontroller-polyfill/dist/polyfill-patch-fetch",
+      ],
       modernPolyfills: true,
     }),
   ];
