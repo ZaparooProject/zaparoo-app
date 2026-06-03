@@ -34,6 +34,7 @@ function simulateError(
   mockSend: ReturnType<typeof vi.fn>,
   message: string,
   callIndex: number = 0,
+  code: number = -32601,
 ) {
   queueMicrotask(() => {
     if (mockSend.mock.calls[callIndex]) {
@@ -41,7 +42,7 @@ function simulateError(
       const response = {
         jsonrpc: "2.0",
         id: request.id,
-        error: { code: -32601, message },
+        error: { code, message },
       };
       CoreAPI.processReceived({
         data: JSON.stringify(response),
@@ -133,6 +134,11 @@ describe("CoreAPI API Contract", () => {
       expect(warnSpy).toHaveBeenCalledWith(
         "Media tags API call failed:",
         expect.any(Error),
+        {
+          category: "api",
+          action: "mediaTags",
+          severity: "warning",
+        },
       );
     });
 
@@ -150,13 +156,18 @@ describe("CoreAPI API Contract", () => {
       expect(warnSpy).toHaveBeenCalledWith(
         "Media generate API call failed:",
         expect.any(Error),
+        {
+          category: "api",
+          action: "mediaGenerate",
+          severity: "warning",
+        },
       );
     });
 
     it("mediaGenerate should report unexpected API errors with context", async () => {
       const errorSpy = vi.spyOn(logger, "error");
       const promise = CoreAPI.mediaGenerate();
-      simulateError(mockSend, "indexer crashed");
+      simulateError(mockSend, "indexer crashed", 0, -32000);
 
       await expect(promise).rejects.toThrow("indexer crashed");
       expect(errorSpy).toHaveBeenCalledWith(
