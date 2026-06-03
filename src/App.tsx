@@ -10,6 +10,7 @@ import { Purchases } from "@revenuecat/purchases-capacitor";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { InboxModal } from "@/components/InboxModal";
 import { StagedTokenModal } from "@/components/home/StagedTokenModal";
+import { isExpectedRevenueCatLogoutError } from "@/lib/errors";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
 import { DatabaseIcon, PlayIcon } from "./lib/images";
@@ -289,9 +290,15 @@ export default function App() {
             }
           } else {
             // Revert to anonymous RevenueCat customer — only if not already anonymous
-            const { isAnonymous } = await Purchases.isAnonymous();
-            if (!isAnonymous) {
-              await Purchases.logOut();
+            try {
+              const { isAnonymous } = await Purchases.isAnonymous();
+              if (!isAnonymous) {
+                await Purchases.logOut();
+              }
+            } catch (e) {
+              if (!isExpectedRevenueCatLogoutError(e)) {
+                throw e;
+              }
             }
             const { customerInfo } = await Purchases.getCustomerInfo();
             const hasAccess =
