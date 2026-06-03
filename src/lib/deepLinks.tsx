@@ -5,31 +5,59 @@ import toast from "react-hot-toast";
 import { useStatusStore } from "./store";
 import { logger } from "./logger";
 
-// Deduplication window in milliseconds - prevents double-processing when both
-// getLaunchUrl() and appUrlOpen fire for the same URL on cold start
 const DEDUPE_WINDOW_MS = 1000;
+const DEEP_LINK_HOST = "zaparoo.app";
 
-const AppUrlListener: React.FC = () => {
+type ParsedDeepLink =
+  | { type: "run"; value: string }
+  | { type: "write"; value: string }
+  | { type: "unsupported" }
+  | { type: "invalid" };
+
+export function parseDeepLink(urlString: string): ParsedDeepLink {
+  try {
+    const url = new URL(urlString);
+    const scheme = url.protocol.replace(":", "");
+
+    if (scheme === "https" && url.host !== DEEP_LINK_HOST) {
+      return { type: "unsupported" };
+    }
+
+    if (scheme !== "https" && scheme !== "zaparoo") {
+      return { type: "unsupported" };
+    }
+
+    const path = url.pathname || (scheme === "zaparoo" ? `/${url.host}` : "");
+    const value = url.searchParams.get("v");
+
+    if (!value) {
+      return { type: "unsupported" };
+    }
+
+    if (path === "/run") {
+      return { type: "run", value };
+    }
+
+    if (path === "/write") {
+      return { type: "write", value };
+    }
+
+    return { type: "unsupported" };
+  } catch {
+    return { type: "invalid" };
+  }
+}
+
+export function useDeepLinks() {
   const { t } = useTranslation();
   const setRunQueue = useStatusStore((state) => state.setRunQueue);
   const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
-
-  // Track last processed URL with timestamp for time-based deduplication
   const lastProcessedRef = useRef<{ url: string; time: number } | null>(null);
 
-  /**
-   * Process a deep link URL and dispatch to appropriate queue.
-   * Handles both /run and /write paths with a 'v' query parameter.
-   * Uses time-based deduplication to prevent double-processing on cold start
-   * while still allowing intentional repeat clicks.
-   */
   const processUrl = useCallback(
     (urlString: string) => {
       const now = Date.now();
 
-      // Skip if same URL was processed within deduplication window
-      // This catches cold-start duplicates (getLaunchUrl + appUrlOpen)
-      // but allows intentional repeat clicks after the window expires
       if (
         lastProcessedRef.current &&
         lastProcessedRef.current.url === urlString &&
@@ -40,59 +68,77 @@ const AppUrlListener: React.FC = () => {
       }
 
       lastProcessedRef.current = { url: urlString, time: now };
+      const parsed = parseDeepLink(urlString);
+      logger.log("App URL opened:", { url: urlString, parsed });
 
       try {
-        const url = new URL(urlString);
-        const path = url.pathname;
-        const params = new URLSearchParams(url.search);
-        const queryParams = Object.fromEntries(params.entries());
-        const data = {
-          path,
-          queryParams,
-        };
-        logger.log("App URL opened:", data);
-
-        if (path === "/run" && queryParams.v) {
-          logger.log("Run queue:", queryParams.v);
-          setRunQueue({ value: queryParams.v, unsafe: true });
-        } else if (path === "/write" && queryParams.v) {
-          logger.log("Write queue:", queryParams.v);
-          setWriteQueue(queryParams.v);
+        if (parsed.type === "run") {
+          logger.log("Run queue:", parsed.value);
+          setRunQueue({ value: parsed.value, unsafe: true });
+        } else if (parsed.type === "write") {
+          logger.log("Write queue:", parsed.value);
+          setWriteQueue(parsed.value);
+        } else if (parsed.type === "invalid") {
+          logger.warn("Invalid deep link URL", new Error("Invalid URL"));
+          toast.error(t("deepLinks.invalidUrl"));
         }
       } catch (error) {
-        logger.warn("Invalid deep link URL", error);
-        toast.error(t("deepLinks.invalidUrl"));
+        logger.error("Deep link dispatch failed", error, {
+          category: "general",
+          action: "deepLinkDispatch",
+        });
       }
     },
     [setRunQueue, setWriteQueue, t],
   );
 
   useEffect(() => {
-    // Check for launch URL on cold start - this catches deep links that
-    // arrived before the listener was registered (app was not running)
-    App.getLaunchUrl().then((result) => {
-      if (result?.url) {
-        logger.log("App launched with URL:", result.url);
-        processUrl(result.url);
-      }
-    });
-
-    // Register listener for deep links while app is running
+    let disposed = false;
     let listenerHandle: Awaited<ReturnType<typeof App.addListener>> | null =
       null;
 
     App.addListener("appUrlOpen", (event: URLOpenListenerEvent) => {
       processUrl(event.url);
-    }).then((handle) => {
-      listenerHandle = handle;
-    });
+    })
+      .then((handle) => {
+        if (disposed) {
+          void handle.remove();
+          return;
+        }
+        listenerHandle = handle;
+      })
+      .catch((error) => {
+        logger.error("Failed to register deep link listener", error, {
+          category: "lifecycle",
+          action: "deepLinkListener",
+          severity: "warning",
+        });
+      });
 
-    // Cleanup listener on unmount to prevent memory leaks
+    App.getLaunchUrl()
+      .then((result) => {
+        if (!disposed && result?.url) {
+          logger.log("App launched with URL:", result.url);
+          processUrl(result.url);
+        }
+      })
+      .catch((error) => {
+        logger.error("Failed to read launch URL", error, {
+          category: "lifecycle",
+          action: "getLaunchUrl",
+          severity: "warning",
+        });
+      });
+
     return () => {
-      listenerHandle?.remove();
+      disposed = true;
+      void listenerHandle?.remove();
     };
   }, [processUrl]);
+}
 
+const AppUrlListener: React.FC = () => {
+  useDeepLinks();
   return null;
 };
 

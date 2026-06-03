@@ -16,7 +16,7 @@ import { useStatusStore } from "./lib/store";
 import { DatabaseIcon, PlayIcon } from "./lib/images";
 import { ConnectionProvider } from "./components/ConnectionProvider";
 import { ReconnectingIndicator } from "./components/ReconnectingIndicator";
-import AppUrlListener from "./lib/deepLinks.tsx";
+import { useDeepLinks } from "./lib/deepLinks.tsx";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { useDataCache } from "./hooks/useDataCache";
 import { SlideModalProvider } from "./components/SlideModalProvider";
@@ -190,6 +190,8 @@ declare module "@tanstack/react-router" {
 }
 
 export default function App() {
+  useDeepLinks();
+
   // Wait for preferences to hydrate before rendering to prevent layout shifts
   const hasHydrated = usePreferencesStore((state) => state._hasHydrated);
   const proAccessHydrated = usePreferencesStore(
@@ -335,7 +337,6 @@ export default function App() {
 
   return (
     <>
-      <AppUrlListener />
       <QueueProcessors />
       <Toaster
         position="top-center"

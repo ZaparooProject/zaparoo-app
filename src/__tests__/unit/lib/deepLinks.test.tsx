@@ -73,7 +73,7 @@ vi.mock("../../../lib/store", () => ({
   }),
 }));
 
-import AppUrlListener from "../../../lib/deepLinks";
+import AppUrlListener, { parseDeepLink } from "../../../lib/deepLinks";
 
 describe("AppUrlListener", () => {
   beforeEach(() => {
@@ -102,6 +102,67 @@ describe("AppUrlListener", () => {
 
     await waitFor(() => {
       expect(listenerRemoveFn).toHaveBeenCalled();
+    });
+  });
+
+  it("should cleanup listener if handle resolves after unmount", async () => {
+    let resolveHandle: (value: {
+      remove: typeof listenerRemoveFn;
+    }) => void = () => {};
+    mockAddListener.mockImplementationOnce(
+      (eventName: string, callback: (event: URLOpenListenerEvent) => void) => {
+        if (eventName === "appUrlOpen") {
+          urlOpenCallback = callback;
+        }
+        return new Promise((resolve) => {
+          resolveHandle = resolve;
+        });
+      },
+    );
+
+    const { unmount } = render(<AppUrlListener />);
+
+    unmount();
+    resolveHandle({ remove: listenerRemoveFn });
+
+    await waitFor(() => {
+      expect(listenerRemoveFn).toHaveBeenCalled();
+    });
+  });
+
+  describe("parseDeepLink", () => {
+    it("should parse HTTPS run links", () => {
+      expect(parseDeepLink("https://zaparoo.app/run?v=test-token")).toEqual({
+        type: "run",
+        value: "test-token",
+      });
+    });
+
+    it("should parse HTTPS write links", () => {
+      expect(parseDeepLink("https://zaparoo.app/write?v=test-write")).toEqual({
+        type: "write",
+        value: "test-write",
+      });
+    });
+
+    it("should parse custom scheme app paths", () => {
+      expect(parseDeepLink("zaparoo://app/run?v=test-token")).toEqual({
+        type: "run",
+        value: "test-token",
+      });
+    });
+
+    it("should parse custom scheme host paths", () => {
+      expect(parseDeepLink("zaparoo://write?v=test-write")).toEqual({
+        type: "write",
+        value: "test-write",
+      });
+    });
+
+    it("should reject other HTTPS hosts", () => {
+      expect(parseDeepLink("https://example.com/run?v=test-token")).toEqual({
+        type: "unsupported",
+      });
     });
   });
 
@@ -375,7 +436,8 @@ describe("AppUrlListener", () => {
       expect(mockLogger.log).toHaveBeenCalledWith(
         "App URL opened:",
         expect.objectContaining({
-          path: "/unknown",
+          url: "zaparoo://app/unknown",
+          parsed: { type: "unsupported" },
         }),
       );
     });
