@@ -63,4 +63,10 @@ describe("isCoreFeatureAvailable", () => {
     expect(isCoreFeatureAvailable("mediaTags", "2.6.2")).toBe(false);
     expect(isCoreFeatureAvailable("mediaTags", "2.7.0")).toBe(true);
   });
+
+  it("should gate browse-all media search behind Core 2.10.0", () => {
+    expect(FEATURE_GATES.mediaBrowseAllSearch?.since).toBe("2.10.0");
+    expect(isCoreFeatureAvailable("mediaBrowseAllSearch", "2.9.1")).toBe(false);
+    expect(isCoreFeatureAvailable("mediaBrowseAllSearch", "2.10.0")).toBe(true);
+  });
 });
