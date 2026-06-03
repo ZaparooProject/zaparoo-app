@@ -370,6 +370,29 @@ describe("notification processing", () => {
     });
   });
 
+  describe("message error handling", () => {
+    it("should show recoverable toast when message processing fails", async () => {
+      const { resetToastRateLimiter } = await import("@/lib/toastUtils");
+      resetToastRateLimiter();
+      vi.mocked(CoreAPI.processReceived).mockRejectedValueOnce(
+        new Error("Malformed Core JSON response: Unexpected end of JSON input"),
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith("error");
+      });
+    });
+  });
+
   describe("media.stopped", () => {
     it("should clear playing state and staged token when media stops", async () => {
       useStatusStore.setState({

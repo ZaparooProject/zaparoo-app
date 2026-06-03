@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI } from "../../lib/coreApi";
+import { CoreAPI, MalformedCoreResponseError } from "../../lib/coreApi";
 import { logger } from "../../lib/logger";
 import {
   HistoryResponseEntry,
@@ -139,6 +139,28 @@ describe("CoreAPI API Contract", () => {
           action: "mediaTags",
           severity: "warning",
         },
+      );
+    });
+
+    it("mediaTags should report malformed Core responses as recoverable warnings", async () => {
+      const warnSpy = vi.spyOn(logger, "warn");
+      const promise = CoreAPI.mediaTags();
+      const request = JSON.parse(mockSend.mock.calls[0]![0]);
+
+      await CoreAPI.processReceived({
+        data: `{"jsonrpc":"2.0","id":"${request.id}","result":{"tags":[`,
+      } as MessageEvent);
+
+      await expect(promise).rejects.toBeInstanceOf(MalformedCoreResponseError);
+      expect(warnSpy).toHaveBeenCalledWith(
+        "Media tags API call failed:",
+        expect.any(MalformedCoreResponseError),
+        expect.objectContaining({
+          category: "api",
+          action: "mediaTags",
+          severity: "warning",
+          requestId: request.id,
+        }),
       );
     });
 
