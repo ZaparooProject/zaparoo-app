@@ -51,6 +51,7 @@ import {
   getDeviceAddress,
   getWsUrl,
   isCancelled,
+  isExpectedMediaDatabaseError,
   type NotificationRequest,
 } from "@/lib/coreApi";
 import { useStatusStore, ConnectionState } from "@/lib/store";
@@ -593,6 +594,19 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           }
         })
         .catch((e) => {
+          if (isExpectedMediaDatabaseError(e)) {
+            setGamesIndex({
+              exists: false,
+              indexing: false,
+              optimizing: false,
+              totalSteps: 0,
+              currentStep: 0,
+              currentStepDisplay: "",
+              totalFiles: 0,
+            });
+            return;
+          }
+
           logger.error("Failed to get media information:", e);
           // Suppress the toast unless we're actually live-connected — the
           // connection-state UI already conveys reconnect/disconnect, and

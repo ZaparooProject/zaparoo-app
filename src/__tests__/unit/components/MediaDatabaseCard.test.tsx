@@ -14,6 +14,12 @@ vi.mock("../../../lib/coreApi", () => ({
     media: vi.fn(),
     systems: vi.fn(),
   },
+  isMissingMediaDatabaseSetupError: (error: unknown) =>
+    error instanceof Error && error.message.includes("no such table: DBConfig"),
+  isExpectedMediaDatabaseError: (error: unknown) =>
+    error instanceof Error &&
+    (error.message.includes("no such table: DBConfig") ||
+      error.message.includes("Method not found")),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -295,6 +301,39 @@ describe("MediaDatabaseCard", () => {
     expect(CoreAPI.mediaGenerate).toHaveBeenCalledOnce();
   });
 
+  it("should disable update action for unsupported Core versions", async () => {
+    mockStore.coreVersion = "2.6.9";
+
+    render(<MediaDatabaseCard />);
+
+    const updateButton = screen.getByRole("button", {
+      name: "settings.updateDb",
+    });
+    expect(updateButton).toBeDisabled();
+    fireEvent.click(updateButton);
+
+    expect(CoreAPI.mediaGenerate).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("settings.updateDb.status.unsupported"),
+    ).toBeInTheDocument();
+  });
+
+  it("should show setup error inline when update finds invalid database metadata", async () => {
+    vi.mocked(CoreAPI.mediaGenerate).mockRejectedValue(
+      new Error("failed to get optimization status: no such table: DBConfig"),
+    );
+
+    render(<MediaDatabaseCard />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb",
+      }),
+    );
+
+    expect(await screen.findByText("error")).toBeInTheDocument();
+  });
+
   it("should show ready status when database exists (no file count)", async () => {
     render(<MediaDatabaseCard />);
 
@@ -327,6 +366,18 @@ describe("MediaDatabaseCard", () => {
 
     // Wait for the query to resolve
     expect(await screen.findByText("No database found")).toBeInTheDocument();
+  });
+
+  it("should show setup status when database metadata is invalid", async () => {
+    vi.mocked(CoreAPI.media).mockRejectedValue(
+      new Error("failed to get optimization status: no such table: DBConfig"),
+    );
+
+    render(<MediaDatabaseCard />);
+
+    expect(
+      await screen.findByText("settings.updateDb.status.setupMissing"),
+    ).toBeInTheDocument();
   });
 
   it("should show checking status when loading", async () => {

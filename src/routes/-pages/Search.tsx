@@ -10,7 +10,7 @@ import { BackToTop } from "@/components/BackToTop.tsx";
 import { TagBadge } from "@/components/TagBadge.tsx";
 import { logger } from "@/lib/logger";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
-import { CoreAPI } from "@/lib/coreApi.ts";
+import { CoreAPI, isExpectedMediaDatabaseError } from "@/lib/coreApi.ts";
 import {
   BackIcon,
   CreateIcon,
@@ -180,6 +180,18 @@ export function Search() {
         setGamesIndex(s.database);
       } catch (e) {
         if (cancelled) return;
+        if (isExpectedMediaDatabaseError(e)) {
+          setGamesIndex({
+            exists: false,
+            indexing: false,
+            optimizing: false,
+            totalSteps: 0,
+            currentStep: 0,
+            currentStepDisplay: "",
+            totalFiles: 0,
+          });
+          return;
+        }
         logger.error("Failed to fetch media index:", e, {
           category: "api",
           action: "media",
