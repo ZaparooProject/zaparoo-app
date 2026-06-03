@@ -7,12 +7,12 @@ import { LOG_LEVEL, Purchases } from "@revenuecat/purchases-capacitor";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { initializeApp } from "firebase/app";
+import { isPluginAvailable } from "@/lib/capacitorBridge";
 import App from "./App";
 import { ThemeProvider } from "./components/theme-provider";
 import { ErrorComponent } from "./components/ErrorComponent";
 import { logger } from "./lib/logger";
 import { resolvePurchasesReady } from "./lib/purchasesSetup";
-import { isPluginAvailable } from "./lib/capacitorBridge";
 
 // Firebase config is optional - auth features will be disabled without it
 const firebaseConfigs = import.meta.glob<Record<string, string>>(

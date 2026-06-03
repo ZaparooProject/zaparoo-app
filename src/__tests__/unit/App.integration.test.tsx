@@ -1,6 +1,7 @@
 import { render, screen } from "../../test-utils";
 import { vi, beforeEach, describe, it, expect } from "vitest";
 import App from "@/App";
+import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 
 // Mock window.location for i18n
 Object.defineProperty(window, "location", {
@@ -50,6 +51,11 @@ vi.mock("@capacitor/core", () => ({
 
 vi.mock("@uidotdev/usehooks", () => ({
   usePrevious: vi.fn(() => undefined),
+}));
+
+vi.mock("@/lib/capacitorBridge", () => ({
+  isNativePluginAvailable: vi.fn(() => true),
+  isPluginAvailable: vi.fn(() => true),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => {
@@ -222,6 +228,7 @@ vi.mock("@/lib/purchasesSetup", () => ({ purchasesReady: Promise.resolve() }));
 describe("App Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(isNativePluginAvailable).mockReturnValue(true);
   });
 
   it("should render App component with all providers", () => {
@@ -262,7 +269,7 @@ describe("App Integration", () => {
     const { StatusBar } = await import("@capacitor/status-bar");
 
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    vi.mocked(Capacitor.isPluginAvailable).mockImplementation(
+    vi.mocked(isNativePluginAvailable).mockImplementation(
       (pluginName: string) => pluginName !== "StatusBar",
     );
 

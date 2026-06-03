@@ -946,7 +946,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       null;
 
     const setupListeners = async () => {
-      if (!isPluginAvailable("App")) return;
+      if (!isNativePluginAvailable("App")) return;
 
       resumeListener = await App.addListener("resume", () => {
         logger.log("[ConnectionProvider] App resumed");

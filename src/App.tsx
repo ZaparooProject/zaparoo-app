@@ -9,6 +9,10 @@ import { Purchases } from "@revenuecat/purchases-capacitor";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { InboxModal } from "@/components/InboxModal";
 import { StagedTokenModal } from "@/components/home/StagedTokenModal";
+import {
+  isNativePluginAvailable,
+  isPluginAvailable,
+} from "@/lib/capacitorBridge";
 import { isExpectedRevenueCatLogoutError } from "@/lib/errors";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
@@ -33,10 +37,6 @@ import { useLiveUpdate } from "./hooks/useLiveUpdate";
 import { initDeviceInfo, logger } from "./lib/logger";
 import { getSubscriptionStatus } from "./lib/onlineApi";
 import { purchasesReady } from "./lib/purchasesSetup";
-import {
-  isNativePluginAvailable,
-  isPluginAvailable,
-} from "./lib/capacitorBridge";
 import {
   A11yAnnouncerProvider,
   useAnnouncer,

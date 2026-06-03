@@ -201,9 +201,13 @@ function resetStore() {
 }
 
 describe("ConnectionProvider", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     resetStore();
+
+    const bridge = await import("@/lib/capacitorBridge");
+    vi.mocked(bridge.isPluginAvailable).mockReturnValue(true);
+    vi.mocked(bridge.isNativePluginAvailable).mockReturnValue(true);
   });
 
   describe("rendering", () => {
@@ -226,6 +230,48 @@ describe("ConnectionProvider", () => {
 
       expect(screen.getByTestId("isConnected")).toBeInTheDocument();
       expect(screen.getByTestId("hasData")).toBeInTheDocument();
+    });
+
+    it("should skip startup plugin calls when bridge plugins are unavailable", async () => {
+      const { App } = await import("@capacitor/app");
+      const { Capacitor } = await import("@capacitor/core");
+      const { Network } = await import("@capacitor/network");
+      const bridge = await import("@/lib/capacitorBridge");
+
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(bridge.isPluginAvailable).mockImplementation(
+        (pluginName: string) => pluginName !== "Preferences",
+      );
+      vi.mocked(bridge.isNativePluginAvailable).mockImplementation(
+        (pluginName: string) => !["App", "Network"].includes(pluginName),
+      );
+      vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
+        "192.168.1.100:7497",
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(connectionManager.setEventHandlers).toHaveBeenCalled();
+      });
+
+      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+
+      await waitFor(() => {
+        expect(CoreAPI.version).toHaveBeenCalled();
+      });
+
+      expect(Preferences.get).not.toHaveBeenCalled();
+      expect(App.addListener).not.toHaveBeenCalled();
+      expect(Network.addListener).not.toHaveBeenCalled();
     });
   });
 
@@ -1857,9 +1903,12 @@ describe("app lifecycle handling", () => {
 });
 
 describe("browser visibility handling (web platform)", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     resetStore();
+
+    const { Capacitor } = await import("@capacitor/core");
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
   });
 
   it("should call connectionManager.resumeAll when tab becomes visible", async () => {
