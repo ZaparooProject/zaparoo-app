@@ -11,7 +11,7 @@ import toast from "react-hot-toast";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { BackIcon } from "@/lib/images.tsx";
 import { HeaderButton } from "@/components/wui/HeaderButton.tsx";
-import { CoreAPI } from "@/lib/coreApi.ts";
+import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store.ts";
 import { logger } from "@/lib/logger";
 import { Button } from "@/components/wui/Button";

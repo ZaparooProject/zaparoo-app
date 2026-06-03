@@ -54,7 +54,11 @@ import {
   isExpectedMediaDatabaseError,
   type NotificationRequest,
 } from "@/lib/coreApi";
-import { useStatusStore, ConnectionState } from "@/lib/store";
+import {
+  DEFAULT_GAMES_INDEX,
+  useStatusStore,
+  ConnectionState,
+} from "@/lib/store";
 import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
 import { formatDurationDisplay, formatDurationAccessible } from "@/lib/utils";
 import {
@@ -595,15 +599,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         })
         .catch((e) => {
           if (isExpectedMediaDatabaseError(e)) {
-            setGamesIndex({
-              exists: false,
-              indexing: false,
-              optimizing: false,
-              totalSteps: 0,
-              currentStep: 0,
-              currentStepDisplay: "",
-              totalFiles: 0,
-            });
+            setGamesIndex(DEFAULT_GAMES_INDEX);
             return;
           }
 

@@ -83,10 +83,14 @@ vi.mock("../../../lib/coreApi", () => ({
   getDeviceAddress: vi.fn(() => "192.168.1.100:7497"),
   getWsUrl: vi.fn(() => "ws://192.168.1.100:7497"),
   isCancelled: vi.fn(() => false),
-  isExpectedMediaDatabaseError: (error: unknown) =>
-    error instanceof Error &&
-    (error.message.includes("no such table: DBConfig") ||
-      error.message.includes("Method not found")),
+  isExpectedMediaDatabaseError: (error: unknown) => {
+    if (!(error instanceof Error)) return false;
+    const msg = error.message.toLowerCase();
+    return (
+      msg.includes("no such table: dbconfig") ||
+      msg.includes("method not found")
+    );
+  },
 }));
 
 vi.mock("@capacitor/preferences", () => ({

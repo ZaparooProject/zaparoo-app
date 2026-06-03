@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "../../../test-utils";
 import { Search } from "@/routes/-pages/Search";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { CoreAPI } from "@/lib/coreApi.ts";
+import { CoreAPI } from "@/lib/coreApi";
 
 // Mock route
 vi.mock("@tanstack/react-router", () => ({
@@ -42,7 +42,7 @@ vi.mock("@capacitor/preferences", () => ({
 }));
 
 // Mock CoreAPI
-vi.mock("@/lib/coreApi.ts", () => ({
+vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
     media: vi.fn().mockResolvedValue({
       database: { exists: true, indexing: false },
@@ -50,10 +50,15 @@ vi.mock("@/lib/coreApi.ts", () => ({
     }),
     run: vi.fn().mockResolvedValue(undefined),
   },
-  isExpectedMediaDatabaseError: (error: unknown) =>
-    error instanceof Error &&
-    (error.message.includes("no such table: DBConfig") ||
-      error.message.includes("Method not found")),
+  isExpectedMediaDatabaseError: (error: unknown) => {
+    const msg = String(
+      error instanceof Error ? error.message : error,
+    ).toLowerCase();
+    return (
+      msg.includes("no such table: dbconfig") ||
+      msg.includes("method not found")
+    );
+  },
 }));
 
 // Mock useSmartSwipe

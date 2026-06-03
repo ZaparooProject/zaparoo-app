@@ -142,6 +142,7 @@ export function MediaDatabaseCard({
   };
 
   const handleCancelUpdate = async () => {
+    setGenerateError(null);
     setCancelRequested(true);
     try {
       await CoreAPI.mediaGenerateCancel();
@@ -170,6 +171,7 @@ export function MediaDatabaseCard({
   };
 
   const handleResumeUpdate = async () => {
+    setGenerateError(null);
     setResumeRequested(true);
     try {
       await CoreAPI.mediaGenerateResume();

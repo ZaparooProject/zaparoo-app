@@ -78,9 +78,9 @@ function getErrorMessage(error: unknown): string {
 export function isUnsupportedMediaApiError(error: unknown): boolean {
   const message = getErrorMessage(error).toLowerCase();
   return (
-    (error instanceof CoreApiError && message.includes("method not found")) ||
+    (error instanceof CoreApiError && error.code === -32601) ||
     message.includes("method not found") ||
-    message.includes("query or system is required")
+    message === "query or system is required"
   );
 }
 
@@ -105,7 +105,11 @@ function logMediaApiFailure(
   severity: "error" | "warning" = "error",
 ): void {
   if (isExpectedMediaDatabaseError(error)) {
-    logger.warn(`${label}:`, error);
+    logger.warn(`${label}:`, error, {
+      category: "api",
+      action,
+      severity: "warning",
+    });
     return;
   }
 

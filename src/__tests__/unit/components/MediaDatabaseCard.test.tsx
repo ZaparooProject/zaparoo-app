@@ -14,12 +14,17 @@ vi.mock("../../../lib/coreApi", () => ({
     media: vi.fn(),
     systems: vi.fn(),
   },
-  isMissingMediaDatabaseSetupError: (error: unknown) =>
-    error instanceof Error && error.message.includes("no such table: DBConfig"),
-  isExpectedMediaDatabaseError: (error: unknown) =>
-    error instanceof Error &&
-    (error.message.includes("no such table: DBConfig") ||
-      error.message.includes("Method not found")),
+  isMissingMediaDatabaseSetupError: (error: unknown) => {
+    const msg = error instanceof Error ? error.message.toLowerCase() : "";
+    return msg.includes("no such table: dbconfig");
+  },
+  isExpectedMediaDatabaseError: (error: unknown) => {
+    const msg = error instanceof Error ? error.message.toLowerCase() : "";
+    return (
+      msg.includes("no such table: dbconfig") ||
+      msg.includes("method not found")
+    );
+  },
 }));
 
 vi.mock("react-i18next", () => ({
@@ -332,6 +337,79 @@ describe("MediaDatabaseCard", () => {
     );
 
     expect(await screen.findByText("error")).toBeInTheDocument();
+  });
+
+  it("should clear stale generate errors when cancel is attempted", async () => {
+    vi.mocked(CoreAPI.mediaGenerate).mockRejectedValue(
+      new Error("Method not found"),
+    );
+    const { rerender } = render(<MediaDatabaseCard />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb",
+      }),
+    );
+    expect(await screen.findByText("error")).toBeInTheDocument();
+
+    mockStore.gamesIndex = {
+      indexing: true,
+      exists: false,
+      totalFiles: 0,
+      currentStep: 2,
+      totalSteps: 11,
+      currentStepDisplay: "Atari 2600",
+    };
+    vi.mocked(CoreAPI.mediaGenerateCancel).mockResolvedValue(undefined);
+    rerender(<MediaDatabaseCard />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /settings\.updateDb\.cancel/i,
+      }),
+    );
+
+    await vi.waitFor(() => {
+      expect(CoreAPI.mediaGenerateCancel).toHaveBeenCalledOnce();
+    });
+    expect(screen.queryByText("error")).not.toBeInTheDocument();
+  });
+
+  it("should clear stale generate errors when resume is attempted", async () => {
+    vi.mocked(CoreAPI.mediaGenerate).mockRejectedValue(
+      new Error("Method not found"),
+    );
+    const { rerender } = render(<MediaDatabaseCard />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb",
+      }),
+    );
+    expect(await screen.findByText("error")).toBeInTheDocument();
+
+    mockStore.gamesIndex = {
+      indexing: true,
+      exists: false,
+      totalFiles: 0,
+      currentStep: 2,
+      totalSteps: 11,
+      currentStepDisplay: "Atari 2600",
+      paused: true,
+    };
+    vi.mocked(CoreAPI.mediaGenerateResume).mockResolvedValue(undefined);
+    rerender(<MediaDatabaseCard />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /settings\.updateDb\.resume/i,
+      }),
+    );
+
+    await vi.waitFor(() => {
+      expect(CoreAPI.mediaGenerateResume).toHaveBeenCalledOnce();
+    });
+    expect(screen.queryByText("error")).not.toBeInTheDocument();
   });
 
   it("should show ready status when database exists (no file count)", async () => {

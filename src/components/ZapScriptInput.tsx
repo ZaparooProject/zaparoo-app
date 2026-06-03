@@ -5,7 +5,7 @@ import { Browser } from "@capacitor/browser";
 import { EraserIcon, HelpCircleIcon, PlusIcon } from "lucide-react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useStatusStore } from "@/lib/store.ts";
-import { CoreAPI } from "@/lib/coreApi.ts";
+import { CoreAPI } from "@/lib/coreApi";
 import { Button } from "@/components/wui/Button.tsx";
 import { MediaSearchModal } from "@/components/MediaSearchModal.tsx";
 import { CommandsModal } from "@/components/CommandsModal.tsx";

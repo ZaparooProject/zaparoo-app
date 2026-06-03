@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI, getDeviceAddress, getWsUrl } from "@/lib/coreApi.ts";
+import {
+  CoreAPI,
+  CoreApiError,
+  getDeviceAddress,
+  getWsUrl,
+  isUnsupportedMediaApiError,
+} from "@/lib/coreApi";
 import { Capacitor } from "@capacitor/core";
 import { Notification } from "@/lib/models.ts";
 
@@ -25,6 +31,35 @@ Object.defineProperty(window, "location", {
     hostname: "localhost",
   },
   writable: true,
+});
+
+describe("media API error classification", () => {
+  it("should recognize unsupported media API errors case-insensitively", () => {
+    expect(isUnsupportedMediaApiError(new Error("Method not found"))).toBe(
+      true,
+    );
+    expect(isUnsupportedMediaApiError("METHOD NOT FOUND")).toBe(true);
+  });
+
+  it("should recognize JSON-RPC method-not-found codes", () => {
+    expect(
+      isUnsupportedMediaApiError(new CoreApiError("No method", -32601)),
+    ).toBe(true);
+    expect(
+      isUnsupportedMediaApiError(new CoreApiError("Other failure", -32000)),
+    ).toBe(false);
+  });
+
+  it("should only match exact missing query/system contract errors", () => {
+    expect(isUnsupportedMediaApiError("query or system is required")).toBe(
+      true,
+    );
+    expect(
+      isUnsupportedMediaApiError(
+        "query or system is required for old endpoint",
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("CoreAPI", () => {

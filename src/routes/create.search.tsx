@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Preferences } from "@capacitor/preferences";
 import { logger } from "@/lib/logger";
-import { CoreAPI } from "@/lib/coreApi.ts";
+import { CoreAPI } from "@/lib/coreApi";
 import { Search, type LoaderData } from "./-pages/Search";
 
 export const Route = createFileRoute("/create/search")({

@@ -15,7 +15,7 @@ import { PageFrame } from "@/components/PageFrame";
 import { useStatusStore } from "@/lib/store";
 import { Button } from "@/components/wui/Button";
 import { ExternalIcon, NextIcon } from "@/lib/images";
-import { getDeviceAddress } from "@/lib/coreApi.ts";
+import { getDeviceAddress } from "@/lib/coreApi";
 import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
 import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
 import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";

@@ -151,6 +151,17 @@ interface StatusState {
   resetConnectionState: () => void;
 }
 
+export const DEFAULT_GAMES_INDEX: IndexResponse = {
+  exists: false,
+  indexing: false,
+  optimizing: false,
+  totalSteps: 0,
+  currentStep: 0,
+  currentStepDisplay: "",
+  totalFiles: 0,
+  totalMedia: undefined,
+};
+
 export const useStatusStore = create<StatusState>()((set) => ({
   connected: false,
   setConnected: (status) => set({ connected: status }),
