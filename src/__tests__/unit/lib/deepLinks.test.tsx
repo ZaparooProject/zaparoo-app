@@ -16,6 +16,7 @@ const { mockAddListener, mockGetLaunchUrl, mockLogger, mockToast } = vi.hoisted(
     mockLogger: {
       log: vi.fn(),
       error: vi.fn(),
+      warn: vi.fn(),
     },
     mockToast: {
       error: vi.fn(),
@@ -300,15 +301,11 @@ describe("AppUrlListener", () => {
         url: "not-a-valid-url",
       });
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        "Failed to parse deep link URL",
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        "Invalid deep link URL",
         expect.any(Error),
-        expect.objectContaining({
-          category: "general",
-          action: "parseDeepLink",
-          severity: "warning",
-        }),
       );
+      expect(mockLogger.error).not.toHaveBeenCalled();
 
       expect(mockToast.error).toHaveBeenCalledWith("deepLinks.invalidUrl");
     });
@@ -324,7 +321,11 @@ describe("AppUrlListener", () => {
         url: "",
       });
 
-      expect(mockLogger.error).toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        "Invalid deep link URL",
+        expect.any(Error),
+      );
+      expect(mockLogger.error).not.toHaveBeenCalled();
       expect(mockToast.error).toHaveBeenCalledWith("deepLinks.invalidUrl");
     });
 

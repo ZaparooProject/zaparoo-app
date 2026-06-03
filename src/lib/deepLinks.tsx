@@ -60,11 +60,7 @@ const AppUrlListener: React.FC = () => {
           setWriteQueue(queryParams.v);
         }
       } catch (error) {
-        logger.error("Failed to parse deep link URL", error, {
-          category: "general",
-          action: "parseDeepLink",
-          severity: "warning",
-        });
+        logger.warn("Invalid deep link URL", error);
         toast.error(t("deepLinks.invalidUrl"));
       }
     },
