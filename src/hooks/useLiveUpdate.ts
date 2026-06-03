@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { LiveUpdate } from "@capawesome/capacitor-live-update";
 import { logger } from "@/lib/logger";
+import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 
 /**
  * Hook to handle Capawesome Live Update lifecycle.
@@ -16,7 +17,11 @@ export function useLiveUpdate() {
   const initialized = useRef(false);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform() || initialized.current) {
+    if (
+      !Capacitor.isNativePlatform() ||
+      !isNativePluginAvailable("LiveUpdate") ||
+      initialized.current
+    ) {
       return;
     }
 

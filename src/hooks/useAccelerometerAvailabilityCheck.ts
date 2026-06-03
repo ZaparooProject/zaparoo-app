@@ -3,6 +3,10 @@ import { Capacitor } from "@capacitor/core";
 import { CapacitorShake } from "@capgo/capacitor-shake";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { logger } from "@/lib/logger";
+import {
+  isCapacitorPluginUnavailableError,
+  isNativePluginAvailable,
+} from "@/lib/capacitorBridge";
 
 /**
  * Hook to check accelerometer/shake detection availability once at app startup.
@@ -18,8 +22,11 @@ export function useAccelerometerAvailabilityCheck() {
   );
 
   useEffect(() => {
-    // Skip on web platform
-    if (!Capacitor.isNativePlatform()) {
+    // Skip on web platform or when the native plugin bridge is unavailable
+    if (
+      !Capacitor.isNativePlatform() ||
+      !isNativePluginAvailable("CapacitorShake")
+    ) {
       setAccelerometerAvailable(false);
       setAccelerometerAvailabilityHydrated(true);
       return;
@@ -39,11 +46,13 @@ export function useAccelerometerAvailabilityCheck() {
         // Clean up test listener
         await listener.remove();
       } catch (e) {
-        logger.error("Failed to check accelerometer availability:", e, {
-          category: "accelerometer",
-          action: "availabilityCheck",
-          severity: "warning",
-        });
+        if (!isCapacitorPluginUnavailableError(e)) {
+          logger.error("Failed to check accelerometer availability:", e, {
+            category: "accelerometer",
+            action: "availabilityCheck",
+            severity: "warning",
+          });
+        }
         // On error, assume accelerometer not available
         setAccelerometerAvailable(false);
         setAccelerometerAvailabilityHydrated(true);

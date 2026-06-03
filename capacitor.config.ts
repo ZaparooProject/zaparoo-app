@@ -16,9 +16,11 @@ const config: CapacitorConfig = {
         : undefined,
     androidScheme: "http",
     cleartext: true,
+    errorPath: "unsupported-webview.html",
   },
   android: {
     allowMixedContent: true,
+    minWebViewVersion: 60,
   },
   plugins: {
     CapacitorHttp: {

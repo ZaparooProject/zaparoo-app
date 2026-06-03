@@ -24,7 +24,7 @@ import {
 // Mock external modules
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
-    get: vi.fn(),
+    get: vi.fn().mockResolvedValue({ value: null }),
     set: vi.fn().mockResolvedValue(undefined),
     remove: vi.fn().mockResolvedValue(undefined),
     clear: vi.fn().mockResolvedValue(undefined),
@@ -35,6 +35,7 @@ vi.mock("@capacitor/core", () => ({
   Capacitor: {
     getPlatform: vi.fn().mockReturnValue("ios"),
     isNativePlatform: vi.fn().mockReturnValue(true),
+    isPluginAvailable: vi.fn().mockReturnValue(true),
   },
 }));
 
@@ -214,6 +215,11 @@ describe("RestorePuchasesButton", () => {
 
     render(<RestorePuchasesButton />);
 
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
+    await waitFor(() => {
+      expect(usePreferencesStore.getState()._hasHydrated).toBe(true);
+    });
+
     const button = screen.getByRole("button", {
       name: "settings.app.restorePurchases",
     });
@@ -224,13 +230,9 @@ describe("RestorePuchasesButton", () => {
       expect(Purchases.getCustomerInfo).toHaveBeenCalled();
     });
 
-    const { Preferences } = await import("@capacitor/preferences");
-    // Preferences.set is now called with app-preferences key and full state
-    expect(Preferences.set).toHaveBeenCalled();
-    const setCall = vi.mocked(Preferences.set).mock.calls[0]![0];
-    expect(setCall.key).toBe("app-preferences");
-    const state = JSON.parse(setCall.value);
-    expect(state.state.launcherAccess).toBe(true);
+    await waitFor(() => {
+      expect(usePreferencesStore.getState().launcherAccess).toBe(true);
+    });
 
     // No longer reloads the page - state updates reactively
     expect(window.location.reload).not.toHaveBeenCalled();
