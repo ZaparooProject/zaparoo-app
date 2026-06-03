@@ -38,6 +38,14 @@ describe("capacitorBridge", () => {
     expect(Capacitor.isPluginAvailable).not.toHaveBeenCalled();
   });
 
+  it("should return false when native platform check throws", () => {
+    vi.spyOn(Capacitor, "isNativePlatform").mockImplementation(() => {
+      throw new Error("bridge unavailable");
+    });
+
+    expect(isNativePluginAvailable("StatusBar")).toBe(false);
+  });
+
   it("should detect expected unavailable plugin errors", () => {
     expect(
       isCapacitorPluginUnavailableError(

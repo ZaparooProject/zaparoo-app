@@ -1,7 +1,8 @@
-import { render, screen } from "../../test-utils";
+import { render, screen, waitFor } from "../../test-utils";
 import { vi, beforeEach, describe, it, expect } from "vitest";
 import App from "@/App";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
+import { logger } from "@/lib/logger";
 
 // Mock window.location for i18n
 Object.defineProperty(window, "location", {
@@ -277,5 +278,23 @@ describe("App Integration", () => {
 
     expect(StatusBar.show).not.toHaveBeenCalled();
     expect(StatusBar.setStyle).not.toHaveBeenCalled();
+  });
+
+  it("should log non-critical StatusBar setup failures", async () => {
+    const { Capacitor } = await import("@capacitor/core");
+    const { StatusBar } = await import("@capacitor/status-bar");
+    const error = new Error("StatusBar unavailable");
+
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(StatusBar.show).mockRejectedValueOnce(error);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(logger.warn).toHaveBeenCalledWith(
+        "StatusBar setup failed:",
+        error,
+      );
+    });
   });
 });
