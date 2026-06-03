@@ -1,5 +1,9 @@
 import { t } from "i18next";
-import { Purchases, PurchasesPackage } from "@revenuecat/purchases-capacitor";
+import {
+  Purchases,
+  type PurchasesOfferings,
+  type PurchasesPackage,
+} from "@revenuecat/purchases-capacitor";
 import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import toast from "react-hot-toast";
@@ -58,10 +62,62 @@ export const RestorePuchasesButton = () => {
   );
 };
 
+type OfferingsStatus =
+  | "loading"
+  | "available"
+  | "missing"
+  | "error"
+  | "unsupported";
+
+function getOfferingDiagnostics(offerings: PurchasesOfferings) {
+  const allOfferings = Object.values(offerings.all ?? {});
+
+  return {
+    platform: Capacitor.getPlatform(),
+    hasCurrentOffering: !!offerings.current,
+    packageCount: offerings.current?.availablePackages.length ?? 0,
+    offeringIdentifiers: allOfferings.map((offering) => offering.identifier),
+  };
+}
+
+function getPurchaseBody(
+  status: OfferingsStatus,
+  purchasePackage: PurchasesPackage | null,
+) {
+  if (purchasePackage) {
+    return t("scan.purchaseProP1", {
+      price: purchasePackage.product.priceString,
+    });
+  }
+
+  if (status === "loading") {
+    return t("scan.purchaseProLoading");
+  }
+
+  if (status === "error") {
+    return t("scan.purchaseProOfferingsError");
+  }
+
+  return t("scan.purchaseProUnavailable");
+}
+
+function getPurchaseActionLabel(status: OfferingsStatus) {
+  if (status === "loading") {
+    return t("loading");
+  }
+
+  if (status === "available") {
+    return t("scan.purchaseProAction");
+  }
+
+  return t("scan.purchaseProUnavailableAction");
+}
+
 const ProPurchaseModal = (props: {
   proPurchaseModalOpen: boolean;
   setProPurchaseModalOpen: (open: boolean) => void;
   purchasePackage: PurchasesPackage | null;
+  offeringsStatus: OfferingsStatus;
   setProAccess: (access: boolean) => void;
 }) => {
   return (
@@ -74,15 +130,11 @@ const ProPurchaseModal = (props: {
           <DialogTitle>{t("scan.purchaseProTitle")}</DialogTitle>
         </DialogHeader>
         <div>
-          {t("scan.purchaseProP1", {
-            price: props.purchasePackage
-              ? props.purchasePackage.product.priceString
-              : "$6.99 USD",
-          })}
+          {getPurchaseBody(props.offeringsStatus, props.purchasePackage)}
         </div>
         <div className="pb-2">{t("scan.purchaseProP2")}</div>
         <Button
-          label={t("scan.purchaseProAction")}
+          label={getPurchaseActionLabel(props.offeringsStatus)}
           disabled={!props.purchasePackage}
           onClick={() => {
             if (props.purchasePackage) {
@@ -128,6 +180,9 @@ export const useProPurchase = () => {
   );
   const [launcherPackage, setLauncherPackage] =
     useState<PurchasesPackage | null>(null);
+  const [offeringsStatus, setOfferingsStatus] = useState<OfferingsStatus>(() =>
+    Capacitor.getPlatform() === "web" ? "unsupported" : "loading",
+  );
 
   useEffect(() => {
     if (Capacitor.getPlatform() === "web") {
@@ -138,22 +193,29 @@ export const useProPurchase = () => {
     // Fetch offerings for purchase flow UI
     Purchases.getOfferings()
       .then((offerings) => {
-        if (
-          offerings.current &&
-          offerings.current.availablePackages.length > 0
-        ) {
-          setLauncherPackage(offerings.current.availablePackages[0] ?? null);
-        } else {
-          logger.error("no launcher purchase package found");
+        const purchasePackage = offerings.current?.availablePackages[0] ?? null;
+
+        if (purchasePackage) {
+          setLauncherPackage(purchasePackage);
+          setOfferingsStatus("available");
+          return;
         }
+
+        setLauncherPackage(null);
+        setOfferingsStatus("missing");
+        logger.warn(
+          "RevenueCat offerings returned no packages",
+          getOfferingDiagnostics(offerings),
+        );
       })
       .catch((e) => {
-        // Network issues or Play Store unavailable - not critical
-        logger.warn("offerings error", e, {
+        setLauncherPackage(null);
+        setOfferingsStatus("error");
+        logger.error("RevenueCat offerings unavailable", e, {
           category: "purchase",
           action: "getOfferings",
+          severity: "warning",
         });
-        toast.error(t("settings.app.offeringsError"));
       });
 
     // Skip customer info check if already hydrated (initial state already set)
@@ -187,6 +249,7 @@ export const useProPurchase = () => {
         proPurchaseModalOpen={proPurchaseModalOpen}
         setProPurchaseModalOpen={setProPurchaseModalOpen}
         purchasePackage={launcherPackage}
+        offeringsStatus={offeringsStatus}
         setProAccess={setProAccess}
       />
     ),

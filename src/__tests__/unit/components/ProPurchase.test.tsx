@@ -63,16 +63,26 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
+const { mockT } = vi.hoisted(() => ({
+  mockT: (key: string, options?: Record<string, string>) => {
+    if (key === "scan.purchaseProP1" && options?.price) {
+      return `${key} ${options.price}`;
+    }
+
+    return key;
+  },
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: mockT,
     i18n: { changeLanguage: vi.fn() },
   }),
 }));
 
 // Mock i18next for direct t() imports used in ProPurchase component
 vi.mock("i18next", () => ({
-  t: (key: string) => key,
+  t: mockT,
 }));
 
 describe("RestorePuchasesButton", () => {
@@ -258,6 +268,11 @@ describe("useProPurchase", () => {
     // Reset store state
     const { usePreferencesStore } = await import("@/lib/preferencesStore");
     usePreferencesStore.setState({ launcherAccess: false });
+    const { useStatusStore } = await import("@/lib/store");
+    useStatusStore.setState({ proPurchaseModalOpen: false });
+    const { Capacitor } = await import("@capacitor/core");
+    vi.mocked(Capacitor.getPlatform).mockReturnValue("ios");
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     // Set up default mock returns for the hook
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     vi.mocked(Purchases.getOfferings).mockResolvedValue({
@@ -360,6 +375,143 @@ describe("useProPurchase", () => {
       expect(Purchases.getCustomerInfo).toHaveBeenCalled();
       expect(result.current.proAccess).toBe(true);
     });
+  });
+
+  it("should show unavailable state and warn when offerings have no packages", async () => {
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { logger } = await import("@/lib/logger");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue({
+      current: {
+        identifier: "current",
+        availablePackages: [],
+      },
+      all: {
+        current: {
+          identifier: "current",
+          availablePackages: [],
+        },
+      },
+    } as any);
+
+    const { result } = renderHook(() => useProPurchase());
+
+    await waitFor(() => {
+      expect(logger.warn).toHaveBeenCalledWith(
+        "RevenueCat offerings returned no packages",
+        expect.objectContaining({
+          platform: "ios",
+          hasCurrentOffering: true,
+          packageCount: 0,
+          offeringIdentifiers: ["current"],
+        }),
+      );
+    });
+    expect(logger.error).not.toHaveBeenCalledWith(
+      "RevenueCat offerings returned no packages",
+    );
+
+    act(() => {
+      result.current.setProPurchaseModalOpen(true);
+    });
+
+    const PurchaseModalComponent = result.current.PurchaseModal;
+    render(<PurchaseModalComponent />);
+
+    expect(screen.getByText("scan.purchaseProUnavailable")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "scan.purchaseProUnavailableAction" }),
+    ).toBeDisabled();
+  });
+
+  it("should show error state and report when offerings fail to load", async () => {
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { logger } = await import("@/lib/logger");
+    const error = new Error("Network unavailable");
+    vi.mocked(Purchases.getOfferings).mockRejectedValue(error);
+
+    const { result } = renderHook(() => useProPurchase());
+
+    await waitFor(() => {
+      expect(logger.error).toHaveBeenCalledWith(
+        "RevenueCat offerings unavailable",
+        error,
+        {
+          category: "purchase",
+          action: "getOfferings",
+          severity: "warning",
+        },
+      );
+    });
+
+    act(() => {
+      result.current.setProPurchaseModalOpen(true);
+    });
+
+    const PurchaseModalComponent = result.current.PurchaseModal;
+    render(<PurchaseModalComponent />);
+
+    expect(
+      screen.getByText("scan.purchaseProOfferingsError"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "scan.purchaseProUnavailableAction" }),
+    ).toBeDisabled();
+  });
+
+  it("should show fetched package price and enable purchase action", async () => {
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue({
+      current: {
+        availablePackages: [
+          {
+            product: {
+              priceString: "$6.99",
+            },
+          },
+        ],
+      },
+      all: {},
+    } as any);
+
+    const { result } = renderHook(() => useProPurchase());
+
+    await waitFor(() => {
+      expect(Purchases.getOfferings).toHaveBeenCalled();
+    });
+
+    act(() => {
+      result.current.setProPurchaseModalOpen(true);
+    });
+
+    const PurchaseModalComponent = result.current.PurchaseModal;
+    render(<PurchaseModalComponent />);
+
+    expect(screen.getByText("scan.purchaseProP1 $6.99")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "scan.purchaseProAction" }),
+    ).toBeEnabled();
+  });
+
+  it("should show unsupported state on web platform", async () => {
+    const { Capacitor } = await import("@capacitor/core");
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Capacitor.getPlatform).mockReturnValue("web");
+
+    const { result } = renderHook(() => useProPurchase());
+
+    await waitFor(() => {
+      expect(Purchases.getOfferings).not.toHaveBeenCalled();
+    });
+
+    act(() => {
+      result.current.setProPurchaseModalOpen(true);
+    });
+
+    const PurchaseModalComponent = result.current.PurchaseModal;
+    render(<PurchaseModalComponent />);
+
+    expect(screen.getByText("scan.purchaseProUnavailable")).toBeInTheDocument();
+    expect(screen.queryByText(/\$6\.99/)).not.toBeInTheDocument();
   });
 
   it("should render PurchaseModal component", async () => {
