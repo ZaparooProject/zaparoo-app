@@ -37,11 +37,11 @@ export default defineConfig(({ command, mode }) => {
     react(),
     legacy({
       targets: [
-        "chrome >= 49",
+        "chrome >= 60",
         "safari >= 11",
         "firefox >= 52",
         "ios >= 11",
-        "android >= 49",
+        "android >= 60",
       ],
       additionalLegacyPolyfills: [
         "regenerator-runtime/runtime",

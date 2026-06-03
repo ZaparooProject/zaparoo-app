@@ -7,6 +7,7 @@
 import { Capacitor } from "@capacitor/core";
 import { Device } from "@capacitor/device";
 import { useStatusStore } from "./store";
+import { isPluginAvailable } from "./capacitorBridge";
 
 // Check if Rollbar should be enabled (native + production + token present)
 const isNative = Capacitor.isNativePlatform();
@@ -78,6 +79,8 @@ let cachedDeviceInfo: {
  */
 export async function initDeviceInfo(): Promise<void> {
   if (cachedDeviceInfo) return;
+
+  if (!isPluginAvailable("Device")) return;
 
   try {
     const info = await Device.getInfo();

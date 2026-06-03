@@ -60,6 +60,10 @@ import {
   ConnectionState,
 } from "@/lib/store";
 import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
+import {
+  isNativePluginAvailable,
+  isPluginAvailable,
+} from "@/lib/capacitorBridge";
 import { formatDurationDisplay, formatDurationAccessible } from "@/lib/utils";
 import {
   ConnectionContext,
@@ -466,7 +470,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // late setDeviceHistory(stored) would wholesale overwrite the
     // freshly-merged metadata from updateDeviceHistoryMeta().
     setCoreVersionPending(true);
-    Preferences.get({ key: "deviceHistory" })
+    const deviceHistory = isPluginAvailable("Preferences")
+      ? Preferences.get({ key: "deviceHistory" })
+      : Promise.resolve({ value: null });
+
+    deviceHistory
       .then((v) => {
         try {
           if (v.value) {
@@ -938,6 +946,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       null;
 
     const setupListeners = async () => {
+      if (!isPluginAvailable("App")) return;
+
       resumeListener = await App.addListener("resume", () => {
         logger.log("[ConnectionProvider] App resumed");
         connectionManager.resumeAll();
@@ -949,7 +959,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       });
     };
 
-    setupListeners();
+    setupListeners().catch((e) => {
+      logger.warn("[ConnectionProvider] Failed to setup app listeners:", e);
+    });
 
     return () => {
       resumeListener?.remove();
@@ -979,7 +991,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   // Network change detection (native platforms only)
   // Triggers immediate reconnect when network is restored (e.g., WiFi reconnects)
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
+    if (!Capacitor.isNativePlatform() || !isNativePluginAvailable("Network")) {
+      return;
+    }
 
     let networkListener: PluginListenerHandle | null = null;
 

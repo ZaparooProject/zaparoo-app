@@ -3,6 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { logger } from "@/lib/logger";
+import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 
 /**
  * Hook to check camera/barcode scanner availability once at app startup.
@@ -18,8 +19,11 @@ export function useCameraAvailabilityCheck() {
   );
 
   useEffect(() => {
-    // Skip on web platform
-    if (!Capacitor.isNativePlatform()) {
+    // Skip on web platform or when the native plugin bridge is unavailable
+    if (
+      !Capacitor.isNativePlatform() ||
+      !isNativePluginAvailable("BarcodeScanner")
+    ) {
       setCameraAvailable(false);
       setCameraAvailabilityHydrated(true);
       return;

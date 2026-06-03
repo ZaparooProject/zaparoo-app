@@ -129,6 +129,7 @@ vi.mock("@capacitor/app", () => ({
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: vi.fn(() => false),
+    isPluginAvailable: vi.fn(() => true),
   },
 }));
 
@@ -136,6 +137,11 @@ vi.mock("@capacitor/network", () => ({
   Network: {
     addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
   },
+}));
+
+vi.mock("@/lib/capacitorBridge", () => ({
+  isPluginAvailable: vi.fn(() => true),
+  isNativePluginAvailable: vi.fn(() => true),
 }));
 
 // Use vi.hoisted for toast mock

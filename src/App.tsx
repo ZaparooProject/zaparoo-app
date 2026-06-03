@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import toast, { Toaster, useToasterStore } from "react-hot-toast";
-import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
@@ -34,6 +33,10 @@ import { useLiveUpdate } from "./hooks/useLiveUpdate";
 import { initDeviceInfo, logger } from "./lib/logger";
 import { getSubscriptionStatus } from "./lib/onlineApi";
 import { purchasesReady } from "./lib/purchasesSetup";
+import {
+  isNativePluginAvailable,
+  isPluginAvailable,
+} from "./lib/capacitorBridge";
 import {
   A11yAnnouncerProvider,
   useAnnouncer,
@@ -211,9 +214,13 @@ export default function App() {
     initDeviceInfo();
 
     // Show status bar and configure style
-    if (Capacitor.isNativePlatform()) {
-      StatusBar.show();
-      StatusBar.setStyle({ style: Style.Dark });
+    if (isNativePluginAvailable("StatusBar")) {
+      Promise.all([
+        StatusBar.show(),
+        StatusBar.setStyle({ style: Style.Dark }),
+      ]).catch((e) => {
+        logger.warn("StatusBar setup failed:", e);
+      });
     }
   }, []);
 
@@ -236,6 +243,10 @@ export default function App() {
   useEffect(() => {
     let cleanup: (() => void) | undefined;
 
+    if (!isPluginAvailable("FirebaseAuthentication")) {
+      return undefined;
+    }
+
     FirebaseAuthentication.addListener("authStateChange", async (change) => {
       // Refresh user data and token to get latest claims (e.g., email_verified)
       // This must happen before any API calls that depend on token claims
@@ -251,8 +262,8 @@ export default function App() {
 
       setLoggedInUser(change.user);
 
-      // Sync RevenueCat identity with Firebase user (skip on web)
-      if (Capacitor.getPlatform() !== "web") {
+      // Sync RevenueCat identity with Firebase user (skip on web or missing bridge)
+      if (isNativePluginAvailable("Purchases")) {
         await purchasesReady;
         try {
           if (change.user) {
@@ -313,9 +324,13 @@ export default function App() {
           });
         }
       }
-    }).then((handle) => {
-      cleanup = () => handle.remove();
-    });
+    })
+      .then((handle) => {
+        cleanup = () => handle.remove();
+      })
+      .catch((e) => {
+        logger.warn("Firebase auth listener setup failed:", e);
+      });
 
     return () => {
       cleanup?.();
