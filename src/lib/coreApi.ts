@@ -1687,29 +1687,45 @@ function validateHost(host: string): boolean {
   return false;
 }
 
-function formatDeviceAddress(host: string, port: number): string {
+type DeviceAddressScheme = "http" | "https" | "ws" | "wss";
+
+type WebSocketScheme = "ws" | "wss";
+
+function formatDeviceAddress(
+  host: string,
+  port: number,
+  scheme?: DeviceAddressScheme,
+): string {
   const hostPart = host.includes(":") ? `[${host}]` : host;
-  return port === DEFAULT_DEVICE_PORT ? hostPart : `${hostPart}:${port}`;
+  const address =
+    port === DEFAULT_DEVICE_PORT ? hostPart : `${hostPart}:${port}`;
+  return scheme ? `${scheme}://${address}` : address;
 }
 
-function formatWsUrl(host: string, port: number): string {
+function formatWsUrl(
+  host: string,
+  port: number,
+  scheme: WebSocketScheme = "ws",
+): string {
   const hostPart = host.includes(":") ? `[${host}]` : host;
-  return `ws://${hostPart}:${port}/api/v0.1`;
+  return `${scheme}://${hostPart}:${port}/api/v0.1`;
 }
 
 function validateHostAndPort(
   host: string,
   port: number | null,
+  addressScheme?: DeviceAddressScheme,
+  wsScheme?: WebSocketScheme,
 ): DeviceAddressValidationResult {
   if (port === null) return invalidDeviceAddress();
   if (!validateHost(host)) return invalidDeviceAddress();
 
   return {
     ok: true,
-    address: formatDeviceAddress(host, port),
+    address: formatDeviceAddress(host, port, addressScheme),
     host,
     port,
-    wsUrl: formatWsUrl(host, port),
+    wsUrl: formatWsUrl(host, port, wsScheme),
   };
 }
 
@@ -1735,20 +1751,24 @@ function normalizeUrlInput(
     return invalidDeviceAddress();
   }
 
+  const addressScheme = url.protocol.slice(0, -1) as DeviceAddressScheme;
+  const wsScheme: WebSocketScheme = ["https:", "wss:"].includes(url.protocol)
+    ? "wss"
+    : "ws";
   const host = url.hostname.replace(/^\[|\]$/g, "");
   const port = parsePort(url.port || undefined);
   if (host.includes(":")) {
     if (port === null || !isValidIPv6(host)) return invalidDeviceAddress();
     return {
       ok: true,
-      address: formatDeviceAddress(host, port),
+      address: formatDeviceAddress(host, port, addressScheme),
       host,
       port,
-      wsUrl: formatWsUrl(host, port),
+      wsUrl: formatWsUrl(host, port, wsScheme),
     };
   }
 
-  return validateHostAndPort(host, port);
+  return validateHostAndPort(host, port, addressScheme, wsScheme);
 }
 
 export function validateDeviceAddress(

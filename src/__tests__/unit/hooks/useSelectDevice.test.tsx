@@ -15,13 +15,18 @@ const {
 } = vi.hoisted(() => ({
   mockGetDeviceAddress: vi.fn(() => "192.168.1.10:7497"),
   mockSetDeviceAddress: vi.fn(),
-  mockValidateDeviceAddress: vi.fn((address: string): unknown => ({
-    ok: true,
-    address,
-    host: address.split(":")[0] ?? address,
-    port: 7497,
-    wsUrl: `ws://${address}/api/v0.1`,
-  })),
+  mockValidateDeviceAddress: vi.fn((address: string): unknown => {
+    const [host = address, portInput] = address.split(":");
+    const port = portInput ? Number(portInput) : 7497;
+
+    return {
+      ok: true,
+      address,
+      host,
+      port,
+      wsUrl: `ws://${host}:${port}/api/v0.1`,
+    };
+  }),
   mockCoreReset: vi.fn(),
   mockPreferencesRemove: vi.fn().mockResolvedValue(undefined),
   mockResetConnectionState: vi.fn(),
@@ -65,13 +70,18 @@ describe("useSelectDevice", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetDeviceAddress.mockReturnValue("192.168.1.10:7497");
-    mockValidateDeviceAddress.mockImplementation((address: string) => ({
-      ok: true,
-      address,
-      host: address.split(":")[0] ?? address,
-      port: 7497,
-      wsUrl: `ws://${address}/api/v0.1`,
-    }));
+    mockValidateDeviceAddress.mockImplementation((address: string) => {
+      const [host = address, portInput] = address.split(":");
+      const port = portInput ? Number(portInput) : 7497;
+
+      return {
+        ok: true,
+        address,
+        host,
+        port,
+        wsUrl: `ws://${host}:${port}/api/v0.1`,
+      };
+    });
   });
 
   describe("selectDevice", () => {
@@ -201,6 +211,34 @@ describe("useSelectDevice", () => {
           version: "1.0.0",
         },
       );
+    });
+
+    it("should not save or write history when scanned address is invalid", () => {
+      mockValidateDeviceAddress.mockReturnValue({
+        ok: false,
+        errorKey: "settings.deviceAddressInvalid",
+        message: "Invalid device address",
+      });
+      const { result } = renderHook(() => useSelectDevice());
+
+      let selectionResult: unknown;
+      act(() => {
+        selectionResult = result.current.selectScanDevice({
+          address: "192.168.1.286",
+        });
+      });
+
+      expect(selectionResult).toMatchObject({
+        ok: false,
+        errorKey: "settings.deviceAddressInvalid",
+      });
+      expect(mockSetDeviceAddress).not.toHaveBeenCalled();
+      expect(mockSetTargetDeviceAddress).not.toHaveBeenCalled();
+      expect(mockResetConnectionState).not.toHaveBeenCalled();
+      expect(mockCoreReset).not.toHaveBeenCalled();
+      expect(mockPreferencesRemove).not.toHaveBeenCalled();
+      expect(mockAddDeviceHistory).not.toHaveBeenCalled();
+      expect(mockUpdateDeviceHistoryMeta).not.toHaveBeenCalled();
     });
   });
 });

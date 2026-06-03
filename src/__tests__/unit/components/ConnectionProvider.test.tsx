@@ -91,12 +91,15 @@ vi.mock("../../../lib/coreApi", () => ({
       };
     }
 
+    const [host = address, portInput] = address.split(":");
+    const port = portInput ? Number(portInput) : 7497;
+
     return {
       ok: true,
       address,
-      host: address.split(":")[0] ?? address,
-      port: 7497,
-      wsUrl: `ws://${address}/api/v0.1`,
+      host,
+      port,
+      wsUrl: `ws://${host}:${port}/api/v0.1`,
     };
   }),
   isCancelled: vi.fn(() => false),

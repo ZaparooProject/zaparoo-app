@@ -5,7 +5,7 @@
  * Message queuing is handled at the CoreAPI level, not here.
  */
 
-import { InvalidDeviceAddressError } from "../coreApi";
+import { InvalidDeviceAddressError } from "@/lib/coreApi";
 import { logger } from "../logger";
 import { EncryptedSession } from "../crypto/session";
 import type {

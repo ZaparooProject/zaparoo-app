@@ -93,6 +93,13 @@ describe("CoreAPI URL Functions", () => {
       expect(url).toBe("ws://mydevice.local:9000/api/v0.1");
     });
 
+    it("should use wss for secure stored URLs", () => {
+      localStorage.setItem("deviceAddress", "wss://mydevice.local:9000");
+
+      const url = getWsUrl();
+      expect(url).toBe("wss://mydevice.local:9000/api/v0.1");
+    });
+
     it("should reject invalid port number (out of range)", () => {
       localStorage.setItem("deviceAddress", "192.168.1.100:99999");
 
@@ -191,10 +198,23 @@ describe("CoreAPI URL Functions", () => {
       );
       expect(result).toEqual({
         ok: true,
-        address: "mydevice.local:9000",
+        address: "http://mydevice.local:9000",
         host: "mydevice.local",
         port: 9000,
         wsUrl: "ws://mydevice.local:9000/api/v0.1",
+      });
+    });
+
+    it("should preserve secure URL schemes", () => {
+      const result = validateDeviceAddress(
+        "https://mydevice.local:9000/api/v0.1",
+      );
+      expect(result).toEqual({
+        ok: true,
+        address: "https://mydevice.local:9000",
+        host: "mydevice.local",
+        port: 9000,
+        wsUrl: "wss://mydevice.local:9000/api/v0.1",
       });
     });
 
