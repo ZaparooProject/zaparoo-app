@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Preferences } from "@capacitor/preferences";
 import { logger } from "@/lib/logger";
-import { CoreAPI } from "@/lib/coreApi";
+import { CoreAPI, isRequestCancelledError } from "@/lib/coreApi";
 import { Search, type LoaderData } from "./-pages/Search";
 
 export const Route = createFileRoute("/create/search")({
@@ -10,7 +10,13 @@ export const Route = createFileRoute("/create/search")({
       await Promise.all([
         Preferences.get({ key: "searchSystem" }),
         Preferences.get({ key: "searchTags" }),
-        CoreAPI.systems(),
+        CoreAPI.systems().catch((error) => {
+          if (!isRequestCancelledError(error)) {
+            throw error;
+          }
+          logger.debug("Search systems loader request cancelled", error);
+          return { systems: [] };
+        }),
       ]);
 
     let savedTags: string[] = [];

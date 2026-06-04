@@ -14,7 +14,7 @@ import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
 import { BackToTop } from "./BackToTop";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
+import { TabBar } from "./wui/TabBar";
 
 export interface System {
   id: string;
@@ -302,12 +302,8 @@ export function SystemSelector({
           </div>
         </div>
 
-        {/* Category tabs using shadcn tabs */}
-        <Tabs
-          value={selectedCategory}
-          onValueChange={setSelectedCategory}
-          className="flex min-h-0 flex-1 flex-col"
-        >
+        {/* Category tabs */}
+        <div className="flex min-h-0 flex-1 flex-col">
           <div className="px-2 py-2">
             <div className="relative overflow-hidden rounded-lg">
               {/* Left gradient - only show when scrolled and overflowing */}
@@ -320,16 +316,24 @@ export function SystemSelector({
                 />
               )}
 
-              <TabsList {...tabsProps}>
-                <TabsTrigger value="all">
-                  {t("systemSelector.allCategories")}
-                </TabsTrigger>
-                {categories.map((category) => (
-                  <TabsTrigger key={category} value={category}>
-                    {category}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+              <TabBar
+                label={t("systemSelector.categories")}
+                layout="scroll"
+                role="tab"
+                options={[
+                  {
+                    value: "all",
+                    label: t("systemSelector.allCategories"),
+                  },
+                  ...categories.map((category) => ({
+                    value: category,
+                    label: category,
+                  })),
+                ]}
+                value={selectedCategory}
+                onChange={setSelectedCategory}
+                containerProps={tabsProps}
+              />
 
               {/* Right gradient - only show when more content and overflowing */}
               {hasOverflow && (
@@ -343,11 +347,7 @@ export function SystemSelector({
             </div>
           </div>
 
-          <TabsContent
-            value={selectedCategory}
-            className="min-h-0 flex-1 overflow-hidden"
-            tabIndex={-1}
-          >
+          <div className="min-h-0 flex-1 overflow-hidden" tabIndex={-1}>
             {isLoading ? (
               <div className="flex h-32 items-center justify-center">
                 <span className="text-muted-foreground">{t("loading")}</span>
@@ -517,8 +517,8 @@ export function SystemSelector({
                 </div>
               </>
             )}
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
 
         {/* Scroll to top button */}
         <BackToTop

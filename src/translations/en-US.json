@@ -684,6 +684,7 @@
       "selected": "{{name}} selected",
       "deselected": "{{name}} deselected",
       "allSystems": "All systems",
+      "categories": "System categories",
       "allCategories": "All",
       "noResults": "No systems found",
       "noResultsHint": "Try a shorter query or clear the search.",

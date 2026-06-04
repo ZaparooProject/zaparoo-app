@@ -205,6 +205,19 @@ export function isCancelled<T>(
   );
 }
 
+export function isRequestCancelledError(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
+
+  return /request cancelled|request canceled|connection reset|aborted/i.test(
+    message,
+  );
+}
+
 interface ApiResponse {
   jsonrpc: string;
   id: string;
@@ -1230,7 +1243,11 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Systems API call failed:", error);
+          if (isRequestCancelledError(error)) {
+            logger.debug("Systems API call cancelled:", error);
+          } else {
+            logger.error("Systems API call failed:", error);
+          }
           reject(error);
         });
     });
