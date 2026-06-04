@@ -13,7 +13,7 @@
     "sync": "npx cap sync",
     "build:server": "tsc --noEmit -p tsconfig.build.json && vite build && cross-env NODE_ENV=development cap sync",
     "build:analyze": "tsc --noEmit -p tsconfig.build.json && vite build --mode analyze",
-    "live-update": "npm run build:web && npx capawesome apps:liveupdates:upload --app-id e96c260c-3271-4895-bff0-de9f8ca4d05a --path dist --private-key live-update-private.pem --channel production",
+    "live-update": "sh -c 'test -n \"$VITE_RELEASE_KEY\" || { echo \"VITE_RELEASE_KEY is required for live updates\"; exit 1; }; npm run build:web && npx capawesome apps:liveupdates:upload --app-id e96c260c-3271-4895-bff0-de9f8ca4d05a --path dist --private-key live-update-private.pem --channel production --custom-property releaseKey=$VITE_RELEASE_KEY'",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

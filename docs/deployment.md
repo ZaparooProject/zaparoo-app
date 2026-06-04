@@ -39,14 +39,15 @@ If a bad update crashes the app before `ready()` is called, the plugin automatic
 ### Pushing a Live Update
 
 ```bash
-npm run live-update
+VITE_RELEASE_KEY="live:1.10.2-ota.1" npm run live-update
 ```
 
 This command:
 
-1. Builds the web assets (`npm run build:web`)
-2. Signs the bundle with `live-update-private.pem`
-3. Uploads to Capawesome Cloud
+1. Requires `VITE_RELEASE_KEY` so the app can identify the applied web bundle for the “What’s new” dialog
+2. Builds the web assets (`npm run build:web`)
+3. Signs the bundle with `live-update-private.pem`
+4. Uploads to Capawesome Cloud with `releaseKey` as a custom property
 
 ### Listing Deployed Updates
 

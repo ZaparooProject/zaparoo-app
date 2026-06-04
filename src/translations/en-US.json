@@ -68,6 +68,10 @@
       "filesFound": "{{count}} items scanned",
       "nowPlayingHeading": "Now playing"
     },
+    "whatsNew": {
+      "title": "What's new",
+      "gotIt": "Got it"
+    },
     "write": {
       "noWriteMethodAvailable": "No NFC writing capability available",
       "nfcNotSupported": "NFC is not supported on this device"
