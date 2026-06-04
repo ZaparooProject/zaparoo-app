@@ -39,7 +39,7 @@ If a bad update crashes the app before `ready()` is called, the plugin automatic
 ### Pushing a Live Update
 
 ```bash
-VITE_RELEASE_KEY="live:1.10.2-ota.1" npm run live-update
+VITE_RELEASE_KEY="live:1.11.0-ota.1" npm run live-update
 ```
 
 This command:
@@ -80,6 +80,36 @@ Required for:
 - Capacitor version upgrades
 - Plugin configuration changes in `capacitor.config.ts`
 
+### Store Release Checklist
+
+1. Choose the release version and next store build number.
+2. Bump version files in lockstep:
+   - `package.json` (`version`)
+   - `package-lock.json` (top-level and root package `version`)
+   - `android/app/build.gradle` (`versionCode`, `versionName`)
+   - `ios/App/App.xcodeproj/project.pbxproj` (`MARKETING_VERSION`; `CURRENT_PROJECT_VERSION` if the iOS build number changes)
+3. Confirm `src/lib/whatsNew.ts` has announcement `releaseKeys` for the native version/build, e.g. `native:1.11.0+25` and `native:1.11.0+1`.
+4. Check About page credits in `src/routes/settings.about.tsx`:
+   - translation credits
+   - active Patreon CSV export names
+   - Patreon tier coloring (`#F1C40D` Supporter/Sponsor, `#E74C3C` Mega Supporter, `#E91E63` Ultra Supporter)
+5. Run validation:
+   - `npm run typecheck`
+   - `npm run format:check`
+   - `npm run lint`
+   - `npm run test -- --run`
+6. Optionally run `npm run build:web` for a web-only production build. Run `npm run build` only when ready for Capacitor sync/native file updates.
+7. Commit the release prep changes.
+8. Create and push the version tag:
+
+   ```bash
+   git tag v1.11.0
+   git push origin v1.11.0
+   ```
+
+9. Confirm GitHub release artifacts and Capawesome Cloud iOS/Android builds complete.
+10. Submit/release from App Store Connect and Google Play Console.
+
 ---
 
 ## Code Signing
@@ -101,8 +131,7 @@ The app uses Capawesome Cloud for building iOS and Android binaries.
 
 ### Configuration Files
 
-- `capawesome.config.json` - Build commands and app configuration
-- `capawesome.config.json` — Build commands (injects GitHub Packages auth via `NPM_TOKEN`)
+- `capawesome.config.json` — Build commands and app configuration. It injects GitHub Packages auth via `NPM_TOKEN`.
 
 ### Build Process
 
@@ -116,8 +145,8 @@ The app uses Capawesome Cloud for building iOS and Android binaries.
 
 ```bash
 # Create and push a version tag
-git tag v1.9.2
-git push origin v1.9.2
+git tag v1.11.0
+git push origin v1.11.0
 ```
 
 ### Required Secrets in Capawesome Cloud

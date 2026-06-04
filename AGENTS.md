@@ -163,7 +163,7 @@ docs/                focused guides for Capacitor, deployment, and testing
 
 - Keep the summary concise.
 - Do not include a separate test plan section.
-- For a store release, bump version fields in the three files documented in `docs/deployment.md`.
+- For a store release, follow the checklist in `docs/deployment.md` and bump all version fields in lockstep.
 
 ## Pointer docs
 
