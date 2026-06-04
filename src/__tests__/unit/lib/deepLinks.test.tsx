@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor } from "../../../test-utils";
+import { render, waitFor } from "@/test-utils";
 import type { URLOpenListenerEvent } from "@capacitor/app";
 
 // Create hoisted mocks
@@ -73,11 +73,13 @@ vi.mock("@/lib/store", () => ({
   }),
 }));
 
+import { CoreAPI } from "@/lib/coreApi";
 import AppUrlListener, { parseDeepLink } from "@/lib/deepLinks";
 
 describe("AppUrlListener", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    CoreAPI.reset();
     urlOpenCallback = null;
     mockGetLaunchUrl.mockResolvedValue({ url: undefined });
   });
