@@ -16,7 +16,11 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { BackIcon } from "@/lib/images";
-import { TabBar } from "@/components/wui/TabBar";
+import {
+  getTabBarPanelId,
+  getTabBarTabId,
+  TabBar,
+} from "@/components/wui/TabBar";
 import { ReadTab } from "@/components/nfc/ReadTab";
 import { ToolsTab } from "@/components/nfc/ToolsTab";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -79,6 +83,9 @@ function NfcUtils() {
     setWriteIntent(true);
   };
 
+  const activeTabId = getTabBarTabId(activeTab, "nfc-tab");
+  const activePanelId = getTabBarPanelId(activeTabId);
+
   return (
     <>
       <div {...swipeHandlers} className="flex h-full w-full flex-col">
@@ -99,8 +106,16 @@ function NfcUtils() {
               label={t("create.nfc.title")}
               role="tab"
               options={[
-                { value: "read", label: "Read" },
-                { value: "tools", label: "Tools" },
+                {
+                  value: "read",
+                  label: "Read",
+                  id: getTabBarTabId("read", "nfc-tab"),
+                },
+                {
+                  value: "tools",
+                  label: "Tools",
+                  id: getTabBarTabId("tools", "nfc-tab"),
+                },
               ]}
               value={activeTab}
               onChange={(value) => {
@@ -108,7 +123,12 @@ function NfcUtils() {
                 setActiveTab(value);
               }}
             />
-            <div className="flex-1 overflow-y-auto">
+            <div
+              id={activePanelId}
+              role="tabpanel"
+              aria-labelledby={activeTabId}
+              className="flex-1 overflow-y-auto"
+            >
               {activeTab === "read" ? (
                 <ReadTab result={nfcWriter.result} onScan={handleScan} />
               ) : (

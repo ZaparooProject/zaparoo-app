@@ -15,6 +15,7 @@ import React from "react";
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, waitFor } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
+import type { MappingResponse } from "@/lib/models";
 
 const {
   componentRef,
@@ -35,7 +36,9 @@ const {
   mockMappingsReload: vi.fn(),
   mockRefetch: vi.fn(),
   mockMappingsData: {
-    current: { mappings: [] as any[] } as { mappings: any[] } | undefined,
+    current: { mappings: [] as MappingResponse[] } as
+      | { mappings: MappingResponse[] }
+      | undefined,
   },
   mockIsLoading: { current: false },
 }));
@@ -117,7 +120,9 @@ vi.mock("react-hot-toast", () => ({
 
 import "@/routes/create.mappings";
 
-const buildMapping = (overrides: Partial<any> = {}) => ({
+const buildMapping = (
+  overrides: Partial<MappingResponse> = {},
+): MappingResponse => ({
   id: "1",
   added: new Date().toISOString(),
   label: "",

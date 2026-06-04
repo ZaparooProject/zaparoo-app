@@ -6,6 +6,7 @@ import {
   getWhatsNewAnnouncement,
   resolveRuntimeReleaseIdentity,
 } from "@/lib/whatsNew";
+import { buildRuntimeReleaseIdentity } from "@/test-utils/factories";
 
 describe("whatsNew", () => {
   beforeEach(() => {
@@ -29,12 +30,14 @@ describe("whatsNew", () => {
   it("should resolve native identity when no live bundle is active", async () => {
     const identity = await resolveRuntimeReleaseIdentity();
 
-    expect(identity).toEqual({
-      nativeVersion: "1.2.3",
-      nativeBuild: "42",
-      liveBundleId: null,
-      releaseKey: "native:1.2.3+42",
-    });
+    expect(identity).toEqual(
+      buildRuntimeReleaseIdentity({
+        nativeVersion: "1.2.3",
+        nativeBuild: "42",
+        liveBundleId: null,
+        releaseKey: "native:1.2.3+42",
+      }),
+    );
   });
 
   it("should include the current live bundle in the fallback release key", async () => {
@@ -46,12 +49,14 @@ describe("whatsNew", () => {
 
     const identity = await resolveRuntimeReleaseIdentity();
 
-    expect(identity).toEqual({
-      nativeVersion: "1.2.3",
-      nativeBuild: "42",
-      liveBundleId: "bundle-2026-06-04",
-      releaseKey: "native:1.2.3+42:bundle:bundle-2026-06-04",
-    });
+    expect(identity).toEqual(
+      buildRuntimeReleaseIdentity({
+        nativeVersion: "1.2.3",
+        nativeBuild: "42",
+        liveBundleId: "bundle-2026-06-04",
+        releaseKey: "native:1.2.3+42:bundle:bundle-2026-06-04",
+      }),
+    );
   });
 
   it("should prefer the injected release key", async () => {

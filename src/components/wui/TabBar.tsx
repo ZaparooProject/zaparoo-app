@@ -12,6 +12,16 @@ type TabBarRole = "radio" | "tab";
 export interface TabBarOption<T extends string> {
   value: T;
   label: ReactNode;
+  id?: string;
+}
+
+export function getTabBarTabId(value: string, prefix = "tab"): string {
+  const safeValue = value.toLowerCase().replace(/[^a-z0-9_-]+/g, "-");
+  return `${prefix}-${safeValue}`;
+}
+
+export function getTabBarPanelId(tabId: string): string {
+  return `tabpanel-${tabId}`;
 }
 
 interface TabBarProps<T extends string> {
@@ -70,7 +80,11 @@ export function TabBar<T extends string>({
     }
   };
 
-  const { className, ...restContainerProps } = containerProps ?? {};
+  const {
+    className,
+    style: containerStyle,
+    ...restContainerProps
+  } = containerProps ?? {};
 
   return (
     <div
@@ -84,16 +98,19 @@ export function TabBar<T extends string>({
       style={{
         ...(layout === "grid"
           ? { gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }
-          : null),
-        ...containerProps?.style,
+          : {}),
+        ...containerStyle,
       }}
       {...restContainerProps}
     >
       {options.map((option, index) => {
         const active = option.value === value;
+        const tabId = option.id ?? getTabBarTabId(option.value);
+        const panelId = getTabBarPanelId(tabId);
         return (
           <button
             key={option.value}
+            id={role === "tab" ? tabId : undefined}
             ref={(el) => {
               buttonRefs.current[index] = el;
             }}
@@ -101,6 +118,7 @@ export function TabBar<T extends string>({
             role={role}
             aria-checked={role === "radio" ? active : undefined}
             aria-selected={role === "tab" ? active : undefined}
+            aria-controls={role === "tab" ? panelId : undefined}
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => onKeyDown(event, index)}

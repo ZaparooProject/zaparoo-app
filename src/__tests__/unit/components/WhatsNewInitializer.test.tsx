@@ -1,11 +1,12 @@
-import { act, fireEvent, render, screen, waitFor } from "@/test-utils";
+import { act, render, screen, waitFor } from "@/test-utils";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WhatsNewInitializer } from "@/components/WhatsNewInitializer";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import type {
-  RuntimeReleaseIdentity,
-  WhatsNewAnnouncement,
-} from "@/lib/whatsNew";
+import {
+  buildRuntimeReleaseIdentity,
+  buildWhatsNewAnnouncement,
+} from "@/test-utils/factories";
 
 const whatsNewMock = vi.hoisted(() => ({
   resolveRuntimeReleaseIdentity: vi.fn(),
@@ -17,19 +18,10 @@ vi.mock("@/lib/whatsNew", () => ({
   getWhatsNewAnnouncement: whatsNewMock.getWhatsNewAnnouncement,
 }));
 
-const identity: RuntimeReleaseIdentity = {
-  nativeVersion: "1.0.1",
-  nativeBuild: "2",
-  liveBundleId: null,
-  releaseKey: "native:1.0.1+2",
-};
-
-const announcement: WhatsNewAnnouncement = {
-  id: "release-1.0.1",
+const identity = buildRuntimeReleaseIdentity();
+const announcement = buildWhatsNewAnnouncement({
   releaseKeys: [identity.releaseKey],
-  title: "What's new in test",
-  items: ["First test item", "Second test item"],
-};
+});
 
 function setPreferencesState(
   values: Partial<ReturnType<typeof usePreferencesStore.getState>>,
@@ -77,13 +69,14 @@ describe("WhatsNewInitializer", () => {
   });
 
   it("should treat uninitialized users with completed tours as legacy installs", async () => {
+    const user = userEvent.setup();
     setPreferencesState({ whatsNewInitialized: false, tourCompleted: true });
 
     render(<WhatsNewInitializer />);
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
 
-    fireEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "whatsNew.gotIt" }),
     );
 
@@ -127,13 +120,15 @@ describe("WhatsNewInitializer", () => {
   });
 
   it("should mark the announcement seen on dismiss", async () => {
+    const user = userEvent.setup();
+
     render(<WhatsNewInitializer />);
 
     await waitFor(() => {
       expect(whatsNewMock.getWhatsNewAnnouncement).toHaveBeenCalled();
     });
 
-    fireEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "whatsNew.gotIt" }),
     );
 

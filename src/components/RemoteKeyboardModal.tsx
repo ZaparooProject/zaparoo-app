@@ -465,7 +465,6 @@ export function RemoteKeyboardModal(props: {
                       className="remote-keyboard-screenshot-control"
                       href={screenshotUrl}
                       download={getScreenshotFileName(screenshot.path)}
-                      onClick={triggerControlHaptic}
                     >
                       <Download size={20} aria-hidden="true" />
                       {t("remoteKeyboard.screenshotDownload")}

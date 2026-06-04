@@ -10,11 +10,15 @@ import { compareStrings } from "@/lib/utils";
 import { useStatusStore } from "@/lib/store";
 import { useSmartTabs } from "@/hooks/useSmartTabs";
 import { EmptyState } from "@/components/wui/EmptyState";
+import {
+  getTabBarPanelId,
+  getTabBarTabId,
+  TabBar,
+} from "@/components/wui/TabBar";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
 import { BackToTop } from "./BackToTop";
-import { TabBar } from "./wui/TabBar";
 
 export interface System {
   id: string;
@@ -224,6 +228,13 @@ export function SystemSelector({
     overscan: 5,
   });
 
+  const systemTabIdPrefix = "system-category-tab";
+  const selectedCategoryTabId = getTabBarTabId(
+    selectedCategory,
+    systemTabIdPrefix,
+  );
+  const selectedCategoryPanelId = getTabBarPanelId(selectedCategoryTabId);
+
   // Footer for multi-select mode
   const footer =
     mode === "multi" ? (
@@ -324,10 +335,12 @@ export function SystemSelector({
                   {
                     value: "all",
                     label: t("systemSelector.allCategories"),
+                    id: getTabBarTabId("all", systemTabIdPrefix),
                   },
                   ...categories.map((category) => ({
                     value: category,
                     label: category,
+                    id: getTabBarTabId(category, systemTabIdPrefix),
                   })),
                 ]}
                 value={selectedCategory}
@@ -347,7 +360,13 @@ export function SystemSelector({
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-hidden" tabIndex={-1}>
+          <div
+            id={selectedCategoryPanelId}
+            role="tabpanel"
+            aria-labelledby={selectedCategoryTabId}
+            className="min-h-0 flex-1 overflow-hidden"
+            tabIndex={-1}
+          >
             {isLoading ? (
               <div className="flex h-32 items-center justify-center">
                 <span className="text-muted-foreground">{t("loading")}</span>
