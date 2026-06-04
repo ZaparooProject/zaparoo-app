@@ -20,9 +20,9 @@ export type WhatsNewAnnouncement = {
 
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
-    id: "release-1.11.1",
-    releaseKeys: ["native:1.11.1+26", "native:1.11.1+1"],
-    title: "What's new in 1.11.1",
+    id: "release-1.11.2",
+    releaseKeys: ["native:1.11.2+27"],
+    title: "What's new in 1.11.2",
     items: [
       "Use the new Controls modal for remote and keyboard input.",
       "View and manage existing mappings from the Mappings page.",

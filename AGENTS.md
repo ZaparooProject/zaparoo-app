@@ -30,7 +30,7 @@ Zaparoo App is a mobile-first React 19 + TypeScript + Vite application for Zapar
 - `npm run build:server` — development server build, then Capacitor sync.
 - `npm run build:analyze` — analyzer build.
 - `npm run sync` — Capacitor sync only.
-- `npm run live-update` — signed live update upload; requires `live-update-private.pem`.
+- `npm run live-update` — signed live update upload; requires `live-update-private.pem`, `LIVE_UPDATE_CHANNEL`, and `VITE_RELEASE_KEY`.
 - `npx cap open ios` / `npx cap open android` — open native projects.
 
 ## Project layout
@@ -66,7 +66,7 @@ docs/                focused guides for Capacitor, deployment, and testing
 ### Ask first
 
 - Adding a Capacitor plugin, because it forces a native rebuild and store release.
-- Bumping the app version; see `docs/deployment.md` because three files must change in lockstep.
+- Bumping the app version; see `docs/deployment.md` because package, Android, iOS, What's New, and live update channels must stay in lockstep.
 - Refactors that touch many files or shared infrastructure.
 - Force-pushes, branch deletes, force-resets, hook bypasses, or anything that overwrites others' work.
 - Starting long-running local servers.
@@ -163,7 +163,7 @@ docs/                focused guides for Capacitor, deployment, and testing
 
 - Keep the summary concise.
 - Do not include a separate test plan section.
-- For a store release, follow the checklist in `docs/deployment.md` and bump all version fields in lockstep.
+- For a store release, follow the checklist in `docs/deployment.md`, keep Android `versionCode` and iOS `CURRENT_PROJECT_VERSION` matched, and keep `src/__tests__/validation/release-config.test.ts` passing.
 
 ## Pointer docs
 
