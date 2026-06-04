@@ -50,7 +50,7 @@ vi.mock("@capacitor/app", () => ({
 }));
 
 // Mock logger
-vi.mock("../../../lib/logger", () => ({
+vi.mock("@/lib/logger", () => ({
   logger: mockLogger,
 }));
 
@@ -63,7 +63,7 @@ vi.mock("react-hot-toast", () => ({
 const mockSetRunQueue = vi.fn();
 const mockSetWriteQueue = vi.fn();
 
-vi.mock("../../../lib/store", () => ({
+vi.mock("@/lib/store", () => ({
   useStatusStore: vi.fn((selector: (state: unknown) => unknown) => {
     const state = {
       setRunQueue: mockSetRunQueue,
@@ -73,7 +73,7 @@ vi.mock("../../../lib/store", () => ({
   }),
 }));
 
-import AppUrlListener, { parseDeepLink } from "../../../lib/deepLinks";
+import AppUrlListener, { parseDeepLink } from "@/lib/deepLinks";
 
 describe("AppUrlListener", () => {
   beforeEach(() => {
@@ -152,10 +152,9 @@ describe("AppUrlListener", () => {
       });
     });
 
-    it("should parse custom scheme host paths", () => {
+    it("should reject custom scheme links with unexpected hosts", () => {
       expect(parseDeepLink("zaparoo://write?v=test-write")).toEqual({
-        type: "write",
-        value: "test-write",
+        type: "unsupported",
       });
     });
 
@@ -362,11 +361,16 @@ describe("AppUrlListener", () => {
         url: "not-a-valid-url",
       });
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         "Invalid deep link URL",
         expect.any(Error),
+        {
+          category: "general",
+          action: "deepLinkParse",
+          severity: "error",
+        },
       );
-      expect(mockLogger.error).not.toHaveBeenCalled();
+      expect(mockLogger.warn).not.toHaveBeenCalled();
 
       expect(mockToast.error).toHaveBeenCalledWith("deepLinks.invalidUrl");
     });
@@ -382,11 +386,16 @@ describe("AppUrlListener", () => {
         url: "",
       });
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         "Invalid deep link URL",
         expect.any(Error),
+        {
+          category: "general",
+          action: "deepLinkParse",
+          severity: "error",
+        },
       );
-      expect(mockLogger.error).not.toHaveBeenCalled();
+      expect(mockLogger.warn).not.toHaveBeenCalled();
       expect(mockToast.error).toHaveBeenCalledWith("deepLinks.invalidUrl");
     });
 

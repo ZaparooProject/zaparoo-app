@@ -13,13 +13,13 @@ import {
   isNativePluginAvailable,
   isPluginAvailable,
 } from "@/lib/capacitorBridge";
+import { useDeepLinks } from "@/lib/deepLinks";
 import { isExpectedRevenueCatLogoutError } from "@/lib/errors";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
 import { DatabaseIcon, PlayIcon } from "./lib/images";
 import { ConnectionProvider } from "./components/ConnectionProvider";
 import { ReconnectingIndicator } from "./components/ReconnectingIndicator";
-import { useDeepLinks } from "./lib/deepLinks.tsx";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { useDataCache } from "./hooks/useDataCache";
 import { SlideModalProvider } from "./components/SlideModalProvider";

@@ -2,17 +2,18 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { App, URLOpenListenerEvent } from "@capacitor/app";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { useStatusStore } from "./store";
-import { logger } from "./logger";
+import { useStatusStore } from "@/lib/store";
+import { logger } from "@/lib/logger";
 
 const DEDUPE_WINDOW_MS = 1000;
 const DEEP_LINK_HOST = "zaparoo.app";
+const CUSTOM_SCHEME_HOSTS = new Set(["", "app"]);
 
 type ParsedDeepLink =
   | { type: "run"; value: string }
   | { type: "write"; value: string }
   | { type: "unsupported" }
-  | { type: "invalid" };
+  | { type: "invalid"; error: Error };
 
 export function parseDeepLink(urlString: string): ParsedDeepLink {
   try {
@@ -27,7 +28,11 @@ export function parseDeepLink(urlString: string): ParsedDeepLink {
       return { type: "unsupported" };
     }
 
-    const path = url.pathname || (scheme === "zaparoo" ? `/${url.host}` : "");
+    if (scheme === "zaparoo" && !CUSTOM_SCHEME_HOSTS.has(url.host)) {
+      return { type: "unsupported" };
+    }
+
+    const path = url.pathname;
     const value = url.searchParams.get("v");
 
     if (!value) {
@@ -43,8 +48,11 @@ export function parseDeepLink(urlString: string): ParsedDeepLink {
     }
 
     return { type: "unsupported" };
-  } catch {
-    return { type: "invalid" };
+  } catch (error) {
+    return {
+      type: "invalid",
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
   }
 }
 
@@ -79,13 +87,18 @@ export function useDeepLinks() {
           logger.log("Write queue:", parsed.value);
           setWriteQueue(parsed.value);
         } else if (parsed.type === "invalid") {
-          logger.warn("Invalid deep link URL", new Error("Invalid URL"));
+          logger.error("Invalid deep link URL", parsed.error, {
+            category: "general",
+            action: "deepLinkParse",
+            severity: "error",
+          });
           toast.error(t("deepLinks.invalidUrl"));
         }
       } catch (error) {
         logger.error("Deep link dispatch failed", error, {
           category: "general",
           action: "deepLinkDispatch",
+          severity: "error",
         });
       }
     },
