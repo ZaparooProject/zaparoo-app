@@ -15,6 +15,7 @@ import React from "react";
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, waitFor } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
+import type { MappingResponse } from "@/lib/models";
 
 const {
   componentRef,
@@ -34,7 +35,11 @@ const {
   mockToastError: vi.fn(),
   mockMappingsReload: vi.fn(),
   mockRefetch: vi.fn(),
-  mockMappingsData: { current: { mappings: [] as any[] } },
+  mockMappingsData: {
+    current: { mappings: [] as MappingResponse[] } as
+      | { mappings: MappingResponse[] }
+      | undefined,
+  },
   mockIsLoading: { current: false },
 }));
 
@@ -115,7 +120,9 @@ vi.mock("react-hot-toast", () => ({
 
 import "@/routes/create.mappings";
 
-const buildMapping = (overrides: Partial<any> = {}) => ({
+const buildMapping = (
+  overrides: Partial<MappingResponse> = {},
+): MappingResponse => ({
   id: "1",
   added: new Date().toISOString(),
   label: "",
@@ -178,6 +185,28 @@ describe("Create Mappings List Route", () => {
           name: "create.mappings.list.newMapping",
         }),
       ).toBeInTheDocument();
+    });
+
+    it("should render blank content while mappings are initially loading", () => {
+      mockMappingsData.current = undefined;
+      mockIsLoading.current = true;
+
+      renderList();
+
+      expect(
+        screen.getByRole("heading", { name: "create.mappings.title" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", {
+          name: "create.mappings.list.newMapping",
+        }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("create.mappings.list.empty"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("create.mappings.list.searchEmpty"),
+      ).not.toBeInTheDocument();
     });
 
     it("should render the empty state when there are no mappings", () => {

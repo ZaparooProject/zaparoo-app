@@ -22,6 +22,12 @@ const {
     showFilenames: false,
     shakeEnabled: false,
     launcherAccess: false,
+    whatsNewInitialized: true,
+    lastWhatsNewRuntimeKey: "native:1.0.0+1",
+    seenWhatsNewAnnouncementIds: [],
+    initializeWhatsNew: vi.fn(),
+    setLastWhatsNewRuntimeKey: vi.fn(),
+    markWhatsNewSeen: vi.fn(),
   },
 }));
 

@@ -34,6 +34,7 @@ import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
 import { usePassiveNfcListener } from "./hooks/usePassiveNfcListener";
 import { useLiveUpdate } from "./hooks/useLiveUpdate";
+import { WhatsNewInitializer } from "./components/WhatsNewInitializer";
 import { initDeviceInfo, logger } from "./lib/logger";
 import { getSubscriptionStatus } from "./lib/onlineApi";
 import { purchasesReady } from "./lib/purchasesSetup";
@@ -393,6 +394,7 @@ export default function App() {
             <RequirementsModal />
             <InboxModal />
             <StagedTokenModal />
+            <WhatsNewInitializer />
           </ConnectionProvider>
         </SlideModalProvider>
       </A11yAnnouncerProvider>

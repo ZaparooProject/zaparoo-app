@@ -77,6 +77,11 @@ export interface PreferencesState {
   // Tour completion tracking
   tourCompleted: boolean;
 
+  // What's new tracking
+  whatsNewInitialized: boolean;
+  lastWhatsNewRuntimeKey: string | null;
+  seenWhatsNewAnnouncementIds: string[];
+
   // Log viewer settings
   logLevelFilters: {
     debug: boolean;
@@ -136,6 +141,12 @@ export interface PreferencesActions {
   setShakeZapscript: (value: string) => void;
   setCustomText: (value: string) => void;
   setTourCompleted: (value: boolean) => void;
+  initializeWhatsNew: (
+    runtimeKey: string,
+    announcementId: string | null,
+  ) => void;
+  setLastWhatsNewRuntimeKey: (runtimeKey: string) => void;
+  markWhatsNewSeen: (announcementId: string, runtimeKey: string) => void;
   setLogLevelFilters: (filters: PreferencesState["logLevelFilters"]) => void;
   setShowFilenames: (value: boolean) => void;
   setHapticsEnabled: (value: boolean) => void;
@@ -173,6 +184,9 @@ const DEFAULT_PREFERENCES: Omit<
   shakeZapscript: "",
   customText: "",
   tourCompleted: false,
+  whatsNewInitialized: false,
+  lastWhatsNewRuntimeKey: null,
+  seenWhatsNewAnnouncementIds: [],
   logLevelFilters: {
     debug: true,
     info: true,
@@ -245,6 +259,23 @@ export const usePreferencesStore = create<PreferencesStore>()(
       setShakeZapscript: (value) => set({ shakeZapscript: value }),
       setCustomText: (value) => set({ customText: value }),
       setTourCompleted: (value) => set({ tourCompleted: value }),
+      initializeWhatsNew: (runtimeKey, announcementId) =>
+        set({
+          whatsNewInitialized: true,
+          lastWhatsNewRuntimeKey: runtimeKey,
+          seenWhatsNewAnnouncementIds: announcementId ? [announcementId] : [],
+        }),
+      setLastWhatsNewRuntimeKey: (runtimeKey) =>
+        set({ whatsNewInitialized: true, lastWhatsNewRuntimeKey: runtimeKey }),
+      markWhatsNewSeen: (announcementId, runtimeKey) =>
+        set((state) => ({
+          whatsNewInitialized: true,
+          lastWhatsNewRuntimeKey: runtimeKey,
+          seenWhatsNewAnnouncementIds:
+            state.seenWhatsNewAnnouncementIds.includes(announcementId)
+              ? state.seenWhatsNewAnnouncementIds
+              : [...state.seenWhatsNewAnnouncementIds, announcementId],
+        })),
       setLogLevelFilters: (filters) => set({ logLevelFilters: filters }),
       setShowFilenames: (value) => set({ showFilenames: value }),
       setHapticsEnabled: (value) => set({ hapticsEnabled: value }),
@@ -265,6 +296,9 @@ export const usePreferencesStore = create<PreferencesStore>()(
         shakeZapscript: state.shakeZapscript,
         customText: state.customText,
         tourCompleted: state.tourCompleted,
+        whatsNewInitialized: state.whatsNewInitialized,
+        lastWhatsNewRuntimeKey: state.lastWhatsNewRuntimeKey,
+        seenWhatsNewAnnouncementIds: state.seenWhatsNewAnnouncementIds,
         logLevelFilters: state.logLevelFilters,
         showFilenames: state.showFilenames,
         hapticsEnabled: state.hapticsEnabled,
