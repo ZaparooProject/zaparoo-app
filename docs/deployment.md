@@ -39,7 +39,7 @@ If a bad update crashes the app before `ready()` is called, the plugin automatic
 ### Pushing a Live Update
 
 ```bash
-VITE_RELEASE_KEY="live:1.11.0-ota.1" npm run live-update
+VITE_RELEASE_KEY="live:1.11.1-ota.1" npm run live-update
 ```
 
 This command:
@@ -88,27 +88,28 @@ Required for:
    - `package-lock.json` (top-level and root package `version`)
    - `android/app/build.gradle` (`versionCode`, `versionName`)
    - `ios/App/App.xcodeproj/project.pbxproj` (`MARKETING_VERSION`; `CURRENT_PROJECT_VERSION` if the iOS build number changes)
-3. Confirm `src/lib/whatsNew.ts` has announcement `releaseKeys` for the native version/build, e.g. `native:1.11.0+25` and `native:1.11.0+1`.
-4. Check About page credits in `src/routes/settings.about.tsx`:
+3. Confirm `src/lib/whatsNew.ts` has announcement `releaseKeys` for the native version/build, e.g. `native:1.11.1+26` and `native:1.11.1+1`.
+4. After Capacitor upgrades, confirm GitHub Actions and Capawesome Cloud use a Node.js version supported by `@capacitor/cli`. Capacitor 8 requires Node 22+.
+5. Check About page credits in `src/routes/settings.about.tsx`:
    - translation credits
    - active Patreon CSV export names
    - Patreon tier coloring (`#F1C40D` Supporter/Sponsor, `#E74C3C` Mega Supporter, `#E91E63` Ultra Supporter)
-5. Run validation:
+6. Run validation:
    - `npm run typecheck`
    - `npm run format:check`
    - `npm run lint`
    - `npm run test -- --run`
-6. Optionally run `npm run build:web` for a web-only production build. Run `npm run build` only when ready for Capacitor sync/native file updates.
-7. Commit the release prep changes.
-8. Create and push the version tag:
+7. Optionally run `npm run build:web` for a web-only production build. Run `npm run build` only when ready for Capacitor sync/native file updates.
+8. Commit the release prep changes.
+9. Create and push the version tag:
 
    ```bash
-   git tag v1.11.0
-   git push origin v1.11.0
+   git tag v1.11.1
+   git push origin v1.11.1
    ```
 
-9. Confirm GitHub release artifacts and Capawesome Cloud iOS/Android builds complete.
-10. Submit/release from App Store Connect and Google Play Console.
+10. Confirm GitHub release artifacts and Capawesome Cloud iOS/Android builds complete.
+11. Submit/release from App Store Connect and Google Play Console.
 
 ---
 
@@ -145,9 +146,13 @@ The app uses Capawesome Cloud for building iOS and Android binaries.
 
 ```bash
 # Create and push a version tag
-git tag v1.11.0
-git push origin v1.11.0
+git tag v1.11.1
+git push origin v1.11.1
 ```
+
+### Build Runtime
+
+GitHub Actions use Node 22 because Capacitor 8's CLI requires Node 22 or newer. If Capawesome Cloud builds fail with a Node version error, set the `NODE_VERSION` environment variable to `22` in the selected Capawesome Cloud environment.
 
 ### Required Secrets in Capawesome Cloud
 

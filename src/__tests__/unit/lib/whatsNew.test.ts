@@ -73,10 +73,10 @@ describe("whatsNew", () => {
     expect(identity.liveBundleId).toBe("bundle-2026-06-04");
   });
 
-  it("should find the first 1.11.0 announcement", () => {
-    const announcement = getWhatsNewAnnouncement("native:1.11.0+25");
+  it("should find the first 1.11.1 announcement", () => {
+    const announcement = getWhatsNewAnnouncement("native:1.11.1+26");
 
-    expect(announcement?.id).toBe("release-1.11.0");
+    expect(announcement?.id).toBe("release-1.11.1");
     expect(announcement?.items).toHaveLength(5);
   });
 });
