@@ -1,0 +1,7 @@
+# CodeRabbit configuration
+# ESLint is already enforced by CI. Disable CodeRabbit's sandboxed ESLint
+# because its dependency install cannot authenticate against private registries.
+reviews:
+  tools:
+    eslint:
+      enabled: false

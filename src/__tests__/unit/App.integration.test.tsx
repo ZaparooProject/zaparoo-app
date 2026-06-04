@@ -4,6 +4,27 @@ import App from "@/App";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 import { logger } from "@/lib/logger";
 
+const {
+  mockUseDeepLinks,
+  mockUseRunQueueProcessor,
+  mockUseWriteQueueProcessor,
+  mockPreferencesState,
+} = vi.hoisted(() => ({
+  mockUseDeepLinks: vi.fn(),
+  mockUseRunQueueProcessor: vi.fn(),
+  mockUseWriteQueueProcessor: vi.fn(),
+  mockPreferencesState: {
+    _hasHydrated: true,
+    _proAccessHydrated: true,
+    _nfcAvailabilityHydrated: true,
+    _cameraAvailabilityHydrated: true,
+    _accelerometerAvailabilityHydrated: true,
+    showFilenames: false,
+    shakeEnabled: false,
+    launcherAccess: false,
+  },
+}));
+
 // Mock window.location for i18n
 Object.defineProperty(window, "location", {
   value: {
@@ -144,6 +165,7 @@ vi.mock("@/components/ReconnectingIndicator", () => ({
 }));
 
 vi.mock("@/lib/deepLinks", () => ({
+  useDeepLinks: mockUseDeepLinks,
   default: () => <div data-testid="deep-links" />,
 }));
 
@@ -177,20 +199,10 @@ vi.mock("@capacitor/status-bar", () => ({
 
 vi.mock("@/lib/preferencesStore", () => {
   const usePreferencesStore: any = vi.fn((selector) => {
-    const state = {
-      _hasHydrated: true,
-      _proAccessHydrated: true,
-      _nfcAvailabilityHydrated: true,
-      _cameraAvailabilityHydrated: true,
-      _accelerometerAvailabilityHydrated: true,
-      showFilenames: false,
-      shakeEnabled: false,
-      launcherAccess: false,
-    };
     if (typeof selector === "function") {
-      return selector(state);
+      return selector(mockPreferencesState);
     }
-    return state;
+    return mockPreferencesState;
   });
 
   return { usePreferencesStore };
@@ -214,10 +226,10 @@ vi.mock("@/hooks/useAccelerometerAvailabilityCheck", () => ({
   useAccelerometerAvailabilityCheck: vi.fn(),
 }));
 vi.mock("@/hooks/useRunQueueProcessor", () => ({
-  useRunQueueProcessor: vi.fn(),
+  useRunQueueProcessor: mockUseRunQueueProcessor,
 }));
 vi.mock("@/hooks/useWriteQueueProcessor", () => ({
-  useWriteQueueProcessor: vi.fn(),
+  useWriteQueueProcessor: mockUseWriteQueueProcessor,
 }));
 vi.mock("@/hooks/useShakeDetection", () => ({ useShakeDetection: vi.fn() }));
 vi.mock("@/lib/logger", () => ({
@@ -229,6 +241,16 @@ vi.mock("@/lib/purchasesSetup", () => ({ purchasesReady: Promise.resolve() }));
 describe("App Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.assign(mockPreferencesState, {
+      _hasHydrated: true,
+      _proAccessHydrated: true,
+      _nfcAvailabilityHydrated: true,
+      _cameraAvailabilityHydrated: true,
+      _accelerometerAvailabilityHydrated: true,
+      showFilenames: false,
+      shakeEnabled: false,
+      launcherAccess: false,
+    });
     vi.mocked(isNativePluginAvailable).mockReturnValue(true);
   });
 
@@ -247,7 +269,7 @@ describe("App Integration", () => {
 
     // Verify ConnectionProvider is rendered
     expect(screen.getByTestId("connection-provider")).toBeInTheDocument();
-    expect(screen.getByTestId("deep-links")).toBeInTheDocument();
+    expect(mockUseDeepLinks).toHaveBeenCalled();
     expect(screen.getByTestId("staged-token-modal")).toBeInTheDocument();
   });
 
@@ -263,6 +285,17 @@ describe("App Integration", () => {
 
     // Verify ConnectionProvider is rendered
     expect(screen.getByTestId("connection-provider")).toBeInTheDocument();
+  });
+
+  it("should initialize deep links before hydration completes", () => {
+    mockPreferencesState._hasHydrated = false;
+
+    const { container } = render(<App />);
+
+    expect(mockUseDeepLinks).toHaveBeenCalled();
+    expect(mockUseRunQueueProcessor).not.toHaveBeenCalled();
+    expect(mockUseWriteQueueProcessor).not.toHaveBeenCalled();
+    expect(container.textContent).toBe("");
   });
 
   it("should skip StatusBar setup when native plugin is unavailable", async () => {

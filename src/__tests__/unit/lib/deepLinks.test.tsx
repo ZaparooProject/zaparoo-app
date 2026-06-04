@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor } from "../../../test-utils";
+import { render, waitFor } from "@/test-utils";
 import type { URLOpenListenerEvent } from "@capacitor/app";
 
 // Create hoisted mocks
@@ -50,7 +50,7 @@ vi.mock("@capacitor/app", () => ({
 }));
 
 // Mock logger
-vi.mock("../../../lib/logger", () => ({
+vi.mock("@/lib/logger", () => ({
   logger: mockLogger,
 }));
 
@@ -63,7 +63,7 @@ vi.mock("react-hot-toast", () => ({
 const mockSetRunQueue = vi.fn();
 const mockSetWriteQueue = vi.fn();
 
-vi.mock("../../../lib/store", () => ({
+vi.mock("@/lib/store", () => ({
   useStatusStore: vi.fn((selector: (state: unknown) => unknown) => {
     const state = {
       setRunQueue: mockSetRunQueue,
@@ -73,11 +73,13 @@ vi.mock("../../../lib/store", () => ({
   }),
 }));
 
-import AppUrlListener from "../../../lib/deepLinks";
+import { CoreAPI } from "@/lib/coreApi";
+import AppUrlListener, { parseDeepLink } from "@/lib/deepLinks";
 
 describe("AppUrlListener", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    CoreAPI.reset();
     urlOpenCallback = null;
     mockGetLaunchUrl.mockResolvedValue({ url: undefined });
   });
@@ -102,6 +104,66 @@ describe("AppUrlListener", () => {
 
     await waitFor(() => {
       expect(listenerRemoveFn).toHaveBeenCalled();
+    });
+  });
+
+  it("should cleanup listener if handle resolves after unmount", async () => {
+    let resolveHandle: (value: {
+      remove: typeof listenerRemoveFn;
+    }) => void = () => {};
+    mockAddListener.mockImplementationOnce(
+      (eventName: string, callback: (event: URLOpenListenerEvent) => void) => {
+        if (eventName === "appUrlOpen") {
+          urlOpenCallback = callback;
+        }
+        return new Promise((resolve) => {
+          resolveHandle = resolve;
+        });
+      },
+    );
+
+    const { unmount } = render(<AppUrlListener />);
+
+    unmount();
+    resolveHandle({ remove: listenerRemoveFn });
+
+    await waitFor(() => {
+      expect(listenerRemoveFn).toHaveBeenCalled();
+    });
+  });
+
+  describe("parseDeepLink", () => {
+    it("should parse HTTPS run links", () => {
+      expect(parseDeepLink("https://zaparoo.app/run?v=test-token")).toEqual({
+        type: "run",
+        value: "test-token",
+      });
+    });
+
+    it("should parse HTTPS write links", () => {
+      expect(parseDeepLink("https://zaparoo.app/write?v=test-write")).toEqual({
+        type: "write",
+        value: "test-write",
+      });
+    });
+
+    it("should parse custom scheme app paths", () => {
+      expect(parseDeepLink("zaparoo://app/run?v=test-token")).toEqual({
+        type: "run",
+        value: "test-token",
+      });
+    });
+
+    it("should reject custom scheme links with unexpected hosts", () => {
+      expect(parseDeepLink("zaparoo://write?v=test-write")).toEqual({
+        type: "unsupported",
+      });
+    });
+
+    it("should reject other HTTPS hosts", () => {
+      expect(parseDeepLink("https://example.com/run?v=test-token")).toEqual({
+        type: "unsupported",
+      });
     });
   });
 
@@ -301,11 +363,16 @@ describe("AppUrlListener", () => {
         url: "not-a-valid-url",
       });
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         "Invalid deep link URL",
         expect.any(Error),
+        {
+          category: "general",
+          action: "deepLinkParse",
+          severity: "error",
+        },
       );
-      expect(mockLogger.error).not.toHaveBeenCalled();
+      expect(mockLogger.warn).not.toHaveBeenCalled();
 
       expect(mockToast.error).toHaveBeenCalledWith("deepLinks.invalidUrl");
     });
@@ -321,11 +388,16 @@ describe("AppUrlListener", () => {
         url: "",
       });
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         "Invalid deep link URL",
         expect.any(Error),
+        {
+          category: "general",
+          action: "deepLinkParse",
+          severity: "error",
+        },
       );
-      expect(mockLogger.error).not.toHaveBeenCalled();
+      expect(mockLogger.warn).not.toHaveBeenCalled();
       expect(mockToast.error).toHaveBeenCalledWith("deepLinks.invalidUrl");
     });
 
@@ -375,7 +447,8 @@ describe("AppUrlListener", () => {
       expect(mockLogger.log).toHaveBeenCalledWith(
         "App URL opened:",
         expect.objectContaining({
-          path: "/unknown",
+          url: "zaparoo://app/unknown",
+          parsed: { type: "unsupported" },
         }),
       );
     });
