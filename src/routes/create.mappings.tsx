@@ -95,7 +95,8 @@ function Mappings() {
     }
   };
 
-  const isEmpty = !mappings.isLoading && sortedMappings.length === 0;
+  const isInitialLoading = mappings.isLoading && !mappings.data;
+  const isEmpty = !isInitialLoading && sortedMappings.length === 0;
 
   return (
     <PageFrame
@@ -122,7 +123,7 @@ function Mappings() {
       }
     >
       <div className="flex flex-col gap-3">
-        {isEmpty ? (
+        {isInitialLoading ? null : isEmpty ? (
           <EmptyState
             title={t("create.mappings.list.empty")}
             description={t("create.mappings.list.emptyDescription")}
