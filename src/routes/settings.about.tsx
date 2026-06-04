@@ -110,14 +110,13 @@ function About() {
             Tuxosaurus,{" "}
             <span style={{ color: "#E74C3C" }}>Retrosoft Studios</span>, Casey
             McGinty, <span style={{ color: "#E91E63" }}>Biddle</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>
-              Gentlemen&apos;s Pixel Club
-            </span>
-            , <span style={{ color: "#F1C40D" }}>VolJoe</span>,{" "}
             <span style={{ color: "#F1C40D" }}>Shijuro</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Tim Sullivan</span>,{" "}
             <span style={{ color: "#F1C40D" }}>TheJesusFish</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>disctoad</span>
+            <span style={{ color: "#F1C40D" }}>disctoad</span>,{" "}
+            <span style={{ color: "#F1C40D" }}>Mark Dodsworth</span>,{" "}
+            <span style={{ color: "#F1C40D" }}>ayoub</span>,{" "}
+            <span style={{ color: "#F1C40D" }}>Michael Quinn</span>,{" "}
+            <span style={{ color: "#F1C40D" }}>Lina Blue</span>
           </div>
 
           <Button
