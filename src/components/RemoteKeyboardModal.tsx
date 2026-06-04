@@ -22,6 +22,7 @@ import "react-simple-keyboard/build/css/index.css";
 import { SlideModal } from "@/components/SlideModal";
 import { Segmented } from "@/components/wui/Segmented";
 import { CoreAPI } from "@/lib/coreApi";
+import { useHaptics } from "@/hooks/useHaptics";
 import { logger } from "@/lib/logger";
 import { useStatusStore } from "@/lib/store";
 
@@ -213,6 +214,7 @@ export function RemoteKeyboardModal(props: {
   close: () => void;
 }) {
   const { t } = useTranslation();
+  const { impact } = useHaptics();
   const connected = useStatusStore((state) => state.connected);
   const corePlatform = useStatusStore((state) => state.corePlatform);
   const [layoutName, setLayoutName] = useState<KeyboardLayoutName>("default");
@@ -229,7 +231,13 @@ export function RemoteKeyboardModal(props: {
     { value: "keyboard", label: t("remoteKeyboard.keyboardMode") },
   ];
 
+  const triggerControlHaptic = () => {
+    impact("light");
+  };
+
   const sendMacro = (keys: string) => {
+    triggerControlHaptic();
+
     if (!connected) {
       const message = t("remoteKeyboard.disconnected");
       setError(null);
@@ -256,6 +264,7 @@ export function RemoteKeyboardModal(props: {
   const handleKeyPress = (button: string) => {
     const nextLayout = layoutSwitches[button];
     if (nextLayout) {
+      triggerControlHaptic();
       setLayoutName(nextLayout);
       return;
     }
@@ -267,6 +276,8 @@ export function RemoteKeyboardModal(props: {
   };
 
   const handleScreenshot = () => {
+    triggerControlHaptic();
+
     if (!connected) {
       const message = t("remoteKeyboard.disconnected");
       setError(null);
@@ -294,6 +305,8 @@ export function RemoteKeyboardModal(props: {
   };
 
   const shareScreenshot = async () => {
+    triggerControlHaptic();
+
     if (!screenshot) return;
 
     try {
@@ -351,7 +364,10 @@ export function RemoteKeyboardModal(props: {
           labelHidden
           options={modeOptions}
           value={mode}
-          onChange={setMode}
+          onChange={(next) => {
+            triggerControlHaptic();
+            setMode(next);
+          }}
         />
         {mode === "remote" ? (
           <div className="remote-keyboard-pad">
@@ -449,6 +465,7 @@ export function RemoteKeyboardModal(props: {
                       className="remote-keyboard-screenshot-control"
                       href={screenshotUrl}
                       download={getScreenshotFileName(screenshot.path)}
+                      onClick={triggerControlHaptic}
                     >
                       <Download size={20} aria-hidden="true" />
                       {t("remoteKeyboard.screenshotDownload")}
@@ -457,7 +474,10 @@ export function RemoteKeyboardModal(props: {
                   <button
                     type="button"
                     className="remote-keyboard-screenshot-control"
-                    onClick={() => setScreenshot(null)}
+                    onClick={() => {
+                      triggerControlHaptic();
+                      setScreenshot(null);
+                    }}
                   >
                     <X size={20} aria-hidden="true" />
                     {t("remoteKeyboard.screenshotClear")}

@@ -7,6 +7,7 @@ import { CoreAPI } from "@/lib/coreApi";
 import { Capacitor } from "@capacitor/core";
 import { Directory, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import toast from "react-hot-toast";
 
 interface KeyboardMockProps {
@@ -105,6 +106,17 @@ describe("RemoteKeyboardModal", () => {
     await waitFor(() => {
       expect(CoreAPI.inputKeyboard).toHaveBeenCalledWith({ keys: "{enter}" });
     });
+  });
+
+  it("should trigger light haptics for remote pad actions on native platforms", async () => {
+    const user = userEvent.setup();
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "remoteKeyboard.up" }));
+
+    expect(Haptics.impact).toHaveBeenCalledWith({ style: ImpactStyle.Light });
   });
 
   it("should send generic remote actions when platform is unknown", async () => {
@@ -362,6 +374,32 @@ describe("RemoteKeyboardModal", () => {
     expect(toast.error).toHaveBeenCalledWith("remoteKeyboard.screenshotError");
   });
 
+  it("should trigger light haptics for screenshot capture and clear controls", async () => {
+    const user = userEvent.setup();
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "remoteKeyboard.screenshotAction",
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: "remoteKeyboard.screenshotClear",
+      }),
+    );
+
+    expect(Haptics.impact).toHaveBeenCalledTimes(2);
+    expect(Haptics.impact).toHaveBeenNthCalledWith(1, {
+      style: ImpactStyle.Light,
+    });
+    expect(Haptics.impact).toHaveBeenNthCalledWith(2, {
+      style: ImpactStyle.Light,
+    });
+  });
+
   it("should send literal key presses from keyboard mode", async () => {
     const user = userEvent.setup();
 
@@ -374,6 +412,26 @@ describe("RemoteKeyboardModal", () => {
 
     await waitFor(() => {
       expect(CoreAPI.inputKeyboard).toHaveBeenCalledWith({ keys: "q" });
+    });
+  });
+
+  it("should trigger light haptics for mode and keyboard key controls", async () => {
+    const user = userEvent.setup();
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+
+    render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+
+    await user.click(
+      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+    );
+    await user.click(screen.getByRole("button", { name: "q" }));
+
+    expect(Haptics.impact).toHaveBeenCalledTimes(2);
+    expect(Haptics.impact).toHaveBeenNthCalledWith(1, {
+      style: ImpactStyle.Light,
+    });
+    expect(Haptics.impact).toHaveBeenNthCalledWith(2, {
+      style: ImpactStyle.Light,
     });
   });
 
