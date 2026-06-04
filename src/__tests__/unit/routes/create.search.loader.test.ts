@@ -11,6 +11,12 @@ vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
     systems: vi.fn(),
   },
+  isRequestCancelledError: (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    return /request cancelled|request canceled|connection reset|aborted/i.test(
+      message,
+    );
+  },
 }));
 
 describe("Create Search Route Loader", () => {
@@ -122,6 +128,23 @@ describe("Create Search Route Loader", () => {
 
     // CoreAPI.systems is called in parallel, so it will be called even if preferences fail
     expect(mockCoreApiSystems).toHaveBeenCalled();
+  });
+
+  it("should use empty systems when CoreAPI systems request is cancelled", async () => {
+    mockPreferencesGet
+      .mockResolvedValueOnce({ value: "snes" })
+      .mockResolvedValueOnce({ value: "[]" });
+    mockCoreApiSystems.mockRejectedValue(
+      new Error("Request cancelled: connection reset"),
+    );
+
+    const result = await Route.options?.loader?.({} as any);
+
+    expect(result).toEqual({
+      systemQuery: "snes",
+      tagQuery: [],
+      systems: { systems: [] },
+    });
   });
 
   it("should handle CoreAPI systems failure", async () => {
