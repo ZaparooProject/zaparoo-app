@@ -132,6 +132,11 @@ export interface System {
   category?: string;
   releaseDate?: string;
   manufacturer?: string;
+  zapScript?: string;
+}
+
+export interface SystemsParams {
+  all?: boolean;
 }
 
 export interface SystemsResponse {
@@ -240,6 +245,8 @@ export interface IndexResponse {
   currentStepDisplay?: string;
   totalFiles?: number;
   totalMedia?: number;
+  systemsCompleted?: number;
+  systemsTotal?: number;
 }
 
 export interface PlayingResponse {

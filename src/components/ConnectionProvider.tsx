@@ -229,15 +229,30 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             const currentState = useStatusStore.getState().gamesIndex;
             setGamesIndex(params);
 
-            // Invalidate media query on significant state changes
-            if (
+            const mediaStateChanged =
               currentState.indexing !== params.indexing ||
               currentState.optimizing !== params.optimizing ||
               currentState.exists !== params.exists ||
-              currentState.totalMedia !== params.totalMedia
-            ) {
+              currentState.totalMedia !== params.totalMedia;
+            if (mediaStateChanged) {
               logger.log("Database state changed, invalidating media query");
               queryClient.invalidateQueries({ queryKey: ["media"] });
+            }
+
+            // Latest Core increments systemsCompleted after each durable system
+            // commit. Older Core omits it but flips indexing/exists at completion.
+            const libraryContentChanged =
+              currentState.indexing !== params.indexing ||
+              currentState.exists !== params.exists ||
+              currentState.totalMedia !== params.totalMedia ||
+              currentState.systemsCompleted !== params.systemsCompleted;
+            if (libraryContentChanged) {
+              logger.log("Media library changed, invalidating cached lists");
+              queryClient.invalidateQueries({ queryKey: ["systems"] });
+              queryClient.invalidateQueries({ queryKey: ["tags"] });
+              queryClient.invalidateQueries({
+                queryKey: ["infiniteMediaSearch"],
+              });
             }
             break;
           }
@@ -564,11 +579,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           });
       });
 
-    // Fetch media information so the in-memory gamesIndex reflects whatever
-    // state Core is in right now (e.g. an indexing run that started while we
-    // were disconnected). Also drop any cached ["media"] query so the settings
-    // card refetches.
+    // Refetch device-scoped library data after every connection. This handles
+    // reconnects where Core's library changed while app was disconnected.
     queryClient.invalidateQueries({ queryKey: ["media"] });
+    queryClient.invalidateQueries({ queryKey: ["systems"] });
+    queryClient.invalidateQueries({ queryKey: ["tags"] });
+    queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] });
 
     const fetchMediaState = (retryDelayMs: number) => {
       const scheduledFor = currentConnectionId.current;

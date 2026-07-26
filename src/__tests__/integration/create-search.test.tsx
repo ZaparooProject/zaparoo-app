@@ -205,11 +205,17 @@ vi.mock("@/components/SystemSelector", () => ({
   SystemSelectorTrigger: ({
     onClick,
     selectedSystems,
+    disabled,
   }: {
     onClick: () => void;
     selectedSystems: string[];
+    disabled?: boolean;
   }) => (
-    <button data-testid="system-selector-trigger" onClick={onClick}>
+    <button
+      data-testid="system-selector-trigger"
+      onClick={onClick}
+      disabled={disabled}
+    >
       {selectedSystems.length > 0 ? selectedSystems.join(", ") : "All Systems"}
     </button>
   ),
@@ -239,11 +245,17 @@ vi.mock("@/components/TagSelector", () => ({
   TagSelectorTrigger: ({
     onClick,
     selectedTags,
+    disabled,
   }: {
     onClick: () => void;
     selectedTags: string[];
+    disabled?: boolean;
   }) => (
-    <button data-testid="tag-selector-trigger" onClick={onClick}>
+    <button
+      data-testid="tag-selector-trigger"
+      onClick={onClick}
+      disabled={disabled}
+    >
       {selectedTags.length > 0 ? selectedTags.join(", ") : "All Tags"}
     </button>
   ),
@@ -451,7 +463,7 @@ describe("Create Search Integration", () => {
     // Note: Testing "games index does not exist" state requires full router
     // context due to Link component rendering, so it's tested elsewhere.
 
-    it("should disable search button when indexing is in progress", () => {
+    it("should keep search controls enabled during usable indexing", () => {
       useStatusStore.setState({
         gamesIndex: {
           exists: true,
@@ -468,7 +480,9 @@ describe("Create Search Integration", () => {
       const searchButton = screen.getByRole("button", {
         name: /create.search.searchButton/i,
       });
-      expect(searchButton).toBeDisabled();
+      expect(searchButton).toBeEnabled();
+      expect(screen.getByRole("button", { name: "All Systems" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "All Tags" })).toBeEnabled();
     });
 
     it("should disable search input when not connected", () => {

@@ -6,6 +6,7 @@ import {
   setDeviceAddress,
   getWsUrl,
 } from "../../lib/coreApi";
+import { Method } from "../../lib/models";
 
 const mockSend = vi.fn();
 import { Preferences } from "@capacitor/preferences";
@@ -186,6 +187,24 @@ describe("CoreAPI Internals", () => {
       vi.spyOn(CoreAPI, "call").mockRejectedValue(new Error("Network error"));
 
       await expect(CoreAPI.systems()).rejects.toThrow("Network error");
+    });
+
+    it("should request all systems and filter virtual launchables", async () => {
+      const callSpy = vi.spyOn(CoreAPI, "call").mockResolvedValue({
+        systems: [
+          { id: "snes", name: "Super Nintendo" },
+          {
+            id: "virtual:steam",
+            name: "Steam",
+            zapScript: "**launch.system:steam",
+          },
+        ],
+      });
+
+      await expect(CoreAPI.systems({ all: true })).resolves.toEqual({
+        systems: [{ id: "snes", name: "Super Nintendo" }],
+      });
+      expect(callSpy).toHaveBeenCalledWith(Method.Systems, { all: true });
     });
 
     it("should propagate settings method errors", async () => {

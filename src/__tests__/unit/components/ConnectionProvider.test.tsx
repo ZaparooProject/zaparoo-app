@@ -949,6 +949,50 @@ describe("notification processing", () => {
   });
 
   describe("media.indexing", () => {
+    it("should invalidate library queries after a system commit", async () => {
+      const invalidateSpy = vi.spyOn(
+        QueryClient.prototype,
+        "invalidateQueries",
+      );
+      useStatusStore.setState({
+        gamesIndex: {
+          exists: true,
+          indexing: true,
+          systemsCompleted: 1,
+          systemsTotal: 10,
+        },
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.MediaIndexing,
+        params: {
+          exists: true,
+          indexing: true,
+          systemsCompleted: 2,
+          systemsTotal: 10,
+        },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      invalidateSpy.mockClear();
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(invalidateSpy).toHaveBeenCalledWith({
+          queryKey: ["systems"],
+        });
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["tags"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["infiniteMediaSearch"],
+      });
+      invalidateSpy.mockRestore();
+    });
+
     it("should update games index state", async () => {
       const mediaIndexingNotification: NotificationRequest = {
         method: Notification.MediaIndexing,
@@ -1170,6 +1214,32 @@ describe("connection event handling", () => {
       expect(useStatusStore.getState().corePlatform).toBe("test");
       expect(useStatusStore.getState().coreVersionPending).toBe(false);
     });
+  });
+
+  it("should invalidate library queries after reconnecting", async () => {
+    const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+    invalidateSpy.mockClear();
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["systems"] });
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["tags"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["infiniteMediaSearch"],
+    });
+    invalidateSpy.mockRestore();
   });
 
   it("should fetch inbox messages when connected Core supports inbox", async () => {

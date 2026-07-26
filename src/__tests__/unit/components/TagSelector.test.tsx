@@ -6,7 +6,7 @@
  * - Tag grouping by type with priority sorting
  * - Search filtering (debounced)
  * - Tag selection/deselection with screen reader announcements
- * - Disable behavior during indexing
+ * - Selection remains available during indexing
  * - Footer with selected count, clear all, and apply buttons
  * - Accordion expand/collapse all
  */
@@ -87,6 +87,7 @@ describe("TagSelector", () => {
     // Reset stores
     useStatusStore.setState({
       ...useStatusStore.getState(),
+      targetDeviceAddress: "device-a",
       gamesIndex: {
         exists: true,
         indexing: false,
@@ -169,6 +170,36 @@ describe("TagSelector", () => {
       await waitFor(() => {
         expect(screen.getByText("tagSelector.noTags")).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("cache freshness", () => {
+    it("should refresh tags when target device changes", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      vi.mocked(CoreAPI.mediaTags)
+        .mockResolvedValueOnce({ tags: [{ tag: "Action", type: "genre" }] })
+        .mockResolvedValueOnce({ tags: [{ tag: "Puzzle", type: "genre" }] });
+
+      render(<TagSelector {...defaultProps} />);
+      await user.click(
+        await screen.findByRole("button", {
+          name: /tagSelector\.type\.genre/i,
+        }),
+      );
+      expect(
+        await screen.findByRole("checkbox", { name: /action/i }),
+      ).toBeInTheDocument();
+
+      act(() => {
+        useStatusStore.setState({ targetDeviceAddress: "device-b" });
+      });
+
+      expect(
+        await screen.findByRole("checkbox", { name: /puzzle/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("checkbox", { name: /action/i }),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -426,7 +457,7 @@ describe("TagSelector", () => {
   });
 
   describe("indexing state", () => {
-    it("should disable selection during indexing", async () => {
+    it("should keep selection controls enabled during indexing", async () => {
       // Arrange
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const onSelect = vi.fn();
@@ -446,7 +477,13 @@ describe("TagSelector", () => {
         },
       });
 
-      render(<TagSelector {...defaultProps} onSelect={onSelect} />);
+      render(
+        <TagSelector
+          {...defaultProps}
+          onSelect={onSelect}
+          selectedTags={["genre:RPG"]}
+        />,
+      );
 
       await waitFor(() => {
         expect(
@@ -459,16 +496,21 @@ describe("TagSelector", () => {
         screen.getByRole("button", { name: /tagSelector\.type\.genre/i }),
       );
 
-      // Act - try to click on tag
+      // Act
       const tagButton = await screen.findByRole("checkbox", {
         name: /action/i,
       });
-      expect(tagButton).toBeDisabled();
-
+      expect(tagButton).toBeEnabled();
       await user.click(tagButton);
 
-      // Assert - should not have called onSelect
-      expect(onSelect).not.toHaveBeenCalled();
+      // Assert
+      expect(onSelect).toHaveBeenCalledWith(["genre:RPG", "genre:Action"]);
+      expect(
+        screen.getByRole("button", { name: /tagSelector\.clearAll/i }),
+      ).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: /tagSelector\.apply/i }),
+      ).toBeEnabled();
     });
   });
 
@@ -689,7 +731,7 @@ describe("TagSelectorTrigger", () => {
     ).toBeInTheDocument();
   });
 
-  it("should be disabled during indexing", () => {
+  it("should stay enabled during indexing", async () => {
     // Arrange
     const onClick = vi.fn();
     useStatusStore.setState({
@@ -706,12 +748,14 @@ describe("TagSelectorTrigger", () => {
     // Act
     render(<TagSelectorTrigger {...defaultProps} onClick={onClick} />);
 
-    // Assert - button should be disabled, preventing any interaction
+    // Assert
     const button = screen.getByRole("button");
-    expect(button).toBeDisabled();
+    expect(button).toBeEnabled();
+    await userEvent.click(button);
+    expect(onClick).toHaveBeenCalled();
   });
 
-  it("should call onClick when clicked and not indexing", async () => {
+  it("should call onClick when enabled", async () => {
     // Arrange
     const onClick = vi.fn();
 
