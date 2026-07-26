@@ -481,8 +481,8 @@ describe("Create Search Integration", () => {
         name: /create.search.searchButton/i,
       });
       expect(searchButton).toBeEnabled();
-      expect(screen.getByTestId("system-selector-trigger")).toBeEnabled();
-      expect(screen.getByTestId("tag-selector-trigger")).toBeEnabled();
+      expect(screen.getByRole("button", { name: "All Systems" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "All Tags" })).toBeEnabled();
     });
 
     it("should disable search input when not connected", () => {

@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event";
-import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import { render, screen, fireEvent, waitFor } from "@/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MediaDatabaseCard } from "../../../components/MediaDatabaseCard";
 import { CoreAPI } from "../../../lib/coreApi";

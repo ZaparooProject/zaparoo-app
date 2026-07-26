@@ -471,8 +471,10 @@ describe("Search Component", () => {
         name: "create.search.searchButton",
       });
       expect(searchButton).toBeDisabled();
-      expect(screen.getByTestId("system-selector-trigger")).toBeDisabled();
-      expect(screen.getByTestId("tag-selector-trigger")).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "All Systems" }),
+      ).toBeDisabled();
+      expect(screen.getByRole("button", { name: "All Tags" })).toBeDisabled();
     });
 
     it("should keep search controls enabled while indexing has usable data", () => {
@@ -485,8 +487,8 @@ describe("Search Component", () => {
         screen.getByRole("button", { name: "create.search.searchButton" }),
       ).toBeEnabled();
       expect(screen.getByLabelText("create.search.gameInput")).toBeEnabled();
-      expect(screen.getByTestId("system-selector-trigger")).toBeEnabled();
-      expect(screen.getByTestId("tag-selector-trigger")).toBeEnabled();
+      expect(screen.getByRole("button", { name: "All Systems" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "All Tags" })).toBeEnabled();
     });
 
     it("should show database warning after expected media setup error", async () => {

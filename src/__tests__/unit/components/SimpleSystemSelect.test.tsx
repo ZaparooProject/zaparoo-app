@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, act } from "../../../test-utils";
+import { render, screen, waitFor, act } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { SimpleSystemSelect } from "@/components/SimpleSystemSelect";
 import { CoreAPI } from "@/lib/coreApi";

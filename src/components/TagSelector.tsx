@@ -351,7 +351,7 @@ export function TagSelector({
                       <button
                         className={classNames(
                           "flex h-full w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                          "rounded-lg focus:outline-none",
+                          "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
                           "hover:bg-white/10 focus:bg-white/10",
                           { "bg-white/10": isSelected },
                         )}
@@ -443,7 +443,7 @@ export function TagSelector({
                                 key={tag.tag}
                                 className={classNames(
                                   "flex w-full items-center justify-between px-3 py-3 text-left transition-colors",
-                                  "rounded-md focus:outline-none",
+                                  "rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
                                   "hover:bg-white/5 focus:bg-white/5",
                                   { "bg-white/10": isSelected },
                                 )}
@@ -537,7 +537,7 @@ export function TagSelectorTrigger({
     <button
       onClick={handleClick}
       className={classNames(
-        "border-input text-foreground flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus:ring-2 focus:ring-white/20 focus:outline-none",
+        "border-input text-foreground flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
         {
           "hover:bg-white/10": !disabled,
           "cursor-not-allowed opacity-50": disabled,

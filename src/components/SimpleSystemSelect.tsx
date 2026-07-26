@@ -69,7 +69,7 @@ export function SimpleSystemSelect({
       onChange={handleChange}
       disabled={disabled || isLoading}
       className={classNames(
-        "border-input text-foreground w-full rounded-md border px-3 py-2 transition-colors focus:ring-2 focus:ring-white/20 focus:outline-none",
+        "border-input text-foreground w-full rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
         {
           "hover:bg-white/10": !disabled && !isLoading,
           "cursor-not-allowed opacity-50": disabled || isLoading,

@@ -377,7 +377,7 @@ export function SystemSelector({
                       <button
                         className={classNames(
                           "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                          "rounded-lg focus:outline-none",
+                          "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
                           "hover:bg-white/10 focus:bg-white/10",
                           {
                             "bg-white/10":
@@ -455,7 +455,7 @@ export function SystemSelector({
                           <button
                             className={classNames(
                               "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                              "rounded-lg focus:outline-none",
+                              "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
                               "hover:bg-white/10 focus:bg-white/10",
                               {
                                 "bg-white/10": isSelected,
