@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "../../../test-utils";
+import { render, screen, waitFor, act } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { SimpleSystemSelect } from "@/components/SimpleSystemSelect";
 import { CoreAPI } from "@/lib/coreApi";
@@ -10,11 +10,6 @@ vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
     systems: vi.fn(),
   },
-}));
-
-// Mock store
-vi.mock("@/lib/store", () => ({
-  useStatusStore: vi.fn(),
 }));
 
 const mockSystems = {
@@ -30,10 +25,8 @@ const mockSystems = {
 
 describe("SimpleSystemSelect", () => {
   beforeEach(() => {
+    useStatusStore.setState({ targetDeviceAddress: "device-a" });
     vi.mocked(CoreAPI.systems).mockResolvedValue(mockSystems);
-    vi.mocked(useStatusStore).mockReturnValue({
-      gamesIndex: { indexing: false, exists: true },
-    });
   });
 
   it("renders a select element", () => {
@@ -42,6 +35,33 @@ describe("SimpleSystemSelect", () => {
 
     const select = screen.getByRole("combobox");
     expect(select).toBeInTheDocument();
+  });
+
+  it("refreshes systems when target device changes", async () => {
+    const onSelect = vi.fn();
+    vi.mocked(CoreAPI.systems)
+      .mockResolvedValueOnce({
+        systems: [{ id: "snes", name: "Super Nintendo" }],
+      })
+      .mockResolvedValueOnce({
+        systems: [{ id: "genesis", name: "Sega Genesis" }],
+      });
+
+    render(<SimpleSystemSelect value="" onSelect={onSelect} />);
+    expect(
+      await screen.findByRole("option", { name: "Super Nintendo" }),
+    ).toBeInTheDocument();
+
+    act(() => {
+      useStatusStore.setState({ targetDeviceAddress: "device-b" });
+    });
+
+    expect(
+      await screen.findByRole("option", { name: "Sega Genesis" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "Super Nintendo" }),
+    ).not.toBeInTheDocument();
   });
 
   it("displays grouped systems by category", async () => {
@@ -162,13 +182,9 @@ describe("SimpleSystemSelect", () => {
     });
   });
 
-  it("disables select when indexing", () => {
-    vi.mocked(useStatusStore).mockReturnValue({
-      gamesIndex: { indexing: true, exists: true },
-    });
-
+  it("disables select when requested", () => {
     const onSelect = vi.fn();
-    render(<SimpleSystemSelect value="" onSelect={onSelect} />);
+    render(<SimpleSystemSelect value="" onSelect={onSelect} disabled={true} />);
 
     const select = screen.getByRole("combobox");
     expect(select).toBeDisabled();

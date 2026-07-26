@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event";
-import { render, screen, fireEvent } from "../../../test-utils";
+import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MediaDatabaseCard } from "../../../components/MediaDatabaseCard";
 import { CoreAPI } from "../../../lib/coreApi";
@@ -65,6 +65,7 @@ const { ConnectionState, mockStore } = vi.hoisted(() => {
   } as const;
   const mockStore = {
     connected: true,
+    targetDeviceAddress: "test-device",
     connectionState: ConnectionState.CONNECTED as string,
     gamesIndex: {
       indexing: false,
@@ -107,6 +108,7 @@ describe("MediaDatabaseCard", () => {
     vi.clearAllMocks();
     // Reset mock store state
     mockStore.connected = true;
+    mockStore.targetDeviceAddress = "test-device";
     mockStore.connectionState = ConnectionState.CONNECTED;
     mockStore.gamesIndex = {
       indexing: false,
@@ -128,6 +130,14 @@ describe("MediaDatabaseCard", () => {
     });
     vi.mocked(CoreAPI.systems).mockResolvedValue({ systems: [] });
     vi.mocked(CoreAPI.mediaCleanOrphans).mockResolvedValue({ deleted: 0 });
+  });
+
+  it("should request all indexable systems for partial updates", async () => {
+    render(<MediaDatabaseCard />);
+
+    await waitFor(() => {
+      expect(CoreAPI.systems).toHaveBeenCalledWith({ all: true });
+    });
   });
 
   it("should render update button when not indexing", () => {

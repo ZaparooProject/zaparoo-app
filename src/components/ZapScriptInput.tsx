@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 import { useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Browser } from "@capacitor/browser";
 import { EraserIcon, HelpCircleIcon, PlusIcon } from "lucide-react";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -27,11 +26,6 @@ export function ZapScriptInput(props: {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [cursorPosition, setCursorPosition] = useState<number>(0);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-
-  const systems = useQuery({
-    queryKey: ["systems"],
-    queryFn: () => CoreAPI.systems(),
-  });
 
   const { t } = useTranslation();
 
@@ -159,10 +153,7 @@ export function ZapScriptInput(props: {
                   label={t("create.custom.selectSystem")}
                   variant="outline"
                   disabled={!connected}
-                  onClick={() => {
-                    setSystemsOpen(true);
-                    systems.refetch();
-                  }}
+                  onClick={() => setSystemsOpen(true)}
                   className="w-full"
                   icon={<PlusIcon size={20} />}
                 />

@@ -94,8 +94,9 @@ export function Search() {
     system: string,
     tags: string[],
   ) => searchQuery.trim().length > 0 || system !== "all" || tags.length > 0;
-  const baseSearchReady =
-    connected && gamesIndex.exists && !gamesIndex.indexing;
+  // Current Core keeps exists true once committed systems are readable during
+  // indexing; older versions report false, preserving compatibility here.
+  const baseSearchReady = connected && gamesIndex.exists;
   const canSearch =
     baseSearchReady &&
     (browseAllSearchAvailable ||
@@ -353,7 +354,7 @@ export function Search() {
             setValue={(v) => setQuery(v)}
             type="search"
             clearable={true}
-            disabled={!connected || !gamesIndex.exists || gamesIndex.indexing}
+            disabled={!connected || !gamesIndex.exists}
             onKeyUp={(e) => {
               if (e.key === "Enter") {
                 e.currentTarget.blur();
@@ -375,10 +376,7 @@ export function Search() {
                 placeholder={t("create.search.allSystems")}
                 mode="single"
                 onClick={() => setSystemSelectorOpen(true)}
-                className={classNames({
-                  "opacity-50":
-                    !connected || !gamesIndex.exists || gamesIndex.indexing,
-                })}
+                disabled={!connected || !gamesIndex.exists}
               />
             </div>
 
@@ -391,10 +389,7 @@ export function Search() {
                   selectedTags={queryTags}
                   placeholder={t("create.search.allTags")}
                   onClick={() => setTagSelectorOpen(true)}
-                  className={classNames({
-                    "opacity-50":
-                      !connected || !gamesIndex.exists || gamesIndex.indexing,
-                  })}
+                  disabled={!connected || !gamesIndex.exists}
                 />
               </div>
             )}

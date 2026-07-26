@@ -177,13 +177,13 @@ describe("Create Search Route Loader", () => {
     const result = await Route.options?.loader?.({} as any);
 
     expect(result).toEqual({
-      systemQuery: "snes",
+      systemQuery: "all",
       tagQuery: [],
       systems: null,
     });
   });
 
-  it("should preserve exact preference value", async () => {
+  it("should discard a saved system missing from current device", async () => {
     const mockSystemsResponse = { systems: [] };
 
     // Test with a custom system ID
@@ -195,7 +195,7 @@ describe("Create Search Route Loader", () => {
     const result = await Route.options?.loader?.({} as any);
 
     expect(result).toEqual({
-      systemQuery: "custom-system-123",
+      systemQuery: "all",
       tagQuery: ["action", "rpg"],
       systems: mockSystemsResponse,
     });
@@ -224,7 +224,7 @@ describe("Create Search Route Loader", () => {
 
     // Verify result is correct (proves parallel execution worked)
     expect(result).toEqual({
-      systemQuery: "snes",
+      systemQuery: "all",
       tagQuery: [],
       systems: { systems: [] },
     });
