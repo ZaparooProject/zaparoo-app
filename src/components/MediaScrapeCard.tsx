@@ -28,6 +28,9 @@ export function MediaScrapeCard() {
   const { t } = useTranslation();
   const featureAvailable = useStrictMediaScrapersFeature();
   const connected = useStatusStore((state) => state.connected);
+  const targetDeviceAddress = useStatusStore(
+    (state) => state.targetDeviceAddress,
+  );
   const connectionState = useStatusStore((state) => state.connectionState);
   const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
   const setScrapingStatus = useStatusStore((state) => state.setScrapingStatus);
@@ -90,7 +93,7 @@ export function MediaScrapeCard() {
   }, [scrapeStatusData, setScrapingStatus]);
 
   const { data: systemsData } = useQuery({
-    queryKey: ["systems"],
+    queryKey: ["systems", targetDeviceAddress, { all: false }],
     queryFn: () => CoreAPI.systems(),
     enabled: connected && featureAvailable,
   });

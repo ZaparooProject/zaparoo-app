@@ -59,7 +59,9 @@ export function VirtualSearchResults({
     query,
     systems,
     tags,
-    enabled: hasSearched && gamesIndex.exists && !gamesIndex.indexing,
+    // Core keeps exists true once committed systems are searchable during an
+    // index; older versions report false until indexing finishes.
+    enabled: hasSearched && gamesIndex.exists,
   });
 
   // Call onSearchComplete when loading finishes

@@ -31,6 +31,7 @@ import {
   SearchResultsResponse,
   ScreenshotResponse,
   SettingsResponse,
+  SystemsParams,
   SystemsResponse,
   TokensResponse,
   UpdateMappingRequest,
@@ -1225,14 +1226,20 @@ class CoreApi {
     });
   }
 
-  systems(): Promise<SystemsResponse> {
+  systems(params?: SystemsParams): Promise<SystemsResponse> {
     return new Promise<SystemsResponse>((resolve, reject) => {
-      this.call(Method.Systems)
+      this.call(Method.Systems, params)
         .then((result) => {
           try {
             const response = result as SystemsResponse;
-            logger.debug(response);
-            resolve(response);
+            // Virtual launchables execute ZapScript directly and never own media
+            // rows, so they are not valid choices in app game-system filters.
+            const gameSystems = response.systems.filter(
+              (system) => !system.zapScript,
+            );
+            const filteredResponse = { ...response, systems: gameSystems };
+            logger.debug(filteredResponse);
+            resolve(filteredResponse);
           } catch (e) {
             logger.error("Error processing systems response:", e);
             reject(

@@ -6,8 +6,8 @@ import { Search, Check, X } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
-import { compareStrings } from "@/lib/utils";
 import { useStatusStore } from "@/lib/store";
+import { compareStrings } from "@/lib/utils";
 import { useSmartTabs } from "@/hooks/useSmartTabs";
 import { EmptyState } from "@/components/wui/EmptyState";
 import {
@@ -36,6 +36,8 @@ interface SystemSelectorProps {
   includeAllOption?: boolean;
   defaultSelection?: string; // When selectedSystems is empty, what should be shown as selected (e.g., "all" or undefined for nothing)
   allowedSystemIds?: string[];
+  // Include unavailable launcher-backed systems for first-time partial indexes.
+  allSystems?: boolean;
 }
 
 interface GroupedSystems {
@@ -54,6 +56,7 @@ export function SystemSelector({
   includeAllOption = false,
   defaultSelection,
   allowedSystemIds,
+  allSystems = false,
 }: SystemSelectorProps) {
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
@@ -65,6 +68,9 @@ export function SystemSelector({
   const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
   const [showLeftGradient, setShowLeftGradient] = useState(false);
   const [showRightGradient, setShowRightGradient] = useState(true);
+  const targetDeviceAddress = useStatusStore(
+    (state) => state.targetDeviceAddress,
+  );
 
   // Smart tabs hook for overflow detection and drag scrolling
   const { hasOverflow, tabsProps } = useSmartTabs<HTMLDivElement>({
@@ -80,13 +86,12 @@ export function SystemSelector({
     },
   });
 
-  // Get indexing state to disable selector when indexing is in progress
-  const gamesIndex = useStatusStore((state) => state.gamesIndex);
-
   // Fetch systems data
   const { data: systemsData, isLoading } = useQuery({
-    queryKey: ["systems"],
-    queryFn: () => CoreAPI.systems(),
+    queryKey: ["systems", targetDeviceAddress, { all: allSystems }],
+    queryFn: () => CoreAPI.systems(allSystems ? { all: true } : undefined),
+    enabled: isOpen,
+    staleTime: 0,
   });
 
   // Process and filter systems
@@ -158,9 +163,6 @@ export function SystemSelector({
   // Handle system selection
   const handleSystemSelect = useCallback(
     (systemId: string) => {
-      // Don't allow selection while indexing
-      if (gamesIndex.indexing) return;
-
       if (mode === "single" || mode === "insert") {
         if (systemId === "all") {
           onSelect([]);
@@ -195,24 +197,13 @@ export function SystemSelector({
         }
       }
     },
-    [
-      mode,
-      selectedSystems,
-      onSelect,
-      onClose,
-      gamesIndex.indexing,
-      announce,
-      t,
-      systemsData,
-    ],
+    [mode, selectedSystems, onSelect, onClose, announce, t, systemsData],
   );
 
   // Handle clear all
   const handleClearAll = useCallback(() => {
-    // Don't allow clearing while indexing
-    if (gamesIndex.indexing) return;
     onSelect([]);
-  }, [onSelect, gamesIndex.indexing]);
+  }, [onSelect]);
 
   // Handle apply (for multi-select)
   const handleApply = useCallback(() => {
@@ -250,13 +241,7 @@ export function SystemSelector({
           {selectedSystems.length > 0 && (
             <button
               onClick={handleClearAll}
-              className={classNames("text-sm underline", {
-                "text-muted-foreground hover:text-foreground":
-                  !gamesIndex.indexing,
-                "text-muted-foreground/50 cursor-not-allowed":
-                  gamesIndex.indexing,
-              })}
-              disabled={gamesIndex.indexing}
+              className="text-muted-foreground hover:text-foreground text-sm underline"
               type="button"
             >
               {t("systemSelector.clearAll")}
@@ -266,10 +251,7 @@ export function SystemSelector({
             label={t("systemSelector.apply")}
             onClick={handleApply}
             className="flex-1"
-            disabled={
-              gamesIndex.indexing ||
-              (selectedSystems.length === 0 && !includeAllOption)
-            }
+            disabled={selectedSystems.length === 0 && !includeAllOption}
           />
         </div>
       </div>
@@ -395,19 +377,15 @@ export function SystemSelector({
                       <button
                         className={classNames(
                           "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                          "rounded-lg focus:outline-none",
+                          "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                          "hover:bg-white/10 focus:bg-white/10",
                           {
                             "bg-white/10":
                               defaultSelection === "all" &&
                               selectedSystems.length === 0,
-                            "hover:bg-white/10 focus:bg-white/10":
-                              !gamesIndex.indexing,
-                            "cursor-not-allowed opacity-50":
-                              gamesIndex.indexing,
                           },
                         )}
                         onClick={() => handleSystemSelect("all")}
-                        disabled={gamesIndex.indexing}
                         type="button"
                         role="radio"
                         aria-checked={
@@ -477,17 +455,13 @@ export function SystemSelector({
                           <button
                             className={classNames(
                               "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                              "rounded-lg focus:outline-none",
+                              "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                              "hover:bg-white/10 focus:bg-white/10",
                               {
                                 "bg-white/10": isSelected,
-                                "hover:bg-white/10 focus:bg-white/10":
-                                  !gamesIndex.indexing,
-                                "cursor-not-allowed opacity-50":
-                                  gamesIndex.indexing,
                               },
                             )}
                             onClick={() => handleSystemSelect(system.id)}
-                            disabled={gamesIndex.indexing}
                             type="button"
                             role={mode === "multi" ? "checkbox" : "radio"}
                             aria-checked={isSelected}
@@ -574,9 +548,6 @@ export function SystemSelectorTrigger({
 }) {
   const { t } = useTranslation();
 
-  // Get indexing state to disable trigger when indexing is in progress
-  const gamesIndex = useStatusStore((state) => state.gamesIndex);
-
   const displayText = useMemo(() => {
     if (!systemsData?.systems) return placeholder;
 
@@ -612,10 +583,9 @@ export function SystemSelectorTrigger({
     });
   }, [selectedSystems, systemsData, placeholder, mode, t]);
 
-  const isDisabled = disabled || gamesIndex.indexing;
+  const isDisabled = disabled;
 
   const handleClick = () => {
-    // Don't open selector while indexing or disabled
     if (isDisabled) return;
     onClick();
   };

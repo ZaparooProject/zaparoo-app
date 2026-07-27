@@ -31,6 +31,9 @@ export function MediaDatabaseCard({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const connected = useStatusStore((state) => state.connected);
+  const targetDeviceAddress = useStatusStore(
+    (state) => state.targetDeviceAddress,
+  );
   const connectionState = useStatusStore((state) => state.connectionState);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
@@ -93,10 +96,11 @@ export function MediaDatabaseCard({
     retry: false,
   });
 
-  // Fetch systems data for selector
+  // Include unavailable launcher-backed systems so users can run their first
+  // partial index for a system. CoreAPI removes virtual ZapScript launchables.
   const { data: systemsData } = useQuery({
-    queryKey: ["systems"],
-    queryFn: () => CoreAPI.systems(),
+    queryKey: ["systems", targetDeviceAddress, { all: true }],
+    queryFn: () => CoreAPI.systems({ all: true }),
     enabled: connected,
   });
 
@@ -575,6 +579,7 @@ export function MediaDatabaseCard({
         mode="multi"
         title={t("settings.updateDb.selectSystemsTitle")}
         includeAllOption={true}
+        allSystems={true}
       />
     </>
   );
