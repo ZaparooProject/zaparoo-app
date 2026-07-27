@@ -8,7 +8,7 @@
  * - Single-select mode (closes on selection)
  * - Multi-select mode (stays open, shows count)
  * - "All Systems" option when includeAllOption is true
- * - Disabling selection during indexing
+ * - Selection remains available during indexing
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
@@ -103,6 +103,7 @@ describe("SystemSelector", () => {
     // Reset store
     useStatusStore.setState({
       ...useStatusStore.getState(),
+      targetDeviceAddress: "test-device",
       gamesIndex: {
         exists: true,
         indexing: false,
@@ -118,6 +119,20 @@ describe("SystemSelector", () => {
   });
 
   describe("page rendering", () => {
+    it("should scope full system queries to the selected device", () => {
+      useStatusStore.setState({ targetDeviceAddress: "10.0.0.5:7497" });
+
+      render(<SystemSelector {...defaultProps} allSystems={true} />);
+
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ["systems", "10.0.0.5:7497", { all: true }],
+          enabled: true,
+          staleTime: 0,
+        }),
+      );
+    });
+
     it("should render modal with title", () => {
       // Act
       render(<SystemSelector {...defaultProps} />);
@@ -657,29 +672,9 @@ describe("SystemSelector", () => {
   });
 
   describe("indexing state", () => {
-    it("should disable selection during indexing", async () => {
-      // Arrange
-      useStatusStore.setState({
-        ...useStatusStore.getState(),
-        gamesIndex: {
-          exists: true,
-          indexing: true,
-          totalSteps: 100,
-          currentStep: 50,
-        },
-      });
-
-      render(<SystemSelector {...defaultProps} mode="single" />);
-
-      // Assert - buttons should be disabled
-      const systemButton = screen.getByRole("radio", {
-        name: "Nintendo Entertainment System",
-      });
-      expect(systemButton).toBeDisabled();
-    });
-
-    it("should not call onSelect when clicking during indexing", async () => {
-      // Arrange
+    it("should allow selection during indexing", async () => {
+      // Arrange - indexing runs, but committed systems are already served,
+      // so selection stays enabled.
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const onSelect = vi.fn();
 
@@ -697,17 +692,18 @@ describe("SystemSelector", () => {
         <SystemSelector {...defaultProps} mode="single" onSelect={onSelect} />,
       );
 
-      // Act - try to click (button is disabled, so this shouldn't fire)
+      // Act
       const button = screen.getByRole("radio", {
         name: "Nintendo Entertainment System",
       });
+      expect(button).toBeEnabled();
       await user.click(button);
 
       // Assert
-      expect(onSelect).not.toHaveBeenCalled();
+      expect(onSelect).toHaveBeenCalledWith(["nes"]);
     });
 
-    it("should disable clear all button during indexing", () => {
+    it("should keep clear all enabled during indexing", () => {
       // Arrange
       useStatusStore.setState({
         ...useStatusStore.getState(),
@@ -730,7 +726,7 @@ describe("SystemSelector", () => {
       // Assert
       expect(
         screen.getByRole("button", { name: "systemSelector.clearAll" }),
-      ).toBeDisabled();
+      ).toBeEnabled();
     });
   });
 
@@ -912,7 +908,7 @@ describe("SystemSelectorTrigger", () => {
   });
 
   describe("indexing state", () => {
-    it("should be disabled during indexing", () => {
+    it("should stay enabled during indexing", () => {
       // Arrange
       useStatusStore.setState({
         ...useStatusStore.getState(),
@@ -933,11 +929,12 @@ describe("SystemSelectorTrigger", () => {
         />,
       );
 
-      // Assert
-      expect(screen.getByRole("button")).toBeDisabled();
+      // Assert - indexing no longer disables the trigger; committed systems
+      // are already served.
+      expect(screen.getByRole("button")).toBeEnabled();
     });
 
-    it("should not call onClick when indexing", async () => {
+    it("should call onClick when indexing", async () => {
       // Arrange
       const user = userEvent.setup();
       const onClick = vi.fn();
@@ -964,7 +961,7 @@ describe("SystemSelectorTrigger", () => {
       await user.click(screen.getByRole("button"));
 
       // Assert
-      expect(onClick).not.toHaveBeenCalled();
+      expect(onClick).toHaveBeenCalled();
     });
   });
 });

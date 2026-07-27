@@ -44,6 +44,10 @@ vi.mock("@capacitor/device", () => ({
   },
 }));
 
+vi.mock("../../../lib/capacitorBridge", () => ({
+  isPluginAvailable: vi.fn(() => true),
+}));
+
 // Mock import.meta.env for production mode with token
 vi.stubEnv("PROD", true);
 vi.stubEnv("VITE_ROLLBAR_ACCESS_TOKEN", "test-token");
@@ -74,6 +78,18 @@ describe("Logger Rate Limiting", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("should skip device info lookup when Device plugin is unavailable", async () => {
+    const { Device } = await import("@capacitor/device");
+    const { isPluginAvailable } = await import("../../../lib/capacitorBridge");
+    const { initDeviceInfo } = await import("../../../lib/logger");
+
+    vi.mocked(isPluginAvailable).mockReturnValueOnce(false);
+
+    await initDeviceInfo();
+
+    expect(Device.getInfo).not.toHaveBeenCalled();
   });
 
   it("should report the first error", () => {

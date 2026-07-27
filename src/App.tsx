@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import toast, { Toaster, useToasterStore } from "react-hot-toast";
-import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
@@ -9,12 +8,18 @@ import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { InboxModal } from "@/components/InboxModal";
+import { StagedTokenModal } from "@/components/home/StagedTokenModal";
+import {
+  isNativePluginAvailable,
+  isPluginAvailable,
+} from "@/lib/capacitorBridge";
+import { useDeepLinks } from "@/lib/deepLinks";
+import { isExpectedRevenueCatLogoutError } from "@/lib/errors";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
 import { DatabaseIcon, PlayIcon } from "./lib/images";
 import { ConnectionProvider } from "./components/ConnectionProvider";
 import { ReconnectingIndicator } from "./components/ReconnectingIndicator";
-import AppUrlListener from "./lib/deepLinks.tsx";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { useDataCache } from "./hooks/useDataCache";
 import { SlideModalProvider } from "./components/SlideModalProvider";
@@ -29,6 +34,7 @@ import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
 import { usePassiveNfcListener } from "./hooks/usePassiveNfcListener";
 import { useLiveUpdate } from "./hooks/useLiveUpdate";
+import { WhatsNewInitializer } from "./components/WhatsNewInitializer";
 import { initDeviceInfo, logger } from "./lib/logger";
 import { getSubscriptionStatus } from "./lib/onlineApi";
 import { purchasesReady } from "./lib/purchasesSetup";
@@ -188,6 +194,8 @@ declare module "@tanstack/react-router" {
 }
 
 export default function App() {
+  useDeepLinks();
+
   // Wait for preferences to hydrate before rendering to prevent layout shifts
   const hasHydrated = usePreferencesStore((state) => state._hasHydrated);
   const proAccessHydrated = usePreferencesStore(
@@ -209,9 +217,13 @@ export default function App() {
     initDeviceInfo();
 
     // Show status bar and configure style
-    if (Capacitor.isNativePlatform()) {
-      StatusBar.show();
-      StatusBar.setStyle({ style: Style.Dark });
+    if (isNativePluginAvailable("StatusBar")) {
+      Promise.all([
+        StatusBar.show(),
+        StatusBar.setStyle({ style: Style.Dark }),
+      ]).catch((e) => {
+        logger.warn("StatusBar setup failed:", e);
+      });
     }
   }, []);
 
@@ -234,6 +246,10 @@ export default function App() {
   useEffect(() => {
     let cleanup: (() => void) | undefined;
 
+    if (!isPluginAvailable("FirebaseAuthentication")) {
+      return undefined;
+    }
+
     FirebaseAuthentication.addListener("authStateChange", async (change) => {
       // Refresh user data and token to get latest claims (e.g., email_verified)
       // This must happen before any API calls that depend on token claims
@@ -249,8 +265,8 @@ export default function App() {
 
       setLoggedInUser(change.user);
 
-      // Sync RevenueCat identity with Firebase user (skip on web)
-      if (Capacitor.getPlatform() !== "web") {
+      // Sync RevenueCat identity with Firebase user (skip on web or missing bridge)
+      if (isNativePluginAvailable("Purchases")) {
         await purchasesReady;
         try {
           if (change.user) {
@@ -288,9 +304,15 @@ export default function App() {
             }
           } else {
             // Revert to anonymous RevenueCat customer — only if not already anonymous
-            const { isAnonymous } = await Purchases.isAnonymous();
-            if (!isAnonymous) {
-              await Purchases.logOut();
+            try {
+              const { isAnonymous } = await Purchases.isAnonymous();
+              if (!isAnonymous) {
+                await Purchases.logOut();
+              }
+            } catch (e) {
+              if (!isExpectedRevenueCatLogoutError(e)) {
+                throw e;
+              }
             }
             const { customerInfo } = await Purchases.getCustomerInfo();
             const hasAccess =
@@ -305,9 +327,13 @@ export default function App() {
           });
         }
       }
-    }).then((handle) => {
-      cleanup = () => handle.remove();
-    });
+    })
+      .then((handle) => {
+        cleanup = () => handle.remove();
+      })
+      .catch((e) => {
+        logger.warn("Firebase auth listener setup failed:", e);
+      });
 
     return () => {
       cleanup?.();
@@ -327,7 +353,6 @@ export default function App() {
 
   return (
     <>
-      <AppUrlListener />
       <QueueProcessors />
       <Toaster
         position="top-center"
@@ -368,6 +393,8 @@ export default function App() {
             </div>
             <RequirementsModal />
             <InboxModal />
+            <StagedTokenModal />
+            <WhatsNewInitializer />
           </ConnectionProvider>
         </SlideModalProvider>
       </A11yAnnouncerProvider>

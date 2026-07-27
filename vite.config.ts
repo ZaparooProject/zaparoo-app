@@ -37,13 +37,19 @@ export default defineConfig(({ command, mode }) => {
     react(),
     legacy({
       targets: [
-        "chrome >= 49",
+        "chrome >= 60",
         "safari >= 11",
         "firefox >= 52",
         "ios >= 11",
-        "android >= 49",
+        "android >= 60",
       ],
-      additionalLegacyPolyfills: ["regenerator-runtime/runtime"],
+      additionalLegacyPolyfills: [
+        "regenerator-runtime/runtime",
+        "abortcontroller-polyfill/dist/polyfill-patch-fetch",
+      ],
+      additionalModernPolyfills: [
+        "abortcontroller-polyfill/dist/polyfill-patch-fetch",
+      ],
       modernPolyfills: true,
     }),
   ];

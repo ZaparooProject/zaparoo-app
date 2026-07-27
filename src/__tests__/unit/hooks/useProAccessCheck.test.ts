@@ -12,8 +12,16 @@ import { renderHook, waitFor } from "../../../test-utils";
 import { useProAccessCheck } from "../../../hooks/useProAccessCheck";
 
 // Create hoisted mocks
-const { mockGetPlatform, mockGetCustomerInfo, mockLogger } = vi.hoisted(() => ({
+const {
+  mockGetPlatform,
+  mockIsNativePlatform,
+  mockIsPluginAvailable,
+  mockGetCustomerInfo,
+  mockLogger,
+} = vi.hoisted(() => ({
   mockGetPlatform: vi.fn().mockReturnValue("ios"),
+  mockIsNativePlatform: vi.fn().mockReturnValue(true),
+  mockIsPluginAvailable: vi.fn().mockReturnValue(true),
   mockGetCustomerInfo: vi.fn(),
   mockLogger: {
     log: vi.fn(),
@@ -25,7 +33,14 @@ const { mockGetPlatform, mockGetCustomerInfo, mockLogger } = vi.hoisted(() => ({
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     getPlatform: mockGetPlatform,
+    isNativePlatform: mockIsNativePlatform,
+    isPluginAvailable: mockIsPluginAvailable,
   },
+}));
+
+vi.mock("@/lib/capacitorBridge", () => ({
+  isNativePluginAvailable: (pluginName: string) =>
+    mockIsNativePlatform() && mockIsPluginAvailable(pluginName),
 }));
 
 // Mock RevenueCat
@@ -65,6 +80,8 @@ describe("useProAccessCheck", () => {
 
     // Default to iOS platform
     mockGetPlatform.mockReturnValue("ios");
+    mockIsNativePlatform.mockReturnValue(true);
+    mockIsPluginAvailable.mockReturnValue(true);
 
     // Default to successful response with no entitlement
     mockGetCustomerInfo.mockResolvedValue({
@@ -170,6 +187,21 @@ describe("useProAccessCheck", () => {
   });
 
   describe("error handling", () => {
+    it("should mark as hydrated when Purchases plugin is unavailable", async () => {
+      mockGetPlatform.mockReturnValue("ios");
+      mockIsPluginAvailable.mockReturnValue(false);
+
+      renderHook(() => useProAccessCheck());
+
+      await waitFor(() => {
+        expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
+      });
+
+      expect(mockGetCustomerInfo).not.toHaveBeenCalled();
+      expect(mockSetLauncherAccess).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
     it("should mark as hydrated on RevenueCat error", async () => {
       mockGetPlatform.mockReturnValue("ios");
       mockGetCustomerInfo.mockRejectedValue(new Error("Network error"));
@@ -289,7 +321,11 @@ describe("useProAccessCheck", () => {
         purchasesReady: deferredReady,
       }));
       vi.doMock("@capacitor/core", () => ({
-        Capacitor: { getPlatform: vi.fn().mockReturnValue("ios") },
+        Capacitor: {
+          getPlatform: vi.fn().mockReturnValue("ios"),
+          isNativePlatform: vi.fn().mockReturnValue(true),
+          isPluginAvailable: vi.fn().mockReturnValue(true),
+        },
       }));
       vi.doMock("@revenuecat/purchases-capacitor", () => ({
         Purchases: { getCustomerInfo: mockGetCustomerInfoDeferred },

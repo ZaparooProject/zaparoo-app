@@ -11,6 +11,12 @@ vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
     systems: vi.fn(),
   },
+  isRequestCancelledError: (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    return /request cancelled|request canceled|connection reset|aborted/i.test(
+      message,
+    );
+  },
 }));
 
 describe("Create Search Route Loader", () => {
@@ -124,6 +130,23 @@ describe("Create Search Route Loader", () => {
     expect(mockCoreApiSystems).toHaveBeenCalled();
   });
 
+  it("should use empty systems when CoreAPI systems request is cancelled", async () => {
+    mockPreferencesGet
+      .mockResolvedValueOnce({ value: "snes" })
+      .mockResolvedValueOnce({ value: "[]" });
+    mockCoreApiSystems.mockRejectedValue(
+      new Error("Request cancelled: connection reset"),
+    );
+
+    const result = await Route.options?.loader?.({} as any);
+
+    expect(result).toEqual({
+      systemQuery: "snes",
+      tagQuery: [],
+      systems: { systems: [] },
+    });
+  });
+
   it("should handle CoreAPI systems failure", async () => {
     mockPreferencesGet
       .mockResolvedValueOnce({ value: "snes" }) // searchSystem
@@ -154,13 +177,13 @@ describe("Create Search Route Loader", () => {
     const result = await Route.options?.loader?.({} as any);
 
     expect(result).toEqual({
-      systemQuery: "snes",
+      systemQuery: "all",
       tagQuery: [],
       systems: null,
     });
   });
 
-  it("should preserve exact preference value", async () => {
+  it("should discard a saved system missing from current device", async () => {
     const mockSystemsResponse = { systems: [] };
 
     // Test with a custom system ID
@@ -172,7 +195,7 @@ describe("Create Search Route Loader", () => {
     const result = await Route.options?.loader?.({} as any);
 
     expect(result).toEqual({
-      systemQuery: "custom-system-123",
+      systemQuery: "all",
       tagQuery: ["action", "rpg"],
       systems: mockSystemsResponse,
     });
@@ -201,7 +224,7 @@ describe("Create Search Route Loader", () => {
 
     // Verify result is correct (proves parallel execution worked)
     expect(result).toEqual({
-      systemQuery: "snes",
+      systemQuery: "all",
       tagQuery: [],
       systems: { systems: [] },
     });

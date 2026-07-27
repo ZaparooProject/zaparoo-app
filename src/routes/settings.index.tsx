@@ -15,14 +15,13 @@ import { PageFrame } from "@/components/PageFrame";
 import { useStatusStore } from "@/lib/store";
 import { Button } from "@/components/wui/Button";
 import { ExternalIcon, NextIcon } from "@/lib/images";
-import { getDeviceAddress } from "@/lib/coreApi.ts";
+import { getDeviceAddress } from "@/lib/coreApi";
 import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
 import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
 import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
 import { GatedFeature } from "@/components/GatedFeature";
 import { InboxButton } from "@/components/InboxButton";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export const Route = createFileRoute("/settings/")({
   component: Settings,
@@ -43,7 +42,6 @@ function Settings() {
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
-  const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
   const setDeviceHistory = useStatusStore((state) => state.setDeviceHistory);
   const showMediaScraper =
     coreVersion !== null &&
@@ -51,6 +49,7 @@ function Settings() {
     isCoreFeatureAvailable("mediaScrapers", coreVersion);
 
   const [address, setAddress] = useState(getDeviceAddress());
+  const [addressError, setAddressError] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
 
   const { selectDevice, selectScanDevice } = useSelectDevice();
@@ -63,14 +62,31 @@ function Settings() {
     });
   }, [setDeviceHistory]);
 
-  const handleDeviceAddressChange = (newAddress: string) => {
-    selectDevice(newAddress);
+  const handleAddressInputChange = (newAddress: string) => {
     setAddress(newAddress);
+    if (addressError) setAddressError("");
+  };
+
+  const handleDeviceAddressChange = (newAddress: string) => {
+    const result = selectDevice(newAddress);
+    if (!result.ok) {
+      setAddressError(t(result.errorKey));
+      return;
+    }
+
+    setAddress(result.address);
+    setAddressError("");
   };
 
   const handleScanDeviceSelect = (device: ScanDeviceSelection) => {
-    selectScanDevice(device);
-    setAddress(device.address);
+    const result = selectScanDevice(device);
+    if (!result.ok) {
+      setAddressError(t(result.errorKey));
+      return;
+    }
+
+    setAddress(result.address);
+    setAddressError("");
   };
 
   return (
@@ -91,9 +107,10 @@ function Settings() {
           <div data-tour="device-address">
             <DeviceConnectionCard
               address={address}
-              setAddress={setAddress}
+              setAddress={handleAddressInputChange}
               onAddressChange={handleDeviceAddressChange}
               connectionError={connectionError}
+              addressError={addressError}
               onScanClick={() => setScanOpen(true)}
             />
           </div>
@@ -108,17 +125,6 @@ function Settings() {
           />
 
           <MediaDatabaseCard />
-
-          <div>
-            <Button
-              label={t("settings.designer")}
-              className="w-full"
-              icon={<ExternalIcon size="20" />}
-              onClick={() =>
-                Browser.open({ url: "https://design.zaparoo.org" })
-              }
-            />
-          </div>
 
           {!Capacitor.isNativePlatform() && (
             <div>
@@ -206,6 +212,28 @@ function Settings() {
               {t("settings.moreSettings")}
             </h2>
 
+            {showMediaScraper && (
+              <Link
+                to="/settings/media"
+                className="flex min-h-[48px] flex-row items-center justify-between"
+              >
+                <span>{t("settings.media.title")}</span>
+                <span aria-hidden="true">
+                  <NextIcon size="20" />
+                </span>
+              </Link>
+            )}
+
+            <Link
+              to="/settings/play-controls"
+              className="flex min-h-[48px] flex-row items-center justify-between"
+            >
+              <p>{t("settings.playControls.title")}</p>
+              <span aria-hidden="true">
+                <NextIcon size="20" />
+              </span>
+            </Link>
+
             <Link
               to="/settings/readers"
               className="flex min-h-[48px] flex-row items-center justify-between"
@@ -215,36 +243,6 @@ function Settings() {
                 <NextIcon size="20" />
               </span>
             </Link>
-
-            <Link
-              to="/settings/playtime"
-              className="flex min-h-[48px] flex-row items-center justify-between"
-            >
-              <p>{t("settings.playtime.title")}</p>
-              <span aria-hidden="true">
-                <NextIcon size="20" />
-              </span>
-            </Link>
-
-            {showMediaScraper && (
-              <Link
-                to="/settings/scraper"
-                className="flex min-h-[48px] flex-row items-center justify-between"
-              >
-                <span className="flex items-center gap-2">
-                  <span>{t("settings.scraper.title")}</span>
-                  {scrapingStatus?.scraping === true ? (
-                    <LoadingSpinner
-                      size={16}
-                      className="text-muted-foreground"
-                    />
-                  ) : null}
-                </span>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Link>
-            )}
 
             {Capacitor.isNativePlatform() && (
               <Link

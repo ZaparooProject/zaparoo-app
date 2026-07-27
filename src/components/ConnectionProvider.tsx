@@ -49,12 +49,21 @@ import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import {
   CoreAPI,
   getDeviceAddress,
-  getWsUrl,
   isCancelled,
+  isExpectedMediaDatabaseError,
+  validateDeviceAddress,
   type NotificationRequest,
 } from "@/lib/coreApi";
-import { useStatusStore, ConnectionState } from "@/lib/store";
+import {
+  DEFAULT_GAMES_INDEX,
+  useStatusStore,
+  ConnectionState,
+} from "@/lib/store";
 import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
+import {
+  isNativePluginAvailable,
+  isPluginAvailable,
+} from "@/lib/capacitorBridge";
 import { formatDurationDisplay, formatDurationAccessible } from "@/lib/utils";
 import {
   ConnectionContext,
@@ -98,6 +107,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setGamesIndex,
     setScrapingStatus,
     setLastToken,
+    setActiveTokens,
+    clearActiveTokens,
+    setStagedToken,
+    clearStagedToken,
     addDeviceHistory,
     setDeviceHistory,
     updateDeviceHistoryMeta,
@@ -119,6 +132,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setGamesIndex: state.setGamesIndex,
       setScrapingStatus: state.setScrapingStatus,
       setLastToken: state.setLastToken,
+      setActiveTokens: state.setActiveTokens,
+      clearActiveTokens: state.clearActiveTokens,
+      setStagedToken: state.setStagedToken,
+      clearStagedToken: state.clearStagedToken,
       addDeviceHistory: state.addDeviceHistory,
       setDeviceHistory: state.setDeviceHistory,
       updateDeviceHistoryMeta: state.updateDeviceHistoryMeta,
@@ -189,6 +206,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             const params = notification.params as PlayingResponse;
             logger.log("media.started", params);
             setPlaying(params);
+            clearStagedToken();
             break;
           }
 
@@ -200,6 +218,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               mediaPath: "",
               mediaName: "",
             });
+            clearStagedToken();
             break;
           }
 
@@ -210,15 +229,30 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             const currentState = useStatusStore.getState().gamesIndex;
             setGamesIndex(params);
 
-            // Invalidate media query on significant state changes
-            if (
+            const mediaStateChanged =
               currentState.indexing !== params.indexing ||
               currentState.optimizing !== params.optimizing ||
               currentState.exists !== params.exists ||
-              currentState.totalMedia !== params.totalMedia
-            ) {
+              currentState.totalMedia !== params.totalMedia;
+            if (mediaStateChanged) {
               logger.log("Database state changed, invalidating media query");
               queryClient.invalidateQueries({ queryKey: ["media"] });
+            }
+
+            // Latest Core increments systemsCompleted after each durable system
+            // commit. Older Core omits it but flips indexing/exists at completion.
+            const libraryContentChanged =
+              currentState.indexing !== params.indexing ||
+              currentState.exists !== params.exists ||
+              currentState.totalMedia !== params.totalMedia ||
+              currentState.systemsCompleted !== params.systemsCompleted;
+            if (libraryContentChanged) {
+              logger.log("Media library changed, invalidating cached lists");
+              queryClient.invalidateQueries({ queryKey: ["systems"] });
+              queryClient.invalidateQueries({ queryKey: ["tags"] });
+              queryClient.invalidateQueries({
+                queryKey: ["infiniteMediaSearch"],
+              });
             }
             break;
           }
@@ -241,6 +275,41 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             const params = notification.params as TokenResponse;
             logger.log("activeToken", params);
             setLastToken(params);
+            setActiveTokens([params]);
+            clearStagedToken();
+            break;
+          }
+
+          case Notification.TokensRemoved: {
+            logger.log("tokens.removed");
+            clearActiveTokens();
+            break;
+          }
+
+          case Notification.TokensStaged: {
+            const params = notification.params as TokenResponse;
+            logger.log("tokens.staged", params);
+            setStagedToken({ token: params, ready: false });
+            announce(t("tokenStaging.stagedAnnounce"), "assertive");
+            break;
+          }
+
+          case Notification.TokensStagedReady: {
+            const params = notification.params as TokenResponse;
+            logger.log("tokens.staged.ready", params);
+            setStagedToken({ token: params, ready: true });
+            announce(t("tokenStaging.readyAnnounce"), "assertive");
+            break;
+          }
+
+          case Notification.ReadersConnected:
+          case Notification.ReadersDisconnected: {
+            logger.log(notification.method, notification.params);
+            queryClient.invalidateQueries({ queryKey: ["readers"] });
+            if (notification.method === Notification.ReadersDisconnected) {
+              clearActiveTokens();
+              clearStagedToken();
+            }
             break;
           }
 
@@ -372,6 +441,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             break;
           }
 
+          case Notification.TokensLaunching: {
+            logger.debug("running notification ignored", notification.params);
+            break;
+          }
+
           default:
             logger.warn("Unknown notification method:", notification.method);
         }
@@ -385,6 +459,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setGamesIndex,
       setScrapingStatus,
       setLastToken,
+      setActiveTokens,
+      clearActiveTokens,
+      setStagedToken,
+      clearStagedToken,
       queryClient,
       t,
       announce,
@@ -407,7 +485,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // late setDeviceHistory(stored) would wholesale overwrite the
     // freshly-merged metadata from updateDeviceHistoryMeta().
     setCoreVersionPending(true);
-    Preferences.get({ key: "deviceHistory" })
+    const deviceHistory = isPluginAvailable("Preferences")
+      ? Preferences.get({ key: "deviceHistory" })
+      : Promise.resolve({ value: null });
+
+    deviceHistory
       .then((v) => {
         try {
           if (v.value) {
@@ -497,11 +579,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           });
       });
 
-    // Fetch media information so the in-memory gamesIndex reflects whatever
-    // state Core is in right now (e.g. an indexing run that started while we
-    // were disconnected). Also drop any cached ["media"] query so the settings
-    // card refetches.
+    // Refetch device-scoped library data after every connection. This handles
+    // reconnects where Core's library changed while app was disconnected.
     queryClient.invalidateQueries({ queryKey: ["media"] });
+    queryClient.invalidateQueries({ queryKey: ["systems"] });
+    queryClient.invalidateQueries({ queryKey: ["tags"] });
+    queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] });
 
     const fetchMediaState = (retryDelayMs: number) => {
       const scheduledFor = currentConnectionId.current;
@@ -539,6 +622,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           }
         })
         .catch((e) => {
+          if (isExpectedMediaDatabaseError(e)) {
+            setGamesIndex(DEFAULT_GAMES_INDEX);
+            return;
+          }
+
           logger.error("Failed to get media information:", e);
           // Suppress the toast unless we're actually live-connected — the
           // connection-state UI already conveys reconnect/disconnect, and
@@ -567,6 +655,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           return;
         }
         try {
+          setActiveTokens(v.active ?? []);
           if (v.last) {
             setLastToken(v.last);
           }
@@ -594,6 +683,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setGamesIndex,
     setPlaying,
     setLastToken,
+    setActiveTokens,
     setCoreVersion,
     setCorePlatform,
     setCoreVersionPending,
@@ -653,22 +743,18 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       return;
     }
 
-    let wsUrl: string;
-    try {
-      wsUrl = getWsUrl();
-    } catch (e) {
-      logger.error("Failed to construct WebSocket URL:", e);
-      setConnectionState(ConnectionState.ERROR);
-      setConnectionError(
-        e instanceof Error ? e.message : "Invalid configuration",
+    const addressResult = validateDeviceAddress(targetDeviceAddress);
+    if (!addressResult.ok) {
+      logger.warn(
+        `[ConnectionProvider] Invalid device address: ${targetDeviceAddress}`,
       );
-      return;
-    }
-    if (!wsUrl) {
       setConnectionState(ConnectionState.ERROR);
-      setConnectionError("Invalid WebSocket URL");
+      setConnectionError(tRef.current(addressResult.errorKey));
       return;
     }
+
+    const wsUrl = addressResult.wsUrl;
+    const deviceAddress = addressResult.address;
 
     // Generate unique ID for this connection session to prevent stale events
     // Use crypto.randomUUID if available, fallback for older Android WebViews
@@ -682,7 +768,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     CoreAPI.reset();
 
     logger.log(
-      `[ConnectionProvider] Setting up connection to: ${targetDeviceAddress} (id: ${connectionId.slice(0, 8)})`,
+      `[ConnectionProvider] Setting up connection to: ${deviceAddress} (id: ${connectionId.slice(0, 8)})`,
     );
 
     // Setup connection manager event handlers
@@ -783,7 +869,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       onCredentialsRevoked: () => {
         // Server rejected our stored credentials — clear them and prompt
         // the user to pair again.
-        const deviceKey = normalizeDeviceKey(targetDeviceAddress);
+        const deviceKey = normalizeDeviceKey(deviceAddress);
         credentialStore.delete(deviceKey).catch((err) => {
           logger.error("Failed to delete revoked credentials", err, {
             category: "storage",
@@ -793,7 +879,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         const updated = useStatusStore
           .getState()
           .deviceHistory.map((entry) =>
-            entry.address === targetDeviceAddress
+            entry.address === deviceAddress
               ? { ...entry, paired: undefined }
               : entry,
           );
@@ -809,16 +895,16 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
     // Add device and set as active
     const transport = connectionManager.addDevice({
-      deviceId: targetDeviceAddress,
+      deviceId: deviceAddress,
       type: "websocket",
       address: wsUrl,
       encryption: {
         getCredentials: () =>
-          credentialStore.get(normalizeDeviceKey(targetDeviceAddress)),
+          credentialStore.get(normalizeDeviceKey(deviceAddress)),
       },
     });
 
-    connectionManager.setActiveDevice(targetDeviceAddress);
+    connectionManager.setActiveDevice(deviceAddress);
 
     // Create a compatibility wrapper for CoreAPI
     const transportWrapper = {
@@ -853,7 +939,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       }
       // Reset CoreAPI to clear any pending requests for this connection
       CoreAPI.reset();
-      connectionManager.removeDevice(targetDeviceAddress);
+      connectionManager.removeDevice(deviceAddress);
       setConnectionState(ConnectionState.DISCONNECTED);
     };
   }, [
@@ -876,6 +962,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       null;
 
     const setupListeners = async () => {
+      if (!isNativePluginAvailable("App")) return;
+
       resumeListener = await App.addListener("resume", () => {
         logger.log("[ConnectionProvider] App resumed");
         connectionManager.resumeAll();
@@ -887,7 +975,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       });
     };
 
-    setupListeners();
+    setupListeners().catch((e) => {
+      logger.warn("[ConnectionProvider] Failed to setup app listeners:", e);
+    });
 
     return () => {
       resumeListener?.remove();
@@ -917,7 +1007,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   // Network change detection (native platforms only)
   // Triggers immediate reconnect when network is restored (e.g., WiFi reconnects)
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
+    if (!Capacitor.isNativePlatform() || !isNativePluginAvailable("Network")) {
+      return;
+    }
 
     let networkListener: PluginListenerHandle | null = null;
 

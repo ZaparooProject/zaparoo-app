@@ -1,7 +1,9 @@
-import { render, screen, fireEvent } from "../../../test-utils";
+import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent, waitFor } from "@/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MediaDatabaseCard } from "../../../components/MediaDatabaseCard";
 import { CoreAPI } from "../../../lib/coreApi";
+import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 
 // Mock dependencies
 vi.mock("../../../lib/coreApi", () => ({
@@ -9,7 +11,20 @@ vi.mock("../../../lib/coreApi", () => ({
     mediaGenerate: vi.fn(),
     mediaGenerateCancel: vi.fn(),
     mediaGenerateResume: vi.fn(),
+    mediaCleanOrphans: vi.fn(),
     media: vi.fn(),
+    systems: vi.fn(),
+  },
+  isMissingMediaDatabaseSetupError: (error: unknown) => {
+    const msg = error instanceof Error ? error.message.toLowerCase() : "";
+    return msg.includes("no such table: dbconfig");
+  },
+  isExpectedMediaDatabaseError: (error: unknown) => {
+    const msg = error instanceof Error ? error.message.toLowerCase() : "";
+    return (
+      msg.includes("no such table: dbconfig") ||
+      msg.includes("method not found")
+    );
   },
 }));
 
@@ -22,6 +37,10 @@ vi.mock("react-i18next", () => ({
       return key;
     },
   }),
+}));
+
+vi.mock("@/lib/toastUtils", () => ({
+  showRateLimitedErrorToast: vi.fn(),
 }));
 
 // Mock @tanstack/react-query only when needed for specific tests
@@ -46,6 +65,7 @@ const { ConnectionState, mockStore } = vi.hoisted(() => {
   } as const;
   const mockStore = {
     connected: true,
+    targetDeviceAddress: "test-device",
     connectionState: ConnectionState.CONNECTED as string,
     gamesIndex: {
       indexing: false,
@@ -66,6 +86,8 @@ const { ConnectionState, mockStore } = vi.hoisted(() => {
       paused?: boolean;
     },
     scrapingStatus: null as { scraping: boolean } | null,
+    coreVersion: "2.12.0" as string | null,
+    coreVersionPending: false,
     safeInsets: {
       top: "0px",
       bottom: "0px",
@@ -86,6 +108,7 @@ describe("MediaDatabaseCard", () => {
     vi.clearAllMocks();
     // Reset mock store state
     mockStore.connected = true;
+    mockStore.targetDeviceAddress = "test-device";
     mockStore.connectionState = ConnectionState.CONNECTED;
     mockStore.gamesIndex = {
       indexing: false,
@@ -97,11 +120,23 @@ describe("MediaDatabaseCard", () => {
       currentStepDisplay: "",
     };
     mockStore.scrapingStatus = null;
+    mockStore.coreVersion = "2.12.0";
+    mockStore.coreVersionPending = false;
 
     // Default mock - database exists and ready
     vi.mocked(CoreAPI.media).mockResolvedValue({
       database: { exists: true, indexing: false },
       active: [],
+    });
+    vi.mocked(CoreAPI.systems).mockResolvedValue({ systems: [] });
+    vi.mocked(CoreAPI.mediaCleanOrphans).mockResolvedValue({ deleted: 0 });
+  });
+
+  it("should request all indexable systems for partial updates", async () => {
+    render(<MediaDatabaseCard />);
+
+    await waitFor(() => {
+      expect(CoreAPI.systems).toHaveBeenCalledWith({ all: true });
     });
   });
 
@@ -161,6 +196,115 @@ describe("MediaDatabaseCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("should hide clean missing media action by default", () => {
+    render(<MediaDatabaseCard />);
+
+    expect(
+      screen.queryByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should hide clean missing media action for unsupported Core versions", () => {
+    mockStore.coreVersion = "2.11.9";
+
+    render(<MediaDatabaseCard showMaintenanceActions />);
+
+    expect(
+      screen.queryByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should confirm before cleaning missing media", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.mediaCleanOrphans).mockResolvedValue({ deleted: 3 });
+
+    render(<MediaDatabaseCard showMaintenanceActions />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    );
+    expect(
+      screen.getByRole("dialog", {
+        name: "settings.updateDb.cleanOrphansConfirmTitle",
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphansConfirmAction",
+      }),
+    );
+
+    await vi.waitFor(() => {
+      expect(CoreAPI.mediaCleanOrphans).toHaveBeenCalledOnce();
+    });
+    expect(
+      await screen.findByText("settings.updateDb.cleanOrphansSuccess"),
+    ).toBeInTheDocument();
+  });
+
+  it("should show when no missing media entries are found", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.mediaCleanOrphans).mockResolvedValue({ deleted: 0 });
+
+    render(<MediaDatabaseCard showMaintenanceActions />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphansConfirmAction",
+      }),
+    );
+
+    expect(
+      await screen.findByText("settings.updateDb.cleanOrphansNone"),
+    ).toBeInTheDocument();
+  });
+
+  it("should show clean missing media errors inline", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.mediaCleanOrphans).mockRejectedValue(
+      new Error("clean timed out"),
+    );
+
+    render(<MediaDatabaseCard showMaintenanceActions />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphansConfirmAction",
+      }),
+    );
+
+    expect(await screen.findByText("error")).toBeInTheDocument();
+  });
+
+  it("should disable clean missing media while scraping", () => {
+    mockStore.scrapingStatus = { scraping: true };
+
+    render(<MediaDatabaseCard showMaintenanceActions />);
+
+    expect(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    ).toBeDisabled();
+  });
+
   it("should call CoreAPI.mediaGenerate when button is clicked", async () => {
     const { CoreAPI } = await import("../../../lib/coreApi");
 
@@ -175,6 +319,183 @@ describe("MediaDatabaseCard", () => {
     fireEvent.click(updateButton!);
 
     expect(CoreAPI.mediaGenerate).toHaveBeenCalledOnce();
+  });
+
+  it("should disable update action for unsupported Core versions", async () => {
+    mockStore.coreVersion = "2.6.9";
+
+    render(<MediaDatabaseCard />);
+
+    const updateButton = screen.getByRole("button", {
+      name: "settings.updateDb",
+    });
+    expect(updateButton).toBeDisabled();
+    fireEvent.click(updateButton);
+
+    expect(CoreAPI.mediaGenerate).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("settings.updateDb.status.unsupported"),
+    ).toBeInTheDocument();
+  });
+
+  it("should show setup error inline when update finds invalid database metadata", async () => {
+    vi.mocked(CoreAPI.mediaGenerate).mockRejectedValue(
+      new Error("failed to get optimization status: no such table: DBConfig"),
+    );
+
+    render(<MediaDatabaseCard />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb",
+      }),
+    );
+
+    expect(await screen.findByText("error")).toBeInTheDocument();
+    expect(showRateLimitedErrorToast).not.toHaveBeenCalled();
+  });
+
+  it("should show unexpected update failures inline and in a toast", async () => {
+    vi.mocked(CoreAPI.mediaGenerate).mockRejectedValue(
+      new Error("network down"),
+    );
+
+    render(<MediaDatabaseCard />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb",
+      }),
+    );
+
+    expect(await screen.findByText("error")).toBeInTheDocument();
+    expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
+  });
+
+  it("should show expected cancel failures inline and allow retry", async () => {
+    mockStore.gamesIndex = {
+      indexing: true,
+      exists: false,
+      totalFiles: 0,
+      currentStep: 2,
+      totalSteps: 11,
+      currentStepDisplay: "Atari 2600",
+    };
+    vi.mocked(CoreAPI.mediaGenerateCancel).mockRejectedValue(
+      new Error("Method not found"),
+    );
+
+    render(<MediaDatabaseCard />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /settings\.updateDb\.cancel/i,
+      }),
+    );
+
+    expect(await screen.findByText("error")).toBeInTheDocument();
+    await vi.waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /settings\.updateDb\.cancel/i }),
+      ).not.toBeDisabled();
+    });
+    expect(showRateLimitedErrorToast).not.toHaveBeenCalled();
+  });
+
+  it("should show setup errors from clean missing media without a toast", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.mediaCleanOrphans).mockRejectedValue(
+      new Error("failed to get optimization status: no such table: DBConfig"),
+    );
+
+    render(<MediaDatabaseCard showMaintenanceActions />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphans",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb.cleanOrphansConfirmAction",
+      }),
+    );
+
+    expect(await screen.findByText("error")).toBeInTheDocument();
+    expect(showRateLimitedErrorToast).not.toHaveBeenCalled();
+  });
+
+  it("should clear stale generate errors when cancel is attempted", async () => {
+    vi.mocked(CoreAPI.mediaGenerate).mockRejectedValue(
+      new Error("Method not found"),
+    );
+    const { rerender } = render(<MediaDatabaseCard />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb",
+      }),
+    );
+    expect(await screen.findByText("error")).toBeInTheDocument();
+
+    mockStore.gamesIndex = {
+      indexing: true,
+      exists: false,
+      totalFiles: 0,
+      currentStep: 2,
+      totalSteps: 11,
+      currentStepDisplay: "Atari 2600",
+    };
+    vi.mocked(CoreAPI.mediaGenerateCancel).mockResolvedValue(undefined);
+    rerender(<MediaDatabaseCard />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /settings\.updateDb\.cancel/i,
+      }),
+    );
+
+    await vi.waitFor(() => {
+      expect(CoreAPI.mediaGenerateCancel).toHaveBeenCalledOnce();
+    });
+    expect(screen.queryByText("error")).not.toBeInTheDocument();
+  });
+
+  it("should clear stale generate errors when resume is attempted", async () => {
+    vi.mocked(CoreAPI.mediaGenerate).mockRejectedValue(
+      new Error("Method not found"),
+    );
+    const { rerender } = render(<MediaDatabaseCard />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings.updateDb",
+      }),
+    );
+    expect(await screen.findByText("error")).toBeInTheDocument();
+
+    mockStore.gamesIndex = {
+      indexing: true,
+      exists: false,
+      totalFiles: 0,
+      currentStep: 2,
+      totalSteps: 11,
+      currentStepDisplay: "Atari 2600",
+      paused: true,
+    };
+    vi.mocked(CoreAPI.mediaGenerateResume).mockResolvedValue(undefined);
+    rerender(<MediaDatabaseCard />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /settings\.updateDb\.resume/i,
+      }),
+    );
+
+    await vi.waitFor(() => {
+      expect(CoreAPI.mediaGenerateResume).toHaveBeenCalledOnce();
+    });
+    expect(screen.queryByText("error")).not.toBeInTheDocument();
   });
 
   it("should show ready status when database exists (no file count)", async () => {
@@ -209,6 +530,18 @@ describe("MediaDatabaseCard", () => {
 
     // Wait for the query to resolve
     expect(await screen.findByText("No database found")).toBeInTheDocument();
+  });
+
+  it("should show setup status when database metadata is invalid", async () => {
+    vi.mocked(CoreAPI.media).mockRejectedValue(
+      new Error("failed to get optimization status: no such table: DBConfig"),
+    );
+
+    render(<MediaDatabaseCard />);
+
+    expect(
+      await screen.findByText("settings.updateDb.status.setupMissing"),
+    ).toBeInTheDocument();
   });
 
   it("should show checking status when loading", async () => {

@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "../../../test-utils";
 import { Search } from "@/routes/-pages/Search";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+import { CoreAPI } from "@/lib/coreApi";
 
 // Mock route
 vi.mock("@tanstack/react-router", () => ({
@@ -37,6 +38,26 @@ vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     set: vi.fn(),
     get: vi.fn().mockResolvedValue({ value: null }),
+  },
+}));
+
+// Mock CoreAPI
+vi.mock("@/lib/coreApi", () => ({
+  CoreAPI: {
+    media: vi.fn().mockResolvedValue({
+      database: { exists: true, indexing: false },
+      active: [],
+    }),
+    run: vi.fn().mockResolvedValue(undefined),
+  },
+  isExpectedMediaDatabaseError: (error: unknown) => {
+    const msg = String(
+      error instanceof Error ? error.message : error,
+    ).toLowerCase();
+    return (
+      msg.includes("no such table: dbconfig") ||
+      msg.includes("method not found")
+    );
   },
 }));
 
@@ -131,11 +152,17 @@ vi.mock("@/components/SystemSelector", () => ({
   SystemSelectorTrigger: ({
     onClick,
     selectedSystems,
+    disabled,
   }: {
     onClick: () => void;
     selectedSystems: string[];
+    disabled?: boolean;
   }) => (
-    <button data-testid="system-selector-trigger" onClick={onClick}>
+    <button
+      data-testid="system-selector-trigger"
+      onClick={onClick}
+      disabled={disabled}
+    >
       {selectedSystems.length > 0 ? selectedSystems.join(", ") : "All Systems"}
     </button>
   ),
@@ -161,11 +188,17 @@ vi.mock("@/components/TagSelector", () => ({
   TagSelectorTrigger: ({
     onClick,
     selectedTags,
+    disabled,
   }: {
     onClick: () => void;
     selectedTags: string[];
+    disabled?: boolean;
   }) => (
-    <button data-testid="tag-selector-trigger" onClick={onClick}>
+    <button
+      data-testid="tag-selector-trigger"
+      onClick={onClick}
+      disabled={disabled}
+    >
       {selectedTags.length > 0 ? selectedTags.join(", ") : "All Tags"}
     </button>
   ),
@@ -278,12 +311,18 @@ describe("Search Component", () => {
     useStatusStore.setState({
       ...useStatusStore.getInitialState(),
       connected: true,
+      coreVersion: "2.10.0",
+      coreVersionPending: false,
       gamesIndex: { exists: true, indexing: false },
     });
     usePreferencesStore.setState({
       ...usePreferencesStore.getInitialState(),
       _hasHydrated: true,
       showFilenames: false,
+    });
+    vi.mocked(CoreAPI.media).mockResolvedValue({
+      database: { exists: true, indexing: false },
+      active: [],
     });
   });
 
@@ -362,6 +401,56 @@ describe("Search Component", () => {
       expect(searchButton).not.toBeDisabled();
     });
 
+    it("should disable empty all-systems search when Core does not support browse-all", () => {
+      useStatusStore.setState({ coreVersion: "2.9.1" });
+      render(<Search />);
+
+      const searchButton = screen.getByRole("button", {
+        name: "create.search.searchButton",
+      });
+      expect(searchButton).toBeDisabled();
+    });
+
+    it("should allow query search when Core does not support browse-all", () => {
+      useStatusStore.setState({ coreVersion: "2.9.1" });
+      render(<Search />);
+
+      const input = screen.getByLabelText("create.search.gameInput");
+      fireEvent.change(input, { target: { value: "mario" } });
+
+      const searchButton = screen.getByRole("button", {
+        name: "create.search.searchButton",
+      });
+      expect(searchButton).not.toBeDisabled();
+      fireEvent.click(searchButton);
+
+      expect(mockAddRecentSearch).toHaveBeenCalledWith({
+        query: "mario",
+        system: "all",
+        tags: [],
+      });
+    });
+
+    it("should allow system-filtered empty search when Core does not support browse-all", () => {
+      useStatusStore.setState({ coreVersion: "2.9.1" });
+      render(<Search />);
+
+      fireEvent.click(screen.getByTestId("system-selector-trigger"));
+      fireEvent.click(screen.getByRole("button", { name: "Select SNES" }));
+
+      const searchButton = screen.getByRole("button", {
+        name: "create.search.searchButton",
+      });
+      expect(searchButton).not.toBeDisabled();
+      fireEvent.click(searchButton);
+
+      expect(mockAddRecentSearch).toHaveBeenCalledWith({
+        query: "",
+        system: "snes",
+        tags: [],
+      });
+    });
+
     it("should disable search button when not connected", () => {
       useStatusStore.setState({ connected: false });
       render(<Search />);
@@ -372,9 +461,9 @@ describe("Search Component", () => {
       expect(searchButton).toBeDisabled();
     });
 
-    it("should disable search button when index does not exist", () => {
+    it("should disable search controls when indexing has no usable data", () => {
       useStatusStore.setState({
-        gamesIndex: { exists: false, indexing: false },
+        gamesIndex: { exists: false, indexing: true },
       });
       render(<Search />);
 
@@ -382,18 +471,36 @@ describe("Search Component", () => {
         name: "create.search.searchButton",
       });
       expect(searchButton).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "All Systems" }),
+      ).toBeDisabled();
+      expect(screen.getByRole("button", { name: "All Tags" })).toBeDisabled();
     });
 
-    it("should disable search button when indexing", () => {
+    it("should keep search controls enabled while indexing has usable data", () => {
       useStatusStore.setState({
         gamesIndex: { exists: true, indexing: true },
       });
       render(<Search />);
 
-      const searchButton = screen.getByRole("button", {
-        name: "create.search.searchButton",
+      expect(
+        screen.getByRole("button", { name: "create.search.searchButton" }),
+      ).toBeEnabled();
+      expect(screen.getByLabelText("create.search.gameInput")).toBeEnabled();
+      expect(screen.getByRole("button", { name: "All Systems" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "All Tags" })).toBeEnabled();
+    });
+
+    it("should show database warning after expected media setup error", async () => {
+      vi.mocked(CoreAPI.media).mockRejectedValueOnce(
+        new Error("failed to get optimization status: no such table: DBConfig"),
+      );
+
+      render(<Search />);
+
+      await vi.waitFor(() => {
+        expect(useStatusStore.getState().gamesIndex.exists).toBe(false);
       });
-      expect(searchButton).toBeDisabled();
     });
 
     it("should perform search when search button is clicked", () => {
@@ -423,6 +530,26 @@ describe("Search Component", () => {
 
       expect(mockAddRecentSearch).toHaveBeenCalledWith({
         query: "zelda",
+        system: "all",
+        tags: [],
+      });
+    });
+
+    it("should ignore selected tags when Core stops supporting media tags", () => {
+      render(<Search />);
+
+      fireEvent.click(screen.getByTestId("tag-selector-trigger"));
+      fireEvent.click(screen.getByRole("button", { name: "Select Action" }));
+      useStatusStore.setState({ coreVersion: "2.6.2" });
+      fireEvent.change(screen.getByLabelText("create.search.gameInput"), {
+        target: { value: "mario" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: "create.search.searchButton" }),
+      );
+
+      expect(mockAddRecentSearch).toHaveBeenCalledWith({
+        query: "mario",
         system: "all",
         tags: [],
       });
@@ -508,6 +635,16 @@ describe("Search Component", () => {
         "action",
       );
     });
+
+    it("should hide tag selector when Core does not support media tags", () => {
+      useStatusStore.setState({ coreVersion: "2.6.2" });
+
+      render(<Search />);
+
+      expect(
+        screen.queryByTestId("tag-selector-trigger"),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("search input disabled state", () => {
@@ -522,16 +659,6 @@ describe("Search Component", () => {
     it("should disable search input when index does not exist", () => {
       useStatusStore.setState({
         gamesIndex: { exists: false, indexing: false },
-      });
-      render(<Search />);
-
-      const input = screen.getByLabelText("create.search.gameInput");
-      expect(input).toBeDisabled();
-    });
-
-    it("should disable search input when indexing", () => {
-      useStatusStore.setState({
-        gamesIndex: { exists: true, indexing: true },
       });
       render(<Search />);
 

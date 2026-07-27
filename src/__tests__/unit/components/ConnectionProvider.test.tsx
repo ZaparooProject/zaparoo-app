@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Preferences } from "@capacitor/preferences";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "../../../test-utils";
 import { ConnectionProvider } from "../../../components/ConnectionProvider";
 import { useConnection } from "../../../hooks/useConnection";
@@ -81,7 +82,35 @@ vi.mock("../../../lib/coreApi", () => ({
   },
   getDeviceAddress: vi.fn(() => "192.168.1.100:7497"),
   getWsUrl: vi.fn(() => "ws://192.168.1.100:7497"),
+  validateDeviceAddress: vi.fn((address: string) => {
+    if (address.includes("286")) {
+      return {
+        ok: false,
+        errorKey: "settings.deviceAddressInvalid",
+        message: "Invalid device address",
+      };
+    }
+
+    const [host = address, portInput] = address.split(":");
+    const port = portInput ? Number(portInput) : 7497;
+
+    return {
+      ok: true,
+      address,
+      host,
+      port,
+      wsUrl: `ws://${host}:${port}/api/v0.1`,
+    };
+  }),
   isCancelled: vi.fn(() => false),
+  isExpectedMediaDatabaseError: (error: unknown) => {
+    if (!(error instanceof Error)) return false;
+    const msg = error.message.toLowerCase();
+    return (
+      msg.includes("no such table: dbconfig") ||
+      msg.includes("method not found")
+    );
+  },
 }));
 
 vi.mock("@capacitor/preferences", () => ({
@@ -100,6 +129,7 @@ vi.mock("@capacitor/app", () => ({
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: vi.fn(() => false),
+    isPluginAvailable: vi.fn(() => true),
   },
 }));
 
@@ -107,6 +137,11 @@ vi.mock("@capacitor/network", () => ({
   Network: {
     addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
   },
+}));
+
+vi.mock("@/lib/capacitorBridge", () => ({
+  isPluginAvailable: vi.fn(() => true),
+  isNativePluginAvailable: vi.fn(() => true),
 }));
 
 // Use vi.hoisted for toast mock
@@ -166,9 +201,13 @@ function resetStore() {
 }
 
 describe("ConnectionProvider", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     resetStore();
+
+    const bridge = await import("@/lib/capacitorBridge");
+    vi.mocked(bridge.isPluginAvailable).mockReturnValue(true);
+    vi.mocked(bridge.isNativePluginAvailable).mockReturnValue(true);
   });
 
   describe("rendering", () => {
@@ -191,6 +230,48 @@ describe("ConnectionProvider", () => {
 
       expect(screen.getByTestId("isConnected")).toBeInTheDocument();
       expect(screen.getByTestId("hasData")).toBeInTheDocument();
+    });
+
+    it("should skip startup plugin calls when bridge plugins are unavailable", async () => {
+      const { App } = await import("@capacitor/app");
+      const { Capacitor } = await import("@capacitor/core");
+      const { Network } = await import("@capacitor/network");
+      const bridge = await import("@/lib/capacitorBridge");
+
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(bridge.isPluginAvailable).mockImplementation(
+        (pluginName: string) => pluginName !== "Preferences",
+      );
+      vi.mocked(bridge.isNativePluginAvailable).mockImplementation(
+        (pluginName: string) => !["App", "Network"].includes(pluginName),
+      );
+      vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
+        "192.168.1.100:7497",
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(connectionManager.setEventHandlers).toHaveBeenCalled();
+      });
+
+      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+
+      await waitFor(() => {
+        expect(CoreAPI.version).toHaveBeenCalled();
+      });
+
+      expect(Preferences.get).not.toHaveBeenCalled();
+      expect(App.addListener).not.toHaveBeenCalled();
+      expect(Network.addListener).not.toHaveBeenCalled();
     });
   });
 
@@ -216,11 +297,33 @@ describe("ConnectionProvider", () => {
         expect.objectContaining({
           deviceId: "192.168.1.100:7497",
           type: "websocket",
-          address: "ws://192.168.1.100:7497",
+          address: "ws://192.168.1.100:7497/api/v0.1",
           encryption: expect.objectContaining({
             getCredentials: expect.any(Function),
           }),
         }),
+      );
+    });
+
+    it("should not create a transport for invalid target address", () => {
+      useStatusStore.setState({
+        ...useStatusStore.getInitialState(),
+        targetDeviceAddress: "192.168.1.286",
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(connectionManager.addDevice).not.toHaveBeenCalled();
+      expect(connectionManager.setActiveDevice).not.toHaveBeenCalled();
+      expect(useStatusStore.getState().connectionState).toBe(
+        ConnectionState.ERROR,
+      );
+      expect(useStatusStore.getState().connectionError).toBe(
+        "settings.deviceAddressInvalid",
       );
     });
 
@@ -312,7 +415,19 @@ describe("notification processing", () => {
   });
 
   describe("media.started", () => {
-    it("should update playing state when media starts", async () => {
+    it("should update playing state and clear staged token when media starts", async () => {
+      useStatusStore.setState({
+        stagedToken: {
+          ready: true,
+          token: {
+            type: "ntag",
+            uid: "STAGED",
+            text: "**launch:nes/zelda.nes",
+            data: "",
+            scanTime: "2024-01-15T11:00:00Z",
+          },
+        },
+      });
       const mediaStartedNotification: NotificationRequest = {
         method: Notification.MediaStarted,
         params: {
@@ -344,12 +459,48 @@ describe("notification processing", () => {
           mediaPath: "/games/mario.sfc",
           mediaName: "Super Mario World",
         });
+        expect(useStatusStore.getState().stagedToken).toBeNull();
+      });
+    });
+  });
+
+  describe("message error handling", () => {
+    it("should show recoverable toast when message processing fails", async () => {
+      const { resetToastRateLimiter } = await import("@/lib/toastUtils");
+      resetToastRateLimiter();
+      vi.mocked(CoreAPI.processReceived).mockRejectedValueOnce(
+        new Error("Malformed Core JSON response: Unexpected end of JSON input"),
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith("error");
       });
     });
   });
 
   describe("media.stopped", () => {
-    it("should clear playing state when media stops", async () => {
+    it("should clear playing state and staged token when media stops", async () => {
+      useStatusStore.setState({
+        stagedToken: {
+          ready: true,
+          token: {
+            type: "ntag",
+            uid: "STAGED",
+            text: "**launch:nes/zelda.nes",
+            data: "",
+            scanTime: "2024-01-15T11:00:00Z",
+          },
+        },
+      });
       const mediaStoppedNotification: NotificationRequest = {
         method: Notification.MediaStopped,
         params: {},
@@ -375,6 +526,7 @@ describe("notification processing", () => {
           mediaPath: "",
           mediaName: "",
         });
+        expect(useStatusStore.getState().stagedToken).toBeNull();
       });
     });
   });
@@ -412,6 +564,230 @@ describe("notification processing", () => {
           scanTime: "2024-01-15T12:00:00Z",
         });
       });
+    });
+
+    it("should set active tokens and clear staged token", async () => {
+      useStatusStore.setState({
+        stagedToken: {
+          ready: false,
+          token: {
+            type: "ntag",
+            uid: "STAGED",
+            text: "**launch:nes/zelda.nes",
+            data: "",
+            scanTime: "2024-01-15T11:00:00Z",
+          },
+        },
+      });
+      const tokenScannedNotification: NotificationRequest = {
+        method: Notification.TokensScanned,
+        params: {
+          type: "ntag",
+          uid: "ABC123",
+          text: "**launch:snes/mario.sfc",
+          data: "launch data",
+          scanTime: "2024-01-15T12:00:00Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        tokenScannedNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().activeTokens).toEqual([
+          tokenScannedNotification.params,
+        ]);
+        expect(useStatusStore.getState().stagedToken).toBeNull();
+      });
+    });
+  });
+
+  describe("token staging notifications", () => {
+    it("should store staged token as waiting", async () => {
+      const stagedNotification: NotificationRequest = {
+        method: Notification.TokensStaged,
+        params: {
+          type: "ntag",
+          uid: "STAGED",
+          text: "**launch:nes/zelda.nes",
+          data: "",
+          scanTime: "2024-01-15T11:00:00Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        stagedNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().stagedToken).toEqual({
+          token: stagedNotification.params,
+          ready: false,
+        });
+        expect(mockAnnounce).toHaveBeenCalledWith(
+          "tokenStaging.stagedAnnounce",
+          "assertive",
+        );
+      });
+    });
+
+    it("should mark staged token ready", async () => {
+      const readyNotification: NotificationRequest = {
+        method: Notification.TokensStagedReady,
+        params: {
+          type: "ntag",
+          uid: "STAGED",
+          text: "**launch:nes/zelda.nes",
+          data: "",
+          scanTime: "2024-01-15T11:00:00Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        readyNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().stagedToken).toEqual({
+          token: readyNotification.params,
+          ready: true,
+        });
+        expect(mockAnnounce).toHaveBeenCalledWith(
+          "tokenStaging.readyAnnounce",
+          "assertive",
+        );
+      });
+    });
+
+    it("should clear active tokens on token removal while preserving staged and last tokens", async () => {
+      const lastToken = {
+        type: "ntag",
+        uid: "LAST",
+        text: "**launch:snes/mario.sfc",
+        data: "",
+        scanTime: "2024-01-15T12:00:00Z",
+      };
+      const stagedToken = {
+        type: "ntag",
+        uid: "STAGED",
+        text: "**launch:nes/zelda.nes",
+        data: "",
+        scanTime: "2024-01-15T11:00:00Z",
+      };
+      useStatusStore.setState({
+        lastToken,
+        activeTokens: [lastToken],
+        stagedToken: { token: stagedToken, ready: true },
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.TokensRemoved,
+        params: undefined,
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().activeTokens).toEqual([]);
+        expect(useStatusStore.getState().stagedToken).toEqual({
+          token: stagedToken,
+          ready: true,
+        });
+        expect(useStatusStore.getState().lastToken).toEqual(lastToken);
+      });
+    });
+  });
+
+  describe("reader notifications", () => {
+    it("should invalidate readers query on reader added", async () => {
+      const invalidateSpy = vi.spyOn(
+        QueryClient.prototype,
+        "invalidateQueries",
+      );
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.ReadersConnected,
+        params: { driver: "pn532", path: "/dev/ttyUSB0", connected: true },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["readers"] });
+      });
+      invalidateSpy.mockRestore();
+    });
+
+    it("should invalidate readers query and clear active state on reader removed", async () => {
+      const invalidateSpy = vi.spyOn(
+        QueryClient.prototype,
+        "invalidateQueries",
+      );
+      const token = {
+        type: "ntag",
+        uid: "ACTIVE",
+        text: "**launch:snes/mario.sfc",
+        data: "",
+        scanTime: "2024-01-15T12:00:00Z",
+      };
+      useStatusStore.setState({
+        activeTokens: [token],
+        stagedToken: { token, ready: false },
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.ReadersDisconnected,
+        params: { driver: "pn532", path: "/dev/ttyUSB0", connected: false },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["readers"] });
+        expect(useStatusStore.getState().activeTokens).toEqual([]);
+        expect(useStatusStore.getState().stagedToken).toBeNull();
+      });
+      invalidateSpy.mockRestore();
     });
   });
 
@@ -573,6 +949,50 @@ describe("notification processing", () => {
   });
 
   describe("media.indexing", () => {
+    it("should invalidate library queries after a system commit", async () => {
+      const invalidateSpy = vi.spyOn(
+        QueryClient.prototype,
+        "invalidateQueries",
+      );
+      useStatusStore.setState({
+        gamesIndex: {
+          exists: true,
+          indexing: true,
+          systemsCompleted: 1,
+          systemsTotal: 10,
+        },
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.MediaIndexing,
+        params: {
+          exists: true,
+          indexing: true,
+          systemsCompleted: 2,
+          systemsTotal: 10,
+        },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      invalidateSpy.mockClear();
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(invalidateSpy).toHaveBeenCalledWith({
+          queryKey: ["systems"],
+        });
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["tags"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["infiniteMediaSearch"],
+      });
+      invalidateSpy.mockRestore();
+    });
+
     it("should update games index state", async () => {
       const mediaIndexingNotification: NotificationRequest = {
         method: Notification.MediaIndexing,
@@ -794,6 +1214,32 @@ describe("connection event handling", () => {
       expect(useStatusStore.getState().corePlatform).toBe("test");
       expect(useStatusStore.getState().coreVersionPending).toBe(false);
     });
+  });
+
+  it("should invalidate library queries after reconnecting", async () => {
+    const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+    invalidateSpy.mockClear();
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["systems"] });
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["tags"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["infiniteMediaSearch"],
+    });
+    invalidateSpy.mockRestore();
   });
 
   it("should fetch inbox messages when connected Core supports inbox", async () => {
@@ -1302,6 +1748,33 @@ describe("API error handling", () => {
     expect(screen.getByText("Test")).toBeInTheDocument();
   });
 
+  it("should degrade expected media database setup errors without toast", async () => {
+    vi.mocked(CoreAPI.media).mockRejectedValueOnce(
+      new Error("failed to get optimization status: no such table: DBConfig"),
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().gamesIndex).toMatchObject({
+        exists: false,
+        indexing: false,
+        optimizing: false,
+      });
+    });
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
+
   it("should handle tokens API failure gracefully", async () => {
     vi.mocked(CoreAPI.tokens).mockRejectedValueOnce(new Error("Network error"));
 
@@ -1523,9 +1996,12 @@ describe("app lifecycle handling", () => {
 });
 
 describe("browser visibility handling (web platform)", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     resetStore();
+
+    const { Capacitor } = await import("@capacitor/core");
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
   });
 
   it("should call connectionManager.resumeAll when tab becomes visible", async () => {

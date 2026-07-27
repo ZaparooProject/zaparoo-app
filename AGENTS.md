@@ -30,7 +30,7 @@ Zaparoo App is a mobile-first React 19 + TypeScript + Vite application for Zapar
 - `npm run build:server` — development server build, then Capacitor sync.
 - `npm run build:analyze` — analyzer build.
 - `npm run sync` — Capacitor sync only.
-- `npm run live-update` — signed live update upload; requires `live-update-private.pem`.
+- `npm run live-update` — signed live update upload; requires `live-update-private.pem`, `LIVE_UPDATE_CHANNEL`, and `VITE_RELEASE_KEY`.
 - `npx cap open ios` / `npx cap open android` — open native projects.
 
 ## Project layout
@@ -66,7 +66,7 @@ docs/                focused guides for Capacitor, deployment, and testing
 ### Ask first
 
 - Adding a Capacitor plugin, because it forces a native rebuild and store release.
-- Bumping the app version; see `docs/deployment.md` because three files must change in lockstep.
+- Bumping the app version; see `docs/deployment.md` because package, Android, iOS, What's New, and live update channels must stay in lockstep.
 - Refactors that touch many files or shared infrastructure.
 - Force-pushes, branch deletes, force-resets, hook bypasses, or anything that overwrites others' work.
 - Starting long-running local servers.
@@ -128,8 +128,8 @@ docs/                focused guides for Capacitor, deployment, and testing
 
 - shadcn/ui components live under `src/components/ui/`.
 - Custom Zaparoo components live under `src/components/wui/`. Prefer them over inline JSX.
-- Before adding or changing UI, inspect nearby screens and reuse their layout, typography, spacing, and component patterns.
-- Do not invent new card styles, label treatments, badges, stat blocks, or loading affordances unless explicitly requested. If the existing design language does not cover the state, stop and ask before introducing a new visual pattern.
+- Before adding or changing UI, read `docs/design-language.md`, then inspect the nearest sibling screens/components and copy their layout, typography, spacing, states, and component patterns exactly.
+- Do not invent new card styles, label treatments, badges, stat blocks, helper text, descriptions, icons, loading affordances, or other visual flair unless explicitly requested. If the existing design language does not cover the state, stop and ask before introducing a new visual pattern.
 - Use `<EmptyState>` for empty placeholders so they stay consistent.
 - Use `classnames` for conditional Tailwind classes.
 - Use focus rings such as `focus-visible:ring-2 focus-visible:ring-white/50`.
@@ -163,7 +163,7 @@ docs/                focused guides for Capacitor, deployment, and testing
 
 - Keep the summary concise.
 - Do not include a separate test plan section.
-- For a store release, bump version fields in the three files documented in `docs/deployment.md`.
+- For a store release, follow the checklist in `docs/deployment.md`, keep Android `versionCode` and iOS `CURRENT_PROJECT_VERSION` matched, and keep `src/__tests__/validation/release-config.test.ts` passing.
 
 ## Pointer docs
 

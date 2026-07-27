@@ -47,6 +47,11 @@ export type DeviceHistoryMeta = Partial<
 
 export type EncryptionState = "unknown" | "plaintext" | "encrypted";
 
+export interface StagedTokenState {
+  token: TokenResponse;
+  ready: boolean;
+}
+
 interface StatusState {
   connected: boolean;
   setConnected: (status: boolean) => void;
@@ -69,6 +74,14 @@ interface StatusState {
 
   lastToken: TokenResponse;
   setLastToken: (token: TokenResponse) => void;
+
+  activeTokens: TokenResponse[];
+  setActiveTokens: (tokens: TokenResponse[]) => void;
+  clearActiveTokens: () => void;
+
+  stagedToken: StagedTokenState | null;
+  setStagedToken: (stagedToken: StagedTokenState | null) => void;
+  clearStagedToken: () => void;
 
   gamesIndex: IndexResponse;
   setGamesIndex: (index: IndexResponse) => void;
@@ -138,6 +151,17 @@ interface StatusState {
   resetConnectionState: () => void;
 }
 
+export const DEFAULT_GAMES_INDEX: IndexResponse = {
+  exists: false,
+  indexing: false,
+  optimizing: false,
+  totalSteps: 0,
+  currentStep: 0,
+  currentStepDisplay: "",
+  totalFiles: 0,
+  totalMedia: undefined,
+};
+
 export const useStatusStore = create<StatusState>()((set) => ({
   connected: false,
   setConnected: (status) => set({ connected: status }),
@@ -166,6 +190,14 @@ export const useStatusStore = create<StatusState>()((set) => ({
 
   lastToken: { type: "", uid: "", text: "", data: "", scanTime: "" },
   setLastToken: (token) => set({ lastToken: token }),
+
+  activeTokens: [],
+  setActiveTokens: (tokens) => set({ activeTokens: tokens }),
+  clearActiveTokens: () => set({ activeTokens: [] }),
+
+  stagedToken: null,
+  setStagedToken: (stagedToken) => set({ stagedToken }),
+  clearStagedToken: () => set({ stagedToken: null }),
 
   gamesIndex: {
     exists: true,
@@ -392,6 +424,8 @@ export const useStatusStore = create<StatusState>()((set) => ({
       writeQueue: "",
       // Reset media-related state that will be refetched on reconnect
       lastToken: { type: "", uid: "", text: "", data: "", scanTime: "" },
+      activeTokens: [],
+      stagedToken: null,
       gamesIndex: {
         exists: true,
         indexing: false,

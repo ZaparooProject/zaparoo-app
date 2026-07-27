@@ -390,6 +390,47 @@ describe("Settings Online Route", () => {
       expect(mockPurchasesLogOut).not.toHaveBeenCalled();
     });
 
+    it("should ignore expected RevenueCat logout state errors on native platform", async () => {
+      const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
+      mockState.platform = "ios";
+      mockPurchasesLogOut.mockRejectedValueOnce(
+        new Error("Cannot log out anonymous app user"),
+      );
+
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "online.logout" }));
+
+      await waitFor(() => {
+        expect(mockFirebaseAuth.signOut).toHaveBeenCalled();
+      });
+
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it("should log unexpected RevenueCat logout errors on native platform", async () => {
+      const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
+      mockState.platform = "ios";
+      const error = new Error("network connection lost");
+      mockPurchasesLogOut.mockRejectedValueOnce(error);
+
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "online.logout" }));
+
+      await waitFor(() => {
+        expect(mockFirebaseAuth.signOut).toHaveBeenCalled();
+      });
+
+      expect(logger.error).toHaveBeenCalledWith(
+        "RevenueCat logout failed:",
+        error,
+        expect.objectContaining({ action: "logOut" }),
+      );
+    });
+
     it("should skip RevenueCat logout on web platform", async () => {
       const user = userEvent.setup();
       mockState.platform = "web";
@@ -604,10 +645,11 @@ describe("Settings Online Route", () => {
       });
     });
 
-    it("should show error toast on login failure", async () => {
+    it("should show error toast without logging expected login failure", async () => {
       const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
       mockFirebaseAuth.signInWithEmailAndPassword.mockRejectedValueOnce(
-        new Error("Invalid credentials"),
+        new Error("auth/invalid-credential"),
       );
 
       renderComponent();
@@ -623,6 +665,7 @@ describe("Settings Online Route", () => {
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("online.loginWrong");
       });
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
     it("should signup with email and password when age confirmed", async () => {
@@ -701,8 +744,9 @@ describe("Settings Online Route", () => {
       ).not.toHaveBeenCalled();
     });
 
-    it("should show error on signup failure for email already in use", async () => {
+    it("should show error without logging expected signup failure for email already in use", async () => {
       const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
       mockFirebaseAuth.createUserWithEmailAndPassword.mockRejectedValueOnce(
         new Error("email-already-in-use"),
       );
@@ -723,10 +767,12 @@ describe("Settings Online Route", () => {
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("online.emailExists");
       });
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
-    it("should show error on signup failure for weak password", async () => {
+    it("should show error without logging expected signup failure for weak password", async () => {
       const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
       mockFirebaseAuth.createUserWithEmailAndPassword.mockRejectedValueOnce(
         new Error("weak-password"),
       );
@@ -747,6 +793,7 @@ describe("Settings Online Route", () => {
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("online.weakPassword");
       });
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
     it("should submit on Enter key press", async () => {

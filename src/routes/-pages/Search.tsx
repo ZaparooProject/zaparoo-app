@@ -1,7 +1,6 @@
 import { getRouteApi, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
 import { Capacitor } from "@capacitor/core";
 import classNames from "classnames";
@@ -11,7 +10,7 @@ import { BackToTop } from "@/components/BackToTop.tsx";
 import { TagBadge } from "@/components/TagBadge.tsx";
 import { logger } from "@/lib/logger";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
-import { CoreAPI } from "@/lib/coreApi.ts";
+import { CoreAPI, isExpectedMediaDatabaseError } from "@/lib/coreApi";
 import {
   BackIcon,
   CreateIcon,
@@ -29,7 +28,7 @@ import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useHaptics } from "@/hooks/useHaptics";
-import { useStatusStore } from "@/lib/store";
+import { DEFAULT_GAMES_INDEX, useStatusStore } from "@/lib/store";
 import { TextInput } from "@/components/wui/TextInput";
 import { WriteModal } from "@/components/WriteModal";
 import { PageFrame } from "@/components/PageFrame";
@@ -41,6 +40,7 @@ import { TagSelector, TagSelectorTrigger } from "@/components/TagSelector";
 import { useRecentSearches } from "@/hooks/useRecentSearches";
 import { RecentSearchesModal } from "@/components/RecentSearchesModal";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { isCoreFeatureAvailable } from "@/lib/featureGates";
 
 export interface LoaderData {
   systemQuery: string;
@@ -58,6 +58,10 @@ export function Search() {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const setGamesIndex = useStatusStore((state) => state.setGamesIndex);
   const connected = useStatusStore((state) => state.connected);
+  const coreVersion = useStatusStore((state) => state.coreVersion);
+  const coreVersionPending = useStatusStore(
+    (state) => state.coreVersionPending,
+  );
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
 
   const [querySystem, setQuerySystem] = useState(loaderData.systemQuery);
@@ -76,6 +80,27 @@ export function Search() {
   const [isSearching, setIsSearching] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const mediaTagsAvailable =
+    connected &&
+    !coreVersionPending &&
+    isCoreFeatureAvailable("mediaTags", coreVersion);
+  const effectiveQueryTags = mediaTagsAvailable ? queryTags : [];
+  const browseAllSearchAvailable =
+    connected &&
+    !coreVersionPending &&
+    isCoreFeatureAvailable("mediaBrowseAllSearch", coreVersion);
+  const hasSearchConstraint = (
+    searchQuery: string,
+    system: string,
+    tags: string[],
+  ) => searchQuery.trim().length > 0 || system !== "all" || tags.length > 0;
+  // Current Core keeps exists true once committed systems are readable during
+  // indexing; older versions report false, preserving compatibility here.
+  const baseSearchReady = connected && gamesIndex.exists;
+  const canSearch =
+    baseSearchReady &&
+    (browseAllSearchAvailable ||
+      hasSearchConstraint(query, querySystem, effectiveQueryTags));
 
   // Recent searches hook
   const {
@@ -87,7 +112,7 @@ export function Search() {
 
   // Manual search function
   const performSearch = async () => {
-    if (!connected || !gamesIndex.exists || gamesIndex.indexing) {
+    if (!canSearch) {
       return;
     }
 
@@ -99,14 +124,14 @@ export function Search() {
     setSearchParams({
       query: query,
       system: querySystem,
-      tags: queryTags,
+      tags: effectiveQueryTags,
     });
 
     try {
       await addRecentSearch({
         query: query,
         system: querySystem,
-        tags: queryTags,
+        tags: effectiveQueryTags,
       });
     } catch (e) {
       logger.warn("Failed to record recent search", e, {
@@ -121,9 +146,6 @@ export function Search() {
     null,
   );
   const [writeMode, setWriteMode] = useState<"path" | "zapScript">("zapScript");
-
-  // Check if search has valid parameters
-  const canSearch = connected && gamesIndex.exists && !gamesIndex.indexing;
 
   const preferRemoteWriter = usePreferencesStore(
     (state) => state.preferRemoteWriter,
@@ -159,6 +181,10 @@ export function Search() {
         setGamesIndex(s.database);
       } catch (e) {
         if (cancelled) return;
+        if (isExpectedMediaDatabaseError(e)) {
+          setGamesIndex(DEFAULT_GAMES_INDEX);
+          return;
+        }
         logger.error("Failed to fetch media index:", e, {
           category: "api",
           action: "media",
@@ -178,14 +204,11 @@ export function Search() {
     }
   }, [selectedResult]);
 
-  // Check if tags API is available for backwards compatibility
-  const { isError: tagsApiError } = useQuery({
-    queryKey: ["tagsAvailable"],
-    queryFn: () => CoreAPI.mediaTags([]),
-    retry: false,
-    staleTime: 60000, // Cache for 1 minute
-    enabled: connected, // Only check when connected
-  });
+  useEffect(() => {
+    if (!mediaTagsAvailable) {
+      setTagSelectorOpen(false);
+    }
+  }, [mediaTagsAvailable]);
 
   const router = useRouter();
   const goBack = () => router.history.back();
@@ -249,9 +272,10 @@ export function Search() {
   const handleRecentSearchSelect = async (
     recentSearch: (typeof recentSearches)[0],
   ) => {
+    const searchTags = mediaTagsAvailable ? recentSearch.tags : [];
     setQuery(recentSearch.query);
     setQuerySystem(recentSearch.system);
-    setQueryTags(recentSearch.tags);
+    setQueryTags(searchTags);
     setSelectedResult(null);
 
     // Save preferences to match the selected search
@@ -260,7 +284,7 @@ export function Search() {
         Preferences.set({ key: "searchSystem", value: recentSearch.system }),
         Preferences.set({
           key: "searchTags",
-          value: JSON.stringify(recentSearch.tags),
+          value: JSON.stringify(searchTags),
         }),
       ]);
     } catch (err) {
@@ -272,12 +296,20 @@ export function Search() {
     }
 
     // Automatically execute the search
-    if (connected && gamesIndex.exists && !gamesIndex.indexing) {
+    if (
+      baseSearchReady &&
+      (browseAllSearchAvailable ||
+        hasSearchConstraint(
+          recentSearch.query,
+          recentSearch.system,
+          searchTags,
+        ))
+    ) {
       setIsSearching(true);
       setSearchParams({
         query: recentSearch.query,
         system: recentSearch.system,
-        tags: recentSearch.tags,
+        tags: searchTags,
       });
     }
   };
@@ -322,7 +354,7 @@ export function Search() {
             setValue={(v) => setQuery(v)}
             type="search"
             clearable={true}
-            disabled={!connected || !gamesIndex.exists || gamesIndex.indexing}
+            disabled={!connected || !gamesIndex.exists}
             onKeyUp={(e) => {
               if (e.key === "Enter") {
                 e.currentTarget.blur();
@@ -344,28 +376,23 @@ export function Search() {
                 placeholder={t("create.search.allSystems")}
                 mode="single"
                 onClick={() => setSystemSelectorOpen(true)}
-                className={classNames({
-                  "opacity-50":
-                    !connected || !gamesIndex.exists || gamesIndex.indexing,
-                })}
+                disabled={!connected || !gamesIndex.exists}
               />
             </div>
 
-            <div className="flex flex-col md:flex-1">
-              <label className="mb-1 text-white">
-                {t("create.search.tagsInput")}
-              </label>
-              <TagSelectorTrigger
-                selectedTags={queryTags}
-                placeholder={t("create.search.allTags")}
-                onClick={() => setTagSelectorOpen(true)}
-                disabled={tagsApiError}
-                className={classNames({
-                  "opacity-50":
-                    !connected || !gamesIndex.exists || gamesIndex.indexing,
-                })}
-              />
-            </div>
+            {mediaTagsAvailable && (
+              <div className="flex flex-col md:flex-1">
+                <label className="mb-1 text-white">
+                  {t("create.search.tagsInput")}
+                </label>
+                <TagSelectorTrigger
+                  selectedTags={queryTags}
+                  placeholder={t("create.search.allTags")}
+                  onClick={() => setTagSelectorOpen(true)}
+                  disabled={!connected || !gamesIndex.exists}
+                />
+              </div>
+            )}
           </div>
 
           <Button
@@ -691,14 +718,16 @@ export function Search() {
         includeAllOption={true}
         defaultSelection="all"
       />
-      <TagSelector
-        isOpen={tagSelectorOpen}
-        onClose={() => setTagSelectorOpen(false)}
-        onSelect={handleTagSelect}
-        selectedTags={queryTags}
-        systems={querySystem === "all" ? [] : [querySystem]}
-        title={t("create.search.selectTags")}
-      />
+      {mediaTagsAvailable && (
+        <TagSelector
+          isOpen={tagSelectorOpen}
+          onClose={() => setTagSelectorOpen(false)}
+          onSelect={handleTagSelect}
+          selectedTags={queryTags}
+          systems={querySystem === "all" ? [] : [querySystem]}
+          title={t("create.search.selectTags")}
+        />
+      )}
       <RecentSearchesModal
         isOpen={recentSearchesOpen}
         onClose={() => setRecentSearchesOpen(false)}

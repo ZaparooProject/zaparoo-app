@@ -68,12 +68,28 @@
       "filesFound": "{{count}} items scanned",
       "nowPlayingHeading": "Now playing"
     },
+    "whatsNew": {
+      "title": "What's new",
+      "gotIt": "Got it"
+    },
     "write": {
       "noWriteMethodAvailable": "No NFC writing capability available",
       "nfcNotSupported": "NFC is not supported on this device"
     },
     "accessibility": {
       "skipToContent": "Skip to main content"
+    },
+    "tokenStaging": {
+      "title": "Confirm staged token?",
+      "waitingDescription": "This token is waiting for confirmation.",
+      "readyDescription": "This token is ready to confirm.",
+      "tokenValue": "Token value",
+      "confirm": "Confirm",
+      "dismiss": "Hide",
+      "confirmError": "Could not confirm staged token",
+      "expiredError": "Confirmation expired. Scan the token again.",
+      "stagedAnnounce": "A token is waiting for confirmation.",
+      "readyAnnounce": "A staged token is ready to confirm."
     },
     "scan": {
       "cameraMode": "Camera",
@@ -103,10 +119,15 @@
       "purchaseProP1": "Zaparoo Pro can be unlocked with a one-time purchase of {{price}}, which will help support future development of Zaparoo.",
       "purchaseProP2": "Pro includes the Launch on scan feature, which turns your phone into a wireless Zaparoo reader! All future Pro features will be included at no extra cost.",
       "purchaseProAction": "Unlock Zaparoo Pro",
+      "purchaseProLoading": "Checking Zaparoo Pro availability...",
+      "purchaseProUnavailable": "Zaparoo Pro is not available for purchase right now. Update the app and try again, or restore purchases from Settings > Advanced if you already bought Pro.",
+      "purchaseProOfferingsError": "Zaparoo Pro purchase options could not be loaded. Check your connection and try again, or restore purchases from Settings > Advanced if you already bought Pro.",
+      "purchaseProUnavailableAction": "Purchase unavailable",
       "completeIntro": "Let's Zaparoo",
       "statusScanning": "Scanning for NFC tag",
       "statusSuccess": "Tag scanned successfully",
-      "statusError": "Tag scan failed"
+      "statusError": "Tag scan failed",
+      "remoteKeyboard": "Controls"
     },
     "create": {
       "title": "Create a New Tag",
@@ -399,6 +420,8 @@
       "title": "Settings",
       "moreSettings": "More settings",
       "device": "Device address",
+      "deviceAddressRequired": "Enter a device address",
+      "deviceAddressInvalid": "Enter a valid hostname, IP address, or host:port.",
       "modeLabel": "Scan mode",
       "tapMode": "Tap",
       "insertMode": "Hold",
@@ -412,22 +435,36 @@
       "updateDb.status.mediaCount": "Database ready: {{formattedCount}} media titles",
       "updateDb.status.noConnection": "Not connected",
       "updateDb.status.checking": "Checking database status...",
+      "updateDb.status.unsupported": "Media database updates require a newer Zaparoo Core version.",
+      "updateDb.status.setupMissing": "Media database is not ready. Update the database to rebuild it.",
+      "updateDb.startError": "Failed to start media database update",
       "updateDb.blockedByScrape": "Scraping is running. Database updates are unavailable until it finishes.",
       "updateDb.selectSystemsTitle": "Select Systems to Update",
       "updateDb.allSystems": "All systems",
       "updateDb.progressLabel": "Database update progress",
+      "updateDb.cleanOrphans": "Clean missing media",
+      "updateDb.cleanOrphansPending": "Cleaning...",
+      "updateDb.cleanOrphansPendingStatus": "Cleaning missing media. This can take a minute.",
+      "updateDb.cleanOrphansConfirmTitle": "Clean missing media?",
+      "updateDb.cleanOrphansConfirmDescription": "This removes database entries for files that are already marked missing. Update the media database first if you recently changed files.",
+      "updateDb.cleanOrphansConfirmAction": "Clean",
+      "updateDb.cleanOrphansSuccess": "Removed {{count}} missing media entries",
+      "updateDb.cleanOrphansNone": "No missing media entries found",
+      "updateDb.cleanOrphansError": "Clean missing media failed",
       "scrapeMedia": "Scrape media metadata",
       "scrapeMedia.cancel": "Cancel",
       "scrapeMedia.starting": "Starting...",
       "scrapeMedia.scraperPlaceholder": "Select a scraper",
       "scrapeMedia.allSystems": "All systems",
       "scrapeMedia.selectSystemsTitle": "Select systems to scrape",
-      "scrapeMedia.progressLabel": "Scrape progress",
+      "scrapeMedia.overallProgressLabel": "Overall scrape progress",
+      "scrapeMedia.progressLabel": "Current system scrape progress",
       "scrapeMedia.preparing": "Preparing scrape",
       "scrapeMedia.activeTitle": "Scraping media",
       "scrapeMedia.activeDescription": "Scraping metadata for the current system",
       "scrapeMedia.lastScrapeTitle": "Last scrape",
       "scrapeMedia.currentSystem": "Current system",
+      "scrapeMedia.systemProgressCount": "{{current}} / {{total}} systems",
       "scrapeMedia.processedCount": "{{processed}} / {{total}} processed",
       "scrapeMedia.statsLabel": "Scrape stats",
       "scrapeMedia.matchedLabel": "Matched",
@@ -446,8 +483,10 @@
       "scrapeMedia.status.totalScraped": "{{formattedCount}} media records scraped",
       "scrapeMedia.force": "Re-scrape already scraped media",
       "scrapeMedia.resume": "Resume",
-      "scraper": {
-        "title": "Scraper"
+      "media": {
+        "title": "Manage Media",
+        "databaseTitle": "Media database",
+        "scraperTitle": "Metadata scraper"
       },
       "designer": "Zaparoo Designer",
       "getApp": "Get the Zaparoo App",
@@ -513,6 +552,9 @@
         "connectedReaders": "Device Readers",
         "noReadersDetected": "No readers found"
       },
+      "playControls": {
+        "title": "Play Controls"
+      },
       "playtime": {
         "title": "Playtime"
       },
@@ -536,7 +578,7 @@
         "nfcDriver": "NFC driver connection string",
         "insertModeBlocklist": "Insert mode core blocklist",
         "playtime": {
-          "title": "Playtime Limits",
+          "title": "Playtime limits",
           "enabled": "Enable playtime limits",
           "enabledHelp": "Enforce limits on how long media can be played for on the connected device.\n\n**Daily limit:** Total amount of time media can be played for the day across all sessions. Resets daily.\n\n**Session limit:** Maximum amount of time media can be played at once.\n\n**Session reset timeout:** Amount of time required after a session has completed before a new session can start.",
           "dailyLimit": "Daily limit",
@@ -557,6 +599,16 @@
           "cooldownRemaining": "Cooldown ends in",
           "warningToast": "{{remaining}} of playtime remaining",
           "reachedToast": "{{type}} reached"
+        },
+        "launchGuard": {
+          "title": "Launch guard",
+          "enabled": "Enable launch guard",
+          "enabledHelp": "When media is playing, disruptive scanned tokens are staged instead of launched immediately.",
+          "requireConfirm": "Require App confirmation",
+          "requireConfirmHelp": "Show a confirmation prompt in the App before launching a staged token. When disabled, tapping the same token again confirms it.",
+          "timeout": "Confirmation timeout",
+          "delay": "Confirmation delay",
+          "seconds": "Seconds"
         }
       },
       "app": {
@@ -632,6 +684,7 @@
       "selected": "{{name}} selected",
       "deselected": "{{name}} deselected",
       "allSystems": "All systems",
+      "categories": "System categories",
       "allCategories": "All",
       "noResults": "No systems found",
       "noResultsHint": "Try a shorter query or clear the search.",
@@ -712,7 +765,12 @@
     "features": {
       "requiresCoreVersion": "Requires Zaparoo Core v{{version}} or later",
       "inbox": "Notifications",
-      "mediaScrapers": "Scraper"
+      "mediaScrapers": "Scraper",
+      "mediaGenerate": "Media database updates",
+      "mediaCleanOrphans": "Clean missing media",
+      "mediaTags": "Media tags",
+      "mediaBrowseAllSearch": "Browse all media search",
+      "remoteInput": "Remote input"
     },
     "inbox": {
       "title": "Notifications",
@@ -732,6 +790,35 @@
     },
     "deepLinks": {
       "invalidUrl": "Invalid link format"
+    },
+    "remoteKeyboard": {
+      "title": "Controls",
+      "mode": "Input mode",
+      "remoteMode": "Remote",
+      "keyboardMode": "Keyboard",
+      "up": "Up",
+      "down": "Down",
+      "left": "Left",
+      "right": "Right",
+      "ok": "OK",
+      "back": "Back",
+      "osd": "OSD",
+      "menu": "Menu",
+      "context": "Context",
+      "start": "Start",
+      "select": "Select",
+      "minus": "-",
+      "equals": "=",
+      "sendError": "Could not send keyboard input",
+      "screenshotAction": "Screenshot",
+      "screenshotAlt": "Captured platform screenshot",
+      "screenshotDownload": "Download",
+      "screenshotShare": "Share",
+      "screenshotShareTitle": "Zaparoo Screenshot",
+      "screenshotClear": "Clear",
+      "screenshotError": "Could not capture screenshot",
+      "screenshotShareError": "Could not share screenshot",
+      "disconnected": "Connect to a device before sending input"
     },
     "pairing": {
       "title": "Pair with Device",

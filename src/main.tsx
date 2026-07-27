@@ -7,6 +7,7 @@ import { LOG_LEVEL, Purchases } from "@revenuecat/purchases-capacitor";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { initializeApp } from "firebase/app";
+import { isPluginAvailable } from "@/lib/capacitorBridge";
 import App from "./App";
 import { ThemeProvider } from "./components/theme-provider";
 import { ErrorComponent } from "./components/ErrorComponent";
@@ -34,25 +35,37 @@ const queryClient = new QueryClient({
   },
 });
 
-Preferences.get({ key: "apiUrl" })
-  .then((res) => {
-    if (res.value && localStorage.getItem("apiUrl") === null) {
-      localStorage.setItem("apiUrl", res.value);
-      window.location.reload();
-    }
-  })
-  .catch(() => {
-    // Silently ignore - migration from Preferences to localStorage is optional
-  });
-
-const onDeviceReady = async () => {
-  if (import.meta.env.MODE === "development") {
-    await Purchases.setLogLevel({
-      level: LOG_LEVEL.DEBUG,
+if (isPluginAvailable("Preferences")) {
+  Preferences.get({ key: "apiUrl" })
+    .then((res) => {
+      if (res.value && localStorage.getItem("apiUrl") === null) {
+        localStorage.setItem("apiUrl", res.value);
+        window.location.reload();
+      }
+    })
+    .catch(() => {
+      // Silently ignore - migration from Preferences to localStorage is optional
     });
+}
+
+let purchasesInitializationStarted = false;
+
+const initializePurchasesOnce = async () => {
+  if (purchasesInitializationStarted) return;
+  purchasesInitializationStarted = true;
+
+  if (!Capacitor.isNativePlatform() || !isPluginAvailable("Purchases")) {
+    resolvePurchasesReady();
+    return;
   }
 
   try {
+    if (import.meta.env.MODE === "development") {
+      await Purchases.setLogLevel({
+        level: LOG_LEVEL.DEBUG,
+      });
+    }
+
     if (Capacitor.getPlatform() === "ios") {
       await Purchases.configure({
         apiKey: import.meta.env.VITE_APPLE_STORE_API,
@@ -73,12 +86,14 @@ const onDeviceReady = async () => {
   }
 };
 
-// Web platform skips RC entirely — resolve immediately so awaits don't hang
-if (!Capacitor.isNativePlatform()) {
-  resolvePurchasesReady();
+if (!Capacitor.isNativePlatform() || !isPluginAvailable("Purchases")) {
+  initializePurchasesOnce();
+} else {
+  document.addEventListener("deviceready", initializePurchasesOnce, false);
+  window.setTimeout(() => {
+    initializePurchasesOnce();
+  }, 1500);
 }
-
-document.addEventListener("deviceready", onDeviceReady, false);
 
 // App content wrapped in theme and query providers
 const AppContent = (

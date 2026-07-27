@@ -51,4 +51,22 @@ describe("isCoreFeatureAvailable", () => {
     expect(isCoreFeatureAvailable("mediaScrapers", "2.11.9")).toBe(false);
     expect(isCoreFeatureAvailable("mediaScrapers", "2.12.0")).toBe(true);
   });
+
+  it("should gate media orphan cleanup behind Core 2.12.0", () => {
+    expect(FEATURE_GATES.mediaCleanOrphans?.since).toBe("2.12.0");
+    expect(isCoreFeatureAvailable("mediaCleanOrphans", "2.11.9")).toBe(false);
+    expect(isCoreFeatureAvailable("mediaCleanOrphans", "2.12.0")).toBe(true);
+  });
+
+  it("should gate media tags behind Core 2.7.0", () => {
+    expect(FEATURE_GATES.mediaTags?.since).toBe("2.7.0");
+    expect(isCoreFeatureAvailable("mediaTags", "2.6.2")).toBe(false);
+    expect(isCoreFeatureAvailable("mediaTags", "2.7.0")).toBe(true);
+  });
+
+  it("should gate browse-all media search behind Core 2.10.0", () => {
+    expect(FEATURE_GATES.mediaBrowseAllSearch?.since).toBe("2.10.0");
+    expect(isCoreFeatureAvailable("mediaBrowseAllSearch", "2.9.1")).toBe(false);
+    expect(isCoreFeatureAvailable("mediaBrowseAllSearch", "2.10.0")).toBe(true);
+  });
 });

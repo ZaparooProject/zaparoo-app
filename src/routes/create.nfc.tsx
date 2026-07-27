@@ -16,7 +16,11 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { BackIcon } from "@/lib/images";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  getTabBarPanelId,
+  getTabBarTabId,
+  TabBar,
+} from "@/components/wui/TabBar";
 import { ReadTab } from "@/components/nfc/ReadTab";
 import { ToolsTab } from "@/components/nfc/ToolsTab";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -79,6 +83,9 @@ function NfcUtils() {
     setWriteIntent(true);
   };
 
+  const activeTabId = getTabBarTabId(activeTab, "nfc-tab");
+  const activePanelId = getTabBarPanelId(activeTabId);
+
   return (
     <>
       <div {...swipeHandlers} className="flex h-full w-full flex-col">
@@ -94,28 +101,44 @@ function NfcUtils() {
             <h1 className="text-foreground text-xl">{t("create.nfc.title")}</h1>
           }
         >
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => {
-              impact("light");
-              setActiveTab(value);
-            }}
-            className="flex h-full flex-col"
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="read">Read</TabsTrigger>
-              <TabsTrigger value="tools">Tools</TabsTrigger>
-            </TabsList>
-            <TabsContent value="read" className="flex-1 overflow-y-auto">
-              <ReadTab result={nfcWriter.result} onScan={handleScan} />
-            </TabsContent>
-            <TabsContent value="tools" className="flex-1 overflow-y-auto">
-              <ToolsTab
-                onToolAction={handleToolAction}
-                isProcessing={nfcWriter.writing}
-              />
-            </TabsContent>
-          </Tabs>
+          <div className="flex h-full flex-col">
+            <TabBar
+              label={t("create.nfc.title")}
+              role="tab"
+              options={[
+                {
+                  value: "read",
+                  label: "Read",
+                  id: getTabBarTabId("read", "nfc-tab"),
+                },
+                {
+                  value: "tools",
+                  label: "Tools",
+                  id: getTabBarTabId("tools", "nfc-tab"),
+                },
+              ]}
+              value={activeTab}
+              onChange={(value) => {
+                impact("light");
+                setActiveTab(value);
+              }}
+            />
+            <div
+              id={activePanelId}
+              role="tabpanel"
+              aria-labelledby={activeTabId}
+              className="flex-1 overflow-y-auto"
+            >
+              {activeTab === "read" ? (
+                <ReadTab result={nfcWriter.result} onScan={handleScan} />
+              ) : (
+                <ToolsTab
+                  onToolAction={handleToolAction}
+                  isProcessing={nfcWriter.writing}
+                />
+              )}
+            </div>
+          </div>
         </PageFrame>
       </div>
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />

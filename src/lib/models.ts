@@ -1,5 +1,6 @@
 export enum Method {
   Run = "run",
+  Confirm = "confirm",
   Stop = "stop",
   Tokens = "tokens",
   History = "tokens.history",
@@ -8,6 +9,7 @@ export enum Method {
   MediaGenerate = "media.generate",
   MediaGenerateCancel = "media.generate.cancel",
   MediaGenerateResume = "media.generate.resume",
+  MediaCleanOrphans = "media.clean.orphans",
   MediaActive = "media.active",
   MediaActiveUpdate = "media.active.update",
   MediaTags = "media.tags",
@@ -37,6 +39,9 @@ export enum Method {
   MediaScrapeStatus = "media.scrape.status",
   MediaScrapeCancel = "media.scrape.cancel",
   MediaScrapeResume = "media.scrape.resume",
+  InputKeyboard = "input.keyboard",
+  InputGamepad = "input.gamepad",
+  Screenshot = "screenshot",
 }
 
 export enum Notification {
@@ -45,6 +50,8 @@ export enum Notification {
   TokensLaunching = "running",
   TokensScanned = "tokens.added",
   TokensRemoved = "tokens.removed",
+  TokensStaged = "tokens.staged",
+  TokensStagedReady = "tokens.staged.ready",
   MediaStarted = "media.started",
   MediaStopped = "media.stopped",
   MediaIndexing = "media.indexing",
@@ -52,6 +59,7 @@ export enum Notification {
   PlaytimeLimitReached = "playtime.limit.reached",
   InboxAdded = "inbox.added",
   MediaScraping = "media.scraping",
+  ClientsPaired = "clients.paired",
 }
 
 export interface VersionResponse {
@@ -69,6 +77,20 @@ export interface LaunchRequest {
 
 export interface WriteRequest {
   text: string;
+}
+
+export interface InputKeyboardRequest {
+  keys: string;
+}
+
+export interface InputGamepadRequest {
+  buttons: string;
+}
+
+export interface ScreenshotResponse {
+  path: string;
+  data: string;
+  size: number;
 }
 
 export interface SearchParams {
@@ -110,6 +132,11 @@ export interface System {
   category?: string;
   releaseDate?: string;
   manufacturer?: string;
+  zapScript?: string;
+}
+
+export interface SystemsParams {
+  all?: boolean;
 }
 
 export interface SystemsResponse {
@@ -178,6 +205,10 @@ export interface SettingsResponse {
   readersScanMode: "tap" | "hold" | "insert";
   readersScanExitDelay: number;
   readersScanIgnoreSystems: string[];
+  launchGuardEnabled?: boolean;
+  launchGuardTimeout?: number;
+  launchGuardDelay?: number;
+  launchGuardRequireConfirm?: boolean;
 }
 
 export interface UpdateSettingsRequest {
@@ -189,6 +220,10 @@ export interface UpdateSettingsRequest {
   readersScanExitDelay?: number;
   readersScanIgnoreSystems?: string[];
   runZapScript?: boolean;
+  launchGuardEnabled?: boolean;
+  launchGuardTimeout?: number;
+  launchGuardDelay?: number;
+  launchGuardRequireConfirm?: boolean;
 }
 
 export interface TokenResponse {
@@ -197,6 +232,7 @@ export interface TokenResponse {
   text: string;
   data: string;
   scanTime: string;
+  readerId?: string;
 }
 
 export interface IndexResponse {
@@ -209,6 +245,8 @@ export interface IndexResponse {
   currentStepDisplay?: string;
   totalFiles?: number;
   totalMedia?: number;
+  systemsCompleted?: number;
+  systemsTotal?: number;
 }
 
 export interface PlayingResponse {
@@ -425,6 +463,10 @@ export interface MediaScrapeResumeResponse {
   message: string;
 }
 
+export interface MediaCleanOrphansResponse {
+  deleted: number;
+}
+
 // ---------------------------------------------------------------------------
 // media.scraping  (notification)
 // ---------------------------------------------------------------------------
@@ -437,9 +479,26 @@ export interface MediaScrapeResumeResponse {
  *
  * Mirrors Go struct: ScrapingStatusResponse (pkg/api/models/responses.go).
  */
+export interface ScrapeSystemProgress {
+  systemId: string;
+  systemName?: string;
+  processed: number;
+  total: number;
+  matched: number;
+  skipped: number;
+}
+
 export interface ScrapingStatusNotification {
   /** ID of the scraper that is running, e.g. "gamelist.xml". */
   scraperId?: string;
+  /** 1-based current system step in the overall scrape run. */
+  currentStep?: number;
+  /** Display name for the current overall step. */
+  currentStepDisplay?: string;
+  /** Total system steps in the overall scrape run. */
+  totalSteps?: number;
+  /** Current system progress, when Core provides the structured payload. */
+  currentSystem?: ScrapeSystemProgress;
   /** System currently being scraped. Omitted between system transitions. */
   systemId?: string;
   /** Number of source records processed so far. */

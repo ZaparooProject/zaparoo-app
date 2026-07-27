@@ -120,6 +120,20 @@ describe("DeviceConnectionCard", () => {
     expect(screen.getByText("scan.connectedHeading")).toBeInTheDocument();
   });
 
+  it("shows address validation error when provided", () => {
+    render(
+      <DeviceConnectionCard
+        {...defaultProps}
+        addressError="settings.deviceAddressInvalid"
+      />,
+    );
+
+    expect(
+      screen.getByText("settings.deviceAddressInvalid"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toHaveAttribute("aria-invalid", "true");
+  });
+
   it("shows connection error when provided", () => {
     mockUseConnection.mockReturnValue({
       isConnected: false,

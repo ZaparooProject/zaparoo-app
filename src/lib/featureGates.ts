@@ -21,6 +21,31 @@ export const FEATURE_GATES: Record<string, FeatureGate> = {
     marquee: false,
     labelKey: "features.mediaScrapers",
   },
+  mediaGenerate: {
+    since: "2.7.0",
+    marquee: false,
+    labelKey: "features.mediaGenerate",
+  },
+  mediaCleanOrphans: {
+    since: "2.12.0",
+    marquee: false,
+    labelKey: "features.mediaCleanOrphans",
+  },
+  mediaTags: {
+    since: "2.7.0",
+    marquee: false,
+    labelKey: "features.mediaTags",
+  },
+  mediaBrowseAllSearch: {
+    since: "2.10.0",
+    marquee: false,
+    labelKey: "features.mediaBrowseAllSearch",
+  },
+  remoteInput: {
+    since: "2.10.0",
+    marquee: true,
+    labelKey: "features.remoteInput",
+  },
 };
 
 export type FeatureId = keyof typeof FEATURE_GATES;

@@ -1,31 +1,67 @@
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { ConnectionState, useStatusStore } from "@/lib/store";
-import { CoreAPI } from "@/lib/coreApi";
+import {
+  CoreAPI,
+  isExpectedMediaDatabaseError,
+  isMissingMediaDatabaseSetupError,
+} from "@/lib/coreApi";
 import { DatabaseIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
+import { isCoreFeatureAvailable } from "@/lib/featureGates";
+import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 import { SystemSelector, SystemSelectorTrigger } from "./SystemSelector";
 import { LoadingSpinner } from "./ui/loading-spinner";
+import { SlideModal } from "./SlideModal";
 
-export function MediaDatabaseCard() {
+interface MediaDatabaseCardProps {
+  showMaintenanceActions?: boolean;
+  variant?: "card" | "plain";
+}
+
+export function MediaDatabaseCard({
+  showMaintenanceActions = false,
+  variant = "card",
+}: MediaDatabaseCardProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const connected = useStatusStore((state) => state.connected);
+  const targetDeviceAddress = useStatusStore(
+    (state) => state.targetDeviceAddress,
+  );
   const connectionState = useStatusStore((state) => state.connectionState);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
+  const coreVersion = useStatusStore((state) => state.coreVersion);
+  const coreVersionPending = useStatusStore(
+    (state) => state.coreVersionPending,
+  );
+  const cleanOrphansFeature = useCoreFeature("mediaCleanOrphans");
   const isLiveConnected = connectionState === ConnectionState.CONNECTED;
   const [cancelRequested, setCancelRequested] = useState(false);
   const [resumeRequested, setResumeRequested] = useState(false);
   const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
+  const [cleanConfirmOpen, setCleanConfirmOpen] = useState(false);
+  const [cleanDeletedCount, setCleanDeletedCount] = useState<number | null>(
+    null,
+  );
+  const [cleanError, setCleanError] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   const isPaused = gamesIndex.paused === true;
   const isScraping = scrapingStatus?.scraping === true;
+  const mediaGenerateAvailable =
+    coreVersion !== null &&
+    !coreVersionPending &&
+    isCoreFeatureAvailable("mediaGenerate", coreVersion);
+  const mediaGenerateUnsupported =
+    coreVersion !== null && !coreVersionPending && !mediaGenerateAvailable;
 
   // Derive isCancelling: true only if we requested cancel AND indexing is still happening
   const isCancelling = cancelRequested && gamesIndex.indexing;
@@ -48,7 +84,11 @@ export function MediaDatabaseCard() {
   }, [isPaused, gamesIndex.indexing, resumeRequested]);
 
   // Fetch real-time database status
-  const { data: mediaStatus, isLoading } = useQuery({
+  const {
+    data: mediaStatus,
+    isLoading,
+    error: mediaStatusError,
+  } = useQuery({
     queryKey: ["media"],
     queryFn: () => CoreAPI.media(),
     enabled: connected,
@@ -56,14 +96,17 @@ export function MediaDatabaseCard() {
     retry: false,
   });
 
-  // Fetch systems data for selector
+  // Include unavailable launcher-backed systems so users can run their first
+  // partial index for a system. CoreAPI removes virtual ZapScript launchables.
   const { data: systemsData } = useQuery({
-    queryKey: ["systems"],
-    queryFn: () => CoreAPI.systems(),
+    queryKey: ["systems", targetDeviceAddress, { all: true }],
+    queryFn: () => CoreAPI.systems({ all: true }),
     enabled: connected,
   });
 
-  const handleUpdateDatabase = () => {
+  const handleUpdateDatabase = async () => {
+    if (!mediaGenerateAvailable) return;
+
     // If no systems selected or all systems selected, pass undefined (all systems)
     const systemsToUpdate =
       selectedSystems.length === 0 ||
@@ -72,12 +115,38 @@ export function MediaDatabaseCard() {
         ? undefined
         : selectedSystems;
 
-    CoreAPI.mediaGenerate(
-      systemsToUpdate ? { systems: systemsToUpdate } : undefined,
-    );
+    setGenerateError(null);
+    try {
+      await CoreAPI.mediaGenerate(
+        systemsToUpdate ? { systems: systemsToUpdate } : undefined,
+      );
+      queryClient.invalidateQueries({ queryKey: ["media"] });
+    } catch (error) {
+      if (isMissingMediaDatabaseSetupError(error)) {
+        setGenerateError(t("settings.updateDb.status.setupMissing"));
+        return;
+      }
+
+      if (isExpectedMediaDatabaseError(error)) {
+        setGenerateError(
+          error instanceof Error
+            ? error.message
+            : t("settings.updateDb.startError"),
+        );
+        return;
+      }
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : t("settings.updateDb.startError");
+      setGenerateError(message);
+      showRateLimitedErrorToast(t("error", { msg: message }));
+    }
   };
 
   const handleCancelUpdate = async () => {
+    setGenerateError(null);
     setCancelRequested(true);
     try {
       await CoreAPI.mediaGenerateCancel();
@@ -85,6 +154,16 @@ export function MediaDatabaseCard() {
       // when the indexing status updates from the WebSocket notification
       queryClient.invalidateQueries({ queryKey: ["media"] });
     } catch (error) {
+      if (isExpectedMediaDatabaseError(error)) {
+        setGenerateError(
+          error instanceof Error
+            ? error.message
+            : t("settings.updateDb.startError"),
+        );
+        setCancelRequested(false);
+        return;
+      }
+
       logger.error("Failed to cancel media generation:", error, {
         category: "api",
         action: "mediaGenerateCancel",
@@ -96,11 +175,22 @@ export function MediaDatabaseCard() {
   };
 
   const handleResumeUpdate = async () => {
+    setGenerateError(null);
     setResumeRequested(true);
     try {
       await CoreAPI.mediaGenerateResume();
       queryClient.invalidateQueries({ queryKey: ["media"] });
     } catch (error) {
+      if (isExpectedMediaDatabaseError(error)) {
+        setGenerateError(
+          error instanceof Error
+            ? error.message
+            : t("settings.updateDb.startError"),
+        );
+        setResumeRequested(false);
+        return;
+      }
+
       logger.error("Failed to resume media generation:", error, {
         category: "api",
         action: "mediaGenerateResume",
@@ -114,6 +204,47 @@ export function MediaDatabaseCard() {
   const isOptimizing =
     gamesIndex.optimizing || mediaStatus?.database?.optimizing;
   const isIndexing = gamesIndex.indexing || mediaStatus?.database?.indexing;
+
+  const cleanMutation = useMutation({
+    mutationFn: () => CoreAPI.mediaCleanOrphans(),
+    onSuccess: (response) => {
+      setCleanDeletedCount(response.deleted);
+      setCleanError(null);
+      queryClient.invalidateQueries({ queryKey: ["media"] });
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
+      queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] });
+    },
+    onError: (err) => {
+      const message = isMissingMediaDatabaseSetupError(err)
+        ? t("settings.updateDb.status.setupMissing")
+        : err instanceof Error
+          ? err.message
+          : t("settings.updateDb.cleanOrphansError");
+      setCleanError(message);
+      if (isExpectedMediaDatabaseError(err)) {
+        return;
+      }
+      logger.error("Failed to clean media orphans", err, {
+        category: "api",
+        action: "mediaCleanOrphans",
+        severity: "error",
+      });
+      showRateLimitedErrorToast(t("error", { msg: message }));
+    },
+  });
+
+  const isCleaning = cleanMutation.isPending;
+  const showCleanAction =
+    showMaintenanceActions && cleanOrphansFeature.available;
+  const cleanDisabled =
+    !connected || isIndexing || isOptimizing || isScraping || isCleaning;
+
+  const handleCleanConfirm = () => {
+    setCleanConfirmOpen(false);
+    setCleanDeletedCount(null);
+    setCleanError(null);
+    cleanMutation.mutate();
+  };
 
   // Display string for the current step. Core sends `currentStepDisplay` for
   // every phase (folder discovery, per-system loop, writing, indexes, caches);
@@ -221,7 +352,11 @@ export function MediaDatabaseCard() {
             }
             variant="outline"
             className="w-full"
-            disabled={!connected || (isPaused ? isResuming : isCancelling)}
+            disabled={
+              !connected ||
+              !mediaGenerateAvailable ||
+              (isPaused ? isResuming : isCancelling)
+            }
             onClick={isPaused ? handleResumeUpdate : handleCancelUpdate}
           />
         </div>
@@ -237,11 +372,27 @@ export function MediaDatabaseCard() {
       );
     }
 
+    if (mediaGenerateUnsupported) {
+      return (
+        <div className="text-muted-foreground mt-3 text-sm">
+          {t("settings.updateDb.status.unsupported")}
+        </div>
+      );
+    }
+
     // Show loading state while fetching database status
     if (isLoading) {
       return (
         <div className="text-muted-foreground mt-3 text-sm">
           {t("settings.updateDb.status.checking")}
+        </div>
+      );
+    }
+
+    if (isMissingMediaDatabaseSetupError(mediaStatusError)) {
+      return (
+        <div className="text-muted-foreground mt-3 text-sm">
+          {t("settings.updateDb.status.setupMissing")}
         </div>
       );
     }
@@ -297,6 +448,89 @@ export function MediaDatabaseCard() {
     return "";
   };
 
+  const content = (
+    <div className="space-y-3">
+      {/* System selector for choosing which systems to update */}
+      <SystemSelectorTrigger
+        selectedSystems={selectedSystems}
+        systemsData={systemsData}
+        placeholder={t("settings.updateDb.allSystems")}
+        mode="multi"
+        onClick={() => setSystemSelectorOpen(true)}
+        disabled={
+          !connected || !mediaGenerateAvailable || isScraping || isCleaning
+        }
+      />
+
+      {isScraping ? (
+        <div className="text-muted-foreground text-sm">
+          {t("settings.updateDb.blockedByScrape")}
+        </div>
+      ) : null}
+
+      <div data-tour="update-database">
+        <Button
+          label={t("settings.updateDb")}
+          icon={<DatabaseIcon size="20" />}
+          className="w-full"
+          disabled={
+            !connected ||
+            !mediaGenerateAvailable ||
+            isIndexing ||
+            isOptimizing ||
+            isScraping ||
+            isCleaning
+          }
+          onClick={handleUpdateDatabase}
+        />
+      </div>
+
+      {renderStatus()}
+
+      {generateError ? (
+        <p className="text-error text-sm">
+          {t("error", { msg: generateError })}
+        </p>
+      ) : null}
+
+      {showCleanAction ? (
+        <div className="space-y-2 pt-1">
+          <Button
+            label={
+              isCleaning
+                ? t("settings.updateDb.cleanOrphansPending")
+                : t("settings.updateDb.cleanOrphans")
+            }
+            variant="outline"
+            intent="destructive"
+            className="w-full"
+            disabled={cleanDisabled}
+            onClick={() => setCleanConfirmOpen(true)}
+          />
+          {isCleaning ? (
+            <p className="text-muted-foreground text-sm">
+              {t("settings.updateDb.cleanOrphansPendingStatus")}
+            </p>
+          ) : null}
+          {cleanError ? (
+            <p className="text-error text-sm">
+              {t("error", { msg: cleanError })}
+            </p>
+          ) : null}
+          {cleanDeletedCount !== null ? (
+            <p className="text-muted-foreground text-sm">
+              {cleanDeletedCount > 0
+                ? t("settings.updateDb.cleanOrphansSuccess", {
+                    count: cleanDeletedCount,
+                  })
+                : t("settings.updateDb.cleanOrphansNone")}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
     <>
       {/* Screen reader announcement for database update progress */}
@@ -304,37 +538,38 @@ export function MediaDatabaseCard() {
         {getStatusText()}
       </div>
 
-      <Card>
-        <div className="space-y-3">
-          {/* System selector for choosing which systems to update */}
-          <SystemSelectorTrigger
-            selectedSystems={selectedSystems}
-            systemsData={systemsData}
-            placeholder={t("settings.updateDb.allSystems")}
-            mode="multi"
-            onClick={() => setSystemSelectorOpen(true)}
-            disabled={!connected || isScraping}
-          />
+      {variant === "card" ? <Card>{content}</Card> : content}
 
-          {isScraping ? (
-            <div className="text-muted-foreground text-sm">
-              {t("settings.updateDb.blockedByScrape")}
+      {showCleanAction ? (
+        <SlideModal
+          isOpen={cleanConfirmOpen}
+          close={() => setCleanConfirmOpen(false)}
+          title={t("settings.updateDb.cleanOrphansConfirmTitle")}
+        >
+          <div className="flex flex-col gap-4 py-4">
+            <p className="text-muted-foreground text-sm">
+              {t("settings.updateDb.cleanOrphansConfirmDescription")}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                label={t("nav.cancel")}
+                variant="outline"
+                className="flex-1"
+                disabled={isCleaning}
+                onClick={() => setCleanConfirmOpen(false)}
+              />
+              <Button
+                label={t("settings.updateDb.cleanOrphansConfirmAction")}
+                variant="outline"
+                intent="destructive"
+                className="border-error text-error flex-1"
+                disabled={isCleaning}
+                onClick={handleCleanConfirm}
+              />
             </div>
-          ) : null}
-
-          <div data-tour="update-database">
-            <Button
-              label={t("settings.updateDb")}
-              icon={<DatabaseIcon size="20" />}
-              className="w-full"
-              disabled={!connected || isIndexing || isOptimizing || isScraping}
-              onClick={handleUpdateDatabase}
-            />
           </div>
-
-          {renderStatus()}
-        </div>
-      </Card>
+        </SlideModal>
+      ) : null}
 
       <SystemSelector
         isOpen={systemSelectorOpen}
@@ -344,6 +579,7 @@ export function MediaDatabaseCard() {
         mode="multi"
         title={t("settings.updateDb.selectSystemsTitle")}
         includeAllOption={true}
+        allSystems={true}
       />
     </>
   );

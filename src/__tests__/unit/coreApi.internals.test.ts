@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   CoreAPI,
+  MalformedCoreResponseError,
   getDeviceAddress,
   setDeviceAddress,
   getWsUrl,
 } from "../../lib/coreApi";
+import { Method } from "../../lib/models";
 
 const mockSend = vi.fn();
 import { Preferences } from "@capacitor/preferences";
@@ -87,19 +89,11 @@ describe("CoreAPI Internals", () => {
       expect(() => setDeviceAddress("test-address")).not.toThrow();
     });
 
-    it("should throw when getWsUrl encounters an error", () => {
-      // Mock String.prototype.lastIndexOf to throw an error during URL construction
-      const originalLastIndexOf = String.prototype.lastIndexOf;
-      String.prototype.lastIndexOf = vi.fn(() => {
-        throw new Error("String operation error");
-      });
+    it("should not throw for invalid saved device address", () => {
+      mockLocalStorage.getItem.mockReturnValue("192.168.1.286");
 
-      try {
-        expect(() => getWsUrl()).toThrow("String operation error");
-      } finally {
-        // Restore mock
-        String.prototype.lastIndexOf = originalLastIndexOf;
-      }
+      expect(() => getWsUrl()).not.toThrow();
+      expect(getWsUrl()).toBe("");
     });
   });
 
@@ -132,6 +126,16 @@ describe("CoreAPI Internals", () => {
       await expect(CoreAPI.processReceived(messageEvent)).rejects.toThrow(
         "Not a valid JSON-RPC payload.",
       );
+    });
+
+    it("should classify malformed JSON as a recoverable Core response error", async () => {
+      const messageEvent = new MessageEvent("message", {
+        data: '{"jsonrpc":"2.0","result":',
+      });
+
+      await expect(
+        CoreAPI.processReceived(messageEvent),
+      ).rejects.toBeInstanceOf(MalformedCoreResponseError);
     });
 
     it("should process notifications and return method/params", async () => {
@@ -183,6 +187,24 @@ describe("CoreAPI Internals", () => {
       vi.spyOn(CoreAPI, "call").mockRejectedValue(new Error("Network error"));
 
       await expect(CoreAPI.systems()).rejects.toThrow("Network error");
+    });
+
+    it("should request all systems and filter virtual launchables", async () => {
+      const callSpy = vi.spyOn(CoreAPI, "call").mockResolvedValue({
+        systems: [
+          { id: "snes", name: "Super Nintendo" },
+          {
+            id: "virtual:steam",
+            name: "Steam",
+            zapScript: "**launch.system:steam",
+          },
+        ],
+      });
+
+      await expect(CoreAPI.systems({ all: true })).resolves.toEqual({
+        systems: [{ id: "snes", name: "Super Nintendo" }],
+      });
+      expect(callSpy).toHaveBeenCalledWith(Method.Systems, { all: true });
     });
 
     it("should propagate settings method errors", async () => {

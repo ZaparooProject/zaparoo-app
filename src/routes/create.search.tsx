@@ -1,16 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Preferences } from "@capacitor/preferences";
 import { logger } from "@/lib/logger";
-import { CoreAPI } from "@/lib/coreApi.ts";
+import { CoreAPI, isRequestCancelledError } from "@/lib/coreApi";
 import { Search, type LoaderData } from "./-pages/Search";
 
 export const Route = createFileRoute("/create/search")({
   loader: async (): Promise<LoaderData> => {
+    let systemsRequestCancelled = false;
     const [systemPreference, tagPreference, systemsResponse] =
       await Promise.all([
         Preferences.get({ key: "searchSystem" }),
         Preferences.get({ key: "searchTags" }),
-        CoreAPI.systems(),
+        CoreAPI.systems().catch((error) => {
+          if (!isRequestCancelledError(error)) {
+            throw error;
+          }
+          logger.debug("Search systems loader request cancelled", error);
+          systemsRequestCancelled = true;
+          return { systems: [] };
+        }),
       ]);
 
     let savedTags: string[] = [];
@@ -27,8 +35,18 @@ export const Route = createFileRoute("/create/search")({
       });
     }
 
+    const savedSystem = systemPreference.value;
+    const systems = Array.isArray(systemsResponse?.systems)
+      ? systemsResponse.systems
+      : [];
+    const savedSystemAvailable =
+      systemsRequestCancelled ||
+      !savedSystem ||
+      savedSystem === "all" ||
+      systems.some((system) => system.id === savedSystem);
+
     return {
-      systemQuery: systemPreference.value || "all",
+      systemQuery: savedSystemAvailable && savedSystem ? savedSystem : "all",
       tagQuery: savedTags,
       systems: systemsResponse,
     };

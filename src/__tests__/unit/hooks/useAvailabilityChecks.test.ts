@@ -9,6 +9,12 @@ import { useNfcAvailabilityCheck } from "@/hooks/useNfcAvailabilityCheck";
 import { useCameraAvailabilityCheck } from "@/hooks/useCameraAvailabilityCheck";
 import { useAccelerometerAvailabilityCheck } from "@/hooks/useAccelerometerAvailabilityCheck";
 
+vi.mock("@/lib/capacitorBridge", () => ({
+  isCapacitorPluginUnavailableError: vi.fn(() => false),
+  isNativePluginAvailable: vi.fn(() => true),
+  isPluginAvailable: vi.fn(() => true),
+}));
+
 describe("Availability Check Hooks", () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -1,6 +1,13 @@
 import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MediaSearchModal } from "@/components/MediaSearchModal";
+
+const mockStoreState = {
+  connected: true,
+  gamesIndex: { exists: true, indexing: false },
+  safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+};
 
 // Mock external hooks and plugins
 vi.mock("@/hooks/useHaptics", () => ({
@@ -38,14 +45,9 @@ vi.mock("use-debounce", () => ({
 }));
 
 vi.mock("@/lib/store", () => ({
-  useStatusStore: vi.fn((selector) => {
-    const state = {
-      connected: true,
-      gamesIndex: { exists: true, indexing: false },
-      safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
-    };
-    return selector ? selector(state) : state;
-  }),
+  useStatusStore: vi.fn((selector) =>
+    selector ? selector(mockStoreState) : mockStoreState,
+  ),
 }));
 
 vi.mock("@/lib/coreApi", () => ({
@@ -131,6 +133,8 @@ describe("MediaSearchModal", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockStoreState.connected = true;
+    mockStoreState.gamesIndex = { exists: true, indexing: false };
   });
 
   it("should render when open", () => {
@@ -237,6 +241,55 @@ describe("MediaSearchModal", () => {
 
     // Verify search query is passed to results
     expect(screen.getByText("Search results for: mario")).toBeInTheDocument();
+  });
+
+  it("should allow search while indexing", async () => {
+    const user = userEvent.setup();
+    mockStoreState.gamesIndex = { exists: true, indexing: true };
+
+    render(
+      <MediaSearchModal
+        isOpen={true}
+        close={mockClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    const searchInput = screen.getByPlaceholderText(
+      "create.search.gameInputPlaceholder",
+    );
+    await user.type(searchInput, "mario");
+
+    const searchButton = screen.getByRole("button", {
+      name: /create\.search\.searchButton/i,
+    });
+    expect(searchButton).toBeEnabled();
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toBeEnabled();
+    });
+    await user.click(searchButton);
+
+    expect(await screen.findByTestId("search-results")).toBeInTheDocument();
+  });
+
+  it("should stay disabled when indexing has no usable data", async () => {
+    mockStoreState.gamesIndex = { exists: false, indexing: true };
+
+    render(
+      <MediaSearchModal
+        isOpen={true}
+        close={mockClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    expect(
+      screen.getByPlaceholderText("create.search.gameInputPlaceholder"),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /create\.search\.searchButton/i }),
+    ).toBeDisabled();
+    expect(await screen.findByRole("combobox")).toBeDisabled();
   });
 
   it("should call onSelect and close when result is selected", async () => {
