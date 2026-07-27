@@ -847,7 +847,11 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Run API call failed:", error);
+          if (isRequestCancelledError(error)) {
+            logger.debug("Run API call cancelled:", error);
+          } else {
+            logger.error("Run API call failed:", error);
+          }
           reject(error);
         });
     });

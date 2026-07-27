@@ -507,8 +507,12 @@ describe("useNfcWriter", () => {
 
       await act(async () => {
         void result.current.write(WriteAction.Write, "test content");
-        await Promise.resolve();
-        await Promise.resolve();
+      });
+
+      // Wait for the observable precondition - the local write has started -
+      // rather than counting determineWriteMethod's internal awaits
+      await waitFor(() => {
+        expect(mockWriteTag).toHaveBeenCalled();
       });
 
       unmount();

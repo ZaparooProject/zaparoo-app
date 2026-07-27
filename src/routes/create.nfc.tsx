@@ -75,6 +75,7 @@ export function NfcUtils() {
       logger.error("NFC read failed:", e, {
         category: "nfc",
         action: "nfcUtilsRead",
+        severity: "error",
       });
     });
     setWriteIntent(true);
@@ -85,6 +86,7 @@ export function NfcUtils() {
       logger.error("NFC tool action failed:", e, {
         category: "nfc",
         action: "nfcUtilsTool",
+        severity: "error",
       });
     });
     setWriteIntent(true);

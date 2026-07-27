@@ -241,6 +241,8 @@ function TestWrapper({
 describe("Index Route Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Drop the setWriteOpen callback captured from a prior Index render
+    mockScanOperationsProps.current = null;
 
     // Reset stores to connected state
     useStatusStore.setState({

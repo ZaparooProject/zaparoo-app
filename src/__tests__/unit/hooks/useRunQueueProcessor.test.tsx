@@ -7,10 +7,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act } from "../../../test-utils";
-import { useRunQueueProcessor } from "../../../hooks/useRunQueueProcessor";
-import { ConnectionState, useStatusStore } from "../../../lib/store";
-import { usePreferencesStore } from "../../../lib/preferencesStore";
+import { renderHook, act } from "@/test-utils";
+import { useRunQueueProcessor } from "@/hooks/useRunQueueProcessor";
+import { ConnectionState, useStatusStore } from "@/lib/store";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 
 // Create hoisted mocks
 const { mockRunToken, mockToast, mockLogger } = vi.hoisted(() => ({

@@ -50,6 +50,11 @@ export function useScanOperations({
   const statusResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  // Bumped on every user-initiated start/stop. Automatic continuous-scan
+  // restarts inherit the current generation, so a blocked launch can still
+  // stop its own restarted session - but a launch that fails late (e.g. a
+  // 30s request timeout) can't tear down a scan the user started afterwards.
+  const scanGenerationRef = useRef(0);
 
   const scheduleStatusReset = useCallback(() => {
     if (statusResetTimerRef.current) {
@@ -63,6 +68,8 @@ export function useScanOperations({
 
   useEffect(() => {
     return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentional: invalidate in-flight launch cleanups on unmount; this is a counter, not a node ref
+      scanGenerationRef.current++;
       if (restartTimerRef.current) {
         clearTimeout(restartTimerRef.current);
         restartTimerRef.current = null;
@@ -75,6 +82,7 @@ export function useScanOperations({
   }, []);
 
   const doScan = useCallback(() => {
+    const generation = scanGenerationRef.current;
     setScanSession(true);
 
     readTag()
@@ -104,9 +112,10 @@ export function useScanOperations({
             false, // override
             hasData, // canQueueCommands - only queue if we had a prior connection
           ).then((ok) => {
-            if (!ok) {
+            if (!ok && scanGenerationRef.current === generation) {
               // Launch was blocked (e.g. Pro gate opened the purchase modal):
-              // stop scanning entirely, including any pending restart
+              // stop scanning entirely, including any pending restart. Skipped
+              // when the user has since stopped/restarted scanning themselves.
               if (restartTimerRef.current) {
                 clearTimeout(restartTimerRef.current);
                 restartTimerRef.current = null;
@@ -163,6 +172,7 @@ export function useScanOperations({
   ]);
 
   const handleScanButton = useCallback(async () => {
+    scanGenerationRef.current++;
     if (scanSession) {
       setScanSession(false);
       // Stop a pending iOS continuous-scan restart along with the session
@@ -204,6 +214,7 @@ export function useScanOperations({
             logger.error("Camera-initiated write failed:", e, {
               category: "nfc",
               action: "cameraWrite",
+              severity: "error",
             });
           });
           return;

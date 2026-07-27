@@ -83,6 +83,7 @@ export function Create() {
                     logger.error("NFC write failed:", e, {
                       category: "nfc",
                       action: "writeCurrentMedia",
+                      severity: "error",
                     });
                   });
                 setWriteIntent(true);

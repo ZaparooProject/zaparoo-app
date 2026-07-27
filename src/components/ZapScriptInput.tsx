@@ -128,6 +128,7 @@ export function ZapScriptInput(props: {
                       logger.error("ZapScript run failed:", e, {
                         category: "api",
                         action: "runZapScript",
+                        severity: "error",
                       });
                     });
                   }}

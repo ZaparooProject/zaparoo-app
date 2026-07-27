@@ -382,7 +382,6 @@ export default function App() {
 
   return (
     <>
-      <QueueProcessors />
       <Toaster
         position="top-center"
         toastOptions={{
@@ -423,6 +422,10 @@ export default function App() {
             <RequirementsModal />
             <InboxModal />
             <StagedTokenModal />
+            {/* Must live inside A11yAnnouncerProvider and SlideModalProvider:
+                its WriteModal uses useAnnouncer and its confirm modal renders
+                a SlideModal */}
+            <QueueProcessors />
             <WhatsNewInitializer />
           </ConnectionProvider>
         </SlideModalProvider>

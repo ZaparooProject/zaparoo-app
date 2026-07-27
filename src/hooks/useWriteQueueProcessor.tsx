@@ -93,14 +93,19 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
       // Only check remote readers if local NFC is not available AND the
       // connection is fully established - during RECONNECTING the request
       // would sit in the offline queue until it times out.
-      if (
-        !hasWriteCapability &&
-        useStatusStore.getState().connectionState === ConnectionState.CONNECTED
-      ) {
+      const isConnected =
+        useStatusStore.getState().connectionState === ConnectionState.CONNECTED;
+      if (!hasWriteCapability && isConnected) {
         hasWriteCapability = await CoreAPI.hasWriteCapableReader();
       }
 
       if (!hasWriteCapability) {
+        if (!isConnected) {
+          // No local NFC and the connection is still establishing (e.g. cold
+          // start from a deep link) - throw so the retry loop keeps the write
+          // alive until the remote reader can be checked
+          throw new Error(tRef.current("write.noWriteMethodAvailable"));
+        }
         toast.error(tRef.current("write.noWriteMethodAvailable"));
         return;
       }

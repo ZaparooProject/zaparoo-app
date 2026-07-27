@@ -86,19 +86,20 @@ export function __resetNfcSessionState(): void {
 
 /**
  * Wait for the active session (if any) to finish releasing its lock.
- * Cancellation unwinds through a few microtasks (listener removal); this
- * yields until the lock is free so a follow-up session won't see "busy".
+ * Polls on short timers rather than microtasks so native Capacitor callbacks
+ * (listener removal, session teardown) get macrotask turns to complete.
  */
 export async function waitForSessionRelease(
-  maxMicrotasks = 100,
+  timeoutMs = 2000,
 ): Promise<boolean> {
-  for (let i = 0; i < maxMicrotasks; i++) {
-    if (activeSessionToken === null) {
-      return true;
+  const start = Date.now();
+  while (activeSessionToken !== null) {
+    if (Date.now() - start >= timeoutMs) {
+      return false;
     }
-    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 10));
   }
-  return activeSessionToken === null;
+  return true;
 }
 
 async function stopScanSessionSafely(): Promise<void> {
@@ -133,13 +134,16 @@ async function withNfcSession<T>(
         clearTimeout(timeoutId);
         timeoutId = undefined;
       }
+      // Remove listeners BEFORE releasing the session lock - a successor
+      // session may start the moment the lock frees, and this session's
+      // listeners must not still be attached when it does.
+      await Promise.all(listeners.map((listener) => listener.remove()));
+      listeners = [];
       if (activeSessionToken === sessionToken) {
         activeSessionToken = null;
         activeSessionCancel = null;
         sessionManager.setIsScanning(false);
       }
-      await Promise.all(listeners.map((listener) => listener.remove()));
-      listeners = [];
     };
 
     const handleSuccess = async (result: T) => {
@@ -573,9 +577,8 @@ export async function cancelSession() {
   try {
     supported = (await Nfc.isSupported()).nfc;
   } catch (error) {
-    // isSupported rejects on web / when the bridge is unavailable; nothing to cancel
+    // isSupported rejects on web / when the bridge is unavailable
     logger.debug("NFC support check failed during cancel:", error);
-    return;
   }
   if (supported) {
     // Stop the native session first. On iOS this also fires the
@@ -583,9 +586,10 @@ export async function cancelSession() {
     // where stopping does not emit an event. Do NOT call removeAllListeners()
     // as it would globally remove ALL NFC listeners, breaking encapsulation
     // and potentially affecting other code.
-    await Nfc.stopScanSession();
+    await stopScanSessionSafely();
   }
-  // Deterministically unwind the active JS session (no-op if none, and the
-  // settled guard makes a duplicate native cancel event harmless).
+  // Deterministically unwind the active JS session even when native stopping
+  // is unsupported or fails (no-op if none, and the settled guard makes a
+  // duplicate native cancel event harmless).
   activeSessionCancel?.();
 }

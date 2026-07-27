@@ -100,6 +100,7 @@ export const runToken = async (
           logger.error("launch error", e, {
             category: "api",
             action: "runToken",
+            severity: "error",
             hasUid: !!uid,
             textPrefix: text.slice(0, 20),
           });

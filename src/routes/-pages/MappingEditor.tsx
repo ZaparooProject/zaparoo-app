@@ -193,6 +193,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
       logger.error("NFC read failed:", e, {
         category: "nfc",
         action: "mappingNfcScan",
+        severity: "error",
       });
     });
     setWriteIntent(true);

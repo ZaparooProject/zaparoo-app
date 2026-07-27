@@ -78,6 +78,7 @@ export function CustomText() {
                   logger.error("NFC write failed:", e, {
                     category: "nfc",
                     action: "writeCustomText",
+                    severity: "error",
                   });
                 });
                 setWriteIntent(true);

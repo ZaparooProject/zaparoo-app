@@ -159,6 +159,9 @@ export function useNfcWriter(
   // Whether THIS hook instance has a local NFC session in flight, so unmount
   // cleanup only cancels sessions it owns instead of any active session.
   const ownsLocalSessionRef = useRef(false);
+  // Monotonic per-write token: a superseded write's cleanup must not clear
+  // the ownership flag set by a newer write still in flight.
+  const writeOpIdRef = useRef(0);
 
   const { t } = useTranslation();
 
@@ -181,6 +184,8 @@ export function useNfcWriter(
 
   const write = useCallback(
     async (action: WriteAction, text?: string) => {
+      const writeOpId = ++writeOpIdRef.current;
+
       // Clear any previous state before starting a new write operation
       setStatus(null);
       setResult(null);
@@ -364,7 +369,9 @@ export function useNfcWriter(
           setStatus(Status.Error);
         })
         .finally(() => {
-          if (usesLocalSession) {
+          // Only the latest write may release ownership - an older write
+          // settling late must not clear the flag for a newer local session
+          if (usesLocalSession && writeOpIdRef.current === writeOpId) {
             ownsLocalSessionRef.current = false;
           }
         });

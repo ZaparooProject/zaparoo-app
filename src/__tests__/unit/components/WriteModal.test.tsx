@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, act } from "../../../test-utils";
+import { render, screen, fireEvent, act } from "@/test-utils";
 import { WriteModal } from "@/components/WriteModal";
 import { useStatusStore } from "@/lib/store";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
