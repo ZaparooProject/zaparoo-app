@@ -22,8 +22,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="zaparoo.app" android:pathPrefix="/run" />
-                <data android:scheme="https" android:host="zaparoo.app" android:pathPrefix="/write" />
+                <data android:scheme="https" android:host="zaparoo.app" />
             </intent-filter>
 
             <!-- Custom scheme deep links: work offline and without domain verification -->

@@ -4,7 +4,7 @@
     "details": [
       {
         "appID": "LYZZF7F2CZ.dev.wizzo.tapto",
-        "paths": ["/run", "/write"]
+        "paths": ["*"]
       }
     ]
   }
