@@ -1,5 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI, getDeviceAddress, getWsUrl } from "@/lib/coreApi.ts";
+import {
+  CoreAPI,
+  CoreApiError,
+  MalformedCoreResponseError,
+  getDeviceAddress,
+  getWsUrl,
+  isExpectedMediaDatabaseError,
+  isMissingMediaDatabaseSetupError,
+  isUnsupportedMediaApiError,
+} from "@/lib/coreApi";
 import { Capacitor } from "@capacitor/core";
 import { Notification } from "@/lib/models.ts";
 
@@ -25,6 +34,59 @@ Object.defineProperty(window, "location", {
     hostname: "localhost",
   },
   writable: true,
+});
+
+describe("media API error classification", () => {
+  it("should recognize unsupported media API errors case-insensitively", () => {
+    expect(isUnsupportedMediaApiError(new Error("Method not found"))).toBe(
+      true,
+    );
+    expect(isUnsupportedMediaApiError("METHOD NOT FOUND")).toBe(true);
+  });
+
+  it("should recognize JSON-RPC method-not-found codes", () => {
+    expect(
+      isUnsupportedMediaApiError(new CoreApiError("No method", -32601)),
+    ).toBe(true);
+    expect(
+      isUnsupportedMediaApiError(new CoreApiError("Other failure", -32000)),
+    ).toBe(false);
+  });
+
+  it("should only match exact missing query/system contract errors", () => {
+    expect(isUnsupportedMediaApiError("query or system is required")).toBe(
+      true,
+    );
+    expect(
+      isUnsupportedMediaApiError(
+        "query or system is required for old endpoint",
+      ),
+    ).toBe(false);
+  });
+
+  it("should recognize missing media database setup errors", () => {
+    expect(
+      isMissingMediaDatabaseSetupError(
+        new Error("failed to get optimization status: no such table: DBConfig"),
+      ),
+    ).toBe(true);
+    expect(
+      isMissingMediaDatabaseSetupError(
+        "failed to get optimization status during indexing check",
+      ),
+    ).toBe(true);
+    expect(isMissingMediaDatabaseSetupError(null)).toBe(false);
+  });
+
+  it("should classify unsupported and missing setup failures as expected", () => {
+    expect(isExpectedMediaDatabaseError(new Error("Method not found"))).toBe(
+      true,
+    );
+    expect(
+      isExpectedMediaDatabaseError(new Error("no such table: DBConfig")),
+    ).toBe(true);
+    expect(isExpectedMediaDatabaseError(new Error("network down"))).toBe(false);
+  });
 });
 
 describe("CoreAPI", () => {
@@ -106,11 +168,25 @@ describe("CoreAPI", () => {
     expect(result).toBeNull();
   });
 
-  it("should handle invalid JSON in processReceived", async () => {
+  it("should reject unknown malformed JSON in processReceived", async () => {
     const invalidJsonEvent = { data: "invalid json" } as MessageEvent;
-    await expect(CoreAPI.processReceived(invalidJsonEvent)).rejects.toThrow(
-      "Error parsing JSON response",
-    );
+
+    await expect(
+      CoreAPI.processReceived(invalidJsonEvent),
+    ).rejects.toBeInstanceOf(MalformedCoreResponseError);
+  });
+
+  it("should reject matching pending requests for malformed JSON responses", async () => {
+    const promise = CoreAPI.version();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+
+    await expect(
+      CoreAPI.processReceived({
+        data: `{"jsonrpc":"2.0","id":"${sentData.id}","result":{"version":`,
+      } as MessageEvent),
+    ).resolves.toBeNull();
+
+    await expect(promise).rejects.toBeInstanceOf(MalformedCoreResponseError);
   });
 
   it.each([
@@ -155,6 +231,80 @@ describe("CoreAPI", () => {
     });
   });
 
+  it("should send input.keyboard with keys params", () => {
+    CoreAPI.inputKeyboard({ keys: "abc{enter}" }).catch(() => {
+      // Ignore timeout errors
+    });
+
+    expect(mockSend).toHaveBeenCalledOnce();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    expect(sentData.method).toBe("input.keyboard");
+    expect(sentData.params).toEqual({ keys: "abc{enter}" });
+  });
+
+  it("should send input.gamepad with buttons params", () => {
+    CoreAPI.inputGamepad({ buttons: "^^vv<><>BA{start}" }).catch(() => {
+      // Ignore timeout errors
+    });
+
+    expect(mockSend).toHaveBeenCalledOnce();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    expect(sentData.method).toBe("input.gamepad");
+    expect(sentData.params).toEqual({ buttons: "^^vv<><>BA{start}" });
+  });
+
+  it("should resolve screenshot responses", async () => {
+    const promise = CoreAPI.screenshot();
+
+    expect(mockSend).toHaveBeenCalledOnce();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    expect(sentData.method).toBe("screenshot");
+    expect(sentData.params).toBeUndefined();
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: sentData.id,
+        result: {
+          path: "/media/fat/screenshots/MiSTer.png",
+          data: "iVBORw0KGgo=",
+          size: 12,
+        },
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    await expect(promise).resolves.toEqual({
+      path: "/media/fat/screenshots/MiSTer.png",
+      data: "iVBORw0KGgo=",
+      size: 12,
+    });
+  });
+
+  it("should reject invalid screenshot responses", async () => {
+    const promise = CoreAPI.screenshot();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: sentData.id,
+        result: { path: "/tmp/screenshot.png", data: "abc" },
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    await expect(promise).rejects.toThrow("Invalid screenshot response");
+  });
+
+  it("should not queue input methods while disconnected", async () => {
+    CoreAPI.setWsInstance({ isConnected: false, send: mockSend });
+
+    await expect(CoreAPI.inputKeyboard({ keys: "a" })).rejects.toThrow(
+      "Request requires active connection",
+    );
+
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
   it("should have readers method returning ReadersResponse type", () => {
     // Test that readers method exists and has proper typing
     expect(typeof CoreAPI.readers).toBe("function");
@@ -192,25 +342,25 @@ describe("CoreAPI", () => {
       expect(wsUrl).toBe("ws://zaparoo.local:9090/api/v0.1");
     });
 
-    it("should strip invalid port and use default when port is non-numeric", () => {
+    it("should reject non-numeric port", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:abc");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
+      expect(wsUrl).toBe("");
     });
 
-    it("should strip invalid port and use default when port is out of range", () => {
+    it("should reject port that is out of range", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:70000");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
+      expect(wsUrl).toBe("");
     });
 
-    it("should strip invalid port and use default when port is zero", () => {
+    it("should reject zero port", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:0");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
+      expect(wsUrl).toBe("");
     });
 
     it("should handle unbracketed IPv6 addresses by wrapping in brackets", () => {
@@ -229,11 +379,11 @@ describe("CoreAPI", () => {
       expect(wsUrl).toBe("ws://[fe80::1]:7497/api/v0.1");
     });
 
-    it("should handle trailing colon by stripping it and using default port", () => {
+    it("should reject trailing colon", () => {
       localStorageMock.getItem.mockReturnValue("192.168.1.100:");
 
       const wsUrl = getWsUrl();
-      expect(wsUrl).toBe("ws://192.168.1.100:7497/api/v0.1");
+      expect(wsUrl).toBe("");
     });
 
     it("should use localhost with default port when no address is stored and on web", () => {

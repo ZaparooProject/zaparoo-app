@@ -2,6 +2,10 @@ import { render, waitFor, act } from "../../test-utils";
 import { vi, beforeEach, describe, it, expect } from "vitest";
 import React from "react";
 
+const { mockIsPluginAvailable } = vi.hoisted(() => ({
+  mockIsPluginAvailable: vi.fn<(pluginName: string) => boolean>(() => true),
+}));
+
 // Store mock functions
 const mockSetLoggedInUser = vi.fn();
 const mockSetLauncherAccess = vi.fn();
@@ -49,12 +53,19 @@ vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: vi.fn(() => mockPlatform !== "web"),
     getPlatform: vi.fn(() => mockPlatform),
+    isPluginAvailable: mockIsPluginAvailable,
   },
   registerPlugin: vi.fn(),
 }));
 
 vi.mock("@uidotdev/usehooks", () => ({
   usePrevious: vi.fn(() => undefined),
+}));
+
+vi.mock("@/lib/capacitorBridge", () => ({
+  isPluginAvailable: (pluginName: string) => mockIsPluginAvailable(pluginName),
+  isNativePluginAvailable: (pluginName: string) =>
+    mockPlatform !== "web" && mockIsPluginAvailable(pluginName),
 }));
 
 vi.mock("@capacitor/status-bar", () => ({
@@ -80,7 +91,13 @@ vi.mock("@revenuecat/purchases-capacitor", () => ({
     logIn: (...args: unknown[]) => mockPurchasesLogIn(...args),
     logOut: () => mockPurchasesLogOut(),
     getCustomerInfo: () => mockPurchasesGetCustomerInfo(),
+    isAnonymous: vi.fn().mockResolvedValue({ isAnonymous: false }),
   },
+}));
+
+// purchasesReady resolves immediately in tests
+vi.mock("@/lib/purchasesSetup", () => ({
+  purchasesReady: Promise.resolve(),
 }));
 
 vi.mock("@/lib/onlineApi", () => ({
@@ -103,6 +120,13 @@ vi.mock("@/lib/store", () => {
       connected: true,
       playing: { mediaName: "", systemId: "", mediaPath: "" },
       safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+      inboxMessages: [],
+      inboxModalOpen: false,
+      setInboxModalOpen: vi.fn(),
+      removeInboxMessage: vi.fn(),
+      setInboxMessages: vi.fn(),
+      coreVersion: null as string | null,
+      coreVersionPending: false,
     };
     if (typeof selector === "function") {
       return selector(mockState);
@@ -114,6 +138,9 @@ vi.mock("@/lib/store", () => {
     playing: { mediaName: "", systemId: "", mediaPath: "" },
     gamesIndex: { exists: true, indexing: false, totalFiles: 0 },
     safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+    inboxMessages: [],
+    coreVersion: null,
+    coreVersionPending: false,
   });
 
   return { useStatusStore };
@@ -130,6 +157,12 @@ vi.mock("@/lib/preferencesStore", () => {
       showFilenames: false,
       shakeEnabled: false,
       launcherAccess: false,
+      whatsNewInitialized: true,
+      lastWhatsNewRuntimeKey: "native:1.0.0+1",
+      seenWhatsNewAnnouncementIds: [],
+      initializeWhatsNew: vi.fn(),
+      setLastWhatsNewRuntimeKey: vi.fn(),
+      markWhatsNewSeen: vi.fn(),
       setLauncherAccess: mockSetLauncherAccess,
     };
     if (typeof selector === "function") {
@@ -159,6 +192,7 @@ vi.mock("@/components/ConnectionProvider", () => ({
     isConnected: true,
     hasData: false,
     showReconnecting: false,
+    openPairingModal: () => {},
   }),
 }));
 
@@ -167,6 +201,7 @@ vi.mock("@/components/ReconnectingIndicator", () => ({
 }));
 
 vi.mock("@/lib/deepLinks", () => ({
+  useDeepLinks: vi.fn(),
   default: () => <div data-testid="deep-links" />,
 }));
 
@@ -178,6 +213,10 @@ vi.mock("@/components/SlideModalProvider", () => ({
   SlideModalProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="slide-modal-provider">{children}</div>
   ),
+}));
+
+vi.mock("@/components/InboxModal", () => ({
+  InboxModal: () => <div data-testid="inbox-modal" />,
 }));
 
 vi.mock("@/components/A11yAnnouncer", () => ({
@@ -228,6 +267,7 @@ describe("Firebase Auth Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPlatform = "web"; // Default to web platform
+    mockIsPluginAvailable.mockReturnValue(true);
     mockAddListener.mockImplementation(() =>
       Promise.resolve({ remove: mockRemove }),
     );
@@ -256,6 +296,19 @@ describe("Firebase Auth Integration", () => {
         "authStateChange",
         expect.any(Function),
       );
+    });
+  });
+
+  it("should skip auth listener setup when FirebaseAuthentication is unavailable", async () => {
+    mockIsPluginAvailable.mockImplementation(
+      (pluginName: string) => pluginName !== "FirebaseAuthentication",
+    );
+
+    const App = (await import("@/App")).default;
+    render(<App />);
+
+    await waitFor(() => {
+      expect(mockAddListener).not.toHaveBeenCalled();
     });
   });
 
@@ -455,6 +508,42 @@ describe("Firebase Auth Integration", () => {
       expect(mockPurchasesLogOut).not.toHaveBeenCalled();
     });
 
+    it("should skip RevenueCat sync when Purchases plugin is unavailable", async () => {
+      mockPlatform = "ios";
+      mockIsPluginAvailable.mockImplementation(
+        (pluginName: string) => pluginName !== "Purchases",
+      );
+
+      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
+        null;
+      mockAddListener.mockImplementation(
+        (
+          _event: string,
+          callback: (change: { user: unknown }) => Promise<void>,
+        ) => {
+          authCallback = callback;
+          return Promise.resolve({ remove: mockRemove });
+        },
+      );
+
+      const App = (await import("@/App")).default;
+      render(<App />);
+
+      await waitFor(() => {
+        expect(authCallback).not.toBeNull();
+      });
+
+      const mockUser = { uid: "user-123", email: "test@example.com" };
+      await act(async () => {
+        await authCallback!({ user: mockUser });
+      });
+
+      expect(mockSetLoggedInUser).toHaveBeenCalledWith(mockUser);
+      expect(mockPurchasesLogIn).not.toHaveBeenCalled();
+      expect(mockPurchasesLogOut).not.toHaveBeenCalled();
+      expect(mockPurchasesGetCustomerInfo).not.toHaveBeenCalled();
+    });
+
     it("should call Purchases.logIn when user authenticates on native platform", async () => {
       mockPlatform = "ios";
 
@@ -599,6 +688,119 @@ describe("Firebase Auth Integration", () => {
 
       expect(mockPurchasesLogOut).toHaveBeenCalled();
       expect(mockPurchasesGetCustomerInfo).toHaveBeenCalled();
+    });
+
+    it("should not call Purchases.logOut when RC user is already anonymous on sign out", async () => {
+      mockPlatform = "ios";
+
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+      vi.mocked(Purchases.isAnonymous).mockResolvedValueOnce({
+        isAnonymous: true,
+      });
+
+      mockPurchasesGetCustomerInfo.mockResolvedValue({
+        customerInfo: { entitlements: { active: {} } },
+      });
+
+      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
+        null;
+      mockAddListener.mockImplementation(
+        (
+          _event: string,
+          callback: (change: { user: unknown }) => Promise<void>,
+        ) => {
+          authCallback = callback;
+          return Promise.resolve({ remove: mockRemove });
+        },
+      );
+
+      const App = (await import("@/App")).default;
+      render(<App />);
+
+      await waitFor(() => {
+        expect(authCallback).not.toBeNull();
+      });
+
+      await act(async () => {
+        await authCallback!({ user: null });
+      });
+
+      expect(mockPurchasesLogOut).not.toHaveBeenCalled();
+      expect(mockPurchasesGetCustomerInfo).toHaveBeenCalled();
+    });
+
+    it("should ignore expected RevenueCat logout state errors on sign out", async () => {
+      mockPlatform = "ios";
+      mockPurchasesLogOut.mockRejectedValueOnce(
+        new Error("Cannot log out anonymous app user"),
+      );
+      mockPurchasesGetCustomerInfo.mockResolvedValue({
+        customerInfo: { entitlements: { active: {} } },
+      });
+
+      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
+        null;
+      mockAddListener.mockImplementation(
+        (
+          _event: string,
+          callback: (change: { user: unknown }) => Promise<void>,
+        ) => {
+          authCallback = callback;
+          return Promise.resolve({ remove: mockRemove });
+        },
+      );
+
+      const App = (await import("@/App")).default;
+      render(<App />);
+
+      await waitFor(() => {
+        expect(authCallback).not.toBeNull();
+      });
+
+      await act(async () => {
+        await authCallback!({ user: null });
+      });
+
+      expect(mockPurchasesGetCustomerInfo).toHaveBeenCalled();
+      expect(mockLoggerError).not.toHaveBeenCalled();
+    });
+
+    it("should report unexpected RevenueCat logout errors on sign out", async () => {
+      mockPlatform = "ios";
+      const error = new Error("network connection lost");
+      mockPurchasesLogOut.mockRejectedValueOnce(error);
+
+      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
+        null;
+      mockAddListener.mockImplementation(
+        (
+          _event: string,
+          callback: (change: { user: unknown }) => Promise<void>,
+        ) => {
+          authCallback = callback;
+          return Promise.resolve({ remove: mockRemove });
+        },
+      );
+
+      const App = (await import("@/App")).default;
+      render(<App />);
+
+      await waitFor(() => {
+        expect(authCallback).not.toBeNull();
+      });
+
+      await act(async () => {
+        await authCallback!({ user: null });
+      });
+
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        "RevenueCat login sync failed:",
+        error,
+        expect.objectContaining({
+          category: "purchase",
+          action: "logOut",
+        }),
+      );
     });
 
     it("should handle RevenueCat login failure gracefully", async () => {

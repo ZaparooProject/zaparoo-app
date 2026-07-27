@@ -26,10 +26,8 @@ export const MediaIndexingToast = (props: {
       <div className="flex grow flex-col pr-3">
         <div className="font-semibold">{t("toast.updateDbHeading")}</div>
         <div className="text-sm">
-          {gamesIndex.currentStepDisplay
-            ? gamesIndex.currentStep === gamesIndex.totalSteps
-              ? t("toast.writingDb")
-              : gamesIndex.currentStepDisplay
+          {gamesIndex.currentStepDisplay && gamesIndex.currentStepDisplay !== ""
+            ? gamesIndex.currentStepDisplay
             : t("toast.preparingDb")}
         </div>
         <div

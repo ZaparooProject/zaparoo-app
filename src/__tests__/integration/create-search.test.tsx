@@ -1,7 +1,7 @@
 /**
  * Integration Test: Create Search Page
  *
- * Tests the REAL Search component from src/routes/create.search.tsx including:
+ * Tests the REAL Search component from src/routes/-pages/Search.tsx including:
  * - Search form input handling
  * - System selector interactions
  * - Tag selector interactions
@@ -30,7 +30,7 @@ const mockLoaderData = {
   } as SystemsResponse,
 };
 
-// Mock the router with Route.useLoaderData
+// Mock the router with getRouteApi.useLoaderData
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
@@ -40,16 +40,9 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
         back: vi.fn(),
       },
     })),
-    createFileRoute: vi.fn(() => {
-      // createFileRoute returns a function that returns the Route object
-      return () => {
-        const route = {
-          component: null,
-          useLoaderData: () => mockLoaderData,
-        };
-        return route;
-      };
-    }),
+    getRouteApi: vi.fn(() => ({
+      useLoaderData: () => mockLoaderData,
+    })),
   };
 });
 
@@ -104,6 +97,11 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
 // Mock useNfcWriter with trackable mock - hoisted below
 vi.mock("@/lib/writeNfcHook", () => ({
   useNfcWriter: vi.fn(() => mockNfcWriter),
+  WriteMethod: {
+    Auto: "auto",
+    LocalNFC: "local",
+    RemoteReader: "remote",
+  },
   WriteAction: {
     Write: "write",
   },
@@ -207,11 +205,17 @@ vi.mock("@/components/SystemSelector", () => ({
   SystemSelectorTrigger: ({
     onClick,
     selectedSystems,
+    disabled,
   }: {
     onClick: () => void;
     selectedSystems: string[];
+    disabled?: boolean;
   }) => (
-    <button data-testid="system-selector-trigger" onClick={onClick}>
+    <button
+      data-testid="system-selector-trigger"
+      onClick={onClick}
+      disabled={disabled}
+    >
       {selectedSystems.length > 0 ? selectedSystems.join(", ") : "All Systems"}
     </button>
   ),
@@ -241,11 +245,17 @@ vi.mock("@/components/TagSelector", () => ({
   TagSelectorTrigger: ({
     onClick,
     selectedTags,
+    disabled,
   }: {
     onClick: () => void;
     selectedTags: string[];
+    disabled?: boolean;
   }) => (
-    <button data-testid="tag-selector-trigger" onClick={onClick}>
+    <button
+      data-testid="tag-selector-trigger"
+      onClick={onClick}
+      disabled={disabled}
+    >
       {selectedTags.length > 0 ? selectedTags.join(", ") : "All Tags"}
     </button>
   ),
@@ -288,7 +298,7 @@ const { mockClipboardWriteText } = vi.hoisted(() => ({
 }));
 
 // Import the REAL component after mocks are set up
-import { Search } from "@/routes/create.search";
+import { Search } from "@/routes/-pages/Search";
 
 describe("Create Search Integration", () => {
   beforeEach(() => {
@@ -312,6 +322,8 @@ describe("Create Search Integration", () => {
       ...useStatusStore.getInitialState(),
       connected: true,
       connectionState: ConnectionState.CONNECTED,
+      coreVersion: "2.10.0",
+      coreVersionPending: false,
       gamesIndex: {
         exists: true,
         indexing: false,
@@ -451,7 +463,7 @@ describe("Create Search Integration", () => {
     // Note: Testing "games index does not exist" state requires full router
     // context due to Link component rendering, so it's tested elsewhere.
 
-    it("should disable search button when indexing is in progress", () => {
+    it("should keep search controls enabled during usable indexing", () => {
       useStatusStore.setState({
         gamesIndex: {
           exists: true,
@@ -468,7 +480,9 @@ describe("Create Search Integration", () => {
       const searchButton = screen.getByRole("button", {
         name: /create.search.searchButton/i,
       });
-      expect(searchButton).toBeDisabled();
+      expect(searchButton).toBeEnabled();
+      expect(screen.getByRole("button", { name: "All Systems" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "All Tags" })).toBeEnabled();
     });
 
     it("should disable search input when not connected", () => {
@@ -1022,6 +1036,16 @@ describe("Create Search Integration", () => {
           "platformer, action",
         );
       });
+    });
+
+    it("should hide tag selector when Core does not support media tags", () => {
+      useStatusStore.setState({ coreVersion: "2.6.2" });
+
+      render(<Search />);
+
+      expect(
+        screen.queryByTestId("tag-selector-trigger"),
+      ).not.toBeInTheDocument();
     });
   });
 

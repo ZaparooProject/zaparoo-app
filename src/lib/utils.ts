@@ -104,6 +104,14 @@ export function formatDurationDisplay(
   return parts.length > 0 ? parts.join(" ") : "0m";
 }
 
+/** Null-safe string comparator for Array.sort — treats undefined/null as "" */
+export function compareStrings(
+  a: string | undefined | null,
+  b: string | undefined | null,
+): number {
+  return (a ?? "").localeCompare(b ?? "");
+}
+
 /** Translation function type for formatDurationAccessible */
 type TranslateFn = (key: string, options?: { count: number }) => string;
 

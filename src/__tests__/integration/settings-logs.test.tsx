@@ -1,7 +1,7 @@
 /**
  * Integration Test: Settings Logs Page
  *
- * Tests the REAL Logs component from src/routes/settings.logs.tsx including:
+ * Tests the REAL Logs component from src/routes/-pages/Logs.tsx including:
  * - Log level filter toggles
  * - Search input filtering
  * - Entry count display
@@ -25,9 +25,6 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       history: {
         back: vi.fn(),
       },
-    })),
-    createFileRoute: vi.fn(() => () => ({
-      component: null,
     })),
   };
 });
@@ -149,7 +146,7 @@ function createMockLogContent(
 }
 
 // Import the REAL component after mocks are set up
-import { Logs } from "@/routes/settings.logs";
+import { Logs } from "@/routes/-pages/Logs";
 
 describe("Settings Logs Integration", () => {
   beforeEach(() => {

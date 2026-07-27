@@ -1,7 +1,16 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2, AlertCircle, WifiOff, Loader2 } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  WifiOff,
+  Loader2,
+  Lock,
+  LockOpen,
+} from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
+import { useStatusStore } from "@/lib/store";
 import { getDeviceAddress } from "@/lib/coreApi";
 
 type ConnectionUIState =
@@ -9,7 +18,8 @@ type ConnectionUIState =
   | "reconnecting"
   | "connected"
   | "error"
-  | "disconnected";
+  | "disconnected"
+  | "pairingRequired";
 
 interface ConnectionStatusConfig {
   icon: ReactNode;
@@ -26,6 +36,8 @@ export interface ConnectionStatusDisplayProps {
   connectedSubtitle?: string;
   /** Whether connected subtitle is still loading (shows skeleton) */
   connectedSubtitleLoading?: boolean;
+  /** Optional second subtitle line for connected state (e.g., user-chosen device name). */
+  connectedName?: string;
   /** Optional action slot (e.g., settings button, history button) */
   action?: ReactNode;
   /** Optional className for the outer container */
@@ -40,17 +52,33 @@ export function ConnectionStatusDisplay({
   connectionError,
   connectedSubtitle,
   connectedSubtitleLoading,
+  connectedName,
   action,
   className,
 }: ConnectionStatusDisplayProps) {
   const { t } = useTranslation();
   const { isConnected, showConnecting, showReconnecting } = useConnection();
+  const encryptionState = useStatusStore((s) => s.encryptionState);
+  const pairingRequired = useStatusStore((s) => s.pairingRequired);
   const savedAddress = getDeviceAddress();
 
   // Derive UI state from connection context
   const deriveUIState = (): ConnectionUIState => {
     if (!savedAddress) return "disconnected";
+    // The transport flips to "connected" when the WebSocket opens, before the
+    // server has confirmed the encryption mode. Hold the UI in connecting/
+    // reconnecting until the consumer learns the mode (encryptionState is set
+    // by onPlaintextMode after the first non-error reply, or by
+    // onEncryptedHandshakeOk after first decrypt). Prevents a green flash
+    // before -32002 surfaces on encryption-required cores.
+    if (isConnected && encryptionState === "unknown") {
+      return showReconnecting ? "reconnecting" : "connecting";
+    }
     if (isConnected) return "connected";
+    // Pairing-required outranks reconnecting/error so the user sees the real
+    // blocker instead of a generic "Reconnecting..." spinner that won't resolve
+    // without their action.
+    if (pairingRequired) return "pairingRequired";
     // Show reconnecting state (previously connected, now retrying)
     if (showReconnecting) return "reconnecting";
     // Show error if we have one during initial connection attempts
@@ -99,6 +127,13 @@ export function ConnectionStatusDisplay({
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
+    pairingRequired: {
+      icon: <AlertTriangle className="h-6 w-6" />,
+      iconColorClass: "text-warning",
+      title: t("connection.pairingRequired"),
+      subtitle: addressOrPlaceholder,
+      subtitleColorClass: "text-muted-foreground",
+    },
   };
 
   const config = stateConfig[uiState];
@@ -106,6 +141,9 @@ export function ConnectionStatusDisplay({
   // Show skeleton when connected but subtitle is still loading
   const showSkeleton =
     uiState === "connected" && connectedSubtitleLoading && !connectedSubtitle;
+
+  const showLock = uiState === "connected" && encryptionState === "encrypted";
+  const showUnlock = uiState === "connected" && encryptionState === "plaintext";
 
   return (
     <div className={`flex items-center gap-3 ${className || ""}`}>
@@ -119,7 +157,21 @@ export function ConnectionStatusDisplay({
 
       {/* Text content */}
       <div className="min-w-0 flex-1">
-        <h2 className="font-medium">{config.title}</h2>
+        <h2 className="flex items-center gap-1.5 font-medium">
+          {config.title}
+          {showLock && (
+            <Lock
+              className="text-success h-4 w-4 shrink-0"
+              aria-label={t("connection.encrypted")}
+            />
+          )}
+          {showUnlock && (
+            <LockOpen
+              className="text-muted-foreground h-4 w-4 shrink-0"
+              aria-label={t("connection.unencrypted")}
+            />
+          )}
+        </h2>
         {showSkeleton ? (
           <div className="bg-muted mt-1 h-4 w-32 animate-pulse rounded" />
         ) : (
@@ -128,6 +180,11 @@ export function ConnectionStatusDisplay({
               {config.subtitle}
             </p>
           )
+        )}
+        {uiState === "connected" && connectedName && (
+          <p className={`truncate text-sm ${config.subtitleColorClass}`}>
+            {connectedName}
+          </p>
         )}
       </div>
 

@@ -6,14 +6,17 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Preferences } from "@capacitor/preferences";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "../../../test-utils";
 import { ConnectionProvider } from "../../../components/ConnectionProvider";
 import { useConnection } from "../../../hooks/useConnection";
 import { connectionManager } from "../../../lib/transport";
 import { CoreAPI } from "../../../lib/coreApi";
+import { ConnectionState, useStatusStore } from "@/lib/store";
 import type { TransportState } from "../../../lib/transport/types";
 import type { NotificationRequest } from "../../../lib/coreApi";
-import { Notification } from "../../../lib/models";
+import { InboxSeverity, Notification } from "../../../lib/models";
 
 // Capture event handlers for notification testing
 let capturedEventHandlers: {
@@ -64,67 +67,56 @@ vi.mock("../../../lib/coreApi", () => ({
     processReceived: vi.fn().mockResolvedValue(null),
     media: vi.fn().mockResolvedValue({ database: {}, active: [] }),
     tokens: vi.fn().mockResolvedValue({ last: null }),
+    version: vi.fn().mockResolvedValue({ version: "2.5.0", platform: "test" }),
+    inbox: vi.fn().mockResolvedValue({ messages: [] }),
+    mediaScrapeStatus: vi.fn().mockResolvedValue({
+      processed: 0,
+      total: 0,
+      matched: 0,
+      skipped: 0,
+      totalScraped: 0,
+      scraping: false,
+      done: false,
+      paused: false,
+    }),
   },
   getDeviceAddress: vi.fn(() => "192.168.1.100:7497"),
   getWsUrl: vi.fn(() => "ws://192.168.1.100:7497"),
-  isCancelled: vi.fn(() => false),
-}));
+  validateDeviceAddress: vi.fn((address: string) => {
+    if (address.includes("286")) {
+      return {
+        ok: false,
+        errorKey: "settings.deviceAddressInvalid",
+        message: "Invalid device address",
+      };
+    }
 
-// Use vi.hoisted to define mock functions that can be used in vi.mock
-const { mockSetPlaying, mockSetLastToken, mockSetGamesIndex } = vi.hoisted(
-  () => ({
-    mockSetPlaying: vi.fn(),
-    mockSetLastToken: vi.fn(),
-    mockSetGamesIndex: vi.fn(),
+    const [host = address, portInput] = address.split(":");
+    const port = portInput ? Number(portInput) : 7497;
+
+    return {
+      ok: true,
+      address,
+      host,
+      port,
+      wsUrl: `ws://${host}:${port}/api/v0.1`,
+    };
   }),
-);
-
-vi.mock("../../../lib/store", () => {
-  // Track gamesIndex state for change detection
-  const mockGamesIndexState = {
-    indexing: false,
-    optimizing: false,
-    exists: false,
-    totalMedia: 0,
-  };
-
-  return {
-    useStatusStore: Object.assign(
-      vi.fn((selector) => {
-        const state = {
-          targetDeviceAddress: "192.168.1.100:7497",
-          setTargetDeviceAddress: vi.fn(),
-          setConnectionState: vi.fn(),
-          setConnectionError: vi.fn(),
-          setPlaying: mockSetPlaying,
-          setGamesIndex: mockSetGamesIndex,
-          setLastToken: mockSetLastToken,
-          addDeviceHistory: vi.fn(),
-          setDeviceHistory: vi.fn(),
-          gamesIndex: mockGamesIndexState,
-        };
-        return selector(state);
-      }),
-      {
-        getState: () => ({
-          gamesIndex: mockGamesIndexState,
-        }),
-      },
-    ),
-    ConnectionState: {
-      IDLE: "idle",
-      CONNECTING: "connecting",
-      CONNECTED: "connected",
-      RECONNECTING: "reconnecting",
-      DISCONNECTED: "disconnected",
-      ERROR: "error",
-    },
-  };
-});
+  isCancelled: vi.fn(() => false),
+  isExpectedMediaDatabaseError: (error: unknown) => {
+    if (!(error instanceof Error)) return false;
+    const msg = error.message.toLowerCase();
+    return (
+      msg.includes("no such table: dbconfig") ||
+      msg.includes("method not found")
+    );
+  },
+}));
 
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     get: vi.fn().mockResolvedValue({ value: null }),
+    set: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -137,6 +129,7 @@ vi.mock("@capacitor/app", () => ({
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: vi.fn(() => false),
+    isPluginAvailable: vi.fn(() => true),
   },
 }));
 
@@ -144,6 +137,11 @@ vi.mock("@capacitor/network", () => ({
   Network: {
     addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
   },
+}));
+
+vi.mock("@/lib/capacitorBridge", () => ({
+  isPluginAvailable: vi.fn(() => true),
+  isNativePluginAvailable: vi.fn(() => true),
 }));
 
 // Use vi.hoisted for toast mock
@@ -194,9 +192,22 @@ function ConnectionConsumer() {
   );
 }
 
+// Pre-set targetDeviceAddress to skip the async polling initialization
+function resetStore() {
+  useStatusStore.setState({
+    ...useStatusStore.getInitialState(),
+    targetDeviceAddress: "192.168.1.100:7497",
+  });
+}
+
 describe("ConnectionProvider", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    resetStore();
+
+    const bridge = await import("@/lib/capacitorBridge");
+    vi.mocked(bridge.isPluginAvailable).mockReturnValue(true);
+    vi.mocked(bridge.isNativePluginAvailable).mockReturnValue(true);
   });
 
   describe("rendering", () => {
@@ -220,6 +231,48 @@ describe("ConnectionProvider", () => {
       expect(screen.getByTestId("isConnected")).toBeInTheDocument();
       expect(screen.getByTestId("hasData")).toBeInTheDocument();
     });
+
+    it("should skip startup plugin calls when bridge plugins are unavailable", async () => {
+      const { App } = await import("@capacitor/app");
+      const { Capacitor } = await import("@capacitor/core");
+      const { Network } = await import("@capacitor/network");
+      const bridge = await import("@/lib/capacitorBridge");
+
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(bridge.isPluginAvailable).mockImplementation(
+        (pluginName: string) => pluginName !== "Preferences",
+      );
+      vi.mocked(bridge.isNativePluginAvailable).mockImplementation(
+        (pluginName: string) => !["App", "Network"].includes(pluginName),
+      );
+      vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
+        "192.168.1.100:7497",
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(connectionManager.setEventHandlers).toHaveBeenCalled();
+      });
+
+      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+
+      await waitFor(() => {
+        expect(CoreAPI.version).toHaveBeenCalled();
+      });
+
+      expect(Preferences.get).not.toHaveBeenCalled();
+      expect(App.addListener).not.toHaveBeenCalled();
+      expect(Network.addListener).not.toHaveBeenCalled();
+    });
   });
 
   describe("connection initialization", () => {
@@ -240,11 +293,38 @@ describe("ConnectionProvider", () => {
         </ConnectionProvider>,
       );
 
-      expect(connectionManager.addDevice).toHaveBeenCalledWith({
-        deviceId: "192.168.1.100:7497",
-        type: "websocket",
-        address: "ws://192.168.1.100:7497",
+      expect(connectionManager.addDevice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deviceId: "192.168.1.100:7497",
+          type: "websocket",
+          address: "ws://192.168.1.100:7497/api/v0.1",
+          encryption: expect.objectContaining({
+            getCredentials: expect.any(Function),
+          }),
+        }),
+      );
+    });
+
+    it("should not create a transport for invalid target address", () => {
+      useStatusStore.setState({
+        ...useStatusStore.getInitialState(),
+        targetDeviceAddress: "192.168.1.286",
       });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(connectionManager.addDevice).not.toHaveBeenCalled();
+      expect(connectionManager.setActiveDevice).not.toHaveBeenCalled();
+      expect(useStatusStore.getState().connectionState).toBe(
+        ConnectionState.ERROR,
+      );
+      expect(useStatusStore.getState().connectionError).toBe(
+        "settings.deviceAddressInvalid",
+      );
     });
 
     it("should set active device after adding", () => {
@@ -300,6 +380,11 @@ describe("ConnectionProvider", () => {
 });
 
 describe("useConnection hook", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetStore();
+  });
+
   it("should return connection context values with expected initial state", () => {
     render(
       <ConnectionProvider>
@@ -324,16 +409,25 @@ describe("notification processing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
-    // Clear hoisted mocks explicitly
-    mockSetPlaying.mockClear();
-    mockSetLastToken.mockClear();
-    mockSetGamesIndex.mockClear();
+    resetStore();
     mockToast.mockClear();
     mockAnnounce.mockClear();
   });
 
   describe("media.started", () => {
-    it("should update playing state when media starts", async () => {
+    it("should update playing state and clear staged token when media starts", async () => {
+      useStatusStore.setState({
+        stagedToken: {
+          ready: true,
+          token: {
+            type: "ntag",
+            uid: "STAGED",
+            text: "**launch:nes/zelda.nes",
+            data: "",
+            scanTime: "2024-01-15T11:00:00Z",
+          },
+        },
+      });
       const mediaStartedNotification: NotificationRequest = {
         method: Notification.MediaStarted,
         params: {
@@ -359,18 +453,54 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       await waitFor(() => {
-        expect(mockSetPlaying).toHaveBeenCalledWith({
+        expect(useStatusStore.getState().playing).toEqual({
           systemId: "snes",
           systemName: "Super Nintendo",
           mediaPath: "/games/mario.sfc",
           mediaName: "Super Mario World",
         });
+        expect(useStatusStore.getState().stagedToken).toBeNull();
+      });
+    });
+  });
+
+  describe("message error handling", () => {
+    it("should show recoverable toast when message processing fails", async () => {
+      const { resetToastRateLimiter } = await import("@/lib/toastUtils");
+      resetToastRateLimiter();
+      vi.mocked(CoreAPI.processReceived).mockRejectedValueOnce(
+        new Error("Malformed Core JSON response: Unexpected end of JSON input"),
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith("error");
       });
     });
   });
 
   describe("media.stopped", () => {
-    it("should clear playing state when media stops", async () => {
+    it("should clear playing state and staged token when media stops", async () => {
+      useStatusStore.setState({
+        stagedToken: {
+          ready: true,
+          token: {
+            type: "ntag",
+            uid: "STAGED",
+            text: "**launch:nes/zelda.nes",
+            data: "",
+            scanTime: "2024-01-15T11:00:00Z",
+          },
+        },
+      });
       const mediaStoppedNotification: NotificationRequest = {
         method: Notification.MediaStopped,
         params: {},
@@ -390,12 +520,13 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       await waitFor(() => {
-        expect(mockSetPlaying).toHaveBeenCalledWith({
+        expect(useStatusStore.getState().playing).toEqual({
           systemId: "",
           systemName: "",
           mediaPath: "",
           mediaName: "",
         });
+        expect(useStatusStore.getState().stagedToken).toBeNull();
       });
     });
   });
@@ -426,13 +557,338 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       await waitFor(() => {
-        expect(mockSetLastToken).toHaveBeenCalledWith({
+        expect(useStatusStore.getState().lastToken).toEqual({
           uid: "ABC123",
           text: "**launch:snes/mario.sfc",
           data: "launch data",
           scanTime: "2024-01-15T12:00:00Z",
         });
       });
+    });
+
+    it("should set active tokens and clear staged token", async () => {
+      useStatusStore.setState({
+        stagedToken: {
+          ready: false,
+          token: {
+            type: "ntag",
+            uid: "STAGED",
+            text: "**launch:nes/zelda.nes",
+            data: "",
+            scanTime: "2024-01-15T11:00:00Z",
+          },
+        },
+      });
+      const tokenScannedNotification: NotificationRequest = {
+        method: Notification.TokensScanned,
+        params: {
+          type: "ntag",
+          uid: "ABC123",
+          text: "**launch:snes/mario.sfc",
+          data: "launch data",
+          scanTime: "2024-01-15T12:00:00Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        tokenScannedNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().activeTokens).toEqual([
+          tokenScannedNotification.params,
+        ]);
+        expect(useStatusStore.getState().stagedToken).toBeNull();
+      });
+    });
+  });
+
+  describe("token staging notifications", () => {
+    it("should store staged token as waiting", async () => {
+      const stagedNotification: NotificationRequest = {
+        method: Notification.TokensStaged,
+        params: {
+          type: "ntag",
+          uid: "STAGED",
+          text: "**launch:nes/zelda.nes",
+          data: "",
+          scanTime: "2024-01-15T11:00:00Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        stagedNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().stagedToken).toEqual({
+          token: stagedNotification.params,
+          ready: false,
+        });
+        expect(mockAnnounce).toHaveBeenCalledWith(
+          "tokenStaging.stagedAnnounce",
+          "assertive",
+        );
+      });
+    });
+
+    it("should mark staged token ready", async () => {
+      const readyNotification: NotificationRequest = {
+        method: Notification.TokensStagedReady,
+        params: {
+          type: "ntag",
+          uid: "STAGED",
+          text: "**launch:nes/zelda.nes",
+          data: "",
+          scanTime: "2024-01-15T11:00:00Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        readyNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().stagedToken).toEqual({
+          token: readyNotification.params,
+          ready: true,
+        });
+        expect(mockAnnounce).toHaveBeenCalledWith(
+          "tokenStaging.readyAnnounce",
+          "assertive",
+        );
+      });
+    });
+
+    it("should clear active tokens on token removal while preserving staged and last tokens", async () => {
+      const lastToken = {
+        type: "ntag",
+        uid: "LAST",
+        text: "**launch:snes/mario.sfc",
+        data: "",
+        scanTime: "2024-01-15T12:00:00Z",
+      };
+      const stagedToken = {
+        type: "ntag",
+        uid: "STAGED",
+        text: "**launch:nes/zelda.nes",
+        data: "",
+        scanTime: "2024-01-15T11:00:00Z",
+      };
+      useStatusStore.setState({
+        lastToken,
+        activeTokens: [lastToken],
+        stagedToken: { token: stagedToken, ready: true },
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.TokensRemoved,
+        params: undefined,
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().activeTokens).toEqual([]);
+        expect(useStatusStore.getState().stagedToken).toEqual({
+          token: stagedToken,
+          ready: true,
+        });
+        expect(useStatusStore.getState().lastToken).toEqual(lastToken);
+      });
+    });
+  });
+
+  describe("reader notifications", () => {
+    it("should invalidate readers query on reader added", async () => {
+      const invalidateSpy = vi.spyOn(
+        QueryClient.prototype,
+        "invalidateQueries",
+      );
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.ReadersConnected,
+        params: { driver: "pn532", path: "/dev/ttyUSB0", connected: true },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["readers"] });
+      });
+      invalidateSpy.mockRestore();
+    });
+
+    it("should invalidate readers query and clear active state on reader removed", async () => {
+      const invalidateSpy = vi.spyOn(
+        QueryClient.prototype,
+        "invalidateQueries",
+      );
+      const token = {
+        type: "ntag",
+        uid: "ACTIVE",
+        text: "**launch:snes/mario.sfc",
+        data: "",
+        scanTime: "2024-01-15T12:00:00Z",
+      };
+      useStatusStore.setState({
+        activeTokens: [token],
+        stagedToken: { token, ready: false },
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.ReadersDisconnected,
+        params: { driver: "pn532", path: "/dev/ttyUSB0", connected: false },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["readers"] });
+        expect(useStatusStore.getState().activeTokens).toEqual([]);
+        expect(useStatusStore.getState().stagedToken).toBeNull();
+      });
+      invalidateSpy.mockRestore();
+    });
+  });
+
+  describe("inbox.added", () => {
+    it("should add inbox message when the feature gate is available", async () => {
+      useStatusStore.setState({ coreVersion: "2.8.0" });
+      const inboxNotification: NotificationRequest = {
+        method: Notification.InboxAdded,
+        params: {
+          id: 11,
+          title: "New warning",
+          severity: InboxSeverity.Info,
+          createdAt: "2026-05-19T10:00:00.000Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        inboxNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().inboxMessages).toEqual([
+          inboxNotification.params,
+        ]);
+      });
+    });
+
+    it("should ignore inbox message when the feature gate is unavailable", async () => {
+      useStatusStore.setState({ coreVersion: "2.7.0" });
+      const inboxNotification: NotificationRequest = {
+        method: Notification.InboxAdded,
+        params: {
+          id: 12,
+          title: "Unsupported message",
+          severity: InboxSeverity.Warning,
+          createdAt: "2026-05-19T10:00:00.000Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        inboxNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      expect(useStatusStore.getState().inboxMessages).toEqual([]);
+      expect(mockToast).not.toHaveBeenCalled();
+    });
+
+    it("should show warning toast that opens the inbox", async () => {
+      useStatusStore.setState({ coreVersion: "2.8.0" });
+      const inboxNotification: NotificationRequest = {
+        method: Notification.InboxAdded,
+        params: {
+          id: 13,
+          title: "Action needed",
+          severity: InboxSeverity.Warning,
+          createdAt: "2026-05-19T10:00:00.000Z",
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        inboxNotification,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalled();
+      });
+
+      const toastRenderer = mockToast.mock.calls[0]![0] as (to: {
+        id: string;
+      }) => React.ReactNode;
+      render(<>{toastRenderer({ id: "toast-1" })}</>);
+      screen.getByRole("button", { name: "Action needed" }).click();
+
+      expect(useStatusStore.getState().inboxModalOpen).toBe(true);
     });
   });
 
@@ -493,6 +949,50 @@ describe("notification processing", () => {
   });
 
   describe("media.indexing", () => {
+    it("should invalidate library queries after a system commit", async () => {
+      const invalidateSpy = vi.spyOn(
+        QueryClient.prototype,
+        "invalidateQueries",
+      );
+      useStatusStore.setState({
+        gamesIndex: {
+          exists: true,
+          indexing: true,
+          systemsCompleted: 1,
+          systemsTotal: 10,
+        },
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.MediaIndexing,
+        params: {
+          exists: true,
+          indexing: true,
+          systemsCompleted: 2,
+          systemsTotal: 10,
+        },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      invalidateSpy.mockClear();
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(invalidateSpy).toHaveBeenCalledWith({
+          queryKey: ["systems"],
+        });
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["tags"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["infiniteMediaSearch"],
+      });
+      invalidateSpy.mockRestore();
+    });
+
     it("should update games index state", async () => {
       const mediaIndexingNotification: NotificationRequest = {
         method: Notification.MediaIndexing,
@@ -518,7 +1018,7 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       await waitFor(() => {
-        expect(mockSetGamesIndex).toHaveBeenCalledWith({
+        expect(useStatusStore.getState().gamesIndex).toMatchObject({
           indexing: true,
           optimizing: false,
           exists: true,
@@ -528,9 +1028,27 @@ describe("notification processing", () => {
     });
   });
 
-  describe("error handling", () => {
-    it("should not update state when processReceived returns null", async () => {
-      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(null);
+  describe("media.scraping", () => {
+    it("should update scraper status state", async () => {
+      const mediaScrapingNotification: NotificationRequest = {
+        method: Notification.MediaScraping,
+        params: {
+          scraperId: "gamelist.xml",
+          systemId: "snes",
+          processed: 42,
+          total: 100,
+          matched: 38,
+          skipped: 4,
+          totalScraped: 1200,
+          scraping: true,
+          done: false,
+          paused: true,
+        },
+      };
+
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
+        mediaScrapingNotification,
+      );
 
       render(
         <ConnectionProvider>
@@ -541,9 +1059,43 @@ describe("notification processing", () => {
       expect(capturedEventHandlers.onMessage).toBeDefined();
       await capturedEventHandlers.onMessage!("test-device", {});
 
-      // Handler completes synchronously after await, so we can assert immediately
-      expect(mockSetPlaying).not.toHaveBeenCalled();
-      expect(mockSetLastToken).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(useStatusStore.getState().scrapingStatus).toMatchObject({
+          scraperId: "gamelist.xml",
+          systemId: "snes",
+          processed: 42,
+          total: 100,
+          matched: 38,
+          skipped: 4,
+          totalScraped: 1200,
+          scraping: true,
+          done: false,
+          paused: true,
+        });
+      });
+    });
+  });
+
+  describe("error handling", () => {
+    it("should not update state when processReceived returns null", async () => {
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(null);
+
+      const initialState = useStatusStore.getInitialState();
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onMessage).toBeDefined();
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      // State should remain at initial values
+      expect(useStatusStore.getState().playing).toEqual(initialState.playing);
+      expect(useStatusStore.getState().lastToken).toEqual(
+        initialState.lastToken,
+      );
     });
 
     it("should handle unknown notification method gracefully", async () => {
@@ -567,8 +1119,11 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       // State should not be updated for unknown notifications
-      expect(mockSetPlaying).not.toHaveBeenCalled();
-      expect(mockSetLastToken).not.toHaveBeenCalled();
+      const initialState = useStatusStore.getInitialState();
+      expect(useStatusStore.getState().playing).toEqual(initialState.playing);
+      expect(useStatusStore.getState().lastToken).toEqual(
+        initialState.lastToken,
+      );
     });
 
     it("should show toast when processReceived throws an error", async () => {
@@ -627,6 +1182,7 @@ describe("connection event handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
+    resetStore();
     // Re-setup mock after clearAllMocks - use the address from store mock
     vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
       "192.168.1.100:7497",
@@ -653,6 +1209,306 @@ describe("connection event handling", () => {
       expect(CoreAPI.flushQueue).toHaveBeenCalled();
       expect(CoreAPI.media).toHaveBeenCalled();
       expect(CoreAPI.tokens).toHaveBeenCalled();
+      expect(CoreAPI.version).toHaveBeenCalled();
+      expect(useStatusStore.getState().coreVersion).toBe("2.5.0");
+      expect(useStatusStore.getState().corePlatform).toBe("test");
+      expect(useStatusStore.getState().coreVersionPending).toBe(false);
+    });
+  });
+
+  it("should invalidate library queries after reconnecting", async () => {
+    const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+    invalidateSpy.mockClear();
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["systems"] });
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["tags"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["infiniteMediaSearch"],
+    });
+    invalidateSpy.mockRestore();
+  });
+
+  it("should fetch inbox messages when connected Core supports inbox", async () => {
+    const messages = [
+      {
+        id: 21,
+        title: "Fetched message",
+        severity: InboxSeverity.Info,
+        createdAt: "2026-05-19T10:00:00.000Z",
+      },
+    ];
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "2.8.0",
+      platform: "test",
+    });
+    vi.mocked(CoreAPI.inbox).mockResolvedValueOnce({ messages });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.inbox).toHaveBeenCalled();
+      expect(useStatusStore.getState().inboxMessages).toEqual(messages);
+    });
+  });
+
+  it("should clear stale inbox state when connected Core does not support inbox", async () => {
+    useStatusStore.setState({
+      inboxMessages: [
+        {
+          id: 22,
+          title: "Stale message",
+          severity: InboxSeverity.Warning,
+          createdAt: "2026-05-19T10:00:00.000Z",
+        },
+      ],
+      inboxModalOpen: true,
+    });
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "2.7.0",
+      platform: "test",
+    });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().coreVersion).toBe("2.7.0");
+      expect(CoreAPI.inbox).not.toHaveBeenCalled();
+      expect(useStatusStore.getState().inboxMessages).toEqual([]);
+      expect(useStatusStore.getState().inboxModalOpen).toBe(false);
+    });
+  });
+
+  it("should fetch scraper status when connected Core supports media scrapers", async () => {
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "2.12.0",
+      platform: "test",
+    });
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockResolvedValueOnce({
+      scraperId: "gamelist.xml",
+      processed: 1,
+      total: 2,
+      matched: 1,
+      skipped: 0,
+      totalScraped: 12,
+      scraping: true,
+      done: false,
+      paused: false,
+    });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.mediaScrapeStatus).toHaveBeenCalled();
+      expect(useStatusStore.getState().scrapingStatus).toMatchObject({
+        scraperId: "gamelist.xml",
+        scraping: true,
+        totalScraped: 12,
+      });
+    });
+  });
+
+  it("should not fetch scraper status when connected Core is below media scraper gate", async () => {
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "2.11.9",
+      platform: "test",
+    });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().coreVersion).toBe("2.11.9");
+      expect(CoreAPI.mediaScrapeStatus).not.toHaveBeenCalled();
+    });
+  });
+
+  it("should clear stale scraper status when fetching scraper status fails", async () => {
+    useStatusStore.setState({
+      scrapingStatus: {
+        scraperId: "gamelist.xml",
+        processed: 1,
+        total: 2,
+        matched: 1,
+        skipped: 0,
+        totalScraped: 12,
+        scraping: true,
+        done: false,
+        paused: false,
+      },
+    });
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "2.12.0",
+      platform: "test",
+    });
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockRejectedValueOnce(
+      new Error("status failed"),
+    );
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.mediaScrapeStatus).toHaveBeenCalled();
+      expect(useStatusStore.getState().scrapingStatus).toBeNull();
+    });
+  });
+
+  it("should merge platform, version, and lastConnectedAt into deviceHistory entry", async () => {
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+
+    const before = Date.now();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      const entry = useStatusStore
+        .getState()
+        .deviceHistory.find((e) => e.address === "192.168.1.100:7497");
+      expect(entry).toBeDefined();
+      expect(entry!.platform).toBe("test");
+      expect(entry!.version).toBe("2.5.0");
+      expect(typeof entry!.lastConnectedAt).toBe("number");
+      expect(entry!.lastConnectedAt!).toBeGreaterThanOrEqual(before);
+    });
+  });
+
+  it("should preserve fresh metadata when stored deviceHistory hydrates from Preferences", async () => {
+    // Pre-existing history on disk has no metadata. The fix sequences the two
+    // chains so the version() merge runs after Preferences.get hydrates state
+    // — this test guards against regressing back to a parallel race where the
+    // stored hydrate would clobber the merged metadata.
+    const stored = JSON.stringify([
+      { address: "192.168.1.100:7497", name: "Old Name" },
+      { address: "10.0.0.1:7497" },
+    ]);
+    vi.mocked(Preferences.get).mockResolvedValueOnce({ value: stored });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+
+    const before = Date.now();
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      const history = useStatusStore.getState().deviceHistory;
+      const entry = history.find((e) => e.address === "192.168.1.100:7497");
+      // Stored entry is preserved (name retained), AND fresh metadata merged.
+      expect(entry?.name).toBe("Old Name");
+      expect(entry?.platform).toBe("test");
+      expect(entry?.version).toBe("2.5.0");
+      expect(typeof entry?.lastConnectedAt).toBe("number");
+      expect(entry!.lastConnectedAt!).toBeGreaterThanOrEqual(before);
+      // Other stored entries are not lost.
+      expect(history.find((e) => e.address === "10.0.0.1:7497")).toBeDefined();
+    });
+  });
+
+  it("should set coreVersion to null when version fetch fails", async () => {
+    vi.mocked(CoreAPI.version).mockRejectedValueOnce(
+      new Error("Network error"),
+    );
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().coreVersion).toBeNull();
+      expect(useStatusStore.getState().corePlatform).toBeNull();
+      expect(useStatusStore.getState().coreVersionPending).toBe(false);
     });
   });
 
@@ -712,6 +1568,7 @@ describe("cancelled request handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
+    resetStore();
     // Ensure getActiveDeviceId returns the device we're testing with
     vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
       "192.168.1.100:7497",
@@ -742,8 +1599,94 @@ describe("cancelled request handling", () => {
     expect(screen.getByText("Test")).toBeInTheDocument();
   });
 
+  it("should retry media() once after a cancelled response on initial connect", async () => {
+    // Reconnect can race with the transport coming back up; the first call may
+    // resolve as cancelled (request reset). We schedule one delayed retry —
+    // without it the settings card and store stay stale until the next
+    // notification arrives.
+    const { isCancelled } = await import("../../../lib/coreApi");
+    vi.mocked(isCancelled)
+      .mockReturnValueOnce(true) // first call: cancelled, schedules retry
+      .mockReturnValue(false); // retry: not cancelled, processed normally
+    vi.mocked(CoreAPI.media)
+      .mockResolvedValueOnce({ cancelled: true } as any)
+      .mockResolvedValueOnce({
+        database: { exists: true, indexing: false },
+        active: [],
+      } as any);
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    try {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+
+      await waitFor(() => {
+        expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+      });
+
+      // Advance past the 500ms scheduled retry.
+      await vi.advanceTimersByTimeAsync(600);
+
+      await waitFor(() => {
+        expect(CoreAPI.media).toHaveBeenCalledTimes(2);
+      });
+    } finally {
+      vi.useRealTimers();
+      vi.mocked(isCancelled).mockReturnValue(false);
+    }
+  });
+
+  it("should clear a pending media retry timer on unmount", async () => {
+    // If the user switches devices while a retry is pending the timer must
+    // not fire and write stale data into the new connection's store.
+    const { isCancelled } = await import("../../../lib/coreApi");
+    vi.mocked(isCancelled).mockReturnValueOnce(true);
+    vi.mocked(CoreAPI.media).mockResolvedValueOnce({ cancelled: true } as any);
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    try {
+      const { unmount } = render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+
+      await waitFor(() => {
+        expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+      });
+
+      unmount();
+
+      // Even after the retry window, no second call — the cleanup cleared it.
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      vi.mocked(isCancelled).mockReturnValue(false);
+    }
+  });
+
   it("should handle cancelled tokens response gracefully", async () => {
-    vi.mocked(CoreAPI.tokens).mockResolvedValueOnce({ cancelled: true } as any);
+    vi.mocked(CoreAPI.tokens).mockResolvedValueOnce({
+      cancelled: true,
+    } as any);
 
     render(
       <ConnectionProvider>
@@ -768,13 +1711,17 @@ describe("cancelled request handling", () => {
 });
 
 describe("API error handling", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
+    resetStore();
     // Ensure getActiveDeviceId returns the device we're testing with
     vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
       "192.168.1.100:7497",
     );
+    // Reset rate limiter so toast assertions aren't masked by inter-test cooldown.
+    const { resetToastRateLimiter } = await import("@/lib/toastUtils");
+    resetToastRateLimiter();
   });
 
   it("should handle media API failure gracefully", async () => {
@@ -801,6 +1748,33 @@ describe("API error handling", () => {
     expect(screen.getByText("Test")).toBeInTheDocument();
   });
 
+  it("should degrade expected media database setup errors without toast", async () => {
+    vi.mocked(CoreAPI.media).mockRejectedValueOnce(
+      new Error("failed to get optimization status: no such table: DBConfig"),
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().gamesIndex).toMatchObject({
+        exists: false,
+        indexing: false,
+        optimizing: false,
+      });
+    });
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
+
   it("should handle tokens API failure gracefully", async () => {
     vi.mocked(CoreAPI.tokens).mockRejectedValueOnce(new Error("Network error"));
 
@@ -824,6 +1798,102 @@ describe("API error handling", () => {
     // Should not crash
     expect(screen.getByText("Test")).toBeInTheDocument();
   });
+
+  it("should show error toast when media fetch fails while CONNECTED", async () => {
+    vi.mocked(CoreAPI.media).mockRejectedValueOnce(new Error("Network error"));
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(String));
+    });
+  });
+
+  it("should suppress error toast when media fetch fails after RECONNECTING", async () => {
+    // Reject after we flip to RECONNECTING — simulates a transport flap that
+    // rejects pending requests via CoreAPI.reset() while reconnect is in flight.
+    let rejectMedia: (e: Error) => void = () => {};
+    vi.mocked(CoreAPI.media).mockReturnValueOnce(
+      new Promise<never>((_, rej) => {
+        rejectMedia = rej;
+      }),
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.media).toHaveBeenCalled();
+    });
+
+    // Flip the store to RECONNECTING before resolving the rejection.
+    useStatusStore.setState({
+      connectionState: ConnectionState.RECONNECTING,
+      connected: true,
+    });
+    rejectMedia(new Error("Request cancelled: connection reset"));
+
+    // Give the catch handler a chance to run.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  it("should suppress error toast when tokens fetch fails after RECONNECTING", async () => {
+    let rejectTokens: (e: Error) => void = () => {};
+    vi.mocked(CoreAPI.tokens).mockReturnValueOnce(
+      new Promise<never>((_, rej) => {
+        rejectTokens = rej;
+      }),
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.tokens).toHaveBeenCalled();
+    });
+
+    useStatusStore.setState({
+      connectionState: ConnectionState.RECONNECTING,
+      connected: true,
+    });
+    rejectTokens(new Error("Request cancelled: connection reset"));
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
 });
 
 describe("app lifecycle handling", () => {
@@ -834,6 +1904,7 @@ describe("app lifecycle handling", () => {
     vi.clearAllMocks();
     resumeCallback = null;
     pauseCallback = null;
+    resetStore();
 
     // Capture the callbacks passed to App.addListener
     const { App } = await import("@capacitor/app");
@@ -925,8 +1996,12 @@ describe("app lifecycle handling", () => {
 });
 
 describe("browser visibility handling (web platform)", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    resetStore();
+
+    const { Capacitor } = await import("@capacitor/core");
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
   });
 
   it("should call connectionManager.resumeAll when tab becomes visible", async () => {
@@ -989,6 +2064,7 @@ describe("edge cases", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
+    resetStore();
   });
 
   describe("stale connection events", () => {
@@ -1037,6 +2113,7 @@ describe("network status handling (native platform)", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     networkListener = null;
+    resetStore();
 
     // Mock Capacitor as native platform
     const { Capacitor } = await import("@capacitor/core");
@@ -1157,6 +2234,7 @@ describe("processNotification error handling", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
+    resetStore();
     mockToast.mockClear();
     mockToastError.mockClear();
     // Reset toast rate limiter to ensure toast shows

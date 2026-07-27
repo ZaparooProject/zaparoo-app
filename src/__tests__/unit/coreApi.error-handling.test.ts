@@ -1,7 +1,14 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
-import { CoreAPI } from "@/lib/coreApi";
+import { CoreAPI, isRequestCancelledError } from "@/lib/coreApi";
 
 describe("CoreAPI Error Handling Coverage", () => {
+  it("should identify connection reset cancellation errors", () => {
+    expect(
+      isRequestCancelledError(new Error("Request cancelled: connection reset")),
+    ).toBe(true);
+    expect(isRequestCancelledError(new Error("Network error"))).toBe(false);
+  });
+
   const mockSend = vi.fn();
 
   beforeEach(() => {
@@ -59,6 +66,19 @@ describe("CoreAPI Error Handling Coverage", () => {
     ["mediaActive", () => CoreAPI.mediaActive()],
     ["readers", () => CoreAPI.readers()],
     ["readersWriteCancel", () => CoreAPI.readersWriteCancel()],
+    ["inbox", () => CoreAPI.inbox()],
+    ["inboxDelete", () => CoreAPI.inboxDelete({ id: 1 })],
+    ["inboxClear", () => CoreAPI.inboxClear()],
+    ["scrapers", () => CoreAPI.scrapers()],
+    [
+      "mediaScrape",
+      () =>
+        CoreAPI.mediaScrape({ scraperId: "gamelist.xml", systems: ["snes"] }),
+    ],
+    ["mediaScrapeStatus", () => CoreAPI.mediaScrapeStatus()],
+    ["mediaCleanOrphans", () => CoreAPI.mediaCleanOrphans()],
+    ["mediaScrapeCancel", () => CoreAPI.mediaScrapeCancel()],
+    ["mediaScrapeResume", () => CoreAPI.mediaScrapeResume()],
   ];
 
   describe.each(errorTestCases)(

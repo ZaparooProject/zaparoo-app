@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { Camera } from "lucide-react";
+import { Camera, GamepadDirectional } from "lucide-react";
+import { GatedFeature } from "@/components/GatedFeature";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { ScanResult } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { ScanSpinner } from "../ScanSpinner";
@@ -29,6 +31,8 @@ interface ScanControlsProps {
   scanStatus: ScanResult;
   onScanButton: () => void;
   onCameraScan: () => void;
+  connected?: boolean;
+  onRemoteKeyboard?: () => void;
 }
 
 export function ScanControls({
@@ -36,10 +40,13 @@ export function ScanControls({
   scanStatus,
   onScanButton,
   onCameraScan,
+  connected = false,
+  onRemoteKeyboard,
 }: ScanControlsProps) {
   const { t } = useTranslation();
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
   const cameraAvailable = usePreferencesStore((state) => state.cameraAvailable);
+  const remoteInput = useCoreFeature("remoteInput");
 
   const statusAnnouncement = getScanStatusAnnouncement(
     scanSession,
@@ -76,14 +83,29 @@ export function ScanControls({
         <div className="mt-8"></div>
       )}
 
-      {Capacitor.isNativePlatform() && cameraAvailable && (
-        <div className="mb-4 flex justify-center">
-          <Button
-            variant="text"
-            onClick={onCameraScan}
-            label={t("scan.cameraMode")}
-            icon={<Camera size={20} />}
-          />
+      {((Capacitor.isNativePlatform() && cameraAvailable) ||
+        onRemoteKeyboard) && (
+        <div className="mb-4 flex justify-center gap-3">
+          {Capacitor.isNativePlatform() && cameraAvailable && (
+            <Button
+              variant="text"
+              onClick={onCameraScan}
+              label={t("scan.cameraMode")}
+              icon={<Camera size={20} />}
+            />
+          )}
+          {onRemoteKeyboard && (
+            <GatedFeature featureId="remoteInput">
+              <Button
+                variant="text"
+                onClick={onRemoteKeyboard}
+                label={t("scan.remoteKeyboard")}
+                icon={<GamepadDirectional size={20} />}
+                disabled={!connected || !remoteInput.available}
+                aria-label={t("scan.remoteKeyboard")}
+              />
+            </GatedFeature>
+          )}
         </div>
       )}
     </>

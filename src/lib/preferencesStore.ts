@@ -1,9 +1,13 @@
 import { create } from "zustand";
 import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 import { Preferences } from "@capacitor/preferences";
-import { Capacitor } from "@capacitor/core";
 import { TextZoom } from "@capacitor/text-zoom";
 import { sessionManager } from "./nfc";
+import {
+  isCapacitorPluginUnavailableError,
+  isNativePluginAvailable,
+  isPluginAvailable,
+} from "./capacitorBridge";
 
 /**
  * Preferences Store
@@ -14,17 +18,43 @@ import { sessionManager } from "./nfc";
  * page loads.
  */
 
+// Blocks writes to storage until the initial hydration read completes.
+// Without this, synchronous state updates that fire before the async
+// Preferences.get() resolves (e.g. web-platform availability checks in
+// useNfcAvailabilityCheck) trigger a persist write with default values,
+// clobbering the stored state (e.g. tourCompleted: true → false).
+let _storageWritesEnabled = false;
+
 // Custom storage adapter for Capacitor Preferences
 const capacitorPreferencesStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
-    const result = await Preferences.get({ key: name });
-    return result.value;
+    if (!isPluginAvailable("Preferences")) return null;
+
+    try {
+      const result = await Preferences.get({ key: name });
+      return result.value;
+    } catch (e) {
+      if (isCapacitorPluginUnavailableError(e)) return null;
+      throw e;
+    }
   },
   setItem: async (name: string, value: string): Promise<void> => {
-    await Preferences.set({ key: name, value });
+    if (!_storageWritesEnabled || !isPluginAvailable("Preferences")) return;
+
+    try {
+      await Preferences.set({ key: name, value });
+    } catch (e) {
+      if (!isCapacitorPluginUnavailableError(e)) throw e;
+    }
   },
   removeItem: async (name: string): Promise<void> => {
-    await Preferences.remove({ key: name });
+    if (!isPluginAvailable("Preferences")) return;
+
+    try {
+      await Preferences.remove({ key: name });
+    } catch (e) {
+      if (!isCapacitorPluginUnavailableError(e)) throw e;
+    }
   },
 };
 
@@ -46,6 +76,11 @@ export interface PreferencesState {
 
   // Tour completion tracking
   tourCompleted: boolean;
+
+  // What's new tracking
+  whatsNewInitialized: boolean;
+  lastWhatsNewRuntimeKey: string | null;
+  seenWhatsNewAnnouncementIds: string[];
 
   // Log viewer settings
   logLevelFilters: {
@@ -106,6 +141,12 @@ export interface PreferencesActions {
   setShakeZapscript: (value: string) => void;
   setCustomText: (value: string) => void;
   setTourCompleted: (value: boolean) => void;
+  initializeWhatsNew: (
+    runtimeKey: string,
+    announcementId: string | null,
+  ) => void;
+  setLastWhatsNewRuntimeKey: (runtimeKey: string) => void;
+  markWhatsNewSeen: (announcementId: string, runtimeKey: string) => void;
   setLogLevelFilters: (filters: PreferencesState["logLevelFilters"]) => void;
   setShowFilenames: (value: boolean) => void;
   setHapticsEnabled: (value: boolean) => void;
@@ -143,6 +184,9 @@ const DEFAULT_PREFERENCES: Omit<
   shakeZapscript: "",
   customText: "",
   tourCompleted: false,
+  whatsNewInitialized: false,
+  lastWhatsNewRuntimeKey: null,
+  seenWhatsNewAnnouncementIds: [],
   logLevelFilters: {
     debug: true,
     info: true,
@@ -215,6 +259,23 @@ export const usePreferencesStore = create<PreferencesStore>()(
       setShakeZapscript: (value) => set({ shakeZapscript: value }),
       setCustomText: (value) => set({ customText: value }),
       setTourCompleted: (value) => set({ tourCompleted: value }),
+      initializeWhatsNew: (runtimeKey, announcementId) =>
+        set({
+          whatsNewInitialized: true,
+          lastWhatsNewRuntimeKey: runtimeKey,
+          seenWhatsNewAnnouncementIds: announcementId ? [announcementId] : [],
+        }),
+      setLastWhatsNewRuntimeKey: (runtimeKey) =>
+        set({ whatsNewInitialized: true, lastWhatsNewRuntimeKey: runtimeKey }),
+      markWhatsNewSeen: (announcementId, runtimeKey) =>
+        set((state) => ({
+          whatsNewInitialized: true,
+          lastWhatsNewRuntimeKey: runtimeKey,
+          seenWhatsNewAnnouncementIds:
+            state.seenWhatsNewAnnouncementIds.includes(announcementId)
+              ? state.seenWhatsNewAnnouncementIds
+              : [...state.seenWhatsNewAnnouncementIds, announcementId],
+        })),
       setLogLevelFilters: (filters) => set({ logLevelFilters: filters }),
       setShowFilenames: (value) => set({ showFilenames: value }),
       setHapticsEnabled: (value) => set({ hapticsEnabled: value }),
@@ -235,6 +296,9 @@ export const usePreferencesStore = create<PreferencesStore>()(
         shakeZapscript: state.shakeZapscript,
         customText: state.customText,
         tourCompleted: state.tourCompleted,
+        whatsNewInitialized: state.whatsNewInitialized,
+        lastWhatsNewRuntimeKey: state.lastWhatsNewRuntimeKey,
+        seenWhatsNewAnnouncementIds: state.seenWhatsNewAnnouncementIds,
         logLevelFilters: state.logLevelFilters,
         showFilenames: state.showFilenames,
         hapticsEnabled: state.hapticsEnabled,
@@ -243,13 +307,17 @@ export const usePreferencesStore = create<PreferencesStore>()(
 
       // Callback when hydration completes
       onRehydrateStorage: () => (state) => {
+        _storageWritesEnabled = true;
         if (state) {
           // Initialize sessionManager with hydrated values
           sessionManager.setShouldRestart(state.restartScan);
           sessionManager.setLaunchOnScan(state.launchOnScan);
 
           // Apply text zoom on native platforms
-          if (Capacitor.isNativePlatform() && state.textZoomLevel !== 1.0) {
+          if (
+            isNativePluginAvailable("TextZoom") &&
+            state.textZoomLevel !== 1.0
+          ) {
             TextZoom.set({ value: state.textZoomLevel }).catch(() => {
               // Silently ignore - text zoom may not be available
             });

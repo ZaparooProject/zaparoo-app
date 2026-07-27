@@ -6,7 +6,7 @@
  * - Tag grouping by type with priority sorting
  * - Search filtering (debounced)
  * - Tag selection/deselection with screen reader announcements
- * - Disable behavior during indexing
+ * - Selection remains available during indexing
  * - Footer with selected count, clear all, and apply buttons
  * - Accordion expand/collapse all
  */
@@ -16,7 +16,7 @@ import { render, screen, waitFor, act } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { TagSelector, TagSelectorTrigger } from "@/components/TagSelector";
 import { useStatusStore } from "@/lib/store";
-import { CoreAPI } from "@/lib/coreApi";
+import { CoreAPI, MalformedCoreResponseError } from "@/lib/coreApi";
 import { TagInfo } from "@/lib/models";
 
 // Mock CoreAPI
@@ -24,6 +24,17 @@ vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
     mediaTags: vi.fn(),
     reset: vi.fn(),
+  },
+  MalformedCoreResponseError: class MalformedCoreResponseError extends Error {
+    constructor(
+      public readonly parseMessage: string,
+      public readonly requestId: string | null,
+      public readonly dataLength: number,
+      public readonly dataPreview: string,
+    ) {
+      super(`Malformed Core JSON response: ${parseMessage}`);
+      this.name = "MalformedCoreResponseError";
+    }
   },
 }));
 
@@ -76,6 +87,7 @@ describe("TagSelector", () => {
     // Reset stores
     useStatusStore.setState({
       ...useStatusStore.getState(),
+      targetDeviceAddress: "device-a",
       gamesIndex: {
         exists: true,
         indexing: false,
@@ -124,6 +136,26 @@ describe("TagSelector", () => {
         expect(screen.getByText("tagSelector.unavailable")).toBeInTheDocument();
       });
     });
+
+    it("should render error state when tags response is malformed", async () => {
+      // Arrange
+      vi.mocked(CoreAPI.mediaTags).mockRejectedValue(
+        new MalformedCoreResponseError(
+          "Unexpected end of JSON input",
+          null,
+          42,
+          "{",
+        ),
+      );
+
+      // Act
+      render(<TagSelector {...defaultProps} />);
+
+      // Assert
+      await waitFor(() => {
+        expect(screen.getByText("tagSelector.unavailable")).toBeInTheDocument();
+      });
+    });
   });
 
   describe("empty state", () => {
@@ -138,6 +170,36 @@ describe("TagSelector", () => {
       await waitFor(() => {
         expect(screen.getByText("tagSelector.noTags")).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("cache freshness", () => {
+    it("should refresh tags when target device changes", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      vi.mocked(CoreAPI.mediaTags)
+        .mockResolvedValueOnce({ tags: [{ tag: "Action", type: "genre" }] })
+        .mockResolvedValueOnce({ tags: [{ tag: "Puzzle", type: "genre" }] });
+
+      render(<TagSelector {...defaultProps} />);
+      await user.click(
+        await screen.findByRole("button", {
+          name: /tagSelector\.type\.genre/i,
+        }),
+      );
+      expect(
+        await screen.findByRole("checkbox", { name: /action/i }),
+      ).toBeInTheDocument();
+
+      act(() => {
+        useStatusStore.setState({ targetDeviceAddress: "device-b" });
+      });
+
+      expect(
+        await screen.findByRole("checkbox", { name: /puzzle/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("checkbox", { name: /action/i }),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -170,6 +232,39 @@ describe("TagSelector", () => {
           }),
         ).toBeInTheDocument();
       });
+    });
+
+    it("should sort multiple non-priority types alphabetically after priority ones", async () => {
+      // Arrange - two non-priority types ("zone" > "arcade" alphabetically)
+      vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
+        tags: [
+          { tag: "Action", type: "genre" },
+          { tag: "1990", type: "year" },
+          { tag: "Zebra Tag", type: "zone" },
+          { tag: "Alpha Tag", type: "arcade" },
+        ],
+      });
+
+      // Act
+      render(<TagSelector {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /tagSelector\.type\.genre/i }),
+        ).toBeInTheDocument();
+      });
+
+      // Assert - "arcade" should appear before "zone" (alphabetical among non-priority types)
+      const triggers = screen.getAllByRole("button", {
+        name: /tagSelector\.type\./i,
+      });
+      const typeNames = triggers.map((t) => t.textContent ?? "");
+      const arcadeIndex = typeNames.findIndex((n) => n.includes("arcade"));
+      const zoneIndex = typeNames.findIndex((n) => n.includes("zone"));
+
+      expect(arcadeIndex).toBeGreaterThan(-1);
+      expect(zoneIndex).toBeGreaterThan(-1);
+      expect(arcadeIndex).toBeLessThan(zoneIndex); // "arcade" < "zone" alphabetically
     });
 
     it("should sort types with priority (genre, year, series, publisher first)", async () => {
@@ -232,6 +327,31 @@ describe("TagSelector", () => {
         expect(screen.getByText("Action")).toBeInTheDocument();
         // Non-matching tags should not be visible in the virtualized list
         // Since we're mocking useVirtualizer, it will show all items
+      });
+    });
+
+    it("should show no-results title and hint when search has no matches", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
+        tags: createMockTags(),
+      });
+
+      render(<TagSelector {...defaultProps} />);
+
+      const searchInput = await screen.findByPlaceholderText(
+        "tagSelector.searchPlaceholder",
+      );
+      await user.type(searchInput, "NoMatchingTag");
+
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("tagSelector.noResults")).toBeInTheDocument();
+        expect(
+          screen.getByText("tagSelector.noResultsHint"),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -337,7 +457,7 @@ describe("TagSelector", () => {
   });
 
   describe("indexing state", () => {
-    it("should disable selection during indexing", async () => {
+    it("should keep selection controls enabled during indexing", async () => {
       // Arrange
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const onSelect = vi.fn();
@@ -357,7 +477,13 @@ describe("TagSelector", () => {
         },
       });
 
-      render(<TagSelector {...defaultProps} onSelect={onSelect} />);
+      render(
+        <TagSelector
+          {...defaultProps}
+          onSelect={onSelect}
+          selectedTags={["genre:RPG"]}
+        />,
+      );
 
       await waitFor(() => {
         expect(
@@ -370,16 +496,21 @@ describe("TagSelector", () => {
         screen.getByRole("button", { name: /tagSelector\.type\.genre/i }),
       );
 
-      // Act - try to click on tag
+      // Act
       const tagButton = await screen.findByRole("checkbox", {
         name: /action/i,
       });
-      expect(tagButton).toBeDisabled();
-
+      expect(tagButton).toBeEnabled();
       await user.click(tagButton);
 
-      // Assert - should not have called onSelect
-      expect(onSelect).not.toHaveBeenCalled();
+      // Assert
+      expect(onSelect).toHaveBeenCalledWith(["genre:RPG", "genre:Action"]);
+      expect(
+        screen.getByRole("button", { name: /tagSelector\.clearAll/i }),
+      ).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: /tagSelector\.apply/i }),
+      ).toBeEnabled();
     });
   });
 
@@ -600,7 +731,7 @@ describe("TagSelectorTrigger", () => {
     ).toBeInTheDocument();
   });
 
-  it("should be disabled during indexing", () => {
+  it("should stay enabled during indexing", async () => {
     // Arrange
     const onClick = vi.fn();
     useStatusStore.setState({
@@ -617,12 +748,14 @@ describe("TagSelectorTrigger", () => {
     // Act
     render(<TagSelectorTrigger {...defaultProps} onClick={onClick} />);
 
-    // Assert - button should be disabled, preventing any interaction
+    // Assert
     const button = screen.getByRole("button");
-    expect(button).toBeDisabled();
+    expect(button).toBeEnabled();
+    await userEvent.click(button);
+    expect(onClick).toHaveBeenCalled();
   });
 
-  it("should call onClick when clicked and not indexing", async () => {
+  it("should call onClick when enabled", async () => {
     // Arrange
     const onClick = vi.fn();
 

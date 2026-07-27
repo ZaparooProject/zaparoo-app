@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI } from "../../lib/coreApi";
-import { LaunchRequest, HistoryResponseEntry } from "../../lib/models";
+import { CoreAPI, MalformedCoreResponseError } from "../../lib/coreApi";
+import { logger } from "../../lib/logger";
+import {
+  HistoryResponseEntry,
+  InboxSeverity,
+  LaunchRequest,
+} from "../../lib/models";
 
 /**
  * Helper to simulate API response for CoreAPI tests.
@@ -25,6 +30,27 @@ function simulateResponse(
   });
 }
 
+function simulateError(
+  mockSend: ReturnType<typeof vi.fn>,
+  message: string,
+  callIndex: number = 0,
+  code: number = -32601,
+) {
+  queueMicrotask(() => {
+    if (mockSend.mock.calls[callIndex]) {
+      const request = JSON.parse(mockSend.mock.calls[callIndex]![0]);
+      const response = {
+        jsonrpc: "2.0",
+        id: request.id,
+        error: { code, message },
+      };
+      CoreAPI.processReceived({
+        data: JSON.stringify(response),
+      } as MessageEvent);
+    }
+  });
+}
+
 const mockSend = vi.fn();
 
 describe("CoreAPI API Contract", () => {
@@ -39,6 +65,7 @@ describe("CoreAPI API Contract", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllTimers();
+    vi.restoreAllMocks();
   });
 
   describe("API Method Parameters and Return Types", () => {
@@ -74,6 +101,191 @@ describe("CoreAPI API Contract", () => {
 
       const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
       expect(sentData.method).toBe("settings");
+    });
+
+    it("mediaGenerateResume should send correct JSON-RPC format", async () => {
+      const promise = CoreAPI.mediaGenerateResume();
+      simulateResponse(mockSend, null);
+      await promise;
+
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("media.generate.resume");
+      expect(sentData.params).toBeUndefined();
+    });
+
+    it("mediaCleanOrphans should return deleted count", async () => {
+      const promise = CoreAPI.mediaCleanOrphans();
+      simulateResponse(mockSend, { deleted: 12 });
+
+      await expect(promise).resolves.toEqual({ deleted: 12 });
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("media.clean.orphans");
+      expect(sentData.params).toBeUndefined();
+    });
+
+    it("mediaTags should not report unsupported API errors", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const warnSpy = vi.spyOn(logger, "warn");
+      const promise = CoreAPI.mediaTags();
+      simulateError(mockSend, "Method not found");
+
+      await expect(promise).rejects.toThrow("Method not found");
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        "Media tags API call failed:",
+        expect.any(Error),
+        {
+          category: "api",
+          action: "mediaTags",
+          severity: "warning",
+        },
+      );
+    });
+
+    it("mediaTags should report malformed Core responses as recoverable warnings", async () => {
+      const warnSpy = vi.spyOn(logger, "warn");
+      const promise = CoreAPI.mediaTags();
+      const request = JSON.parse(mockSend.mock.calls[0]![0]);
+
+      await CoreAPI.processReceived({
+        data: `{"jsonrpc":"2.0","id":"${request.id}","result":{"tags":[`,
+      } as MessageEvent);
+
+      await expect(promise).rejects.toBeInstanceOf(MalformedCoreResponseError);
+      expect(warnSpy).toHaveBeenCalledWith(
+        "Media tags API call failed:",
+        expect.any(MalformedCoreResponseError),
+        expect.objectContaining({
+          category: "api",
+          action: "mediaTags",
+          severity: "warning",
+          requestId: request.id,
+        }),
+      );
+    });
+
+    it("mediaGenerate should not report missing database setup errors", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const warnSpy = vi.spyOn(logger, "warn");
+      const promise = CoreAPI.mediaGenerate();
+      simulateError(
+        mockSend,
+        "failed to get optimization status during indexing check: failed to get optimization status: no such table: DBConfig",
+      );
+
+      await expect(promise).rejects.toThrow("no such table: DBConfig");
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        "Media generate API call failed:",
+        expect.any(Error),
+        {
+          category: "api",
+          action: "mediaGenerate",
+          severity: "warning",
+        },
+      );
+    });
+
+    it("mediaGenerate should report unexpected API errors with context", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const promise = CoreAPI.mediaGenerate();
+      simulateError(mockSend, "indexer crashed", 0, -32000);
+
+      await expect(promise).rejects.toThrow("indexer crashed");
+      expect(errorSpy).toHaveBeenCalledWith(
+        "Media generate API call failed:",
+        expect.any(Error),
+        {
+          category: "api",
+          action: "mediaGenerate",
+          severity: "error",
+        },
+      );
+    });
+
+    it("scrapers should return available scraper metadata", async () => {
+      const promise = CoreAPI.scrapers();
+      simulateResponse(mockSend, {
+        scrapers: [
+          {
+            id: "gamelist.xml",
+            name: "ES gamelist.xml",
+            supportedSystems: ["snes"],
+          },
+        ],
+      });
+
+      await expect(promise).resolves.toEqual({
+        scrapers: [
+          {
+            id: "gamelist.xml",
+            name: "ES gamelist.xml",
+            supportedSystems: ["snes"],
+          },
+        ],
+      });
+      expect(JSON.parse(mockSend.mock.calls[0]![0]).method).toBe("scrapers");
+    });
+
+    it("mediaScrape should send selected scraper parameters", async () => {
+      const promise = CoreAPI.mediaScrape({
+        scraperId: "gamelist.xml",
+        systems: ["snes"],
+        force: true,
+      });
+      simulateResponse(mockSend, null);
+      await promise;
+
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("media.scrape");
+      expect(sentData.params).toEqual({
+        scraperId: "gamelist.xml",
+        systems: ["snes"],
+        force: true,
+      });
+    });
+
+    it("mediaScrapeStatus should return scraper progress", async () => {
+      const status = {
+        scraperId: "gamelist.xml",
+        systemId: "snes",
+        processed: 1,
+        total: 2,
+        matched: 1,
+        skipped: 0,
+        totalScraped: 12,
+        scraping: true,
+        done: false,
+        paused: false,
+      };
+      const promise = CoreAPI.mediaScrapeStatus();
+      simulateResponse(mockSend, status);
+
+      await expect(promise).resolves.toEqual(status);
+      expect(JSON.parse(mockSend.mock.calls[0]![0]).method).toBe(
+        "media.scrape.status",
+      );
+    });
+
+    it("mediaScrapeCancel and resume should return Core messages", async () => {
+      const cancelPromise = CoreAPI.mediaScrapeCancel();
+      simulateResponse(mockSend, { message: "scraping cancelled" });
+      await expect(cancelPromise).resolves.toEqual({
+        message: "scraping cancelled",
+      });
+
+      const resumePromise = CoreAPI.mediaScrapeResume();
+      simulateResponse(mockSend, { message: "Media scraping resumed" }, 1);
+      await expect(resumePromise).resolves.toEqual({
+        message: "Media scraping resumed",
+      });
+
+      expect(JSON.parse(mockSend.mock.calls[0]![0]).method).toBe(
+        "media.scrape.cancel",
+      );
+      expect(JSON.parse(mockSend.mock.calls[1]![0]).method).toBe(
+        "media.scrape.resume",
+      );
     });
   });
 
@@ -184,6 +396,16 @@ describe("CoreAPI API Contract", () => {
   });
 
   describe("Additional Method JSON-RPC Format", () => {
+    it("confirm should send correct JSON-RPC format and resolve", async () => {
+      const resultPromise = CoreAPI.confirm();
+      simulateResponse(mockSend, null);
+
+      await expect(resultPromise).resolves.toBeUndefined();
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("confirm");
+      expect(sentData.params).toBeUndefined();
+    });
+
     it("mappingsReload should send correct JSON-RPC format", () => {
       CoreAPI.mappingsReload().catch(() => {});
 
@@ -207,6 +429,47 @@ describe("CoreAPI API Contract", () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.stringContaining('"method":"media.active.update"'),
       );
+    });
+
+    it("inbox should send correct JSON-RPC format and resolve messages", async () => {
+      const inboxResponse = {
+        messages: [
+          {
+            id: 1,
+            title: "Update available",
+            severity: InboxSeverity.Info,
+            createdAt: "2026-05-19T10:00:00.000Z",
+          },
+        ],
+      };
+
+      const resultPromise = CoreAPI.inbox();
+      simulateResponse(mockSend, inboxResponse);
+
+      await expect(resultPromise).resolves.toEqual(inboxResponse);
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("inbox");
+      expect(sentData.params).toBeUndefined();
+    });
+
+    it("inboxDelete should send id param and resolve", async () => {
+      const resultPromise = CoreAPI.inboxDelete({ id: 42 });
+      simulateResponse(mockSend, null);
+
+      await expect(resultPromise).resolves.toBeUndefined();
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("inbox.delete");
+      expect(sentData.params).toEqual({ id: 42 });
+    });
+
+    it("inboxClear should send correct JSON-RPC format and resolve", async () => {
+      const resultPromise = CoreAPI.inboxClear();
+      simulateResponse(mockSend, null);
+
+      await expect(resultPromise).resolves.toBeUndefined();
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("inbox.clear");
+      expect(sentData.params).toBeUndefined();
     });
   });
 });

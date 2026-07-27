@@ -25,9 +25,15 @@ import { BackIcon, GoogleIcon, AppleIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import {
+  collectErrorSearchStrings,
+  isExpectedEmailAuthError,
+  isExpectedRevenueCatLogoutError,
+} from "@/lib/errors";
+import {
   updateRequirements,
   deleteAccount,
   cancelAccountDeletion,
+  NotSignedInError,
 } from "@/lib/onlineApi";
 import {
   Dialog,
@@ -50,6 +56,24 @@ function isOAuthAvailable(): boolean {
   }
   // On web, only allow OAuth on the official zaparoo.app domain
   return window.location.hostname === "zaparoo.app";
+}
+
+const SIGNUP_EMAIL_AUTH_ERROR_TOKENS = [
+  "email-already-in-use",
+  "auth/email-already-in-use",
+  "weak-password",
+  "auth/weak-password",
+] as const;
+
+function getExpectedSignupEmailAuthErrorToken(error: unknown): string | null {
+  if (!isExpectedEmailAuthError(error)) return null;
+
+  const searchStrings = collectErrorSearchStrings(error);
+  return (
+    SIGNUP_EMAIL_AUTH_ERROR_TOKENS.find((token) =>
+      searchStrings.some((searchString) => searchString.includes(token)),
+    ) ?? null
+  );
 }
 
 /**
@@ -163,17 +187,19 @@ function OnlinePage() {
           toast.error(t("online.signUpFail"));
         }
       } catch (e) {
-        const error = e as Error;
-        logger.error("Firebase email signup failed:", error, {
-          category: "api",
-          action: "createUserWithEmailAndPassword",
-          severity: "warning",
-        });
+        const isExpectedEmailError = isExpectedEmailAuthError(e);
+        const emailAuthErrorToken = getExpectedSignupEmailAuthErrorToken(e);
+        if (!isExpectedEmailError) {
+          logger.error("Firebase email signup failed:", e, {
+            category: "api",
+            action: "createUserWithEmailAndPassword",
+            severity: "warning",
+          });
+        }
 
-        // Handle specific error codes
-        if (error.message.includes("email-already-in-use")) {
+        if (emailAuthErrorToken?.includes("email-already-in-use")) {
           toast.error(t("online.emailExists"));
-        } else if (error.message.includes("weak-password")) {
+        } else if (emailAuthErrorToken?.includes("weak-password")) {
           toast.error(t("online.weakPassword"));
         } else {
           toast.error(t("online.signUpFail"));
@@ -211,11 +237,13 @@ function OnlinePage() {
         }
       } catch (e) {
         const error = e as Error;
-        logger.error("Firebase email login failed:", error, {
-          category: "api",
-          action: "signInWithEmail",
-          severity: "warning",
-        });
+        if (!isExpectedEmailAuthError(e)) {
+          logger.error("Firebase email login failed:", error, {
+            category: "api",
+            action: "signInWithEmail",
+            severity: "warning",
+          });
+        }
         toast.error(t("online.loginWrong"));
       } finally {
         setIsLoading(false);
@@ -346,13 +374,18 @@ function OnlinePage() {
     // Revert RevenueCat to anonymous before Firebase signOut (skip on web)
     if (Capacitor.getPlatform() !== "web") {
       try {
-        await Purchases.logOut();
+        const { isAnonymous } = await Purchases.isAnonymous();
+        if (!isAnonymous) {
+          await Purchases.logOut();
+        }
       } catch (e) {
-        logger.error("RevenueCat logout failed:", e, {
-          category: "purchase",
-          action: "logOut",
-          severity: "warning",
-        });
+        if (!isExpectedRevenueCatLogoutError(e)) {
+          logger.error("RevenueCat logout failed:", e, {
+            category: "purchase",
+            action: "logOut",
+            severity: "warning",
+          });
+        }
       }
     }
 
@@ -386,6 +419,12 @@ function OnlinePage() {
       setConfirmText("");
       toast.success(t("online.deleteAccountScheduled"));
     } catch (e) {
+      if (e instanceof NotSignedInError) {
+        setDeleteModalOpen(false);
+        setConfirmText("");
+        toast.error(t("online.notSignedInError"));
+        return;
+      }
       const error = e as AxiosError<{ error?: { code?: string } }>;
       const code = error.response?.data?.error?.code;
 
@@ -415,6 +454,10 @@ function OnlinePage() {
       setScheduledDeletion(null);
       toast.success(t("online.deletionCancelled"));
     } catch (e) {
+      if (e instanceof NotSignedInError) {
+        toast.error(t("online.notSignedInError"));
+        return;
+      }
       logger.error("Cancel deletion failed:", e, {
         category: "api",
         action: "cancelAccountDeletion",

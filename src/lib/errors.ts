@@ -33,6 +33,18 @@ export class NfcCancelledError extends ZaparooError {
 }
 
 /**
+ * Thrown when NFC tag/session loss is expected during normal tag interaction.
+ */
+export class NfcTransientError extends ZaparooError {
+  constructor(
+    message = "NFC tag was lost during operation",
+    public readonly originalError?: Error,
+  ) {
+    super(message);
+  }
+}
+
+/**
  * Thrown when NFC tag is not NDEF formatted.
  * Can be recovered by formatting the tag first.
  */
@@ -86,6 +98,104 @@ export class PurchaseCancelledError extends ZaparooError {
 }
 
 // =============================================================================
+// Auth and RevenueCat State Errors
+// =============================================================================
+
+const EXPECTED_EMAIL_AUTH_TOKENS = [
+  "auth/invalid-credential",
+  "invalid-credential",
+  "auth/wrong-password",
+  "wrong-password",
+  "auth/user-not-found",
+  "user-not-found",
+  "auth/invalid-email",
+  "invalid-email",
+  "auth/email-already-in-use",
+  "email-already-in-use",
+  "auth/weak-password",
+  "weak-password",
+];
+
+const EXPECTED_REVENUECAT_LOGOUT_TOKENS = [
+  "already anonymous",
+  "current user is anonymous",
+  "anonymous app user",
+  "cannot log out anonymous",
+  "can't log out anonymous",
+  "cannot logout anonymous",
+  "can't logout anonymous",
+  "no current user",
+  "credentials unavailable",
+  "credentials_unavailable",
+  "credential unavailable",
+  "credential_unavailable",
+  "missing credentials",
+  "no credentials",
+];
+
+export function collectErrorSearchStrings(error: unknown): string[] {
+  const strings: string[] = [];
+  const visited = new Set<unknown>();
+
+  const collect = (value: unknown): void => {
+    if (value == null || visited.has(value)) return;
+
+    if (typeof value === "string") {
+      strings.push(value.toLowerCase());
+      return;
+    }
+
+    if (typeof value !== "object") return;
+
+    visited.add(value);
+    if (value instanceof Error) {
+      strings.push(value.name.toLowerCase(), value.message.toLowerCase());
+    }
+
+    const record = value as Record<string, unknown>;
+    for (const key of [
+      "code",
+      "name",
+      "message",
+      "readableErrorCode",
+      "underlyingErrorMessage",
+      "localizedDescription",
+      "domain",
+      "userInfo",
+      "error",
+    ]) {
+      collect(record[key]);
+    }
+  };
+
+  collect(error);
+  return strings;
+}
+
+function includesAnyToken(error: unknown, tokens: readonly string[]): boolean {
+  const searchStrings = collectErrorSearchStrings(error);
+  return tokens.some((token) =>
+    searchStrings.some((searchString) => searchString.includes(token)),
+  );
+}
+
+/**
+ * Check if Firebase email auth failed for expected user-facing reasons.
+ * These are login/signup states, not production monitoring events.
+ */
+export function isExpectedEmailAuthError(error: unknown): boolean {
+  return includesAnyToken(error, EXPECTED_EMAIL_AUTH_TOKENS);
+}
+
+/**
+ * Check if RevenueCat logout failed because auth state already moved anonymous.
+ * These races are expected during sign-out and should not report to monitoring.
+ */
+export function isExpectedRevenueCatLogoutError(error: unknown): boolean {
+  return includesAnyToken(error, EXPECTED_REVENUECAT_LOGOUT_TOKENS);
+}
+
+// =============================================================================
 // Type Guards
 // =============================================================================
 
@@ -107,14 +217,52 @@ export function isCancellationError(error: unknown): boolean {
 export function isNfcError(error: unknown): boolean {
   return (
     error instanceof NfcCancelledError ||
+    error instanceof NfcTransientError ||
     error instanceof NfcUnformattedTagError ||
     error instanceof NfcFormatError
+  );
+}
+
+/**
+ * Check if error is an expected transient NFC failure.
+ */
+export function isTransientNfcError(error: unknown): boolean {
+  return error instanceof NfcTransientError;
+}
+
+/**
+ * Check if NFC error should surface user feedback without production reporting.
+ */
+export function isExpectedNfcError(error: unknown): boolean {
+  const wrappedError = wrapNfcError(error);
+  return (
+    wrappedError instanceof NfcCancelledError ||
+    wrappedError instanceof NfcTransientError ||
+    wrappedError instanceof NfcUnformattedTagError ||
+    wrappedError instanceof NfcFormatError
   );
 }
 
 // =============================================================================
 // Error Wrapping Utilities
 // =============================================================================
+
+function normalizeError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+
+  if (
+    error !== null &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return new Error(error.message);
+  }
+
+  return new Error(String(error));
+}
 
 /**
  * Wraps native NFC plugin errors into typed errors.
@@ -124,11 +272,18 @@ export function isNfcError(error: unknown): boolean {
  * @returns A typed error if recognized, otherwise the original error
  */
 export function wrapNfcError(error: unknown): Error {
-  if (!(error instanceof Error)) {
-    return error instanceof Error ? error : new Error(String(error));
+  const normalizedError = normalizeError(error);
+
+  if (
+    normalizedError instanceof NfcCancelledError ||
+    normalizedError instanceof NfcTransientError ||
+    normalizedError instanceof NfcUnformattedTagError ||
+    normalizedError instanceof NfcFormatError
+  ) {
+    return normalizedError;
   }
 
-  const msg = error.message.toLowerCase();
+  const msg = normalizedError.message.toLowerCase();
 
   // Check for unformatted tag errors
   if (
@@ -136,7 +291,23 @@ export function wrapNfcError(error: unknown): Error {
     msg.includes("tag is not ndef") ||
     msg.includes("not ndef formatted")
   ) {
-    return new NfcUnformattedTagError(error.message, error);
+    return new NfcUnformattedTagError(normalizedError.message, normalizedError);
+  }
+
+  // Check for transient tag/session loss during normal NFC operations
+  if (
+    msg.includes("no nfc tag was detected") ||
+    msg.includes("the tag is not connected") ||
+    msg.includes("tag was lost") ||
+    msg.includes("taglostexception") ||
+    msg.includes("tag is out of date") ||
+    msg.includes("stale tag") ||
+    msg.includes("could not connect to tag") ||
+    msg.includes("session invalidated unexpectedly") ||
+    msg.includes("reader session invalidated") ||
+    msg.includes("connection lost")
+  ) {
+    return new NfcTransientError(normalizedError.message, normalizedError);
   }
 
   // Check for format-related errors (used for user-friendly messages)
@@ -146,10 +317,10 @@ export function wrapNfcError(error: unknown): Error {
     msg.includes("only one tagtechnology") ||
     msg.includes("format")
   ) {
-    return new NfcFormatError(error.message, error);
+    return new NfcFormatError(normalizedError.message, normalizedError);
   }
 
-  return error;
+  return normalizedError;
 }
 
 /**

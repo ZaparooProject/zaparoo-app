@@ -6,7 +6,7 @@ import { ListPlusIcon, NfcIcon } from "lucide-react";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
-import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
 import { Card } from "@/components/wui/Card";
 import { Button } from "@/components/wui/Button";
 import { WriteModal } from "@/components/WriteModal";
@@ -23,7 +23,10 @@ function Create() {
   const connected = useStatusStore((state) => state.connected);
   const playing = useStatusStore((state) => state.playing);
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
-  const nfcWriter = useNfcWriter();
+  const preferRemoteWriter = usePreferencesStore(
+    (state) => state.preferRemoteWriter,
+  );
+  const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);
   const writeOpen = writeIntent && nfcWriter.status === null;

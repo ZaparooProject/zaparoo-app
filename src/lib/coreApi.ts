@@ -5,11 +5,19 @@ import { logger } from "./logger.ts";
 import {
   AddMappingRequest,
   AllMappingsResponse,
+  DeleteInboxRequest,
   HistoryResponse,
+  InboxResponse,
+  InputGamepadRequest,
+  InputKeyboardRequest,
   LaunchRequest,
   LogDownloadResponse,
   MediaActiveUpdateRequest,
   MediaResponse,
+  MediaCleanOrphansResponse,
+  MediaScrapeCancelResponse,
+  MediaScrapeParams,
+  MediaScrapeResumeResponse,
   MediaTagsResponse,
   Method,
   Notification,
@@ -17,9 +25,13 @@ import {
   PlaytimeLimitsUpdateRequest,
   PlaytimeStatus,
   ReadersResponse,
+  ScrapersResponse,
+  ScrapingStatusNotification,
   SearchParams,
   SearchResultsResponse,
+  ScreenshotResponse,
   SettingsResponse,
+  SystemsParams,
   SystemsResponse,
   TokensResponse,
   UpdateMappingRequest,
@@ -48,6 +60,125 @@ interface ApiRequest {
   params: unknown;
 }
 
+export class CoreApiError extends Error {
+  constructor(
+    message: string,
+    public readonly code: number,
+  ) {
+    super(message);
+    this.name = "CoreApiError";
+  }
+}
+
+export class MalformedCoreResponseError extends Error {
+  constructor(
+    public readonly parseMessage: string,
+    public readonly requestId: string | null,
+    public readonly dataLength: number,
+    public readonly dataPreview: string,
+  ) {
+    super(`Malformed Core JSON response: ${parseMessage}`);
+    this.name = "MalformedCoreResponseError";
+  }
+}
+
+export function isMalformedCoreResponseError(
+  error: unknown,
+): error is MalformedCoreResponseError {
+  return error instanceof MalformedCoreResponseError;
+}
+
+function normalizeMessageData(data: unknown): string {
+  if (typeof data === "string") return data;
+  if (data instanceof ArrayBuffer) {
+    return new TextDecoder().decode(data);
+  }
+  return String(data);
+}
+
+function createSanitizedDataPreview(data: string): string {
+  let preview = "";
+
+  for (let index = 0; index < data.length && preview.length < 200; ) {
+    const codePoint = data.codePointAt(index) ?? 0;
+    const charLength = codePoint > 0xffff ? 2 : 1;
+    const char = data.slice(index, index + charLength);
+
+    preview += codePoint <= 31 || codePoint === 127 ? " " : char;
+    index += charLength;
+  }
+
+  return preview;
+}
+
+function extractJsonRpcIdFromMalformedData(data: string): string | null {
+  const match = data.match(/"id"\s*:\s*"([^"\\\r\n]{1,128})"/);
+  return match?.[1] ?? null;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return String(error);
+}
+
+export function isUnsupportedMediaApiError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    (error instanceof CoreApiError && error.code === -32601) ||
+    message.includes("method not found") ||
+    message === "query or system is required"
+  );
+}
+
+export function isMissingMediaDatabaseSetupError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes("no such table: dbconfig") ||
+    message.includes("failed to get optimization status during indexing check")
+  );
+}
+
+export function isExpectedMediaDatabaseError(error: unknown): boolean {
+  return (
+    isUnsupportedMediaApiError(error) || isMissingMediaDatabaseSetupError(error)
+  );
+}
+
+function logMediaApiFailure(
+  label: string,
+  action: string,
+  error: unknown,
+  severity: "error" | "warning" = "error",
+): void {
+  if (isMalformedCoreResponseError(error)) {
+    logger.warn(`${label}:`, error, {
+      category: "api",
+      action,
+      severity: "warning",
+      requestId: error.requestId,
+      dataLength: error.dataLength,
+      dataPreview: error.dataPreview,
+    });
+    return;
+  }
+
+  if (isExpectedMediaDatabaseError(error)) {
+    logger.warn(`${label}:`, error, {
+      category: "api",
+      action,
+      severity: "warning",
+    });
+    return;
+  }
+
+  logger.error(`${label}:`, error, {
+    category: "api",
+    action,
+    severity,
+  });
+}
+
 interface ApiError {
   code: number;
   message: string;
@@ -72,6 +203,19 @@ export function isCancelled<T>(
     typeof response === "object" &&
     "cancelled" in response &&
     response.cancelled === true
+  );
+}
+
+export function isRequestCancelledError(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
+
+  return /request cancelled|request canceled|connection reset|aborted/i.test(
+    message,
   );
 }
 
@@ -290,6 +434,22 @@ class CoreApi {
     this.send = () => logger.warn("WebSocket send is not initialized");
   }
 
+  private callConnected(
+    method: Method,
+    params?: unknown,
+    signal?: AbortSignal,
+  ): Promise<unknown> {
+    if (signal?.aborted) {
+      return Promise.resolve({ cancelled: true });
+    }
+
+    if (!this.transport?.isConnected) {
+      return Promise.reject(new Error("Request requires active connection"));
+    }
+
+    return this.call(method, params, signal);
+  }
+
   call(
     method: Method,
     params?: unknown,
@@ -504,21 +664,36 @@ class CoreApi {
           return;
         }
 
+        const rawData = normalizeMessageData(msg.data);
         let res: ApiResponse;
         try {
-          res = JSON.parse(msg.data);
+          res = JSON.parse(rawData);
         } catch (e) {
-          logger.error("Could not parse JSON:", msg.data, e, {
-            category: "api",
-            action: "parseJSON",
-            severity: "critical",
-            dataPreview: String(msg.data).slice(0, 100),
-          });
-          reject(
-            new Error(
-              `Error parsing JSON response: ${e instanceof Error ? e.message : String(e)}`,
-            ),
+          const parseMessage = e instanceof Error ? e.message : String(e);
+          const requestId = extractJsonRpcIdFromMalformedData(rawData);
+          const error = new MalformedCoreResponseError(
+            parseMessage,
+            requestId,
+            rawData.length,
+            createSanitizedDataPreview(rawData),
           );
+          if (requestId) {
+            const pendingResponse = this.responsePool[requestId];
+            if (pendingResponse) {
+              if (pendingResponse.timeoutId) {
+                clearTimeout(pendingResponse.timeoutId);
+              }
+              pendingResponse.reject(error);
+              delete this.responsePool[requestId];
+              if (requestId === this.pendingWriteId) {
+                this.pendingWriteId = null;
+              }
+              resolve(null);
+              return;
+            }
+          }
+
+          reject(error);
           return;
         }
 
@@ -559,7 +734,7 @@ class CoreApi {
         }
 
         if (res.error) {
-          promise.reject(new Error(res.error.message));
+          promise.reject(new CoreApiError(res.error.message, res.error.code));
           delete this.responsePool[res.id];
 
           // Clear pendingWriteId if this error response is for the pending write
@@ -622,6 +797,84 @@ class CoreApi {
         })
         .catch((error) => {
           logger.error("Run API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  confirm(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.Confirm)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Confirm API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  inputKeyboard(params: InputKeyboardRequest): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.callConnected(Method.InputKeyboard, params)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Input keyboard API call failed:", error, {
+            category: "api",
+            action: "inputKeyboard",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
+
+  inputGamepad(params: InputGamepadRequest): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.callConnected(Method.InputGamepad, params)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Input gamepad API call failed:", error, {
+            category: "api",
+            action: "inputGamepad",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
+
+  screenshot(): Promise<ScreenshotResponse> {
+    return new Promise<ScreenshotResponse>((resolve, reject) => {
+      this.callConnected(Method.Screenshot)
+        .then((response) => {
+          if (
+            response &&
+            typeof response === "object" &&
+            "path" in response &&
+            "data" in response &&
+            "size" in response &&
+            typeof response.path === "string" &&
+            typeof response.data === "string" &&
+            typeof response.size === "number"
+          ) {
+            resolve(response as ScreenshotResponse);
+            return;
+          }
+
+          reject(new Error("Invalid screenshot response"));
+        })
+        .catch((error) => {
+          logger.error("Screenshot API call failed:", error, {
+            category: "api",
+            action: "screenshot",
+            severity: "error",
+          });
           reject(error);
         });
     });
@@ -709,7 +962,11 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Media search API call failed:", error);
+          logMediaApiFailure(
+            "Media search API call failed",
+            "mediaSearch",
+            error,
+          );
           reject(error);
         });
     });
@@ -734,7 +991,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Media tags API call failed:", error);
+          logMediaApiFailure("Media tags API call failed", "mediaTags", error);
           reject(error);
         });
     });
@@ -747,7 +1004,11 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Media generate API call failed:", error);
+          logMediaApiFailure(
+            "Media generate API call failed",
+            "mediaGenerate",
+            error,
+          );
           reject(error);
         });
     });
@@ -760,20 +1021,225 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Media generate cancel API call failed:", error);
+          logMediaApiFailure(
+            "Media generate cancel API call failed",
+            "mediaGenerateCancel",
+            error,
+            "warning",
+          );
           reject(error);
         });
     });
   }
 
-  systems(): Promise<SystemsResponse> {
+  mediaGenerateResume(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MediaGenerateResume)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logMediaApiFailure(
+            "Media generate resume API call failed",
+            "mediaGenerateResume",
+            error,
+            "warning",
+          );
+          reject(error);
+        });
+    });
+  }
+
+  mediaCleanOrphans(): Promise<MediaCleanOrphansResponse> {
+    return new Promise<MediaCleanOrphansResponse>((resolve, reject) => {
+      this.call(Method.MediaCleanOrphans)
+        .then((result) => {
+          try {
+            const response = result as MediaCleanOrphansResponse;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing media clean orphans response:", e, {
+              category: "coreApi",
+              action: "mediaCleanOrphans",
+              severity: "error",
+            });
+            reject(
+              new Error(
+                `Failed to process media clean orphans response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logMediaApiFailure(
+            "Media clean orphans API call failed",
+            "mediaCleanOrphans",
+            error,
+          );
+          reject(error);
+        });
+    });
+  }
+
+  scrapers(): Promise<ScrapersResponse> {
+    return new Promise<ScrapersResponse>((resolve, reject) => {
+      this.call(Method.Scrapers)
+        .then((result) => {
+          try {
+            const response = result as ScrapersResponse;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing scrapers response:", e, {
+              category: "coreApi",
+              action: "scrapers",
+              severity: "error",
+            });
+            reject(
+              new Error(
+                `Failed to process scrapers response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logMediaApiFailure("Scrapers API call failed", "scrapers", error);
+          reject(error);
+        });
+    });
+  }
+
+  mediaScrape(params: MediaScrapeParams): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MediaScrape, params)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logMediaApiFailure(
+            "Media scrape API call failed",
+            "mediaScrape",
+            error,
+          );
+          reject(error);
+        });
+    });
+  }
+
+  mediaScrapeStatus(): Promise<ScrapingStatusNotification> {
+    return new Promise<ScrapingStatusNotification>((resolve, reject) => {
+      this.call(Method.MediaScrapeStatus)
+        .then((result) => {
+          try {
+            const response = result as ScrapingStatusNotification;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing media scrape status response:", e, {
+              category: "coreApi",
+              action: "mediaScrapeStatus",
+              severity: "error",
+            });
+            reject(
+              new Error(
+                `Failed to process media scrape status response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logMediaApiFailure(
+            "Media scrape status API call failed",
+            "mediaScrapeStatus",
+            error,
+            "warning",
+          );
+          reject(error);
+        });
+    });
+  }
+
+  mediaScrapeCancel(): Promise<MediaScrapeCancelResponse> {
+    return new Promise<MediaScrapeCancelResponse>((resolve, reject) => {
+      this.call(Method.MediaScrapeCancel)
+        .then((result) => {
+          try {
+            const response = result as MediaScrapeCancelResponse;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing media scrape cancel response:", e, {
+              category: "coreApi",
+              action: "mediaScrapeCancel",
+              severity: "error",
+            });
+            reject(
+              new Error(
+                `Failed to process media scrape cancel response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logMediaApiFailure(
+            "Media scrape cancel API call failed",
+            "mediaScrapeCancel",
+            error,
+            "warning",
+          );
+          reject(error);
+        });
+    });
+  }
+
+  mediaScrapeResume(): Promise<MediaScrapeResumeResponse> {
+    return new Promise<MediaScrapeResumeResponse>((resolve, reject) => {
+      this.call(Method.MediaScrapeResume)
+        .then((result) => {
+          try {
+            const response = result as MediaScrapeResumeResponse;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing media scrape resume response:", e, {
+              category: "coreApi",
+              action: "mediaScrapeResume",
+              severity: "error",
+            });
+            reject(
+              new Error(
+                `Failed to process media scrape resume response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logMediaApiFailure(
+            "Media scrape resume API call failed",
+            "mediaScrapeResume",
+            error,
+            "warning",
+          );
+          reject(error);
+        });
+    });
+  }
+
+  systems(params?: SystemsParams): Promise<SystemsResponse> {
     return new Promise<SystemsResponse>((resolve, reject) => {
-      this.call(Method.Systems)
+      this.call(Method.Systems, params)
         .then((result) => {
           try {
             const response = result as SystemsResponse;
-            logger.debug(response);
-            resolve(response);
+            // Virtual launchables execute ZapScript directly and never own media
+            // rows, so they are not valid choices in app game-system filters.
+            const gameSystems = response.systems.filter(
+              (system) => !system.zapScript,
+            );
+            const filteredResponse = { ...response, systems: gameSystems };
+            logger.debug(filteredResponse);
+            resolve(filteredResponse);
           } catch (e) {
             logger.error("Error processing systems response:", e);
             reject(
@@ -784,7 +1250,11 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Systems API call failed:", error);
+          if (isRequestCancelledError(error)) {
+            logger.debug("Systems API call cancelled:", error);
+          } else {
+            logger.error("Systems API call failed:", error);
+          }
           reject(error);
         });
     });
@@ -925,7 +1395,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Media API call failed:", error);
+          logMediaApiFailure("Media API call failed", "media", error);
           reject(error);
         });
     });
@@ -975,7 +1445,11 @@ class CoreApi {
           resolve(result as MediaResponse["active"]);
         })
         .catch((error) => {
-          logger.error("Media active API call failed:", error);
+          logMediaApiFailure(
+            "Media active API call failed",
+            "mediaActive",
+            error,
+          );
           reject(error);
         });
     });
@@ -988,7 +1462,11 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Media active update API call failed:", error);
+          logMediaApiFailure(
+            "Media active update API call failed",
+            "mediaActiveUpdate",
+            error,
+          );
           reject(error);
         });
     });
@@ -1141,11 +1619,312 @@ class CoreApi {
         });
     });
   }
+
+  inbox(): Promise<InboxResponse> {
+    return new Promise<InboxResponse>((resolve, reject) => {
+      this.call(Method.Inbox)
+        .then((result) => {
+          try {
+            const response = result as InboxResponse;
+            logger.debug(response);
+            resolve(response);
+          } catch (e) {
+            logger.error("Error processing inbox response:", e, {
+              category: "api",
+              action: "inbox.process",
+              severity: "error",
+            });
+            reject(
+              new Error(
+                `Failed to process inbox response: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+            );
+          }
+        })
+        .catch((error) => {
+          logger.error("Inbox API call failed:", error, {
+            category: "api",
+            action: "inbox.fetch",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
+
+  inboxDelete(params: DeleteInboxRequest): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.InboxDelete, params)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Inbox delete API call failed:", error, {
+            category: "api",
+            action: "inbox.delete",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
+
+  inboxClear(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.InboxClear)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logger.error("Inbox clear API call failed:", error, {
+            category: "api",
+            action: "inbox.clear",
+            severity: "error",
+          });
+          reject(error);
+        });
+    });
+  }
 }
 
 export const CoreAPI = new CoreApi();
 
 const addrKey = "deviceAddress";
+const DEFAULT_DEVICE_PORT = 7497;
+const INVALID_DEVICE_ADDRESS_MESSAGE = "Invalid device address";
+
+export class InvalidDeviceAddressError extends Error {
+  constructor(message = INVALID_DEVICE_ADDRESS_MESSAGE) {
+    super(message);
+    this.name = "InvalidDeviceAddressError";
+  }
+}
+
+export interface ValidDeviceAddress {
+  ok: true;
+  address: string;
+  host: string;
+  port: number;
+  wsUrl: string;
+}
+
+export interface InvalidDeviceAddress {
+  ok: false;
+  errorKey: "settings.deviceAddressRequired" | "settings.deviceAddressInvalid";
+  message: string;
+}
+
+export type DeviceAddressValidationResult =
+  | ValidDeviceAddress
+  | InvalidDeviceAddress;
+
+function invalidDeviceAddress(
+  errorKey: InvalidDeviceAddress["errorKey"] = "settings.deviceAddressInvalid",
+): InvalidDeviceAddress {
+  return {
+    ok: false,
+    errorKey,
+    message:
+      errorKey === "settings.deviceAddressRequired"
+        ? "Enter a device address"
+        : INVALID_DEVICE_ADDRESS_MESSAGE,
+  };
+}
+
+function parsePort(port: string | undefined): number | null {
+  if (port === undefined) return DEFAULT_DEVICE_PORT;
+  if (!/^\d+$/.test(port)) return null;
+
+  const parsed = Number(port);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) return null;
+  return parsed;
+}
+
+function isValidIPv4(host: string): boolean {
+  const octets = host.split(".");
+  return (
+    octets.length === 4 &&
+    octets.every((octet) => {
+      if (!/^\d+$/.test(octet)) return false;
+      if (octet.length > 1 && octet.startsWith("0")) return false;
+      const parsed = Number(octet);
+      return parsed >= 0 && parsed <= 255;
+    })
+  );
+}
+
+function isValidIPv6(host: string): boolean {
+  try {
+    new URL(`ws://[${host}]`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isValidHostname(host: string): boolean {
+  if (host.length === 0 || host.length > 253) return false;
+  if (/^[0-9.]+$/.test(host)) return false;
+
+  const labels = host.split(".");
+  return labels.every(
+    (label) =>
+      label.length > 0 &&
+      label.length <= 63 &&
+      /^[a-zA-Z0-9-]+$/.test(label) &&
+      !label.startsWith("-") &&
+      !label.endsWith("-"),
+  );
+}
+
+function validateHost(host: string): boolean {
+  if (isValidIPv4(host) || isValidHostname(host)) return true;
+
+  if (/^[0-9.]+$/.test(host)) return false;
+  return false;
+}
+
+type DeviceAddressScheme = "http" | "https" | "ws" | "wss";
+
+type WebSocketScheme = "ws" | "wss";
+
+function formatDeviceAddress(
+  host: string,
+  port: number,
+  scheme?: DeviceAddressScheme,
+): string {
+  const hostPart = host.includes(":") ? `[${host}]` : host;
+  const address =
+    port === DEFAULT_DEVICE_PORT ? hostPart : `${hostPart}:${port}`;
+  return scheme ? `${scheme}://${address}` : address;
+}
+
+function formatWsUrl(
+  host: string,
+  port: number,
+  scheme: WebSocketScheme = "ws",
+): string {
+  const hostPart = host.includes(":") ? `[${host}]` : host;
+  return `${scheme}://${hostPart}:${port}/api/v0.1`;
+}
+
+function validateHostAndPort(
+  host: string,
+  port: number | null,
+  addressScheme?: DeviceAddressScheme,
+  wsScheme?: WebSocketScheme,
+): DeviceAddressValidationResult {
+  if (port === null) return invalidDeviceAddress();
+  if (!validateHost(host)) return invalidDeviceAddress();
+
+  return {
+    ok: true,
+    address: formatDeviceAddress(host, port, addressScheme),
+    host,
+    port,
+    wsUrl: formatWsUrl(host, port, wsScheme),
+  };
+}
+
+function normalizeUrlInput(
+  input: string,
+): DeviceAddressValidationResult | null {
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(input)) return null;
+
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch {
+    return invalidDeviceAddress();
+  }
+
+  if (!["ws:", "wss:", "http:", "https:"].includes(url.protocol)) {
+    return invalidDeviceAddress();
+  }
+  if (url.username || url.password || url.search || url.hash) {
+    return invalidDeviceAddress();
+  }
+  if (!["", "/", "/api/v0.1"].includes(url.pathname)) {
+    return invalidDeviceAddress();
+  }
+
+  const addressScheme = url.protocol.slice(0, -1) as DeviceAddressScheme;
+  const wsScheme: WebSocketScheme = ["https:", "wss:"].includes(url.protocol)
+    ? "wss"
+    : "ws";
+  const host = url.hostname.replace(/^\[|\]$/g, "");
+  const port = parsePort(url.port || undefined);
+  if (host.includes(":")) {
+    if (port === null || !isValidIPv6(host)) return invalidDeviceAddress();
+    return {
+      ok: true,
+      address: formatDeviceAddress(host, port, addressScheme),
+      host,
+      port,
+      wsUrl: formatWsUrl(host, port, wsScheme),
+    };
+  }
+
+  return validateHostAndPort(host, port, addressScheme, wsScheme);
+}
+
+export function validateDeviceAddress(
+  input: string,
+): DeviceAddressValidationResult {
+  const address = input.trim();
+  if (!address) return invalidDeviceAddress("settings.deviceAddressRequired");
+
+  const urlResult = normalizeUrlInput(address);
+  if (urlResult) return urlResult;
+
+  if (/\s/.test(address)) return invalidDeviceAddress();
+
+  if (address.startsWith("[")) {
+    const match = /^\[([^\]]+)](?::([^:]+))?$/.exec(address);
+    if (!match) return invalidDeviceAddress();
+
+    const [, host, portInput] = match;
+    if (!host || !isValidIPv6(host)) return invalidDeviceAddress();
+
+    const port = parsePort(portInput);
+    if (port === null) return invalidDeviceAddress();
+
+    return {
+      ok: true,
+      address: formatDeviceAddress(host, port),
+      host,
+      port,
+      wsUrl: formatWsUrl(host, port),
+    };
+  }
+
+  const colonCount = (address.match(/:/g) || []).length;
+  if (colonCount > 1) {
+    if (!isValidIPv6(address)) return invalidDeviceAddress();
+    return {
+      ok: true,
+      address: formatDeviceAddress(address, DEFAULT_DEVICE_PORT),
+      host: address,
+      port: DEFAULT_DEVICE_PORT,
+      wsUrl: formatWsUrl(address, DEFAULT_DEVICE_PORT),
+    };
+  }
+
+  if (colonCount === 1) {
+    const [host, portInput] = address.split(":");
+    if (!host || !portInput) return invalidDeviceAddress();
+    return validateHostAndPort(host, parsePort(portInput));
+  }
+
+  return validateHostAndPort(address, DEFAULT_DEVICE_PORT);
+}
+
+export function isInvalidDeviceAddressError(error: unknown): boolean {
+  return (
+    error instanceof InvalidDeviceAddressError ||
+    (error instanceof Error && error.message === INVALID_DEVICE_ADDRESS_MESSAGE)
+  );
+}
 
 export function getDeviceAddress() {
   const addr = localStorage.getItem(addrKey) || "";
@@ -1166,88 +1945,25 @@ export function setDeviceAddress(addr: string) {
   }
 }
 
+/** Parse a device address into host and numeric port. Handles IPv4, hostname, and IPv6. */
+export function parseDeviceAddress(address: string): {
+  host: string;
+  port: number;
+} {
+  const result = validateDeviceAddress(address);
+  if (result.ok) return { host: result.host, port: result.port };
+  return { host: "", port: DEFAULT_DEVICE_PORT };
+}
+
 export function getWsUrl() {
   const address = getDeviceAddress();
+  if (!address) return "";
 
-  // Handle empty address
-  if (!address) {
-    return "";
-  }
-
-  let host = address;
-  let port = "7497"; // default port
-
-  // Check if this is a bracketed IPv6 address (e.g., [::1] or [::1]:8080)
-  if (address.startsWith("[")) {
-    const closeBracket = address.indexOf("]");
-    if (closeBracket > 0) {
-      host = address.substring(0, closeBracket + 1); // Include brackets
-      const afterBracket = address.substring(closeBracket + 1);
-      if (afterBracket.startsWith(":") && afterBracket.length > 1) {
-        const potentialPort = afterBracket.substring(1);
-        if (/^\d+$/.test(potentialPort)) {
-          const portNum = parseInt(potentialPort, 10);
-          if (portNum > 0 && portNum <= 65535) {
-            port = potentialPort;
-          }
-        }
-      }
-    }
-    return `ws://${host}:${port}/api/v0.1`;
-  }
-
-  // Check if this looks like an unbracketed IPv6 address (multiple colons, not just host:port)
-  const colonCount = (address.match(/:/g) || []).length;
-  if (colonCount > 1) {
-    // Multiple colons - validate it looks like IPv6 (hex segments separated by colons)
-    // Valid segments are empty (for :: shorthand) or 1-4 hex characters
-    const segments = address.split(":");
-    const isValidIPv6 = segments.every(
-      (seg) => seg === "" || /^[0-9a-fA-F]{1,4}$/.test(seg),
-    );
-
-    if (!isValidIPv6) {
-      logger.warn(`Invalid address format (not valid IPv6): ${address}`);
-      return "";
-    }
-
-    // Wrap in brackets for proper URL format
-    return `ws://[${address}]:${port}/api/v0.1`;
-  }
-
-  // Handle IPv4 or hostname with optional port
-  const lastColonIndex = address.lastIndexOf(":");
-
-  // Check for malformed address starting with colon (e.g., ":8080")
-  if (lastColonIndex === 0) {
-    // Address starts with colon - invalid, no host
+  const result = validateDeviceAddress(address);
+  if (!result.ok) {
     logger.warn(`Invalid device address format: ${address}`);
     return "";
   }
 
-  // Check for trailing colon (e.g., "192.168.1.100:")
-  if (lastColonIndex === address.length - 1) {
-    // Trailing colon - strip it and use default port
-    host = address.substring(0, lastColonIndex);
-    return `ws://${host}:${port}/api/v0.1`;
-  }
-
-  if (lastColonIndex > 0) {
-    const potentialPort = address.substring(lastColonIndex + 1);
-    const potentialHost = address.substring(0, lastColonIndex);
-
-    if (/^\d+$/.test(potentialPort)) {
-      const portNum = parseInt(potentialPort, 10);
-      if (portNum > 0 && portNum <= 65535) {
-        host = potentialHost;
-        port = potentialPort;
-      } else {
-        host = potentialHost;
-      }
-    } else {
-      host = potentialHost;
-    }
-  }
-
-  return `ws://${host}:${port}/api/v0.1`;
+  return result.wsUrl;
 }

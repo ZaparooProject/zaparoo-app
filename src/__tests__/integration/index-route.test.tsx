@@ -1,7 +1,7 @@
 /**
  * Integration Test: Index Route (Home Page)
  *
- * Tests the REAL Index component from src/routes/index.tsx including:
+ * Tests the REAL Index component from src/routes/-pages/Index.tsx including:
  * - Page structure and accessibility
  * - Connection status display
  * - Scan controls visibility based on NFC/camera availability
@@ -201,7 +201,7 @@ vi.mock("@capacitor/core", () => ({
 }));
 
 // Import the REAL component after mocks are set up
-import { Index } from "@/routes/index";
+import { Index } from "@/routes/-pages/Index";
 
 // Helper to provide connection context
 function TestWrapper({
@@ -217,6 +217,7 @@ function TestWrapper({
     hasData: true,
     showConnecting: false,
     showReconnecting: false,
+    openPairingModal: () => {},
   };
 
   return (
@@ -244,6 +245,10 @@ describe("Index Route Integration", () => {
       },
       writeOpen: false,
       proPurchaseModalOpen: false,
+      // Seed encryptionState so connected-state assertions don't hit the
+      // verifying UI gate (encryptionState === "unknown" -> connecting).
+      encryptionState: "plaintext",
+      pairingRequired: false,
     });
 
     usePreferencesStore.setState({
@@ -408,6 +413,23 @@ describe("Index Route Integration", () => {
 
       expect(mockScanOperationsState.handleCameraScan).toHaveBeenCalledTimes(1);
     });
+
+    it("should open controls modal when remote controls button is clicked", async () => {
+      const user = userEvent.setup();
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: /scan.remoteKeyboard/i }),
+      );
+
+      expect(
+        screen.getByRole("dialog", { name: "remoteKeyboard.title" }),
+      ).toBeInTheDocument();
+    });
   });
 
   describe("Connection Status", () => {
@@ -445,6 +467,7 @@ describe("Index Route Integration", () => {
         hasData: false,
         showConnecting: false,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       render(
@@ -921,6 +944,7 @@ describe("Index Route Integration", () => {
         hasData: false,
         showConnecting: false,
         showReconnecting: false,
+        openPairingModal: () => {},
       };
 
       rerender(

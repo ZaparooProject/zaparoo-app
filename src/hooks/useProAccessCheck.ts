@@ -3,6 +3,8 @@ import { Capacitor } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { logger } from "@/lib/logger";
+import { purchasesReady } from "@/lib/purchasesSetup";
+import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 
 /**
  * Hook to check Pro access status from RevenueCat on app startup.
@@ -18,15 +20,21 @@ export function useProAccessCheck() {
   );
 
   useEffect(() => {
-    // Skip on web platform
+    // Skip on web platform or when the native purchases bridge is unavailable
     if (Capacitor.getPlatform() === "web") {
       logger.log("Web platform, skipping Pro access check");
       setProAccessHydrated(true);
       return;
     }
 
-    // Check customer info from RevenueCat
-    Purchases.getCustomerInfo()
+    if (!isNativePluginAvailable("Purchases")) {
+      setProAccessHydrated(true);
+      return;
+    }
+
+    // Wait for Purchases.configure() to complete before querying customer info
+    purchasesReady
+      .then(() => Purchases.getCustomerInfo())
       .then((info) => {
         // Use optional chaining for safe access to nested entitlements
         const hasProAccess =

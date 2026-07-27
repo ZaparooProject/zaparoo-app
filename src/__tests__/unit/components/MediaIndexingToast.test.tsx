@@ -61,13 +61,18 @@ describe("MediaIndexingToast", () => {
     expect(screen.getByText("toast.preparingDb")).toBeInTheDocument();
   });
 
-  it("should display writing message when at final step", () => {
+  it("should render Core-supplied step text verbatim, even when Step===Total", () => {
+    // Regression: previously the toast hardcoded toast.writingDb whenever
+    // currentStep===totalSteps, hiding Core's split phases (Writing database /
+    // Creating indexes / Building search caches).
     mockGamesIndex.currentStep = 10;
     mockGamesIndex.totalSteps = 10;
+    mockGamesIndex.currentStepDisplay = "Building search caches";
 
     render(<MediaIndexingToast id="test-id" setHideToast={mockSetHideToast} />);
 
-    expect(screen.getByText("toast.writingDb")).toBeInTheDocument();
+    expect(screen.getByText("Building search caches")).toBeInTheDocument();
+    expect(screen.queryByText("toast.writingDb")).not.toBeInTheDocument();
   });
 
   it("should render Hide button", () => {

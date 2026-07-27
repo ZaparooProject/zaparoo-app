@@ -13,10 +13,12 @@ import { Route as IndexRouteImport } from "./routes/index";
 import { Route as SettingsIndexRouteImport } from "./routes/settings.index";
 import { Route as CreateIndexRouteImport } from "./routes/create.index";
 import { Route as SettingsReadersRouteImport } from "./routes/settings.readers";
-import { Route as SettingsPlaytimeRouteImport } from "./routes/settings.playtime";
+import { Route as SettingsPlayControlsRouteImport } from "./routes/settings.play-controls";
 import { Route as SettingsOnlineRouteImport } from "./routes/settings.online";
+import { Route as SettingsMediaRouteImport } from "./routes/settings.media";
 import { Route as SettingsLogsRouteImport } from "./routes/settings.logs";
 import { Route as SettingsHelpRouteImport } from "./routes/settings.help";
+import { Route as SettingsDevicesRouteImport } from "./routes/settings.devices";
 import { Route as SettingsAdvancedRouteImport } from "./routes/settings.advanced";
 import { Route as SettingsAccessibilityRouteImport } from "./routes/settings.accessibility";
 import { Route as SettingsAboutRouteImport } from "./routes/settings.about";
@@ -25,6 +27,9 @@ import { Route as CreateSearchRouteImport } from "./routes/create.search";
 import { Route as CreateNfcRouteImport } from "./routes/create.nfc";
 import { Route as CreateMappingsRouteImport } from "./routes/create.mappings";
 import { Route as CreateCustomRouteImport } from "./routes/create.custom";
+import { Route as SettingsDevicesAddressRouteImport } from "./routes/settings.devices_.$address";
+import { Route as CreateMappingsNewRouteImport } from "./routes/create.mappings_.new";
+import { Route as CreateMappingsEditIdRouteImport } from "./routes/create.mappings_.edit_.$id";
 
 const IndexRoute = IndexRouteImport.update({
   id: "/",
@@ -46,14 +51,19 @@ const SettingsReadersRoute = SettingsReadersRouteImport.update({
   path: "/settings/readers",
   getParentRoute: () => rootRouteImport,
 } as any);
-const SettingsPlaytimeRoute = SettingsPlaytimeRouteImport.update({
-  id: "/settings/playtime",
-  path: "/settings/playtime",
+const SettingsPlayControlsRoute = SettingsPlayControlsRouteImport.update({
+  id: "/settings/play-controls",
+  path: "/settings/play-controls",
   getParentRoute: () => rootRouteImport,
 } as any);
 const SettingsOnlineRoute = SettingsOnlineRouteImport.update({
   id: "/settings/online",
   path: "/settings/online",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsMediaRoute = SettingsMediaRouteImport.update({
+  id: "/settings/media",
+  path: "/settings/media",
   getParentRoute: () => rootRouteImport,
 } as any);
 const SettingsLogsRoute = SettingsLogsRouteImport.update({
@@ -64,6 +74,11 @@ const SettingsLogsRoute = SettingsLogsRouteImport.update({
 const SettingsHelpRoute = SettingsHelpRouteImport.update({
   id: "/settings/help",
   path: "/settings/help",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsDevicesRoute = SettingsDevicesRouteImport.update({
+  id: "/settings/devices",
+  path: "/settings/devices",
   getParentRoute: () => rootRouteImport,
 } as any);
 const SettingsAdvancedRoute = SettingsAdvancedRouteImport.update({
@@ -106,6 +121,21 @@ const CreateCustomRoute = CreateCustomRouteImport.update({
   path: "/create/custom",
   getParentRoute: () => rootRouteImport,
 } as any);
+const SettingsDevicesAddressRoute = SettingsDevicesAddressRouteImport.update({
+  id: "/settings/devices_/$address",
+  path: "/settings/devices/$address",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const CreateMappingsNewRoute = CreateMappingsNewRouteImport.update({
+  id: "/create/mappings_/new",
+  path: "/create/mappings/new",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const CreateMappingsEditIdRoute = CreateMappingsEditIdRouteImport.update({
+  id: "/create/mappings_/edit_/$id",
+  path: "/create/mappings/edit/$id",
+  getParentRoute: () => rootRouteImport,
+} as any);
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
@@ -117,13 +147,18 @@ export interface FileRoutesByFullPath {
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
+  "/settings/devices": typeof SettingsDevicesRoute;
   "/settings/help": typeof SettingsHelpRoute;
   "/settings/logs": typeof SettingsLogsRoute;
+  "/settings/media": typeof SettingsMediaRoute;
   "/settings/online": typeof SettingsOnlineRoute;
-  "/settings/playtime": typeof SettingsPlaytimeRoute;
+  "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
   "/create/": typeof CreateIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
+  "/create/mappings/new": typeof CreateMappingsNewRoute;
+  "/settings/devices/$address": typeof SettingsDevicesAddressRoute;
+  "/create/mappings/edit/$id": typeof CreateMappingsEditIdRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
@@ -135,13 +170,18 @@ export interface FileRoutesByTo {
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
+  "/settings/devices": typeof SettingsDevicesRoute;
   "/settings/help": typeof SettingsHelpRoute;
   "/settings/logs": typeof SettingsLogsRoute;
+  "/settings/media": typeof SettingsMediaRoute;
   "/settings/online": typeof SettingsOnlineRoute;
-  "/settings/playtime": typeof SettingsPlaytimeRoute;
+  "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
   "/create": typeof CreateIndexRoute;
   "/settings": typeof SettingsIndexRoute;
+  "/create/mappings/new": typeof CreateMappingsNewRoute;
+  "/settings/devices/$address": typeof SettingsDevicesAddressRoute;
+  "/create/mappings/edit/$id": typeof CreateMappingsEditIdRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -154,13 +194,18 @@ export interface FileRoutesById {
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
+  "/settings/devices": typeof SettingsDevicesRoute;
   "/settings/help": typeof SettingsHelpRoute;
   "/settings/logs": typeof SettingsLogsRoute;
+  "/settings/media": typeof SettingsMediaRoute;
   "/settings/online": typeof SettingsOnlineRoute;
-  "/settings/playtime": typeof SettingsPlaytimeRoute;
+  "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
   "/create/": typeof CreateIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
+  "/create/mappings_/new": typeof CreateMappingsNewRoute;
+  "/settings/devices_/$address": typeof SettingsDevicesAddressRoute;
+  "/create/mappings_/edit_/$id": typeof CreateMappingsEditIdRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -174,13 +219,18 @@ export interface FileRouteTypes {
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
+    | "/settings/devices"
     | "/settings/help"
     | "/settings/logs"
+    | "/settings/media"
     | "/settings/online"
-    | "/settings/playtime"
+    | "/settings/play-controls"
     | "/settings/readers"
     | "/create/"
-    | "/settings/";
+    | "/settings/"
+    | "/create/mappings/new"
+    | "/settings/devices/$address"
+    | "/create/mappings/edit/$id";
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/"
@@ -192,13 +242,18 @@ export interface FileRouteTypes {
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
+    | "/settings/devices"
     | "/settings/help"
     | "/settings/logs"
+    | "/settings/media"
     | "/settings/online"
-    | "/settings/playtime"
+    | "/settings/play-controls"
     | "/settings/readers"
     | "/create"
-    | "/settings";
+    | "/settings"
+    | "/create/mappings/new"
+    | "/settings/devices/$address"
+    | "/create/mappings/edit/$id";
   id:
     | "__root__"
     | "/"
@@ -210,13 +265,18 @@ export interface FileRouteTypes {
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
+    | "/settings/devices"
     | "/settings/help"
     | "/settings/logs"
+    | "/settings/media"
     | "/settings/online"
-    | "/settings/playtime"
+    | "/settings/play-controls"
     | "/settings/readers"
     | "/create/"
-    | "/settings/";
+    | "/settings/"
+    | "/create/mappings_/new"
+    | "/settings/devices_/$address"
+    | "/create/mappings_/edit_/$id";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -229,13 +289,18 @@ export interface RootRouteChildren {
   SettingsAboutRoute: typeof SettingsAboutRoute;
   SettingsAccessibilityRoute: typeof SettingsAccessibilityRoute;
   SettingsAdvancedRoute: typeof SettingsAdvancedRoute;
+  SettingsDevicesRoute: typeof SettingsDevicesRoute;
   SettingsHelpRoute: typeof SettingsHelpRoute;
   SettingsLogsRoute: typeof SettingsLogsRoute;
+  SettingsMediaRoute: typeof SettingsMediaRoute;
   SettingsOnlineRoute: typeof SettingsOnlineRoute;
-  SettingsPlaytimeRoute: typeof SettingsPlaytimeRoute;
+  SettingsPlayControlsRoute: typeof SettingsPlayControlsRoute;
   SettingsReadersRoute: typeof SettingsReadersRoute;
   CreateIndexRoute: typeof CreateIndexRoute;
   SettingsIndexRoute: typeof SettingsIndexRoute;
+  CreateMappingsNewRoute: typeof CreateMappingsNewRoute;
+  SettingsDevicesAddressRoute: typeof SettingsDevicesAddressRoute;
+  CreateMappingsEditIdRoute: typeof CreateMappingsEditIdRoute;
 }
 
 declare module "@tanstack/react-router" {
@@ -268,11 +333,11 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof SettingsReadersRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    "/settings/playtime": {
-      id: "/settings/playtime";
-      path: "/settings/playtime";
-      fullPath: "/settings/playtime";
-      preLoaderRoute: typeof SettingsPlaytimeRouteImport;
+    "/settings/play-controls": {
+      id: "/settings/play-controls";
+      path: "/settings/play-controls";
+      fullPath: "/settings/play-controls";
+      preLoaderRoute: typeof SettingsPlayControlsRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/settings/online": {
@@ -280,6 +345,13 @@ declare module "@tanstack/react-router" {
       path: "/settings/online";
       fullPath: "/settings/online";
       preLoaderRoute: typeof SettingsOnlineRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/media": {
+      id: "/settings/media";
+      path: "/settings/media";
+      fullPath: "/settings/media";
+      preLoaderRoute: typeof SettingsMediaRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/settings/logs": {
@@ -294,6 +366,13 @@ declare module "@tanstack/react-router" {
       path: "/settings/help";
       fullPath: "/settings/help";
       preLoaderRoute: typeof SettingsHelpRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/devices": {
+      id: "/settings/devices";
+      path: "/settings/devices";
+      fullPath: "/settings/devices";
+      preLoaderRoute: typeof SettingsDevicesRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/settings/advanced": {
@@ -352,6 +431,27 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof CreateCustomRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/settings/devices_/$address": {
+      id: "/settings/devices_/$address";
+      path: "/settings/devices/$address";
+      fullPath: "/settings/devices/$address";
+      preLoaderRoute: typeof SettingsDevicesAddressRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/create/mappings_/new": {
+      id: "/create/mappings_/new";
+      path: "/create/mappings/new";
+      fullPath: "/create/mappings/new";
+      preLoaderRoute: typeof CreateMappingsNewRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/create/mappings_/edit_/$id": {
+      id: "/create/mappings_/edit_/$id";
+      path: "/create/mappings/edit/$id";
+      fullPath: "/create/mappings/edit/$id";
+      preLoaderRoute: typeof CreateMappingsEditIdRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
@@ -365,13 +465,18 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsAccessibilityRoute: SettingsAccessibilityRoute,
   SettingsAdvancedRoute: SettingsAdvancedRoute,
+  SettingsDevicesRoute: SettingsDevicesRoute,
   SettingsHelpRoute: SettingsHelpRoute,
   SettingsLogsRoute: SettingsLogsRoute,
+  SettingsMediaRoute: SettingsMediaRoute,
   SettingsOnlineRoute: SettingsOnlineRoute,
-  SettingsPlaytimeRoute: SettingsPlaytimeRoute,
+  SettingsPlayControlsRoute: SettingsPlayControlsRoute,
   SettingsReadersRoute: SettingsReadersRoute,
   CreateIndexRoute: CreateIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
+  CreateMappingsNewRoute: CreateMappingsNewRoute,
+  SettingsDevicesAddressRoute: SettingsDevicesAddressRoute,
+  CreateMappingsEditIdRoute: CreateMappingsEditIdRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

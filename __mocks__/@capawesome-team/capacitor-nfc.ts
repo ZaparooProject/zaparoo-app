@@ -42,6 +42,66 @@ export const Nfc = {
   makeReadOnly: vi.fn().mockResolvedValue(undefined),
 };
 
+export enum TypeNameFormat {
+  Empty = 0,
+  WellKnown = 1,
+  MimeMedia = 2,
+  AbsoluteUri = 3,
+  External = 4,
+  Unknown = 5,
+  Unchanged = 6,
+}
+
+export enum RecordTypeDefinition {
+  AndroidApp = "android.com:pkg",
+  AlternativeCarrier = "ac",
+  HandoverCarrier = "Hc",
+  HandoverRequest = "Hr",
+  HandoverSelect = "Hs",
+  SmartPoster = "Sp",
+  Text = "T",
+  Uri = "U",
+}
+
+const URI_PREFIXES: Record<number, string> = {
+  0x00: "",
+  0x01: "http://www.",
+  0x02: "https://www.",
+  0x03: "http://",
+  0x04: "https://",
+  0x05: "tel:",
+  0x06: "mailto:",
+  0x07: "ftp://anonymous:anonymous@",
+  0x08: "ftp://ftp.",
+  0x09: "ftps://",
+  0x0a: "sftp://",
+  0x0b: "smb://",
+  0x0c: "nfs://",
+  0x0d: "ftp://",
+  0x0e: "dav://",
+  0x0f: "news:",
+  0x10: "telnet://",
+  0x11: "imap:",
+  0x12: "rtsp://",
+  0x13: "urn:",
+  0x14: "pop:",
+  0x15: "sip:",
+  0x16: "sips:",
+  0x17: "tftp:",
+  0x18: "btspp://",
+  0x19: "btl2cap://",
+  0x1a: "btgoep://",
+  0x1b: "tcpobex://",
+  0x1c: "irdaobex://",
+  0x1d: "file://",
+  0x1e: "urn:epc:id:",
+  0x1f: "urn:epc:tag:",
+  0x20: "urn:epc:pat:",
+  0x21: "urn:epc:raw:",
+  0x22: "urn:epc:",
+  0x23: "urn:nfc:",
+};
+
 export class NfcUtils {
   createNdefTextRecord = vi.fn().mockReturnValue({
     record: {
@@ -51,6 +111,48 @@ export class NfcUtils {
       type: [84], // 'T' for text
     },
   });
+
+  mapBytesToRecordTypeDefinition({ bytes }: { bytes: number[] }) {
+    if (bytes.length === 1) {
+      if (bytes[0] === 84) return { type: RecordTypeDefinition.Text };
+      if (bytes[0] === 85) return { type: RecordTypeDefinition.Uri };
+    }
+    return { type: undefined };
+  }
+
+  getTextFromNdefTextRecord({ record }: { record: { payload?: number[] } }) {
+    const payload = record.payload;
+    if (!payload) return { text: undefined };
+    const langLen = payload[0] ?? 0;
+    const decoder = new TextDecoder();
+    const text = decoder.decode(new Uint8Array(payload)).substring(langLen + 1);
+    return { text };
+  }
+
+  getIdentifierCodeFromNdefUriRecord({
+    record,
+  }: {
+    record: { payload?: number[] };
+  }) {
+    const payload = record.payload;
+    if (!payload || payload.length === 0) return { identifierCode: undefined };
+    const code = payload[0] as number;
+    return {
+      identifierCode: code in URI_PREFIXES ? code : undefined,
+    };
+  }
+
+  getUriFromNdefUriRecord({ record }: { record: { payload?: number[] } }) {
+    const payload = record.payload;
+    if (!payload || payload.length === 0) return { uri: undefined };
+    const decoder = new TextDecoder();
+    const uri = decoder.decode(new Uint8Array(payload.slice(1)));
+    return { uri };
+  }
+
+  mapUriIdentifierCodeToString({ identifierCode }: { identifierCode: number }) {
+    return { prefix: URI_PREFIXES[identifierCode] ?? "" };
+  }
 }
 
 /**

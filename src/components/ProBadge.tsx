@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { Badge } from "@/components/wui/Badge";
 
 interface ProBadgeProps {
   onPress?: () => void;
@@ -11,9 +12,9 @@ export const ProBadge = ({ onPress, show = true }: ProBadgeProps) => {
   if (!show) return null;
 
   const badge = (
-    <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-300">
+    <Badge variant="pro" className="ml-2">
       {t("settings.app.proFeature")}
-    </span>
+    </Badge>
   );
 
   if (onPress) {

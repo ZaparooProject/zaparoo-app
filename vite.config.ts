@@ -37,13 +37,19 @@ export default defineConfig(({ command, mode }) => {
     react(),
     legacy({
       targets: [
-        "chrome >= 49",
+        "chrome >= 60",
         "safari >= 11",
         "firefox >= 52",
         "ios >= 11",
-        "android >= 49",
+        "android >= 60",
       ],
-      additionalLegacyPolyfills: ["regenerator-runtime/runtime"],
+      additionalLegacyPolyfills: [
+        "regenerator-runtime/runtime",
+        "abortcontroller-polyfill/dist/polyfill-patch-fetch",
+      ],
+      additionalModernPolyfills: [
+        "abortcontroller-polyfill/dist/polyfill-patch-fetch",
+      ],
       modernPolyfills: true,
     }),
   ];
@@ -104,7 +110,8 @@ export default defineConfig(({ command, mode }) => {
             // Group large, stable packages into their own chunks
             if (
               packageName === "firebase" ||
-              packageName.startsWith("@firebase/")
+              packageName.startsWith("@firebase/") ||
+              packageName.startsWith("@capacitor-firebase/")
             ) {
               return "vendor-firebase";
             }
@@ -121,7 +128,9 @@ export default defineConfig(({ command, mode }) => {
             }
 
             if (
-              packageName.startsWith("@capacitor") ||
+              packageName.startsWith("@capacitor/") ||
+              packageName.startsWith("@capacitor-community/") ||
+              packageName.startsWith("@capacitor-mlkit/") ||
               packageName.startsWith("@capawesome") ||
               packageName.startsWith("@capgo/") ||
               packageName.startsWith("@revenuecat/")
