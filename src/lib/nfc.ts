@@ -10,6 +10,7 @@ import {
 import { logger } from "./logger";
 import {
   NfcCancelledError,
+  NfcSessionBusyError,
   NfcUnformattedTagError,
   NfcFormatError,
   NfcTransientError,
@@ -59,30 +60,104 @@ const createNdefTextRecord = (text: string) => {
   return record;
 };
 
+// iOS enforces its own ~60s scan sheet timeout; Android reader-mode sessions
+// stay open indefinitely, so we bound them ourselves.
+const ANDROID_SESSION_TIMEOUT_MS = 60000;
+
+// Owner token for the currently active scan session. Prevents two callers from
+// starting overlapping native sessions and stops one session's cleanup from
+// clobbering another's isScanning state.
+let activeSessionToken: symbol | null = null;
+
+// Unwinds the active session with a cancellation. Set by withNfcSession so
+// cancelSession() can deterministically release the session instead of relying
+// on the native scanSessionCanceled event (not guaranteed on Android).
+let activeSessionCancel: (() => void) | null = null;
+
+/**
+ * Test-only helper: clears the module-level session lock so an unfinished
+ * session in one test cannot block sessions in the next.
+ */
+export function __resetNfcSessionState(): void {
+  activeSessionToken = null;
+  activeSessionCancel = null;
+  sessionManager.setIsScanning(false);
+}
+
+/**
+ * Wait for the active session (if any) to finish releasing its lock.
+ * Cancellation unwinds through a few microtasks (listener removal); this
+ * yields until the lock is free so a follow-up session won't see "busy".
+ */
+export async function waitForSessionRelease(
+  maxMicrotasks = 100,
+): Promise<boolean> {
+  for (let i = 0; i < maxMicrotasks; i++) {
+    if (activeSessionToken === null) {
+      return true;
+    }
+    await Promise.resolve();
+  }
+  return activeSessionToken === null;
+}
+
+async function stopScanSessionSafely(): Promise<void> {
+  try {
+    await Nfc.stopScanSession();
+  } catch (error) {
+    logger.debug("Failed to stop NFC scan session:", error);
+  }
+}
+
 /**
  * Helper function to manage NFC scan session lifecycle with proper listener cleanup.
  * This ensures all listeners are removed after the operation completes, preventing memory leaks.
+ * Rejects with NfcSessionBusyError if another session is already active.
  */
 async function withNfcSession<T>(
   handler: (event: NfcTagScannedEvent) => Promise<T>,
 ): Promise<T> {
+  if (activeSessionToken !== null) {
+    throw new NfcSessionBusyError();
+  }
+  const sessionToken = Symbol("nfcSession");
+  activeSessionToken = sessionToken;
+
   return new Promise((resolve, reject) => {
     let listeners: PluginListenerHandle[] = [];
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let settled = false;
 
     const cleanup = async () => {
-      sessionManager.setIsScanning(false);
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+        timeoutId = undefined;
+      }
+      if (activeSessionToken === sessionToken) {
+        activeSessionToken = null;
+        activeSessionCancel = null;
+        sessionManager.setIsScanning(false);
+      }
       await Promise.all(listeners.map((listener) => listener.remove()));
       listeners = [];
     };
 
     const handleSuccess = async (result: T) => {
+      if (settled) return;
+      settled = true;
       await cleanup();
       resolve(result);
     };
 
     const handleError = async (error: unknown) => {
+      if (settled) return;
+      settled = true;
       await cleanup();
       reject(error);
+    };
+
+    activeSessionCancel = () => {
+      void handleError(new NfcCancelledError());
     };
 
     const setupAndStartScan = async () => {
@@ -95,7 +170,7 @@ async function withNfcSession<T>(
           async (event) => {
             try {
               const result = await handler(event);
-              Nfc.stopScanSession();
+              await stopScanSessionSafely();
               await handleSuccess(result);
             } catch (error) {
               const wrappedError = wrapNfcError(error);
@@ -111,7 +186,7 @@ async function withNfcSession<T>(
                       : undefined,
                 });
               }
-              Nfc.stopScanSession();
+              await stopScanSessionSafely();
               await handleError(wrappedError);
             }
           },
@@ -120,7 +195,7 @@ async function withNfcSession<T>(
         const scanCanceledHandle = await Nfc.addListener(
           "scanSessionCanceled",
           async () => {
-            Nfc.stopScanSession();
+            await stopScanSessionSafely();
             await handleError(new NfcCancelledError());
           },
         );
@@ -142,7 +217,7 @@ async function withNfcSession<T>(
                     : undefined,
               });
             }
-            Nfc.stopScanSession();
+            await stopScanSessionSafely();
             await handleError(wrappedError);
           },
         );
@@ -157,9 +232,19 @@ async function withNfcSession<T>(
         sessionManager.setIsScanning(true);
         // Now it's safe to start the scan session
         await Nfc.startScanSession();
+
+        if (Capacitor.getPlatform() === "android") {
+          timeoutId = setTimeout(() => {
+            void stopScanSessionSafely();
+            void handleError(
+              new NfcCancelledError("NFC scan session timed out"),
+            );
+          }, ANDROID_SESSION_TIMEOUT_MS);
+        }
       } catch (setupError) {
         const wrappedError = wrapNfcError(setupError);
         // If setup fails (e.g., NFC not enabled), clean up and reject
+        settled = true;
         await cleanup();
         reject(wrappedError);
       }
@@ -484,12 +569,23 @@ export async function makeReadOnly(): Promise<Result> {
 }
 
 export async function cancelSession() {
-  const supported = await Nfc.isSupported();
-  if (supported.nfc) {
-    // Just stop the session - this triggers scanSessionCanceled event which
-    // withNfcSession handles properly by cleaning up its own listeners.
-    // Do NOT call removeAllListeners() as it would globally remove ALL NFC listeners,
-    // breaking encapsulation and potentially affecting other code.
+  let supported = false;
+  try {
+    supported = (await Nfc.isSupported()).nfc;
+  } catch (error) {
+    // isSupported rejects on web / when the bridge is unavailable; nothing to cancel
+    logger.debug("NFC support check failed during cancel:", error);
+    return;
+  }
+  if (supported) {
+    // Stop the native session first. On iOS this also fires the
+    // scanSessionCanceled event; the explicit unwind below covers Android,
+    // where stopping does not emit an event. Do NOT call removeAllListeners()
+    // as it would globally remove ALL NFC listeners, breaking encapsulation
+    // and potentially affecting other code.
     await Nfc.stopScanSession();
   }
+  // Deterministically unwind the active JS session (no-op if none, and the
+  // settled guard makes a duplicate native cancel event harmless).
+  activeSessionCancel?.();
 }

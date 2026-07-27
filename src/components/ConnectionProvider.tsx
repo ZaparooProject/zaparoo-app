@@ -446,6 +446,14 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             break;
           }
 
+          case Notification.ClientsPaired: {
+            // This client was approved on the device. Clear any encryption
+            // block so lifecycle reconnects are no longer suppressed.
+            logger.log("client paired notification received");
+            connectionManager.clearEncryptionBlockActive();
+            break;
+          }
+
           default:
             logger.warn("Unknown notification method:", notification.method);
         }
@@ -733,6 +741,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   // Setup connection when device address changes
   useEffect(() => {
     // Reset local connection state when device changes so UI doesn't show stale data
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: reset state for the newly selected external device.
     setLocalConnection(null);
     setEncryptionState("unknown");
     setPairingRequired(false);
@@ -1067,6 +1076,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         isOpen={pairingOpen}
         close={() => setPairingOpen(false)}
         address={targetDeviceAddress}
+        onSuccess={() => connectionManager.immediateReconnectActive()}
       />
     </ConnectionContext.Provider>
   );

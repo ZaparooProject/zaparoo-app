@@ -74,7 +74,13 @@ vi.mock("@/lib/store", () => ({
 }));
 
 import { CoreAPI } from "@/lib/coreApi";
-import AppUrlListener, { parseDeepLink } from "@/lib/deepLinks";
+import { parseDeepLink, useDeepLinks } from "@/lib/deepLinks";
+
+// Minimal harness component: the app consumes the hook directly
+const AppUrlListener = () => {
+  useDeepLinks();
+  return null;
+};
 
 describe("AppUrlListener", () => {
   beforeEach(() => {
@@ -154,9 +160,41 @@ describe("AppUrlListener", () => {
       });
     });
 
-    it("should reject custom scheme links with unexpected hosts", () => {
+    it("should parse custom scheme links with the action as host", () => {
+      // zaparoo://run?v=x parses "run" as the URL host - the natural form
+      expect(parseDeepLink("zaparoo://run?v=test-token")).toEqual({
+        type: "run",
+        value: "test-token",
+      });
       expect(parseDeepLink("zaparoo://write?v=test-write")).toEqual({
+        type: "write",
+        value: "test-write",
+      });
+    });
+
+    it("should reject custom scheme links with unexpected hosts", () => {
+      expect(parseDeepLink("zaparoo://other/run?v=test-token")).toEqual({
         type: "unsupported",
+      });
+    });
+
+    it("should tolerate trailing slashes and casing", () => {
+      expect(parseDeepLink("https://zaparoo.app/run/?v=test-token")).toEqual({
+        type: "run",
+        value: "test-token",
+      });
+      expect(parseDeepLink("https://zaparoo.app/Run?v=test-token")).toEqual({
+        type: "run",
+        value: "test-token",
+      });
+    });
+
+    it("should flag recognized action links missing the value param", () => {
+      expect(parseDeepLink("https://zaparoo.app/run")).toEqual({
+        type: "missingValue",
+      });
+      expect(parseDeepLink("zaparoo://write")).toEqual({
+        type: "missingValue",
       });
     });
 
@@ -187,13 +225,11 @@ describe("AppUrlListener", () => {
         expect(mockSetRunQueue).toHaveBeenCalledWith({
           value: "cold-start-token",
           unsafe: true,
+          source: "deepLink",
         });
       });
 
-      expect(mockLogger.log).toHaveBeenCalledWith(
-        "App launched with URL:",
-        "zaparoo://app/run?v=cold-start-token",
-      );
+      expect(mockLogger.log).toHaveBeenCalledWith("App launched with URL");
     });
 
     it("should not process if launch URL is undefined", async () => {
@@ -234,6 +270,7 @@ describe("AppUrlListener", () => {
         expect(mockSetRunQueue).toHaveBeenCalledWith({
           value: "duplicate-token",
           unsafe: true,
+          source: "deepLink",
         });
       });
 
@@ -253,8 +290,7 @@ describe("AppUrlListener", () => {
 
       // Should log that it's skipping duplicate
       expect(mockLogger.log).toHaveBeenCalledWith(
-        "Skipping duplicate URL (within dedup window):",
-        duplicateUrl,
+        "Skipping duplicate URL (within dedup window)",
       );
     });
   });
@@ -275,6 +311,7 @@ describe("AppUrlListener", () => {
       expect(mockSetRunQueue).toHaveBeenCalledWith({
         value: "test-token-value",
         unsafe: true,
+        source: "deepLink",
       });
 
       expect(mockLogger.log).toHaveBeenCalledWith(
@@ -297,6 +334,7 @@ describe("AppUrlListener", () => {
       expect(mockSetRunQueue).toHaveBeenCalledWith({
         value: "hello world",
         unsafe: true,
+        source: "deepLink",
       });
     });
 
@@ -447,8 +485,7 @@ describe("AppUrlListener", () => {
       expect(mockLogger.log).toHaveBeenCalledWith(
         "App URL opened:",
         expect.objectContaining({
-          url: "zaparoo://app/unknown",
-          parsed: { type: "unsupported" },
+          type: "unsupported",
         }),
       );
     });
@@ -470,6 +507,7 @@ describe("AppUrlListener", () => {
       expect(mockSetRunQueue).toHaveBeenCalledWith({
         value: "token",
         unsafe: true,
+        source: "deepLink",
       });
     });
 
@@ -487,6 +525,7 @@ describe("AppUrlListener", () => {
       expect(mockSetRunQueue).toHaveBeenCalledWith({
         value: "universal-link-token",
         unsafe: true,
+        source: "deepLink",
       });
     });
   });

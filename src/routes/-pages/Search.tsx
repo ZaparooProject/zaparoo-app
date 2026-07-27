@@ -168,6 +168,7 @@ export function Search() {
   // Close modal when NFC operation completes
   useEffect(() => {
     if (nfcWriter.status !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Close the modal after the external NFC operation completes.
       setWriteOpen(false);
     }
   }, [nfcWriter]);
@@ -200,12 +201,14 @@ export function Search() {
   // Set default write mode when selected result changes
   useEffect(() => {
     if (selectedResult) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Initialize mode from the newly selected external result.
       setWriteMode(selectedResult.zapScript ? "zapScript" : "path");
     }
   }, [selectedResult]);
 
   useEffect(() => {
     if (!mediaTagsAvailable) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Close unavailable controls when Core capability changes.
       setTagSelectorOpen(false);
     }
   }, [mediaTagsAvailable]);
@@ -612,8 +615,10 @@ export function Search() {
                     ? selectedResult.zapScript
                     : selectedResult.path;
                 try {
-                  await nfcWriter.write(WriteAction.Write, textToWrite);
+                  // Open the modal first: write() resolves when the whole
+                  // operation completes, not when it starts
                   setWriteOpen(true);
+                  await nfcWriter.write(WriteAction.Write, textToWrite);
                 } catch (err) {
                   logger.error("NFC write failed", err, {
                     category: "nfc",

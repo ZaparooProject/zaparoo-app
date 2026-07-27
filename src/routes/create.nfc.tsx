@@ -16,11 +16,8 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { BackIcon } from "@/lib/images";
-import {
-  getTabBarPanelId,
-  getTabBarTabId,
-  TabBar,
-} from "@/components/wui/TabBar";
+import { TabBar } from "@/components/wui/TabBar";
+import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { ReadTab } from "@/components/nfc/ReadTab";
 import { ToolsTab } from "@/components/nfc/ToolsTab";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -29,7 +26,7 @@ export const Route = createFileRoute("/create/nfc")({
   component: NfcUtils,
 });
 
-function NfcUtils() {
+export function NfcUtils() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.nfc.title"));
   const preferRemoteWriter = usePreferencesStore(
@@ -74,12 +71,22 @@ function NfcUtils() {
   });
 
   const handleScan = () => {
-    nfcWriter.write(WriteAction.Read);
+    nfcWriter.write(WriteAction.Read).catch((e) => {
+      logger.error("NFC read failed:", e, {
+        category: "nfc",
+        action: "nfcUtilsRead",
+      });
+    });
     setWriteIntent(true);
   };
 
   const handleToolAction = (action: WriteAction) => {
-    nfcWriter.write(action);
+    nfcWriter.write(action).catch((e) => {
+      logger.error("NFC tool action failed:", e, {
+        category: "nfc",
+        action: "nfcUtilsTool",
+      });
+    });
     setWriteIntent(true);
   };
 

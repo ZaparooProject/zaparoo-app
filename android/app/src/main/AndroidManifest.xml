@@ -22,7 +22,16 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="zaparoo.app" />
+                <data android:scheme="https" android:host="zaparoo.app" android:pathPrefix="/run" />
+                <data android:scheme="https" android:host="zaparoo.app" android:pathPrefix="/write" />
+            </intent-filter>
+
+            <!-- Custom scheme deep links: work offline and without domain verification -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="zaparoo" />
             </intent-filter>
 
             <!-- NFC: Handle NDEF text records (Zaparoo cards use text/plain) -->

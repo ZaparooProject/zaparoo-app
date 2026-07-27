@@ -2,6 +2,7 @@ import { Preferences } from "@capacitor/preferences";
 import { v4 as uuidv4 } from "uuid";
 import { Capacitor } from "@capacitor/core";
 import { logger } from "./logger.ts";
+import { RequestCancelledError } from "./errors";
 import {
   AddMappingRequest,
   AllMappingsResponse,
@@ -207,6 +208,9 @@ export function isCancelled<T>(
 }
 
 export function isRequestCancelledError(error: unknown): boolean {
+  if (error instanceof RequestCancelledError) {
+    return true;
+  }
   const message =
     error instanceof Error
       ? error.message
@@ -236,7 +240,6 @@ interface ResponsePromise {
   resolve: (value: unknown) => void;
   reject: (reason: ApiError | Error) => void;
   timeoutId?: ReturnType<typeof setTimeout>;
-  abortController?: AbortController;
 }
 
 interface QueuedRequest {
@@ -246,6 +249,7 @@ interface QueuedRequest {
     reject: (reason: ApiError | Error) => void;
   };
   signal?: AbortSignal;
+  expiryTimeoutId?: ReturnType<typeof setTimeout>;
 }
 
 class CoreApi {
@@ -314,6 +318,10 @@ class CoreApi {
 
       // Filter out stale requests before processing
       const freshRequests = this.requestQueue.filter((queued) => {
+        if (queued.expiryTimeoutId) {
+          clearTimeout(queued.expiryTimeoutId);
+          queued.expiryTimeoutId = undefined;
+        }
         const age = now - queued.req.timestamp;
         if (age > MAX_QUEUE_AGE_MS) {
           logger.warn(
@@ -403,7 +411,9 @@ class CoreApi {
   reset() {
     logger.log("Resetting CoreAPI state");
 
-    const cancelError = new Error("Request cancelled: connection reset");
+    const cancelError = new RequestCancelledError(
+      "Request cancelled: connection reset",
+    );
 
     // Clear all pending response promises with rejection
     Object.keys(this.responsePool).forEach((id) => {
@@ -422,6 +432,9 @@ class CoreApi {
 
     // Clear request queue
     this.requestQueue.forEach((queued) => {
+      if (queued.expiryTimeoutId) {
+        clearTimeout(queued.expiryTimeoutId);
+      }
       queued.promiseHandlers.reject(cancelError);
     });
     this.requestQueue = [];
@@ -525,11 +538,42 @@ class CoreApi {
           `Queueing request ${req.method} (ID: ${id}). Current state: ${this.transport?.currentState}`,
         );
         const promise = new Promise<unknown>((resolve, reject) => {
-          this.requestQueue.push({
+          const queued: QueuedRequest = {
             req,
             promiseHandlers: { resolve, reject },
             signal,
-          });
+          };
+          this.requestQueue.push(queued);
+
+          // Queued requests must not hang forever if the connection never returns
+          queued.expiryTimeoutId = setTimeout(() => {
+            const index = this.requestQueue.indexOf(queued);
+            if (index !== -1) {
+              this.requestQueue.splice(index, 1);
+              reject(
+                new RequestCancelledError(
+                  "Request expired while waiting for connection",
+                ),
+              );
+            }
+          }, RequestTimeout);
+
+          if (signal) {
+            signal.addEventListener(
+              "abort",
+              () => {
+                const index = this.requestQueue.indexOf(queued);
+                if (index !== -1) {
+                  this.requestQueue.splice(index, 1);
+                  if (queued.expiryTimeoutId) {
+                    clearTimeout(queued.expiryTimeoutId);
+                  }
+                  resolve({ cancelled: true });
+                }
+              },
+              { once: true },
+            );
+          }
         });
         return promise;
       }
@@ -603,7 +647,6 @@ class CoreApi {
         };
 
         signal.addEventListener("abort", abortHandler, { once: true });
-        poolEntry!.abortController = new AbortController();
       }
 
       logger.debug(payload);
@@ -792,7 +835,15 @@ class CoreApi {
   run(params: LaunchRequest): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       this.call(Method.Run, params)
-        .then(() => {
+        .then((result) => {
+          // A cancelled result means the request was dropped (stale queue,
+          // abort, reset) and never reached the device - that is not success.
+          if (isCancelled(result)) {
+            reject(
+              new RequestCancelledError("Launch request was not delivered"),
+            );
+            return;
+          }
           resolve();
         })
         .catch((error) => {

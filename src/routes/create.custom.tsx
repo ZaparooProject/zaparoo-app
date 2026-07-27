@@ -9,6 +9,7 @@ import { Button } from "@/components/wui/Button";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { WriteModal } from "@/components/WriteModal";
 import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
+import { logger } from "@/lib/logger";
 import { PageFrame } from "@/components/PageFrame";
 import { usePreferencesStore, selectCustomText } from "@/lib/preferencesStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/create/custom")({
   component: CustomText,
 });
 
-function CustomText() {
+export function CustomText() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.custom.title"));
   const { customText, setCustomText } = usePreferencesStore(
@@ -73,7 +74,12 @@ function CustomText() {
             disabled={customText === ""}
             onClick={() => {
               if (customText !== "") {
-                nfcWriter.write(WriteAction.Write, customText);
+                nfcWriter.write(WriteAction.Write, customText).catch((e) => {
+                  logger.error("NFC write failed:", e, {
+                    category: "nfc",
+                    action: "writeCustomText",
+                  });
+                });
                 setWriteIntent(true);
               }
             }}

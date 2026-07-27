@@ -7,6 +7,7 @@ import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
 import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
+import { logger } from "@/lib/logger";
 import { Card } from "@/components/wui/Card";
 import { Button } from "@/components/wui/Button";
 import { WriteModal } from "@/components/WriteModal";
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/create/")({
   component: Create,
 });
 
-function Create() {
+export function Create() {
   const { t } = useTranslation();
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t("create.title"));
   const connected = useStatusStore((state) => state.connected);
@@ -76,7 +77,14 @@ function Create() {
             disabled={!connected || playing.mediaPath === ""}
             onClick={() => {
               if (playing.mediaPath !== "") {
-                nfcWriter.write(WriteAction.Write, playing.mediaPath);
+                nfcWriter
+                  .write(WriteAction.Write, playing.mediaPath)
+                  .catch((e) => {
+                    logger.error("NFC write failed:", e, {
+                      category: "nfc",
+                      action: "writeCurrentMedia",
+                    });
+                  });
                 setWriteIntent(true);
               }
             }}

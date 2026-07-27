@@ -39,9 +39,12 @@ export function Index() {
   );
 
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
-  const writeOpen = useStatusStore((state) => state.writeOpen);
-  const setWriteOpen = useStatusStore((state) => state.setWriteOpen);
-  const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
+  // Local modal state: queue-driven writes render their own modal at the app
+  // root; this one belongs exclusively to this page's scan-flow writes. The
+  // modal shows while a write is intended and auto-closes on any completion
+  // (success, cancelled, or error) because status becomes non-null.
+  const [writeIntent, setWriteIntent] = useState(false);
+  const writeOpen = writeIntent && nfcWriter.status === null;
   const closeWriteModal = async () => {
     try {
       await nfcWriter.end();
@@ -52,16 +55,9 @@ export function Index() {
         severity: "error",
       });
     } finally {
-      setWriteOpen(false);
-      setWriteQueue("");
+      setWriteIntent(false);
     }
   };
-  useEffect(() => {
-    // Auto-close modal on any completion (success, cancelled, or error)
-    if (nfcWriter.status !== null) {
-      setWriteOpen(false);
-    }
-  }, [nfcWriter.status, setWriteOpen]);
   const { PurchaseModal, proPurchaseModalOpen, setProPurchaseModalOpen } =
     useProPurchase();
 
@@ -93,7 +89,7 @@ export function Index() {
     launcherAccess,
     setLastToken,
     setProPurchaseModalOpen,
-    setWriteOpen,
+    setWriteOpen: setWriteIntent,
     nfcWriter,
   });
 

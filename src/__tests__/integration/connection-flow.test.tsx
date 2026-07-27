@@ -41,8 +41,6 @@ describe("Connection Flow Integration", () => {
       connectionState: ConnectionState.IDLE,
       connectionError: "",
       targetDeviceAddress: "",
-      lastConnectionTime: null,
-      retryCount: 0,
       // Seed encryptionState as plaintext so connected-state assertions don't
       // hit the verifying UI gate (encryptionState === "unknown" -> connecting).
       encryptionState: "plaintext",

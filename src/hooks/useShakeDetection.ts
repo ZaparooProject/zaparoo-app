@@ -116,7 +116,7 @@ export function useShakeDetection({
               });
             }
 
-            setRunQueue({ value: zapscript, unsafe: true });
+            setRunQueue({ value: zapscript, unsafe: true, source: "shake" });
           },
         );
 

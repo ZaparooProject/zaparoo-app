@@ -9,7 +9,6 @@ describe("StatusStore", () => {
       connected: false,
       connectionError: "",
       connectionState: ConnectionState.IDLE,
-      lastConnectionTime: null,
       deviceHistory: [],
     });
   });
@@ -251,8 +250,11 @@ describe("StatusStore", () => {
       store.setConnected(true);
       store.setConnectionState(ConnectionState.CONNECTED);
       store.setConnectionError("Some error");
-      store.setLastConnectionTime(Date.now());
-      store.setRunQueue({ value: "test-uid", unsafe: true });
+      store.setRunQueue({
+        value: "test-uid",
+        unsafe: true,
+        source: "deepLink",
+      });
       store.setWriteQueue("test-write-data");
       store.setLastToken({
         type: "nfc",
@@ -283,11 +285,14 @@ describe("StatusStore", () => {
       const resetState = useStatusStore.getState();
       expect(resetState.connected).toBe(false);
       expect(resetState.connectionState).toBe(ConnectionState.IDLE);
-      expect(resetState.lastConnectionTime).toBe(null);
       expect(resetState.connectionError).toBe("");
-      expect(resetState.retryCount).toBe(0);
-      expect(resetState.runQueue).toBe(null);
-      expect(resetState.writeQueue).toBe("");
+      // Queued deep-link intents are device-independent and survive resets
+      expect(resetState.runQueue).toEqual({
+        value: "test-uid",
+        unsafe: true,
+        source: "deepLink",
+      });
+      expect(resetState.writeQueue).toBe("test-write-data");
 
       // Verify media-related state is reset
       expect(resetState.lastToken).toEqual({
@@ -319,7 +324,6 @@ describe("StatusStore", () => {
 
       // Set some non-connection state
       store.setCameraOpen(true);
-      store.setNfcModalOpen(true);
       store.addDeviceHistory("192.168.1.100");
       store.setLoggedInUser({ uid: "test-user" } as any);
 
@@ -329,7 +333,6 @@ describe("StatusStore", () => {
       // Verify non-connection state is preserved
       const state = useStatusStore.getState();
       expect(state.cameraOpen).toBe(true);
-      expect(state.nfcModalOpen).toBe(true);
       expect(state.deviceHistory).toEqual([{ address: "192.168.1.100" }]);
       expect(state.loggedInUser).toEqual({ uid: "test-user" });
     });

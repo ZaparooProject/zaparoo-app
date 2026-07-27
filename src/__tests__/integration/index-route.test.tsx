@@ -35,6 +35,12 @@ const mockScanOperationsState = {
   runToken: vi.fn(),
 };
 
+// Captures the props Index passes to useScanOperations so tests can drive
+// the page's local write modal via its setWriteOpen callback
+const mockScanOperationsProps: {
+  current: { setWriteOpen: (open: boolean) => void } | null;
+} = { current: null };
+
 const mockNfcWriterState = {
   write: vi.fn(),
   end: vi.fn().mockResolvedValue(undefined),
@@ -88,7 +94,12 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 
 // Mock useScanOperations
 vi.mock("@/hooks/useScanOperations", () => ({
-  useScanOperations: vi.fn(() => mockScanOperationsState),
+  useScanOperations: vi.fn(
+    (props: { setWriteOpen: (open: boolean) => void }) => {
+      mockScanOperationsProps.current = props;
+      return mockScanOperationsState;
+    },
+  ),
 }));
 
 // Mock useNfcWriter
@@ -793,14 +804,22 @@ describe("Index Route Integration", () => {
   });
 
   describe("Write Modal", () => {
-    it("should render write modal when writeOpen is true", () => {
-      useStatusStore.setState({ writeOpen: true });
+    // The write modal on Index is local page state, opened through the
+    // setWriteOpen callback the page hands to useScanOperations
+    const openWriteModal = () => {
+      act(() => {
+        mockScanOperationsProps.current?.setWriteOpen(true);
+      });
+    };
 
+    it("should render write modal when the scan flow opens it", () => {
       render(
         <TestWrapper>
           <Index />
         </TestWrapper>,
       );
+
+      openWriteModal();
 
       // WriteModal renders a dialog with aria-label when open
       const writeDialog = screen.getByRole("dialog", {
@@ -811,13 +830,14 @@ describe("Index Route Integration", () => {
 
     it("should close write modal and call nfcWriter.end when close is triggered", async () => {
       const user = userEvent.setup();
-      useStatusStore.setState({ writeOpen: true });
 
       render(
         <TestWrapper>
           <Index />
         </TestWrapper>,
       );
+
+      openWriteModal();
 
       // Find and click the cancel button in the write modal
       const cancelButton = screen.getByRole("button", { name: /nav.cancel/i });
@@ -826,16 +846,19 @@ describe("Index Route Integration", () => {
       await waitFor(() => {
         expect(mockNfcWriterState.end).toHaveBeenCalled();
       });
+      expect(
+        screen.queryByRole("dialog", { name: /spinner.holdTag/i }),
+      ).not.toBeInTheDocument();
     });
 
     it("should auto-close write modal when nfcWriter status changes", () => {
-      useStatusStore.setState({ writeOpen: true });
-
       const { rerender } = render(
         <TestWrapper>
           <Index />
         </TestWrapper>,
       );
+
+      openWriteModal();
 
       // Simulate nfcWriter status change
       mockNfcWriterState.status = "success";
@@ -847,7 +870,9 @@ describe("Index Route Integration", () => {
       );
 
       // The effect should have closed the modal
-      expect(useStatusStore.getState().writeOpen).toBe(false);
+      expect(
+        screen.queryByRole("dialog", { name: /spinner.holdTag/i }),
+      ).not.toBeInTheDocument();
     });
   });
 

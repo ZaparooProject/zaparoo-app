@@ -485,8 +485,31 @@ describe("useNfcWriter", () => {
   });
 
   describe("cleanup on unmount", () => {
-    it("should cancel session on unmount", () => {
+    it("should not cancel session on unmount when no operation is active", () => {
       const { unmount } = renderHook(() => useNfcWriter());
+
+      unmount();
+
+      // No local session was started by this instance, so unmounting must not
+      // tear down sessions owned by other components
+      expect(mockCancelSession).not.toHaveBeenCalled();
+    });
+
+    it("should cancel session on unmount while a local operation is in flight", async () => {
+      mockIsConnected.mockReturnValue(false);
+      mockIsNativePlatform.mockReturnValue(true);
+      mockNfcIsAvailable.mockResolvedValue({ nfc: true });
+      mockCancelSession.mockResolvedValue(undefined);
+      // Local write that never completes - session stays open
+      mockWriteTag.mockReturnValue(new Promise(() => {}));
+
+      const { result, unmount } = renderHook(() => useNfcWriter());
+
+      await act(async () => {
+        void result.current.write(WriteAction.Write, "test content");
+        await Promise.resolve();
+        await Promise.resolve();
+      });
 
       unmount();
 

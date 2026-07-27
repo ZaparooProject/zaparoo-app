@@ -79,7 +79,7 @@ export const server = setupServer(...handlers);
 beforeAll(() => server.listen());
 
 // Reset handlers after each test
-afterEach(() => {
+afterEach(async () => {
   server.resetHandlers();
   cleanup();
   // Clear any hanging timers
@@ -93,6 +93,16 @@ afterEach(() => {
   __resetZeroConfMock();
   // Reset NFC mock state between tests
   __resetNfcMock();
+  // Reset NFC session lock so unfinished sessions can't block the next test.
+  // Dynamic import so lib/nfc is not evaluated before per-file plugin mocks
+  // apply. Files that replace lib/nfc with a partial mock throw on access to
+  // the missing export - nothing to reset there, so ignore.
+  try {
+    const nfcModule = await import("./lib/nfc");
+    nfcModule.__resetNfcSessionState();
+  } catch {
+    // lib/nfc is mocked without the test-reset export in this file
+  }
   // Reset LiveUpdate mock state between tests
   __resetLiveUpdateMock();
   // Reset SecureStorage mock state between tests

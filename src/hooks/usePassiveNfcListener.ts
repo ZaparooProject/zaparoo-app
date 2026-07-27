@@ -32,6 +32,12 @@ import { logger } from "@/lib/logger";
  *
  * On iOS, this hook does nothing as iOS doesn't support passive NFC listening.
  */
+// How long after returning to the foreground a tag event is still treated as
+// the background tap that woke the app. The NFC intent that resumed the app
+// can arrive shortly after the foreground transition; beyond this window,
+// ordinary foreground taps must not auto-launch.
+const BACKGROUND_TAP_GRACE_MS = 3000;
+
 export function usePassiveNfcListener() {
   const nfcListenerRef = useRef<PluginListenerHandle | null>(null);
   const appStateListenerRef = useRef<PluginListenerHandle | null>(null);
@@ -59,6 +65,11 @@ export function usePassiveNfcListener() {
     if (!nfcAvailable) {
       return;
     }
+
+    // Guards against the effect re-running (deps change) before async listener
+    // registration resolves, which would otherwise leak the earlier handles
+    let disposed = false;
+    let graceTimer: ReturnType<typeof setTimeout> | null = null;
 
     const handleNfcTagScanned = (event: NfcTagScannedEvent) => {
       logger.log("Passive NFC listener: event received", {
@@ -136,28 +147,46 @@ export function usePassiveNfcListener() {
       try {
         // Register NFC listener FIRST - this is critical because the nfcTagScanned
         // event may fire immediately on app launch before other listeners are ready
-        nfcListenerRef.current = await Nfc.addListener(
+        const nfcHandle = await Nfc.addListener(
           "nfcTagScanned",
           handleNfcTagScanned,
         );
+        if (disposed) {
+          void nfcHandle.remove();
+          return;
+        }
+        nfcListenerRef.current = nfcHandle;
 
         // Listen for app state changes - this fires when app actually stops/starts
         // Unlike pause/resume, appStateChange with isActive:false only fires when
         // the app actually goes to background, NOT during the quick pause/resume
         // cycle that happens when NFC is tapped while app is in foreground
-        appStateListenerRef.current = await App.addListener(
+        const appStateHandle = await App.addListener(
           "appStateChange",
           ({ isActive }) => {
             if (!isActive) {
               // App is going to background
+              if (graceTimer) {
+                clearTimeout(graceTimer);
+                graceTimer = null;
+              }
               wasInBackgroundRef.current = true;
               logger.debug("Passive NFC listener: app went to background", {
                 category: "nfc",
                 action: "passiveListener",
               });
             } else {
-              // App is coming to foreground - don't reset wasInBackground here
-              // We reset it in handleNfcTagScanned after processing the tag
+              // App is coming to foreground. Keep the background flag alive
+              // briefly so the tag intent that woke the app is still handled,
+              // then clear it - otherwise every later foreground tap would be
+              // misread as a background tap and auto-launch.
+              if (graceTimer) {
+                clearTimeout(graceTimer);
+              }
+              graceTimer = setTimeout(() => {
+                graceTimer = null;
+                wasInBackgroundRef.current = false;
+              }, BACKGROUND_TAP_GRACE_MS);
               logger.debug("Passive NFC listener: app came to foreground", {
                 category: "nfc",
                 action: "passiveListener",
@@ -166,6 +195,11 @@ export function usePassiveNfcListener() {
             }
           },
         );
+        if (disposed) {
+          void appStateHandle.remove();
+          return;
+        }
+        appStateListenerRef.current = appStateHandle;
 
         logger.debug("Passive NFC listener: registered", {
           category: "nfc",
@@ -183,6 +217,11 @@ export function usePassiveNfcListener() {
 
     // Cleanup on unmount
     return () => {
+      disposed = true;
+      if (graceTimer) {
+        clearTimeout(graceTimer);
+        graceTimer = null;
+      }
       if (appStateListenerRef.current) {
         appStateListenerRef.current.remove();
         appStateListenerRef.current = null;

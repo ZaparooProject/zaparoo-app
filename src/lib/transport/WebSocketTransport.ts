@@ -186,6 +186,11 @@ export class WebSocketTransport implements Transport {
       return;
     }
 
+    // An explicit reconnect request means the app is active again. Clear the
+    // paused flag so that if this attempt fails, scheduleReconnect() keeps
+    // retrying instead of silently bailing until the next lifecycle event.
+    this.heartbeatPaused = false;
+
     if (this._state === "connected" && this.ws?.readyState === WebSocket.OPEN) {
       logger.log(
         `[Transport:${this.deviceId}] Already connected, resuming heartbeat`,

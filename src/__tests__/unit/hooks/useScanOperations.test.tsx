@@ -23,6 +23,7 @@ import {
 const mockLogger = vi.hoisted(() => ({
   log: vi.fn(),
   debug: vi.fn(),
+  warn: vi.fn(),
   error: vi.fn(),
 }));
 

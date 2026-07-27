@@ -40,6 +40,7 @@ export function TextInput(props: {
   const { impact } = useHaptics();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Keep the editable value synchronized with controlled prop updates.
     setValue(props.value);
   }, [props.value]);
 

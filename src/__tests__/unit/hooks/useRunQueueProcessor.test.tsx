@@ -1,13 +1,16 @@
 /**
  * Unit tests for useRunQueueProcessor hook
  *
- * Tests the launch queue processing with retry logic,
- * Pro access gating, and offline/reconnecting scenarios.
+ * Tests launch queue processing: immediate launch when connected,
+ * deep-link confirmation, waiting for connection with a deadline,
+ * and backlog handling for items queued mid-launch.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "../../../test-utils";
 import { useRunQueueProcessor } from "../../../hooks/useRunQueueProcessor";
+import { ConnectionState, useStatusStore } from "../../../lib/store";
+import { usePreferencesStore } from "../../../lib/preferencesStore";
 
 // Create hoisted mocks
 const { mockRunToken, mockToast, mockLogger } = vi.hoisted(() => ({
@@ -17,6 +20,8 @@ const { mockRunToken, mockToast, mockLogger } = vi.hoisted(() => ({
   },
   mockLogger: {
     log: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
     error: vi.fn(),
   },
 }));
@@ -40,58 +45,24 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-// Mock the stores with controllable state
-const mockStoreState = {
-  runQueue: null as { value: string; unsafe: boolean } | null,
-  connected: true,
-  launcherAccess: true,
+const flush = async () => {
+  await act(async () => {
+    await Promise.resolve();
+  });
 };
-
-const mockSetRunQueue = vi.fn();
-const mockSetLastToken = vi.fn();
-const mockSetProPurchaseModalOpen = vi.fn();
-
-// Mock store with both selector pattern and getState() support
-vi.mock("../../../lib/store", () => ({
-  useStatusStore: Object.assign(
-    vi.fn((selector: (state: unknown) => unknown) => {
-      const state = {
-        runQueue: mockStoreState.runQueue,
-        setRunQueue: mockSetRunQueue,
-        setLastToken: mockSetLastToken,
-        setProPurchaseModalOpen: mockSetProPurchaseModalOpen,
-        connected: mockStoreState.connected,
-      };
-      return selector(state);
-    }),
-    {
-      getState: () => ({
-        connected: mockStoreState.connected,
-      }),
-    },
-  ),
-}));
-
-vi.mock("../../../lib/preferencesStore", () => ({
-  usePreferencesStore: vi.fn((selector: (state: unknown) => unknown) => {
-    const state = {
-      launcherAccess: mockStoreState.launcherAccess,
-    };
-    return selector(state);
-  }),
-}));
 
 describe("useRunQueueProcessor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
 
-    // Reset store state
-    mockStoreState.runQueue = null;
-    mockStoreState.connected = true;
-    mockStoreState.launcherAccess = true;
+    useStatusStore.setState({
+      runQueue: null,
+      connectionState: ConnectionState.CONNECTED,
+      connected: true,
+    });
+    usePreferencesStore.setState({ launcherAccess: true });
 
-    // Reset mock implementations
     mockRunToken.mockResolvedValue(true);
   });
 
@@ -103,30 +74,28 @@ describe("useRunQueueProcessor", () => {
     renderHook(() => useRunQueueProcessor());
 
     expect(mockRunToken).not.toHaveBeenCalled();
-    expect(mockSetRunQueue).not.toHaveBeenCalled();
   });
 
-  it("should process queue immediately when connected", async () => {
-    mockStoreState.runQueue = { value: "test-token", unsafe: false };
-    mockStoreState.connected = true;
-
+  it("should process shake items immediately when connected", async () => {
     renderHook(() => useRunQueueProcessor());
 
-    // Queue should be cleared immediately
-    expect(mockSetRunQueue).toHaveBeenCalledWith(null);
-
-    // runToken should be called
-    await vi.waitFor(() => {
-      expect(mockRunToken).toHaveBeenCalled();
+    act(() => {
+      useStatusStore
+        .getState()
+        .setRunQueue({ value: "test-token", unsafe: false, source: "shake" });
     });
+    await flush();
+
+    // Queue should be cleared
+    expect(useStatusStore.getState().runQueue).toBe(null);
 
     expect(mockRunToken).toHaveBeenCalledWith(
       "",
       "test-token",
       true, // launcherAccess
       true, // connected
-      mockSetLastToken,
-      mockSetProPurchaseModalOpen,
+      expect.any(Function),
+      expect.any(Function),
       false, // unsafe
       false, // override
       true, // canQueueCommands
@@ -135,117 +104,200 @@ describe("useRunQueueProcessor", () => {
   });
 
   it("should pass unsafe flag correctly", async () => {
-    mockStoreState.runQueue = { value: "unsafe-token", unsafe: true };
-    mockStoreState.connected = true;
-
     renderHook(() => useRunQueueProcessor());
 
-    await vi.waitFor(() => {
-      expect(mockRunToken).toHaveBeenCalled();
+    act(() => {
+      useStatusStore
+        .getState()
+        .setRunQueue({ value: "unsafe-token", unsafe: true, source: "shake" });
     });
+    await flush();
 
     expect(mockRunToken).toHaveBeenCalledWith(
       "",
       "unsafe-token",
       true,
       true,
-      mockSetLastToken,
-      mockSetProPurchaseModalOpen,
+      expect.any(Function),
+      expect.any(Function),
       true, // unsafe should be true
-      false, // override
-      true, // canQueueCommands
-      true, // requiresLaunch
+      false,
+      true,
+      true,
     );
   });
 
-  it("should retry when disconnected", async () => {
-    mockStoreState.runQueue = { value: "retry-token", unsafe: false };
-    mockStoreState.connected = false;
+  it("should require confirmation for deep link items", async () => {
+    const { result } = renderHook(() => useRunQueueProcessor());
 
-    renderHook(() => useRunQueueProcessor());
-
-    // Queue should be cleared
-    expect(mockSetRunQueue).toHaveBeenCalledWith(null);
-
-    // First attempt - not connected, should log retry
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(500);
-    });
-
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.stringContaining("Device not connected, retrying"),
-    );
-
-    // Still not connected after first retry
-    expect(mockRunToken).not.toHaveBeenCalled();
-  });
-
-  it("should process after reconnection during retry", async () => {
-    mockStoreState.runQueue = { value: "reconnect-token", unsafe: false };
-    mockStoreState.connected = false;
-
-    renderHook(() => useRunQueueProcessor());
-
-    // First few retries while disconnected
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(500);
-      await vi.advanceTimersByTimeAsync(500);
-    });
-
-    // Now reconnect
-    mockStoreState.connected = true;
-
-    // Next retry should succeed
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(500);
-    });
-
-    await vi.waitFor(() => {
-      expect(mockRunToken).toHaveBeenCalled();
-    });
-  });
-
-  it("should show error toast after max retries exhausted", async () => {
-    mockStoreState.runQueue = { value: "fail-token", unsafe: false };
-    mockStoreState.connected = false;
-
-    renderHook(() => useRunQueueProcessor());
-
-    // Advance through all 15 retries (500ms each = 7500ms total)
-    for (let i = 0; i < 16; i++) {
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
+    act(() => {
+      useStatusStore.getState().setRunQueue({
+        value: "link-token",
+        unsafe: true,
+        source: "deepLink",
       });
-    }
+    });
+    await flush();
 
-    // Should show error toast
+    // Not launched yet - awaiting user confirmation
+    expect(mockRunToken).not.toHaveBeenCalled();
+    expect(result.current.pendingConfirm).toEqual({
+      value: "link-token",
+      unsafe: true,
+      source: "deepLink",
+    });
+
+    act(() => {
+      result.current.confirmRun();
+    });
+    await flush();
+
+    expect(result.current.pendingConfirm).toBe(null);
+    expect(mockRunToken).toHaveBeenCalledWith(
+      "",
+      "link-token",
+      true,
+      true,
+      expect.any(Function),
+      expect.any(Function),
+      true,
+      false,
+      true,
+      true,
+    );
+  });
+
+  it("should discard deep link items when confirmation is cancelled", async () => {
+    const { result } = renderHook(() => useRunQueueProcessor());
+
+    act(() => {
+      useStatusStore.getState().setRunQueue({
+        value: "link-token",
+        unsafe: true,
+        source: "deepLink",
+      });
+    });
+    await flush();
+
+    act(() => {
+      result.current.cancelConfirm();
+    });
+    await flush();
+
+    expect(result.current.pendingConfirm).toBe(null);
+    expect(mockRunToken).not.toHaveBeenCalled();
+  });
+
+  it("should wait for CONNECTED before launching", async () => {
+    useStatusStore.setState({
+      connectionState: ConnectionState.RECONNECTING,
+      connected: true,
+    });
+
+    renderHook(() => useRunQueueProcessor());
+
+    act(() => {
+      useStatusStore
+        .getState()
+        .setRunQueue({ value: "wait-token", unsafe: false, source: "shake" });
+    });
+    await flush();
+
+    // Reconnecting is not connected enough to launch
+    expect(mockRunToken).not.toHaveBeenCalled();
+
+    act(() => {
+      useStatusStore.getState().setConnectionState(ConnectionState.CONNECTED);
+    });
+    await flush();
+
+    expect(mockRunToken).toHaveBeenCalledTimes(1);
+  });
+
+  it("should show error toast when the connection deadline passes", async () => {
+    useStatusStore.setState({
+      connectionState: ConnectionState.DISCONNECTED,
+      connected: false,
+    });
+
+    renderHook(() => useRunQueueProcessor());
+
+    act(() => {
+      useStatusStore
+        .getState()
+        .setRunQueue({ value: "fail-token", unsafe: false, source: "shake" });
+    });
+    await flush();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30000);
+    });
+
     expect(mockToast.error).toHaveBeenCalledWith("create.custom.failMsg");
+    expect(mockRunToken).not.toHaveBeenCalled();
+  });
 
-    // Should log error
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      "Failed to connect to device after multiple attempts",
-      expect.any(Object),
+  it("should process items queued while another launch is in flight", async () => {
+    let resolveFirst: (value: boolean) => void = () => {};
+    mockRunToken.mockImplementationOnce(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveFirst = resolve;
+        }),
     );
 
-    // runToken should NOT have been called (never connected)
-    expect(mockRunToken).not.toHaveBeenCalled();
+    renderHook(() => useRunQueueProcessor());
+
+    act(() => {
+      useStatusStore
+        .getState()
+        .setRunQueue({ value: "first", unsafe: false, source: "shake" });
+    });
+    await flush();
+    expect(mockRunToken).toHaveBeenCalledTimes(1);
+
+    // Second item arrives while the first is still launching
+    act(() => {
+      useStatusStore
+        .getState()
+        .setRunQueue({ value: "second", unsafe: false, source: "shake" });
+    });
+    await flush();
+    expect(mockRunToken).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      resolveFirst(true);
+    });
+    await flush();
+    await flush();
+
+    expect(mockRunToken).toHaveBeenCalledTimes(2);
+    expect(mockRunToken).toHaveBeenLastCalledWith(
+      "",
+      "second",
+      true,
+      true,
+      expect.any(Function),
+      expect.any(Function),
+      false,
+      false,
+      true,
+      true,
+    );
   });
 
   it("should handle runToken errors gracefully", async () => {
-    mockStoreState.runQueue = { value: "error-token", unsafe: false };
-    mockStoreState.connected = true;
     mockRunToken.mockRejectedValueOnce(new Error("API Error"));
 
     renderHook(() => useRunQueueProcessor());
 
-    await vi.waitFor(() => {
-      expect(mockRunToken).toHaveBeenCalled();
+    act(() => {
+      useStatusStore
+        .getState()
+        .setRunQueue({ value: "error-token", unsafe: false, source: "shake" });
     });
-
-    // Allow error to propagate
-    await act(async () => {
-      await vi.runAllTimersAsync();
-    });
+    await flush();
+    await flush();
 
     expect(mockLogger.error).toHaveBeenCalledWith(
       "runQueue error",
@@ -254,34 +306,29 @@ describe("useRunQueueProcessor", () => {
     );
   });
 
-  it("should return processQueue function", () => {
-    const { result } = renderHook(() => useRunQueueProcessor());
-
-    expect(result.current.processQueue).toBeInstanceOf(Function);
-  });
-
   it("should use launcherAccess from preferences store", async () => {
-    mockStoreState.runQueue = { value: "pro-token", unsafe: false };
-    mockStoreState.connected = true;
-    mockStoreState.launcherAccess = false;
+    usePreferencesStore.setState({ launcherAccess: false });
 
     renderHook(() => useRunQueueProcessor());
 
-    await vi.waitFor(() => {
-      expect(mockRunToken).toHaveBeenCalled();
+    act(() => {
+      useStatusStore
+        .getState()
+        .setRunQueue({ value: "pro-token", unsafe: false, source: "shake" });
     });
+    await flush();
 
     expect(mockRunToken).toHaveBeenCalledWith(
       "",
       "pro-token",
       false, // launcherAccess should be false
       true,
-      mockSetLastToken,
-      mockSetProPurchaseModalOpen,
-      false, // unsafe
-      false, // override
-      true, // canQueueCommands
-      true, // requiresLaunch
+      expect.any(Function),
+      expect.any(Function),
+      false,
+      false,
+      true,
+      true,
     );
   });
 });

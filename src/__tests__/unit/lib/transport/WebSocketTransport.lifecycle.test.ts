@@ -607,6 +607,40 @@ describe("WebSocketTransport lifecycle", () => {
       transport.destroy();
     });
 
+    it("should keep retrying if the first reconnect attempt after resume fails", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+        reconnectInterval: 2000,
+      });
+
+      transport.connect();
+      MockWebSocket.getLatest()!.simulateOpen();
+
+      // App goes to background; the socket dies while paused
+      transport.pauseHeartbeat();
+      MockWebSocket.getLatest()!.simulateClose();
+
+      // No reconnects are scheduled while paused
+      const instancesWhilePaused = MockWebSocket.instances.length;
+      vi.advanceTimersByTime(10000);
+      expect(MockWebSocket.instances.length).toBe(instancesWhilePaused);
+
+      // App comes to foreground - a single immediate reconnect attempt fires
+      transport.immediateReconnect();
+      vi.advanceTimersByTime(500);
+      expect(MockWebSocket.instances.length).toBe(instancesWhilePaused + 1);
+
+      // That first attempt fails (e.g. Wi-Fi still re-associating)
+      MockWebSocket.getLatest()!.simulateClose();
+
+      // The retry loop must keep going instead of silently stopping
+      vi.advanceTimersByTime(2000);
+      expect(MockWebSocket.instances.length).toBe(instancesWhilePaused + 2);
+
+      transport.destroy();
+    });
+
     it("should resume heartbeat if already connected (stale connection detection)", () => {
       const transport = new WebSocketTransport({
         deviceId: "test-device",

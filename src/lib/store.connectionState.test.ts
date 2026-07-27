@@ -12,14 +12,13 @@ describe("Store ConnectionState Integration", () => {
     expect(newState.connected).toBe(true);
   });
 
-  it("should increment retryCount when retryConnection is called", () => {
-    const initialState = useStatusStore.getState();
-    const initialRetryCount = initialState.retryCount;
+  it("should treat RECONNECTING as connected for UI purposes", () => {
+    const { setConnectionState } = useStatusStore.getState();
 
-    const { retryConnection } = useStatusStore.getState();
-    retryConnection();
+    setConnectionState(ConnectionState.RECONNECTING);
 
     const newState = useStatusStore.getState();
-    expect(newState.retryCount).toBe(initialRetryCount + 1);
+    expect(newState.connectionState).toBe(ConnectionState.RECONNECTING);
+    expect(newState.connected).toBe(true);
   });
 });

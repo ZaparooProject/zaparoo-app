@@ -6,6 +6,7 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
+import { getTabBarPanelId, getTabBarTabId } from "./tabBarIds";
 
 type TabBarRole = "radio" | "tab";
 
@@ -13,15 +14,6 @@ export interface TabBarOption<T extends string> {
   value: T;
   label: ReactNode;
   id?: string;
-}
-
-export function getTabBarTabId(value: string, prefix = "tab"): string {
-  const safeValue = value.toLowerCase().replace(/[^a-z0-9_-]+/g, "-");
-  return `${prefix}-${safeValue}`;
-}
-
-export function getTabBarPanelId(tabId: string): string {
-  return `tabpanel-${tabId}`;
 }
 
 interface TabBarProps<T extends string> {

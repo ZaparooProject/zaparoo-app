@@ -11,8 +11,21 @@ const {
   mockPreferencesState,
 } = vi.hoisted(() => ({
   mockUseDeepLinks: vi.fn(),
-  mockUseRunQueueProcessor: vi.fn(),
-  mockUseWriteQueueProcessor: vi.fn(),
+  mockUseRunQueueProcessor: vi.fn(() => ({
+    pendingConfirm: null,
+    confirmRun: vi.fn(),
+    cancelConfirm: vi.fn(),
+  })),
+  mockUseWriteQueueProcessor: vi.fn(() => ({
+    nfcWriter: {
+      write: vi.fn(),
+      end: vi.fn(),
+      writing: false,
+      result: null,
+      status: null,
+    },
+    reset: vi.fn(),
+  })),
   mockPreferencesState: {
     _hasHydrated: true,
     _proAccessHydrated: true,
@@ -79,6 +92,7 @@ vi.mock("@capacitor/core", () => ({
 
 vi.mock("@uidotdev/usehooks", () => ({
   usePrevious: vi.fn(() => undefined),
+  useMediaQuery: vi.fn(() => false),
 }));
 
 vi.mock("@/lib/capacitorBridge", () => ({
@@ -141,10 +155,6 @@ vi.mock("@/lib/store", () => {
     useStatusStore,
   };
 });
-
-vi.mock("@/hooks/useDataCache", () => ({
-  useDataCache: vi.fn(() => ({})),
-}));
 
 vi.mock("@/lib/coreApi", () => ({
   getDeviceAddress: vi.fn(() => "192.168.1.100"),
@@ -277,13 +287,6 @@ describe("App Integration", () => {
     expect(screen.getByTestId("connection-provider")).toBeInTheDocument();
     expect(mockUseDeepLinks).toHaveBeenCalled();
     expect(screen.getByTestId("staged-token-modal")).toBeInTheDocument();
-  });
-
-  it("should use useDataCache hook", () => {
-    render(<App />);
-
-    // Verify useDataCache mock is available (implicitly tested by rendering)
-    expect(screen.getByTestId("router")).toBeInTheDocument();
   });
 
   it("should have ConnectionProvider wrapping app content", () => {

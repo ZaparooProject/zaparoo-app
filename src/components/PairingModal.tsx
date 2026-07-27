@@ -50,6 +50,7 @@ export function PairingModal({
 
   useEffect(() => {
     if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Clear transient form state when the modal closes.
       setPin("");
       setClientName("");
       setError(null);

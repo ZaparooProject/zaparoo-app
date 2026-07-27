@@ -298,9 +298,17 @@ export class ConnectionManager {
   }
 
   /**
-   * Trigger immediate reconnect on the active device.
+   * Trigger immediate reconnect on the active device. Ignored while paused
+   * (app backgrounded) - e.g. a network change event must not reopen the
+   * socket in the background; resumeAll() will reconnect on foreground.
    */
   immediateReconnectActive(): void {
+    if (this.isPaused) {
+      logger.debug(
+        "[ConnectionManager] immediateReconnectActive ignored while paused",
+      );
+      return;
+    }
     const transport = this.getActiveTransport();
     if (transport) {
       transport.immediateReconnect();
