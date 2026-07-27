@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import toast from "react-hot-toast";
+import { NotSignedInError } from "@/lib/onlineApi";
 
 // Use vi.hoisted for all variables that need to be accessed in mock factories
 const {
@@ -65,6 +66,7 @@ vi.mock("@capacitor-firebase/authentication", () => ({
 vi.mock("@revenuecat/purchases-capacitor", () => ({
   Purchases: {
     logOut: () => mockPurchasesLogOut(),
+    isAnonymous: vi.fn().mockResolvedValue({ isAnonymous: false }),
   },
 }));
 
@@ -83,12 +85,16 @@ vi.mock("@capacitor/browser", () => ({
   },
 }));
 
-// Mock onlineApi
-vi.mock("@/lib/onlineApi", () => ({
-  updateRequirements: (...args: unknown[]) => mockUpdateRequirements(...args),
-  deleteAccount: (...args: unknown[]) => mockDeleteAccount(...args),
-  cancelAccountDeletion: () => mockCancelAccountDeletion(),
-}));
+// Mock onlineApi — spread actual module so non-function exports (e.g. NotSignedInError) are real
+vi.mock("@/lib/onlineApi", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    updateRequirements: (...args: unknown[]) => mockUpdateRequirements(...args),
+    deleteAccount: (...args: unknown[]) => mockDeleteAccount(...args),
+    cancelAccountDeletion: () => mockCancelAccountDeletion(),
+  };
+});
 
 // Mock store
 vi.mock("@/lib/store", async (importOriginal) => {
@@ -358,6 +364,71 @@ describe("Settings Online Route", () => {
         expect(mockPurchasesLogOut).toHaveBeenCalled();
         expect(mockFirebaseAuth.signOut).toHaveBeenCalled();
       });
+
+      expect(mockPurchasesLogOut.mock.invocationCallOrder[0]!).toBeLessThan(
+        mockFirebaseAuth.signOut.mock.invocationCallOrder[0]!,
+      );
+    });
+
+    it("should not call Purchases.logOut when RC user is already anonymous on native platform", async () => {
+      const user = userEvent.setup();
+      mockState.platform = "ios";
+
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+      vi.mocked(Purchases.isAnonymous).mockResolvedValueOnce({
+        isAnonymous: true,
+      });
+
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "online.logout" }));
+
+      await waitFor(() => {
+        expect(mockFirebaseAuth.signOut).toHaveBeenCalled();
+      });
+
+      expect(mockPurchasesLogOut).not.toHaveBeenCalled();
+    });
+
+    it("should ignore expected RevenueCat logout state errors on native platform", async () => {
+      const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
+      mockState.platform = "ios";
+      mockPurchasesLogOut.mockRejectedValueOnce(
+        new Error("Cannot log out anonymous app user"),
+      );
+
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "online.logout" }));
+
+      await waitFor(() => {
+        expect(mockFirebaseAuth.signOut).toHaveBeenCalled();
+      });
+
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it("should log unexpected RevenueCat logout errors on native platform", async () => {
+      const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
+      mockState.platform = "ios";
+      const error = new Error("network connection lost");
+      mockPurchasesLogOut.mockRejectedValueOnce(error);
+
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "online.logout" }));
+
+      await waitFor(() => {
+        expect(mockFirebaseAuth.signOut).toHaveBeenCalled();
+      });
+
+      expect(logger.error).toHaveBeenCalledWith(
+        "RevenueCat logout failed:",
+        error,
+        expect.objectContaining({ action: "logOut" }),
+      );
     });
 
     it("should skip RevenueCat logout on web platform", async () => {
@@ -574,10 +645,11 @@ describe("Settings Online Route", () => {
       });
     });
 
-    it("should show error toast on login failure", async () => {
+    it("should show error toast without logging expected login failure", async () => {
       const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
       mockFirebaseAuth.signInWithEmailAndPassword.mockRejectedValueOnce(
-        new Error("Invalid credentials"),
+        new Error("auth/invalid-credential"),
       );
 
       renderComponent();
@@ -593,6 +665,7 @@ describe("Settings Online Route", () => {
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("online.loginWrong");
       });
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
     it("should signup with email and password when age confirmed", async () => {
@@ -671,8 +744,9 @@ describe("Settings Online Route", () => {
       ).not.toHaveBeenCalled();
     });
 
-    it("should show error on signup failure for email already in use", async () => {
+    it("should show error without logging expected signup failure for email already in use", async () => {
       const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
       mockFirebaseAuth.createUserWithEmailAndPassword.mockRejectedValueOnce(
         new Error("email-already-in-use"),
       );
@@ -693,10 +767,12 @@ describe("Settings Online Route", () => {
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("online.emailExists");
       });
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
-    it("should show error on signup failure for weak password", async () => {
+    it("should show error without logging expected signup failure for weak password", async () => {
       const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
       mockFirebaseAuth.createUserWithEmailAndPassword.mockRejectedValueOnce(
         new Error("weak-password"),
       );
@@ -717,6 +793,7 @@ describe("Settings Online Route", () => {
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("online.weakPassword");
       });
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
     it("should submit on Enter key press", async () => {
@@ -1017,6 +1094,40 @@ describe("Settings Online Route", () => {
         );
       });
     });
+
+    it("should close modal and show not-signed-in toast when auth is stale during delete", async () => {
+      const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
+      mockDeleteAccount.mockRejectedValueOnce(new NotSignedInError());
+
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", { name: "online.deleteAccount" }),
+      );
+
+      const confirmInput = screen.getByPlaceholderText("DELETE MY ACCOUNT");
+      await user.type(confirmInput, "DELETE MY ACCOUNT");
+
+      const deleteButtons = screen.getAllByRole("button", {
+        name: /online.deleteAccount/,
+      });
+      await user.click(deleteButtons[deleteButtons.length - 1]!);
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("online.notSignedInError");
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText("online.deleteAccountConfirmTitle"),
+        ).not.toBeInTheDocument();
+      });
+
+      await waitFor(() => {
+        expect(logger.error).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe("scheduled deletion cancellation", () => {
@@ -1056,6 +1167,44 @@ describe("Settings Online Route", () => {
           "online.deleteAccountScheduled",
         );
       });
+    });
+
+    it("should show not-signed-in toast without logging error when auth is stale during cancel", async () => {
+      const user = userEvent.setup();
+      const { logger } = await import("@/lib/logger");
+
+      mockDeleteAccount.mockResolvedValueOnce({
+        scheduled_deletion_at: "2024-02-15T00:00:00Z",
+      });
+      mockCancelAccountDeletion.mockRejectedValueOnce(new NotSignedInError());
+
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", { name: "online.deleteAccount" }),
+      );
+      const confirmInput = screen.getByPlaceholderText("DELETE MY ACCOUNT");
+      await user.type(confirmInput, "DELETE MY ACCOUNT");
+      const deleteButtons = screen.getAllByRole("button", {
+        name: /online.deleteAccount/,
+      });
+      await user.click(deleteButtons[deleteButtons.length - 1]!);
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: "online.cancelDeletion" }),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: "online.cancelDeletion" }),
+      );
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("online.notSignedInError");
+      });
+
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
     it("should handle cancel deletion failure", async () => {

@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import classNames from "classnames";
-import { CoreAPI } from "@/lib/coreApi.ts";
+import { CoreAPI } from "@/lib/coreApi";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";

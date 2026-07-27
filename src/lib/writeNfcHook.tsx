@@ -17,7 +17,11 @@ import {
 } from "./nfc";
 import { CoreAPI } from "./coreApi.ts";
 import { logger } from "./logger";
-import { NfcCancelledError, isCancellationError } from "./errors";
+import {
+  NfcCancelledError,
+  isCancellationError,
+  isExpectedNfcError,
+} from "./errors";
 
 export interface WriteNfcHook {
   write: (action: WriteAction, text?: string) => Promise<void>;
@@ -286,11 +290,15 @@ export function useNfcWriter(
             setStatus(Status.Cancelled);
             return;
           }
-          logger.error("NFC write operation failed", e, {
-            category: "nfc",
-            action: action,
-            writeMethod: currentWriteMethod,
-          });
+          if (isExpectedNfcError(e)) {
+            logger.debug("Expected NFC write operation failure", e);
+          } else {
+            logger.error("NFC write operation failed", e, {
+              category: "nfc",
+              action: action,
+              writeMethod: currentWriteMethod,
+            });
+          }
           let showMs = 4000;
           if (Capacitor.getPlatform() === "ios") {
             showMs += 4000;

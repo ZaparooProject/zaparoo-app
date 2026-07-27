@@ -73,6 +73,11 @@ vi.mock("@/lib/preferencesStore", () => ({
 // Mock NFC writer
 vi.mock("@/lib/writeNfcHook", () => ({
   useNfcWriter: () => mockNfcWriter,
+  WriteMethod: {
+    Auto: "auto",
+    LocalNFC: "local",
+    RemoteReader: "remote",
+  },
   WriteAction: {
     Write: "write",
     Read: "read",

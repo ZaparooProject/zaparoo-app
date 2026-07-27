@@ -4,7 +4,7 @@ This guide covers CI/CD with Capawesome Cloud and over-the-air (OTA) live update
 
 ## Live Updates
 
-The app uses Capawesome Cloud for OTA updates, allowing JS/HTML/CSS changes to be pushed directly to users without app store review.
+The app uses Capawesome Cloud for OTA updates, allowing binary-compatible JS/HTML/CSS changes to be pushed directly to users without app store review. Do not use Live Updates for native dependency, Capacitor plugin, permission, or plugin configuration changes.
 
 ### How It Works
 
@@ -20,7 +20,6 @@ Located in `capacitor.config.ts`:
 LiveUpdate: {
   appId: "your-app-id",
   autoUpdateStrategy: "background",
-  defaultChannel: "production",
   readyTimeout: 10000,
   publicKey: "-----BEGIN PUBLIC KEY-----...",
 }
@@ -36,17 +35,28 @@ Called in `App.tsx` after successful render:
 
 If a bad update crashes the app before `ready()` is called, the plugin automatically rolls back to the previous working version.
 
+### Versioned Channels
+
+Zaparoo App 1.11.2 and newer use Capawesome versioned channels. Each native build listens on `production-<build-number>`:
+
+- Android sets `capawesome_live_update_default_channel` to `production-` + `versionCode` in `android/app/build.gradle`.
+- iOS sets `CapawesomeLiveUpdateDefaultChannel` to `production-$(CURRENT_PROJECT_VERSION)` in `ios/App/App/Info.plist`.
+
+The old shared `production` channel is only for older installed apps. Never deploy 1.11.2+ web bundles to shared `production`.
+
 ### Pushing a Live Update
 
 ```bash
-npm run live-update
+LIVE_UPDATE_CHANNEL="production-27" VITE_RELEASE_KEY="live:1.11.2-ota.1" npm run live-update
 ```
 
 This command:
 
-1. Builds the web assets (`npm run build:web`)
-2. Signs the bundle with `live-update-private.pem`
-3. Uploads to Capawesome Cloud
+1. Requires `LIVE_UPDATE_CHANNEL` so the bundle goes to the matching native build channel
+2. Requires `VITE_RELEASE_KEY` so the app can identify the applied web bundle for the “What’s new” dialog
+3. Builds the web assets (`npm run build:web`)
+4. Signs the bundle with `live-update-private.pem`
+5. Uploads to Capawesome Cloud with `releaseKey` as a custom property
 
 ### Listing Deployed Updates
 
@@ -79,6 +89,44 @@ Required for:
 - Capacitor version upgrades
 - Plugin configuration changes in `capacitor.config.ts`
 
+### Store Release Checklist
+
+1. Choose the release version and next store build number.
+2. Bump version files in lockstep:
+   - `package.json` (`version`)
+   - `package-lock.json` (top-level and root package `version`)
+   - `android/app/build.gradle` (`versionCode`, `versionName`)
+   - `ios/App/App.xcodeproj/project.pbxproj` (`MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`)
+3. Increment both platform build numbers on every store release. Android `versionCode` and iOS `CURRENT_PROJECT_VERSION` must match so versioned live update channels line up.
+4. Confirm `src/lib/whatsNew.ts` has announcement `releaseKeys` for the native version/build, e.g. `native:1.11.2+27`.
+5. Confirm the release guard in `src/__tests__/validation/release-config.test.ts` covers the version/channel invariants.
+6. After Capacitor upgrades, confirm GitHub Actions and Capawesome Cloud use a Node.js version supported by `@capacitor/cli`. Capacitor 8 requires Node 22+.
+7. Check About page credits in `src/routes/settings.about.tsx`:
+   - translation credits
+   - active Patreon CSV export names
+   - Patreon tier coloring (`#F1C40D` Supporter/Sponsor, `#E74C3C` Mega Supporter, `#E91E63` Ultra Supporter)
+8. Run validation:
+   - `npm run typecheck`
+   - `npm run format:check`
+   - `npm run lint`
+   - `npm run test -- --run`
+9. Run `npm run sync` when native Live Update config changes and inspect generated native config diffs.
+10. Optionally run `npm run build:web` for a web-only production build. Run `npm run build` only when ready for Capacitor sync/native file updates.
+11. Commit the release prep changes.
+12. Create and push the version tag:
+
+```bash
+git tag v1.11.2
+git push origin v1.11.2
+```
+
+13. Confirm GitHub release artifacts and Capawesome Cloud iOS/Android builds complete.
+14. Submit/release from App Store Connect and Google Play Console.
+
+### Failed Release Tags
+
+`v1.11.0` and `v1.11.1` are abandoned failed tags. Do not submit or promote builds from those tags.
+
 ---
 
 ## Code Signing
@@ -100,8 +148,7 @@ The app uses Capawesome Cloud for building iOS and Android binaries.
 
 ### Configuration Files
 
-- `capawesome.config.json` - Build commands and app configuration
-- `capawesome.config.json` — Build commands (injects GitHub Packages auth via `NPM_TOKEN`)
+- `capawesome.config.json` — Build commands and app configuration. It injects GitHub Packages auth via `NPM_TOKEN`.
 
 ### Build Process
 
@@ -115,9 +162,13 @@ The app uses Capawesome Cloud for building iOS and Android binaries.
 
 ```bash
 # Create and push a version tag
-git tag v1.9.2
-git push origin v1.9.2
+git tag v1.11.2
+git push origin v1.11.2
 ```
+
+### Build Runtime
+
+GitHub Actions use Node 22 because Capacitor 8's CLI requires Node 22 or newer. If Capawesome Cloud builds fail with a Node version error, set the `NODE_VERSION` environment variable to `22` in the selected Capawesome Cloud environment.
 
 ### Required Secrets in Capawesome Cloud
 

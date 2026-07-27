@@ -2,46 +2,28 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
 import { useNetworkScan, DiscoveredDevice } from "@/hooks/useNetworkScan";
+import { EmptyState } from "@/components/wui/EmptyState";
 import { SlideModal } from "./SlideModal";
-import { Card } from "./wui/Card";
+import { DeviceRow } from "./DeviceRow";
+
+export interface SelectedScanDevice {
+  address: string;
+  name?: string;
+  platform?: string;
+  version?: string;
+}
 
 interface NetworkScanModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectDevice: (address: string) => void;
+  onSelectDevice: (device: SelectedScanDevice) => void;
 }
 
-function DeviceCard({
-  device,
-  onSelect,
-}: {
-  device: DiscoveredDevice;
-  onSelect: () => void;
-}) {
-  const { t } = useTranslation();
-
-  // Build connection string: use just IP if default port, otherwise IP:port
-  const connectionString =
-    device.port === 7497 ? device.address : `${device.address}:${device.port}`;
-
-  return (
-    <Card onClick={onSelect} className="flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <span className="font-medium">{device.name}</span>
-        {device.platform && (
-          <span className="text-foreground-muted text-sm">
-            {device.platform}
-          </span>
-        )}
-      </div>
-      <div className="text-foreground-muted text-sm">{connectionString}</div>
-      {device.version && (
-        <div className="text-foreground-muted text-xs">
-          {t("settings.networkScan.version", { version: device.version })}
-        </div>
-      )}
-    </Card>
-  );
+function buildConnectionString(device: DiscoveredDevice): string {
+  // Default Zaparoo port — drop it from the displayed/connect string.
+  return device.port === 7497
+    ? device.address
+    : `${device.address}:${device.port}`;
 }
 
 export function NetworkScanModal({
@@ -62,14 +44,13 @@ export function NetworkScanModal({
   }, [isOpen, startScan, stopScan]);
 
   const handleSelectDevice = (device: DiscoveredDevice) => {
-    // Build connection string
-    const connectionString =
-      device.port === 7497
-        ? device.address
-        : `${device.address}:${device.port}`;
-
     stopScan();
-    onSelectDevice(connectionString);
+    onSelectDevice({
+      address: buildConnectionString(device),
+      name: device.name,
+      platform: device.platform,
+      version: device.version,
+    });
     onClose();
   };
 
@@ -88,8 +69,8 @@ export function NetworkScanModal({
         {/* Scanning indicator */}
         {isScanning && devices.length === 0 && (
           <div className="flex flex-col items-center justify-center gap-3 py-8">
-            <Loader2 className="text-foreground-muted h-8 w-8 animate-spin" />
-            <p className="text-foreground-muted">
+            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground">
               {t("settings.networkScan.searching")}
             </p>
           </div>
@@ -106,9 +87,14 @@ export function NetworkScanModal({
         {devices.length > 0 && (
           <div className="flex flex-col gap-2">
             {devices.map((device) => (
-              <DeviceCard
+              <DeviceRow
                 key={device.address}
-                device={device}
+                entry={{
+                  address: buildConnectionString(device),
+                  name: device.name,
+                  platform: device.platform,
+                  version: device.version,
+                }}
                 onSelect={() => handleSelectDevice(device)}
               />
             ))}
@@ -118,8 +104,8 @@ export function NetworkScanModal({
         {/* Scanning indicator when we have results */}
         {isScanning && devices.length > 0 && (
           <div className="flex items-center justify-center gap-2 py-2">
-            <Loader2 className="text-foreground-muted h-4 w-4 animate-spin" />
-            <p className="text-foreground-muted text-sm">
+            <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+            <p className="text-muted-foreground text-sm">
               {t("settings.networkScan.stillSearching")}
             </p>
           </div>
@@ -127,11 +113,7 @@ export function NetworkScanModal({
 
         {/* No devices found - only shows if scan fails to start */}
         {!isScanning && !error && devices.length === 0 && (
-          <div className="flex flex-col items-center justify-center gap-2 py-8">
-            <p className="text-foreground-muted">
-              {t("settings.networkScan.noDevices")}
-            </p>
-          </div>
+          <EmptyState title={t("settings.networkScan.noDevices")} />
         )}
       </div>
     </SlideModal>

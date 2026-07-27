@@ -33,6 +33,7 @@ describe("ReconnectingIndicator", () => {
       mockUseConnection.mockReturnValue({
         showConnecting: false,
         showReconnecting: false,
+        openPairingModal: () => {},
       });
 
       render(<ReconnectingIndicator />);
@@ -47,6 +48,7 @@ describe("ReconnectingIndicator", () => {
       mockUseConnection.mockReturnValue({
         showConnecting: true,
         showReconnecting: false,
+        openPairingModal: () => {},
       });
 
       render(<ReconnectingIndicator />);
@@ -58,6 +60,7 @@ describe("ReconnectingIndicator", () => {
       mockUseConnection.mockReturnValue({
         showConnecting: true,
         showReconnecting: false,
+        openPairingModal: () => {},
       });
 
       render(<ReconnectingIndicator />);
@@ -71,6 +74,7 @@ describe("ReconnectingIndicator", () => {
       mockUseConnection.mockReturnValue({
         showConnecting: true,
         showReconnecting: false,
+        openPairingModal: () => {},
       });
 
       const { container } = render(<ReconnectingIndicator />);
@@ -85,6 +89,7 @@ describe("ReconnectingIndicator", () => {
       mockUseConnection.mockReturnValue({
         showConnecting: false,
         showReconnecting: true,
+        openPairingModal: () => {},
       });
 
       render(<ReconnectingIndicator />);
@@ -96,6 +101,7 @@ describe("ReconnectingIndicator", () => {
       mockUseConnection.mockReturnValue({
         showConnecting: false,
         showReconnecting: true,
+        openPairingModal: () => {},
       });
 
       render(<ReconnectingIndicator />);
@@ -109,6 +115,7 @@ describe("ReconnectingIndicator", () => {
       mockUseConnection.mockReturnValue({
         showConnecting: false,
         showReconnecting: true,
+        openPairingModal: () => {},
       });
 
       const { container } = render(<ReconnectingIndicator />);
@@ -124,6 +131,7 @@ describe("ReconnectingIndicator", () => {
       mockUseConnection.mockReturnValue({
         showConnecting: true,
         showReconnecting: true,
+        openPairingModal: () => {},
       });
 
       render(<ReconnectingIndicator />);

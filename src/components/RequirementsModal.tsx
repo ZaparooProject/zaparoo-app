@@ -17,6 +17,7 @@ import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import { updateRequirements, getRequirements } from "@/lib/onlineApi";
 import { useStatusStore } from "@/lib/store";
 import { logger } from "@/lib/logger";
+import { isExpectedRevenueCatLogoutError } from "@/lib/errors";
 
 const TOS_URL = "https://zaparoo.com/terms";
 const PRIVACY_URL = "https://zaparoo.com/privacy";
@@ -112,13 +113,18 @@ export function RequirementsModal() {
     // Revert RevenueCat to anonymous before Firebase signOut (skip on web)
     if (Capacitor.getPlatform() !== "web") {
       try {
-        await Purchases.logOut();
+        const { isAnonymous } = await Purchases.isAnonymous();
+        if (!isAnonymous) {
+          await Purchases.logOut();
+        }
       } catch (e) {
-        logger.error("RevenueCat logout failed:", e, {
-          category: "purchase",
-          action: "logOut",
-          severity: "warning",
-        });
+        if (!isExpectedRevenueCatLogoutError(e)) {
+          logger.error("RevenueCat logout failed:", e, {
+            category: "purchase",
+            action: "logOut",
+            severity: "warning",
+          });
+        }
       }
     }
 

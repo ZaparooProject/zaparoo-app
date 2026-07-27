@@ -1,6 +1,7 @@
-import axios from "axios";
+import axios, { type InternalAxiosRequestConfig } from "axios";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
+import { useStatusStore } from "@/lib/store";
 import type {
   RequirementsResponse,
   UpdateRequirementsRequest,
@@ -8,15 +9,34 @@ import type {
   DeleteAccountResponse,
 } from "@/lib/models";
 
+export class NotSignedInError extends Error {
+  constructor() {
+    super("User is not signed in");
+    this.name = "NotSignedInError";
+  }
+}
+
 const client = axios.create({
   baseURL: "https://api.zaparoo.com/v1",
 });
 
-client.interceptors.request.use(async function (config) {
+export async function authRequestInterceptor(
+  config: InternalAxiosRequestConfig,
+) {
+  const { user } = await FirebaseAuthentication.getCurrentUser();
+  if (!user) {
+    const state = useStatusStore.getState();
+    if (state.loggedInUser !== null) {
+      state.setLoggedInUser(null);
+    }
+    throw new NotSignedInError();
+  }
   const token = await FirebaseAuthentication.getIdToken();
   config.headers.Authorization = `Bearer ${token.token}`;
   return config;
-});
+}
+
+client.interceptors.request.use(authRequestInterceptor);
 
 // Response interceptor to catch requirements_not_met errors
 client.interceptors.response.use(

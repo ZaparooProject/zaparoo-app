@@ -83,7 +83,15 @@ export default defineConfig(
       // React Refresh
       "react-refresh/only-export-components": [
         "warn",
-        { allowConstantExport: true },
+        {
+          allowConstantExport: true,
+          // TanStack Router file-based routes export `Route = createFileRoute(...)`
+          // alongside their component; that pairing is the framework's canonical pattern.
+          // The component must also be exported (not just declared locally) so the
+          // rule still sees a React export — otherwise the local component would
+          // trigger a "move to separate file" warning.
+          allowExportNames: ["Route"],
+        },
       ],
 
       // Accessibility rules

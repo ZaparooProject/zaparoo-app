@@ -7,12 +7,18 @@ import { useDebounce } from "use-debounce";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
+import { compareStrings } from "@/lib/utils";
 import { useSmartTabs } from "@/hooks/useSmartTabs";
+import { EmptyState } from "@/components/wui/EmptyState";
+import {
+  getTabBarPanelId,
+  getTabBarTabId,
+  TabBar,
+} from "@/components/wui/TabBar";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
 import { BackToTop } from "./BackToTop";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 
 export interface System {
   id: string;
@@ -29,6 +35,9 @@ interface SystemSelectorProps {
   title?: string;
   includeAllOption?: boolean;
   defaultSelection?: string; // When selectedSystems is empty, what should be shown as selected (e.g., "all" or undefined for nothing)
+  allowedSystemIds?: string[];
+  // Include unavailable launcher-backed systems for first-time partial indexes.
+  allSystems?: boolean;
 }
 
 interface GroupedSystems {
@@ -46,6 +55,8 @@ export function SystemSelector({
   title,
   includeAllOption = false,
   defaultSelection,
+  allowedSystemIds,
+  allSystems = false,
 }: SystemSelectorProps) {
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
@@ -57,6 +68,9 @@ export function SystemSelector({
   const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
   const [showLeftGradient, setShowLeftGradient] = useState(false);
   const [showRightGradient, setShowRightGradient] = useState(true);
+  const targetDeviceAddress = useStatusStore(
+    (state) => state.targetDeviceAddress,
+  );
 
   // Smart tabs hook for overflow detection and drag scrolling
   const { hasOverflow, tabsProps } = useSmartTabs<HTMLDivElement>({
@@ -72,13 +86,12 @@ export function SystemSelector({
     },
   });
 
-  // Get indexing state to disable selector when indexing is in progress
-  const gamesIndex = useStatusStore((state) => state.gamesIndex);
-
   // Fetch systems data
   const { data: systemsData, isLoading } = useQuery({
-    queryKey: ["systems"],
-    queryFn: () => CoreAPI.systems(),
+    queryKey: ["systems", targetDeviceAddress, { all: allSystems }],
+    queryFn: () => CoreAPI.systems(allSystems ? { all: true } : undefined),
+    enabled: isOpen,
+    staleTime: 0,
   });
 
   // Process and filter systems
@@ -87,7 +100,12 @@ export function SystemSelector({
       return { filteredSystems: [], categories: [] };
     }
 
-    const systems = systemsData.systems;
+    const systems =
+      allowedSystemIds === undefined
+        ? systemsData.systems
+        : systemsData.systems.filter((system) =>
+            allowedSystemIds.includes(system.id),
+          );
 
     // Group systems by category
     const grouped: GroupedSystems = {};
@@ -114,7 +132,7 @@ export function SystemSelector({
       }
       if (aPriority !== -1) return -1;
       if (bPriority !== -1) return 1;
-      return a.localeCompare(b);
+      return compareStrings(a, b);
     });
 
     // Filter systems based on search and category
@@ -137,17 +155,14 @@ export function SystemSelector({
     }
 
     // Sort filtered systems by name
-    filtered.sort((a, b) => a.name.localeCompare(b.name));
+    filtered.sort((a, b) => compareStrings(a.name, b.name));
 
     return { filteredSystems: filtered, categories };
-  }, [systemsData, debouncedSearchQuery, selectedCategory]);
+  }, [systemsData, allowedSystemIds, debouncedSearchQuery, selectedCategory]);
 
   // Handle system selection
   const handleSystemSelect = useCallback(
     (systemId: string) => {
-      // Don't allow selection while indexing
-      if (gamesIndex.indexing) return;
-
       if (mode === "single" || mode === "insert") {
         if (systemId === "all") {
           onSelect([]);
@@ -182,24 +197,13 @@ export function SystemSelector({
         }
       }
     },
-    [
-      mode,
-      selectedSystems,
-      onSelect,
-      onClose,
-      gamesIndex.indexing,
-      announce,
-      t,
-      systemsData,
-    ],
+    [mode, selectedSystems, onSelect, onClose, announce, t, systemsData],
   );
 
   // Handle clear all
   const handleClearAll = useCallback(() => {
-    // Don't allow clearing while indexing
-    if (gamesIndex.indexing) return;
     onSelect([]);
-  }, [onSelect, gamesIndex.indexing]);
+  }, [onSelect]);
 
   // Handle apply (for multi-select)
   const handleApply = useCallback(() => {
@@ -214,6 +218,13 @@ export function SystemSelector({
     estimateSize: () => ITEM_HEIGHT,
     overscan: 5,
   });
+
+  const systemTabIdPrefix = "system-category-tab";
+  const selectedCategoryTabId = getTabBarTabId(
+    selectedCategory,
+    systemTabIdPrefix,
+  );
+  const selectedCategoryPanelId = getTabBarPanelId(selectedCategoryTabId);
 
   // Footer for multi-select mode
   const footer =
@@ -230,13 +241,7 @@ export function SystemSelector({
           {selectedSystems.length > 0 && (
             <button
               onClick={handleClearAll}
-              className={classNames("text-sm underline", {
-                "text-muted-foreground hover:text-foreground":
-                  !gamesIndex.indexing,
-                "text-muted-foreground/50 cursor-not-allowed":
-                  gamesIndex.indexing,
-              })}
-              disabled={gamesIndex.indexing}
+              className="text-muted-foreground hover:text-foreground text-sm underline"
               type="button"
             >
               {t("systemSelector.clearAll")}
@@ -246,10 +251,7 @@ export function SystemSelector({
             label={t("systemSelector.apply")}
             onClick={handleApply}
             className="flex-1"
-            disabled={
-              gamesIndex.indexing ||
-              (selectedSystems.length === 0 && !includeAllOption)
-            }
+            disabled={selectedSystems.length === 0 && !includeAllOption}
           />
         </div>
       </div>
@@ -278,7 +280,7 @@ export function SystemSelector({
               placeholder={t("systemSelector.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="border-input bg-background text-foreground w-full rounded-md border px-10 py-2 text-sm focus:ring-2 focus:ring-white/20 focus:outline-none"
+              className="border-input bg-background text-foreground w-full rounded-md border px-10 py-2 focus:ring-2 focus:ring-white/20 focus:outline-none"
             />
             {searchQuery && (
               <button
@@ -293,12 +295,8 @@ export function SystemSelector({
           </div>
         </div>
 
-        {/* Category tabs using shadcn tabs */}
-        <Tabs
-          value={selectedCategory}
-          onValueChange={setSelectedCategory}
-          className="flex min-h-0 flex-1 flex-col"
-        >
+        {/* Category tabs */}
+        <div className="flex min-h-0 flex-1 flex-col">
           <div className="px-2 py-2">
             <div className="relative overflow-hidden rounded-lg">
               {/* Left gradient - only show when scrolled and overflowing */}
@@ -311,16 +309,26 @@ export function SystemSelector({
                 />
               )}
 
-              <TabsList {...tabsProps}>
-                <TabsTrigger value="all">
-                  {t("systemSelector.allCategories")}
-                </TabsTrigger>
-                {categories.map((category) => (
-                  <TabsTrigger key={category} value={category}>
-                    {category}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+              <TabBar
+                label={t("systemSelector.categories")}
+                layout="scroll"
+                role="tab"
+                options={[
+                  {
+                    value: "all",
+                    label: t("systemSelector.allCategories"),
+                    id: getTabBarTabId("all", systemTabIdPrefix),
+                  },
+                  ...categories.map((category) => ({
+                    value: category,
+                    label: category,
+                    id: getTabBarTabId(category, systemTabIdPrefix),
+                  })),
+                ]}
+                value={selectedCategory}
+                onChange={setSelectedCategory}
+                containerProps={tabsProps}
+              />
 
               {/* Right gradient - only show when more content and overflowing */}
               {hasOverflow && (
@@ -334,8 +342,10 @@ export function SystemSelector({
             </div>
           </div>
 
-          <TabsContent
-            value={selectedCategory}
+          <div
+            id={selectedCategoryPanelId}
+            role="tabpanel"
+            aria-labelledby={selectedCategoryTabId}
             className="min-h-0 flex-1 overflow-hidden"
             tabIndex={-1}
           >
@@ -344,13 +354,18 @@ export function SystemSelector({
                 <span className="text-muted-foreground">{t("loading")}</span>
               </div>
             ) : filteredSystems.length === 0 ? (
-              <div className="flex h-32 items-center justify-center">
-                <span className="text-muted-foreground">
-                  {debouncedSearchQuery
-                    ? t("systemSelector.noResults")
-                    : t("systemSelector.noSystems")}
-                </span>
-              </div>
+              debouncedSearchQuery ? (
+                <EmptyState
+                  className="h-32"
+                  title={t("systemSelector.noResults")}
+                  description={t("systemSelector.noResultsHint")}
+                />
+              ) : (
+                <EmptyState
+                  className="h-32"
+                  title={t("systemSelector.noSystems")}
+                />
+              )
             ) : (
               <>
                 {/* Add "All Systems" option for single/insert mode */}
@@ -362,19 +377,15 @@ export function SystemSelector({
                       <button
                         className={classNames(
                           "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                          "rounded-lg focus:outline-none",
+                          "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                          "hover:bg-white/10 focus:bg-white/10",
                           {
                             "bg-white/10":
                               defaultSelection === "all" &&
                               selectedSystems.length === 0,
-                            "hover:bg-white/10 focus:bg-white/10":
-                              !gamesIndex.indexing,
-                            "cursor-not-allowed opacity-50":
-                              gamesIndex.indexing,
                           },
                         )}
                         onClick={() => handleSystemSelect("all")}
-                        disabled={gamesIndex.indexing}
                         type="button"
                         role="radio"
                         aria-checked={
@@ -444,17 +455,13 @@ export function SystemSelector({
                           <button
                             className={classNames(
                               "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                              "rounded-lg focus:outline-none",
+                              "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                              "hover:bg-white/10 focus:bg-white/10",
                               {
                                 "bg-white/10": isSelected,
-                                "hover:bg-white/10 focus:bg-white/10":
-                                  !gamesIndex.indexing,
-                                "cursor-not-allowed opacity-50":
-                                  gamesIndex.indexing,
                               },
                             )}
                             onClick={() => handleSystemSelect(system.id)}
-                            disabled={gamesIndex.indexing}
                             type="button"
                             role={mode === "multi" ? "checkbox" : "radio"}
                             aria-checked={isSelected}
@@ -503,8 +510,8 @@ export function SystemSelector({
                 </div>
               </>
             )}
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
 
         {/* Scroll to top button */}
         <BackToTop
@@ -541,9 +548,6 @@ export function SystemSelectorTrigger({
 }) {
   const { t } = useTranslation();
 
-  // Get indexing state to disable trigger when indexing is in progress
-  const gamesIndex = useStatusStore((state) => state.gamesIndex);
-
   const displayText = useMemo(() => {
     if (!systemsData?.systems) return placeholder;
 
@@ -579,10 +583,9 @@ export function SystemSelectorTrigger({
     });
   }, [selectedSystems, systemsData, placeholder, mode, t]);
 
-  const isDisabled = disabled || gamesIndex.indexing;
+  const isDisabled = disabled;
 
   const handleClick = () => {
-    // Don't open selector while indexing or disabled
     if (isDisabled) return;
     onClick();
   };

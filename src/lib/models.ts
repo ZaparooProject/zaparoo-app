@@ -1,5 +1,6 @@
 export enum Method {
   Run = "run",
+  Confirm = "confirm",
   Stop = "stop",
   Tokens = "tokens",
   History = "tokens.history",
@@ -7,6 +8,8 @@ export enum Method {
   MediaSearch = "media.search",
   MediaGenerate = "media.generate",
   MediaGenerateCancel = "media.generate.cancel",
+  MediaGenerateResume = "media.generate.resume",
+  MediaCleanOrphans = "media.clean.orphans",
   MediaActive = "media.active",
   MediaActiveUpdate = "media.active.update",
   MediaTags = "media.tags",
@@ -28,6 +31,17 @@ export enum Method {
   Playtime = "playtime",
   PlaytimeLimits = "settings.playtime.limits",
   PlaytimeLimitsUpdate = "settings.playtime.limits.update",
+  Inbox = "inbox",
+  InboxDelete = "inbox.delete",
+  InboxClear = "inbox.clear",
+  Scrapers = "scrapers",
+  MediaScrape = "media.scrape",
+  MediaScrapeStatus = "media.scrape.status",
+  MediaScrapeCancel = "media.scrape.cancel",
+  MediaScrapeResume = "media.scrape.resume",
+  InputKeyboard = "input.keyboard",
+  InputGamepad = "input.gamepad",
+  Screenshot = "screenshot",
 }
 
 export enum Notification {
@@ -36,11 +50,16 @@ export enum Notification {
   TokensLaunching = "running",
   TokensScanned = "tokens.added",
   TokensRemoved = "tokens.removed",
+  TokensStaged = "tokens.staged",
+  TokensStagedReady = "tokens.staged.ready",
   MediaStarted = "media.started",
   MediaStopped = "media.stopped",
   MediaIndexing = "media.indexing",
   PlaytimeLimitWarning = "playtime.limit.warning",
   PlaytimeLimitReached = "playtime.limit.reached",
+  InboxAdded = "inbox.added",
+  MediaScraping = "media.scraping",
+  ClientsPaired = "clients.paired",
 }
 
 export interface VersionResponse {
@@ -58,6 +77,20 @@ export interface LaunchRequest {
 
 export interface WriteRequest {
   text: string;
+}
+
+export interface InputKeyboardRequest {
+  keys: string;
+}
+
+export interface InputGamepadRequest {
+  buttons: string;
+}
+
+export interface ScreenshotResponse {
+  path: string;
+  data: string;
+  size: number;
 }
 
 export interface SearchParams {
@@ -99,6 +132,11 @@ export interface System {
   category?: string;
   releaseDate?: string;
   manufacturer?: string;
+  zapScript?: string;
+}
+
+export interface SystemsParams {
+  all?: boolean;
 }
 
 export interface SystemsResponse {
@@ -167,6 +205,10 @@ export interface SettingsResponse {
   readersScanMode: "tap" | "hold" | "insert";
   readersScanExitDelay: number;
   readersScanIgnoreSystems: string[];
+  launchGuardEnabled?: boolean;
+  launchGuardTimeout?: number;
+  launchGuardDelay?: number;
+  launchGuardRequireConfirm?: boolean;
 }
 
 export interface UpdateSettingsRequest {
@@ -178,6 +220,10 @@ export interface UpdateSettingsRequest {
   readersScanExitDelay?: number;
   readersScanIgnoreSystems?: string[];
   runZapScript?: boolean;
+  launchGuardEnabled?: boolean;
+  launchGuardTimeout?: number;
+  launchGuardDelay?: number;
+  launchGuardRequireConfirm?: boolean;
 }
 
 export interface TokenResponse {
@@ -186,17 +232,21 @@ export interface TokenResponse {
   text: string;
   data: string;
   scanTime: string;
+  readerId?: string;
 }
 
 export interface IndexResponse {
   exists: boolean;
   indexing: boolean;
   optimizing?: boolean;
+  paused?: boolean;
   totalSteps?: number;
   currentStep?: number;
   currentStepDisplay?: string;
   totalFiles?: number;
   totalMedia?: number;
+  systemsCompleted?: number;
+  systemsTotal?: number;
 }
 
 export interface PlayingResponse {
@@ -332,4 +382,139 @@ export interface DeleteAccountResponse {
   message: string;
   scheduled_deletion_at: string;
   can_cancel_until: string;
+}
+
+export enum InboxSeverity {
+  Info = 0,
+  Warning = 1,
+  Error = 2,
+}
+
+export interface InboxMessage {
+  id: number;
+  title: string;
+  body?: string;
+  severity: InboxSeverity;
+  category?: string;
+  profileId?: number;
+  createdAt: string;
+}
+
+export interface InboxResponse {
+  messages: InboxMessage[];
+}
+
+export interface DeleteInboxRequest {
+  id: number;
+}
+
+// ---------------------------------------------------------------------------
+// scrapers
+// ---------------------------------------------------------------------------
+
+/** One entry returned by the "scrapers" RPC method. */
+export interface ScraperInfo {
+  /** Stable machine-readable identifier (e.g. "gamelist.xml"). */
+  id: string;
+  /** Human-readable display name (e.g. "ES gamelist.xml"). */
+  name: string;
+  /** Supported system IDs. Empty means the scraper can run against all systems. */
+  supportedSystems: string[];
+}
+
+/** Response shape for the "scrapers" JSON-RPC method. */
+export interface ScrapersResponse {
+  scrapers: ScraperInfo[];
+}
+
+// ---------------------------------------------------------------------------
+// media.scrape
+// ---------------------------------------------------------------------------
+
+/**
+ * Parameters for the "media.scrape" RPC method.
+ *
+ * The call returns immediately with a null result; progress is delivered via
+ * "media.scraping" notifications until Done is true.
+ */
+export interface MediaScrapeParams {
+  /** ID of the scraper to run, e.g. "gamelist.xml". Must match a value from the "scrapers" method. */
+  scraperId: string;
+  /**
+   * Limit scraping to these system IDs.
+   * Omit or pass an empty array to scrape all systems.
+   */
+  systems?: string[];
+  /** When true, re-processes records that already carry a sentinel tag from a prior run. */
+  force?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// media.scrape.status / media.scrape.cancel / media.scrape.resume
+// ---------------------------------------------------------------------------
+
+/** Response for media.scrape.cancel. */
+export interface MediaScrapeCancelResponse {
+  message: string;
+}
+
+/** Response for media.scrape.resume. */
+export interface MediaScrapeResumeResponse {
+  message: string;
+}
+
+export interface MediaCleanOrphansResponse {
+  deleted: number;
+}
+
+// ---------------------------------------------------------------------------
+// media.scraping  (notification)
+// ---------------------------------------------------------------------------
+
+/**
+ * Payload broadcast on the "media.scraping" notification channel.
+ *
+ * Emitted for every ScrapeUpdate received from the running scraper and once
+ * more when the run finishes or is cancelled (scraping: false, done: true).
+ *
+ * Mirrors Go struct: ScrapingStatusResponse (pkg/api/models/responses.go).
+ */
+export interface ScrapeSystemProgress {
+  systemId: string;
+  systemName?: string;
+  processed: number;
+  total: number;
+  matched: number;
+  skipped: number;
+}
+
+export interface ScrapingStatusNotification {
+  /** ID of the scraper that is running, e.g. "gamelist.xml". */
+  scraperId?: string;
+  /** 1-based current system step in the overall scrape run. */
+  currentStep?: number;
+  /** Display name for the current overall step. */
+  currentStepDisplay?: string;
+  /** Total system steps in the overall scrape run. */
+  totalSteps?: number;
+  /** Current system progress, when Core provides the structured payload. */
+  currentSystem?: ScrapeSystemProgress;
+  /** System currently being scraped. Omitted between system transitions. */
+  systemId?: string;
+  /** Number of source records processed so far. */
+  processed: number;
+  /** Total source records for the current system, or 0 before known. */
+  total: number;
+  /** Number of records successfully matched and enriched. */
+  matched: number;
+  /** Number of records skipped, unmatched, or failed per-record processing. */
+  skipped: number;
+  /** Number of media records already marked scraped. */
+  totalScraped: number;
+  /** True while scraping is in progress, false on the terminal event. */
+  scraping: boolean;
+  /** True on the final notification for this run. */
+  done: boolean;
+  /** True when the active scrape is paused. */
+  paused: boolean;
 }

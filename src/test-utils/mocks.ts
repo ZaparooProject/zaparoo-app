@@ -125,16 +125,6 @@ export const mockCapacitorCore = (platform = "ios") => ({
   },
 });
 
-// RevenueCat Purchases mock
-export const mockRevenueCatPurchases = () => ({
-  Purchases: {
-    restorePurchases: vi.fn(),
-    getCustomerInfo: vi.fn(),
-    getOfferings: vi.fn(),
-    purchasePackage: vi.fn(),
-  },
-});
-
 // React Hot Toast mock
 export const mockReactHotToast = () => ({
   default: {

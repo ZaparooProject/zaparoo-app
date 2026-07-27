@@ -14,6 +14,13 @@
     color: var(--color-foreground);
   }
 
+  /* Prevent iOS WebView from auto-zooming when form controls are focused */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
   /* Style native select dropdown arrow for dark theme (especially iOS) */
   select {
     color-scheme: dark;
@@ -186,12 +193,33 @@
       transform: scale(1);
     }
   }
+
+  /* Amber halo + slow throb used to flag pending notifications. Distinct from
+     the cyan glow used for active-nav state. The base filter is the brightest
+     point of the throb so users with prefers-reduced-motion still see a
+     readable static halo (the global reduce-motion rule freezes the
+     animation). */
+  @keyframes amber-throb {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.3));
+    }
+    50% {
+      filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.9));
+    }
+  }
 }
 
 @layer utilities {
   /* Custom utility classes */
   .bg-transparent {
     background: transparent !important;
+  }
+
+  .attention-throb {
+    filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.7));
+    animation: amber-throb 1.8s ease-in-out infinite;
+    will-change: filter;
   }
 
   [type="search"] {
@@ -204,6 +232,9 @@
   }
   .text-error {
     color: var(--color-error);
+  }
+  .text-warning {
+    color: var(--color-warning);
   }
   .text-primary {
     color: var(--color-primary);
@@ -221,6 +252,9 @@
   }
   .border-bd-input {
     border-color: var(--color-border-input);
+  }
+  .border-error {
+    border-color: var(--color-error);
   }
 
   /* Backgrounds */
@@ -319,6 +353,7 @@
   --color-primary: #3faeec;
   --color-success: #36d24f;
   --color-error: #e87171;
+  --color-warning: #facc15;
   --color-border-filled: rgba(255, 255, 255, 0.4);
   --color-border-outline: #b4bbd9;
   --color-border-input: #9197ae;
@@ -623,6 +658,184 @@
     border-right: none;
     border-top: none;
   }
+}
+
+.remote-keyboard-pad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.remote-keyboard-dpad {
+  display: grid;
+  grid-template-areas:
+    ". up ."
+    "left ok right"
+    ". down .";
+  grid-template-columns: repeat(3, 4rem);
+  grid-template-rows: repeat(3, 3.5rem);
+  gap: 0.35rem;
+}
+
+.remote-keyboard-pad-button,
+.remote-keyboard-pad-action {
+  border: 1px solid hsl(0 0% 100% / 13%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.7rem;
+  background: hsl(210 22% 15% / 80%);
+  color: hsl(0 0% 100%);
+  font-size: 1rem;
+  font-weight: 600;
+  transition:
+    opacity 0.1s,
+    transform 0.1s;
+}
+
+.remote-keyboard-pad-button:active,
+.remote-keyboard-pad-action:active {
+  transform: scale(0.96);
+  opacity: 0.8;
+}
+
+.remote-keyboard-pad-button:focus-visible,
+.remote-keyboard-pad-action:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px hsl(0 0% 100% / 50%),
+    0 0 0 4px hsl(var(--background));
+}
+
+.remote-keyboard-pad-up {
+  grid-area: up;
+}
+
+.remote-keyboard-pad-left {
+  grid-area: left;
+}
+
+.remote-keyboard-pad-ok {
+  grid-area: ok;
+  min-width: 4rem;
+}
+
+.remote-keyboard-pad-right {
+  grid-area: right;
+}
+
+.remote-keyboard-pad-down {
+  grid-area: down;
+}
+
+.remote-keyboard-pad-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.remote-keyboard-pad-action {
+  min-height: 3.5rem;
+  min-width: 4rem;
+  padding: 0 0.875rem;
+}
+
+.remote-keyboard-pad-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+.remote-keyboard-screenshot-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.remote-keyboard-screenshot-image {
+  max-height: 22rem;
+  width: 100%;
+  border: 1px solid hsl(0 0% 100% / 13%);
+  border-radius: 0.7rem;
+  background: hsl(0 0% 0% / 45%);
+  object-fit: contain;
+}
+
+.remote-keyboard-screenshot-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.remote-keyboard-screenshot-control {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid hsl(0 0% 100% / 13%);
+  border-radius: 0.7rem;
+  background: hsl(210 22% 15% / 80%);
+  color: hsl(0 0% 100%);
+  font-weight: 600;
+}
+
+.remote-keyboard-screenshot-control:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px hsl(0 0% 100% / 50%),
+    0 0 0 4px hsl(var(--background));
+}
+
+.remote-keyboard-wrapper .remote-keyboard {
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-row {
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-row .hg-button:not(:last-child) {
+  margin-right: 0;
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-row:not(:last-child) {
+  margin-bottom: 0.25rem;
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-button {
+  min-height: 2.5rem;
+  border: 1px solid hsl(0 0% 100% / 13%);
+  border-radius: 0.7rem;
+  background: hsl(210 22% 15% / 80%);
+  color: hsl(0 0% 100%);
+  box-shadow: none;
+  font-size: 1rem;
+  font-weight: 600;
+  transition:
+    opacity 0.1s,
+    transform 0.1s;
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-button:active {
+  transform: scale(0.96);
+  opacity: 0.8;
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px hsl(0 0% 100% / 50%),
+    0 0 0 4px hsl(var(--background));
+}
+
+.remote-keyboard-wrapper .remote-keyboard .hg-button-space {
+  max-width: none;
 }
 
 /* Accessibility: Respect user's reduced motion preference */

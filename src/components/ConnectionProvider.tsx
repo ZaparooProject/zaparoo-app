@@ -21,7 +21,12 @@ import { Network } from "@capacitor/network";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import { Clock, AlertTriangle } from "lucide-react";
+import {
+  Clock,
+  AlertTriangle,
+  OctagonAlert,
+  TriangleAlert,
+} from "lucide-react";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import {
   connectionManager,
@@ -31,26 +36,41 @@ import {
 import { logger } from "@/lib/logger";
 import {
   IndexResponse,
+  InboxMessage,
+  InboxSeverity,
   Notification,
   PlayingResponse,
   PlaytimeLimitReachedParams,
   PlaytimeLimitWarningParams,
+  ScrapingStatusNotification,
   TokenResponse,
 } from "@/lib/models";
+import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import {
   CoreAPI,
   getDeviceAddress,
-  getWsUrl,
   isCancelled,
+  isExpectedMediaDatabaseError,
+  validateDeviceAddress,
   type NotificationRequest,
 } from "@/lib/coreApi";
-import { useStatusStore, ConnectionState } from "@/lib/store";
+import {
+  DEFAULT_GAMES_INDEX,
+  useStatusStore,
+  ConnectionState,
+} from "@/lib/store";
+import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
+import {
+  isNativePluginAvailable,
+  isPluginAvailable,
+} from "@/lib/capacitorBridge";
 import { formatDurationDisplay, formatDurationAccessible } from "@/lib/utils";
 import {
   ConnectionContext,
   type ConnectionContextValue,
 } from "@/hooks/useConnection";
 import { useAnnouncer } from "./A11yAnnouncer";
+import { PairingModal } from "./PairingModal";
 
 interface ConnectionProviderProps {
   children: ReactNode;
@@ -63,6 +83,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const isInitialized = useRef(false);
   // Track current connection to prevent stale events from old connections
   const currentConnectionId = useRef<string | null>(null);
+  // Pending media-fetch retry; cleared on cleanup so a stale connection
+  // can't write its state into the freshly-mounted one.
+  const mediaRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Pairing modal is auto-opened when the transport reports the server requires
+  // encryption (or rejects our credentials). Closed on success or user dismiss.
+  const [pairingOpen, setPairingOpen] = useState(false);
 
   // Refs for stable callback references - prevents effect re-run on callback changes
   const handleConnectionOpenRef = useRef<() => void>(() => {});
@@ -79,9 +105,23 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setConnectionError,
     setPlaying,
     setGamesIndex,
+    setScrapingStatus,
     setLastToken,
+    setActiveTokens,
+    clearActiveTokens,
+    setStagedToken,
+    clearStagedToken,
     addDeviceHistory,
     setDeviceHistory,
+    updateDeviceHistoryMeta,
+    setCoreVersion,
+    setCorePlatform,
+    setCoreVersionPending,
+    setEncryptionState,
+    setPairingRequired,
+    addInboxMessage,
+    setInboxMessages,
+    setInboxModalOpen,
   } = useStatusStore(
     useShallow((state) => ({
       targetDeviceAddress: state.targetDeviceAddress,
@@ -90,9 +130,23 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setConnectionError: state.setConnectionError,
       setPlaying: state.setPlaying,
       setGamesIndex: state.setGamesIndex,
+      setScrapingStatus: state.setScrapingStatus,
       setLastToken: state.setLastToken,
+      setActiveTokens: state.setActiveTokens,
+      clearActiveTokens: state.clearActiveTokens,
+      setStagedToken: state.setStagedToken,
+      clearStagedToken: state.clearStagedToken,
       addDeviceHistory: state.addDeviceHistory,
       setDeviceHistory: state.setDeviceHistory,
+      updateDeviceHistoryMeta: state.updateDeviceHistoryMeta,
+      setCoreVersion: state.setCoreVersion,
+      setCorePlatform: state.setCorePlatform,
+      setCoreVersionPending: state.setCoreVersionPending,
+      setEncryptionState: state.setEncryptionState,
+      setPairingRequired: state.setPairingRequired,
+      addInboxMessage: state.addInboxMessage,
+      setInboxMessages: state.setInboxMessages,
+      setInboxModalOpen: state.setInboxModalOpen,
     })),
   );
 
@@ -152,6 +206,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             const params = notification.params as PlayingResponse;
             logger.log("media.started", params);
             setPlaying(params);
+            clearStagedToken();
             break;
           }
 
@@ -163,6 +218,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               mediaPath: "",
               mediaName: "",
             });
+            clearStagedToken();
             break;
           }
 
@@ -173,15 +229,44 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             const currentState = useStatusStore.getState().gamesIndex;
             setGamesIndex(params);
 
-            // Invalidate media query on significant state changes
-            if (
+            const mediaStateChanged =
               currentState.indexing !== params.indexing ||
               currentState.optimizing !== params.optimizing ||
               currentState.exists !== params.exists ||
-              currentState.totalMedia !== params.totalMedia
-            ) {
+              currentState.totalMedia !== params.totalMedia;
+            if (mediaStateChanged) {
               logger.log("Database state changed, invalidating media query");
               queryClient.invalidateQueries({ queryKey: ["media"] });
+            }
+
+            // Latest Core increments systemsCompleted after each durable system
+            // commit. Older Core omits it but flips indexing/exists at completion.
+            const libraryContentChanged =
+              currentState.indexing !== params.indexing ||
+              currentState.exists !== params.exists ||
+              currentState.totalMedia !== params.totalMedia ||
+              currentState.systemsCompleted !== params.systemsCompleted;
+            if (libraryContentChanged) {
+              logger.log("Media library changed, invalidating cached lists");
+              queryClient.invalidateQueries({ queryKey: ["systems"] });
+              queryClient.invalidateQueries({ queryKey: ["tags"] });
+              queryClient.invalidateQueries({
+                queryKey: ["infiniteMediaSearch"],
+              });
+            }
+            break;
+          }
+
+          case Notification.MediaScraping: {
+            const params = notification.params as ScrapingStatusNotification;
+            logger.log("mediaScraping", params);
+            setScrapingStatus(params);
+            if (params.done || !params.scraping) {
+              queryClient.invalidateQueries({ queryKey: ["media"] });
+              queryClient.invalidateQueries({ queryKey: ["tags"] });
+              queryClient.invalidateQueries({
+                queryKey: ["infiniteMediaSearch"],
+              });
             }
             break;
           }
@@ -190,6 +275,41 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             const params = notification.params as TokenResponse;
             logger.log("activeToken", params);
             setLastToken(params);
+            setActiveTokens([params]);
+            clearStagedToken();
+            break;
+          }
+
+          case Notification.TokensRemoved: {
+            logger.log("tokens.removed");
+            clearActiveTokens();
+            break;
+          }
+
+          case Notification.TokensStaged: {
+            const params = notification.params as TokenResponse;
+            logger.log("tokens.staged", params);
+            setStagedToken({ token: params, ready: false });
+            announce(t("tokenStaging.stagedAnnounce"), "assertive");
+            break;
+          }
+
+          case Notification.TokensStagedReady: {
+            const params = notification.params as TokenResponse;
+            logger.log("tokens.staged.ready", params);
+            setStagedToken({ token: params, ready: true });
+            announce(t("tokenStaging.readyAnnounce"), "assertive");
+            break;
+          }
+
+          case Notification.ReadersConnected:
+          case Notification.ReadersDisconnected: {
+            logger.log(notification.method, notification.params);
+            queryClient.invalidateQueries({ queryKey: ["readers"] });
+            if (notification.method === Notification.ReadersDisconnected) {
+              clearActiveTokens();
+              clearStagedToken();
+            }
             break;
           }
 
@@ -236,6 +356,53 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             break;
           }
 
+          case Notification.InboxAdded: {
+            const inboxMessage = notification.params as InboxMessage;
+            const coreVersion = useStatusStore.getState().coreVersion;
+            if (!isCoreFeatureAvailable("inbox", coreVersion)) {
+              break;
+            }
+            addInboxMessage(inboxMessage);
+            if (inboxMessage.severity >= InboxSeverity.Warning) {
+              const severityIconNode =
+                inboxMessage.severity === InboxSeverity.Error ? (
+                  <span className="text-error pr-1 pl-1">
+                    <OctagonAlert size={20} />
+                  </span>
+                ) : (
+                  <span className="pr-1 pl-1 text-amber-400">
+                    <TriangleAlert size={20} />
+                  </span>
+                );
+              toast(
+                (to) => (
+                  <span
+                    className="flex grow flex-col"
+                    onClick={() => {
+                      toast.dismiss(to.id);
+                      setInboxModalOpen(true);
+                    }}
+                    onKeyUp={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        toast.dismiss(to.id);
+                        setInboxModalOpen(true);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    {inboxMessage.title}
+                  </span>
+                ),
+                {
+                  icon: severityIconNode,
+                  duration: 6000,
+                },
+              );
+            }
+            break;
+          }
+
           case Notification.PlaytimeLimitReached: {
             const reachedParams =
               notification.params as PlaytimeLimitReachedParams;
@@ -274,6 +441,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             break;
           }
 
+          case Notification.TokensLaunching: {
+            logger.debug("running notification ignored", notification.params);
+            break;
+          }
+
           default:
             logger.warn("Unknown notification method:", notification.method);
         }
@@ -282,18 +454,42 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         toast.error(t("error", { msg: "Error processing notification" }));
       }
     },
-    [setPlaying, setGamesIndex, setLastToken, queryClient, t, announce],
+    [
+      setPlaying,
+      setGamesIndex,
+      setScrapingStatus,
+      setLastToken,
+      setActiveTokens,
+      clearActiveTokens,
+      setStagedToken,
+      clearStagedToken,
+      queryClient,
+      t,
+      announce,
+      addInboxMessage,
+      setInboxModalOpen,
+    ],
   );
 
   // Handle connection open - fetch initial data
   const handleConnectionOpen = useCallback(() => {
     setConnectionError("");
+    setInboxMessages([]);
+    setInboxModalOpen(false);
 
     // Flush any queued API requests
     CoreAPI.flushQueue();
 
-    // Load device history
-    Preferences.get({ key: "deviceHistory" })
+    // Hydrate device history from Preferences first, THEN call version() and
+    // merge platform/version metadata in .finally(). Do not parallelise: a
+    // late setDeviceHistory(stored) would wholesale overwrite the
+    // freshly-merged metadata from updateDeviceHistoryMeta().
+    setCoreVersionPending(true);
+    const deviceHistory = isPluginAvailable("Preferences")
+      ? Preferences.get({ key: "deviceHistory" })
+      : Promise.resolve({ value: null });
+
+    deviceHistory
       .then((v) => {
         try {
           if (v.value) {
@@ -307,32 +503,148 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       })
       .catch((e) => {
         logger.error("Failed to get device history:", e);
+      })
+      .finally(() => {
+        // Fetch Core version for feature gating, then persist platform/version
+        // on the device-history entry so the device list can render them
+        // between connects. lastConnectedAt powers the "recently used"
+        // sort/subtitle (no UI yet, but stored for free).
+        CoreAPI.version()
+          .then((res) => {
+            if (isCancelled(res)) {
+              // Don't clear pending — a new connection will manage its own pending state
+              logger.log("Version request was cancelled, skipping");
+              return;
+            }
+            setCoreVersion(res.version);
+            setCorePlatform(res.platform);
+            setCoreVersionPending(false);
+            updateDeviceHistoryMeta(getDeviceAddress(), {
+              platform: res.platform,
+              version: res.version,
+              lastConnectedAt: Date.now(),
+            });
+            if (isCoreFeatureAvailable("mediaScrapers", res.version)) {
+              CoreAPI.mediaScrapeStatus()
+                .then((statusRes) => {
+                  if (isCancelled(statusRes)) {
+                    logger.log(
+                      "Media scrape status request was cancelled, skipping",
+                    );
+                    return;
+                  }
+                  setScrapingStatus(statusRes);
+                })
+                .catch((err) => {
+                  setScrapingStatus(null);
+                  logger.error("Failed to fetch media scrape status:", err, {
+                    category: "api",
+                    action: "mediaScrapeStatus",
+                    severity: "warning",
+                  });
+                });
+            } else {
+              setScrapingStatus(null);
+            }
+            if (isCoreFeatureAvailable("inbox", res.version)) {
+              CoreAPI.inbox()
+                .then((inboxRes) => {
+                  if (isCancelled(inboxRes)) {
+                    logger.log("Inbox request was cancelled, skipping");
+                    return;
+                  }
+                  setInboxMessages(inboxRes.messages);
+                })
+                .catch((err) => {
+                  logger.error("Failed to fetch inbox:", err, {
+                    category: "api",
+                    action: "inbox",
+                    severity: "warning",
+                  });
+                });
+            } else {
+              setInboxMessages([]);
+              setInboxModalOpen(false);
+            }
+          })
+          .catch((e) => {
+            logger.error("Failed to get Core version:", e, {
+              category: "api",
+              action: "version",
+              severity: "warning",
+            });
+            setCoreVersion(null);
+            setCorePlatform(null);
+            setCoreVersionPending(false);
+          });
       });
 
-    // Fetch media information
-    CoreAPI.media()
-      .then((v) => {
-        // Skip processing if request was cancelled (stale, aborted, or connection reset)
-        if (isCancelled(v)) {
-          logger.log("Media request was cancelled, skipping");
-          return;
-        }
-        try {
-          setGamesIndex(v.database);
-          const firstActive = v.active[0];
-          if (firstActive) {
-            setPlaying(firstActive);
+    // Refetch device-scoped library data after every connection. This handles
+    // reconnects where Core's library changed while app was disconnected.
+    queryClient.invalidateQueries({ queryKey: ["media"] });
+    queryClient.invalidateQueries({ queryKey: ["systems"] });
+    queryClient.invalidateQueries({ queryKey: ["tags"] });
+    queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] });
+
+    const fetchMediaState = (retryDelayMs: number) => {
+      const scheduledFor = currentConnectionId.current;
+      CoreAPI.media()
+        .then((v) => {
+          if (isCancelled(v)) {
+            logger.log("Media request was cancelled, retrying once");
+            // The first call after a reconnect can race with the transport
+            // re-coming up; one delayed retry is enough to catch up.
+            if (retryDelayMs > 0) {
+              if (mediaRetryTimer.current) {
+                clearTimeout(mediaRetryTimer.current);
+              }
+              mediaRetryTimer.current = setTimeout(() => {
+                mediaRetryTimer.current = null;
+                // Bail if the connection has changed under us — otherwise
+                // we'd write a stale connection's state into a newer one.
+                if (currentConnectionId.current !== scheduledFor) {
+                  return;
+                }
+                fetchMediaState(0);
+              }, retryDelayMs);
+            }
+            return;
           }
-        } catch (e) {
-          logger.error("Error processing media data:", e);
-          toast.error(t("error", { msg: "Failed to process media data" }));
-        }
-      })
-      .catch((e) => {
-        logger.error("Failed to get media information:", e);
-        // Use rate-limited toast to prevent spam on connection issues
-        showRateLimitedErrorToast(t("error", { msg: "Failed to fetch media" }));
-      });
+          try {
+            setGamesIndex(v.database);
+            const firstActive = v.active[0];
+            if (firstActive) {
+              setPlaying(firstActive);
+            }
+          } catch (e) {
+            logger.error("Error processing media data:", e);
+            toast.error(t("error", { msg: "Failed to process media data" }));
+          }
+        })
+        .catch((e) => {
+          if (isExpectedMediaDatabaseError(e)) {
+            setGamesIndex(DEFAULT_GAMES_INDEX);
+            return;
+          }
+
+          logger.error("Failed to get media information:", e);
+          // Suppress the toast unless we're actually live-connected — the
+          // connection-state UI already conveys reconnect/disconnect, and
+          // WS transport flapping makes these rejections common. (Note: the
+          // store's `connected` flag stays true during RECONNECTING, so we
+          // intentionally check `connectionState` here, not `connected`.)
+          if (
+            useStatusStore.getState().connectionState ===
+            ConnectionState.CONNECTED
+          ) {
+            showRateLimitedErrorToast(
+              t("error", { msg: "Failed to fetch media" }),
+            );
+          }
+        });
+    };
+
+    fetchMediaState(500);
 
     // Fetch tokens information
     CoreAPI.tokens()
@@ -343,6 +655,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           return;
         }
         try {
+          setActiveTokens(v.active ?? []);
           if (v.last) {
             setLastToken(v.last);
           }
@@ -353,18 +666,31 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       })
       .catch((e) => {
         logger.error("Failed to get tokens information:", e);
-        // Use rate-limited toast to prevent spam on connection issues
-        showRateLimitedErrorToast(
-          t("error", { msg: "Failed to fetch tokens" }),
-        );
+        if (
+          useStatusStore.getState().connectionState ===
+          ConnectionState.CONNECTED
+        ) {
+          showRateLimitedErrorToast(
+            t("error", { msg: "Failed to fetch tokens" }),
+          );
+        }
       });
   }, [
     setConnectionError,
     setDeviceHistory,
     addDeviceHistory,
+    updateDeviceHistoryMeta,
     setGamesIndex,
     setPlaying,
     setLastToken,
+    setActiveTokens,
+    setCoreVersion,
+    setCorePlatform,
+    setCoreVersionPending,
+    setScrapingStatus,
+    setInboxMessages,
+    setInboxModalOpen,
+    queryClient,
     t,
   ]);
 
@@ -408,28 +734,27 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   useEffect(() => {
     // Reset local connection state when device changes so UI doesn't show stale data
     setLocalConnection(null);
+    setEncryptionState("unknown");
+    setPairingRequired(false);
+    setPairingOpen(false);
 
     if (targetDeviceAddress === "") {
       setConnectionState(ConnectionState.DISCONNECTED);
       return;
     }
 
-    let wsUrl: string;
-    try {
-      wsUrl = getWsUrl();
-    } catch (e) {
-      logger.error("Failed to construct WebSocket URL:", e);
-      setConnectionState(ConnectionState.ERROR);
-      setConnectionError(
-        e instanceof Error ? e.message : "Invalid configuration",
+    const addressResult = validateDeviceAddress(targetDeviceAddress);
+    if (!addressResult.ok) {
+      logger.warn(
+        `[ConnectionProvider] Invalid device address: ${targetDeviceAddress}`,
       );
-      return;
-    }
-    if (!wsUrl) {
       setConnectionState(ConnectionState.ERROR);
-      setConnectionError("Invalid WebSocket URL");
+      setConnectionError(tRef.current(addressResult.errorKey));
       return;
     }
+
+    const wsUrl = addressResult.wsUrl;
+    const deviceAddress = addressResult.address;
 
     // Generate unique ID for this connection session to prevent stale events
     // Use crypto.randomUUID if available, fallback for older Android WebViews
@@ -443,7 +768,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     CoreAPI.reset();
 
     logger.log(
-      `[ConnectionProvider] Setting up connection to: ${targetDeviceAddress} (id: ${connectionId.slice(0, 8)})`,
+      `[ConnectionProvider] Setting up connection to: ${deviceAddress} (id: ${connectionId.slice(0, 8)})`,
     );
 
     // Setup connection manager event handlers
@@ -456,6 +781,19 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           // Update local connection state for context consumers
           // Note: useState always triggers re-render when called with a new object reference
           setLocalConnection(connection);
+
+          // Each new connect attempt starts unverified — clear stale signals
+          // from a prior attempt so the UI gate in ConnectionStatusDisplay shows
+          // "connecting" until the server confirms the encryption mode. Reset
+          // only on "connecting" (the start of a fresh socket attempt). The
+          // transient "reconnecting" state that fires between disconnect and
+          // the next connect must NOT reset, because onEncryptionRequired sets
+          // pairingRequired=true just before the close — wiping it during
+          // "reconnecting" prevents the pair UI from ever rendering.
+          if (connection.state === "connecting") {
+            setEncryptionState("unknown");
+            setPairingRequired(false);
+          }
 
           // Handle connection open - always re-fetch data to prevent stale state
           if (connection.state === "connected") {
@@ -503,16 +841,70 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           );
         }
       },
+      onEncryptedHandshakeOk: () => {
+        setEncryptionState("encrypted");
+        setPairingRequired(false);
+      },
+      onPlaintextMode: () => {
+        setEncryptionState("plaintext");
+        setPairingRequired(false);
+      },
+      onEncryptionRequired: () => {
+        // Server demands encryption but we have no credentials — open the
+        // pairing modal so the user can pair. Connection stays failed until
+        // pairing succeeds and triggers an immediate reconnect.
+        setEncryptionState("plaintext");
+        setPairingRequired(true);
+        setConnectionError(
+          tRef.current("pairing.connectionError.encryptionRequired"),
+        );
+        setPairingOpen(true);
+      },
+      onUnsupportedVersion: () => {
+        setEncryptionState("plaintext");
+        setConnectionError(
+          tRef.current("pairing.connectionError.unsupportedVersion"),
+        );
+      },
+      onCredentialsRevoked: () => {
+        // Server rejected our stored credentials — clear them and prompt
+        // the user to pair again.
+        const deviceKey = normalizeDeviceKey(deviceAddress);
+        credentialStore.delete(deviceKey).catch((err) => {
+          logger.error("Failed to delete revoked credentials", err, {
+            category: "storage",
+            action: "deleteCredentials",
+          });
+        });
+        const updated = useStatusStore
+          .getState()
+          .deviceHistory.map((entry) =>
+            entry.address === deviceAddress
+              ? { ...entry, paired: undefined }
+              : entry,
+          );
+        setDeviceHistory(updated);
+        setEncryptionState("plaintext");
+        setPairingRequired(true);
+        setConnectionError(
+          tRef.current("pairing.connectionError.credentialsRevoked"),
+        );
+        setPairingOpen(true);
+      },
     });
 
     // Add device and set as active
     const transport = connectionManager.addDevice({
-      deviceId: targetDeviceAddress,
+      deviceId: deviceAddress,
       type: "websocket",
       address: wsUrl,
+      encryption: {
+        getCredentials: () =>
+          credentialStore.get(normalizeDeviceKey(deviceAddress)),
+      },
     });
 
-    connectionManager.setActiveDevice(targetDeviceAddress);
+    connectionManager.setActiveDevice(deviceAddress);
 
     // Create a compatibility wrapper for CoreAPI
     const transportWrapper = {
@@ -540,15 +932,23 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       if (currentConnectionId.current === connectionId) {
         currentConnectionId.current = null;
       }
+      // Drop any pending media retry so it can't fire against the next connection.
+      if (mediaRetryTimer.current) {
+        clearTimeout(mediaRetryTimer.current);
+        mediaRetryTimer.current = null;
+      }
       // Reset CoreAPI to clear any pending requests for this connection
       CoreAPI.reset();
-      connectionManager.removeDevice(targetDeviceAddress);
+      connectionManager.removeDevice(deviceAddress);
       setConnectionState(ConnectionState.DISCONNECTED);
     };
   }, [
     targetDeviceAddress,
     setConnectionState,
     setConnectionError,
+    setEncryptionState,
+    setPairingRequired,
+    setDeviceHistory,
     mapTransportState,
     // Note: handleConnectionOpen, processNotification, and t are accessed via refs
     // to prevent this effect from re-running when those callbacks change
@@ -562,6 +962,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       null;
 
     const setupListeners = async () => {
+      if (!isNativePluginAvailable("App")) return;
+
       resumeListener = await App.addListener("resume", () => {
         logger.log("[ConnectionProvider] App resumed");
         connectionManager.resumeAll();
@@ -573,7 +975,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       });
     };
 
-    setupListeners();
+    setupListeners().catch((e) => {
+      logger.warn("[ConnectionProvider] Failed to setup app listeners:", e);
+    });
 
     return () => {
       resumeListener?.remove();
@@ -603,7 +1007,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   // Network change detection (native platforms only)
   // Triggers immediate reconnect when network is restored (e.g., WiFi reconnects)
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
+    if (!Capacitor.isNativePlatform() || !isNativePluginAvailable("Network")) {
+      return;
+    }
 
     let networkListener: PluginListenerHandle | null = null;
 
@@ -630,6 +1036,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     };
   }, []);
 
+  const openPairingModal = useCallback(() => {
+    setPairingOpen(true);
+  }, []);
+
   // Memoize context value to prevent unnecessary re-renders of consumers
   const contextValue = useMemo<ConnectionContextValue>(
     () => ({
@@ -638,13 +1048,26 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       hasData,
       showConnecting,
       showReconnecting,
+      openPairingModal,
     }),
-    [localConnection, isConnected, hasData, showConnecting, showReconnecting],
+    [
+      localConnection,
+      isConnected,
+      hasData,
+      showConnecting,
+      showReconnecting,
+      openPairingModal,
+    ],
   );
 
   return (
     <ConnectionContext.Provider value={contextValue}>
       {children}
+      <PairingModal
+        isOpen={pairingOpen}
+        close={() => setPairingOpen(false)}
+        address={targetDeviceAddress}
+      />
     </ConnectionContext.Provider>
   );
 }

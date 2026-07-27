@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "../../../../test-utils";
 import { ConnectionStatus } from "../../../../components/home/ConnectionStatus";
+import { useStatusStore } from "@/lib/store";
 
 // Mock coreApi
 const mockGetDeviceAddress = vi.fn(() => "192.168.1.100");
@@ -54,8 +55,22 @@ describe("ConnectionStatus", () => {
       isConnected: false,
       showConnecting: false,
       showReconnecting: false,
+      openPairingModal: () => {},
       hasData: false,
     });
+    // Reset the store to its initial state, then layer per-test overrides on
+    // top — prevents state leaking across tests via the shared store.
+    // encryptionState is "plaintext" so the "connected" gate doesn't hold the
+    // display in "connecting".
+    useStatusStore.setState(
+      {
+        ...useStatusStore.getInitialState(),
+        connectionError: "",
+        encryptionState: "plaintext",
+        pairingRequired: false,
+      },
+      true,
+    );
   });
 
   it("renders disconnected state when no address is saved", () => {
@@ -72,6 +87,7 @@ describe("ConnectionStatus", () => {
       isConnected: true,
       showConnecting: false,
       showReconnecting: false,
+      openPairingModal: () => {},
       hasData: true,
     });
 
@@ -87,6 +103,7 @@ describe("ConnectionStatus", () => {
       isConnected: false,
       showConnecting: true,
       showReconnecting: false,
+      openPairingModal: () => {},
       hasData: false,
     });
 
@@ -101,6 +118,7 @@ describe("ConnectionStatus", () => {
       isConnected: false,
       showConnecting: false,
       showReconnecting: true,
+      openPairingModal: () => {},
       hasData: true,
     });
 
@@ -116,6 +134,7 @@ describe("ConnectionStatus", () => {
       isConnected: false,
       showConnecting: false,
       showReconnecting: false,
+      openPairingModal: () => {},
       hasData: false,
     });
 
@@ -131,6 +150,7 @@ describe("ConnectionStatus", () => {
       isConnected: true,
       showConnecting: false,
       showReconnecting: false,
+      openPairingModal: () => {},
       hasData: true,
     });
 

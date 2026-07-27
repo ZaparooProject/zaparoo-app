@@ -22,6 +22,8 @@ export interface ConnectionContextValue {
   showConnecting: boolean;
   /** Whether to show "Reconnecting..." indicator (had prior successful connection) */
   showReconnecting: boolean;
+  /** Open the pairing modal for the current device */
+  openPairingModal: () => void;
 }
 
 export const ConnectionContext = createContext<ConnectionContextValue>({
@@ -30,6 +32,7 @@ export const ConnectionContext = createContext<ConnectionContextValue>({
   hasData: false,
   showConnecting: false,
   showReconnecting: false,
+  openPairingModal: () => {},
 });
 
 /**

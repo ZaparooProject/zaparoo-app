@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useRef, useState } from "react";
 import { Preferences } from "@capacitor/preferences";
-import classNames from "classnames";
 import { useStatusStore } from "@/lib/store.ts";
 import { logger } from "@/lib/logger";
 import { SlideModal } from "@/components/SlideModal.tsx";
@@ -39,9 +38,10 @@ export function MediaSearchModal(props: {
 
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
 
-  // Manual search function
+  // Core keeps exists true once committed systems are searchable during an
+  // index; older versions report false until indexing finishes.
   const performSearch = () => {
-    if (!connected || !gamesIndex.exists || gamesIndex.indexing) {
+    if (!connected || !gamesIndex.exists) {
       return;
     }
 
@@ -78,7 +78,7 @@ export function MediaSearchModal(props: {
     setSelectedResult(result);
   };
 
-  const canSearch = connected && gamesIndex.exists && !gamesIndex.indexing;
+  const canSearch = connected && gamesIndex.exists;
 
   return (
     <>
@@ -116,9 +116,7 @@ export function MediaSearchModal(props: {
                 value={selectedSystem}
                 onSelect={handleSystemSelect}
                 includeAllOption={true}
-                className={classNames({
-                  "opacity-50": !canSearch,
-                })}
+                disabled={!canSearch || !props.isOpen}
               />
             </div>
 

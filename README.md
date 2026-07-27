@@ -72,6 +72,7 @@ All contributors to the app will be included here and in the About page of the a
 - Seexelas - French/Français
 - Ze Conehead - German/Deutsch
 - Pink Melon - Korean/한국어
+- [Carlos R.](https://github.com/crodriguezdominguez) - Spanish/Español
 
 Translation files are located in `src/translations/` as JSON files. To add or update a translation, copy `en-US.json` as a starting point and translate the values. The filename should use the BCP 47 locale format (e.g. `de-DE.json` for German, `ja-JP.json` for Japanese).
 

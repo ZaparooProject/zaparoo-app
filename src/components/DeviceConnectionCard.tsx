@@ -1,9 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
 import { Capacitor } from "@capacitor/core";
-import { ArrowLeftRightIcon, SearchIcon } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { ArrowLeftRightIcon, KeyRoundIcon, SearchIcon } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
-import { CoreAPI, getDeviceAddress } from "@/lib/coreApi";
+import { getDeviceAddress } from "@/lib/coreApi";
+import { normalizeDeviceKey } from "@/lib/crypto/credentials";
+import { useStatusStore } from "@/lib/store";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 import { TextInput } from "./wui/TextInput";
@@ -14,8 +16,7 @@ interface DeviceConnectionCardProps {
   setAddress: (address: string) => void;
   onAddressChange: (address: string) => void;
   connectionError: string;
-  hasDeviceHistory: boolean;
-  onHistoryClick: () => void;
+  addressError?: string;
   onScanClick?: () => void;
 }
 
@@ -24,24 +25,34 @@ export function DeviceConnectionCard({
   setAddress,
   onAddressChange,
   connectionError,
-  hasDeviceHistory,
-  onHistoryClick,
+  addressError,
   onScanClick,
 }: DeviceConnectionCardProps) {
   const { t } = useTranslation();
-  const { isConnected } = useConnection();
+  const { isConnected, openPairingModal } = useConnection();
 
-  // Fetch version info when connected
   const savedAddress = getDeviceAddress();
-  const { data: version, isLoading: isVersionLoading } = useQuery({
-    queryKey: ["version", savedAddress],
-    queryFn: () => CoreAPI.version(),
-    enabled: isConnected && !!savedAddress,
-  });
+  const coreVersion = useStatusStore((state) => state.coreVersion);
+  const corePlatform = useStatusStore((state) => state.corePlatform);
+  const coreVersionPending = useStatusStore(
+    (state) => state.coreVersionPending,
+  );
+  const pairingRequired = useStatusStore((state) => state.pairingRequired);
+  const deviceHistory = useStatusStore((state) => state.deviceHistory);
 
-  // Settings page shows version/platform info as subtitle
-  const connectedSubtitle = version
-    ? `${version.platform} (${/^\d+\.\d+\.\d+/.test(version.version) ? "v" : ""}${version.version})`
+  const savedKey = savedAddress ? normalizeDeviceKey(savedAddress) : "";
+  const currentEntry = savedKey
+    ? deviceHistory.find((e) => normalizeDeviceKey(e.address) === savedKey)
+    : undefined;
+
+  const versionLabel =
+    coreVersion !== null
+      ? `${/^\d+\.\d+\.\d+/.test(coreVersion) ? "v" : ""}${coreVersion}`
+      : undefined;
+  const connectedSubtitle = versionLabel
+    ? corePlatform
+      ? `${corePlatform} (${versionLabel})`
+      : versionLabel
     : undefined;
 
   return (
@@ -57,6 +68,7 @@ export function DeviceConnectionCard({
             saveValue={onAddressChange}
             saveDisabled={address === savedAddress}
             autoComplete="off"
+            error={addressError}
             onKeyUp={(e) => {
               if (e.key === "Enter" && address !== savedAddress) {
                 onAddressChange(address);
@@ -68,9 +80,18 @@ export function DeviceConnectionCard({
           <ConnectionStatusDisplay
             connectionError={connectionError}
             connectedSubtitle={connectedSubtitle}
-            connectedSubtitleLoading={isVersionLoading}
+            connectedSubtitleLoading={isConnected && coreVersionPending}
+            connectedName={currentEntry?.name}
             action={
               <div className="flex items-center gap-1">
+                {pairingRequired && (
+                  <Button
+                    icon={<KeyRoundIcon size="24" />}
+                    variant="text"
+                    onClick={openPairingModal}
+                    aria-label={t("pairing.openPairing")}
+                  />
+                )}
                 {/* Network scan button - only on native platforms */}
                 {Capacitor.isNativePlatform() && onScanClick && (
                   <Button
@@ -80,13 +101,13 @@ export function DeviceConnectionCard({
                     aria-label={t("settings.networkScan.title")}
                   />
                 )}
-                <Button
-                  icon={<ArrowLeftRightIcon size="24" />}
-                  variant="text"
-                  onClick={onHistoryClick}
+                <Link
+                  to="/settings/devices"
                   aria-label={t("settings.deviceHistory")}
-                  disabled={!hasDeviceHistory}
-                />
+                  className="focus-visible:ring-background flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 text-white transition-all duration-100 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
+                >
+                  <ArrowLeftRightIcon size="24" />
+                </Link>
               </div>
             }
           />

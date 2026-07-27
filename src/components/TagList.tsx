@@ -1,5 +1,6 @@
 import { TagInfo } from "@/lib/models";
 import { TagBadge } from "@/components/TagBadge";
+import { Badge } from "@/components/wui/Badge";
 
 interface TagListProps {
   tags: TagInfo[];
@@ -28,14 +29,12 @@ export function TagList({ tags, maxMobile = 2, maxDesktop = 4 }: TagListProps) {
         </span>
       ))}
       {tags.length > maxMobile && (
-        <span className="inline-block rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-xs text-white/60 sm:hidden">
-          +{tags.length - maxMobile}
-        </span>
+        <Badge className="sm:hidden">+{tags.length - maxMobile}</Badge>
       )}
       {tags.length > maxDesktop && (
-        <span className="hidden rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-xs text-white/60 sm:inline-block">
+        <Badge className="hidden sm:inline-flex">
           +{tags.length - maxDesktop}
-        </span>
+        </Badge>
       )}
     </div>
   );

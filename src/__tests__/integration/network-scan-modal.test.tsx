@@ -378,7 +378,9 @@ describe("NetworkScanModal", () => {
       await user.click(screen.getByText("MiSTer"));
 
       // Assert
-      expect(onSelectDevice).toHaveBeenCalledWith("192.168.1.100");
+      expect(onSelectDevice).toHaveBeenCalledWith(
+        expect.objectContaining({ address: "192.168.1.100", name: "MiSTer" }),
+      );
     });
 
     it("should include port in selection when not default", async () => {
@@ -418,7 +420,12 @@ describe("NetworkScanModal", () => {
       await user.click(screen.getByText("Custom Device"));
 
       // Assert
-      expect(onSelectDevice).toHaveBeenCalledWith("192.168.1.100:9000");
+      expect(onSelectDevice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: "192.168.1.100:9000",
+          name: "Custom Device",
+        }),
+      );
     });
 
     it("should close modal when device is selected", async () => {

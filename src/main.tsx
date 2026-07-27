@@ -7,10 +7,12 @@ import { LOG_LEVEL, Purchases } from "@revenuecat/purchases-capacitor";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { initializeApp } from "firebase/app";
+import { isPluginAvailable } from "@/lib/capacitorBridge";
 import App from "./App";
 import { ThemeProvider } from "./components/theme-provider";
 import { ErrorComponent } from "./components/ErrorComponent";
 import { logger } from "./lib/logger";
+import { resolvePurchasesReady } from "./lib/purchasesSetup";
 
 // Firebase config is optional - auth features will be disabled without it
 const firebaseConfigs = import.meta.glob<Record<string, string>>(
@@ -33,33 +35,65 @@ const queryClient = new QueryClient({
   },
 });
 
-Preferences.get({ key: "apiUrl" })
-  .then((res) => {
-    if (res.value && localStorage.getItem("apiUrl") === null) {
-      localStorage.setItem("apiUrl", res.value);
-      window.location.reload();
-    }
-  })
-  .catch(() => {
-    // Silently ignore - migration from Preferences to localStorage is optional
-  });
-
-const onDeviceReady = async () => {
-  if (import.meta.env.MODE === "development") {
-    await Purchases.setLogLevel({
-      level: LOG_LEVEL.DEBUG,
+if (isPluginAvailable("Preferences")) {
+  Preferences.get({ key: "apiUrl" })
+    .then((res) => {
+      if (res.value && localStorage.getItem("apiUrl") === null) {
+        localStorage.setItem("apiUrl", res.value);
+        window.location.reload();
+      }
+    })
+    .catch(() => {
+      // Silently ignore - migration from Preferences to localStorage is optional
     });
+}
+
+let purchasesInitializationStarted = false;
+
+const initializePurchasesOnce = async () => {
+  if (purchasesInitializationStarted) return;
+  purchasesInitializationStarted = true;
+
+  if (!Capacitor.isNativePlatform() || !isPluginAvailable("Purchases")) {
+    resolvePurchasesReady();
+    return;
   }
 
-  if (Capacitor.getPlatform() === "ios") {
-    await Purchases.configure({ apiKey: import.meta.env.VITE_APPLE_STORE_API });
-  } else if (Capacitor.getPlatform() === "android") {
-    await Purchases.configure({
-      apiKey: import.meta.env.VITE_GOOGLE_STORE_API,
+  try {
+    if (import.meta.env.MODE === "development") {
+      await Purchases.setLogLevel({
+        level: LOG_LEVEL.DEBUG,
+      });
+    }
+
+    if (Capacitor.getPlatform() === "ios") {
+      await Purchases.configure({
+        apiKey: import.meta.env.VITE_APPLE_STORE_API,
+      });
+    } else if (Capacitor.getPlatform() === "android") {
+      await Purchases.configure({
+        apiKey: import.meta.env.VITE_GOOGLE_STORE_API,
+      });
+    }
+  } catch (e) {
+    logger.error("Purchases configure failed:", e, {
+      category: "purchase",
+      action: "configure",
+      severity: "error",
     });
+  } finally {
+    resolvePurchasesReady();
   }
 };
-document.addEventListener("deviceready", onDeviceReady, false);
+
+if (!Capacitor.isNativePlatform() || !isPluginAvailable("Purchases")) {
+  initializePurchasesOnce();
+} else {
+  document.addEventListener("deviceready", initializePurchasesOnce, false);
+  window.setTimeout(() => {
+    initializePurchasesOnce();
+  }, 1500);
+}
 
 // App content wrapped in theme and query providers
 const AppContent = (

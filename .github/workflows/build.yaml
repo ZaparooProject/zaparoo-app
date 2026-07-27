@@ -30,11 +30,11 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Setup Node
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
-          node-version: 20
+          node-version: 22
           cache: "npm"
       - name: Authenticate NPM registry
         run: echo -e "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}\n@capawesome-team:registry=https://npm.pkg.github.com/" > ~/.npmrc
@@ -73,15 +73,15 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
         with:
-          subject-path: 'zaparoo_app-web-*.tar.gz'
+          subject-path: "zaparoo_app-web-*.tar.gz"
       - name: Attest SBOM
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
         with:
-          subject-path: 'zaparoo_app-web-*.tar.gz'
+          subject-path: "zaparoo_app-web-*.tar.gz"
           sbom-path: sbom.spdx.json
       - name: Create release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v2
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |

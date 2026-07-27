@@ -11,11 +11,16 @@ import { logger } from "@/lib/logger";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useHaptics } from "@/hooks/useHaptics";
 import { WriteModal } from "@/components/WriteModal";
-import { useNfcWriter, WriteAction } from "@/lib/writeNfcHook";
+import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { BackIcon } from "@/lib/images";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  getTabBarPanelId,
+  getTabBarTabId,
+  TabBar,
+} from "@/components/wui/TabBar";
 import { ReadTab } from "@/components/nfc/ReadTab";
 import { ToolsTab } from "@/components/nfc/ToolsTab";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -27,7 +32,10 @@ export const Route = createFileRoute("/create/nfc")({
 function NfcUtils() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.nfc.title"));
-  const nfcWriter = useNfcWriter();
+  const preferRemoteWriter = usePreferencesStore(
+    (state) => state.preferRemoteWriter,
+  );
+  const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   const { impact } = useHaptics();
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);
@@ -75,6 +83,9 @@ function NfcUtils() {
     setWriteIntent(true);
   };
 
+  const activeTabId = getTabBarTabId(activeTab, "nfc-tab");
+  const activePanelId = getTabBarPanelId(activeTabId);
+
   return (
     <>
       <div {...swipeHandlers} className="flex h-full w-full flex-col">
@@ -90,28 +101,44 @@ function NfcUtils() {
             <h1 className="text-foreground text-xl">{t("create.nfc.title")}</h1>
           }
         >
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => {
-              impact("light");
-              setActiveTab(value);
-            }}
-            className="flex h-full flex-col"
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="read">Read</TabsTrigger>
-              <TabsTrigger value="tools">Tools</TabsTrigger>
-            </TabsList>
-            <TabsContent value="read" className="flex-1 overflow-y-auto">
-              <ReadTab result={nfcWriter.result} onScan={handleScan} />
-            </TabsContent>
-            <TabsContent value="tools" className="flex-1 overflow-y-auto">
-              <ToolsTab
-                onToolAction={handleToolAction}
-                isProcessing={nfcWriter.writing}
-              />
-            </TabsContent>
-          </Tabs>
+          <div className="flex h-full flex-col">
+            <TabBar
+              label={t("create.nfc.title")}
+              role="tab"
+              options={[
+                {
+                  value: "read",
+                  label: "Read",
+                  id: getTabBarTabId("read", "nfc-tab"),
+                },
+                {
+                  value: "tools",
+                  label: "Tools",
+                  id: getTabBarTabId("tools", "nfc-tab"),
+                },
+              ]}
+              value={activeTab}
+              onChange={(value) => {
+                impact("light");
+                setActiveTab(value);
+              }}
+            />
+            <div
+              id={activePanelId}
+              role="tabpanel"
+              aria-labelledby={activeTabId}
+              className="flex-1 overflow-y-auto"
+            >
+              {activeTab === "read" ? (
+                <ReadTab result={nfcWriter.result} onScan={handleScan} />
+              ) : (
+                <ToolsTab
+                  onToolAction={handleToolAction}
+                  isProcessing={nfcWriter.writing}
+                />
+              )}
+            </div>
+          </div>
         </PageFrame>
       </div>
       <WriteModal isOpen={writeOpen} close={closeWriteModal} />
