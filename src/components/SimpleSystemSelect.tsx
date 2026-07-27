@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
-import { compareStrings } from "@/lib/utils";
 import { useStatusStore } from "@/lib/store";
+import { compareStrings } from "@/lib/utils";
 
 interface SimpleSystemSelectProps {
   value: string; // The currently selected system ID (or "all")
@@ -11,6 +11,7 @@ interface SimpleSystemSelectProps {
   placeholder?: string;
   includeAllOption?: boolean;
   className?: string;
+  disabled?: boolean;
 }
 
 export function SimpleSystemSelect({
@@ -19,16 +20,19 @@ export function SimpleSystemSelect({
   placeholder,
   includeAllOption = false,
   className,
+  disabled = false,
 }: SimpleSystemSelectProps) {
   const { t } = useTranslation();
-
-  // Get indexing state to disable selector when indexing is in progress
-  const gamesIndex = useStatusStore((state) => state.gamesIndex);
+  const targetDeviceAddress = useStatusStore(
+    (state) => state.targetDeviceAddress,
+  );
 
   // Fetch systems data
   const { data: systemsData, isLoading } = useQuery({
-    queryKey: ["systems"],
+    queryKey: ["systems", targetDeviceAddress, { all: false }],
     queryFn: () => CoreAPI.systems(),
+    enabled: !disabled,
+    staleTime: 0,
   });
 
   // Group systems by category and sort
@@ -63,12 +67,12 @@ export function SimpleSystemSelect({
     <select
       value={value}
       onChange={handleChange}
-      disabled={gamesIndex.indexing || isLoading}
+      disabled={disabled || isLoading}
       className={classNames(
-        "border-input text-foreground w-full rounded-md border px-3 py-2 transition-colors focus:ring-2 focus:ring-white/20 focus:outline-none",
+        "border-input text-foreground w-full rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
         {
-          "hover:bg-white/10": !gamesIndex.indexing && !isLoading,
-          "cursor-not-allowed opacity-50": gamesIndex.indexing || isLoading,
+          "hover:bg-white/10": !disabled && !isLoading,
+          "cursor-not-allowed opacity-50": disabled || isLoading,
         },
         className,
       )}

@@ -388,6 +388,22 @@ describe("VirtualSearchResults", () => {
       );
     });
 
+    it("should search while indexing", async () => {
+      mockStoreState.gamesIndex = { exists: true, indexing: true };
+      const mediaSearchSpy = vi.spyOn(CoreAPI, "mediaSearch");
+      mediaSearchSpy.mockResolvedValueOnce({
+        results: createMockResults(10),
+        total: 10,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+
+      renderComponent();
+
+      await waitFor(() => {
+        expect(mediaSearchSpy).toHaveBeenCalledTimes(1);
+      });
+    });
+
     it("should pass systems and tags to search API", async () => {
       const mediaSearchSpy = vi.spyOn(CoreAPI, "mediaSearch");
       mediaSearchSpy.mockResolvedValueOnce({

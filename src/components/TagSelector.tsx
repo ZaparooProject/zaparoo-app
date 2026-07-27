@@ -6,8 +6,8 @@ import { Search, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
-import { compareStrings } from "@/lib/utils";
 import { useStatusStore } from "@/lib/store";
+import { compareStrings } from "@/lib/utils";
 import { TagInfo } from "@/lib/models";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { useAnnouncer } from "./A11yAnnouncer";
@@ -53,9 +53,9 @@ export function TagSelector({
   const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [allExpanded, setAllExpanded] = useState(false);
-
-  // Get indexing state to disable selector when indexing is in progress
-  const gamesIndex = useStatusStore((state) => state.gamesIndex);
+  const targetDeviceAddress = useStatusStore(
+    (state) => state.targetDeviceAddress,
+  );
 
   // Fetch tags data
   const {
@@ -63,9 +63,10 @@ export function TagSelector({
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["tags", systems],
+    queryKey: ["tags", targetDeviceAddress, systems],
     queryFn: () => CoreAPI.mediaTags(systems.length > 0 ? systems : undefined),
     enabled: isOpen, // Only fetch when modal is open
+    staleTime: 0,
     retry: false, // Don't retry on error for backwards compatibility
   });
 
@@ -142,9 +143,6 @@ export function TagSelector({
   // Handle tag selection
   const handleTagSelect = useCallback(
     (tag: TagInfo) => {
-      // Don't allow selection while indexing
-      if (gamesIndex.indexing) return;
-
       // Format tag as "<type>:<value>" for the API
       const formattedTag = `${tag.type}:${tag.tag}`;
       const wasSelected = selectedTags.includes(formattedTag);
@@ -160,15 +158,13 @@ export function TagSelector({
         announce(t("tagSelector.selected", { name: tag.tag }));
       }
     },
-    [selectedTags, onSelect, gamesIndex.indexing, announce, t],
+    [selectedTags, onSelect, announce, t],
   );
 
   // Handle clear all
   const handleClearAll = useCallback(() => {
-    // Don't allow clearing while indexing
-    if (gamesIndex.indexing) return;
     onSelect([]);
-  }, [onSelect, gamesIndex.indexing]);
+  }, [onSelect]);
 
   // Handle apply
   const handleApply = useCallback(() => {
@@ -218,13 +214,7 @@ export function TagSelector({
         {selectedTags.length > 0 && (
           <button
             onClick={handleClearAll}
-            className={classNames("text-sm underline", {
-              "text-muted-foreground hover:text-foreground":
-                !gamesIndex.indexing,
-              "text-muted-foreground/50 cursor-not-allowed":
-                gamesIndex.indexing,
-            })}
-            disabled={gamesIndex.indexing}
+            className="text-muted-foreground hover:text-foreground text-sm underline"
             type="button"
           >
             {t("tagSelector.clearAll")}
@@ -234,7 +224,6 @@ export function TagSelector({
           label={t("tagSelector.apply")}
           onClick={handleApply}
           className="flex-1"
-          disabled={gamesIndex.indexing}
         />
       </div>
     </div>
@@ -362,17 +351,11 @@ export function TagSelector({
                       <button
                         className={classNames(
                           "flex h-full w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                          "rounded-lg focus:outline-none",
-                          {
-                            "bg-white/10": isSelected,
-                            "hover:bg-white/10 focus:bg-white/10":
-                              !gamesIndex.indexing,
-                            "cursor-not-allowed opacity-50":
-                              gamesIndex.indexing,
-                          },
+                          "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                          "hover:bg-white/10 focus:bg-white/10",
+                          { "bg-white/10": isSelected },
                         )}
                         onClick={() => handleTagSelect(tag)}
-                        disabled={gamesIndex.indexing}
                         type="button"
                         role="checkbox"
                         aria-checked={isSelected}
@@ -460,17 +443,11 @@ export function TagSelector({
                                 key={tag.tag}
                                 className={classNames(
                                   "flex w-full items-center justify-between px-3 py-3 text-left transition-colors",
-                                  "rounded-md focus:outline-none",
-                                  {
-                                    "bg-white/10": isSelected,
-                                    "hover:bg-white/5 focus:bg-white/5":
-                                      !gamesIndex.indexing,
-                                    "cursor-not-allowed opacity-50":
-                                      gamesIndex.indexing,
-                                  },
+                                  "rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                                  "hover:bg-white/5 focus:bg-white/5",
+                                  { "bg-white/10": isSelected },
                                 )}
                                 onClick={() => handleTagSelect(tag)}
-                                disabled={gamesIndex.indexing}
                                 type="button"
                                 role="checkbox"
                                 aria-checked={isSelected}
@@ -536,9 +513,6 @@ export function TagSelectorTrigger({
 }) {
   const { t } = useTranslation();
 
-  // Get indexing state to disable trigger when indexing is in progress
-  const gamesIndex = useStatusStore((state) => state.gamesIndex);
-
   const displayText = useMemo(() => {
     if (selectedTags.length === 0) {
       return placeholder;
@@ -555,8 +529,7 @@ export function TagSelectorTrigger({
   }, [selectedTags, placeholder, t]);
 
   const handleClick = () => {
-    // Don't open selector while indexing or if disabled
-    if (gamesIndex.indexing || disabled) return;
+    if (disabled) return;
     onClick();
   };
 
@@ -564,15 +537,15 @@ export function TagSelectorTrigger({
     <button
       onClick={handleClick}
       className={classNames(
-        "border-input text-foreground flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus:ring-2 focus:ring-white/20 focus:outline-none",
+        "border-input text-foreground flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
         {
-          "hover:bg-white/10": !gamesIndex.indexing && !disabled,
-          "cursor-not-allowed opacity-50": gamesIndex.indexing || disabled,
+          "hover:bg-white/10": !disabled,
+          "cursor-not-allowed opacity-50": disabled,
         },
         className,
       )}
       style={{ backgroundColor: "var(--color-background)" }}
-      disabled={gamesIndex.indexing || disabled}
+      disabled={disabled}
       type="button"
     >
       <span
