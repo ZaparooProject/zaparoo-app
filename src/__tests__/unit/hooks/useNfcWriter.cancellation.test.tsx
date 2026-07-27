@@ -91,10 +91,12 @@ describe("useNfcWriter Cancellation", () => {
       // Mock write operation that doesn't resolve immediately (simulates pending write)
       vi.mocked(CoreAPI.write).mockReturnValue(new Promise(() => {}));
 
-      // Start write operation - the hook's write() function returns after setting up
-      // the async operation, it doesn't wait for CoreAPI.write to complete
+      // Start write operation WITHOUT awaiting completion - write() now
+      // resolves only when the operation finishes, and this one never does
       await act(async () => {
-        await result.current.write(WriteAction.Write, "test");
+        void result.current.write(WriteAction.Write, "test");
+        // Let determineWriteMethod resolve so the operation starts
+        await Promise.resolve();
       });
 
       // End/cancel the operation
@@ -160,8 +162,32 @@ describe("useNfcWriter Cancellation", () => {
         await result.current.end();
       });
 
-      // Should call both cancelWrite and cancelSession
-      expect(CoreAPI.cancelWrite).toHaveBeenCalledTimes(1);
+      // Local NFC has no pending Core write to cancel - only the session
+      expect(CoreAPI.cancelWrite).not.toHaveBeenCalled();
+      expect(cancelSession).toHaveBeenCalledTimes(1);
+    });
+
+    it("should cancel the session when ending a read action", async () => {
+      // Regression: end() used to no-op for non-write actions because
+      // currentWriteMethod was only set for WriteAction.Write, leaving the
+      // NFC session running after the user dismissed the modal
+      const { cancelSession, readRaw } = await import("../../../lib/nfc");
+      vi.mocked(cancelSession).mockResolvedValue();
+      vi.mocked(readRaw).mockReturnValue(new Promise(() => {}));
+
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.Auto, false),
+      );
+
+      await act(async () => {
+        void result.current.write(WriteAction.Read);
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        await result.current.end();
+      });
+
       expect(cancelSession).toHaveBeenCalledTimes(1);
     });
 
@@ -266,7 +292,9 @@ describe("useNfcWriter Cancellation", () => {
       vi.mocked(CoreAPI.write).mockReturnValue(writePromise as Promise<void>);
 
       await act(async () => {
-        await result.current.write(WriteAction.Write, "test");
+        void result.current.write(WriteAction.Write, "test");
+        // Let determineWriteMethod resolve so the operation starts
+        await Promise.resolve();
       });
 
       // Cancel immediately

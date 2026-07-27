@@ -60,6 +60,7 @@ vi.mock("@capacitor/core", () => ({
 
 vi.mock("@uidotdev/usehooks", () => ({
   usePrevious: vi.fn(() => undefined),
+  useMediaQuery: vi.fn(() => false),
 }));
 
 vi.mock("@/lib/capacitorBridge", () => ({
@@ -237,10 +238,23 @@ vi.mock("@/hooks/useAccelerometerAvailabilityCheck", () => ({
   useAccelerometerAvailabilityCheck: vi.fn(),
 }));
 vi.mock("@/hooks/useRunQueueProcessor", () => ({
-  useRunQueueProcessor: vi.fn(),
+  useRunQueueProcessor: vi.fn(() => ({
+    pendingConfirm: null,
+    confirmRun: vi.fn(),
+    cancelConfirm: vi.fn(),
+  })),
 }));
 vi.mock("@/hooks/useWriteQueueProcessor", () => ({
-  useWriteQueueProcessor: vi.fn(),
+  useWriteQueueProcessor: vi.fn(() => ({
+    nfcWriter: {
+      write: vi.fn(),
+      end: vi.fn(),
+      writing: false,
+      result: null,
+      status: null,
+    },
+    reset: vi.fn(),
+  })),
 }));
 vi.mock("@/hooks/useShakeDetection", () => ({ useShakeDetection: vi.fn() }));
 vi.mock("@/hooks/usePassiveNfcListener", () => ({

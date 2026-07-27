@@ -58,6 +58,7 @@ export function RequirementsModal() {
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Start each modal session with a clean requirements form.
       setTosChecked(false);
       setPrivacyChecked(false);
       setAgeChecked(false);

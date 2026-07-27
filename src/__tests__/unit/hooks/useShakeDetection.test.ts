@@ -219,6 +219,7 @@ describe("useShakeDetection", () => {
       expect(setRunQueue).toHaveBeenCalledWith({
         value: "**launch.random",
         unsafe: true,
+        source: "shake",
       });
     });
 

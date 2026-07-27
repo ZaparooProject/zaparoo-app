@@ -152,6 +152,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
   useEffect(() => {
     if (!isEditing || hydrated) return;
     if (existing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate form state once from the external mapping query.
       setLabel(existing.label);
       setType(normalizeType(existing.type));
       setMatch(normalizeMatch(existing.match));
@@ -188,7 +189,13 @@ export function MappingEditor({ id }: MappingEditorProps) {
   };
 
   const startNfcScan = () => {
-    nfcWriter.write(WriteAction.Read);
+    nfcWriter.write(WriteAction.Read).catch((e) => {
+      logger.error("NFC read failed:", e, {
+        category: "nfc",
+        action: "mappingNfcScan",
+        severity: "error",
+      });
+    });
     setWriteIntent(true);
   };
 

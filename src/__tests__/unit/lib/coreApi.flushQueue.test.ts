@@ -133,4 +133,44 @@ describe("CoreAPI flushQueue TTL", () => {
     // No requests should have been sent
     expect(mockSend).not.toHaveBeenCalled();
   });
+
+  it("should reject run() instead of resolving success when the queued launch is dropped as stale", async () => {
+    mockTransport.isConnected = false;
+    CoreAPI.setWsInstance(mockTransport as never);
+
+    // Queue a launch while disconnected
+    const runPromise = CoreAPI.run({ uid: "", text: "**launch.random" });
+    const settled = runPromise.then(
+      () => "resolved",
+      (e: Error) => e,
+    );
+
+    // Let it go stale, then flush on reconnect
+    vi.advanceTimersByTime(11000);
+    mockTransport.isConnected = true;
+    CoreAPI.flushQueue();
+
+    // The dropped launch must NOT report success
+    const outcome = await settled;
+    expect(outcome).not.toBe("resolved");
+    expect((outcome as Error).message).toContain("not delivered");
+  });
+
+  it("should expire queued requests instead of hanging forever when the connection never returns", async () => {
+    mockTransport.isConnected = false;
+    CoreAPI.setWsInstance(mockTransport as never);
+
+    const promise = CoreAPI.call(Method.Media);
+    const settled = promise.then(
+      () => "resolved",
+      (e: Error) => e,
+    );
+
+    // Never reconnect - the queued request must reject after its expiry
+    await vi.advanceTimersByTimeAsync(31000);
+
+    const outcome = await settled;
+    expect(outcome).not.toBe("resolved");
+    expect((outcome as Error).message).toContain("expired");
+  });
 });

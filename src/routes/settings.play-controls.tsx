@@ -26,7 +26,7 @@ export const Route = createFileRoute("/settings/play-controls")({
   component: PlayControlsSettings,
 });
 
-function PlayControlsSettings() {
+export function PlayControlsSettings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("settings.playControls.title"));
   const connected = useStatusStore((state) => state.connected);
@@ -112,6 +112,7 @@ function PlayControlsSettings() {
   useEffect(() => {
     if (limitsConfig) {
       const daily = parseDuration(limitsConfig.daily);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate controls from external Core settings.
       setDailyHours(String(daily.hours));
       setDailyMinutes(String(daily.minutes));
 
@@ -126,6 +127,7 @@ function PlayControlsSettings() {
 
   useEffect(() => {
     if (coreSettings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate controls from external Core settings.
       setLaunchGuardTimeout(String(coreSettings.launchGuardTimeout ?? 15));
       setLaunchGuardDelay(String(coreSettings.launchGuardDelay ?? 0));
     }

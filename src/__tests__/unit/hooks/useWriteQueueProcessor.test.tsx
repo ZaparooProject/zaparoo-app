@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "../../../test-utils";
 import { useWriteQueueProcessor } from "@/hooks/useWriteQueueProcessor";
-import { useStatusStore } from "@/lib/store";
+import { ConnectionState, useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
@@ -138,7 +138,10 @@ describe("useWriteQueueProcessor", () => {
     it("should check remote writers when NFC unavailable and connected", async () => {
       // Arrange - No local NFC, but connected with remote writer
       usePreferencesStore.setState({ nfcAvailable: false });
-      useStatusStore.setState({ connected: true });
+      useStatusStore.setState({
+        connected: true,
+        connectionState: ConnectionState.CONNECTED,
+      });
       vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
       vi.mocked(CoreAPI.isConnected).mockReturnValue(true);
 
@@ -162,7 +165,10 @@ describe("useWriteQueueProcessor", () => {
       // Arrange - Web platform
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
       usePreferencesStore.setState({ nfcAvailable: false });
-      useStatusStore.setState({ connected: true });
+      useStatusStore.setState({
+        connected: true,
+        connectionState: ConnectionState.CONNECTED,
+      });
       vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
       vi.mocked(CoreAPI.isConnected).mockReturnValue(true);
 
@@ -177,15 +183,19 @@ describe("useWriteQueueProcessor", () => {
         await vi.advanceTimersByTimeAsync(100);
       });
 
-      // Assert
+      // Assert - remote write completed, so the modal has already closed again
       expect(CoreAPI.hasWriteCapableReader).toHaveBeenCalled();
-      expect(useStatusStore.getState().writeOpen).toBe(true);
+      expect(CoreAPI.write).toHaveBeenCalled();
+      expect(useStatusStore.getState().writeOpen).toBe(false);
     });
 
     it("should NOT call remote writer API when not connected", async () => {
       // Arrange - NFC not available AND not connected
       usePreferencesStore.setState({ nfcAvailable: false });
-      useStatusStore.setState({ connected: false });
+      useStatusStore.setState({
+        connected: false,
+        connectionState: ConnectionState.DISCONNECTED,
+      });
 
       renderHook(() => useWriteQueueProcessor());
 
@@ -194,11 +204,14 @@ describe("useWriteQueueProcessor", () => {
         useStatusStore.getState().setWriteQueue("offline-content");
       });
 
+      // The write is kept alive through the retry ladder (connection may
+      // still be establishing) - run the finite retry ladder to exhaustion
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(100);
+        await vi.runAllTimersAsync();
       });
 
-      // Assert - Should NOT call API (prevents timeout on cold start)
+      // Assert - Should never call the API while disconnected (prevents
+      // timeout on cold start), and surface an error once retries exhaust
       expect(CoreAPI.hasWriteCapableReader).not.toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalled();
     });
@@ -208,7 +221,10 @@ describe("useWriteQueueProcessor", () => {
     it("should show error when no write methods available", async () => {
       // Arrange - No NFC, connected but no remote writer
       usePreferencesStore.setState({ nfcAvailable: false });
-      useStatusStore.setState({ connected: true });
+      useStatusStore.setState({
+        connected: true,
+        connectionState: ConnectionState.CONNECTED,
+      });
       vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(false);
 
       renderHook(() => useWriteQueueProcessor());
@@ -229,6 +245,48 @@ describe("useWriteQueueProcessor", () => {
   });
 
   describe("retry logic", () => {
+    it("should keep a pending retry alive across re-renders", async () => {
+      // Regression: the old implementation cleared the retry timer in the
+      // effect cleanup on every render, permanently wedging the processor.
+      vi.mocked(CoreAPI.hasWriteCapableReader)
+        .mockRejectedValueOnce(new Error("Network error"))
+        .mockResolvedValue(true);
+
+      usePreferencesStore.setState({ nfcAvailable: false });
+      useStatusStore.setState({
+        connected: true,
+        connectionState: ConnectionState.CONNECTED,
+      });
+
+      const { rerender } = renderHook(() => useWriteQueueProcessor());
+
+      act(() => {
+        useStatusStore.getState().setWriteQueue("rerender-content");
+      });
+
+      // First attempt fails and schedules a retry
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      const callsAfterFirstAttempt = vi.mocked(CoreAPI.hasWriteCapableReader)
+        .mock.calls.length;
+
+      // Unrelated re-renders while the retry is pending
+      rerender();
+      rerender();
+      rerender();
+
+      // The retry must still fire: the capability check runs again
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+
+      expect(
+        vi.mocked(CoreAPI.hasWriteCapableReader).mock.calls.length,
+      ).toBeGreaterThan(callsAfterFirstAttempt);
+    });
+
     it("should retry when capability check fails", async () => {
       // Arrange - Make capability check fail then succeed
       // Note: hasWriteCapableReader may be called multiple times:
@@ -240,7 +298,10 @@ describe("useWriteQueueProcessor", () => {
         .mockResolvedValue(true);
 
       usePreferencesStore.setState({ nfcAvailable: false });
-      useStatusStore.setState({ connected: true });
+      useStatusStore.setState({
+        connected: true,
+        connectionState: ConnectionState.CONNECTED,
+      });
 
       renderHook(() => useWriteQueueProcessor());
 
@@ -271,7 +332,10 @@ describe("useWriteQueueProcessor", () => {
       );
 
       usePreferencesStore.setState({ nfcAvailable: false });
-      useStatusStore.setState({ connected: true });
+      useStatusStore.setState({
+        connected: true,
+        connectionState: ConnectionState.CONNECTED,
+      });
 
       renderHook(() => useWriteQueueProcessor());
 
@@ -354,7 +418,10 @@ describe("useWriteQueueProcessor", () => {
           }),
       );
       usePreferencesStore.setState({ nfcAvailable: false });
-      useStatusStore.setState({ connected: true });
+      useStatusStore.setState({
+        connected: true,
+        connectionState: ConnectionState.CONNECTED,
+      });
 
       renderHook(() => useWriteQueueProcessor());
 

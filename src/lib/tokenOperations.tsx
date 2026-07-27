@@ -1,5 +1,6 @@
 import toast from "react-hot-toast";
-import { CoreAPI } from "./coreApi";
+import i18n from "@/i18n";
+import { CoreAPI, isRequestCancelledError } from "./coreApi";
 import { TokenResponse } from "./models";
 import { sessionManager } from "./nfc";
 import { logger } from "./logger";
@@ -75,34 +76,36 @@ export const runToken = async (
       return resolve(true);
     }
 
-    const run = async () => {
-      CoreAPI.run({
-        uid: uid,
-        text: text,
-        unsafe: unsafe,
+    // When disconnected (and queueing allowed), CoreAPI queues the request
+    // and flushes it on reconnect with its own expiry - no extra delay needed.
+    CoreAPI.run({
+      uid: uid,
+      text: text,
+      unsafe: unsafe,
+    })
+      .then(() => {
+        resolve(true);
       })
-        .then(() => {
-          resolve(true);
-        })
-        .catch((e) => {
+      .catch((e) => {
+        if (isRequestCancelledError(e)) {
+          // The request was dropped or cancelled before reaching the
+          // device - show a clear message instead of internal error text.
+          toast.error(i18n.t("deepLinks.notDelivered"));
+          logger.warn("launch request cancelled", e, {
+            category: "api",
+            action: "runToken",
+          });
+        } else {
           toast.error(e.message);
           logger.error("launch error", e, {
             category: "api",
             action: "runToken",
+            severity: "error",
             hasUid: !!uid,
             textPrefix: text.slice(0, 20),
           });
-          resolve(false);
-        });
-    };
-
-    if (!connected) {
-      // Small delay when reconnecting to let connection stabilize
-      setTimeout(() => {
-        run();
-      }, 500);
-    } else {
-      run();
-    }
+        }
+        resolve(false);
+      });
   });
 };

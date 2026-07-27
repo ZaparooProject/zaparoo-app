@@ -10,11 +10,8 @@ import { useStatusStore } from "@/lib/store";
 import { compareStrings } from "@/lib/utils";
 import { useSmartTabs } from "@/hooks/useSmartTabs";
 import { EmptyState } from "@/components/wui/EmptyState";
-import {
-  getTabBarPanelId,
-  getTabBarTabId,
-  TabBar,
-} from "@/components/wui/TabBar";
+import { TabBar } from "@/components/wui/TabBar";
+import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";

@@ -13,7 +13,7 @@ export const Route = createFileRoute("/settings/media")({
   component: MediaSettings,
 });
 
-function MediaSettings() {
+export function MediaSettings() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("settings.media.title"));
   const router = useRouter();

@@ -52,6 +52,15 @@ export interface StagedTokenState {
   ready: boolean;
 }
 
+export interface RunQueueItem {
+  value: string;
+  unsafe: boolean;
+  // Where the queued launch came from. Deep links are untrusted URLs and
+  // require user confirmation before launching; shake is a deliberate
+  // physical action on the user's own device.
+  source: "deepLink" | "shake";
+}
+
 interface StatusState {
   connected: boolean;
   setConnected: (status: boolean) => void;
@@ -63,14 +72,8 @@ interface StatusState {
   connectionState: ConnectionState;
   setConnectionState: (state: ConnectionState) => void;
 
-  lastConnectionTime: number | null;
-  setLastConnectionTime: (time: number | null) => void;
-
   connectionError: string;
   setConnectionError: (error: string) => void;
-
-  retryCount: number;
-  retryConnection: () => void;
 
   lastToken: TokenResponse;
   setLastToken: (token: TokenResponse) => void;
@@ -98,9 +101,6 @@ interface StatusState {
   loggedInUser: User | null;
   setLoggedInUser: (loggedInUser: User | null) => void;
 
-  nfcModalOpen: boolean;
-  setNfcModalOpen: (nfcModalOpen: boolean) => void;
-
   proPurchaseModalOpen: boolean;
   setProPurchaseModalOpen: (proPurchaseModalOpen: boolean) => void;
 
@@ -121,8 +121,8 @@ interface StatusState {
     opts?: { source?: "auto" | "manual" },
   ) => void;
 
-  runQueue: { value: string; unsafe: boolean } | null;
-  setRunQueue: (runQueue: { value: string; unsafe: boolean } | null) => void;
+  runQueue: RunQueueItem | null;
+  setRunQueue: (runQueue: RunQueueItem | null) => void;
 
   writeQueue: string;
   setWriteQueue: (writeQueue: string) => void;
@@ -179,14 +179,8 @@ export const useStatusStore = create<StatusState>()((set) => ({
         state === ConnectionState.RECONNECTING,
     }),
 
-  lastConnectionTime: null,
-  setLastConnectionTime: (time) => set({ lastConnectionTime: time }),
-
   connectionError: "",
   setConnectionError: (error) => set({ connectionError: error }),
-
-  retryCount: 0,
-  retryConnection: () => set((state) => ({ retryCount: state.retryCount + 1 })),
 
   lastToken: { type: "", uid: "", text: "", data: "", scanTime: "" },
   setLastToken: (token) => set({ lastToken: token }),
@@ -227,9 +221,6 @@ export const useStatusStore = create<StatusState>()((set) => ({
   loggedInUser: null,
   setLoggedInUser: (loggedInUser: User | null) =>
     set({ loggedInUser: loggedInUser }),
-
-  nfcModalOpen: false,
-  setNfcModalOpen: (nfcModalOpen) => set({ nfcModalOpen }),
 
   proPurchaseModalOpen: false,
   setProPurchaseModalOpen: (proPurchaseModalOpen) =>
@@ -417,11 +408,10 @@ export const useStatusStore = create<StatusState>()((set) => ({
     set({
       connected: false,
       connectionState: ConnectionState.IDLE,
-      lastConnectionTime: null,
       connectionError: "",
-      retryCount: 0,
-      runQueue: null,
-      writeQueue: "",
+      // Note: runQueue/writeQueue are deliberately NOT reset here. Queued
+      // deep-link intents are device-independent and must survive device
+      // switching and connection resets.
       // Reset media-related state that will be refetched on reconnect
       lastToken: { type: "", uid: "", text: "", data: "", scanTime: "" },
       activeTokens: [],

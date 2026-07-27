@@ -21,7 +21,6 @@ import { DatabaseIcon, PlayIcon } from "./lib/images";
 import { ConnectionProvider } from "./components/ConnectionProvider";
 import { ReconnectingIndicator } from "./components/ReconnectingIndicator";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
-import { useDataCache } from "./hooks/useDataCache";
 import { SlideModalProvider } from "./components/SlideModalProvider";
 import { RequirementsModal } from "./components/RequirementsModal";
 import { usePreferencesStore } from "./lib/preferencesStore";
@@ -32,6 +31,8 @@ import { useCameraAvailabilityCheck } from "./hooks/useCameraAvailabilityCheck";
 import { useAccelerometerAvailabilityCheck } from "./hooks/useAccelerometerAvailabilityCheck";
 import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
+import { WriteModal } from "./components/WriteModal";
+import { DeepLinkConfirmModal } from "./components/DeepLinkConfirmModal";
 import { usePassiveNfcListener } from "./hooks/usePassiveNfcListener";
 import { useLiveUpdate } from "./hooks/useLiveUpdate";
 import { WhatsNewInitializer } from "./components/WhatsNewInitializer";
@@ -44,13 +45,43 @@ import {
 } from "./components/A11yAnnouncer";
 
 // Component to initialize queue processors and passive listeners after preferences hydrate
-// This ensures sessionManager.launchOnScan is set correctly before processing
+// This ensures sessionManager.launchOnScan is set correctly before processing.
+// It also renders the UI for queue-driven flows: the write modal (bound to the
+// same writer instance that performs queued writes, on every route) and the
+// deep-link launch confirmation.
 function QueueProcessors() {
-  useRunQueueProcessor();
-  useWriteQueueProcessor();
+  const { pendingConfirm, confirmRun, cancelConfirm } = useRunQueueProcessor();
+  const { nfcWriter } = useWriteQueueProcessor();
   // Listen for NFC intents on Android even when not in explicit scan mode
   usePassiveNfcListener();
-  return null;
+
+  const writeOpen = useStatusStore((state) => state.writeOpen);
+  const setWriteOpen = useStatusStore((state) => state.setWriteOpen);
+
+  const closeWriteModal = async () => {
+    try {
+      await nfcWriter.end();
+    } catch (err) {
+      logger.error("Failed to end NFC writer session", err, {
+        category: "nfc",
+        action: "closeWriteModal",
+        severity: "error",
+      });
+    } finally {
+      setWriteOpen(false);
+    }
+  };
+
+  return (
+    <>
+      <WriteModal isOpen={writeOpen} close={closeWriteModal} />
+      <DeepLinkConfirmModal
+        item={pendingConfirm}
+        onConfirm={confirmRun}
+        onCancel={cancelConfirm}
+      />
+    </>
+  );
 }
 
 // Component to announce all toasts for screen readers
@@ -227,8 +258,6 @@ export default function App() {
     }
   }, []);
 
-  // Initialize data cache early in app lifecycle
-  useDataCache();
   // Check Pro access status once at app startup
   useProAccessCheck();
   // Check hardware availability once at app startup
@@ -353,7 +382,6 @@ export default function App() {
 
   return (
     <>
-      <QueueProcessors />
       <Toaster
         position="top-center"
         toastOptions={{
@@ -394,6 +422,10 @@ export default function App() {
             <RequirementsModal />
             <InboxModal />
             <StagedTokenModal />
+            {/* Must live inside A11yAnnouncerProvider and SlideModalProvider:
+                its WriteModal uses useAnnouncer and its confirm modal renders
+                a SlideModal */}
+            <QueueProcessors />
             <WhatsNewInitializer />
           </ConnectionProvider>
         </SlideModalProvider>

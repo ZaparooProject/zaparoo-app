@@ -1,7 +1,5 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useStatusStore } from "@/lib/store";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { ScanResult } from "@/lib/models";
@@ -71,18 +69,5 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
         />
       </div>
     </div>
-  );
-}
-
-export function NFCModal() {
-  const nfcModalOpen = useStatusStore((state) => state.nfcModalOpen);
-  const setNfcModalOpen = useStatusStore((state) => state.setNfcModalOpen);
-
-  return (
-    <Dialog open={nfcModalOpen} onOpenChange={setNfcModalOpen}>
-      <DialogContent>
-        <ScanSpinner spinning={true} status={ScanResult.Default} write />
-      </DialogContent>
-    </Dialog>
   );
 }

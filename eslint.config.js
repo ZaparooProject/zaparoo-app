@@ -7,7 +7,7 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import react from "eslint-plugin-react";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import importX from "eslint-plugin-import-x";
-import vitest from "eslint-plugin-vitest";
+import vitest from "@vitest/eslint-plugin";
 import testingLibrary from "eslint-plugin-testing-library";
 import prettier from "eslint-config-prettier";
 import globals from "globals";
@@ -185,7 +185,15 @@ export default defineConfig(
       ...react.configs.recommended.rules,
       "react/react-in-jsx-scope": "off",
       "react/jsx-uses-react": "off",
-      ...vitest.configs.recommended.rules,
+      // Preserve the established test lint baseline when the maintained plugin adds rules.
+      "vitest/expect-expect": "error",
+      "vitest/no-identical-title": "error",
+      "vitest/no-commented-out-tests": "error",
+      "vitest/valid-title": "error",
+      "vitest/valid-expect": "error",
+      "vitest/valid-describe-callback": "error",
+      "vitest/require-local-test-context-for-concurrent-snapshots": "error",
+      "vitest/no-import-node-test": "error",
       ...testingLibrary.configs.react.rules,
       // Relaxed rules for tests
       "@typescript-eslint/no-explicit-any": "off",

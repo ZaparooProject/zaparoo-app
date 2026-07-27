@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor, act } from "../../../test-utils";
-import { WriteModal, NFCModal } from "@/components/WriteModal";
+import { render, screen, fireEvent, act } from "@/test-utils";
+import { WriteModal } from "@/components/WriteModal";
 import { useStatusStore } from "@/lib/store";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
@@ -200,51 +200,5 @@ describe("WriteModal", () => {
       expect(screen.getByRole("dialog")).toBeInTheDocument();
       expect(mockAnnounce).toHaveBeenCalledWith("spinner.holdTag", "assertive");
     });
-  });
-});
-
-describe("NFCModal", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    useStatusStore.setState(useStatusStore.getInitialState());
-  });
-
-  it("does not render when nfcModalOpen is false", () => {
-    useStatusStore.setState({ nfcModalOpen: false });
-    render(<NFCModal />);
-
-    // Dialog should not be visible
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
-  it("renders dialog when nfcModalOpen is true", () => {
-    useStatusStore.setState({ nfcModalOpen: true });
-    render(<NFCModal />);
-
-    // Dialog should be visible
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-  });
-
-  it("calls setNfcModalOpen when dialog is closed", async () => {
-    useStatusStore.setState({ nfcModalOpen: true });
-    render(<NFCModal />);
-
-    // The dialog should be open
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-
-    // Close the dialog by pressing Escape
-    fireEvent.keyDown(document, { key: "Escape" });
-
-    await waitFor(() => {
-      expect(useStatusStore.getState().nfcModalOpen).toBe(false);
-    });
-  });
-
-  it("contains ScanSpinner in write mode", () => {
-    useStatusStore.setState({ nfcModalOpen: true });
-    render(<NFCModal />);
-
-    // Should have a spinner status element
-    expect(screen.getByRole("status")).toBeInTheDocument();
   });
 });

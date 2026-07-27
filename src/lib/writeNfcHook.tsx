@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
@@ -154,41 +154,59 @@ export function useNfcWriter(
   const [writing, setWriting] = useState(false);
   const [result, setResult] = useState<null | Result>(null);
   const [status, setStatus] = useState<null | Status>(null);
-  const [currentWriteMethod, setCurrentWriteMethod] =
-    useState<WriteMethod | null>(null);
-  const [abortController, setAbortController] =
-    useState<AbortController | null>(null);
+  const currentWriteMethodRef = useRef<WriteMethod | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  // Whether THIS hook instance has a local NFC session in flight, so unmount
+  // cleanup only cancels sessions it owns instead of any active session.
+  const ownsLocalSessionRef = useRef(false);
+  // Monotonic per-write token: a superseded write's cleanup must not clear
+  // the ownership flag set by a newer write still in flight.
+  const writeOpIdRef = useRef(0);
 
   const { t } = useTranslation();
 
   useEffect(() => {
     return () => {
-      cancelSession();
-      setResult(null);
-      setWriting(false);
-      setStatus(null);
+      if (ownsLocalSessionRef.current) {
+        ownsLocalSessionRef.current = false;
+        cancelSession().catch((error) => {
+          logger.debug("Failed to cancel NFC session on unmount:", error);
+        });
+      }
+      if (
+        abortControllerRef.current &&
+        !abortControllerRef.current.signal.aborted
+      ) {
+        abortControllerRef.current.abort();
+      }
     };
   }, []);
 
-  return {
-    write: async (action: WriteAction, text?: string) => {
+  const write = useCallback(
+    async (action: WriteAction, text?: string) => {
+      const writeOpId = ++writeOpIdRef.current;
+
       // Clear any previous state before starting a new write operation
       setStatus(null);
       setResult(null);
       setWriting(false);
 
       // Clean up any existing AbortController before creating new one
-      if (abortController && !abortController.signal.aborted) {
-        abortController.abort();
+      if (
+        abortControllerRef.current &&
+        !abortControllerRef.current.signal.aborted
+      ) {
+        abortControllerRef.current.abort();
       }
 
       // Create new AbortController for this write operation
       const controller = new AbortController();
-      setAbortController(controller);
+      abortControllerRef.current = controller;
 
       let actionFunc = readRaw;
       let toastSuccess = t("spinner.writeSuccess");
       let toastFailed = t("spinner.writeFailed");
+      let usesLocalSession = true;
 
       switch (action) {
         case WriteAction.Write: {
@@ -197,19 +215,31 @@ export function useNfcWriter(
               category: "nfc",
               action: "writeValidation",
             });
+            setStatus(Status.Error);
             return;
           }
 
-          const selectedWriteMethod = await determineWriteMethod(
-            writeMethod,
-            preferRemoteWriter,
-          );
-          setCurrentWriteMethod(selectedWriteMethod);
+          let selectedWriteMethod: WriteMethod;
+          try {
+            selectedWriteMethod = await determineWriteMethod(
+              writeMethod,
+              preferRemoteWriter,
+            );
+          } catch (error) {
+            logger.error("Failed to determine write method:", error, {
+              category: "nfc",
+              action: "determineWriteMethod",
+            });
+            setStatus(Status.Error);
+            throw error;
+          }
+          currentWriteMethodRef.current = selectedWriteMethod;
 
           if (selectedWriteMethod === WriteMethod.LocalNFC) {
             actionFunc = () => writeTag(text);
           } else {
             actionFunc = () => coreWrite(text, controller.signal);
+            usesLocalSession = false;
           }
 
           toastSuccess = t("spinner.writeSuccess");
@@ -218,6 +248,7 @@ export function useNfcWriter(
           break;
         }
         case WriteAction.Read:
+          currentWriteMethodRef.current = WriteMethod.LocalNFC;
           actionFunc = readRaw;
           toastSuccess = t("spinner.readSuccess");
           toastFailed = t("spinner.readFailed");
@@ -230,18 +261,22 @@ export function useNfcWriter(
               platform: Capacitor.getPlatform(),
               severity: "warning",
             });
+            setStatus(Status.Error);
             return;
           }
+          currentWriteMethodRef.current = WriteMethod.LocalNFC;
           actionFunc = formatTag;
           toastSuccess = t("spinner.formatSuccess");
           toastFailed = t("spinner.formatFailed");
           break;
         case WriteAction.Erase:
+          currentWriteMethodRef.current = WriteMethod.LocalNFC;
           actionFunc = eraseTag;
           toastSuccess = t("spinner.eraseSuccess");
           toastFailed = t("spinner.eraseFailed");
           break;
         case WriteAction.MakeReadOnly:
+          currentWriteMethodRef.current = WriteMethod.LocalNFC;
           actionFunc = makeReadOnly;
           toastSuccess = t("spinner.makeReadOnlySuccess");
           toastFailed = t("spinner.makeReadOnlyFailed");
@@ -249,7 +284,10 @@ export function useNfcWriter(
       }
 
       setWriting(true);
-      actionFunc()
+      if (usesLocalSession) {
+        ownsLocalSessionRef.current = true;
+      }
+      return actionFunc()
         .then((result) => {
           setWriting(false);
           if (result.status === Status.Cancelled) {
@@ -296,7 +334,7 @@ export function useNfcWriter(
             logger.error("NFC write operation failed", e, {
               category: "nfc",
               action: action,
-              writeMethod: currentWriteMethod,
+              writeMethod: currentWriteMethodRef.current,
             });
           }
           let showMs = 4000;
@@ -329,42 +367,66 @@ export function useNfcWriter(
             },
           );
           setStatus(Status.Error);
+        })
+        .finally(() => {
+          // Only the latest write may release ownership - an older write
+          // settling late must not clear the flag for a newer local session
+          if (usesLocalSession && writeOpIdRef.current === writeOpId) {
+            ownsLocalSessionRef.current = false;
+          }
         });
     },
-    end: async () => {
-      // Cancel pending write requests FIRST while pendingWriteId is still valid
-      if (currentWriteMethod !== null) {
-        CoreAPI.cancelWrite();
+    [writeMethod, preferRemoteWriter, t],
+  );
 
-        // Then cancel based on the current write method being used
-        if (currentWriteMethod === WriteMethod.RemoteReader) {
-          // CoreAPI.cancelWrite() already calls readersWriteCancel(), but we can add extra safety
-          try {
-            await CoreAPI.readersWriteCancel();
-          } catch (error) {
-            logger.error("Failed to cancel remote write:", error, {
-              category: "nfc",
-              action: "cancelRemoteWrite",
-            });
-          }
-        } else {
-          // For local NFC or when method is unknown, use the existing cancellation
-          await cancelSession();
-        }
+  const end = useCallback(async () => {
+    const method = currentWriteMethodRef.current;
+
+    // Cancel pending write requests FIRST while pendingWriteId is still valid
+    if (method === WriteMethod.RemoteReader) {
+      CoreAPI.cancelWrite();
+      // CoreAPI.cancelWrite() already calls readersWriteCancel(), but we can add extra safety
+      try {
+        await CoreAPI.readersWriteCancel();
+      } catch (error) {
+        logger.error("Failed to cancel remote write:", error, {
+          category: "nfc",
+          action: "cancelRemoteWrite",
+        });
       }
-
-      // Abort promise operations AFTER cancelling API requests
-      if (abortController && !abortController.signal.aborted) {
-        abortController.abort();
+    } else {
+      // For local NFC or when method is unknown, always attempt session
+      // cancellation so read/format/erase sessions are actually stopped.
+      try {
+        await cancelSession();
+      } catch (error) {
+        logger.debug("Failed to cancel NFC session:", error);
       }
+    }
 
-      setCurrentWriteMethod(null);
-      setAbortController(null);
-      setStatus(null);
-      setWriting(false);
-    },
-    writing,
-    result,
-    status,
-  };
+    // Abort promise operations AFTER cancelling API requests
+    if (
+      abortControllerRef.current &&
+      !abortControllerRef.current.signal.aborted
+    ) {
+      abortControllerRef.current.abort();
+    }
+
+    currentWriteMethodRef.current = null;
+    abortControllerRef.current = null;
+    ownsLocalSessionRef.current = false;
+    setStatus(null);
+    setWriting(false);
+  }, []);
+
+  return useMemo(
+    () => ({
+      write,
+      end,
+      writing,
+      result,
+      status,
+    }),
+    [write, end, writing, result, status],
+  );
 }

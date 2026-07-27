@@ -789,7 +789,12 @@
       }
     },
     "deepLinks": {
-      "invalidUrl": "Invalid link format"
+      "invalidUrl": "Invalid link format",
+      "missingValue": "This link is missing a value to run or write",
+      "confirmTitle": "Run ZapScript?",
+      "confirmDescription": "A link you opened wants to run this on your connected device.",
+      "confirmRun": "Run",
+      "notDelivered": "Launch was not delivered to the device"
     },
     "remoteKeyboard": {
       "title": "Controls",

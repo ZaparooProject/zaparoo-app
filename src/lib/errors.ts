@@ -69,6 +69,31 @@ export class NfcFormatError extends ZaparooError {
   }
 }
 
+/**
+ * Thrown when an NFC session is requested while another session is active.
+ * Callers decide whether to cancel the active session and retry.
+ */
+export class NfcSessionBusyError extends ZaparooError {
+  constructor(message = "Another NFC operation is already in progress") {
+    super(message);
+  }
+}
+
+// =============================================================================
+// API Errors
+// =============================================================================
+
+/**
+ * Thrown when a JSON-RPC request is cancelled before completion, e.g. dropped
+ * from the offline queue or aborted on connection reset. Not a user-facing
+ * error condition in itself; callers surface their own feedback.
+ */
+export class RequestCancelledError extends ZaparooError {
+  constructor(message = "Request was cancelled") {
+    super(message);
+  }
+}
+
 // =============================================================================
 // Barcode Scanner Errors
 // =============================================================================
@@ -207,7 +232,8 @@ export function isCancellationError(error: unknown): boolean {
   return (
     error instanceof NfcCancelledError ||
     error instanceof BarcodeScanCancelledError ||
-    error instanceof PurchaseCancelledError
+    error instanceof PurchaseCancelledError ||
+    error instanceof RequestCancelledError
   );
 }
 

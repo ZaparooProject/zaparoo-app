@@ -3,8 +3,10 @@ import { useRef, useState } from "react";
 import { Browser } from "@capacitor/browser";
 import { EraserIcon, HelpCircleIcon, PlusIcon } from "lucide-react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import toast from "react-hot-toast";
 import { useStatusStore } from "@/lib/store.ts";
 import { CoreAPI } from "@/lib/coreApi";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/wui/Button.tsx";
 import { MediaSearchModal } from "@/components/MediaSearchModal.tsx";
 import { CommandsModal } from "@/components/CommandsModal.tsx";
@@ -121,6 +123,13 @@ export function ZapScriptInput(props: {
                     CoreAPI.run({
                       uid: "",
                       text: props.value,
+                    }).catch((e) => {
+                      toast.error(t("create.custom.failMsg"));
+                      logger.error("ZapScript run failed:", e, {
+                        category: "api",
+                        action: "runZapScript",
+                        severity: "error",
+                      });
                     });
                   }}
                   variant="outline"
