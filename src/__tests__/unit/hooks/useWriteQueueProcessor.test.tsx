@@ -205,9 +205,9 @@ describe("useWriteQueueProcessor", () => {
       });
 
       // The write is kept alive through the retry ladder (connection may
-      // still be establishing) - ride it out fully
+      // still be establishing) - run the finite retry ladder to exhaustion
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(6000);
+        await vi.runAllTimersAsync();
       });
 
       // Assert - Should never call the API while disconnected (prevents
