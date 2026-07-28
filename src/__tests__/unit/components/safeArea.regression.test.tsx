@@ -62,6 +62,7 @@ vi.mock("@tanstack/react-router", () => ({
     <a href={to}>{children}</a>
   ),
   useLocation: () => ({ pathname: "/" }),
+  useRouter: () => undefined,
 }));
 
 vi.mock("@/hooks/useHaptics", () => ({
