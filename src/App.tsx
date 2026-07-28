@@ -58,6 +58,18 @@ function QueueProcessors() {
   const writeOpen = useStatusStore((state) => state.writeOpen);
   const setWriteOpen = useStatusStore((state) => state.setWriteOpen);
 
+  // The queue processor leaves the modal open on verification failure so the
+  // retry UI shows; once a retry succeeds (or is cancelled) close it here.
+  useEffect(() => {
+    if (
+      writeOpen &&
+      nfcWriter.status !== null &&
+      nfcWriter.verifyError === null
+    ) {
+      setWriteOpen(false);
+    }
+  }, [writeOpen, nfcWriter.status, nfcWriter.verifyError, setWriteOpen]);
+
   const closeWriteModal = async () => {
     try {
       await nfcWriter.end();
@@ -74,7 +86,12 @@ function QueueProcessors() {
 
   return (
     <>
-      <WriteModal isOpen={writeOpen} close={closeWriteModal} />
+      <WriteModal
+        isOpen={writeOpen}
+        close={closeWriteModal}
+        verifyError={nfcWriter.verifyError !== null}
+        retry={() => void nfcWriter.retry()}
+      />
       <DeepLinkConfirmModal
         item={pendingConfirm}
         onConfirm={confirmRun}

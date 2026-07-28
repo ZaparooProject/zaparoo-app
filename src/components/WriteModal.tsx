@@ -7,10 +7,17 @@ import { ScanSpinner } from "./ScanSpinner";
 import { Button } from "./wui/Button";
 import { useAnnouncer } from "./A11yAnnouncer";
 
-export function WriteModal(props: { isOpen: boolean; close: () => void }) {
+export function WriteModal(props: {
+  isOpen: boolean;
+  close: () => void;
+  verifyError?: boolean;
+  retry?: () => void;
+}) {
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const retryButtonRef = useRef<HTMLButtonElement>(null);
+  const verifyError = props.verifyError ?? false;
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: () => props.close(),
@@ -33,7 +40,7 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
 
   // Announce and focus when modal opens
   useEffect(() => {
-    if (props.isOpen) {
+    if (props.isOpen && !verifyError) {
       // Announce the modal
       announce(t("spinner.holdTag"), "assertive");
       // Focus the cancel button after a short delay
@@ -42,7 +49,18 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [props.isOpen, announce, t]);
+  }, [props.isOpen, verifyError, announce, t]);
+
+  // Announce and focus the retry action when verification fails
+  useEffect(() => {
+    if (props.isOpen && verifyError) {
+      announce(t("spinner.verifyFailedRetry"), "assertive");
+      const timer = setTimeout(() => {
+        retryButtonRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [props.isOpen, verifyError, announce, t]);
 
   if (!props.isOpen) {
     return null;
@@ -54,19 +72,48 @@ export function WriteModal(props: { isOpen: boolean; close: () => void }) {
       style={{ position: "fixed", left: 0, top: 0 }}
       role="dialog"
       aria-modal="true"
-      aria-label={t("spinner.holdTag")}
+      aria-label={
+        verifyError ? t("spinner.verifyFailedRetry") : t("spinner.holdTag")
+      }
       {...swipeHandlers}
     >
       <div className="flex flex-col items-center gap-8">
         <div aria-hidden="true">
-          <ScanSpinner spinning={true} status={ScanResult.Default} write />
+          <ScanSpinner
+            spinning={!verifyError}
+            status={verifyError ? ScanResult.Error : ScanResult.Default}
+            write
+          />
         </div>
-        <Button
-          ref={cancelButtonRef}
-          variant="outline"
-          onClick={() => props.close()}
-          label={t("nav.cancel")}
-        />
+        {verifyError ? (
+          <>
+            <p className="text-error px-8 text-center">
+              {t("spinner.verifyFailedRetry")}
+            </p>
+            <div className="flex w-full gap-3 px-8">
+              <Button
+                ref={retryButtonRef}
+                className="flex-1"
+                onClick={() => props.retry?.()}
+                label={t("scan.retry")}
+              />
+              <Button
+                ref={cancelButtonRef}
+                className="flex-1"
+                variant="outline"
+                onClick={() => props.close()}
+                label={t("nav.cancel")}
+              />
+            </div>
+          </>
+        ) : (
+          <Button
+            ref={cancelButtonRef}
+            variant="outline"
+            onClick={() => props.close()}
+            label={t("nav.cancel")}
+          />
+        )}
       </div>
     </div>
   );

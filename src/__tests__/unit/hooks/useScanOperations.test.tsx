@@ -45,10 +45,13 @@ const createMockBarcode = (rawValue: string): Barcode => ({
 describe("useScanOperations", () => {
   const mockNfcWriter = {
     write: vi.fn().mockResolvedValue(undefined),
+    retry: vi.fn().mockResolvedValue(undefined),
     end: vi.fn().mockResolvedValue(undefined),
     writing: false,
     result: null,
     status: null,
+    verifyError: null,
+    getVerifyError: vi.fn(() => null),
   };
 
   const defaultProps = {

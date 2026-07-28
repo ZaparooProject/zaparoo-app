@@ -13,6 +13,7 @@ import {
   WriteAction,
 } from "../../../lib/writeNfcHook";
 import { Status } from "../../../lib/nfc";
+import { NfcVerificationError } from "../../../lib/errors";
 
 // Create hoisted mocks
 const {
@@ -190,7 +191,12 @@ describe("useNfcWriter", () => {
       });
 
       // Should use writeTag (local NFC)
-      expect(mockWriteTag).toHaveBeenCalledWith("test content");
+      expect(mockWriteTag).toHaveBeenCalledWith("test content", {
+        ios: {
+          verifyingMessage: "spinner.verifying",
+          verifyFailedMessage: "spinner.verifyFailed",
+        },
+      });
       expect(mockWrite).not.toHaveBeenCalled();
     });
 
@@ -246,7 +252,12 @@ describe("useNfcWriter", () => {
         await result.current.write(WriteAction.Write, "test content");
       });
 
-      expect(mockWriteTag).toHaveBeenCalledWith("test content");
+      expect(mockWriteTag).toHaveBeenCalledWith("test content", {
+        ios: {
+          verifyingMessage: "spinner.verifying",
+          verifyFailedMessage: "spinner.verifyFailed",
+        },
+      });
     });
 
     it("should use explicit RemoteReader method when specified", async () => {
@@ -440,6 +451,110 @@ describe("useNfcWriter", () => {
     });
   });
 
+  describe("verification failure handling", () => {
+    it("should set verifyError and Error status without an immediate toast", async () => {
+      mockWriteTag.mockRejectedValue(new NfcVerificationError());
+
+      const { result } = renderHook(() => useNfcWriter());
+
+      await act(async () => {
+        await result.current.write(WriteAction.Write, "content");
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe(Status.Error);
+      });
+      expect(result.current.verifyError).toBeInstanceOf(NfcVerificationError);
+      expect(result.current.getVerifyError()).toBeInstanceOf(
+        NfcVerificationError,
+      );
+      expect(mockToast.error).not.toHaveBeenCalled();
+      expect(mockToast.success).not.toHaveBeenCalled();
+    });
+
+    it("should fire the deferred error toast on end()", async () => {
+      mockWriteTag.mockRejectedValue(new NfcVerificationError());
+
+      const { result } = renderHook(() => useNfcWriter());
+
+      await act(async () => {
+        await result.current.write(WriteAction.Write, "content");
+      });
+      await act(async () => {
+        await result.current.end();
+      });
+
+      expect(mockToast.error).toHaveBeenCalledTimes(1);
+      expect(result.current.verifyError).toBeNull();
+    });
+
+    it("should not fire the deferred toast again on a second end()", async () => {
+      mockWriteTag.mockRejectedValue(new NfcVerificationError());
+
+      const { result } = renderHook(() => useNfcWriter());
+
+      await act(async () => {
+        await result.current.write(WriteAction.Write, "content");
+      });
+      await act(async () => {
+        await result.current.end();
+      });
+      await act(async () => {
+        await result.current.end();
+      });
+
+      expect(mockToast.error).toHaveBeenCalledTimes(1);
+    });
+
+    it("should re-run the same write on retry() and clear verifyError", async () => {
+      mockWriteTag.mockRejectedValueOnce(new NfcVerificationError());
+      mockWriteTag.mockResolvedValueOnce({
+        status: Status.Success,
+        info: { rawTag: null, tag: { uid: "test", text: "content" } },
+      });
+
+      const { result } = renderHook(() => useNfcWriter());
+
+      await act(async () => {
+        await result.current.write(WriteAction.Write, "content");
+      });
+      await waitFor(() => {
+        expect(result.current.verifyError).not.toBeNull();
+      });
+
+      await act(async () => {
+        await result.current.retry();
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe(Status.Success);
+      });
+      expect(result.current.verifyError).toBeNull();
+      expect(mockWriteTag).toHaveBeenCalledTimes(2);
+      expect(mockWriteTag).toHaveBeenNthCalledWith(
+        2,
+        "content",
+        expect.objectContaining({ ios: expect.any(Object) }),
+      );
+      // The failed attempt's deferred toast must not fire after a
+      // successful retry
+      await act(async () => {
+        await result.current.end();
+      });
+      expect(mockToast.error).not.toHaveBeenCalled();
+    });
+
+    it("should do nothing on retry() without a prior write", async () => {
+      const { result } = renderHook(() => useNfcWriter());
+
+      await act(async () => {
+        await result.current.retry();
+      });
+
+      expect(mockWriteTag).not.toHaveBeenCalled();
+    });
+  });
+
   describe("end() cancellation", () => {
     it("should reset state on end()", async () => {
       const { result } = renderHook(() => useNfcWriter());
@@ -535,7 +650,12 @@ describe("useNfcWriter", () => {
       });
 
       // Should use local NFC write without calling hasWriteCapableReader
-      expect(mockWriteTag).toHaveBeenCalledWith("test content");
+      expect(mockWriteTag).toHaveBeenCalledWith("test content", {
+        ios: {
+          verifyingMessage: "spinner.verifying",
+          verifyFailedMessage: "spinner.verifyFailed",
+        },
+      });
       expect(mockHasWriteCapableReader).not.toHaveBeenCalled();
       expect(mockWrite).not.toHaveBeenCalled();
     });

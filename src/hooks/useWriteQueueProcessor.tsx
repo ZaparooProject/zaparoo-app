@@ -124,7 +124,9 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
       // write() resolves when the operation completes (including tag errors,
       // which surface their own toast) and only rejects on setup failures.
       await writer.write(WriteAction.Write, currentWriteValue);
-      if (ownsProcessing()) {
+      // On verification failure the modal stays open showing the retry UI;
+      // QueueProcessors closes it once the retry resolves or is cancelled.
+      if (ownsProcessing() && writer.getVerifyError() === null) {
         useStatusStore.getState().setWriteOpen(false);
       }
     };

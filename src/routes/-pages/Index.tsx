@@ -44,7 +44,9 @@ export function Index() {
   // modal shows while a write is intended and auto-closes on any completion
   // (success, cancelled, or error) because status becomes non-null.
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = writeIntent && nfcWriter.status === null;
+  const writeOpen =
+    writeIntent &&
+    (nfcWriter.status === null || nfcWriter.verifyError !== null);
   const closeWriteModal = async () => {
     try {
       await nfcWriter.end();
@@ -223,7 +225,12 @@ export function Index() {
         onClose={() => setHistoryOpen(false)}
         historyData={history.data}
       />
-      <WriteModal isOpen={writeOpen} close={closeWriteModal} />
+      <WriteModal
+        isOpen={writeOpen}
+        close={closeWriteModal}
+        verifyError={nfcWriter.verifyError !== null}
+        retry={() => void nfcWriter.retry()}
+      />
       <RemoteKeyboardModal
         isOpen={remoteKeyboardOpen}
         close={() => setRemoteKeyboardOpen(false)}

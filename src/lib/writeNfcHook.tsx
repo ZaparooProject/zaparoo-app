@@ -19,16 +19,26 @@ import { CoreAPI } from "./coreApi.ts";
 import { logger } from "./logger";
 import {
   NfcCancelledError,
+  NfcVerificationError,
   isCancellationError,
   isExpectedNfcError,
 } from "./errors";
 
 export interface WriteNfcHook {
   write: (action: WriteAction, text?: string) => Promise<void>;
+  /** Re-run the last write after a verification failure. */
+  retry: () => Promise<void>;
   end: () => Promise<void>;
   writing: boolean;
   result: null | Result;
   status: null | Status;
+  /** Set when the post-write read-back showed the write did not stick. */
+  verifyError: NfcVerificationError | null;
+  /**
+   * Ref-backed read of verifyError for callers that need the value right
+   * after awaiting write(), before React re-renders.
+   */
+  getVerifyError: () => NfcVerificationError | null;
 }
 
 export enum WriteMethod {
@@ -154,6 +164,20 @@ export function useNfcWriter(
   const [writing, setWriting] = useState(false);
   const [result, setResult] = useState<null | Result>(null);
   const [status, setStatus] = useState<null | Status>(null);
+  const [verifyError, setVerifyError] = useState<NfcVerificationError | null>(
+    null,
+  );
+  const verifyErrorRef = useRef<NfcVerificationError | null>(null);
+  const lastWriteArgsRef = useRef<{
+    action: WriteAction;
+    text?: string;
+  } | null>(null);
+  // Verification-failure toast content stashed until the write modal closes,
+  // so the toast is not fired while the scan UI still covers it.
+  const deferredErrorToastRef = useRef<{
+    title: string;
+    message: string;
+  } | null>(null);
   const currentWriteMethodRef = useRef<WriteMethod | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   // Whether THIS hook instance has a local NFC session in flight, so unmount
@@ -190,6 +214,10 @@ export function useNfcWriter(
       setStatus(null);
       setResult(null);
       setWriting(false);
+      setVerifyError(null);
+      verifyErrorRef.current = null;
+      deferredErrorToastRef.current = null;
+      lastWriteArgsRef.current = { action, text };
 
       // Clean up any existing AbortController before creating new one
       if (
@@ -236,7 +264,13 @@ export function useNfcWriter(
           currentWriteMethodRef.current = selectedWriteMethod;
 
           if (selectedWriteMethod === WriteMethod.LocalNFC) {
-            actionFunc = () => writeTag(text);
+            actionFunc = () =>
+              writeTag(text, {
+                ios: {
+                  verifyingMessage: t("spinner.verifying"),
+                  verifyFailedMessage: t("spinner.verifyFailed"),
+                },
+              });
           } else {
             actionFunc = () => coreWrite(text, controller.signal);
             usesLocalSession = false;
@@ -337,6 +371,18 @@ export function useNfcWriter(
               writeMethod: currentWriteMethodRef.current,
             });
           }
+          if (e instanceof NfcVerificationError) {
+            // The write modal surfaces this failure with a retry action; the
+            // toast is deferred until the modal closes so it stays visible.
+            verifyErrorRef.current = e;
+            setVerifyError(e);
+            deferredErrorToastRef.current = {
+              title: toastFailed,
+              message: t("spinner.verifyFailedRetry"),
+            };
+            setStatus(Status.Error);
+            return;
+          }
           let showMs = 4000;
           if (Capacitor.getPlatform() === "ios") {
             showMs += 4000;
@@ -379,6 +425,22 @@ export function useNfcWriter(
     [writeMethod, preferRemoteWriter, t],
   );
 
+  const retry = useCallback(async () => {
+    const lastWrite = lastWriteArgsRef.current;
+    if (!lastWrite || lastWrite.action !== WriteAction.Write) {
+      return;
+    }
+    // Retrying replaces the failed attempt; its deferred toast must not fire.
+    deferredErrorToastRef.current = null;
+    try {
+      await write(lastWrite.action, lastWrite.text);
+    } catch {
+      // write() already logged the failure and set error status
+    }
+  }, [write]);
+
+  const getVerifyError = useCallback(() => verifyErrorRef.current, []);
+
   const end = useCallback(async () => {
     const method = currentWriteMethodRef.current;
 
@@ -417,16 +479,48 @@ export function useNfcWriter(
     ownsLocalSessionRef.current = false;
     setStatus(null);
     setWriting(false);
+
+    // The scan UI is gone now, so a stashed verification-failure toast can
+    // fire without being obscured.
+    const deferredToast = deferredErrorToastRef.current;
+    if (deferredToast) {
+      deferredErrorToastRef.current = null;
+      toast.error(
+        (to) => (
+          // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+          <span
+            className="flex grow flex-col"
+            onClick={() => toast.dismiss(to.id)}
+          >
+            <span>{deferredToast.title}</span>
+            <span>{deferredToast.message}</span>
+          </span>
+        ),
+        {
+          icon: (
+            <span className="text-error pr-1">
+              <WarningIcon size="24" />
+            </span>
+          ),
+          duration: 4000,
+        },
+      );
+    }
+    verifyErrorRef.current = null;
+    setVerifyError(null);
   }, []);
 
   return useMemo(
     () => ({
       write,
+      retry,
       end,
       writing,
       result,
       status,
+      verifyError,
+      getVerifyError,
     }),
-    [write, end, writing, result, status],
+    [write, retry, end, writing, result, status, verifyError, getVerifyError],
   );
 }

@@ -18,9 +18,12 @@ const { componentRef, mockState, mockNfcWriter } = vi.hoisted(() => ({
   mockNfcWriter: {
     status: null as null | string,
     write: vi.fn().mockResolvedValue(undefined),
+    retry: vi.fn().mockResolvedValue(undefined),
     end: vi.fn(),
     writing: false,
     result: null,
+    verifyError: null,
+    getVerifyError: vi.fn(() => null),
   },
 }));
 

@@ -36,7 +36,9 @@ export function NfcUtils() {
   const { impact } = useHaptics();
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = writeIntent && nfcWriter.status === null;
+  const writeOpen =
+    writeIntent &&
+    (nfcWriter.status === null || nfcWriter.verifyError !== null);
   const [activeTab, setActiveTab] = useState("read");
   // Track previous status to detect completion
   const prevStatusRef = useRef(nfcWriter.status);
@@ -150,7 +152,12 @@ export function NfcUtils() {
           </div>
         </PageFrame>
       </div>
-      <WriteModal isOpen={writeOpen} close={closeWriteModal} />
+      <WriteModal
+        isOpen={writeOpen}
+        close={closeWriteModal}
+        verifyError={nfcWriter.verifyError !== null}
+        retry={() => void nfcWriter.retry()}
+      />
     </>
   );
 }

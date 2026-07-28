@@ -186,6 +186,109 @@ describe("WriteModal", () => {
     });
   });
 
+  describe("verification error state", () => {
+    it("renders the retry message and buttons when verification failed", () => {
+      render(
+        <WriteModal
+          isOpen={true}
+          close={vi.fn()}
+          verifyError={true}
+          retry={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText("spinner.verifyFailedRetry")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "scan.retry" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "nav.cancel" }),
+      ).toBeInTheDocument();
+    });
+
+    it("does not render the retry button without a verification error", () => {
+      render(<WriteModal isOpen={true} close={vi.fn()} retry={vi.fn()} />);
+
+      expect(
+        screen.queryByRole("button", { name: "scan.retry" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("spinner.verifyFailedRetry"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("calls retry when the retry button is clicked", () => {
+      const mockRetry = vi.fn();
+      render(
+        <WriteModal
+          isOpen={true}
+          close={vi.fn()}
+          verifyError={true}
+          retry={mockRetry}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "scan.retry" }));
+
+      expect(mockRetry).toHaveBeenCalledTimes(1);
+    });
+
+    it("calls close when cancel is clicked in the error state", () => {
+      const mockClose = vi.fn();
+      render(
+        <WriteModal
+          isOpen={true}
+          close={mockClose}
+          verifyError={true}
+          retry={vi.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "nav.cancel" }));
+
+      expect(mockClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("announces the failure and focuses the retry button", () => {
+      render(
+        <WriteModal
+          isOpen={true}
+          close={vi.fn()}
+          verifyError={true}
+          retry={vi.fn()}
+        />,
+      );
+
+      expect(mockAnnounce).toHaveBeenCalledWith(
+        "spinner.verifyFailedRetry",
+        "assertive",
+      );
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      expect(screen.getByRole("button", { name: "scan.retry" })).toHaveFocus();
+    });
+
+    it("labels the dialog with the failure message", () => {
+      const { container } = render(
+        <WriteModal
+          isOpen={true}
+          close={vi.fn()}
+          verifyError={true}
+          retry={vi.fn()}
+        />,
+      );
+
+      const modalDialog = container.querySelector('[role="dialog"]');
+      expect(modalDialog).toHaveAttribute(
+        "aria-label",
+        "spinner.verifyFailedRetry",
+      );
+    });
+  });
+
   describe("transition from closed to open", () => {
     it("handles transition from closed to open", () => {
       const mockClose = vi.fn();

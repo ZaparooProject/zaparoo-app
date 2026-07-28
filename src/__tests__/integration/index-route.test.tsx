@@ -43,10 +43,13 @@ const mockScanOperationsProps: {
 
 const mockNfcWriterState = {
   write: vi.fn(),
+  retry: vi.fn(),
   end: vi.fn().mockResolvedValue(undefined),
   writing: false,
   result: null,
   status: null as null | string,
+  verifyError: null,
+  getVerifyError: vi.fn(() => null),
 };
 
 const mockHistoryQueryState = {

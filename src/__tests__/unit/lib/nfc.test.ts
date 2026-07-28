@@ -31,6 +31,8 @@ const {
   mockErase,
   mockMakeReadOnly,
   mockConnect,
+  mockTransceive,
+  mockSetAlertMessage,
   mockClose,
   mockIsSupported,
   mockGetPlatform,
@@ -74,6 +76,12 @@ const {
     mockErase: vi.fn().mockResolvedValue(undefined),
     mockMakeReadOnly: vi.fn().mockResolvedValue(undefined),
     mockConnect: vi.fn().mockResolvedValue(undefined),
+    // Rejects by default so write verification takes the "unverified skip"
+    // path unless a test provides readable tag memory.
+    mockTransceive: vi
+      .fn()
+      .mockRejectedValue(new Error("transceive not mocked")),
+    mockSetAlertMessage: vi.fn().mockResolvedValue(undefined),
     mockClose: vi.fn().mockResolvedValue(undefined),
     mockIsSupported: vi.fn().mockResolvedValue({ nfc: true }),
     mockGetPlatform: vi.fn().mockReturnValue("android"),
@@ -98,6 +106,8 @@ vi.mock("@capawesome-team/capacitor-nfc", async () => {
       erase: mockErase,
       makeReadOnly: mockMakeReadOnly,
       connect: mockConnect,
+      transceive: mockTransceive,
+      setAlertMessage: mockSetAlertMessage,
       close: mockClose,
       isSupported: mockIsSupported,
     },
@@ -118,8 +128,9 @@ vi.mock("../../../lib/logger", () => ({
   },
 }));
 
+import { NfcUtils } from "@capawesome-team/capacitor-nfc";
 import { logger } from "../../../lib/logger";
-import { NfcTransientError } from "../../../lib/errors";
+import { NfcTransientError, NfcVerificationError } from "../../../lib/errors";
 import {
   int2hex,
   int2char,
@@ -162,6 +173,10 @@ describe("nfc", () => {
     mockFormat.mockResolvedValue(undefined);
     mockConnect.mockResolvedValue(undefined);
     mockClose.mockResolvedValue(undefined);
+    mockTransceive
+      .mockReset()
+      .mockRejectedValue(new Error("transceive not mocked"));
+    mockSetAlertMessage.mockClear();
 
     // Reset default platform to Android
     mockGetPlatform.mockReturnValue("android");
@@ -682,10 +697,302 @@ describe("nfc", () => {
 
       const result = await writePromise;
 
-      // Nfc.close() is called before the second attempt
-      expect(mockClose).toHaveBeenCalledTimes(1);
+      // Nfc.close() is called before the second format attempt (post-write
+      // verification cleanup may close again afterwards)
+      const firstClose = mockClose.mock.invocationCallOrder[0] ?? Infinity;
+      const secondFormat = mockFormat.mock.invocationCallOrder[1] ?? -Infinity;
+      expect(firstClose).toBeLessThan(secondFormat);
       expect(mockFormat).toHaveBeenCalledTimes(2);
       expect(result.status).toBe(Status.Success);
+    });
+  });
+
+  describe("writeTag verification", () => {
+    /**
+     * Build Type 2 tag user memory containing the real NDEF text record
+     * writeTag would produce, wrapped in an NDEF TLV, padded to full pages.
+     */
+    function t2Memory(text: string): number[] {
+      const { record } = new NfcUtils().createNdefTextRecord({ text });
+      const payload = record.payload ?? [];
+      const ndef = [0xd1, 0x01, payload.length, 0x54, ...payload];
+      const mem = [0x03, ndef.length, ...ndef, 0xfe];
+      while (mem.length % 16 !== 0) {
+        mem.push(0x00);
+      }
+      return mem;
+    }
+
+    /** Serve READ (0x30) commands from the given Type 2 memory image. */
+    function mockTransceiveFromMemory(mem: number[]): void {
+      mockTransceive
+        .mockReset()
+        .mockImplementation((options: { data: number[] }) => {
+          const page = options.data[1] ?? 0;
+          const start = (page - 4) * 4;
+          const slice = mem.slice(start, start + 16);
+          while (slice.length < 16) {
+            slice.push(0x00);
+          }
+          return Promise.resolve({ response: slice });
+        });
+    }
+
+    /** Fire the initial scan event that triggers the write handler. */
+    async function fireInitialScan(uid: number[] = [1, 2, 3, 4]) {
+      await vi.waitFor(() => {
+        expect(mockState.nfcTagScannedCallback).not.toBeNull();
+      });
+      mockState.nfcTagScannedCallback?.({
+        nfcTag: { id: uid },
+      } as NfcTagScannedEvent);
+    }
+
+    describe("android", () => {
+      it("should verify successfully when the tag contains the written text", async () => {
+        mockTransceiveFromMemory(t2Memory("test content"));
+
+        const writePromise = writeTag("test content");
+        await fireInitialScan();
+        const result = await writePromise;
+
+        expect(result.status).toBe(Status.Success);
+        expect(mockConnect).toHaveBeenCalledWith({ techType: "NFC_A" });
+        expect(mockClose).toHaveBeenCalled();
+      });
+
+      it("should reject with NfcVerificationError when the tag text mismatches", async () => {
+        mockTransceiveFromMemory(t2Memory("something else"));
+
+        const writePromise = writeTag("test content");
+        await fireInitialScan();
+
+        await expect(writePromise).rejects.toBeInstanceOf(NfcVerificationError);
+        expect(mockClose).toHaveBeenCalled();
+      });
+
+      it("should reject with NfcVerificationError when the tag has an empty NDEF message", async () => {
+        mockTransceiveFromMemory([
+          0x03, 0x00, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+          0x00, 0x00, 0x00, 0x00, 0x00,
+        ]);
+
+        const writePromise = writeTag("test content");
+        await fireInitialScan();
+
+        await expect(writePromise).rejects.toMatchObject({
+          name: "NfcVerificationError",
+          reason: "empty",
+        });
+        expect(mockClose).toHaveBeenCalled();
+      });
+
+      it("should reject with NfcVerificationError when the tag has no NDEF TLV", async () => {
+        mockTransceiveFromMemory([
+          0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+          0x00, 0x00, 0x00, 0x00, 0x00,
+        ]);
+
+        const writePromise = writeTag("test content");
+        await fireInitialScan();
+
+        await expect(writePromise).rejects.toMatchObject({
+          name: "NfcVerificationError",
+          reason: "no-ndef",
+        });
+      });
+
+      it("should succeed unverified when connect fails", async () => {
+        mockConnect.mockRejectedValue(new Error("Tech type not supported."));
+
+        const writePromise = writeTag("test content");
+        await fireInitialScan();
+        const result = await writePromise;
+
+        expect(result.status).toBe(Status.Success);
+        expect(mockTransceive).not.toHaveBeenCalled();
+      });
+
+      it("should succeed unverified when the first read is unsupported", async () => {
+        // Default mockTransceive rejects every call
+        const writePromise = writeTag("test content");
+        await fireInitialScan();
+        const result = await writePromise;
+
+        expect(result.status).toBe(Status.Success);
+        expect(mockClose).toHaveBeenCalled();
+      });
+
+      it("should succeed unverified when the tag is lost mid-read", async () => {
+        const mem = t2Memory("a".repeat(60));
+        let calls = 0;
+        mockTransceive.mockReset().mockImplementation(() => {
+          calls++;
+          if (calls > 1) {
+            return Promise.reject(new Error("Tag was lost."));
+          }
+          return Promise.resolve({ response: mem.slice(0, 16) });
+        });
+
+        const writePromise = writeTag("a".repeat(60));
+        await fireInitialScan();
+        const result = await writePromise;
+
+        expect(result.status).toBe(Status.Success);
+        expect(mockClose).toHaveBeenCalled();
+      });
+
+      it("should verify after the auto-format write path", async () => {
+        mockWrite.mockRejectedValueOnce(
+          new Error("The NFC tag has not yet been formatted as NDEF."),
+        );
+        mockTransceiveFromMemory(t2Memory("test content"));
+
+        const writePromise = writeTag("test content");
+        await fireInitialScan();
+        const result = await writePromise;
+
+        expect(mockFormat).toHaveBeenCalled();
+        expect(mockConnect).toHaveBeenCalled();
+        expect(result.status).toBe(Status.Success);
+      });
+
+      it("should reject after auto-format when the read-back mismatches", async () => {
+        mockWrite.mockRejectedValueOnce(
+          new Error("The NFC tag has not yet been formatted as NDEF."),
+        );
+        mockTransceiveFromMemory(t2Memory("something else"));
+
+        const writePromise = writeTag("test content");
+        await fireInitialScan();
+
+        await expect(writePromise).rejects.toBeInstanceOf(NfcVerificationError);
+        // The verification failure must not trigger further format retries
+        expect(mockFormat).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe("ios", () => {
+      const IOS_OPTIONS = {
+        verifyTimeoutMs: 300,
+        ios: {
+          verifyingMessage: "verifying",
+          verifyFailedMessage: "did not save",
+        },
+      };
+
+      /** Build a scan event carrying the real NDEF record for the text. */
+      function textTagEvent(uid: number[], text: string): NfcTagScannedEvent {
+        const { record } = new NfcUtils().createNdefTextRecord({ text });
+        return {
+          nfcTag: { id: uid, message: { records: [record] } },
+        } as NfcTagScannedEvent;
+      }
+
+      /**
+       * Wait until the write happened and the verifier is waiting on the next
+       * scan event, then deliver it.
+       */
+      async function fireVerificationScan(event: NfcTagScannedEvent) {
+        await vi.waitFor(() => {
+          expect(mockWrite).toHaveBeenCalled();
+          expect(mockSetAlertMessage).toHaveBeenCalled();
+        });
+        // Let the verifier register its waiter after setAlertMessage resolves
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        mockState.nfcTagScannedCallback?.(event);
+      }
+
+      beforeEach(() => {
+        mockGetPlatform.mockReturnValue("ios");
+      });
+
+      it("should verify against a matching re-scan of the same tag", async () => {
+        const writePromise = writeTag("test content", IOS_OPTIONS);
+        await fireInitialScan([1, 2, 3, 4]);
+        await fireVerificationScan(textTagEvent([1, 2, 3, 4], "test content"));
+        const result = await writePromise;
+
+        expect(result.status).toBe(Status.Success);
+        expect(result.info.tag?.text).toBe("test content");
+        expect(mockSetAlertMessage).toHaveBeenCalledWith({
+          message: "verifying",
+        });
+        expect(mockStopScanSession).toHaveBeenCalledWith();
+        expect(mockConnect).not.toHaveBeenCalled();
+      });
+
+      it("should reject and stop the session with an error message on mismatch", async () => {
+        const writePromise = writeTag("test content", IOS_OPTIONS);
+        await fireInitialScan([1, 2, 3, 4]);
+        await fireVerificationScan(textTagEvent([1, 2, 3, 4], "other text"));
+
+        await expect(writePromise).rejects.toBeInstanceOf(NfcVerificationError);
+        expect(mockStopScanSession).toHaveBeenCalledWith({
+          errorMessage: "did not save",
+        });
+      });
+
+      it("should reject when the re-scan shows zero NDEF records", async () => {
+        const writePromise = writeTag("test content", IOS_OPTIONS);
+        await fireInitialScan([1, 2, 3, 4]);
+        await fireVerificationScan({
+          nfcTag: { id: [1, 2, 3, 4], message: { records: [] } },
+        } as unknown as NfcTagScannedEvent);
+
+        await expect(writePromise).rejects.toMatchObject({
+          name: "NfcVerificationError",
+          reason: "empty",
+        });
+      });
+
+      it("should succeed unverified when no re-scan arrives before the timeout", async () => {
+        const writePromise = writeTag("test content", {
+          ...IOS_OPTIONS,
+          verifyTimeoutMs: 50,
+        });
+        await fireInitialScan([1, 2, 3, 4]);
+        const result = await writePromise;
+
+        expect(result.status).toBe(Status.Success);
+      });
+
+      it("should ignore a different tag and succeed unverified on timeout", async () => {
+        const writePromise = writeTag("test content", {
+          ...IOS_OPTIONS,
+          verifyTimeoutMs: 150,
+        });
+        await fireInitialScan([1, 2, 3, 4]);
+        await fireVerificationScan(textTagEvent([9, 9, 9, 9], "test content"));
+        const result = await writePromise;
+
+        expect(result.status).toBe(Status.Success);
+      });
+
+      it("should resolve as Cancelled when the session is canceled during verification", async () => {
+        const writePromise = writeTag("test content", IOS_OPTIONS);
+        await fireInitialScan([1, 2, 3, 4]);
+        await vi.waitFor(() => {
+          expect(mockWrite).toHaveBeenCalled();
+        });
+
+        mockState.scanSessionCanceledCallback?.();
+        const result = await writePromise;
+
+        expect(result.status).toBe(Status.Cancelled);
+        mockState.listenerHandles.forEach((handle) => {
+          expect(handle.remove).toHaveBeenCalled();
+        });
+      });
+
+      it("should not re-run the write handler when polling re-fires the same tag", async () => {
+        const writePromise = writeTag("test content", IOS_OPTIONS);
+        await fireInitialScan([1, 2, 3, 4]);
+        await fireVerificationScan(textTagEvent([1, 2, 3, 4], "test content"));
+        await writePromise;
+
+        expect(mockWrite).toHaveBeenCalledTimes(1);
+      });
     });
   });
 

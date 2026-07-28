@@ -123,7 +123,9 @@ export function MappingEditor({ id }: MappingEditorProps) {
   );
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = writeIntent && nfcWriter.status === null;
+  const writeOpen =
+    writeIntent &&
+    (nfcWriter.status === null || nfcWriter.verifyError !== null);
   const prevStatusRef = useRef(nfcWriter.status);
 
   const mappings = useQuery({
@@ -407,7 +409,12 @@ export function MappingEditor({ id }: MappingEditorProps) {
         )}
       </PageFrame>
 
-      <WriteModal isOpen={writeOpen} close={closeWriteModal} />
+      <WriteModal
+        isOpen={writeOpen}
+        close={closeWriteModal}
+        verifyError={nfcWriter.verifyError !== null}
+        retry={() => void nfcWriter.retry()}
+      />
 
       <SlideModal
         isOpen={confirmOpen}

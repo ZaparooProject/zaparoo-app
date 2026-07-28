@@ -70,6 +70,20 @@ export class NfcFormatError extends ZaparooError {
 }
 
 /**
+ * Thrown when a post-write read-back of the tag shows the written data did not
+ * stick (empty NDEF, mismatched text, or unparseable contents). A tag-quality
+ * problem the user can fix by retrying, not a production monitoring event.
+ */
+export class NfcVerificationError extends ZaparooError {
+  constructor(
+    message = "NFC write verification failed: tag data does not match written data",
+    public readonly reason?: "empty" | "mismatch" | "no-ndef" | "unparseable",
+  ) {
+    super(message);
+  }
+}
+
+/**
  * Thrown when an NFC session is requested while another session is active.
  * Callers decide whether to cancel the active session and retry.
  */
@@ -245,7 +259,8 @@ export function isNfcError(error: unknown): boolean {
     error instanceof NfcCancelledError ||
     error instanceof NfcTransientError ||
     error instanceof NfcUnformattedTagError ||
-    error instanceof NfcFormatError
+    error instanceof NfcFormatError ||
+    error instanceof NfcVerificationError
   );
 }
 
@@ -265,7 +280,8 @@ export function isExpectedNfcError(error: unknown): boolean {
     wrappedError instanceof NfcCancelledError ||
     wrappedError instanceof NfcTransientError ||
     wrappedError instanceof NfcUnformattedTagError ||
-    wrappedError instanceof NfcFormatError
+    wrappedError instanceof NfcFormatError ||
+    wrappedError instanceof NfcVerificationError
   );
 }
 
@@ -304,7 +320,8 @@ export function wrapNfcError(error: unknown): Error {
     normalizedError instanceof NfcCancelledError ||
     normalizedError instanceof NfcTransientError ||
     normalizedError instanceof NfcUnformattedTagError ||
-    normalizedError instanceof NfcFormatError
+    normalizedError instanceof NfcFormatError ||
+    normalizedError instanceof NfcVerificationError
   ) {
     return normalizedError;
   }
