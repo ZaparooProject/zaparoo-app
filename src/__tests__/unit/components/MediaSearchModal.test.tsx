@@ -295,6 +295,7 @@ describe("MediaSearchModal", () => {
   });
 
   it("should default to ZapScript and insert it after confirmation", async () => {
+    const user = userEvent.setup();
     render(
       <MediaSearchModal
         isOpen={true}
@@ -303,16 +304,18 @@ describe("MediaSearchModal", () => {
       />,
     );
 
-    const searchInput = screen.getByPlaceholderText(
-      "create.search.gameInputPlaceholder",
-    );
-    fireEvent.change(searchInput, { target: { value: "mario" } });
-    fireEvent.click(
+    const searchInput = screen.getByRole("searchbox", {
+      name: "create.search.gameInput",
+    });
+    await user.type(searchInput, "mario");
+    await user.click(
       screen.getByRole("button", {
         name: /create\.search\.searchButton/i,
       }),
     );
-    fireEvent.click(await screen.findByTestId("result-0"));
+    await user.click(
+      await screen.findByRole("button", { name: "Super Mario World" }),
+    );
 
     const zapScriptRadio = await screen.findByRole("radio", {
       name: /create\.search\.zapscriptLabel/i,
@@ -320,7 +323,7 @@ describe("MediaSearchModal", () => {
     expect(zapScriptRadio).toBeChecked();
     expect(mockOnSelect).not.toHaveBeenCalled();
 
-    fireEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "create.custom.insert" }),
     );
 
@@ -329,6 +332,7 @@ describe("MediaSearchModal", () => {
   });
 
   it("should allow selecting and inserting the media path", async () => {
+    const user = userEvent.setup();
     render(
       <MediaSearchModal
         isOpen={true}
@@ -337,22 +341,24 @@ describe("MediaSearchModal", () => {
       />,
     );
 
-    const searchInput = screen.getByPlaceholderText(
-      "create.search.gameInputPlaceholder",
-    );
-    fireEvent.change(searchInput, { target: { value: "mario" } });
-    fireEvent.click(
+    const searchInput = screen.getByRole("searchbox", {
+      name: "create.search.gameInput",
+    });
+    await user.type(searchInput, "mario");
+    await user.click(
       screen.getByRole("button", {
         name: /create\.search\.searchButton/i,
       }),
     );
-    fireEvent.click(await screen.findByTestId("result-0"));
-    fireEvent.click(
+    await user.click(
+      await screen.findByRole("button", { name: "Super Mario World" }),
+    );
+    await user.click(
       await screen.findByRole("radio", {
         name: /create\.search\.pathLabel/i,
       }),
     );
-    fireEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "create.custom.insert" }),
     );
 
