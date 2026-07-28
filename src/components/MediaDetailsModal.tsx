@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { type ReactElement, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { Copy, FileCode, Folder, Tag } from "lucide-react";
@@ -21,6 +21,8 @@ export interface MediaDetailsModalProps {
   onCopy?: MediaDetailsAction;
   onPreview?: MediaDetailsAction;
   previewDisabled?: boolean;
+  primaryActionLabel?: string;
+  primaryActionIcon?: ReactElement;
 }
 
 export function MediaDetailsModal({
@@ -31,6 +33,8 @@ export function MediaDetailsModal({
   onCopy,
   onPreview,
   previewDisabled = false,
+  primaryActionLabel,
+  primaryActionIcon,
 }: MediaDetailsModalProps) {
   const { t } = useTranslation();
   const { impact } = useHaptics();
@@ -221,8 +225,8 @@ export function MediaDetailsModal({
 
           <div className="flex flex-col gap-2 pt-2">
             <Button
-              label={t("create.search.writeLabel")}
-              icon={<CreateIcon size="20" />}
+              label={primaryActionLabel ?? t("create.search.writeLabel")}
+              icon={primaryActionIcon ?? <CreateIcon size="20" />}
               intent="primary"
               onClick={() => void onWrite(selectedValue)}
               className="w-full"

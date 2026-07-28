@@ -204,6 +204,7 @@
         "insertCommandStart": "Insert command start",
         "insertCommandSeparator": "Insert command separator",
         "insertMedia": "Insert media path",
+        "insert": "Insert",
         "insertSystem": "Insert system",
         "insertCommand": "Insert command",
         "runZapScript": "Run ZapScript"
