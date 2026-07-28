@@ -21,6 +21,7 @@ import { DatabaseIcon, PlayIcon } from "./lib/images";
 import { ConnectionProvider } from "./components/ConnectionProvider";
 import { ReconnectingIndicator } from "./components/ReconnectingIndicator";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
+import { PAGE_SCROLL_RESTORATION_SELECTOR } from "./components/PageFrame";
 import { SlideModalProvider } from "./components/SlideModalProvider";
 import { RequirementsModal } from "./components/RequirementsModal";
 import { usePreferencesStore } from "./lib/preferencesStore";
@@ -230,6 +231,7 @@ function MediaFinishedToastHandler() {
 
 const router = createRouter({
   scrollRestoration: true,
+  scrollToTopSelectors: [PAGE_SCROLL_RESTORATION_SELECTOR],
   routeTree,
   defaultErrorComponent: ErrorComponent,
   basepath: __APP_BASE_PATH__,

@@ -10,25 +10,25 @@
 
 import { Route as rootRouteImport } from "./routes/__root";
 import { Route as IndexRouteImport } from "./routes/index";
-import { Route as SettingsIndexRouteImport } from "./routes/settings.index";
 import { Route as CreateIndexRouteImport } from "./routes/create.index";
-import { Route as SettingsReadersRouteImport } from "./routes/settings.readers";
-import { Route as SettingsPlayControlsRouteImport } from "./routes/settings.play-controls";
-import { Route as SettingsOnlineRouteImport } from "./routes/settings.online";
-import { Route as SettingsMediaRouteImport } from "./routes/settings.media";
-import { Route as SettingsLogsRouteImport } from "./routes/settings.logs";
-import { Route as SettingsHelpRouteImport } from "./routes/settings.help";
-import { Route as SettingsDevicesRouteImport } from "./routes/settings.devices";
-import { Route as SettingsAdvancedRouteImport } from "./routes/settings.advanced";
-import { Route as SettingsAccessibilityRouteImport } from "./routes/settings.accessibility";
-import { Route as SettingsAboutRouteImport } from "./routes/settings.about";
-import { Route as CreateTextRouteImport } from "./routes/create.text";
-import { Route as CreateSearchRouteImport } from "./routes/create.search";
-import { Route as CreateNfcRouteImport } from "./routes/create.nfc";
-import { Route as CreateMappingsRouteImport } from "./routes/create.mappings";
 import { Route as CreateCustomRouteImport } from "./routes/create.custom";
-import { Route as SettingsDevicesAddressRouteImport } from "./routes/settings.devices_.$address";
+import { Route as CreateMappingsRouteImport } from "./routes/create.mappings";
+import { Route as CreateNfcRouteImport } from "./routes/create.nfc";
+import { Route as CreateSearchRouteImport } from "./routes/create.search";
+import { Route as CreateTextRouteImport } from "./routes/create.text";
+import { Route as SettingsIndexRouteImport } from "./routes/settings.index";
+import { Route as SettingsAboutRouteImport } from "./routes/settings.about";
+import { Route as SettingsAccessibilityRouteImport } from "./routes/settings.accessibility";
+import { Route as SettingsAdvancedRouteImport } from "./routes/settings.advanced";
+import { Route as SettingsDevicesRouteImport } from "./routes/settings.devices";
+import { Route as SettingsHelpRouteImport } from "./routes/settings.help";
+import { Route as SettingsLogsRouteImport } from "./routes/settings.logs";
+import { Route as SettingsMediaRouteImport } from "./routes/settings.media";
+import { Route as SettingsOnlineRouteImport } from "./routes/settings.online";
+import { Route as SettingsPlayControlsRouteImport } from "./routes/settings.play-controls";
+import { Route as SettingsReadersRouteImport } from "./routes/settings.readers";
 import { Route as CreateMappingsNewRouteImport } from "./routes/create.mappings_.new";
+import { Route as SettingsDevicesAddressRouteImport } from "./routes/settings.devices_.$address";
 import { Route as CreateMappingsEditIdRouteImport } from "./routes/create.mappings_.edit_.$id";
 
 const IndexRoute = IndexRouteImport.update({
@@ -36,84 +36,9 @@ const IndexRoute = IndexRouteImport.update({
   path: "/",
   getParentRoute: () => rootRouteImport,
 } as any);
-const SettingsIndexRoute = SettingsIndexRouteImport.update({
-  id: "/settings/",
-  path: "/settings/",
-  getParentRoute: () => rootRouteImport,
-} as any);
 const CreateIndexRoute = CreateIndexRouteImport.update({
   id: "/create/",
   path: "/create/",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const SettingsReadersRoute = SettingsReadersRouteImport.update({
-  id: "/settings/readers",
-  path: "/settings/readers",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const SettingsPlayControlsRoute = SettingsPlayControlsRouteImport.update({
-  id: "/settings/play-controls",
-  path: "/settings/play-controls",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const SettingsOnlineRoute = SettingsOnlineRouteImport.update({
-  id: "/settings/online",
-  path: "/settings/online",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const SettingsMediaRoute = SettingsMediaRouteImport.update({
-  id: "/settings/media",
-  path: "/settings/media",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const SettingsLogsRoute = SettingsLogsRouteImport.update({
-  id: "/settings/logs",
-  path: "/settings/logs",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const SettingsHelpRoute = SettingsHelpRouteImport.update({
-  id: "/settings/help",
-  path: "/settings/help",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const SettingsDevicesRoute = SettingsDevicesRouteImport.update({
-  id: "/settings/devices",
-  path: "/settings/devices",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const SettingsAdvancedRoute = SettingsAdvancedRouteImport.update({
-  id: "/settings/advanced",
-  path: "/settings/advanced",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const SettingsAccessibilityRoute = SettingsAccessibilityRouteImport.update({
-  id: "/settings/accessibility",
-  path: "/settings/accessibility",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const SettingsAboutRoute = SettingsAboutRouteImport.update({
-  id: "/settings/about",
-  path: "/settings/about",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const CreateTextRoute = CreateTextRouteImport.update({
-  id: "/create/text",
-  path: "/create/text",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const CreateSearchRoute = CreateSearchRouteImport.update({
-  id: "/create/search",
-  path: "/create/search",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const CreateNfcRoute = CreateNfcRouteImport.update({
-  id: "/create/nfc",
-  path: "/create/nfc",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const CreateMappingsRoute = CreateMappingsRouteImport.update({
-  id: "/create/mappings",
-  path: "/create/mappings",
   getParentRoute: () => rootRouteImport,
 } as any);
 const CreateCustomRoute = CreateCustomRouteImport.update({
@@ -121,14 +46,89 @@ const CreateCustomRoute = CreateCustomRouteImport.update({
   path: "/create/custom",
   getParentRoute: () => rootRouteImport,
 } as any);
-const SettingsDevicesAddressRoute = SettingsDevicesAddressRouteImport.update({
-  id: "/settings/devices_/$address",
-  path: "/settings/devices/$address",
+const CreateMappingsRoute = CreateMappingsRouteImport.update({
+  id: "/create/mappings",
+  path: "/create/mappings",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const CreateNfcRoute = CreateNfcRouteImport.update({
+  id: "/create/nfc",
+  path: "/create/nfc",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const CreateSearchRoute = CreateSearchRouteImport.update({
+  id: "/create/search",
+  path: "/create/search",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const CreateTextRoute = CreateTextRouteImport.update({
+  id: "/create/text",
+  path: "/create/text",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: "/settings/",
+  path: "/settings/",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsAboutRoute = SettingsAboutRouteImport.update({
+  id: "/settings/about",
+  path: "/settings/about",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsAccessibilityRoute = SettingsAccessibilityRouteImport.update({
+  id: "/settings/accessibility",
+  path: "/settings/accessibility",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsAdvancedRoute = SettingsAdvancedRouteImport.update({
+  id: "/settings/advanced",
+  path: "/settings/advanced",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsDevicesRoute = SettingsDevicesRouteImport.update({
+  id: "/settings/devices",
+  path: "/settings/devices",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsHelpRoute = SettingsHelpRouteImport.update({
+  id: "/settings/help",
+  path: "/settings/help",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsLogsRoute = SettingsLogsRouteImport.update({
+  id: "/settings/logs",
+  path: "/settings/logs",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsMediaRoute = SettingsMediaRouteImport.update({
+  id: "/settings/media",
+  path: "/settings/media",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsOnlineRoute = SettingsOnlineRouteImport.update({
+  id: "/settings/online",
+  path: "/settings/online",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsPlayControlsRoute = SettingsPlayControlsRouteImport.update({
+  id: "/settings/play-controls",
+  path: "/settings/play-controls",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsReadersRoute = SettingsReadersRouteImport.update({
+  id: "/settings/readers",
+  path: "/settings/readers",
   getParentRoute: () => rootRouteImport,
 } as any);
 const CreateMappingsNewRoute = CreateMappingsNewRouteImport.update({
   id: "/create/mappings_/new",
   path: "/create/mappings/new",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsDevicesAddressRoute = SettingsDevicesAddressRouteImport.update({
+  id: "/settings/devices_/$address",
+  path: "/settings/devices/$address",
   getParentRoute: () => rootRouteImport,
 } as any);
 const CreateMappingsEditIdRoute = CreateMappingsEditIdRouteImport.update({
@@ -312,116 +312,11 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof IndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    "/settings/": {
-      id: "/settings/";
-      path: "/settings";
-      fullPath: "/settings/";
-      preLoaderRoute: typeof SettingsIndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
     "/create/": {
       id: "/create/";
       path: "/create";
       fullPath: "/create/";
       preLoaderRoute: typeof CreateIndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/settings/readers": {
-      id: "/settings/readers";
-      path: "/settings/readers";
-      fullPath: "/settings/readers";
-      preLoaderRoute: typeof SettingsReadersRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/settings/play-controls": {
-      id: "/settings/play-controls";
-      path: "/settings/play-controls";
-      fullPath: "/settings/play-controls";
-      preLoaderRoute: typeof SettingsPlayControlsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/settings/online": {
-      id: "/settings/online";
-      path: "/settings/online";
-      fullPath: "/settings/online";
-      preLoaderRoute: typeof SettingsOnlineRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/settings/media": {
-      id: "/settings/media";
-      path: "/settings/media";
-      fullPath: "/settings/media";
-      preLoaderRoute: typeof SettingsMediaRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/settings/logs": {
-      id: "/settings/logs";
-      path: "/settings/logs";
-      fullPath: "/settings/logs";
-      preLoaderRoute: typeof SettingsLogsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/settings/help": {
-      id: "/settings/help";
-      path: "/settings/help";
-      fullPath: "/settings/help";
-      preLoaderRoute: typeof SettingsHelpRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/settings/devices": {
-      id: "/settings/devices";
-      path: "/settings/devices";
-      fullPath: "/settings/devices";
-      preLoaderRoute: typeof SettingsDevicesRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/settings/advanced": {
-      id: "/settings/advanced";
-      path: "/settings/advanced";
-      fullPath: "/settings/advanced";
-      preLoaderRoute: typeof SettingsAdvancedRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/settings/accessibility": {
-      id: "/settings/accessibility";
-      path: "/settings/accessibility";
-      fullPath: "/settings/accessibility";
-      preLoaderRoute: typeof SettingsAccessibilityRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/settings/about": {
-      id: "/settings/about";
-      path: "/settings/about";
-      fullPath: "/settings/about";
-      preLoaderRoute: typeof SettingsAboutRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/create/text": {
-      id: "/create/text";
-      path: "/create/text";
-      fullPath: "/create/text";
-      preLoaderRoute: typeof CreateTextRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/create/search": {
-      id: "/create/search";
-      path: "/create/search";
-      fullPath: "/create/search";
-      preLoaderRoute: typeof CreateSearchRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/create/nfc": {
-      id: "/create/nfc";
-      path: "/create/nfc";
-      fullPath: "/create/nfc";
-      preLoaderRoute: typeof CreateNfcRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/create/mappings": {
-      id: "/create/mappings";
-      path: "/create/mappings";
-      fullPath: "/create/mappings";
-      preLoaderRoute: typeof CreateMappingsRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/create/custom": {
@@ -431,11 +326,109 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof CreateCustomRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    "/settings/devices_/$address": {
-      id: "/settings/devices_/$address";
-      path: "/settings/devices/$address";
-      fullPath: "/settings/devices/$address";
-      preLoaderRoute: typeof SettingsDevicesAddressRouteImport;
+    "/create/mappings": {
+      id: "/create/mappings";
+      path: "/create/mappings";
+      fullPath: "/create/mappings";
+      preLoaderRoute: typeof CreateMappingsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/create/nfc": {
+      id: "/create/nfc";
+      path: "/create/nfc";
+      fullPath: "/create/nfc";
+      preLoaderRoute: typeof CreateNfcRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/create/search": {
+      id: "/create/search";
+      path: "/create/search";
+      fullPath: "/create/search";
+      preLoaderRoute: typeof CreateSearchRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/create/text": {
+      id: "/create/text";
+      path: "/create/text";
+      fullPath: "/create/text";
+      preLoaderRoute: typeof CreateTextRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/": {
+      id: "/settings/";
+      path: "/settings";
+      fullPath: "/settings/";
+      preLoaderRoute: typeof SettingsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/about": {
+      id: "/settings/about";
+      path: "/settings/about";
+      fullPath: "/settings/about";
+      preLoaderRoute: typeof SettingsAboutRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/accessibility": {
+      id: "/settings/accessibility";
+      path: "/settings/accessibility";
+      fullPath: "/settings/accessibility";
+      preLoaderRoute: typeof SettingsAccessibilityRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/advanced": {
+      id: "/settings/advanced";
+      path: "/settings/advanced";
+      fullPath: "/settings/advanced";
+      preLoaderRoute: typeof SettingsAdvancedRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/devices": {
+      id: "/settings/devices";
+      path: "/settings/devices";
+      fullPath: "/settings/devices";
+      preLoaderRoute: typeof SettingsDevicesRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/help": {
+      id: "/settings/help";
+      path: "/settings/help";
+      fullPath: "/settings/help";
+      preLoaderRoute: typeof SettingsHelpRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/logs": {
+      id: "/settings/logs";
+      path: "/settings/logs";
+      fullPath: "/settings/logs";
+      preLoaderRoute: typeof SettingsLogsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/media": {
+      id: "/settings/media";
+      path: "/settings/media";
+      fullPath: "/settings/media";
+      preLoaderRoute: typeof SettingsMediaRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/online": {
+      id: "/settings/online";
+      path: "/settings/online";
+      fullPath: "/settings/online";
+      preLoaderRoute: typeof SettingsOnlineRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/play-controls": {
+      id: "/settings/play-controls";
+      path: "/settings/play-controls";
+      fullPath: "/settings/play-controls";
+      preLoaderRoute: typeof SettingsPlayControlsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/readers": {
+      id: "/settings/readers";
+      path: "/settings/readers";
+      fullPath: "/settings/readers";
+      preLoaderRoute: typeof SettingsReadersRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/create/mappings_/new": {
@@ -443,6 +436,13 @@ declare module "@tanstack/react-router" {
       path: "/create/mappings/new";
       fullPath: "/create/mappings/new";
       preLoaderRoute: typeof CreateMappingsNewRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/devices_/$address": {
+      id: "/settings/devices_/$address";
+      path: "/settings/devices/$address";
+      fullPath: "/settings/devices/$address";
+      preLoaderRoute: typeof SettingsDevicesAddressRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/create/mappings_/edit_/$id": {

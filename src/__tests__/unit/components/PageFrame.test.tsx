@@ -1,6 +1,18 @@
-import { render, screen } from "../../../test-utils";
+import { act, fireEvent, render, screen } from "../../../test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { PageFrame } from "@/components/PageFrame";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from "@tanstack/react-router";
+import {
+  PageFrame,
+  PAGE_SCROLL_RESTORATION_ID,
+  PAGE_SCROLL_RESTORATION_SELECTOR,
+} from "@/components/PageFrame";
 import { useRef } from "react";
 
 // Mock store for safe insets
@@ -109,6 +121,97 @@ describe("PageFrame", () => {
 
     const pageFrame = screen.getByTestId("page-frame");
     expect(pageFrame).toHaveAttribute("role", "main");
+  });
+
+  it("should identify its scroll container for router restoration", () => {
+    const { container } = render(
+      <PageFrame>
+        <div>Scrollable content</div>
+      </PageFrame>,
+    );
+
+    const scrollContainer = container.querySelector(
+      PAGE_SCROLL_RESTORATION_SELECTOR,
+    );
+    expect(scrollContainer).toHaveAttribute(
+      "data-scroll-restoration-id",
+      PAGE_SCROLL_RESTORATION_ID,
+    );
+  });
+
+  it("should reset on forward navigation and restore on back navigation", async () => {
+    const rootRoute = createRootRoute({
+      component: () => <Outlet />,
+    });
+    const settingsRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/settings",
+      component: () => (
+        <PageFrame>
+          <div>Settings page</div>
+        </PageFrame>
+      ),
+    });
+    const mediaRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/settings/media",
+      component: () => (
+        <PageFrame>
+          <div>Media page</div>
+        </PageFrame>
+      ),
+    });
+    const routeTree = rootRoute.addChildren([settingsRoute, mediaRoute]);
+    const history = createMemoryHistory({ initialEntries: ["/settings"] });
+    const router = createRouter({
+      routeTree,
+      history,
+      scrollRestoration: true,
+      scrollToTopSelectors: [PAGE_SCROLL_RESTORATION_SELECTOR],
+    });
+
+    render(<RouterProvider router={router} />);
+    await screen.findByText("Settings page");
+
+    const settingsScrollContainer = document.querySelector(
+      PAGE_SCROLL_RESTORATION_SELECTOR,
+    );
+    expect(settingsScrollContainer).toBeInstanceOf(HTMLElement);
+    if (!(settingsScrollContainer instanceof HTMLElement)) return;
+
+    settingsScrollContainer.scrollTop = 320;
+    fireEvent.scroll(settingsScrollContainer);
+
+    await act(() => router.navigate({ to: "/settings/media" }));
+    await screen.findByText("Media page");
+
+    const mediaScrollContainer = document.querySelector(
+      PAGE_SCROLL_RESTORATION_SELECTOR,
+    );
+    expect(mediaScrollContainer).toBeInstanceOf(HTMLElement);
+    if (!(mediaScrollContainer instanceof HTMLElement)) return;
+    expect(mediaScrollContainer.scrollTop).toBe(0);
+
+    const firstSettingsFrame = new Promise<number>((resolve) => {
+      const sampleFrame = () => {
+        if (
+          screen.queryByText("Settings page") &&
+          !screen.queryByText("Media page")
+        ) {
+          const restoredScrollContainer = document.querySelector(
+            PAGE_SCROLL_RESTORATION_SELECTOR,
+          );
+          resolve(restoredScrollContainer?.scrollTop ?? -1);
+          return;
+        }
+        window.requestAnimationFrame(sampleFrame);
+      };
+      window.requestAnimationFrame(sampleFrame);
+    });
+
+    act(() => router.history.back());
+
+    expect(await firstSettingsFrame).toBe(320);
   });
 
   it("should handle scrollRef", () => {

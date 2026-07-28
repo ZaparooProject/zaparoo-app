@@ -302,11 +302,9 @@ export function MediaDatabaseCard({
                 <LoadingSpinner size={16} className="text-muted-foreground" />
               ) : null}
             </div>
-            {(isPaused || !isLiveConnected) && (
+            {isPaused && (
               <div className="text-muted-foreground text-xs">
-                {isPaused
-                  ? t("settings.updateDb.status.paused")
-                  : t("settings.updateDb.status.reconnecting")}
+                {t("settings.updateDb.status.paused")}
               </div>
             )}
             <div
@@ -439,9 +437,6 @@ export function MediaDatabaseCard({
     if (isIndexing) {
       if (isPaused) {
         return `${stepText} — ${t("settings.updateDb.status.paused")}`;
-      }
-      if (!isLiveConnected) {
-        return `${stepText} — ${t("settings.updateDb.status.reconnecting")}`;
       }
       return stepText;
     }

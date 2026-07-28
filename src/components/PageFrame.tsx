@@ -1,6 +1,10 @@
-import React, { RefObject, ReactNode } from "react";
+import React, { RefObject, ReactNode, useLayoutEffect, useRef } from "react";
+import { useElementScrollRestoration, useRouter } from "@tanstack/react-router";
 import { useStatusStore } from "@/lib/store";
 import { ResponsiveContainer } from "./ResponsiveContainer";
+
+export const PAGE_SCROLL_RESTORATION_ID = "page-scroll";
+export const PAGE_SCROLL_RESTORATION_SELECTOR = `[data-scroll-restoration-id="${PAGE_SCROLL_RESTORATION_ID}"]`;
 
 interface PageFrameProps extends React.HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
@@ -15,8 +19,34 @@ interface PageFrameProps extends React.HTMLAttributes<HTMLDivElement> {
   scrollRef?: RefObject<HTMLDivElement | null>;
 }
 
+interface PageFrameLayoutProps extends PageFrameProps {
+  restorationEntry?: {
+    scrollX: number;
+    scrollY: number;
+  };
+}
+
 export function PageFrame(props: PageFrameProps) {
+  const router = useRouter({ warn: false });
+
+  return router ? (
+    <RoutedPageFrame {...props} />
+  ) : (
+    <PageFrameLayout {...props} />
+  );
+}
+
+function RoutedPageFrame(props: PageFrameProps) {
+  const restorationEntry = useElementScrollRestoration({
+    id: PAGE_SCROLL_RESTORATION_ID,
+  });
+
+  return <PageFrameLayout {...props} restorationEntry={restorationEntry} />;
+}
+
+function PageFrameLayout(props: PageFrameLayoutProps) {
   const safeInsets = useStatusStore((state) => state.safeInsets);
+  const internalScrollRef = useRef<HTMLDivElement>(null);
 
   // Destructure known props and collect the rest
   const {
@@ -26,11 +56,23 @@ export function PageFrame(props: PageFrameProps) {
     headerCenter,
     headerRight,
     scrollRef,
+    restorationEntry,
     className,
     ...restProps
   } = props;
 
+  const activeScrollRef = scrollRef ?? internalScrollRef;
   const hasHeaderContent = header || headerLeft || headerCenter || headerRight;
+
+  useLayoutEffect(() => {
+    const scrollContainer = activeScrollRef.current;
+    if (!scrollContainer || !restorationEntry) return;
+
+    // Restore during this page's layout phase so Back navigation never paints
+    // the new page at the top before TanStack Router applies its global restore.
+    scrollContainer.scrollLeft = restorationEntry.scrollX;
+    scrollContainer.scrollTop = restorationEntry.scrollY;
+  }, [activeScrollRef, restorationEntry]);
 
   return (
     <div
@@ -63,7 +105,8 @@ export function PageFrame(props: PageFrameProps) {
         )}
       </div>
       <div
-        ref={scrollRef}
+        ref={activeScrollRef}
+        data-scroll-restoration-id={PAGE_SCROLL_RESTORATION_ID}
         className="flex-1 overflow-y-auto pb-4"
         style={{
           paddingRight: `calc(1rem + ${safeInsets.right})`,
