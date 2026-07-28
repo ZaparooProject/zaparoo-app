@@ -763,10 +763,7 @@ describe("MediaDatabaseCard", () => {
     });
   });
 
-  it("should show Reconnecting indicator when reconnecting mid-index", () => {
-    // Real reconnect path: store.connected stays true during RECONNECTING
-    // (see src/lib/store.ts) — only connectionState distinguishes the live
-    // CONNECTED state from a transient drop.
+  it("should not duplicate the global reconnecting status mid-index", () => {
     mockStore.connected = true;
     mockStore.connectionState = ConnectionState.RECONNECTING;
     mockStore.gamesIndex = {
@@ -781,9 +778,10 @@ describe("MediaDatabaseCard", () => {
     render(<MediaDatabaseCard />);
 
     expect(
-      screen.getAllByText("settings.updateDb.status.reconnecting").length,
-    ).toBeGreaterThan(0);
-    // Spinner is suppressed while reconnecting — updates are paused.
+      screen.queryByText("settings.updateDb.status.reconnecting"),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText("Sega Genesis").length).toBeGreaterThan(0);
+    // Updates remain visibly paused without duplicating global status copy.
     expect(
       screen.queryByRole("status", { name: "Loading" }),
     ).not.toBeInTheDocument();

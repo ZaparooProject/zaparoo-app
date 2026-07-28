@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "../../test-utils";
 import { vi, beforeEach, describe, it, expect } from "vitest";
 import App from "@/App";
+import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 import { logger } from "@/lib/logger";
 
@@ -9,6 +10,7 @@ const {
   mockUseRunQueueProcessor,
   mockUseWriteQueueProcessor,
   mockPreferencesState,
+  mockRouterOptions,
 } = vi.hoisted(() => ({
   mockUseDeepLinks: vi.fn(),
   mockUseRunQueueProcessor: vi.fn(() => ({
@@ -29,6 +31,9 @@ const {
     },
     reset: vi.fn(),
   })),
+  mockRouterOptions: {
+    current: null as Record<string, unknown> | null,
+  },
   mockPreferencesState: {
     _hasHydrated: true,
     _proAccessHydrated: true,
@@ -65,10 +70,13 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
-    createRouter: vi.fn(() => ({
-      subscribe: vi.fn(),
-      navigate: vi.fn(),
-    })),
+    createRouter: vi.fn((options: Record<string, unknown>) => {
+      mockRouterOptions.current = options;
+      return {
+        subscribe: vi.fn(),
+        navigate: vi.fn(),
+      };
+    }),
     RouterProvider: ({ children }: { children: React.ReactNode }) => (
       <div data-testid="router">{children}</div>
     ),
@@ -271,6 +279,13 @@ describe("App Integration", () => {
       launcherAccess: false,
     });
     vi.mocked(isNativePluginAvailable).mockReturnValue(true);
+  });
+
+  it("should reset page scroll containers on forward navigation", () => {
+    expect(mockRouterOptions.current).toMatchObject({
+      scrollRestoration: true,
+      scrollToTopSelectors: [PAGE_SCROLL_RESTORATION_SELECTOR],
+    });
   });
 
   it("should render App component with all providers", () => {

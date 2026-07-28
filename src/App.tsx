@@ -8,6 +8,7 @@ import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { InboxModal } from "@/components/InboxModal";
+import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 import { StagedTokenModal } from "@/components/home/StagedTokenModal";
 import {
   isNativePluginAvailable,
@@ -230,6 +231,7 @@ function MediaFinishedToastHandler() {
 
 const router = createRouter({
   scrollRestoration: true,
+  scrollToTopSelectors: [PAGE_SCROLL_RESTORATION_SELECTOR],
   routeTree,
   defaultErrorComponent: ErrorComponent,
   basepath: __APP_BASE_PATH__,
