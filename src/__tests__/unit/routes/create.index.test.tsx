@@ -10,6 +10,7 @@ const {
   mockNfcWriter,
   mockMediaActive,
   mockLoggerError,
+  mockShowRateLimitedErrorToast,
 } = vi.hoisted(() => ({
   componentRef: { current: null as any },
   mockState: {
@@ -37,6 +38,7 @@ const {
   },
   mockMediaActive: vi.fn(),
   mockLoggerError: vi.fn(),
+  mockShowRateLimitedErrorToast: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -99,6 +101,10 @@ vi.mock("@/lib/logger", () => ({
   logger: {
     error: mockLoggerError,
   },
+}));
+
+vi.mock("@/lib/toastUtils", () => ({
+  showRateLimitedErrorToast: mockShowRateLimitedErrorToast,
 }));
 
 // Mock NFC writer
@@ -533,6 +539,7 @@ describe("Create Index Route", () => {
       );
 
       await waitFor(() => expect(mockMediaActive).toHaveBeenCalledOnce());
+      expect(mockShowRateLimitedErrorToast).toHaveBeenCalledWith("error");
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(mockNfcWriter.write).not.toHaveBeenCalled();
     });

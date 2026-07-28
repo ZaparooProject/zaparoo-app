@@ -10,6 +10,7 @@ import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
 import { CoreAPI } from "@/lib/coreApi";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import { logger } from "@/lib/logger";
+import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import type { PlayingResponse, SearchResultGame } from "@/lib/models";
 import { MediaDetailsModal } from "@/components/MediaDetailsModal";
 import { Card } from "@/components/wui/Card";
@@ -76,6 +77,9 @@ export function Create() {
       try {
         const response = await CoreAPI.mediaActive();
         if (!response || response.mediaPath === "") {
+          showRateLimitedErrorToast(
+            t("error", { msg: t("create.currentGameUnavailable") }),
+          );
           setCurrentMediaDetails(null);
           return;
         }

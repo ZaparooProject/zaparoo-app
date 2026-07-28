@@ -1498,6 +1498,10 @@ class CoreApi {
     return new Promise<PlayingResponse | null>((resolve, reject) => {
       this.call(Method.MediaActive)
         .then((result) => {
+          if (isCancelled(result)) {
+            resolve(null);
+            return;
+          }
           resolve(result as PlayingResponse | null);
         })
         .catch((error) => {

@@ -139,6 +139,7 @@
       "currentGameHeading": "Current media",
       "currentGameSub": "Write '{{game}}' to a tag",
       "currentGameSubFallback": "Write 'Now Playing' to a tag",
+      "currentGameUnavailable": "Current media is no longer active",
       "customHeading": "Custom ZapScript",
       "customSub": "Write ZapScript to an NFC tag",
       "nfcHeading": "NFC utilities",

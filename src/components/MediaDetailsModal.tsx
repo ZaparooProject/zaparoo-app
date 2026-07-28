@@ -112,13 +112,13 @@ export function MediaDetailsModal({
                   impact("light");
                   setWriteMode("path");
                 }}
-                className="sr-only"
+                className="peer sr-only"
               />
               <label
                 htmlFor={pathInputId}
                 aria-label={`${t("create.search.pathLabel")}: ${media.path}${writeMode === "path" ? `, ${t("selected")}` : ""}`}
                 className={classNames(
-                  "flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
+                  "flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-white/50",
                   {
                     "border-white/30 bg-white/10": writeMode === "path",
                     "border-white/10 bg-white/5 hover:bg-white/[0.07]":
@@ -169,13 +169,13 @@ export function MediaDetailsModal({
                     impact("light");
                     setWriteMode("zapScript");
                   }}
-                  className="sr-only"
+                  className="peer sr-only"
                 />
                 <label
                   htmlFor={zapScriptInputId}
                   aria-label={`${t("create.search.zapscriptLabel")}: ${media.zapScript}${writeMode === "zapScript" ? `, ${t("selected")}` : ""}`}
                   className={classNames(
-                    "flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
+                    "flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-white/50",
                     {
                       "border-white/30 bg-white/10": writeMode === "zapScript",
                       "border-white/10 bg-white/5 hover:bg-white/[0.07]":

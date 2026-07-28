@@ -214,7 +214,7 @@ describe("CoreAPI", () => {
     },
   );
 
-  it("should resolve media.active object and null responses", async () => {
+  it("should resolve media.active object, null, and cancellation responses", async () => {
     const activeMedia = {
       systemId: "SNES",
       systemName: "Super Nintendo",
@@ -248,6 +248,20 @@ describe("CoreAPI", () => {
     } as MessageEvent).catch(() => undefined);
 
     await expect(emptyPromise).resolves.toBeNull();
+
+    mockSend.mockClear();
+    const cancelledPromise = CoreAPI.mediaActive();
+    const cancelledRequest = JSON.parse(mockSend.mock.calls[0][0]);
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: cancelledRequest.id,
+        result: { cancelled: true },
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    await expect(cancelledPromise).resolves.toBeNull();
   });
 
   it("should handle tokens.removed notification", async () => {

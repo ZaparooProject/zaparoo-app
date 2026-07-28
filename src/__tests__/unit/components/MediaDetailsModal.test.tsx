@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen } from "../../../test-utils";
+import { render, screen } from "@/test-utils";
 import { MediaDetailsModal } from "@/components/MediaDetailsModal";
 import type { SearchResultGame } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
