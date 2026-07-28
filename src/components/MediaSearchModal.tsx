@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useRef, useState } from "react";
 import { Preferences } from "@capacitor/preferences";
+import { PlusIcon } from "lucide-react";
 import { useStatusStore } from "@/lib/store.ts";
 import { logger } from "@/lib/logger";
 import { SlideModal } from "@/components/SlideModal.tsx";
@@ -11,11 +12,12 @@ import { SearchResultGame } from "@/lib/models.ts";
 import { BackToTop } from "@/components/BackToTop.tsx";
 import { SearchIcon } from "@/lib/images.tsx";
 import { SimpleSystemSelect } from "@/components/SimpleSystemSelect.tsx";
+import { MediaDetailsModal } from "@/components/MediaDetailsModal";
 
 export function MediaSearchModal(props: {
   isOpen: boolean;
   close: () => void;
-  onSelect: (path: string) => void;
+  onSelect: (value: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -69,12 +71,6 @@ export function MediaSearchModal(props: {
 
   // Handle result selection - called by VirtualSearchResults when a result is clicked
   const handleResultSelect = (result: SearchResultGame | null) => {
-    if (result) {
-      // Use zapScript if available, otherwise fall back to path
-      const valueToInsert = result.zapScript || result.path;
-      onSelect(valueToInsert);
-      close();
-    }
     setSelectedResult(result);
   };
 
@@ -83,7 +79,7 @@ export function MediaSearchModal(props: {
   return (
     <>
       <SlideModal
-        isOpen={props.isOpen}
+        isOpen={props.isOpen && selectedResult === null}
         close={props.close}
         title={t("create.search.title")}
         scrollRef={scrollContainerRef}
@@ -155,6 +151,18 @@ export function MediaSearchModal(props: {
           bottomOffset="1rem"
         />
       </SlideModal>
+      <MediaDetailsModal
+        isOpen={props.isOpen && selectedResult !== null}
+        close={() => setSelectedResult(null)}
+        media={selectedResult}
+        onWrite={(value) => {
+          onSelect(value);
+          setSelectedResult(null);
+          close();
+        }}
+        primaryActionLabel={t("create.custom.insert")}
+        primaryActionIcon={<PlusIcon size="20" />}
+      />
     </>
   );
 }

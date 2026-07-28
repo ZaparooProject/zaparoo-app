@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MediaSearchModal } from "@/components/MediaSearchModal";
+import type { SearchResultGame } from "@/lib/models";
 
 const mockStoreState = {
   connected: true,
@@ -95,9 +96,7 @@ vi.mock("@/components/VirtualSearchResults", () => ({
   }: {
     query: string;
     hasSearched: boolean;
-    setSelectedResult: (
-      result: { path: string; zapScript?: string } | null,
-    ) => void;
+    setSelectedResult: (result: SearchResultGame | null) => void;
   }) => {
     if (!hasSearched) {
       return (
@@ -115,8 +114,11 @@ vi.mock("@/components/VirtualSearchResults", () => ({
           data-testid="result-0"
           onClick={() =>
             setSelectedResult({
+              system: { id: "snes", name: "Super Nintendo" },
+              name: "Super Mario World",
               path: "/games/mario.sfc",
               zapScript: "**launch:/games/mario.sfc",
+              tags: [],
             })
           }
         >
@@ -292,7 +294,8 @@ describe("MediaSearchModal", () => {
     expect(await screen.findByRole("combobox")).toBeDisabled();
   });
 
-  it("should call onSelect and close when result is selected", async () => {
+  it("should default to ZapScript and insert it after confirmation", async () => {
+    const user = userEvent.setup();
     render(
       <MediaSearchModal
         isOpen={true}
@@ -301,30 +304,69 @@ describe("MediaSearchModal", () => {
       />,
     );
 
-    // Enter search query and trigger search
-    const searchInput = screen.getByPlaceholderText(
-      "create.search.gameInputPlaceholder",
+    const searchInput = screen.getByRole("searchbox", {
+      name: "create.search.gameInput",
+    });
+    await user.type(searchInput, "mario");
+    await user.click(
+      screen.getByRole("button", {
+        name: /create\.search\.searchButton/i,
+      }),
     );
-    fireEvent.change(searchInput, { target: { value: "mario" } });
+    await user.click(
+      await screen.findByRole("button", { name: "Super Mario World" }),
+    );
 
-    const searchButton = screen.getByRole("button", {
-      name: /create\.search\.searchButton/i,
+    const zapScriptRadio = await screen.findByRole("radio", {
+      name: /create\.search\.zapscriptLabel/i,
     });
-    fireEvent.click(searchButton);
+    expect(zapScriptRadio).toBeChecked();
+    expect(mockOnSelect).not.toHaveBeenCalled();
 
-    // Wait for search results
-    await waitFor(() => {
-      expect(screen.getByTestId("result-0")).toBeInTheDocument();
-    });
-
-    // Click on a result
-    fireEvent.click(screen.getByTestId("result-0"));
+    await user.click(
+      screen.getByRole("button", { name: "create.custom.insert" }),
+    );
 
     expect(mockOnSelect).toHaveBeenCalledWith("**launch:/games/mario.sfc");
-    expect(mockClose).toHaveBeenCalled();
+    expect(mockClose).toHaveBeenCalledOnce();
   });
 
-  it("should not render modal content when closed (aria-hidden)", () => {
+  it("should allow selecting and inserting the media path", async () => {
+    const user = userEvent.setup();
+    render(
+      <MediaSearchModal
+        isOpen={true}
+        close={mockClose}
+        onSelect={mockOnSelect}
+      />,
+    );
+
+    const searchInput = screen.getByRole("searchbox", {
+      name: "create.search.gameInput",
+    });
+    await user.type(searchInput, "mario");
+    await user.click(
+      screen.getByRole("button", {
+        name: /create\.search\.searchButton/i,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Super Mario World" }),
+    );
+    await user.click(
+      await screen.findByRole("radio", {
+        name: /create\.search\.pathLabel/i,
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "create.custom.insert" }),
+    );
+
+    expect(mockOnSelect).toHaveBeenCalledWith("/games/mario.sfc");
+    expect(mockClose).toHaveBeenCalledOnce();
+  });
+
+  it("should hide all modal content when closed", () => {
     render(
       <MediaSearchModal
         isOpen={false}
@@ -333,9 +375,11 @@ describe("MediaSearchModal", () => {
       />,
     );
 
-    // Modal should have aria-hidden when closed
-    const modal = screen.getByRole("dialog", { hidden: true });
-    expect(modal).toHaveAttribute("aria-hidden", "true");
+    const modals = screen.getAllByRole("dialog", { hidden: true });
+    expect(modals).toHaveLength(2);
+    expect(
+      modals.every((modal) => modal.getAttribute("aria-hidden") === "true"),
+    ).toBe(true);
   });
 
   it("should trigger search on Enter key press", async () => {
