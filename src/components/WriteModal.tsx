@@ -3,9 +3,17 @@ import { useTranslation } from "react-i18next";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { ScanResult } from "@/lib/models";
+import type { WriteNfcHook } from "@/lib/writeNfcHook";
 import { ScanSpinner } from "./ScanSpinner";
 import { Button } from "./wui/Button";
 import { useAnnouncer } from "./A11yAnnouncer";
+
+export function isWriteModalOpen(
+  writeIntent: boolean,
+  writer: Pick<WriteNfcHook, "status" | "verifyError">,
+): boolean {
+  return writeIntent && (writer.status === null || writer.verifyError !== null);
+}
 
 export function WriteModal(props: {
   isOpen: boolean;

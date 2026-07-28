@@ -24,7 +24,7 @@ import { PageFrame } from "@/components/PageFrame";
 import { SlideModal } from "@/components/SlideModal";
 import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { WriteModal } from "@/components/WriteModal";
+import { isWriteModalOpen, WriteModal } from "@/components/WriteModal";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
@@ -123,9 +123,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
   );
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen =
-    writeIntent &&
-    (nfcWriter.status === null || nfcWriter.verifyError !== null);
+  const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
   const prevStatusRef = useRef(nfcWriter.status);
 
   const mappings = useQuery({

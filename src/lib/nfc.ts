@@ -446,6 +446,7 @@ type VerifyOutcome =
 // starts at page 4.
 const T2_READ_COMMAND = 0x30;
 const T2_FIRST_DATA_PAGE = 4;
+const T2_LAST_PAGE = 0xff;
 const T2_BYTES_PER_PAGE = 4;
 const T2_READ_RESPONSE_BYTES = 16;
 const VERIFY_MAX_BYTES = 1024;
@@ -469,7 +470,11 @@ async function verifyWrittenTagAndroid(
     const bytes: number[] = [];
     let firstRead = true;
     while (bytes.length < VERIFY_MAX_BYTES) {
-      const page = T2_FIRST_DATA_PAGE + bytes.length / T2_BYTES_PER_PAGE;
+      const page =
+        T2_FIRST_DATA_PAGE + Math.floor(bytes.length / T2_BYTES_PER_PAGE);
+      if (page > T2_LAST_PAGE) {
+        return { kind: "skipped", reason: "capacity-cap" };
+      }
       let response: number[];
       try {
         ({ response } = await Nfc.transceive({

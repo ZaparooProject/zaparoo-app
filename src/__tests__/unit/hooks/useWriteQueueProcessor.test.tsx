@@ -81,6 +81,19 @@ describe("useWriteQueueProcessor", () => {
   });
 
   describe("queue processing with local NFC", () => {
+    function ndefTextReadResponse(text: string): number[] {
+      const payload = [
+        2,
+        ...Array.from(`en${text}`).map((character) => character.charCodeAt(0)),
+      ];
+      const ndef = [0xd1, 0x01, payload.length, 0x54, ...payload];
+      const response = [0x03, ndef.length, ...ndef, 0xfe];
+      while (response.length < 16) {
+        response.push(0x00);
+      }
+      return response;
+    }
+
     it("should process write queue when NFC is available on native platform", async () => {
       // Arrange
       usePreferencesStore.setState({ nfcAvailable: true });
@@ -191,6 +204,93 @@ describe("useWriteQueueProcessor", () => {
       // Assert - modal stays open showing the retry UI, no toast yet
       expect(useStatusStore.getState().writeOpen).toBe(true);
       expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    it("should keep the next write queued until verification retry succeeds", async () => {
+      usePreferencesStore.setState({ nfcAvailable: true });
+      vi.mocked(Nfc.connect).mockResolvedValue(undefined);
+      vi.mocked(Nfc.transceive).mockResolvedValue({
+        response: [0xfe, ...Array<number>(15).fill(0)],
+      });
+      const { result } = renderHook(() => useWriteQueueProcessor());
+
+      act(() => {
+        useStatusStore.getState().setWriteQueue("a");
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+        __simulateTagScanned(__createMockNfcTag("01020304", ""));
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      act(() => {
+        useStatusStore.getState().setWriteQueue("b");
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      expect(useStatusStore.getState().writeQueue).toBe("b");
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(1);
+
+      vi.mocked(Nfc.transceive).mockResolvedValue({
+        response: ndefTextReadResponse("a"),
+      });
+      let retryPromise: Promise<void>;
+      act(() => {
+        retryPromise = result.current.nfcWriter.retry();
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+        __simulateTagScanned(__createMockNfcTag("01020304", ""));
+        await retryPromise!;
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      expect(useStatusStore.getState().writeQueue).toBe("");
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(3);
+
+      await act(async () => {
+        await result.current.nfcWriter.end();
+      });
+    });
+
+    it("should resume the queue when verification is cancelled", async () => {
+      usePreferencesStore.setState({ nfcAvailable: true });
+      vi.mocked(Nfc.connect).mockResolvedValue(undefined);
+      vi.mocked(Nfc.transceive).mockResolvedValue({
+        response: [0xfe, ...Array<number>(15).fill(0)],
+      });
+      const { result } = renderHook(() => useWriteQueueProcessor());
+
+      act(() => {
+        useStatusStore.getState().setWriteQueue("a");
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+        __simulateTagScanned(__createMockNfcTag("01020304", ""));
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      act(() => {
+        useStatusStore.getState().setWriteQueue("b");
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+      });
+      expect(useStatusStore.getState().writeQueue).toBe("b");
+
+      await act(async () => {
+        await result.current.nfcWriter.end();
+        await vi.advanceTimersByTimeAsync(100);
+      });
+
+      expect(useStatusStore.getState().writeQueue).toBe("");
+      expect(Nfc.startScanSession).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        await result.current.nfcWriter.end();
+      });
     });
   });
 

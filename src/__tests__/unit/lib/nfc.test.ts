@@ -5,7 +5,7 @@
  * NFC session operations are tested via mocked Capacitor plugin.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { NfcTagScannedEvent } from "@capawesome-team/capacitor-nfc";
 
 // Track listener callbacks and handles for each test
@@ -842,6 +842,27 @@ describe("nfc", () => {
         expect(mockClose).toHaveBeenCalled();
       });
 
+      it("should not read past the maximum Type 2 page", async () => {
+        mockTransceive.mockReset().mockImplementation(() => {
+          const response = Array<number>(16).fill(0);
+          if (mockTransceive.mock.calls.length === 1) {
+            response.splice(0, 4, 0x03, 0xff, 0x04, 0x00);
+          }
+          return Promise.resolve({ response });
+        });
+
+        const writePromise = writeTag("test content");
+        await fireInitialScan();
+        const result = await writePromise;
+
+        expect(result.status).toBe(Status.Success);
+        expect(
+          mockTransceive.mock.calls.every(
+            ([options]) => (options as { data: number[] }).data[1]! <= 0xff,
+          ),
+        ).toBe(true);
+      });
+
       it("should verify after the auto-format write path", async () => {
         mockWrite.mockRejectedValueOnce(
           new Error("The NFC tag has not yet been formatted as NDEF."),
@@ -880,6 +901,15 @@ describe("nfc", () => {
           verifyFailedMessage: "did not save",
         },
       };
+      let setTimeoutSpy: ReturnType<typeof vi.spyOn>;
+
+      beforeEach(() => {
+        setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+      });
+
+      afterEach(() => {
+        setTimeoutSpy.mockRestore();
+      });
 
       /** Build a scan event carrying the real NDEF record for the text. */
       function textTagEvent(uid: number[], text: string): NfcTagScannedEvent {
@@ -893,13 +923,19 @@ describe("nfc", () => {
        * Wait until the write happened and the verifier is waiting on the next
        * scan event, then deliver it.
        */
-      async function fireVerificationScan(event: NfcTagScannedEvent) {
+      async function fireVerificationScan(
+        event: NfcTagScannedEvent,
+        timeoutMs = IOS_OPTIONS.verifyTimeoutMs,
+      ) {
         await vi.waitFor(() => {
           expect(mockWrite).toHaveBeenCalled();
           expect(mockSetAlertMessage).toHaveBeenCalled();
+          expect(
+            setTimeoutSpy.mock.calls.some(
+              (call: unknown[]) => call[1] === timeoutMs,
+            ),
+          ).toBe(true);
         });
-        // Let the verifier register its waiter after setAlertMessage resolves
-        await new Promise((resolve) => setTimeout(resolve, 0));
         mockState.nfcTagScannedCallback?.(event);
       }
 
@@ -963,7 +999,10 @@ describe("nfc", () => {
           verifyTimeoutMs: 150,
         });
         await fireInitialScan([1, 2, 3, 4]);
-        await fireVerificationScan(textTagEvent([9, 9, 9, 9], "test content"));
+        await fireVerificationScan(
+          textTagEvent([9, 9, 9, 9], "test content"),
+          150,
+        );
         const result = await writePromise;
 
         expect(result.status).toBe(Status.Success);

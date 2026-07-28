@@ -10,7 +10,7 @@ import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
 import { logger } from "@/lib/logger";
 import { Card } from "@/components/wui/Card";
 import { Button } from "@/components/wui/Button";
-import { WriteModal } from "@/components/WriteModal";
+import { isWriteModalOpen, WriteModal } from "@/components/WriteModal";
 import { PageFrame } from "@/components/PageFrame";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 
@@ -30,9 +30,7 @@ export function Create() {
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen =
-    writeIntent &&
-    (nfcWriter.status === null || nfcWriter.verifyError !== null);
+  const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
   const closeWriteModal = async () => {
     setWriteIntent(false);
     await nfcWriter.end();

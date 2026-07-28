@@ -102,6 +102,10 @@ vi.mock("@/components/ZapScriptInput.tsx", () => ({
 
 // Mock WriteModal to simplify testing
 vi.mock("@/components/WriteModal", () => ({
+  isWriteModalOpen: (
+    writeIntent: boolean,
+    writer: { status: unknown; verifyError: unknown },
+  ) => writeIntent && (writer.status === null || writer.verifyError !== null),
   WriteModal: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="write-modal">Write Modal</div> : null,
 }));

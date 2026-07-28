@@ -14,7 +14,7 @@ const { componentRef, mockGoBack, mockNfcWriter, mockImpact } = vi.hoisted(
       end: vi.fn(),
       writing: false,
       result: null as any,
-      verifyError: null,
+      verifyError: null as Error | null,
       getVerifyError: vi.fn(() => null),
     },
     mockImpact: vi.fn(),
@@ -85,8 +85,26 @@ vi.mock("@/lib/logger", () => ({
 
 // Mock WriteModal to simplify testing
 vi.mock("@/components/WriteModal", () => ({
-  WriteModal: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="write-modal">Write Modal</div> : null,
+  isWriteModalOpen: (
+    writeIntent: boolean,
+    writer: { status: unknown; verifyError: unknown },
+  ) => writeIntent && (writer.status === null || writer.verifyError !== null),
+  WriteModal: ({
+    isOpen,
+    verifyError,
+    retry,
+  }: {
+    isOpen: boolean;
+    verifyError: boolean;
+    retry: () => void;
+  }) =>
+    isOpen ? (
+      <div data-testid="write-modal">
+        Write Modal
+        <span data-testid="verify-error">{String(verifyError)}</span>
+        <button onClick={retry}>Retry write</button>
+      </div>
+    ) : null,
 }));
 
 // Mock ReadTab with functional scan button
@@ -143,7 +161,9 @@ describe("Create NFC Route", () => {
     mockNfcWriter.status = null;
     mockNfcWriter.writing = false;
     mockNfcWriter.result = null;
+    mockNfcWriter.verifyError = null;
     mockNfcWriter.write.mockClear();
+    mockNfcWriter.retry.mockClear();
     mockNfcWriter.end.mockClear();
     mockImpact.mockClear();
   });
@@ -202,6 +222,22 @@ describe("Create NFC Route", () => {
       await user.click(screen.getByTestId("scan-button"));
 
       expect(screen.getByTestId("write-modal")).toBeInTheDocument();
+    });
+
+    it("should keep the modal open and retry after verification fails", async () => {
+      const user = userEvent.setup();
+      mockNfcWriter.status = "error";
+      mockNfcWriter.verifyError = new Error("verification failed");
+      renderComponent();
+
+      await user.click(screen.getByTestId("scan-button"));
+
+      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
+      expect(screen.getByTestId("verify-error")).toHaveTextContent("true");
+
+      await user.click(screen.getByRole("button", { name: "Retry write" }));
+
+      expect(mockNfcWriter.retry).toHaveBeenCalledOnce();
     });
   });
 
