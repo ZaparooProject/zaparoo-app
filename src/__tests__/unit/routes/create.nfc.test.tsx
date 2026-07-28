@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
+import { CoreAPI } from "@/lib/coreApi";
+import { useStatusStore } from "@/lib/store";
+
+const initialStatusState = { ...useStatusStore.getState() };
 
 // Use vi.hoisted for all variables that need to be accessed in mock factories
 const { componentRef, mockGoBack, mockNfcWriter, mockImpact } = vi.hoisted(
@@ -30,18 +34,6 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       return { options };
     },
     useRouter: () => ({ history: { back: mockGoBack } }),
-  };
-});
-
-// Mock store
-vi.mock("@/lib/store", async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
-  return {
-    ...actual,
-    useStatusStore: (selector: any) =>
-      selector({
-        safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
-      }),
   };
 });
 
@@ -84,28 +76,29 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 // Mock WriteModal to simplify testing
-vi.mock("@/components/WriteModal", () => ({
-  isWriteModalOpen: (
-    writeIntent: boolean,
-    writer: { status: unknown; verifyError: unknown },
-  ) => writeIntent && (writer.status === null || writer.verifyError !== null),
-  WriteModal: ({
-    isOpen,
-    verifyError,
-    retry,
-  }: {
-    isOpen: boolean;
-    verifyError: boolean;
-    retry: () => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="write-modal">
-        Write Modal
-        <span data-testid="verify-error">{String(verifyError)}</span>
-        <button onClick={retry}>Retry write</button>
-      </div>
-    ) : null,
-}));
+vi.mock("@/components/WriteModal", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/components/WriteModal")>();
+  return {
+    ...actual,
+    WriteModal: ({
+      isOpen,
+      verifyError,
+      retry,
+    }: {
+      isOpen: boolean;
+      verifyError: boolean;
+      retry: () => void;
+    }) =>
+      isOpen ? (
+        <div data-testid="write-modal">
+          Write Modal
+          <span data-testid="verify-error">{String(verifyError)}</span>
+          <button onClick={retry}>Retry write</button>
+        </div>
+      ) : null,
+  };
+});
 
 // Mock ReadTab with functional scan button
 vi.mock("@/components/nfc/ReadTab", () => ({
@@ -157,6 +150,8 @@ const getNfcUtils = () => componentRef.current;
 
 describe("Create NFC Route", () => {
   beforeEach(() => {
+    useStatusStore.setState({ ...initialStatusState });
+    CoreAPI.reset();
     vi.clearAllMocks();
     mockNfcWriter.status = null;
     mockNfcWriter.writing = false;

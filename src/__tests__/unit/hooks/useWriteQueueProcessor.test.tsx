@@ -232,6 +232,10 @@ describe("useWriteQueueProcessor", () => {
 
       expect(useStatusStore.getState().writeQueue).toBe("b");
       expect(Nfc.startScanSession).toHaveBeenCalledTimes(1);
+      const setWriteOpenSpy = vi.spyOn(
+        useStatusStore.getState(),
+        "setWriteOpen",
+      );
 
       vi.mocked(Nfc.transceive).mockResolvedValue({
         response: ndefTextReadResponse("a"),
@@ -249,6 +253,10 @@ describe("useWriteQueueProcessor", () => {
 
       expect(useStatusStore.getState().writeQueue).toBe("");
       expect(Nfc.startScanSession).toHaveBeenCalledTimes(3);
+      expect(setWriteOpenSpy.mock.calls.map(([isOpen]) => isOpen)).toEqual([
+        false,
+        true,
+      ]);
 
       await act(async () => {
         await result.current.nfcWriter.end();
@@ -279,6 +287,10 @@ describe("useWriteQueueProcessor", () => {
         await vi.advanceTimersByTimeAsync(100);
       });
       expect(useStatusStore.getState().writeQueue).toBe("b");
+      const setWriteOpenSpy = vi.spyOn(
+        useStatusStore.getState(),
+        "setWriteOpen",
+      );
 
       await act(async () => {
         await result.current.nfcWriter.end();
@@ -287,6 +299,10 @@ describe("useWriteQueueProcessor", () => {
 
       expect(useStatusStore.getState().writeQueue).toBe("");
       expect(Nfc.startScanSession).toHaveBeenCalledTimes(2);
+      expect(setWriteOpenSpy.mock.calls.map(([isOpen]) => isOpen)).toEqual([
+        false,
+        true,
+      ]);
 
       await act(async () => {
         await result.current.nfcWriter.end();

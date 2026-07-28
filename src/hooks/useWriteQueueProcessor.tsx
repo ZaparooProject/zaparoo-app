@@ -50,15 +50,15 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
   const opIdRef = useRef(0);
   // Self-reference so finish() can chain to the next queued item
   const processNextRef = useRef<() => void>(() => {});
-  const pendingVerificationFinishRef = useRef<(() => void) | null>(null);
+  const pendingVerificationCompletionRef = useRef<(() => void) | null>(null);
 
   const completePendingVerification = useCallback(() => {
-    const finish = pendingVerificationFinishRef.current;
-    if (!finish) {
+    const complete = pendingVerificationCompletionRef.current;
+    if (!complete) {
       return;
     }
-    pendingVerificationFinishRef.current = null;
-    finish();
+    pendingVerificationCompletionRef.current = null;
+    complete();
   }, []);
 
   const processNext = useCallback(() => {
@@ -135,7 +135,7 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
       // which surface their own toast) and only rejects on setup failures.
       await writer.write(WriteAction.Write, currentWriteValue);
       // On verification failure the modal stays open showing the retry UI;
-      // QueueProcessors closes it once the retry resolves or is cancelled.
+      // deferred completion closes it after retry or cancellation.
       if (ownsProcessing() && writer.getVerifyError() === null) {
         useStatusStore.getState().setWriteOpen(false);
       }
@@ -145,12 +145,17 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
       if (!ownsProcessing()) {
         return;
       }
-      if (pendingVerificationFinishRef.current === finish) {
-        pendingVerificationFinishRef.current = null;
-      }
       isProcessingRef.current = false;
       // Pick up a write that was queued while this one was processing
       processNextRef.current();
+    };
+
+    const completeDeferredVerification = () => {
+      if (!ownsProcessing()) {
+        return;
+      }
+      useStatusStore.getState().setWriteOpen(false);
+      finish();
     };
 
     const run = () => {
@@ -160,7 +165,8 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
             return;
           }
           if (nfcWriterRef.current.getVerifyError() !== null) {
-            pendingVerificationFinishRef.current = finish;
+            pendingVerificationCompletionRef.current =
+              completeDeferredVerification;
             return;
           }
           finish();
@@ -226,7 +232,7 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
     // the modal or clear the processing flag for a successor.
     opIdRef.current++;
     isProcessingRef.current = false;
-    pendingVerificationFinishRef.current = null;
+    pendingVerificationCompletionRef.current = null;
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
