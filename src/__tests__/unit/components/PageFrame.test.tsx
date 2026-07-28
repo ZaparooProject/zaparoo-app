@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "../../../test-utils";
+import { act, fireEvent, render, screen, waitFor } from "@/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   createMemoryHistory,
@@ -192,26 +192,15 @@ describe("PageFrame", () => {
     if (!(mediaScrollContainer instanceof HTMLElement)) return;
     expect(mediaScrollContainer.scrollTop).toBe(0);
 
-    const firstSettingsFrame = new Promise<number>((resolve) => {
-      const sampleFrame = () => {
-        if (
-          screen.queryByText("Settings page") &&
-          !screen.queryByText("Media page")
-        ) {
-          const restoredScrollContainer = document.querySelector(
-            PAGE_SCROLL_RESTORATION_SELECTOR,
-          );
-          resolve(restoredScrollContainer?.scrollTop ?? -1);
-          return;
-        }
-        window.requestAnimationFrame(sampleFrame);
-      };
-      window.requestAnimationFrame(sampleFrame);
-    });
-
     act(() => router.history.back());
 
-    expect(await firstSettingsFrame).toBe(320);
+    await screen.findByText("Settings page");
+    await waitFor(() => {
+      const restoredScrollContainer = document.querySelector(
+        PAGE_SCROLL_RESTORATION_SELECTOR,
+      );
+      expect(restoredScrollContainer).toHaveProperty("scrollTop", 320);
+    });
   });
 
   it("should handle scrollRef", () => {

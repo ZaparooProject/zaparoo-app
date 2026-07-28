@@ -1,7 +1,7 @@
 import React, { RefObject, ReactNode, useLayoutEffect, useRef } from "react";
 import { useElementScrollRestoration, useRouter } from "@tanstack/react-router";
+import { ResponsiveContainer } from "@/components/ResponsiveContainer";
 import { useStatusStore } from "@/lib/store";
-import { ResponsiveContainer } from "./ResponsiveContainer";
 
 export const PAGE_SCROLL_RESTORATION_ID = "page-scroll";
 export const PAGE_SCROLL_RESTORATION_SELECTOR = `[data-scroll-restoration-id="${PAGE_SCROLL_RESTORATION_ID}"]`;
@@ -28,8 +28,9 @@ interface PageFrameLayoutProps extends PageFrameProps {
 
 export function PageFrame(props: PageFrameProps) {
   const router = useRouter({ warn: false });
+  const scrollRestorationEnabled = Boolean(router?.options?.scrollRestoration);
 
-  return router ? (
+  return scrollRestorationEnabled ? (
     <RoutedPageFrame {...props} />
   ) : (
     <PageFrameLayout {...props} />
