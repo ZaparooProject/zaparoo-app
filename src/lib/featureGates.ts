@@ -41,6 +41,11 @@ export const FEATURE_GATES: Record<string, FeatureGate> = {
     marquee: false,
     labelKey: "features.mediaBrowseAllSearch",
   },
+  activeMediaZapScript: {
+    since: "2.9.0",
+    marquee: false,
+    labelKey: "features.activeMediaZapScript",
+  },
   remoteInput: {
     since: "2.10.0",
     marquee: true,

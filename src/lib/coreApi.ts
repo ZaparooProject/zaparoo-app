@@ -25,6 +25,7 @@ import {
   PlaytimeLimitsConfig,
   PlaytimeLimitsUpdateRequest,
   PlaytimeStatus,
+  PlayingResponse,
   ReadersResponse,
   ScrapersResponse,
   ScrapingStatusNotification,
@@ -1493,11 +1494,11 @@ class CoreApi {
     });
   }
 
-  mediaActive(): Promise<MediaResponse["active"]> {
-    return new Promise<MediaResponse["active"]>((resolve, reject) => {
+  mediaActive(): Promise<PlayingResponse | null> {
+    return new Promise<PlayingResponse | null>((resolve, reject) => {
       this.call(Method.MediaActive)
         .then((result) => {
-          resolve(result as MediaResponse["active"]);
+          resolve(result as PlayingResponse | null);
         })
         .catch((error) => {
           logMediaApiFailure(

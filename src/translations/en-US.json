@@ -773,6 +773,7 @@
       "mediaCleanOrphans": "Clean missing media",
       "mediaTags": "Media tags",
       "mediaBrowseAllSearch": "Browse all media search",
+      "activeMediaZapScript": "Current media ZapScript",
       "remoteInput": "Remote input"
     },
     "inbox": {

@@ -3,31 +3,19 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Preferences } from "@capacitor/preferences";
 import { Capacitor } from "@capacitor/core";
-import classNames from "classnames";
-import { Folder, FileCode, Tag, Copy } from "lucide-react";
 import { VirtualSearchResults } from "@/components/VirtualSearchResults.tsx";
 import { BackToTop } from "@/components/BackToTop.tsx";
-import { TagBadge } from "@/components/TagBadge.tsx";
+import { MediaDetailsModal } from "@/components/MediaDetailsModal";
 import { logger } from "@/lib/logger";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { CoreAPI, isExpectedMediaDatabaseError } from "@/lib/coreApi";
-import {
-  BackIcon,
-  CreateIcon,
-  PlayIcon,
-  SearchIcon,
-  HistoryIcon,
-  DeviceIcon,
-} from "@/lib/images";
+import { BackIcon, SearchIcon, HistoryIcon } from "@/lib/images";
 import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
 import { SearchResultGame, SystemsResponse } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { filenameFromPath } from "@/lib/path";
-import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
-import { useHaptics } from "@/hooks/useHaptics";
 import { DEFAULT_GAMES_INDEX, useStatusStore } from "@/lib/store";
 import { TextInput } from "@/components/wui/TextInput";
 import { WriteModal } from "@/components/WriteModal";
@@ -54,7 +42,6 @@ export function Search() {
   const { t } = useTranslation();
   usePageHeadingFocus(t("create.search.title"));
   const loaderData = route.useLoaderData();
-  const { impact } = useHaptics();
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const setGamesIndex = useStatusStore((state) => state.setGamesIndex);
   const connected = useStatusStore((state) => state.connected);
@@ -62,7 +49,6 @@ export function Search() {
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
-  const showFilenames = usePreferencesStore((s) => s.showFilenames);
 
   const [querySystem, setQuerySystem] = useState(loaderData.systemQuery);
   const [queryTags, setQueryTags] = useState<string[]>(loaderData.tagQuery);
@@ -145,7 +131,6 @@ export function Search() {
   const [selectedResult, setSelectedResult] = useState<SearchResultGame | null>(
     null,
   );
-  const [writeMode, setWriteMode] = useState<"path" | "zapScript">("zapScript");
 
   const preferRemoteWriter = usePreferencesStore(
     (state) => state.preferRemoteWriter,
@@ -198,14 +183,6 @@ export function Search() {
       cancelled = true;
     };
   }, [setGamesIndex]);
-
-  // Set default write mode when selected result changes
-  useEffect(() => {
-    if (selectedResult) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Initialize mode from the newly selected external result.
-      setWriteMode(selectedResult.zapScript ? "zapScript" : "path");
-    }
-  }, [selectedResult]);
 
   useEffect(() => {
     if (!mediaTagsAvailable) {
@@ -430,284 +407,74 @@ export function Search() {
         />
       </PageFrame>
 
-      <SlideModal
+      <MediaDetailsModal
         isOpen={selectedResult !== null && !writeOpen}
         close={() => setSelectedResult(null)}
-        title={
-          selectedResult
-            ? showFilenames
-              ? filenameFromPath(selectedResult.path) || selectedResult.name
-              : selectedResult.name
-            : "Game Details"
-        }
-      >
-        <div className="flex flex-col gap-4 pt-2">
-          {/* Primary Info */}
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
-              <div className="flex items-center gap-2 sm:min-w-[100px]">
-                <DeviceIcon size="16" className="text-white/60" />
-                <span className="text-sm text-white/60">
-                  {t("create.search.systemLabel")}
-                </span>
-              </div>
-              <span className="flex-1 font-medium">
-                {selectedResult?.system.name}
-              </span>
-            </div>
-            {selectedResult?.tags && selectedResult.tags.length > 0 && (
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
-                <div className="flex items-center gap-2 sm:min-w-[100px]">
-                  <Tag size={16} className="text-white/60" />
-                  <span className="text-sm text-white/60">
-                    {t("create.search.tagsLabel")}
-                  </span>
-                </div>
-                <div className="flex flex-1 flex-wrap gap-1.5">
-                  {selectedResult.tags.map((tag, tagIndex) => (
-                    <TagBadge key={tagIndex} type={tag.type} tag={tag.tag} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Technical Details - Selectable Options */}
-          <fieldset
-            className="space-y-2"
-            role="radiogroup"
-            aria-label={t("create.search.selectWriteValue")}
-          >
-            <legend className="sr-only">
-              {t("create.search.selectWriteValue")}
-            </legend>
-
-            {/* Path Option */}
-            <div className="flex items-center gap-2">
-              <input
-                type="radio"
-                id="write-mode-path"
-                name="write-mode"
-                value="path"
-                checked={writeMode === "path"}
-                onChange={() => {
-                  impact("light");
-                  setWriteMode("path");
-                }}
-                className="sr-only"
-              />
-              <label
-                htmlFor="write-mode-path"
-                aria-label={`${t("create.search.pathLabel")}: ${selectedResult?.path || ""}${writeMode === "path" ? `, ${t("selected")}` : ""}`}
-                className={classNames(
-                  "flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
-                  {
-                    "border-white/30 bg-white/10": writeMode === "path",
-                    "border-white/10 bg-white/5 hover:bg-white/[0.07]":
-                      writeMode !== "path",
-                  },
-                )}
-              >
-                <div
-                  className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3"
-                  aria-hidden="true"
-                >
-                  <div className="flex items-center gap-2 sm:min-w-[100px]">
-                    <Folder size={16} className="flex-shrink-0 text-white/60" />
-                    <span className="text-sm text-white/60">
-                      {t("create.search.pathLabel")}
-                    </span>
-                  </div>
-                  <code className="flex-1 text-left font-mono text-sm break-all text-white/90">
-                    {selectedResult?.path}
-                  </code>
-                </div>
-                <div
-                  aria-hidden="true"
-                  className={classNames(
-                    "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
-                    {
-                      "border-white bg-white": writeMode === "path",
-                      "border-white/30": writeMode !== "path",
-                    },
-                  )}
-                >
-                  {writeMode === "path" && (
-                    <div className="bg-background h-2 w-2 rounded-full" />
-                  )}
-                </div>
-              </label>
-            </div>
-
-            {/* ZapScript Option */}
-            {selectedResult?.zapScript && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  id="write-mode-zapscript"
-                  name="write-mode"
-                  value="zapScript"
-                  checked={writeMode === "zapScript"}
-                  onChange={() => {
-                    impact("light");
-                    setWriteMode("zapScript");
-                  }}
-                  className="sr-only"
-                />
-                <label
-                  htmlFor="write-mode-zapscript"
-                  aria-label={`${t("create.search.zapscriptLabel")}: ${selectedResult.zapScript}${writeMode === "zapScript" ? `, ${t("selected")}` : ""}`}
-                  className={classNames(
-                    "flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200",
-                    {
-                      "border-white/30 bg-white/10": writeMode === "zapScript",
-                      "border-white/10 bg-white/5 hover:bg-white/[0.07]":
-                        writeMode !== "zapScript",
-                    },
-                  )}
-                >
-                  <div
-                    className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3"
-                    aria-hidden="true"
-                  >
-                    <div className="flex items-center gap-2 sm:min-w-[100px]">
-                      <FileCode
-                        size={16}
-                        className="flex-shrink-0 text-white/60"
-                      />
-                      <span className="text-sm text-white/60">
-                        {t("create.search.zapscriptLabel")}
-                      </span>
-                    </div>
-                    <code className="flex-1 text-left font-mono text-sm break-words text-white/90">
-                      {selectedResult.zapScript}
-                    </code>
-                  </div>
-                  <div
-                    aria-hidden="true"
-                    className={classNames(
-                      "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
-                      {
-                        "border-white bg-white": writeMode === "zapScript",
-                        "border-white/30": writeMode !== "zapScript",
-                      },
-                    )}
-                  >
-                    {writeMode === "zapScript" && (
-                      <div className="bg-background h-2 w-2 rounded-full" />
-                    )}
-                  </div>
-                </label>
-              </div>
-            )}
-          </fieldset>
-
-          {/* Actions */}
-          <div className="flex flex-col gap-2 pt-2">
-            <Button
-              label={t("create.search.writeLabel")}
-              icon={<CreateIcon size="20" />}
-              intent="primary"
-              disabled={!selectedResult}
-              onClick={async () => {
-                if (!selectedResult) return;
-                const textToWrite =
-                  writeMode === "zapScript" && selectedResult.zapScript
-                    ? selectedResult.zapScript
-                    : selectedResult.path;
-                try {
-                  // Open the modal first: write() resolves when the whole
-                  // operation completes, not when it starts
-                  setWriteOpen(true);
-                  await nfcWriter.write(WriteAction.Write, textToWrite);
-                } catch (err) {
-                  logger.error("NFC write failed", err, {
-                    category: "nfc",
-                    action: "writeFromSearch",
-                    severity: "error",
-                  });
-                  showRateLimitedErrorToast(
-                    t("error", {
-                      msg: err instanceof Error ? err.message : String(err),
-                    }),
-                  );
-                }
-              }}
-              className="w-full"
-            />
-            <div className="flex flex-row gap-2">
-              <Button
-                label={t("create.search.copyLabel")}
-                icon={<Copy size="20" />}
-                variant="outline"
-                disabled={!selectedResult}
-                onClick={async () => {
-                  if (!selectedResult) return;
-                  const textToCopy =
-                    writeMode === "zapScript" && selectedResult.zapScript
-                      ? selectedResult.zapScript
-                      : selectedResult.path;
-                  try {
-                    await navigator.clipboard.writeText(textToCopy);
-                  } catch (webErr) {
-                    if (Capacitor.isNativePlatform()) {
-                      try {
-                        const { Clipboard } =
-                          await import("@capacitor/clipboard");
-                        await Clipboard.write({ string: textToCopy });
-                      } catch (nativeErr) {
-                        logger.error("Failed to copy to clipboard", nativeErr, {
-                          category: "share",
-                          action: "copyResult",
-                          severity: "error",
-                        });
-                      }
-                    } else {
-                      logger.error("Failed to copy to clipboard", webErr, {
-                        category: "share",
-                        action: "copyResult",
-                        severity: "error",
-                      });
-                    }
-                  }
-                }}
-                className="flex-1"
-              />
-              <Button
-                label={t("create.search.playLabel")}
-                icon={<PlayIcon size="20" />}
-                variant="outline"
-                disabled={!selectedResult || !connected}
-                onClick={async () => {
-                  if (!selectedResult) return;
-                  const textToRun =
-                    writeMode === "zapScript" && selectedResult.zapScript
-                      ? selectedResult.zapScript
-                      : selectedResult.path;
-                  try {
-                    await CoreAPI.run({
-                      uid: "",
-                      text: textToRun,
-                    });
-                  } catch (e) {
-                    logger.error("CoreAPI.run failed", e, {
-                      category: "api",
-                      action: "run",
-                      severity: "error",
-                    });
-                    showRateLimitedErrorToast(
-                      t("error", {
-                        msg: e instanceof Error ? e.message : String(e),
-                      }),
-                    );
-                  }
-                }}
-                className="flex-1"
-              />
-            </div>
-          </div>
-        </div>
-      </SlideModal>
+        media={selectedResult}
+        onWrite={async (textToWrite) => {
+          try {
+            // Open the modal first: write() resolves when the whole operation
+            // completes, not when it starts.
+            setWriteOpen(true);
+            await nfcWriter.write(WriteAction.Write, textToWrite);
+          } catch (err) {
+            logger.error("NFC write failed", err, {
+              category: "nfc",
+              action: "writeFromSearch",
+              severity: "error",
+            });
+            showRateLimitedErrorToast(
+              t("error", {
+                msg: err instanceof Error ? err.message : String(err),
+              }),
+            );
+          }
+        }}
+        onCopy={async (textToCopy) => {
+          try {
+            await navigator.clipboard.writeText(textToCopy);
+          } catch (webErr) {
+            if (Capacitor.isNativePlatform()) {
+              try {
+                const { Clipboard } = await import("@capacitor/clipboard");
+                await Clipboard.write({ string: textToCopy });
+              } catch (nativeErr) {
+                logger.error("Failed to copy to clipboard", nativeErr, {
+                  category: "share",
+                  action: "copyResult",
+                  severity: "error",
+                });
+              }
+            } else {
+              logger.error("Failed to copy to clipboard", webErr, {
+                category: "share",
+                action: "copyResult",
+                severity: "error",
+              });
+            }
+          }
+        }}
+        onPreview={async (textToRun) => {
+          try {
+            await CoreAPI.run({
+              uid: "",
+              text: textToRun,
+            });
+          } catch (e) {
+            logger.error("CoreAPI.run failed", e, {
+              category: "api",
+              action: "run",
+              severity: "error",
+            });
+            showRateLimitedErrorToast(
+              t("error", {
+                msg: e instanceof Error ? e.message : String(e),
+              }),
+            );
+          }
+        }}
+        previewDisabled={!connected}
+      />
       <BackToTop
         scrollContainerRef={scrollContainerRef}
         threshold={200}
