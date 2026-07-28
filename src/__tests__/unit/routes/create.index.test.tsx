@@ -1,17 +1,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "../../../test-utils";
+import { render, screen, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
+import type { PlayingResponse } from "@/lib/models";
 
 // Use vi.hoisted for all variables that need to be accessed in mock factories
-const { componentRef, mockState, mockNfcWriter } = vi.hoisted(() => ({
+const {
+  componentRef,
+  mockState,
+  mockNfcWriter,
+  mockMediaActive,
+  mockLoggerError,
+  mockShowRateLimitedErrorToast,
+} = vi.hoisted(() => ({
   componentRef: { current: null as any },
   mockState: {
     connected: true,
     playing: {
+      systemId: "",
       mediaName: "",
       mediaPath: "",
       systemName: "",
-    },
+    } as PlayingResponse,
+    coreVersion: "2.9.0" as string | null,
+    coreVersionPending: false,
     nfcAvailable: true,
     platform: "ios" as string,
   },
@@ -25,6 +36,9 @@ const { componentRef, mockState, mockNfcWriter } = vi.hoisted(() => ({
     verifyError: null,
     getVerifyError: vi.fn(() => null),
   },
+  mockMediaActive: vi.fn(),
+  mockLoggerError: vi.fn(),
+  mockShowRateLimitedErrorToast: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -60,6 +74,8 @@ vi.mock("@/lib/store", async (importOriginal) => {
       selector({
         connected: mockState.connected,
         playing: mockState.playing,
+        coreVersion: mockState.coreVersion,
+        coreVersionPending: mockState.coreVersionPending,
         safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
       }),
   };
@@ -70,7 +86,25 @@ vi.mock("@/lib/preferencesStore", () => ({
   usePreferencesStore: (selector: any) =>
     selector({
       nfcAvailable: mockState.nfcAvailable,
+      preferRemoteWriter: false,
+      showFilenames: false,
     }),
+}));
+
+vi.mock("@/lib/coreApi", () => ({
+  CoreAPI: {
+    mediaActive: mockMediaActive,
+  },
+}));
+
+vi.mock("@/lib/logger", () => ({
+  logger: {
+    error: mockLoggerError,
+  },
+}));
+
+vi.mock("@/lib/toastUtils", () => ({
+  showRateLimitedErrorToast: mockShowRateLimitedErrorToast,
 }));
 
 // Mock NFC writer
@@ -106,8 +140,13 @@ vi.mock("@/components/WriteModal", () => ({
     writeIntent: boolean,
     writer: { status: unknown; verifyError: unknown },
   ) => writeIntent && (writer.status === null || writer.verifyError !== null),
-  WriteModal: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="write-modal">Write Modal</div> : null,
+  WriteModal: ({ isOpen, close }: { isOpen: boolean; close: () => void }) =>
+    isOpen ? (
+      <div data-testid="write-modal">
+        Write Modal
+        <button onClick={close}>Close write modal</button>
+      </div>
+    ) : null,
 }));
 
 // Import the route module to trigger createFileRoute which captures the component
@@ -120,12 +159,23 @@ describe("Create Index Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockState.connected = true;
-    mockState.playing = { mediaName: "", mediaPath: "", systemName: "" };
+    mockState.playing = {
+      systemId: "",
+      mediaName: "",
+      mediaPath: "",
+      systemName: "",
+    };
+    mockState.coreVersion = "2.9.0";
+    mockState.coreVersionPending = false;
     mockState.nfcAvailable = true;
     mockState.platform = "ios";
     mockNfcWriter.status = null;
     mockNfcWriter.write.mockClear();
     mockNfcWriter.end.mockClear();
+    mockMediaActive.mockImplementation(async () => ({
+      ...mockState.playing,
+      zapScript: "@SNES/Super Mario World",
+    }));
   });
 
   afterEach(() => {
@@ -135,6 +185,15 @@ describe("Create Index Route", () => {
   const renderComponent = () => {
     const Create = getCreate();
     return render(<Create />);
+  };
+
+  const setActiveMedia = () => {
+    mockState.playing = {
+      systemId: "SNES",
+      mediaName: "Super Mario World",
+      mediaPath: "/games/smw.sfc",
+      systemName: "Super Nintendo",
+    };
   };
 
   describe("rendering", () => {
@@ -181,9 +240,10 @@ describe("Create Index Route", () => {
   describe("current game display", () => {
     it("should show current game name when playing", () => {
       mockState.playing = {
+        systemId: "SNES",
         mediaName: "Super Mario World",
         mediaPath: "/games/smw.sfc",
-        systemName: "SNES",
+        systemName: "Super Nintendo",
       };
       renderComponent();
       // The translation with interpolation
@@ -191,7 +251,12 @@ describe("Create Index Route", () => {
     });
 
     it("should show fallback when no game playing", () => {
-      mockState.playing = { mediaName: "", mediaPath: "", systemName: "" };
+      mockState.playing = {
+        systemId: "",
+        mediaName: "",
+        mediaPath: "",
+        systemName: "",
+      };
       renderComponent();
       expect(
         screen.getByText("create.currentGameSubFallback"),
@@ -282,22 +347,75 @@ describe("Create Index Route", () => {
     });
   });
 
-  describe("current game card interaction", () => {
-    it("should call nfcWriter.write when current game card is clicked with valid media", async () => {
-      mockState.playing = {
-        mediaName: "Super Mario World",
-        mediaPath: "/games/smw.sfc",
-        systemName: "SNES",
-      };
-
+  describe("current media details", () => {
+    it("should open details without immediately writing", async () => {
+      setActiveMedia();
       const user = userEvent.setup();
       renderComponent();
 
-      // Card has role="button" when onClick is provided
-      const currentGameCard = screen.getByRole("button", {
-        name: /create\.currentGameHeading/i,
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.currentGameHeading/i,
+        }),
+      );
+
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+      expect(mockMediaActive).toHaveBeenCalledOnce();
+      expect(screen.getByText("Super Nintendo")).toBeInTheDocument();
+      expect(screen.getByText("/games/smw.sfc")).toBeInTheDocument();
+      expect(screen.getByText("@SNES/Super Mario World")).toBeInTheDocument();
+      expect(mockNfcWriter.write).not.toHaveBeenCalled();
+    });
+
+    it("should default to ZapScript and write it", async () => {
+      setActiveMedia();
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.currentGameHeading/i,
+        }),
+      );
+
+      const zapScriptRadio = await screen.findByRole("radio", {
+        name: /create\.search\.zapscriptLabel/i,
       });
-      await user.click(currentGameCard);
+      expect(zapScriptRadio).toBeChecked();
+
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.search\.writeLabel/i,
+        }),
+      );
+
+      expect(mockNfcWriter.write).toHaveBeenCalledWith(
+        "write",
+        "@SNES/Super Mario World",
+      );
+      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
+    });
+
+    it("should write path when path is selected", async () => {
+      setActiveMedia();
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.currentGameHeading/i,
+        }),
+      );
+      await user.click(
+        await screen.findByRole("radio", {
+          name: /create\.search\.pathLabel/i,
+        }),
+      );
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.search\.writeLabel/i,
+        }),
+      );
 
       expect(mockNfcWriter.write).toHaveBeenCalledWith(
         "write",
@@ -305,85 +423,166 @@ describe("Create Index Route", () => {
       );
     });
 
-    it("should open write modal when current game card is clicked", async () => {
-      mockState.playing = {
-        mediaName: "Super Mario World",
-        mediaPath: "/games/smw.sfc",
-        systemName: "SNES",
-      };
-      mockNfcWriter.status = null;
-
+    it("should only expose write action", async () => {
+      setActiveMedia();
       const user = userEvent.setup();
       renderComponent();
 
-      const currentGameCard = screen.getByRole("button", {
-        name: /create\.currentGameHeading/i,
-      });
-      await user.click(currentGameCard);
-
-      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.currentGameHeading/i,
+        }),
+      );
+      expect(
+        await screen.findByRole("button", {
+          name: /create\.search\.writeLabel/i,
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", {
+          name: /create\.search\.copyLabel/i,
+        }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", {
+          name: /create\.search\.playLabel/i,
+        }),
+      ).not.toBeInTheDocument();
     });
 
-    it("should not call nfcWriter.write when current game has no media path", async () => {
-      mockState.playing = {
-        mediaName: "",
-        mediaPath: "",
-        systemName: "",
-      };
-
+    it("should show path-only details before Core 2.9.0", async () => {
+      setActiveMedia();
+      mockState.coreVersion = "2.8.9";
       const user = userEvent.setup();
       renderComponent();
 
-      // Card is disabled when no media path, but still has button role
-      const currentGameCard = screen.getByRole("button", {
-        name: /create\.currentGameHeading/i,
-      });
-      await user.click(currentGameCard);
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.currentGameHeading/i,
+        }),
+      );
 
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+      expect(mockMediaActive).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("radio", { name: /create\.search\.pathLabel/i }),
+      ).toBeChecked();
+      expect(
+        screen.queryByRole("radio", {
+          name: /create\.search\.zapscriptLabel/i,
+        }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should show path-only details while Core version is pending", async () => {
+      setActiveMedia();
+      mockState.coreVersionPending = true;
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.currentGameHeading/i,
+        }),
+      );
+
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+      expect(mockMediaActive).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("radio", {
+          name: /create\.search\.zapscriptLabel/i,
+        }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should fall back to cached path when enrichment fails", async () => {
+      setActiveMedia();
+      const error = new Error("media.active failed");
+      mockMediaActive.mockRejectedValueOnce(error);
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.currentGameHeading/i,
+        }),
+      );
+
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByText("/games/smw.sfc")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("radio", {
+          name: /create\.search\.zapscriptLabel/i,
+        }),
+      ).not.toBeInTheDocument();
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        "Failed to fetch active media details:",
+        error,
+        {
+          category: "api",
+          action: "mediaActive",
+          severity: "warning",
+        },
+      );
+    });
+
+    it("should not open stale details when Core reports no active media", async () => {
+      setActiveMedia();
+      mockMediaActive.mockResolvedValueOnce(null);
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.currentGameHeading/i,
+        }),
+      );
+
+      await waitFor(() => expect(mockMediaActive).toHaveBeenCalledOnce());
+      expect(mockShowRateLimitedErrorToast).toHaveBeenCalledWith("error");
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(mockNfcWriter.write).not.toHaveBeenCalled();
+    });
+
+    it("should not open or write when current media has no path", async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.currentGameHeading/i,
+        }),
+      );
+
+      expect(mockMediaActive).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(mockNfcWriter.write).not.toHaveBeenCalled();
     });
   });
 
   describe("write modal", () => {
-    it("should close write modal and call nfcWriter.end when dismissed", async () => {
-      mockState.playing = {
-        mediaName: "Super Mario World",
-        mediaPath: "/games/smw.sfc",
-        systemName: "SNES",
-      };
-      mockNfcWriter.status = null;
-
+    it("should end writer when dismissed", async () => {
+      setActiveMedia();
       const user = userEvent.setup();
       renderComponent();
 
-      // Open modal by clicking current game card
-      const currentGameCard = screen.getByRole("button", {
-        name: /create\.currentGameHeading/i,
-      });
-      await user.click(currentGameCard);
+      await user.click(
+        screen.getByRole("button", {
+          name: /create\.currentGameHeading/i,
+        }),
+      );
+      await user.click(
+        await screen.findByRole("button", {
+          name: /create\.search\.writeLabel/i,
+        }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "Close write modal" }),
+      );
 
-      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
-
-      // The modal would be closed via closeWriteModal which sets writeIntent to false
-      // and calls nfcWriter.end(). Since our mock just shows/hides based on isOpen,
-      // we verify the nfcWriter.write was called
-      expect(mockNfcWriter.write).toHaveBeenCalled();
-    });
-
-    it("should hide write modal when nfcWriter.status becomes non-null", () => {
-      mockState.playing = {
-        mediaName: "Super Mario World",
-        mediaPath: "/games/smw.sfc",
-        systemName: "SNES",
-      };
-      // Status is non-null, so modal should not show even with writeIntent
-      mockNfcWriter.status = "success";
-
-      renderComponent();
-
-      // Modal derives visibility from writeIntent && status === null
-      // Since we haven't clicked anything yet, writeIntent is false
+      await waitFor(() => expect(mockNfcWriter.end).toHaveBeenCalledOnce());
       expect(screen.queryByTestId("write-modal")).not.toBeInTheDocument();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
   });
 });

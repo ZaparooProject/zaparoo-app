@@ -7,7 +7,12 @@ import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
 import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
+import { CoreAPI } from "@/lib/coreApi";
+import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import { logger } from "@/lib/logger";
+import { showRateLimitedErrorToast } from "@/lib/toastUtils";
+import type { PlayingResponse, SearchResultGame } from "@/lib/models";
+import { MediaDetailsModal } from "@/components/MediaDetailsModal";
 import { Card } from "@/components/wui/Card";
 import { Button } from "@/components/wui/Button";
 import { isWriteModalOpen, WriteModal } from "@/components/WriteModal";
@@ -18,22 +23,79 @@ export const Route = createFileRoute("/create/")({
   component: Create,
 });
 
+function toMediaDetails(
+  playing: PlayingResponse,
+  includeZapScript: boolean,
+): SearchResultGame {
+  return {
+    system: {
+      id: playing.systemId,
+      name: playing.systemName || playing.systemId,
+    },
+    name: playing.mediaName,
+    path: playing.mediaPath,
+    zapScript: includeZapScript ? playing.zapScript : undefined,
+    tags: [],
+  };
+}
+
 export function Create() {
   const { t } = useTranslation();
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t("create.title"));
   const connected = useStatusStore((state) => state.connected);
   const playing = useStatusStore((state) => state.playing);
+  const coreVersion = useStatusStore((state) => state.coreVersion);
+  const coreVersionPending = useStatusStore(
+    (state) => state.coreVersionPending,
+  );
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
   const preferRemoteWriter = usePreferencesStore(
     (state) => state.preferRemoteWriter,
   );
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
+  const [currentMediaDetails, setCurrentMediaDetails] =
+    useState<SearchResultGame | null>(null);
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);
   const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
+  const activeMediaZapScriptAvailable =
+    connected &&
+    !coreVersionPending &&
+    isCoreFeatureAvailable("activeMediaZapScript", coreVersion);
   const closeWriteModal = async () => {
     setWriteIntent(false);
     await nfcWriter.end();
+  };
+
+  const openCurrentMediaDetails = async () => {
+    if (!connected || playing.mediaPath === "") {
+      return;
+    }
+
+    let activeMedia = playing;
+    if (activeMediaZapScriptAvailable) {
+      try {
+        const response = await CoreAPI.mediaActive();
+        if (!response || response.mediaPath === "") {
+          showRateLimitedErrorToast(
+            t("error", { msg: t("create.currentGameUnavailable") }),
+          );
+          setCurrentMediaDetails(null);
+          return;
+        }
+        activeMedia = response;
+      } catch (error) {
+        logger.error("Failed to fetch active media details:", error, {
+          category: "api",
+          action: "mediaActive",
+          severity: "warning",
+        });
+      }
+    }
+
+    setCurrentMediaDetails(
+      toMediaDetails(activeMedia, activeMediaZapScriptAvailable),
+    );
   };
 
   return (
@@ -75,20 +137,7 @@ export function Create() {
           <Card
             className="cursor-pointer"
             disabled={!connected || playing.mediaPath === ""}
-            onClick={() => {
-              if (playing.mediaPath !== "") {
-                nfcWriter
-                  .write(WriteAction.Write, playing.mediaPath)
-                  .catch((e) => {
-                    logger.error("NFC write failed:", e, {
-                      category: "nfc",
-                      action: "writeCurrentMedia",
-                      severity: "error",
-                    });
-                  });
-                setWriteIntent(true);
-              }
-            }}
+            onClick={() => void openCurrentMediaDetails()}
           >
             <div className="flex flex-row items-center gap-3">
               <Button
@@ -177,6 +226,21 @@ export function Create() {
           </Link>
         </div>
       </PageFrame>
+      <MediaDetailsModal
+        isOpen={currentMediaDetails !== null && !writeOpen}
+        close={() => setCurrentMediaDetails(null)}
+        media={currentMediaDetails}
+        onWrite={(value) => {
+          setWriteIntent(true);
+          return nfcWriter.write(WriteAction.Write, value).catch((error) => {
+            logger.error("NFC write failed:", error, {
+              category: "nfc",
+              action: "writeCurrentMedia",
+              severity: "error",
+            });
+          });
+        }}
+      />
       <WriteModal
         isOpen={writeOpen}
         close={closeWriteModal}

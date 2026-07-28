@@ -254,6 +254,7 @@ export interface PlayingResponse {
   systemName: string;
   mediaName: string;
   mediaPath: string;
+  zapScript?: string;
   started?: string;
   launcherId?: string;
 }

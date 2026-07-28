@@ -139,6 +139,7 @@
       "currentGameHeading": "Current media",
       "currentGameSub": "Write '{{game}}' to a tag",
       "currentGameSubFallback": "Write 'Now Playing' to a tag",
+      "currentGameUnavailable": "Current media is no longer active",
       "customHeading": "Custom ZapScript",
       "customSub": "Write ZapScript to an NFC tag",
       "nfcHeading": "NFC utilities",
@@ -773,6 +774,7 @@
       "mediaCleanOrphans": "Clean missing media",
       "mediaTags": "Media tags",
       "mediaBrowseAllSearch": "Browse all media search",
+      "activeMediaZapScript": "Current media ZapScript",
       "remoteInput": "Remote input"
     },
     "inbox": {

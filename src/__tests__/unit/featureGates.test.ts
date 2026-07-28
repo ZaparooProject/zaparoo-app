@@ -69,4 +69,10 @@ describe("isCoreFeatureAvailable", () => {
     expect(isCoreFeatureAvailable("mediaBrowseAllSearch", "2.9.1")).toBe(false);
     expect(isCoreFeatureAvailable("mediaBrowseAllSearch", "2.10.0")).toBe(true);
   });
+
+  it("should gate active-media ZapScript behind Core 2.9.0", () => {
+    expect(FEATURE_GATES.activeMediaZapScript?.since).toBe("2.9.0");
+    expect(isCoreFeatureAvailable("activeMediaZapScript", "2.8.9")).toBe(false);
+    expect(isCoreFeatureAvailable("activeMediaZapScript", "2.9.0")).toBe(true);
+  });
 });

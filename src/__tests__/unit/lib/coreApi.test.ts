@@ -214,6 +214,56 @@ describe("CoreAPI", () => {
     },
   );
 
+  it("should resolve media.active object, null, and cancellation responses", async () => {
+    const activeMedia = {
+      systemId: "SNES",
+      systemName: "Super Nintendo",
+      mediaName: "Super Mario World",
+      mediaPath: "/games/smw.sfc",
+      zapScript: "@SNES/Super Mario World",
+    };
+    const activePromise = CoreAPI.mediaActive();
+    const activeRequest = JSON.parse(mockSend.mock.calls[0][0]);
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: activeRequest.id,
+        result: activeMedia,
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    await expect(activePromise).resolves.toEqual(activeMedia);
+
+    mockSend.mockClear();
+    const emptyPromise = CoreAPI.mediaActive();
+    const emptyRequest = JSON.parse(mockSend.mock.calls[0][0]);
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: emptyRequest.id,
+        result: null,
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    await expect(emptyPromise).resolves.toBeNull();
+
+    mockSend.mockClear();
+    const cancelledPromise = CoreAPI.mediaActive();
+    const cancelledRequest = JSON.parse(mockSend.mock.calls[0][0]);
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: cancelledRequest.id,
+        result: { cancelled: true },
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    await expect(cancelledPromise).resolves.toBeNull();
+  });
+
   it("should handle tokens.removed notification", async () => {
     const tokensRemovedEvent = {
       data: JSON.stringify({
