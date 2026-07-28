@@ -40,6 +40,15 @@ export const Nfc = {
   erase: vi.fn().mockResolvedValue(undefined),
   close: vi.fn().mockResolvedValue(undefined),
   makeReadOnly: vi.fn().mockResolvedValue(undefined),
+  // connect/transceive reject by default so write verification takes the
+  // "unverified skip" path unless a test opts in to a readable tag.
+  connect: vi
+    .fn()
+    .mockRejectedValue(new Error("connect not supported in mock")),
+  transceive: vi
+    .fn()
+    .mockRejectedValue(new Error("transceive not supported in mock")),
+  setAlertMessage: vi.fn().mockResolvedValue(undefined),
 };
 
 export enum TypeNameFormat {
@@ -103,14 +112,24 @@ const URI_PREFIXES: Record<number, string> = {
 };
 
 export class NfcUtils {
-  createNdefTextRecord = vi.fn().mockReturnValue({
-    record: {
-      id: [],
-      payload: [],
-      tnf: 1,
-      type: [84], // 'T' for text
-    },
-  });
+  createNdefTextRecord = vi
+    .fn()
+    .mockImplementation(({ text }: { text: string }) => {
+      // Realistic language-prefixed text payload so verification code that
+      // compares written and read-back records behaves like production.
+      const payload = [
+        2,
+        ...Array.from("en" + text).map((c) => c.charCodeAt(0)),
+      ];
+      return {
+        record: {
+          id: [],
+          payload,
+          tnf: 1,
+          type: [84], // 'T' for text
+        },
+      };
+    });
 
   mapBytesToRecordTypeDefinition({ bytes }: { bytes: number[] }) {
     if (bytes.length === 1) {
@@ -224,6 +243,14 @@ export function __resetNfcMock(): void {
   vi.mocked(Nfc.write).mockClear();
   vi.mocked(Nfc.format).mockClear();
   vi.mocked(Nfc.erase).mockClear();
+  vi.mocked(Nfc.close).mockClear();
+  vi.mocked(Nfc.setAlertMessage).mockClear();
+  vi.mocked(Nfc.connect)
+    .mockReset()
+    .mockRejectedValue(new Error("connect not supported in mock"));
+  vi.mocked(Nfc.transceive)
+    .mockReset()
+    .mockRejectedValue(new Error("transceive not supported in mock"));
 }
 
 // Enum exports for tests that import enums

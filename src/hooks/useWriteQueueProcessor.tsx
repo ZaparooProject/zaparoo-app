@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
@@ -50,6 +50,16 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
   const opIdRef = useRef(0);
   // Self-reference so finish() can chain to the next queued item
   const processNextRef = useRef<() => void>(() => {});
+  const pendingVerificationCompletionRef = useRef<(() => void) | null>(null);
+
+  const completePendingVerification = useCallback(() => {
+    const complete = pendingVerificationCompletionRef.current;
+    if (!complete) {
+      return;
+    }
+    pendingVerificationCompletionRef.current = null;
+    complete();
+  }, []);
 
   const processNext = useCallback(() => {
     if (isProcessingRef.current) {
@@ -124,7 +134,9 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
       // write() resolves when the operation completes (including tag errors,
       // which surface their own toast) and only rejects on setup failures.
       await writer.write(WriteAction.Write, currentWriteValue);
-      if (ownsProcessing()) {
+      // On verification failure the modal stays open showing the retry UI;
+      // deferred completion closes it after retry or cancellation.
+      if (ownsProcessing() && writer.getVerifyError() === null) {
         useStatusStore.getState().setWriteOpen(false);
       }
     };
@@ -138,9 +150,27 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
       processNextRef.current();
     };
 
+    const completeDeferredVerification = () => {
+      if (!ownsProcessing()) {
+        return;
+      }
+      useStatusStore.getState().setWriteOpen(false);
+      finish();
+    };
+
     const run = () => {
       attempt()
-        .then(finish)
+        .then(() => {
+          if (!ownsProcessing()) {
+            return;
+          }
+          if (nfcWriterRef.current.getVerifyError() !== null) {
+            pendingVerificationCompletionRef.current =
+              completeDeferredVerification;
+            return;
+          }
+          finish();
+        })
         .catch((e) => {
           if (!ownsProcessing()) {
             return;
@@ -202,11 +232,32 @@ export function useWriteQueueProcessor(): UseWriteQueueProcessorReturn {
     // the modal or clear the processing flag for a successor.
     opIdRef.current++;
     isProcessingRef.current = false;
+    pendingVerificationCompletionRef.current = null;
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
   }, []);
 
-  return { nfcWriter, reset };
+  const retry = useCallback(async () => {
+    await nfcWriterRef.current.retry();
+    if (nfcWriterRef.current.getVerifyError() === null) {
+      completePendingVerification();
+    }
+  }, [completePendingVerification]);
+
+  const end = useCallback(async () => {
+    try {
+      await nfcWriterRef.current.end();
+    } finally {
+      completePendingVerification();
+    }
+  }, [completePendingVerification]);
+
+  const guardedNfcWriter = useMemo<WriteNfcHook>(
+    () => ({ ...nfcWriter, retry, end }),
+    [nfcWriter, retry, end],
+  );
+
+  return { nfcWriter: guardedNfcWriter, reset };
 }

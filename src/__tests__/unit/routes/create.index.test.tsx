@@ -18,9 +18,12 @@ const { componentRef, mockState, mockNfcWriter } = vi.hoisted(() => ({
   mockNfcWriter: {
     status: null as null | string,
     write: vi.fn().mockResolvedValue(undefined),
+    retry: vi.fn().mockResolvedValue(undefined),
     end: vi.fn(),
     writing: false,
     result: null,
+    verifyError: null,
+    getVerifyError: vi.fn(() => null),
   },
 }));
 
@@ -99,6 +102,10 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
 
 // Mock WriteModal to simplify testing
 vi.mock("@/components/WriteModal", () => ({
+  isWriteModalOpen: (
+    writeIntent: boolean,
+    writer: { status: unknown; verifyError: unknown },
+  ) => writeIntent && (writer.status === null || writer.verifyError !== null),
   WriteModal: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="write-modal">Write Modal</div> : null,
 }));

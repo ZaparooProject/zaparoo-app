@@ -58,7 +58,10 @@
       "eraseFailed": "Failed to erase tag",
       "makeReadOnlySuccess": "Tag set to read-only",
       "makeReadOnlyFailed": "Failed to set tag to read-only",
-      "formatErrorRetry": "Unable to format this tag. Please try again or use a different tag."
+      "formatErrorRetry": "Unable to format this tag. Please try again or use a different tag.",
+      "verifying": "Verifying tag...",
+      "verifyFailed": "Tag did not save correctly",
+      "verifyFailedRetry": "The tag did not save correctly. Hold it to your phone and try again."
     },
     "toast": {
       "updateDbHeading": "Updating media database",

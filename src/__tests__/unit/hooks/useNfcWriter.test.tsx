@@ -85,7 +85,12 @@ describe("useNfcWriter - Enhanced Functionality", () => {
         await result.current.write(WriteAction.Write, "test-content");
       });
 
-      expect(writeTag).toHaveBeenCalledWith("test-content");
+      expect(writeTag).toHaveBeenCalledWith("test-content", {
+        ios: {
+          verifyingMessage: "spinner.verifying",
+          verifyFailedMessage: "spinner.verifyFailed",
+        },
+      });
       expect(CoreAPI.write).not.toHaveBeenCalled();
     });
 
@@ -119,7 +124,12 @@ describe("useNfcWriter - Enhanced Functionality", () => {
         await result.current.write(WriteAction.Write, "test-content");
       });
 
-      expect(writeTag).toHaveBeenCalledWith("test-content");
+      expect(writeTag).toHaveBeenCalledWith("test-content", {
+        ios: {
+          verifyingMessage: "spinner.verifying",
+          verifyFailedMessage: "spinner.verifyFailed",
+        },
+      });
     });
 
     it("should fallback to remote when local NFC unavailable", async () => {

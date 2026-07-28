@@ -5,7 +5,7 @@ import { Capacitor } from "@capacitor/core";
 import { logger } from "@/lib/logger";
 import { useNfcWriter, WriteMethod } from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
-import { WriteModal } from "@/components/WriteModal.tsx";
+import { isWriteModalOpen, WriteModal } from "@/components/WriteModal.tsx";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
 import logoImage from "@/assets/lockup.webp";
 import { cancelSession } from "@/lib/nfc";
@@ -44,7 +44,7 @@ export function Index() {
   // modal shows while a write is intended and auto-closes on any completion
   // (success, cancelled, or error) because status becomes non-null.
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = writeIntent && nfcWriter.status === null;
+  const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
   const closeWriteModal = async () => {
     try {
       await nfcWriter.end();
@@ -223,7 +223,12 @@ export function Index() {
         onClose={() => setHistoryOpen(false)}
         historyData={history.data}
       />
-      <WriteModal isOpen={writeOpen} close={closeWriteModal} />
+      <WriteModal
+        isOpen={writeOpen}
+        close={closeWriteModal}
+        verifyError={nfcWriter.verifyError !== null}
+        retry={() => void nfcWriter.retry()}
+      />
       <RemoteKeyboardModal
         isOpen={remoteKeyboardOpen}
         close={() => setRemoteKeyboardOpen(false)}

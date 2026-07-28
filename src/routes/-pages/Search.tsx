@@ -165,9 +165,10 @@ export function Search() {
     }
   };
 
-  // Close modal when NFC operation completes
+  // Close modal when NFC operation completes; keep it open on verification
+  // failure so the in-modal retry UI is shown.
   useEffect(() => {
-    if (nfcWriter.status !== null) {
+    if (nfcWriter.status !== null && nfcWriter.verifyError === null) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Close the modal after the external NFC operation completes.
       setWriteOpen(false);
     }
@@ -712,7 +713,12 @@ export function Search() {
         threshold={200}
         bottomOffset="calc(80px + 1rem)"
       />
-      <WriteModal isOpen={writeOpen} close={closeWriteModal} />
+      <WriteModal
+        isOpen={writeOpen}
+        close={closeWriteModal}
+        verifyError={nfcWriter.verifyError !== null}
+        retry={() => void nfcWriter.retry()}
+      />
       <SystemSelector
         isOpen={systemSelectorOpen}
         onClose={() => setSystemSelectorOpen(false)}

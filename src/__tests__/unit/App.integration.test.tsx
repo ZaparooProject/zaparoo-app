@@ -19,10 +19,13 @@ const {
   mockUseWriteQueueProcessor: vi.fn(() => ({
     nfcWriter: {
       write: vi.fn(),
+      retry: vi.fn(),
       end: vi.fn(),
       writing: false,
       result: null,
       status: null,
+      verifyError: null,
+      getVerifyError: vi.fn(() => null),
     },
     reset: vi.fn(),
   })),

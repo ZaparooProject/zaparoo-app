@@ -7,7 +7,7 @@ import { BackIcon, CreateIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
-import { WriteModal } from "@/components/WriteModal";
+import { isWriteModalOpen, WriteModal } from "@/components/WriteModal";
 import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
 import { logger } from "@/lib/logger";
 import { PageFrame } from "@/components/PageFrame";
@@ -30,7 +30,7 @@ export function CustomText() {
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = writeIntent && nfcWriter.status === null;
+  const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
   const closeWriteModal = async () => {
     setWriteIntent(false);
     await nfcWriter.end();
@@ -87,7 +87,12 @@ export function CustomText() {
           />
         </div>
       </PageFrame>
-      <WriteModal isOpen={writeOpen} close={closeWriteModal} />
+      <WriteModal
+        isOpen={writeOpen}
+        close={closeWriteModal}
+        verifyError={nfcWriter.verifyError !== null}
+        retry={() => void nfcWriter.retry()}
+      />
     </>
   );
 }
