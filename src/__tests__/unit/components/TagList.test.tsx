@@ -43,6 +43,19 @@ describe("TagList", () => {
     expect(tagElements[3]).toHaveAccessibleName("player 1p");
   });
 
+  it("should preserve server tag order when requested", () => {
+    const tags: TagInfo[] = [
+      { type: "unfinished", tag: "wip" },
+      { type: "region", tag: "usa" },
+    ];
+
+    render(<TagList tags={tags} preserveOrder />);
+
+    const tagElements = screen.getAllByLabelText(/^(unfinished|region)/);
+    expect(tagElements[0]).toHaveAccessibleName("unfinished wip");
+    expect(tagElements[1]).toHaveAccessibleName("region usa");
+  });
+
   it("should limit visible tags based on maxDesktop", () => {
     const tags: TagInfo[] = [
       { type: "genre", tag: "action" },

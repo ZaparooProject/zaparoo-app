@@ -41,6 +41,11 @@ export const FEATURE_GATES: Record<string, FeatureGate> = {
     marquee: false,
     labelKey: "features.mediaBrowseAllSearch",
   },
+  mediaDisambiguatingTags: {
+    since: "2.15.0",
+    marquee: false,
+    labelKey: "features.mediaDisambiguatingTags",
+  },
   activeMediaZapScript: {
     since: "2.9.0",
     marquee: false,
