@@ -43,7 +43,6 @@ export function MediaDatabaseCard({
   );
   const cleanOrphansFeature = useCoreFeature("mediaCleanOrphans");
   const isLiveConnected = connectionState === ConnectionState.CONNECTED;
-  const [cancelRequested, setCancelRequested] = useState(false);
   const [resumeRequested, setResumeRequested] = useState(false);
   const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
@@ -63,19 +62,10 @@ export function MediaDatabaseCard({
   const mediaGenerateUnsupported =
     coreVersion !== null && !coreVersionPending && !mediaGenerateAvailable;
 
-  // Derive isCancelling: true only if we requested cancel AND indexing is still happening
-  const isCancelling = cancelRequested && gamesIndex.indexing;
   // Derive isResuming: true only if we requested resume AND indexing is still paused
   const isResuming = resumeRequested && isPaused;
 
-  // Reset cancel/resume request when state changes (syncing with external Zustand store state)
-  useEffect(() => {
-    if (!gamesIndex.indexing && cancelRequested) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing local UI state with external store
-      setCancelRequested(false);
-    }
-  }, [gamesIndex.indexing, cancelRequested]);
-
+  // Reset resume request when state changes (syncing with external Zustand store state)
   useEffect(() => {
     if ((!isPaused || !gamesIndex.indexing) && resumeRequested) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing local UI state with external store
@@ -145,35 +135,6 @@ export function MediaDatabaseCard({
     }
   };
 
-  const handleCancelUpdate = async () => {
-    setGenerateError(null);
-    setCancelRequested(true);
-    try {
-      await CoreAPI.mediaGenerateCancel();
-      // Note: Don't reset cancelRequested here - it resets automatically via effect
-      // when the indexing status updates from the WebSocket notification
-      queryClient.invalidateQueries({ queryKey: ["media"] });
-    } catch (error) {
-      if (isExpectedMediaDatabaseError(error)) {
-        setGenerateError(
-          error instanceof Error
-            ? error.message
-            : t("settings.updateDb.startError"),
-        );
-        setCancelRequested(false);
-        return;
-      }
-
-      logger.error("Failed to cancel media generation:", error, {
-        category: "api",
-        action: "mediaGenerateCancel",
-        severity: "warning",
-      });
-      // Only reset on error, since cancellation request failed
-      setCancelRequested(false);
-    }
-  };
-
   const handleResumeUpdate = async () => {
     setGenerateError(null);
     setResumeRequested(true);
@@ -191,6 +152,12 @@ export function MediaDatabaseCard({
         return;
       }
 
+      const message =
+        error instanceof Error
+          ? error.message
+          : t("settings.updateDb.startError");
+      setGenerateError(message);
+      showRateLimitedErrorToast(t("error", { msg: message }));
       logger.error("Failed to resume media generation:", error, {
         category: "api",
         action: "mediaGenerateResume",
@@ -338,25 +305,15 @@ export function MediaDatabaseCard({
               />
             </div>
           </div>
-          <Button
-            label={
-              isPaused
-                ? isResuming
-                  ? t("resuming")
-                  : t("settings.updateDb.resume")
-                : isCancelling
-                  ? t("cancelling")
-                  : t("settings.updateDb.cancel")
-            }
-            variant="outline"
-            className="w-full"
-            disabled={
-              !connected ||
-              !mediaGenerateAvailable ||
-              (isPaused ? isResuming : isCancelling)
-            }
-            onClick={isPaused ? handleResumeUpdate : handleCancelUpdate}
-          />
+          {isPaused ? (
+            <Button
+              label={isResuming ? t("resuming") : t("settings.updateDb.resume")}
+              variant="outline"
+              className="w-full"
+              disabled={!connected || !mediaGenerateAvailable || isResuming}
+              onClick={handleResumeUpdate}
+            />
+          ) : null}
         </div>
       );
     }
