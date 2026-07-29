@@ -96,6 +96,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const isInitialized = useRef(false);
   // Track current connection to prevent stale events from old connections
   const currentConnectionId = useRef<string | null>(null);
+  // Monotonically identifies the latest current-client capability request.
+  // Connection transitions invalidate older callbacks before they can write.
+  const currentClientRequestToken = useRef(0);
+  const invalidateCurrentClientRequest = useCallback(() => {
+    currentClientRequestToken.current++;
+  }, []);
   // Pending media-fetch retry; cleared on cleanup so a stale connection
   // can't write its state into the freshly-mounted one.
   const mediaRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -496,6 +502,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
   // Handle connection open - fetch initial data
   const handleConnectionOpen = useCallback(() => {
+    const clientRequestToken = ++currentClientRequestToken.current;
     setConnectionError("");
     setInboxMessages([]);
     setInboxModalOpen(false);
@@ -539,6 +546,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               logger.log("Version request was cancelled, skipping");
               return;
             }
+            if (clientRequestToken !== currentClientRequestToken.current) {
+              return;
+            }
             setCoreVersion(res.version);
             setCorePlatform(res.platform);
             setCoreVersionPending(false);
@@ -551,6 +561,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             if (versionSatisfies(res.version, CLIENT_CAPABILITIES_SINCE)) {
               CoreAPI.clientsCurrent()
                 .then((clientRes) => {
+                  if (
+                    clientRequestToken !== currentClientRequestToken.current
+                  ) {
+                    return;
+                  }
                   if (isCancelled(clientRes)) {
                     logger.log(
                       "Current client request was cancelled, skipping",
@@ -560,6 +575,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
                   setCurrentClient(clientRes);
                 })
                 .catch((err) => {
+                  if (
+                    clientRequestToken !== currentClientRequestToken.current
+                  ) {
+                    return;
+                  }
                   setCurrentClient(null);
                   if (err instanceof CoreApiError && err.code === -32601) {
                     logger.warn(
@@ -627,6 +647,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             }
           })
           .catch((e) => {
+            if (clientRequestToken !== currentClientRequestToken.current) {
+              return;
+            }
             logger.error("Failed to get Core version:", e, {
               category: "api",
               action: "version",
@@ -796,6 +819,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // Reset local connection state when device changes so UI doesn't show stale data
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: reset state for the newly selected external device.
     setLocalConnection(null);
+    invalidateCurrentClientRequest();
     setCurrentClient(null);
     setEncryptionState("unknown");
     setPairingRequired(false);
@@ -845,10 +869,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           // Note: useState always triggers re-render when called with a new object reference
           setLocalConnection(connection);
 
-          if (
-            connection.state === "connecting" ||
-            connection.state === "reconnecting"
-          ) {
+          if (connection.state !== "connected") {
+            invalidateCurrentClientRequest();
             setCurrentClient(null);
           }
 
@@ -1010,11 +1032,13 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       // Reset CoreAPI to clear any pending requests for this connection
       CoreAPI.reset();
       connectionManager.removeDevice(deviceAddress);
+      invalidateCurrentClientRequest();
       setCurrentClient(null);
       setConnectionState(ConnectionState.DISCONNECTED);
     };
   }, [
     targetDeviceAddress,
+    invalidateCurrentClientRequest,
     setConnectionState,
     setConnectionError,
     setCurrentClient,

@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Preferences } from "@capacitor/preferences";
 import { QueryClient } from "@tanstack/react-query";
-import { render, screen, waitFor } from "../../../test-utils";
+import { act, render, screen, waitFor } from "../../../test-utils";
 import { ConnectionProvider } from "../../../components/ConnectionProvider";
 import { useConnection } from "../../../hooks/useConnection";
 import { connectionManager } from "../../../lib/transport";
@@ -16,11 +16,7 @@ import { CoreAPI } from "../../../lib/coreApi";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import type { TransportState } from "../../../lib/transport/types";
 import type { NotificationRequest } from "../../../lib/coreApi";
-import {
-  ClientCapability,
-  InboxSeverity,
-  Notification,
-} from "../../../lib/models";
+import { ClientCapability, InboxSeverity, Notification } from "@/lib/models";
 
 // Capture event handlers for notification testing
 let capturedEventHandlers: {
@@ -1319,6 +1315,61 @@ describe("connection event handling", () => {
       });
     });
   });
+
+  it.each(["resolve", "reject"] as const)(
+    "should ignore stale clients.current %s callbacks after reconnecting",
+    async (outcome) => {
+      vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+        version: "DEVELOPMENT",
+        platform: "test",
+      });
+      type CurrentClient = Awaited<ReturnType<typeof CoreAPI.clientsCurrent>>;
+      let resolveRequest!: (value: CurrentClient) => void;
+      let rejectRequest!: (reason: Error) => void;
+      const deferredRequest = new Promise<CurrentClient>((resolve, reject) => {
+        resolveRequest = resolve;
+        rejectRequest = reject;
+      });
+      vi.mocked(CoreAPI.clientsCurrent).mockReturnValueOnce(deferredRequest);
+
+      render(
+        <ConnectionProvider>
+          <ConnectionConsumer />
+        </ConnectionProvider>,
+      );
+      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+      await waitFor(() => {
+        expect(CoreAPI.clientsCurrent).toHaveBeenCalledTimes(1);
+      });
+
+      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        state: "reconnecting",
+        hasData: true,
+        hasConnectedBefore: true,
+      });
+      const newerClient: CurrentClient = {
+        paired: true,
+        role: "admin",
+        capabilities: [ClientCapability.SettingsWrite],
+      };
+      useStatusStore.setState({ currentClient: newerClient });
+
+      await act(async () => {
+        if (outcome === "resolve") {
+          resolveRequest({ paired: true, role: "member", capabilities: [] });
+        } else {
+          rejectRequest(new Error("stale request failed"));
+        }
+        await deferredRequest.catch(() => undefined);
+      });
+
+      expect(useStatusStore.getState().currentClient).toEqual(newerClient);
+    },
+  );
 
   it("should clear stale client capabilities while reconnecting", () => {
     useStatusStore.setState({

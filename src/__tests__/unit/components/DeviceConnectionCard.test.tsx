@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { render, screen, fireEvent } from "../../../test-utils";
 import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
 import { useStatusStore } from "@/lib/store";
@@ -163,7 +164,8 @@ describe("DeviceConnectionCard", () => {
     expect(historyLink).toHaveAttribute("href", "/settings/devices");
   });
 
-  it("should always allow manual pairing", () => {
+  it("should always allow manual pairing", async () => {
+    const user = userEvent.setup();
     const openPairingModal = vi.fn();
     mockUseConnection.mockReturnValue({
       isConnected: true,
@@ -171,10 +173,9 @@ describe("DeviceConnectionCard", () => {
       showReconnecting: false,
       openPairingModal,
     });
-    useStatusStore.setState({ pairingRequired: false });
 
     render(<DeviceConnectionCard {...defaultProps} />);
-    fireEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "pairing.openPairing" }),
     );
 
