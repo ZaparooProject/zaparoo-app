@@ -35,6 +35,7 @@ import {
 } from "@/lib/transport";
 import { logger } from "@/lib/logger";
 import {
+  ClientCapability,
   IndexResponse,
   InboxMessage,
   InboxSeverity,
@@ -46,8 +47,10 @@ import {
   TokenResponse,
 } from "@/lib/models";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
+import { satisfies as versionSatisfies } from "@/lib/coreVersion";
 import {
   CoreAPI,
+  CoreApiError,
   getDeviceAddress,
   isCancelled,
   isExpectedMediaDatabaseError,
@@ -76,6 +79,16 @@ interface ConnectionProviderProps {
   children: ReactNode;
 }
 
+const CLIENT_CAPABILITIES_SINCE = "2.16.0";
+const LEGACY_CLIENT_ACCESS = {
+  paired: false,
+  role: null,
+  capabilities: [
+    ClientCapability.ProfilesManage,
+    ClientCapability.SettingsWrite,
+  ],
+};
+
 export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
@@ -83,6 +96,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const isInitialized = useRef(false);
   // Track current connection to prevent stale events from old connections
   const currentConnectionId = useRef<string | null>(null);
+  // Monotonically identifies the latest current-client capability request.
+  // Connection transitions invalidate older callbacks before they can write.
+  const currentClientRequestToken = useRef(0);
+  const invalidateCurrentClientRequest = useCallback(() => {
+    currentClientRequestToken.current++;
+  }, []);
   // Pending media-fetch retry; cleared on cleanup so a stale connection
   // can't write its state into the freshly-mounted one.
   const mediaRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -117,6 +136,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setCoreVersion,
     setCorePlatform,
     setCoreVersionPending,
+    setCurrentClient,
     setEncryptionState,
     setPairingRequired,
     addInboxMessage,
@@ -142,6 +162,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setCoreVersion: state.setCoreVersion,
       setCorePlatform: state.setCorePlatform,
       setCoreVersionPending: state.setCoreVersionPending,
+      setCurrentClient: state.setCurrentClient,
       setEncryptionState: state.setEncryptionState,
       setPairingRequired: state.setPairingRequired,
       addInboxMessage: state.addInboxMessage,
@@ -481,6 +502,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
   // Handle connection open - fetch initial data
   const handleConnectionOpen = useCallback(() => {
+    const clientRequestToken = ++currentClientRequestToken.current;
     setConnectionError("");
     setInboxMessages([]);
     setInboxModalOpen(false);
@@ -524,6 +546,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               logger.log("Version request was cancelled, skipping");
               return;
             }
+            if (clientRequestToken !== currentClientRequestToken.current) {
+              return;
+            }
             setCoreVersion(res.version);
             setCorePlatform(res.platform);
             setCoreVersionPending(false);
@@ -532,6 +557,52 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               version: res.version,
               lastConnectedAt: Date.now(),
             });
+
+            if (versionSatisfies(res.version, CLIENT_CAPABILITIES_SINCE)) {
+              CoreAPI.clientsCurrent()
+                .then((clientRes) => {
+                  if (
+                    clientRequestToken !== currentClientRequestToken.current
+                  ) {
+                    return;
+                  }
+                  if (isCancelled(clientRes)) {
+                    logger.log(
+                      "Current client request was cancelled, skipping",
+                    );
+                    return;
+                  }
+                  setCurrentClient(clientRes);
+                })
+                .catch((err) => {
+                  if (
+                    clientRequestToken !== currentClientRequestToken.current
+                  ) {
+                    return;
+                  }
+                  setCurrentClient(null);
+                  if (err instanceof CoreApiError && err.code === -32601) {
+                    logger.warn(
+                      "Current client capabilities are unavailable on this Core build",
+                    );
+                    return;
+                  }
+                  logger.error(
+                    "Failed to fetch current client capabilities:",
+                    err,
+                    {
+                      category: "api",
+                      action: "clientsCurrent",
+                      severity: "warning",
+                    },
+                  );
+                });
+            } else {
+              // Roles did not exist before Core 2.16, so older connections
+              // retain their legacy unrestricted settings access.
+              setCurrentClient(LEGACY_CLIENT_ACCESS);
+            }
+
             if (isCoreFeatureAvailable("mediaScrapers", res.version)) {
               CoreAPI.mediaScrapeStatus()
                 .then((statusRes) => {
@@ -576,6 +647,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             }
           })
           .catch((e) => {
+            if (clientRequestToken !== currentClientRequestToken.current) {
+              return;
+            }
             logger.error("Failed to get Core version:", e, {
               category: "api",
               action: "version",
@@ -584,6 +658,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             setCoreVersion(null);
             setCorePlatform(null);
             setCoreVersionPending(false);
+            setCurrentClient(null);
           });
       });
 
@@ -695,6 +770,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setCoreVersion,
     setCorePlatform,
     setCoreVersionPending,
+    setCurrentClient,
     setScrapingStatus,
     setInboxMessages,
     setInboxModalOpen,
@@ -743,6 +819,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // Reset local connection state when device changes so UI doesn't show stale data
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: reset state for the newly selected external device.
     setLocalConnection(null);
+    invalidateCurrentClientRequest();
+    setCurrentClient(null);
     setEncryptionState("unknown");
     setPairingRequired(false);
     setPairingOpen(false);
@@ -790,6 +868,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           // Update local connection state for context consumers
           // Note: useState always triggers re-render when called with a new object reference
           setLocalConnection(connection);
+
+          if (connection.state !== "connected") {
+            invalidateCurrentClientRequest();
+            setCurrentClient(null);
+          }
 
           // Each new connect attempt starts unverified — clear stale signals
           // from a prior attempt so the UI gate in ConnectionStatusDisplay shows
@@ -949,12 +1032,16 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       // Reset CoreAPI to clear any pending requests for this connection
       CoreAPI.reset();
       connectionManager.removeDevice(deviceAddress);
+      invalidateCurrentClientRequest();
+      setCurrentClient(null);
       setConnectionState(ConnectionState.DISCONNECTED);
     };
   }, [
     targetDeviceAddress,
+    invalidateCurrentClientRequest,
     setConnectionState,
     setConnectionError,
+    setCurrentClient,
     setEncryptionState,
     setPairingRequired,
     setDeviceHistory,
@@ -1076,7 +1163,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         isOpen={pairingOpen}
         close={() => setPairingOpen(false)}
         address={targetDeviceAddress}
-        onSuccess={() => connectionManager.immediateReconnectActive()}
+        onSuccess={() => connectionManager.restartActiveConnection()}
       />
     </ConnectionContext.Provider>
   );

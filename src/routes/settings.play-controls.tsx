@@ -20,7 +20,8 @@ import {
   parseDuration,
 } from "@/lib/utils";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
-import { type UpdateSettingsRequest } from "@/lib/models";
+import { useClientCapability } from "@/hooks/useClientCapability";
+import { ClientCapability, type UpdateSettingsRequest } from "@/lib/models";
 
 export const Route = createFileRoute("/settings/play-controls")({
   component: PlayControlsSettings,
@@ -31,6 +32,9 @@ export function PlayControlsSettings() {
   usePageHeadingFocus(t("settings.playControls.title"));
   const connected = useStatusStore((state) => state.connected);
   const connectionState = useStatusStore((state) => state.connectionState);
+  const canWriteCoreSettings = useClientCapability(
+    ClientCapability.SettingsWrite,
+  );
 
   const isConnecting =
     connectionState === ConnectionState.CONNECTING ||
@@ -134,7 +138,7 @@ export function PlayControlsSettings() {
   }, [coreSettings]);
 
   useEffect(() => {
-    if (!limitsConfig) return;
+    if (!limitsConfig || !canWriteCoreSettings) return;
 
     if (dailyTimeoutRef.current) {
       clearTimeout(dailyTimeoutRef.current);
@@ -158,10 +162,10 @@ export function PlayControlsSettings() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dailyHours, dailyMinutes]);
+  }, [dailyHours, dailyMinutes, canWriteCoreSettings]);
 
   useEffect(() => {
-    if (!limitsConfig) return;
+    if (!limitsConfig || !canWriteCoreSettings) return;
 
     if (sessionTimeoutRef.current) {
       clearTimeout(sessionTimeoutRef.current);
@@ -185,10 +189,10 @@ export function PlayControlsSettings() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionHours, sessionMinutes]);
+  }, [sessionHours, sessionMinutes, canWriteCoreSettings]);
 
   useEffect(() => {
-    if (!limitsConfig) return;
+    if (!limitsConfig || !canWriteCoreSettings) return;
 
     if (resetTimeoutRef.current) {
       clearTimeout(resetTimeoutRef.current);
@@ -216,10 +220,10 @@ export function PlayControlsSettings() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resetMinutes]);
+  }, [resetMinutes, canWriteCoreSettings]);
 
   useEffect(() => {
-    if (!coreSettings) return;
+    if (!coreSettings || !canWriteCoreSettings) return;
 
     const timeout = parseFloat(launchGuardTimeout) || 0;
     if (timeout === (coreSettings.launchGuardTimeout ?? 15)) return;
@@ -238,10 +242,10 @@ export function PlayControlsSettings() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [launchGuardTimeout]);
+  }, [launchGuardTimeout, canWriteCoreSettings]);
 
   useEffect(() => {
-    if (!coreSettings) return;
+    if (!coreSettings || !canWriteCoreSettings) return;
 
     const delay = parseFloat(launchGuardDelay) || 0;
     if (delay === (coreSettings.launchGuardDelay ?? 0)) return;
@@ -260,10 +264,12 @@ export function PlayControlsSettings() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [launchGuardDelay]);
+  }, [launchGuardDelay, canWriteCoreSettings]);
 
   const handleEnabledToggle = (enabled: boolean) => {
-    updateMutation.mutate({ enabled });
+    if (canWriteCoreSettings) {
+      updateMutation.mutate({ enabled });
+    }
   };
 
   const launchGuardEnabled = coreSettings?.launchGuardEnabled ?? false;
@@ -326,7 +332,7 @@ export function PlayControlsSettings() {
             }
             value={limitsConfig?.enabled ?? false}
             setValue={handleEnabledToggle}
-            disabled={!connected}
+            disabled={!canWriteCoreSettings}
             loading={isConnecting || (connected && isPending)}
           />
 
@@ -465,7 +471,7 @@ export function PlayControlsSettings() {
                   value={dailyHours}
                   setValue={setDailyHours}
                   label={t("settings.core.playtime.hours")}
-                  disabled={!connected || !limitsConfig?.enabled}
+                  disabled={!canWriteCoreSettings || !limitsConfig?.enabled}
                 />
                 <TextInput
                   type="number"
@@ -473,7 +479,7 @@ export function PlayControlsSettings() {
                   value={dailyMinutes}
                   setValue={setDailyMinutes}
                   label={t("settings.core.playtime.minutes")}
-                  disabled={!connected || !limitsConfig?.enabled}
+                  disabled={!canWriteCoreSettings || !limitsConfig?.enabled}
                 />
               </div>
             </div>
@@ -489,7 +495,7 @@ export function PlayControlsSettings() {
                   value={sessionHours}
                   setValue={setSessionHours}
                   label={t("settings.core.playtime.hours")}
-                  disabled={!connected || !limitsConfig?.enabled}
+                  disabled={!canWriteCoreSettings || !limitsConfig?.enabled}
                 />
                 <TextInput
                   type="number"
@@ -497,7 +503,7 @@ export function PlayControlsSettings() {
                   value={sessionMinutes}
                   setValue={setSessionMinutes}
                   label={t("settings.core.playtime.minutes")}
-                  disabled={!connected || !limitsConfig?.enabled}
+                  disabled={!canWriteCoreSettings || !limitsConfig?.enabled}
                 />
               </div>
             </div>
@@ -513,7 +519,7 @@ export function PlayControlsSettings() {
                   value={resetMinutes}
                   setValue={setResetMinutes}
                   label={t("settings.core.playtime.minutes")}
-                  disabled={!connected || !limitsConfig?.enabled}
+                  disabled={!canWriteCoreSettings || !limitsConfig?.enabled}
                   className="max-w-[calc(50%-0.25rem)]"
                 />
               </div>
@@ -543,7 +549,7 @@ export function PlayControlsSettings() {
             setValue={(launchGuardEnabled) => {
               updateCoreSetting.mutate({ launchGuardEnabled });
             }}
-            disabled={!connected}
+            disabled={!canWriteCoreSettings}
             loading={isConnecting || (connected && !coreSettings)}
           />
 
@@ -563,7 +569,7 @@ export function PlayControlsSettings() {
             setValue={(launchGuardRequireConfirm) => {
               updateCoreSetting.mutate({ launchGuardRequireConfirm });
             }}
-            disabled={!connected || !launchGuardEnabled}
+            disabled={!canWriteCoreSettings || !launchGuardEnabled}
             loading={isConnecting || (connected && !coreSettings)}
           />
 
@@ -579,7 +585,7 @@ export function PlayControlsSettings() {
                   value={launchGuardTimeout}
                   setValue={setLaunchGuardTimeout}
                   label={t("settings.core.launchGuard.seconds")}
-                  disabled={!connected || !launchGuardEnabled}
+                  disabled={!canWriteCoreSettings || !launchGuardEnabled}
                   className="max-w-[calc(50%-0.25rem)]"
                 />
               </div>
@@ -596,7 +602,7 @@ export function PlayControlsSettings() {
                   value={launchGuardDelay}
                   setValue={setLaunchGuardDelay}
                   label={t("settings.core.launchGuard.seconds")}
-                  disabled={!connected || !launchGuardEnabled}
+                  disabled={!canWriteCoreSettings || !launchGuardEnabled}
                   className="max-w-[calc(50%-0.25rem)]"
                 />
               </div>

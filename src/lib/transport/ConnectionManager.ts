@@ -316,9 +316,25 @@ export class ConnectionManager {
   }
 
   /**
+   * Replace the active device's socket, even when it is currently connected.
+   * Used after pairing so an optional plaintext connection immediately reloads
+   * the newly stored credentials. While paused, disconnect now and let
+   * resumeAll() open the replacement socket in the foreground.
+   */
+  restartActiveConnection(): void {
+    const transport = this.getActiveTransport();
+    if (!transport) return;
+
+    transport.disconnect();
+    if (!this.isPaused) {
+      transport.immediateReconnect();
+    }
+  }
+
+  /**
    * Clear the encryption-blocked state on the active device. Call this after
-   * resolving the encryption issue (e.g. successful pairing) before invoking
-   * immediateReconnectActive() so the reconnect actually proceeds.
+   * resolving the encryption issue (e.g. successful pairing) before restarting
+   * the connection so the reconnect actually proceeds.
    */
   clearEncryptionBlockActive(): void {
     this.getActiveTransport()?.clearEncryptionBlock();

@@ -34,6 +34,7 @@ export enum Method {
   Inbox = "inbox",
   InboxDelete = "inbox.delete",
   InboxClear = "inbox.clear",
+  ClientsCurrent = "clients.current",
   Scrapers = "scrapers",
   MediaScrape = "media.scrape",
   MediaScrapeStatus = "media.scrape.status",
@@ -65,6 +66,19 @@ export enum Notification {
 export interface VersionResponse {
   version: string;
   platform: string;
+}
+
+export type ClientRole = "admin" | "member";
+
+export enum ClientCapability {
+  ProfilesManage = "profiles.manage",
+  SettingsWrite = "settings.write",
+}
+
+export interface ClientsCurrentResponse {
+  paired: boolean;
+  role: ClientRole | null;
+  capabilities: string[];
 }
 
 export interface LaunchRequest {

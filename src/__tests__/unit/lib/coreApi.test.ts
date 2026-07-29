@@ -193,6 +193,7 @@ describe("CoreAPI", () => {
     ["stop", () => CoreAPI.stop(), "stop"],
     ["mediaActive", () => CoreAPI.mediaActive(), "media.active"],
     ["settingsReload", () => CoreAPI.settingsReload(), "settings.reload"],
+    ["clientsCurrent", () => CoreAPI.clientsCurrent(), "clients.current"],
     [
       "readersWriteCancel",
       () => CoreAPI.readersWriteCancel(),

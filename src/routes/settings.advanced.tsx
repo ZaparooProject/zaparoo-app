@@ -16,8 +16,10 @@ import { BackIcon, NextIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { RestorePuchasesButton } from "@/components/ProPurchase";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { useClientCapability } from "@/hooks/useClientCapability";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
+import { ClientCapability } from "@/lib/models";
 
 export const Route = createFileRoute("/settings/advanced")({
   component: AdvancedSettings,
@@ -28,6 +30,9 @@ export function AdvancedSettings() {
   usePageHeadingFocus(t("settings.advanced.title"));
   const connected = useStatusStore((state) => state.connected);
   const connectionState = useStatusStore((state) => state.connectionState);
+  const canWriteCoreSettings = useClientCapability(
+    ClientCapability.SettingsWrite,
+  );
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
   const setShowFilenames = usePreferencesStore((s) => s.setShowFilenames);
 
@@ -50,6 +55,7 @@ export function AdvancedSettings() {
   });
 
   const handleErrorReportingToggle = (value: boolean) => {
+    if (!canWriteCoreSettings) return;
     if (value) {
       setShowErrorReportingModal(true);
     } else {
@@ -58,6 +64,7 @@ export function AdvancedSettings() {
   };
 
   const confirmEnableErrorReporting = () => {
+    if (!canWriteCoreSettings) return;
     update.mutate({ errorReporting: true });
     setShowErrorReportingModal(false);
   };
@@ -101,7 +108,7 @@ export function AdvancedSettings() {
           }
           value={data?.errorReporting ?? false}
           setValue={handleErrorReportingToggle}
-          disabled={!connected}
+          disabled={!canWriteCoreSettings}
           loading={isLoading}
         />
 
@@ -117,7 +124,7 @@ export function AdvancedSettings() {
           }
           value={data?.debugLogging ?? false}
           setValue={(v) => update.mutate({ debugLogging: v })}
-          disabled={!connected}
+          disabled={!canWriteCoreSettings}
           loading={isLoading}
         />
 
@@ -176,6 +183,7 @@ export function AdvancedSettings() {
               label={t("yes")}
               intent="primary"
               onClick={confirmEnableErrorReporting}
+              disabled={!canWriteCoreSettings}
             />
           </div>
         </div>

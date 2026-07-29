@@ -165,6 +165,11 @@ describe("Settings Readers Integration", () => {
       ...useStatusStore.getInitialState(),
       connected: true,
       connectionState: ConnectionState.CONNECTED,
+      currentClient: {
+        paired: true,
+        role: "admin",
+        capabilities: ["settings.write"],
+      },
     });
     usePreferencesStore.setState({
       ...usePreferencesStore.getInitialState(),

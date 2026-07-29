@@ -82,6 +82,11 @@ describe("Settings Advanced Route", () => {
   const defaultStoreState = {
     connected: true,
     connectionState: ConnectionState.CONNECTED,
+    currentClient: {
+      paired: true,
+      role: "admin",
+      capabilities: ["settings.write"],
+    },
     safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
   };
 
@@ -227,6 +232,35 @@ describe("Settings Advanced Route", () => {
       await waitFor(() => {
         expect(mockSettingsUpdate).toHaveBeenCalledWith({ debugLogging: true });
       });
+    });
+
+    it("should disable Core settings for a member client", async () => {
+      mockUseStatusStore.mockImplementation((selector) =>
+        selector({
+          ...defaultStoreState,
+          currentClient: {
+            paired: true,
+            role: "member",
+            capabilities: [],
+          },
+        }),
+      );
+
+      renderComponent();
+
+      const errorReporting = await screen.findByRole("checkbox", {
+        name: /settings.advanced.errorReporting/i,
+      });
+      const debugLogging = screen.getByRole("checkbox", {
+        name: /settings.advanced.debugLogging/i,
+      });
+      const showFilenames = screen.getByRole("checkbox", {
+        name: /settings.advanced.showFilenames/i,
+      });
+
+      expect(errorReporting).toBeDisabled();
+      expect(debugLogging).toBeDisabled();
+      expect(showFilenames).toBeEnabled();
     });
 
     it("should call setShowFilenames when show filenames is toggled", async () => {
