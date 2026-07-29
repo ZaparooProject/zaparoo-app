@@ -18,6 +18,8 @@ vi.mock("react-i18next", () => ({
 // Flexible store mock - state can be modified per test
 const mockStoreState = {
   connected: true,
+  coreVersion: "2.15.0",
+  coreVersionPending: false,
   gamesIndex: { exists: true, indexing: false },
 };
 
@@ -89,6 +91,8 @@ describe("VirtualSearchResults", () => {
     mockGetVirtualItems.mockReturnValue([]);
     // Reset to default state
     mockStoreState.connected = true;
+    mockStoreState.coreVersion = "2.15.0";
+    mockStoreState.coreVersionPending = false;
     mockStoreState.gamesIndex = { exists: true, indexing: false };
     mockPreferencesState.showFilenames = false;
   });
@@ -343,6 +347,110 @@ describe("VirtualSearchResults", () => {
       await waitFor(() => {
         expect(screen.getByText("Super Nintendo")).toBeInTheDocument();
       });
+    });
+
+    it("should show only ordered disambiguating tags on supported Core", async () => {
+      const results = [
+        {
+          ...createMockResults(1)[0]!,
+          name: "Variant Game",
+          path: "/games/Variant Game (USA).rom",
+          tags: [
+            { type: "genre", tag: "action" },
+            { type: "region", tag: "usa" },
+          ],
+          disambiguatingTags: [
+            { type: "unfinished", tag: "wip" },
+            { type: "region", tag: "usa" },
+          ],
+        },
+        {
+          ...createMockResults(1, 1)[0]!,
+          name: "Variant Game",
+          path: "/games/Variant Game (Europe).rom",
+          tags: [
+            { type: "genre", tag: "action" },
+            { type: "region", tag: "eu" },
+          ],
+          disambiguatingTags: [{ type: "region", tag: "eu" }],
+        },
+      ];
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValueOnce({
+        results,
+        total: 2,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+      mockGetVirtualItems.mockReturnValue([
+        { index: 0, key: 0, start: 0, size: 100 },
+        { index: 1, key: 1, start: 100, size: 100 },
+      ]);
+
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByLabelText("unfinished wip")).toBeInTheDocument();
+      });
+      const firstResultTags = screen
+        .getByTestId("result-0")
+        .querySelectorAll('[aria-label^="unfinished"], [aria-label^="region"]');
+      expect(firstResultTags[0]).toHaveAccessibleName("unfinished wip");
+      expect(firstResultTags[1]).toHaveAccessibleName("region usa");
+      expect(screen.queryByLabelText("genre action")).not.toBeInTheDocument();
+      expect(screen.getAllByText("Variant Game")).toHaveLength(2);
+      expect(screen.queryByText("Variant Game (USA)")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Variant Game (Europe)"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should fall back to full tags before Core 2.15.0", async () => {
+      mockStoreState.coreVersion = "2.14.1";
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValueOnce({
+        results: [
+          {
+            ...createMockResults(1)[0]!,
+            tags: [{ type: "genre", tag: "action" }],
+            disambiguatingTags: [{ type: "region", tag: "usa" }],
+          },
+        ],
+        total: 1,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+      mockGetVirtualItems.mockReturnValue([
+        { index: 0, key: 0, start: 0, size: 100 },
+      ]);
+
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByLabelText("genre action")).toBeInTheDocument();
+      });
+      expect(screen.queryByLabelText("region usa")).not.toBeInTheDocument();
+    });
+
+    it("should still honor the filename display preference", async () => {
+      mockPreferencesState.showFilenames = true;
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValueOnce({
+        results: [
+          {
+            ...createMockResults(1)[0]!,
+            name: "Variant Game",
+            path: "/games/Variant Game (USA).rom",
+          },
+        ],
+        total: 1,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+      mockGetVirtualItems.mockReturnValue([
+        { index: 0, key: 0, start: 0, size: 100 },
+      ]);
+
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("Variant Game (USA)")).toBeInTheDocument();
+      });
+      expect(screen.queryByText("Variant Game")).not.toBeInTheDocument();
     });
   });
 

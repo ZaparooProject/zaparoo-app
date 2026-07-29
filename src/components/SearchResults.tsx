@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import { SearchResultGame, SearchResultsResponse } from "@/lib/models.ts";
@@ -11,6 +10,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 import { EmptyState } from "@/components/wui/EmptyState.tsx";
 import { TagList } from "@/components/TagList.tsx";
+import { isCoreFeatureAvailable } from "@/lib/featureGates";
 
 export function SearchResults(props: {
   loading: boolean;
@@ -25,23 +25,14 @@ export function SearchResults(props: {
   onClearFilters?: () => void;
 }) {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
+  const disambiguatingTagsAvailable = useStatusStore(
+    (state) =>
+      state.connected &&
+      !state.coreVersionPending &&
+      isCoreFeatureAvailable("mediaDisambiguatingTags", state.coreVersion),
+  );
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
   const { t } = useTranslation();
-
-  // Build a set of names that appear more than once in results (duplicates)
-  const results = props.resp?.results;
-  const duplicateNames = useMemo(() => {
-    if (!results) return new Set<string>();
-    const nameCounts = new Map<string, number>();
-    for (const item of results) {
-      nameCounts.set(item.name, (nameCounts.get(item.name) ?? 0) + 1);
-    }
-    const duplicates = new Set<string>();
-    for (const [name, count] of nameCounts) {
-      if (count > 1) duplicates.add(name);
-    }
-    return duplicates;
-  }, [results]);
 
   // Screen reader announcement for search results
   const getAriaLiveMessage = () => {
@@ -169,18 +160,13 @@ export function SearchResults(props: {
         {/* Results list */}
         <div>
           {props.resp.results.map((game, i) => {
-            const isDuplicate = duplicateNames.has(game.name);
             // Primary display: filename if global pref enabled, otherwise clean name
             const displayName = showFilenames
               ? filenameFromPath(game.path) || game.name
               : game.name;
-            // For duplicates (when not using global filename pref), show filename as subtitle
-            const filename = filenameFromPath(game.path);
-            const showFilenameSubtitle =
-              isDuplicate &&
-              !showFilenames &&
-              filename &&
-              filename !== game.name;
+            const displayTags = disambiguatingTagsAvailable
+              ? (game.disambiguatingTags ?? [])
+              : game.tags;
 
             const handleGameSelect = () => {
               if (
@@ -226,11 +212,13 @@ export function SearchResults(props: {
               >
                 <div className="flex flex-col">
                   <p className="font-semibold">{displayName}</p>
-                  {showFilenameSubtitle && (
-                    <p className="text-sm text-white/60">{filename}</p>
-                  )}
                   <p className="text-sm">{game.system.name}</p>
-                  <TagList tags={game.tags} maxMobile={2} maxDesktop={4} />
+                  <TagList
+                    tags={displayTags}
+                    maxMobile={2}
+                    maxDesktop={4}
+                    preserveOrder={disambiguatingTagsAvailable}
+                  />
                 </div>
                 <div>
                   <NextIcon size="20" />

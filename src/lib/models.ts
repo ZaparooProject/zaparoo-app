@@ -112,6 +112,7 @@ export interface SearchResultGame {
   path: string;
   zapScript?: string;
   tags: TagInfo[];
+  disambiguatingTags?: TagInfo[];
 }
 
 export interface Pagination {

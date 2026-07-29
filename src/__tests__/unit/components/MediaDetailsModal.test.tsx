@@ -25,6 +25,7 @@ const mediaWithZapScript: SearchResultGame = {
     { type: "genre", tag: "platformer" },
     { type: "year", tag: "1990" },
   ],
+  disambiguatingTags: [{ type: "year", tag: "1990" }],
 };
 
 function renderModal(
