@@ -301,6 +301,7 @@
           "reloadedSuccess": "Reloaded mappings from config files",
           "reloadFailed": "Failed to reload mappings",
           "disabledBadge": "Disabled",
+          "readOnlyBadge": "Read-only",
           "noOverride": "No action",
           "openMapping": "Open {{name}}"
         },
@@ -777,6 +778,7 @@
       "mediaBrowseAllSearch": "Browse all media search",
       "mediaDisambiguatingTags": "Search result disambiguation",
       "activeMediaZapScript": "Current media ZapScript",
+      "readOnlyMappings": "File mappings",
       "remoteInput": "Remote input"
     },
     "inbox": {

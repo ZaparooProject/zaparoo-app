@@ -103,6 +103,16 @@ describe("CoreAPI API Contract", () => {
       expect(sentData.method).toBe("settings");
     });
 
+    it("mappings should request read-only entries when enabled", async () => {
+      const promise = CoreAPI.mappings({ includeReadOnly: true });
+      simulateResponse(mockSend, { mappings: [] });
+      await promise;
+
+      const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
+      expect(sentData.method).toBe("mappings");
+      expect(sentData.params).toEqual({ includeReadOnly: true });
+    });
+
     it("mediaGenerateResume should send correct JSON-RPC format", async () => {
       const promise = CoreAPI.mediaGenerateResume();
       simulateResponse(mockSend, null);

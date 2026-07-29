@@ -5,6 +5,7 @@ import { logger } from "./logger.ts";
 import { RequestCancelledError } from "./errors";
 import {
   AddMappingRequest,
+  AllMappingsParams,
   AllMappingsResponse,
   DeleteInboxRequest,
   HistoryResponse,
@@ -1354,9 +1355,9 @@ class CoreApi {
     });
   }
 
-  mappings(): Promise<AllMappingsResponse> {
+  mappings(params?: AllMappingsParams): Promise<AllMappingsResponse> {
     return new Promise<AllMappingsResponse>((resolve, reject) => {
-      this.call(Method.Mappings)
+      this.call(Method.Mappings, params)
         .then((result) => {
           try {
             const response = result as AllMappingsResponse;

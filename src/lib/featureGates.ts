@@ -51,6 +51,11 @@ export const FEATURE_GATES: Record<string, FeatureGate> = {
     marquee: false,
     labelKey: "features.activeMediaZapScript",
   },
+  readOnlyMappings: {
+    since: "2.15.0",
+    marquee: false,
+    labelKey: "features.readOnlyMappings",
+  },
   remoteInput: {
     since: "2.10.0",
     marquee: true,
