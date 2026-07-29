@@ -23,16 +23,21 @@ const {
   mockNavigate,
   mockToastSuccess,
   mockToastError,
+  mockMappings,
   mockMappingsReload,
   mockRefetch,
   mockMappingsData,
+  mockMappingsQueryFn,
   mockIsLoading,
+  mockCoreVersion,
+  mockCoreVersionPending,
 } = vi.hoisted(() => ({
   componentRef: { current: null as any },
   mockGoBack: vi.fn(),
   mockNavigate: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
+  mockMappings: vi.fn(),
   mockMappingsReload: vi.fn(),
   mockRefetch: vi.fn(),
   mockMappingsData: {
@@ -40,7 +45,12 @@ const {
       | { mappings: MappingResponse[] }
       | undefined,
   },
+  mockMappingsQueryFn: {
+    current: undefined as (() => Promise<unknown>) | undefined,
+  },
   mockIsLoading: { current: false },
+  mockCoreVersion: { current: "2.15.0" as string | null },
+  mockCoreVersionPending: { current: false },
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -65,7 +75,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
-    mappings: vi.fn(),
+    mappings: mockMappings,
     mappingsReload: mockMappingsReload,
     systems: vi.fn().mockResolvedValue({ systems: [] }),
     run: vi.fn().mockResolvedValue({}),
@@ -82,6 +92,8 @@ vi.mock("@/lib/store", async (importOriginal) => {
     useStatusStore: (selector: any) =>
       selector({
         connected: mockConnected,
+        coreVersion: mockCoreVersion.current,
+        coreVersionPending: mockCoreVersionPending.current,
         safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
       }),
   };
@@ -91,22 +103,31 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
   return {
     ...actual,
-    useQuery: vi.fn(({ queryKey }: { queryKey: string[] }) => {
-      if (queryKey[0] === "mappings") {
+    useQuery: vi.fn(
+      ({
+        queryKey,
+        queryFn,
+      }: {
+        queryKey: readonly unknown[];
+        queryFn: () => Promise<unknown>;
+      }) => {
+        if (queryKey[0] === "mappings") {
+          mockMappingsQueryFn.current = queryFn;
+          return {
+            data: mockMappingsData.current,
+            isLoading: mockIsLoading.current,
+            isError: false,
+            refetch: mockRefetch,
+          };
+        }
         return {
-          data: mockMappingsData.current,
-          isLoading: mockIsLoading.current,
+          data: undefined,
+          isLoading: false,
           isError: false,
-          refetch: mockRefetch,
+          refetch: vi.fn(),
         };
-      }
-      return {
-        data: undefined,
-        isLoading: false,
-        isError: false,
-        refetch: vi.fn(),
-      };
-    }),
+      },
+    ),
   };
 });
 
@@ -131,6 +152,8 @@ const buildMapping = (
   match: "exact",
   pattern: "AABB",
   override: "**launch.random",
+  source: "database",
+  readOnly: false,
   ...overrides,
 });
 
@@ -141,7 +164,11 @@ describe("Create Mappings List Route", () => {
     vi.clearAllMocks();
     mockConnected = true;
     mockMappingsData.current = { mappings: [] };
+    mockMappingsQueryFn.current = undefined;
     mockIsLoading.current = false;
+    mockCoreVersion.current = "2.15.0";
+    mockCoreVersionPending.current = false;
+    mockMappings.mockResolvedValue({ mappings: [] });
     mockMappingsReload.mockResolvedValue(undefined);
     mockRefetch.mockResolvedValue({});
   });
@@ -264,6 +291,50 @@ describe("Create Mappings List Route", () => {
         screen.getByText("create.mappings.list.disabledBadge"),
       ).toBeInTheDocument();
     });
+
+    it("should render file mapping details with a read-only badge", () => {
+      mockMappingsData.current = {
+        mappings: [
+          buildMapping({
+            id: "",
+            added: "",
+            label: "Config mapping",
+            pattern: "config-pattern",
+            override: "**launch.system:snes",
+            source: "file",
+            readOnly: true,
+          }),
+        ],
+      };
+
+      renderList();
+
+      expect(screen.getByText("Config mapping")).toBeInTheDocument();
+      expect(screen.getByText("config-pattern")).toBeInTheDocument();
+      expect(screen.getByText("**launch.system:snes")).toBeInTheDocument();
+      expect(
+        screen.getByText("create.mappings.list.readOnlyBadge"),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("API request", () => {
+    it("should request read-only mappings from supported Core versions", async () => {
+      renderList();
+
+      await mockMappingsQueryFn.current?.();
+
+      expect(mockMappings).toHaveBeenCalledWith({ includeReadOnly: true });
+    });
+
+    it("should omit read-only mappings for older Core versions", async () => {
+      mockCoreVersion.current = "2.14.1";
+      renderList();
+
+      await mockMappingsQueryFn.current?.();
+
+      expect(mockMappings).toHaveBeenCalledWith();
+    });
   });
 
   describe("search", () => {
@@ -371,6 +442,28 @@ describe("Create Mappings List Route", () => {
         to: "/create/mappings/edit/$id",
         params: { id: "42" },
       });
+    });
+
+    it("should not navigate when a read-only row is tapped", async () => {
+      mockMappingsData.current = {
+        mappings: [
+          buildMapping({
+            id: "",
+            added: "",
+            label: "Config mapping",
+            source: "file",
+            readOnly: true,
+          }),
+        ],
+      };
+      const user = userEvent.setup();
+      renderList();
+
+      const mappingLabel = screen.getByText("Config mapping");
+      expect(mappingLabel.closest('[role="button"]')).toBeNull();
+      await user.click(mappingLabel);
+
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
 
     it("should navigate from the empty-state CTA to /create/mappings/new", async () => {

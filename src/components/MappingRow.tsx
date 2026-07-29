@@ -20,12 +20,13 @@ const MATCH_LABEL_KEYS: Record<string, string> = {
 
 interface MappingRowProps {
   mapping: MappingResponse;
-  onTap: () => void;
+  onTap?: () => void;
   isLast?: boolean;
 }
 
 export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
   const { t } = useTranslation();
+  const isInteractive = !mapping.readOnly && onTap !== undefined;
 
   const primaryText =
     mapping.label.trim() !== ""
@@ -43,22 +44,29 @@ export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={onTap}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onTap();
-        }
-      }}
+      role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      onClick={isInteractive ? onTap : undefined}
+      onKeyDown={
+        isInteractive
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onTap?.();
+              }
+            }
+          : undefined
+      }
       className={classNames(
-        "flex cursor-pointer flex-row items-center justify-between gap-3 px-1 py-3",
-        "focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
-        { "border-bd-outline border-b border-solid": !isLast },
+        "flex flex-row items-center justify-between gap-3 px-1 py-3",
+        {
+          "cursor-pointer focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none":
+            isInteractive,
+          "border-bd-outline border-b border-solid": !isLast,
+        },
       )}
     >
-      <span className="sr-only">{accessibleName}</span>
+      {isInteractive && <span className="sr-only">{accessibleName}</span>}
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex items-center gap-2">
           <span
@@ -68,6 +76,9 @@ export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
           >
             {primaryText}
           </span>
+          {mapping.readOnly && (
+            <Badge>{t("create.mappings.list.readOnlyBadge")}</Badge>
+          )}
           {!mapping.enabled && (
             <Badge variant="error">
               {t("create.mappings.list.disabledBadge")}
@@ -91,9 +102,11 @@ export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
           {overridePreview}
         </div>
       </div>
-      <div className="text-muted-foreground shrink-0">
-        <NextIcon size="20" />
-      </div>
+      {isInteractive && (
+        <div className="text-muted-foreground shrink-0">
+          <NextIcon size="20" />
+        </div>
+      )}
     </div>
   );
 }

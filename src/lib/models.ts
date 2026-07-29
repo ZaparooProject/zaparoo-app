@@ -149,6 +149,7 @@ export interface MediaTagsResponse {
 }
 
 export type MappingType = "uid" | "text" | "data";
+export type MappingSource = "database" | "file";
 
 export interface MappingResponse {
   id: string;
@@ -159,6 +160,12 @@ export interface MappingResponse {
   match: string;
   pattern: string;
   override: string;
+  source: MappingSource;
+  readOnly: boolean;
+}
+
+export interface AllMappingsParams {
+  includeReadOnly?: boolean;
 }
 
 export interface AllMappingsResponse {

@@ -20,6 +20,7 @@ import { PageFrame } from "@/components/PageFrame";
 import { MappingRow } from "@/components/MappingRow";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
 
 export const Route = createFileRoute("/create/mappings")({
   component: Mappings,
@@ -34,6 +35,10 @@ export function Mappings() {
   const goBack = () => router.history.back();
   const [search, setSearch] = useState("");
   const [reloading, setReloading] = useState(false);
+  const { available: readOnlyMappingsAvailable } = useCoreFeature(
+    "readOnlyMappings",
+    { requireKnownSupport: true },
+  );
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
@@ -41,8 +46,11 @@ export function Mappings() {
   });
 
   const mappings = useQuery({
-    queryKey: ["mappings"],
-    queryFn: () => CoreAPI.mappings(),
+    queryKey: ["mappings", { includeReadOnly: readOnlyMappingsAvailable }],
+    queryFn: () =>
+      readOnlyMappingsAvailable
+        ? CoreAPI.mappings({ includeReadOnly: true })
+        : CoreAPI.mappings(),
   });
 
   const sortedMappings = useMemo(() => {
@@ -164,9 +172,14 @@ export function Mappings() {
               <div className="flex flex-col">
                 {filteredMappings.map((mapping, i) => (
                   <MappingRow
-                    key={mapping.id}
+                    key={
+                      mapping.id ||
+                      `file:${mapping.type}:${mapping.match}:${mapping.pattern}:${i}`
+                    }
                     mapping={mapping}
-                    onTap={() => goToEdit(mapping.id)}
+                    onTap={
+                      mapping.readOnly ? undefined : () => goToEdit(mapping.id)
+                    }
                     isLast={i === filteredMappings.length - 1}
                   />
                 ))}
