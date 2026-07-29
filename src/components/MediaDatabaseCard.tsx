@@ -152,6 +152,12 @@ export function MediaDatabaseCard({
         return;
       }
 
+      const message =
+        error instanceof Error
+          ? error.message
+          : t("settings.updateDb.startError");
+      setGenerateError(message);
+      showRateLimitedErrorToast(t("error", { msg: message }));
       logger.error("Failed to resume media generation:", error, {
         category: "api",
         action: "mediaGenerateResume",

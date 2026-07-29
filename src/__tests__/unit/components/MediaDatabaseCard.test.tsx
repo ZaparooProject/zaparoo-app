@@ -661,7 +661,8 @@ describe("MediaDatabaseCard", () => {
     expect(CoreAPI.mediaGenerateResume).toHaveBeenCalledOnce();
   });
 
-  it("should re-enable the Resume button after a failed resume so user can retry", async () => {
+  it("should show unexpected resume failures and allow retry", async () => {
+    const user = userEvent.setup();
     mockStore.gamesIndex = {
       indexing: true,
       exists: false,
@@ -681,7 +682,7 @@ describe("MediaDatabaseCard", () => {
     const resumeButton = screen.getByRole("button", {
       name: /settings\.updateDb\.resume/i,
     });
-    fireEvent.click(resumeButton);
+    await user.click(resumeButton);
 
     // Once the rejection settles, the button must return to "Resume" (enabled),
     // not stay stuck in "Resuming…" — otherwise the user can't try again.
@@ -694,6 +695,8 @@ describe("MediaDatabaseCard", () => {
       });
       expect(button).not.toBeDisabled();
     });
+    expect(await screen.findByText("error")).toBeInTheDocument();
+    expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
   });
 
   it("should not duplicate the global reconnecting status mid-index", () => {
