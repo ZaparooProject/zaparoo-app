@@ -7,6 +7,7 @@ import {
   AddMappingRequest,
   AllMappingsParams,
   AllMappingsResponse,
+  ClientsCurrentResponse,
   DeleteInboxRequest,
   HistoryResponse,
   InboxResponse,
@@ -832,6 +833,12 @@ class CoreApi {
           reject(error);
         });
     });
+  }
+
+  clientsCurrent(): Promise<ClientsCurrentResponse> {
+    return this.call(Method.ClientsCurrent).then(
+      (result) => result as ClientsCurrentResponse,
+    );
   }
 
   run(params: LaunchRequest): Promise<void> {

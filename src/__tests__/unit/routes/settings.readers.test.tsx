@@ -42,6 +42,11 @@ vi.mock("@/lib/store", async (importOriginal) => {
       selector({
         connected: true,
         connectionState: "CONNECTED",
+        currentClient: {
+          paired: true,
+          role: "admin",
+          capabilities: ["settings.write"],
+        },
         safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
         gamesIndex: {
           indexing: false,

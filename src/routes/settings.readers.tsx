@@ -25,8 +25,9 @@ import { useProPurchase } from "@/components/ProPurchase";
 import { ProBadge } from "@/components/ProBadge";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { CoreAPI } from "@/lib/coreApi";
-import { UpdateSettingsRequest } from "@/lib/models.ts";
+import { ClientCapability, UpdateSettingsRequest } from "@/lib/models.ts";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { useClientCapability } from "@/hooks/useClientCapability";
 
 export const Route = createFileRoute("/settings/readers")({
   component: ReadersSettings,
@@ -37,6 +38,9 @@ export function ReadersSettings() {
   usePageHeadingFocus(t("settings.readers.title"));
   const connected = useStatusStore((state) => state.connected);
   const connectionState = useStatusStore((state) => state.connectionState);
+  const canWriteCoreSettings = useClientCapability(
+    ClientCapability.SettingsWrite,
+  );
   const [systemPickerOpen, setSystemPickerOpen] = useState(false);
 
   // Determine if we're in a loading state (connecting or reconnecting)
@@ -227,7 +231,7 @@ export function ReadersSettings() {
                 onClick={() =>
                   updateCoreSetting.mutate({ readersScanMode: "tap" })
                 }
-                disabled={!connected}
+                disabled={!canWriteCoreSettings}
               >
                 {coreSettings?.readersScanMode === "tap" && connected && (
                   <span aria-hidden="true">
@@ -270,7 +274,7 @@ export function ReadersSettings() {
                 onClick={() =>
                   updateCoreSetting.mutate({ readersScanMode: "hold" })
                 }
-                disabled={!connected}
+                disabled={!canWriteCoreSettings}
               >
                 {coreSettings?.readersScanMode === "hold" && connected && (
                   <span aria-hidden="true">
@@ -496,7 +500,7 @@ export function ReadersSettings() {
           }
           value={coreSettings?.audioScanFeedback ?? false}
           setValue={(v) => updateCoreSetting.mutate({ audioScanFeedback: v })}
-          disabled={!connected}
+          disabled={!canWriteCoreSettings}
           loading={isLoading}
         />
 
@@ -513,7 +517,7 @@ export function ReadersSettings() {
           }
           value={coreSettings?.readersAutoDetect ?? false}
           setValue={(v) => updateCoreSetting.mutate({ readersAutoDetect: v })}
-          disabled={!connected}
+          disabled={!canWriteCoreSettings}
           loading={isLoading}
         />
       </div>

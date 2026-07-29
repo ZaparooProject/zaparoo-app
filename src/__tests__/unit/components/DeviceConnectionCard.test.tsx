@@ -163,6 +163,24 @@ describe("DeviceConnectionCard", () => {
     expect(historyLink).toHaveAttribute("href", "/settings/devices");
   });
 
+  it("should always allow manual pairing", () => {
+    const openPairingModal = vi.fn();
+    mockUseConnection.mockReturnValue({
+      isConnected: true,
+      showConnecting: false,
+      showReconnecting: false,
+      openPairingModal,
+    });
+    useStatusStore.setState({ pairingRequired: false });
+
+    render(<DeviceConnectionCard {...defaultProps} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "pairing.openPairing" }),
+    );
+
+    expect(openPairingModal).toHaveBeenCalledTimes(1);
+  });
+
   it("has device address input accessible", () => {
     render(<DeviceConnectionCard {...defaultProps} />);
 

@@ -37,7 +37,6 @@ export function DeviceConnectionCard({
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
-  const pairingRequired = useStatusStore((state) => state.pairingRequired);
   const deviceHistory = useStatusStore((state) => state.deviceHistory);
 
   const savedKey = savedAddress ? normalizeDeviceKey(savedAddress) : "";
@@ -84,14 +83,12 @@ export function DeviceConnectionCard({
             connectedName={currentEntry?.name}
             action={
               <div className="flex items-center gap-1">
-                {pairingRequired && (
-                  <Button
-                    icon={<KeyRoundIcon size="24" />}
-                    variant="text"
-                    onClick={openPairingModal}
-                    aria-label={t("pairing.openPairing")}
-                  />
-                )}
+                <Button
+                  icon={<KeyRoundIcon size="24" />}
+                  variant="text"
+                  onClick={openPairingModal}
+                  aria-label={t("pairing.openPairing")}
+                />
                 {/* Network scan button - only on native platforms */}
                 {Capacitor.isNativePlatform() && onScanClick && (
                   <Button

@@ -4,6 +4,7 @@ import { Preferences } from "@capacitor/preferences";
 import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
 import { logger } from "@/lib/logger";
 import {
+  ClientsCurrentResponse,
   IndexResponse,
   InboxMessage,
   PlayingResponse,
@@ -133,6 +134,9 @@ interface StatusState {
   setCorePlatform: (platform: string | null) => void;
   coreVersionPending: boolean;
   setCoreVersionPending: (pending: boolean) => void;
+
+  currentClient: ClientsCurrentResponse | null;
+  setCurrentClient: (client: ClientsCurrentResponse | null) => void;
 
   encryptionState: EncryptionState;
   setEncryptionState: (state: EncryptionState) => void;
@@ -381,6 +385,9 @@ export const useStatusStore = create<StatusState>()((set) => ({
   coreVersionPending: false,
   setCoreVersionPending: (pending) => set({ coreVersionPending: pending }),
 
+  currentClient: null,
+  setCurrentClient: (client) => set({ currentClient: client }),
+
   encryptionState: "unknown",
   setEncryptionState: (state) => set({ encryptionState: state }),
 
@@ -435,6 +442,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
       coreVersion: null,
       corePlatform: null,
       coreVersionPending: false,
+      currentClient: null,
       encryptionState: "unknown",
       pairingRequired: false,
       inboxMessages: [],

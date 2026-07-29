@@ -16,8 +16,13 @@ vi.mock("../../../../lib/transport/WebSocketTransport", () => {
 
     send = vi.fn();
     immediateReconnect = vi.fn();
+    clearEncryptionBlock = vi.fn();
     pauseHeartbeat = vi.fn();
     resumeHeartbeat = vi.fn();
+    disconnect = vi.fn(() => {
+      this._state = "disconnected";
+      this.handlers.onStateChange?.("disconnected");
+    });
     destroy = vi.fn(() => {
       this._state = "disconnected";
     });
@@ -54,11 +59,6 @@ vi.mock("../../../../lib/transport/WebSocketTransport", () => {
       }, 0);
     }
 
-    disconnect(): void {
-      this._state = "disconnected";
-      this.handlers.onStateChange?.("disconnected");
-    }
-
     // Test helpers
     simulateMessage(data: string): void {
       this.handlers.onMessage?.({ data });
@@ -87,8 +87,10 @@ interface MockTransport {
   isConnected: boolean;
   hasEverConnected: boolean;
   send: ReturnType<typeof vi.fn>;
+  disconnect: ReturnType<typeof vi.fn>;
   destroy: ReturnType<typeof vi.fn>;
   immediateReconnect: ReturnType<typeof vi.fn>;
+  clearEncryptionBlock: ReturnType<typeof vi.fn>;
   pauseHeartbeat: ReturnType<typeof vi.fn>;
   resumeHeartbeat: ReturnType<typeof vi.fn>;
   simulateMessage: (data: string) => void;
@@ -410,6 +412,49 @@ describe("ConnectionManager", () => {
       // Disconnected transport should get immediateReconnect
       expect(transport2.immediateReconnect).toHaveBeenCalled();
       expect(transport2.resumeHeartbeat).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("restartActiveConnection", () => {
+    it("should replace an already-connected active socket", async () => {
+      const transport = manager.addDevice({
+        deviceId: "device-1",
+        type: "websocket",
+        address: "ws://localhost:7497",
+      }) as unknown as MockTransport;
+      manager.setActiveDevice("device-1");
+      await vi.advanceTimersByTimeAsync(10);
+      transport.disconnect.mockClear();
+      transport.immediateReconnect.mockClear();
+
+      manager.restartActiveConnection();
+
+      expect(transport.disconnect).toHaveBeenCalledTimes(1);
+      expect(transport.immediateReconnect).toHaveBeenCalledTimes(1);
+      expect(transport.disconnect.mock.invocationCallOrder[0]!).toBeLessThan(
+        transport.immediateReconnect.mock.invocationCallOrder[0]!,
+      );
+    });
+
+    it("should defer reopening the socket while paused", async () => {
+      const transport = manager.addDevice({
+        deviceId: "device-1",
+        type: "websocket",
+        address: "ws://localhost:7497",
+      }) as unknown as MockTransport;
+      manager.setActiveDevice("device-1");
+      await vi.advanceTimersByTimeAsync(10);
+      manager.pauseAll();
+      transport.disconnect.mockClear();
+      transport.immediateReconnect.mockClear();
+
+      manager.restartActiveConnection();
+
+      expect(transport.disconnect).toHaveBeenCalledTimes(1);
+      expect(transport.immediateReconnect).not.toHaveBeenCalled();
+
+      manager.resumeAll();
+      expect(transport.immediateReconnect).toHaveBeenCalledTimes(1);
     });
   });
 

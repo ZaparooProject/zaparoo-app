@@ -16,7 +16,11 @@ import { CoreAPI } from "../../../lib/coreApi";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import type { TransportState } from "../../../lib/transport/types";
 import type { NotificationRequest } from "../../../lib/coreApi";
-import { InboxSeverity, Notification } from "../../../lib/models";
+import {
+  ClientCapability,
+  InboxSeverity,
+  Notification,
+} from "../../../lib/models";
 
 // Capture event handlers for notification testing
 let capturedEventHandlers: {
@@ -24,6 +28,10 @@ let capturedEventHandlers: {
   onMessage?: (deviceId: string, event: unknown) => void;
   onError?: (deviceId: string, error: Error) => void;
 } = {};
+
+const pairingModalCapture = vi.hoisted(() => ({
+  onSuccess: undefined as (() => void) | undefined,
+}));
 
 // Mock dependencies
 vi.mock("../../../lib/transport", () => {
@@ -55,11 +63,28 @@ vi.mock("../../../lib/transport", () => {
       pauseAll: vi.fn(),
       resumeAll: vi.fn(),
       immediateReconnectActive: vi.fn(),
+      restartActiveConnection: vi.fn(),
+      clearEncryptionBlockActive: vi.fn(),
     },
   };
 });
 
+vi.mock("../../../components/PairingModal", () => ({
+  PairingModal: ({ onSuccess }: { onSuccess?: () => void }) => {
+    pairingModalCapture.onSuccess = onSuccess;
+    return null;
+  },
+}));
+
 vi.mock("../../../lib/coreApi", () => ({
+  CoreApiError: class extends Error {
+    constructor(
+      message: string,
+      readonly code: number,
+    ) {
+      super(message);
+    }
+  },
   CoreAPI: {
     setWsInstance: vi.fn(),
     flushQueue: vi.fn(),
@@ -68,6 +93,11 @@ vi.mock("../../../lib/coreApi", () => ({
     media: vi.fn().mockResolvedValue({ database: {}, active: [] }),
     tokens: vi.fn().mockResolvedValue({ last: null }),
     version: vi.fn().mockResolvedValue({ version: "2.5.0", platform: "test" }),
+    clientsCurrent: vi.fn().mockResolvedValue({
+      paired: true,
+      role: "admin",
+      capabilities: ["profiles.manage", "settings.write"],
+    }),
     inbox: vi.fn().mockResolvedValue({ messages: [] }),
     mediaScrapeStatus: vi.fn().mockResolvedValue({
       processed: 0,
@@ -336,6 +366,21 @@ describe("ConnectionProvider", () => {
 
       expect(connectionManager.setActiveDevice).toHaveBeenCalledWith(
         "192.168.1.100:7497",
+      );
+    });
+
+    it("should restart the active connection after pairing succeeds", () => {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(pairingModalCapture.onSuccess).toBeDefined();
+      pairingModalCapture.onSuccess?.();
+
+      expect(connectionManager.restartActiveConnection).toHaveBeenCalledTimes(
+        1,
       );
     });
   });
@@ -1214,6 +1259,95 @@ describe("connection event handling", () => {
       expect(useStatusStore.getState().corePlatform).toBe("test");
       expect(useStatusStore.getState().coreVersionPending).toBe(false);
     });
+  });
+
+  it("should preserve legacy capabilities for older Core versions", async () => {
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().currentClient).toEqual({
+        paired: false,
+        role: null,
+        capabilities: [
+          ClientCapability.ProfilesManage,
+          ClientCapability.SettingsWrite,
+        ],
+      });
+    });
+    expect(CoreAPI.clientsCurrent).not.toHaveBeenCalled();
+  });
+
+  it("should hydrate current client capabilities from supported Core", async () => {
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "DEVELOPMENT",
+      platform: "test",
+    });
+    vi.mocked(CoreAPI.clientsCurrent).mockResolvedValueOnce({
+      paired: true,
+      role: "member",
+      capabilities: [],
+    });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.clientsCurrent).toHaveBeenCalledTimes(1);
+      expect(useStatusStore.getState().currentClient).toEqual({
+        paired: true,
+        role: "member",
+        capabilities: [],
+      });
+    });
+  });
+
+  it("should clear stale client capabilities while reconnecting", () => {
+    useStatusStore.setState({
+      currentClient: {
+        paired: true,
+        role: "admin",
+        capabilities: [ClientCapability.SettingsWrite],
+      },
+    });
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+    useStatusStore.setState({
+      currentClient: {
+        paired: true,
+        role: "admin",
+        capabilities: [ClientCapability.SettingsWrite],
+      },
+    });
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "reconnecting",
+      hasData: true,
+      hasConnectedBefore: true,
+    });
+
+    expect(useStatusStore.getState().currentClient).toBeNull();
   });
 
   it("should invalidate library queries after reconnecting", async () => {

@@ -277,6 +277,11 @@ describe("StatusStore", () => {
         mediaName: "Test Game",
         mediaPath: "/path/to/game",
       });
+      store.setCurrentClient({
+        paired: true,
+        role: "admin",
+        capabilities: ["settings.write"],
+      });
 
       // Reset the state
       store.resetConnectionState();
@@ -317,6 +322,7 @@ describe("StatusStore", () => {
         mediaName: "",
         mediaPath: "",
       });
+      expect(resetState.currentClient).toBeNull();
     });
 
     it("should not affect non-connection-related state", () => {
