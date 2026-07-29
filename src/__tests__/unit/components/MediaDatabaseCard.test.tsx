@@ -9,7 +9,6 @@ import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
     mediaGenerate: vi.fn(),
-    mediaGenerateCancel: vi.fn(),
     mediaGenerateResume: vi.fn(),
     mediaCleanOrphans: vi.fn(),
     media: vi.fn(),
@@ -372,36 +371,6 @@ describe("MediaDatabaseCard", () => {
     expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
   });
 
-  it("should show expected cancel failures inline and allow retry", async () => {
-    mockStore.gamesIndex = {
-      indexing: true,
-      exists: false,
-      totalFiles: 0,
-      currentStep: 2,
-      totalSteps: 11,
-      currentStepDisplay: "Atari 2600",
-    };
-    vi.mocked(CoreAPI.mediaGenerateCancel).mockRejectedValue(
-      new Error("Method not found"),
-    );
-
-    render(<MediaDatabaseCard />);
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /settings\.updateDb\.cancel/i,
-      }),
-    );
-
-    expect(await screen.findByText("error")).toBeInTheDocument();
-    await vi.waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /settings\.updateDb\.cancel/i }),
-      ).not.toBeDisabled();
-    });
-    expect(showRateLimitedErrorToast).not.toHaveBeenCalled();
-  });
-
   it("should show setup errors from clean missing media without a toast", async () => {
     const user = userEvent.setup();
     vi.mocked(CoreAPI.mediaCleanOrphans).mockRejectedValue(
@@ -423,42 +392,6 @@ describe("MediaDatabaseCard", () => {
 
     expect(await screen.findByText("error")).toBeInTheDocument();
     expect(showRateLimitedErrorToast).not.toHaveBeenCalled();
-  });
-
-  it("should clear stale generate errors when cancel is attempted", async () => {
-    vi.mocked(CoreAPI.mediaGenerate).mockRejectedValue(
-      new Error("Method not found"),
-    );
-    const { rerender } = render(<MediaDatabaseCard />);
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "settings.updateDb",
-      }),
-    );
-    expect(await screen.findByText("error")).toBeInTheDocument();
-
-    mockStore.gamesIndex = {
-      indexing: true,
-      exists: false,
-      totalFiles: 0,
-      currentStep: 2,
-      totalSteps: 11,
-      currentStepDisplay: "Atari 2600",
-    };
-    vi.mocked(CoreAPI.mediaGenerateCancel).mockResolvedValue(undefined);
-    rerender(<MediaDatabaseCard />);
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /settings\.updateDb\.cancel/i,
-      }),
-    );
-
-    await vi.waitFor(() => {
-      expect(CoreAPI.mediaGenerateCancel).toHaveBeenCalledOnce();
-    });
-    expect(screen.queryByText("error")).not.toBeInTheDocument();
   });
 
   it("should clear stale generate errors when resume is attempted", async () => {
@@ -787,86 +720,13 @@ describe("MediaDatabaseCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("should show cancel button when indexing", () => {
+  it("should hide the cancel button while indexing", () => {
     mockStore.gamesIndex.indexing = true;
 
     render(<MediaDatabaseCard />);
 
-    const cancelButton = screen.getByRole("button", {
-      name: /settings\.updateDb\.cancel/i,
-    });
-    expect(cancelButton).toBeInTheDocument();
-    expect(cancelButton).not.toBeDisabled();
-  });
-
-  it("should call CoreAPI.mediaGenerateCancel when cancel button is clicked", async () => {
-    mockStore.gamesIndex.indexing = true;
-    const { CoreAPI } = await import("../../../lib/coreApi");
-
-    render(<MediaDatabaseCard />);
-
-    const cancelButton = screen.getByRole("button", {
-      name: /settings\.updateDb\.cancel/i,
-    });
-    fireEvent.click(cancelButton);
-
-    expect(CoreAPI.mediaGenerateCancel).toHaveBeenCalledOnce();
-  });
-
-  it("should not show cancel button when not indexing", () => {
-    mockStore.gamesIndex.indexing = false;
-
-    render(<MediaDatabaseCard />);
-
-    const cancelButton = screen.queryByRole("button", {
-      name: /settings\.updateDb\.cancel/i,
-    });
-    expect(cancelButton).not.toBeInTheDocument();
-  });
-
-  it('should keep cancel button in "Cancelling..." state after API call completes (regression test)', async () => {
-    // REGRESSION TEST: This test prevents re-introducing a bug where the cancel button
-    // immediately reverts to "Cancel" state after the API call completes, even though
-    // the actual cancellation is still happening in the background on zaparoo-core.
-    //
-    // The bug was caused by a `finally` block that reset `isCancelling` state immediately
-    // after the API call. The correct behavior is to keep the button in "Cancelling..."
-    // state until a WebSocket notification confirms that indexing has stopped.
-
-    mockStore.gamesIndex.indexing = true;
-    const { CoreAPI } = await import("../../../lib/coreApi");
-
-    // Mock the cancel API to resolve successfully
-    vi.mocked(CoreAPI.mediaGenerateCancel).mockResolvedValue(undefined);
-
-    render(<MediaDatabaseCard />);
-
-    // Find and click the cancel button
-    const cancelButton = screen.getByRole("button", {
-      name: /settings\.updateDb\.cancel/i,
-    });
-    fireEvent.click(cancelButton);
-
-    // Wait for the API call to complete
-    await vi.waitFor(() => {
-      expect(CoreAPI.mediaGenerateCancel).toHaveBeenCalledOnce();
-    });
-
-    // CRITICAL ASSERTION: After the API call completes, the button should STILL
-    // be in the "Cancelling..." state (disabled with "cancelling" text),
-    // NOT reverted back to "Cancel" state.
-    //
-    // This is because the actual cancellation is happening in the background,
-    // and we need to wait for the WebSocket notification (indexing: false) to confirm.
-    const buttonAfterApiCall = screen.getByRole("button", {
-      name: /cancelling/i,
-    });
-    expect(buttonAfterApiCall).toBeInTheDocument();
-    expect(buttonAfterApiCall).toBeDisabled();
-
-    // Verify it's NOT showing the normal "Cancel" text
     expect(
-      screen.queryByRole("button", { name: /^settings\.updateDb\.cancel$/i }),
+      screen.queryByRole("button", { name: /settings\.updateDb\.cancel/i }),
     ).not.toBeInTheDocument();
   });
 });
