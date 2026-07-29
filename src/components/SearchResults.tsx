@@ -10,7 +10,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 import { EmptyState } from "@/components/wui/EmptyState.tsx";
 import { TagList } from "@/components/TagList.tsx";
-import { isCoreFeatureAvailable } from "@/lib/featureGates";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
 
 export function SearchResults(props: {
   loading: boolean;
@@ -25,11 +25,9 @@ export function SearchResults(props: {
   onClearFilters?: () => void;
 }) {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  const disambiguatingTagsAvailable = useStatusStore(
-    (state) =>
-      state.connected &&
-      !state.coreVersionPending &&
-      isCoreFeatureAvailable("mediaDisambiguatingTags", state.coreVersion),
+  const { available: disambiguatingTagsAvailable } = useCoreFeature(
+    "mediaDisambiguatingTags",
+    { requireKnownSupport: true },
   );
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
   const { t } = useTranslation();

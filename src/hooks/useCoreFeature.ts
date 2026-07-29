@@ -12,7 +12,15 @@ interface CoreFeatureResult {
   marquee: boolean;
 }
 
-export function useCoreFeature(id: FeatureId): CoreFeatureResult {
+interface CoreFeatureOptions {
+  requireKnownSupport?: boolean;
+}
+
+export function useCoreFeature(
+  id: FeatureId,
+  options: CoreFeatureOptions = {},
+): CoreFeatureResult {
+  const connected = useStatusStore((state) => state.connected);
   const coreVersion = useStatusStore((state) => state.coreVersion);
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
@@ -21,8 +29,12 @@ export function useCoreFeature(id: FeatureId): CoreFeatureResult {
   // When version is unknown (null or still loading), treat as available so we
   // don't falsely show features as "outdated" — consistent with CoreOutdatedNotice.
   const versionUnknown = coreVersion === null || coreVersionPending;
+  const knownAvailable =
+    connected && !coreVersionPending && isCoreFeatureAvailable(id, coreVersion);
   return {
-    available: versionUnknown || isCoreFeatureAvailable(id, coreVersion),
+    available: options.requireKnownSupport
+      ? knownAvailable
+      : versionUnknown || isCoreFeatureAvailable(id, coreVersion),
     requiredVersion: gate?.since ?? "",
     currentVersion: coreVersion,
     marquee: gate?.marquee ?? false,

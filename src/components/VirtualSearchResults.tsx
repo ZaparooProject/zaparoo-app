@@ -13,7 +13,7 @@ import { Button } from "@/components/wui/Button.tsx";
 import { EmptyState } from "@/components/wui/EmptyState.tsx";
 import { useVirtualInfiniteSearch } from "@/hooks/useVirtualInfiniteSearch";
 import { TagList } from "@/components/TagList.tsx";
-import { isCoreFeatureAvailable } from "@/lib/featureGates";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
 
 export interface VirtualSearchResultsProps {
   query: string;
@@ -45,11 +45,9 @@ export function VirtualSearchResults({
   scrollContainerRef,
 }: VirtualSearchResultsProps) {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  const disambiguatingTagsAvailable = useStatusStore(
-    (state) =>
-      state.connected &&
-      !state.coreVersionPending &&
-      isCoreFeatureAvailable("mediaDisambiguatingTags", state.coreVersion),
+  const { available: disambiguatingTagsAvailable } = useCoreFeature(
+    "mediaDisambiguatingTags",
+    { requireKnownSupport: true },
   );
   const { t } = useTranslation();
 
