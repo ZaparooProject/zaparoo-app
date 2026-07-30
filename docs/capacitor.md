@@ -51,6 +51,19 @@ const platform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
 | `capacitor-plugin-safe-area`         | Safe area insets for notched devices |
 | `capacitor-zeroconf`                 | Zeroconf/Bonjour network discovery   |
 
+### Online authentication MFA bridge
+
+Native Firebase remains the source of truth for Zaparoo Online sessions. The local `MfaAuthentication` plugin retains Firebase's non-serializable multi-factor resolver and completes TOTP challenges for email/password, Google, and Apple sign-in.
+
+- TypeScript adapter: `src/lib/mfaAuthentication.ts`
+- Android bridge: `android/app/src/main/java/dev/wizzo/tapto/MfaAuthenticationPlugin.java`
+- iOS bridge: `ios/App/App/MfaAuthenticationPlugin.swift`
+- Web fallback: `src/lib/mfaAuthentication.web.ts`
+
+On native platforms, Google authorization and iOS Apple authorization use `@capacitor-firebase/authentication` with `skipNativeAuth: true`, then pass the temporary credential to the local bridge. Android Apple authorization runs inside the local bridge because Firebase owns that provider flow and must expose its MFA resolver directly. Resolvers stay in memory and are cleared after success, cancellation, or a new sign-in attempt.
+
+Changes to this bridge require native Android and iOS builds; they cannot ship as a web-only live update.
+
 ---
 
 ## Feature Availability Checks
