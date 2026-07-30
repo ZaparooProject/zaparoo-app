@@ -9,6 +9,7 @@ const {
   componentRef,
   mockGoBack,
   mockFirebaseAuth,
+  mockMfaAuthentication,
   mockPurchasesLogOut,
   mockBrowserOpen,
   mockDeleteAccount,
@@ -27,6 +28,14 @@ const {
     signInWithApple: vi.fn(),
     sendPasswordResetEmail: vi.fn(),
     sendEmailVerification: vi.fn(),
+    getCurrentUser: vi.fn(),
+  },
+  mockMfaAuthentication: {
+    signInWithEmailAndPassword: vi.fn(),
+    signInWithGoogle: vi.fn(),
+    signInWithApple: vi.fn(),
+    resolveTotpSignIn: vi.fn(),
+    cancelSignIn: vi.fn(),
   },
   mockPurchasesLogOut: vi.fn(),
   mockBrowserOpen: vi.fn(),
@@ -60,6 +69,10 @@ vi.mock("react-hot-toast", () => ({
 // Mock Firebase Authentication
 vi.mock("@capacitor-firebase/authentication", () => ({
   FirebaseAuthentication: mockFirebaseAuth,
+}));
+
+vi.mock("@/lib/mfaAuthentication", () => ({
+  MfaAuthentication: mockMfaAuthentication,
 }));
 
 // Mock RevenueCat
@@ -138,7 +151,18 @@ describe("Settings Online Route", () => {
 
     // Reset Firebase mocks with default implementations
     mockFirebaseAuth.signOut.mockResolvedValue(undefined);
-    mockFirebaseAuth.signInWithEmailAndPassword.mockResolvedValue({
+    mockMfaAuthentication.signInWithEmailAndPassword.mockResolvedValue({
+      mfaRequired: false,
+    });
+    mockMfaAuthentication.signInWithGoogle.mockResolvedValue({
+      mfaRequired: false,
+    });
+    mockMfaAuthentication.signInWithApple.mockResolvedValue({
+      mfaRequired: false,
+    });
+    mockMfaAuthentication.resolveTotpSignIn.mockResolvedValue(undefined);
+    mockMfaAuthentication.cancelSignIn.mockResolvedValue(undefined);
+    mockFirebaseAuth.getCurrentUser.mockResolvedValue({
       user: {
         email: "test@example.com",
         uid: "test-uid",
@@ -637,7 +661,7 @@ describe("Settings Online Route", () => {
 
       await waitFor(() => {
         expect(
-          mockFirebaseAuth.signInWithEmailAndPassword,
+          mockMfaAuthentication.signInWithEmailAndPassword,
         ).toHaveBeenCalledWith({
           email: "test@example.com",
           password: "password123",
@@ -648,7 +672,7 @@ describe("Settings Online Route", () => {
     it("should show error toast without logging expected login failure", async () => {
       const user = userEvent.setup();
       const { logger } = await import("@/lib/logger");
-      mockFirebaseAuth.signInWithEmailAndPassword.mockRejectedValueOnce(
+      mockMfaAuthentication.signInWithEmailAndPassword.mockRejectedValueOnce(
         new Error("auth/invalid-credential"),
       );
 
@@ -810,8 +834,117 @@ describe("Settings Online Route", () => {
       await user.keyboard("{Enter}");
 
       await waitFor(() => {
-        expect(mockFirebaseAuth.signInWithEmailAndPassword).toHaveBeenCalled();
+        expect(
+          mockMfaAuthentication.signInWithEmailAndPassword,
+        ).toHaveBeenCalled();
       });
+    });
+  });
+
+  describe("MFA authentication", () => {
+    const startMfaChallenge = async () => {
+      const user = userEvent.setup();
+      mockMfaAuthentication.signInWithEmailAndPassword.mockResolvedValueOnce({
+        mfaRequired: true,
+      });
+      renderComponent();
+
+      await user.type(
+        screen.getByPlaceholderText("me@example.com"),
+        "test@example.com",
+      );
+      await user.type(screen.getByLabelText("online.password"), "password123");
+      await user.click(screen.getByRole("button", { name: "online.login" }));
+
+      await screen.findByRole("heading", { name: "online.mfaTitle" });
+      return user;
+    };
+
+    it("should show TOTP challenge when second factor is required", async () => {
+      await startMfaChallenge();
+
+      expect(screen.getByLabelText("online.mfaCode")).toBeInTheDocument();
+      expect(
+        screen.queryByLabelText("online.password"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should resolve TOTP and finish login", async () => {
+      const user = await startMfaChallenge();
+
+      await user.type(screen.getByLabelText("online.mfaCode"), "123456");
+      await user.click(
+        screen.getByRole("button", { name: "online.mfaVerify" }),
+      );
+
+      await waitFor(() => {
+        expect(mockMfaAuthentication.resolveTotpSignIn).toHaveBeenCalledWith({
+          code: "123456",
+        });
+      });
+      expect(mockUpdateRequirements).toHaveBeenCalledWith({
+        accept_tos: true,
+        accept_privacy: true,
+      });
+      expect(mockSetLoggedInUser).toHaveBeenCalledWith(
+        expect.objectContaining({ uid: "test-uid" }),
+      );
+    });
+
+    it("should show inline error for invalid TOTP", async () => {
+      const user = await startMfaChallenge();
+      mockMfaAuthentication.resolveTotpSignIn.mockRejectedValueOnce(
+        Object.assign(new Error("Invalid code"), {
+          code: "auth/invalid-verification-code",
+        }),
+      );
+
+      await user.type(screen.getByLabelText("online.mfaCode"), "111111");
+      await user.click(
+        screen.getByRole("button", { name: "online.mfaVerify" }),
+      );
+
+      expect(
+        await screen.findByText("online.mfaCodeInvalid"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "online.mfaTitle" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should return to login and clear native challenge", async () => {
+      const user = await startMfaChallenge();
+      mockMfaAuthentication.cancelSignIn.mockClear();
+
+      await user.click(screen.getByRole("button", { name: "online.mfaBack" }));
+
+      await waitFor(() => {
+        expect(mockMfaAuthentication.cancelSignIn).toHaveBeenCalledTimes(1);
+      });
+      expect(
+        screen.getByRole("button", { name: "online.login" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should restart login when TOTP challenge expires", async () => {
+      const user = await startMfaChallenge();
+      mockMfaAuthentication.resolveTotpSignIn.mockRejectedValueOnce(
+        Object.assign(new Error("Expired"), {
+          code: "auth/invalid-multi-factor-session",
+        }),
+      );
+
+      await user.type(screen.getByLabelText("online.mfaCode"), "123456");
+      await user.click(
+        screen.getByRole("button", { name: "online.mfaVerify" }),
+      );
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("online.mfaExpired");
+      });
+      expect(
+        screen.getByRole("button", { name: "online.login" }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -872,17 +1005,6 @@ describe("Settings Online Route", () => {
     it("should login with Google", async () => {
       const user = userEvent.setup();
       mockState.platform = "ios";
-      mockFirebaseAuth.signInWithGoogle.mockResolvedValueOnce({
-        user: {
-          email: "google@example.com",
-          uid: "google-uid",
-          displayName: "Google User",
-          emailVerified: true,
-          providerData: [{ providerId: "google.com" }],
-        },
-      });
-      mockUpdateRequirements.mockResolvedValueOnce({});
-
       renderComponent();
 
       await user.click(
@@ -890,24 +1012,17 @@ describe("Settings Online Route", () => {
       );
 
       await waitFor(() => {
-        expect(mockFirebaseAuth.signInWithGoogle).toHaveBeenCalled();
+        expect(mockMfaAuthentication.signInWithGoogle).toHaveBeenCalled();
+      });
+      expect(mockUpdateRequirements).toHaveBeenCalledWith({
+        accept_tos: true,
+        accept_privacy: true,
       });
     });
 
     it("should login with Apple", async () => {
       const user = userEvent.setup();
       mockState.platform = "ios";
-      mockFirebaseAuth.signInWithApple.mockResolvedValueOnce({
-        user: {
-          email: "apple@example.com",
-          uid: "apple-uid",
-          displayName: "Apple User",
-          emailVerified: true,
-          providerData: [{ providerId: "apple.com" }],
-        },
-      });
-      mockUpdateRequirements.mockResolvedValueOnce({});
-
       renderComponent();
 
       await user.click(
@@ -915,17 +1030,56 @@ describe("Settings Online Route", () => {
       );
 
       await waitFor(() => {
-        expect(mockFirebaseAuth.signInWithApple).toHaveBeenCalled();
+        expect(mockMfaAuthentication.signInWithApple).toHaveBeenCalled();
       });
+      expect(mockUpdateRequirements).toHaveBeenCalledWith({
+        accept_tos: true,
+        accept_privacy: true,
+      });
+    });
+
+    it("should show MFA challenge after Google login", async () => {
+      const user = userEvent.setup();
+      mockState.platform = "ios";
+      mockMfaAuthentication.signInWithGoogle.mockResolvedValueOnce({
+        mfaRequired: true,
+      });
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", { name: "online.loginGoogle" }),
+      );
+
+      expect(
+        await screen.findByRole("heading", { name: "online.mfaTitle" }),
+      ).toBeInTheDocument();
+      expect(mockUpdateRequirements).not.toHaveBeenCalled();
+    });
+
+    it("should show MFA challenge after Apple login", async () => {
+      const user = userEvent.setup();
+      mockState.platform = "ios";
+      mockMfaAuthentication.signInWithApple.mockResolvedValueOnce({
+        mfaRequired: true,
+      });
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", { name: "online.loginApple" }),
+      );
+
+      expect(
+        await screen.findByRole("heading", { name: "online.mfaTitle" }),
+      ).toBeInTheDocument();
+      expect(mockUpdateRequirements).not.toHaveBeenCalled();
     });
 
     it("should not show error toast when OAuth is cancelled", async () => {
       const user = userEvent.setup();
       mockState.platform = "ios";
-      mockFirebaseAuth.signInWithGoogle.mockRejectedValueOnce(
+      mockMfaAuthentication.signInWithGoogle.mockRejectedValueOnce(
         new Error("popup_closed_by_user"),
       );
-
       renderComponent();
 
       await user.click(
@@ -933,20 +1087,17 @@ describe("Settings Online Route", () => {
       );
 
       await waitFor(() => {
-        expect(mockFirebaseAuth.signInWithGoogle).toHaveBeenCalled();
+        expect(mockMfaAuthentication.signInWithGoogle).toHaveBeenCalled();
       });
-
-      // Should not show error toast for cancelled login
       expect(toast.error).not.toHaveBeenCalled();
     });
 
     it("should show error toast on OAuth failure", async () => {
       const user = userEvent.setup();
       mockState.platform = "ios";
-      mockFirebaseAuth.signInWithGoogle.mockRejectedValueOnce(
+      mockMfaAuthentication.signInWithGoogle.mockRejectedValueOnce(
         new Error("Network error"),
       );
-
       renderComponent();
 
       await user.click(
@@ -1323,7 +1474,9 @@ describe("Settings Online Route", () => {
       await user.click(screen.getByRole("button", { name: "online.login" }));
 
       await waitFor(() => {
-        expect(mockFirebaseAuth.signInWithEmailAndPassword).toHaveBeenCalled();
+        expect(
+          mockMfaAuthentication.signInWithEmailAndPassword,
+        ).toHaveBeenCalled();
       });
 
       // Should still set the logged in user even if requirements update fails

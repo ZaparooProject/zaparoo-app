@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { Browser } from "@capacitor/browser";
@@ -36,6 +36,10 @@ import {
   NotSignedInError,
 } from "@/lib/onlineApi";
 import {
+  MfaAuthentication,
+  type MfaSignInResult,
+} from "@/lib/mfaAuthentication";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -63,6 +67,19 @@ const SIGNUP_EMAIL_AUTH_ERROR_TOKENS = [
   "auth/email-already-in-use",
   "weak-password",
   "auth/weak-password",
+] as const;
+
+const INVALID_MFA_CODE_TOKENS = [
+  "invalid-verification-code",
+  "auth/invalid-verification-code",
+] as const;
+
+const EXPIRED_MFA_CHALLENGE_TOKENS = [
+  "code-expired",
+  "session-expired",
+  "invalid-multi-factor-session",
+  "multi-factor-challenge-missing",
+  "totp-challenge-timeout",
 ] as const;
 
 function getExpectedSignupEmailAuthErrorToken(error: unknown): string | null {
@@ -130,6 +147,10 @@ export function OnlinePage() {
   const [onlineEmail, setOnlineEmail] = useState("");
   const [onlinePassword, setOnlinePassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [mfaPending, setMfaPending] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [isMfaVerifying, setIsMfaVerifying] = useState(false);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -142,6 +163,54 @@ export function OnlinePage() {
   const [isCancelling, setIsCancelling] = useState(false);
 
   const oauthAvailable = isOAuthAvailable();
+
+  useEffect(
+    () => () => {
+      void MfaAuthentication.cancelSignIn().catch((e) => {
+        logger.error("Failed to clear MFA challenge:", e, {
+          category: "api",
+          action: "cancelMfaSignIn",
+          severity: "warning",
+        });
+      });
+    },
+    [],
+  );
+
+  const completeSignIn = async (): Promise<boolean> => {
+    const { user } = await FirebaseAuthentication.getCurrentUser();
+    if (!user) {
+      toast.error(t("online.loginFail"));
+      return false;
+    }
+
+    try {
+      await updateRequirements({
+        accept_tos: true,
+        accept_privacy: true,
+      });
+    } catch (e) {
+      logger.error("Failed to record terms acceptance:", e, {
+        category: "api",
+        action: "updateRequirements",
+        severity: "warning",
+      });
+    }
+
+    setLoggedInUser(user);
+    return true;
+  };
+
+  const handleFirstFactorResult = async (result: MfaSignInResult) => {
+    if (result.mfaRequired) {
+      setMfaPending(true);
+      setMfaCode("");
+      setMfaError(null);
+      return;
+    }
+
+    await completeSignIn();
+  };
 
   const handleEmailAuth = async () => {
     if (!onlineEmail || !onlinePassword) return;
@@ -210,31 +279,13 @@ export function OnlinePage() {
     } else {
       // Log in flow
       try {
-        const result = await FirebaseAuthentication.signInWithEmailAndPassword({
+        const result = await MfaAuthentication.signInWithEmailAndPassword({
           email: onlineEmail,
           password: onlinePassword,
         });
+        setOnlinePassword("");
 
-        if (result.user) {
-          // Auto-agree to TOS/Privacy on login (no age verification for existing users)
-          try {
-            await updateRequirements({
-              accept_tos: true,
-              accept_privacy: true,
-            });
-          } catch (e) {
-            logger.error("Failed to record terms acceptance:", e, {
-              category: "api",
-              action: "updateRequirements",
-              severity: "warning",
-            });
-            // Continue anyway - modal will show if needed
-          }
-
-          setLoggedInUser(result.user);
-        } else {
-          toast.error(t("online.loginWrong"));
-        }
+        await handleFirstFactorResult(result);
       } catch (e) {
         const error = e as Error;
         if (!isExpectedEmailAuthError(e)) {
@@ -251,31 +302,64 @@ export function OnlinePage() {
     }
   };
 
+  const handleCancelMfa = async () => {
+    try {
+      await MfaAuthentication.cancelSignIn();
+    } catch (e) {
+      logger.error("Failed to cancel MFA challenge:", e, {
+        category: "api",
+        action: "cancelMfaSignIn",
+        severity: "warning",
+      });
+    }
+    setMfaPending(false);
+    setMfaCode("");
+    setMfaError(null);
+  };
+
+  const handleMfaVerify = async () => {
+    if (!/^\d{6}$/.test(mfaCode) || isMfaVerifying) {
+      setMfaError(t("online.mfaCodeInvalid"));
+      return;
+    }
+
+    setIsMfaVerifying(true);
+    setMfaError(null);
+    try {
+      await MfaAuthentication.resolveTotpSignIn({ code: mfaCode });
+      setMfaPending(false);
+      setMfaCode("");
+      await completeSignIn();
+    } catch (e) {
+      const searchStrings = collectErrorSearchStrings(e);
+      const hasToken = (tokens: readonly string[]) =>
+        tokens.some((token) =>
+          searchStrings.some((searchString) => searchString.includes(token)),
+        );
+
+      if (hasToken(INVALID_MFA_CODE_TOKENS)) {
+        setMfaError(t("online.mfaCodeInvalid"));
+      } else if (hasToken(EXPIRED_MFA_CHALLENGE_TOKENS)) {
+        await handleCancelMfa();
+        toast.error(t("online.mfaExpired"));
+      } else {
+        logger.error("Firebase MFA verification failed:", e, {
+          category: "api",
+          action: "resolveTotpSignIn",
+          severity: "warning",
+        });
+        setMfaError(t("online.mfaFailed"));
+      }
+    } finally {
+      setIsMfaVerifying(false);
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      const result = await FirebaseAuthentication.signInWithGoogle();
-
-      if (result.user) {
-        // Auto-agree to TOS/Privacy on OAuth login
-        try {
-          await updateRequirements({
-            accept_tos: true,
-            accept_privacy: true,
-          });
-        } catch (e) {
-          logger.error("Failed to record terms acceptance:", e, {
-            category: "api",
-            action: "updateRequirements",
-            severity: "warning",
-          });
-          // Continue anyway - modal will show if needed
-        }
-
-        setLoggedInUser(result.user);
-      } else {
-        toast.error(t("online.loginWrong"));
-      }
+      const result = await MfaAuthentication.signInWithGoogle();
+      await handleFirstFactorResult(result);
     } catch (e) {
       const error = e as Error;
       // Check if user cancelled the login - don't show error toast
@@ -302,28 +386,8 @@ export function OnlinePage() {
   const handleAppleSignIn = async () => {
     setIsLoading(true);
     try {
-      const result = await FirebaseAuthentication.signInWithApple();
-
-      if (result.user) {
-        // Auto-agree to TOS/Privacy on OAuth login
-        try {
-          await updateRequirements({
-            accept_tos: true,
-            accept_privacy: true,
-          });
-        } catch (e) {
-          logger.error("Failed to record terms acceptance:", e, {
-            category: "api",
-            action: "updateRequirements",
-            severity: "warning",
-          });
-          // Continue anyway - modal will show if needed
-        }
-
-        setLoggedInUser(result.user);
-      } else {
-        toast.error(t("online.loginWrong"));
-      }
+      const result = await MfaAuthentication.signInWithApple();
+      await handleFirstFactorResult(result);
     } catch (e) {
       const error = e as Error;
       // Check if user cancelled the login - don't show error toast
@@ -407,6 +471,12 @@ export function OnlinePage() {
   const handleKeyUp = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && onlineEmail && onlinePassword && !isLoading) {
       handleEmailAuth();
+    }
+  };
+
+  const handleMfaKeyUp = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && /^\d{6}$/.test(mfaCode) && !isMfaVerifying) {
+      handleMfaVerify();
     }
   };
 
@@ -617,6 +687,51 @@ export function OnlinePage() {
                 />
               )}
             </div>
+          </div>
+        ) : mfaPending ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col items-center gap-2">
+              <h2 className="text-lg font-semibold">{t("online.mfaTitle")}</h2>
+              <p className="text-muted-foreground text-center text-sm">
+                {t("online.mfaDescription")}
+              </p>
+            </div>
+
+            <TextInput
+              label={t("online.mfaCode")}
+              placeholder="123456"
+              value={mfaCode}
+              setValue={(value) =>
+                setMfaCode(value.replace(/\D/g, "").slice(0, 6))
+              }
+              inputMode="numeric"
+              maxLength={6}
+              autoComplete="one-time-code"
+              onKeyUp={handleMfaKeyUp}
+              disabled={isMfaVerifying}
+              error={mfaError ?? undefined}
+            />
+
+            <Button
+              label={
+                isMfaVerifying
+                  ? t("online.mfaVerifying")
+                  : t("online.mfaVerify")
+              }
+              onClick={handleMfaVerify}
+              disabled={!/^\d{6}$/.test(mfaCode) || isMfaVerifying}
+              className="w-full"
+              intent="primary"
+            />
+
+            <button
+              type="button"
+              onClick={handleCancelMfa}
+              disabled={isMfaVerifying}
+              className="text-muted-foreground hover:text-foreground text-sm underline transition-colors disabled:opacity-50"
+            >
+              {t("online.mfaBack")}
+            </button>
           </div>
         ) : (
           // Not logged in state
