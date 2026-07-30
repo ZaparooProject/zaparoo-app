@@ -64,6 +64,33 @@ describe("MfaAuthentication service", () => {
     });
   });
 
+  it("should delegate email and password login to the bridge", async () => {
+    const options = {
+      email: "test@example.com",
+      password: "password123",
+    };
+
+    await expect(
+      MfaAuthentication.signInWithEmailAndPassword(options),
+    ).resolves.toEqual({ mfaRequired: false });
+
+    expect(mockBridge.signInWithEmailAndPassword).toHaveBeenCalledWith(options);
+  });
+
+  it("should delegate TOTP resolution to the bridge", async () => {
+    const options = { code: "123456" };
+
+    await MfaAuthentication.resolveTotpSignIn(options);
+
+    expect(mockBridge.resolveTotpSignIn).toHaveBeenCalledWith(options);
+  });
+
+  it("should delegate cancellation to the bridge", async () => {
+    await MfaAuthentication.cancelSignIn();
+
+    expect(mockBridge.cancelSignIn).toHaveBeenCalledWith();
+  });
+
   it("should use web bridge for Google login in browser", async () => {
     await MfaAuthentication.signInWithGoogle();
 

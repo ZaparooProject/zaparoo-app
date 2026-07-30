@@ -35,7 +35,7 @@ public class MfaAuthenticationPlugin extends Plugin {
         pendingResolver = null;
         FirebaseAuth.getInstance()
             .signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener(getActivity(), task -> handleSignInResult(call, task));
+            .addOnCompleteListener(task -> handleSignInResult(call, task));
     }
 
     @PluginMethod
@@ -56,7 +56,7 @@ public class MfaAuthenticationPlugin extends Plugin {
         pendingResolver = null;
         FirebaseAuth.getInstance()
             .signInWithCredential(credential)
-            .addOnCompleteListener(getActivity(), task -> handleSignInResult(call, task));
+            .addOnCompleteListener(task -> handleSignInResult(call, task));
     }
 
     @PluginMethod
@@ -70,14 +70,14 @@ public class MfaAuthenticationPlugin extends Plugin {
         FirebaseAuth auth = FirebaseAuth.getInstance();
         Task<AuthResult> pendingResult = auth.getPendingAuthResult();
         if (pendingResult != null) {
-            pendingResult.addOnCompleteListener(getActivity(), task -> handleSignInResult(call, task));
+            pendingResult.addOnCompleteListener(task -> handleSignInResult(call, task));
             return;
         }
 
         OAuthProvider.Builder provider = OAuthProvider.newBuilder("apple.com");
         provider.setScopes(Arrays.asList("email", "name"));
         auth.startActivityForSignInWithProvider(getActivity(), provider.build())
-            .addOnCompleteListener(getActivity(), task -> handleSignInResult(call, task));
+            .addOnCompleteListener(task -> handleSignInResult(call, task));
     }
 
     @PluginMethod
@@ -108,7 +108,7 @@ public class MfaAuthenticationPlugin extends Plugin {
 
         resolver
             .resolveSignIn(TotpMultiFactorGenerator.getAssertionForSignIn(hint.getUid(), code))
-            .addOnCompleteListener(getActivity(), task -> {
+            .addOnCompleteListener(task -> {
                 if (task.isSuccessful()) {
                     pendingResolver = null;
                     call.resolve();

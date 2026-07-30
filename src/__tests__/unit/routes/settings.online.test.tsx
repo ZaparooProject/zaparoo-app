@@ -867,6 +867,9 @@ describe("Settings Online Route", () => {
       expect(
         screen.queryByLabelText("online.password"),
       ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "online.mfaTitle" }),
+      ).toHaveFocus();
     });
 
     it("should resolve TOTP and finish login", async () => {
@@ -882,13 +885,15 @@ describe("Settings Online Route", () => {
           code: "123456",
         });
       });
-      expect(mockUpdateRequirements).toHaveBeenCalledWith({
-        accept_tos: true,
-        accept_privacy: true,
+      await waitFor(() => {
+        expect(mockUpdateRequirements).toHaveBeenCalledWith({
+          accept_tos: true,
+          accept_privacy: true,
+        });
+        expect(mockSetLoggedInUser).toHaveBeenCalledWith(
+          expect.objectContaining({ uid: "test-uid" }),
+        );
       });
-      expect(mockSetLoggedInUser).toHaveBeenCalledWith(
-        expect.objectContaining({ uid: "test-uid" }),
-      );
     });
 
     it("should show inline error for invalid TOTP", async () => {
@@ -1014,9 +1019,11 @@ describe("Settings Online Route", () => {
       await waitFor(() => {
         expect(mockMfaAuthentication.signInWithGoogle).toHaveBeenCalled();
       });
-      expect(mockUpdateRequirements).toHaveBeenCalledWith({
-        accept_tos: true,
-        accept_privacy: true,
+      await waitFor(() => {
+        expect(mockUpdateRequirements).toHaveBeenCalledWith({
+          accept_tos: true,
+          accept_privacy: true,
+        });
       });
     });
 
@@ -1032,9 +1039,11 @@ describe("Settings Online Route", () => {
       await waitFor(() => {
         expect(mockMfaAuthentication.signInWithApple).toHaveBeenCalled();
       });
-      expect(mockUpdateRequirements).toHaveBeenCalledWith({
-        accept_tos: true,
-        accept_privacy: true,
+      await waitFor(() => {
+        expect(mockUpdateRequirements).toHaveBeenCalledWith({
+          accept_tos: true,
+          accept_privacy: true,
+        });
       });
     });
 

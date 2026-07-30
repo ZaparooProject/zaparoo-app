@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { useEffect, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { Browser } from "@capacitor/browser";
@@ -151,6 +151,9 @@ export function OnlinePage() {
   const [mfaCode, setMfaCode] = useState("");
   const [mfaError, setMfaError] = useState<string | null>(null);
   const [isMfaVerifying, setIsMfaVerifying] = useState(false);
+  const mfaHeadingRef = useRef<HTMLHeadingElement>(null);
+  const mfaPendingRef = useRef(mfaPending);
+  const isMfaCodeComplete = /^\d{6}$/.test(mfaCode);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -164,8 +167,17 @@ export function OnlinePage() {
 
   const oauthAvailable = isOAuthAvailable();
 
+  useEffect(() => {
+    mfaPendingRef.current = mfaPending;
+    if (mfaPending) {
+      mfaHeadingRef.current?.focus();
+    }
+  }, [mfaPending]);
+
   useEffect(
     () => () => {
+      if (!mfaPendingRef.current) return;
+
       void MfaAuthentication.cancelSignIn().catch((e) => {
         logger.error("Failed to clear MFA challenge:", e, {
           category: "api",
@@ -318,7 +330,9 @@ export function OnlinePage() {
   };
 
   const handleMfaVerify = async () => {
-    if (!/^\d{6}$/.test(mfaCode) || isMfaVerifying) {
+    if (isMfaVerifying) return;
+
+    if (!isMfaCodeComplete) {
       setMfaError(t("online.mfaCodeInvalid"));
       return;
     }
@@ -475,7 +489,7 @@ export function OnlinePage() {
   };
 
   const handleMfaKeyUp = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && /^\d{6}$/.test(mfaCode) && !isMfaVerifying) {
+    if (e.key === "Enter" && isMfaCodeComplete && !isMfaVerifying) {
       handleMfaVerify();
     }
   };
@@ -691,7 +705,13 @@ export function OnlinePage() {
         ) : mfaPending ? (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col items-center gap-2">
-              <h2 className="text-lg font-semibold">{t("online.mfaTitle")}</h2>
+              <h2
+                ref={mfaHeadingRef}
+                tabIndex={-1}
+                className="text-lg font-semibold"
+              >
+                {t("online.mfaTitle")}
+              </h2>
               <p className="text-muted-foreground text-center text-sm">
                 {t("online.mfaDescription")}
               </p>
@@ -719,7 +739,7 @@ export function OnlinePage() {
                   : t("online.mfaVerify")
               }
               onClick={handleMfaVerify}
-              disabled={!/^\d{6}$/.test(mfaCode) || isMfaVerifying}
+              disabled={!isMfaCodeComplete || isMfaVerifying}
               className="w-full"
               intent="primary"
             />
