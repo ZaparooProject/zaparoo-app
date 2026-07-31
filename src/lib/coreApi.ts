@@ -788,6 +788,7 @@ class CoreApi {
           if (res.id === this.pendingWriteId) {
             this.pendingWriteId = null;
           }
+          resolve(null);
           return;
         }
 
@@ -798,6 +799,7 @@ class CoreApi {
         if (res.id === this.pendingWriteId) {
           this.pendingWriteId = null;
         }
+        resolve(null);
       } catch (e) {
         logger.error("Unexpected error processing message:", e, {
           category: "api",

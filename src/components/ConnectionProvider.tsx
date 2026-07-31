@@ -331,6 +331,15 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     [cancelMediaStopReconciliation, refreshMediaState],
   );
 
+  useEffect(
+    () => () => {
+      cancelMediaStopReconciliation("primary");
+      cancelMediaStopReconciliation("background");
+      invalidateMediaStateRequest();
+    },
+    [cancelMediaStopReconciliation, invalidateMediaStateRequest],
+  );
+
   // Process notifications from WebSocket messages
   const processNotification = useCallback(
     (notification: NotificationRequest) => {

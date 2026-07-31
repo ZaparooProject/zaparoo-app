@@ -449,6 +449,13 @@ describe("useConnection hook", () => {
 describe("notification processing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(CoreAPI.processReceived).mockReset().mockResolvedValue(null);
+    vi.mocked(CoreAPI.media)
+      .mockReset()
+      .mockResolvedValue({
+        database: { exists: false, indexing: false },
+        active: [],
+      });
     capturedEventHandlers = {};
     resetStore();
     mockToast.mockClear();
@@ -469,19 +476,24 @@ describe("notification processing", () => {
           },
         },
       });
+      const startedMedia = {
+        systemId: "snes",
+        systemName: "Super Nintendo",
+        mediaPath: "/games/mario.sfc",
+        mediaName: "Super Mario World",
+      };
       const mediaStartedNotification: NotificationRequest = {
         method: Notification.MediaStarted,
-        params: {
-          systemId: "snes",
-          systemName: "Super Nintendo",
-          mediaPath: "/games/mario.sfc",
-          mediaName: "Super Mario World",
-        },
+        params: startedMedia,
       };
 
       vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
         mediaStartedNotification,
       );
+      vi.mocked(CoreAPI.media).mockResolvedValueOnce({
+        database: { exists: true, indexing: false },
+        active: [startedMedia],
+      });
 
       render(
         <ConnectionProvider>
@@ -494,12 +506,7 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       await waitFor(() => {
-        expect(useStatusStore.getState().playing).toEqual({
-          systemId: "snes",
-          systemName: "Super Nintendo",
-          mediaPath: "/games/mario.sfc",
-          mediaName: "Super Mario World",
-        });
+        expect(useStatusStore.getState().playing).toEqual(startedMedia);
         expect(useStatusStore.getState().stagedToken).toBeNull();
       });
     });
@@ -667,6 +674,7 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       await waitFor(() => {
+        expect(CoreAPI.media).toHaveBeenCalledTimes(1);
         expect(useStatusStore.getState().playing).toEqual({
           systemId: "",
           systemName: "",
