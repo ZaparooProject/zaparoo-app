@@ -1508,7 +1508,15 @@ class CoreApi {
   mediaControl(params: MediaControlRequest): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       this.call(Method.MediaControl, params)
-        .then(() => {
+        .then((result) => {
+          if (isCancelled(result)) {
+            reject(
+              new RequestCancelledError(
+                "Media control request was not delivered",
+              ),
+            );
+            return;
+          }
           resolve();
         })
         .catch((error) => {

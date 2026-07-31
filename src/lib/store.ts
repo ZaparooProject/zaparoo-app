@@ -163,6 +163,15 @@ interface StatusState {
   resetConnectionState: () => void;
 }
 
+export function emptyPlaying(): PlayingResponse {
+  return {
+    systemId: "",
+    systemName: "",
+    mediaName: "",
+    mediaPath: "",
+  };
+}
+
 export const DEFAULT_GAMES_INDEX: IndexResponse = {
   exists: false,
   indexing: false,
@@ -219,20 +228,10 @@ export const useStatusStore = create<StatusState>()((set) => ({
   scrapingStatus: null,
   setScrapingStatus: (status) => set({ scrapingStatus: status }),
 
-  playing: {
-    systemId: "",
-    systemName: "",
-    mediaName: "",
-    mediaPath: "",
-  },
+  playing: emptyPlaying(),
   setPlaying: (playing) => set({ playing }),
 
-  backgroundPlaying: {
-    systemId: "",
-    systemName: "",
-    mediaName: "",
-    mediaPath: "",
-  },
+  backgroundPlaying: emptyPlaying(),
   setBackgroundPlaying: (backgroundPlaying) => set({ backgroundPlaying }),
 
   playlists: {
@@ -461,18 +460,8 @@ export const useStatusStore = create<StatusState>()((set) => ({
         totalFiles: 0,
       },
       scrapingStatus: null,
-      playing: {
-        systemId: "",
-        systemName: "",
-        mediaName: "",
-        mediaPath: "",
-      },
-      backgroundPlaying: {
-        systemId: "",
-        systemName: "",
-        mediaName: "",
-        mediaPath: "",
-      },
+      playing: emptyPlaying(),
+      backgroundPlaying: emptyPlaying(),
       playlists: {
         primary: null,
         background: null,

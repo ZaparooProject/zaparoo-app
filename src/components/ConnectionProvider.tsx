@@ -61,6 +61,7 @@ import {
 } from "@/lib/coreApi";
 import {
   DEFAULT_GAMES_INDEX,
+  emptyPlaying,
   useStatusStore,
   ConnectionState,
 } from "@/lib/store";
@@ -92,17 +93,13 @@ const LEGACY_CLIENT_ACCESS = {
   ],
 };
 
-function emptyPlaying(): PlayingResponse {
-  return {
-    systemId: "",
-    systemName: "",
-    mediaPath: "",
-    mediaName: "",
-  };
-}
-
 function getMediaSlot(slot: unknown): MediaSlot | null {
-  if (slot === undefined || slot === "" || slot === "primary") {
+  if (
+    slot === undefined ||
+    slot === null ||
+    slot === "" ||
+    slot === "primary"
+  ) {
     return "primary";
   }
   if (slot === "background") {
@@ -351,7 +348,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             logger.log("media.started", params);
             if (slot) {
               cancelMediaStopReconciliation(slot);
-              clearStagedToken();
+              if (slot === "primary") {
+                clearStagedToken();
+              }
               refreshMediaState();
             }
             break;
@@ -800,8 +799,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
     const fetchMediaState = (retryDelayMs: number) => {
       const scheduledFor = currentConnectionId.current;
+      const requestToken = ++mediaStateRequestToken.current;
       CoreAPI.media()
         .then((v) => {
+          if (requestToken !== mediaStateRequestToken.current) {
+            return;
+          }
           if (isCancelled(v)) {
             logger.log("Media request was cancelled, retrying once");
             // The first call after a reconnect can race with the transport
@@ -831,6 +834,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           }
         })
         .catch((e) => {
+          if (requestToken !== mediaStateRequestToken.current) {
+            return;
+          }
           if (isExpectedMediaDatabaseError(e)) {
             setGamesIndex(DEFAULT_GAMES_INDEX);
             return;

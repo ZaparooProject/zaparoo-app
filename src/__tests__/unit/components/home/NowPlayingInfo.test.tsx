@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "../../../../test-utils";
+import { render, screen, within } from "../../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { NowPlayingInfo } from "@/components/home/NowPlayingInfo";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -135,23 +135,18 @@ describe("NowPlayingInfo", () => {
 
       expect(screen.getByText("scan.playlistName")).toBeInTheDocument();
       expect(screen.getByText("scan.playlistPosition")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "scan.backgroundMediaHeading" }),
+      ).toBeInTheDocument();
       const controls = screen.getByRole("group", {
         name: "scan.playlistControls",
       });
-      expect(controls).toBeInTheDocument();
-      expect(controls.parentElement).toContainElement(
-        screen.getByRole("heading", { name: "scan.backgroundMediaHeading" }),
-      );
-      expect(
-        Array.from(controls.querySelectorAll("button")).map((button) =>
-          button.getAttribute("aria-label"),
-        ),
-      ).toEqual([
-        "scan.playlistPrevious",
-        "scan.stopBackgroundMediaButton",
-        "scan.playlistPause",
-        "scan.playlistNext",
-      ]);
+      const buttons = within(controls).getAllByRole("button");
+      expect(buttons).toHaveLength(4);
+      expect(buttons[0]).toHaveAccessibleName("scan.playlistPrevious");
+      expect(buttons[1]).toHaveAccessibleName("scan.stopBackgroundMediaButton");
+      expect(buttons[2]).toHaveAccessibleName("scan.playlistPause");
+      expect(buttons[3]).toHaveAccessibleName("scan.playlistNext");
     });
 
     it("should use current playlist item while active media changes", () => {

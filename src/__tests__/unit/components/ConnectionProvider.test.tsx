@@ -484,7 +484,7 @@ describe("notification processing", () => {
       };
       const mediaStartedNotification: NotificationRequest = {
         method: Notification.MediaStarted,
-        params: startedMedia,
+        params: { ...startedMedia, slot: null },
       };
 
       vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
@@ -518,7 +518,17 @@ describe("notification processing", () => {
         mediaPath: "/games/smw.sfc",
         mediaName: "Super Mario World",
       };
-      useStatusStore.setState({ playing: primary });
+      const stagedToken = {
+        ready: true,
+        token: {
+          type: "ntag",
+          uid: "STAGED",
+          text: "**launch:snes/mario.sfc",
+          data: "",
+          scanTime: "2024-01-15T11:00:00Z",
+        },
+      };
+      useStatusStore.setState({ playing: primary, stagedToken });
       vi.mocked(CoreAPI.media).mockResolvedValueOnce({
         database: { exists: true, indexing: false },
         active: [
@@ -579,6 +589,7 @@ describe("notification processing", () => {
           index: 1,
           playing: true,
         });
+        expect(useStatusStore.getState().stagedToken).toEqual(stagedToken);
       });
     });
 
@@ -1535,7 +1546,7 @@ describe("connection event handling", () => {
           systemName: "Super Nintendo",
           mediaPath: "/games/smw.sfc",
           mediaName: "Super Mario World",
-          slot: "primary",
+          slot: null as never,
         },
       ],
       playlists: [
@@ -1595,6 +1606,80 @@ describe("connection event handling", () => {
         "Soundtrack",
       );
     });
+  });
+
+  it("should ignore stale initial media after a notification refresh", async () => {
+    type MediaResult = Awaited<ReturnType<typeof CoreAPI.media>>;
+    let resolveInitialRequest!: (value: MediaResult) => void;
+    const initialRequest = new Promise<MediaResult>((resolve) => {
+      resolveInitialRequest = resolve;
+    });
+
+    vi.mocked(CoreAPI.media)
+      .mockReset()
+      .mockResolvedValue({
+        database: { exists: false, indexing: false },
+        active: [],
+      })
+      .mockReturnValueOnce(initialRequest)
+      .mockResolvedValueOnce({
+        database: { exists: true, indexing: false },
+        active: [
+          {
+            systemId: "SNES",
+            systemName: "Super Nintendo",
+            mediaPath: "/games/new.sfc",
+            mediaName: "New Game",
+          },
+        ],
+      });
+    vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+      method: Notification.MediaStarted,
+      params: {
+        systemId: "SNES",
+        systemName: "Super Nintendo",
+        mediaPath: "/games/new.sfc",
+        mediaName: "New Game",
+      },
+    });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+    act(() => {
+      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+    });
+    await waitFor(() => {
+      expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+    });
+
+    await capturedEventHandlers.onMessage!("test-device", {});
+    await waitFor(() => {
+      expect(useStatusStore.getState().playing.mediaName).toBe("New Game");
+    });
+
+    await act(async () => {
+      resolveInitialRequest({
+        database: { exists: true, indexing: false },
+        active: [
+          {
+            systemId: "NES",
+            systemName: "Nintendo",
+            mediaPath: "/games/old.nes",
+            mediaName: "Old Game",
+          },
+        ],
+      });
+      await initialRequest;
+    });
+
+    expect(useStatusStore.getState().playing.mediaName).toBe("New Game");
   });
 
   it("should keep primary empty when only background media is active", async () => {

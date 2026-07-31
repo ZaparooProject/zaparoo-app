@@ -239,6 +239,26 @@ describe("CoreAPI", () => {
     await expect(controlPromise).resolves.toBeUndefined();
   });
 
+  it("should reject cancelled media.control responses", async () => {
+    const controlPromise = CoreAPI.mediaControl({
+      action: "stop",
+      slot: "background",
+    });
+    const request = JSON.parse(mockSend.mock.calls[0][0]);
+
+    await CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: { cancelled: true },
+      }),
+    } as MessageEvent);
+
+    await expect(controlPromise).rejects.toThrow(
+      "Media control request was not delivered",
+    );
+  });
+
   it("should resolve media.active object, null, and cancellation responses", async () => {
     const activeMedia = {
       systemId: "SNES",

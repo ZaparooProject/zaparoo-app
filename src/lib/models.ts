@@ -343,7 +343,7 @@ export interface MediaActiveUpdateRequest {
 }
 
 export interface MediaControlRequest {
-  action: string;
+  action: "stop";
   slot?: MediaSlot;
   args?: Record<string, string>;
 }

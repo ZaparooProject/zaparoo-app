@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@/test-utils";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   createMemoryHistory,
@@ -7,13 +8,14 @@ import {
   createRouter,
   Outlet,
   RouterProvider,
+  useRouterState,
 } from "@tanstack/react-router";
 import {
   PageFrame,
   PAGE_SCROLL_RESTORATION_ID,
   PAGE_SCROLL_RESTORATION_SELECTOR,
 } from "@/components/PageFrame";
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 // Mock store for safe insets
 vi.mock("@/lib/store", () => ({
@@ -203,7 +205,84 @@ describe("PageFrame", () => {
     });
   });
 
+  it("should restore each history entry across same-route parameter navigation", async () => {
+    const restoredScrollByPath = new Map<string, number>();
+    const ItemPage = () => {
+      const pathname = useRouterState({
+        select: (state) => state.location.pathname,
+      });
+      useLayoutEffect(() => {
+        const scrollContainer = document.querySelector(
+          PAGE_SCROLL_RESTORATION_SELECTOR,
+        );
+        if (scrollContainer instanceof HTMLElement) {
+          restoredScrollByPath.set(pathname, scrollContainer.scrollTop);
+        }
+      }, [pathname]);
+
+      return (
+        <PageFrame>
+          <div>Item page</div>
+        </PageFrame>
+      );
+    };
+    const rootRoute = createRootRoute({ component: () => <Outlet /> });
+    const itemRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/settings/devices/$address",
+      component: ItemPage,
+    });
+    const history = createMemoryHistory({
+      initialEntries: ["/settings/devices/one"],
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([itemRoute]),
+      history,
+      scrollRestoration: true,
+      scrollToTopSelectors: [PAGE_SCROLL_RESTORATION_SELECTOR],
+    });
+
+    render(<RouterProvider router={router} />);
+    await screen.findByText("Item page");
+
+    const scrollContainer = document.querySelector(
+      PAGE_SCROLL_RESTORATION_SELECTOR,
+    );
+    expect(scrollContainer).toBeInstanceOf(HTMLElement);
+    if (!(scrollContainer instanceof HTMLElement)) return;
+
+    scrollContainer.scrollTop = 120;
+    fireEvent.scroll(scrollContainer);
+
+    await act(() =>
+      router.navigate({
+        to: "/settings/devices/$address",
+        params: { address: "two" },
+      }),
+    );
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/settings/devices/two");
+      expect(scrollContainer.scrollTop).toBe(0);
+    });
+
+    scrollContainer.scrollTop = 240;
+    fireEvent.scroll(scrollContainer);
+
+    act(() => history.back());
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/settings/devices/one");
+      expect(restoredScrollByPath.get("/settings/devices/one")).toBe(120);
+    });
+
+    act(() => history.forward());
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/settings/devices/two");
+      expect(restoredScrollByPath.get("/settings/devices/two")).toBe(240);
+    });
+  });
+
   it("should preserve active scroll position across state updates", async () => {
+    const user = userEvent.setup();
     const StatefulPage = () => {
       const [count, setCount] = useState(0);
       return (
@@ -236,7 +315,7 @@ describe("PageFrame", () => {
     if (!(scrollContainer instanceof HTMLElement)) return;
     scrollContainer.scrollTop = 240;
 
-    fireEvent.click(screen.getByRole("button", { name: "Update 0" }));
+    await user.click(screen.getByRole("button", { name: "Update 0" }));
     await screen.findByRole("button", { name: "Update 1" });
 
     expect(scrollContainer.scrollTop).toBe(240);

@@ -1,5 +1,9 @@
 import React, { RefObject, ReactNode, useLayoutEffect, useRef } from "react";
-import { useElementScrollRestoration, useRouter } from "@tanstack/react-router";
+import {
+  useElementScrollRestoration,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
 import { ResponsiveContainer } from "@/components/ResponsiveContainer";
 import { useStatusStore } from "@/lib/store";
 
@@ -24,6 +28,7 @@ interface PageFrameLayoutProps extends PageFrameProps {
     scrollX: number;
     scrollY: number;
   };
+  restorationKey?: string;
 }
 
 export function PageFrame(props: PageFrameProps) {
@@ -41,14 +46,25 @@ function RoutedPageFrame(props: PageFrameProps) {
   const restorationEntry = useElementScrollRestoration({
     id: PAGE_SCROLL_RESTORATION_ID,
   });
+  const restorationKey = useRouterState({
+    select: (state) =>
+      state.location.state.__TSR_key || state.location.href || "",
+  });
 
-  return <PageFrameLayout {...props} restorationEntry={restorationEntry} />;
+  return (
+    <PageFrameLayout
+      {...props}
+      restorationEntry={restorationEntry}
+      restorationKey={restorationKey}
+    />
+  );
 }
 
 function PageFrameLayout(props: PageFrameLayoutProps) {
   const safeInsets = useStatusStore((state) => state.safeInsets);
   const internalScrollRef = useRef<HTMLDivElement>(null);
   const hasRestoredScroll = useRef(false);
+  const restoredEntryKey = useRef<string | undefined>(undefined);
 
   // Destructure known props and collect the rest
   const {
@@ -59,6 +75,7 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
     headerRight,
     scrollRef,
     restorationEntry,
+    restorationKey,
     className,
     ...restProps
   } = props;
@@ -67,17 +84,22 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
   const hasHeaderContent = header || headerLeft || headerCenter || headerRight;
 
   useLayoutEffect(() => {
+    if (restoredEntryKey.current !== restorationKey) {
+      restoredEntryKey.current = restorationKey;
+      hasRestoredScroll.current = false;
+    }
+
     const scrollContainer = activeScrollRef.current;
     if (!scrollContainer || !restorationEntry || hasRestoredScroll.current) {
       return;
     }
 
-    // Restore only on mount. Reapplying the router's original entry during
-    // ordinary state updates would snap an actively used page back to the top.
+    // Restore once per history entry. Ordinary state updates keep the same
+    // entry key, while same-route parameter navigation receives a new key.
     scrollContainer.scrollLeft = restorationEntry.scrollX;
     scrollContainer.scrollTop = restorationEntry.scrollY;
     hasRestoredScroll.current = true;
-  }, [activeScrollRef, restorationEntry]);
+  }, [activeScrollRef, restorationEntry, restorationKey]);
 
   return (
     <div
