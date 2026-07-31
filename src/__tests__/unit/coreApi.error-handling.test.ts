@@ -63,6 +63,10 @@ describe("CoreAPI Error Handling Coverage", () => {
     ["media", () => CoreAPI.media()],
     ["tokens", () => CoreAPI.tokens()],
     ["stop", () => CoreAPI.stop()],
+    [
+      "mediaControl",
+      () => CoreAPI.mediaControl({ action: "stop", slot: "background" }),
+    ],
     ["mediaActive", () => CoreAPI.mediaActive()],
     ["readers", () => CoreAPI.readers()],
     ["readersWriteCancel", () => CoreAPI.readersWriteCancel()],

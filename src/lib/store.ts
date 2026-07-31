@@ -7,7 +7,9 @@ import {
   ClientsCurrentResponse,
   IndexResponse,
   InboxMessage,
+  type MediaSlot,
   PlayingResponse,
+  PlaylistState,
   ScrapingStatusNotification,
   TokenResponse,
 } from "./models";
@@ -96,6 +98,12 @@ interface StatusState {
   playing: PlayingResponse;
   setPlaying: (playing: PlayingResponse) => void;
 
+  backgroundPlaying: PlayingResponse;
+  setBackgroundPlaying: (playing: PlayingResponse) => void;
+
+  playlists: Record<MediaSlot, PlaylistState | null>;
+  setPlaylist: (slot: MediaSlot, playlist: PlaylistState | null) => void;
+
   cameraOpen: boolean;
   setCameraOpen: (cameraOpen: boolean) => void;
 
@@ -155,6 +163,15 @@ interface StatusState {
   resetConnectionState: () => void;
 }
 
+export function emptyPlaying(): PlayingResponse {
+  return {
+    systemId: "",
+    systemName: "",
+    mediaName: "",
+    mediaPath: "",
+  };
+}
+
 export const DEFAULT_GAMES_INDEX: IndexResponse = {
   exists: false,
   indexing: false,
@@ -211,13 +228,23 @@ export const useStatusStore = create<StatusState>()((set) => ({
   scrapingStatus: null,
   setScrapingStatus: (status) => set({ scrapingStatus: status }),
 
-  playing: {
-    systemId: "",
-    systemName: "",
-    mediaName: "",
-    mediaPath: "",
-  },
+  playing: emptyPlaying(),
   setPlaying: (playing) => set({ playing }),
+
+  backgroundPlaying: emptyPlaying(),
+  setBackgroundPlaying: (backgroundPlaying) => set({ backgroundPlaying }),
+
+  playlists: {
+    primary: null,
+    background: null,
+  },
+  setPlaylist: (slot, playlist) =>
+    set((state) => ({
+      playlists: {
+        ...state.playlists,
+        [slot]: playlist,
+      },
+    })),
 
   cameraOpen: false,
   setCameraOpen: (cameraOpen) => set({ cameraOpen: cameraOpen }),
@@ -433,11 +460,11 @@ export const useStatusStore = create<StatusState>()((set) => ({
         totalFiles: 0,
       },
       scrapingStatus: null,
-      playing: {
-        systemId: "",
-        systemName: "",
-        mediaName: "",
-        mediaPath: "",
+      playing: emptyPlaying(),
+      backgroundPlaying: emptyPlaying(),
+      playlists: {
+        primary: null,
+        background: null,
       },
       coreVersion: null,
       corePlatform: null,

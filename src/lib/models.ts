@@ -12,6 +12,7 @@ export enum Method {
   MediaCleanOrphans = "media.clean.orphans",
   MediaActive = "media.active",
   MediaActiveUpdate = "media.active.update",
+  MediaControl = "media.control",
   MediaTags = "media.tags",
   Systems = "systems",
   Settings = "settings",
@@ -271,6 +272,8 @@ export interface IndexResponse {
   systemsTotal?: number;
 }
 
+export type MediaSlot = "primary" | "background";
+
 export interface PlayingResponse {
   systemId: string;
   systemName: string;
@@ -279,6 +282,8 @@ export interface PlayingResponse {
   zapScript?: string;
   started?: string;
   launcherId?: string;
+  launcherControls?: string[];
+  slot?: MediaSlot;
 }
 
 export enum ScanResult {
@@ -287,9 +292,26 @@ export enum ScanResult {
   Error,
 }
 
+export interface PlaylistItemInfo {
+  name: string;
+  zapScript: string;
+}
+
+export interface PlaylistState {
+  id: string;
+  name: string;
+  slot: MediaSlot;
+  repeat: "none" | "all" | "one";
+  items: PlaylistItemInfo[];
+  index: number;
+  total: number;
+  playing: boolean;
+}
+
 export interface MediaResponse {
   database: IndexResponse;
   active: PlayingResponse[];
+  playlists?: PlaylistState[];
 }
 
 export interface TokensResponse {
@@ -318,6 +340,12 @@ export interface MediaActiveUpdateRequest {
   systemId: string;
   mediaPath: string;
   mediaName: string;
+}
+
+export interface MediaControlRequest {
+  action: "stop";
+  slot?: MediaSlot;
+  args?: Record<string, string>;
 }
 
 export interface PlaytimeLimitsConfig {

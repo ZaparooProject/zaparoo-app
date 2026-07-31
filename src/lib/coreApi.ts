@@ -16,6 +16,7 @@ import {
   LaunchRequest,
   LogDownloadResponse,
   MediaActiveUpdateRequest,
+  MediaControlRequest,
   MediaResponse,
   MediaCleanOrphansResponse,
   MediaScrapeCancelResponse,
@@ -787,6 +788,7 @@ class CoreApi {
           if (res.id === this.pendingWriteId) {
             this.pendingWriteId = null;
           }
+          resolve(null);
           return;
         }
 
@@ -797,6 +799,7 @@ class CoreApi {
         if (res.id === this.pendingWriteId) {
           this.pendingWriteId = null;
         }
+        resolve(null);
       } catch (e) {
         logger.error("Unexpected error processing message:", e, {
           category: "api",
@@ -1497,6 +1500,31 @@ class CoreApi {
         })
         .catch((error) => {
           logger.error("Stop API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  mediaControl(params: MediaControlRequest): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MediaControl, params)
+        .then((result) => {
+          if (isCancelled(result)) {
+            reject(
+              new RequestCancelledError(
+                "Media control request was not delivered",
+              ),
+            );
+            return;
+          }
+          resolve();
+        })
+        .catch((error) => {
+          logMediaApiFailure(
+            "Media control API call failed",
+            "mediaControl",
+            error,
+          );
           reject(error);
         });
     });

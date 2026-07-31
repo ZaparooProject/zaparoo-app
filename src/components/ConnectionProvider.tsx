@@ -39,6 +39,8 @@ import {
   IndexResponse,
   InboxMessage,
   InboxSeverity,
+  type MediaResponse,
+  type MediaSlot,
   Notification,
   PlayingResponse,
   PlaytimeLimitReachedParams,
@@ -59,6 +61,7 @@ import {
 } from "@/lib/coreApi";
 import {
   DEFAULT_GAMES_INDEX,
+  emptyPlaying,
   useStatusStore,
   ConnectionState,
 } from "@/lib/store";
@@ -80,6 +83,7 @@ interface ConnectionProviderProps {
 }
 
 const CLIENT_CAPABILITIES_SINCE = "2.16.0";
+const MEDIA_TRANSITION_GRACE_MS = 250;
 const LEGACY_CLIENT_ACCESS = {
   paired: false,
   role: null,
@@ -88,6 +92,37 @@ const LEGACY_CLIENT_ACCESS = {
     ClientCapability.SettingsWrite,
   ],
 };
+
+function getMediaSlot(slot: unknown): MediaSlot | null {
+  if (
+    slot === undefined ||
+    slot === null ||
+    slot === "" ||
+    slot === "primary"
+  ) {
+    return "primary";
+  }
+  if (slot === "background") {
+    return "background";
+  }
+  return null;
+}
+
+function getPlaylistForSlot(response: MediaResponse, slot: MediaSlot) {
+  return (
+    response.playlists?.find(
+      (playlist) => getMediaSlot(playlist.slot) === slot,
+    ) ?? null
+  );
+}
+
+function getPlayingForSlot(response: MediaResponse, slot: MediaSlot) {
+  return (
+    response.active?.find(
+      (activeMedia) => getMediaSlot(activeMedia.slot) === slot,
+    ) ?? null
+  );
+}
 
 export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const { t } = useTranslation();
@@ -105,6 +140,13 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   // Pending media-fetch retry; cleared on cleanup so a stale connection
   // can't write its state into the freshly-mounted one.
   const mediaRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mediaStopTimers = useRef<
+    Record<MediaSlot, ReturnType<typeof setTimeout> | null>
+  >({ primary: null, background: null });
+  const mediaStateRequestToken = useRef(0);
+  const invalidateMediaStateRequest = useCallback(() => {
+    mediaStateRequestToken.current++;
+  }, []);
   // Pairing modal is auto-opened when the transport reports the server requires
   // encryption (or rejects our credentials). Closed on success or user dismiss.
   const [pairingOpen, setPairingOpen] = useState(false);
@@ -123,6 +165,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setConnectionState,
     setConnectionError,
     setPlaying,
+    setBackgroundPlaying,
+    setPlaylist,
     setGamesIndex,
     setScrapingStatus,
     setLastToken,
@@ -149,6 +193,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setConnectionState: state.setConnectionState,
       setConnectionError: state.setConnectionError,
       setPlaying: state.setPlaying,
+      setBackgroundPlaying: state.setBackgroundPlaying,
+      setPlaylist: state.setPlaylist,
       setGamesIndex: state.setGamesIndex,
       setScrapingStatus: state.setScrapingStatus,
       setLastToken: state.setLastToken,
@@ -218,6 +264,79 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     [],
   );
 
+  const applyMediaState = useCallback(
+    (response: MediaResponse) => {
+      setPlaying(getPlayingForSlot(response, "primary") ?? emptyPlaying());
+      setBackgroundPlaying(
+        getPlayingForSlot(response, "background") ?? emptyPlaying(),
+      );
+      setPlaylist("primary", getPlaylistForSlot(response, "primary"));
+      setPlaylist("background", getPlaylistForSlot(response, "background"));
+    },
+    [setBackgroundPlaying, setPlaying, setPlaylist],
+  );
+
+  const refreshMediaState = useCallback(
+    (stoppedSlot?: MediaSlot) => {
+      const requestToken = ++mediaStateRequestToken.current;
+      void CoreAPI.media()
+        .then((response) => {
+          if (
+            requestToken !== mediaStateRequestToken.current ||
+            isCancelled(response)
+          ) {
+            return;
+          }
+          applyMediaState(response);
+        })
+        .catch((error) => {
+          if (requestToken !== mediaStateRequestToken.current) {
+            return;
+          }
+          if (stoppedSlot === "primary") {
+            setPlaying(emptyPlaying());
+            setPlaylist("primary", null);
+          } else if (stoppedSlot === "background") {
+            setBackgroundPlaying(emptyPlaying());
+            setPlaylist("background", null);
+          }
+          logger.error("Failed to refresh media slot state", error, {
+            category: "api",
+            action: "media",
+            severity: "warning",
+          });
+        });
+    },
+    [applyMediaState, setBackgroundPlaying, setPlaying, setPlaylist],
+  );
+
+  const cancelMediaStopReconciliation = useCallback((slot: MediaSlot) => {
+    const timer = mediaStopTimers.current[slot];
+    if (!timer) return;
+    clearTimeout(timer);
+    mediaStopTimers.current[slot] = null;
+  }, []);
+
+  const scheduleMediaStopReconciliation = useCallback(
+    (slot: MediaSlot) => {
+      cancelMediaStopReconciliation(slot);
+      mediaStopTimers.current[slot] = setTimeout(() => {
+        mediaStopTimers.current[slot] = null;
+        refreshMediaState(slot);
+      }, MEDIA_TRANSITION_GRACE_MS);
+    },
+    [cancelMediaStopReconciliation, refreshMediaState],
+  );
+
+  useEffect(
+    () => () => {
+      cancelMediaStopReconciliation("primary");
+      cancelMediaStopReconciliation("background");
+      invalidateMediaStateRequest();
+    },
+    [cancelMediaStopReconciliation, invalidateMediaStateRequest],
+  );
+
   // Process notifications from WebSocket messages
   const processNotification = useCallback(
     (notification: NotificationRequest) => {
@@ -225,21 +344,28 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         switch (notification.method) {
           case Notification.MediaStarted: {
             const params = notification.params as PlayingResponse;
+            const slot = getMediaSlot(params.slot);
             logger.log("media.started", params);
-            setPlaying(params);
-            clearStagedToken();
+            if (slot) {
+              cancelMediaStopReconciliation(slot);
+              if (slot === "primary") {
+                clearStagedToken();
+              }
+              refreshMediaState();
+            }
             break;
           }
 
           case Notification.MediaStopped: {
-            logger.log("media.stopped");
-            setPlaying({
-              systemId: "",
-              systemName: "",
-              mediaPath: "",
-              mediaName: "",
-            });
-            clearStagedToken();
+            const params = notification.params as { slot?: unknown };
+            const slot = getMediaSlot(params.slot);
+            logger.log("media.stopped", params);
+            if (slot) {
+              if (slot === "primary") {
+                clearStagedToken();
+              }
+              scheduleMediaStopReconciliation(slot);
+            }
             break;
           }
 
@@ -484,7 +610,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       }
     },
     [
-      setPlaying,
+      refreshMediaState,
+      cancelMediaStopReconciliation,
+      scheduleMediaStopReconciliation,
       setGamesIndex,
       setScrapingStatus,
       setLastToken,
@@ -671,8 +799,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
     const fetchMediaState = (retryDelayMs: number) => {
       const scheduledFor = currentConnectionId.current;
+      const requestToken = ++mediaStateRequestToken.current;
       CoreAPI.media()
         .then((v) => {
+          if (requestToken !== mediaStateRequestToken.current) {
+            return;
+          }
           if (isCancelled(v)) {
             logger.log("Media request was cancelled, retrying once");
             // The first call after a reconnect can race with the transport
@@ -695,16 +827,16 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           }
           try {
             setGamesIndex(v.database);
-            const firstActive = v.active[0];
-            if (firstActive) {
-              setPlaying(firstActive);
-            }
+            applyMediaState(v);
           } catch (e) {
             logger.error("Error processing media data:", e);
             toast.error(t("error", { msg: "Failed to process media data" }));
           }
         })
         .catch((e) => {
+          if (requestToken !== mediaStateRequestToken.current) {
+            return;
+          }
           if (isExpectedMediaDatabaseError(e)) {
             setGamesIndex(DEFAULT_GAMES_INDEX);
             return;
@@ -764,7 +896,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     addDeviceHistory,
     updateDeviceHistoryMeta,
     setGamesIndex,
-    setPlaying,
+    applyMediaState,
     setLastToken,
     setActiveTokens,
     setCoreVersion,
@@ -1029,6 +1161,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         clearTimeout(mediaRetryTimer.current);
         mediaRetryTimer.current = null;
       }
+      cancelMediaStopReconciliation("primary");
+      cancelMediaStopReconciliation("background");
+      invalidateMediaStateRequest();
       // Reset CoreAPI to clear any pending requests for this connection
       CoreAPI.reset();
       connectionManager.removeDevice(deviceAddress);
@@ -1039,6 +1174,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   }, [
     targetDeviceAddress,
     invalidateCurrentClientRequest,
+    invalidateMediaStateRequest,
+    cancelMediaStopReconciliation,
     setConnectionState,
     setConnectionError,
     setCurrentClient,

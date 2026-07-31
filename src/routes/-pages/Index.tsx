@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { logger } from "@/lib/logger";
+import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { useNfcWriter, WriteMethod } from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { isWriteModalOpen, WriteModal } from "@/components/WriteModal.tsx";
@@ -10,6 +11,8 @@ import { useAnnouncer } from "@/components/A11yAnnouncer";
 import logoImage from "@/assets/lockup.webp";
 import { cancelSession } from "@/lib/nfc";
 import { CoreAPI } from "@/lib/coreApi";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
+import type { MediaSlot, PlayingResponse } from "@/lib/models";
 import { HistoryIcon } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
 import { ToggleChip } from "@/components/wui/ToggleChip";
@@ -26,6 +29,16 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useConnection } from "@/hooks/useConnection";
 import { useKeepAwake } from "@/hooks/useKeepAwake";
+
+type PlaylistCommand = "previous" | "pause" | "play" | "next";
+
+function canPausePlaylist(media: PlayingResponse) {
+  return (
+    media.systemId === "Audio" &&
+    media.launcherControls?.includes("pause") === true &&
+    media.launcherControls.includes("resume")
+  );
+}
 
 export function Index() {
   const { t } = useTranslation();
@@ -63,13 +76,23 @@ export function Index() {
 
   const connected = useStatusStore((state) => state.connected);
   const playing = useStatusStore((state) => state.playing);
+  const backgroundPlaying = useStatusStore((state) => state.backgroundPlaying);
+  const primaryPlaylist = useStatusStore((state) => state.playlists.primary);
+  const backgroundPlaylist = useStatusStore(
+    (state) => state.playlists.background,
+  );
+  const setPlaylist = useStatusStore((state) => state.setPlaylist);
   const lastToken = useStatusStore((state) => state.lastToken);
   const setLastToken = useStatusStore((state) => state.setLastToken);
   const { hasData } = useConnection();
 
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
+  const [stopTarget, setStopTarget] = useState<MediaSlot | null>(null);
   const [remoteKeyboardOpen, setRemoteKeyboardOpen] = useState(false);
+  const { available: backgroundMediaAvailable } = useCoreFeature(
+    "backgroundMediaSlot",
+    { requireKnownSupport: true },
+  );
   // Holds the deferred history-modal toggle that fires after the pro-purchase
   // modal closes. Tracked so we can cancel a pending toggle on unmount or
   // when another toggle arrives before the timer fires.
@@ -100,6 +123,70 @@ export function Index() {
   });
 
   useKeepAwake();
+
+  const confirmStop = () => {
+    const target = stopTarget;
+    setStopTarget(null);
+    if (!target) return;
+
+    const playlist = useStatusStore.getState().playlists[target];
+    if (playlist) {
+      void CoreAPI.run({
+        text: `**playlist.stop?slot=${target}`,
+      }).catch((error) => {
+        logger.error("Failed to stop playlist", error, {
+          category: "api",
+          action: "runPlaylistControl",
+          severity: "error",
+        });
+        showRateLimitedErrorToast(t("scan.playlistControlError"));
+      });
+      return;
+    }
+
+    if (target === "primary") {
+      handleStopConfirm();
+      return;
+    }
+    void CoreAPI.mediaControl({ action: "stop", slot: "background" }).catch(
+      (error) => {
+        logger.error("Failed to stop background media", error, {
+          category: "api",
+          action: "mediaControl",
+          severity: "error",
+        });
+        showRateLimitedErrorToast(t("scan.stopBackgroundMediaError"));
+      },
+    );
+  };
+
+  const runPlaylistCommand = (slot: MediaSlot, command: PlaylistCommand) => {
+    const playlist = useStatusStore.getState().playlists[slot];
+    const playlistID = playlist?.id;
+    const playing =
+      command === "play" ? true : command === "pause" ? false : null;
+
+    void CoreAPI.run({
+      text: `**playlist.${command}?slot=${slot}`,
+    })
+      .then(() => {
+        if (playing === null || !playlistID) {
+          return;
+        }
+        const current = useStatusStore.getState().playlists[slot];
+        if (current?.id === playlistID) {
+          setPlaylist(slot, { ...current, playing });
+        }
+      })
+      .catch((error) => {
+        logger.error("Failed to control playlist", error, {
+          category: "api",
+          action: "runPlaylistControl",
+          severity: "error",
+        });
+        showRateLimitedErrorToast(t("scan.playlistControlError"));
+      });
+  };
 
   // Force a fresh fetch each time the modal is opened so the user always sees
   // the latest scans, not a cached snapshot from a prior open.
@@ -212,9 +299,44 @@ export function Index() {
             mediaName={playing.mediaName}
             mediaPath={playing.mediaPath}
             systemName={playing.systemName}
-            onStop={() => setStopConfirmOpen(true)}
+            onStop={() => setStopTarget("primary")}
             connected={connected}
+            playlist={primaryPlaylist}
+            canPausePlaylist={canPausePlaylist(playing)}
+            onPlaylistPrevious={() => runPlaylistCommand("primary", "previous")}
+            onPlaylistToggle={() =>
+              runPlaylistCommand(
+                "primary",
+                primaryPlaylist?.playing ? "pause" : "play",
+              )
+            }
+            onPlaylistNext={() => runPlaylistCommand("primary", "next")}
           />
+
+          {backgroundMediaAvailable &&
+            (backgroundPlaying.mediaName !== "" || backgroundPlaylist) && (
+              <NowPlayingInfo
+                mediaName={backgroundPlaying.mediaName}
+                mediaPath={backgroundPlaying.mediaPath}
+                systemName={backgroundPlaying.systemName}
+                onStop={() => setStopTarget("background")}
+                connected={connected}
+                headingLabel={t("scan.backgroundMediaHeading")}
+                stopButtonLabel={t("scan.stopBackgroundMediaButton")}
+                playlist={backgroundPlaylist}
+                canPausePlaylist={canPausePlaylist(backgroundPlaying)}
+                onPlaylistPrevious={() =>
+                  runPlaylistCommand("background", "previous")
+                }
+                onPlaylistToggle={() =>
+                  runPlaylistCommand(
+                    "background",
+                    backgroundPlaylist?.playing ? "pause" : "play",
+                  )
+                }
+                onPlaylistNext={() => runPlaylistCommand("background", "next")}
+              />
+            )}
         </div>
       </PageFrame>
 
@@ -235,12 +357,12 @@ export function Index() {
       />
       <PurchaseModal />
       <StopConfirmModal
-        isOpen={stopConfirmOpen}
-        onClose={() => setStopConfirmOpen(false)}
-        onConfirm={() => {
-          handleStopConfirm();
-          setStopConfirmOpen(false);
-        }}
+        isOpen={stopTarget !== null}
+        onClose={() => setStopTarget(null)}
+        onConfirm={confirmStop}
+        description={
+          stopTarget === "background" ? t("stopBackgroundMedia") : undefined
+        }
       />
     </>
   );

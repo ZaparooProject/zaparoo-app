@@ -449,6 +449,13 @@ describe("useConnection hook", () => {
 describe("notification processing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(CoreAPI.processReceived).mockReset().mockResolvedValue(null);
+    vi.mocked(CoreAPI.media)
+      .mockReset()
+      .mockResolvedValue({
+        database: { exists: false, indexing: false },
+        active: [],
+      });
     capturedEventHandlers = {};
     resetStore();
     mockToast.mockClear();
@@ -469,19 +476,24 @@ describe("notification processing", () => {
           },
         },
       });
+      const startedMedia = {
+        systemId: "snes",
+        systemName: "Super Nintendo",
+        mediaPath: "/games/mario.sfc",
+        mediaName: "Super Mario World",
+      };
       const mediaStartedNotification: NotificationRequest = {
         method: Notification.MediaStarted,
-        params: {
-          systemId: "snes",
-          systemName: "Super Nintendo",
-          mediaPath: "/games/mario.sfc",
-          mediaName: "Super Mario World",
-        },
+        params: { ...startedMedia, slot: null },
       };
 
       vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
         mediaStartedNotification,
       );
+      vi.mocked(CoreAPI.media).mockResolvedValueOnce({
+        database: { exists: true, indexing: false },
+        active: [startedMedia],
+      });
 
       render(
         <ConnectionProvider>
@@ -494,14 +506,121 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       await waitFor(() => {
-        expect(useStatusStore.getState().playing).toEqual({
-          systemId: "snes",
-          systemName: "Super Nintendo",
-          mediaPath: "/games/mario.sfc",
-          mediaName: "Super Mario World",
-        });
+        expect(useStatusStore.getState().playing).toEqual(startedMedia);
         expect(useStatusStore.getState().stagedToken).toBeNull();
       });
+    });
+
+    it("should update background media without replacing primary media", async () => {
+      const primary = {
+        systemId: "SNES",
+        systemName: "Super Nintendo",
+        mediaPath: "/games/smw.sfc",
+        mediaName: "Super Mario World",
+      };
+      const stagedToken = {
+        ready: true,
+        token: {
+          type: "ntag",
+          uid: "STAGED",
+          text: "**launch:snes/mario.sfc",
+          data: "",
+          scanTime: "2024-01-15T11:00:00Z",
+        },
+      };
+      useStatusStore.setState({ playing: primary, stagedToken });
+      vi.mocked(CoreAPI.media).mockResolvedValueOnce({
+        database: { exists: true, indexing: false },
+        active: [
+          primary,
+          {
+            systemId: "Audio",
+            systemName: "Audio",
+            mediaPath: "/music/theme.mp3",
+            mediaName: "Theme",
+            slot: "background",
+          },
+        ],
+        playlists: [
+          {
+            id: "soundtrack",
+            name: "Soundtrack",
+            slot: "background",
+            repeat: "all",
+            items: [
+              { name: "Intro", zapScript: "@Audio/Intro" },
+              { name: "Theme", zapScript: "@Audio/Theme" },
+            ],
+            index: 1,
+            total: 2,
+            playing: true,
+          },
+        ],
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.MediaStarted,
+        params: {
+          systemId: "Audio",
+          systemName: "Audio",
+          mediaPath: "/music/theme.mp3",
+          mediaName: "Theme",
+          slot: "background",
+        },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().playing).toEqual(primary);
+        expect(useStatusStore.getState().backgroundPlaying).toEqual({
+          systemId: "Audio",
+          systemName: "Audio",
+          mediaPath: "/music/theme.mp3",
+          mediaName: "Theme",
+          slot: "background",
+        });
+        expect(useStatusStore.getState().playlists.background).toMatchObject({
+          id: "soundtrack",
+          index: 1,
+          playing: true,
+        });
+        expect(useStatusStore.getState().stagedToken).toEqual(stagedToken);
+      });
+    });
+
+    it("should ignore notifications for unknown future slots", async () => {
+      const primary = {
+        systemId: "SNES",
+        systemName: "Super Nintendo",
+        mediaPath: "/games/smw.sfc",
+        mediaName: "Super Mario World",
+      };
+      useStatusStore.setState({ playing: primary });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.MediaStarted,
+        params: {
+          systemId: "Video",
+          systemName: "Video",
+          mediaPath: "/video/trailer.mp4",
+          mediaName: "Trailer",
+          slot: "tertiary",
+        },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      expect(useStatusStore.getState().playing).toEqual(primary);
+      expect(useStatusStore.getState().backgroundPlaying.mediaName).toBe("");
     });
   });
 
@@ -529,8 +648,15 @@ describe("notification processing", () => {
   });
 
   describe("media.stopped", () => {
-    it("should clear playing state and staged token when media stops", async () => {
+    it("should clear primary media without clearing background media", async () => {
       useStatusStore.setState({
+        backgroundPlaying: {
+          systemId: "Audio",
+          systemName: "Audio",
+          mediaPath: "/music/theme.mp3",
+          mediaName: "Theme",
+          slot: "background",
+        },
         stagedToken: {
           ready: true,
           token: {
@@ -542,33 +668,180 @@ describe("notification processing", () => {
           },
         },
       });
-      const mediaStoppedNotification: NotificationRequest = {
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
         method: Notification.MediaStopped,
         params: {},
-      };
-
-      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce(
-        mediaStoppedNotification,
-      );
+      });
+      vi.mocked(CoreAPI.media).mockResolvedValueOnce({
+        database: { exists: true, indexing: false },
+        active: [useStatusStore.getState().backgroundPlaying],
+      });
 
       render(
         <ConnectionProvider>
           <div>Test</div>
         </ConnectionProvider>,
       );
-
-      expect(capturedEventHandlers.onMessage).toBeDefined();
       await capturedEventHandlers.onMessage!("test-device", {});
 
       await waitFor(() => {
+        expect(CoreAPI.media).toHaveBeenCalledTimes(1);
         expect(useStatusStore.getState().playing).toEqual({
           systemId: "",
           systemName: "",
           mediaPath: "",
           mediaName: "",
         });
+        expect(useStatusStore.getState().backgroundPlaying.mediaName).toBe(
+          "Theme",
+        );
         expect(useStatusStore.getState().stagedToken).toBeNull();
       });
+    });
+
+    it("should clear background media without clearing primary media", async () => {
+      const primary = {
+        systemId: "SNES",
+        systemName: "Super Nintendo",
+        mediaPath: "/games/smw.sfc",
+        mediaName: "Super Mario World",
+      };
+      useStatusStore.setState({
+        playing: primary,
+        backgroundPlaying: {
+          systemId: "Audio",
+          systemName: "Audio",
+          mediaPath: "/music/theme.mp3",
+          mediaName: "Theme",
+          slot: "background",
+        },
+        playlists: {
+          primary: null,
+          background: {
+            id: "soundtrack",
+            name: "Soundtrack",
+            slot: "background",
+            repeat: "all",
+            items: [{ name: "Theme", zapScript: "@Audio/Theme" }],
+            index: 0,
+            total: 1,
+            playing: true,
+          },
+        },
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.MediaStopped,
+        params: { slot: "background" },
+      });
+      vi.mocked(CoreAPI.media).mockResolvedValueOnce({
+        database: { exists: true, indexing: false },
+        active: [primary],
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      expect(useStatusStore.getState().backgroundPlaying?.mediaName).toBe(
+        "Theme",
+      );
+      expect(useStatusStore.getState().playlists.background?.name).toBe(
+        "Soundtrack",
+      );
+
+      await waitFor(() => {
+        expect(useStatusStore.getState().playing).toEqual(primary);
+        expect(useStatusStore.getState().backgroundPlaying).toEqual({
+          systemId: "",
+          systemName: "",
+          mediaPath: "",
+          mediaName: "",
+        });
+        expect(useStatusStore.getState().playlists.background).toBeNull();
+      });
+    });
+
+    it("should preserve background controls between playlist tracks", async () => {
+      vi.useFakeTimers();
+      const previous = {
+        systemId: "Audio",
+        systemName: "Audio",
+        mediaPath: "/music/intro.mp3",
+        mediaName: "Intro",
+        slot: "background" as const,
+      };
+      const next = {
+        systemId: "Audio",
+        systemName: "Audio",
+        mediaPath: "/music/theme.mp3",
+        mediaName: "Theme",
+        slot: "background" as const,
+      };
+      const playlist = {
+        id: "soundtrack",
+        name: "Soundtrack",
+        slot: "background" as const,
+        repeat: "all" as const,
+        items: [
+          { name: "Intro", zapScript: "@Audio/Intro" },
+          { name: "Theme", zapScript: "@Audio/Theme" },
+        ],
+        index: 1,
+        total: 2,
+        playing: true,
+      };
+      useStatusStore.setState({
+        backgroundPlaying: previous,
+        playlists: {
+          primary: null,
+          background: playlist,
+        },
+      });
+      vi.mocked(CoreAPI.processReceived)
+        .mockResolvedValueOnce({
+          method: Notification.MediaStopped,
+          params: { slot: "background" },
+        })
+        .mockResolvedValueOnce({
+          method: Notification.MediaStarted,
+          params: next,
+        });
+      vi.mocked(CoreAPI.media).mockResolvedValueOnce({
+        database: { exists: true, indexing: false },
+        active: [next],
+        playlists: [playlist],
+      });
+
+      const view = render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      try {
+        await capturedEventHandlers.onMessage!("test-device", {});
+        expect(useStatusStore.getState().backgroundPlaying).toEqual(previous);
+        expect(useStatusStore.getState().playlists.background).toEqual(
+          playlist,
+        );
+
+        await capturedEventHandlers.onMessage!("test-device", {});
+        await act(async () => {
+          await vi.runAllTimersAsync();
+        });
+
+        expect(useStatusStore.getState().backgroundPlaying).toEqual(next);
+        expect(useStatusStore.getState().playlists.background).toEqual(
+          playlist,
+        );
+        expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+      } finally {
+        view.unmount();
+        vi.useRealTimers();
+      }
     });
   });
 
@@ -1254,6 +1527,199 @@ describe("connection event handling", () => {
       expect(useStatusStore.getState().coreVersion).toBe("2.5.0");
       expect(useStatusStore.getState().corePlatform).toBe("test");
       expect(useStatusStore.getState().coreVersionPending).toBe(false);
+    });
+  });
+
+  it("should hydrate both media slots regardless of response order", async () => {
+    vi.mocked(CoreAPI.media).mockResolvedValueOnce({
+      database: { exists: true, indexing: false },
+      active: [
+        {
+          systemId: "Audio",
+          systemName: "Audio",
+          mediaPath: "/music/theme.mp3",
+          mediaName: "Theme",
+          slot: "background",
+        },
+        {
+          systemId: "SNES",
+          systemName: "Super Nintendo",
+          mediaPath: "/games/smw.sfc",
+          mediaName: "Super Mario World",
+          slot: null as never,
+        },
+      ],
+      playlists: [
+        {
+          id: "favorites",
+          name: "Favorites",
+          slot: "primary",
+          repeat: "none",
+          items: [
+            {
+              name: "Super Mario World",
+              zapScript: "@SNES/Super Mario World",
+            },
+          ],
+          index: 0,
+          total: 1,
+          playing: true,
+        },
+        {
+          id: "soundtrack",
+          name: "Soundtrack",
+          slot: "background",
+          repeat: "all",
+          items: [
+            { name: "Theme", zapScript: "@Audio/Theme" },
+            { name: "Battle", zapScript: "@Audio/Battle" },
+          ],
+          index: 0,
+          total: 2,
+          playing: true,
+        },
+      ],
+    });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().playing.mediaName).toBe(
+        "Super Mario World",
+      );
+      expect(useStatusStore.getState().backgroundPlaying.mediaName).toBe(
+        "Theme",
+      );
+      expect(useStatusStore.getState().playlists.primary?.name).toBe(
+        "Favorites",
+      );
+      expect(useStatusStore.getState().playlists.background?.name).toBe(
+        "Soundtrack",
+      );
+    });
+  });
+
+  it("should ignore stale initial media after a notification refresh", async () => {
+    type MediaResult = Awaited<ReturnType<typeof CoreAPI.media>>;
+    let resolveInitialRequest!: (value: MediaResult) => void;
+    const initialRequest = new Promise<MediaResult>((resolve) => {
+      resolveInitialRequest = resolve;
+    });
+
+    vi.mocked(CoreAPI.media)
+      .mockReset()
+      .mockResolvedValue({
+        database: { exists: false, indexing: false },
+        active: [],
+      })
+      .mockReturnValueOnce(initialRequest)
+      .mockResolvedValueOnce({
+        database: { exists: true, indexing: false },
+        active: [
+          {
+            systemId: "SNES",
+            systemName: "Super Nintendo",
+            mediaPath: "/games/new.sfc",
+            mediaName: "New Game",
+          },
+        ],
+      });
+    vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+      method: Notification.MediaStarted,
+      params: {
+        systemId: "SNES",
+        systemName: "Super Nintendo",
+        mediaPath: "/games/new.sfc",
+        mediaName: "New Game",
+      },
+    });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+    act(() => {
+      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+    });
+    await waitFor(() => {
+      expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+    });
+
+    await capturedEventHandlers.onMessage!("test-device", {});
+    await waitFor(() => {
+      expect(useStatusStore.getState().playing.mediaName).toBe("New Game");
+    });
+
+    await act(async () => {
+      resolveInitialRequest({
+        database: { exists: true, indexing: false },
+        active: [
+          {
+            systemId: "NES",
+            systemName: "Nintendo",
+            mediaPath: "/games/old.nes",
+            mediaName: "Old Game",
+          },
+        ],
+      });
+      await initialRequest;
+    });
+
+    expect(useStatusStore.getState().playing.mediaName).toBe("New Game");
+  });
+
+  it("should keep primary empty when only background media is active", async () => {
+    useStatusStore.setState({
+      playing: {
+        systemId: "NES",
+        systemName: "Nintendo",
+        mediaPath: "/games/old.nes",
+        mediaName: "Old Game",
+      },
+    });
+    vi.mocked(CoreAPI.media).mockResolvedValueOnce({
+      database: { exists: true, indexing: false },
+      active: [
+        {
+          systemId: "Audio",
+          systemName: "Audio",
+          mediaPath: "/music/theme.mp3",
+          mediaName: "Theme",
+          slot: "background",
+        },
+      ],
+    });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().playing.mediaName).toBe("");
+      expect(useStatusStore.getState().backgroundPlaying.mediaName).toBe(
+        "Theme",
+      );
     });
   });
 

@@ -10,6 +10,22 @@ describe("StatusStore", () => {
       connectionError: "",
       connectionState: ConnectionState.IDLE,
       deviceHistory: [],
+      playing: {
+        systemId: "",
+        systemName: "",
+        mediaName: "",
+        mediaPath: "",
+      },
+      backgroundPlaying: {
+        systemId: "",
+        systemName: "",
+        mediaName: "",
+        mediaPath: "",
+      },
+      playlists: {
+        primary: null,
+        background: null,
+      },
     });
   });
 
@@ -242,6 +258,47 @@ describe("StatusStore", () => {
     });
   });
 
+  describe("background media", () => {
+    it("should update background media independently", () => {
+      const primary = {
+        systemId: "SNES",
+        systemName: "Super Nintendo",
+        mediaName: "Super Mario World",
+        mediaPath: "/games/smw.sfc",
+      };
+      const background = {
+        systemId: "Audio",
+        systemName: "Audio",
+        mediaName: "Soundtrack",
+        mediaPath: "/music/soundtrack.mp3",
+        slot: "background" as const,
+      };
+
+      const playlist = {
+        id: "soundtrack",
+        name: "Soundtrack",
+        slot: "background" as const,
+        repeat: "all" as const,
+        items: [
+          { name: "Theme", zapScript: "@Audio/Theme" },
+          { name: "Battle", zapScript: "@Audio/Battle" },
+        ],
+        index: 0,
+        total: 2,
+        playing: true,
+      };
+
+      useStatusStore.getState().setPlaying(primary);
+      useStatusStore.getState().setBackgroundPlaying(background);
+      useStatusStore.getState().setPlaylist("background", playlist);
+
+      expect(useStatusStore.getState().playing).toEqual(primary);
+      expect(useStatusStore.getState().backgroundPlaying).toEqual(background);
+      expect(useStatusStore.getState().playlists.background).toEqual(playlist);
+      expect(useStatusStore.getState().playlists.primary).toBeNull();
+    });
+  });
+
   describe("resetConnectionState", () => {
     it("should reset all connection-related state to default values", () => {
       const store = useStatusStore.getState();
@@ -276,6 +333,23 @@ describe("StatusStore", () => {
         systemName: "Test System",
         mediaName: "Test Game",
         mediaPath: "/path/to/game",
+      });
+      store.setBackgroundPlaying({
+        systemId: "Audio",
+        systemName: "Audio",
+        mediaName: "Test Song",
+        mediaPath: "/path/to/song.mp3",
+        slot: "background",
+      });
+      store.setPlaylist("background", {
+        id: "soundtrack",
+        name: "Soundtrack",
+        slot: "background",
+        repeat: "none",
+        items: [{ name: "Test Song", zapScript: "@Audio/Test Song" }],
+        index: 0,
+        total: 1,
+        playing: true,
       });
       store.setCurrentClient({
         paired: true,
@@ -321,6 +395,16 @@ describe("StatusStore", () => {
         systemName: "",
         mediaName: "",
         mediaPath: "",
+      });
+      expect(resetState.backgroundPlaying).toEqual({
+        systemId: "",
+        systemName: "",
+        mediaName: "",
+        mediaPath: "",
+      });
+      expect(resetState.playlists).toEqual({
+        primary: null,
+        background: null,
       });
       expect(resetState.currentClient).toBeNull();
     });
