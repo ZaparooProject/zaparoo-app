@@ -85,4 +85,10 @@ describe("isCoreFeatureAvailable", () => {
     expect(isCoreFeatureAvailable("activeMediaZapScript", "2.8.9")).toBe(false);
     expect(isCoreFeatureAvailable("activeMediaZapScript", "2.9.0")).toBe(true);
   });
+
+  it("should gate background media slots behind Core 2.15.0", () => {
+    expect(FEATURE_GATES.backgroundMediaSlot?.since).toBe("2.15.0");
+    expect(isCoreFeatureAvailable("backgroundMediaSlot", "2.14.1")).toBe(false);
+    expect(isCoreFeatureAvailable("backgroundMediaSlot", "2.15.0")).toBe(true);
+  });
 });

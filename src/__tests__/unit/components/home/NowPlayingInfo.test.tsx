@@ -66,6 +66,122 @@ describe("NowPlayingInfo", () => {
         screen.getByRole("button", { name: "scan.stopPlayingButton" }),
       ).toBeInTheDocument();
     });
+
+    it("should render custom background labels", () => {
+      render(
+        <NowPlayingInfo
+          {...defaultProps}
+          headingLabel="Background media"
+          stopButtonLabel="Stop background media"
+        />,
+      );
+
+      expect(
+        screen.getByRole("region", { name: "Background media" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Stop background media" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should use unique heading IDs when rendered twice", () => {
+      render(
+        <>
+          <NowPlayingInfo {...defaultProps} />
+          <NowPlayingInfo
+            {...defaultProps}
+            headingLabel="Background media"
+            stopButtonLabel="Stop background media"
+          />
+        </>,
+      );
+
+      const regions = screen.getAllByRole("region");
+      expect(regions).toHaveLength(2);
+      expect(regions[0]).toHaveAttribute("aria-labelledby");
+      expect(regions[1]).toHaveAttribute("aria-labelledby");
+      expect(regions[0]!.getAttribute("aria-labelledby")).not.toBe(
+        regions[1]!.getAttribute("aria-labelledby"),
+      );
+    });
+
+    it("should render generic playlist metadata and Audio controls", () => {
+      render(
+        <NowPlayingInfo
+          {...defaultProps}
+          mediaName="Theme"
+          systemName="Audio"
+          headingLabel="scan.backgroundMediaHeading"
+          stopButtonLabel="scan.stopBackgroundMediaButton"
+          playlist={{
+            id: "soundtrack",
+            name: "Soundtrack",
+            slot: "background",
+            repeat: "all",
+            items: [
+              { name: "Intro", zapScript: "@Audio/Intro" },
+              { name: "Theme", zapScript: "@Audio/Theme" },
+            ],
+            index: 1,
+            total: 2,
+            playing: true,
+          }}
+          canPausePlaylist
+          onPlaylistPrevious={vi.fn()}
+          onPlaylistToggle={vi.fn()}
+          onPlaylistNext={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText("scan.playlistName")).toBeInTheDocument();
+      expect(screen.getByText("scan.playlistPosition")).toBeInTheDocument();
+      const controls = screen.getByRole("group", {
+        name: "scan.playlistControls",
+      });
+      expect(controls).toBeInTheDocument();
+      expect(controls.parentElement).toContainElement(
+        screen.getByRole("heading", { name: "scan.backgroundMediaHeading" }),
+      );
+      expect(
+        Array.from(controls.querySelectorAll("button")).map((button) =>
+          button.getAttribute("aria-label"),
+        ),
+      ).toEqual([
+        "scan.playlistPrevious",
+        "scan.stopBackgroundMediaButton",
+        "scan.playlistPause",
+        "scan.playlistNext",
+      ]);
+    });
+
+    it("should use current playlist item while active media changes", () => {
+      render(
+        <NowPlayingInfo
+          {...defaultProps}
+          mediaName=""
+          systemName=""
+          playlist={{
+            id: "favorites",
+            name: "Favorites",
+            slot: "primary",
+            repeat: "none",
+            items: [
+              { name: "Super Mario World", zapScript: "@SNES/Super Mario" },
+            ],
+            index: 0,
+            total: 1,
+            playing: true,
+          }}
+          onPlaylistPrevious={vi.fn()}
+          onPlaylistNext={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText(/Super Mario World/)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "scan.stopPlayingButton" }),
+      ).toBeEnabled();
+    });
   });
 
   describe("empty state", () => {

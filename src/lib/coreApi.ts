@@ -16,6 +16,7 @@ import {
   LaunchRequest,
   LogDownloadResponse,
   MediaActiveUpdateRequest,
+  MediaControlRequest,
   MediaResponse,
   MediaCleanOrphansResponse,
   MediaScrapeCancelResponse,
@@ -1497,6 +1498,23 @@ class CoreApi {
         })
         .catch((error) => {
           logger.error("Stop API call failed:", error);
+          reject(error);
+        });
+    });
+  }
+
+  mediaControl(params: MediaControlRequest): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.call(Method.MediaControl, params)
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          logMediaApiFailure(
+            "Media control API call failed",
+            "mediaControl",
+            error,
+          );
           reject(error);
         });
     });

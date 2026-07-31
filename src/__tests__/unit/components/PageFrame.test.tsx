@@ -13,7 +13,7 @@ import {
   PAGE_SCROLL_RESTORATION_ID,
   PAGE_SCROLL_RESTORATION_SELECTOR,
 } from "@/components/PageFrame";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 // Mock store for safe insets
 vi.mock("@/lib/store", () => ({
@@ -201,6 +201,45 @@ describe("PageFrame", () => {
       );
       expect(restoredScrollContainer).toHaveProperty("scrollTop", 320);
     });
+  });
+
+  it("should preserve active scroll position across state updates", async () => {
+    const StatefulPage = () => {
+      const [count, setCount] = useState(0);
+      return (
+        <PageFrame>
+          <button onClick={() => setCount((value) => value + 1)}>
+            Update {count}
+          </button>
+        </PageFrame>
+      );
+    };
+    const rootRoute = createRootRoute({ component: () => <Outlet /> });
+    const pageRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/",
+      component: StatefulPage,
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([pageRoute]),
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+      scrollRestoration: true,
+      scrollToTopSelectors: [PAGE_SCROLL_RESTORATION_SELECTOR],
+    });
+
+    render(<RouterProvider router={router} />);
+    await screen.findByRole("button", { name: "Update 0" });
+    const scrollContainer = document.querySelector(
+      PAGE_SCROLL_RESTORATION_SELECTOR,
+    );
+    expect(scrollContainer).toBeInstanceOf(HTMLElement);
+    if (!(scrollContainer instanceof HTMLElement)) return;
+    scrollContainer.scrollTop = 240;
+
+    fireEvent.click(screen.getByRole("button", { name: "Update 0" }));
+    await screen.findByRole("button", { name: "Update 1" });
+
+    expect(scrollContainer.scrollTop).toBe(240);
   });
 
   it("should handle scrollRef", () => {

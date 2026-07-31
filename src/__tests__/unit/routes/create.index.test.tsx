@@ -21,6 +21,12 @@ const {
       mediaPath: "",
       systemName: "",
     } as PlayingResponse,
+    backgroundPlaying: {
+      systemId: "",
+      mediaName: "",
+      mediaPath: "",
+      systemName: "",
+    } as PlayingResponse,
     coreVersion: "2.9.0" as string | null,
     coreVersionPending: false,
     nfcAvailable: true,
@@ -74,6 +80,7 @@ vi.mock("@/lib/store", async (importOriginal) => {
       selector({
         connected: mockState.connected,
         playing: mockState.playing,
+        backgroundPlaying: mockState.backgroundPlaying,
         coreVersion: mockState.coreVersion,
         coreVersionPending: mockState.coreVersionPending,
         safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
@@ -160,6 +167,12 @@ describe("Create Index Route", () => {
     vi.clearAllMocks();
     mockState.connected = true;
     mockState.playing = {
+      systemId: "",
+      mediaName: "",
+      mediaPath: "",
+      systemName: "",
+    };
+    mockState.backgroundPlaying = {
       systemId: "",
       mediaName: "",
       mediaPath: "",
@@ -261,6 +274,23 @@ describe("Create Index Route", () => {
       expect(
         screen.getByText("create.currentGameSubFallback"),
       ).toBeInTheDocument();
+    });
+
+    it("should remain primary-only when background media is active", () => {
+      mockState.backgroundPlaying = {
+        systemId: "Audio",
+        mediaName: "Theme",
+        mediaPath: "/music/theme.mp3",
+        systemName: "Audio",
+        slot: "background",
+      };
+
+      renderComponent();
+
+      expect(
+        screen.getByText("create.currentGameSubFallback"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/Theme/)).not.toBeInTheDocument();
     });
   });
 

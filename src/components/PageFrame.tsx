@@ -48,6 +48,7 @@ function RoutedPageFrame(props: PageFrameProps) {
 function PageFrameLayout(props: PageFrameLayoutProps) {
   const safeInsets = useStatusStore((state) => state.safeInsets);
   const internalScrollRef = useRef<HTMLDivElement>(null);
+  const hasRestoredScroll = useRef(false);
 
   // Destructure known props and collect the rest
   const {
@@ -67,12 +68,15 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
 
   useLayoutEffect(() => {
     const scrollContainer = activeScrollRef.current;
-    if (!scrollContainer || !restorationEntry) return;
+    if (!scrollContainer || !restorationEntry || hasRestoredScroll.current) {
+      return;
+    }
 
-    // Restore during this page's layout phase so Back navigation never paints
-    // the new page at the top before TanStack Router applies its global restore.
+    // Restore only on mount. Reapplying the router's original entry during
+    // ordinary state updates would snap an actively used page back to the top.
     scrollContainer.scrollLeft = restorationEntry.scrollX;
     scrollContainer.scrollTop = restorationEntry.scrollY;
+    hasRestoredScroll.current = true;
   }, [activeScrollRef, restorationEntry]);
 
   return (

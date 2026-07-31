@@ -215,6 +215,30 @@ describe("CoreAPI", () => {
     },
   );
 
+  it("should send slot-targeted media.control params and resolve", async () => {
+    const controlPromise = CoreAPI.mediaControl({
+      action: "stop",
+      slot: "background",
+    });
+    const request = JSON.parse(mockSend.mock.calls[0][0]);
+
+    expect(request.method).toBe("media.control");
+    expect(request.params).toEqual({
+      action: "stop",
+      slot: "background",
+    });
+
+    await CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: {},
+      }),
+    } as MessageEvent);
+
+    await expect(controlPromise).resolves.toBeUndefined();
+  });
+
   it("should resolve media.active object, null, and cancellation responses", async () => {
     const activeMedia = {
       systemId: "SNES",

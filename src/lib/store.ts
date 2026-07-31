@@ -7,7 +7,9 @@ import {
   ClientsCurrentResponse,
   IndexResponse,
   InboxMessage,
+  type MediaSlot,
   PlayingResponse,
+  PlaylistState,
   ScrapingStatusNotification,
   TokenResponse,
 } from "./models";
@@ -95,6 +97,12 @@ interface StatusState {
 
   playing: PlayingResponse;
   setPlaying: (playing: PlayingResponse) => void;
+
+  backgroundPlaying: PlayingResponse;
+  setBackgroundPlaying: (playing: PlayingResponse) => void;
+
+  playlists: Record<MediaSlot, PlaylistState | null>;
+  setPlaylist: (slot: MediaSlot, playlist: PlaylistState | null) => void;
 
   cameraOpen: boolean;
   setCameraOpen: (cameraOpen: boolean) => void;
@@ -218,6 +226,26 @@ export const useStatusStore = create<StatusState>()((set) => ({
     mediaPath: "",
   },
   setPlaying: (playing) => set({ playing }),
+
+  backgroundPlaying: {
+    systemId: "",
+    systemName: "",
+    mediaName: "",
+    mediaPath: "",
+  },
+  setBackgroundPlaying: (backgroundPlaying) => set({ backgroundPlaying }),
+
+  playlists: {
+    primary: null,
+    background: null,
+  },
+  setPlaylist: (slot, playlist) =>
+    set((state) => ({
+      playlists: {
+        ...state.playlists,
+        [slot]: playlist,
+      },
+    })),
 
   cameraOpen: false,
   setCameraOpen: (cameraOpen) => set({ cameraOpen: cameraOpen }),
@@ -438,6 +466,16 @@ export const useStatusStore = create<StatusState>()((set) => ({
         systemName: "",
         mediaName: "",
         mediaPath: "",
+      },
+      backgroundPlaying: {
+        systemId: "",
+        systemName: "",
+        mediaName: "",
+        mediaPath: "",
+      },
+      playlists: {
+        primary: null,
+        background: null,
       },
       coreVersion: null,
       corePlatform: null,

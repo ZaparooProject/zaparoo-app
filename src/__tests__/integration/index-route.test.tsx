@@ -20,6 +20,7 @@ import userEvent from "@testing-library/user-event";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { ScanResult } from "@/lib/models";
+import { CoreAPI } from "@/lib/coreApi";
 import {
   ConnectionContext,
   ConnectionContextValue,
@@ -51,6 +52,8 @@ const mockNfcWriterState = {
   verifyError: null,
   getVerifyError: vi.fn(() => null),
 };
+
+const mockShowRateLimitedErrorToast = vi.hoisted(() => vi.fn());
 
 const mockHistoryQueryState = {
   data: undefined as
@@ -192,8 +195,14 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
     history: vi.fn(),
+    run: vi.fn().mockResolvedValue(undefined),
+    mediaControl: vi.fn().mockResolvedValue(undefined),
   },
   getDeviceAddress: vi.fn(() => "192.168.1.100"),
+}));
+
+vi.mock("@/lib/toastUtils", () => ({
+  showRateLimitedErrorToast: mockShowRateLimitedErrorToast,
 }));
 
 // Mock NFC cancel session
@@ -241,6 +250,77 @@ function TestWrapper({
   );
 }
 
+function seedBackgroundPlaylist(playing = true) {
+  useStatusStore.setState({
+    backgroundPlaying: {
+      systemId: "Audio",
+      systemName: "Audio",
+      mediaName: "Theme",
+      mediaPath: "/music/theme.mp3",
+      launcherId: "native-audio",
+      launcherControls: ["pause", "resume", "stop"],
+      slot: "background",
+    },
+    playlists: {
+      primary: null,
+      background: {
+        id: "soundtrack",
+        name: "Soundtrack",
+        slot: "background",
+        repeat: "all",
+        items: [
+          { name: "Intro", zapScript: "@Audio/Intro" },
+          { name: "Theme", zapScript: "@Audio/Theme" },
+        ],
+        index: 1,
+        total: 2,
+        playing,
+      },
+    },
+  });
+}
+
+function seedPrimaryPlaylist({
+  audio = false,
+  playing = true,
+}: { audio?: boolean; playing?: boolean } = {}) {
+  const items = audio
+    ? [
+        { name: "Intro", zapScript: "@Audio/Intro" },
+        { name: "Theme", zapScript: "@Audio/Theme" },
+      ]
+    : [
+        { name: "Super Mario World", zapScript: "@SNES/Super Mario World" },
+        { name: "F-Zero", zapScript: "@SNES/F-Zero" },
+      ];
+  useStatusStore.setState({
+    playing: {
+      systemId: audio ? "Audio" : "SNES",
+      systemName: audio ? "Audio" : "Super Nintendo",
+      mediaName: items[0]!.name,
+      mediaPath: audio ? "/music/intro.mp3" : "/games/smw.sfc",
+      launcherId: audio ? "native-audio" : "retroarch",
+      launcherControls: audio
+        ? ["pause", "resume", "stop"]
+        : ["toggle_pause", "stop"],
+      slot: "primary",
+    },
+    playlists: {
+      primary: {
+        id: audio ? "soundtrack" : "favorites",
+        name: audio ? "Soundtrack" : "Favorites",
+        slot: "primary",
+        repeat: "all",
+        items,
+        index: 0,
+        total: items.length,
+        playing,
+      },
+      background: null,
+    },
+  });
+}
+
 describe("Index Route Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -259,6 +339,18 @@ describe("Index Route Integration", () => {
         mediaName: "",
         mediaPath: "",
       },
+      backgroundPlaying: {
+        systemId: "",
+        systemName: "",
+        mediaName: "",
+        mediaPath: "",
+      },
+      playlists: {
+        primary: null,
+        background: null,
+      },
+      coreVersion: "2.15.0",
+      coreVersionPending: false,
       writeOpen: false,
       proPurchaseModalOpen: false,
       // Seed encryptionState so connected-state assertions don't hit the
@@ -282,6 +374,9 @@ describe("Index Route Integration", () => {
     mockScanOperationsState.handleScanButton.mockClear();
     mockScanOperationsState.handleCameraScan.mockClear();
     mockScanOperationsState.handleStopConfirm.mockClear();
+    vi.mocked(CoreAPI.run).mockReset().mockResolvedValue(undefined);
+    vi.mocked(CoreAPI.mediaControl).mockReset().mockResolvedValue(undefined);
+    mockShowRateLimitedErrorToast.mockClear();
 
     mockNfcWriterState.status = null;
     mockNfcWriterState.writing = false;
@@ -637,6 +732,276 @@ describe("Index Route Integration", () => {
       });
       expect(stopButton).toBeDisabled();
     });
+
+    it("should show concurrent primary and background media on supported Core", () => {
+      useStatusStore.setState({
+        playing: {
+          systemId: "SNES",
+          systemName: "Super Nintendo",
+          mediaName: "Super Mario World",
+          mediaPath: "/games/smw.sfc",
+        },
+        backgroundPlaying: {
+          systemId: "Audio",
+          systemName: "Audio",
+          mediaName: "Theme",
+          mediaPath: "/music/theme.mp3",
+          launcherId: "native-audio",
+          launcherControls: ["pause", "resume", "stop"],
+          slot: "background",
+        },
+        playlists: {
+          primary: null,
+          background: {
+            id: "soundtrack",
+            name: "Soundtrack",
+            slot: "background",
+            repeat: "all",
+            items: [
+              { name: "Intro", zapScript: "@Audio/Intro" },
+              { name: "Theme", zapScript: "@Audio/Theme" },
+            ],
+            index: 1,
+            total: 2,
+            playing: true,
+          },
+        },
+      });
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/Super Mario World/)).toBeInTheDocument();
+      expect(screen.getByText(/Theme/)).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "scan.backgroundMediaHeading" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", {
+          name: "scan.stopBackgroundMediaButton",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("group", {
+          name: "scan.playlistControls",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", {
+          name: "scan.playlistPrevious",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", {
+          name: "scan.playlistPause",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "scan.playlistNext" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should hide background media below the Core feature gate", () => {
+      useStatusStore.setState({
+        coreVersion: "2.14.1",
+        backgroundPlaying: {
+          systemId: "Audio",
+          systemName: "Audio",
+          mediaName: "Theme",
+          mediaPath: "/music/theme.mp3",
+          slot: "background",
+        },
+      });
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      expect(
+        screen.queryByRole("heading", {
+          name: "scan.backgroundMediaHeading",
+        }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/Theme/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Playlist Controls", () => {
+    it("should send previous and next commands to the background slot", async () => {
+      const user = userEvent.setup();
+      seedBackgroundPlaylist();
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "scan.playlistPrevious" }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "scan.playlistNext" }),
+      );
+
+      expect(CoreAPI.run).toHaveBeenNthCalledWith(1, {
+        text: "**playlist.previous?slot=background",
+      });
+      expect(CoreAPI.run).toHaveBeenNthCalledWith(2, {
+        text: "**playlist.next?slot=background",
+      });
+    });
+
+    it("should send previous and next commands to the primary slot", async () => {
+      const user = userEvent.setup();
+      seedPrimaryPlaylist();
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "scan.playlistPrevious" }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "scan.playlistNext" }),
+      );
+
+      expect(CoreAPI.run).toHaveBeenNthCalledWith(1, {
+        text: "**playlist.previous?slot=primary",
+      });
+      expect(CoreAPI.run).toHaveBeenNthCalledWith(2, {
+        text: "**playlist.next?slot=primary",
+      });
+    });
+
+    it("should pause and play a primary Audio playlist", async () => {
+      const user = userEvent.setup();
+      seedPrimaryPlaylist({ audio: true });
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "scan.playlistPause" }),
+      );
+
+      await waitFor(() => {
+        expect(CoreAPI.run).toHaveBeenCalledWith({
+          text: "**playlist.pause?slot=primary",
+        });
+        expect(
+          screen.getByRole("button", { name: "scan.playlistPlay" }),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: "scan.playlistPlay" }),
+      );
+      await waitFor(() => {
+        expect(CoreAPI.run).toHaveBeenLastCalledWith({
+          text: "**playlist.play?slot=primary",
+        });
+      });
+    });
+
+    it("should pause and play a background Audio playlist", async () => {
+      const user = userEvent.setup();
+      seedBackgroundPlaylist();
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "scan.playlistPause" }),
+      );
+      await waitFor(() => {
+        expect(CoreAPI.run).toHaveBeenCalledWith({
+          text: "**playlist.pause?slot=background",
+        });
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: "scan.playlistPlay" }),
+      );
+      await waitFor(() => {
+        expect(CoreAPI.run).toHaveBeenLastCalledWith({
+          text: "**playlist.play?slot=background",
+        });
+      });
+    });
+
+    it("should hide Pause for a playing non-Audio playlist", () => {
+      seedPrimaryPlaylist();
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      expect(
+        screen.queryByRole("button", { name: "scan.playlistPause" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "scan.playlistPrevious" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "scan.playlistNext" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should play a paused non-Audio playlist", async () => {
+      const user = userEvent.setup();
+      seedPrimaryPlaylist({ playing: false });
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "scan.playlistPlay" }),
+      );
+      expect(CoreAPI.run).toHaveBeenCalledWith({
+        text: "**playlist.play?slot=primary",
+      });
+    });
+
+    it("should report playlist command failures", async () => {
+      const user = userEvent.setup();
+      seedBackgroundPlaylist();
+      vi.mocked(CoreAPI.run).mockRejectedValueOnce(new Error("run failed"));
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+      await user.click(
+        screen.getByRole("button", { name: "scan.playlistNext" }),
+      );
+
+      await waitFor(() => {
+        expect(mockShowRateLimitedErrorToast).toHaveBeenCalledWith(
+          "scan.playlistControlError",
+        );
+      });
+    });
   });
 
   describe("History Modal", () => {
@@ -762,6 +1127,124 @@ describe("Index Route Integration", () => {
       expect(mockScanOperationsState.handleStopConfirm).toHaveBeenCalledTimes(
         1,
       );
+      expect(CoreAPI.mediaControl).not.toHaveBeenCalled();
+    });
+
+    it("should stop a primary playlist through its targeted slot", async () => {
+      const user = userEvent.setup();
+      seedPrimaryPlaylist();
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+      await user.click(
+        screen.getByRole("button", { name: "scan.stopPlayingButton" }),
+      );
+      await user.click(screen.getByRole("button", { name: /yes/i }));
+
+      await waitFor(() => {
+        expect(CoreAPI.run).toHaveBeenCalledWith({
+          text: "**playlist.stop?slot=primary",
+        });
+      });
+      expect(mockScanOperationsState.handleStopConfirm).not.toHaveBeenCalled();
+      expect(CoreAPI.mediaControl).not.toHaveBeenCalled();
+    });
+
+    it("should stop a background playlist through its targeted slot", async () => {
+      const user = userEvent.setup();
+      seedBackgroundPlaylist();
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+      await user.click(
+        screen.getByRole("button", {
+          name: "scan.stopBackgroundMediaButton",
+        }),
+      );
+      await user.click(screen.getByRole("button", { name: /yes/i }));
+
+      await waitFor(() => {
+        expect(CoreAPI.run).toHaveBeenCalledWith({
+          text: "**playlist.stop?slot=background",
+        });
+      });
+      expect(CoreAPI.mediaControl).not.toHaveBeenCalled();
+    });
+
+    it("should stop background media through its targeted slot", async () => {
+      const user = userEvent.setup();
+      useStatusStore.setState({
+        backgroundPlaying: {
+          systemId: "Audio",
+          systemName: "Audio",
+          mediaName: "Theme",
+          mediaPath: "/music/theme.mp3",
+          slot: "background",
+        },
+      });
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+      await user.click(
+        screen.getByRole("button", {
+          name: "scan.stopBackgroundMediaButton",
+        }),
+      );
+
+      expect(screen.getByText("stopBackgroundMedia")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /yes/i }));
+
+      await waitFor(() => {
+        expect(CoreAPI.mediaControl).toHaveBeenCalledWith({
+          action: "stop",
+          slot: "background",
+        });
+      });
+      expect(mockScanOperationsState.handleStopConfirm).not.toHaveBeenCalled();
+    });
+
+    it("should keep background media visible when targeted stop fails", async () => {
+      const user = userEvent.setup();
+      vi.mocked(CoreAPI.mediaControl).mockRejectedValueOnce(
+        new Error("control failed"),
+      );
+      useStatusStore.setState({
+        backgroundPlaying: {
+          systemId: "Audio",
+          systemName: "Audio",
+          mediaName: "Theme",
+          mediaPath: "/music/theme.mp3",
+          slot: "background",
+        },
+      });
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+      await user.click(
+        screen.getByRole("button", {
+          name: "scan.stopBackgroundMediaButton",
+        }),
+      );
+      await user.click(screen.getByRole("button", { name: /yes/i }));
+
+      await waitFor(() => {
+        expect(mockShowRateLimitedErrorToast).toHaveBeenCalledWith(
+          "scan.stopBackgroundMediaError",
+        );
+      });
+      expect(screen.getByText(/Theme/)).toBeInTheDocument();
     });
 
     it("should close stop confirm modal when cancelled", async () => {
