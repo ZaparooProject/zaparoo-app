@@ -236,6 +236,30 @@ describe("Logger Rate Limiting", () => {
     expect(output).not.toContain("ABCD1234");
   });
 
+  it("should redact API keys and verification URLs in embedded JSON", () => {
+    const sanitized = sanitizeLogValue(
+      '{"apiKey":"camel-secret","API_KEY":"upper-secret","api-key":"hyphen-secret","verification_url_complete":"snake-secret","VerificationUrlComplete":"camel-verification-secret","safe":"kept"}',
+    );
+
+    expect(sanitized).toBe(
+      '{"apiKey":"[REDACTED]","API_KEY":"[REDACTED]","api-key":"[REDACTED]","verification_url_complete":"[REDACTED]","VerificationUrlComplete":"[REDACTED]","safe":"kept"}',
+    );
+  });
+
+  it("should sanitize shared objects on each branch and mark cycles", () => {
+    const shared = { token: "shared-secret", safe: "kept" };
+    const cyclic: Record<string, unknown> = { safe: "kept" };
+    cyclic.self = cyclic;
+
+    expect(sanitizeLogValue({ first: shared, second: shared, cyclic })).toEqual(
+      {
+        first: { token: "[REDACTED]", safe: "kept" },
+        second: { token: "[REDACTED]", safe: "kept" },
+        cyclic: { safe: "kept", self: "[Circular]" },
+      },
+    );
+  });
+
   it("should strip Axios error config before console and Rollbar logging", () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const axiosError = Object.assign(

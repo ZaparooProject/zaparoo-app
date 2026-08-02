@@ -50,7 +50,7 @@ function redactSensitiveString(value: string): string {
     .replace(/\b(?:zpc1|zpd1|zpk1)_[A-Za-z0-9._~-]+\b/g, REDACTED)
     .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, REDACTED)
     .replace(
-      /"([^"]*(?:token|password|secret|authorization|credential|device[_-]?code|user[_-]?code|bearer)[^"]*)"\s*:\s*"[^"]*"/gi,
+      /"([^"]*(?:token|password|secret|authorization|credential|device[_-]?code|user[_-]?code|bearer)[^"]*|api[^a-z0-9"]*key|verification[^a-z0-9"]*url[^a-z0-9"]*complete)"\s*:\s*"[^"]*"/gi,
       (_match, key: string) => `"${key}":"${REDACTED}"`,
     )
     .replace(
@@ -96,17 +96,21 @@ export function sanitizeLogValue(
   if (seen.has(value)) return "[Circular]";
 
   seen.add(value);
-  if (Array.isArray(value)) {
-    return value.map((item) => sanitizeLogValue(item, seen, depth + 1));
-  }
+  try {
+    if (Array.isArray(value)) {
+      return value.map((item) => sanitizeLogValue(item, seen, depth + 1));
+    }
 
-  const result: Record<string, unknown> = {};
-  for (const [key, item] of Object.entries(value)) {
-    result[key] = isSensitiveLogKey(key)
-      ? REDACTED
-      : sanitizeLogValue(item, seen, depth + 1);
+    const result: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) {
+      result[key] = isSensitiveLogKey(key)
+        ? REDACTED
+        : sanitizeLogValue(item, seen, depth + 1);
+    }
+    return result;
+  } finally {
+    seen.delete(value);
   }
-  return result;
 }
 
 function sanitizeLogArgs(args: unknown[]): unknown[] {
