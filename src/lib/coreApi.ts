@@ -491,7 +491,7 @@ class CoreApi {
       if (this.transport?.isConnected) {
         // Connection is open, send immediately
         const payload = JSON.stringify(req);
-        logger.debug("Sending request", payload);
+        logger.debug("Sending request", { id, method });
 
         let poolEntry: ResponsePromise | undefined;
         const promise = new Promise<unknown>((resolve, reject) => {
@@ -611,7 +611,7 @@ class CoreApi {
       };
 
       const payload = JSON.stringify(req);
-      logger.debug("Sending tracked request", payload);
+      logger.debug("Sending tracked request", { id, method });
 
       // Check if already aborted
       if (signal?.aborted) {
@@ -652,8 +652,6 @@ class CoreApi {
 
         signal.addEventListener("abort", abortHandler, { once: true });
       }
-
-      logger.debug(payload);
 
       // Add safe send
       try {
@@ -750,9 +748,9 @@ class CoreApi {
         }
 
         if (!res.id) {
-          logger.log("Received notification", res);
           try {
             const req = res as ApiRequest;
+            logger.log("Received notification", { method: req.method });
             resolve({
               method: req.method as Notification,
               params: req.params,
@@ -770,7 +768,11 @@ class CoreApi {
 
         const promise = this.responsePool[res.id];
         if (!promise) {
-          logger.log("Response ID does not exist:", msg.data);
+          logger.log("Response ID does not exist", {
+            id: res.id,
+            hasError: res.error !== undefined,
+            dataLength: rawData.length,
+          });
           resolve(null); // Changed from reject(null) to resolve(null) to prevent unhandled rejection
           return;
         }

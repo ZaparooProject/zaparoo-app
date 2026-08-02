@@ -59,6 +59,7 @@ const PAST_THROTTLE_WINDOW_MS = THROTTLE_WINDOW_MS + 1_000;
 describe("Logger Rate Limiting", () => {
   let logger: typeof import("../../../lib/logger").logger;
   let rollbarPromise: typeof import("../../../lib/logger").rollbarPromise;
+  let sanitizeLogValue: typeof import("../../../lib/logger").sanitizeLogValue;
 
   beforeEach(async () => {
     vi.useFakeTimers();
@@ -69,6 +70,7 @@ describe("Logger Rate Limiting", () => {
 
     logger = loggerModule.logger;
     rollbarPromise = loggerModule.rollbarPromise;
+    sanitizeLogValue = loggerModule.sanitizeLogValue;
 
     // Wait for rollbar to be loaded
     await rollbarPromise;
@@ -212,5 +214,96 @@ describe("Logger Rate Limiting", () => {
         action: "test",
       }),
     );
+  });
+
+  it("should redact auth secrets from nested log values and strings", () => {
+    const sanitized = sanitizeLogValue({
+      headers: { Authorization: "Bearer firebase-secret" },
+      token: "zpc1_claim-secret",
+      nested: {
+        device_code: "device-secret",
+        safe: "kept",
+      },
+      payload:
+        '{"token":"zpd1_device-secret","url":"https://example.com/link?code=ABCD1234"}',
+    });
+    const output = JSON.stringify(sanitized);
+
+    expect(output).toContain("kept");
+    expect(output).not.toContain("firebase-secret");
+    expect(output).not.toContain("zpc1_claim-secret");
+    expect(output).not.toContain("zpd1_device-secret");
+    expect(output).not.toContain("ABCD1234");
+  });
+
+  it("should redact API keys and verification URLs in embedded JSON", () => {
+    const sanitized = sanitizeLogValue(
+      '{"apiKey":"camel-secret","API_KEY":"upper-secret","api-key":"hyphen-secret","verification_url_complete":"snake-secret","VerificationUrlComplete":"camel-verification-secret","safe":"kept"}',
+    );
+
+    expect(sanitized).toBe(
+      '{"apiKey":"[REDACTED]","API_KEY":"[REDACTED]","api-key":"[REDACTED]","verification_url_complete":"[REDACTED]","VerificationUrlComplete":"[REDACTED]","safe":"kept"}',
+    );
+  });
+
+  it("should sanitize shared objects on each branch and mark cycles", () => {
+    const shared = { token: "shared-secret", safe: "kept" };
+    const cyclic: Record<string, unknown> = { safe: "kept" };
+    cyclic.self = cyclic;
+
+    expect(sanitizeLogValue({ first: shared, second: shared, cyclic })).toEqual(
+      {
+        first: { token: "[REDACTED]", safe: "kept" },
+        second: { token: "[REDACTED]", safe: "kept" },
+        cyclic: { safe: "kept", self: "[Circular]" },
+      },
+    );
+  });
+
+  it("should strip Axios error config before console and Rollbar logging", () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const axiosError = Object.assign(
+      new Error("Claim failed for zpc1_claim-secret"),
+      {
+        name: "AxiosError",
+        code: "ERR_BAD_REQUEST",
+        config: {
+          headers: { Authorization: "Bearer firebase-secret" },
+          data: { token: "zpc1_claim-secret" },
+        },
+        response: { data: { bearer: "zpd1_device-secret" } },
+      },
+    );
+
+    logger.error("Device claim failed", axiosError, {
+      category: "api",
+      action: "claim-redaction-test",
+      idToken: "eyJhbGciOi.payload.signature",
+    });
+
+    const [, safeConsoleError, safeConsoleMetadata] =
+      consoleSpy.mock.calls.at(-1) ?? [];
+    expect(safeConsoleError).toBeInstanceOf(Error);
+    expect(safeConsoleError).not.toBe(axiosError);
+    expect((safeConsoleError as Error).message).not.toContain(
+      "zpc1_claim-secret",
+    );
+    expect(Reflect.has(safeConsoleError as object, "config")).toBe(false);
+    expect(safeConsoleMetadata).toEqual(
+      expect.objectContaining({ idToken: "[REDACTED]" }),
+    );
+
+    const [safeRollbarError, safeRollbarMetadata] =
+      mockRollbar.error.mock.calls.at(-1) ?? [];
+    expect(safeRollbarError).toBeInstanceOf(Error);
+    expect((safeRollbarError as Error).message).not.toContain(
+      "zpc1_claim-secret",
+    );
+    expect(Reflect.has(safeRollbarError as object, "config")).toBe(false);
+    expect(safeRollbarMetadata).toEqual(
+      expect.objectContaining({ idToken: "[REDACTED]" }),
+    );
+
+    consoleSpy.mockRestore();
   });
 });

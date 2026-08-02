@@ -25,6 +25,97 @@ const rollbarPromise = isRollbarEnabled
   : Promise.resolve(null);
 
 const isDev = import.meta.env.DEV;
+const REDACTED = "[REDACTED]";
+const MAX_LOG_VALUE_DEPTH = 6;
+
+function isSensitiveLogKey(key: string): boolean {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return (
+    normalized.includes("token") ||
+    normalized.includes("password") ||
+    normalized.includes("secret") ||
+    normalized.includes("authorization") ||
+    normalized.includes("credential") ||
+    normalized === "bearer" ||
+    normalized === "apikey" ||
+    normalized === "devicecode" ||
+    normalized === "usercode" ||
+    normalized === "verificationurlcomplete"
+  );
+}
+
+function redactSensitiveString(value: string): string {
+  return value
+    .replace(/\bBearer\s+[^\s"',;}]+/gi, `Bearer ${REDACTED}`)
+    .replace(/\b(?:zpc1|zpd1|zpk1)_[A-Za-z0-9._~-]+\b/g, REDACTED)
+    .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, REDACTED)
+    .replace(
+      /"([^"]*(?:token|password|secret|authorization|credential|device[_-]?code|user[_-]?code|bearer)[^"]*|api[^a-z0-9"]*key|verification[^a-z0-9"]*url[^a-z0-9"]*complete)"\s*:\s*"[^"]*"/gi,
+      (_match, key: string) => `"${key}":"${REDACTED}"`,
+    )
+    .replace(
+      /([?&](?:access_token|refresh_token|id_token|token|device_code|user_code|code|secret)=)[^&#\s]+/gi,
+      `$1${REDACTED}`,
+    )
+    .replace(/:\/\/([^:/@\s]+):([^@\s]+)@/g, `://$1:${REDACTED}@`);
+}
+
+function sanitizeError(error: Error): Error {
+  const safeError = new Error(redactSensitiveString(error.message));
+  safeError.name = error.name;
+  if (error.stack) {
+    safeError.stack = redactSensitiveString(error.stack);
+  }
+
+  const code = Reflect.get(error, "code");
+  if (typeof code === "string" || typeof code === "number") {
+    Reflect.set(safeError, "code", code);
+  }
+  return safeError;
+}
+
+export function sanitizeLogValue(
+  value: unknown,
+  seen = new WeakSet<object>(),
+  depth = 0,
+): unknown {
+  if (typeof value === "string") return redactSensitiveString(value);
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return value;
+  }
+  if (value instanceof Error) return sanitizeError(value);
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value !== "object") return String(value);
+  if (depth >= MAX_LOG_VALUE_DEPTH) return "[Object]";
+  if (seen.has(value)) return "[Circular]";
+
+  seen.add(value);
+  try {
+    if (Array.isArray(value)) {
+      return value.map((item) => sanitizeLogValue(item, seen, depth + 1));
+    }
+
+    const result: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) {
+      result[key] = isSensitiveLogKey(key)
+        ? REDACTED
+        : sanitizeLogValue(item, seen, depth + 1);
+    }
+    return result;
+  } finally {
+    seen.delete(value);
+  }
+}
+
+function sanitizeLogArgs(args: unknown[]): unknown[] {
+  return args.map((arg) => sanitizeLogValue(arg));
+}
 
 /**
  * Rate limiting for Rollbar error reporting.
@@ -162,17 +253,17 @@ function isErrorMetadata(arg: unknown): arg is ErrorMetadata {
 export const logger = {
   /** Log general information (dev only) */
   log: (...args: unknown[]): void => {
-    if (isDev) console.log(...args);
+    if (isDev) console.log(...sanitizeLogArgs(args));
   },
 
   /** Log debug information (dev only) */
   debug: (...args: unknown[]): void => {
-    if (isDev) console.debug(...args);
+    if (isDev) console.debug(...sanitizeLogArgs(args));
   },
 
   /** Log warnings (dev only) */
   warn: (...args: unknown[]): void => {
-    if (isDev) console.warn(...args);
+    if (isDev) console.warn(...sanitizeLogArgs(args));
   },
 
   /**
@@ -185,7 +276,7 @@ export const logger = {
    * logger.error("Something failed"); // basic usage still works
    */
   error: (...args: unknown[]): void => {
-    console.error(...args);
+    console.error(...sanitizeLogArgs(args));
 
     // Only report to Rollbar on native platforms in production
     if (!isRollbarEnabled) return;
@@ -193,13 +284,19 @@ export const logger = {
     // Check if last argument is metadata
     const lastArg = args[args.length - 1];
     const metadata = isErrorMetadata(lastArg) ? lastArg : undefined;
+    const safeMetadata = metadata
+      ? (sanitizeLogValue(metadata) as ErrorMetadata)
+      : undefined;
     const logArgs = metadata ? args.slice(0, -1) : args;
 
     // Find error object in args
     const error = logArgs.find((a): a is Error => a instanceof Error);
+    const safeError = error ? sanitizeError(error) : undefined;
 
-    // Build message from non-error args
-    const messageArgs = logArgs.filter((a) => !(a instanceof Error));
+    // Build message from sanitized non-error args
+    const messageArgs = logArgs
+      .filter((a) => !(a instanceof Error))
+      .map((a) => sanitizeLogValue(a));
     const message =
       messageArgs.length > 0
         ? messageArgs
@@ -208,30 +305,30 @@ export const logger = {
         : undefined;
 
     // Rate limit: create fingerprint from category + action + message
-    const fingerprint = `${metadata?.category || "general"}:${metadata?.action || "unknown"}:${error?.message || message || ""}`;
+    const fingerprint = `${safeMetadata?.category || "general"}:${safeMetadata?.action || "unknown"}:${safeError?.message || message || ""}`;
     if (!shouldReportError(fingerprint)) {
       return;
     }
 
     // Prepare custom data for Rollbar (include base context, exclude severity)
     const customData: Record<string, unknown> = buildBaseContext();
-    if (metadata) {
+    if (safeMetadata) {
       // Copy all metadata except severity (which is used for method selection)
-      for (const [key, value] of Object.entries(metadata)) {
+      for (const [key, value] of Object.entries(safeMetadata)) {
         if (key !== "severity") {
           customData[key] = value;
         }
       }
     }
-    if (message && error) {
+    if (message && safeError) {
       customData.message = message;
     }
 
-    // Use error if available, otherwise create one from message
-    const errorToReport = error || new Error(message || "Unknown error");
+    // Use sanitized error if available, otherwise create one from sanitized message
+    const errorToReport = safeError || new Error(message || "Unknown error");
 
     // Report with appropriate severity (always include customData with base context)
-    const severity = metadata?.severity || "error";
+    const severity = safeMetadata?.severity || "error";
     const rollbar = rollbarModule?.rollbar;
     if (!rollbar) return;
 
