@@ -2,6 +2,7 @@ import axios, { type InternalAxiosRequestConfig } from "axios";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import { useStatusStore } from "@/lib/store";
+import { logger } from "@/lib/logger";
 import type {
   RequirementsResponse,
   UpdateRequirementsRequest,
@@ -56,11 +57,18 @@ client.interceptors.response.use(
 
 if (import.meta.env.DEV) {
   client.interceptors.request.use((config) => {
-    console.log("Request", config);
+    logger.debug("Online API request", {
+      method: config.method,
+      url: config.url,
+    });
     return config;
   });
   client.interceptors.response.use((res) => {
-    console.log("Response", res);
+    logger.debug("Online API response", {
+      method: res.config.method,
+      url: res.config.url,
+      status: res.status,
+    });
     return res;
   });
 }

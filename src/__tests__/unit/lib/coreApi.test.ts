@@ -10,7 +10,7 @@ import {
   isUnsupportedMediaApiError,
 } from "@/lib/coreApi";
 import { Capacitor } from "@capacitor/core";
-import { Notification } from "@/lib/models.ts";
+import { Method, Notification } from "@/lib/models.ts";
 
 // Mock Capacitor
 vi.mock("@capacitor/core");
@@ -128,6 +128,44 @@ describe("CoreAPI", () => {
     expect(sentData.method).toBe("version");
     expect(sentData.id).toBeDefined();
     expect(sentData.timestamp).toBeDefined();
+  });
+
+  it("should log request metadata without JSON-RPC params", () => {
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+    CoreAPI.call(Method.Run, { text: "plain-private-request-value" }).catch(
+      () => {},
+    );
+
+    const logCall = debugSpy.mock.calls.find(
+      ([message]) => message === "Sending request",
+    );
+    expect(logCall).toBeDefined();
+    expect(logCall?.[1]).toEqual(
+      expect.objectContaining({ method: Method.Run }),
+    );
+    expect(logCall?.[1]).not.toHaveProperty("params");
+    expect(JSON.stringify(logCall)).not.toContain(
+      "plain-private-request-value",
+    );
+
+    debugSpy.mockRestore();
+  });
+
+  it("should log tracked request metadata without JSON-RPC params", () => {
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+    CoreAPI.write({ text: "plain-private-write-value" }).catch(() => {});
+
+    const logCall = debugSpy.mock.calls.find(
+      ([message]) => message === "Sending tracked request",
+    );
+    expect(logCall).toBeDefined();
+    expect(logCall?.[1]).toEqual(
+      expect.objectContaining({ method: Method.ReadersWrite }),
+    );
+    expect(logCall?.[1]).not.toHaveProperty("params");
+    expect(JSON.stringify(logCall)).not.toContain("plain-private-write-value");
+
+    debugSpy.mockRestore();
   });
 
   it("should timeout requests after 30 seconds", async () => {
