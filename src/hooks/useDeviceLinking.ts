@@ -104,7 +104,7 @@ export function useDeviceLinking(enabled: boolean) {
     } catch (error) {
       if (!mountedRef.current) return;
 
-      queryClient.setQueryData(statusQueryKey, { linked: false });
+      void queryClient.invalidateQueries({ queryKey: statusQueryKey });
       logger.error("Device linking failed", error, {
         category: "api",
         action:

@@ -22,19 +22,24 @@ interface OnlineDeviceSetupProps {
   warpActive: boolean | null;
 }
 
-function formatBackupDate(value: string | undefined): string | null {
+const FAST_AVAILABILITY_POLL_COUNT = 3;
+
+function formatBackupDate(
+  value: string | undefined,
+  language: string,
+): string | null {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? null
-    : date.toLocaleDateString(undefined, { dateStyle: "medium" });
+    : date.toLocaleDateString(language, { dateStyle: "medium" });
 }
 
 export function OnlineDeviceSetup({
   connected,
   warpActive,
 }: OnlineDeviceSetupProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const canWriteCoreSettings = useClientCapability(
     ClientCapability.SettingsWrite,
   );
@@ -57,7 +62,9 @@ export function OnlineDeviceSetup({
       if (warpActive === true) return false;
       const availability = query.state.data?.remote.availability;
       if (availability === undefined || availability === "unknown") {
-        return 3000;
+        return query.state.dataUpdateCount < FAST_AVAILABILITY_POLL_COUNT
+          ? 3000
+          : 15_000;
       }
       return availability === "unavailable" ? 15_000 : false;
     },
@@ -84,6 +91,7 @@ export function OnlineDeviceSetup({
   const backupStatusLabel = getBackupStatusLabel(
     remoteStatus,
     backupStatusQuery.data?.activeOperation,
+    i18n.language,
     t,
   );
   const settingsLoading =
@@ -238,7 +246,7 @@ export function OnlineDeviceSetup({
                       </label>
                       <select
                         id="online-backup-schedule"
-                        className="border-bd-input bg-background text-foreground w-full rounded-md border border-solid p-3"
+                        className="border-bd-input bg-background text-foreground w-full rounded-md border border-solid p-3 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                         value={
                           settingsQuery.data?.backupRemoteSchedule ?? "daily"
                         }
@@ -306,6 +314,7 @@ export function OnlineDeviceSetup({
 function getBackupStatusLabel(
   remote: BackupStatusEntry | undefined,
   activeOperation: string | undefined,
+  language: string,
   t: ReturnType<typeof useTranslation>["t"],
 ): string {
   if (activeOperation?.startsWith("remote")) {
@@ -315,7 +324,7 @@ function getBackupStatusLabel(
   if (remote.lastStatus === "failed") {
     return t("online.features.lastBackupFailed");
   }
-  const lastSuccess = formatBackupDate(remote.lastSuccessAt);
+  const lastSuccess = formatBackupDate(remote.lastSuccessAt, language);
   if (lastSuccess) {
     return t("online.features.lastBackup", { date: lastSuccess });
   }

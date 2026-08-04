@@ -5,10 +5,18 @@ import type {
   PurchasesPackage,
 } from "@revenuecat/purchases-capacitor";
 
-const { mockGetAppUserID, mockLogIn, mockGetCustomerInfo } = vi.hoisted(() => ({
+const {
+  mockGetAppUserID,
+  mockLogIn,
+  mockGetCustomerInfo,
+  mockIsAnonymous,
+  mockLogOut,
+} = vi.hoisted(() => ({
   mockGetAppUserID: vi.fn(),
   mockLogIn: vi.fn(),
   mockGetCustomerInfo: vi.fn(),
+  mockIsAnonymous: vi.fn(),
+  mockLogOut: vi.fn(),
 }));
 
 vi.mock("@revenuecat/purchases-capacitor", () => ({
@@ -16,6 +24,8 @@ vi.mock("@revenuecat/purchases-capacitor", () => ({
     getAppUserID: mockGetAppUserID,
     logIn: mockLogIn,
     getCustomerInfo: mockGetCustomerInfo,
+    isAnonymous: mockIsAnonymous,
+    logOut: mockLogOut,
   },
 }));
 
@@ -24,6 +34,7 @@ import {
   getProPackage,
   getPurchaseAccess,
   getWarpPackages,
+  resetPurchasesUser,
   resolvePurchasesReady,
 } from "@/lib/purchasesSetup";
 
@@ -74,6 +85,8 @@ describe("purchasesSetup", () => {
     mockGetAppUserID.mockResolvedValue({ appUserID: "anonymous" });
     mockLogIn.mockResolvedValue({ customerInfo: customerInfo() });
     mockGetCustomerInfo.mockResolvedValue({ customerInfo: customerInfo() });
+    mockIsAnonymous.mockResolvedValue({ isAnonymous: false });
+    mockLogOut.mockResolvedValue(undefined);
   });
 
   it("should select Pro only from the explicit Pro offering", () => {
@@ -135,13 +148,41 @@ describe("purchasesSetup", () => {
     });
 
     const second = ensurePurchasesUser("user-b");
-    await Promise.resolve();
     expect(mockGetAppUserID).toHaveBeenCalledTimes(1);
 
     releaseFirstLogin({ customerInfo: customerInfo() });
-    await first;
-    await second;
+    await Promise.all([first, second]);
 
     expect(mockLogIn).toHaveBeenLastCalledWith({ appUserID: "user-b" });
+    expect(mockLogIn.mock.invocationCallOrder[0]!).toBeLessThan(
+      mockGetAppUserID.mock.invocationCallOrder[1]!,
+    );
+  });
+
+  it("should skip logout when the current user is anonymous", async () => {
+    mockIsAnonymous.mockResolvedValue({ isAnonymous: true });
+
+    const result = await resetPurchasesUser();
+
+    expect(mockLogOut).not.toHaveBeenCalled();
+    expect(mockGetCustomerInfo).toHaveBeenCalledOnce();
+    expect(result).toEqual(customerInfo());
+  });
+
+  it("should ignore the expected anonymous logout error", async () => {
+    mockLogOut.mockRejectedValue(
+      new Error("Cannot log out anonymous app user"),
+    );
+
+    await expect(resetPurchasesUser()).resolves.toEqual(customerInfo());
+    expect(mockGetCustomerInfo).toHaveBeenCalledOnce();
+  });
+
+  it("should rethrow unexpected logout errors", async () => {
+    const error = new Error("network unavailable");
+    mockLogOut.mockRejectedValue(error);
+
+    await expect(resetPurchasesUser()).rejects.toBe(error);
+    expect(mockGetCustomerInfo).not.toHaveBeenCalled();
   });
 });

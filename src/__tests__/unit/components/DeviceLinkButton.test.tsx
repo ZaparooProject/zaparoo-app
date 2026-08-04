@@ -1,18 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
+import type { User } from "@capacitor-firebase/authentication";
 import { render, screen } from "@/test-utils";
 import { DeviceLinkButton } from "@/components/DeviceLinkButton";
+import { useStatusStore } from "@/lib/store";
 
-const { mockNavigate, mockLinkDevice, mockUseDeviceLinking, mockStatus } =
-  vi.hoisted(() => ({
+const { mockNavigate, mockLinkDevice, mockUseDeviceLinking } = vi.hoisted(
+  () => ({
     mockNavigate: vi.fn(),
     mockLinkDevice: vi.fn(),
     mockUseDeviceLinking: vi.fn(),
-    mockStatus: {
-      loggedInUser: { uid: "user-123" } as { uid: string } | null,
-      coreVersion: "2.16.0" as string | null,
-    },
-  }));
+  }),
+);
+
+const signedInUser: User = {
+  displayName: null,
+  email: "user@example.com",
+  emailVerified: true,
+  isAnonymous: false,
+  metadata: {},
+  phoneNumber: null,
+  photoUrl: null,
+  providerData: [],
+  providerId: "password",
+  tenantId: null,
+  uid: "user-123",
+};
 
 vi.mock("@tanstack/react-router", () => ({
   useRouter: () => ({ navigate: mockNavigate }),
@@ -22,16 +35,13 @@ vi.mock("@/hooks/useDeviceLinking", () => ({
   useDeviceLinking: (enabled: boolean) => mockUseDeviceLinking(enabled),
 }));
 
-vi.mock("@/lib/store", () => ({
-  useStatusStore: (selector: (state: typeof mockStatus) => unknown) =>
-    selector(mockStatus),
-}));
-
 describe("DeviceLinkButton", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockStatus.loggedInUser = { uid: "user-123" };
-    mockStatus.coreVersion = "2.16.0";
+    useStatusStore.setState({
+      loggedInUser: signedInUser,
+      coreVersion: "2.16.0",
+    });
     mockUseDeviceLinking.mockReturnValue({
       state: "unlinked",
       linkDevice: mockLinkDevice,
@@ -50,7 +60,7 @@ describe("DeviceLinkButton", () => {
   });
 
   it("should direct signed-out users to Online settings", async () => {
-    mockStatus.loggedInUser = null;
+    useStatusStore.setState({ loggedInUser: null });
     const user = userEvent.setup();
     render(<DeviceLinkButton enabled />);
 
@@ -91,7 +101,7 @@ describe("DeviceLinkButton", () => {
     const { rerender } = render(<DeviceLinkButton enabled={false} />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
 
-    mockStatus.coreVersion = "2.15.9";
+    useStatusStore.setState({ coreVersion: "2.15.9" });
     rerender(<DeviceLinkButton enabled />);
     expect(
       screen.getByRole("button", { name: "online.deviceLink.updateCore" }),

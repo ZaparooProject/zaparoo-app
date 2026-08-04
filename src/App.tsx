@@ -14,6 +14,11 @@ import {
   isPluginAvailable,
 } from "@/lib/capacitorBridge";
 import { useDeepLinks } from "@/lib/deepLinks";
+import {
+  ensurePurchasesUser,
+  getPurchaseAccess,
+  resetPurchasesUser,
+} from "@/lib/purchasesSetup";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
 import { DatabaseIcon, PlayIcon } from "./lib/images";
@@ -38,14 +43,42 @@ import { WhatsNewInitializer } from "./components/WhatsNewInitializer";
 import { initDeviceInfo, logger } from "./lib/logger";
 import { getSubscriptionStatus } from "./lib/onlineApi";
 import {
-  ensurePurchasesUser,
-  getPurchaseAccess,
-  resetPurchasesUser,
-} from "./lib/purchasesSetup";
-import {
   A11yAnnouncerProvider,
   useAnnouncer,
 } from "./components/A11yAnnouncer";
+
+const SUBSCRIPTION_STATUS_RETRY_DELAY_MS = 500;
+
+function waitForSubscriptionRetry(signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.reject(signal.reason);
+
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(
+      resolve,
+      SUBSCRIPTION_STATUS_RETRY_DELAY_MS,
+    );
+    signal.addEventListener(
+      "abort",
+      () => {
+        window.clearTimeout(timeout);
+        reject(signal.reason);
+      },
+      { once: true },
+    );
+  });
+}
+
+async function getSubscriptionStatusWithRetry(
+  signal: AbortSignal,
+): Promise<Awaited<ReturnType<typeof getSubscriptionStatus>>> {
+  try {
+    return await getSubscriptionStatus(signal);
+  } catch (error) {
+    if (signal.aborted) throw error;
+    await waitForSubscriptionRetry(signal);
+    return getSubscriptionStatus(signal);
+  }
+}
 
 // Component to initialize queue processors and passive listeners after preferences hydrate
 // This ensures sessionManager.launchOnScan is set correctly before processing.
@@ -306,14 +339,16 @@ export default function App() {
     let cleanup: (() => void) | undefined;
     let active = true;
     let authChangeGeneration = 0;
+    let subscriptionController: AbortController | null = null;
 
     if (!isPluginAvailable("FirebaseAuthentication")) {
-      clearOnlinePremiumAccess();
       return undefined;
     }
 
     FirebaseAuthentication.addListener("authStateChange", async (change) => {
       const generation = ++authChangeGeneration;
+      subscriptionController?.abort();
+      subscriptionController = null;
 
       // Refresh user data and token to get latest claims (e.g., email_verified)
       // This must happen before any API calls that depend on token claims
@@ -368,8 +403,12 @@ export default function App() {
 
       if (change.user) {
         const appUserID = change.user.uid;
+        const controller = new AbortController();
+        subscriptionController = controller;
         try {
-          const { is_premium } = await getSubscriptionStatus();
+          const { is_premium } = await getSubscriptionStatusWithRetry(
+            controller.signal,
+          );
           if (
             !active ||
             generation !== authChangeGeneration ||
@@ -379,11 +418,16 @@ export default function App() {
           }
           setOnlinePremiumAccess(is_premium);
         } catch (e) {
+          if (controller.signal.aborted) return;
           logger.error("Failed to check subscription status:", e, {
             category: "api",
             action: "getSubscription",
             severity: "warning",
           });
+        } finally {
+          if (subscriptionController === controller) {
+            subscriptionController = null;
+          }
         }
       }
     })
@@ -397,6 +441,7 @@ export default function App() {
     return () => {
       active = false;
       authChangeGeneration += 1;
+      subscriptionController?.abort();
       cleanup?.();
     };
   }, [

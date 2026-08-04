@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Preferences } from "@capacitor/preferences";
-import { usePreferencesStore } from "../../../lib/preferencesStore";
-import { act, renderHook, waitFor } from "../../../test-utils";
-import { isPluginAvailable } from "../../../lib/capacitorBridge";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { act, renderHook, waitFor } from "@/test-utils";
+import { isPluginAvailable } from "@/lib/capacitorBridge";
 
 // Mock Capacitor Preferences
 vi.mock("@capacitor/preferences", () => ({
@@ -13,7 +13,7 @@ vi.mock("@capacitor/preferences", () => ({
   },
 }));
 
-vi.mock("../../../lib/capacitorBridge", () => ({
+vi.mock("@/lib/capacitorBridge", () => ({
   isCapacitorPluginUnavailableError: vi.fn((error: unknown) =>
     error instanceof Error ? error.message.includes("not implemented") : false,
   ),
@@ -22,7 +22,7 @@ vi.mock("../../../lib/capacitorBridge", () => ({
 }));
 
 // Mock sessionManager
-vi.mock("../../../lib/nfc", () => ({
+vi.mock("@/lib/nfc", () => ({
   sessionManager: {
     setShouldRestart: vi.fn(),
     setLaunchOnScan: vi.fn(),
@@ -197,6 +197,34 @@ describe("usePreferencesStore", () => {
 
       expect(result.current.lifetimeProAccess).toBe(true);
       expect(result.current.onlinePremiumAccess).toBe(false);
+      expect(result.current.launcherAccess).toBe(true);
+    });
+
+    it("should preserve cached access while lifetime Pro status is pending", () => {
+      usePreferencesStore.setState({ launcherAccess: true });
+      const { result } = renderHook(() => usePreferencesStore());
+
+      act(() => {
+        result.current.setOnlinePremiumAccess(false);
+      });
+
+      expect(result.current.lifetimeProAccess).toBeNull();
+      expect(result.current.onlinePremiumAccess).toBe(false);
+      expect(result.current.launcherAccess).toBe(true);
+    });
+
+    it("should preserve cached access during account-state transitions", () => {
+      usePreferencesStore.setState({ launcherAccess: true });
+      const { result } = renderHook(() => usePreferencesStore());
+
+      act(() => {
+        result.current.beginOnlinePremiumAccessCheck();
+      });
+      expect(result.current.launcherAccess).toBe(true);
+
+      act(() => {
+        result.current.clearOnlinePremiumAccess();
+      });
       expect(result.current.launcherAccess).toBe(true);
     });
 

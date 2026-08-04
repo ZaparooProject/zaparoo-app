@@ -178,7 +178,11 @@ export function OnlinePage() {
   const displayedWarpActive =
     purchasePreview === "live"
       ? onlinePremiumAccess
-      : purchasePreview === "warp";
+      : purchasePreview === "warp"
+        ? true
+        : purchasePreview === "free" || purchasePreview === "pro"
+          ? false
+          : null;
 
   useEffect(() => {
     mfaPendingRef.current = mfaPending;

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
+import type { User } from "@capacitor-firebase/authentication";
 import { render, screen } from "@/test-utils";
+import { useStatusStore } from "@/lib/store";
 
 const {
   mockUseDeviceLinking,
@@ -8,18 +10,27 @@ const {
   mockSettings,
   mockSettingsUpdate,
   mockBackupStatus,
-  mockStatus,
 } = vi.hoisted(() => ({
   mockUseDeviceLinking: vi.fn(),
   mockUseClientCapability: vi.fn(),
   mockSettings: vi.fn(),
   mockSettingsUpdate: vi.fn(),
   mockBackupStatus: vi.fn(),
-  mockStatus: {
-    loggedInUser: { uid: "user-123" },
-    coreVersion: "2.16.0" as string | null,
-  },
 }));
+
+const signedInUser: User = {
+  displayName: null,
+  email: "user@example.com",
+  emailVerified: true,
+  isAnonymous: false,
+  metadata: {},
+  phoneNumber: null,
+  photoUrl: null,
+  providerData: [],
+  providerId: "password",
+  tenantId: null,
+  uid: "user-123",
+};
 
 vi.mock("@tanstack/react-router", () => ({
   useRouter: () => ({ navigate: vi.fn() }),
@@ -31,11 +42,6 @@ vi.mock("@/hooks/useDeviceLinking", () => ({
 
 vi.mock("@/hooks/useClientCapability", () => ({
   useClientCapability: () => mockUseClientCapability(),
-}));
-
-vi.mock("@/lib/store", () => ({
-  useStatusStore: (selector: (state: typeof mockStatus) => unknown) =>
-    selector(mockStatus),
 }));
 
 vi.mock("@/lib/coreApi", () => ({
@@ -80,7 +86,10 @@ function backupStatus(overrides: Record<string, unknown> = {}) {
 describe("OnlineDeviceSetup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockStatus.coreVersion = "2.16.0";
+    useStatusStore.setState({
+      loggedInUser: signedInUser,
+      coreVersion: "2.16.0",
+    });
     mockUseDeviceLinking.mockReturnValue({
       state: "unlinked",
       linkDevice: vi.fn(),
@@ -287,6 +296,9 @@ describe("OnlineDeviceSetup", () => {
   });
 
   it("should show the last successful cloud backup date", async () => {
+    const formatDate = vi
+      .spyOn(Date.prototype, "toLocaleDateString")
+      .mockReturnValue("Jan 1, 2030");
     mockUseDeviceLinking.mockReturnValue({
       state: "linked",
       linkDevice: vi.fn(),
@@ -303,5 +315,7 @@ describe("OnlineDeviceSetup", () => {
     expect(
       await screen.findByText("online.features.lastBackup"),
     ).toBeInTheDocument();
+    expect(formatDate).toHaveBeenCalledWith("en", { dateStyle: "medium" });
+    formatDate.mockRestore();
   });
 });

@@ -154,8 +154,8 @@ function WarpSubscriptionPreview({
 function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
   const { t } = useTranslation();
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
-  const lifetimeProAccess = usePreferencesStore(
-    (state) => state.lifetimeProAccess === true,
+  const lifetimeProAccess = usePreferencesStore((state) =>
+    state._hasHydrated ? state.lifetimeProAccess === true : null,
   );
   const {
     subscription,
@@ -187,7 +187,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
         ? t("online.warp.providerPlayStore")
         : revenueCatSubscription?.store === "PADDLE"
           ? t("online.warp.providerPaddle")
-          : revenueCatSubscription?.store;
+          : null;
   const planLabel =
     revenueCatSubscription?.billing_period === "annual"
       ? t("online.warp.annual")
@@ -292,13 +292,15 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
             {renewalSummary && (
               <p className="text-muted-foreground text-sm">{renewalSummary}</p>
             )}
-            <p className="text-muted-foreground text-sm">
-              {t(
-                lifetimeProAccess
-                  ? "online.warp.proOwned"
-                  : "online.warp.proIncluded",
-              )}
-            </p>
+            {lifetimeProAccess !== null && (
+              <p className="text-muted-foreground text-sm">
+                {t(
+                  lifetimeProAccess
+                    ? "online.warp.proOwned"
+                    : "online.warp.proIncluded",
+                )}
+              </p>
+            )}
           </div>
         ) : (
           <p className="text-muted-foreground text-sm">
@@ -448,7 +450,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
               href="https://zaparoo.com/terms"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline"
+              className="rounded-sm underline focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
             >
               {t("online.termsOfService")}
             </a>{" "}
@@ -457,7 +459,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
               href="https://zaparoo.com/privacy"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline"
+              className="rounded-sm underline focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
             >
               {t("online.privacyPolicy")}
             </a>

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen, waitFor } from "../../../test-utils";
+import { act, render, screen, waitFor } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
+import type { User } from "@capacitor-firebase/authentication";
 import toast from "react-hot-toast";
 import { NotSignedInError } from "@/lib/onlineApi";
 import { usePurchasePreviewStore } from "@/lib/purchasePreviewStore";
@@ -45,11 +46,42 @@ const {
   mockUpdateRequirements: vi.fn(),
   mockSetLoggedInUser: vi.fn(),
   mockState: {
-    loggedInUser: null as any,
+    loggedInUser: null as User | null,
     platform: "web" as string,
     connected: false,
   },
 }));
+
+type UserFixture = Omit<Partial<User>, "providerData"> & {
+  providerData?: Array<{ providerId: string }>;
+};
+
+function authenticatedUser(overrides: UserFixture = {}): User {
+  const { providerData = [{ providerId: "password" }], ...userOverrides } =
+    overrides;
+
+  return {
+    displayName: null,
+    email: null,
+    emailVerified: true,
+    isAnonymous: false,
+    metadata: {},
+    phoneNumber: null,
+    photoUrl: null,
+    providerData: providerData.map(({ providerId }) => ({
+      displayName: null,
+      email: null,
+      phoneNumber: null,
+      photoUrl: null,
+      providerId,
+      uid: "test-provider-uid",
+    })),
+    providerId: providerData[0]?.providerId ?? "password",
+    tenantId: null,
+    uid: "test-uid",
+    ...userOverrides,
+  };
+}
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
@@ -266,13 +298,13 @@ describe("Settings Online Route", () => {
 
   describe("rendering - logged in state", () => {
     beforeEach(() => {
-      mockState.loggedInUser = {
+      mockState.loggedInUser = authenticatedUser({
         email: "loggedin@example.com",
         uid: "logged-in-uid",
         displayName: "Logged In User",
         emailVerified: true,
         providerData: [{ providerId: "password" }],
-      };
+      });
     });
 
     it("should render user email", () => {
@@ -330,6 +362,34 @@ describe("Settings Online Route", () => {
       );
     });
 
+    it.each(["free", "pro"] as const)(
+      "should pass inactive %s preview access into device setup",
+      (state) => {
+        usePurchasePreviewStore.getState().setPreviewState(state);
+
+        renderComponent();
+
+        expect(screen.getByTestId("online-device-setup")).toHaveAttribute(
+          "data-warp-active",
+          "false",
+        );
+      },
+    );
+
+    it.each(["loading", "error"] as const)(
+      "should preserve unresolved %s preview access in device setup",
+      (state) => {
+        usePurchasePreviewStore.getState().setPreviewState(state);
+
+        renderComponent();
+
+        expect(screen.getByTestId("online-device-setup")).toHaveAttribute(
+          "data-warp-active",
+          "null",
+        );
+      },
+    );
+
     it("should present device setup before Warp membership", () => {
       mockState.platform = "ios";
 
@@ -369,10 +429,10 @@ describe("Settings Online Route", () => {
     });
 
     it("should not render change password button for OAuth users", () => {
-      mockState.loggedInUser = {
+      mockState.loggedInUser = authenticatedUser({
         ...mockState.loggedInUser,
         providerData: [{ providerId: "google.com" }],
-      };
+      });
       renderComponent();
       expect(
         screen.queryByRole("button", { name: "online.changePassword" }),
@@ -380,31 +440,31 @@ describe("Settings Online Route", () => {
     });
 
     it("should show Google login indicator for Google users", () => {
-      mockState.loggedInUser = {
+      mockState.loggedInUser = authenticatedUser({
         ...mockState.loggedInUser,
         providerData: [{ providerId: "google.com" }],
-      };
+      });
       renderComponent();
       expect(screen.getByText("online.loggedInWithGoogle")).toBeInTheDocument();
     });
 
     it("should show Apple login indicator for Apple users", () => {
-      mockState.loggedInUser = {
+      mockState.loggedInUser = authenticatedUser({
         ...mockState.loggedInUser,
         providerData: [{ providerId: "apple.com" }],
-      };
+      });
       renderComponent();
       expect(screen.getByText("online.loggedInWithApple")).toBeInTheDocument();
     });
 
     it("should not infer latest login method from a linked provider", () => {
-      mockState.loggedInUser = {
+      mockState.loggedInUser = authenticatedUser({
         ...mockState.loggedInUser,
         providerData: [
           { providerId: "google.com" },
           { providerId: "password" },
         ],
-      };
+      });
 
       renderComponent();
 
@@ -451,13 +511,13 @@ describe("Settings Online Route", () => {
 
   describe("logout", () => {
     beforeEach(() => {
-      mockState.loggedInUser = {
+      mockState.loggedInUser = authenticatedUser({
         email: "test@example.com",
         uid: "test-uid",
         displayName: "Test User",
         emailVerified: true,
         providerData: [{ providerId: "password" }],
-      };
+      });
     });
 
     it("should call Firebase signOut and clear user state on logout", async () => {
@@ -566,13 +626,13 @@ describe("Settings Online Route", () => {
 
   describe("external links", () => {
     beforeEach(() => {
-      mockState.loggedInUser = {
+      mockState.loggedInUser = authenticatedUser({
         email: "test@example.com",
         uid: "test-uid",
         displayName: "Test User",
         emailVerified: true,
         providerData: [{ providerId: "password" }],
-      };
+      });
     });
 
     it("should open dashboard when button clicked", async () => {
@@ -591,13 +651,13 @@ describe("Settings Online Route", () => {
 
   describe("password reset", () => {
     beforeEach(() => {
-      mockState.loggedInUser = {
+      mockState.loggedInUser = authenticatedUser({
         email: "test@example.com",
         uid: "test-uid",
         displayName: "Test User",
         emailVerified: true,
         providerData: [{ providerId: "password" }],
-      };
+      });
     });
 
     it("should send password reset email when change password clicked", async () => {
@@ -639,13 +699,13 @@ describe("Settings Online Route", () => {
 
   describe("account deletion", () => {
     beforeEach(() => {
-      mockState.loggedInUser = {
+      mockState.loggedInUser = authenticatedUser({
         email: "test@example.com",
         uid: "test-uid",
         displayName: "Test User",
         emailVerified: true,
         providerData: [{ providerId: "password" }],
-      };
+      });
     });
 
     it("should open delete confirmation dialog", async () => {
@@ -790,7 +850,7 @@ describe("Settings Online Route", () => {
       await waitFor(() => {
         expect(mockSetLoggedInUser).toHaveBeenCalled();
       });
-      mockState.loggedInUser = {
+      mockState.loggedInUser = authenticatedUser({
         email: "test@example.com",
         uid: "test-uid",
         displayName: "Test User",
@@ -799,7 +859,7 @@ describe("Settings Online Route", () => {
           { providerId: "google.com" },
           { providerId: "password" },
         ],
-      };
+      });
       view.rerender(<Online />);
 
       expect(
@@ -1357,13 +1417,13 @@ describe("Settings Online Route", () => {
 
   describe("account deletion error handling", () => {
     beforeEach(() => {
-      mockState.loggedInUser = {
+      mockState.loggedInUser = authenticatedUser({
         email: "test@example.com",
         uid: "test-uid",
         displayName: "Test User",
         emailVerified: true,
         providerData: [{ providerId: "password" }],
-      };
+      });
     });
 
     it("should show error for confirmation mismatch", async () => {
@@ -1482,13 +1542,13 @@ describe("Settings Online Route", () => {
 
   describe("scheduled deletion cancellation", () => {
     beforeEach(() => {
-      mockState.loggedInUser = {
+      mockState.loggedInUser = authenticatedUser({
         email: "test@example.com",
         uid: "test-uid",
         displayName: "Test User",
         emailVerified: true,
         providerData: [{ providerId: "password" }],
-      };
+      });
     });
 
     it("should show cancel deletion option when deletion is scheduled", async () => {
@@ -1562,13 +1622,13 @@ describe("Settings Online Route", () => {
       mockCancelAccountDeletion.mockRejectedValueOnce(new Error("Failed"));
 
       // Set up a user with scheduled deletion
-      mockState.loggedInUser = {
+      mockState.loggedInUser = authenticatedUser({
         email: "test@example.com",
         uid: "test-uid",
         displayName: "Test User",
         emailVerified: true,
         providerData: [{ providerId: "password" }],
-      };
+      });
 
       // We need to trigger the scheduled deletion state first
       mockDeleteAccount.mockResolvedValueOnce({

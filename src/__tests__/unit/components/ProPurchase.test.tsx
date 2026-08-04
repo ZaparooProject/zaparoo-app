@@ -1,4 +1,4 @@
-import { render, screen, waitFor, renderHook, act } from "../../../test-utils";
+import { act, render, renderHook, screen, waitFor } from "@/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { useProPurchase } from "@/components/ProPurchase";
@@ -81,6 +81,8 @@ vi.mock("@/lib/logger", () => ({
     debug: vi.fn(),
   },
 }));
+
+const mockSetLaunchOnScan = vi.fn();
 
 const { mockT } = vi.hoisted(() => ({
   mockT: (key: string, options?: Record<string, string>) => {
@@ -184,6 +186,8 @@ describe("useProPurchase", () => {
       launcherAccess: false,
       lifetimeProAccess: false,
       onlinePremiumAccess: false,
+      launchOnScan: false,
+      setLaunchOnScan: mockSetLaunchOnScan,
     });
     const { useStatusStore } = await import("@/lib/store");
     useStatusStore.setState({ proPurchaseModalOpen: false });
@@ -414,11 +418,42 @@ describe("useProPurchase", () => {
       screen.getByRole("button", { name: "scan.purchaseProAction" }),
     );
 
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
     await waitFor(() => {
       expect(Purchases.purchasePackage).toHaveBeenCalledWith({
         aPackage: proPackage,
       });
+      expect(usePreferencesStore.getState().lifetimeProAccess).toBe(true);
+      expect(mockSetLaunchOnScan).toHaveBeenCalledWith(true);
+      expect(result.current.proPurchaseModalOpen).toBe(false);
     });
+  });
+
+  it("should show a purchase error without enabling launch on scan", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const toast = (await import("react-hot-toast")).default;
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+    vi.mocked(Purchases.purchasePackage).mockRejectedValue(
+      new Error("payment declined"),
+    );
+
+    const { result } = renderHook(() => useProPurchase());
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+    act(() => result.current.setProPurchaseModalOpen(true));
+    render(<result.current.PurchaseModal />);
+
+    await user.click(
+      screen.getByRole("button", { name: "scan.purchaseProAction" }),
+    );
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("scan.purchaseProFailed");
+    });
+    expect(mockSetLaunchOnScan).not.toHaveBeenCalled();
+    expect(result.current.proPurchaseModalOpen).toBe(true);
   });
 
   it("should show unsupported state on web platform", async () => {

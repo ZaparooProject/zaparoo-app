@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen, act } from "../../test-utils";
+import { act, render, screen, within } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -25,6 +25,13 @@ import {
   ConnectionContextValue,
 } from "@/hooks/useConnection";
 import { ReactNode } from "react";
+
+function expectVisibleEmptyValues(regionName: string, count: number) {
+  const region = screen.getByRole("region", { name: regionName });
+  const emptyValues = within(region).getAllByText("none", { exact: true });
+  expect(emptyValues).toHaveLength(count);
+  emptyValues.forEach((value) => expect(value).toBeVisible());
+}
 
 // Helper to provide connection context
 function ConnectionWrapper({
@@ -99,7 +106,7 @@ describe("Home Page Integration", () => {
       // Heading is always visible
       expect(screen.getByText("scan.lastScannedHeading")).toBeInTheDocument();
       // Empty values are explicit
-      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
+      expectVisibleEmptyValues("scan.lastScannedHeading", 2);
     });
 
     it("should show token text when scanned", () => {
@@ -143,7 +150,7 @@ describe("Home Page Integration", () => {
       // UID should be shown (use regex for substring match)
       expect(screen.getByText(/abc123def456ab/)).toBeInTheDocument();
       // Text field shows an explicit empty value
-      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
+      expectVisibleEmptyValues("scan.lastScannedHeading", 1);
     });
 
     it("should update when props change", () => {
@@ -155,7 +162,7 @@ describe("Home Page Integration", () => {
       );
 
       // Initially shows explicit empty values
-      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
+      expectVisibleEmptyValues("scan.lastScannedHeading", 2);
 
       // Simulate token scan
       const newToken = {
@@ -194,7 +201,7 @@ describe("Home Page Integration", () => {
       // Heading is always visible
       expect(screen.getByText("scan.nowPlayingHeading")).toBeInTheDocument();
       // Empty values are explicit
-      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
+      expectVisibleEmptyValues("scan.nowPlayingHeading", 2);
     });
 
     it("should show media info when playing", () => {
@@ -412,7 +419,7 @@ describe("Home Page Integration", () => {
       );
 
       // Initially shows explicit empty values
-      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
+      expectVisibleEmptyValues("scan.lastScannedHeading", 2);
 
       // Update store
       act(() => {
@@ -449,7 +456,7 @@ describe("Home Page Integration", () => {
       );
 
       // Initially shows explicit empty values
-      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
+      expectVisibleEmptyValues("scan.nowPlayingHeading", 2);
 
       // Update store
       act(() => {

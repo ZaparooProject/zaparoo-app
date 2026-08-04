@@ -129,7 +129,7 @@ describe("DeviceConnectionCard", () => {
     ["admin", "connection.clientRoleAdmin"],
     ["member", "connection.clientRoleMember"],
   ] as const)(
-    "shows the current %s client role on supported Core",
+    "should show the current %s client role on supported Core",
     (role, label) => {
       useStatusStore.setState({
         coreVersion: "2.16.0",
@@ -147,7 +147,7 @@ describe("DeviceConnectionCard", () => {
     },
   );
 
-  it("hides client role on older Core versions", () => {
+  it("should hide the client role on older Core versions", () => {
     useStatusStore.setState({
       coreVersion: "2.15.0",
       corePlatform: "MiSTer",

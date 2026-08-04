@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
+import toast from "react-hot-toast";
 import type { PurchasesPackage } from "@revenuecat/purchases-capacitor";
-import { render, screen } from "@/test-utils";
+import { render, screen, waitFor } from "@/test-utils";
 import { usePurchasePreviewStore } from "@/lib/purchasePreviewStore";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 
@@ -75,7 +76,10 @@ function hookState(overrides: Record<string, unknown> = {}) {
 describe("WarpSubscription", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    usePreferencesStore.setState({ lifetimeProAccess: false });
+    usePreferencesStore.setState({
+      _hasHydrated: true,
+      lifetimeProAccess: false,
+    });
     mockUseWarpSubscription.mockReturnValue(hookState());
     mockPurchase.mockResolvedValue("active");
     mockRestore.mockResolvedValue("not_found");
@@ -242,5 +246,122 @@ describe("WarpSubscription", () => {
     expect(
       screen.getByRole("button", { name: "online.warp.retry" }),
     ).toBeInTheDocument();
+  });
+
+  it.each([
+    ["active", "success", "online.warp.purchaseSuccess"],
+    ["pending", "default", "online.warp.paymentPending"],
+    ["activation_pending", "default", "online.warp.activationPending"],
+    ["identity_error", "error", "online.warp.accountMismatch"],
+    ["failed", "error", "online.warp.purchaseFailed"],
+  ] as const)(
+    "should surface the %s purchase result",
+    async (result, toastType, message) => {
+      mockPurchase.mockResolvedValue(result);
+      const user = userEvent.setup();
+      render(<WarpSubscription appUserID="user-123" />);
+
+      await user.click(screen.getByRole("button", { name: "online.warp.get" }));
+      await user.click(
+        screen.getByRole("button", { name: "online.warp.subscribe" }),
+      );
+
+      await waitFor(() => expect(mockPurchase).toHaveBeenCalledOnce());
+      const toastMethod = toastType === "default" ? toast : toast[toastType];
+      expect(toastMethod).toHaveBeenCalledWith(message);
+    },
+  );
+
+  it.each(["cancelled", "busy"] as const)(
+    "should not show an error for the %s purchase result",
+    async (result) => {
+      mockPurchase.mockResolvedValue(result);
+      const user = userEvent.setup();
+      render(<WarpSubscription appUserID="user-123" />);
+
+      await user.click(screen.getByRole("button", { name: "online.warp.get" }));
+      await user.click(
+        screen.getByRole("button", { name: "online.warp.subscribe" }),
+      );
+
+      await waitFor(() => expect(mockPurchase).toHaveBeenCalledOnce());
+      expect(toast).not.toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.error).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["active", "success", "online.warp.restoreSuccess"],
+    ["pro_restored", "success", "online.warp.restoreProSuccess"],
+    ["activation_pending", "default", "online.warp.activationPending"],
+    ["not_found", "error", "online.warp.restoreNotFound"],
+    ["failed", "error", "online.warp.restoreFailed"],
+  ] as const)(
+    "should surface the %s restore result",
+    async (result, toastType, message) => {
+      mockRestore.mockResolvedValue(result);
+      const user = userEvent.setup();
+      render(<WarpSubscription appUserID="user-123" />);
+
+      await user.click(
+        screen.getByRole("button", { name: "online.warp.restore" }),
+      );
+
+      await waitFor(() => expect(mockRestore).toHaveBeenCalledOnce());
+      const toastMethod = toastType === "default" ? toast : toast[toastType];
+      expect(toastMethod).toHaveBeenCalledWith(message);
+    },
+  );
+
+  it.each([
+    ["unavailable", "online.warp.manageUnavailable"],
+    ["failed", "online.warp.manageFailed"],
+  ] as const)(
+    "should surface the %s management result",
+    async (result, message) => {
+      mockManage.mockResolvedValue(result);
+      mockUseWarpSubscription.mockReturnValue(
+        hookState({
+          subscription: {
+            is_premium: true,
+            sources: ["revenuecat"],
+            revenuecat: { active: true, will_renew: true },
+          },
+          packages: null,
+        }),
+      );
+      const user = userEvent.setup();
+      render(<WarpSubscription appUserID="user-123" />);
+
+      await user.click(
+        screen.getByRole("button", { name: "online.warp.manage" }),
+      );
+
+      await waitFor(() => expect(mockManage).toHaveBeenCalledOnce());
+      expect(toast.error).toHaveBeenCalledWith(message);
+    },
+  );
+
+  it("should open management without showing an error", async () => {
+    mockUseWarpSubscription.mockReturnValue(
+      hookState({
+        subscription: {
+          is_premium: true,
+          sources: ["revenuecat"],
+          revenuecat: { active: true, will_renew: true },
+        },
+        packages: null,
+      }),
+    );
+    const user = userEvent.setup();
+    render(<WarpSubscription appUserID="user-123" />);
+
+    await user.click(
+      screen.getByRole("button", { name: "online.warp.manage" }),
+    );
+
+    await waitFor(() => expect(mockManage).toHaveBeenCalledOnce());
+    expect(toast.error).not.toHaveBeenCalled();
   });
 });

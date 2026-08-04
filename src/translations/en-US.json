@@ -137,6 +137,7 @@
       "purchaseProLoading": "Checking Zaparoo Pro availability...",
       "purchaseProUnavailable": "Zaparoo Pro is not available for purchase right now. Update the App and try again, or sign in and restore purchases from Zaparoo Online settings if you already bought Pro.",
       "purchaseProOfferingsError": "Zaparoo Pro purchase options could not be loaded. Check your connection and try again, or sign in and restore purchases from Zaparoo Online settings if you already bought Pro.",
+      "purchaseProFailed": "Zaparoo Pro purchase failed",
       "purchaseProUnavailableAction": "Purchase unavailable",
       "completeIntro": "Let's Zaparoo",
       "statusScanning": "Scanning for NFC tag",

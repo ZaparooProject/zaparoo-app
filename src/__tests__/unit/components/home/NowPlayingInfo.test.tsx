@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "../../../../test-utils";
+import { render, screen, within } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { NowPlayingInfo } from "@/components/home/NowPlayingInfo";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -185,7 +185,12 @@ describe("NowPlayingInfo", () => {
       render(<NowPlayingInfo {...defaultProps} mediaName="" systemName="" />);
 
       // Assert - Name and system are empty
-      expect(screen.getAllByText("none")).toHaveLength(2);
+      const region = screen.getByRole("region", {
+        name: "scan.nowPlayingHeading",
+      });
+      const emptyValues = within(region).getAllByText("none", { exact: true });
+      expect(emptyValues).toHaveLength(2);
+      emptyValues.forEach((value) => expect(value).toBeVisible());
     });
   });
 

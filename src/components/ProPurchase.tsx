@@ -5,6 +5,7 @@ import {
 } from "@revenuecat/purchases-capacitor";
 import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
+import toast from "react-hot-toast";
 import {
   Dialog,
   DialogContent,
@@ -108,10 +109,11 @@ const ProPurchaseModal = (props: {
                       aPackage: purchasePackage,
                     }),
                 );
-                props.setLifetimeProAccess(
-                  getPurchaseAccess(purchase.customerInfo).lifetimePro,
-                );
-                usePreferencesStore.getState().setLaunchOnScan(true);
+                const access = getPurchaseAccess(purchase.customerInfo);
+                props.setLifetimeProAccess(access.lifetimePro);
+                if (access.lifetimePro) {
+                  usePreferencesStore.getState().setLaunchOnScan(true);
+                }
                 props.setProPurchaseModalOpen(false);
                 logger.log("Pro purchase completed", {
                   platform: Capacitor.getPlatform(),
@@ -126,6 +128,7 @@ const ProPurchaseModal = (props: {
                   action: "purchasePackage",
                   severity: "warning",
                 });
+                toast.error(t("scan.purchaseProFailed"));
               }
             })();
           }}
@@ -208,11 +211,7 @@ export const useProPurchase = () => {
     // Fallback if not hydrated yet (shouldn't happen normally)
     Purchases.getCustomerInfo()
       .then((info) => {
-        if (info.customerInfo.entitlements?.active?.tapto_launcher) {
-          setLifetimeProAccess(true);
-        } else {
-          setLifetimeProAccess(false);
-        }
+        setLifetimeProAccess(getPurchaseAccess(info.customerInfo).lifetimePro);
       })
       .catch((e) => {
         logger.error("customer info error", e, {

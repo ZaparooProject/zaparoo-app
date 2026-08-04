@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "../../../../test-utils";
+import { render, screen } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { LastScannedInfo } from "@/components/home/LastScannedInfo";
 import { TokenResponse, ScanResult } from "@/lib/models";
@@ -80,7 +80,7 @@ describe("LastScannedInfo", () => {
       );
 
       // Assert - Time and text are empty (UID hidden when equal to text)
-      expect(screen.getAllByText("none").length).toBeGreaterThanOrEqual(2);
+      expect(screen.getAllByText("none", { exact: true })).toHaveLength(2);
     });
   });
 

@@ -8,8 +8,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, waitFor } from "../../../test-utils";
-import { useProAccessCheck } from "../../../hooks/useProAccessCheck";
+import { renderHook, waitFor } from "@/test-utils";
+import { useProAccessCheck } from "@/hooks/useProAccessCheck";
 
 // Create hoisted mocks
 const {
@@ -18,6 +18,7 @@ const {
   mockIsPluginAvailable,
   mockGetCustomerInfo,
   mockLogger,
+  getPurchaseAccessStub,
 } = vi.hoisted(() => ({
   mockGetPlatform: vi.fn().mockReturnValue("ios"),
   mockIsNativePlatform: vi.fn().mockReturnValue(true),
@@ -27,6 +28,12 @@ const {
     log: vi.fn(),
     error: vi.fn(),
   },
+  getPurchaseAccessStub: (customerInfo: {
+    entitlements?: { active?: Record<string, unknown> };
+  }) => ({
+    lifetimePro: Boolean(customerInfo.entitlements?.active?.tapto_launcher),
+    warp: Boolean(customerInfo.entitlements?.active?.warp),
+  }),
 }));
 
 // Mock Capacitor
@@ -57,27 +64,22 @@ vi.mock("@revenuecat/purchases-capacitor", () => ({
 // purchasesReady resolves immediately in tests
 vi.mock("@/lib/purchasesSetup", () => ({
   purchasesReady: Promise.resolve(),
-  getPurchaseAccess: (customerInfo: {
-    entitlements?: { active?: Record<string, unknown> };
-  }) => ({
-    lifetimePro: Boolean(customerInfo.entitlements?.active?.tapto_launcher),
-    warp: Boolean(customerInfo.entitlements?.active?.warp),
-  }),
+  getPurchaseAccess: getPurchaseAccessStub,
 }));
 
 // Mock logger
-vi.mock("../../../lib/logger", () => ({
+vi.mock("@/lib/logger", () => ({
   logger: mockLogger,
 }));
 
 // Mock preferences store
-const mockSetLauncherAccess = vi.fn();
+const mockSetLifetimeProAccess = vi.fn();
 const mockSetProAccessHydrated = vi.fn();
 
-vi.mock("../../../lib/preferencesStore", () => ({
+vi.mock("@/lib/preferencesStore", () => ({
   usePreferencesStore: vi.fn((selector: (state: unknown) => unknown) => {
     const state = {
-      setLifetimeProAccess: mockSetLauncherAccess,
+      setLifetimeProAccess: mockSetLifetimeProAccess,
       setProAccessHydrated: mockSetProAccessHydrated,
     };
     return selector(state);
@@ -125,8 +127,8 @@ describe("useProAccessCheck", () => {
       // Should NOT call RevenueCat
       expect(mockGetCustomerInfo).not.toHaveBeenCalled();
 
-      // Should NOT set launcher access (keeps cached value)
-      expect(mockSetLauncherAccess).not.toHaveBeenCalled();
+      // Should NOT set lifetime Pro access (keeps cached value)
+      expect(mockSetLifetimeProAccess).not.toHaveBeenCalled();
     });
   });
 
@@ -146,7 +148,7 @@ describe("useProAccessCheck", () => {
       renderHook(() => useProAccessCheck());
 
       await waitFor(() => {
-        expect(mockSetLauncherAccess).toHaveBeenCalledWith(true);
+        expect(mockSetLifetimeProAccess).toHaveBeenCalledWith(true);
       });
 
       expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
@@ -165,7 +167,7 @@ describe("useProAccessCheck", () => {
       renderHook(() => useProAccessCheck());
 
       await waitFor(() => {
-        expect(mockSetLauncherAccess).toHaveBeenCalledWith(false);
+        expect(mockSetLifetimeProAccess).toHaveBeenCalledWith(false);
       });
 
       expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
@@ -191,7 +193,7 @@ describe("useProAccessCheck", () => {
         expect(mockGetCustomerInfo).toHaveBeenCalled();
       });
 
-      expect(mockSetLauncherAccess).toHaveBeenCalledWith(true);
+      expect(mockSetLifetimeProAccess).toHaveBeenCalledWith(true);
       expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
     });
   });
@@ -208,7 +210,7 @@ describe("useProAccessCheck", () => {
       });
 
       expect(mockGetCustomerInfo).not.toHaveBeenCalled();
-      expect(mockSetLauncherAccess).not.toHaveBeenCalled();
+      expect(mockSetLifetimeProAccess).not.toHaveBeenCalled();
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
@@ -243,8 +245,8 @@ describe("useProAccessCheck", () => {
         expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
       });
 
-      // Should NOT call setLauncherAccess (preserves cached value)
-      expect(mockSetLauncherAccess).not.toHaveBeenCalled();
+      // Should NOT update lifetime Pro access (preserves cached value)
+      expect(mockSetLifetimeProAccess).not.toHaveBeenCalled();
     });
   });
 
@@ -265,7 +267,7 @@ describe("useProAccessCheck", () => {
       renderHook(() => useProAccessCheck());
 
       await waitFor(() => {
-        expect(mockSetLauncherAccess).toHaveBeenCalledWith(false);
+        expect(mockSetLifetimeProAccess).toHaveBeenCalledWith(false);
       });
     });
 
@@ -282,9 +284,9 @@ describe("useProAccessCheck", () => {
 
       renderHook(() => useProAccessCheck());
 
-      // Should handle undefined safely and set launcherAccess to false
+      // Should handle undefined safely and clear lifetime Pro access
       await waitFor(() => {
-        expect(mockSetLauncherAccess).toHaveBeenCalledWith(false);
+        expect(mockSetLifetimeProAccess).toHaveBeenCalledWith(false);
       });
 
       expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
@@ -299,9 +301,9 @@ describe("useProAccessCheck", () => {
 
       renderHook(() => useProAccessCheck());
 
-      // Should handle missing entitlements safely and set launcherAccess to false
+      // Should handle missing entitlements safely and clear lifetime Pro access
       await waitFor(() => {
-        expect(mockSetLauncherAccess).toHaveBeenCalledWith(false);
+        expect(mockSetLifetimeProAccess).toHaveBeenCalledWith(false);
       });
 
       expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
@@ -324,19 +326,12 @@ describe("useProAccessCheck", () => {
       const mockGetCustomerInfoDeferred = vi.fn().mockResolvedValue({
         customerInfo: { entitlements: { active: {} } },
       });
-      const mockSetLauncherAccessDeferred = vi.fn();
+      const mockSetLifetimeProAccessDeferred = vi.fn();
       const mockSetProAccessHydratedDeferred = vi.fn();
 
       vi.doMock("@/lib/purchasesSetup", () => ({
         purchasesReady: deferredReady,
-        getPurchaseAccess: (customerInfo: {
-          entitlements?: { active?: Record<string, unknown> };
-        }) => ({
-          lifetimePro: Boolean(
-            customerInfo.entitlements?.active?.tapto_launcher,
-          ),
-          warp: Boolean(customerInfo.entitlements?.active?.warp),
-        }),
+        getPurchaseAccess: getPurchaseAccessStub,
       }));
       vi.doMock("@capacitor/core", () => ({
         Capacitor: {
@@ -357,7 +352,7 @@ describe("useProAccessCheck", () => {
       vi.doMock("@/lib/preferencesStore", () => ({
         usePreferencesStore: vi.fn((selector: (s: unknown) => unknown) =>
           selector({
-            setLifetimeProAccess: mockSetLauncherAccessDeferred,
+            setLifetimeProAccess: mockSetLifetimeProAccessDeferred,
             setProAccessHydrated: mockSetProAccessHydratedDeferred,
           }),
         ),

@@ -15,6 +15,8 @@ const {
   mockBrowserOpen,
   mockSetLifetimeProAccess,
   mockSetOnlinePremiumAccess,
+  mockIsNativePlatform,
+  mockAddAppListener,
 } = vi.hoisted(() => ({
   mockEnsurePurchasesUser: vi.fn(),
   mockGetOfferings: vi.fn(),
@@ -24,7 +26,11 @@ const {
   mockBrowserOpen: vi.fn(),
   mockSetLifetimeProAccess: vi.fn(),
   mockSetOnlinePremiumAccess: vi.fn(),
+  mockIsNativePlatform: vi.fn(() => true),
+  mockAddAppListener: vi.fn(),
 }));
+
+let appStateCallback: ((state: { isActive: boolean }) => void) | null = null;
 
 const monthlyPackage = {
   identifier: "$rc_monthly",
@@ -63,13 +69,13 @@ function subscription(isPremium: boolean): SubscriptionResponse {
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     getPlatform: vi.fn(() => "ios"),
-    isNativePlatform: vi.fn(() => true),
+    isNativePlatform: mockIsNativePlatform,
   },
 }));
 
 vi.mock("@capacitor/app", () => ({
   App: {
-    addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
+    addListener: mockAddAppListener,
   },
 }));
 
@@ -133,11 +139,22 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
-import { useWarpSubscription } from "@/hooks/useWarpSubscription";
+import {
+  ACTIVATION_POLL_DEADLINE_MS,
+  useWarpSubscription,
+} from "@/hooks/useWarpSubscription";
 
 describe("useWarpSubscription", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    appStateCallback = null;
+    mockIsNativePlatform.mockReturnValue(true);
+    mockAddAppListener.mockImplementation(
+      (_event: string, callback: (state: { isActive: boolean }) => void) => {
+        appStateCallback = callback;
+        return Promise.resolve({ remove: vi.fn() });
+      },
+    );
     mockEnsurePurchasesUser.mockResolvedValue(customerInfo());
     mockGetOfferings.mockResolvedValue({});
     mockGetSubscriptionStatus.mockResolvedValue(subscription(false));
@@ -220,7 +237,8 @@ describe("useWarpSubscription", () => {
 
     expect(restoreResult).toBe("not_found");
     expect(mockRestorePurchases).toHaveBeenCalledOnce();
-    expect(mockGetSubscriptionStatus).toHaveBeenCalledTimes(2);
+    expect(result.current.subscription?.is_premium).toBe(false);
+    expect(result.current.activationPending).toBe(false);
   });
 
   it("should stop activation polling at the bounded deadline", async () => {
@@ -237,7 +255,7 @@ describe("useWarpSubscription", () => {
 
       let purchaseResult: string | undefined;
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(30_000);
+        await vi.advanceTimersByTimeAsync(ACTIVATION_POLL_DEADLINE_MS + 1);
         purchaseResult = await purchasePromise;
       });
 
@@ -246,6 +264,39 @@ describe("useWarpSubscription", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("should load web subscription status without native RevenueCat calls", async () => {
+    mockIsNativePlatform.mockReturnValue(false);
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.subscription?.is_premium).toBe(false);
+    expect(mockEnsurePurchasesUser).not.toHaveBeenCalled();
+    expect(mockGetOfferings).not.toHaveBeenCalled();
+  });
+
+  it("should refresh on foreground without replacing content with loading", async () => {
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let resolveRefresh!: (value: SubscriptionResponse) => void;
+    mockGetSubscriptionStatus.mockImplementationOnce(
+      () =>
+        new Promise<SubscriptionResponse>((resolve) => {
+          resolveRefresh = resolve;
+        }),
+    );
+
+    act(() => appStateCallback?.({ isActive: true }));
+    expect(result.current.isLoading).toBe(false);
+
+    resolveRefresh(subscription(true));
+    await waitFor(() => {
+      expect(result.current.subscription?.is_premium).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+    });
   });
 
   it("should fetch a fresh management URL before opening it", async () => {

@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useDeviceLinking } from "@/hooks/useDeviceLinking";
+import { NotSignedInError } from "@/lib/onlineApi";
 
 const {
   mockCreateDeviceClaim,
@@ -159,5 +160,47 @@ describe("useDeviceLinking", () => {
 
     expect(mockToastError).toHaveBeenCalledWith("online.deviceLink.linkFailed");
     expect(result.current.state).toBe("unlinked");
+  });
+
+  it("should time out a stalled device link", async () => {
+    const { result } = renderHook(() => useDeviceLinking(true));
+    await waitFor(() => expect(result.current.state).toBe("unlinked"));
+    mockCreateDeviceClaim.mockImplementation(
+      (signal: AbortSignal) =>
+        new Promise((_, reject) => {
+          signal.addEventListener("abort", () => reject(new Error("aborted")), {
+            once: true,
+          });
+        }),
+    );
+
+    vi.useFakeTimers();
+    try {
+      let linkPromise: Promise<void> | undefined;
+      act(() => {
+        linkPromise = result.current.linkDevice();
+      });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_001);
+        await linkPromise;
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith("online.deviceLink.timeout");
+      expect(mockSettingsAuthClaim).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("should surface a signed-out claim failure", async () => {
+    mockCreateDeviceClaim.mockRejectedValue(new NotSignedInError());
+    const { result } = renderHook(() => useDeviceLinking(true));
+    await waitFor(() => expect(result.current.state).toBe("unlinked"));
+
+    await act(async () => result.current.linkDevice());
+
+    expect(mockToastError).toHaveBeenCalledWith("online.notSignedInError");
+    expect(mockSettingsAuthClaim).not.toHaveBeenCalled();
   });
 });

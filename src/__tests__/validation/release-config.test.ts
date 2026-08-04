@@ -79,8 +79,22 @@ describe("release configuration", () => {
       "android/app/src/main/AndroidManifest.xml",
     );
 
-    expect(androidManifest).toContain('android:launchMode="singleTop"');
-    expect(androidManifest).not.toContain('android:launchMode="singleTask"');
+    const mainActivity = requireMatch(
+      androidManifest,
+      /(<activity\b(?=[^>]*android:name="\.MainActivity")[^>]*>)/,
+      "MainActivity manifest element",
+    );
+
+    expect(mainActivity).toContain('android:launchMode="singleTop"');
+    expect(mainActivity).not.toContain('android:launchMode="singleTask"');
+  });
+
+  it("should keep purchase previews out of release workflow builds", () => {
+    const releaseWorkflow = readProjectFile(".github/workflows/build.yaml");
+
+    expect(releaseWorkflow).toMatch(/^\s*run:\s*npm run build\s*$/m);
+    expect(releaseWorkflow).toMatch(/^\s*run:\s*npm run build:core\s*$/m);
+    expect(releaseWorkflow).not.toContain("VITE_PURCHASE_PREVIEW");
   });
 
   it("should have a What's New release key for the native build", () => {

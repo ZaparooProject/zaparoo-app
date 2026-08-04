@@ -32,6 +32,7 @@ export type WarpPurchaseResult =
   | "pending"
   | "identity_error"
   | "cancelled"
+  | "busy"
   | "failed";
 export type WarpRestoreResult =
   | "active"
@@ -42,10 +43,11 @@ export type WarpRestoreResult =
 export type WarpManageResult = "opened" | "unavailable" | "failed";
 
 const ACTIVATION_POLL_INTERVAL_MS = 2000;
-const ACTIVATION_POLL_DEADLINE_MS = 30_000;
+export const ACTIVATION_POLL_DEADLINE_MS = 30_000;
 const ACTIVATION_REQUEST_TIMEOUT_MS = 8000;
 
 function wait(delayMs: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.reject(signal.reason);
   if (delayMs <= 0) return Promise.resolve();
 
   return new Promise((resolve, reject) => {
@@ -114,13 +116,22 @@ export function useWarpSubscription(appUserID: string) {
   );
 
   const loadAccount = useCallback(
-    async (signal: AbortSignal) => {
+    async (signal: AbortSignal, silent = false) => {
       if (!mountedRef.current) return;
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       setLoadFailed(false);
       setPackagesUnavailable(false);
 
       try {
+        if (!Capacitor.isNativePlatform()) {
+          const nextSubscription = await getSubscriptionStatus(signal);
+          if (signal.aborted) return;
+          setPackages(null);
+          setRevenueCatWarpActive(false);
+          applySubscription(nextSubscription);
+          return;
+        }
+
         const [customerInfo, nextSubscription] = await Promise.all([
           ensurePurchasesUser(appUserID),
           getSubscriptionStatus(signal),
@@ -170,7 +181,9 @@ export function useWarpSubscription(appUserID: string) {
           severity: "warning",
         });
       } finally {
-        if (!signal.aborted && mountedRef.current) setIsLoading(false);
+        if (!silent && !signal.aborted && mountedRef.current) {
+          setIsLoading(false);
+        }
       }
     },
     [appUserID, applySubscription, setLifetimeProAccess],
@@ -184,7 +197,7 @@ export function useWarpSubscription(appUserID: string) {
     void Promise.resolve().then(() => loadAccount(controller.signal));
     void CapacitorApp.addListener("appStateChange", ({ isActive }) => {
       if (!isActive || controller.signal.aborted || actionRef.current) return;
-      void loadAccount(controller.signal);
+      void loadAccount(controller.signal, true);
     })
       .then((handle) => {
         if (controller.signal.aborted) {
@@ -268,7 +281,7 @@ export function useWarpSubscription(appUserID: string) {
 
   const purchase = useCallback(async (): Promise<WarpPurchaseResult> => {
     const controller = beginAction("purchase");
-    if (!controller) return "failed";
+    if (!controller) return "busy";
     setActivationPending(false);
 
     try {
@@ -465,11 +478,13 @@ export function useWarpSubscription(appUserID: string) {
       await Browser.open({ url: managementURL });
       return "opened";
     } catch (e) {
-      logger.error("Failed to open subscription management", e, {
-        category: "purchase",
-        action: "manageSubscription",
-        severity: "warning",
-      });
+      if (!controller.signal.aborted) {
+        logger.error("Failed to open subscription management", e, {
+          category: "purchase",
+          action: "manageSubscription",
+          severity: "warning",
+        });
+      }
       return "failed";
     } finally {
       finishAction();

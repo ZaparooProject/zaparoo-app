@@ -267,7 +267,9 @@ export const usePreferencesStore = create<PreferencesStore>()(
       beginOnlinePremiumAccessCheck: () =>
         set((state) => ({
           onlinePremiumAccess: null,
-          launcherAccess: state.lifetimeProAccess === true,
+          launcherAccess:
+            state.lifetimeProAccess === true ||
+            (state.lifetimeProAccess === null && state.launcherAccess),
         })),
       setOnlinePremiumAccess: (value) =>
         set((state) => ({
@@ -280,7 +282,9 @@ export const usePreferencesStore = create<PreferencesStore>()(
       clearOnlinePremiumAccess: () =>
         set((state) => ({
           onlinePremiumAccess: false,
-          launcherAccess: state.lifetimeProAccess === true,
+          launcherAccess:
+            state.lifetimeProAccess === true ||
+            (state.lifetimeProAccess === null && state.launcherAccess),
         })),
       setPreferRemoteWriter: (value) => set({ preferRemoteWriter: value }),
       setShakeEnabled: (value) => set({ shakeEnabled: value }),

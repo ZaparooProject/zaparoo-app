@@ -286,6 +286,9 @@ describe("Settings Index Route", () => {
       expect(
         within(languageSelect).getByRole("option", { name: "English (US)" }),
       ).toBeInTheDocument();
+      expect(
+        within(languageSelect).getByRole("option", { name: "Español" }),
+      ).toBeInTheDocument();
       expect(screen.getByText("Français")).toBeInTheDocument();
       expect(screen.getByText("Nederlands")).toBeInTheDocument();
       expect(screen.getByText("中文")).toBeInTheDocument();
