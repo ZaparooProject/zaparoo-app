@@ -15,6 +15,8 @@ import {
 import type { AxiosError } from "axios";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { Button } from "@/components/wui/Button.tsx";
+import { WarpSubscription } from "@/components/WarpSubscription";
+import { OnlineDeviceSetup } from "@/components/OnlineDeviceSetup";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useStatusStore } from "@/lib/store.ts";
@@ -45,6 +47,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  getPurchasePreviewState,
+  usePurchasePreviewStore,
+} from "@/lib/purchasePreviewStore";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 
 export const Route = createFileRoute("/settings/online")({
   component: OnlinePage,
@@ -94,42 +101,32 @@ function getExpectedSignupEmailAuthErrorToken(error: unknown): string | null {
 }
 
 /**
- * Get user's display initial for avatar
- */
-function getUserInitial(
-  displayName: string | null,
-  email: string | null,
-): string {
-  if (displayName && displayName.length > 0) {
-    return displayName.charAt(0).toUpperCase();
-  }
-  if (email && email.length > 0) {
-    return email.charAt(0).toUpperCase();
-  }
-  return "?";
-}
-
-/**
  * Get the primary auth provider from user data
  * Returns 'google', 'apple', 'password', or null
  */
-function getAuthProvider(
+type AuthProvider = "google" | "apple" | "password";
+
+function getSoleLinkedAuthProvider(
   providerData: { providerId: string }[] | undefined,
-): "google" | "apple" | "password" | null {
-  if (!providerData || providerData.length === 0) return null;
-
-  // Check provider IDs - prioritize OAuth providers over password
-  for (const provider of providerData) {
-    if (provider.providerId === "google.com") return "google";
-    if (provider.providerId === "apple.com") return "apple";
+): AuthProvider | null {
+  const providers = new Set<AuthProvider>();
+  for (const provider of providerData ?? []) {
+    if (provider.providerId === "google.com") providers.add("google");
+    if (provider.providerId === "apple.com") providers.add("apple");
+    if (provider.providerId === "password") providers.add("password");
   }
 
-  // Check for password provider
-  for (const provider of providerData) {
-    if (provider.providerId === "password") return "password";
-  }
+  return providers.size === 1
+    ? (providers.values().next().value ?? null)
+    : null;
+}
 
-  return null;
+function hasPasswordProvider(
+  providerData: { providerId: string }[] | undefined,
+): boolean {
+  return (
+    providerData?.some(({ providerId }) => providerId === "password") ?? false
+  );
 }
 
 export function OnlinePage() {
@@ -143,11 +140,16 @@ export function OnlinePage() {
   });
 
   const loggedInUser = useStatusStore((state) => state.loggedInUser);
+  const connected = useStatusStore((state) => state.connected);
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
   const [onlineEmail, setOnlineEmail] = useState("");
   const [onlinePassword, setOnlinePassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mfaPending, setMfaPending] = useState(false);
+  const [pendingAuthProvider, setPendingAuthProvider] =
+    useState<AuthProvider | null>(null);
+  const [sessionAuthProvider, setSessionAuthProvider] =
+    useState<AuthProvider | null>(null);
   const [mfaCode, setMfaCode] = useState("");
   const [mfaError, setMfaError] = useState<string | null>(null);
   const [isMfaVerifying, setIsMfaVerifying] = useState(false);
@@ -166,6 +168,21 @@ export function OnlinePage() {
   const [isCancelling, setIsCancelling] = useState(false);
 
   const oauthAvailable = isOAuthAvailable();
+  const configuredPurchasePreview = usePurchasePreviewStore(
+    (state) => state.state,
+  );
+  const purchasePreview = getPurchasePreviewState(configuredPurchasePreview);
+  const onlinePremiumAccess = usePreferencesStore(
+    (state) => state.onlinePremiumAccess,
+  );
+  const displayedWarpActive =
+    purchasePreview === "live"
+      ? onlinePremiumAccess
+      : purchasePreview === "warp"
+        ? true
+        : purchasePreview === "free" || purchasePreview === "pro"
+          ? false
+          : null;
 
   useEffect(() => {
     mfaPendingRef.current = mfaPending;
@@ -213,15 +230,19 @@ export function OnlinePage() {
     return true;
   };
 
-  const handleFirstFactorResult = async (result: MfaSignInResult) => {
+  const handleFirstFactorResult = async (
+    result: MfaSignInResult,
+    provider: AuthProvider,
+  ) => {
     if (result.mfaRequired) {
+      setPendingAuthProvider(provider);
       setMfaPending(true);
       setMfaCode("");
       setMfaError(null);
       return;
     }
 
-    await completeSignIn();
+    if (await completeSignIn()) setSessionAuthProvider(provider);
   };
 
   const handleEmailAuth = async () => {
@@ -264,6 +285,7 @@ export function OnlinePage() {
           }
 
           setLoggedInUser(result.user);
+          setSessionAuthProvider("password");
         } else {
           toast.error(t("online.signUpFail"));
         }
@@ -297,7 +319,7 @@ export function OnlinePage() {
         });
         setOnlinePassword("");
 
-        await handleFirstFactorResult(result);
+        await handleFirstFactorResult(result, "password");
       } catch (e) {
         const error = e as Error;
         if (!isExpectedEmailAuthError(e)) {
@@ -325,6 +347,7 @@ export function OnlinePage() {
       });
     }
     setMfaPending(false);
+    setPendingAuthProvider(null);
     setMfaCode("");
     setMfaError(null);
   };
@@ -341,9 +364,13 @@ export function OnlinePage() {
     setMfaError(null);
     try {
       await MfaAuthentication.resolveTotpSignIn({ code: mfaCode });
+      const signedIn = await completeSignIn();
+      if (signedIn && pendingAuthProvider) {
+        setSessionAuthProvider(pendingAuthProvider);
+      }
       setMfaPending(false);
+      setPendingAuthProvider(null);
       setMfaCode("");
-      await completeSignIn();
     } catch (e) {
       const searchStrings = collectErrorSearchStrings(e);
       const hasToken = (tokens: readonly string[]) =>
@@ -373,7 +400,7 @@ export function OnlinePage() {
     setIsLoading(true);
     try {
       const result = await MfaAuthentication.signInWithGoogle();
-      await handleFirstFactorResult(result);
+      await handleFirstFactorResult(result, "google");
     } catch (e) {
       const error = e as Error;
       // Check if user cancelled the login - don't show error toast
@@ -401,7 +428,7 @@ export function OnlinePage() {
     setIsLoading(true);
     try {
       const result = await MfaAuthentication.signInWithApple();
-      await handleFirstFactorResult(result);
+      await handleFirstFactorResult(result, "apple");
     } catch (e) {
       const error = e as Error;
       // Check if user cancelled the login - don't show error toast
@@ -470,6 +497,7 @@ export function OnlinePage() {
     FirebaseAuthentication.signOut()
       .then(() => {
         setLoggedInUser(null);
+        setSessionAuthProvider(null);
         setOnlineEmail("");
         setOnlinePassword("");
       })
@@ -570,22 +598,7 @@ export function OnlinePage() {
       <div className="flex flex-col gap-4">
         {loggedInUser !== null ? (
           // Logged in state
-          <div className="flex flex-col items-center gap-4 py-4">
-            {/* Avatar - use profile photo if available, otherwise initial */}
-            {loggedInUser.photoUrl ? (
-              <img
-                src={loggedInUser.photoUrl}
-                alt=""
-                className="border-bd-filled h-20 w-20 rounded-full border object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className="bg-button-pattern border-bd-filled flex h-20 w-20 items-center justify-center rounded-full border text-3xl font-semibold text-white">
-                {getUserInitial(loggedInUser.displayName, loggedInUser.email)}
-              </div>
-            )}
-
-            {/* User info */}
+          <div className="flex flex-col gap-6 py-4">
             <div className="flex flex-col items-center gap-1">
               {loggedInUser.displayName && (
                 <span className="text-lg font-medium text-white">
@@ -598,7 +611,9 @@ export function OnlinePage() {
 
               {/* Auth provider indicator */}
               {(() => {
-                const provider = getAuthProvider(loggedInUser.providerData);
+                const provider =
+                  sessionAuthProvider ??
+                  getSoleLinkedAuthProvider(loggedInUser.providerData);
                 if (provider === "google") {
                   return (
                     <span className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
@@ -615,12 +630,38 @@ export function OnlinePage() {
                     </span>
                   );
                 }
+                if (provider === "password") {
+                  return (
+                    <span className="text-muted-foreground mt-1 text-xs">
+                      {t("online.loggedInWithPassword")}
+                    </span>
+                  );
+                }
                 return null;
               })()}
             </div>
 
+            <OnlineDeviceSetup
+              connected={connected}
+              warpActive={displayedWarpActive}
+            />
+
+            {(Capacitor.isNativePlatform() || purchasePreview !== "live") && (
+              <WarpSubscription appUserID={loggedInUser.uid} />
+            )}
+
             {/* Account actions */}
-            <div className="mt-2 flex w-full flex-col gap-3">
+            <section
+              className="flex w-full flex-col gap-3"
+              aria-labelledby="online-account-actions-title"
+            >
+              <h2
+                id="online-account-actions-title"
+                className="text-lg font-medium text-white"
+              >
+                {t("online.account")}
+              </h2>
+
               {/* Dashboard button */}
               <Button
                 label={t("online.dashboard")}
@@ -633,7 +674,7 @@ export function OnlinePage() {
               />
 
               {/* Change password - only for email/password users */}
-              {getAuthProvider(loggedInUser.providerData) === "password" && (
+              {hasPasswordProvider(loggedInUser.providerData) && (
                 <Button
                   label={t("online.changePassword")}
                   variant="outline"
@@ -700,7 +741,7 @@ export function OnlinePage() {
                   className="border-error text-error mt-2 w-full"
                 />
               )}
-            </div>
+            </section>
           </div>
         ) : mfaPending ? (
           <div className="flex flex-col gap-4">

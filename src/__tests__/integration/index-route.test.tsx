@@ -15,7 +15,7 @@
 
 import React, { ReactNode } from "react";
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen, waitFor, act } from "../../test-utils";
+import { act, render, screen, waitFor, within } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -25,6 +25,13 @@ import {
   ConnectionContext,
   ConnectionContextValue,
 } from "@/hooks/useConnection";
+
+function expectVisibleEmptyValues(regionName: string, count: number) {
+  const region = screen.getByRole("region", { name: regionName });
+  const emptyValues = within(region).getAllByText("none", { exact: true });
+  expect(emptyValues).toHaveLength(count);
+  emptyValues.forEach((value) => expect(value).toBeVisible());
+}
 
 // Mock state that can be modified per-test
 const mockScanOperationsState = {
@@ -592,7 +599,7 @@ describe("Index Route Integration", () => {
   });
 
   describe("Last Scanned Info", () => {
-    it("should show heading and dash placeholders when no token scanned", () => {
+    it("should show heading and empty values when no token scanned", () => {
       render(
         <TestWrapper>
           <Index />
@@ -600,7 +607,7 @@ describe("Index Route Integration", () => {
       );
 
       expect(screen.getByText("scan.lastScannedHeading")).toBeInTheDocument();
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      expectVisibleEmptyValues("scan.lastScannedHeading", 2);
     });
 
     it("should show token info when last token exists in store", () => {
@@ -631,8 +638,8 @@ describe("Index Route Integration", () => {
         </TestWrapper>,
       );
 
-      // Initially shows dash placeholders
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Initially shows explicit empty values
+      expectVisibleEmptyValues("scan.lastScannedHeading", 2);
 
       // Update store
       act(() => {
@@ -1411,7 +1418,7 @@ describe("Index Route Integration", () => {
       );
 
       // Initially no media playing
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      expectVisibleEmptyValues("scan.nowPlayingHeading", 2);
 
       // Update store
       act(() => {

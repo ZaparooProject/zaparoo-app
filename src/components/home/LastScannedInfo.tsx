@@ -32,44 +32,39 @@ export function LastScannedInfo({
       >
         <p>
           {t("scan.lastScannedTime", { time: "" })}
-          {lastToken.uid === "" && lastToken.text === "" ? (
-            <>
-              <span aria-hidden="true">—</span>
-              <span className="sr-only">{t("none")}</span>
-            </>
-          ) : (
-            new Date(lastToken.scanTime).toLocaleString()
-          )}
+          <span>
+            {lastToken.uid === "" && lastToken.text === ""
+              ? t("none")
+              : new Date(lastToken.scanTime).toLocaleString()}
+          </span>
         </p>
         {lastToken.uid !== lastToken.text && (
           <p style={{ wordBreak: "break-all" }}>
             {t("scan.lastScannedUid", { uid: "" })}
-            {lastToken.uid === "" || lastToken.uid === "__api__" ? (
-              <>
-                <span aria-hidden="true">—</span>
-                <span className="sr-only">{t("none")}</span>
-              </>
-            ) : (
-              <>
-                {lastToken.uid}
-                <CopyButton text={lastToken.uid} className="ml-1" />
-              </>
-            )}
+            <span>
+              {lastToken.uid === "" || lastToken.uid === "__api__" ? (
+                t("none")
+              ) : (
+                <>
+                  {lastToken.uid}
+                  <CopyButton text={lastToken.uid} className="ml-1" />
+                </>
+              )}
+            </span>
           </p>
         )}
         <p style={{ wordBreak: "break-all" }}>
           {t("scan.lastScannedText", { text: "" })}
-          {lastToken.text === "" ? (
-            <>
-              <span aria-hidden="true">—</span>
-              <span className="sr-only">{t("none")}</span>
-            </>
-          ) : (
-            <>
-              {lastToken.text}
-              <CopyButton text={lastToken.text} className="ml-1" />
-            </>
-          )}
+          <span>
+            {lastToken.text === "" ? (
+              t("none")
+            ) : (
+              <>
+                {lastToken.text}
+                <CopyButton text={lastToken.text} className="ml-1" />
+              </>
+            )}
+          </span>
         </p>
       </div>
     </section>

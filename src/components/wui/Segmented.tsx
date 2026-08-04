@@ -8,6 +8,7 @@ interface SegmentedProps<T extends string> {
   options: { value: T; label: string }[];
   value: T;
   onChange: (next: T) => void;
+  disabled?: boolean;
 }
 
 export function Segmented<T extends string>({
@@ -17,6 +18,7 @@ export function Segmented<T extends string>({
   options,
   value,
   onChange,
+  disabled = false,
 }: SegmentedProps<T>) {
   return (
     <div className="flex flex-col">
@@ -28,6 +30,7 @@ export function Segmented<T extends string>({
         options={options}
         value={value}
         onChange={onChange}
+        disabled={disabled}
       />
       {help && (
         <span className="text-muted-foreground mt-1 text-sm">{help}</span>

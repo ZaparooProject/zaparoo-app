@@ -13,6 +13,7 @@ const {
   mockCoreReset,
   mockSetDeviceAddress,
   mockGetDeviceAddress,
+  mockUseDeviceLinking,
 } = vi.hoisted(() => ({
   componentRef: { current: null as any },
   mockNavigate: vi.fn(),
@@ -22,6 +23,7 @@ const {
   mockCoreReset: vi.fn(),
   mockSetDeviceAddress: vi.fn(),
   mockGetDeviceAddress: vi.fn(() => "192.168.1.10"),
+  mockUseDeviceLinking: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -59,6 +61,10 @@ vi.mock("@/hooks/useSelectDevice", () => ({
     selectDevice: mockSelectDevice,
     selectScanDevice: vi.fn(),
   }),
+}));
+
+vi.mock("@/hooks/useDeviceLinking", () => ({
+  useDeviceLinking: (enabled: boolean) => mockUseDeviceLinking(enabled),
 }));
 
 vi.mock("@/lib/coreApi", () => ({
@@ -112,6 +118,7 @@ describe("Settings Device Detail Route", () => {
     setTargetDeviceAddress: mockSetTargetDeviceAddress,
     resetConnectionState: mockResetConnectionState,
     safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+    coreVersion: "2.16.0",
     ...overrides,
   });
 
@@ -127,6 +134,10 @@ describe("Settings Device Detail Route", () => {
       address: encodeDeviceAddress("192.168.1.50"),
     };
     mockGetDeviceAddress.mockReturnValue("192.168.1.10");
+    mockUseDeviceLinking.mockReturnValue({
+      state: "unlinked",
+      linkDevice: vi.fn(),
+    });
     mockUseStatusStore.mockImplementation((selector) => selector(buildState()));
   });
 
@@ -213,6 +224,12 @@ describe("Settings Device Detail Route", () => {
       }),
     ).not.toBeInTheDocument();
     expect(screen.getByLabelText("settings.activeDevice")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "online.deviceLink.link" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("online.deviceLink.description"),
+    ).toBeInTheDocument();
   });
 
   it("calls selectDevice when 'Use this device' is tapped", async () => {

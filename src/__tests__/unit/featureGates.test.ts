@@ -91,4 +91,10 @@ describe("isCoreFeatureAvailable", () => {
     expect(isCoreFeatureAvailable("backgroundMediaSlot", "2.14.1")).toBe(false);
     expect(isCoreFeatureAvailable("backgroundMediaSlot", "2.15.0")).toBe(true);
   });
+
+  it("should gate device linking behind Core 2.16.0", () => {
+    expect(FEATURE_GATES.deviceLinking?.since).toBe("2.16.0");
+    expect(isCoreFeatureAvailable("deviceLinking", "2.15.9")).toBe(false);
+    expect(isCoreFeatureAvailable("deviceLinking", "2.16.0")).toBe(true);
+  });
 });

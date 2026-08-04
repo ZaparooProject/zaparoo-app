@@ -2,7 +2,7 @@ import "@testing-library/jest-dom";
 import { afterEach, beforeAll, afterAll, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 import { setupServer } from "msw/node";
-import { handlers } from "./test-utils/msw-handlers";
+import { handlers } from "@/test-utils/msw-handlers";
 
 // Mock Capacitor plugins - calling vi.mock WITHOUT a factory tells Vitest
 // to use the corresponding file in __mocks__ directory
@@ -36,13 +36,14 @@ vi.mock("@aparajita/capacitor-secure-storage");
 // 3. Logger tests need the real implementation
 // Tests that need specific logger behavior can mock it locally.
 
-import { CoreAPI } from "./lib/coreApi";
+import { CoreAPI } from "@/lib/coreApi";
 import { __resetPreferencesStorage } from "../__mocks__/@capacitor/preferences";
 import { __resetZeroConfMock } from "../__mocks__/capacitor-zeroconf";
 import { __resetNfcMock } from "../__mocks__/@capawesome-team/capacitor-nfc";
 import { __resetLiveUpdateMock } from "../__mocks__/@capawesome/capacitor-live-update";
 import { __resetSecureStorageMock } from "../__mocks__/@aparajita/capacitor-secure-storage";
-import { __resetDeviceCache } from "./hooks/useNetworkScan";
+import { __resetDeviceCache } from "@/hooks/useNetworkScan";
+import { resetPurchasePreviewState } from "@/lib/purchasePreviewStore";
 
 // Define global constants that Vite normally injects
 (globalThis as any).__APP_BASE_PATH__ = "/";
@@ -98,7 +99,7 @@ afterEach(async () => {
   // apply. Files that replace lib/nfc with a partial mock throw on access to
   // the missing export - nothing to reset there, so ignore.
   try {
-    const nfcModule = await import("./lib/nfc");
+    const nfcModule = await import("@/lib/nfc");
     nfcModule.__resetNfcSessionState();
   } catch {
     // lib/nfc is mocked without the test-reset export in this file
@@ -109,6 +110,8 @@ afterEach(async () => {
   __resetSecureStorageMock();
   // Reset network scan device cache between tests
   __resetDeviceCache();
+  // Reset development-only purchase previews between tests
+  resetPurchasePreviewState();
 });
 
 // Close server after all tests

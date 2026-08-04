@@ -18,6 +18,9 @@ export enum Method {
   Settings = "settings",
   SettingsUpdate = "settings.update",
   SettingsReload = "settings.reload",
+  SettingsAuthClaim = "settings.auth.claim",
+  SettingsAuthStatus = "settings.auth.status",
+  SettingsBackupStatus = "settings.backup.status",
   SettingsLogsDownload = "settings.logs.download",
   LaunchersRefresh = "launchers.refresh",
   Mappings = "mappings",
@@ -100,6 +103,68 @@ export interface InputKeyboardRequest {
 
 export interface InputGamepadRequest {
   buttons: string;
+}
+
+export interface SettingsAuthClaimRequest {
+  claimUrl: string;
+  token: string;
+}
+
+export interface SettingsAuthClaimResponse {
+  domains: string[];
+}
+
+export interface SettingsAuthStatusRequest {
+  url: string;
+}
+
+export interface SettingsAuthStatusResponse {
+  linked: boolean;
+}
+
+export interface BackupCategoryStatus {
+  files: number;
+  bytes: number;
+  enabled: boolean;
+}
+
+export interface BackupWarning {
+  category: string;
+  path: string;
+  reason: string;
+}
+
+export interface BackupStatusEntry {
+  lastRunAt?: string;
+  lastSuccessAt?: string;
+  lastSnapshotCreatedAt?: string;
+  availabilityCheckedAt?: string;
+  deviceName?: string;
+  linkedAt?: string;
+  categories?: Record<string, BackupCategoryStatus>;
+  schedule?: "daily" | "weekly" | "manual";
+  lastError?: string;
+  availability?: "available" | "unavailable" | "unknown";
+  lastStatus: string;
+  warnings?: BackupWarning[];
+  lastBackupSize: number;
+  skippedFiles?: number;
+  linked?: boolean;
+  enabled: boolean;
+  lastRunNoChanges?: boolean;
+}
+
+export interface BackupStatusResponse {
+  activeSince?: string;
+  activeOperation?: string;
+  local: BackupStatusEntry;
+  remote: BackupStatusEntry;
+}
+
+export interface DeviceClaimResponse {
+  claim_url: string;
+  token: string;
+  expires_at: string;
 }
 
 export interface ScreenshotResponse {
@@ -228,6 +293,10 @@ export interface SettingsResponse {
   readersScanMode: "tap" | "hold" | "insert";
   readersScanExitDelay: number;
   readersScanIgnoreSystems: string[];
+  backupRemoteEnabled?: boolean;
+  playtimeSyncEnabled?: boolean;
+  backupRemoteSchedule?: "daily" | "weekly" | "manual";
+  backupRemoteBaseUrl?: string;
   launchGuardEnabled?: boolean;
   launchGuardTimeout?: number;
   launchGuardDelay?: number;
@@ -243,6 +312,9 @@ export interface UpdateSettingsRequest {
   readersScanExitDelay?: number;
   readersScanIgnoreSystems?: string[];
   runZapScript?: boolean;
+  backupRemoteEnabled?: boolean;
+  playtimeSyncEnabled?: boolean;
+  backupRemoteSchedule?: "daily" | "weekly" | "manual";
   launchGuardEnabled?: boolean;
   launchGuardTimeout?: number;
   launchGuardDelay?: number;
@@ -421,6 +493,28 @@ export interface RequirementsResponse {
   requirements: RequirementsStatus;
   required_versions: RequiredVersions;
   accepted_versions: AcceptedVersions;
+}
+
+export interface PatreonSubscriptionInfo {
+  linked: boolean;
+  status: string;
+  linked_at: string;
+}
+
+export interface RevenueCatSubscriptionInfo {
+  active: boolean;
+  product_id?: string;
+  billing_period?: "monthly" | "annual";
+  store?: string;
+  expires_at?: string;
+  will_renew: boolean;
+}
+
+export interface SubscriptionResponse {
+  is_premium: boolean;
+  sources: string[];
+  patreon?: PatreonSubscriptionInfo | null;
+  revenuecat?: RevenueCatSubscriptionInfo | null;
 }
 
 export interface UpdateRequirementsRequest {

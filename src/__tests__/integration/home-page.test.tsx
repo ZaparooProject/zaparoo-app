@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen, act } from "../../test-utils";
+import { act, render, screen, within } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -25,6 +25,13 @@ import {
   ConnectionContextValue,
 } from "@/hooks/useConnection";
 import { ReactNode } from "react";
+
+function expectVisibleEmptyValues(regionName: string, count: number) {
+  const region = screen.getByRole("region", { name: regionName });
+  const emptyValues = within(region).getAllByText("none", { exact: true });
+  expect(emptyValues).toHaveLength(count);
+  emptyValues.forEach((value) => expect(value).toBeVisible());
+}
 
 // Helper to provide connection context
 function ConnectionWrapper({
@@ -88,7 +95,7 @@ describe("Home Page Integration", () => {
   });
 
   describe("Last Scanned Info", () => {
-    it("should show heading and dash placeholders when no token scanned", () => {
+    it("should show heading and empty values when no token scanned", () => {
       render(
         <LastScannedInfo
           lastToken={{ type: "", uid: "", text: "", data: "", scanTime: "" }}
@@ -98,8 +105,8 @@ describe("Home Page Integration", () => {
 
       // Heading is always visible
       expect(screen.getByText("scan.lastScannedHeading")).toBeInTheDocument();
-      // Dash placeholders are shown (hidden from screen readers)
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Empty values are explicit
+      expectVisibleEmptyValues("scan.lastScannedHeading", 2);
     });
 
     it("should show token text when scanned", () => {
@@ -124,7 +131,7 @@ describe("Home Page Integration", () => {
       expect(screen.getByText(/abc123def456ab/)).toBeInTheDocument();
     });
 
-    it("should show UID with dash for text when text is empty", () => {
+    it("should show UID with 'none' for text when text is empty", () => {
       const lastToken = {
         type: "ntag215",
         uid: "abc123def456ab",
@@ -142,8 +149,8 @@ describe("Home Page Integration", () => {
 
       // UID should be shown (use regex for substring match)
       expect(screen.getByText(/abc123def456ab/)).toBeInTheDocument();
-      // Text field shows dash
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Text field shows an explicit empty value
+      expectVisibleEmptyValues("scan.lastScannedHeading", 1);
     });
 
     it("should update when props change", () => {
@@ -154,8 +161,8 @@ describe("Home Page Integration", () => {
         />,
       );
 
-      // Initially shows dash placeholders
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Initially shows explicit empty values
+      expectVisibleEmptyValues("scan.lastScannedHeading", 2);
 
       // Simulate token scan
       const newToken = {
@@ -180,7 +187,7 @@ describe("Home Page Integration", () => {
   });
 
   describe("Now Playing Info", () => {
-    it("should show heading and dash placeholders when nothing is playing", () => {
+    it("should show heading and empty values when nothing is playing", () => {
       render(
         <NowPlayingInfo
           mediaName=""
@@ -193,8 +200,8 @@ describe("Home Page Integration", () => {
 
       // Heading is always visible
       expect(screen.getByText("scan.nowPlayingHeading")).toBeInTheDocument();
-      // Dash placeholders are shown
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Empty values are explicit
+      expectVisibleEmptyValues("scan.nowPlayingHeading", 2);
     });
 
     it("should show media info when playing", () => {
@@ -411,8 +418,8 @@ describe("Home Page Integration", () => {
         />,
       );
 
-      // Initially shows dash placeholders
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Initially shows explicit empty values
+      expectVisibleEmptyValues("scan.lastScannedHeading", 2);
 
       // Update store
       act(() => {
@@ -448,8 +455,8 @@ describe("Home Page Integration", () => {
         />,
       );
 
-      // Initially shows dash placeholders
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Initially shows explicit empty values
+      expectVisibleEmptyValues("scan.nowPlayingHeading", 2);
 
       // Update store
       act(() => {

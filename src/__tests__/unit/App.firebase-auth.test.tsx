@@ -1,4 +1,4 @@
-import { render, waitFor, act } from "../../test-utils";
+import { act, render, waitFor } from "@/test-utils";
 import { vi, beforeEach, describe, it, expect } from "vitest";
 import React from "react";
 
@@ -7,8 +7,16 @@ const { mockIsPluginAvailable } = vi.hoisted(() => ({
 }));
 
 // Store mock functions
-const mockSetLoggedInUser = vi.fn();
+let mockLoggedInUser: { uid: string; email?: string } | null = null;
+const mockSetLoggedInUser = vi.fn(
+  (user: { uid: string; email?: string } | null) => {
+    mockLoggedInUser = user;
+  },
+);
 const mockSetLauncherAccess = vi.fn();
+const mockBeginOnlinePremiumAccessCheck = vi.fn();
+const mockSetOnlinePremiumAccess = vi.fn();
+const mockClearOnlinePremiumAccess = vi.fn();
 const mockGetIdToken = vi.fn();
 const mockReload = vi.fn();
 const mockAddListener = vi.fn();
@@ -18,6 +26,8 @@ const mockRemove = vi.fn();
 const mockPurchasesLogIn = vi.fn();
 const mockPurchasesLogOut = vi.fn();
 const mockPurchasesGetCustomerInfo = vi.fn();
+const mockPurchasesIsAnonymous = vi.fn();
+const mockResetPurchasesUser = vi.fn();
 
 // Online API mock
 const mockGetSubscriptionStatus = vi.fn();
@@ -92,17 +102,29 @@ vi.mock("@revenuecat/purchases-capacitor", () => ({
     logIn: (...args: unknown[]) => mockPurchasesLogIn(...args),
     logOut: () => mockPurchasesLogOut(),
     getCustomerInfo: () => mockPurchasesGetCustomerInfo(),
-    isAnonymous: vi.fn().mockResolvedValue({ isAnonymous: false }),
+    isAnonymous: () => mockPurchasesIsAnonymous(),
   },
 }));
 
 // purchasesReady resolves immediately in tests
 vi.mock("@/lib/purchasesSetup", () => ({
   purchasesReady: Promise.resolve(),
+  ensurePurchasesUser: async (appUserID: string) => {
+    const result = await mockPurchasesLogIn({ appUserID });
+    return result.customerInfo;
+  },
+  getPurchaseAccess: (customerInfo: {
+    entitlements?: { active?: Record<string, unknown> };
+  }) => ({
+    lifetimePro: Boolean(customerInfo.entitlements?.active?.tapto_launcher),
+    warp: Boolean(customerInfo.entitlements?.active?.warp),
+  }),
+  resetPurchasesUser: () => mockResetPurchasesUser(),
 }));
 
 vi.mock("@/lib/onlineApi", () => ({
-  getSubscriptionStatus: () => mockGetSubscriptionStatus(),
+  getSubscriptionStatus: (signal?: AbortSignal) =>
+    mockGetSubscriptionStatus(signal),
 }));
 
 vi.mock("@/lib/store", () => {
@@ -136,6 +158,7 @@ vi.mock("@/lib/store", () => {
   });
 
   useStatusStore.getState = () => ({
+    loggedInUser: mockLoggedInUser,
     playing: { mediaName: "", systemId: "", mediaPath: "" },
     gamesIndex: { exists: true, indexing: false, totalFiles: 0 },
     safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
@@ -164,7 +187,10 @@ vi.mock("@/lib/preferencesStore", () => {
       initializeWhatsNew: vi.fn(),
       setLastWhatsNewRuntimeKey: vi.fn(),
       markWhatsNewSeen: vi.fn(),
-      setLauncherAccess: mockSetLauncherAccess,
+      setLifetimeProAccess: mockSetLauncherAccess,
+      beginOnlinePremiumAccessCheck: mockBeginOnlinePremiumAccessCheck,
+      setOnlinePremiumAccess: mockSetOnlinePremiumAccess,
+      clearOnlinePremiumAccess: mockClearOnlinePremiumAccess,
     };
     if (typeof selector === "function") {
       return selector(state);
@@ -283,6 +309,7 @@ Object.defineProperty(window, "location", {
 describe("Firebase Auth Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLoggedInUser = null;
     mockPlatform = "web"; // Default to web platform
     mockIsPluginAvailable.mockReturnValue(true);
     mockAddListener.mockImplementation(() =>
@@ -296,9 +323,11 @@ describe("Firebase Auth Integration", () => {
       customerInfo: { entitlements: { active: {} } },
     });
     mockPurchasesLogOut.mockResolvedValue(undefined);
+    mockPurchasesIsAnonymous.mockResolvedValue({ isAnonymous: false });
     mockPurchasesGetCustomerInfo.mockResolvedValue({
       customerInfo: { entitlements: { active: {} } },
     });
+    mockResetPurchasesUser.mockResolvedValue({ entitlements: { active: {} } });
 
     // Default online API mock
     mockGetSubscriptionStatus.mockResolvedValue({ is_premium: false });
@@ -327,6 +356,7 @@ describe("Firebase Auth Integration", () => {
     await waitFor(() => {
       expect(mockAddListener).not.toHaveBeenCalled();
     });
+    expect(mockClearOnlinePremiumAccess).not.toHaveBeenCalled();
   });
 
   it("should set logged in user when auth state changes with user", async () => {
@@ -423,6 +453,25 @@ describe("Firebase Auth Integration", () => {
     await waitFor(() => {
       expect(mockRemove).toHaveBeenCalled();
     });
+  });
+
+  it("should remove a listener that resolves after unmount", async () => {
+    let resolveListener!: (handle: { remove: typeof mockRemove }) => void;
+    mockAddListener.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveListener = resolve;
+        }),
+    );
+
+    const App = (await import("@/App")).default;
+    const { unmount } = render(<App />);
+    await waitFor(() => expect(mockAddListener).toHaveBeenCalled());
+
+    unmount();
+    resolveListener({ remove: mockRemove });
+
+    await waitFor(() => expect(mockRemove).toHaveBeenCalledOnce());
   });
 
   // Regression test: Ensures token is refreshed on auth state change to get
@@ -561,6 +610,113 @@ describe("Firebase Auth Integration", () => {
       expect(mockPurchasesGetCustomerInfo).not.toHaveBeenCalled();
     });
 
+    it("should clear lifetime access before synchronizing a new identity", async () => {
+      mockPlatform = "ios";
+      let resolveLogin!: (value: {
+        customerInfo: {
+          entitlements: { active: Record<string, unknown> };
+        };
+      }) => void;
+      mockPurchasesLogIn.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveLogin = resolve;
+          }),
+      );
+
+      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
+        null;
+      mockAddListener.mockImplementation(
+        (
+          _event: string,
+          callback: (change: { user: unknown }) => Promise<void>,
+        ) => {
+          authCallback = callback;
+          return Promise.resolve({ remove: mockRemove });
+        },
+      );
+
+      const App = (await import("@/App")).default;
+      render(<App />);
+      await waitFor(() => expect(authCallback).not.toBeNull());
+
+      let authPromise!: Promise<void>;
+      act(() => {
+        authPromise = authCallback!({
+          user: { uid: "user-123", email: "test@example.com" },
+        });
+      });
+
+      await waitFor(() => {
+        expect(mockSetLauncherAccess).toHaveBeenCalledWith(false);
+        expect(mockBeginOnlinePremiumAccessCheck).toHaveBeenCalledOnce();
+      });
+      expect(mockSetLauncherAccess).not.toHaveBeenCalledWith(true);
+
+      resolveLogin({
+        customerInfo: {
+          entitlements: { active: { tapto_launcher: {} } },
+        },
+      });
+      await act(async () => authPromise);
+
+      expect(mockSetLauncherAccess).toHaveBeenLastCalledWith(true);
+    });
+
+    it("should ignore RevenueCat access from a stale identity change", async () => {
+      mockPlatform = "ios";
+      let resolveFirstLogin!: (value: {
+        customerInfo: {
+          entitlements: { active: Record<string, unknown> };
+        };
+      }) => void;
+      mockPurchasesLogIn
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveFirstLogin = resolve;
+            }),
+        )
+        .mockResolvedValueOnce({
+          customerInfo: { entitlements: { active: {} } },
+        });
+
+      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
+        null;
+      mockAddListener.mockImplementation(
+        (
+          _event: string,
+          callback: (change: { user: unknown }) => Promise<void>,
+        ) => {
+          authCallback = callback;
+          return Promise.resolve({ remove: mockRemove });
+        },
+      );
+
+      const App = (await import("@/App")).default;
+      render(<App />);
+      await waitFor(() => expect(authCallback).not.toBeNull());
+
+      let firstChange!: Promise<void>;
+      act(() => {
+        firstChange = authCallback!({ user: { uid: "user-123" } });
+      });
+      await waitFor(() => expect(mockPurchasesLogIn).toHaveBeenCalledOnce());
+
+      await act(async () => {
+        await authCallback!({ user: { uid: "user-456" } });
+      });
+      resolveFirstLogin({
+        customerInfo: {
+          entitlements: { active: { tapto_launcher: {} } },
+        },
+      });
+      await act(async () => firstChange);
+
+      expect(mockSetLauncherAccess).not.toHaveBeenCalledWith(true);
+      expect(mockSetLauncherAccess).toHaveBeenLastCalledWith(false);
+    });
+
     it("should call Purchases.logIn when user authenticates on native platform", async () => {
       mockPlatform = "ios";
 
@@ -668,16 +824,11 @@ describe("Firebase Auth Integration", () => {
         await authCallback!({ user: mockUser });
       });
 
-      // First call sets false (from RevenueCat), second call sets true (from API)
-      expect(mockSetLauncherAccess).toHaveBeenLastCalledWith(true);
+      expect(mockSetOnlinePremiumAccess).toHaveBeenLastCalledWith(true);
     });
 
-    it("should call Purchases.logOut when user signs out on native platform", async () => {
+    it("should reset the RevenueCat user when signing out", async () => {
       mockPlatform = "ios";
-
-      mockPurchasesGetCustomerInfo.mockResolvedValue({
-        customerInfo: { entitlements: { active: {} } },
-      });
 
       let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
         null;
@@ -703,89 +854,13 @@ describe("Firebase Auth Integration", () => {
         await authCallback!({ user: null });
       });
 
-      expect(mockPurchasesLogOut).toHaveBeenCalled();
-      expect(mockPurchasesGetCustomerInfo).toHaveBeenCalled();
-    });
-
-    it("should not call Purchases.logOut when RC user is already anonymous on sign out", async () => {
-      mockPlatform = "ios";
-
-      const { Purchases } = await import("@revenuecat/purchases-capacitor");
-      vi.mocked(Purchases.isAnonymous).mockResolvedValueOnce({
-        isAnonymous: true,
-      });
-
-      mockPurchasesGetCustomerInfo.mockResolvedValue({
-        customerInfo: { entitlements: { active: {} } },
-      });
-
-      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
-        null;
-      mockAddListener.mockImplementation(
-        (
-          _event: string,
-          callback: (change: { user: unknown }) => Promise<void>,
-        ) => {
-          authCallback = callback;
-          return Promise.resolve({ remove: mockRemove });
-        },
-      );
-
-      const App = (await import("@/App")).default;
-      render(<App />);
-
-      await waitFor(() => {
-        expect(authCallback).not.toBeNull();
-      });
-
-      await act(async () => {
-        await authCallback!({ user: null });
-      });
-
-      expect(mockPurchasesLogOut).not.toHaveBeenCalled();
-      expect(mockPurchasesGetCustomerInfo).toHaveBeenCalled();
-    });
-
-    it("should ignore expected RevenueCat logout state errors on sign out", async () => {
-      mockPlatform = "ios";
-      mockPurchasesLogOut.mockRejectedValueOnce(
-        new Error("Cannot log out anonymous app user"),
-      );
-      mockPurchasesGetCustomerInfo.mockResolvedValue({
-        customerInfo: { entitlements: { active: {} } },
-      });
-
-      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
-        null;
-      mockAddListener.mockImplementation(
-        (
-          _event: string,
-          callback: (change: { user: unknown }) => Promise<void>,
-        ) => {
-          authCallback = callback;
-          return Promise.resolve({ remove: mockRemove });
-        },
-      );
-
-      const App = (await import("@/App")).default;
-      render(<App />);
-
-      await waitFor(() => {
-        expect(authCallback).not.toBeNull();
-      });
-
-      await act(async () => {
-        await authCallback!({ user: null });
-      });
-
-      expect(mockPurchasesGetCustomerInfo).toHaveBeenCalled();
-      expect(mockLoggerError).not.toHaveBeenCalled();
+      expect(mockResetPurchasesUser).toHaveBeenCalledOnce();
     });
 
     it("should report unexpected RevenueCat logout errors on sign out", async () => {
       mockPlatform = "ios";
       const error = new Error("network connection lost");
-      mockPurchasesLogOut.mockRejectedValueOnce(error);
+      mockResetPurchasesUser.mockRejectedValueOnce(error);
 
       let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
         null;
@@ -849,7 +924,8 @@ describe("Firebase Auth Integration", () => {
         await authCallback!({ user: mockUser });
       });
 
-      // Should log error but not throw
+      // Failed synchronization must leave the previous identity's access cleared.
+      expect(mockSetLauncherAccess).toHaveBeenLastCalledWith(false);
       expect(mockLoggerError).toHaveBeenCalledWith(
         "RevenueCat login sync failed:",
         expect.any(Error),
@@ -857,6 +933,49 @@ describe("Firebase Auth Integration", () => {
           category: "purchase",
           action: "logIn",
         }),
+      );
+    });
+
+    it("should retry a failed subscription status check once", async () => {
+      mockPlatform = "ios";
+      mockPurchasesLogIn.mockResolvedValue({
+        customerInfo: { entitlements: { active: {} } },
+      });
+      mockGetSubscriptionStatus
+        .mockRejectedValueOnce(new Error("temporary API error"))
+        .mockResolvedValueOnce({ is_premium: true });
+
+      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
+        null;
+      mockAddListener.mockImplementation(
+        (
+          _event: string,
+          callback: (change: { user: unknown }) => Promise<void>,
+        ) => {
+          authCallback = callback;
+          return Promise.resolve({ remove: mockRemove });
+        },
+      );
+
+      const App = (await import("@/App")).default;
+      render(<App />);
+      await waitFor(() => expect(authCallback).not.toBeNull());
+
+      await act(async () => {
+        await authCallback!({
+          user: { uid: "user-123", email: "test@example.com" },
+        });
+      });
+
+      expect(mockGetSubscriptionStatus).toHaveBeenCalledTimes(2);
+      expect(mockGetSubscriptionStatus).toHaveBeenCalledWith(
+        expect.any(AbortSignal),
+      );
+      expect(mockSetOnlinePremiumAccess).toHaveBeenCalledWith(true);
+      expect(mockLoggerError).not.toHaveBeenCalledWith(
+        "Failed to check subscription status:",
+        expect.anything(),
+        expect.anything(),
       );
     });
 
@@ -892,7 +1011,9 @@ describe("Firebase Auth Integration", () => {
         await authCallback!({ user: mockUser });
       });
 
-      // Should log error but not throw
+      // Should retry once, then terminate pending access and log the error.
+      expect(mockGetSubscriptionStatus).toHaveBeenCalledTimes(2);
+      expect(mockSetOnlinePremiumAccess).toHaveBeenCalledWith(false);
       expect(mockLoggerError).toHaveBeenCalledWith(
         "Failed to check subscription status:",
         expect.any(Error),

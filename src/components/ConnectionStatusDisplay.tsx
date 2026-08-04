@@ -38,6 +38,8 @@ export interface ConnectionStatusDisplayProps {
   connectedSubtitleLoading?: boolean;
   /** Optional second subtitle line for connected state (e.g., user-chosen device name). */
   connectedName?: string;
+  /** Optional compact label shown after the connected lock state. */
+  connectedTitleSuffix?: string;
   /** Optional action slot (e.g., settings button, history button) */
   action?: ReactNode;
   /** Optional className for the outer container */
@@ -53,6 +55,7 @@ export function ConnectionStatusDisplay({
   connectedSubtitle,
   connectedSubtitleLoading,
   connectedName,
+  connectedTitleSuffix,
   action,
   className,
 }: ConnectionStatusDisplayProps) {
@@ -170,6 +173,11 @@ export function ConnectionStatusDisplay({
               className="text-muted-foreground h-4 w-4 shrink-0"
               aria-label={t("connection.unencrypted")}
             />
+          )}
+          {uiState === "connected" && connectedTitleSuffix && (
+            <span className="text-muted-foreground text-sm font-normal">
+              {connectedTitleSuffix}
+            </span>
           )}
         </h2>
         {showSkeleton ? (

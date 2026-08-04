@@ -74,6 +74,29 @@ describe("release configuration", () => {
     expect(liveUpdateScript).not.toContain("--channel production");
   });
 
+  it("should use RevenueCat-compatible Android activity launch mode", () => {
+    const androidManifest = readProjectFile(
+      "android/app/src/main/AndroidManifest.xml",
+    );
+
+    const mainActivity = requireMatch(
+      androidManifest,
+      /(<activity\b(?=[^>]*android:name="\.MainActivity")[^>]*>)/,
+      "MainActivity manifest element",
+    );
+
+    expect(mainActivity).toContain('android:launchMode="singleTop"');
+    expect(mainActivity).not.toContain('android:launchMode="singleTask"');
+  });
+
+  it("should keep purchase previews out of release workflow builds", () => {
+    const releaseWorkflow = readProjectFile(".github/workflows/build.yaml");
+
+    expect(releaseWorkflow).toMatch(/^\s*run:\s*npm run build\s*$/m);
+    expect(releaseWorkflow).toMatch(/^\s*run:\s*npm run build:core\s*$/m);
+    expect(releaseWorkflow).not.toContain("VITE_PURCHASE_PREVIEW");
+  });
+
   it("should have a What's New release key for the native build", () => {
     const packageJson = readPackageJson();
     const androidGradle = readProjectFile("android/app/build.gradle");

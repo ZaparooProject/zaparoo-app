@@ -17,7 +17,7 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import Keyboard from "react-simple-keyboard";
+import Keyboard from "react-simple-keyboard/build/index.modern.esm.js";
 import "react-simple-keyboard/build/css/index.css";
 import { SlideModal } from "@/components/SlideModal";
 import { Segmented } from "@/components/wui/Segmented";

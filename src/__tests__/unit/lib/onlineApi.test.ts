@@ -101,16 +101,46 @@ describe("onlineApi", () => {
   });
 
   describe("getSubscriptionStatus", () => {
-    it("should return subscription status from the API", async () => {
-      mockGet.mockResolvedValue({
-        data: { is_premium: true },
-      });
+    it("should return full subscription status from the API", async () => {
+      const subscription = {
+        is_premium: true,
+        sources: ["revenuecat"],
+        patreon: null,
+        revenuecat: {
+          active: true,
+          product_id: "warp_annual",
+          billing_period: "annual",
+          store: "APP_STORE",
+          expires_at: "2027-01-01T00:00:00Z",
+          will_renew: true,
+        },
+      };
+      mockGet.mockResolvedValue({ data: subscription });
 
       const { getSubscriptionStatus } = await import("../../../lib/onlineApi");
       const result = await getSubscriptionStatus();
 
       expect(mockGet).toHaveBeenCalledWith("/account/subscription");
-      expect(result).toEqual({ is_premium: true });
+      expect(result).toEqual(subscription);
+    });
+
+    it("should forward AbortSignal for bounded activation polling", async () => {
+      const controller = new AbortController();
+      mockGet.mockResolvedValue({
+        data: {
+          is_premium: false,
+          sources: [],
+          patreon: null,
+          revenuecat: null,
+        },
+      });
+
+      const { getSubscriptionStatus } = await import("../../../lib/onlineApi");
+      await getSubscriptionStatus(controller.signal);
+
+      expect(mockGet).toHaveBeenCalledWith("/account/subscription", {
+        signal: controller.signal,
+      });
     });
 
     it("should return is_premium false when user has no subscription", async () => {
@@ -143,6 +173,28 @@ describe("onlineApi", () => {
       await expect(getSubscriptionStatus()).rejects.toThrow(
         "Request failed with status code 401",
       );
+    });
+  });
+
+  describe("createDeviceClaim", () => {
+    it("should create an app-owned one-shot device claim", async () => {
+      const claim = {
+        claim_url: "https://api.zaparoo.com/v1/device-claims/redeem",
+        token: "zpc1_test",
+        expires_at: "2026-08-04T10:00:00Z",
+      };
+      const controller = new AbortController();
+      mockPost.mockResolvedValue({ data: claim });
+
+      const { createDeviceClaim } = await import("../../../lib/onlineApi");
+      const result = await createDeviceClaim(controller.signal);
+
+      expect(mockPost).toHaveBeenCalledWith(
+        "/device-claims",
+        { source: "app" },
+        { signal: controller.signal },
+      );
+      expect(result).toEqual(claim);
     });
   });
 

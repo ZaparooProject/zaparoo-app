@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Preferences } from "@capacitor/preferences";
-import { usePreferencesStore } from "../../../lib/preferencesStore";
-import { act, renderHook, waitFor } from "../../../test-utils";
-import { isPluginAvailable } from "../../../lib/capacitorBridge";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { act, renderHook, waitFor } from "@/test-utils";
+import { isPluginAvailable } from "@/lib/capacitorBridge";
 
 // Mock Capacitor Preferences
 vi.mock("@capacitor/preferences", () => ({
@@ -13,7 +13,7 @@ vi.mock("@capacitor/preferences", () => ({
   },
 }));
 
-vi.mock("../../../lib/capacitorBridge", () => ({
+vi.mock("@/lib/capacitorBridge", () => ({
   isCapacitorPluginUnavailableError: vi.fn((error: unknown) =>
     error instanceof Error ? error.message.includes("not implemented") : false,
   ),
@@ -22,7 +22,7 @@ vi.mock("../../../lib/capacitorBridge", () => ({
 }));
 
 // Mock sessionManager
-vi.mock("../../../lib/nfc", () => ({
+vi.mock("@/lib/nfc", () => ({
   sessionManager: {
     setShouldRestart: vi.fn(),
     setLaunchOnScan: vi.fn(),
@@ -38,6 +38,8 @@ describe("usePreferencesStore", () => {
       restartScan: false,
       launchOnScan: true,
       launcherAccess: false,
+      lifetimeProAccess: null,
+      onlinePremiumAccess: null,
       preferRemoteWriter: false,
       shakeEnabled: false,
       shakeMode: "random",
@@ -158,28 +160,98 @@ describe("usePreferencesStore", () => {
       expect(result.current.preferRemoteWriter).toBe(false);
     });
 
-    it("should allow setting launcherAccess to true (Pro purchase)", () => {
+    it("should grant launcher access for a lifetime Pro purchase", () => {
       const { result } = renderHook(() => usePreferencesStore());
 
       expect(result.current.launcherAccess).toBe(false);
 
       act(() => {
-        result.current.setLauncherAccess(true);
+        result.current.setLifetimeProAccess(true);
       });
 
       expect(result.current.launcherAccess).toBe(true);
     });
 
-    it("should persist launcherAccess changes across renders", () => {
+    it("should retain effective launcher access across renders", () => {
       const { result, rerender } = renderHook(() => usePreferencesStore());
 
       act(() => {
-        result.current.setLauncherAccess(true);
+        result.current.setLifetimeProAccess(true);
       });
 
       rerender();
 
       expect(result.current.launcherAccess).toBe(true);
+    });
+  });
+
+  describe("source-aware purchase access", () => {
+    it("should retain lifetime Pro when online access expires", () => {
+      const { result } = renderHook(() => usePreferencesStore());
+
+      act(() => {
+        result.current.setLifetimeProAccess(true);
+        result.current.setOnlinePremiumAccess(true);
+        result.current.setOnlinePremiumAccess(false);
+      });
+
+      expect(result.current.lifetimeProAccess).toBe(true);
+      expect(result.current.onlinePremiumAccess).toBe(false);
+      expect(result.current.launcherAccess).toBe(true);
+    });
+
+    it("should preserve cached access while lifetime Pro status is pending", () => {
+      usePreferencesStore.setState({ launcherAccess: true });
+      const { result } = renderHook(() => usePreferencesStore());
+
+      act(() => {
+        result.current.setOnlinePremiumAccess(false);
+      });
+
+      expect(result.current.lifetimeProAccess).toBeNull();
+      expect(result.current.onlinePremiumAccess).toBe(false);
+      expect(result.current.launcherAccess).toBe(true);
+    });
+
+    it("should preserve cached access during account-state transitions", () => {
+      usePreferencesStore.setState({ launcherAccess: true });
+      const { result } = renderHook(() => usePreferencesStore());
+
+      act(() => {
+        result.current.beginOnlinePremiumAccessCheck();
+      });
+      expect(result.current.launcherAccess).toBe(true);
+
+      act(() => {
+        result.current.clearOnlinePremiumAccess();
+      });
+      expect(result.current.launcherAccess).toBe(true);
+    });
+
+    it("should clear previous account access while next status loads", () => {
+      const { result } = renderHook(() => usePreferencesStore());
+
+      act(() => {
+        result.current.setLifetimeProAccess(false);
+        result.current.setOnlinePremiumAccess(true);
+        result.current.beginOnlinePremiumAccessCheck();
+      });
+
+      expect(result.current.onlinePremiumAccess).toBeNull();
+      expect(result.current.launcherAccess).toBe(false);
+    });
+
+    it("should revoke temporary access on logout without revoking Pro", () => {
+      const { result } = renderHook(() => usePreferencesStore());
+
+      act(() => {
+        result.current.setLifetimeProAccess(false);
+        result.current.setOnlinePremiumAccess(true);
+        result.current.clearOnlinePremiumAccess();
+      });
+
+      expect(result.current.onlinePremiumAccess).toBe(false);
+      expect(result.current.launcherAccess).toBe(false);
     });
   });
 

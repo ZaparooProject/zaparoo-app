@@ -7,6 +7,7 @@ import {
   AddMappingRequest,
   AllMappingsParams,
   AllMappingsResponse,
+  BackupStatusResponse,
   ClientsCurrentResponse,
   DeleteInboxRequest,
   HistoryResponse,
@@ -35,6 +36,10 @@ import {
   SearchParams,
   SearchResultsResponse,
   ScreenshotResponse,
+  SettingsAuthClaimRequest,
+  SettingsAuthClaimResponse,
+  SettingsAuthStatusRequest,
+  SettingsAuthStatusResponse,
   SettingsResponse,
   SystemsParams,
   SystemsResponse,
@@ -1365,6 +1370,54 @@ class CoreApi {
           reject(error);
         });
     });
+  }
+
+  async settingsAuthClaim(
+    params: SettingsAuthClaimRequest,
+    signal?: AbortSignal,
+  ): Promise<SettingsAuthClaimResponse> {
+    const result = await this.callConnected(
+      Method.SettingsAuthClaim,
+      params,
+      signal,
+    );
+    if (isCancelled(result)) {
+      throw new RequestCancelledError("Device link request was cancelled");
+    }
+    return result as SettingsAuthClaimResponse;
+  }
+
+  async settingsAuthStatus(
+    params: SettingsAuthStatusRequest,
+    signal?: AbortSignal,
+  ): Promise<SettingsAuthStatusResponse> {
+    const result = await this.callConnected(
+      Method.SettingsAuthStatus,
+      params,
+      signal,
+    );
+    if (isCancelled(result)) {
+      throw new RequestCancelledError(
+        "Device link status request was cancelled",
+      );
+    }
+    return result as SettingsAuthStatusResponse;
+  }
+
+  async settingsBackupStatus(
+    signal?: AbortSignal,
+  ): Promise<BackupStatusResponse> {
+    const result = await this.callConnected(
+      Method.SettingsBackupStatus,
+      undefined,
+      signal,
+    );
+    if (isCancelled(result)) {
+      throw new RequestCancelledError(
+        "Device backup status request was cancelled",
+      );
+    }
+    return result as BackupStatusResponse;
   }
 
   mappings(params?: AllMappingsParams): Promise<AllMappingsResponse> {

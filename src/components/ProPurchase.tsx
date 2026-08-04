@@ -1,7 +1,6 @@
 import { t } from "i18next";
 import {
   Purchases,
-  type PurchasesOfferings,
   type PurchasesPackage,
 } from "@revenuecat/purchases-capacitor";
 import { useEffect, useState } from "react";
@@ -10,57 +9,23 @@ import toast from "react-hot-toast";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { logger } from "@/lib/logger";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useStatusStore } from "@/lib/store";
-import { useHaptics } from "@/hooks/useHaptics";
 import { PurchaseCancelledError, wrapPurchaseError } from "@/lib/errors";
+import {
+  getOfferingDiagnostics,
+  getProPackage,
+  getPurchaseAccess,
+  PRO_OFFERING_ID,
+  purchasesReady,
+  runPurchasesOperation,
+} from "@/lib/purchasesSetup";
 import { Button } from "./wui/Button";
-
-export const RestorePuchasesButton = () => {
-  const setLauncherAccess = usePreferencesStore.getState().setLauncherAccess;
-  const { notification } = useHaptics();
-
-  return (
-    <Button
-      label={t("settings.app.restorePurchases")}
-      className="w-full"
-      onClick={async () => {
-        logger.log("Restore button clicked");
-        try {
-          await Purchases.restorePurchases();
-          const info = await Purchases.getCustomerInfo();
-          logger.log("Restore purchases - customer info:", {
-            entitlements: info.customerInfo.entitlements,
-            activeEntitlements: Object.keys(
-              info.customerInfo.entitlements?.active || {},
-            ),
-            hasTaptoLauncher:
-              !!info.customerInfo.entitlements?.active?.tapto_launcher,
-          });
-          if (info.customerInfo.entitlements?.active?.tapto_launcher) {
-            setLauncherAccess(true);
-            notification("success");
-            toast.success(t("settings.app.restoreSuccess"));
-          } else {
-            // No active Pro entitlement found - inform user
-            toast.error(t("settings.app.restoreNotFound"));
-          }
-        } catch (e) {
-          logger.error("restore purchases error", e, {
-            category: "purchase",
-            action: "restore",
-            severity: "warning",
-          });
-          toast.error(t("settings.app.restoreFail"));
-        }
-      }}
-    />
-  );
-};
 
 type OfferingsStatus =
   | "loading"
@@ -68,17 +33,6 @@ type OfferingsStatus =
   | "missing"
   | "error"
   | "unsupported";
-
-function getOfferingDiagnostics(offerings: PurchasesOfferings) {
-  const allOfferings = Object.values(offerings.all ?? {});
-
-  return {
-    platform: Capacitor.getPlatform(),
-    hasCurrentOffering: !!offerings.current,
-    packageCount: offerings.current?.availablePackages.length ?? 0,
-    offeringIdentifiers: allOfferings.map((offering) => offering.identifier),
-  };
-}
 
 function getPurchaseBody(
   status: OfferingsStatus,
@@ -113,12 +67,13 @@ function getPurchaseActionLabel(status: OfferingsStatus) {
   return t("scan.purchaseProUnavailableAction");
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 const ProPurchaseModal = (props: {
   proPurchaseModalOpen: boolean;
   setProPurchaseModalOpen: (open: boolean) => void;
   purchasePackage: PurchasesPackage | null;
   offeringsStatus: OfferingsStatus;
-  setProAccess: (access: boolean) => void;
+  setLifetimeProAccess: (access: boolean) => void;
 }) => {
   return (
     <Dialog
@@ -128,38 +83,54 @@ const ProPurchaseModal = (props: {
       <DialogContent onOpenChange={props.setProPurchaseModalOpen}>
         <DialogHeader>
           <DialogTitle>{t("scan.purchaseProTitle")}</DialogTitle>
+          <DialogDescription asChild>
+            <div className="flex flex-col gap-3">
+              <p>
+                {getPurchaseBody(props.offeringsStatus, props.purchasePackage)}
+              </p>
+              <p>{t("scan.purchaseProP2")}</p>
+            </div>
+          </DialogDescription>
         </DialogHeader>
-        <div>
-          {getPurchaseBody(props.offeringsStatus, props.purchasePackage)}
-        </div>
-        <div className="pb-2">{t("scan.purchaseProP2")}</div>
         <Button
           label={getPurchaseActionLabel(props.offeringsStatus)}
           disabled={!props.purchasePackage}
           onClick={() => {
-            if (props.purchasePackage) {
-              Purchases.purchasePackage({ aPackage: props.purchasePackage })
-                .then((purchase) => {
-                  logger.log("purchase success", purchase);
-                  props.setProAccess(true);
-                  usePreferencesStore.getState().setLaunchOnScan(true);
-                  props.setProPurchaseModalOpen(false);
-                })
-                .catch((e: Error) => {
-                  // Wrap RevenueCat errors to get typed errors
-                  const wrappedError = wrapPurchaseError(e);
+            if (!props.purchasePackage) return;
 
-                  // User canceling the purchase is not an error
-                  if (wrappedError instanceof PurchaseCancelledError) {
-                    return;
-                  }
-                  logger.error("purchase error", wrappedError, {
-                    category: "purchase",
-                    action: "purchasePackage",
-                    severity: "warning",
-                  });
+            const purchasePackage = props.purchasePackage;
+            const user = useStatusStore.getState().loggedInUser;
+            void (async () => {
+              try {
+                const purchase = await runPurchasesOperation(
+                  user?.uid ?? null,
+                  () =>
+                    Purchases.purchasePackage({
+                      aPackage: purchasePackage,
+                    }),
+                );
+                const access = getPurchaseAccess(purchase.customerInfo);
+                props.setLifetimeProAccess(access.lifetimePro);
+                if (access.lifetimePro) {
+                  usePreferencesStore.getState().setLaunchOnScan(true);
+                }
+                props.setProPurchaseModalOpen(false);
+                logger.log("Pro purchase completed", {
+                  platform: Capacitor.getPlatform(),
+                  packageIdentifier: purchasePackage.identifier,
                 });
-            }
+              } catch (e) {
+                const wrappedError = wrapPurchaseError(e);
+                if (wrappedError instanceof PurchaseCancelledError) return;
+
+                logger.error("Pro purchase failed", wrappedError, {
+                  category: "purchase",
+                  action: "purchasePackage",
+                  severity: "warning",
+                });
+                toast.error(t("scan.purchaseProFailed"));
+              }
+            })();
           }}
         />
       </DialogContent>
@@ -167,11 +138,14 @@ const ProPurchaseModal = (props: {
   );
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useProPurchase = () => {
   // Subscribe directly to the store for reactive updates
-  const proAccess = usePreferencesStore((state) => state.launcherAccess);
-  const setProAccess = usePreferencesStore((state) => state.setLauncherAccess);
+  const proAccess = usePreferencesStore(
+    (state) => state.lifetimeProAccess === true,
+  );
+  const setLifetimeProAccess = usePreferencesStore(
+    (state) => state.setLifetimeProAccess,
+  );
   const proPurchaseModalOpen = useStatusStore(
     (state) => state.proPurchaseModalOpen,
   );
@@ -190,10 +164,12 @@ export const useProPurchase = () => {
       return;
     }
 
-    // Fetch offerings for purchase flow UI
-    Purchases.getOfferings()
+    // Fetch explicit Pro offering so adding another offering cannot change
+    // what the permanent Pro action purchases.
+    purchasesReady
+      .then(() => Purchases.getOfferings())
       .then((offerings) => {
-        const purchasePackage = offerings.current?.availablePackages[0] ?? null;
+        const purchasePackage = getProPackage(offerings);
 
         if (purchasePackage) {
           setLauncherPackage(purchasePackage);
@@ -205,7 +181,10 @@ export const useProPurchase = () => {
         setOfferingsStatus("missing");
         logger.error(
           "RevenueCat offerings returned no packages",
-          getOfferingDiagnostics(offerings),
+          {
+            platform: Capacitor.getPlatform(),
+            ...getOfferingDiagnostics(offerings, PRO_OFFERING_ID),
+          },
           {
             category: "purchase",
             action: "getOfferings",
@@ -232,11 +211,7 @@ export const useProPurchase = () => {
     // Fallback if not hydrated yet (shouldn't happen normally)
     Purchases.getCustomerInfo()
       .then((info) => {
-        if (info.customerInfo.entitlements?.active?.tapto_launcher) {
-          setProAccess(true);
-        } else {
-          setProAccess(false);
-        }
+        setLifetimeProAccess(getPurchaseAccess(info.customerInfo).lifetimePro);
       })
       .catch((e) => {
         logger.error("customer info error", e, {
@@ -245,7 +220,7 @@ export const useProPurchase = () => {
           severity: "warning",
         });
       });
-  }, [setProAccess]);
+  }, [setLifetimeProAccess]);
 
   return {
     proAccess,
@@ -255,7 +230,7 @@ export const useProPurchase = () => {
         setProPurchaseModalOpen={setProPurchaseModalOpen}
         purchasePackage={launcherPackage}
         offeringsStatus={offeringsStatus}
-        setProAccess={setProAccess}
+        setLifetimeProAccess={setLifetimeProAccess}
       />
     ),
     proPurchaseModalOpen,

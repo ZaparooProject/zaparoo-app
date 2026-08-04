@@ -13,6 +13,7 @@
     "dev": "vite",
     "dev:server": "cross-env NODE_ENV=development vite",
     "build": "tsc --noEmit -p tsconfig.build.json && vite build && npx cap sync",
+    "build:preview": "cross-env VITE_PURCHASE_PREVIEW=true npm run build",
     "build:web": "tsc --noEmit -p tsconfig.build.json && vite build",
     "build:core": "tsc --noEmit -p tsconfig.build.json && vite build --mode core",
     "sync": "npx cap sync",

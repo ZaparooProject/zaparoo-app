@@ -1,16 +1,7 @@
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  renderHook,
-  act,
-} from "../../../test-utils";
-import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
-import {
-  RestorePuchasesButton,
-  useProPurchase,
-} from "@/components/ProPurchase";
+import { act, render, renderHook, screen, waitFor } from "@/test-utils";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { useProPurchase } from "@/components/ProPurchase";
 import {
   PACKAGE_TYPE,
   PRODUCT_CATEGORY,
@@ -37,6 +28,15 @@ vi.mock("@capacitor/core", () => ({
     isNativePlatform: vi.fn().mockReturnValue(true),
     isPluginAvailable: vi.fn().mockReturnValue(true),
   },
+}));
+
+vi.mock("@/lib/purchasesSetup", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/purchasesSetup")>()),
+  purchasesReady: Promise.resolve(),
+  runPurchasesOperation: async (
+    _appUserID: string | null,
+    operation: (customerInfo: unknown) => Promise<unknown>,
+  ) => operation({}),
 }));
 
 vi.mock("@revenuecat/purchases-capacitor", () => ({
@@ -82,6 +82,8 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
+const mockSetLaunchOnScan = vi.fn();
+
 const { mockT } = vi.hoisted(() => ({
   mockT: (key: string, options?: Record<string, string>) => {
     if (key === "scan.purchaseProP1" && options?.price) {
@@ -105,7 +107,7 @@ vi.mock("i18next", () => ({
 }));
 
 const presentedOfferingContext = {
-  offeringIdentifier: "current",
+  offeringIdentifier: "pro",
   placementIdentifier: null,
   targetingContext: null,
 } as const;
@@ -131,7 +133,7 @@ function createProduct(): PurchasesStoreProduct {
     subscriptionPeriod: null,
     defaultOption: null,
     subscriptionOptions: null,
-    presentedOfferingIdentifier: "current",
+    presentedOfferingIdentifier: "pro",
     presentedOfferingContext,
   };
 }
@@ -141,7 +143,7 @@ function createPackage(): PurchasesPackage {
     identifier: "$rc_lifetime",
     packageType: PACKAGE_TYPE.LIFETIME,
     product: createProduct(),
-    offeringIdentifier: "current",
+    offeringIdentifier: "pro",
     presentedOfferingContext,
     webCheckoutUrl: null,
   };
@@ -151,8 +153,8 @@ function createOffering(
   availablePackages: PurchasesPackage[] = [],
 ): PurchasesOffering {
   return {
-    identifier: "current",
-    serverDescription: "Current offering",
+    identifier: "pro",
+    serverDescription: "Pro offering",
     metadata: {},
     availablePackages,
     lifetime: null,
@@ -175,190 +177,18 @@ function createOfferings(
   };
 }
 
-describe("RestorePuchasesButton", () => {
-  beforeAll(() => {
-    Object.defineProperty(window, "location", {
-      value: {
-        reload: vi.fn(),
-      },
-      writable: true,
-    });
-  });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("should render restore purchases button", () => {
-    render(<RestorePuchasesButton />);
-
-    const button = screen.getByRole("button", {
-      name: "settings.app.restorePurchases",
-    });
-    expect(button).toBeInTheDocument();
-  });
-
-  it("should handle successful restore with active entitlement", async () => {
-    const mockCustomerInfo = {
-      customerInfo: {
-        entitlements: {
-          active: {
-            tapto_launcher: true,
-          },
-        },
-      },
-    } as any;
-
-    const { Purchases } = await import("@revenuecat/purchases-capacitor");
-    vi.mocked(Purchases.restorePurchases).mockResolvedValue({} as any);
-    vi.mocked(Purchases.getCustomerInfo).mockResolvedValue(mockCustomerInfo);
-
-    render(<RestorePuchasesButton />);
-
-    const { usePreferencesStore } = await import("@/lib/preferencesStore");
-    await waitFor(() => {
-      expect(usePreferencesStore.getState()._hasHydrated).toBe(true);
-    });
-
-    const button = screen.getByRole("button", {
-      name: "settings.app.restorePurchases",
-    });
-    fireEvent.click(button);
-
-    await waitFor(() => {
-      expect(Purchases.restorePurchases).toHaveBeenCalled();
-      expect(Purchases.getCustomerInfo).toHaveBeenCalled();
-    });
-
-    await waitFor(() => {
-      expect(usePreferencesStore.getState().launcherAccess).toBe(true);
-    });
-
-    // No longer reloads the page - state updates reactively
-    expect(window.location.reload).not.toHaveBeenCalled();
-  });
-
-  it("should handle restore purchases failure", async () => {
-    const { Purchases } = await import("@revenuecat/purchases-capacitor");
-    vi.mocked(Purchases.restorePurchases).mockRejectedValue(
-      new Error("Restore failed"),
-    );
-
-    render(<RestorePuchasesButton />);
-
-    const button = screen.getByRole("button", {
-      name: "settings.app.restorePurchases",
-    });
-    fireEvent.click(button);
-
-    await waitFor(() => {
-      expect(Purchases.restorePurchases).toHaveBeenCalled();
-    });
-
-    const toast = await import("react-hot-toast");
-    expect(toast.default.error).toHaveBeenCalledWith(
-      "settings.app.restoreFail",
-    );
-  });
-
-  it("should show not found toast when restore succeeds but no entitlement exists", async () => {
-    const mockCustomerInfo = {
-      customerInfo: {
-        entitlements: {
-          active: {}, // No tapto_launcher entitlement
-        },
-      },
-    } as any;
-
-    const { Purchases } = await import("@revenuecat/purchases-capacitor");
-    vi.mocked(Purchases.restorePurchases).mockResolvedValue({} as any);
-    vi.mocked(Purchases.getCustomerInfo).mockResolvedValue(mockCustomerInfo);
-
-    render(<RestorePuchasesButton />);
-
-    const button = screen.getByRole("button", {
-      name: "settings.app.restorePurchases",
-    });
-    fireEvent.click(button);
-
-    await waitFor(() => {
-      expect(Purchases.restorePurchases).toHaveBeenCalled();
-      expect(Purchases.getCustomerInfo).toHaveBeenCalled();
-    });
-
-    const toast = await import("react-hot-toast");
-    expect(toast.default.error).toHaveBeenCalledWith(
-      "settings.app.restoreNotFound",
-    );
-  });
-
-  it("should handle undefined entitlements.active gracefully", async () => {
-    const mockCustomerInfo = {
-      customerInfo: {
-        entitlements: {
-          active: undefined,
-        },
-      },
-    } as any;
-
-    const { Purchases } = await import("@revenuecat/purchases-capacitor");
-    vi.mocked(Purchases.restorePurchases).mockResolvedValue({} as any);
-    vi.mocked(Purchases.getCustomerInfo).mockResolvedValue(mockCustomerInfo);
-
-    render(<RestorePuchasesButton />);
-
-    const button = screen.getByRole("button", {
-      name: "settings.app.restorePurchases",
-    });
-    fireEvent.click(button);
-
-    await waitFor(() => {
-      expect(Purchases.restorePurchases).toHaveBeenCalled();
-      expect(Purchases.getCustomerInfo).toHaveBeenCalled();
-    });
-
-    const toast = await import("react-hot-toast");
-    // Should show "not found" toast, not crash
-    expect(toast.default.error).toHaveBeenCalledWith(
-      "settings.app.restoreNotFound",
-    );
-  });
-
-  it("should handle missing entitlements object gracefully", async () => {
-    const mockCustomerInfo = {
-      customerInfo: {}, // No entitlements at all
-    } as any;
-
-    const { Purchases } = await import("@revenuecat/purchases-capacitor");
-    vi.mocked(Purchases.restorePurchases).mockResolvedValue({} as any);
-    vi.mocked(Purchases.getCustomerInfo).mockResolvedValue(mockCustomerInfo);
-
-    render(<RestorePuchasesButton />);
-
-    const button = screen.getByRole("button", {
-      name: "settings.app.restorePurchases",
-    });
-    fireEvent.click(button);
-
-    await waitFor(() => {
-      expect(Purchases.restorePurchases).toHaveBeenCalled();
-      expect(Purchases.getCustomerInfo).toHaveBeenCalled();
-    });
-
-    const toast = await import("react-hot-toast");
-    // Should show "not found" toast, not crash
-    expect(toast.default.error).toHaveBeenCalledWith(
-      "settings.app.restoreNotFound",
-    );
-  });
-});
-
 describe("useProPurchase", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     // Reset store state
     const { usePreferencesStore } = await import("@/lib/preferencesStore");
-    usePreferencesStore.setState({ launcherAccess: false });
+    usePreferencesStore.setState({
+      launcherAccess: false,
+      lifetimeProAccess: false,
+      onlinePremiumAccess: false,
+      launchOnScan: false,
+      setLaunchOnScan: mockSetLaunchOnScan,
+    });
     const { useStatusStore } = await import("@/lib/store");
     useStatusStore.setState({ proPurchaseModalOpen: false });
     const { Capacitor } = await import("@capacitor/core");
@@ -388,10 +218,12 @@ describe("useProPurchase", () => {
     });
   });
 
-  it("should reflect store state when launcherAccess is true", async () => {
-    // Set store state before rendering
+  it("should reflect store state when lifetime Pro access is true", async () => {
     const { usePreferencesStore } = await import("@/lib/preferencesStore");
-    usePreferencesStore.setState({ launcherAccess: true });
+    usePreferencesStore.setState({
+      launcherAccess: true,
+      lifetimeProAccess: true,
+    });
 
     const { result } = renderHook(() => useProPurchase());
 
@@ -428,6 +260,7 @@ describe("useProPurchase", () => {
     usePreferencesStore.setState({
       _proAccessHydrated: false,
       launcherAccess: false,
+      lifetimeProAccess: false,
     });
 
     const mockOfferings = createOfferings(createOffering([createPackage()]));
@@ -467,9 +300,9 @@ describe("useProPurchase", () => {
         "RevenueCat offerings returned no packages",
         expect.objectContaining({
           platform: "ios",
-          hasCurrentOffering: true,
-          packageCount: 0,
-          offeringIdentifiers: ["current"],
+          offeringIdentifier: "pro",
+          offeringFound: true,
+          packageIdentifiers: [],
         }),
         {
           category: "purchase",
@@ -550,6 +383,77 @@ describe("useProPurchase", () => {
     expect(
       screen.getByRole("button", { name: "scan.purchaseProAction" }),
     ).toBeEnabled();
+  });
+
+  it("should never buy the current Warp package as Pro", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const proPackage = createPackage();
+    const warpPackage = {
+      ...createPackage(),
+      identifier: "$rc_annual",
+      offeringIdentifier: "warp",
+    } as PurchasesPackage;
+    const proOffering = createOffering([proPackage]);
+    const warpOffering = {
+      ...createOffering([warpPackage]),
+      identifier: "warp",
+    };
+    vi.mocked(Purchases.getOfferings).mockResolvedValue({
+      current: warpOffering,
+      all: { pro: proOffering, warp: warpOffering },
+    });
+    vi.mocked(Purchases.purchasePackage).mockResolvedValue({
+      customerInfo: {
+        entitlements: { active: { tapto_launcher: {} } },
+      },
+    } as never);
+
+    const { result } = renderHook(() => useProPurchase());
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+    act(() => result.current.setProPurchaseModalOpen(true));
+    render(<result.current.PurchaseModal />);
+
+    await user.click(
+      screen.getByRole("button", { name: "scan.purchaseProAction" }),
+    );
+
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
+    await waitFor(() => {
+      expect(Purchases.purchasePackage).toHaveBeenCalledWith({
+        aPackage: proPackage,
+      });
+      expect(usePreferencesStore.getState().lifetimeProAccess).toBe(true);
+      expect(mockSetLaunchOnScan).toHaveBeenCalledWith(true);
+      expect(result.current.proPurchaseModalOpen).toBe(false);
+    });
+  });
+
+  it("should show a purchase error without enabling launch on scan", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const toast = (await import("react-hot-toast")).default;
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+    vi.mocked(Purchases.purchasePackage).mockRejectedValue(
+      new Error("payment declined"),
+    );
+
+    const { result } = renderHook(() => useProPurchase());
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+    act(() => result.current.setProPurchaseModalOpen(true));
+    render(<result.current.PurchaseModal />);
+
+    await user.click(
+      screen.getByRole("button", { name: "scan.purchaseProAction" }),
+    );
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("scan.purchaseProFailed");
+    });
+    expect(mockSetLaunchOnScan).not.toHaveBeenCalled();
+    expect(result.current.proPurchaseModalOpen).toBe(true);
   });
 
   it("should show unsupported state on web platform", async () => {

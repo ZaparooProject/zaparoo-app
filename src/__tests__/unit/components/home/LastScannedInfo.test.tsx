@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "../../../../test-utils";
+import { render, screen } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { LastScannedInfo } from "@/components/home/LastScannedInfo";
 import { TokenResponse, ScanResult } from "@/lib/models";
@@ -70,7 +70,7 @@ describe("LastScannedInfo", () => {
   });
 
   describe("empty state", () => {
-    it("should show dash with sr-only 'none' when no token data", () => {
+    it("should show 'none' when no token data", () => {
       // Arrange & Act
       render(
         <LastScannedInfo
@@ -79,32 +79,8 @@ describe("LastScannedInfo", () => {
         />,
       );
 
-      // Assert - Multiple dashes for time and text (UID hidden when equal to text)
-      const dashes = screen.getAllByText("—");
-      expect(dashes.length).toBeGreaterThanOrEqual(2);
-
-      // Screen reader text
-      const srOnlyNones = screen.getAllByText("none");
-      expect(srOnlyNones.length).toBeGreaterThanOrEqual(2);
-      srOnlyNones.forEach((el) => {
-        expect(el).toHaveClass("sr-only");
-      });
-    });
-
-    it("should hide dashes from screen readers", () => {
-      // Arrange & Act
-      render(
-        <LastScannedInfo
-          lastToken={createToken({ uid: "", text: "" })}
-          scanStatus={ScanResult.Default}
-        />,
-      );
-
-      // Assert
-      const dashes = screen.getAllByText("—");
-      dashes.forEach((dash) => {
-        expect(dash).toHaveAttribute("aria-hidden", "true");
-      });
+      // Assert - Time and text are empty (UID hidden when equal to text)
+      expect(screen.getAllByText("none", { exact: true })).toHaveLength(2);
     });
   });
 
@@ -122,9 +98,9 @@ describe("LastScannedInfo", () => {
       );
 
       // Assert - The date is formatted with toLocaleString
-      // We can't match exact format due to locale differences, but we can verify it's not a dash
+      // We can't match exact format due to locale differences.
       const timeText = screen.getByText(/scan\.lastScannedTime/).parentElement;
-      expect(timeText?.textContent).not.toContain("—");
+      expect(timeText?.textContent).not.toContain("none");
     });
 
     it("should display UID when different from text", () => {

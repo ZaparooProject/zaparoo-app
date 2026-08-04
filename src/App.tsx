@@ -5,7 +5,6 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import { Purchases } from "@revenuecat/purchases-capacitor";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { InboxModal } from "@/components/InboxModal";
 import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
@@ -15,7 +14,11 @@ import {
   isPluginAvailable,
 } from "@/lib/capacitorBridge";
 import { useDeepLinks } from "@/lib/deepLinks";
-import { isExpectedRevenueCatLogoutError } from "@/lib/errors";
+import {
+  ensurePurchasesUser,
+  getPurchaseAccess,
+  resetPurchasesUser,
+} from "@/lib/purchasesSetup";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
 import { DatabaseIcon, PlayIcon } from "./lib/images";
@@ -39,11 +42,43 @@ import { useLiveUpdate } from "./hooks/useLiveUpdate";
 import { WhatsNewInitializer } from "./components/WhatsNewInitializer";
 import { initDeviceInfo, logger } from "./lib/logger";
 import { getSubscriptionStatus } from "./lib/onlineApi";
-import { purchasesReady } from "./lib/purchasesSetup";
 import {
   A11yAnnouncerProvider,
   useAnnouncer,
 } from "./components/A11yAnnouncer";
+
+const SUBSCRIPTION_STATUS_RETRY_DELAY_MS = 500;
+
+function waitForSubscriptionRetry(signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.reject(signal.reason);
+
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(
+      resolve,
+      SUBSCRIPTION_STATUS_RETRY_DELAY_MS,
+    );
+    signal.addEventListener(
+      "abort",
+      () => {
+        window.clearTimeout(timeout);
+        reject(signal.reason);
+      },
+      { once: true },
+    );
+  });
+}
+
+async function getSubscriptionStatusWithRetry(
+  signal: AbortSignal,
+): Promise<Awaited<ReturnType<typeof getSubscriptionStatus>>> {
+  try {
+    return await getSubscriptionStatus(signal);
+  } catch (error) {
+    if (signal.aborted) throw error;
+    await waitForSubscriptionRetry(signal);
+    return getSubscriptionStatus(signal);
+  }
+}
 
 // Component to initialize queue processors and passive listeners after preferences hydrate
 // This ensures sessionManager.launchOnScan is set correctly before processing.
@@ -287,18 +322,45 @@ export default function App() {
   useLiveUpdate();
 
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
-  const setLauncherAccess = usePreferencesStore(
-    (state) => state.setLauncherAccess,
+  const setLifetimeProAccess = usePreferencesStore(
+    (state) => state.setLifetimeProAccess,
+  );
+  const beginOnlinePremiumAccessCheck = usePreferencesStore(
+    (state) => state.beginOnlinePremiumAccessCheck,
+  );
+  const setOnlinePremiumAccess = usePreferencesStore(
+    (state) => state.setOnlinePremiumAccess,
+  );
+  const clearOnlinePremiumAccess = usePreferencesStore(
+    (state) => state.clearOnlinePremiumAccess,
   );
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
+    let active = true;
+    let authChangeGeneration = 0;
+    let subscriptionController: AbortController | null = null;
 
     if (!isPluginAvailable("FirebaseAuthentication")) {
       return undefined;
     }
 
     FirebaseAuthentication.addListener("authStateChange", async (change) => {
+      if (!active) return;
+      const generation = ++authChangeGeneration;
+      subscriptionController?.abort();
+      subscriptionController = null;
+
+      const previousUser = useStatusStore.getState().loggedInUser;
+      const identityChanged = previousUser?.uid !== change.user?.uid;
+
+      if (identityChanged) setLifetimeProAccess(false);
+      if (!change.user) {
+        clearOnlinePremiumAccess();
+      } else if (identityChanged) {
+        beginOnlinePremiumAccessCheck();
+      }
+
       // Refresh user data and token to get latest claims (e.g., email_verified)
       // This must happen before any API calls that depend on token claims
       if (change.user) {
@@ -311,61 +373,27 @@ export default function App() {
         }
       }
 
+      if (!active || generation !== authChangeGeneration) return;
       setLoggedInUser(change.user);
 
-      // Sync RevenueCat identity with Firebase user (skip on web or missing bridge)
+      // Sync RevenueCat identity with Firebase user (skip on web or missing bridge).
       if (isNativePluginAvailable("Purchases")) {
-        await purchasesReady;
         try {
           if (change.user) {
-            // Link RevenueCat to Firebase user - transfers anonymous purchases
-            const { customerInfo } = await Purchases.logIn({
-              appUserID: change.user.uid,
-            });
-            let hasAccess = !!customerInfo.entitlements.active?.tapto_launcher;
-
-            // Restore purchases to transfer any orphaned purchases from anonymous user
-            if (!hasAccess) {
-              try {
-                await Purchases.restorePurchases();
-                const restored = await Purchases.getCustomerInfo();
-                hasAccess =
-                  !!restored.customerInfo.entitlements.active?.tapto_launcher;
-              } catch (e) {
-                logger.warn("Auto-restore after login failed:", e);
-              }
+            const appUserID = change.user.uid;
+            const customerInfo = await ensurePurchasesUser(appUserID);
+            if (
+              !active ||
+              generation !== authChangeGeneration ||
+              useStatusStore.getState().loggedInUser?.uid !== appUserID
+            ) {
+              return;
             }
-            setLauncherAccess(hasAccess);
-
-            // Also check API premium status (online subscription)
-            try {
-              const { is_premium } = await getSubscriptionStatus();
-              if (is_premium) {
-                setLauncherAccess(true);
-              }
-            } catch (e) {
-              logger.error("Failed to check subscription status:", e, {
-                category: "api",
-                action: "getSubscription",
-                severity: "warning",
-              });
-            }
+            setLifetimeProAccess(getPurchaseAccess(customerInfo).lifetimePro);
           } else {
-            // Revert to anonymous RevenueCat customer — only if not already anonymous
-            try {
-              const { isAnonymous } = await Purchases.isAnonymous();
-              if (!isAnonymous) {
-                await Purchases.logOut();
-              }
-            } catch (e) {
-              if (!isExpectedRevenueCatLogoutError(e)) {
-                throw e;
-              }
-            }
-            const { customerInfo } = await Purchases.getCustomerInfo();
-            const hasAccess =
-              !!customerInfo.entitlements.active?.tapto_launcher;
-            setLauncherAccess(hasAccess);
+            const customerInfo = await resetPurchasesUser();
+            if (!active || generation !== authChangeGeneration) return;
+            setLifetimeProAccess(getPurchaseAccess(customerInfo).lifetimePro);
           }
         } catch (e) {
           logger.error("RevenueCat login sync failed:", e, {
@@ -375,18 +403,71 @@ export default function App() {
           });
         }
       }
+
+      if (change.user) {
+        const appUserID = change.user.uid;
+        const controller = new AbortController();
+        subscriptionController = controller;
+        try {
+          const { is_premium } = await getSubscriptionStatusWithRetry(
+            controller.signal,
+          );
+          if (
+            !active ||
+            generation !== authChangeGeneration ||
+            useStatusStore.getState().loggedInUser?.uid !== appUserID
+          ) {
+            return;
+          }
+          setOnlinePremiumAccess(is_premium);
+        } catch (e) {
+          if (controller.signal.aborted) return;
+          if (
+            !active ||
+            generation !== authChangeGeneration ||
+            useStatusStore.getState().loggedInUser?.uid !== appUserID
+          ) {
+            return;
+          }
+          setOnlinePremiumAccess(false);
+          logger.error("Failed to check subscription status:", e, {
+            category: "api",
+            action: "getSubscription",
+            severity: "warning",
+          });
+        } finally {
+          if (subscriptionController === controller) {
+            subscriptionController = null;
+          }
+        }
+      }
     })
       .then((handle) => {
-        cleanup = () => handle.remove();
+        if (!active) {
+          void handle.remove();
+          return;
+        }
+        cleanup = () => {
+          void handle.remove();
+        };
       })
       .catch((e) => {
         logger.warn("Firebase auth listener setup failed:", e);
       });
 
     return () => {
+      active = false;
+      authChangeGeneration += 1;
+      subscriptionController?.abort();
       cleanup?.();
     };
-  }, [setLoggedInUser, setLauncherAccess]);
+  }, [
+    beginOnlinePremiumAccessCheck,
+    clearOnlinePremiumAccess,
+    setLifetimeProAccess,
+    setLoggedInUser,
+    setOnlinePremiumAccess,
+  ]);
 
   // Block rendering until preferences, Pro access, and hardware availability are hydrated to prevent layout shifts
   if (

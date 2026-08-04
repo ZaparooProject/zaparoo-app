@@ -64,6 +64,8 @@ export interface PreferencesState {
   restartScan: boolean;
   launchOnScan: boolean;
   launcherAccess: boolean;
+  lifetimeProAccess: boolean | null;
+  onlinePremiumAccess: boolean | null;
   preferRemoteWriter: boolean;
 
   // Shake to launch settings
@@ -134,7 +136,10 @@ export interface PreferencesState {
 export interface PreferencesActions {
   setRestartScan: (value: boolean) => void;
   setLaunchOnScan: (value: boolean) => void;
-  setLauncherAccess: (value: boolean) => void;
+  setLifetimeProAccess: (value: boolean) => void;
+  beginOnlinePremiumAccessCheck: () => void;
+  setOnlinePremiumAccess: (value: boolean) => void;
+  clearOnlinePremiumAccess: () => void;
   setPreferRemoteWriter: (value: boolean) => void;
   setShakeEnabled: (value: boolean) => void;
   setShakeMode: (value: "random" | "custom") => void;
@@ -178,6 +183,8 @@ const DEFAULT_PREFERENCES: Omit<
   restartScan: false,
   launchOnScan: true, // Default on - Pro check happens at launch time
   launcherAccess: false,
+  lifetimeProAccess: null,
+  onlinePremiumAccess: null,
   preferRemoteWriter: false,
   shakeEnabled: false,
   shakeMode: "random",
@@ -249,7 +256,36 @@ export const usePreferencesStore = create<PreferencesStore>()(
         set({ launchOnScan: value });
         sessionManager.setLaunchOnScan(value);
       },
-      setLauncherAccess: (value) => set({ launcherAccess: value }),
+      setLifetimeProAccess: (value) =>
+        set((state) => ({
+          lifetimeProAccess: value,
+          launcherAccess:
+            value ||
+            state.onlinePremiumAccess === true ||
+            (state.onlinePremiumAccess === null && state.launcherAccess),
+        })),
+      beginOnlinePremiumAccessCheck: () =>
+        set((state) => ({
+          onlinePremiumAccess: null,
+          launcherAccess:
+            state.lifetimeProAccess === true ||
+            (state.lifetimeProAccess === null && state.launcherAccess),
+        })),
+      setOnlinePremiumAccess: (value) =>
+        set((state) => ({
+          onlinePremiumAccess: value,
+          launcherAccess:
+            value ||
+            state.lifetimeProAccess === true ||
+            (state.lifetimeProAccess === null && state.launcherAccess),
+        })),
+      clearOnlinePremiumAccess: () =>
+        set((state) => ({
+          onlinePremiumAccess: false,
+          launcherAccess:
+            state.lifetimeProAccess === true ||
+            (state.lifetimeProAccess === null && state.launcherAccess),
+        })),
       setPreferRemoteWriter: (value) => set({ preferRemoteWriter: value }),
       setShakeEnabled: (value) => set({ shakeEnabled: value }),
       setShakeMode: (value) => {
@@ -336,6 +372,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
           // Never persist the hydration flags or runtime-checked values
           _hasHydrated: currentState._hasHydrated,
           _proAccessHydrated: currentState._proAccessHydrated,
+          lifetimeProAccess: currentState.lifetimeProAccess,
+          onlinePremiumAccess: currentState.onlinePremiumAccess,
           nfcAvailable: currentState.nfcAvailable,
           _nfcAvailabilityHydrated: currentState._nfcAvailabilityHydrated,
           cameraAvailable: currentState.cameraAvailable,

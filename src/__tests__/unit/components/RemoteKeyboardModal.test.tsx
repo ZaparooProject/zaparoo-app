@@ -17,7 +17,7 @@ interface KeyboardMockProps {
   onKeyPress: (button: string) => void;
 }
 
-vi.mock("react-simple-keyboard", () => ({
+vi.mock("react-simple-keyboard/build/index.modern.esm.js", () => ({
   default: ({ layout, layoutName, display, onKeyPress }: KeyboardMockProps) => (
     <div>
       {layout[layoutName]?.flatMap((row) =>

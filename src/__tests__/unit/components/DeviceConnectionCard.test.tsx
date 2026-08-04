@@ -84,6 +84,10 @@ describe("DeviceConnectionCard", () => {
     useStatusStore.setState({
       encryptionState: "plaintext",
       pairingRequired: false,
+      coreVersion: null,
+      corePlatform: null,
+      coreVersionPending: false,
+      currentClient: null,
     });
   });
 
@@ -119,6 +123,43 @@ describe("DeviceConnectionCard", () => {
 
     // ConnectionStatusDisplay shows "Connected" heading when connected
     expect(screen.getByText("scan.connectedHeading")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["admin", "connection.clientRoleAdmin"],
+    ["member", "connection.clientRoleMember"],
+  ] as const)(
+    "should show the current %s client role on supported Core",
+    (role, label) => {
+      useStatusStore.setState({
+        coreVersion: "2.16.0",
+        corePlatform: "MiSTer",
+        currentClient: { paired: true, role, capabilities: [] },
+      });
+
+      render(<DeviceConnectionCard {...defaultProps} />);
+
+      expect(screen.getByText("MiSTer (v2.16.0)")).toBeInTheDocument();
+      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
+        `scan.connectedHeading${label}`,
+      );
+    },
+  );
+
+  it("should hide the client role on older Core versions", () => {
+    useStatusStore.setState({
+      coreVersion: "2.15.0",
+      corePlatform: "MiSTer",
+      currentClient: { paired: true, role: "admin", capabilities: [] },
+    });
+
+    render(<DeviceConnectionCard {...defaultProps} />);
+
+    expect(screen.getByText("MiSTer (v2.15.0)")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/connection\.clientRoleAdmin/),
+    ).not.toBeInTheDocument();
   });
 
   it("shows address validation error when provided", () => {

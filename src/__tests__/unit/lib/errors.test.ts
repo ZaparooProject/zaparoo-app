@@ -14,6 +14,8 @@ import {
   NfcFormatError,
   BarcodeScanCancelledError,
   PurchaseCancelledError,
+  PurchasePendingError,
+  PurchaseIdentityError,
   isCancellationError,
   isExpectedEmailAuthError,
   isExpectedRevenueCatLogoutError,
@@ -623,6 +625,70 @@ describe("errors", () => {
       expect(wrapPurchaseError(mixedCase)).toBeInstanceOf(
         PurchaseCancelledError,
       );
+    });
+
+    it.each([
+      [
+        "cancellation code",
+        { code: "1", message: "Store error" },
+        PurchaseCancelledError,
+      ],
+      [
+        "cancellation readable code",
+        {
+          userInfo: { readableErrorCode: "PURCHASE_CANCELLED_ERROR" },
+          message: "Store error",
+        },
+        PurchaseCancelledError,
+      ],
+      [
+        "cancellation message",
+        { message: "Purchase was cancelled" },
+        PurchaseCancelledError,
+      ],
+      [
+        "pending code",
+        { code: "20", message: "Store error" },
+        PurchasePendingError,
+      ],
+      [
+        "pending readable code",
+        {
+          userInfo: { readableErrorCode: "PAYMENT_PENDING_ERROR" },
+          message: "Store error",
+        },
+        PurchasePendingError,
+      ],
+      [
+        "pending message",
+        { message: "Purchase is pending" },
+        PurchasePendingError,
+      ],
+      [
+        "identity code",
+        { code: "14", message: "Store error" },
+        PurchaseIdentityError,
+      ],
+      [
+        "identity readable code",
+        {
+          userInfo: { readableErrorCode: "INVALID_APP_USER_ID_ERROR" },
+          message: "Store error",
+        },
+        PurchaseIdentityError,
+      ],
+    ])(
+      "should classify a RevenueCat %s independently",
+      (_label, error, type) => {
+        expect(wrapPurchaseError(error)).toBeInstanceOf(type);
+      },
+    );
+
+    it("should preserve a plain object message in a generic Error", () => {
+      const wrapped = wrapPurchaseError({ message: "Store unavailable" });
+
+      expect(wrapped).toBeInstanceOf(Error);
+      expect(wrapped).toHaveProperty("message", "Store unavailable");
     });
 
     it("should return original error for non-cancellation errors", () => {

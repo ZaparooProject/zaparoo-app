@@ -5,7 +5,6 @@ import "./index.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LOG_LEVEL, Purchases } from "@revenuecat/purchases-capacitor";
 import { Capacitor } from "@capacitor/core";
-import { Preferences } from "@capacitor/preferences";
 import { initializeApp } from "firebase/app";
 import { isPluginAvailable } from "@/lib/capacitorBridge";
 import App from "./App";
@@ -34,19 +33,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-if (isPluginAvailable("Preferences")) {
-  Preferences.get({ key: "apiUrl" })
-    .then((res) => {
-      if (res.value && localStorage.getItem("apiUrl") === null) {
-        localStorage.setItem("apiUrl", res.value);
-        window.location.reload();
-      }
-    })
-    .catch(() => {
-      // Silently ignore - migration from Preferences to localStorage is optional
-    });
-}
 
 let purchasesInitializationStarted = false;
 
