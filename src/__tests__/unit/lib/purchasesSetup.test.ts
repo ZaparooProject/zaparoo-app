@@ -11,12 +11,20 @@ const {
   mockGetCustomerInfo,
   mockIsAnonymous,
   mockLogOut,
+  mockIsNativePlatform,
 } = vi.hoisted(() => ({
   mockGetAppUserID: vi.fn(),
   mockLogIn: vi.fn(),
   mockGetCustomerInfo: vi.fn(),
   mockIsAnonymous: vi.fn(),
   mockLogOut: vi.fn(),
+  mockIsNativePlatform: vi.fn(),
+}));
+
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: mockIsNativePlatform,
+  },
 }));
 
 vi.mock("@revenuecat/purchases-capacitor", () => ({
@@ -84,6 +92,7 @@ describe("purchasesSetup", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsNativePlatform.mockReturnValue(true);
     mockGetAppUserID.mockResolvedValue({ appUserID: "anonymous" });
     mockLogIn.mockResolvedValue({ customerInfo: customerInfo() });
     mockGetCustomerInfo.mockResolvedValue({ customerInfo: customerInfo() });
@@ -159,6 +168,19 @@ describe("purchasesSetup", () => {
     expect(mockLogIn.mock.invocationCallOrder[0]!).toBeLessThan(
       mockGetAppUserID.mock.invocationCallOrder[1]!,
     );
+  });
+
+  it("should reject purchase operations on web before using RevenueCat", async () => {
+    mockIsNativePlatform.mockReturnValue(false);
+    const operation = vi.fn();
+
+    await expect(runPurchasesOperation(null, operation)).rejects.toThrow(
+      "require a native platform",
+    );
+
+    expect(operation).not.toHaveBeenCalled();
+    expect(mockGetCustomerInfo).not.toHaveBeenCalled();
+    expect(mockGetAppUserID).not.toHaveBeenCalled();
   });
 
   it("should reject an operation when its RevenueCat identity changes", async () => {

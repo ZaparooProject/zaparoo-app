@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import {
   Purchases,
   type CustomerInfo,
@@ -155,6 +156,12 @@ export function runPurchasesOperation<T>(
   operation: (customerInfo: CustomerInfo) => Promise<T>,
   options: PurchasesOperationOptions = {},
 ): Promise<T> {
+  if (!Capacitor.isNativePlatform()) {
+    return Promise.reject(
+      new Error("RevenueCat purchase operations require a native platform"),
+    );
+  }
+
   return enqueueIdentityOperation(async () => {
     assertCurrentOperation(options);
     const customerInfo = appUserID
