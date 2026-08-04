@@ -346,9 +346,20 @@ export default function App() {
     }
 
     FirebaseAuthentication.addListener("authStateChange", async (change) => {
+      if (!active) return;
       const generation = ++authChangeGeneration;
       subscriptionController?.abort();
       subscriptionController = null;
+
+      const previousUser = useStatusStore.getState().loggedInUser;
+      const identityChanged = previousUser?.uid !== change.user?.uid;
+
+      if (identityChanged) setLifetimeProAccess(false);
+      if (!change.user) {
+        clearOnlinePremiumAccess();
+      } else if (identityChanged) {
+        beginOnlinePremiumAccessCheck();
+      }
 
       // Refresh user data and token to get latest claims (e.g., email_verified)
       // This must happen before any API calls that depend on token claims
@@ -363,15 +374,7 @@ export default function App() {
       }
 
       if (!active || generation !== authChangeGeneration) return;
-
-      const previousUser = useStatusStore.getState().loggedInUser;
       setLoggedInUser(change.user);
-
-      if (!change.user) {
-        clearOnlinePremiumAccess();
-      } else if (previousUser?.uid !== change.user.uid) {
-        beginOnlinePremiumAccessCheck();
-      }
 
       // Sync RevenueCat identity with Firebase user (skip on web or missing bridge).
       if (isNativePluginAvailable("Purchases")) {
@@ -419,6 +422,14 @@ export default function App() {
           setOnlinePremiumAccess(is_premium);
         } catch (e) {
           if (controller.signal.aborted) return;
+          if (
+            !active ||
+            generation !== authChangeGeneration ||
+            useStatusStore.getState().loggedInUser?.uid !== appUserID
+          ) {
+            return;
+          }
+          setOnlinePremiumAccess(false);
           logger.error("Failed to check subscription status:", e, {
             category: "api",
             action: "getSubscription",
@@ -432,7 +443,13 @@ export default function App() {
       }
     })
       .then((handle) => {
-        cleanup = () => handle.remove();
+        if (!active) {
+          void handle.remove();
+          return;
+        }
+        cleanup = () => {
+          void handle.remove();
+        };
       })
       .catch((e) => {
         logger.warn("Firebase auth listener setup failed:", e);

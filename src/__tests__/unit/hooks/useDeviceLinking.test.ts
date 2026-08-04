@@ -1,6 +1,9 @@
 import { act, renderHook, waitFor } from "@/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useDeviceLinking } from "@/hooks/useDeviceLinking";
+import {
+  DEVICE_LINK_TIMEOUT_MS,
+  useDeviceLinking,
+} from "@/hooks/useDeviceLinking";
 import { NotSignedInError } from "@/lib/onlineApi";
 
 const {
@@ -182,7 +185,7 @@ describe("useDeviceLinking", () => {
       });
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(15_001);
+        await vi.advanceTimersByTimeAsync(DEVICE_LINK_TIMEOUT_MS + 1);
         await linkPromise;
       });
 

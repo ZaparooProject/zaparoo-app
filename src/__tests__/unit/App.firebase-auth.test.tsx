@@ -455,6 +455,25 @@ describe("Firebase Auth Integration", () => {
     });
   });
 
+  it("should remove a listener that resolves after unmount", async () => {
+    let resolveListener!: (handle: { remove: typeof mockRemove }) => void;
+    mockAddListener.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveListener = resolve;
+        }),
+    );
+
+    const App = (await import("@/App")).default;
+    const { unmount } = render(<App />);
+    await waitFor(() => expect(mockAddListener).toHaveBeenCalled());
+
+    unmount();
+    resolveListener({ remove: mockRemove });
+
+    await waitFor(() => expect(mockRemove).toHaveBeenCalledOnce());
+  });
+
   // Regression test: Ensures token is refreshed on auth state change to get
   // latest claims (e.g., email_verified). Without this, users who verified
   // their email externally would see the requirements modal on app restart
@@ -589,6 +608,113 @@ describe("Firebase Auth Integration", () => {
       expect(mockPurchasesLogIn).not.toHaveBeenCalled();
       expect(mockPurchasesLogOut).not.toHaveBeenCalled();
       expect(mockPurchasesGetCustomerInfo).not.toHaveBeenCalled();
+    });
+
+    it("should clear lifetime access before synchronizing a new identity", async () => {
+      mockPlatform = "ios";
+      let resolveLogin!: (value: {
+        customerInfo: {
+          entitlements: { active: Record<string, unknown> };
+        };
+      }) => void;
+      mockPurchasesLogIn.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveLogin = resolve;
+          }),
+      );
+
+      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
+        null;
+      mockAddListener.mockImplementation(
+        (
+          _event: string,
+          callback: (change: { user: unknown }) => Promise<void>,
+        ) => {
+          authCallback = callback;
+          return Promise.resolve({ remove: mockRemove });
+        },
+      );
+
+      const App = (await import("@/App")).default;
+      render(<App />);
+      await waitFor(() => expect(authCallback).not.toBeNull());
+
+      let authPromise!: Promise<void>;
+      act(() => {
+        authPromise = authCallback!({
+          user: { uid: "user-123", email: "test@example.com" },
+        });
+      });
+
+      await waitFor(() => {
+        expect(mockSetLauncherAccess).toHaveBeenCalledWith(false);
+        expect(mockBeginOnlinePremiumAccessCheck).toHaveBeenCalledOnce();
+      });
+      expect(mockSetLauncherAccess).not.toHaveBeenCalledWith(true);
+
+      resolveLogin({
+        customerInfo: {
+          entitlements: { active: { tapto_launcher: {} } },
+        },
+      });
+      await act(async () => authPromise);
+
+      expect(mockSetLauncherAccess).toHaveBeenLastCalledWith(true);
+    });
+
+    it("should ignore RevenueCat access from a stale identity change", async () => {
+      mockPlatform = "ios";
+      let resolveFirstLogin!: (value: {
+        customerInfo: {
+          entitlements: { active: Record<string, unknown> };
+        };
+      }) => void;
+      mockPurchasesLogIn
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveFirstLogin = resolve;
+            }),
+        )
+        .mockResolvedValueOnce({
+          customerInfo: { entitlements: { active: {} } },
+        });
+
+      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
+        null;
+      mockAddListener.mockImplementation(
+        (
+          _event: string,
+          callback: (change: { user: unknown }) => Promise<void>,
+        ) => {
+          authCallback = callback;
+          return Promise.resolve({ remove: mockRemove });
+        },
+      );
+
+      const App = (await import("@/App")).default;
+      render(<App />);
+      await waitFor(() => expect(authCallback).not.toBeNull());
+
+      let firstChange!: Promise<void>;
+      act(() => {
+        firstChange = authCallback!({ user: { uid: "user-123" } });
+      });
+      await waitFor(() => expect(mockPurchasesLogIn).toHaveBeenCalledOnce());
+
+      await act(async () => {
+        await authCallback!({ user: { uid: "user-456" } });
+      });
+      resolveFirstLogin({
+        customerInfo: {
+          entitlements: { active: { tapto_launcher: {} } },
+        },
+      });
+      await act(async () => firstChange);
+
+      expect(mockSetLauncherAccess).not.toHaveBeenCalledWith(true);
+      expect(mockSetLauncherAccess).toHaveBeenLastCalledWith(false);
     });
 
     it("should call Purchases.logIn when user authenticates on native platform", async () => {
@@ -798,7 +924,8 @@ describe("Firebase Auth Integration", () => {
         await authCallback!({ user: mockUser });
       });
 
-      // Should log error but not throw
+      // Failed synchronization must leave the previous identity's access cleared.
+      expect(mockSetLauncherAccess).toHaveBeenLastCalledWith(false);
       expect(mockLoggerError).toHaveBeenCalledWith(
         "RevenueCat login sync failed:",
         expect.any(Error),
@@ -884,8 +1011,9 @@ describe("Firebase Auth Integration", () => {
         await authCallback!({ user: mockUser });
       });
 
-      // Should retry once, then log the final error without throwing
+      // Should retry once, then terminate pending access and log the error.
       expect(mockGetSubscriptionStatus).toHaveBeenCalledTimes(2);
+      expect(mockSetOnlinePremiumAccess).toHaveBeenCalledWith(false);
       expect(mockLoggerError).toHaveBeenCalledWith(
         "Failed to check subscription status:",
         expect.any(Error),

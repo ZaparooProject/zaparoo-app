@@ -31,6 +31,7 @@ const {
 }));
 
 let appStateCallback: ((state: { isActive: boolean }) => void) | null = null;
+let loggedInUserID = "user-123";
 
 const monthlyPackage = {
   identifier: "$rc_monthly",
@@ -128,7 +129,7 @@ vi.mock("@/lib/preferencesStore", () => ({
 
 vi.mock("@/lib/store", () => ({
   useStatusStore: {
-    getState: () => ({ loggedInUser: { uid: "user-123" } }),
+    getState: () => ({ loggedInUser: { uid: loggedInUserID } }),
   },
 }));
 
@@ -148,6 +149,7 @@ describe("useWarpSubscription", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     appStateCallback = null;
+    loggedInUserID = "user-123";
     mockIsNativePlatform.mockReturnValue(true);
     mockAddAppListener.mockImplementation(
       (_event: string, callback: (state: { isActive: boolean }) => void) => {
@@ -241,6 +243,49 @@ describe("useWarpSubscription", () => {
     expect(result.current.activationPending).toBe(false);
   });
 
+  it("should clear stale activation state when checkout offerings return", async () => {
+    mockEnsurePurchasesUser.mockResolvedValue(customerInfo({ warp: true }));
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.activationPending).toBe(true));
+
+    mockEnsurePurchasesUser.mockResolvedValue(customerInfo());
+    act(() => appStateCallback?.({ isActive: true }));
+
+    await waitFor(() => {
+      expect(mockGetOfferings).toHaveBeenCalledOnce();
+      expect(result.current.activationPending).toBe(false);
+    });
+  });
+
+  it.each([
+    {
+      label: "lifetime Pro",
+      access: customerInfo({ lifetimePro: true }),
+      expected: "pro_restored",
+    },
+    {
+      label: "no purchases",
+      access: customerInfo(),
+      expected: "not_found",
+    },
+  ])(
+    "should clear stale activation state after restoring $label",
+    async ({ access, expected }) => {
+      mockEnsurePurchasesUser.mockResolvedValue(customerInfo({ warp: true }));
+      mockRestorePurchases.mockResolvedValue({ customerInfo: access });
+      const { result } = renderHook(() => useWarpSubscription("user-123"));
+      await waitFor(() => expect(result.current.activationPending).toBe(true));
+
+      let restoreResult: string | undefined;
+      await act(async () => {
+        restoreResult = await result.current.restore();
+      });
+
+      expect(restoreResult).toBe(expected);
+      expect(result.current.activationPending).toBe(false);
+    },
+  );
+
   it("should stop activation polling at the bounded deadline", async () => {
     mockGetSubscriptionStatus.mockResolvedValue(subscription(false));
     const { result } = renderHook(() => useWarpSubscription("user-123"));
@@ -277,6 +322,31 @@ describe("useWarpSubscription", () => {
     expect(mockGetOfferings).not.toHaveBeenCalled();
   });
 
+  it("should stop loading when the initial subscription request stalls", async () => {
+    vi.useFakeTimers();
+    try {
+      mockIsNativePlatform.mockReturnValue(false);
+      mockGetSubscriptionStatus.mockImplementation(
+        (signal: AbortSignal) =>
+          new Promise((_, reject) => {
+            signal.addEventListener("abort", () => reject(signal.reason), {
+              once: true,
+            });
+          }),
+      );
+
+      const { result } = renderHook(() => useWarpSubscription("user-123"));
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.loadFailed).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("should refresh on foreground without replacing content with loading", async () => {
     const { result } = renderHook(() => useWarpSubscription("user-123"));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -297,6 +367,97 @@ describe("useWarpSubscription", () => {
       expect(result.current.subscription?.is_premium).toBe(true);
       expect(result.current.isLoading).toBe(false);
     });
+  });
+
+  it("should ignore a foreground response after retry starts", async () => {
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let resolveForeground!: (value: SubscriptionResponse) => void;
+    mockGetSubscriptionStatus
+      .mockImplementationOnce(
+        () =>
+          new Promise<SubscriptionResponse>((resolve) => {
+            resolveForeground = resolve;
+          }),
+      )
+      .mockResolvedValueOnce(subscription(true));
+
+    act(() => appStateCallback?.({ isActive: true }));
+    await waitFor(() =>
+      expect(mockGetSubscriptionStatus).toHaveBeenCalledTimes(2),
+    );
+
+    await act(async () => result.current.retry());
+    expect(result.current.subscription?.is_premium).toBe(true);
+
+    await act(async () => {
+      resolveForeground(subscription(false));
+      await Promise.resolve();
+    });
+    expect(result.current.subscription?.is_premium).toBe(true);
+  });
+
+  it("should reject a purchase result for a stale account", async () => {
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    mockSetLifetimeProAccess.mockClear();
+
+    let resolvePurchase!: (value: { customerInfo: CustomerInfo }) => void;
+    mockPurchasePackage.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePurchase = resolve;
+        }),
+    );
+
+    let purchasePromise!: Promise<string>;
+    act(() => {
+      purchasePromise = result.current.purchase();
+    });
+    await waitFor(() => expect(mockPurchasePackage).toHaveBeenCalledOnce());
+
+    loggedInUserID = "user-456";
+    resolvePurchase({ customerInfo: customerInfo({ warp: true }) });
+
+    let purchaseResult: string | undefined;
+    await act(async () => {
+      purchaseResult = await purchasePromise;
+    });
+    expect(purchaseResult).toBe("identity_error");
+    expect(mockSetLifetimeProAccess).not.toHaveBeenCalled();
+    expect(result.current.revenueCatWarpActive).toBe(false);
+  });
+
+  it("should ignore a restore result for a stale account", async () => {
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    mockSetLifetimeProAccess.mockClear();
+
+    let resolveRestore!: (value: { customerInfo: CustomerInfo }) => void;
+    mockRestorePurchases.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRestore = resolve;
+        }),
+    );
+
+    let restorePromise!: Promise<string>;
+    act(() => {
+      restorePromise = result.current.restore();
+    });
+    await waitFor(() => expect(mockRestorePurchases).toHaveBeenCalledOnce());
+
+    loggedInUserID = "user-456";
+    resolveRestore({ customerInfo: customerInfo({ warp: true }) });
+
+    let restoreResult: string | undefined;
+    await act(async () => {
+      restoreResult = await restorePromise;
+    });
+    expect(restoreResult).toBe("failed");
+    expect(mockSetLifetimeProAccess).not.toHaveBeenCalled();
+    expect(result.current.revenueCatWarpActive).toBe(false);
   });
 
   it("should fetch a fresh management URL before opening it", async () => {

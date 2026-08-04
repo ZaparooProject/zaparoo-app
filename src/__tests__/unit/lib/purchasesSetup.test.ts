@@ -29,6 +29,7 @@ vi.mock("@revenuecat/purchases-capacitor", () => ({
   },
 }));
 
+import { PurchaseIdentityError } from "@/lib/errors";
 import {
   ensurePurchasesUser,
   getProPackage,
@@ -36,6 +37,7 @@ import {
   getWarpPackages,
   resetPurchasesUser,
   resolvePurchasesReady,
+  runPurchasesOperation,
 } from "@/lib/purchasesSetup";
 
 function customerInfo(active: Record<string, unknown> = {}): CustomerInfo {
@@ -157,6 +159,32 @@ describe("purchasesSetup", () => {
     expect(mockLogIn.mock.invocationCallOrder[0]!).toBeLessThan(
       mockGetAppUserID.mock.invocationCallOrder[1]!,
     );
+  });
+
+  it("should reject an operation when its RevenueCat identity changes", async () => {
+    mockGetAppUserID
+      .mockResolvedValueOnce({ appUserID: "user-123" })
+      .mockResolvedValueOnce({ appUserID: "user-456" });
+
+    await expect(
+      runPurchasesOperation("user-123", async () => "completed"),
+    ).rejects.toBeInstanceOf(PurchaseIdentityError);
+  });
+
+  it("should reject an operation when its account guard becomes stale", async () => {
+    mockGetAppUserID.mockResolvedValue({ appUserID: "user-123" });
+    let current = true;
+
+    await expect(
+      runPurchasesOperation(
+        "user-123",
+        async () => {
+          current = false;
+          return "completed";
+        },
+        { isCurrentIdentity: () => current },
+      ),
+    ).rejects.toBeInstanceOf(PurchaseIdentityError);
   });
 
   it("should skip logout when the current user is anonymous", async () => {

@@ -97,12 +97,24 @@ export function useWarpSubscription(appUserID: string) {
   const [activationPending, setActivationPending] = useState(false);
   const actionRef = useRef<WarpAction>(null);
   const actionAbortRef = useRef<AbortController | null>(null);
+  const accountLoadAbortRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
   const setLifetimeProAccess = usePreferencesStore(
     (state) => state.setLifetimeProAccess,
   );
   const setOnlinePremiumAccess = usePreferencesStore(
     (state) => state.setOnlinePremiumAccess,
+  );
+  const isCurrentIdentity = useCallback(
+    () => useStatusStore.getState().loggedInUser?.uid === appUserID,
+    [appUserID],
+  );
+  const assertCurrentAction = useCallback(
+    (signal: AbortSignal) => {
+      signal.throwIfAborted();
+      if (!isCurrentIdentity()) throw new PurchaseIdentityError();
+    },
+    [isCurrentIdentity],
   );
 
   const applySubscription = useCallback(
@@ -124,17 +136,19 @@ export function useWarpSubscription(appUserID: string) {
 
       try {
         if (!Capacitor.isNativePlatform()) {
-          const nextSubscription = await getSubscriptionStatus(signal);
+          const nextSubscription =
+            await getSubscriptionStatusWithTimeout(signal);
           if (signal.aborted) return;
           setPackages(null);
           setRevenueCatWarpActive(false);
           applySubscription(nextSubscription);
+          setActivationPending(false);
           return;
         }
 
         const [customerInfo, nextSubscription] = await Promise.all([
           ensurePurchasesUser(appUserID),
-          getSubscriptionStatus(signal),
+          getSubscriptionStatusWithTimeout(signal),
         ]);
         if (signal.aborted) return;
 
@@ -154,6 +168,7 @@ export function useWarpSubscription(appUserID: string) {
           return;
         }
 
+        setActivationPending(false);
         const offerings = await Purchases.getOfferings();
         if (signal.aborted) return;
 
@@ -191,23 +206,42 @@ export function useWarpSubscription(appUserID: string) {
 
   useEffect(() => {
     mountedRef.current = true;
-    const controller = new AbortController();
+    const lifecycleController = new AbortController();
     let appStateHandle: { remove: () => Promise<void> } | null = null;
 
-    void Promise.resolve().then(() => loadAccount(controller.signal));
+    const startAccountLoad = (silent = false) => {
+      accountLoadAbortRef.current?.abort();
+      const loadController = new AbortController();
+      accountLoadAbortRef.current = loadController;
+      void loadAccount(loadController.signal, silent).finally(() => {
+        if (accountLoadAbortRef.current === loadController) {
+          accountLoadAbortRef.current = null;
+        }
+      });
+    };
+
+    void Promise.resolve().then(() => {
+      if (!lifecycleController.signal.aborted) startAccountLoad();
+    });
     void CapacitorApp.addListener("appStateChange", ({ isActive }) => {
-      if (!isActive || controller.signal.aborted || actionRef.current) return;
-      void loadAccount(controller.signal, true);
+      if (
+        !isActive ||
+        lifecycleController.signal.aborted ||
+        actionRef.current
+      ) {
+        return;
+      }
+      startAccountLoad(true);
     })
       .then((handle) => {
-        if (controller.signal.aborted) {
+        if (lifecycleController.signal.aborted) {
           void handle.remove();
           return;
         }
         appStateHandle = handle;
       })
       .catch((e) => {
-        if (controller.signal.aborted) return;
+        if (lifecycleController.signal.aborted) return;
         logger.error("Failed to listen for subscription refresh", e, {
           category: "lifecycle",
           action: "appStateChange",
@@ -217,7 +251,9 @@ export function useWarpSubscription(appUserID: string) {
 
     return () => {
       mountedRef.current = false;
-      controller.abort();
+      lifecycleController.abort();
+      accountLoadAbortRef.current?.abort();
+      accountLoadAbortRef.current = null;
       actionAbortRef.current?.abort();
       if (appStateHandle) void appStateHandle.remove();
     };
@@ -226,6 +262,8 @@ export function useWarpSubscription(appUserID: string) {
   const beginAction = useCallback((nextAction: Exclude<WarpAction, null>) => {
     if (actionRef.current) return null;
 
+    accountLoadAbortRef.current?.abort();
+    accountLoadAbortRef.current = null;
     const controller = new AbortController();
     actionRef.current = nextAction;
     actionAbortRef.current?.abort();
@@ -293,6 +331,7 @@ export function useWarpSubscription(appUserID: string) {
       }
 
       const latestSubscription = await getSubscriptionStatus(controller.signal);
+      assertCurrentAction(controller.signal);
       applySubscription(latestSubscription);
       if (latestSubscription.is_premium) return "active";
 
@@ -313,6 +352,7 @@ export function useWarpSubscription(appUserID: string) {
           }
 
           const offerings = await Purchases.getOfferings();
+          assertCurrentAction(controller.signal);
           const freshPackages = getWarpPackages(offerings);
           const purchasePackage = freshPackages?.[selectedPlan];
           if (!purchasePackage) {
@@ -337,8 +377,13 @@ export function useWarpSubscription(appUserID: string) {
             purchased: true,
           };
         },
+        {
+          signal: controller.signal,
+          isCurrentIdentity,
+        },
       );
 
+      assertCurrentAction(controller.signal);
       const access = getPurchaseAccess(purchaseResult.customerInfo);
       setLifetimeProAccess(access.lifetimePro);
       setRevenueCatWarpActive(access.warp);
@@ -383,8 +428,10 @@ export function useWarpSubscription(appUserID: string) {
   }, [
     appUserID,
     applySubscription,
+    assertCurrentAction,
     beginAction,
     finishAction,
+    isCurrentIdentity,
     pollForActivation,
     selectedPlan,
     setLifetimeProAccess,
@@ -402,9 +449,15 @@ export function useWarpSubscription(appUserID: string) {
         return "failed";
       }
 
-      const result = await runPurchasesOperation(appUserID, () =>
-        Purchases.restorePurchases(),
+      const result = await runPurchasesOperation(
+        appUserID,
+        () => Purchases.restorePurchases(),
+        {
+          signal: controller.signal,
+          isCurrentIdentity,
+        },
       );
+      assertCurrentAction(controller.signal);
       const access = getPurchaseAccess(result.customerInfo);
       setLifetimeProAccess(access.lifetimePro);
       setRevenueCatWarpActive(access.warp);
@@ -417,6 +470,7 @@ export function useWarpSubscription(appUserID: string) {
       const currentSubscription = await getSubscriptionStatusWithTimeout(
         controller.signal,
       );
+      assertCurrentAction(controller.signal);
       applySubscription(currentSubscription);
       if (currentSubscription.is_premium) return "active";
 
@@ -435,6 +489,7 @@ export function useWarpSubscription(appUserID: string) {
         return "activation_pending";
       }
 
+      setActivationPending(false);
       if (access.lifetimePro) return "pro_restored";
       return "not_found";
     } catch (e) {
@@ -452,8 +507,10 @@ export function useWarpSubscription(appUserID: string) {
   }, [
     appUserID,
     applySubscription,
+    assertCurrentAction,
     beginAction,
     finishAction,
+    isCurrentIdentity,
     pollForActivation,
     setLifetimeProAccess,
   ]);

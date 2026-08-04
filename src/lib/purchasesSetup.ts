@@ -4,7 +4,10 @@ import {
   type PurchasesOfferings,
   type PurchasesPackage,
 } from "@revenuecat/purchases-capacitor";
-import { isExpectedRevenueCatLogoutError } from "@/lib/errors";
+import {
+  isExpectedRevenueCatLogoutError,
+  PurchaseIdentityError,
+} from "@/lib/errors";
 
 export const PRO_ENTITLEMENT_ID = "tapto_launcher";
 export const PRO_OFFERING_ID = "pro";
@@ -135,11 +138,25 @@ export function resetPurchasesUser(): Promise<CustomerInfo> {
   });
 }
 
+interface PurchasesOperationOptions {
+  signal?: AbortSignal;
+  isCurrentIdentity?: () => boolean;
+}
+
+function assertCurrentOperation(options: PurchasesOperationOptions): void {
+  options.signal?.throwIfAborted();
+  if (options.isCurrentIdentity && !options.isCurrentIdentity()) {
+    throw new PurchaseIdentityError();
+  }
+}
+
 export function runPurchasesOperation<T>(
   appUserID: string | null,
   operation: (customerInfo: CustomerInfo) => Promise<T>,
+  options: PurchasesOperationOptions = {},
 ): Promise<T> {
   return enqueueIdentityOperation(async () => {
+    assertCurrentOperation(options);
     const customerInfo = appUserID
       ? await syncPurchasesUser(appUserID)
       : await (async () => {
@@ -147,7 +164,17 @@ export function runPurchasesOperation<T>(
           const result = await Purchases.getCustomerInfo();
           return result.customerInfo;
         })();
+    assertCurrentOperation(options);
 
-    return operation(customerInfo);
+    const result = await operation(customerInfo);
+    assertCurrentOperation(options);
+
+    if (appUserID) {
+      const current = await Purchases.getAppUserID();
+      assertCurrentOperation(options);
+      if (current.appUserID !== appUserID) throw new PurchaseIdentityError();
+    }
+
+    return result;
   });
 }

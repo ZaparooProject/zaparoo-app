@@ -12,7 +12,7 @@ import { createDeviceClaim, NotSignedInError } from "@/lib/onlineApi";
 import { logger } from "@/lib/logger";
 
 const ZAPAROO_API_URL = "https://api.zaparoo.com";
-const DEVICE_LINK_TIMEOUT_MS = 15_000;
+export const DEVICE_LINK_TIMEOUT_MS = 15_000;
 const DEVICE_LINK_STATUS_STALE_MS = 30_000;
 
 export type DeviceLinkState =
