@@ -121,25 +121,11 @@ export function NowPlayingInfo({
       <div>
         <p>
           {t("scan.nowPlayingName", { game: "" })}
-          {displayName === "" ? (
-            <>
-              <span aria-hidden="true">—</span>
-              <span className="sr-only">{t("none")}</span>
-            </>
-          ) : (
-            displayName
-          )}
+          <span>{displayName === "" ? t("none") : displayName}</span>
         </p>
         <p>
           {t("scan.nowPlayingSystem", { system: "" })}
-          {systemName === "" ? (
-            <>
-              <span aria-hidden="true">—</span>
-              <span className="sr-only">{t("none")}</span>
-            </>
-          ) : (
-            systemName
-          )}
+          <span>{systemName === "" ? t("none") : systemName}</span>
         </p>
         {playlist && (
           <>

@@ -5,6 +5,7 @@ import { ArrowLeftRightIcon, KeyRoundIcon, SearchIcon } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
 import { getDeviceAddress } from "@/lib/coreApi";
 import { normalizeDeviceKey } from "@/lib/crypto/credentials";
+import { satisfies as versionSatisfies } from "@/lib/coreVersion";
 import { useStatusStore } from "@/lib/store";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
@@ -37,6 +38,7 @@ export function DeviceConnectionCard({
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
+  const currentClient = useStatusStore((state) => state.currentClient);
   const deviceHistory = useStatusStore((state) => state.deviceHistory);
 
   const savedKey = savedAddress ? normalizeDeviceKey(savedAddress) : "";
@@ -48,12 +50,21 @@ export function DeviceConnectionCard({
     coreVersion !== null
       ? `${/^\d+\.\d+\.\d+/.test(coreVersion) ? "v" : ""}${coreVersion}`
       : undefined;
-  const connectedSubtitle = versionLabel
+  const deviceDetails = versionLabel
     ? corePlatform
       ? `${corePlatform} (${versionLabel})`
       : versionLabel
     : undefined;
-
+  const clientRole =
+    coreVersion !== null && versionSatisfies(coreVersion, "2.16.0")
+      ? currentClient?.role
+      : null;
+  const clientRoleLabel =
+    clientRole === "admin"
+      ? t("connection.clientRoleAdmin")
+      : clientRole === "member"
+        ? t("connection.clientRoleMember")
+        : undefined;
   return (
     <section aria-labelledby="device-connection-heading">
       <Card>
@@ -78,9 +89,10 @@ export function DeviceConnectionCard({
           {/* Connection status row */}
           <ConnectionStatusDisplay
             connectionError={connectionError}
-            connectedSubtitle={connectedSubtitle}
+            connectedSubtitle={deviceDetails}
             connectedSubtitleLoading={isConnected && coreVersionPending}
             connectedName={currentEntry?.name}
+            connectedTitleSuffix={clientRoleLabel}
             action={
               <div className="flex items-center gap-1">
                 <Button

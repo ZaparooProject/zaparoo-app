@@ -386,6 +386,80 @@ describe("CoreAPI", () => {
     expect(sentData.params).toEqual({ buttons: "^^vv<><>BA{start}" });
   });
 
+  it("should send and resolve device auth status requests", async () => {
+    const promise = CoreAPI.settingsAuthStatus({
+      url: "https://api.zaparoo.com",
+    });
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+
+    expect(sentData.method).toBe("settings.auth.status");
+    expect(sentData.params).toEqual({ url: "https://api.zaparoo.com" });
+
+    await CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: sentData.id,
+        result: { linked: true },
+      }),
+    } as MessageEvent);
+
+    await expect(promise).resolves.toEqual({ linked: true });
+  });
+
+  it("should send and resolve one-shot device auth claims", async () => {
+    const promise = CoreAPI.settingsAuthClaim({
+      claimUrl: "https://api.zaparoo.com/v1/device-claims/redeem",
+      token: "zpc1_test",
+    });
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+
+    expect(sentData.method).toBe("settings.auth.claim");
+    expect(sentData.params).toEqual({
+      claimUrl: "https://api.zaparoo.com/v1/device-claims/redeem",
+      token: "zpc1_test",
+    });
+
+    await CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: sentData.id,
+        result: { domains: ["https://api.zaparoo.com"] },
+      }),
+    } as MessageEvent);
+
+    await expect(promise).resolves.toEqual({
+      domains: ["https://api.zaparoo.com"],
+    });
+  });
+
+  it("should send and resolve cloud backup status requests", async () => {
+    const promise = CoreAPI.settingsBackupStatus();
+    const sentData = JSON.parse(mockSend.mock.calls[0][0]);
+    const result = {
+      activeOperation: "",
+      local: { lastStatus: "", lastBackupSize: 0, enabled: true },
+      remote: {
+        linked: true,
+        enabled: false,
+        lastStatus: "success",
+        lastBackupSize: 123,
+      },
+    };
+
+    expect(sentData.method).toBe("settings.backup.status");
+    expect(sentData.params).toBeUndefined();
+
+    await CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: sentData.id,
+        result,
+      }),
+    } as MessageEvent);
+
+    await expect(promise).resolves.toEqual(result);
+  });
+
   it("should resolve screenshot responses", async () => {
     const promise = CoreAPI.screenshot();
 

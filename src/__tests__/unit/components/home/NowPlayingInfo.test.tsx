@@ -180,31 +180,12 @@ describe("NowPlayingInfo", () => {
   });
 
   describe("empty state", () => {
-    it("should show dash with sr-only 'none' when no media playing", () => {
+    it("should show 'none' when no media is playing", () => {
       // Arrange & Act
       render(<NowPlayingInfo {...defaultProps} mediaName="" systemName="" />);
 
-      // Assert - Dashes for name and system
-      const dashes = screen.getAllByText("—");
-      expect(dashes).toHaveLength(2);
-
-      // Screen reader text
-      const srOnlyNones = screen.getAllByText("none");
-      expect(srOnlyNones).toHaveLength(2);
-      srOnlyNones.forEach((el) => {
-        expect(el).toHaveClass("sr-only");
-      });
-    });
-
-    it("should hide dashes from screen readers", () => {
-      // Arrange & Act
-      render(<NowPlayingInfo {...defaultProps} mediaName="" systemName="" />);
-
-      // Assert
-      const dashes = screen.getAllByText("—");
-      dashes.forEach((dash) => {
-        expect(dash).toHaveAttribute("aria-hidden", "true");
-      });
+      // Assert - Name and system are empty
+      expect(screen.getAllByText("none")).toHaveLength(2);
     });
   });
 

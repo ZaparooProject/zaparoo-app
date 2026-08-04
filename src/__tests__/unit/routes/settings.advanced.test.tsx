@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectionState } from "@/lib/store";
+import { usePurchasePreviewStore } from "@/lib/purchasePreviewStore";
 
 // Mock CoreAPI
 const mockSettings = vi.fn();
@@ -183,6 +184,20 @@ describe("Settings Advanced Route", () => {
           screen.getByText("settings.advanced.viewLogs"),
         ).toBeInTheDocument();
       });
+    });
+
+    it("should update development purchase preview state", async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.selectOptions(
+        screen.getByRole("combobox", {
+          name: "settings.advanced.purchasePreview",
+        }),
+        "pro",
+      );
+
+      expect(usePurchasePreviewStore.getState().state).toBe("pro");
     });
   });
 

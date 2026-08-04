@@ -21,6 +21,7 @@ interface TabBarProps<T extends string> {
   options: TabBarOption<T>[];
   value: T;
   onChange: (next: T) => void;
+  disabled?: boolean;
   role?: TabBarRole;
   layout?: "grid" | "scroll";
   containerProps?: HTMLAttributes<HTMLDivElement> & {
@@ -33,6 +34,7 @@ export function TabBar<T extends string>({
   options,
   value,
   onChange,
+  disabled = false,
   role = "radio",
   layout = "grid",
   containerProps,
@@ -41,7 +43,7 @@ export function TabBar<T extends string>({
 
   const focusAndSelect = (index: number) => {
     const target = options[index];
-    if (!target) return;
+    if (!target || disabled) return;
     onChange(target.value);
     buttonRefs.current[index]?.focus();
   };
@@ -108,6 +110,7 @@ export function TabBar<T extends string>({
             }}
             type="button"
             role={role}
+            disabled={disabled}
             aria-checked={role === "radio" ? active : undefined}
             aria-selected={role === "tab" ? active : undefined}
             aria-controls={role === "tab" ? panelId : undefined}
@@ -121,6 +124,7 @@ export function TabBar<T extends string>({
               {
                 "bg-button-pattern text-white": active,
                 "text-muted-foreground": !active,
+                "cursor-not-allowed opacity-60": disabled,
               },
             )}
           >

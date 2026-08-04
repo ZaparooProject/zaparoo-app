@@ -592,7 +592,7 @@ describe("Index Route Integration", () => {
   });
 
   describe("Last Scanned Info", () => {
-    it("should show heading and dash placeholders when no token scanned", () => {
+    it("should show heading and empty values when no token scanned", () => {
       render(
         <TestWrapper>
           <Index />
@@ -600,7 +600,7 @@ describe("Index Route Integration", () => {
       );
 
       expect(screen.getByText("scan.lastScannedHeading")).toBeInTheDocument();
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
     });
 
     it("should show token info when last token exists in store", () => {
@@ -631,8 +631,8 @@ describe("Index Route Integration", () => {
         </TestWrapper>,
       );
 
-      // Initially shows dash placeholders
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Initially shows explicit empty values
+      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
 
       // Update store
       act(() => {
@@ -1411,7 +1411,7 @@ describe("Index Route Integration", () => {
       );
 
       // Initially no media playing
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
 
       // Update store
       act(() => {

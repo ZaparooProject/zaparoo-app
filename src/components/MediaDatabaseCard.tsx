@@ -393,7 +393,7 @@ export function MediaDatabaseCard({
     if (isOptimizing) return t("settings.updateDb.status.optimizing");
     if (isIndexing) {
       if (isPaused) {
-        return `${stepText} — ${t("settings.updateDb.status.paused")}`;
+        return `${stepText}: ${t("settings.updateDb.status.paused")}`;
       }
       return stepText;
     }

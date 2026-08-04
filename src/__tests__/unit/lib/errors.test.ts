@@ -14,6 +14,8 @@ import {
   NfcFormatError,
   BarcodeScanCancelledError,
   PurchaseCancelledError,
+  PurchasePendingError,
+  PurchaseIdentityError,
   isCancellationError,
   isExpectedEmailAuthError,
   isExpectedRevenueCatLogoutError,
@@ -623,6 +625,36 @@ describe("errors", () => {
       expect(wrapPurchaseError(mixedCase)).toBeInstanceOf(
         PurchaseCancelledError,
       );
+    });
+
+    it("should classify structured RevenueCat cancellation errors", () => {
+      const wrapped = wrapPurchaseError({
+        code: "1",
+        userCancelled: true,
+        message: "Cancelled",
+      });
+
+      expect(wrapped).toBeInstanceOf(PurchaseCancelledError);
+    });
+
+    it("should classify structured RevenueCat pending errors", () => {
+      const wrapped = wrapPurchaseError({
+        code: "20",
+        userInfo: { readableErrorCode: "PAYMENT_PENDING_ERROR" },
+        message: "Payment pending",
+      });
+
+      expect(wrapped).toBeInstanceOf(PurchasePendingError);
+    });
+
+    it("should classify structured RevenueCat identity errors", () => {
+      const wrapped = wrapPurchaseError({
+        code: "14",
+        userInfo: { readableErrorCode: "INVALID_APP_USER_ID_ERROR" },
+        message: "Invalid app user ID",
+      });
+
+      expect(wrapped).toBeInstanceOf(PurchaseIdentityError);
     });
 
     it("should return original error for non-cancellation errors", () => {

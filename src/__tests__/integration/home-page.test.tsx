@@ -88,7 +88,7 @@ describe("Home Page Integration", () => {
   });
 
   describe("Last Scanned Info", () => {
-    it("should show heading and dash placeholders when no token scanned", () => {
+    it("should show heading and empty values when no token scanned", () => {
       render(
         <LastScannedInfo
           lastToken={{ type: "", uid: "", text: "", data: "", scanTime: "" }}
@@ -98,8 +98,8 @@ describe("Home Page Integration", () => {
 
       // Heading is always visible
       expect(screen.getByText("scan.lastScannedHeading")).toBeInTheDocument();
-      // Dash placeholders are shown (hidden from screen readers)
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Empty values are explicit
+      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
     });
 
     it("should show token text when scanned", () => {
@@ -124,7 +124,7 @@ describe("Home Page Integration", () => {
       expect(screen.getByText(/abc123def456ab/)).toBeInTheDocument();
     });
 
-    it("should show UID with dash for text when text is empty", () => {
+    it("should show UID with 'none' for text when text is empty", () => {
       const lastToken = {
         type: "ntag215",
         uid: "abc123def456ab",
@@ -142,8 +142,8 @@ describe("Home Page Integration", () => {
 
       // UID should be shown (use regex for substring match)
       expect(screen.getByText(/abc123def456ab/)).toBeInTheDocument();
-      // Text field shows dash
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Text field shows an explicit empty value
+      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
     });
 
     it("should update when props change", () => {
@@ -154,8 +154,8 @@ describe("Home Page Integration", () => {
         />,
       );
 
-      // Initially shows dash placeholders
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Initially shows explicit empty values
+      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
 
       // Simulate token scan
       const newToken = {
@@ -180,7 +180,7 @@ describe("Home Page Integration", () => {
   });
 
   describe("Now Playing Info", () => {
-    it("should show heading and dash placeholders when nothing is playing", () => {
+    it("should show heading and empty values when nothing is playing", () => {
       render(
         <NowPlayingInfo
           mediaName=""
@@ -193,8 +193,8 @@ describe("Home Page Integration", () => {
 
       // Heading is always visible
       expect(screen.getByText("scan.nowPlayingHeading")).toBeInTheDocument();
-      // Dash placeholders are shown
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Empty values are explicit
+      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
     });
 
     it("should show media info when playing", () => {
@@ -411,8 +411,8 @@ describe("Home Page Integration", () => {
         />,
       );
 
-      // Initially shows dash placeholders
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Initially shows explicit empty values
+      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
 
       // Update store
       act(() => {
@@ -448,8 +448,8 @@ describe("Home Page Integration", () => {
         />,
       );
 
-      // Initially shows dash placeholders
-      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+      // Initially shows explicit empty values
+      expect(screen.getAllByText("none").length).toBeGreaterThan(0);
 
       // Update store
       act(() => {

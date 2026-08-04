@@ -8,6 +8,8 @@ import type {
   UpdateRequirementsRequest,
   PendingRequirement,
   DeleteAccountResponse,
+  DeviceClaimResponse,
+  SubscriptionResponse,
 } from "@/lib/models";
 
 export class NotSignedInError extends Error {
@@ -75,10 +77,25 @@ if (import.meta.env.DEV) {
 
 export const onlineApi = client;
 
-export async function getSubscriptionStatus(): Promise<{
-  is_premium: boolean;
-}> {
-  const response = await client.get("/account/subscription");
+export async function getSubscriptionStatus(
+  signal?: AbortSignal,
+): Promise<SubscriptionResponse> {
+  const response = signal
+    ? await client.get<SubscriptionResponse>("/account/subscription", {
+        signal,
+      })
+    : await client.get<SubscriptionResponse>("/account/subscription");
+  return response.data;
+}
+
+export async function createDeviceClaim(
+  signal?: AbortSignal,
+): Promise<DeviceClaimResponse> {
+  const response = await client.post<DeviceClaimResponse>(
+    "/device-claims",
+    { source: "app" },
+    signal ? { signal } : undefined,
+  );
   return response.data;
 }
 

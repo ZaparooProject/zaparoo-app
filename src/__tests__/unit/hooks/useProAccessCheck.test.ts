@@ -47,12 +47,22 @@ vi.mock("@/lib/capacitorBridge", () => ({
 vi.mock("@revenuecat/purchases-capacitor", () => ({
   Purchases: {
     getCustomerInfo: mockGetCustomerInfo,
+    addCustomerInfoUpdateListener: vi.fn().mockResolvedValue("listener-1"),
+    removeCustomerInfoUpdateListener: vi.fn().mockResolvedValue({
+      wasRemoved: true,
+    }),
   },
 }));
 
 // purchasesReady resolves immediately in tests
 vi.mock("@/lib/purchasesSetup", () => ({
   purchasesReady: Promise.resolve(),
+  getPurchaseAccess: (customerInfo: {
+    entitlements?: { active?: Record<string, unknown> };
+  }) => ({
+    lifetimePro: Boolean(customerInfo.entitlements?.active?.tapto_launcher),
+    warp: Boolean(customerInfo.entitlements?.active?.warp),
+  }),
 }));
 
 // Mock logger
@@ -67,7 +77,7 @@ const mockSetProAccessHydrated = vi.fn();
 vi.mock("../../../lib/preferencesStore", () => ({
   usePreferencesStore: vi.fn((selector: (state: unknown) => unknown) => {
     const state = {
-      setLauncherAccess: mockSetLauncherAccess,
+      setLifetimeProAccess: mockSetLauncherAccess,
       setProAccessHydrated: mockSetProAccessHydrated,
     };
     return selector(state);
@@ -319,6 +329,14 @@ describe("useProAccessCheck", () => {
 
       vi.doMock("@/lib/purchasesSetup", () => ({
         purchasesReady: deferredReady,
+        getPurchaseAccess: (customerInfo: {
+          entitlements?: { active?: Record<string, unknown> };
+        }) => ({
+          lifetimePro: Boolean(
+            customerInfo.entitlements?.active?.tapto_launcher,
+          ),
+          warp: Boolean(customerInfo.entitlements?.active?.warp),
+        }),
       }));
       vi.doMock("@capacitor/core", () => ({
         Capacitor: {
@@ -328,12 +346,18 @@ describe("useProAccessCheck", () => {
         },
       }));
       vi.doMock("@revenuecat/purchases-capacitor", () => ({
-        Purchases: { getCustomerInfo: mockGetCustomerInfoDeferred },
+        Purchases: {
+          getCustomerInfo: mockGetCustomerInfoDeferred,
+          addCustomerInfoUpdateListener: vi.fn().mockResolvedValue("listener"),
+          removeCustomerInfoUpdateListener: vi
+            .fn()
+            .mockResolvedValue({ wasRemoved: true }),
+        },
       }));
       vi.doMock("@/lib/preferencesStore", () => ({
         usePreferencesStore: vi.fn((selector: (s: unknown) => unknown) =>
           selector({
-            setLauncherAccess: mockSetLauncherAccessDeferred,
+            setLifetimeProAccess: mockSetLauncherAccessDeferred,
             setProAccessHydrated: mockSetProAccessHydratedDeferred,
           }),
         ),

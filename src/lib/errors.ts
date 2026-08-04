@@ -136,6 +136,25 @@ export class PurchaseCancelledError extends ZaparooError {
   }
 }
 
+/**
+ * Returned when store checkout is awaiting external approval or payment.
+ */
+export class PurchasePendingError extends ZaparooError {
+  constructor(message = "Purchase is pending") {
+    super(message);
+  }
+}
+
+/**
+ * Returned when RevenueCat cannot safely associate the store operation with
+ * the expected app account.
+ */
+export class PurchaseIdentityError extends ZaparooError {
+  constructor(message = "Purchase account identity is invalid") {
+    super(message);
+  }
+}
+
 // =============================================================================
 // Auth and RevenueCat State Errors
 // =============================================================================
@@ -396,21 +415,59 @@ export function wrapBarcodeScannerError(error: unknown): Error {
  * @returns A typed error if recognized, otherwise the original error
  */
 export function wrapPurchaseError(error: unknown): Error {
-  if (!(error instanceof Error)) {
-    return error instanceof Error ? error : new Error(String(error));
-  }
+  const record =
+    typeof error === "object" && error !== null
+      ? (error as Record<string, unknown>)
+      : null;
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof record?.message === "string"
+        ? record.message
+        : String(error);
+  const msg = message.toLowerCase();
+  const code = typeof record?.code === "string" ? record.code : null;
+  const userInfo =
+    typeof record?.userInfo === "object" && record.userInfo !== null
+      ? (record.userInfo as Record<string, unknown>)
+      : null;
+  const readableCode = (
+    typeof userInfo?.readableErrorCode === "string"
+      ? userInfo.readableErrorCode
+      : typeof record?.readableErrorCode === "string"
+        ? record.readableErrorCode
+        : ""
+  ).toLowerCase();
 
-  const msg = error.message.toLowerCase();
-
-  // Check for purchase cancellation
   if (
+    record?.userCancelled === true ||
+    code === "1" ||
+    readableCode.includes("purchase_cancelled") ||
     msg.includes("purchase was cancelled") ||
     msg.includes("purchase was canceled") ||
     msg.includes("user cancelled") ||
     msg.includes("user canceled")
   ) {
-    return new PurchaseCancelledError(error.message);
+    return new PurchaseCancelledError(message);
   }
 
-  return error;
+  if (
+    code === "20" ||
+    readableCode.includes("payment_pending") ||
+    msg.includes("payment pending") ||
+    msg.includes("purchase is pending")
+  ) {
+    return new PurchasePendingError(message);
+  }
+
+  if (
+    code === "14" ||
+    code === "22" ||
+    readableCode.includes("invalid_app_user_id") ||
+    readableCode.includes("log_out_anonymous_user")
+  ) {
+    return new PurchaseIdentityError(message);
+  }
+
+  return error instanceof Error ? error : new Error(message);
 }

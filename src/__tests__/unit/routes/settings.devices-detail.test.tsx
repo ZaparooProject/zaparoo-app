@@ -61,6 +61,11 @@ vi.mock("@/hooks/useSelectDevice", () => ({
   }),
 }));
 
+vi.mock("@/components/DeviceLinkButton", () => ({
+  DeviceLinkButton: ({ enabled }: { enabled: boolean }) =>
+    enabled ? <div data-testid="device-link-button" /> : null,
+}));
+
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: { reset: mockCoreReset },
   getDeviceAddress: () => mockGetDeviceAddress(),
@@ -213,6 +218,10 @@ describe("Settings Device Detail Route", () => {
       }),
     ).not.toBeInTheDocument();
     expect(screen.getByLabelText("settings.activeDevice")).toBeInTheDocument();
+    expect(screen.getByTestId("device-link-button")).toBeInTheDocument();
+    expect(
+      screen.getByText("online.deviceLink.description"),
+    ).toBeInTheDocument();
   });
 
   it("calls selectDevice when 'Use this device' is tapped", async () => {

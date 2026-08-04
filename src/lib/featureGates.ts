@@ -66,6 +66,11 @@ export const FEATURE_GATES: Record<string, FeatureGate> = {
     marquee: true,
     labelKey: "features.remoteInput",
   },
+  deviceLinking: {
+    since: "2.16.0",
+    marquee: false,
+    labelKey: "features.deviceLinking",
+  },
 };
 
 export type FeatureId = keyof typeof FEATURE_GATES;

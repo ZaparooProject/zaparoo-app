@@ -1,46 +1,56 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
-import { Purchases } from "@revenuecat/purchases-capacitor";
+import { Purchases, type CustomerInfo } from "@revenuecat/purchases-capacitor";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { logger } from "@/lib/logger";
-import { purchasesReady } from "@/lib/purchasesSetup";
+import { getPurchaseAccess, purchasesReady } from "@/lib/purchasesSetup";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 
 /**
- * Hook to check Pro access status from RevenueCat on app startup.
- * This runs once at the App level to prevent layout shifts.
- * The result is cached in the preferences store.
+ * Hydrates permanent Pro ownership from RevenueCat and keeps it current.
+ * Account-owned online access is synchronized separately after Firebase auth.
  */
 export function useProAccessCheck() {
-  const setLauncherAccess = usePreferencesStore(
-    (state) => state.setLauncherAccess,
+  const setLifetimeProAccess = usePreferencesStore(
+    (state) => state.setLifetimeProAccess,
   );
   const setProAccessHydrated = usePreferencesStore(
     (state) => state.setProAccessHydrated,
   );
 
   useEffect(() => {
-    // Skip on web platform or when the native purchases bridge is unavailable
     if (Capacitor.getPlatform() === "web") {
       logger.log("Web platform, skipping Pro access check");
       setProAccessHydrated(true);
-      return;
+      return undefined;
     }
 
     if (!isNativePluginAvailable("Purchases")) {
       setProAccessHydrated(true);
-      return;
+      return undefined;
     }
 
-    // Wait for Purchases.configure() to complete before querying customer info
+    let active = true;
+    let listenerToRemove: string | null = null;
+
+    const applyCustomerInfo = (customerInfo: CustomerInfo) => {
+      if (!active) return;
+      setLifetimeProAccess(getPurchaseAccess(customerInfo).lifetimePro);
+    };
+
     purchasesReady
-      .then(() => Purchases.getCustomerInfo())
-      .then((info) => {
-        // Use optional chaining for safe access to nested entitlements
-        const hasProAccess =
-          !!info.customerInfo?.entitlements?.active?.tapto_launcher;
-        setLauncherAccess(hasProAccess);
-        setProAccessHydrated(true);
+      .then(async () => {
+        const info = await Purchases.getCustomerInfo();
+        applyCustomerInfo(info.customerInfo);
+        if (active) setProAccessHydrated(true);
+
+        listenerToRemove =
+          await Purchases.addCustomerInfoUpdateListener(applyCustomerInfo);
+        if (!active && listenerToRemove) {
+          await Purchases.removeCustomerInfoUpdateListener({
+            listenerToRemove,
+          });
+        }
       })
       .catch((e) => {
         logger.error("Failed to check Pro access:", e, {
@@ -48,8 +58,16 @@ export function useProAccessCheck() {
           action: "proAccessCheck",
           severity: "warning",
         });
-        // On error, mark as hydrated but keep cached value
-        setProAccessHydrated(true);
+        if (active) setProAccessHydrated(true);
       });
-  }, [setLauncherAccess, setProAccessHydrated]);
+
+    return () => {
+      active = false;
+      if (listenerToRemove) {
+        void Purchases.removeCustomerInfoUpdateListener({
+          listenerToRemove,
+        });
+      }
+    };
+  }, [setLifetimeProAccess, setProAccessHydrated]);
 }

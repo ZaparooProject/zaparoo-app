@@ -7,6 +7,7 @@ import {
   within,
 } from "../../../test-utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { usePurchasePreviewStore } from "@/lib/purchasePreviewStore";
 
 // Mock CoreAPI
 vi.mock("@/lib/coreApi", () => ({
@@ -36,6 +37,7 @@ vi.mock("@/lib/coreApi", () => ({
 
 // Mock stores
 const mockUseStatusStore = vi.fn();
+const mockUsePreferencesStore = vi.fn();
 
 vi.mock("@/lib/store", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
@@ -95,7 +97,8 @@ vi.mock("@capacitor/browser", () => ({
 
 // Mock preferencesStore to avoid hydration issues
 vi.mock("@/lib/preferencesStore", () => ({
-  usePreferencesStore: vi.fn(() => ({})),
+  usePreferencesStore: (selector: (state: unknown) => unknown) =>
+    mockUsePreferencesStore(selector),
 }));
 
 // Mock ProPurchase component
@@ -214,6 +217,9 @@ describe("Settings Index Route", () => {
     mockUseStatusStore.mockImplementation((selector) =>
       selector(defaultStoreState),
     );
+    mockUsePreferencesStore.mockImplementation((selector) =>
+      selector({ onlinePremiumAccess: false }),
+    );
   });
 
   afterEach(() => {
@@ -269,13 +275,17 @@ describe("Settings Index Route", () => {
     it("should render the language selector with all supported languages", () => {
       renderComponent();
 
-      const languageSelect = screen.getByRole("combobox");
-      expect(languageSelect).toBeInTheDocument();
+      const languageSelect = screen.getByRole("combobox", {
+        name: "settings.language",
+      });
+      expect(languageSelect).toHaveValue("en-US");
 
       // Check that all supported languages are options
       expect(screen.getByText("Deutsch")).toBeInTheDocument();
       expect(screen.getByText("English (UK)")).toBeInTheDocument();
-      expect(screen.getByText("English (US)")).toBeInTheDocument();
+      expect(
+        within(languageSelect).getByRole("option", { name: "English (US)" }),
+      ).toBeInTheDocument();
       expect(screen.getByText("Français")).toBeInTheDocument();
       expect(screen.getByText("Nederlands")).toBeInTheDocument();
       expect(screen.getByText("中文")).toBeInTheDocument();
@@ -429,15 +439,14 @@ describe("Settings Index Route", () => {
   });
 
   describe("online account", () => {
-    it("should show login button when not logged in", () => {
+    it("should show signed-out status in the Online navigation row", () => {
       renderComponent();
 
-      expect(
-        screen.getByRole("button", { name: "online.settingsLogInButton" }),
-      ).toBeInTheDocument();
+      const onlineLink = screen.getByRole("link", { name: /online\.title/ });
+      expect(onlineLink).toHaveTextContent("online.settingsStatusSignedOut");
     });
 
-    it("should show manage button and email when logged in", () => {
+    it("should show free account status without duplicating email", () => {
       mockUseStatusStore.mockImplementation((selector) =>
         selector({
           ...defaultStoreState,
@@ -447,10 +456,65 @@ describe("Settings Index Route", () => {
 
       renderComponent();
 
+      const onlineLink = screen.getByRole("link", { name: /online\.title/ });
+      expect(onlineLink).toHaveTextContent("online.settingsStatusFree");
+      expect(screen.queryByText("test@example.com")).not.toBeInTheDocument();
+    });
+
+    it("should show neutral signed-in status while subscription loads", async () => {
+      const { Capacitor } = await import("@capacitor/core");
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      mockUseStatusStore.mockImplementation((selector) =>
+        selector({
+          ...defaultStoreState,
+          loggedInUser: { email: "test@example.com" },
+        }),
+      );
+      mockUsePreferencesStore.mockImplementation((selector) =>
+        selector({ onlinePremiumAccess: null }),
+      );
+
+      renderComponent();
+
+      const onlineLink = screen.getByRole("link", { name: /online\.title/ });
+      expect(onlineLink).toHaveTextContent("online.settingsStatusSignedIn");
       expect(
-        screen.getByRole("button", { name: "online.settingsManageButton" }),
-      ).toBeInTheDocument();
-      expect(screen.getByText("test@example.com")).toBeInTheDocument();
+        screen.queryByRole("button", { name: "scan.purchaseProAction" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should show development Pro preview on web", () => {
+      usePurchasePreviewStore.getState().setPreviewState("pro");
+
+      renderComponent();
+
+      expect(
+        screen.getByRole("button", { name: "settings.app.proActive" }),
+      ).toBeDisabled();
+      const onlineLink = screen.getByRole("link", { name: /online\.title/ });
+      expect(onlineLink).toHaveTextContent("online.settingsStatusFree");
+    });
+
+    it("should show active Warp and suppress Pro upsell", async () => {
+      const { Capacitor } = await import("@capacitor/core");
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      mockUseStatusStore.mockImplementation((selector) =>
+        selector({
+          ...defaultStoreState,
+          loggedInUser: { email: "test@example.com" },
+        }),
+      );
+      mockUsePreferencesStore.mockImplementation((selector) =>
+        selector({ onlinePremiumAccess: true }),
+      );
+
+      renderComponent();
+
+      const onlineLink = screen.getByRole("link", { name: /online\.title/ });
+      expect(onlineLink).toHaveTextContent("online.settingsStatusWarpActive");
+      expect(
+        screen.queryByRole("button", { name: "scan.purchaseProAction" }),
+      ).not.toBeInTheDocument();
     });
   });
 });

@@ -7,8 +7,16 @@ const { mockIsPluginAvailable } = vi.hoisted(() => ({
 }));
 
 // Store mock functions
-const mockSetLoggedInUser = vi.fn();
+let mockLoggedInUser: { uid: string; email?: string } | null = null;
+const mockSetLoggedInUser = vi.fn(
+  (user: { uid: string; email?: string } | null) => {
+    mockLoggedInUser = user;
+  },
+);
 const mockSetLauncherAccess = vi.fn();
+const mockBeginOnlinePremiumAccessCheck = vi.fn();
+const mockSetOnlinePremiumAccess = vi.fn();
+const mockClearOnlinePremiumAccess = vi.fn();
 const mockGetIdToken = vi.fn();
 const mockReload = vi.fn();
 const mockAddListener = vi.fn();
@@ -18,6 +26,7 @@ const mockRemove = vi.fn();
 const mockPurchasesLogIn = vi.fn();
 const mockPurchasesLogOut = vi.fn();
 const mockPurchasesGetCustomerInfo = vi.fn();
+const mockPurchasesIsAnonymous = vi.fn();
 
 // Online API mock
 const mockGetSubscriptionStatus = vi.fn();
@@ -92,13 +101,40 @@ vi.mock("@revenuecat/purchases-capacitor", () => ({
     logIn: (...args: unknown[]) => mockPurchasesLogIn(...args),
     logOut: () => mockPurchasesLogOut(),
     getCustomerInfo: () => mockPurchasesGetCustomerInfo(),
-    isAnonymous: vi.fn().mockResolvedValue({ isAnonymous: false }),
+    isAnonymous: () => mockPurchasesIsAnonymous(),
   },
 }));
 
 // purchasesReady resolves immediately in tests
 vi.mock("@/lib/purchasesSetup", () => ({
   purchasesReady: Promise.resolve(),
+  ensurePurchasesUser: async (appUserID: string) => {
+    const result = await mockPurchasesLogIn({ appUserID });
+    return result.customerInfo;
+  },
+  getPurchaseAccess: (customerInfo: {
+    entitlements?: { active?: Record<string, unknown> };
+  }) => ({
+    lifetimePro: Boolean(customerInfo.entitlements?.active?.tapto_launcher),
+    warp: Boolean(customerInfo.entitlements?.active?.warp),
+  }),
+  resetPurchasesUser: async () => {
+    const { isAnonymous } = await mockPurchasesIsAnonymous();
+    if (!isAnonymous) {
+      try {
+        await mockPurchasesLogOut();
+      } catch (e) {
+        if (
+          !(e instanceof Error) ||
+          !e.message.toLowerCase().includes("anonymous app user")
+        ) {
+          throw e;
+        }
+      }
+    }
+    const result = await mockPurchasesGetCustomerInfo();
+    return result.customerInfo;
+  },
 }));
 
 vi.mock("@/lib/onlineApi", () => ({
@@ -136,6 +172,7 @@ vi.mock("@/lib/store", () => {
   });
 
   useStatusStore.getState = () => ({
+    loggedInUser: mockLoggedInUser,
     playing: { mediaName: "", systemId: "", mediaPath: "" },
     gamesIndex: { exists: true, indexing: false, totalFiles: 0 },
     safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
@@ -164,7 +201,10 @@ vi.mock("@/lib/preferencesStore", () => {
       initializeWhatsNew: vi.fn(),
       setLastWhatsNewRuntimeKey: vi.fn(),
       markWhatsNewSeen: vi.fn(),
-      setLauncherAccess: mockSetLauncherAccess,
+      setLifetimeProAccess: mockSetLauncherAccess,
+      beginOnlinePremiumAccessCheck: mockBeginOnlinePremiumAccessCheck,
+      setOnlinePremiumAccess: mockSetOnlinePremiumAccess,
+      clearOnlinePremiumAccess: mockClearOnlinePremiumAccess,
     };
     if (typeof selector === "function") {
       return selector(state);
@@ -283,6 +323,7 @@ Object.defineProperty(window, "location", {
 describe("Firebase Auth Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLoggedInUser = null;
     mockPlatform = "web"; // Default to web platform
     mockIsPluginAvailable.mockReturnValue(true);
     mockAddListener.mockImplementation(() =>
@@ -296,6 +337,7 @@ describe("Firebase Auth Integration", () => {
       customerInfo: { entitlements: { active: {} } },
     });
     mockPurchasesLogOut.mockResolvedValue(undefined);
+    mockPurchasesIsAnonymous.mockResolvedValue({ isAnonymous: false });
     mockPurchasesGetCustomerInfo.mockResolvedValue({
       customerInfo: { entitlements: { active: {} } },
     });
@@ -668,8 +710,7 @@ describe("Firebase Auth Integration", () => {
         await authCallback!({ user: mockUser });
       });
 
-      // First call sets false (from RevenueCat), second call sets true (from API)
-      expect(mockSetLauncherAccess).toHaveBeenLastCalledWith(true);
+      expect(mockSetOnlinePremiumAccess).toHaveBeenLastCalledWith(true);
     });
 
     it("should call Purchases.logOut when user signs out on native platform", async () => {
@@ -710,10 +751,7 @@ describe("Firebase Auth Integration", () => {
     it("should not call Purchases.logOut when RC user is already anonymous on sign out", async () => {
       mockPlatform = "ios";
 
-      const { Purchases } = await import("@revenuecat/purchases-capacitor");
-      vi.mocked(Purchases.isAnonymous).mockResolvedValueOnce({
-        isAnonymous: true,
-      });
+      mockPurchasesIsAnonymous.mockResolvedValueOnce({ isAnonymous: true });
 
       mockPurchasesGetCustomerInfo.mockResolvedValue({
         customerInfo: { entitlements: { active: {} } },

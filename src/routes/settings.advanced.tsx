@@ -2,7 +2,6 @@ import { useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Capacitor } from "@capacitor/core";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
@@ -14,12 +13,16 @@ import { PageFrame } from "@/components/PageFrame";
 import { UpdateSettingsRequest } from "@/lib/models.ts";
 import { BackIcon, NextIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
-import { RestorePuchasesButton } from "@/components/ProPurchase";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useClientCapability } from "@/hooks/useClientCapability";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { ClientCapability } from "@/lib/models";
+import {
+  isPurchasePreviewEnabled,
+  usePurchasePreviewStore,
+  type PurchasePreviewState,
+} from "@/lib/purchasePreviewStore";
 
 export const Route = createFileRoute("/settings/advanced")({
   component: AdvancedSettings,
@@ -35,6 +38,10 @@ export function AdvancedSettings() {
   );
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
   const setShowFilenames = usePreferencesStore((s) => s.setShowFilenames);
+  const purchasePreviewState = usePurchasePreviewStore((state) => state.state);
+  const setPurchasePreviewState = usePurchasePreviewStore(
+    (state) => state.setPreviewState,
+  );
 
   const [showErrorReportingModal, setShowErrorReportingModal] = useState(false);
 
@@ -142,6 +149,43 @@ export function AdvancedSettings() {
           setValue={setShowFilenames}
         />
 
+        {isPurchasePreviewEnabled() && (
+          <div className="flex flex-col">
+            <label className="text-white" htmlFor="purchase-preview-state">
+              {t("settings.advanced.purchasePreview")}
+            </label>
+            <select
+              id="purchase-preview-state"
+              className="border-bd-input bg-background text-foreground rounded-md border border-solid p-3"
+              value={purchasePreviewState}
+              onChange={(event) =>
+                setPurchasePreviewState(
+                  event.target.value as PurchasePreviewState,
+                )
+              }
+            >
+              <option value="live">
+                {t("settings.advanced.purchasePreviewLive")}
+              </option>
+              <option value="free">
+                {t("settings.advanced.purchasePreviewFree")}
+              </option>
+              <option value="pro">
+                {t("settings.advanced.purchasePreviewPro")}
+              </option>
+              <option value="warp">
+                {t("settings.advanced.purchasePreviewWarp")}
+              </option>
+              <option value="loading">
+                {t("settings.advanced.purchasePreviewLoading")}
+              </option>
+              <option value="error">
+                {t("settings.advanced.purchasePreviewError")}
+              </option>
+            </select>
+          </div>
+        )}
+
         {connected ? (
           <Link to="/settings/logs">
             <div className="flex flex-row items-center justify-between">
@@ -160,8 +204,6 @@ export function AdvancedSettings() {
             <NextIcon size="20" />
           </div>
         )}
-
-        {Capacitor.isNativePlatform() && <RestorePuchasesButton />}
       </div>
 
       <SlideModal

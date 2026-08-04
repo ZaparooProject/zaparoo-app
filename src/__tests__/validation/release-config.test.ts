@@ -74,6 +74,15 @@ describe("release configuration", () => {
     expect(liveUpdateScript).not.toContain("--channel production");
   });
 
+  it("should use RevenueCat-compatible Android activity launch mode", () => {
+    const androidManifest = readProjectFile(
+      "android/app/src/main/AndroidManifest.xml",
+    );
+
+    expect(androidManifest).toContain('android:launchMode="singleTop"');
+    expect(androidManifest).not.toContain('android:launchMode="singleTask"');
+  });
+
   it("should have a What's New release key for the native build", () => {
     const packageJson = readPackageJson();
     const androidGradle = readProjectFile("android/app/build.gradle");

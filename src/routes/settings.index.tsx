@@ -4,7 +4,7 @@ import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
-import { Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { NetworkScanModal } from "@/components/NetworkScanModal";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -13,6 +13,7 @@ import type { ScanDeviceSelection } from "@/hooks/useSelectDevice";
 import i18n from "@/i18n";
 import { PageFrame } from "@/components/PageFrame";
 import { useStatusStore } from "@/lib/store";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Button } from "@/components/wui/Button";
 import { ExternalIcon, NextIcon } from "@/lib/images";
 import { getDeviceAddress } from "@/lib/coreApi";
@@ -22,10 +23,37 @@ import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
 import { GatedFeature } from "@/components/GatedFeature";
 import { InboxButton } from "@/components/InboxButton";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
+import {
+  getPurchasePreviewState,
+  usePurchasePreviewStore,
+} from "@/lib/purchasePreviewStore";
 
 export const Route = createFileRoute("/settings/")({
   component: Settings,
 });
+
+const LANGUAGE_OPTIONS = [
+  { value: "de-DE", label: "Deutsch" },
+  { value: "en-GB", label: "English (UK)" },
+  { value: "en-US", label: "English (US)" },
+  { value: "fr-FR", label: "Français" },
+  { value: "nl-NL", label: "Nederlands" },
+  { value: "es-ES", label: "Español" },
+  { value: "zh-CN", label: "中文" },
+  { value: "ja-JP", label: "日本語" },
+  { value: "ko-KR", label: "한국어" },
+] as const;
+
+const BASE_LANGUAGE_TO_LOCALE: Record<string, string> = {
+  en: "en-US",
+  fr: "fr-FR",
+  zh: "zh-CN",
+  ko: "ko-KR",
+  nl: "nl-NL",
+  ja: "ja-JP",
+  de: "de-DE",
+  es: "es-ES",
+};
 
 export function Settings() {
   const { t } = useTranslation();
@@ -38,6 +66,26 @@ export function Settings() {
 
   const connectionError = useStatusStore((state) => state.connectionError);
   const loggedInUser = useStatusStore((state) => state.loggedInUser);
+  const onlinePremiumAccess = usePreferencesStore(
+    (state) => state.onlinePremiumAccess,
+  );
+  const configuredPurchasePreview = usePurchasePreviewStore(
+    (state) => state.state,
+  );
+  const purchasePreview = getPurchasePreviewState(configuredPurchasePreview);
+  const purchasePreviewEnabled = purchasePreview !== "live";
+  const displayedOnlinePremiumAccess = purchasePreviewEnabled
+    ? purchasePreview === "warp"
+      ? true
+      : purchasePreview === "free" || purchasePreview === "pro"
+        ? false
+        : null
+    : onlinePremiumAccess;
+  const displayedProAccess = purchasePreviewEnabled
+    ? purchasePreview === "pro"
+    : proAccess;
+  const showNativePurchaseUI =
+    Capacitor.isNativePlatform() || purchasePreviewEnabled;
   const coreVersion = useStatusStore((state) => state.coreVersion);
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
@@ -47,6 +95,12 @@ export function Settings() {
     coreVersion !== null &&
     !coreVersionPending &&
     isCoreFeatureAvailable("mediaScrapers", coreVersion);
+  const resolvedLanguage = i18n.resolvedLanguage ?? "en-US";
+  const selectedLanguage =
+    BASE_LANGUAGE_TO_LOCALE[resolvedLanguage] ?? resolvedLanguage;
+  const selectedLanguageLabel =
+    LANGUAGE_OPTIONS.find(({ value }) => value === selectedLanguage)?.label ??
+    selectedLanguage;
 
   const [address, setAddress] = useState(getDeviceAddress());
   const [addressError, setAddressError] = useState("");
@@ -137,9 +191,9 @@ export function Settings() {
             </div>
           )}
 
-          {Capacitor.isNativePlatform() && (
+          {showNativePurchaseUI && displayedOnlinePremiumAccess === false && (
             <div className="flex flex-col gap-5">
-              {proAccess ? (
+              {displayedProAccess ? (
                 <Button
                   label={t("settings.app.proActive")}
                   icon={<Check size={20} />}
@@ -148,144 +202,146 @@ export function Settings() {
               ) : (
                 <Button
                   label={t("scan.purchaseProAction")}
-                  onClick={() => setProPurchaseModalOpen(true)}
+                  onClick={
+                    purchasePreviewEnabled
+                      ? () => undefined
+                      : () => setProPurchaseModalOpen(true)
+                  }
                 />
               )}
             </div>
           )}
 
-          <div>
-            <Link to="/settings/online">
-              <Button
-                label={
-                  loggedInUser !== null
-                    ? t("online.settingsManageButton")
-                    : t("online.settingsLogInButton")
-                }
-                className="w-full"
-              />
-            </Link>
-            {loggedInUser !== null && (
-              <p className="text-muted-foreground mt-1 text-center text-sm">
-                {loggedInUser.email}
-              </p>
-            )}
-          </div>
-
-          <div className="flex flex-col">
-            <label className="text-white">{t("settings.language")}</label>
-            <select
-              className="border-bd-input bg-background text-foreground rounded-md border border-solid p-3"
-              value={(() => {
-                const lang = i18n.resolvedLanguage ?? "en-US";
-                const baseToLocale: Record<string, string> = {
-                  en: "en-US",
-                  fr: "fr-FR",
-                  zh: "zh-CN",
-                  ko: "ko-KR",
-                  nl: "nl-NL",
-                  ja: "ja-JP",
-                  de: "de-DE",
-                  es: "es-ES",
-                };
-                return baseToLocale[lang] ?? lang;
-              })()}
-              onChange={(e) => i18n.changeLanguage(e.target.value)}
+          <div className="flex flex-col gap-1">
+            <Link
+              to="/settings/online"
+              className="flex min-h-[48px] flex-row items-center justify-between"
             >
-              <option value="de-DE">Deutsch</option>
-              <option value="en-GB">English (UK)</option>
-              <option value="en-US">English (US)</option>
-              <option value="fr-FR">Français</option>
-              <option value="nl-NL">Nederlands</option>
-              <option value="es-ES">Español</option>
-              <option value="zh-CN">中文</option>
-              <option value="ja-JP">日本語</option>
-              <option value="ko-KR">한국어</option>
-            </select>
-          </div>
+              <span>{t("online.title")}</span>
+              <span className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  {loggedInUser === null && !purchasePreviewEnabled
+                    ? t("online.settingsStatusSignedOut")
+                    : displayedOnlinePremiumAccess === true
+                      ? t("online.settingsStatusWarpActive")
+                      : displayedOnlinePremiumAccess === false
+                        ? t("online.settingsStatusFree")
+                        : t("online.settingsStatusSignedIn")}
+                </span>
+                <span aria-hidden="true">
+                  <NextIcon size="20" />
+                </span>
+              </span>
+            </Link>
 
-          <nav
-            aria-labelledby="more-settings-heading"
-            className="flex flex-col gap-1"
-          >
-            <h2 id="more-settings-heading" className="sr-only">
-              {t("settings.moreSettings")}
-            </h2>
+            <div className="focus-within:ring-offset-background relative flex min-h-[48px] flex-row items-center justify-between focus-within:ring-2 focus-within:ring-white/50 focus-within:ring-offset-2">
+              <label htmlFor="settings-language">
+                {t("settings.language")}
+              </label>
+              <span
+                className="text-muted-foreground flex items-center gap-2 text-sm"
+                aria-hidden="true"
+              >
+                {selectedLanguageLabel}
+                <ChevronDown size={20} />
+              </span>
+              <select
+                id="settings-language"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                value={selectedLanguage}
+                onChange={(e) => i18n.changeLanguage(e.target.value)}
+              >
+                {LANGUAGE_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            {showMediaScraper && (
+            <nav
+              aria-labelledby="more-settings-heading"
+              className="flex flex-col gap-1"
+            >
+              <h2 id="more-settings-heading" className="sr-only">
+                {t("settings.moreSettings")}
+              </h2>
+
+              {showMediaScraper && (
+                <Link
+                  to="/settings/media"
+                  className="flex min-h-[48px] flex-row items-center justify-between"
+                >
+                  <span>{t("settings.media.title")}</span>
+                  <span aria-hidden="true">
+                    <NextIcon size="20" />
+                  </span>
+                </Link>
+              )}
+
               <Link
-                to="/settings/media"
+                to="/settings/play-controls"
                 className="flex min-h-[48px] flex-row items-center justify-between"
               >
-                <span>{t("settings.media.title")}</span>
+                <p>{t("settings.playControls.title")}</p>
                 <span aria-hidden="true">
                   <NextIcon size="20" />
                 </span>
               </Link>
-            )}
 
-            <Link
-              to="/settings/play-controls"
-              className="flex min-h-[48px] flex-row items-center justify-between"
-            >
-              <p>{t("settings.playControls.title")}</p>
-              <span aria-hidden="true">
-                <NextIcon size="20" />
-              </span>
-            </Link>
-
-            <Link
-              to="/settings/readers"
-              className="flex min-h-[48px] flex-row items-center justify-between"
-            >
-              <p>{t("settings.readers.title")}</p>
-              <span aria-hidden="true">
-                <NextIcon size="20" />
-              </span>
-            </Link>
-
-            {Capacitor.isNativePlatform() && (
               <Link
-                to="/settings/accessibility"
+                to="/settings/readers"
                 className="flex min-h-[48px] flex-row items-center justify-between"
               >
-                <p>{t("settings.accessibility.title")}</p>
+                <p>{t("settings.readers.title")}</p>
                 <span aria-hidden="true">
                   <NextIcon size="20" />
                 </span>
               </Link>
-            )}
 
-            <Link
-              to="/settings/advanced"
-              className="flex min-h-[48px] flex-row items-center justify-between"
-            >
-              <p>{t("settings.advanced.title")}</p>
-              <span aria-hidden="true">
-                <NextIcon size="20" />
-              </span>
-            </Link>
+              {Capacitor.isNativePlatform() && (
+                <Link
+                  to="/settings/accessibility"
+                  className="flex min-h-[48px] flex-row items-center justify-between"
+                >
+                  <p>{t("settings.accessibility.title")}</p>
+                  <span aria-hidden="true">
+                    <NextIcon size="20" />
+                  </span>
+                </Link>
+              )}
 
-            <Link
-              to="/settings/help"
-              className="flex min-h-[48px] flex-row items-center justify-between"
-            >
-              <p>{t("settings.help.title")}</p>
-              <span aria-hidden="true">
-                <NextIcon size="20" />
-              </span>
-            </Link>
+              <Link
+                to="/settings/advanced"
+                className="flex min-h-[48px] flex-row items-center justify-between"
+              >
+                <p>{t("settings.advanced.title")}</p>
+                <span aria-hidden="true">
+                  <NextIcon size="20" />
+                </span>
+              </Link>
 
-            <Link
-              to="/settings/about"
-              className="flex min-h-[48px] flex-row items-center justify-between"
-            >
-              <p>{t("settings.about.title")}</p>
-              <span aria-hidden="true">
-                <NextIcon size="20" />
-              </span>
-            </Link>
-          </nav>
+              <Link
+                to="/settings/help"
+                className="flex min-h-[48px] flex-row items-center justify-between"
+              >
+                <p>{t("settings.help.title")}</p>
+                <span aria-hidden="true">
+                  <NextIcon size="20" />
+                </span>
+              </Link>
+
+              <Link
+                to="/settings/about"
+                className="flex min-h-[48px] flex-row items-center justify-between"
+              >
+                <p>{t("settings.about.title")}</p>
+                <span aria-hidden="true">
+                  <NextIcon size="20" />
+                </span>
+              </Link>
+            </nav>
+          </div>
         </div>
       </PageFrame>
 

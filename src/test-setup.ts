@@ -43,6 +43,7 @@ import { __resetNfcMock } from "../__mocks__/@capawesome-team/capacitor-nfc";
 import { __resetLiveUpdateMock } from "../__mocks__/@capawesome/capacitor-live-update";
 import { __resetSecureStorageMock } from "../__mocks__/@aparajita/capacitor-secure-storage";
 import { __resetDeviceCache } from "./hooks/useNetworkScan";
+import { resetPurchasePreviewState } from "./lib/purchasePreviewStore";
 
 // Define global constants that Vite normally injects
 (globalThis as any).__APP_BASE_PATH__ = "/";
@@ -109,6 +110,8 @@ afterEach(async () => {
   __resetSecureStorageMock();
   // Reset network scan device cache between tests
   __resetDeviceCache();
+  // Reset development-only purchase previews between tests
+  resetPurchasePreviewState();
 });
 
 // Close server after all tests
