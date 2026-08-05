@@ -34,6 +34,52 @@ export interface DiscoveredDevice {
   platform?: string;
 }
 
+interface DeviceIdentity {
+  address?: string;
+  hostname?: string;
+  deviceId?: string;
+}
+
+function normalizeIdentityValue(value: string | undefined): string | undefined {
+  const normalized = value?.trim().toLowerCase();
+  return normalized || undefined;
+}
+
+function normalizeHostname(hostname: string | undefined): string | undefined {
+  return normalizeIdentityValue(hostname?.replace(/\.+$/, ""));
+}
+
+export function getDiscoveredDeviceIdentity(device: DiscoveredDevice): string {
+  const deviceId = normalizeIdentityValue(device.deviceId);
+  if (deviceId) return `id:${deviceId}`;
+
+  const hostname = normalizeHostname(device.hostname);
+  if (hostname) return `hostname:${hostname}`;
+
+  return `address:${normalizeIdentityValue(device.address)}`;
+}
+
+function isSameDiscoveredDevice(
+  left: DeviceIdentity,
+  right: DeviceIdentity,
+): boolean {
+  const leftDeviceId = normalizeIdentityValue(left.deviceId);
+  const rightDeviceId = normalizeIdentityValue(right.deviceId);
+  if (leftDeviceId && rightDeviceId) {
+    return leftDeviceId === rightDeviceId;
+  }
+
+  const leftHostname = normalizeHostname(left.hostname);
+  const rightHostname = normalizeHostname(right.hostname);
+  if (leftHostname && rightHostname) {
+    return leftHostname === rightHostname;
+  }
+
+  const leftAddress = normalizeIdentityValue(left.address);
+  const rightAddress = normalizeIdentityValue(right.address);
+  return Boolean(leftAddress && leftAddress === rightAddress);
+}
+
 interface UseNetworkScanResult {
   /** List of discovered devices */
   devices: DiscoveredDevice[];
@@ -69,23 +115,30 @@ function parseTxtRecord(txtRecord: Record<string, string> | undefined): {
  * Convert a ZeroConfService to our DiscoveredDevice format.
  * Returns null if the service doesn't have a valid IP address.
  */
-function serviceToDevice(service: ZeroConfService): DiscoveredDevice | null {
-  // Get the first IPv4 address, fall back to IPv6
+function serviceToIdentity(service: ZeroConfService): DeviceIdentity {
   const address = service.ipv4Addresses?.[0] || service.ipv6Addresses?.[0];
+  const hostname = normalizeHostname(service.hostname);
+  const deviceId = normalizeIdentityValue(service.txtRecord?.["id"]);
 
-  if (!address) {
+  return {
+    ...(address ? { address } : {}),
+    ...(hostname ? { hostname } : {}),
+    ...(deviceId ? { deviceId } : {}),
+  };
+}
+
+function serviceToDevice(service: ZeroConfService): DiscoveredDevice | null {
+  const identity = serviceToIdentity(service);
+  if (!identity.address) {
     return null;
   }
 
   const txtData = parseTxtRecord(service.txtRecord);
-  // DNS-SD hostnames are commonly returned as absolute names with a trailing
-  // dot. Device address validation expects the equivalent user-facing form.
-  const hostname = service.hostname?.trim().replace(/\.+$/, "");
 
   return {
     name: service.name,
-    address,
-    ...(hostname ? { hostname } : {}),
+    address: identity.address,
+    ...(identity.hostname ? { hostname: identity.hostname } : {}),
     port: service.port,
     ...txtData,
   };
@@ -166,25 +219,33 @@ export function useNetworkScan(): UseNetworkScanResult {
             const device = serviceToDevice(result.service);
             if (device) {
               setDevices((prev) => {
-                // Avoid duplicates by address
-                if (prev.some((d) => d.address === device.address)) {
-                  return prev;
+                const existingIndex = prev.findIndex((existing) =>
+                  isSameDiscoveredDevice(existing, device),
+                );
+                const updated = [...prev];
+                if (existingIndex === -1) {
+                  updated.push(device);
+                } else {
+                  updated[existingIndex] = {
+                    ...updated[existingIndex],
+                    ...device,
+                  };
                 }
-                const updated = [...prev, device];
-                // Update session cache
                 deviceCache = updated;
                 return updated;
               });
             }
           } else if (result.action === "removed") {
-            // Remove device if it goes away
-            const address =
-              result.service.ipv4Addresses?.[0] ||
-              result.service.ipv6Addresses?.[0];
-            if (address) {
+            const removedIdentity = serviceToIdentity(result.service);
+            if (
+              removedIdentity.deviceId ||
+              removedIdentity.hostname ||
+              removedIdentity.address
+            ) {
               setDevices((prev) => {
-                const updated = prev.filter((d) => d.address !== address);
-                // Update session cache
+                const updated = prev.filter(
+                  (device) => !isSameDiscoveredDevice(device, removedIdentity),
+                );
                 deviceCache = updated;
                 return updated;
               });

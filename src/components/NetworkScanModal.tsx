@@ -1,7 +1,11 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
-import { useNetworkScan, DiscoveredDevice } from "@/hooks/useNetworkScan";
+import {
+  getDiscoveredDeviceIdentity,
+  useNetworkScan,
+  type DiscoveredDevice,
+} from "@/hooks/useNetworkScan";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { SlideModal } from "./SlideModal";
 import { DeviceRow } from "./DeviceRow";
@@ -91,7 +95,7 @@ export function NetworkScanModal({
           <div className="flex flex-col gap-2">
             {devices.map((device) => (
               <DeviceRow
-                key={device.address}
+                key={getDiscoveredDeviceIdentity(device)}
                 entry={{
                   address: buildConnectionString(device),
                   name: device.name,

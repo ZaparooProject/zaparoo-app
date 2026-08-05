@@ -184,6 +184,7 @@ describe("NetworkScanModal", () => {
         __simulateDeviceDiscovered(
           createMockService({
             name: "MiSTer FPGA",
+            hostname: "mister.local",
             ipv4Addresses: ["192.168.1.100"],
             txtRecord: { version: "1.5.0", platform: "linux" },
           }),
@@ -194,6 +195,7 @@ describe("NetworkScanModal", () => {
         __simulateDeviceDiscovered(
           createMockService({
             name: "Raspberry Pi",
+            hostname: "raspberry-pi.local",
             ipv4Addresses: ["192.168.1.101"],
             txtRecord: { version: "1.4.0", platform: "linux" },
           }),
