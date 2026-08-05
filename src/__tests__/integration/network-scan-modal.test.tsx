@@ -207,7 +207,7 @@ describe("NetworkScanModal", () => {
       });
     });
 
-    it("should display device address", async () => {
+    it("should display device hostname", async () => {
       // Arrange
       render(
         <NetworkScanModal
@@ -234,9 +234,9 @@ describe("NetworkScanModal", () => {
         );
       });
 
-      // Assert - default port is hidden in connection string
+      // Assert - mDNS hostname is preferred and default port is hidden
       await waitFor(() => {
-        expect(screen.getByText("192.168.1.100")).toBeInTheDocument();
+        expect(screen.getByText("test-device.local")).toBeInTheDocument();
       });
     });
 
@@ -267,9 +267,9 @@ describe("NetworkScanModal", () => {
         );
       });
 
-      // Assert - non-default port is shown
+      // Assert - non-default port is shown with the hostname
       await waitFor(() => {
-        expect(screen.getByText("192.168.1.100:8080")).toBeInTheDocument();
+        expect(screen.getByText("test-device.local:8080")).toBeInTheDocument();
       });
     });
 
@@ -341,7 +341,7 @@ describe("NetworkScanModal", () => {
   });
 
   describe("device selection", () => {
-    it("should call onSelectDevice with address when device clicked", async () => {
+    it("should select normalized hostname when device clicked", async () => {
       // Arrange
       const user = userEvent.setup();
       const onSelectDevice = vi.fn();
@@ -364,6 +364,7 @@ describe("NetworkScanModal", () => {
         __simulateDeviceDiscovered(
           createMockService({
             name: "MiSTer",
+            hostname: "mister.local.",
             ipv4Addresses: ["192.168.1.100"],
             port: 7497,
           }),
@@ -379,7 +380,7 @@ describe("NetworkScanModal", () => {
 
       // Assert
       expect(onSelectDevice).toHaveBeenCalledWith(
-        expect.objectContaining({ address: "192.168.1.100", name: "MiSTer" }),
+        expect.objectContaining({ address: "mister.local", name: "MiSTer" }),
       );
     });
 
@@ -422,8 +423,47 @@ describe("NetworkScanModal", () => {
       // Assert
       expect(onSelectDevice).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: "192.168.1.100:9000",
+          address: "test-device.local:9000",
           name: "Custom Device",
+        }),
+      );
+    });
+
+    it("should fall back to IP when hostname is unavailable", async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const onSelectDevice = vi.fn();
+
+      render(
+        <NetworkScanModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSelectDevice={onSelectDevice}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("settings.networkScan.searching"),
+        ).toBeInTheDocument();
+      });
+
+      act(() => {
+        __simulateDeviceDiscovered(
+          createMockService({
+            name: "Fallback Device",
+            hostname: "",
+            ipv4Addresses: ["192.168.1.100"],
+          }),
+        );
+      });
+
+      await user.click(await screen.findByText("Fallback Device"));
+
+      expect(onSelectDevice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: "192.168.1.100",
+          name: "Fallback Device",
         }),
       );
     });

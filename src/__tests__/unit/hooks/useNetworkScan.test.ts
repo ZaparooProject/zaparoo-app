@@ -13,6 +13,7 @@ let watchCallback:
       action: "added" | "removed" | "resolved";
       service: {
         name: string;
+        hostname?: string;
         port: number;
         ipv4Addresses: string[];
         ipv6Addresses: string[];
@@ -275,6 +276,7 @@ describe("useNetworkScan", () => {
           action: "resolved",
           service: {
             name: "test-device",
+            hostname: "test-device.local.",
             port: 7497,
             ipv4Addresses: ["192.168.1.100"],
             ipv6Addresses: [],
@@ -291,6 +293,7 @@ describe("useNetworkScan", () => {
       expect(result.current.devices[0]).toEqual({
         name: "test-device",
         address: "192.168.1.100",
+        hostname: "test-device.local",
         port: 7497,
         deviceId: "device-123",
         version: "1.0.0",

@@ -20,10 +20,13 @@ interface NetworkScanModalProps {
 }
 
 function buildConnectionString(device: DiscoveredDevice): string {
-  // Default Zaparoo port — drop it from the displayed/connect string.
+  // Prefer the DNS-SD hostname so one saved pairing survives interface and
+  // DHCP address changes. Services without a hostname still connect by IP.
+  const host = device.hostname || device.address;
+  const formattedHost = host.includes(":") ? `[${host}]` : host;
   return device.port === 7497
-    ? device.address
-    : `${device.address}:${device.port}`;
+    ? formattedHost
+    : `${formattedHost}:${device.port}`;
 }
 
 export function NetworkScanModal({

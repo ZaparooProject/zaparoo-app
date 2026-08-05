@@ -20,8 +20,10 @@ export function __resetDeviceCache(): void {
 export interface DiscoveredDevice {
   /** Instance name (usually hostname) */
   name: string;
-  /** IP address to connect to */
+  /** IP address to use when no service hostname is available */
   address: string;
+  /** mDNS hostname shared across the device's network interfaces */
+  hostname?: string;
   /** Port number */
   port: number;
   /** Device ID from TXT record */
@@ -76,10 +78,14 @@ function serviceToDevice(service: ZeroConfService): DiscoveredDevice | null {
   }
 
   const txtData = parseTxtRecord(service.txtRecord);
+  // DNS-SD hostnames are commonly returned as absolute names with a trailing
+  // dot. Device address validation expects the equivalent user-facing form.
+  const hostname = service.hostname?.trim().replace(/\.+$/, "");
 
   return {
     name: service.name,
     address,
+    ...(hostname ? { hostname } : {}),
     port: service.port,
     ...txtData,
   };
