@@ -248,6 +248,39 @@ describe("WebSocketTransport encryption", () => {
       transport.destroy();
     });
 
+    it("should discard an in-flight encrypted frame after reset", async () => {
+      let resolveDecrypt!: (plaintext: string) => void;
+      const decrypt = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveDecrypt = resolve;
+          }),
+      );
+      vi.mocked(EncryptedSession.create).mockResolvedValue({
+        ...makeMockSession(),
+        decrypt,
+      } as unknown as EncryptedSession);
+
+      const onMessage = vi.fn();
+      const transport = makeTransport();
+      transport.setEventHandlers({ onMessage });
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      ws.simulateMessage(JSON.stringify({ e: "stale-frame" }));
+      await flushPromises();
+      expect(decrypt).toHaveBeenCalledTimes(1);
+
+      transport.destroy();
+      resolveDecrypt("stale");
+      await flushPromises();
+
+      expect(onMessage).not.toHaveBeenCalled();
+    });
+
     it("should not fire onEncryptedHandshakeOk twice", async () => {
       const onEncryptedHandshakeOk = vi.fn();
       const transport = makeTransport();

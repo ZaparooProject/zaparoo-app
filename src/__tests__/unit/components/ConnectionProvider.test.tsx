@@ -1343,7 +1343,7 @@ describe("notification processing", () => {
 
     it("should reconcile until authoritative media status is terminal", async () => {
       vi.useFakeTimers();
-      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+      const messagePromise = Promise.resolve<NotificationRequest>({
         method: Notification.MediaIndexing,
         params: {
           indexing: true,
@@ -1352,6 +1352,7 @@ describe("notification processing", () => {
           currentStepDisplay: "Finding media folders",
         },
       });
+      vi.mocked(CoreAPI.processReceived).mockReturnValueOnce(messagePromise);
       vi.mocked(CoreAPI.media)
         .mockResolvedValueOnce({
           database: {
@@ -1371,6 +1372,10 @@ describe("notification processing", () => {
           active: [],
         });
 
+      const invalidateSpy = vi.spyOn(
+        QueryClient.prototype,
+        "invalidateQueries",
+      );
       const view = render(
         <ConnectionProvider>
           <div>Test</div>
@@ -1383,35 +1388,45 @@ describe("notification processing", () => {
 
       try {
         await act(async () => {
-          await capturedEventHandlers.onMessage!("test-device", {});
-          await vi.advanceTimersByTimeAsync(0);
+          capturedEventHandlers.onMessage!("test-device", {});
+          await messagePromise;
         });
         expect(useStatusStore.getState().gamesIndex.indexing).toBe(true);
 
         await act(async () => {
-          await vi.advanceTimersByTimeAsync(2000);
+          await vi.advanceTimersToNextTimerAsync();
         });
         expect(CoreAPI.media).toHaveBeenCalledTimes(1);
         expect(useStatusStore.getState().gamesIndex).toMatchObject({
           indexing: true,
           currentStepDisplay: "Super Nintendo",
         });
+        invalidateSpy.mockClear();
 
         await act(async () => {
-          await vi.advanceTimersByTimeAsync(2000);
+          await vi.advanceTimersToNextTimerAsync();
         });
         expect(CoreAPI.media).toHaveBeenCalledTimes(2);
         expect(useStatusStore.getState().gamesIndex).toMatchObject({
           indexing: false,
           totalMedia: 150,
         });
-
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(4000);
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["media"] });
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["systems"] });
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["tags"] });
+        expect(invalidateSpy).toHaveBeenCalledWith({
+          queryKey: ["infiniteMediaSearch"],
         });
+
+        while (vi.getTimerCount() > 0) {
+          await act(async () => {
+            await vi.advanceTimersToNextTimerAsync();
+          });
+        }
         expect(CoreAPI.media).toHaveBeenCalledTimes(2);
       } finally {
         view.unmount();
+        invalidateSpy.mockRestore();
         vi.useRealTimers();
       }
     });

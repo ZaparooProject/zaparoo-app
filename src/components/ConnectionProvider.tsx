@@ -352,6 +352,38 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     }, MEDIA_INDEX_RECONCILE_MS);
   }, []);
 
+  const applyGamesIndexState = useCallback(
+    (nextState: IndexResponse) => {
+      const currentState = useStatusStore.getState().gamesIndex;
+      setGamesIndex(nextState);
+
+      const mediaStateChanged =
+        currentState.indexing !== nextState.indexing ||
+        currentState.optimizing !== nextState.optimizing ||
+        currentState.exists !== nextState.exists ||
+        currentState.totalMedia !== nextState.totalMedia;
+      if (mediaStateChanged) {
+        logger.log("Database state changed, invalidating media query");
+        queryClient.invalidateQueries({ queryKey: ["media"] });
+      }
+
+      // Latest Core increments systemsCompleted after each durable system
+      // commit. Older Core omits it but flips indexing/exists at completion.
+      const libraryContentChanged =
+        currentState.indexing !== nextState.indexing ||
+        currentState.exists !== nextState.exists ||
+        currentState.totalMedia !== nextState.totalMedia ||
+        currentState.systemsCompleted !== nextState.systemsCompleted;
+      if (libraryContentChanged) {
+        logger.log("Media library changed, invalidating cached lists");
+        queryClient.invalidateQueries({ queryKey: ["systems"] });
+        queryClient.invalidateQueries({ queryKey: ["tags"] });
+        queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] });
+      }
+    },
+    [queryClient, setGamesIndex],
+  );
+
   useEffect(() => {
     runMediaIndexReconciliationRef.current = () => {
       if (
@@ -380,7 +412,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             return;
           }
 
-          setGamesIndex(response.database);
+          applyGamesIndexState(response.database);
           if (response.database.indexing) {
             scheduleMediaIndexReconciliation();
           }
@@ -404,7 +436,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           }
         });
     };
-  }, [scheduleMediaIndexReconciliation, setGamesIndex]);
+  }, [applyGamesIndexState, scheduleMediaIndexReconciliation]);
 
   useEffect(
     () => () => {
@@ -456,39 +488,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             const params = notification.params as IndexResponse;
             logger.log("mediaIndexing", params);
 
-            const currentState = useStatusStore.getState().gamesIndex;
-            setGamesIndex(params);
+            applyGamesIndexState(params);
             if (params.indexing) {
               cancelMediaIndexReconciliation();
               scheduleMediaIndexReconciliation();
             } else {
               cancelMediaIndexReconciliation();
-            }
-
-            const mediaStateChanged =
-              currentState.indexing !== params.indexing ||
-              currentState.optimizing !== params.optimizing ||
-              currentState.exists !== params.exists ||
-              currentState.totalMedia !== params.totalMedia;
-            if (mediaStateChanged) {
-              logger.log("Database state changed, invalidating media query");
-              queryClient.invalidateQueries({ queryKey: ["media"] });
-            }
-
-            // Latest Core increments systemsCompleted after each durable system
-            // commit. Older Core omits it but flips indexing/exists at completion.
-            const libraryContentChanged =
-              currentState.indexing !== params.indexing ||
-              currentState.exists !== params.exists ||
-              currentState.totalMedia !== params.totalMedia ||
-              currentState.systemsCompleted !== params.systemsCompleted;
-            if (libraryContentChanged) {
-              logger.log("Media library changed, invalidating cached lists");
-              queryClient.invalidateQueries({ queryKey: ["systems"] });
-              queryClient.invalidateQueries({ queryKey: ["tags"] });
-              queryClient.invalidateQueries({
-                queryKey: ["infiniteMediaSearch"],
-              });
             }
             break;
           }
@@ -700,11 +705,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     },
     [
       refreshMediaState,
+      applyGamesIndexState,
       cancelMediaIndexReconciliation,
       cancelMediaStopReconciliation,
       scheduleMediaIndexReconciliation,
       scheduleMediaStopReconciliation,
-      setGamesIndex,
       setScrapingStatus,
       setLastToken,
       setActiveTokens,
