@@ -9,6 +9,7 @@ import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { InboxModal } from "@/components/InboxModal";
 import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 import { StagedTokenModal } from "@/components/home/StagedTokenModal";
+import { useAppReviewPrompt } from "@/hooks/useAppReviewPrompt";
 import {
   isNativePluginAvailable,
   isPluginAvailable,
@@ -318,6 +319,7 @@ export default function App() {
   useNfcAvailabilityCheck();
   useCameraAvailabilityCheck();
   useAccelerometerAvailabilityCheck();
+  useAppReviewPrompt();
   // Initialize live updates - must be called after app renders successfully
   useLiveUpdate();
 

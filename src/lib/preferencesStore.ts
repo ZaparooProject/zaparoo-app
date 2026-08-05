@@ -2,6 +2,12 @@ import { create } from "zustand";
 import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 import { Preferences } from "@capacitor/preferences";
 import { TextZoom } from "@capacitor/text-zoom";
+import {
+  DEFAULT_APP_REVIEW_CADENCE,
+  recordAppReviewAttempt,
+  recordSuccessfulAppReviewLaunch,
+  type AppReviewCadenceState,
+} from "@/lib/appReview";
 import { sessionManager } from "./nfc";
 import {
   isCapacitorPluginUnavailableError,
@@ -79,6 +85,9 @@ export interface PreferencesState {
   // Tour completion tracking
   tourCompleted: boolean;
 
+  // Native app-review prompt cadence
+  appReviewCadence: AppReviewCadenceState;
+
   // What's new tracking
   whatsNewInitialized: boolean;
   lastWhatsNewRuntimeKey: string | null;
@@ -146,6 +155,8 @@ export interface PreferencesActions {
   setShakeZapscript: (value: string) => void;
   setCustomText: (value: string) => void;
   setTourCompleted: (value: boolean) => void;
+  recordAppReviewSuccessfulLaunch: (timestamp: number) => void;
+  recordAppReviewAttempt: (timestamp: number) => void;
   initializeWhatsNew: (
     runtimeKey: string,
     announcementId: string | null,
@@ -191,6 +202,7 @@ const DEFAULT_PREFERENCES: Omit<
   shakeZapscript: "",
   customText: "",
   tourCompleted: false,
+  appReviewCadence: DEFAULT_APP_REVIEW_CADENCE,
   whatsNewInitialized: false,
   lastWhatsNewRuntimeKey: null,
   seenWhatsNewAnnouncementIds: [],
@@ -295,6 +307,15 @@ export const usePreferencesStore = create<PreferencesStore>()(
       setShakeZapscript: (value) => set({ shakeZapscript: value }),
       setCustomText: (value) => set({ customText: value }),
       setTourCompleted: (value) => set({ tourCompleted: value }),
+      recordAppReviewSuccessfulLaunch: (timestamp) =>
+        set((state) => ({
+          appReviewCadence: recordSuccessfulAppReviewLaunch(
+            state.appReviewCadence,
+            timestamp,
+          ),
+        })),
+      recordAppReviewAttempt: (timestamp) =>
+        set({ appReviewCadence: recordAppReviewAttempt(timestamp) }),
       initializeWhatsNew: (runtimeKey, announcementId) =>
         set({
           whatsNewInitialized: true,
@@ -332,6 +353,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
         shakeZapscript: state.shakeZapscript,
         customText: state.customText,
         tourCompleted: state.tourCompleted,
+        appReviewCadence: state.appReviewCadence,
         whatsNewInitialized: state.whatsNewInitialized,
         lastWhatsNewRuntimeKey: state.lastWhatsNewRuntimeKey,
         seenWhatsNewAnnouncementIds: state.seenWhatsNewAnnouncementIds,
@@ -369,6 +391,10 @@ export const usePreferencesStore = create<PreferencesStore>()(
         return {
           ...currentState,
           ...persisted,
+          appReviewCadence: {
+            ...currentState.appReviewCadence,
+            ...persisted.appReviewCadence,
+          },
           // Never persist the hydration flags or runtime-checked values
           _hasHydrated: currentState._hasHydrated,
           _proAccessHydrated: currentState._proAccessHydrated,
