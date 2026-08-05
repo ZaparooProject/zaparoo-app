@@ -12,11 +12,12 @@ import { act, render, screen, waitFor } from "../../../test-utils";
 import { ConnectionProvider } from "../../../components/ConnectionProvider";
 import { useConnection } from "../../../hooks/useConnection";
 import { connectionManager } from "../../../lib/transport";
-import { CoreAPI } from "../../../lib/coreApi";
+import { CoreAPI, isCancelled } from "../../../lib/coreApi";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import type { TransportState } from "../../../lib/transport/types";
 import type { NotificationRequest } from "../../../lib/coreApi";
 import { ClientCapability, InboxSeverity, Notification } from "@/lib/models";
+import { logger } from "@/lib/logger";
 
 // Capture event handlers for notification testing
 let capturedEventHandlers: {
@@ -1340,6 +1341,308 @@ describe("notification processing", () => {
         });
       });
     });
+
+    it("should reconcile until authoritative media status is terminal", async () => {
+      vi.useFakeTimers();
+      const messagePromise = Promise.resolve<NotificationRequest>({
+        method: Notification.MediaIndexing,
+        params: {
+          indexing: true,
+          optimizing: false,
+          exists: true,
+          currentStepDisplay: "Finding media folders",
+        },
+      });
+      vi.mocked(CoreAPI.processReceived).mockReturnValueOnce(messagePromise);
+      vi.mocked(CoreAPI.media)
+        .mockResolvedValueOnce({
+          database: {
+            exists: true,
+            indexing: true,
+            currentStepDisplay: "Super Nintendo",
+          },
+          active: [],
+        })
+        .mockResolvedValueOnce({
+          database: {
+            exists: true,
+            indexing: false,
+            optimizing: false,
+            totalMedia: 150,
+          },
+          active: [],
+        });
+
+      const invalidateSpy = vi.spyOn(
+        QueryClient.prototype,
+        "invalidateQueries",
+      );
+      const view = render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      useStatusStore.setState({
+        connected: true,
+        connectionState: ConnectionState.CONNECTED,
+      });
+
+      try {
+        await act(async () => {
+          capturedEventHandlers.onMessage!("test-device", {});
+          await messagePromise;
+        });
+        expect(useStatusStore.getState().gamesIndex.indexing).toBe(true);
+
+        await act(async () => {
+          await vi.advanceTimersToNextTimerAsync();
+        });
+        expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+        expect(useStatusStore.getState().gamesIndex).toMatchObject({
+          indexing: true,
+          currentStepDisplay: "Super Nintendo",
+        });
+        invalidateSpy.mockClear();
+
+        await act(async () => {
+          await vi.advanceTimersToNextTimerAsync();
+        });
+        expect(CoreAPI.media).toHaveBeenCalledTimes(2);
+        expect(useStatusStore.getState().gamesIndex).toMatchObject({
+          indexing: false,
+          totalMedia: 150,
+        });
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["media"] });
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["systems"] });
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["tags"] });
+        expect(invalidateSpy).toHaveBeenCalledWith({
+          queryKey: ["infiniteMediaSearch"],
+        });
+
+        while (vi.getTimerCount() > 0) {
+          await act(async () => {
+            await vi.advanceTimersToNextTimerAsync();
+          });
+        }
+        expect(CoreAPI.media).toHaveBeenCalledTimes(2);
+      } finally {
+        view.unmount();
+        invalidateSpy.mockRestore();
+        vi.useRealTimers();
+      }
+    });
+
+    it.each(["resolve", "reject"] as const)(
+      "should ignore stale reconciliation %s after a terminal notification",
+      async (outcome) => {
+        vi.useFakeTimers();
+        const progressPromise = Promise.resolve<NotificationRequest>({
+          method: Notification.MediaIndexing,
+          params: {
+            indexing: true,
+            optimizing: false,
+            exists: true,
+            currentStepDisplay: "Finding media folders",
+          },
+        });
+        const terminalPromise = Promise.resolve<NotificationRequest>({
+          method: Notification.MediaIndexing,
+          params: {
+            indexing: false,
+            optimizing: false,
+            exists: true,
+            totalMedia: 150,
+          },
+        });
+        vi.mocked(CoreAPI.processReceived)
+          .mockReturnValueOnce(progressPromise)
+          .mockReturnValueOnce(terminalPromise);
+
+        type MediaResponse = Awaited<ReturnType<typeof CoreAPI.media>>;
+        let resolveReconciliation!: (response: MediaResponse) => void;
+        let rejectReconciliation!: (error: Error) => void;
+        vi.mocked(CoreAPI.media).mockReturnValueOnce(
+          new Promise((resolve, reject) => {
+            resolveReconciliation = resolve;
+            rejectReconciliation = reject;
+          }),
+        );
+        const loggerSpy = vi
+          .spyOn(logger, "error")
+          .mockImplementation(() => {});
+
+        const view = render(
+          <ConnectionProvider>
+            <div>Test</div>
+          </ConnectionProvider>,
+        );
+        useStatusStore.setState({
+          connected: true,
+          connectionState: ConnectionState.CONNECTED,
+        });
+
+        try {
+          await act(async () => {
+            capturedEventHandlers.onMessage!("test-device", {});
+            await progressPromise;
+            await vi.advanceTimersToNextTimerAsync();
+          });
+          expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+
+          await act(async () => {
+            capturedEventHandlers.onMessage!("test-device", {});
+            await terminalPromise;
+          });
+          expect(useStatusStore.getState().gamesIndex.indexing).toBe(false);
+
+          await act(async () => {
+            if (outcome === "resolve") {
+              resolveReconciliation({
+                database: {
+                  exists: true,
+                  indexing: true,
+                  currentStepDisplay: "Stale progress",
+                },
+                active: [],
+              });
+            } else {
+              rejectReconciliation(new Error("Stale media status failure"));
+            }
+            await Promise.resolve();
+          });
+
+          expect(useStatusStore.getState().gamesIndex).toMatchObject({
+            indexing: false,
+            totalMedia: 150,
+          });
+          expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+          expect(loggerSpy).not.toHaveBeenCalled();
+          expect(vi.getTimerCount()).toBe(0);
+        } finally {
+          view.unmount();
+          loggerSpy.mockRestore();
+          vi.useRealTimers();
+        }
+      },
+    );
+
+    it("should skip reconciliation after connection loss", async () => {
+      vi.useFakeTimers();
+      const messagePromise = Promise.resolve<NotificationRequest>({
+        method: Notification.MediaIndexing,
+        params: {
+          indexing: true,
+          optimizing: false,
+          exists: true,
+        },
+      });
+      vi.mocked(CoreAPI.processReceived).mockReturnValueOnce(messagePromise);
+
+      const view = render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      useStatusStore.setState({
+        connected: true,
+        connectionState: ConnectionState.CONNECTED,
+      });
+
+      try {
+        await act(async () => {
+          capturedEventHandlers.onMessage!("test-device", {});
+          await messagePromise;
+        });
+        useStatusStore.setState({
+          connected: false,
+          connectionState: ConnectionState.RECONNECTING,
+        });
+
+        await act(async () => {
+          await vi.advanceTimersToNextTimerAsync();
+        });
+
+        expect(CoreAPI.media).not.toHaveBeenCalled();
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        view.unmount();
+        vi.useRealTimers();
+      }
+    });
+
+    it("should retry reconciliation after cancelled and failed status attempts", async () => {
+      vi.useFakeTimers();
+      const messagePromise = Promise.resolve<NotificationRequest>({
+        method: Notification.MediaIndexing,
+        params: {
+          indexing: true,
+          optimizing: false,
+          exists: true,
+        },
+      });
+      vi.mocked(CoreAPI.processReceived).mockReturnValueOnce(messagePromise);
+      vi.mocked(isCancelled).mockReturnValueOnce(true);
+      vi.mocked(CoreAPI.media)
+        .mockResolvedValueOnce({
+          database: { exists: true, indexing: true },
+          active: [],
+        })
+        .mockRejectedValueOnce(new Error("Temporary media status failure"))
+        .mockResolvedValueOnce({
+          database: {
+            exists: true,
+            indexing: false,
+            optimizing: false,
+            totalMedia: 150,
+          },
+          active: [],
+        });
+      const loggerSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+
+      const view = render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      useStatusStore.setState({
+        connected: true,
+        connectionState: ConnectionState.CONNECTED,
+      });
+
+      try {
+        await act(async () => {
+          capturedEventHandlers.onMessage!("test-device", {});
+          await messagePromise;
+          await vi.advanceTimersToNextTimerAsync();
+        });
+        expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+        expect(loggerSpy).not.toHaveBeenCalled();
+
+        await act(async () => {
+          await vi.advanceTimersToNextTimerAsync();
+        });
+        expect(CoreAPI.media).toHaveBeenCalledTimes(2);
+        expect(loggerSpy).toHaveBeenCalledWith(
+          "Failed to reconcile media indexing status",
+          expect.any(Error),
+          expect.objectContaining({ action: "media-index-reconcile" }),
+        );
+
+        await act(async () => {
+          await vi.advanceTimersToNextTimerAsync();
+        });
+        expect(CoreAPI.media).toHaveBeenCalledTimes(3);
+        expect(useStatusStore.getState().gamesIndex).toMatchObject({
+          indexing: false,
+          totalMedia: 150,
+        });
+      } finally {
+        view.unmount();
+        loggerSpy.mockRestore();
+        vi.mocked(isCancelled).mockReturnValue(false);
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe("media.scraping", () => {
@@ -1528,6 +1831,62 @@ describe("connection event handling", () => {
       expect(useStatusStore.getState().corePlatform).toBe("test");
       expect(useStatusStore.getState().coreVersionPending).toBe(false);
     });
+  });
+
+  it("should reconcile indexing discovered during connection hydration", async () => {
+    vi.useFakeTimers();
+    vi.mocked(CoreAPI.media)
+      .mockReset()
+      .mockResolvedValueOnce({
+        database: {
+          exists: true,
+          indexing: true,
+          currentStepDisplay: "Finding media folders",
+        },
+        active: [],
+      })
+      .mockResolvedValueOnce({
+        database: {
+          exists: true,
+          indexing: false,
+          optimizing: false,
+          totalMedia: 150,
+        },
+        active: [],
+      });
+
+    const view = render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    try {
+      await act(async () => {
+        capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+          state: "connected",
+          hasData: false,
+          hasConnectedBefore: false,
+        });
+        await Promise.resolve();
+      });
+
+      expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+      expect(useStatusStore.getState().gamesIndex.indexing).toBe(true);
+
+      await act(async () => {
+        await vi.advanceTimersToNextTimerAsync();
+      });
+
+      expect(CoreAPI.media).toHaveBeenCalledTimes(2);
+      expect(useStatusStore.getState().gamesIndex).toMatchObject({
+        indexing: false,
+        totalMedia: 150,
+      });
+    } finally {
+      view.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("should hydrate both media slots regardless of response order", async () => {

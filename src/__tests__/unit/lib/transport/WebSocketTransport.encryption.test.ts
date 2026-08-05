@@ -9,6 +9,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { WebSocketTransport } from "@/lib/transport/WebSocketTransport";
 import { EncryptedSession } from "@/lib/crypto/session";
+import { logger } from "@/lib/logger";
 
 vi.mock("@/lib/crypto/session", () => ({
   EncryptedSession: {
@@ -203,6 +204,128 @@ describe("WebSocketTransport encryption", () => {
       transport.destroy();
     });
 
+    it("should preserve arrival order while decrypting incoming frames", async () => {
+      let resolveFirst!: (plaintext: string) => void;
+      const decrypt = vi.fn((ciphertext: string): Promise<string> => {
+        if (ciphertext === "first-frame") {
+          return new Promise<string>((resolve) => {
+            resolveFirst = resolve;
+          });
+        }
+        return Promise.resolve("second");
+      });
+      vi.mocked(EncryptedSession.create).mockResolvedValue({
+        ...makeMockSession(),
+        decrypt,
+      } as unknown as EncryptedSession);
+
+      const onMessage = vi.fn();
+      const transport = makeTransport();
+      transport.setEventHandlers({ onMessage });
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      ws.simulateMessage(JSON.stringify({ e: "first-frame" }));
+      ws.simulateMessage(JSON.stringify({ e: "second-frame" }));
+      await flushPromises();
+
+      expect(decrypt).toHaveBeenCalledTimes(1);
+      expect(onMessage).not.toHaveBeenCalled();
+
+      resolveFirst("first");
+      await flushPromises();
+
+      expect(decrypt).toHaveBeenCalledTimes(2);
+      expect(onMessage).toHaveBeenCalledTimes(2);
+      expect(
+        onMessage.mock.calls.map(
+          ([message]) => (message as MessageEvent).data as string,
+        ),
+      ).toEqual(["first", "second"]);
+
+      transport.destroy();
+    });
+
+    it.each(["resolve", "reject"] as const)(
+      "should discard queued encrypted frames when stale decryption %s after reset",
+      async (outcome) => {
+        let resolveDecrypt!: (plaintext: string) => void;
+        let rejectDecrypt!: (error: Error) => void;
+        const decrypt = vi.fn(
+          () =>
+            new Promise<string>((resolve, reject) => {
+              resolveDecrypt = resolve;
+              rejectDecrypt = reject;
+            }),
+        );
+        vi.mocked(EncryptedSession.create).mockResolvedValue({
+          ...makeMockSession(),
+          decrypt,
+        } as unknown as EncryptedSession);
+
+        const onMessage = vi.fn();
+        const onError = vi.fn();
+        const transport = makeTransport();
+        transport.setEventHandlers({ onMessage, onError });
+        transport.connect();
+
+        const ws = MockWebSocket.getLatest()!;
+        ws.simulateOpen();
+        await flushPromises();
+
+        ws.simulateMessage(JSON.stringify({ e: "in-flight-frame" }));
+        ws.simulateMessage(JSON.stringify({ e: "queued-frame" }));
+        await flushPromises();
+        expect(decrypt).toHaveBeenCalledTimes(1);
+
+        transport.destroy();
+        if (outcome === "resolve") {
+          resolveDecrypt("stale");
+        } else {
+          rejectDecrypt(new Error("Stale decrypt failure"));
+        }
+        await flushPromises();
+
+        expect(decrypt).toHaveBeenCalledTimes(1);
+        expect(onMessage).not.toHaveBeenCalled();
+        expect(onError).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should continue processing after a message handler throws", async () => {
+      const loggerSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+      const onMessage = vi
+        .fn()
+        .mockImplementationOnce(() => {
+          throw new Error("Consumer failure");
+        })
+        .mockImplementation(() => undefined);
+      const transport = makeTransport();
+      transport.setEventHandlers({ onMessage });
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      ws.simulateMessage(JSON.stringify({ e: btoa("first") }));
+      ws.simulateMessage(JSON.stringify({ e: btoa("second") }));
+      await flushPromises();
+
+      expect(onMessage).toHaveBeenCalledTimes(2);
+      expect(loggerSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to process encrypted frame"),
+        expect.any(Error),
+        expect.objectContaining({ action: "inbound-processing-failed" }),
+      );
+
+      loggerSpy.mockRestore();
+      transport.destroy();
+    });
+
     it("should not fire onEncryptedHandshakeOk twice", async () => {
       const onEncryptedHandshakeOk = vi.fn();
       const transport = makeTransport();
@@ -323,6 +446,7 @@ describe("WebSocketTransport encryption", () => {
       ws.simulateMessage(
         JSON.stringify({ jsonrpc: "2.0", error: { code: -32002 } }),
       );
+      await flushPromises();
 
       expect(onCredentialsRevoked).toHaveBeenCalledTimes(1);
       expect(transport.state).toBe("disconnected");

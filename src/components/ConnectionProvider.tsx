@@ -84,6 +84,7 @@ interface ConnectionProviderProps {
 
 const CLIENT_CAPABILITIES_SINCE = "2.16.0";
 const MEDIA_TRANSITION_GRACE_MS = 250;
+const MEDIA_INDEX_RECONCILE_MS = 2000;
 const LEGACY_CLIENT_ACCESS = {
   paired: false,
   role: null,
@@ -143,6 +144,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const mediaStopTimers = useRef<
     Record<MediaSlot, ReturnType<typeof setTimeout> | null>
   >({ primary: null, background: null });
+  const mediaIndexReconcileTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const mediaIndexReconcileToken = useRef(0);
+  const runMediaIndexReconciliationRef = useRef<() => void>(() => {});
   const mediaStateRequestToken = useRef(0);
   const invalidateMediaStateRequest = useCallback(() => {
     mediaStateRequestToken.current++;
@@ -328,13 +334,122 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     [cancelMediaStopReconciliation, refreshMediaState],
   );
 
+  const cancelMediaIndexReconciliation = useCallback(() => {
+    if (mediaIndexReconcileTimer.current) {
+      clearTimeout(mediaIndexReconcileTimer.current);
+      mediaIndexReconcileTimer.current = null;
+    }
+    mediaIndexReconcileToken.current++;
+  }, []);
+
+  const scheduleMediaIndexReconciliation = useCallback(() => {
+    if (mediaIndexReconcileTimer.current) {
+      clearTimeout(mediaIndexReconcileTimer.current);
+    }
+    mediaIndexReconcileTimer.current = setTimeout(() => {
+      mediaIndexReconcileTimer.current = null;
+      runMediaIndexReconciliationRef.current();
+    }, MEDIA_INDEX_RECONCILE_MS);
+  }, []);
+
+  const applyGamesIndexState = useCallback(
+    (nextState: IndexResponse) => {
+      const currentState = useStatusStore.getState().gamesIndex;
+      setGamesIndex(nextState);
+
+      const mediaStateChanged =
+        currentState.indexing !== nextState.indexing ||
+        currentState.optimizing !== nextState.optimizing ||
+        currentState.exists !== nextState.exists ||
+        currentState.totalMedia !== nextState.totalMedia;
+      if (mediaStateChanged) {
+        logger.log("Database state changed, invalidating media query");
+        queryClient.invalidateQueries({ queryKey: ["media"] });
+      }
+
+      // Latest Core increments systemsCompleted after each durable system
+      // commit. Older Core omits it but flips indexing/exists at completion.
+      const libraryContentChanged =
+        currentState.indexing !== nextState.indexing ||
+        currentState.exists !== nextState.exists ||
+        currentState.totalMedia !== nextState.totalMedia ||
+        currentState.systemsCompleted !== nextState.systemsCompleted;
+      if (libraryContentChanged) {
+        logger.log("Media library changed, invalidating cached lists");
+        queryClient.invalidateQueries({ queryKey: ["systems"] });
+        queryClient.invalidateQueries({ queryKey: ["tags"] });
+        queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] });
+      }
+    },
+    [queryClient, setGamesIndex],
+  );
+
+  useEffect(() => {
+    runMediaIndexReconciliationRef.current = () => {
+      if (
+        useStatusStore.getState().connectionState !== ConnectionState.CONNECTED
+      ) {
+        return;
+      }
+
+      const requestToken = ++mediaIndexReconcileToken.current;
+      const connectionId = currentConnectionId.current;
+
+      void CoreAPI.media()
+        .then((response) => {
+          if (
+            requestToken !== mediaIndexReconcileToken.current ||
+            connectionId !== currentConnectionId.current ||
+            useStatusStore.getState().connectionState !==
+              ConnectionState.CONNECTED
+          ) {
+            return;
+          }
+          if (isCancelled(response)) {
+            if (useStatusStore.getState().gamesIndex.indexing) {
+              scheduleMediaIndexReconciliation();
+            }
+            return;
+          }
+
+          applyGamesIndexState(response.database);
+          if (response.database.indexing) {
+            scheduleMediaIndexReconciliation();
+          }
+        })
+        .catch((error) => {
+          if (
+            requestToken !== mediaIndexReconcileToken.current ||
+            connectionId !== currentConnectionId.current ||
+            useStatusStore.getState().connectionState !==
+              ConnectionState.CONNECTED
+          ) {
+            return;
+          }
+          logger.error("Failed to reconcile media indexing status", error, {
+            category: "api",
+            action: "media-index-reconcile",
+            severity: "warning",
+          });
+          if (useStatusStore.getState().gamesIndex.indexing) {
+            scheduleMediaIndexReconciliation();
+          }
+        });
+    };
+  }, [applyGamesIndexState, scheduleMediaIndexReconciliation]);
+
   useEffect(
     () => () => {
       cancelMediaStopReconciliation("primary");
       cancelMediaStopReconciliation("background");
+      cancelMediaIndexReconciliation();
       invalidateMediaStateRequest();
     },
-    [cancelMediaStopReconciliation, invalidateMediaStateRequest],
+    [
+      cancelMediaIndexReconciliation,
+      cancelMediaStopReconciliation,
+      invalidateMediaStateRequest,
+    ],
   );
 
   // Process notifications from WebSocket messages
@@ -373,33 +488,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             const params = notification.params as IndexResponse;
             logger.log("mediaIndexing", params);
 
-            const currentState = useStatusStore.getState().gamesIndex;
-            setGamesIndex(params);
-
-            const mediaStateChanged =
-              currentState.indexing !== params.indexing ||
-              currentState.optimizing !== params.optimizing ||
-              currentState.exists !== params.exists ||
-              currentState.totalMedia !== params.totalMedia;
-            if (mediaStateChanged) {
-              logger.log("Database state changed, invalidating media query");
-              queryClient.invalidateQueries({ queryKey: ["media"] });
-            }
-
-            // Latest Core increments systemsCompleted after each durable system
-            // commit. Older Core omits it but flips indexing/exists at completion.
-            const libraryContentChanged =
-              currentState.indexing !== params.indexing ||
-              currentState.exists !== params.exists ||
-              currentState.totalMedia !== params.totalMedia ||
-              currentState.systemsCompleted !== params.systemsCompleted;
-            if (libraryContentChanged) {
-              logger.log("Media library changed, invalidating cached lists");
-              queryClient.invalidateQueries({ queryKey: ["systems"] });
-              queryClient.invalidateQueries({ queryKey: ["tags"] });
-              queryClient.invalidateQueries({
-                queryKey: ["infiniteMediaSearch"],
-              });
+            applyGamesIndexState(params);
+            if (params.indexing) {
+              cancelMediaIndexReconciliation();
+              scheduleMediaIndexReconciliation();
+            } else {
+              cancelMediaIndexReconciliation();
             }
             break;
           }
@@ -611,9 +705,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     },
     [
       refreshMediaState,
+      applyGamesIndexState,
+      cancelMediaIndexReconciliation,
       cancelMediaStopReconciliation,
+      scheduleMediaIndexReconciliation,
       scheduleMediaStopReconciliation,
-      setGamesIndex,
       setScrapingStatus,
       setLastToken,
       setActiveTokens,
@@ -827,6 +923,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           }
           try {
             setGamesIndex(v.database);
+            if (v.database.indexing) {
+              scheduleMediaIndexReconciliation();
+            } else {
+              cancelMediaIndexReconciliation();
+            }
             applyMediaState(v);
           } catch (e) {
             logger.error("Error processing media data:", e);
@@ -838,6 +939,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             return;
           }
           if (isExpectedMediaDatabaseError(e)) {
+            cancelMediaIndexReconciliation();
             setGamesIndex(DEFAULT_GAMES_INDEX);
             return;
           }
@@ -891,6 +993,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         }
       });
   }, [
+    cancelMediaIndexReconciliation,
+    scheduleMediaIndexReconciliation,
     setConnectionError,
     setDeviceHistory,
     addDeviceHistory,
@@ -1163,6 +1267,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       }
       cancelMediaStopReconciliation("primary");
       cancelMediaStopReconciliation("background");
+      cancelMediaIndexReconciliation();
       invalidateMediaStateRequest();
       // Reset CoreAPI to clear any pending requests for this connection
       CoreAPI.reset();
@@ -1175,6 +1280,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     targetDeviceAddress,
     invalidateCurrentClientRequest,
     invalidateMediaStateRequest,
+    cancelMediaIndexReconciliation,
     cancelMediaStopReconciliation,
     setConnectionState,
     setConnectionError,
