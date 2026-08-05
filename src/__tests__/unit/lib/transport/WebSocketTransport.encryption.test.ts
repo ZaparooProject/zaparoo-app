@@ -203,6 +203,51 @@ describe("WebSocketTransport encryption", () => {
       transport.destroy();
     });
 
+    it("should preserve arrival order while decrypting incoming frames", async () => {
+      let resolveFirst!: (plaintext: string) => void;
+      const decrypt = vi.fn((ciphertext: string): Promise<string> => {
+        if (ciphertext === "first-frame") {
+          return new Promise<string>((resolve) => {
+            resolveFirst = resolve;
+          });
+        }
+        return Promise.resolve("second");
+      });
+      vi.mocked(EncryptedSession.create).mockResolvedValue({
+        ...makeMockSession(),
+        decrypt,
+      } as unknown as EncryptedSession);
+
+      const onMessage = vi.fn();
+      const transport = makeTransport();
+      transport.setEventHandlers({ onMessage });
+      transport.connect();
+
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      await flushPromises();
+
+      ws.simulateMessage(JSON.stringify({ e: "first-frame" }));
+      ws.simulateMessage(JSON.stringify({ e: "second-frame" }));
+      await flushPromises();
+
+      expect(decrypt).toHaveBeenCalledTimes(1);
+      expect(onMessage).not.toHaveBeenCalled();
+
+      resolveFirst("first");
+      await flushPromises();
+
+      expect(decrypt).toHaveBeenCalledTimes(2);
+      expect(onMessage).toHaveBeenCalledTimes(2);
+      expect(
+        onMessage.mock.calls.map(
+          ([message]) => (message as MessageEvent).data as string,
+        ),
+      ).toEqual(["first", "second"]);
+
+      transport.destroy();
+    });
+
     it("should not fire onEncryptedHandshakeOk twice", async () => {
       const onEncryptedHandshakeOk = vi.fn();
       const transport = makeTransport();
@@ -323,6 +368,7 @@ describe("WebSocketTransport encryption", () => {
       ws.simulateMessage(
         JSON.stringify({ jsonrpc: "2.0", error: { code: -32002 } }),
       );
+      await flushPromises();
 
       expect(onCredentialsRevoked).toHaveBeenCalledTimes(1);
       expect(transport.state).toBe("disconnected");

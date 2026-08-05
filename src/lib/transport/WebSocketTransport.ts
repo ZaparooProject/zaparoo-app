@@ -76,6 +76,8 @@ export class WebSocketTransport implements Transport {
   private session: EncryptedSession | null = null;
   private outboundQueue: string[] = [];
   private drainInFlight = false;
+  private inboundMessageChain: Promise<void> = Promise.resolve();
+  private inboundGeneration = 0;
   // True once the server has answered a plaintext request without a -32002/-32001
   // error. Until then we keep the consumer's encryption-state UI in "unknown" so
   // it can avoid the green-flash before -32002 arrives on encryption-required cores.
@@ -307,6 +309,8 @@ export class WebSocketTransport implements Transport {
   }
 
   private createWebSocket(): void {
+    // Invalidate queued work from the previous socket before creating another.
+    this.resetEncryptedInbound();
     // Close any existing WebSocket to prevent stale handlers from corrupting state
     this.closeWebSocket();
 
@@ -413,7 +417,7 @@ export class WebSocketTransport implements Transport {
         this.encMode === "trying-encrypted" ||
         this.encMode === "encrypted-verified"
       ) {
-        void this.handleEncryptedMessage(event);
+        this.enqueueEncryptedMessage(event);
       } else {
         this.handlePlaintextMessage(event);
       }
@@ -541,7 +545,44 @@ export class WebSocketTransport implements Transport {
     this.handlers.onOpen?.();
   }
 
-  private async handleEncryptedMessage(event: MessageEvent): Promise<void> {
+  private enqueueEncryptedMessage(event: MessageEvent): void {
+    const generation = this.inboundGeneration;
+    const session = this.session;
+
+    this.inboundMessageChain = this.inboundMessageChain
+      .then(async () => {
+        if (
+          generation !== this.inboundGeneration ||
+          session === null ||
+          session !== this.session
+        ) {
+          return;
+        }
+        await this.handleEncryptedMessage(event, session, generation);
+      })
+      .catch((err: unknown) => {
+        logger.error(
+          `[Transport:${this.deviceId}] Failed to process encrypted frame:`,
+          err,
+          {
+            category: "crypto",
+            action: "inbound-processing-failed",
+            severity: "error",
+          },
+        );
+      });
+  }
+
+  private resetEncryptedInbound(): void {
+    this.inboundGeneration++;
+    this.inboundMessageChain = Promise.resolve();
+  }
+
+  private async handleEncryptedMessage(
+    event: MessageEvent,
+    session: EncryptedSession,
+    generation: number,
+  ): Promise<void> {
     const raw = event.data as string;
     let parsed: Record<string, unknown>;
     try {
@@ -583,11 +624,14 @@ export class WebSocketTransport implements Transport {
     }
 
     // Decrypt the frame.
-    if (typeof parsed.e === "string" && this.session) {
+    if (typeof parsed.e === "string") {
       let plaintext: string;
       try {
-        plaintext = await this.session.decrypt(parsed.e);
+        plaintext = await session.decrypt(parsed.e);
       } catch (err) {
+        if (generation !== this.inboundGeneration || session !== this.session) {
+          return;
+        }
         logger.warn(`[Transport:${this.deviceId}] Decryption failed:`, err, {
           category: "crypto",
           action: "decrypt-failed",
@@ -596,6 +640,10 @@ export class WebSocketTransport implements Transport {
         // produced a bad frame — both are fatal in the binary model.
         this.handlers.onError?.(new Error("Encrypted handshake failed"));
         this.failConnectionForEncryption("decrypt failure");
+        return;
+      }
+
+      if (generation !== this.inboundGeneration || session !== this.session) {
         return;
       }
 
@@ -888,6 +936,7 @@ export class WebSocketTransport implements Transport {
     }
 
     this.closeWebSocket();
+    this.resetEncryptedInbound();
 
     // Reset encryption state for next connect cycle.
     this.session = null;

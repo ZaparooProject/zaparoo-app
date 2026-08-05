@@ -1340,6 +1340,81 @@ describe("notification processing", () => {
         });
       });
     });
+
+    it("should reconcile until authoritative media status is terminal", async () => {
+      vi.useFakeTimers();
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.MediaIndexing,
+        params: {
+          indexing: true,
+          optimizing: false,
+          exists: true,
+          currentStepDisplay: "Finding media folders",
+        },
+      });
+      vi.mocked(CoreAPI.media)
+        .mockResolvedValueOnce({
+          database: {
+            exists: true,
+            indexing: true,
+            currentStepDisplay: "Super Nintendo",
+          },
+          active: [],
+        })
+        .mockResolvedValueOnce({
+          database: {
+            exists: true,
+            indexing: false,
+            optimizing: false,
+            totalMedia: 150,
+          },
+          active: [],
+        });
+
+      const view = render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      useStatusStore.setState({
+        connected: true,
+        connectionState: ConnectionState.CONNECTED,
+      });
+
+      try {
+        await act(async () => {
+          await capturedEventHandlers.onMessage!("test-device", {});
+          await vi.advanceTimersByTimeAsync(0);
+        });
+        expect(useStatusStore.getState().gamesIndex.indexing).toBe(true);
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(2000);
+        });
+        expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+        expect(useStatusStore.getState().gamesIndex).toMatchObject({
+          indexing: true,
+          currentStepDisplay: "Super Nintendo",
+        });
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(2000);
+        });
+        expect(CoreAPI.media).toHaveBeenCalledTimes(2);
+        expect(useStatusStore.getState().gamesIndex).toMatchObject({
+          indexing: false,
+          totalMedia: 150,
+        });
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(4000);
+        });
+        expect(CoreAPI.media).toHaveBeenCalledTimes(2);
+      } finally {
+        view.unmount();
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe("media.scraping", () => {
