@@ -27,6 +27,7 @@ vi.mock("@revenuecat/purchases-capacitor");
 vi.mock("capacitor-plugin-safe-area");
 vi.mock("capacitor-zeroconf");
 vi.mock("@capacitor/network");
+vi.mock("@capawesome/capacitor-app-review");
 vi.mock("@capawesome/capacitor-live-update");
 vi.mock("@aparajita/capacitor-secure-storage");
 

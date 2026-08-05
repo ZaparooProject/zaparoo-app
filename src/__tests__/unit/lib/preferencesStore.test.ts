@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Preferences } from "@capacitor/preferences";
+import { DEFAULT_APP_REVIEW_CADENCE } from "@/lib/appReview";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { act, renderHook, waitFor } from "@/test-utils";
 import { isPluginAvailable } from "@/lib/capacitorBridge";
@@ -44,6 +45,7 @@ describe("usePreferencesStore", () => {
       shakeEnabled: false,
       shakeMode: "random",
       shakeZapscript: "",
+      appReviewCadence: { ...DEFAULT_APP_REVIEW_CADENCE },
       _hasHydrated: true, // Pretend it's hydrated for tests
     });
   });
@@ -78,6 +80,52 @@ describe("usePreferencesStore", () => {
         expect(result.current.showFilenames).toBe(true);
       });
       expect(Preferences.set).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("app review cadence persistence", () => {
+    it("should merge defaults into preferences saved before review tracking", async () => {
+      vi.mocked(Preferences.get).mockResolvedValueOnce({
+        value: JSON.stringify({
+          state: { showFilenames: true },
+          version: 0,
+        }),
+      });
+
+      await usePreferencesStore.persist.rehydrate();
+
+      expect(usePreferencesStore.getState().appReviewCadence).toEqual(
+        DEFAULT_APP_REVIEW_CADENCE,
+      );
+    });
+
+    it("should record launches and reset counters after an attempt", () => {
+      const { result } = renderHook(() => usePreferencesStore());
+      const firstDay = new Date(2026, 0, 1, 12).getTime();
+      const secondDay = new Date(2026, 0, 2, 12).getTime();
+
+      act(() => {
+        result.current.recordAppReviewSuccessfulLaunch(firstDay);
+        result.current.recordAppReviewSuccessfulLaunch(firstDay + 1_000);
+        result.current.recordAppReviewSuccessfulLaunch(secondDay);
+      });
+
+      expect(result.current.appReviewCadence).toMatchObject({
+        successfulLaunchCount: 3,
+        distinctSuccessfulDayCount: 2,
+        lastSuccessfulDay: "2026-01-02",
+      });
+
+      act(() => {
+        result.current.recordAppReviewAttempt(secondDay + 1_000);
+      });
+
+      expect(result.current.appReviewCadence).toEqual({
+        successfulLaunchCount: 0,
+        distinctSuccessfulDayCount: 0,
+        lastSuccessfulDay: null,
+        lastAttemptAt: secondDay + 1_000,
+      });
     });
   });
 

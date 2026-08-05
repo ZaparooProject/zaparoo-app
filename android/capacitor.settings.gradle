@@ -53,6 +53,9 @@ project(':capacitor-text-zoom').projectDir = new File('../node_modules/@capacito
 include ':capawesome-team-capacitor-nfc'
 project(':capawesome-team-capacitor-nfc').projectDir = new File('../node_modules/@capawesome-team/capacitor-nfc/android')
 
+include ':capawesome-capacitor-app-review'
+project(':capawesome-capacitor-app-review').projectDir = new File('../node_modules/@capawesome/capacitor-app-review/android')
+
 include ':capawesome-capacitor-live-update'
 project(':capawesome-capacitor-live-update').projectDir = new File('../node_modules/@capawesome/capacitor-live-update/android')
 

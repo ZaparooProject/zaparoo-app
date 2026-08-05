@@ -46,6 +46,7 @@ const platform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
 | `@capacitor-firebase/authentication` | Firebase auth                        |
 | `@capacitor-mlkit/barcode-scanning`  | Camera barcode scanning              |
 | `@capawesome-team/capacitor-nfc`     | NFC reading/writing                  |
+| `@capawesome/capacitor-app-review`   | Native app store review prompts      |
 | `@capawesome/capacitor-live-update`  | OTA live updates                     |
 | `@capgo/capacitor-shake`             | Shake gesture detection              |
 | `capacitor-plugin-safe-area`         | Safe area insets for notched devices |

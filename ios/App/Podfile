@@ -28,6 +28,7 @@ def capacitor_pods
   pod 'CapacitorStatusBar', :path => '../../node_modules/@capacitor/status-bar'
   pod 'CapacitorTextZoom', :path => '../../node_modules/@capacitor/text-zoom'
   pod 'CapawesomeTeamCapacitorNfc', :path => '../../node_modules/@capawesome-team/capacitor-nfc'
+  pod 'CapawesomeCapacitorAppReview', :path => '../../node_modules/@capawesome/capacitor-app-review'
   pod 'CapawesomeCapacitorLiveUpdate', :path => '../../node_modules/@capawesome/capacitor-live-update'
   pod 'CapgoCapacitorShake', :path => '../../node_modules/@capgo/capacitor-shake'
   pod 'RevenuecatPurchasesCapacitor', :path => '../../node_modules/@revenuecat/purchases-capacitor'
