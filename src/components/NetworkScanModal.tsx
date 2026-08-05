@@ -1,7 +1,11 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
-import { useNetworkScan, DiscoveredDevice } from "@/hooks/useNetworkScan";
+import {
+  getDiscoveredDeviceIdentity,
+  useNetworkScan,
+  type DiscoveredDevice,
+} from "@/hooks/useNetworkScan";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { SlideModal } from "./SlideModal";
 import { DeviceRow } from "./DeviceRow";
@@ -20,10 +24,13 @@ interface NetworkScanModalProps {
 }
 
 function buildConnectionString(device: DiscoveredDevice): string {
-  // Default Zaparoo port — drop it from the displayed/connect string.
+  // Prefer the DNS-SD hostname so one saved pairing survives interface and
+  // DHCP address changes. Services without a hostname still connect by IP.
+  const host = device.hostname || device.address;
+  const formattedHost = host.includes(":") ? `[${host}]` : host;
   return device.port === 7497
-    ? device.address
-    : `${device.address}:${device.port}`;
+    ? formattedHost
+    : `${formattedHost}:${device.port}`;
 }
 
 export function NetworkScanModal({
@@ -88,7 +95,7 @@ export function NetworkScanModal({
           <div className="flex flex-col gap-2">
             {devices.map((device) => (
               <DeviceRow
-                key={device.address}
+                key={getDiscoveredDeviceIdentity(device)}
                 entry={{
                   address: buildConnectionString(device),
                   name: device.name,

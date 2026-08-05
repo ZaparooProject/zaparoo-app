@@ -13,6 +13,7 @@ let watchCallback:
       action: "added" | "removed" | "resolved";
       service: {
         name: string;
+        hostname?: string;
         port: number;
         ipv4Addresses: string[];
         ipv6Addresses: string[];
@@ -275,6 +276,7 @@ describe("useNetworkScan", () => {
           action: "resolved",
           service: {
             name: "test-device",
+            hostname: "test-device.local.",
             port: 7497,
             ipv4Addresses: ["192.168.1.100"],
             ipv6Addresses: [],
@@ -291,6 +293,7 @@ describe("useNetworkScan", () => {
       expect(result.current.devices[0]).toEqual({
         name: "test-device",
         address: "192.168.1.100",
+        hostname: "test-device.local",
         port: 7497,
         deviceId: "device-123",
         version: "1.0.0",
@@ -348,7 +351,7 @@ describe("useNetworkScan", () => {
       expect(result.current.devices).toHaveLength(0);
     });
 
-    it("should avoid duplicate devices by address", async () => {
+    it("should update duplicate devices matched by address", async () => {
       const { useNetworkScan: hook } =
         await import("../../../hooks/useNetworkScan");
       const { result } = renderHook(() => hook());
@@ -357,7 +360,6 @@ describe("useNetworkScan", () => {
         await result.current.startScan();
       });
 
-      // Add same device twice
       act(() => {
         watchCallback?.({
           action: "resolved",
@@ -374,7 +376,7 @@ describe("useNetworkScan", () => {
         watchCallback?.({
           action: "resolved",
           service: {
-            name: "device-1-copy",
+            name: "device-1-updated",
             port: 7497,
             ipv4Addresses: ["192.168.1.100"],
             ipv6Addresses: [],
@@ -383,8 +385,181 @@ describe("useNetworkScan", () => {
       });
 
       expect(result.current.devices).toHaveLength(1);
-      const device = result.current.devices[0];
-      expect(device?.name).toBe("device-1");
+      expect(result.current.devices[0]?.name).toBe("device-1-updated");
+    });
+
+    it("should replace address identity when hostname becomes available", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result } = renderHook(() => hook());
+
+      await act(async () => {
+        await result.current.startScan();
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "address-only",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.100"],
+            ipv6Addresses: [],
+          },
+        });
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "hostname-added",
+            hostname: "Zaparoo.local.",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.100"],
+            ipv6Addresses: [],
+          },
+        });
+      });
+
+      expect(result.current.devices).toHaveLength(1);
+      expect(result.current.devices[0]).toMatchObject({
+        name: "hostname-added",
+        address: "192.168.1.100",
+        hostname: "zaparoo.local",
+      });
+    });
+
+    it("should update address for duplicate normalized hostname", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result } = renderHook(() => hook());
+
+      await act(async () => {
+        await result.current.startScan();
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "ethernet",
+            hostname: "Zaparoo.local.",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.100"],
+            ipv6Addresses: [],
+          },
+        });
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "wifi",
+            hostname: "zaparoo.LOCAL",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.101"],
+            ipv6Addresses: [],
+          },
+        });
+      });
+
+      expect(result.current.devices).toHaveLength(1);
+      expect(result.current.devices[0]).toMatchObject({
+        name: "wifi",
+        address: "192.168.1.101",
+        hostname: "zaparoo.local",
+      });
+    });
+
+    it("should update hostname identity when later result only has address", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result } = renderHook(() => hook());
+
+      await act(async () => {
+        await result.current.startScan();
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "hostname-first",
+            hostname: "zaparoo.local.",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.100"],
+            ipv6Addresses: [],
+          },
+        });
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "address-update",
+            port: 9000,
+            ipv4Addresses: ["192.168.1.100"],
+            ipv6Addresses: [],
+          },
+        });
+      });
+
+      expect(result.current.devices).toHaveLength(1);
+      expect(result.current.devices[0]).toMatchObject({
+        name: "address-update",
+        address: "192.168.1.100",
+        hostname: "zaparoo.local",
+        port: 9000,
+      });
+    });
+
+    it("should match devices by device ID before hostname or address", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result } = renderHook(() => hook());
+
+      await act(async () => {
+        await result.current.startScan();
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "ethernet",
+            hostname: "ethernet.local.",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.100"],
+            ipv6Addresses: [],
+            txtRecord: { id: "DEVICE-123" },
+          },
+        });
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "wifi",
+            hostname: "wifi.local.",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.101"],
+            ipv6Addresses: [],
+            txtRecord: { id: "device-123" },
+          },
+        });
+      });
+
+      expect(result.current.devices).toHaveLength(1);
+      expect(result.current.devices[0]).toMatchObject({
+        name: "wifi",
+        address: "192.168.1.101",
+        hostname: "wifi.local",
+        deviceId: "device-123",
+      });
     });
 
     it("should remove device on removed event", async () => {
@@ -467,7 +642,45 @@ describe("useNetworkScan", () => {
       expect(result.current.devices).toHaveLength(0);
     });
 
-    it("should ignore removed event with no address", async () => {
+    it("should remove device by hostname when removed event has no address", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result } = renderHook(() => hook());
+
+      await act(async () => {
+        await result.current.startScan();
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "test-device",
+            hostname: "zaparoo.local.",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.100"],
+            ipv6Addresses: [],
+          },
+        });
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "removed",
+          service: {
+            name: "test-device",
+            hostname: "ZAPAROO.LOCAL",
+            port: 7497,
+            ipv4Addresses: [],
+            ipv6Addresses: [],
+          },
+        });
+      });
+
+      expect(result.current.devices).toHaveLength(0);
+    });
+
+    it("should ignore removed event with no identity", async () => {
       const { useNetworkScan: hook } =
         await import("../../../hooks/useNetworkScan");
       const { result } = renderHook(() => hook());
@@ -489,7 +702,7 @@ describe("useNetworkScan", () => {
         });
       });
 
-      // Try to remove with no address
+      // Try to remove with no stable identity
       act(() => {
         watchCallback?.({
           action: "removed",
