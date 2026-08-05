@@ -167,6 +167,10 @@ export function useNetworkScan(): UseNetworkScanResult {
 
   const isScanningRef = useRef(false);
 
+  useEffect(() => {
+    deviceCache = devices;
+  }, [devices]);
+
   const stopScan = useCallback(() => {
     // Update UI state immediately
     const wasScanning = isScanningRef.current;
@@ -231,7 +235,6 @@ export function useNetworkScan(): UseNetworkScanResult {
                     ...device,
                   };
                 }
-                deviceCache = updated;
                 return updated;
               });
             }
@@ -243,11 +246,9 @@ export function useNetworkScan(): UseNetworkScanResult {
               removedIdentity.address
             ) {
               setDevices((prev) => {
-                const updated = prev.filter(
+                return prev.filter(
                   (device) => !isSameDiscoveredDevice(device, removedIdentity),
                 );
-                deviceCache = updated;
-                return updated;
               });
             }
           }

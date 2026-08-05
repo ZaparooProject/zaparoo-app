@@ -430,6 +430,49 @@ describe("useNetworkScan", () => {
       });
     });
 
+    it("should update address for duplicate normalized hostname", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result } = renderHook(() => hook());
+
+      await act(async () => {
+        await result.current.startScan();
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "ethernet",
+            hostname: "Zaparoo.local.",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.100"],
+            ipv6Addresses: [],
+          },
+        });
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "wifi",
+            hostname: "zaparoo.LOCAL",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.101"],
+            ipv6Addresses: [],
+          },
+        });
+      });
+
+      expect(result.current.devices).toHaveLength(1);
+      expect(result.current.devices[0]).toMatchObject({
+        name: "wifi",
+        address: "192.168.1.101",
+        hostname: "zaparoo.local",
+      });
+    });
+
     it("should update hostname identity when later result only has address", async () => {
       const { useNetworkScan: hook } =
         await import("../../../hooks/useNetworkScan");
