@@ -2,13 +2,13 @@ import { create } from "zustand";
 import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 import { Preferences } from "@capacitor/preferences";
 import { TextZoom } from "@capacitor/text-zoom";
-import { sessionManager } from "./nfc";
 import {
   DEFAULT_APP_REVIEW_CADENCE,
   recordAppReviewAttempt,
   recordSuccessfulAppReviewLaunch,
   type AppReviewCadenceState,
-} from "./appReview";
+} from "@/lib/appReview";
+import { sessionManager } from "./nfc";
 import {
   isCapacitorPluginUnavailableError,
   isNativePluginAvailable,

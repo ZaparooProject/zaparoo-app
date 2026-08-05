@@ -9,6 +9,7 @@ import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { InboxModal } from "@/components/InboxModal";
 import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 import { StagedTokenModal } from "@/components/home/StagedTokenModal";
+import { useAppReviewPrompt } from "@/hooks/useAppReviewPrompt";
 import {
   isNativePluginAvailable,
   isPluginAvailable,
@@ -33,7 +34,6 @@ import { useProAccessCheck } from "./hooks/useProAccessCheck";
 import { useNfcAvailabilityCheck } from "./hooks/useNfcAvailabilityCheck";
 import { useCameraAvailabilityCheck } from "./hooks/useCameraAvailabilityCheck";
 import { useAccelerometerAvailabilityCheck } from "./hooks/useAccelerometerAvailabilityCheck";
-import { useAppReviewPrompt } from "./hooks/useAppReviewPrompt";
 import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
 import { WriteModal } from "./components/WriteModal";
