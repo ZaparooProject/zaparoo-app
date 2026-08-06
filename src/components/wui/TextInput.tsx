@@ -119,7 +119,7 @@ export function TextInput(props: {
             !props.readOnly && (
               <button
                 type="button"
-                className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-gray-400 transition-colors hover:text-white"
+                className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-gray-400 transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                 onClick={() => {
                   if (props.readOnly) return;
 

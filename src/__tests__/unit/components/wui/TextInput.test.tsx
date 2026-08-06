@@ -41,7 +41,7 @@ describe("TextInput", () => {
     expect(mockSaveValue).toHaveBeenCalledWith("modified text");
   });
 
-  it("hides clear and save actions when changed to read-only", async () => {
+  it("should hide clear and save actions when changed to read-only", async () => {
     const mockSetValue = vi.fn();
     const mockSaveValue = vi.fn();
     const user = userEvent.setup();
@@ -54,7 +54,8 @@ describe("TextInput", () => {
       />,
     );
 
-    await user.type(screen.getByDisplayValue("initial"), " edit");
+    const input = screen.getByRole("textbox");
+    await user.type(input, " edit");
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Clear search" }),
@@ -70,9 +71,8 @@ describe("TextInput", () => {
       />,
     );
 
-    expect(screen.getByDisplayValue("initial edit")).toHaveAttribute(
-      "readonly",
-    );
+    expect(input).toHaveAttribute("readonly");
+    expect(input).toHaveValue("initial edit");
     expect(
       screen.queryByRole("button", { name: "Save" }),
     ).not.toBeInTheDocument();
