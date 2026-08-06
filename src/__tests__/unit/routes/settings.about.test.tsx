@@ -16,6 +16,11 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       componentRef.current = options.component;
       return { options };
     },
+    Link: ({ children, to, ...props }: any) => (
+      <a href={to} {...props}>
+        {children}
+      </a>
+    ),
     useRouter: () => ({ history: { back: mockGoBack } }),
   };
 });
@@ -127,6 +132,13 @@ describe("Settings About Route", () => {
       expect(
         screen.getByRole("button", { name: "settings.about.joinPatreon" }),
       ).toBeInTheDocument();
+    });
+
+    it("should link to third-party licenses", () => {
+      renderComponent();
+      expect(
+        screen.getByRole("link", { name: "settings.licenses.title" }),
+      ).toHaveAttribute("href", "/settings/licenses");
     });
   });
 

@@ -1,10 +1,10 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Browser } from "@capacitor/browser";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button.tsx";
-import { BackIcon } from "@/lib/images";
+import { BackIcon, NextIcon } from "@/lib/images";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 
@@ -129,6 +129,16 @@ export function About() {
             }
           />
         </div>
+
+        <Link
+          to="/settings/licenses"
+          className="flex min-h-[48px] flex-row items-center justify-between"
+        >
+          <span>{t("settings.licenses.title")}</span>
+          <span aria-hidden="true">
+            <NextIcon size="20" />
+          </span>
+        </Link>
       </div>
     </PageFrame>
   );
