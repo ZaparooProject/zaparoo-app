@@ -662,6 +662,19 @@
         "wizzodev": "Wizzo.dev Patrons",
         "joinPatreon": "Join the Patreon"
       },
+      "licenses": {
+        "title": "Third-Party Licenses",
+        "description": "Zaparoo App is built with open source and third-party software. Select a package to read its license and notices.",
+        "searchLabel": "Search packages",
+        "searchPlaceholder": "Package or license",
+        "packageCount": "Packages shown: {{count}}",
+        "noResults": "No matching packages",
+        "projectWebsite": "Project website",
+        "loading": "Loading license notice...",
+        "loadError": "Could not load license notice",
+        "missingNotice": "License notice is unavailable",
+        "retry": "Retry"
+      },
       "readers": {
         "title": "Readers",
         "scanMode": "Scan mode",

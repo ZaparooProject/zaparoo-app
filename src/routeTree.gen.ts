@@ -22,6 +22,7 @@ import { Route as SettingsAccessibilityRouteImport } from "./routes/settings.acc
 import { Route as SettingsAdvancedRouteImport } from "./routes/settings.advanced";
 import { Route as SettingsDevicesRouteImport } from "./routes/settings.devices";
 import { Route as SettingsHelpRouteImport } from "./routes/settings.help";
+import { Route as SettingsLicensesRouteImport } from "./routes/settings.licenses";
 import { Route as SettingsLogsRouteImport } from "./routes/settings.logs";
 import { Route as SettingsMediaRouteImport } from "./routes/settings.media";
 import { Route as SettingsOnlineRouteImport } from "./routes/settings.online";
@@ -96,6 +97,11 @@ const SettingsHelpRoute = SettingsHelpRouteImport.update({
   path: "/settings/help",
   getParentRoute: () => rootRouteImport,
 } as any);
+const SettingsLicensesRoute = SettingsLicensesRouteImport.update({
+  id: "/settings/licenses",
+  path: "/settings/licenses",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const SettingsLogsRoute = SettingsLogsRouteImport.update({
   id: "/settings/logs",
   path: "/settings/logs",
@@ -149,6 +155,7 @@ export interface FileRoutesByFullPath {
   "/settings/advanced": typeof SettingsAdvancedRoute;
   "/settings/devices": typeof SettingsDevicesRoute;
   "/settings/help": typeof SettingsHelpRoute;
+  "/settings/licenses": typeof SettingsLicensesRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/media": typeof SettingsMediaRoute;
   "/settings/online": typeof SettingsOnlineRoute;
@@ -172,6 +179,7 @@ export interface FileRoutesByTo {
   "/settings/advanced": typeof SettingsAdvancedRoute;
   "/settings/devices": typeof SettingsDevicesRoute;
   "/settings/help": typeof SettingsHelpRoute;
+  "/settings/licenses": typeof SettingsLicensesRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/media": typeof SettingsMediaRoute;
   "/settings/online": typeof SettingsOnlineRoute;
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   "/settings/advanced": typeof SettingsAdvancedRoute;
   "/settings/devices": typeof SettingsDevicesRoute;
   "/settings/help": typeof SettingsHelpRoute;
+  "/settings/licenses": typeof SettingsLicensesRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/media": typeof SettingsMediaRoute;
   "/settings/online": typeof SettingsOnlineRoute;
@@ -221,6 +230,7 @@ export interface FileRouteTypes {
     | "/settings/advanced"
     | "/settings/devices"
     | "/settings/help"
+    | "/settings/licenses"
     | "/settings/logs"
     | "/settings/media"
     | "/settings/online"
@@ -244,6 +254,7 @@ export interface FileRouteTypes {
     | "/settings/advanced"
     | "/settings/devices"
     | "/settings/help"
+    | "/settings/licenses"
     | "/settings/logs"
     | "/settings/media"
     | "/settings/online"
@@ -267,6 +278,7 @@ export interface FileRouteTypes {
     | "/settings/advanced"
     | "/settings/devices"
     | "/settings/help"
+    | "/settings/licenses"
     | "/settings/logs"
     | "/settings/media"
     | "/settings/online"
@@ -291,6 +303,7 @@ export interface RootRouteChildren {
   SettingsAdvancedRoute: typeof SettingsAdvancedRoute;
   SettingsDevicesRoute: typeof SettingsDevicesRoute;
   SettingsHelpRoute: typeof SettingsHelpRoute;
+  SettingsLicensesRoute: typeof SettingsLicensesRoute;
   SettingsLogsRoute: typeof SettingsLogsRoute;
   SettingsMediaRoute: typeof SettingsMediaRoute;
   SettingsOnlineRoute: typeof SettingsOnlineRoute;
@@ -396,6 +409,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof SettingsHelpRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/settings/licenses": {
+      id: "/settings/licenses";
+      path: "/settings/licenses";
+      fullPath: "/settings/licenses";
+      preLoaderRoute: typeof SettingsLicensesRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/settings/logs": {
       id: "/settings/logs";
       path: "/settings/logs";
@@ -467,6 +487,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsAdvancedRoute: SettingsAdvancedRoute,
   SettingsDevicesRoute: SettingsDevicesRoute,
   SettingsHelpRoute: SettingsHelpRoute,
+  SettingsLicensesRoute: SettingsLicensesRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsMediaRoute: SettingsMediaRoute,
   SettingsOnlineRoute: SettingsOnlineRoute,
