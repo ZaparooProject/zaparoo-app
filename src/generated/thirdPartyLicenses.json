@@ -1,4 +1,5 @@
 {
+  "noticesFile": "thirdPartyLicenseNotices.652416fe58ca.json",
   "packages": [
     {
       "name": "@alloc/quick-lru",

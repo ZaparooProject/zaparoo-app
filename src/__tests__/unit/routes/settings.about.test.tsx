@@ -1,5 +1,14 @@
+import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "../../../test-utils";
+
+interface MockLinkProps extends Omit<
+  AnchorHTMLAttributes<HTMLAnchorElement>,
+  "href"
+> {
+  to: string;
+  children: ReactNode;
+}
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
 const { componentRef, mockGoBack, mockBrowserOpen } = vi.hoisted(() => ({
@@ -16,7 +25,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       componentRef.current = options.component;
       return { options };
     },
-    Link: ({ children, to, ...props }: any) => (
+    Link: ({ children, to, ...props }: MockLinkProps) => (
       <a href={to} {...props}>
         {children}
       </a>

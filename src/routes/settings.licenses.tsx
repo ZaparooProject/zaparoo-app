@@ -30,6 +30,7 @@ interface ThirdPartyPackage {
 }
 
 interface ThirdPartyLicenseData {
+  noticesFile: string;
   packages: ThirdPartyPackage[];
 }
 
@@ -42,7 +43,7 @@ type NoticeLoadState =
   | { status: "loaded"; notices: Record<string, string> };
 
 const licenseData = licenseDataJson as ThirdPartyLicenseData;
-const noticesUrl = `${__APP_BASE_PATH__.replace(/\/?$/, "/")}thirdPartyLicenseNotices.json`;
+const noticesUrl = `${__APP_BASE_PATH__.replace(/\/?$/, "/")}${licenseData.noticesFile}`;
 
 function isThirdPartyLicenseNotices(
   value: unknown,
@@ -187,63 +188,77 @@ export function ThirdPartyLicenses() {
               value={expandedPackage}
               onValueChange={handleExpandedPackageChange}
             >
-              {filteredPackages.map((packageInfo) => (
-                <AccordionItem
-                  key={`${packageInfo.name}@${packageInfo.version}`}
-                  value={`${packageInfo.name}@${packageInfo.version}`}
-                  className="border-bd-outline last:border-b-0"
-                >
-                  <AccordionTrigger className="gap-3 no-underline hover:no-underline">
-                    <span className="flex min-w-0 flex-col">
-                      <span className="text-foreground break-all">
-                        {packageInfo.name}
+              {filteredPackages.map((packageInfo) => {
+                const noticeText =
+                  noticeLoadState.status === "loaded"
+                    ? noticeLoadState.notices[packageInfo.noticeId]
+                    : undefined;
+                const hasNotice = Boolean(noticeText?.trim());
+
+                return (
+                  <AccordionItem
+                    key={`${packageInfo.name}@${packageInfo.version}`}
+                    value={`${packageInfo.name}@${packageInfo.version}`}
+                    className="border-bd-outline last:border-b-0"
+                  >
+                    <AccordionTrigger className="gap-3 no-underline hover:no-underline">
+                      <span className="flex min-w-0 flex-col">
+                        <span className="text-foreground break-all">
+                          {packageInfo.name}
+                        </span>
+                        <span className="text-muted-foreground text-xs font-normal">
+                          {packageInfo.version} · {packageInfo.license}
+                        </span>
                       </span>
-                      <span className="text-muted-foreground text-xs font-normal">
-                        {packageInfo.version} · {packageInfo.license}
-                      </span>
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent className="flex flex-col gap-3">
-                    {packageInfo.repository && (
-                      <Button
-                        label={t("settings.licenses.projectWebsite")}
-                        variant="outline"
-                        size="sm"
-                        icon={<ExternalIcon size="16" />}
-                        className="self-start"
-                        onClick={() =>
-                          Browser.open({ url: packageInfo.repository })
-                        }
-                      />
-                    )}
-                    {noticeLoadState.status === "loaded" && (
-                      <pre className="text-muted-foreground overflow-x-auto font-mono text-xs break-words whitespace-pre-wrap">
-                        {noticeLoadState.notices[packageInfo.noticeId]}
-                      </pre>
-                    )}
-                    {noticeLoadState.status === "loading" && (
-                      <div className="text-muted-foreground flex items-center gap-2 py-4 text-sm">
-                        <LoadingSpinner size={18} />
-                        <span>{t("settings.licenses.loading")}</span>
-                      </div>
-                    )}
-                    {noticeLoadState.status === "error" && (
-                      <EmptyState
-                        title={t("settings.licenses.loadError")}
-                        size="compact"
-                        action={
-                          <Button
-                            label={t("settings.licenses.retry")}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => void loadNotices()}
-                          />
-                        }
-                      />
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
+                    </AccordionTrigger>
+                    <AccordionContent className="flex flex-col gap-3">
+                      {packageInfo.repository && (
+                        <Button
+                          label={t("settings.licenses.projectWebsite")}
+                          variant="outline"
+                          size="sm"
+                          icon={<ExternalIcon size="16" />}
+                          className="self-start"
+                          onClick={() =>
+                            Browser.open({ url: packageInfo.repository })
+                          }
+                        />
+                      )}
+                      {noticeLoadState.status === "loaded" && hasNotice && (
+                        <pre className="text-muted-foreground overflow-x-auto font-mono text-xs break-words whitespace-pre-wrap">
+                          {noticeText}
+                        </pre>
+                      )}
+                      {noticeLoadState.status === "loaded" && !hasNotice && (
+                        <EmptyState
+                          title={t("settings.licenses.missingNotice")}
+                          size="compact"
+                        />
+                      )}
+                      {noticeLoadState.status === "loading" && (
+                        <div className="text-muted-foreground flex items-center gap-2 py-4 text-sm">
+                          <LoadingSpinner size={18} />
+                          <span>{t("settings.licenses.loading")}</span>
+                        </div>
+                      )}
+                      {noticeLoadState.status === "error" && (
+                        <EmptyState
+                          title={t("settings.licenses.loadError")}
+                          size="compact"
+                          action={
+                            <Button
+                              label={t("settings.licenses.retry")}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void loadNotices()}
+                            />
+                          }
+                        />
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
             </Accordion>
           )}
         </div>

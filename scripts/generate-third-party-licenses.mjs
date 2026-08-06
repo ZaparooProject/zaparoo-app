@@ -12,10 +12,9 @@ const indexOutputPath = path.join(
   projectRoot,
   "src/generated/thirdPartyLicenses.json",
 );
-const noticesOutputPath = path.join(
-  projectRoot,
-  "public/thirdPartyLicenseNotices.json",
-);
+const noticesOutputDirectory = path.join(projectRoot, "public");
+const noticesFilePattern =
+  /^thirdPartyLicenseNotices(?:\.[a-f0-9]{12})?\.json$/;
 const checkOnly = process.argv.includes("--check");
 const lockfile = JSON.parse(
   fs.readFileSync(path.join(projectRoot, "package-lock.json"), "utf8"),
@@ -24,10 +23,11 @@ const lockfile = JSON.parse(
 const licenseFilePattern = /^(licen[cs]e|copying|notice)(\..*)?$/i;
 const rootLicense = fs.readFileSync(path.join(projectRoot, "LICENSE"), "utf8");
 const apacheEnd = "   END OF TERMS AND CONDITIONS";
-const apacheLicense = rootLicense.slice(
-  0,
-  rootLicense.indexOf(apacheEnd) + apacheEnd.length,
-);
+const apacheEndIndex = rootLicense.indexOf(apacheEnd);
+if (apacheEndIndex < 0) {
+  throw new Error(`Apache license marker not found: ${apacheEnd}`);
+}
+const apacheLicense = rootLicense.slice(0, apacheEndIndex + apacheEnd.length);
 const mitLicense = `MIT License
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -144,19 +144,28 @@ for (const [packagePath, lockPackage] of Object.entries(lockfile.packages)) {
     })
     .sort((left, right) => left.localeCompare(right, "en"));
 
+  const licenseFileContents = licenseFiles.map((name) => ({
+    name,
+    text: fs.readFileSync(path.join(packageDirectory, name), "utf8").trim(),
+  }));
+
   let noticeText;
-  if (licenseFiles.length === 0) {
+  if (licenseFileContents.length === 0) {
     noticeText = fallbackLicenseText(packageJson, license);
   } else {
-    noticeText = licenseFiles
-      .map((name) => {
-        const text = fs
-          .readFileSync(path.join(packageDirectory, name), "utf8")
-          .trim();
-        return licenseFiles.length === 1 ? text : `${name}\n\n${text}`;
-      })
+    noticeText = licenseFileContents
+      .map(({ name, text }) =>
+        licenseFileContents.length === 1 ? text : `${name}\n\n${text}`,
+      )
       .join("\n\n---\n\n");
   }
+
+  const inferredLicense = licenseFileContents[0]?.text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean);
+  const displayLicense =
+    license === "Unknown" ? (inferredLicense ?? license) : license;
 
   const noticeId = createHash("sha256")
     .update(noticeText)
@@ -167,10 +176,7 @@ for (const [packagePath, lockPackage] of Object.entries(lockfile.packages)) {
   packagesByKey.set(packageKey, {
     name: packageJson.name,
     version: packageJson.version,
-    license:
-      license === "Unknown" && licenseFiles.length > 0
-        ? noticeText.split("\n", 1)[0]
-        : license,
+    license: displayLicense,
     repository: normalizeRepository(packageJson),
     noticeId,
   });
@@ -182,8 +188,22 @@ const packages = [...packagesByKey.values()].sort((left, right) =>
 const sortedNotices = Object.fromEntries(
   Object.entries(notices).sort(([left], [right]) => left.localeCompare(right)),
 );
-const generatedIndex = `${JSON.stringify({ packages }, null, 2)}\n`;
 const generatedNotices = `${JSON.stringify({ notices: sortedNotices }, null, 2)}\n`;
+const noticesHash = createHash("sha256")
+  .update(generatedNotices)
+  .digest("hex")
+  .slice(0, 12);
+const noticesFile = `thirdPartyLicenseNotices.${noticesHash}.json`;
+const noticesOutputPath = path.join(noticesOutputDirectory, noticesFile);
+const generatedIndex = `${JSON.stringify({ noticesFile, packages }, null, 2)}\n`;
+const noticeArtifacts = fs.existsSync(noticesOutputDirectory)
+  ? fs
+      .readdirSync(noticesOutputDirectory)
+      .filter((name) => noticesFilePattern.test(name))
+  : [];
+const staleNoticeArtifacts = noticeArtifacts.filter(
+  (name) => name !== noticesFile,
+);
 
 if (checkOnly) {
   const currentIndex = fs.existsSync(indexOutputPath)
@@ -192,7 +212,11 @@ if (checkOnly) {
   const currentNotices = fs.existsSync(noticesOutputPath)
     ? fs.readFileSync(noticesOutputPath, "utf8")
     : "";
-  if (currentIndex !== generatedIndex || currentNotices !== generatedNotices) {
+  if (
+    currentIndex !== generatedIndex ||
+    currentNotices !== generatedNotices ||
+    staleNoticeArtifacts.length > 0
+  ) {
     console.error(
       "Third-party license data is stale. Run npm run licenses:generate.",
     );
@@ -200,7 +224,10 @@ if (checkOnly) {
   }
 } else {
   fs.mkdirSync(path.dirname(indexOutputPath), { recursive: true });
-  fs.mkdirSync(path.dirname(noticesOutputPath), { recursive: true });
+  fs.mkdirSync(noticesOutputDirectory, { recursive: true });
+  for (const staleArtifact of staleNoticeArtifacts) {
+    fs.unlinkSync(path.join(noticesOutputDirectory, staleArtifact));
+  }
   fs.writeFileSync(indexOutputPath, generatedIndex);
   fs.writeFileSync(noticesOutputPath, generatedNotices);
   console.log(

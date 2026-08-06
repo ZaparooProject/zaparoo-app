@@ -1,19 +1,42 @@
+import type { ComponentType } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@/test-utils";
-import licenseNotices from "../../../../public/thirdPartyLicenseNotices.json";
+
+type RouterModule = typeof import("@tanstack/react-router");
+type StatusStoreModule = typeof import("@/lib/store");
+
+interface MockRouteOptions {
+  component: ComponentType;
+}
+
+interface MockStatusState {
+  safeInsets: {
+    top: string;
+    bottom: string;
+    left: string;
+    right: string;
+  };
+}
+
+const mockLicenseNotices = {
+  notices: {
+    d6d0b29b55171b92:
+      "Permission is hereby granted, free of charge, to any person obtaining a copy",
+  },
+};
 
 const { componentRef, mockBrowserOpen, mockGoBack } = vi.hoisted(() => ({
-  componentRef: { current: null as any },
+  componentRef: { current: null as ComponentType | null },
   mockBrowserOpen: vi.fn(),
   mockGoBack: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
+  const actual = await importOriginal<RouterModule>();
   return {
     ...actual,
-    createFileRoute: () => (options: any) => {
+    createFileRoute: () => (options: MockRouteOptions) => {
       componentRef.current = options.component;
       return { options };
     },
@@ -28,10 +51,10 @@ vi.mock("@capacitor/browser", () => ({
 }));
 
 vi.mock("@/lib/store", async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
+  const actual = await importOriginal<StatusStoreModule>();
   return {
     ...actual,
-    useStatusStore: (selector: any) =>
+    useStatusStore: <T,>(selector: (state: MockStatusState) => T): T =>
       selector({
         safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
       }),
@@ -48,7 +71,12 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
 
 import "@/routes/settings.licenses";
 
-const getLicenses = () => componentRef.current;
+const getLicenses = (): ComponentType => {
+  if (!componentRef.current) {
+    throw new Error("Licenses route component was not registered");
+  }
+  return componentRef.current;
+};
 
 describe("Settings Licenses Route", () => {
   beforeEach(() => {
@@ -57,7 +85,7 @@ describe("Settings Licenses Route", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => licenseNotices,
+        json: async () => mockLicenseNotices,
       }),
     );
   });
@@ -93,8 +121,12 @@ describe("Settings Licenses Route", () => {
       "shepherd.js",
     );
 
-    expect(screen.getByText("shepherd.js")).toBeInTheDocument();
-    expect(screen.queryByText("@capacitor/core")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^shepherd\.js\s/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^@capacitor\/core\s/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("should expand a package to show its license and project link", async () => {
@@ -110,6 +142,10 @@ describe("Settings Licenses Route", () => {
     expect(
       await screen.findByText(/Permission is hereby granted, free of charge/),
     ).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/thirdPartyLicenseNotices\.[a-f0-9]{12}\.json$/),
+      expect.objectContaining({ signal: expect.anything() }),
+    );
 
     await user.click(
       screen.getByRole("button", {
@@ -119,6 +155,28 @@ describe("Settings Licenses Route", () => {
     expect(mockBrowserOpen).toHaveBeenCalledWith({
       url: "https://github.com/shepherd-pro/shepherd",
     });
+  });
+
+  it("should show an error when a package notice is missing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ notices: {} }),
+      }),
+    );
+    const user = userEvent.setup();
+    renderComponent();
+
+    await user.type(
+      screen.getByLabelText("settings.licenses.searchLabel"),
+      "shepherd.js",
+    );
+    await user.click(screen.getByRole("button", { name: /shepherd\.js/ }));
+
+    expect(
+      await screen.findByText("settings.licenses.missingNotice"),
+    ).toBeInTheDocument();
   });
 
   it("should navigate back", async () => {

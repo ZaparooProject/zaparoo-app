@@ -672,6 +672,7 @@
         "projectWebsite": "Project website",
         "loading": "Loading license notice...",
         "loadError": "Could not load license notice",
+        "missingNotice": "License notice is unavailable",
         "retry": "Retry"
       },
       "readers": {
