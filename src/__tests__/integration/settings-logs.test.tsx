@@ -5,7 +5,7 @@
  * - Log level filter toggles
  * - Search input filtering
  * - Entry count display
- * - Copy/share buttons
+ * - Copy/download/upload buttons
  * - Log entry rendering
  * - Disconnected state
  */
@@ -95,26 +95,13 @@ vi.mock("@capacitor/core", () => ({
   },
 }));
 
-// Mock Capacitor Filesystem
-const mockFilesystemWrite = vi.fn().mockResolvedValue(undefined);
-const mockFilesystemGetUri = vi
-  .fn()
-  .mockResolvedValue({ uri: "file://cache/test.log" });
-vi.mock("@capacitor/filesystem", () => ({
-  Filesystem: {
-    writeFile: (...args: unknown[]) => mockFilesystemWrite(...args),
-    getUri: (...args: unknown[]) => mockFilesystemGetUri(...args),
-  },
-  Directory: { Cache: "CACHE" },
-  Encoding: { UTF8: "utf8" },
+const { mockUploadLogs } = vi.hoisted(() => ({
+  mockUploadLogs: vi
+    .fn()
+    .mockResolvedValue("https://logs.zaparoo.org/test.log"),
 }));
-
-// Mock Capacitor Share
-const mockShareShare = vi.fn().mockResolvedValue({ activityType: "share" });
-vi.mock("@capacitor/share", () => ({
-  Share: {
-    share: (...args: unknown[]) => mockShareShare(...args),
-  },
+vi.mock("@/lib/logsApi", () => ({
+  uploadLogs: (...args: unknown[]) => mockUploadLogs(...args),
 }));
 
 // Mock clipboard (using configurable to allow userEvent to override)
@@ -177,10 +164,7 @@ describe("Settings Logs Integration", () => {
     // Reset Capacitor native state
     mockCapacitorState.isNative = false;
 
-    // Reset Capacitor mocks
-    mockFilesystemWrite.mockClear();
-    mockFilesystemGetUri.mockClear();
-    mockShareShare.mockClear();
+    mockUploadLogs.mockClear();
   });
 
   afterEach(() => {
@@ -709,8 +693,58 @@ describe("Settings Logs Integration", () => {
     });
   });
 
-  describe("Native Platform Share", () => {
-    it("should show share button on native platforms instead of download", () => {
+  describe("Log Upload", () => {
+    it("should show a full upload button when logs are available", () => {
+      mockState.queryData = {
+        filename: "test.log",
+        content: createMockLogContent([
+          { level: "info", time: "2025-01-15T10:30:00Z", message: "Test" },
+        ]),
+        size: 50,
+      };
+
+      render(<Logs />);
+
+      expect(
+        screen.getByRole("button", { name: /settings.logs.upload/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("should upload logs and display a copyable link", async () => {
+      const user = userEvent.setup();
+      const content = createMockLogContent([
+        {
+          level: "info",
+          time: "2025-01-15T10:30:00Z",
+          message: "Upload test",
+        },
+      ]);
+      mockState.queryData = {
+        filename: "test.log",
+        content,
+        size: 100,
+      };
+
+      render(<Logs />);
+
+      await user.click(
+        screen.getByRole("button", { name: /settings.logs.upload/i }),
+      );
+
+      await waitFor(() => {
+        expect(mockUploadLogs).toHaveBeenCalledWith(content);
+      });
+      expect(
+        await screen.findByDisplayValue("https://logs.zaparoo.org/test.log"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", {
+          name: /settings.logs.copyUploadLink/i,
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it("should use upload instead of native sharing", () => {
       mockCapacitorState.isNative = true;
       mockState.queryData = {
         filename: "test.log",
@@ -723,39 +757,14 @@ describe("Settings Logs Integration", () => {
       render(<Logs />);
 
       expect(
-        screen.getByRole("button", { name: /settings.logs.share/i }),
+        screen.getByRole("button", { name: /settings.logs.upload/i }),
       ).toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: /settings.logs.download/i }),
       ).not.toBeInTheDocument();
-    });
-
-    it("should call native share API when share button is clicked", async () => {
-      mockCapacitorState.isNative = true;
-      const user = userEvent.setup();
-      mockState.queryData = {
-        filename: "test.log",
-        content: createMockLogContent([
-          {
-            level: "info",
-            time: "2025-01-15T10:30:00Z",
-            message: "Share test",
-          },
-        ]),
-        size: 100,
-      };
-
-      render(<Logs />);
-
-      const shareButton = screen.getByRole("button", {
-        name: /settings.logs.share/i,
-      });
-      await user.click(shareButton);
-
-      await waitFor(() => {
-        expect(mockFilesystemWrite).toHaveBeenCalled();
-        expect(mockShareShare).toHaveBeenCalled();
-      });
+      expect(
+        screen.queryByRole("button", { name: /settings.logs.share/i }),
+      ).not.toBeInTheDocument();
     });
   });
 

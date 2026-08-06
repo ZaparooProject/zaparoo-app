@@ -11,7 +11,9 @@ export function TextInput(props: {
   value: string | undefined;
   setValue?: (value: string) => void;
   disabled?: boolean;
+  readOnly?: boolean;
   className?: string;
+  "aria-label"?: string;
   saveValue?: (value: string) => void;
   /** Disable just the save button (e.g., when value equals saved value) */
   saveDisabled?: boolean;
@@ -92,6 +94,8 @@ export function TextInput(props: {
             )}
             style={{ backgroundColor: "var(--color-background)" }}
             disabled={props.disabled}
+            readOnly={props.readOnly}
+            aria-label={props["aria-label"]}
             placeholder={props.placeholder}
             value={value}
             autoComplete={props.autoComplete}
