@@ -306,6 +306,10 @@ Object.defineProperty(window, "location", {
   configurable: true,
 });
 
+// Load App during test collection so coverage instrumentation and module
+// transforms do not consume the first test's timeout under CI load.
+const App = (await import("@/App")).default;
+
 describe("Firebase Auth Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -334,7 +338,6 @@ describe("Firebase Auth Integration", () => {
   });
 
   it("should register authStateChange listener on mount", async () => {
-    const App = (await import("@/App")).default;
     render(<App />);
 
     await waitFor(() => {
