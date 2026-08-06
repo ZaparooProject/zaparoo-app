@@ -120,6 +120,13 @@ global.URL.createObjectURL = vi.fn(() => "mock-url");
 global.URL.revokeObjectURL = vi.fn();
 
 // Helper to create base64 encoded log content
+function encodeUtf8ToBase64(content: string) {
+  const bytes = new TextEncoder().encode(content);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
 function createMockLogContent(
   entries: Array<{
     level: string;
@@ -129,7 +136,7 @@ function createMockLogContent(
   }>,
 ) {
   const content = entries.map((e) => JSON.stringify(e)).join("\n");
-  return btoa(content);
+  return encodeUtf8ToBase64(content);
 }
 
 // Import the REAL component after mocks are set up
@@ -769,6 +776,28 @@ describe("Settings Logs Integration", () => {
   });
 
   describe("Download Functionality", () => {
+    it("should preserve non-ASCII bytes in downloaded logs", async () => {
+      const user = userEvent.setup();
+      const content =
+        '{"level":"info","time":"2025-01-15T10:30:00Z","message":"café"}\n';
+      const expectedBytes = new TextEncoder().encode(content);
+      mockState.queryData = {
+        filename: "zaparoo.log",
+        content: encodeUtf8ToBase64(content),
+        size: expectedBytes.byteLength,
+      };
+
+      render(<Logs />);
+
+      await user.click(
+        screen.getByRole("button", { name: /settings.logs.download/i }),
+      );
+
+      const blob = vi.mocked(URL.createObjectURL).mock.calls.at(-1)?.[0];
+      expect(blob).toBeInstanceOf(Blob);
+      expect((blob as Blob).size).toBe(expectedBytes.byteLength);
+    });
+
     it("should trigger download when download button is clicked on web", async () => {
       const user = userEvent.setup();
       mockState.queryData = {

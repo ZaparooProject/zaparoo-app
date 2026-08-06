@@ -123,7 +123,10 @@ export function Logs() {
 
     try {
       const decodedContent = atob(logsQuery.data.content);
-      const blob = new Blob([decodedContent], { type: "text/plain" });
+      const bytes = Uint8Array.from(decodedContent, (character) =>
+        character.charCodeAt(0),
+      );
+      const blob = new Blob([bytes], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement("a");
@@ -134,7 +137,7 @@ export function Logs() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      logger.warn("Failed to download log file:", error, {
+      logger.error("Failed to download log file:", error, {
         category: "storage",
         action: "downloadLog",
         severity: "warning",
@@ -181,7 +184,7 @@ export function Logs() {
     try {
       await writeToClipboard(uploadMutation.data);
     } catch (error) {
-      logger.warn("Failed to copy log URL:", error, {
+      logger.error("Failed to copy log URL:", error, {
         category: "storage",
         action: "copyUploadUrl",
         severity: "warning",
