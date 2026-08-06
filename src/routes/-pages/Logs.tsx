@@ -2,17 +2,8 @@ import { useRouter } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useState, useMemo, useRef } from "react";
-import {
-  Download,
-  Copy,
-  RefreshCw,
-  Share2,
-  Upload,
-  Loader2,
-} from "lucide-react";
+import { Download, Copy, RefreshCw, Upload, Loader2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
-import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
-import { Share } from "@capacitor/share";
 import { Clipboard } from "@capacitor/clipboard";
 import toast from "react-hot-toast";
 import { BackToTop } from "@/components/BackToTop";
@@ -23,6 +14,7 @@ import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
 import { TextInput } from "@/components/wui/TextInput";
+import { Button } from "@/components/wui/Button";
 import { BackIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { ToggleChip } from "@/components/wui/ToggleChip";
@@ -126,51 +118,38 @@ export function Logs() {
 
   const isNative = Capacitor.isNativePlatform();
 
-  const shareOrDownloadFile = async () => {
+  const downloadFile = () => {
     if (!logsQuery.data) return;
 
     try {
       const decodedContent = atob(logsQuery.data.content);
+      const bytes = Uint8Array.from(decodedContent, (character) =>
+        character.charCodeAt(0),
+      );
+      const blob = new Blob([bytes], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
 
-      if (isNative) {
-        // On native platforms, write to cache and share
-        const filename = logsQuery.data.filename;
-        await Filesystem.writeFile({
-          path: filename,
-          data: decodedContent,
-          directory: Directory.Cache,
-          encoding: Encoding.UTF8,
-        });
-
-        const fileUri = await Filesystem.getUri({
-          path: filename,
-          directory: Directory.Cache,
-        });
-
-        await Share.share({
-          title: t("settings.logs.shareTitle"),
-          files: [fileUri.uri],
-          dialogTitle: t("settings.logs.shareTitle"),
-        });
-      } else {
-        // On web, use standard download approach
-        const blob = new Blob([decodedContent], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = logsQuery.data.filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = logsQuery.data.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (error) {
-      logger.warn("Failed to share/download log file:", error, {
+      logger.error("Failed to download log file:", error, {
         category: "storage",
-        action: "shareLog",
+        action: "downloadLog",
         severity: "warning",
       });
+    }
+  };
+
+  const writeToClipboard = async (value: string) => {
+    if (isNative) {
+      await Clipboard.write({ string: value });
+    } else {
+      await navigator.clipboard.writeText(value);
     }
   };
 
@@ -179,11 +158,7 @@ export function Logs() {
 
     try {
       const decodedContent = atob(logsQuery.data.content);
-      if (isNative) {
-        await Clipboard.write({ string: decodedContent });
-      } else {
-        await navigator.clipboard.writeText(decodedContent);
-      }
+      await writeToClipboard(decodedContent);
     } catch (error) {
       logger.warn("Failed to copy to clipboard:", error, {
         category: "storage",
@@ -194,30 +169,28 @@ export function Logs() {
   };
 
   const uploadMutation = useMutation({
-    mutationFn: async () => {
-      const decodedContent = atob(logsQuery.data!.content);
-      return uploadLogs(decodedContent);
-    },
-    onSuccess: async (url) => {
-      try {
-        if (isNative) {
-          await Clipboard.write({ string: url });
-        } else {
-          await navigator.clipboard.writeText(url);
-        }
-        toast.success(t("settings.logs.uploadSuccess"));
-      } catch (error) {
-        logger.warn("Failed to copy URL to clipboard:", error, {
-          category: "storage",
-          action: "copyUploadUrl",
-          severity: "warning",
-        });
-      }
+    mutationFn: () => uploadLogs(logsQuery.data!.content),
+    onSuccess: () => {
+      toast.success(t("settings.logs.uploadSuccess"));
     },
     onError: () => {
       showRateLimitedErrorToast(t("settings.logs.uploadError"));
     },
   });
+
+  const copyUploadUrl = async () => {
+    if (!uploadMutation.data) return;
+
+    try {
+      await writeToClipboard(uploadMutation.data);
+    } catch (error) {
+      logger.error("Failed to copy log URL:", error, {
+        category: "storage",
+        action: "copyUploadUrl",
+        severity: "warning",
+      });
+    }
+  };
 
   const formatTimestamp = (timeStr: string) => {
     try {
@@ -296,28 +269,13 @@ export function Logs() {
                   icon={<Copy size="20" />}
                   title={t("settings.logs.copy")}
                 />
-                <HeaderButton
-                  onClick={() => uploadMutation.mutate()}
-                  icon={
-                    uploadMutation.isPending ? (
-                      <Loader2 size="20" className="animate-spin" />
-                    ) : (
-                      <Upload size="20" />
-                    )
-                  }
-                  title={t("settings.logs.upload")}
-                />
-                <HeaderButton
-                  onClick={shareOrDownloadFile}
-                  icon={
-                    isNative ? <Share2 size="20" /> : <Download size="20" />
-                  }
-                  title={
-                    isNative
-                      ? t("settings.logs.share")
-                      : t("settings.logs.download")
-                  }
-                />
+                {!isNative && (
+                  <HeaderButton
+                    onClick={downloadFile}
+                    icon={<Download size="20" />}
+                    title={t("settings.logs.download")}
+                  />
+                )}
               </>
             )}
             <HeaderButton
@@ -335,6 +293,48 @@ export function Logs() {
         <div className="flex h-full flex-col gap-3">
           {/* Control Bar */}
           <div className="flex flex-col gap-3">
+            {logsQuery.data && (
+              <div className="flex flex-col gap-2">
+                <Button
+                  className="w-full"
+                  intent="primary"
+                  label={
+                    uploadMutation.isPending
+                      ? t("settings.logs.uploading")
+                      : t("settings.logs.upload")
+                  }
+                  icon={
+                    uploadMutation.isPending ? (
+                      <Loader2 size="20" className="animate-spin" />
+                    ) : (
+                      <Upload size="20" />
+                    )
+                  }
+                  disabled={uploadMutation.isPending}
+                  onClick={() => uploadMutation.mutate()}
+                />
+
+                {uploadMutation.data && (
+                  <div className="flex gap-2" aria-live="polite">
+                    <TextInput
+                      className="min-w-0 flex-1"
+                      type="url"
+                      value={uploadMutation.data}
+                      readOnly
+                      aria-label={t("settings.logs.uploadResult")}
+                    />
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      icon={<Copy size="20" />}
+                      aria-label={t("settings.logs.copyUploadLink")}
+                      onClick={copyUploadUrl}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Search */}
             <TextInput
               label=""

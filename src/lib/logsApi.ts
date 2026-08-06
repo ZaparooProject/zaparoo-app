@@ -2,12 +2,30 @@ import { logger } from "@/lib/logger";
 
 const UPLOAD_ENDPOINT = "https://logs.zaparoo.org/";
 const UPLOAD_TIMEOUT_MS = 30000;
+const MAX_UPLOAD_BODY_BYTES = 1024 * 1024;
+const MULTIPART_OVERHEAD_RESERVE_BYTES = 1024;
+export const MAX_LOG_FILE_BYTES =
+  MAX_UPLOAD_BODY_BYTES - MULTIPART_OVERHEAD_RESERVE_BYTES;
 
-export async function uploadLogs(content: string): Promise<string> {
+function decodeBase64(content: string): Uint8Array<ArrayBuffer> {
+  const binary = atob(content);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+function fitLogToUploadLimit(content: Uint8Array<ArrayBuffer>) {
+  if (content.byteLength <= MAX_LOG_FILE_BYTES) return content;
+
+  const tail = content.slice(content.byteLength - MAX_LOG_FILE_BYTES);
+  const firstNewline = tail.indexOf(10);
+  return firstNewline >= 0 ? tail.slice(firstNewline + 1) : tail;
+}
+
+export async function uploadLogs(base64Content: string): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
 
   try {
+    const content = fitLogToUploadLimit(decodeBase64(base64Content));
     const blob = new Blob([content], { type: "text/plain" });
     const formData = new FormData();
     formData.append("file", blob, "core.log");

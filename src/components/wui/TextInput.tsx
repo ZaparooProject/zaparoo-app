@@ -11,7 +11,9 @@ export function TextInput(props: {
   value: string | undefined;
   setValue?: (value: string) => void;
   disabled?: boolean;
+  readOnly?: boolean;
   className?: string;
+  "aria-label"?: string;
   saveValue?: (value: string) => void;
   /** Disable just the save button (e.g., when value equals saved value) */
   saveDisabled?: boolean;
@@ -49,6 +51,8 @@ export function TextInput(props: {
     type = "text";
   }
 
+  const hasSaveAction = !!props.saveValue && !props.readOnly;
+
   return (
     <div className={props.className}>
       {props.label && (
@@ -85,13 +89,16 @@ export function TextInput(props: {
                   props.clearable &&
                   value &&
                   value.length > 0 &&
-                  !props.disabled,
-                "rounded-md": !props.saveValue,
-                "rounded-s-md": props.saveValue,
+                  !props.disabled &&
+                  !props.readOnly,
+                "rounded-md": !hasSaveAction,
+                "rounded-s-md": hasSaveAction,
               },
             )}
             style={{ backgroundColor: "var(--color-background)" }}
             disabled={props.disabled}
+            readOnly={props.readOnly}
+            aria-label={props["aria-label"]}
             placeholder={props.placeholder}
             value={value}
             autoComplete={props.autoComplete}
@@ -105,25 +112,31 @@ export function TextInput(props: {
             }}
             onKeyUp={props.onKeyUp}
           />
-          {props.clearable && value && value.length > 0 && !props.disabled && (
-            <button
-              type="button"
-              className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-gray-400 transition-colors hover:text-white"
-              onClick={() => {
-                impact("light");
-                setValue("");
-                setModified(true);
-                if (props.setValue) {
-                  props.setValue("");
-                }
-              }}
-              aria-label="Clear search"
-            >
-              <ClearIcon size="16" />
-            </button>
-          )}
+          {props.clearable &&
+            value &&
+            value.length > 0 &&
+            !props.disabled &&
+            !props.readOnly && (
+              <button
+                type="button"
+                className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-gray-400 transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                onClick={() => {
+                  if (props.readOnly) return;
+
+                  impact("light");
+                  setValue("");
+                  setModified(true);
+                  if (props.setValue) {
+                    props.setValue("");
+                  }
+                }}
+                aria-label="Clear search"
+              >
+                <ClearIcon size="16" />
+              </button>
+            )}
         </div>
-        {props.saveValue && (
+        {hasSaveAction && (
           <Button
             disabled={!modified || props.disabled || props.saveDisabled}
             icon={<SaveIcon size="20" />}
@@ -132,6 +145,7 @@ export function TextInput(props: {
             onClick={() => {
               if (
                 props.disabled ||
+                props.readOnly ||
                 props.saveDisabled ||
                 value === undefined ||
                 props.saveValue === undefined

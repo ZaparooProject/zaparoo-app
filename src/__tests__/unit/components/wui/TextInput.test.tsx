@@ -41,6 +41,47 @@ describe("TextInput", () => {
     expect(mockSaveValue).toHaveBeenCalledWith("modified text");
   });
 
+  it("should hide clear and save actions when changed to read-only", async () => {
+    const mockSetValue = vi.fn();
+    const mockSaveValue = vi.fn();
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <TextInput
+        value="initial"
+        setValue={mockSetValue}
+        saveValue={mockSaveValue}
+        clearable
+      />,
+    );
+
+    const input = screen.getByRole("textbox");
+    await user.type(input, " edit");
+    expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Clear search" }),
+    ).toBeInTheDocument();
+
+    rerender(
+      <TextInput
+        value="initial"
+        setValue={mockSetValue}
+        saveValue={mockSaveValue}
+        clearable
+        readOnly
+      />,
+    );
+
+    expect(input).toHaveAttribute("readonly");
+    expect(input).toHaveValue("initial edit");
+    expect(
+      screen.queryByRole("button", { name: "Save" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Clear search" }),
+    ).not.toBeInTheDocument();
+    expect(mockSaveValue).not.toHaveBeenCalled();
+  });
+
   it("calls onKeyUp handler when Enter key is pressed", async () => {
     const mockOnKeyUp = vi.fn();
     const user = userEvent.setup();
