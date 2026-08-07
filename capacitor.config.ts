@@ -23,6 +23,10 @@ const config: CapacitorConfig = {
     minWebViewVersion: 60,
   },
   plugins: {
+    Badge: {
+      persist: true,
+      autoClear: false,
+    },
     CapacitorHttp: {
       enabled: true,
     },
