@@ -132,6 +132,8 @@
       "lastScannedUid": "ID: {{uid}}",
       "lastScannedText": "Value: {{text}}",
       "historyTitle": "Scan History",
+      "historyReplay": "Replay scan",
+      "historyReplayError": "Could not replay scan",
       "purchaseProTitle": "Zaparoo Pro",
       "purchaseProP1": "Turn your phone into a wireless Zaparoo reader with a one-time purchase of {{price}}. Your purchase also supports future Zaparoo development.",
       "purchaseProP2": "Pro unlocks Launch on scan and future App features that use your phone's hardware sensors as a reader. Pro is not a subscription and does not include Warp cloud features.",
