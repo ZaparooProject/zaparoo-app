@@ -72,6 +72,93 @@ describe("MediaDetailsModal", () => {
     ).toBeChecked();
   });
 
+  it("should select and remove Core ZapScript tags", async () => {
+    const user = userEvent.setup();
+    renderModal({
+      media: {
+        ...mediaWithZapScript,
+        zapScript: "@SNES/Super Mario World (year:1990)",
+      },
+    });
+
+    const selectedTag = screen.getByRole("button", { name: "year 1990" });
+    expect(selectedTag).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("button", { name: "genre platformer" }),
+    ).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(selectedTag);
+
+    expect(selectedTag).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("@SNES/Super Mario World")).toBeInTheDocument();
+  });
+
+  it("should rebuild grouped ZapScript tags for every action", async () => {
+    const user = userEvent.setup();
+    const onWrite = vi.fn();
+    const onCopy = vi.fn();
+    const onPreview = vi.fn();
+    renderModal({
+      media: {
+        ...mediaWithZapScript,
+        zapScript: "@SNES/Super Mario World (year:1990)",
+        tags: [
+          ...mediaWithZapScript.tags,
+          { type: "region", tag: "us" },
+          { type: "region", tag: "eu" },
+        ],
+      },
+      onWrite,
+      onCopy,
+      onPreview,
+    });
+
+    await user.click(screen.getByRole("button", { name: "region us" }));
+    await user.click(screen.getByRole("button", { name: "region eu" }));
+
+    const customizedZapScript =
+      "@SNES/Super Mario World (year:1990) (region:us, region:eu)";
+    expect(screen.getByText(customizedZapScript)).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /create\.search\.writeLabel/i }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /create\.search\.copyLabel/i }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /create\.search\.playLabel/i }),
+    );
+
+    expect(onWrite).toHaveBeenCalledWith(customizedZapScript);
+    expect(onCopy).toHaveBeenCalledWith(customizedZapScript);
+    expect(onPreview).toHaveBeenCalledWith(customizedZapScript);
+  });
+
+  it("should leave tags read-only for unsupported ZapScript", async () => {
+    const user = userEvent.setup();
+    const onWrite = vi.fn();
+    renderModal({
+      media: {
+        ...mediaWithZapScript,
+        zapScript: "**launch:/games/snes/Super Mario World.sfc",
+      },
+      onWrite,
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "genre platformer" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("genre platformer")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /create\.search\.writeLabel/i }),
+    );
+    expect(onWrite).toHaveBeenCalledWith(
+      "**launch:/games/snes/Super Mario World.sfc",
+    );
+  });
+
   it("should default to path when ZapScript is unavailable", () => {
     renderModal({
       media: {

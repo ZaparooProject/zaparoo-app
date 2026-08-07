@@ -1,4 +1,4 @@
-import { type ReactElement, useEffect, useId, useState } from "react";
+import { type ReactElement, useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { Copy, FileCode, Folder, Tag } from "lucide-react";
@@ -10,6 +10,11 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { SlideModal } from "@/components/SlideModal";
 import { TagBadge } from "@/components/TagBadge";
 import { Button } from "@/components/wui/Button";
+import {
+  buildTitleZapScript,
+  parseTitleZapScript,
+  titleTagKey,
+} from "@/lib/titleZapScript";
 
 type MediaDetailsAction = (value: string) => void | Promise<void>;
 
@@ -43,17 +48,40 @@ export function MediaDetailsModal({
   const pathInputId = `${radioGroupName}-path`;
   const zapScriptInputId = `${radioGroupName}-zapscript`;
   const [writeMode, setWriteMode] = useState<"path" | "zapScript">("path");
+  const [selectedTagKeys, setSelectedTagKeys] = useState<Set<string>>(
+    new Set(),
+  );
+  const parsedZapScript = useMemo(
+    () => (media?.zapScript ? parseTitleZapScript(media.zapScript) : null),
+    [media],
+  );
 
   useEffect(() => {
     if (media) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Initialize mode from newly selected external media.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Initialize state from newly selected external media.
       setWriteMode(media.zapScript ? "zapScript" : "path");
+      setSelectedTagKeys(new Set(parsedZapScript?.tags.map(titleTagKey) ?? []));
     }
-  }, [media]);
+  }, [media, parsedZapScript]);
 
+  const selectedZapScriptTags = useMemo(() => {
+    if (!media || !parsedZapScript) return [];
+
+    const orderedTags = [...parsedZapScript.tags, ...media.tags];
+    const seenTags = new Set<string>();
+    return orderedTags.filter((tag) => {
+      const key = titleTagKey(tag);
+      if (!selectedTagKeys.has(key) || seenTags.has(key)) return false;
+      seenTags.add(key);
+      return true;
+    });
+  }, [media, parsedZapScript, selectedTagKeys]);
+  const customizedZapScript = parsedZapScript
+    ? buildTitleZapScript(parsedZapScript, selectedZapScriptTags)
+    : media?.zapScript;
   const selectedValue =
-    writeMode === "zapScript" && media?.zapScript
-      ? media.zapScript
+    writeMode === "zapScript" && customizedZapScript
+      ? customizedZapScript
       : (media?.path ?? "");
   const title = media
     ? showFilenames
@@ -84,13 +112,46 @@ export function MediaDetailsModal({
                   </span>
                 </div>
                 <div className="flex flex-1 flex-wrap gap-1.5">
-                  {media.tags.map((tag, index) => (
-                    <TagBadge
-                      key={`${tag.type}:${tag.tag}:${index}`}
-                      type={tag.type}
-                      tag={tag.tag}
-                    />
-                  ))}
+                  {media.tags.map((tag, index) => {
+                    const key = titleTagKey(tag);
+                    const selected = selectedTagKeys.has(key);
+
+                    return parsedZapScript ? (
+                      <button
+                        key={`${key}:${index}`}
+                        type="button"
+                        aria-label={`${tag.type} ${tag.tag}`}
+                        aria-pressed={selected}
+                        className={classNames(
+                          "rounded-full transition-opacity focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
+                          { "opacity-40": !selected },
+                        )}
+                        onClick={() => {
+                          impact("light");
+                          setSelectedTagKeys((current) => {
+                            const next = new Set(current);
+                            if (next.has(key)) {
+                              next.delete(key);
+                            } else {
+                              next.add(key);
+                            }
+                            return next;
+                          });
+                          setWriteMode("zapScript");
+                        }}
+                      >
+                        <span aria-hidden="true">
+                          <TagBadge type={tag.type} tag={tag.tag} />
+                        </span>
+                      </button>
+                    ) : (
+                      <TagBadge
+                        key={`${key}:${index}`}
+                        type={tag.type}
+                        tag={tag.tag}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -161,7 +222,7 @@ export function MediaDetailsModal({
               </label>
             </div>
 
-            {media.zapScript && (
+            {customizedZapScript && (
               <div className="flex items-center gap-2">
                 <input
                   type="radio"
@@ -177,7 +238,7 @@ export function MediaDetailsModal({
                 />
                 <label
                   htmlFor={zapScriptInputId}
-                  aria-label={`${t("create.search.zapscriptLabel")}: ${media.zapScript}${writeMode === "zapScript" ? `, ${t("selected")}` : ""}`}
+                  aria-label={`${t("create.search.zapscriptLabel")}: ${customizedZapScript}${writeMode === "zapScript" ? `, ${t("selected")}` : ""}`}
                   className={classNames(
                     "flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-white/50",
                     {
@@ -200,8 +261,8 @@ export function MediaDetailsModal({
                         {t("create.search.zapscriptLabel")}
                       </span>
                     </div>
-                    <code className="flex-1 text-left font-mono text-sm break-words text-white/90">
-                      {media.zapScript}
+                    <code className="min-h-10 flex-1 text-left font-mono text-sm break-words text-white/90">
+                      {customizedZapScript}
                     </code>
                   </div>
                   <div
