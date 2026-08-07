@@ -49,6 +49,25 @@ describe("InboxModal", () => {
     ).toBeInTheDocument();
   });
 
+  it("should render bodyless messages without an inactive expand button", () => {
+    const message = mockInboxMessage({
+      id: 1,
+      title: "Status only",
+      body: undefined,
+    });
+    useStatusStore.setState({
+      inboxModalOpen: true,
+      inboxMessages: [message],
+    });
+
+    render(<InboxModal />);
+
+    expect(screen.getByText("Status only")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Status only/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("should expand a message body when the row is tapped", async () => {
     const user = userEvent.setup();
     const message = mockInboxMessage({

@@ -26,7 +26,7 @@ describe("InboxButton", () => {
 
     const button = screen.getByRole("button", { name: /inbox\.openLabel/i });
     expect(button).toBeInTheDocument();
-    expect(button).not.toHaveClass("attention-throb");
+    expect(screen.queryByText("1")).not.toBeInTheDocument();
   });
 
   it("should render unread count label and attention state when messages exist", () => {
@@ -52,7 +52,8 @@ describe("InboxButton", () => {
     const button = screen.getByRole("button", {
       name: /inbox\.openLabelWithCount/i,
     });
-    expect(button).toHaveClass("attention-throb");
+    expect(button).not.toHaveClass("attention-throb");
+    expect(screen.getByText("2")).toHaveAttribute("aria-hidden", "true");
   });
 
   it("should open inbox and trigger light haptics when clicked", async () => {

@@ -1,5 +1,5 @@
 {
-  "noticesFile": "thirdPartyLicenseNotices.652416fe58ca.json",
+  "noticesFile": "thirdPartyLicenseNotices.157241ab098e.json",
   "packages": [
     {
       "name": "@alloc/quick-lru",
@@ -175,6 +175,13 @@
       "license": "MIT",
       "repository": "https://github.com/capawesome-team/capacitor-plugins",
       "noticeId": "e9cf9cd61bf9cbad"
+    },
+    {
+      "name": "@capawesome/capacitor-badge",
+      "version": "8.0.2",
+      "license": "MIT",
+      "repository": "https://github.com/capawesome-team/capacitor-plugins",
+      "noticeId": "c19f133b5dd75f1b"
     },
     {
       "name": "@capawesome/capacitor-live-update",

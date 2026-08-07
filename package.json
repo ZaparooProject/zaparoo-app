@@ -60,6 +60,7 @@
     "@capacitor/text-zoom": "^8.0.1",
     "@capawesome-team/capacitor-nfc": "^8.1.0",
     "@capawesome/capacitor-app-review": "^8.0.1",
+    "@capawesome/capacitor-badge": "^8.0.2",
     "@capawesome/capacitor-live-update": "^8.3.0",
     "@capgo/capacitor-shake": "^8.0.27",
     "@noble/curves": "^2.2.0",

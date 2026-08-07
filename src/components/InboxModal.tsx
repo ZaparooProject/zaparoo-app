@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
-import { Bell, Info, OctagonAlert, Trash2, TriangleAlert } from "lucide-react";
+import {
+  Bell,
+  ChevronDown,
+  Info,
+  OctagonAlert,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 import { useStatusStore } from "@/lib/store";
 import { CoreAPI } from "@/lib/coreApi";
 import { InboxMessage, InboxSeverity } from "@/lib/models";
@@ -10,6 +17,7 @@ import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { Card } from "@/components/wui/Card";
 
 function severityIcon(severity: InboxSeverity) {
   switch (severity) {
@@ -44,11 +52,8 @@ function severityKey(severity: InboxSeverity): string {
 }
 
 function formatTimestamp(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
 }
 
 function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
@@ -56,46 +61,72 @@ function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const hasBody = !!props.message.body;
 
-  return (
-    <div className="border-bd-outline rounded-md border border-solid p-3">
-      <div className="flex flex-row items-start gap-3">
-        <span aria-label={t(severityKey(props.message.severity))}>
-          {severityIcon(props.message.severity)}
+  const severityLabel = t(severityKey(props.message.severity));
+  const messageContent = (
+    <>
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="text-foreground font-semibold">
+          {props.message.title}
         </span>
+        {hasBody && (
+          <span
+            className={classNames("text-muted-foreground text-sm", {
+              "line-clamp-2": !expanded,
+            })}
+          >
+            {props.message.body}
+          </span>
+        )}
+        <span className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-xs">
+          <span>{severityLabel}</span>
+          <span aria-hidden="true">•</span>
+          <time dateTime={props.message.createdAt}>
+            {formatTimestamp(props.message.createdAt)}
+          </time>
+        </span>
+      </span>
+      {hasBody && (
+        <ChevronDown
+          size={18}
+          aria-hidden="true"
+          className={classNames(
+            "text-muted-foreground mt-0.5 shrink-0 transition-transform",
+            { "rotate-180": expanded },
+          )}
+        />
+      )}
+    </>
+  );
+
+  return (
+    <Card className="flex flex-row items-start gap-3">
+      <span className="mt-0.5 shrink-0" aria-hidden="true">
+        {severityIcon(props.message.severity)}
+      </span>
+      {hasBody ? (
         <button
           type="button"
-          onClick={() => hasBody && setExpanded((prev) => !prev)}
-          aria-expanded={hasBody ? expanded : undefined}
-          className={classNames(
-            "flex flex-1 flex-col gap-1 text-left",
-            "focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none",
-            { "cursor-default": !hasBody, "cursor-pointer": hasBody },
-          )}
+          onClick={() => setExpanded((prev) => !prev)}
+          aria-expanded={expanded}
+          className="focus-visible:ring-offset-background flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded-md text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
-          <span className="font-semibold">{props.message.title}</span>
-          {hasBody && (
-            <span
-              className={classNames("text-foreground-hint text-sm", {
-                "line-clamp-2": !expanded,
-              })}
-            >
-              {props.message.body}
-            </span>
-          )}
-          <span className="text-foreground-hint text-xs">
-            {formatTimestamp(props.message.createdAt)}
-          </span>
+          {messageContent}
         </button>
-        <Button
-          icon={<Trash2 size={18} aria-hidden="true" />}
-          variant="text"
-          size="sm"
-          intent="destructive"
-          aria-label={t("inbox.deleteOne")}
-          onClick={props.onDelete}
-        />
-      </div>
-    </div>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-start gap-2">
+          {messageContent}
+        </div>
+      )}
+      <Button
+        icon={<Trash2 size={18} aria-hidden="true" />}
+        variant="text"
+        size="sm"
+        intent="destructive"
+        aria-label={t("inbox.deleteOne", { title: props.message.title })}
+        onClick={props.onDelete}
+        className="-mt-1 -mr-1 shrink-0"
+      />
+    </Card>
   );
 }
 
@@ -163,9 +194,9 @@ export function InboxModal() {
               />
               <Button
                 label={t("inbox.confirmClearYes")}
-                variant="fill"
+                variant="outline"
                 intent="destructive"
-                className="flex-1"
+                className="border-error text-error flex-1"
                 onClick={handleClearAll}
               />
             </div>
@@ -175,6 +206,7 @@ export function InboxModal() {
             label={t("inbox.clearAll")}
             variant="outline"
             intent="destructive"
+            className="border-error text-error"
             onClick={() => setConfirmingClear(true)}
           />
         )}
@@ -194,7 +226,7 @@ export function InboxModal() {
           title={t("inbox.empty")}
         />
       ) : (
-        <div className="flex flex-col gap-2 py-2">
+        <div className="flex flex-col gap-3 py-2">
           {messages.map((message) => (
             <InboxRow
               key={message.id}

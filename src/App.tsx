@@ -10,6 +10,7 @@ import { InboxModal } from "@/components/InboxModal";
 import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 import { StagedTokenModal } from "@/components/home/StagedTokenModal";
 import { useAppReviewPrompt } from "@/hooks/useAppReviewPrompt";
+import { useAppBadge } from "@/hooks/useAppBadge";
 import {
   isNativePluginAvailable,
   isPluginAvailable,
@@ -319,6 +320,7 @@ export default function App() {
   useNfcAvailabilityCheck();
   useCameraAvailabilityCheck();
   useAccelerometerAvailabilityCheck();
+  useAppBadge();
   useAppReviewPrompt();
   // Initialize live updates - must be called after app renders successfully
   useLiveUpdate();
