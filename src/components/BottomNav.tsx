@@ -6,8 +6,8 @@ import { ReactElement } from "react";
 import { useStatusStore } from "@/lib/store";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { NotificationBadge } from "@/components/NotificationBadge";
 import { ResponsiveContainer } from "./ResponsiveContainer";
-import { NotificationBadge } from "./NotificationBadge";
 
 function NavButton(props: {
   text: string;

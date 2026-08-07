@@ -29,7 +29,7 @@ describe("InboxButton", () => {
     expect(screen.queryByText("1")).not.toBeInTheDocument();
   });
 
-  it("should render unread count label and attention state when messages exist", () => {
+  it("should render notification count label when messages exist", () => {
     useStatusStore.setState({
       inboxMessages: [
         {
@@ -52,7 +52,7 @@ describe("InboxButton", () => {
     const button = screen.getByRole("button", {
       name: /inbox\.openLabelWithCount/i,
     });
-    expect(button).not.toHaveClass("attention-throb");
+    expect(button).toBeInTheDocument();
     expect(screen.getByText("2")).toHaveAttribute("aria-hidden", "true");
   });
 

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Badge } from "@capawesome/capacitor-badge";
 import { useStatusStore } from "@/lib/store";
 import { logger } from "@/lib/logger";
@@ -6,6 +6,7 @@ import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 
 export function useAppBadge() {
   const inboxCount = useStatusStore((state) => state.inboxMessages.length);
+  const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     if (!isNativePluginAvailable("Badge")) return;
@@ -13,20 +14,25 @@ export function useAppBadge() {
     let cancelled = false;
 
     const syncBadge = async () => {
+      if (cancelled) return;
+
       try {
         const support = await Badge.isSupported();
         if (!support.isSupported || cancelled) return;
 
         let permission = await Badge.checkPermissions();
+        if (cancelled) return;
+
         if (
           inboxCount > 0 &&
           (permission.display === "prompt" ||
             permission.display === "prompt-with-rationale")
         ) {
           permission = await Badge.requestPermissions();
+          if (cancelled) return;
         }
 
-        if (permission.display !== "granted" || cancelled) return;
+        if (permission.display !== "granted") return;
 
         await Badge.set({ count: inboxCount });
       } catch (error) {
@@ -40,7 +46,9 @@ export function useAppBadge() {
       }
     };
 
-    void syncBadge();
+    syncQueueRef.current = syncQueueRef.current
+      .catch(() => undefined)
+      .then(syncBadge);
 
     return () => {
       cancelled = true;

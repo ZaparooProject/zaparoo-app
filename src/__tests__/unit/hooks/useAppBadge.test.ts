@@ -1,11 +1,12 @@
-import { act, renderHook, waitFor } from "../../../test-utils";
+import { act, renderHook, waitFor } from "@/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Badge } from "@capawesome/capacitor-badge";
 import { useAppBadge } from "@/hooks/useAppBadge";
+import { CoreAPI } from "@/lib/coreApi";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 import { InboxSeverity } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
-import { mockInboxMessage } from "../../../test-utils/factories";
+import { mockInboxMessage } from "@/test-utils/factories";
 
 vi.mock("@capawesome/capacitor-badge", () => ({
   Badge: {
@@ -22,6 +23,7 @@ vi.mock("@/lib/capacitorBridge", () => ({
 
 describe("useAppBadge", () => {
   beforeEach(() => {
+    CoreAPI.reset();
     vi.clearAllMocks();
     useStatusStore.setState({ inboxMessages: [] });
     vi.mocked(isNativePluginAvailable).mockReturnValue(true);
@@ -82,6 +84,43 @@ describe("useAppBadge", () => {
     });
     expect(Badge.requestPermissions).not.toHaveBeenCalled();
     expect(Badge.set).not.toHaveBeenCalled();
+  });
+
+  it("should serialize badge writes when the count changes during sync", async () => {
+    let resolveFirstSet: (() => void) | undefined;
+    const firstSet = new Promise<void>((resolve) => {
+      resolveFirstSet = resolve;
+    });
+    vi.mocked(Badge.set)
+      .mockImplementationOnce(() => firstSet)
+      .mockResolvedValueOnce();
+    useStatusStore.setState({
+      inboxMessages: [mockInboxMessage({ id: 1 })],
+    });
+    renderHook(() => useAppBadge());
+
+    await waitFor(() => {
+      expect(Badge.set).toHaveBeenNthCalledWith(1, { count: 1 });
+    });
+
+    act(() => {
+      useStatusStore.setState({
+        inboxMessages: [
+          mockInboxMessage({ id: 1 }),
+          mockInboxMessage({ id: 2 }),
+        ],
+      });
+    });
+
+    expect(Badge.set).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      resolveFirstSet?.();
+    });
+
+    await waitFor(() => {
+      expect(Badge.set).toHaveBeenNthCalledWith(2, { count: 2 });
+    });
   });
 
   it("should clear the badge after the inbox is emptied", async () => {
