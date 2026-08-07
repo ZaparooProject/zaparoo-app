@@ -80,7 +80,10 @@ export function parseTitleZapScript(
     if (command.slice(matchEnd, cursor).trim().length > 0) break;
 
     const tags = parseTagGroup(groupValue);
-    if (!tags) break;
+    if (!tags) {
+      if (parsedGroups.length === 0) return null;
+      break;
+    }
 
     parsedGroups.unshift(tags);
     groupStart = matchIndex;

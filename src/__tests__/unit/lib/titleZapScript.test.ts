@@ -43,6 +43,7 @@ describe("titleZapScript", () => {
       "@SNES/Super Mario World||**delay:1s",
       "@SNES/Super Mario World?tags=region:us",
       "@SNES/Super Mario World (-unfinished:beta)",
+      "@SNES/Super Mario World (region:us) (USA)",
     ])("should reject unsupported script %s", (zapScript) => {
       expect(parseTitleZapScript(zapScript)).toBeNull();
     });

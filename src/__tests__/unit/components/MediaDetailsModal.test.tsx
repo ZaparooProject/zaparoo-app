@@ -54,8 +54,12 @@ describe("MediaDetailsModal", () => {
       screen.getByRole("dialog", { name: "Super Mario World" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Super Nintendo")).toBeInTheDocument();
-    expect(screen.getByLabelText("genre platformer")).toBeInTheDocument();
-    expect(screen.getByLabelText("year 1990")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "genre platformer" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "year 1990" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByText("/games/snes/Super Mario World.sfc"),
     ).toBeInTheDocument();
