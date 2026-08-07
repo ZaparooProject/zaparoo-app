@@ -380,14 +380,18 @@ describe("Home Page Integration", () => {
         entries: [
           {
             time: new Date().toISOString(),
+            type: "nfc",
             uid: "abc123def456ab",
             text: "Super Mario Bros",
+            data: "",
             success: true,
           },
           {
             time: new Date(Date.now() - 60000).toISOString(),
+            type: "nfc",
             uid: "def456abc12345",
             text: "Zelda",
+            data: "",
             success: true,
           },
         ],

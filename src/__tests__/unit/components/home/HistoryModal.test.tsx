@@ -2,13 +2,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "../../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { HistoryModal } from "@/components/home/HistoryModal";
+import { CoreAPI } from "@/lib/coreApi";
+import { useStatusStore } from "@/lib/store";
 
 // Note: CopyButton uses Clipboard and Haptics plugins which are already
 // mocked globally in test-setup.ts. No additional mocking needed.
 
 interface HistoryEntry {
+  type: string;
   uid: string;
   text: string;
+  data: string;
   time: string;
   success: boolean;
 }
@@ -16,8 +20,10 @@ interface HistoryEntry {
 const createHistoryEntry = (
   overrides: Partial<HistoryEntry> = {},
 ): HistoryEntry => ({
+  type: "nfc",
   uid: "04abc123def456",
   text: "game:mario",
+  data: "",
   time: new Date().toISOString(),
   success: true,
   ...overrides,
@@ -32,6 +38,8 @@ describe("HistoryModal", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(CoreAPI, "run").mockResolvedValue(undefined);
+    useStatusStore.setState({ connected: true });
   });
 
   describe("rendering", () => {
@@ -153,6 +161,66 @@ describe("HistoryModal", () => {
       // Assert - Should have 3 time labels (one per entry)
       const timeLabels = screen.getAllByText(/scan\.lastScannedTime/);
       expect(timeLabels).toHaveLength(3);
+    });
+  });
+
+  describe("replay", () => {
+    it("should replay a history entry when play is clicked", async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const historyData = {
+        entries: [
+          createHistoryEntry({
+            type: "nfc",
+            uid: "test-uid",
+            text: "game:zelda",
+            data: "raw-data",
+          }),
+        ],
+      };
+      render(<HistoryModal {...defaultProps} historyData={historyData} />);
+
+      // Act
+      await user.click(
+        screen.getByRole("button", { name: "scan.historyReplay" }),
+      );
+
+      // Assert
+      expect(CoreAPI.run).toHaveBeenCalledWith({
+        type: "nfc",
+        uid: "test-uid",
+        text: "game:zelda",
+        data: "raw-data",
+      });
+    });
+
+    it("should disable replay when disconnected", () => {
+      // Arrange
+      useStatusStore.setState({ connected: false });
+      const historyData = { entries: [createHistoryEntry()] };
+
+      // Act
+      render(<HistoryModal {...defaultProps} historyData={historyData} />);
+
+      // Assert
+      expect(
+        screen.getByRole("button", { name: "scan.historyReplay" }),
+      ).toBeDisabled();
+    });
+
+    it("should disable replay when an entry has no scan data", () => {
+      // Arrange
+      const historyData = {
+        entries: [createHistoryEntry({ uid: "", text: "", data: "" })],
+      };
+
+      // Act
+      render(<HistoryModal {...defaultProps} historyData={historyData} />);
+
+      // Assert
+      expect(
+        screen.getByRole("button", { name: "scan.historyReplay" }),
+      ).toBeDisabled();
     });
   });
 
