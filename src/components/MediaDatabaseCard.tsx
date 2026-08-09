@@ -409,6 +409,7 @@ export function MediaDatabaseCard({
         placeholder={t("settings.updateDb.allSystems")}
         mode="multi"
         onClick={() => setSystemSelectorOpen(true)}
+        includeEmptySystems
         disabled={
           !connected || !mediaGenerateAvailable || isScraping || isCleaning
         }
@@ -532,6 +533,7 @@ export function MediaDatabaseCard({
         title={t("settings.updateDb.selectSystemsTitle")}
         includeAllOption={true}
         allSystems={true}
+        includeEmptySystems={true}
       />
     </>
   );

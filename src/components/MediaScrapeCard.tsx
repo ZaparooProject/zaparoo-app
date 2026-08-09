@@ -6,6 +6,7 @@ import { useStatusStore, ConnectionState } from "@/lib/store";
 import { CoreAPI } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
+import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { Button } from "./wui/Button";
 import { SystemSelector, SystemSelectorTrigger } from "./SystemSelector";
 import { LoadingSpinner } from "./ui/loading-spinner";
@@ -26,6 +27,7 @@ function useStrictMediaScrapersFeature() {
 
 export function MediaScrapeCard() {
   const { t } = useTranslation();
+  const resolveSystemName = useSystemNameResolver();
   const featureAvailable = useStrictMediaScrapersFeature();
   const connected = useStatusStore((state) => state.connected);
   const targetDeviceAddress = useStatusStore(
@@ -202,11 +204,17 @@ export function MediaScrapeCard() {
       });
     }
     if (isScraping) {
-      const step =
+      const systemId =
+        scrapingStatus?.currentSystem?.systemId ??
+        scrapingStatus?.systemId ??
+        "";
+      const coreSystemName =
         scrapingStatus?.currentSystem?.systemName ??
         scrapingStatus?.currentStepDisplay ??
-        scrapingStatus?.systemId ??
-        t("settings.scrapeMedia.preparing");
+        systemId;
+      const step = systemId
+        ? resolveSystemName(systemId, coreSystemName)
+        : coreSystemName || t("settings.scrapeMedia.preparing");
       if (isPaused) {
         return `${step}, ${t("settings.scrapeMedia.status.paused")}`;
       }
@@ -279,11 +287,13 @@ export function MediaScrapeCard() {
         ? (currentStep / totalSteps) * 100
         : 0;
       const roundedOverallProgressPct = Math.round(overallProgressPct);
-      const currentSystem =
+      const coreSystemName =
         currentSystemProgress.systemName ??
         scrapingStatus.currentStepDisplay ??
-        currentSystemProgress.systemId ??
-        t("settings.scrapeMedia.preparing");
+        currentSystemProgress.systemId;
+      const currentSystem = currentSystemProgress.systemId
+        ? resolveSystemName(currentSystemProgress.systemId, coreSystemName)
+        : coreSystemName || t("settings.scrapeMedia.preparing");
       const formattedProcessed =
         currentSystemProgress.processed.toLocaleString();
       const formattedTotal = currentSystemProgress.total.toLocaleString();
@@ -539,6 +549,7 @@ export function MediaScrapeCard() {
               mode="multi"
               onClick={() => setSystemSelectorOpen(true)}
               disabled={controlsDisabled || !selectedScraper}
+              includeEmptySystems
             />
 
             <ToggleSwitch
@@ -589,6 +600,7 @@ export function MediaScrapeCard() {
         title={t("settings.scrapeMedia.selectSystemsTitle")}
         includeAllOption={true}
         allowedSystemIds={allowedSystemIds}
+        includeEmptySystems={true}
       />
     </>
   );

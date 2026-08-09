@@ -1,6 +1,8 @@
 import { render, screen, fireEvent } from "../../../test-utils";
 import { BottomNav } from "@/components/BottomNav";
 import { useStatusStore } from "@/lib/store";
+import { useTabSessionStore } from "@/lib/tabSessionStore";
+import { useLibrarySessionStore } from "@/lib/librarySessionStore";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mockInboxMessage } from "@/test-utils/factories";
 
@@ -59,7 +61,9 @@ describe("BottomNav", () => {
       coreVersion: "2.8.0",
       coreVersionPending: false,
     });
-    mockUseLocation.mockReturnValue({ pathname: "/" });
+    useTabSessionStore.getState().reset();
+    useLibrarySessionStore.getState().reset();
+    mockUseLocation.mockReturnValue({ pathname: "/", href: "/" });
     vi.clearAllMocks();
   });
 
@@ -71,6 +75,7 @@ describe("BottomNav", () => {
     render(<BottomNav />);
 
     expect(screen.getByText("nav.index")).toBeInTheDocument();
+    expect(screen.getByText("nav.library")).toBeInTheDocument();
     expect(screen.getByText("nav.create")).toBeInTheDocument();
     expect(screen.getByText("nav.settings")).toBeInTheDocument();
   });
@@ -79,20 +84,76 @@ describe("BottomNav", () => {
     render(<BottomNav />);
 
     expect(screen.getByTestId("link-/")).toBeInTheDocument();
+    expect(screen.getByTestId("link-/library")).toBeInTheDocument();
     expect(screen.getByTestId("link-/create")).toBeInTheDocument();
     expect(screen.getByTestId("link-/settings")).toBeInTheDocument();
   });
 
+  it("reopens the last screen visited in each tab", () => {
+    const session = useTabSessionStore.getState();
+    session.rememberLocation("/library/SNES", "/library/SNES");
+    session.rememberLocation("/create/search", "/create/search");
+    session.rememberLocation(
+      "/settings/language-region",
+      "/settings/language-region",
+    );
+
+    render(<BottomNav />);
+
+    expect(screen.getByTestId("link-/library/SNES")).toBeInTheDocument();
+    expect(screen.getByTestId("link-/create/search")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("link-/settings/language-region"),
+    ).toBeInTheDocument();
+  });
+
   it("marks Home as active when on root path", () => {
-    mockUseLocation.mockReturnValue({ pathname: "/" });
+    mockUseLocation.mockReturnValue({ pathname: "/", href: "/" });
     render(<BottomNav />);
 
     const homeLink = screen.getByTestId("link-/");
     expect(homeLink).toHaveAttribute("aria-current", "page");
   });
 
+  it("marks Library as active on Library routes", () => {
+    mockUseLocation.mockReturnValue({
+      pathname: "/library/SNES",
+      href: "/library/SNES",
+    });
+    render(<BottomNav />);
+
+    expect(screen.getByTestId("link-/library")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("resets active Library navigation to its root", () => {
+    mockUseLocation.mockReturnValue({
+      pathname: "/library/SNES",
+      href: "/library/SNES",
+    });
+    const librarySession = useLibrarySessionStore.getState();
+    librarySession.activateDevice("device-a");
+    librarySession.setFolderLevels("SNES", [
+      { name: "Games", path: "/roms/SNES" },
+    ]);
+    librarySession.setEmbeddedSearchOpen("SNES", true);
+    useTabSessionStore.getState().rememberScroll("library:SNES:browse", 0, 240);
+    render(<BottomNav />);
+
+    fireEvent.click(screen.getByTestId("link-/library"));
+
+    expect(useTabSessionStore.getState().lastHref.library).toBe("/library");
+    expect(useTabSessionStore.getState().scrollPositions).not.toHaveProperty(
+      "library:SNES:browse",
+    );
+    expect(useLibrarySessionStore.getState().folderLevels).toEqual({});
+    expect(useLibrarySessionStore.getState().embeddedSearchOpen).toEqual({});
+  });
+
   it("marks Create as active when on create path", () => {
-    mockUseLocation.mockReturnValue({ pathname: "/create" });
+    mockUseLocation.mockReturnValue({ pathname: "/create", href: "/create" });
     render(<BottomNav />);
 
     const createLink = screen.getByTestId("link-/create");
@@ -100,7 +161,10 @@ describe("BottomNav", () => {
   });
 
   it("marks Create as active when on create subpath", () => {
-    mockUseLocation.mockReturnValue({ pathname: "/create/search" });
+    mockUseLocation.mockReturnValue({
+      pathname: "/create/search",
+      href: "/create/search",
+    });
     render(<BottomNav />);
 
     const createLink = screen.getByTestId("link-/create");
@@ -108,7 +172,10 @@ describe("BottomNav", () => {
   });
 
   it("marks Settings as active when on settings path", () => {
-    mockUseLocation.mockReturnValue({ pathname: "/settings" });
+    mockUseLocation.mockReturnValue({
+      pathname: "/settings",
+      href: "/settings",
+    });
     render(<BottomNav />);
 
     const settingsLink = screen.getByTestId("link-/settings");
@@ -116,7 +183,10 @@ describe("BottomNav", () => {
   });
 
   it("marks Settings as active when on settings subpath", () => {
-    mockUseLocation.mockReturnValue({ pathname: "/settings/advanced" });
+    mockUseLocation.mockReturnValue({
+      pathname: "/settings/advanced",
+      href: "/settings/advanced",
+    });
     render(<BottomNav />);
 
     const settingsLink = screen.getByTestId("link-/settings");
@@ -140,7 +210,10 @@ describe("BottomNav", () => {
     useStatusStore.setState({
       inboxMessages: [mockInboxMessage({ id: 1 }), mockInboxMessage({ id: 2 })],
     });
-    mockUseLocation.mockReturnValue({ pathname: "/settings" });
+    mockUseLocation.mockReturnValue({
+      pathname: "/settings",
+      href: "/settings",
+    });
 
     render(<BottomNav />);
 

@@ -16,6 +16,7 @@ import { render, screen, waitFor, act } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { useQuery } from "@tanstack/react-query";
 import { useStatusStore } from "@/lib/store";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 import {
   SystemSelector,
   SystemSelectorTrigger,
@@ -100,7 +101,8 @@ describe("SystemSelector", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockIsLoading = false;
 
-    // Reset store
+    // Reset stores
+    usePreferencesStore.setState({ systemNameRegion: "auto" });
     useStatusStore.setState({
       ...useStatusStore.getState(),
       targetDeviceAddress: "test-device",
@@ -119,6 +121,69 @@ describe("SystemSelector", () => {
   });
 
   describe("page rendering", () => {
+    it("should use the preferred regional system names", () => {
+      usePreferencesStore.setState({ systemNameRegion: "jp" });
+      vi.mocked(useQuery).mockReturnValueOnce({
+        data: {
+          systems: [
+            { id: "NES", name: "Nintendo Entertainment System" },
+            { id: "SNES", name: "Super Nintendo" },
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useQuery>);
+
+      render(<SystemSelector {...defaultProps} />);
+
+      expect(
+        screen.getByRole("radio", { name: "Famicom" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("radio", { name: "Super Famicom" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should hide systems with an explicit zero media count by default", () => {
+      vi.mocked(useQuery).mockReturnValueOnce({
+        data: {
+          systems: [
+            { id: "SNES", name: "Super Nintendo", mediaCount: 12 },
+            { id: "3DO", name: "3DO", mediaCount: 0 },
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useQuery>);
+
+      render(<SystemSelector {...defaultProps} />);
+
+      expect(screen.getByRole("radio", { name: "SNES" })).toBeInTheDocument();
+      expect(
+        screen.queryByRole("radio", { name: "3DO" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should include zero-count systems when requested", () => {
+      vi.mocked(useQuery).mockReturnValueOnce({
+        data: {
+          systems: [
+            { id: "SNES", name: "Super Nintendo", mediaCount: 12 },
+            { id: "3DO", name: "3DO", mediaCount: 0 },
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useQuery>);
+
+      render(<SystemSelector {...defaultProps} includeEmptySystems />);
+
+      expect(screen.getByRole("radio", { name: "3DO" })).toBeInTheDocument();
+    });
+
     it("should scope full system queries to the selected device", () => {
       useStatusStore.setState({ targetDeviceAddress: "10.0.0.5:7497" });
 
@@ -844,6 +909,36 @@ describe("SystemSelectorTrigger", () => {
       expect(
         screen.getByText("Nintendo Entertainment System, Super Nintendo"),
       ).toBeInTheDocument();
+    });
+
+    it("should exclude zero-count systems from trigger totals unless requested", () => {
+      const countedSystems = {
+        systems: [
+          { id: "snes", name: "Super Nintendo", mediaCount: 10 },
+          { id: "3do", name: "3DO", mediaCount: 0 },
+        ],
+      };
+      const { rerender } = render(
+        <SystemSelectorTrigger
+          selectedSystems={["snes"]}
+          systemsData={countedSystems}
+          mode="multi"
+          onClick={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText("systemSelector.allSystems")).toBeInTheDocument();
+
+      rerender(
+        <SystemSelectorTrigger
+          selectedSystems={["snes"]}
+          systemsData={countedSystems}
+          mode="multi"
+          onClick={vi.fn()}
+          includeEmptySystems
+        />,
+      );
+      expect(screen.getByText("Super Nintendo")).toBeInTheDocument();
     });
 
     it("should display count when more than 3 tags selected", () => {

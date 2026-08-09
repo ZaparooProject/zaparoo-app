@@ -1,19 +1,28 @@
-import React, { useCallback, useEffect, RefObject } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  RefObject,
+} from "react";
 import { useTranslation } from "react-i18next";
+import { Heart } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link } from "@tanstack/react-router";
 import { SearchResultGame } from "@/lib/models.ts";
 import { useStatusStore } from "@/lib/store.ts";
 import { usePreferencesStore } from "@/lib/preferencesStore.ts";
 import { filenameFromPath } from "@/lib/path.ts";
+import { hasFavoriteTag } from "@/lib/libraryMedia";
 import { Card } from "@/components/wui/Card.tsx";
 import { NextIcon, SettingsIcon, WarningIcon } from "@/lib/images.tsx";
 import { LoadingSpinner } from "@/components/ui/loading-spinner.tsx";
+import { DelayedLoading } from "@/components/DelayedLoading.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 import { EmptyState } from "@/components/wui/EmptyState.tsx";
+import { useInitialPageScrollOffset } from "@/lib/pageScrollContext";
 import { useVirtualInfiniteSearch } from "@/hooks/useVirtualInfiniteSearch";
 import { TagList } from "@/components/TagList.tsx";
-import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { useSystemNameResolver } from "@/hooks/useSystemName";
 
 export interface VirtualSearchResultsProps {
   query: string;
@@ -28,6 +37,7 @@ export interface VirtualSearchResultsProps {
   isSearching?: boolean;
   onSearchComplete?: () => void;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
+  loadingDelayMs?: number;
 }
 
 export function VirtualSearchResults({
@@ -43,13 +53,11 @@ export function VirtualSearchResults({
   isSearching = false,
   onSearchComplete,
   scrollContainerRef,
+  loadingDelayMs = 0,
 }: VirtualSearchResultsProps) {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  const { available: disambiguatingTagsAvailable } = useCoreFeature(
-    "mediaDisambiguatingTags",
-    { requireKnownSupport: true },
-  );
   const { t } = useTranslation();
+  const resolveSystemName = useSystemNameResolver();
 
   const {
     allItems,
@@ -85,14 +93,13 @@ export function VirtualSearchResults({
       // Base height: 32px (pt-3 pb-5) + content + 1px border = total (gap handled by virtualizer)
       // Without tags: ~60px content + 32px padding + 1px border = 93px
       // With tags: ~80px content + 32px padding + 1px border = 113px
-      const displayTags = disambiguatingTagsAvailable
-        ? item?.disambiguatingTags
-        : item?.tags;
+      const displayTags = item?.disambiguatingTags;
       return displayTags && displayTags.length > 0 ? 113 : 93;
     },
-    [allItems, disambiguatingTagsAvailable],
+    [allItems],
   );
 
+  const initialScrollOffset = useInitialPageScrollOffset();
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: totalCount + (hasNextPage ? 1 : 0), // +1 for loading sentinel
@@ -100,11 +107,18 @@ export function VirtualSearchResults({
     estimateSize,
     overscan: 5,
     scrollMargin: 8,
+    initialOffset: initialScrollOffset,
     gap: 8,
   });
 
   // Fetch next page when approaching the end
   const virtualItems = virtualizer.getVirtualItems();
+
+  useLayoutEffect(() => {
+    // Cached route data can mount before TanStack Virtual's initial observer
+    // update rerenders the list, so force one post-attachment range update.
+    virtualizer.measure();
+  }, [virtualizer]);
 
   useEffect(() => {
     const [lastItem] = [...virtualItems].reverse();
@@ -179,10 +193,12 @@ export function VirtualSearchResults({
   // Show loading spinner when searching initially
   if (isLoading || isSearching) {
     return (
-      <div className="text-muted-foreground mt-6 flex items-center justify-center gap-2">
-        <LoadingSpinner size={16} className="text-primary" />
-        <span>{t("create.search.loading")}</span>
-      </div>
+      <DelayedLoading delayMs={loadingDelayMs}>
+        <div className="text-muted-foreground mt-6 flex items-center justify-center gap-2">
+          <LoadingSpinner size={16} className="text-primary" />
+          <span>{t("create.search.loading")}</span>
+        </div>
+      </DelayedLoading>
     );
   }
 
@@ -259,7 +275,7 @@ export function VirtualSearchResults({
         data-testid="search-results"
       >
         {virtualItems.map((virtualItem) => {
-          const isLoading = virtualItem.index >= totalCount;
+          const isLoadingRow = virtualItem.index >= totalCount;
           const game = allItems[virtualItem.index];
 
           return (
@@ -275,15 +291,22 @@ export function VirtualSearchResults({
                 transform: `translateY(${virtualItem.start}px)`,
               }}
             >
-              {isLoading ? (
-                <div className="text-muted-foreground flex items-center justify-center gap-2">
-                  <LoadingSpinner size={16} className="text-primary" />
-                  <span>{t("create.search.loading")}</span>
-                </div>
+              {isLoadingRow ? (
+                (loadingDelayMs === 0 || isFetchingNextPage) && (
+                  <DelayedLoading delayMs={loadingDelayMs}>
+                    <div className="text-muted-foreground flex items-center justify-center gap-2">
+                      <LoadingSpinner size={16} className="text-primary" />
+                      <span>{t("create.search.loading")}</span>
+                    </div>
+                  </DelayedLoading>
+                )
               ) : game ? (
                 <SearchResultItem
                   game={game}
-                  disambiguatingTagsAvailable={disambiguatingTagsAvailable}
+                  systemName={resolveSystemName(
+                    game.system.id,
+                    game.system.name,
+                  )}
                   selectedResult={selectedResult}
                   setSelectedResult={setSelectedResult}
                   isLast={virtualItem.index === totalCount - 1}
@@ -300,7 +323,7 @@ export function VirtualSearchResults({
 
 interface SearchResultItemProps {
   game: SearchResultGame;
-  disambiguatingTagsAvailable: boolean;
+  systemName: string;
   selectedResult: SearchResultGame | null;
   setSelectedResult: (game: SearchResultGame | null) => void;
   isLast: boolean;
@@ -309,12 +332,13 @@ interface SearchResultItemProps {
 
 const SearchResultItem = React.memo(function SearchResultItem({
   game,
-  disambiguatingTagsAvailable,
+  systemName,
   selectedResult,
   setSelectedResult,
   isLast,
   index,
 }: SearchResultItemProps) {
+  const { t } = useTranslation();
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
 
   // Primary display: filename if global pref enabled, otherwise clean name
@@ -322,9 +346,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
     ? filenameFromPath(game.path) || game.name
     : game.name;
 
-  const displayTags = disambiguatingTagsAvailable
-    ? (game.disambiguatingTags ?? [])
-    : game.tags;
+  const displayTags = game.disambiguatingTags ?? [];
 
   const handleGameSelect = () => {
     if (selectedResult && selectedResult.path === game.path) {
@@ -359,18 +381,20 @@ const SearchResultItem = React.memo(function SearchResultItem({
         }
       }}
     >
-      <div className="flex flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <p className="font-semibold">{displayName}</p>
-        <p className="text-sm">{game.system.name}</p>
-        <TagList
-          tags={displayTags}
-          maxMobile={2}
-          maxDesktop={4}
-          preserveOrder={disambiguatingTagsAvailable}
-        />
+        <p className="text-sm">{systemName}</p>
+        <TagList tags={displayTags} preserveOrder />
       </div>
-      <div>
-        <NextIcon size="20" />
+      <div className="flex shrink-0 items-center gap-2">
+        {hasFavoriteTag(game.tags) && (
+          <span aria-label={t("library.favorite")}>
+            <Heart size={18} fill="currentColor" aria-hidden="true" />
+          </span>
+        )}
+        <span aria-hidden="true">
+          <NextIcon size="20" />
+        </span>
       </div>
     </div>
   );

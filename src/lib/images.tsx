@@ -1,3 +1,25 @@
+export const ZAP_LOGO_URL = `${__APP_BASE_PATH__}lockup.webp`;
+
+let zapLogoImage: HTMLImageElement | null = null;
+let zapLogoReady: Promise<void> | null = null;
+
+export function preloadZapLogo(): Promise<void> {
+  if (typeof Image === "undefined") return Promise.resolve();
+
+  if (!zapLogoReady) {
+    zapLogoImage = new Image(160, 36);
+    zapLogoImage.decoding = "sync";
+    zapLogoImage.fetchPriority = "high";
+    zapLogoImage.src = ZAP_LOGO_URL;
+    zapLogoReady =
+      typeof zapLogoImage.decode === "function"
+        ? zapLogoImage.decode().catch(() => undefined)
+        : Promise.resolve();
+  }
+
+  return zapLogoReady;
+}
+
 export const Logo = (props: { width: string }) => (
   <svg
     width={props.width}

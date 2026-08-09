@@ -57,6 +57,20 @@ describe("NowPlayingInfo", () => {
       expect(screen.getByText(/scan\.nowPlayingSystem/)).toBeInTheDocument();
     });
 
+    it("should use the preferred regional system name", () => {
+      usePreferencesStore.setState({ systemNameRegion: "jp" });
+
+      render(
+        <NowPlayingInfo
+          {...defaultProps}
+          systemId="NES"
+          systemName="Nintendo Entertainment System"
+        />,
+      );
+
+      expect(screen.getByText("Famicom")).toBeInTheDocument();
+    });
+
     it("should render stop button", () => {
       // Arrange & Act
       render(<NowPlayingInfo {...defaultProps} />);

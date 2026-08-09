@@ -18,6 +18,7 @@ import type { TransportState } from "../../../lib/transport/types";
 import type { NotificationRequest } from "../../../lib/coreApi";
 import { ClientCapability, InboxSeverity, Notification } from "@/lib/models";
 import { logger } from "@/lib/logger";
+import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
 
 // Capture event handlers for notification testing
 let capturedEventHandlers: {
@@ -31,6 +32,10 @@ const pairingModalCapture = vi.hoisted(() => ({
 }));
 
 // Mock dependencies
+vi.mock("@/lib/libraryImageCache", () => ({
+  invalidateLibraryImageCache: vi.fn(),
+}));
+
 vi.mock("../../../lib/transport", () => {
   const mockTransport = {
     deviceId: "test-device",
@@ -1269,6 +1274,7 @@ describe("notification processing", () => {
         QueryClient.prototype,
         "invalidateQueries",
       );
+      const removeSpy = vi.spyOn(QueryClient.prototype, "removeQueries");
       useStatusStore.setState({
         gamesIndex: {
           exists: true,
@@ -1293,6 +1299,7 @@ describe("notification processing", () => {
         </ConnectionProvider>,
       );
       invalidateSpy.mockClear();
+      removeSpy.mockClear();
 
       await capturedEventHandlers.onMessage!("test-device", {});
 
@@ -1305,7 +1312,18 @@ describe("notification processing", () => {
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: ["infiniteMediaSearch"],
       });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["mediaBrowse"],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["mediaBrowseIndex"],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["mediaMeta"],
+      });
+      expect(removeSpy).toHaveBeenCalledWith({ queryKey: ["mediaImage"] });
       invalidateSpy.mockRestore();
+      removeSpy.mockRestore();
     });
 
     it("should update games index state", async () => {
@@ -1646,6 +1664,52 @@ describe("notification processing", () => {
   });
 
   describe("media.scraping", () => {
+    it("should invalidate Library metadata when scraping finishes", async () => {
+      const invalidateSpy = vi.spyOn(
+        QueryClient.prototype,
+        "invalidateQueries",
+      );
+      const removeSpy = vi.spyOn(QueryClient.prototype, "removeQueries");
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.MediaScraping,
+        params: {
+          processed: 100,
+          total: 100,
+          matched: 90,
+          skipped: 10,
+          totalScraped: 1200,
+          scraping: false,
+          done: true,
+          paused: false,
+        },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      invalidateSpy.mockClear();
+      removeSpy.mockClear();
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["mediaBrowse"],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["mediaMeta"],
+      });
+      expect(removeSpy).toHaveBeenCalledWith({ queryKey: ["mediaImage"] });
+      await waitFor(() =>
+        expect(invalidateLibraryImageCache).toHaveBeenCalledWith(
+          "192.168.1.100:7497",
+        ),
+      );
+      invalidateSpy.mockRestore();
+      removeSpy.mockRestore();
+    });
+
     it("should update scraper status state", async () => {
       const mediaScrapingNotification: NotificationRequest = {
         method: Notification.MediaScraping,
@@ -2228,6 +2292,7 @@ describe("connection event handling", () => {
 
   it("should invalidate library queries after reconnecting", async () => {
     const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+    const removeSpy = vi.spyOn(QueryClient.prototype, "removeQueries");
 
     render(
       <ConnectionProvider>
@@ -2235,6 +2300,7 @@ describe("connection event handling", () => {
       </ConnectionProvider>,
     );
     invalidateSpy.mockClear();
+    removeSpy.mockClear();
 
     capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
       state: "connected",
@@ -2249,7 +2315,11 @@ describe("connection event handling", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ["infiniteMediaSearch"],
     });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["mediaBrowse"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["mediaMeta"] });
+    expect(removeSpy).toHaveBeenCalledWith({ queryKey: ["mediaImage"] });
     invalidateSpy.mockRestore();
+    removeSpy.mockRestore();
   });
 
   it("should fetch inbox messages when connected Core supports inbox", async () => {

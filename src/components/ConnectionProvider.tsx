@@ -49,6 +49,8 @@ import {
   TokenResponse,
 } from "@/lib/models";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
+import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
+import { LIBRARY_QUERY_KEYS } from "@/lib/libraryMedia";
 import { satisfies as versionSatisfies } from "@/lib/coreVersion";
 import {
   CoreAPI,
@@ -379,6 +381,21 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         queryClient.invalidateQueries({ queryKey: ["systems"] });
         queryClient.invalidateQueries({ queryKey: ["tags"] });
         queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] });
+        queryClient.invalidateQueries({
+          queryKey: [LIBRARY_QUERY_KEYS.favorites],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [LIBRARY_QUERY_KEYS.browse],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [LIBRARY_QUERY_KEYS.meta],
+        });
+        queryClient.removeQueries({
+          queryKey: [LIBRARY_QUERY_KEYS.image],
+        });
       }
     },
     [queryClient, setGamesIndex],
@@ -508,6 +525,22 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               queryClient.invalidateQueries({
                 queryKey: ["infiniteMediaSearch"],
               });
+              queryClient.invalidateQueries({
+                queryKey: [LIBRARY_QUERY_KEYS.favorites],
+              });
+              queryClient.invalidateQueries({
+                queryKey: [LIBRARY_QUERY_KEYS.browse],
+              });
+              queryClient.invalidateQueries({
+                queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
+              });
+              queryClient.invalidateQueries({
+                queryKey: [LIBRARY_QUERY_KEYS.meta],
+              });
+              queryClient.removeQueries({
+                queryKey: [LIBRARY_QUERY_KEYS.image],
+              });
+              invalidateLibraryImageCache(targetDeviceAddress);
             }
             break;
           }
@@ -721,6 +754,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       announce,
       addInboxMessage,
       setInboxModalOpen,
+      targetDeviceAddress,
     ],
   );
 
@@ -892,6 +926,19 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     queryClient.invalidateQueries({ queryKey: ["systems"] });
     queryClient.invalidateQueries({ queryKey: ["tags"] });
     queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] });
+    queryClient.invalidateQueries({
+      queryKey: [LIBRARY_QUERY_KEYS.favorites],
+    });
+    queryClient.invalidateQueries({
+      queryKey: [LIBRARY_QUERY_KEYS.browse],
+    });
+    queryClient.invalidateQueries({
+      queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
+    });
+    queryClient.invalidateQueries({
+      queryKey: [LIBRARY_QUERY_KEYS.meta],
+    });
+    queryClient.removeQueries({ queryKey: [LIBRARY_QUERY_KEYS.image] });
 
     const fetchMediaState = (retryDelayMs: number) => {
       const scheduledFor = currentConnectionId.current;

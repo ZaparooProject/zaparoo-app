@@ -46,6 +46,8 @@ export function BackHandler() {
 
       if (
         location.pathname === "/create" ||
+        location.pathname === "/library" ||
+        location.pathname === "/library/" ||
         location.pathname === "/settings"
       ) {
         navigate({ to: "/" });
@@ -54,6 +56,11 @@ export function BackHandler() {
 
       if (location.pathname.startsWith("/create")) {
         navigate({ to: "/create" });
+        return true;
+      }
+
+      if (location.pathname.startsWith("/library")) {
+        navigate({ to: "/library" });
         return true;
       }
 

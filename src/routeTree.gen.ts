@@ -16,12 +16,17 @@ import { Route as CreateMappingsRouteImport } from "./routes/create.mappings";
 import { Route as CreateNfcRouteImport } from "./routes/create.nfc";
 import { Route as CreateSearchRouteImport } from "./routes/create.search";
 import { Route as CreateTextRouteImport } from "./routes/create.text";
+import { Route as LibraryIndexRouteImport } from "./routes/library.index";
+import { Route as LibrarySystemRouteImport } from "./routes/library.$system";
+import { Route as LibraryFavoritesRouteImport } from "./routes/library.favorites";
+import { Route as LibrarySearchRouteImport } from "./routes/library.search";
 import { Route as SettingsIndexRouteImport } from "./routes/settings.index";
 import { Route as SettingsAboutRouteImport } from "./routes/settings.about";
 import { Route as SettingsAccessibilityRouteImport } from "./routes/settings.accessibility";
 import { Route as SettingsAdvancedRouteImport } from "./routes/settings.advanced";
 import { Route as SettingsDevicesRouteImport } from "./routes/settings.devices";
 import { Route as SettingsHelpRouteImport } from "./routes/settings.help";
+import { Route as SettingsLanguageRegionRouteImport } from "./routes/settings.language-region";
 import { Route as SettingsLicensesRouteImport } from "./routes/settings.licenses";
 import { Route as SettingsLogsRouteImport } from "./routes/settings.logs";
 import { Route as SettingsMediaRouteImport } from "./routes/settings.media";
@@ -67,6 +72,26 @@ const CreateTextRoute = CreateTextRouteImport.update({
   path: "/create/text",
   getParentRoute: () => rootRouteImport,
 } as any);
+const LibraryIndexRoute = LibraryIndexRouteImport.update({
+  id: "/library/",
+  path: "/library/",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const LibrarySystemRoute = LibrarySystemRouteImport.update({
+  id: "/library/$system",
+  path: "/library/$system",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const LibraryFavoritesRoute = LibraryFavoritesRouteImport.update({
+  id: "/library/favorites",
+  path: "/library/favorites",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const LibrarySearchRoute = LibrarySearchRouteImport.update({
+  id: "/library/search",
+  path: "/library/search",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: "/settings/",
   path: "/settings/",
@@ -95,6 +120,11 @@ const SettingsDevicesRoute = SettingsDevicesRouteImport.update({
 const SettingsHelpRoute = SettingsHelpRouteImport.update({
   id: "/settings/help",
   path: "/settings/help",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsLanguageRegionRoute = SettingsLanguageRegionRouteImport.update({
+  id: "/settings/language-region",
+  path: "/settings/language-region",
   getParentRoute: () => rootRouteImport,
 } as any);
 const SettingsLicensesRoute = SettingsLicensesRouteImport.update({
@@ -150,11 +180,15 @@ export interface FileRoutesByFullPath {
   "/create/nfc": typeof CreateNfcRoute;
   "/create/search": typeof CreateSearchRoute;
   "/create/text": typeof CreateTextRoute;
+  "/library/$system": typeof LibrarySystemRoute;
+  "/library/favorites": typeof LibraryFavoritesRoute;
+  "/library/search": typeof LibrarySearchRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
   "/settings/devices": typeof SettingsDevicesRoute;
   "/settings/help": typeof SettingsHelpRoute;
+  "/settings/language-region": typeof SettingsLanguageRegionRoute;
   "/settings/licenses": typeof SettingsLicensesRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/media": typeof SettingsMediaRoute;
@@ -162,6 +196,7 @@ export interface FileRoutesByFullPath {
   "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
   "/create/": typeof CreateIndexRoute;
+  "/library/": typeof LibraryIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
   "/create/mappings/new": typeof CreateMappingsNewRoute;
   "/settings/devices/$address": typeof SettingsDevicesAddressRoute;
@@ -174,11 +209,15 @@ export interface FileRoutesByTo {
   "/create/nfc": typeof CreateNfcRoute;
   "/create/search": typeof CreateSearchRoute;
   "/create/text": typeof CreateTextRoute;
+  "/library/$system": typeof LibrarySystemRoute;
+  "/library/favorites": typeof LibraryFavoritesRoute;
+  "/library/search": typeof LibrarySearchRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
   "/settings/devices": typeof SettingsDevicesRoute;
   "/settings/help": typeof SettingsHelpRoute;
+  "/settings/language-region": typeof SettingsLanguageRegionRoute;
   "/settings/licenses": typeof SettingsLicensesRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/media": typeof SettingsMediaRoute;
@@ -186,6 +225,7 @@ export interface FileRoutesByTo {
   "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
   "/create": typeof CreateIndexRoute;
+  "/library": typeof LibraryIndexRoute;
   "/settings": typeof SettingsIndexRoute;
   "/create/mappings/new": typeof CreateMappingsNewRoute;
   "/settings/devices/$address": typeof SettingsDevicesAddressRoute;
@@ -199,11 +239,15 @@ export interface FileRoutesById {
   "/create/nfc": typeof CreateNfcRoute;
   "/create/search": typeof CreateSearchRoute;
   "/create/text": typeof CreateTextRoute;
+  "/library/$system": typeof LibrarySystemRoute;
+  "/library/favorites": typeof LibraryFavoritesRoute;
+  "/library/search": typeof LibrarySearchRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
   "/settings/advanced": typeof SettingsAdvancedRoute;
   "/settings/devices": typeof SettingsDevicesRoute;
   "/settings/help": typeof SettingsHelpRoute;
+  "/settings/language-region": typeof SettingsLanguageRegionRoute;
   "/settings/licenses": typeof SettingsLicensesRoute;
   "/settings/logs": typeof SettingsLogsRoute;
   "/settings/media": typeof SettingsMediaRoute;
@@ -211,6 +255,7 @@ export interface FileRoutesById {
   "/settings/play-controls": typeof SettingsPlayControlsRoute;
   "/settings/readers": typeof SettingsReadersRoute;
   "/create/": typeof CreateIndexRoute;
+  "/library/": typeof LibraryIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
   "/create/mappings_/new": typeof CreateMappingsNewRoute;
   "/settings/devices_/$address": typeof SettingsDevicesAddressRoute;
@@ -225,11 +270,15 @@ export interface FileRouteTypes {
     | "/create/nfc"
     | "/create/search"
     | "/create/text"
+    | "/library/$system"
+    | "/library/favorites"
+    | "/library/search"
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
     | "/settings/devices"
     | "/settings/help"
+    | "/settings/language-region"
     | "/settings/licenses"
     | "/settings/logs"
     | "/settings/media"
@@ -237,6 +286,7 @@ export interface FileRouteTypes {
     | "/settings/play-controls"
     | "/settings/readers"
     | "/create/"
+    | "/library/"
     | "/settings/"
     | "/create/mappings/new"
     | "/settings/devices/$address"
@@ -249,11 +299,15 @@ export interface FileRouteTypes {
     | "/create/nfc"
     | "/create/search"
     | "/create/text"
+    | "/library/$system"
+    | "/library/favorites"
+    | "/library/search"
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
     | "/settings/devices"
     | "/settings/help"
+    | "/settings/language-region"
     | "/settings/licenses"
     | "/settings/logs"
     | "/settings/media"
@@ -261,6 +315,7 @@ export interface FileRouteTypes {
     | "/settings/play-controls"
     | "/settings/readers"
     | "/create"
+    | "/library"
     | "/settings"
     | "/create/mappings/new"
     | "/settings/devices/$address"
@@ -273,11 +328,15 @@ export interface FileRouteTypes {
     | "/create/nfc"
     | "/create/search"
     | "/create/text"
+    | "/library/$system"
+    | "/library/favorites"
+    | "/library/search"
     | "/settings/about"
     | "/settings/accessibility"
     | "/settings/advanced"
     | "/settings/devices"
     | "/settings/help"
+    | "/settings/language-region"
     | "/settings/licenses"
     | "/settings/logs"
     | "/settings/media"
@@ -285,6 +344,7 @@ export interface FileRouteTypes {
     | "/settings/play-controls"
     | "/settings/readers"
     | "/create/"
+    | "/library/"
     | "/settings/"
     | "/create/mappings_/new"
     | "/settings/devices_/$address"
@@ -298,11 +358,15 @@ export interface RootRouteChildren {
   CreateNfcRoute: typeof CreateNfcRoute;
   CreateSearchRoute: typeof CreateSearchRoute;
   CreateTextRoute: typeof CreateTextRoute;
+  LibrarySystemRoute: typeof LibrarySystemRoute;
+  LibraryFavoritesRoute: typeof LibraryFavoritesRoute;
+  LibrarySearchRoute: typeof LibrarySearchRoute;
   SettingsAboutRoute: typeof SettingsAboutRoute;
   SettingsAccessibilityRoute: typeof SettingsAccessibilityRoute;
   SettingsAdvancedRoute: typeof SettingsAdvancedRoute;
   SettingsDevicesRoute: typeof SettingsDevicesRoute;
   SettingsHelpRoute: typeof SettingsHelpRoute;
+  SettingsLanguageRegionRoute: typeof SettingsLanguageRegionRoute;
   SettingsLicensesRoute: typeof SettingsLicensesRoute;
   SettingsLogsRoute: typeof SettingsLogsRoute;
   SettingsMediaRoute: typeof SettingsMediaRoute;
@@ -310,6 +374,7 @@ export interface RootRouteChildren {
   SettingsPlayControlsRoute: typeof SettingsPlayControlsRoute;
   SettingsReadersRoute: typeof SettingsReadersRoute;
   CreateIndexRoute: typeof CreateIndexRoute;
+  LibraryIndexRoute: typeof LibraryIndexRoute;
   SettingsIndexRoute: typeof SettingsIndexRoute;
   CreateMappingsNewRoute: typeof CreateMappingsNewRoute;
   SettingsDevicesAddressRoute: typeof SettingsDevicesAddressRoute;
@@ -367,6 +432,34 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof CreateTextRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/library/": {
+      id: "/library/";
+      path: "/library";
+      fullPath: "/library/";
+      preLoaderRoute: typeof LibraryIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/library/$system": {
+      id: "/library/$system";
+      path: "/library/$system";
+      fullPath: "/library/$system";
+      preLoaderRoute: typeof LibrarySystemRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/library/favorites": {
+      id: "/library/favorites";
+      path: "/library/favorites";
+      fullPath: "/library/favorites";
+      preLoaderRoute: typeof LibraryFavoritesRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/library/search": {
+      id: "/library/search";
+      path: "/library/search";
+      fullPath: "/library/search";
+      preLoaderRoute: typeof LibrarySearchRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/settings/": {
       id: "/settings/";
       path: "/settings";
@@ -407,6 +500,13 @@ declare module "@tanstack/react-router" {
       path: "/settings/help";
       fullPath: "/settings/help";
       preLoaderRoute: typeof SettingsHelpRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings/language-region": {
+      id: "/settings/language-region";
+      path: "/settings/language-region";
+      fullPath: "/settings/language-region";
+      preLoaderRoute: typeof SettingsLanguageRegionRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/settings/licenses": {
@@ -482,11 +582,15 @@ const rootRouteChildren: RootRouteChildren = {
   CreateNfcRoute: CreateNfcRoute,
   CreateSearchRoute: CreateSearchRoute,
   CreateTextRoute: CreateTextRoute,
+  LibrarySystemRoute: LibrarySystemRoute,
+  LibraryFavoritesRoute: LibraryFavoritesRoute,
+  LibrarySearchRoute: LibrarySearchRoute,
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsAccessibilityRoute: SettingsAccessibilityRoute,
   SettingsAdvancedRoute: SettingsAdvancedRoute,
   SettingsDevicesRoute: SettingsDevicesRoute,
   SettingsHelpRoute: SettingsHelpRoute,
+  SettingsLanguageRegionRoute: SettingsLanguageRegionRoute,
   SettingsLicensesRoute: SettingsLicensesRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsMediaRoute: SettingsMediaRoute,
@@ -494,6 +598,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsPlayControlsRoute: SettingsPlayControlsRoute,
   SettingsReadersRoute: SettingsReadersRoute,
   CreateIndexRoute: CreateIndexRoute,
+  LibraryIndexRoute: LibraryIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   CreateMappingsNewRoute: CreateMappingsNewRoute,
   SettingsDevicesAddressRoute: SettingsDevicesAddressRoute,

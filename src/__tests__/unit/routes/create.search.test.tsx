@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "../../../test-utils";
 import { Search } from "@/routes/-pages/Search";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { CoreAPI } from "@/lib/coreApi";
 
 // Mock route
@@ -308,6 +309,7 @@ describe("Search Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    useTabSessionStore.getState().reset();
     useStatusStore.setState({
       ...useStatusStore.getInitialState(),
       connected: true,
@@ -383,6 +385,23 @@ describe("Search Component", () => {
   });
 
   describe("search functionality", () => {
+    it("should restore the last submitted search after a tab remount", () => {
+      useTabSessionStore.getState().setCreateSearch({
+        query: "zelda",
+        system: "snes",
+        tags: ["genre:rpg"],
+      });
+
+      render(<Search />);
+
+      expect(screen.getByLabelText("create.search.gameInput")).toHaveValue(
+        "zelda",
+      );
+      expect(screen.getByTestId("virtual-search-results")).toHaveTextContent(
+        "Results shown",
+      );
+    });
+
     it("should update search input value", () => {
       render(<Search />);
 

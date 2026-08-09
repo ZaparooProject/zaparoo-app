@@ -192,7 +192,7 @@ describe("CoreAPI Internals", () => {
     it("should request all systems and filter virtual launchables", async () => {
       const callSpy = vi.spyOn(CoreAPI, "call").mockResolvedValue({
         systems: [
-          { id: "snes", name: "Super Nintendo" },
+          { id: "snes", name: "Super Nintendo", mediaCount: 12 },
           {
             id: "virtual:steam",
             name: "Steam",
@@ -202,7 +202,7 @@ describe("CoreAPI Internals", () => {
       });
 
       await expect(CoreAPI.systems({ all: true })).resolves.toEqual({
-        systems: [{ id: "snes", name: "Super Nintendo" }],
+        systems: [{ id: "snes", name: "Super Nintendo", mediaCount: 12 }],
       });
       expect(callSpy).toHaveBeenCalledWith(Method.Systems, { all: true });
     });

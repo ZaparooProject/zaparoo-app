@@ -19,11 +19,21 @@ import {
   MediaActiveUpdateRequest,
   MediaControlRequest,
   MediaResponse,
+  MediaBrowseIndexParams,
+  MediaBrowseIndexResponse,
+  MediaBrowseParams,
+  MediaBrowseResponse,
   MediaCleanOrphansResponse,
+  MediaImageParams,
+  MediaImageResponse,
+  MediaMetaParams,
+  MediaMetaResponse,
   MediaScrapeCancelResponse,
   MediaScrapeParams,
   MediaScrapeResumeResponse,
   MediaTagsResponse,
+  MediaTagsUpdateParams,
+  MediaTagsUpdateResponse,
   Method,
   Notification,
   PlaytimeLimitsConfig,
@@ -138,6 +148,16 @@ export function isUnsupportedMediaApiError(error: unknown): boolean {
     (error instanceof CoreApiError && error.code === -32601) ||
     message.includes("method not found") ||
     message === "query or system is required"
+  );
+}
+
+export function isMissingMediaImageError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes("no image found for media") ||
+    message.includes("media.image: image file too large") ||
+    message.includes("media.image: image blob too large") ||
+    (message.includes("media binary") && message.includes("is too large"))
   );
 }
 
@@ -1044,6 +1064,101 @@ class CoreApi {
           reject(error);
         });
     });
+  }
+
+  async mediaBrowse(
+    params: MediaBrowseParams,
+    signal?: AbortSignal,
+  ): Promise<MediaBrowseResponse> {
+    try {
+      const result = await this.call(Method.MediaBrowse, params, signal);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Media browse request was cancelled");
+      }
+      return result as MediaBrowseResponse;
+    } catch (error) {
+      if (isRequestCancelledError(error)) throw error;
+      logMediaApiFailure("Media browse API call failed", "mediaBrowse", error);
+      throw error;
+    }
+  }
+
+  async mediaBrowseIndex(
+    params: MediaBrowseIndexParams,
+    signal?: AbortSignal,
+  ): Promise<MediaBrowseIndexResponse> {
+    try {
+      const result = await this.call(Method.MediaBrowseIndex, params, signal);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError(
+          "Media browse index request was cancelled",
+        );
+      }
+      return result as MediaBrowseIndexResponse;
+    } catch (error) {
+      if (isRequestCancelledError(error)) throw error;
+      logMediaApiFailure(
+        "Media browse index API call failed",
+        "mediaBrowseIndex",
+        error,
+      );
+      throw error;
+    }
+  }
+
+  async mediaMeta(
+    params: MediaMetaParams,
+    signal?: AbortSignal,
+  ): Promise<MediaMetaResponse> {
+    try {
+      const result = await this.call(Method.MediaMeta, params, signal);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Media metadata request was cancelled");
+      }
+      return result as MediaMetaResponse;
+    } catch (error) {
+      if (isRequestCancelledError(error)) throw error;
+      logMediaApiFailure("Media metadata API call failed", "mediaMeta", error);
+      throw error;
+    }
+  }
+
+  async mediaImage(
+    params: MediaImageParams,
+    signal?: AbortSignal,
+  ): Promise<MediaImageResponse> {
+    try {
+      const result = await this.call(Method.MediaImage, params, signal);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Media image request was cancelled");
+      }
+      return result as MediaImageResponse;
+    } catch (error) {
+      if (isRequestCancelledError(error)) throw error;
+      logMediaApiFailure(
+        "Media image API call failed",
+        "mediaImage",
+        error,
+        "warning",
+      );
+      throw error;
+    }
+  }
+
+  async mediaTagsUpdate(
+    params: MediaTagsUpdateParams,
+  ): Promise<MediaTagsUpdateResponse> {
+    try {
+      const result = await this.call(Method.MediaTagsUpdate, params);
+      return result as MediaTagsUpdateResponse;
+    } catch (error) {
+      logMediaApiFailure(
+        "Media tags update API call failed",
+        "mediaTagsUpdate",
+        error,
+      );
+      throw error;
+    }
   }
 
   mediaTags(systems?: string[]): Promise<MediaTagsResponse> {

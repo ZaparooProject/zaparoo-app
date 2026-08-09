@@ -17,6 +17,7 @@ import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { DEFAULT_GAMES_INDEX, useStatusStore } from "@/lib/store";
+import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { TextInput } from "@/components/wui/TextInput";
 import { WriteModal } from "@/components/WriteModal";
 import { PageFrame } from "@/components/PageFrame";
@@ -49,20 +50,30 @@ export function Search() {
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
+  const savedSearch = useTabSessionStore((state) => state.createSearch);
+  const setSessionSearch = useTabSessionStore((state) => state.setCreateSearch);
+  const restoredSearch =
+    savedSearch &&
+    (savedSearch.system === "all" ||
+      loaderData.systems.systems.some(
+        (system) => system.id === savedSearch.system,
+      ))
+      ? savedSearch
+      : null;
 
-  const [querySystem, setQuerySystem] = useState(loaderData.systemQuery);
-  const [queryTags, setQueryTags] = useState<string[]>(loaderData.tagQuery);
-  const [query, setQuery] = useState("");
+  const [querySystem, setQuerySystem] = useState(
+    restoredSearch?.system ?? loaderData.systemQuery,
+  );
+  const [queryTags, setQueryTags] = useState<string[]>(
+    restoredSearch?.tags ?? loaderData.tagQuery,
+  );
+  const [query, setQuery] = useState(restoredSearch?.query ?? "");
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
   const [tagSelectorOpen, setTagSelectorOpen] = useState(false);
   const [recentSearchesOpen, setRecentSearchesOpen] = useState(false);
 
   // State for tracking actual searched parameters and results
-  const [searchParams, setSearchParams] = useState<{
-    query: string;
-    system: string;
-    tags: string[];
-  } | null>(null);
+  const [searchParams, setSearchParams] = useState(restoredSearch);
   const [isSearching, setIsSearching] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -107,11 +118,13 @@ export function Search() {
     setSelectedResult(null);
 
     setIsSearching(true);
-    setSearchParams({
-      query: query,
+    const nextSearch = {
+      query,
       system: querySystem,
       tags: effectiveQueryTags,
-    });
+    };
+    setSearchParams(nextSearch);
+    setSessionSearch(nextSearch);
 
     try {
       await addRecentSearch({
@@ -287,11 +300,13 @@ export function Search() {
         ))
     ) {
       setIsSearching(true);
-      setSearchParams({
+      const nextSearch = {
         query: recentSearch.query,
         system: recentSearch.system,
         tags: searchTags,
-      });
+      };
+      setSearchParams(nextSearch);
+      setSessionSearch(nextSearch);
     }
   };
 

@@ -71,6 +71,35 @@ describe("useVirtualInfiniteSearch", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
+    it("should abort an in-flight search when unmounted", async () => {
+      mockCoreAPI.mediaSearch.mockImplementation(
+        (_params: unknown, signal: AbortSignal) =>
+          new Promise((_resolve, reject) => {
+            signal.addEventListener("abort", () => reject(signal.reason), {
+              once: true,
+            });
+          }),
+      );
+
+      const { unmount } = renderHook(
+        () =>
+          useVirtualInfiniteSearch({
+            query: "",
+            systems: ["CPS2"],
+            enabled: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() => expect(mockCoreAPI.mediaSearch).toHaveBeenCalled());
+      const signal = mockCoreAPI.mediaSearch.mock.calls[0]?.[1] as AbortSignal;
+      expect(signal.aborted).toBe(false);
+
+      unmount();
+
+      expect(signal.aborted).toBe(true);
+    });
+
     it("should fetch and return search results", async () => {
       const mockResponse: SearchResultsResponse = {
         results: [

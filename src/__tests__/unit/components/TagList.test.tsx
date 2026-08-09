@@ -1,9 +1,11 @@
 import { render, screen } from "../../../test-utils";
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { TagList } from "@/components/TagList";
 import { TagInfo } from "@/lib/models";
 
 describe("TagList", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("should return null when tags array is empty", () => {
     render(<TagList tags={[]} />);
     // Component returns null, so no tag badges should be present
@@ -22,6 +24,15 @@ describe("TagList", () => {
     expect(screen.getByLabelText("region usa")).toBeInTheDocument();
   });
 
+  it("should support compact display text without changing accessible labels", () => {
+    const tags: TagInfo[] = [{ type: "region", tag: "world" }];
+
+    render(<TagList tags={tags} formatTag={() => "W"} />);
+
+    expect(screen.getByText("W")).toBeInTheDocument();
+    expect(screen.getByLabelText("region world")).toBeInTheDocument();
+  });
+
   it("should sort tags with region/lang first", () => {
     const tags: TagInfo[] = [
       { type: "genre", tag: "action" },
@@ -30,7 +41,7 @@ describe("TagList", () => {
       { type: "lang", tag: "en" },
     ];
 
-    render(<TagList tags={tags} maxDesktop={4} />);
+    render(<TagList tags={tags} />);
 
     // Get all tag badges by their aria-labels
     const tagElements = screen.getAllByLabelText(/^(region|lang|genre|player)/);
@@ -56,23 +67,18 @@ describe("TagList", () => {
     expect(tagElements[1]).toHaveAccessibleName("region usa");
   });
 
-  it("should limit visible tags based on maxDesktop", () => {
-    const tags: TagInfo[] = [
-      { type: "genre", tag: "action" },
-      { type: "genre", tag: "rpg" },
-      { type: "genre", tag: "adventure" },
-      { type: "genre", tag: "puzzle" },
-      { type: "genre", tag: "sports" },
-    ];
-
-    render(<TagList tags={tags} maxDesktop={3} />);
-
-    // Should only render maxDesktop (3) tag badges
-    const tagElements = screen.getAllByLabelText(/^genre/);
-    expect(tagElements).toHaveLength(3);
-  });
-
-  it("should show overflow indicator with correct count on mobile", () => {
+  it("should show one accurate overflow count for tags that do not fit", () => {
+    const clientWidth = vi
+      .spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockReturnValue(130);
+    const offsetWidth = vi
+      .spyOn(HTMLElement.prototype, "offsetWidth", "get")
+      .mockImplementation(function (this: HTMLElement) {
+        return this.textContent?.startsWith("+") ? 30 : 40;
+      });
+    const computedStyle = vi
+      .spyOn(window, "getComputedStyle")
+      .mockReturnValue({ columnGap: "6px" } as CSSStyleDeclaration);
     const tags: TagInfo[] = [
       { type: "genre", tag: "action" },
       { type: "genre", tag: "rpg" },
@@ -80,61 +86,28 @@ describe("TagList", () => {
       { type: "genre", tag: "puzzle" },
     ];
 
-    render(<TagList tags={tags} maxMobile={2} maxDesktop={4} />);
+    render(<TagList tags={tags} preserveOrder />);
 
-    // Should show +2 indicator for mobile (4 total - 2 maxMobile)
-    expect(screen.getByText("+2")).toBeInTheDocument();
+    expect(screen.getAllByLabelText(/^genre/)).toHaveLength(2);
+    expect(screen.getAllByText("+2")).toHaveLength(1);
+    expect(screen.queryByText("+1")).not.toBeInTheDocument();
+    expect(screen.queryByText("+3")).not.toBeInTheDocument();
+
+    clientWidth.mockRestore();
+    offsetWidth.mockRestore();
+    computedStyle.mockRestore();
   });
 
-  it("should show overflow indicator with correct count on desktop", () => {
+  it("should render every tag when the list has enough width", () => {
     const tags: TagInfo[] = [
       { type: "genre", tag: "action" },
       { type: "genre", tag: "rpg" },
       { type: "genre", tag: "adventure" },
-      { type: "genre", tag: "puzzle" },
-      { type: "genre", tag: "sports" },
-      { type: "genre", tag: "racing" },
-    ];
-
-    render(<TagList tags={tags} maxMobile={2} maxDesktop={4} />);
-
-    // Should show +2 indicator for desktop (6 total - 4 maxDesktop)
-    expect(screen.getByText("+2")).toBeInTheDocument();
-    // Should also show mobile overflow
-    expect(screen.getByText("+4")).toBeInTheDocument();
-  });
-
-  it("should not show overflow indicator when tags fit within limits", () => {
-    const tags: TagInfo[] = [
-      { type: "genre", tag: "action" },
-      { type: "genre", tag: "rpg" },
-    ];
-
-    render(<TagList tags={tags} maxMobile={2} maxDesktop={4} />);
-
-    // No overflow indicators needed
-    expect(screen.queryByText(/^\+\d+$/)).not.toBeInTheDocument();
-  });
-
-  it("should use default maxMobile=2 and maxDesktop=4 values", () => {
-    const tags: TagInfo[] = [
-      { type: "genre", tag: "action" },
-      { type: "genre", tag: "rpg" },
-      { type: "genre", tag: "adventure" },
-      { type: "genre", tag: "puzzle" },
-      { type: "genre", tag: "sports" },
     ];
 
     render(<TagList tags={tags} />);
 
-    // With defaults: maxMobile=2, maxDesktop=4
-    // Should render 4 tags (maxDesktop)
-    const tagElements = screen.getAllByLabelText(/^genre/);
-    expect(tagElements).toHaveLength(4);
-
-    // Should show +3 for mobile (5 total - 2 maxMobile)
-    expect(screen.getByText("+3")).toBeInTheDocument();
-    // Should show +1 for desktop (5 total - 4 maxDesktop)
-    expect(screen.getByText("+1")).toBeInTheDocument();
+    expect(screen.getAllByLabelText(/^genre/)).toHaveLength(3);
+    expect(screen.queryByText(/^\+\d+$/)).not.toBeInTheDocument();
   });
 });

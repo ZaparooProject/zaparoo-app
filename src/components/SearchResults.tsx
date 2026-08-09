@@ -1,16 +1,18 @@
 import { useTranslation } from "react-i18next";
+import { Heart } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { SearchResultGame, SearchResultsResponse } from "@/lib/models.ts";
 import { useStatusStore } from "@/lib/store.ts";
 import { usePreferencesStore } from "@/lib/preferencesStore.ts";
 import { filenameFromPath } from "@/lib/path.ts";
+import { hasFavoriteTag } from "@/lib/libraryMedia";
 import { Card } from "@/components/wui/Card.tsx";
 import { NextIcon, SettingsIcon, WarningIcon } from "@/lib/images.tsx";
 import { LoadingSpinner } from "@/components/ui/loading-spinner.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 import { EmptyState } from "@/components/wui/EmptyState.tsx";
 import { TagList } from "@/components/TagList.tsx";
-import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { useSystemNameResolver } from "@/hooks/useSystemName";
 
 export function SearchResults(props: {
   loading: boolean;
@@ -25,11 +27,8 @@ export function SearchResults(props: {
   onClearFilters?: () => void;
 }) {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  const { available: disambiguatingTagsAvailable } = useCoreFeature(
-    "mediaDisambiguatingTags",
-    { requireKnownSupport: true },
-  );
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
+  const resolveSystemName = useSystemNameResolver();
   const { t } = useTranslation();
 
   // Screen reader announcement for search results
@@ -162,9 +161,7 @@ export function SearchResults(props: {
             const displayName = showFilenames
               ? filenameFromPath(game.path) || game.name
               : game.name;
-            const displayTags = disambiguatingTagsAvailable
-              ? (game.disambiguatingTags ?? [])
-              : game.tags;
+            const displayTags = game.disambiguatingTags ?? [];
 
             const handleGameSelect = () => {
               if (
@@ -208,18 +205,22 @@ export function SearchResults(props: {
                   }
                 }}
               >
-                <div className="flex flex-col">
+                <div className="flex min-w-0 flex-1 flex-col">
                   <p className="font-semibold">{displayName}</p>
-                  <p className="text-sm">{game.system.name}</p>
-                  <TagList
-                    tags={displayTags}
-                    maxMobile={2}
-                    maxDesktop={4}
-                    preserveOrder={disambiguatingTagsAvailable}
-                  />
+                  <p className="text-sm">
+                    {resolveSystemName(game.system.id, game.system.name)}
+                  </p>
+                  <TagList tags={displayTags} preserveOrder />
                 </div>
-                <div>
-                  <NextIcon size="20" />
+                <div className="flex shrink-0 items-center gap-2">
+                  {hasFavoriteTag(game.tags) && (
+                    <span aria-label={t("library.favorite")}>
+                      <Heart size={18} fill="currentColor" aria-hidden="true" />
+                    </span>
+                  )}
+                  <span aria-hidden="true">
+                    <NextIcon size="20" />
+                  </span>
                 </div>
               </div>
             );

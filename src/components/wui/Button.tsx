@@ -16,6 +16,8 @@ interface ButtonProps {
   "aria-label"?: string;
   /** Mark as decorative (removes from tab order and accessibility tree) */
   decorative?: boolean;
+  /** Indicates whether the button represents an active toggle state */
+  "aria-pressed"?: boolean;
   /** Indicates whether the controlled element is expanded */
   "aria-expanded"?: boolean;
   /** ID of the element controlled by this button */
@@ -38,6 +40,7 @@ export const Button = memo(
           props.decorative ? undefined : props["aria-label"] || props.label
         }
         aria-hidden={props.decorative || undefined}
+        aria-pressed={props["aria-pressed"]}
         aria-expanded={props["aria-expanded"]}
         aria-controls={props["aria-controls"]}
         tabIndex={props.decorative ? -1 : undefined}

@@ -64,6 +64,24 @@ describe("SimpleSystemSelect", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("hides systems with an explicit zero media count", async () => {
+    vi.mocked(CoreAPI.systems).mockResolvedValue({
+      systems: [
+        { id: "snes", name: "Super Nintendo", mediaCount: 20 },
+        { id: "3do", name: "3DO", mediaCount: 0 },
+      ],
+    });
+
+    render(<SimpleSystemSelect value="" onSelect={vi.fn()} />);
+
+    expect(
+      await screen.findByRole("option", { name: "Super Nintendo" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "3DO" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("displays grouped systems by category", async () => {
     const onSelect = vi.fn();
     render(<SimpleSystemSelect value="" onSelect={onSelect} />);

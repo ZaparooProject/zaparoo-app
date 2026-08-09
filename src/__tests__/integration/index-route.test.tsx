@@ -431,7 +431,13 @@ describe("Index Route Integration", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByAltText("Zaparoo logo")).toBeInTheDocument();
+      const logo = screen.getByAltText("Zaparoo logo");
+      expect(logo).toBeInTheDocument();
+      expect(logo).toHaveAttribute("src", "/lockup.webp");
+      expect(logo).toHaveAttribute("width", "160");
+      expect(logo).toHaveAttribute("height", "36");
+      expect(logo).toHaveAttribute("fetchpriority", "high");
+      expect(logo).toHaveAttribute("decoding", "sync");
     });
 
     it("should render history toggle button", () => {

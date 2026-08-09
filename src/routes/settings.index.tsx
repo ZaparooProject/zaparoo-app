@@ -4,13 +4,12 @@ import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
-import { Check, ChevronDown } from "lucide-react";
+import { Check } from "lucide-react";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { NetworkScanModal } from "@/components/NetworkScanModal";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useSelectDevice } from "@/hooks/useSelectDevice";
 import type { ScanDeviceSelection } from "@/hooks/useSelectDevice";
-import i18n from "@/i18n";
 import { PageFrame } from "@/components/PageFrame";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -31,29 +30,6 @@ import {
 export const Route = createFileRoute("/settings/")({
   component: Settings,
 });
-
-const LANGUAGE_OPTIONS = [
-  { value: "de-DE", label: "Deutsch" },
-  { value: "en-GB", label: "English (UK)" },
-  { value: "en-US", label: "English (US)" },
-  { value: "fr-FR", label: "Français" },
-  { value: "nl-NL", label: "Nederlands" },
-  { value: "es-ES", label: "Español" },
-  { value: "zh-CN", label: "中文" },
-  { value: "ja-JP", label: "日本語" },
-  { value: "ko-KR", label: "한국어" },
-] as const;
-
-const BASE_LANGUAGE_TO_LOCALE: Record<string, string> = {
-  en: "en-US",
-  fr: "fr-FR",
-  zh: "zh-CN",
-  ko: "ko-KR",
-  nl: "nl-NL",
-  ja: "ja-JP",
-  de: "de-DE",
-  es: "es-ES",
-};
 
 export function Settings() {
   const { t } = useTranslation();
@@ -95,13 +71,6 @@ export function Settings() {
     coreVersion !== null &&
     !coreVersionPending &&
     isCoreFeatureAvailable("mediaScrapers", coreVersion);
-  const resolvedLanguage = i18n.resolvedLanguage ?? "en-US";
-  const selectedLanguage =
-    BASE_LANGUAGE_TO_LOCALE[resolvedLanguage] ?? resolvedLanguage;
-  const selectedLanguageLabel =
-    LANGUAGE_OPTIONS.find(({ value }) => value === selectedLanguage)?.label ??
-    selectedLanguage;
-
   const [address, setAddress] = useState(getDeviceAddress());
   const [addressError, setAddressError] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
@@ -234,30 +203,15 @@ export function Settings() {
               </span>
             </Link>
 
-            <div className="focus-within:ring-offset-background relative flex min-h-[48px] flex-row items-center justify-between focus-within:ring-2 focus-within:ring-white/50 focus-within:ring-offset-2">
-              <label htmlFor="settings-language">
-                {t("settings.language")}
-              </label>
-              <span
-                className="text-muted-foreground flex items-center gap-2 text-sm"
-                aria-hidden="true"
-              >
-                {selectedLanguageLabel}
-                <ChevronDown size={20} />
+            <Link
+              to="/settings/language-region"
+              className="flex min-h-[48px] flex-row items-center justify-between"
+            >
+              <span>{t("settings.languageRegion.title")}</span>
+              <span aria-hidden="true">
+                <NextIcon size="20" />
               </span>
-              <select
-                id="settings-language"
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                value={selectedLanguage}
-                onChange={(e) => i18n.changeLanguage(e.target.value)}
-              >
-                {LANGUAGE_OPTIONS.map(({ value, label }) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            </Link>
 
             <nav
               aria-labelledby="more-settings-heading"

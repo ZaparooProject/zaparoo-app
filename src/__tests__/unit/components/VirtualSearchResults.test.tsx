@@ -32,6 +32,7 @@ vi.mock("@/lib/store", () => ({
 // Flexible preferences mock
 const mockPreferencesState = {
   showFilenames: false,
+  systemNameRegion: "auto" as const,
 };
 
 vi.mock("@/lib/preferencesStore", () => ({
@@ -60,12 +61,14 @@ vi.mock("@tanstack/react-router", () => ({
 // Create mock for virtualizer
 const mockGetVirtualItems = vi.fn();
 const mockMeasureElement = vi.fn();
+const mockMeasure = vi.fn();
 
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: () => ({
     getVirtualItems: mockGetVirtualItems,
     getTotalSize: () => 5000,
     measureElement: mockMeasureElement,
+    measure: mockMeasure,
   }),
 }));
 
@@ -76,7 +79,7 @@ describe("VirtualSearchResults", () => {
       name: `Game ${startIndex + i}`,
       path: `/games/game${startIndex + i}.rom`,
       system: {
-        id: "snes",
+        id: "SNES",
         name: "Super Nintendo",
         category: "Console",
         manufacturer: "Nintendo",
@@ -345,7 +348,7 @@ describe("VirtualSearchResults", () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText("Super Nintendo")).toBeInTheDocument();
+        expect(screen.getByText("SNES")).toBeInTheDocument();
       });
     });
 
@@ -403,7 +406,35 @@ describe("VirtualSearchResults", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("should fall back to full tags before Core 2.15.0", async () => {
+    it("should show favorite state as a heart, not a regular tag", async () => {
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValueOnce({
+        results: [
+          {
+            ...createMockResults(1)[0]!,
+            tags: [
+              { type: "user", tag: "favorite" },
+              { type: "extension", tag: "zip" },
+            ],
+            disambiguatingTags: [],
+          },
+        ],
+        total: 1,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+      mockGetVirtualItems.mockReturnValue([
+        { index: 0, key: 0, start: 0, size: 100 },
+      ]);
+
+      renderComponent();
+
+      expect(
+        await screen.findByLabelText("library.favorite"),
+      ).toBeInTheDocument();
+      expect(screen.queryByLabelText("user favorite")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("extension zip")).not.toBeInTheDocument();
+    });
+
+    it("should never fall back to regular tags on older Core", async () => {
       mockStoreState.coreVersion = "2.14.1";
       vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValueOnce({
         results: [
@@ -423,9 +454,9 @@ describe("VirtualSearchResults", () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByLabelText("genre action")).toBeInTheDocument();
+        expect(screen.getByLabelText("region usa")).toBeInTheDocument();
       });
-      expect(screen.queryByLabelText("region usa")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("genre action")).not.toBeInTheDocument();
     });
 
     it("should still honor the filename display preference", async () => {
@@ -493,6 +524,7 @@ describe("VirtualSearchResults", () => {
         expect.objectContaining({
           query: "test",
         }),
+        expect.any(AbortSignal),
       );
     });
 
@@ -531,6 +563,7 @@ describe("VirtualSearchResults", () => {
             systems: ["snes", "genesis"],
             tags: ["action", "rpg"],
           }),
+          expect.any(AbortSignal),
         );
       });
     });
@@ -550,6 +583,7 @@ describe("VirtualSearchResults", () => {
           expect.objectContaining({
             maxResults: 100,
           }),
+          expect.any(AbortSignal),
         );
       });
     });

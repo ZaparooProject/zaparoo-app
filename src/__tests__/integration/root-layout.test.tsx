@@ -264,7 +264,11 @@ describe("Root Layout Integration", () => {
         expect(result).toBe(true);
       });
 
-      const navigateToRootCases = [["/create"], ["/settings"]] as const;
+      const navigateToRootCases = [
+        ["/create"],
+        ["/library"],
+        ["/settings"],
+      ] as const;
 
       it.each(navigateToRootCases)(
         "should navigate to root from %s",
@@ -293,6 +297,23 @@ describe("Root Layout Integration", () => {
           const result = capturedBackButtonHandler?.();
 
           expect(mockNavigate).toHaveBeenCalledWith({ to: "/create" });
+          expect(result).toBe(true);
+        },
+      );
+
+      const navigateToLibraryCases = [
+        ["/library/SNES"],
+        ["/library/PlayStation"],
+      ] as const;
+
+      it.each(navigateToLibraryCases)(
+        "should navigate to /library from %s",
+        (pathname) => {
+          setupBackHandler(pathname);
+
+          const result = capturedBackButtonHandler?.();
+
+          expect(mockNavigate).toHaveBeenCalledWith({ to: "/library" });
           expect(result).toBe(true);
         },
       );

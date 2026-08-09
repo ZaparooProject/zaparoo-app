@@ -391,7 +391,7 @@ describe("Create Index Route", () => {
 
       expect(await screen.findByRole("dialog")).toBeInTheDocument();
       expect(mockMediaActive).toHaveBeenCalledOnce();
-      expect(screen.getByText("Super Nintendo")).toBeInTheDocument();
+      expect(screen.getByText("SNES")).toBeInTheDocument();
       expect(screen.getByText("/games/smw.sfc")).toBeInTheDocument();
       expect(screen.getByText("@SNES/Super Mario World")).toBeInTheDocument();
       expect(mockNfcWriter.write).not.toHaveBeenCalled();

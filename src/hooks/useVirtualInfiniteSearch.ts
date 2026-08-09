@@ -20,7 +20,7 @@ export function useVirtualInfiniteSearch({
 }: UseVirtualInfiniteSearchOptions) {
   const searchQuery = useInfiniteQuery({
     queryKey: ["infiniteMediaSearch", query, systems, tags, maxResults],
-    queryFn: async ({ pageParam }) => {
+    queryFn: async ({ pageParam, signal }) => {
       const searchParams: SearchParams = {
         query,
         systems,
@@ -29,7 +29,7 @@ export function useVirtualInfiniteSearch({
         cursor: pageParam as string | undefined,
       };
 
-      return CoreAPI.mediaSearch(searchParams);
+      return CoreAPI.mediaSearch(searchParams, signal);
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => {

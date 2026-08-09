@@ -6,6 +6,10 @@ export enum Method {
   History = "tokens.history",
   Media = "media",
   MediaSearch = "media.search",
+  MediaBrowse = "media.browse",
+  MediaBrowseIndex = "media.browse.index",
+  MediaMeta = "media.meta",
+  MediaImage = "media.image",
   MediaGenerate = "media.generate",
   MediaGenerateCancel = "media.generate.cancel",
   MediaGenerateResume = "media.generate.resume",
@@ -14,6 +18,7 @@ export enum Method {
   MediaActiveUpdate = "media.active.update",
   MediaControl = "media.control",
   MediaTags = "media.tags",
+  MediaTagsUpdate = "media.tags.update",
   Systems = "systems",
   Settings = "settings",
   SettingsUpdate = "settings.update",
@@ -184,12 +189,136 @@ export interface SearchParams {
 export interface TagInfo {
   tag: string;
   type: string;
+  label?: string;
+}
+
+export type MediaBrowseEntryType = "root" | "directory" | "media";
+export type MediaBrowseSort =
+  | "name-asc"
+  | "name-desc"
+  | "filename-asc"
+  | "filename-desc";
+
+export interface MediaBrowseParams {
+  path?: string;
+  systems?: string[];
+  maxResults?: number;
+  cursor?: string;
+  letter?: string;
+  sort?: MediaBrowseSort;
+}
+
+export interface MediaBrowseEntry {
+  mediaId?: number;
+  name: string;
+  path: string;
+  type: MediaBrowseEntryType;
+  fileCount?: number;
+  systemId?: string;
+  systemIds?: string[];
+  systemName?: string;
+  zapScript?: string;
+  relativePath?: string;
+  group?: string;
+  description?: string;
+  tags?: TagInfo[];
+  disambiguatingTags?: TagInfo[];
+  hasCover?: boolean;
+}
+
+export interface MediaBrowseResponse {
+  path: string;
+  entries: MediaBrowseEntry[];
+  totalFiles: number;
+  totalDirs?: number;
+  pagination?: Pagination;
+}
+
+export interface MediaBrowseIndexParams {
+  path?: string;
+  systems?: string[];
+  sort?: MediaBrowseSort;
+}
+
+export interface MediaBrowseIndexGroup {
+  key: string;
+  label: string;
+  count: number;
+  cursor: string;
+  offset: number;
+}
+
+export interface MediaBrowseIndexResponse {
+  scheme: string;
+  totalFiles: number;
+  groups: MediaBrowseIndexGroup[];
+}
+
+export interface MediaRef {
+  mediaId?: number;
+  system?: string;
+  path?: string;
+}
+
+export type MediaMetaParams = MediaRef;
+
+export interface MediaMetaProperty {
+  text: string;
+  contentType: string;
+  extension?: string;
+  blobSize?: number;
+}
+
+export interface MediaMetaSystemRef {
+  id: string;
+  name: string;
+}
+
+export interface MediaMetaTitle {
+  slug: string;
+  secondarySlug?: string;
+  name: string;
+  slugLength: number;
+  slugWordCount: number;
+  system: MediaMetaSystemRef;
+  tags: TagInfo[];
+  properties: Record<string, MediaMetaProperty>;
+  availableImageTypes?: string[];
+}
+
+export interface MediaMeta {
+  path: string;
+  parentDir: string;
+  isMissing: boolean;
+  tags: TagInfo[];
+  properties: Record<string, MediaMetaProperty>;
+  launcherOverride?: string;
+  availableImageTypes?: string[];
+  title: MediaMetaTitle;
+}
+
+export interface MediaMetaResponse {
+  media: MediaMeta;
+}
+
+export type MediaImageParams = MediaRef & {
+  imageTypes?: string[];
+  maxSize?: number;
+};
+
+export interface MediaImageResponse {
+  contentType: string;
+  extension?: string;
+  data: string;
+  typeTag: string;
 }
 
 export interface SearchResultGame {
+  mediaId?: number;
   system: System;
   name: string;
   path: string;
+  relativePath?: string;
   zapScript?: string;
   tags: TagInfo[];
   disambiguatingTags?: TagInfo[];
@@ -214,6 +343,7 @@ export interface System {
   releaseDate?: string;
   manufacturer?: string;
   zapScript?: string;
+  mediaCount?: number;
 }
 
 export interface SystemsParams {
@@ -227,6 +357,13 @@ export interface SystemsResponse {
 export interface MediaTagsResponse {
   tags: TagInfo[];
 }
+
+export type MediaTagsUpdateParams = MediaRef & {
+  add?: string[];
+  remove?: string[];
+};
+
+export type MediaTagsUpdateResponse = MediaTagsResponse;
 
 export type MappingType = "uid" | "text" | "data";
 export type MappingSource = "database" | "file";

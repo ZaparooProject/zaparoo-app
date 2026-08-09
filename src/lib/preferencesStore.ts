@@ -8,6 +8,7 @@ import {
   recordSuccessfulAppReviewLaunch,
   type AppReviewCadenceState,
 } from "@/lib/appReview";
+import type { SystemNameRegionPreference } from "@/lib/systemNames";
 import { sessionManager } from "./nfc";
 import {
   isCapacitorPluginUnavailableError,
@@ -103,6 +104,7 @@ export interface PreferencesState {
 
   // Display settings
   showFilenames: boolean;
+  systemNameRegion: SystemNameRegionPreference;
 
   // Accessibility settings
   hapticsEnabled: boolean;
@@ -165,6 +167,7 @@ export interface PreferencesActions {
   markWhatsNewSeen: (announcementId: string, runtimeKey: string) => void;
   setLogLevelFilters: (filters: PreferencesState["logLevelFilters"]) => void;
   setShowFilenames: (value: boolean) => void;
+  setSystemNameRegion: (value: SystemNameRegionPreference) => void;
   setHapticsEnabled: (value: boolean) => void;
   setTextZoomLevel: (value: number) => void;
 }
@@ -213,6 +216,7 @@ const DEFAULT_PREFERENCES: Omit<
     error: true,
   },
   showFilenames: false,
+  systemNameRegion: "auto",
   hapticsEnabled: true,
   textZoomLevel: 1.0,
 };
@@ -335,6 +339,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
         })),
       setLogLevelFilters: (filters) => set({ logLevelFilters: filters }),
       setShowFilenames: (value) => set({ showFilenames: value }),
+      setSystemNameRegion: (value) => set({ systemNameRegion: value }),
       setHapticsEnabled: (value) => set({ hapticsEnabled: value }),
       setTextZoomLevel: (value) => set({ textZoomLevel: value }),
     }),
@@ -359,6 +364,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
         seenWhatsNewAnnouncementIds: state.seenWhatsNewAnnouncementIds,
         logLevelFilters: state.logLevelFilters,
         showFilenames: state.showFilenames,
+        systemNameRegion: state.systemNameRegion,
         hapticsEnabled: state.hapticsEnabled,
         textZoomLevel: state.textZoomLevel,
       }),

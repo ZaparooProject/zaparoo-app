@@ -23,7 +23,7 @@ import {
 } from "@/lib/purchasesSetup";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
-import { DatabaseIcon, PlayIcon } from "./lib/images";
+import { DatabaseIcon, PlayIcon, preloadZapLogo } from "./lib/images";
 import { ConnectionProvider } from "./components/ConnectionProvider";
 import { ReconnectingIndicator } from "./components/ReconnectingIndicator";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
@@ -48,6 +48,8 @@ import {
   A11yAnnouncerProvider,
   useAnnouncer,
 } from "./components/A11yAnnouncer";
+
+void preloadZapLogo();
 
 const SUBSCRIPTION_STATUS_RETRY_DELAY_MS = 500;
 

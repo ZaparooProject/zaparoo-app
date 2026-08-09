@@ -218,7 +218,9 @@ describe("Settings Index Route", () => {
       selector(defaultStoreState),
     );
     mockUsePreferencesStore.mockImplementation((selector) =>
-      selector({ onlinePremiumAccess: false }),
+      selector({
+        onlinePremiumAccess: false,
+      }),
     );
   });
 
@@ -256,6 +258,9 @@ describe("Settings Index Route", () => {
     it("should render navigation links to settings subpages", () => {
       renderComponent();
       expect(
+        screen.getByRole("link", { name: "settings.languageRegion.title" }),
+      ).toHaveAttribute("href", "/settings/language-region");
+      expect(
         screen.getByText("settings.readers.title").closest("a"),
       ).toHaveAttribute("href", "/settings/readers");
       expect(
@@ -270,30 +275,6 @@ describe("Settings Index Route", () => {
       expect(
         screen.getByText("settings.about.title").closest("a"),
       ).toHaveAttribute("href", "/settings/about");
-    });
-
-    it("should render the language selector with all supported languages", () => {
-      renderComponent();
-
-      const languageSelect = screen.getByRole("combobox", {
-        name: "settings.language",
-      });
-      expect(languageSelect).toHaveValue("en-US");
-
-      // Check that all supported languages are options
-      expect(screen.getByText("Deutsch")).toBeInTheDocument();
-      expect(screen.getByText("English (UK)")).toBeInTheDocument();
-      expect(
-        within(languageSelect).getByRole("option", { name: "English (US)" }),
-      ).toBeInTheDocument();
-      expect(
-        within(languageSelect).getByRole("option", { name: "Español" }),
-      ).toBeInTheDocument();
-      expect(screen.getByText("Français")).toBeInTheDocument();
-      expect(screen.getByText("Nederlands")).toBeInTheDocument();
-      expect(screen.getByText("中文")).toBeInTheDocument();
-      expect(screen.getByText("日本語")).toBeInTheDocument();
-      expect(screen.getByText("한국어")).toBeInTheDocument();
     });
 
     it("should show manage media row for supported Core versions", () => {

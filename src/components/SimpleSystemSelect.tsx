@@ -1,9 +1,12 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
+import { systemHasIndexedMedia } from "@/lib/systemFilters";
 import { compareStrings } from "@/lib/utils";
+import { useSystemsWithDisplayNames } from "@/hooks/useSystemName";
 
 interface SimpleSystemSelectProps {
   value: string; // The currently selected system ID (or "all")
@@ -35,8 +38,16 @@ export function SimpleSystemSelect({
     staleTime: 0,
   });
 
+  const catalogSystems = useMemo(
+    () => systemsData?.systems ?? [],
+    [systemsData?.systems],
+  );
+  const displaySystems = useSystemsWithDisplayNames(catalogSystems).filter(
+    systemHasIndexedMedia,
+  );
+
   // Group systems by category and sort
-  const groupedSystems = (systemsData?.systems || []).reduce(
+  const groupedSystems = displaySystems.reduce(
     (acc, system) => {
       const category = system.category || "Other";
       if (!acc[category]) {
