@@ -198,6 +198,17 @@ describe("CoreAPI API Contract", () => {
       );
     });
 
+    it("mediaTagsUpdate should reject a non-delivered update", async () => {
+      const promise = CoreAPI.mediaTagsUpdate({
+        mediaId: 42,
+        add: ["user:favorite"],
+      });
+
+      CoreAPI.reset();
+
+      await expect(promise).rejects.toThrow("cancelled");
+    });
+
     it("mediaBrowse should reject an aborted response as cancellation", async () => {
       const controller = new AbortController();
       const promise = CoreAPI.mediaBrowse(

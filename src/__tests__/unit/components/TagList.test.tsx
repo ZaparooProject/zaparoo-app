@@ -1,4 +1,4 @@
-import { render, screen } from "../../../test-utils";
+import { render, screen } from "@/test-utils";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { TagList } from "@/components/TagList";
 import { TagInfo } from "@/lib/models";
@@ -20,8 +20,8 @@ describe("TagList", () => {
 
     render(<TagList tags={tags} />);
 
-    // TagBadge uses aria-label with format "type tag"
-    expect(screen.getByLabelText("region usa")).toBeInTheDocument();
+    expect(screen.getByText("region:usa")).toBeInTheDocument();
+    expect(screen.getByText("region usa")).toBeInTheDocument();
   });
 
   it("should support compact display text without changing accessible labels", () => {
@@ -30,7 +30,7 @@ describe("TagList", () => {
     render(<TagList tags={tags} formatTag={() => "W"} />);
 
     expect(screen.getByText("W")).toBeInTheDocument();
-    expect(screen.getByLabelText("region world")).toBeInTheDocument();
+    expect(screen.getByText("region world")).toBeInTheDocument();
   });
 
   it("should sort tags with region/lang first", () => {
@@ -43,15 +43,16 @@ describe("TagList", () => {
 
     render(<TagList tags={tags} />);
 
-    // Get all tag badges by their aria-labels
-    const tagElements = screen.getAllByLabelText(/^(region|lang|genre|player)/);
+    const tagElements = screen.getAllByText(
+      /^(region:usa|lang:en|genre:action|player:1p)$/,
+    );
 
-    // region and lang should be first (in their original relative order)
-    expect(tagElements[0]).toHaveAccessibleName("region usa");
-    expect(tagElements[1]).toHaveAccessibleName("lang en");
-    // Then other tags
-    expect(tagElements[2]).toHaveAccessibleName("genre action");
-    expect(tagElements[3]).toHaveAccessibleName("player 1p");
+    expect(tagElements.map((element) => element.textContent)).toEqual([
+      "region:usa",
+      "lang:en",
+      "genre:action",
+      "player:1p",
+    ]);
   });
 
   it("should preserve server tag order when requested", () => {
@@ -62,9 +63,11 @@ describe("TagList", () => {
 
     render(<TagList tags={tags} preserveOrder />);
 
-    const tagElements = screen.getAllByLabelText(/^(unfinished|region)/);
-    expect(tagElements[0]).toHaveAccessibleName("unfinished wip");
-    expect(tagElements[1]).toHaveAccessibleName("region usa");
+    const tagElements = screen.getAllByText(/^(unfinished:wip|region:usa)$/);
+    expect(tagElements.map((element) => element.textContent)).toEqual([
+      "unfinished:wip",
+      "region:usa",
+    ]);
   });
 
   it("should show one accurate overflow count for tags that do not fit", () => {
@@ -88,7 +91,10 @@ describe("TagList", () => {
 
     render(<TagList tags={tags} preserveOrder />);
 
-    expect(screen.getAllByLabelText(/^genre/)).toHaveLength(2);
+    expect(screen.getByText("genre:action")).toBeInTheDocument();
+    expect(screen.getByText("genre:rpg")).toBeInTheDocument();
+    expect(screen.queryByText("genre:adventure")).not.toBeInTheDocument();
+    expect(screen.queryByText("genre:puzzle")).not.toBeInTheDocument();
     expect(screen.getAllByText("+2")).toHaveLength(1);
     expect(screen.queryByText("+1")).not.toBeInTheDocument();
     expect(screen.queryByText("+3")).not.toBeInTheDocument();
@@ -112,7 +118,21 @@ describe("TagList", () => {
 
     render(<TagList tags={tags} />);
 
-    expect(screen.getAllByLabelText(/^genre/)).toHaveLength(3);
+    expect(screen.getByText("genre:action")).toBeInTheDocument();
+    expect(screen.getByText("genre:rpg")).toBeInTheDocument();
+    expect(screen.getByText("genre:adventure")).toBeInTheDocument();
     expect(screen.queryByText(/^\+\d+$/)).not.toBeInTheDocument();
+  });
+
+  it("should use tag labels consistently in visual and accessible output", () => {
+    const tags: TagInfo[] = [
+      { type: "genre", tag: "action", label: "Action game" },
+    ];
+
+    render(<TagList tags={tags} />);
+
+    expect(screen.getByText("genre:Action game")).toBeInTheDocument();
+    expect(screen.getByText("genre Action game")).toBeInTheDocument();
+    expect(screen.queryByText("genre:action")).not.toBeInTheDocument();
   });
 });

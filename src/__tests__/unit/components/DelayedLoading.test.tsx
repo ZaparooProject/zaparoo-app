@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@/test-utils";
-import { DelayedLoading } from "@/components/DelayedLoading";
+import {
+  DEFAULT_LOADING_DELAY_MS,
+  DelayedLoading,
+} from "@/components/DelayedLoading";
 
 describe("DelayedLoading", () => {
   afterEach(() => {
@@ -16,7 +19,7 @@ describe("DelayedLoading", () => {
     );
 
     expect(screen.queryByText("Loading")).not.toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(299));
+    act(() => vi.advanceTimersByTime(DEFAULT_LOADING_DELAY_MS - 1));
     expect(screen.queryByText("Loading")).not.toBeInTheDocument();
     unmount();
     act(() => vi.runAllTimers());
@@ -31,7 +34,26 @@ describe("DelayedLoading", () => {
       </DelayedLoading>,
     );
 
-    act(() => vi.advanceTimersByTime(300));
+    act(() => vi.advanceTimersByTime(DEFAULT_LOADING_DELAY_MS));
+
+    expect(screen.getByText("Loading")).toBeInTheDocument();
+  });
+
+  it("should reveal immediately when delay changes to zero", () => {
+    vi.useFakeTimers();
+    const { rerender } = render(
+      <DelayedLoading>
+        <span>Loading</span>
+      </DelayedLoading>,
+    );
+
+    expect(screen.queryByText("Loading")).not.toBeInTheDocument();
+
+    rerender(
+      <DelayedLoading delayMs={0}>
+        <span>Loading</span>
+      </DelayedLoading>,
+    );
 
     expect(screen.getByText("Loading")).toBeInTheDocument();
   });

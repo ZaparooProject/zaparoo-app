@@ -1150,8 +1150,14 @@ class CoreApi {
   ): Promise<MediaTagsUpdateResponse> {
     try {
       const result = await this.call(Method.MediaTagsUpdate, params);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError(
+          "Media tags update request was cancelled",
+        );
+      }
       return result as MediaTagsUpdateResponse;
     } catch (error) {
+      if (isRequestCancelledError(error)) throw error;
       logMediaApiFailure(
         "Media tags update API call failed",
         "mediaTagsUpdate",

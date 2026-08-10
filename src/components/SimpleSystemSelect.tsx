@@ -47,7 +47,7 @@ export function SimpleSystemSelect({
     [systemsData?.systems],
   );
   const displaySystems = useSystemsWithDisplayNames(catalogSystems).filter(
-    systemHasIndexedMedia,
+    (system) => system.id === value || systemHasIndexedMedia(system),
   );
 
   // Group systems by category and sort

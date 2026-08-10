@@ -57,6 +57,7 @@ vi.mock("@/hooks/useHaptics", () => ({
 describe("Library index route", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    CoreAPI.reset();
     mockNavigate.mockClear();
     usePreferencesStore.setState({ systemNameRegion: "auto" });
     useLibrarySessionStore.getState().reset();

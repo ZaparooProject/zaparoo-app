@@ -11,6 +11,7 @@ interface BackButtonHandler {
 class BackButtonManager {
   private handlers: BackButtonHandler[] = [];
   private listener: Promise<{ remove: () => void }> | null = null;
+  private removal: Promise<void> | null = null;
 
   addHandler(handler: BackButtonHandler) {
     this.handlers.push(handler);
@@ -34,7 +35,7 @@ class BackButtonManager {
   }
 
   private setupListener() {
-    if (this.listener) return;
+    if (this.listener || this.removal) return;
 
     this.listener = App.addListener("backButton", () => {
       for (const { handler } of this.handlers) {
@@ -46,17 +47,29 @@ class BackButtonManager {
     });
   }
 
-  private async removeListener() {
-    if (this.listener) {
-      const handle = await this.listener;
-      handle.remove();
-      this.listener = null;
-    }
+  private removeListener(): Promise<void> {
+    if (this.removal) return this.removal;
+    const listener = this.listener;
+    if (!listener) return Promise.resolve();
+
+    this.removal = (async () => {
+      try {
+        const handle = await listener;
+        await handle.remove();
+      } finally {
+        if (this.listener === listener) this.listener = null;
+      }
+    })().finally(() => {
+      this.removal = null;
+      if (this.handlers.length > 0) this.setupListener();
+    });
+
+    return this.removal;
   }
 
   async destroy() {
-    await this.removeListener();
     this.handlers = [];
+    await this.removeListener();
   }
 }
 

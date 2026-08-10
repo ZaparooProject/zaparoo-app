@@ -60,7 +60,10 @@ export function TagList({
     [preserveOrder, tags],
   );
   const measurementKey = displayTags
-    .map((tag) => `${tag.type}\0${tag.tag}\0${formatTag?.(tag) ?? ""}`)
+    .map(
+      (tag) =>
+        `${tag.type}\0${tag.tag}\0${tag.label ?? ""}\0${formatTag?.(tag) ?? ""}`,
+    )
     .join("\u0001");
   const [layout, setLayout] = useState({ key: "", visibleCount: tags.length });
   const visibleCount =
@@ -152,7 +155,7 @@ export function TagList({
           >
             <TagBadge
               type={tag.type}
-              tag={tag.tag}
+              tag={tag.label || tag.tag}
               displayTag={formatTag?.(tag)}
             />
           </span>

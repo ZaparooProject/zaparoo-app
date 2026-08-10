@@ -131,6 +131,7 @@ vi.mock("@/hooks/useHaptics", () => ({
 describe("Library game search", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    CoreAPI.reset();
     mockNavigate.mockClear();
     mockSearchOptions.mockClear();
     useLibrarySessionStore.getState().reset();

@@ -376,6 +376,25 @@ describe("VirtualSearchResults", () => {
       expect(screen.getAllByRole("listitem")).toHaveLength(2);
     });
 
+    it("should omit the set size while more accessible results exist", async () => {
+      mockPreferencesState.accessibleLists = true;
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValueOnce({
+        results: createMockResults(1),
+        total: 2,
+        pagination: {
+          hasNextPage: true,
+          pageSize: 100,
+          nextCursor: "next",
+        },
+      });
+
+      renderComponent();
+
+      expect(await screen.findByRole("listitem")).not.toHaveAttribute(
+        "aria-setsize",
+      );
+    });
+
     it("should load one explicit page in accessible-list mode", async () => {
       const user = userEvent.setup();
       mockPreferencesState.accessibleLists = true;
@@ -410,6 +429,39 @@ describe("VirtualSearchResults", () => {
       expect(await screen.findByText("Game 1")).toBeInTheDocument();
       await waitFor(() => expect(screen.getByTestId("result-1")).toHaveFocus());
       expect(mediaSearch).toHaveBeenCalledTimes(2);
+    });
+
+    it("should restore focus when the final page has no new results", async () => {
+      const user = userEvent.setup();
+      mockPreferencesState.accessibleLists = true;
+      vi.spyOn(CoreAPI, "mediaSearch")
+        .mockResolvedValueOnce({
+          results: createMockResults(1),
+          total: 1,
+          pagination: {
+            hasNextPage: true,
+            pageSize: 100,
+            nextCursor: "next",
+          },
+        })
+        .mockResolvedValueOnce({
+          results: [],
+          total: 1,
+          pagination: {
+            hasNextPage: false,
+            pageSize: 100,
+            nextCursor: null,
+          },
+        });
+
+      renderComponent();
+      await user.click(
+        await screen.findByRole("button", {
+          name: "create.search.loadMore",
+        }),
+      );
+
+      await waitFor(() => expect(screen.getByTestId("result-0")).toHaveFocus());
     });
 
     it("should render result items with system names", async () => {
@@ -507,7 +559,7 @@ describe("VirtualSearchResults", () => {
       renderComponent();
 
       expect(
-        await screen.findByLabelText("library.favorite"),
+        await screen.findByRole("img", { name: "library.favorite" }),
       ).toBeInTheDocument();
       expect(screen.queryByLabelText("user favorite")).not.toBeInTheDocument();
       expect(screen.queryByLabelText("extension zip")).not.toBeInTheDocument();

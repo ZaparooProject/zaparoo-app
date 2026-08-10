@@ -309,6 +309,21 @@ describe("Settings Readers Route", () => {
       });
     });
 
+    it("should keep tap mode tabbable when no mode is selected", async () => {
+      mockSettings.mockResolvedValue({
+        readersScanMode: "unknown",
+        audioScanFeedback: true,
+        readersAutoDetect: true,
+      });
+      renderComponent();
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("radio", { name: /settings.tapMode/i }),
+        ).toHaveAttribute("tabindex", "0");
+      });
+    });
+
     it("should call settings update when changing mode to hold", async () => {
       renderComponent();
 

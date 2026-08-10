@@ -92,7 +92,6 @@ export function ToggleSwitch(props: {
             className={classNames(
               "dot",
               "bg-bd-outline",
-              "peer-checked:bg-primary-foreground",
               "absolute",
               "left-1.5",
               "top-2",
@@ -106,6 +105,7 @@ export function ToggleSwitch(props: {
               "peer-checked:w-6",
               "peer-checked:translate-x-full",
               {
+                "peer-checked:bg-primary-foreground": !props.disabled,
                 "peer-checked:bg-foreground-disabled": props.disabled,
                 "pointer-events-none": props.disabled,
                 "bg-white": !props.disabled,

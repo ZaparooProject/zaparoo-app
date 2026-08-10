@@ -89,7 +89,7 @@ describe("Zap logo preload", () => {
 
     render(createElement(ZapLogo));
 
-    const canvas = screen.getByRole("img", { name: "Zaparoo logo" });
+    const canvas = screen.getByRole("img", { name: "accessibility.logo" });
     expect(canvas).toHaveAttribute("width", "320");
     expect(canvas).toHaveAttribute("height", "72");
     expect(context.setTransform).toHaveBeenCalledWith(2, 0, 0, 2, 0, 0);
@@ -100,6 +100,30 @@ describe("Zap logo preload", () => {
       160,
       36,
     );
+  });
+
+  it("should start logo preload without blocking root navigation", async () => {
+    const decode = vi.fn(() => new Promise<void>(() => undefined));
+
+    class MockImage {
+      decoding = "auto";
+      fetchPriority = "auto";
+      src = "";
+      decode = decode;
+
+      constructor(
+        public width: number,
+        public height: number,
+      ) {}
+    }
+
+    vi.stubGlobal("Image", MockImage);
+    vi.doMock("@/routes/-pages/Index", () => ({ Index: () => null }));
+    const { Route } = await import("@/routes/index");
+    const beforeLoad = Route.options.beforeLoad as () => unknown;
+
+    expect(beforeLoad()).toBeUndefined();
+    expect(decode).toHaveBeenCalledOnce();
   });
 
   it("should not block navigation when decoding fails", async () => {

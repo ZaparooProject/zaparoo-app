@@ -33,6 +33,7 @@ const META_RESPONSE: MediaMetaResponse = {
     isMissing: false,
     tags: [
       { type: "region", tag: "us" },
+      { type: "edition", tag: "special", label: "Special Edition" },
       { type: "scraper.gamelist.xml", tag: "scraped" },
     ],
     properties: {
@@ -125,6 +126,9 @@ describe("LibraryMediaDetailsModal", () => {
     expect(screen.getByText("SNES • 1994 • library.playerCount")).toBeVisible();
     expect(screen.getByText("library.developer")).toBeVisible();
     expect(screen.getByText("Studio")).toBeVisible();
+    expect(
+      screen.getByText("Special Edition").closest("[aria-label]"),
+    ).toHaveAttribute("aria-label", "edition special");
     expect(screen.getByText("library.publisher")).toBeVisible();
     expect(screen.getByText("Publisher")).toBeVisible();
     expect(screen.getByText("library.genre")).toBeVisible();
@@ -179,8 +183,8 @@ describe("LibraryMediaDetailsModal", () => {
     const favoriteButton = await screen.findByRole("button", {
       name: "library.removeFavorite",
     });
-    expect(favoriteButton).toHaveClass("h-12", "w-12");
-    expect(favoriteButton).toHaveTextContent("");
+    expect(favoriteButton).toHaveAccessibleName("library.removeFavorite");
+    expect(favoriteButton).not.toHaveTextContent("library.removeFavorite");
     expect(screen.queryByLabelText("user favorite")).not.toBeInTheDocument();
   });
 
@@ -204,6 +208,24 @@ describe("LibraryMediaDetailsModal", () => {
         }),
       );
     });
+  });
+
+  it("should move focus when carousel navigation reaches a bound", async () => {
+    const user = userEvent.setup();
+    renderModal();
+
+    const next = await screen.findByRole("button", {
+      name: "library.nextImage",
+    });
+    const previous = screen.getByRole("button", {
+      name: "library.previousImage",
+    });
+
+    await user.click(next);
+    await waitFor(() => expect(previous).toHaveFocus());
+
+    await user.click(previous);
+    await waitFor(() => expect(next).toHaveFocus());
   });
 
   it("should add favorites only after explicit details action", async () => {

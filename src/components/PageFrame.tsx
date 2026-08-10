@@ -149,6 +149,7 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
     const restoreScroll = (scrollX: number, scrollY: number) => {
       scrollContainer.scrollLeft = scrollX;
       scrollContainer.scrollTop = scrollY;
+      setHeaderScrolled(scrollY > 0);
     };
 
     const sessionPosition = sessionScrollKey

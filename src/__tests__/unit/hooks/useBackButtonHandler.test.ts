@@ -197,6 +197,35 @@ describe("useBackButtonHandler", () => {
     });
   });
 
+  it("should re-register when a handler is added during listener removal", async () => {
+    let resolveRemoval: (() => void) | undefined;
+    removeListenerMock.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveRemoval = resolve;
+      }),
+    );
+
+    const view = renderHook(() =>
+      useBackButtonHandler("first-handler", vi.fn(), 50, true),
+    );
+    view.unmount();
+
+    const replacementHandler = vi.fn();
+    renderHook(() =>
+      useBackButtonHandler("replacement-handler", replacementHandler, 50, true),
+    );
+
+    expect(App.addListener).toHaveBeenCalledTimes(1);
+
+    resolveRemoval?.();
+    await vi.waitFor(() => {
+      expect(App.addListener).toHaveBeenCalledTimes(2);
+    });
+
+    backButtonCallback?.();
+    expect(replacementHandler).toHaveBeenCalledTimes(1);
+  });
+
   it("should use default priority of 50 when not specified", () => {
     const handler1 = vi.fn().mockReturnValue(true);
     const handler2 = vi.fn();

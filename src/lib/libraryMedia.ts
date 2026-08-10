@@ -21,6 +21,7 @@ export const LIBRARY_QUERY_KEYS = {
 } as const;
 
 export const FAVORITE_TAG_FILTER = "user:favorite";
+export const MAX_SINGLETON_FOLDER_RESOLUTIONS_PER_PAGE = 4;
 
 const SUPPORTED_IMAGE_TYPES = [
   "image",
@@ -108,7 +109,7 @@ export function entrySystemId(
 ): string {
   return (
     nonEmpty(entry.systemId) ??
-    entry.systemIds?.find((systemId) => nonEmpty(systemId) !== null) ??
+    entry.systemIds?.map(nonEmpty).find((systemId) => systemId !== null) ??
     fallbackSystemId
   );
 }
@@ -353,7 +354,8 @@ export async function resolveSingletonFolderEntries(
         entry.path !== preservePath &&
         isPlainFolderEntry(entry) &&
         entry.fileCount === 1,
-    );
+    )
+    .slice(0, MAX_SINGLETON_FOLDER_RESOLUTIONS_PER_PAGE);
   let nextCandidate = 0;
 
   const resolveNext = async () => {

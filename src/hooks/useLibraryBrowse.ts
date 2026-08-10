@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { CoreAPI } from "@/lib/coreApi";
 import {
@@ -16,7 +16,11 @@ import type {
 import { compareStrings } from "@/lib/utils";
 
 const BROWSE_PAGE_SIZE = 100;
-const MAX_JUMP_PAGE_SIZE = 1000;
+
+interface BrowsePageParam {
+  cursor?: string;
+  maxResults: number;
+}
 
 function sortRootEntries(
   entries: MediaBrowseEntry[],
@@ -41,7 +45,6 @@ export function useLibraryBrowse(options: {
   enabled: boolean;
 }) {
   const sort = options.sort ?? "name-asc";
-  const nextPageSizeRef = useRef(BROWSE_PAGE_SIZE);
   const browseQuery = useInfiniteQuery({
     queryKey: [
       LIBRARY_QUERY_KEYS.browse,
@@ -55,11 +58,8 @@ export function useLibraryBrowse(options: {
         {
           path: options.path,
           systems: [options.systemId],
-          maxResults:
-            pageParam === undefined
-              ? BROWSE_PAGE_SIZE
-              : nextPageSizeRef.current,
-          cursor: pageParam,
+          maxResults: pageParam.maxResults,
+          cursor: pageParam.cursor,
           sort,
         },
         signal,
@@ -75,10 +75,16 @@ export function useLibraryBrowse(options: {
       );
       return { ...response, entries };
     },
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) =>
-      lastPage.pagination?.hasNextPage
-        ? lastPage.pagination.nextCursor
+    initialPageParam: {
+      cursor: undefined,
+      maxResults: BROWSE_PAGE_SIZE,
+    } as BrowsePageParam,
+    getNextPageParam: (lastPage): BrowsePageParam | undefined =>
+      lastPage.pagination?.hasNextPage && lastPage.pagination.nextCursor
+        ? {
+            cursor: lastPage.pagination.nextCursor,
+            maxResults: BROWSE_PAGE_SIZE,
+          }
         : undefined,
     enabled: options.enabled,
     staleTime: 60 * 1000,
@@ -99,7 +105,6 @@ export function useLibraryBrowse(options: {
     0;
 
   const fetchMore = useCallback(async () => {
-    nextPageSizeRef.current = BROWSE_PAGE_SIZE;
     await browseQuery.fetchNextPage({ cancelRefetch: false });
   }, [browseQuery]);
 
@@ -109,28 +114,22 @@ export function useLibraryBrowse(options: {
       let count = flattenBrowsePages(pages).length;
       let previousCount = -1;
 
-      try {
-        while (count <= targetIndex && count !== previousCount) {
-          const lastPage = pages.at(-1);
-          if (
-            !lastPage?.pagination?.hasNextPage ||
-            !lastPage.pagination.nextCursor
-          ) {
-            break;
-          }
-
-          previousCount = count;
-          const gap = Math.max(1, targetIndex - count + BROWSE_PAGE_SIZE);
-          nextPageSizeRef.current = Math.min(MAX_JUMP_PAGE_SIZE, gap);
-          const result = await browseQuery.fetchNextPage({
-            cancelRefetch: false,
-          });
-          if (result.isError) throw result.error;
-          pages = result.data?.pages ?? pages;
-          count = flattenBrowsePages(pages).length;
+      while (count <= targetIndex && count !== previousCount) {
+        const lastPage = pages.at(-1);
+        if (
+          !lastPage?.pagination?.hasNextPage ||
+          !lastPage.pagination.nextCursor
+        ) {
+          break;
         }
-      } finally {
-        nextPageSizeRef.current = BROWSE_PAGE_SIZE;
+
+        previousCount = count;
+        const result = await browseQuery.fetchNextPage({
+          cancelRefetch: false,
+        });
+        if (result.isError) throw result.error;
+        pages = result.data?.pages ?? pages;
+        count = flattenBrowsePages(pages).length;
       }
 
       return count > targetIndex;

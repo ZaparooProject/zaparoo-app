@@ -158,6 +158,9 @@ export function SystemSelector({
     allOptionVisible &&
     defaultSelection === "all" &&
     selectedSystems.length === 0;
+  const hasRenderedSelection = filteredSystems.some((system) =>
+    selectedSystems.includes(system.id),
+  );
 
   // Footer for multi-select mode
   const footer =
@@ -308,7 +311,7 @@ export function SystemSelector({
                           mode === "multi" ||
                           isSelected ||
                           (!allOptionSelected &&
-                            selectedSystems.length === 0 &&
+                            !hasRenderedSelection &&
                             index === 0)
                             ? 0
                             : -1

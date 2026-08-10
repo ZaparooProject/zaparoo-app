@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 export const ZAP_LOGO_URL = `${__APP_BASE_PATH__}lockup.webp`;
 export const ZAP_LOGO_WIDTH = 160;
@@ -45,6 +46,7 @@ function drawPreloadedZapLogo(
 }
 
 export function ZapLogo() {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useLayoutEffect(() => {
@@ -69,7 +71,7 @@ export function ZapLogo() {
     <canvas
       ref={canvasRef}
       role="img"
-      aria-label="Zaparoo logo"
+      aria-label={t("accessibility.logo")}
       width={ZAP_LOGO_WIDTH}
       height={ZAP_LOGO_HEIGHT}
       style={{ width: ZAP_LOGO_WIDTH, height: ZAP_LOGO_HEIGHT }}

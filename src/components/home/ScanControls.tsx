@@ -63,14 +63,11 @@ export function ScanControls({
 
       {Capacitor.isNativePlatform() && nfcAvailable ? (
         <div className="mt-8 mb-9 text-center">
-          <button
-            type="button"
-            onClick={onScanButton}
-            aria-label={t("spinner.pressToScan")}
-            className="focus-visible:ring-offset-background inline-block cursor-pointer rounded-full focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-4 focus-visible:outline-none"
-          >
-            <ScanSpinner status={scanStatus} spinning={scanSession} />
-          </button>
+          <ScanSpinner
+            status={scanStatus}
+            spinning={scanSession}
+            onScan={onScanButton}
+          />
         </div>
       ) : (
         <div className="mt-8"></div>

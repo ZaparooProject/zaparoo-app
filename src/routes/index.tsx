@@ -4,6 +4,8 @@ import { Index } from "./-pages/Index";
 
 export const Route = createFileRoute("/")({
   ssr: false,
-  beforeLoad: preloadZapLogo,
+  beforeLoad: () => {
+    void preloadZapLogo();
+  },
   component: Index,
 });

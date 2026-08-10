@@ -29,7 +29,7 @@ describe("SimpleSystemSelect", () => {
     vi.mocked(CoreAPI.systems).mockResolvedValue(mockSystems);
   });
 
-  it("uses an associated visible label", () => {
+  it("should use an associated visible label", () => {
     render(
       <div>
         <span id="system-label">System</span>
@@ -46,7 +46,7 @@ describe("SimpleSystemSelect", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders a select element", () => {
+  it("should render a select element", () => {
     const onSelect = vi.fn();
     render(<SimpleSystemSelect value="" onSelect={onSelect} />);
 
@@ -97,6 +97,19 @@ describe("SimpleSystemSelect", () => {
     expect(
       screen.queryByRole("option", { name: "3DO" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("should preserve a selected system with zero indexed media", async () => {
+    vi.mocked(CoreAPI.systems).mockResolvedValue({
+      systems: [{ id: "3do", name: "3DO", mediaCount: 0 }],
+    });
+
+    render(<SimpleSystemSelect value="3do" onSelect={vi.fn()} />);
+
+    expect(
+      await screen.findByRole("option", { name: "3DO" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toHaveValue("3do");
   });
 
   it("displays grouped systems by category", async () => {

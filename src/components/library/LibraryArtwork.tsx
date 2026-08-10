@@ -53,10 +53,13 @@ export function LibraryArtwork(props: {
     }
     if (imageQuery.isSuccess) {
       onAvailabilityChange?.(Boolean(imageQuery.data?.url));
+    } else if (imageQuery.isError) {
+      onAvailabilityChange?.(false);
     }
   }, [
     imageQuery.data?.typeTag,
     imageQuery.data?.url,
+    imageQuery.isError,
     imageQuery.isSuccess,
     onAvailabilityChange,
     onTypeTag,

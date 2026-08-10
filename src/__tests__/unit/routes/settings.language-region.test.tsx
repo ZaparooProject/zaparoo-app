@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@/test-utils";
+import userEvent from "@testing-library/user-event";
+import { render, screen, within } from "@/test-utils";
 
 const { mockBack, mockChangeLanguage, mockSetSystemNameRegion } = vi.hoisted(
   () => ({
@@ -77,28 +78,30 @@ describe("Language & Region settings", () => {
     ).toBeInTheDocument();
   });
 
-  it("should update app language and system-name region", () => {
+  it("should update app language and system-name region", async () => {
+    const user = userEvent.setup();
     render(<LanguageRegionSettings />);
 
-    fireEvent.change(
+    await user.selectOptions(
       screen.getByRole("combobox", {
         name: "settings.languageRegion.appLanguage",
       }),
-      { target: { value: "ja-JP" } },
+      "ja-JP",
     );
-    fireEvent.change(
+    await user.selectOptions(
       screen.getByRole("combobox", { name: "settings.systemNames.label" }),
-      { target: { value: "jp" } },
+      "jp",
     );
 
     expect(mockChangeLanguage).toHaveBeenCalledWith("ja-JP");
     expect(mockSetSystemNameRegion).toHaveBeenCalledWith("jp");
   });
 
-  it("should navigate back from the header", () => {
+  it("should navigate back from the header", async () => {
+    const user = userEvent.setup();
     render(<LanguageRegionSettings />);
 
-    fireEvent.click(screen.getByRole("button", { name: "nav.back" }));
+    await user.click(screen.getByRole("button", { name: "nav.back" }));
 
     expect(mockBack).toHaveBeenCalledWith({
       to: "/settings",

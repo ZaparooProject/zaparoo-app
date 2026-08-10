@@ -149,19 +149,26 @@ export function VirtualSearchResults({
 
   useEffect(() => {
     const requestedAt = loadMoreStartRef.current;
-    if (requestedAt === null || allItems.length <= requestedAt) return;
+    if (requestedAt === null || isFetchingNextPage) return;
 
-    if (!hasNextPage) {
+    const appendedResults = allItems.length > requestedAt;
+    const reachedEnd = !hasNextPage;
+    if (!appendedResults && !reachedEnd) return;
+
+    if (reachedEnd) {
+      const focusIndex = appendedResults
+        ? requestedAt
+        : Math.max(0, requestedAt - 1);
       requestAnimationFrame(() => {
         accessibleResultsRef.current
           ?.querySelector<HTMLButtonElement>(
-            `[data-testid="result-${requestedAt}"]`,
+            `[data-testid="result-${focusIndex}"]`,
           )
           ?.focus({ preventScroll: true });
       });
     }
     loadMoreStartRef.current = null;
-  }, [allItems.length, hasNextPage]);
+  }, [allItems.length, hasNextPage, isFetchingNextPage]);
 
   // Screen reader announcement for search results
   const getAriaLiveMessage = () => {
@@ -299,7 +306,7 @@ export function VirtualSearchResults({
                 key={`${game.system.id}:${game.path}:${index}`}
                 role="listitem"
                 aria-posinset={index + 1}
-                aria-setsize={totalCount}
+                aria-setsize={hasNextPage ? undefined : totalCount}
               >
                 <SearchResultItem
                   game={game}
@@ -377,7 +384,7 @@ export function VirtualSearchResults({
                 data-index={virtualItem.index}
                 role="listitem"
                 aria-posinset={virtualItem.index + 1}
-                aria-setsize={totalCount}
+                aria-setsize={hasNextPage ? undefined : totalCount}
                 style={{
                   position: "absolute",
                   top: 0,
@@ -466,7 +473,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {hasFavoriteTag(game.tags) && (
-          <span aria-label={t("library.favorite")}>
+          <span role="img" aria-label={t("library.favorite")}>
             <Heart size={18} fill="currentColor" aria-hidden="true" />
           </span>
         )}

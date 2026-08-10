@@ -19,13 +19,14 @@ function Dialog({
   ...props
 }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) {
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen);
+  const isControlled = controlledOpen !== undefined;
   const open = controlledOpen ?? uncontrolledOpen;
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {
-      if (controlledOpen === undefined) setUncontrolledOpen(nextOpen);
+      if (!isControlled) setUncontrolledOpen(nextOpen);
       onOpenChange?.(nextOpen);
     },
-    [controlledOpen, onOpenChange],
+    [isControlled, onOpenChange],
   );
 
   return (
@@ -71,17 +72,13 @@ const DialogContent = React.forwardRef<
   const { t } = useTranslation();
   const dialogState = React.useContext(DialogStateContext);
   const handleOpenChange = onOpenChange ?? dialogState.onOpenChange;
+  const handleBack = React.useCallback(() => {
+    if (!handleOpenChange) return false;
+    handleOpenChange(false);
+    return true;
+  }, [handleOpenChange]);
 
-  useBackButtonHandler(
-    "dialog-content",
-    () => {
-      if (!handleOpenChange) return false;
-      handleOpenChange(false);
-      return true;
-    },
-    100,
-    dialogState.open,
-  );
+  useBackButtonHandler("dialog-content", handleBack, 100, dialogState.open);
 
   return (
     <DialogPortal>

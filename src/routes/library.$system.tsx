@@ -185,6 +185,14 @@ export function LibrarySystem() {
     resumeLibraryThumbnails();
   }, [currentPath, mediaSort]);
 
+  useEffect(
+    () => () => {
+      jumpGenerationRef.current++;
+      resumeLibraryThumbnails();
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!initialRootPath || !initialRoot) return;
 
@@ -306,12 +314,14 @@ export function LibrarySystem() {
     await queryClient.cancelQueries({
       queryKey: [LIBRARY_QUERY_KEYS.image, targetDeviceAddress],
     });
+    if (jumpGenerationRef.current !== generation) return;
     const targetIndex = browse.totalDirs + group.offset;
 
     try {
       const loaded =
         browse.entries.length > targetIndex ||
         (await browse.loadThroughIndex(targetIndex));
+      if (jumpGenerationRef.current !== generation) return;
       if (!loaded) throw new Error("Letter target is outside browse results");
       setPendingJump({ generation, targetIndex });
     } catch (error) {

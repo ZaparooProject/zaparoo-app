@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test-utils";
 import { CoreAPI } from "@/lib/coreApi";
-import type { MediaBrowseEntry, SearchResultsResponse } from "@/lib/models";
+import type { SearchResultsResponse } from "@/lib/models";
 import { useLibrarySessionStore } from "@/lib/librarySessionStore";
 import { useStatusStore } from "@/lib/store";
 import { LibraryFavorites } from "@/routes/library.favorites";
@@ -49,26 +49,13 @@ vi.mock("@/hooks/useSmartSwipe", () => ({
   useSmartSwipe: () => ({}),
 }));
 
-vi.mock("@/components/library/LibraryArtwork", () => ({
-  LibraryArtwork: () => <span aria-hidden="true" />,
-}));
-
-vi.mock("@/components/library/LibraryMediaDetailsModal", () => ({
-  LibraryMediaDetailsModal: ({
-    isOpen,
-    entry,
-  }: {
-    isOpen: boolean;
-    entry: MediaBrowseEntry | null;
-  }) =>
-    isOpen && entry ? <div role="dialog" aria-label={entry.name} /> : null,
-}));
-
-vi.mock("@/components/library/LibraryGameSearch", () => ({
-  LibraryGameSearch: ({ fixedTags }: { fixedTags?: string[] }) => (
-    <div aria-label="favorites search">{fixedTags?.join(",")}</div>
-  ),
-}));
+vi.mock("@/lib/libraryImages", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/libraryImages")>();
+  return {
+    ...actual,
+    requestLibraryImage: vi.fn().mockResolvedValue(null),
+  };
+});
 
 function favoriteResult(
   name: string,
@@ -103,6 +90,7 @@ function favoritesResponse(
 describe("Library Favorites route", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    CoreAPI.reset();
     mockNavigate.mockClear();
     useLibrarySessionStore.getState().reset();
     useStatusStore.setState({
@@ -111,6 +99,27 @@ describe("Library Favorites route", () => {
       coreVersion: "2.15.0",
       coreVersionPending: false,
       gamesIndex: { exists: true, indexing: false },
+    });
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({
+      systems: [{ id: "SNES", name: "Super Nintendo" }],
+    });
+    vi.spyOn(CoreAPI, "mediaMeta").mockResolvedValue({
+      media: {
+        path: "/roms/SNES/Favorite Game.sfc",
+        parentDir: "/roms/SNES",
+        isMissing: false,
+        tags: [{ type: "user", tag: "favorite" }],
+        properties: {},
+        title: {
+          slug: "favorite-game",
+          name: "Favorite Game",
+          slugLength: 13,
+          slugWordCount: 2,
+          system: { id: "SNES", name: "Super Nintendo" },
+          tags: [],
+          properties: {},
+        },
+      },
     });
   });
 
@@ -161,7 +170,9 @@ describe("Library Favorites route", () => {
   });
 
   it("should open search with an immutable favorites scope", async () => {
-    vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValue(favoritesResponse([]));
+    const searchSpy = vi
+      .spyOn(CoreAPI, "mediaSearch")
+      .mockResolvedValue(favoritesResponse([]));
     const user = userEvent.setup();
 
     render(<LibraryFavorites />);
@@ -169,8 +180,17 @@ describe("Library Favorites route", () => {
       await screen.findByRole("button", { name: "library.searchFavorites" }),
     );
 
-    expect(screen.getByLabelText("favorites search")).toHaveTextContent(
-      "user:favorite",
+    expect(
+      screen.getByRole("search", { name: "library.searchFavorites" }),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "library.searchAction" }),
+    );
+    await waitFor(() =>
+      expect(searchSpy).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tags: ["user:favorite"] }),
+        expect.any(AbortSignal),
+      ),
     );
   });
 

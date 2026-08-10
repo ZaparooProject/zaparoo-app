@@ -288,16 +288,19 @@ describe("Accessibility Settings Route", () => {
   });
 
   describe("accessible lists toggle", () => {
-    it("should be available on web and native platforms", () => {
-      mockIsNativePlatform = false;
-      renderComponent();
+    it.each([false, true])(
+      "should be available when native platform is %s",
+      (isNative) => {
+        mockIsNativePlatform = isNative;
+        renderComponent();
 
-      expect(
-        screen.getByRole("checkbox", {
-          name: /settings\.accessibility\.accessibleLists/i,
-        }),
-      ).toBeInTheDocument();
-    });
+        expect(
+          screen.getByRole("checkbox", {
+            name: /settings\.accessibility\.accessibleLists/i,
+          }),
+        ).toBeInTheDocument();
+      },
+    );
 
     it("should update the manual accessible-list preference", async () => {
       const user = userEvent.setup();

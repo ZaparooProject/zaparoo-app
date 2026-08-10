@@ -83,6 +83,7 @@ describe("InboxModal", () => {
     const toggle = screen.getByRole("button", { name: /Long alert/i });
     const body = screen.getByText("Detailed body text");
     expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(body.id).not.toBe("");
     expect(toggle).toHaveAttribute("aria-controls", body.id);
     expect(body).toHaveAttribute("aria-hidden", "true");
 

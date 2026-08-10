@@ -43,12 +43,12 @@ export function SystemFilterControls(props: {
               aria-hidden="true"
             />
             <input
-              type="text"
+              type="search"
               aria-label={t("systemSelector.searchSystems")}
               placeholder={t("systemSelector.searchPlaceholder")}
               value={query}
               onChange={(event) => props.onQueryChange?.(event.target.value)}
-              className="border-input bg-background text-foreground w-full rounded-md border px-10 py-2 focus:ring-2 focus:ring-white/20 focus:outline-none"
+              className="border-input bg-background text-foreground w-full rounded-md border px-10 py-2 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
             />
             {query && (
               <button

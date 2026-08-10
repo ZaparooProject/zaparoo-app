@@ -431,7 +431,7 @@ describe("Index Route Integration", () => {
         </TestWrapper>,
       );
 
-      const logo = screen.getByRole("img", { name: "Zaparoo logo" });
+      const logo = screen.getByRole("img", { name: "accessibility.logo" });
       expect(logo).toBeInstanceOf(HTMLCanvasElement);
       expect(logo).toHaveAttribute("width", "160");
       expect(logo).toHaveAttribute("height", "36");

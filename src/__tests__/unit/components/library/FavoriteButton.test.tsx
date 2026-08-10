@@ -137,8 +137,8 @@ describe("FavoriteButton", () => {
     const button = screen.getByRole("button", {
       name: "library.addFavorite",
     });
-    expect(button).toHaveClass("h-12", "w-12");
-    expect(button).toHaveTextContent("");
+    expect(button).toHaveAccessibleName("library.addFavorite");
+    expect(button).not.toHaveTextContent("library.addFavorite");
     expect(button).toHaveAttribute("aria-pressed", "false");
   });
 

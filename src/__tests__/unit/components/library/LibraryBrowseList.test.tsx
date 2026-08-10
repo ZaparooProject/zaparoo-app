@@ -6,6 +6,7 @@ import {
   type LibraryBrowseListHandle,
 } from "@/components/library/LibraryBrowseList";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+import { useStatusStore } from "@/lib/store";
 import type { MediaBrowseEntry } from "@/lib/models";
 
 const mockMeasure = vi.fn();
@@ -74,6 +75,7 @@ function renderList(
 describe("LibraryBrowseList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useStatusStore.setState({ corePlatform: null });
     usePreferencesStore.setState({
       accessibleLists: false,
       showFilenames: false,
@@ -117,6 +119,21 @@ describe("LibraryBrowseList", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "library.loadMore" }));
     expect(onFetchMore).toHaveBeenCalledTimes(1);
+  });
+
+  it("should expose favorite state through a named role", () => {
+    renderList({
+      entries: [
+        {
+          ...entries[0]!,
+          tags: [{ type: "user", tag: "favorite" }],
+        },
+      ],
+    });
+
+    expect(
+      screen.getByRole("img", { name: "library.favorite" }),
+    ).toBeInTheDocument();
   });
 
   it("should keep ordinary rows at 88px for default text size", () => {

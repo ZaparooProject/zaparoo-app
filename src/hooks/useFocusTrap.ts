@@ -16,6 +16,15 @@ interface InertState {
 }
 
 const inertStates = new WeakMap<HTMLElement, InertState>();
+const activeFocusTraps: object[] = [];
+
+function registerFocusTrap(token: object): () => void {
+  activeFocusTraps.push(token);
+  return () => {
+    const index = activeFocusTraps.lastIndexOf(token);
+    if (index >= 0) activeFocusTraps.splice(index, 1);
+  };
+}
 
 function setInert(element: HTMLElement): () => void {
   const current = inertStates.get(element);
@@ -116,6 +125,9 @@ export function useFocusTrap({
     const container = containerRef.current;
     if (!container) return;
 
+    const trapToken = {};
+    const unregisterFocusTrap = registerFocusTrap(trapToken);
+
     // Store focus before isolating the modal from the surrounding page.
     if (restoreFocus && document.activeElement instanceof HTMLElement) {
       previouslyFocusedRef.current = document.activeElement;
@@ -149,6 +161,8 @@ export function useFocusTrap({
 
     // Handle keyboard navigation and dismissal while the trap is active.
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (activeFocusTraps.at(-1) !== trapToken) return;
+
       if (event.key === "Escape" && onEscapeRef.current) {
         event.preventDefault();
         onEscapeRef.current();
@@ -184,6 +198,7 @@ export function useFocusTrap({
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
+      unregisterFocusTrap();
       restoreIsolation?.();
 
       const previouslyFocused = previouslyFocusedRef.current;

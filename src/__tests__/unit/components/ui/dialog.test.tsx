@@ -36,6 +36,9 @@ describe("Dialog", () => {
       100,
       false,
     );
+    const closedHandler = vi
+      .mocked(useBackButtonHandler)
+      .mock.calls.at(-1)?.[1];
 
     fireEvent.click(screen.getByRole("button", { name: "Open dialog" }));
 
@@ -44,6 +47,9 @@ describe("Dialog", () => {
       expect.any(Function),
       100,
       true,
+    );
+    expect(vi.mocked(useBackButtonHandler).mock.calls.at(-1)?.[1]).toBe(
+      closedHandler,
     );
   });
 

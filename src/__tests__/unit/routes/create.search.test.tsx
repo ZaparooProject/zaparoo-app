@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "../../../test-utils";
+import { act, fireEvent, render, screen } from "../../../test-utils";
 import { Search } from "@/routes/-pages/Search";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -114,17 +114,19 @@ vi.mock("@/components/VirtualSearchResults", () => ({
     hasSearched,
     isSearching,
     onSearchComplete,
+    tags,
   }: {
     hasSearched: boolean;
     isSearching: boolean;
     onSearchComplete?: () => void;
+    tags: string[];
   }) => {
     if (isSearching) {
       // Simulate search completion
       setTimeout(() => onSearchComplete?.(), 10);
     }
     return (
-      <div data-testid="virtual-search-results">
+      <div data-testid="virtual-search-results" data-tags={tags.join(",")}>
         {hasSearched ? "Results shown" : "No search yet"}
       </div>
     );
@@ -400,6 +402,55 @@ describe("Search Component", () => {
       );
       expect(screen.getByTestId("virtual-search-results")).toHaveTextContent(
         "Results shown",
+      );
+    });
+
+    it("should restore tags after pending Core support resolves", () => {
+      useStatusStore.setState({
+        coreVersion: null,
+        coreVersionPending: true,
+      });
+      useTabSessionStore.getState().setCreateSearch({
+        query: "zelda",
+        system: "snes",
+        tags: ["genre:rpg"],
+      });
+
+      render(<Search />);
+
+      expect(screen.getByTestId("virtual-search-results")).toHaveTextContent(
+        "No search yet",
+      );
+
+      act(() => {
+        useStatusStore.setState({
+          coreVersion: "2.15.0",
+          coreVersionPending: false,
+        });
+      });
+
+      expect(screen.getByTestId("virtual-search-results")).toHaveAttribute(
+        "data-tags",
+        "genre:rpg",
+      );
+    });
+
+    it("should remove unsupported tags from a restored search", () => {
+      useStatusStore.setState({
+        coreVersion: "2.6.2",
+        coreVersionPending: false,
+      });
+      useTabSessionStore.getState().setCreateSearch({
+        query: "zelda",
+        system: "snes",
+        tags: ["genre:rpg"],
+      });
+
+      render(<Search />);
+
+      expect(screen.getByTestId("virtual-search-results")).toHaveAttribute(
+        "data-tags",
+        "",
       );
     });
 

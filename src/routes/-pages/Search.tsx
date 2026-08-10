@@ -55,6 +55,11 @@ export function Search() {
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
+  const mediaTagsSupportKnown = !coreVersionPending && coreVersion !== null;
+  const mediaTagsAvailable =
+    connected &&
+    mediaTagsSupportKnown &&
+    isCoreFeatureAvailable("mediaTags", coreVersion);
   const savedSearch = useTabSessionStore((state) => state.createSearch);
   const setSessionSearch = useTabSessionStore((state) => state.setCreateSearch);
   const restoredSearch =
@@ -82,11 +87,14 @@ export function Search() {
   const [isSearching, setIsSearching] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const mediaTagsAvailable =
-    connected &&
-    !coreVersionPending &&
-    isCoreFeatureAvailable("mediaTags", coreVersion);
   const effectiveQueryTags = mediaTagsAvailable ? queryTags : [];
+  const effectiveSearchParams =
+    searchParams && (searchParams.tags.length === 0 || mediaTagsSupportKnown)
+      ? {
+          ...searchParams,
+          tags: mediaTagsAvailable ? searchParams.tags : [],
+        }
+      : null;
   const browseAllSearchAvailable =
     connected &&
     !coreVersionPending &&
@@ -272,7 +280,7 @@ export function Search() {
   const handleRecentSearchSelect = async (
     recentSearch: (typeof recentSearches)[0],
   ) => {
-    const searchTags = mediaTagsAvailable ? recentSearch.tags : [];
+    const searchTags = recentSearch.tags;
     setQuery(recentSearch.query);
     setQuerySystem(recentSearch.system);
     setQueryTags(searchTags);
@@ -409,20 +417,20 @@ export function Search() {
         </div>
 
         <VirtualSearchResults
-          query={searchParams?.query || ""}
+          query={effectiveSearchParams?.query || ""}
           systems={
-            searchParams
-              ? searchParams.system === "all"
+            effectiveSearchParams
+              ? effectiveSearchParams.system === "all"
                 ? []
-                : [searchParams.system]
+                : [effectiveSearchParams.system]
               : []
           }
-          tags={searchParams?.tags || []}
+          tags={effectiveSearchParams?.tags || []}
           selectedResult={selectedResult}
           setSelectedResult={setSelectedResult}
-          hasSearched={searchParams !== null}
-          searchSystem={searchParams?.system || "all"}
-          searchTags={searchParams?.tags || []}
+          hasSearched={effectiveSearchParams !== null}
+          searchSystem={effectiveSearchParams?.system || "all"}
+          searchTags={effectiveSearchParams?.tags || []}
           onClearFilters={handleClearFilters}
           isSearching={isSearching}
           onSearchComplete={() => setIsSearching(false)}

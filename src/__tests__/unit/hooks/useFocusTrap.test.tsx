@@ -105,6 +105,43 @@ function FocusTrapWithTrigger() {
   );
 }
 
+function NestedFocusTraps({
+  onOuterEscape,
+  onInnerEscape,
+}: {
+  onOuterEscape: () => void;
+  onInnerEscape: () => void;
+}) {
+  const outerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  useFocusTrap({
+    isActive: true,
+    containerRef: outerRef,
+    autoFocus: false,
+    restoreFocus: false,
+    onEscape: onOuterEscape,
+    inertBackground: false,
+  });
+  useFocusTrap({
+    isActive: true,
+    containerRef: innerRef,
+    autoFocus: false,
+    restoreFocus: false,
+    onEscape: onInnerEscape,
+    inertBackground: false,
+  });
+
+  return (
+    <div ref={outerRef}>
+      <button>Outer first</button>
+      <div ref={innerRef}>
+        <button>Inner first</button>
+        <button>Inner last</button>
+      </div>
+    </div>
+  );
+}
+
 function FocusTrapWithRemovedTrigger() {
   const [isOpen, setIsOpen] = useState(false);
   const [showTrigger, setShowTrigger] = useState(true);
@@ -348,6 +385,42 @@ describe("useFocusTrap", () => {
       expect(handleKeyDown).toHaveBeenCalledWith(
         expect.objectContaining({ key: "Enter" }),
       );
+    });
+  });
+
+  describe("nested traps", () => {
+    it("should send Escape only to the topmost trap", async () => {
+      const user = userEvent.setup();
+      const onOuterEscape = vi.fn();
+      const onInnerEscape = vi.fn();
+      render(
+        <NestedFocusTraps
+          onOuterEscape={onOuterEscape}
+          onInnerEscape={onInnerEscape}
+        />,
+      );
+
+      await user.keyboard("{Escape}");
+
+      expect(onInnerEscape).toHaveBeenCalledTimes(1);
+      expect(onOuterEscape).not.toHaveBeenCalled();
+    });
+
+    it("should trap Tab only in the topmost trap", async () => {
+      const user = userEvent.setup();
+      render(
+        <NestedFocusTraps onOuterEscape={vi.fn()} onInnerEscape={vi.fn()} />,
+      );
+      const outerFirst = screen.getByRole("button", { name: "Outer first" });
+      const innerFirst = screen.getByRole("button", { name: "Inner first" });
+      const innerLast = screen.getByRole("button", { name: "Inner last" });
+      const outerFocus = vi.spyOn(outerFirst, "focus");
+      innerLast.focus();
+
+      await user.tab();
+
+      expect(innerFirst).toHaveFocus();
+      expect(outerFocus).not.toHaveBeenCalled();
     });
   });
 

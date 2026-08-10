@@ -1,5 +1,6 @@
 import {
   type ReactNode,
+  useCallback,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -111,19 +112,23 @@ export function LibraryFavorites() {
   );
   const hasNextPage = Boolean(favoritesQuery.hasNextPage);
 
-  const closeSearch = () => setEmbeddedSearchOpen(FAVORITES_SCOPE, false);
-  const goBack = () => {
+  const closeSearch = useCallback(
+    () => setEmbeddedSearchOpen(FAVORITES_SCOPE, false),
+    [setEmbeddedSearchOpen],
+  );
+  const goBack = useCallback(() => {
     setSelectedEntry(null);
     if (searchOpen) {
       closeSearch();
       return;
     }
     void navigate({ to: "/library", resetScroll: false });
-  };
-  useBackButtonHandler("library-favorites", () => {
+  }, [closeSearch, navigate, searchOpen]);
+  const handleBackButton = useCallback(() => {
     goBack();
     return true;
-  });
+  }, [goBack]);
+  useBackButtonHandler("library-favorites", handleBackButton);
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

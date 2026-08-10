@@ -4,6 +4,7 @@ import {
   collectLibraryMetadata,
   compactLibraryTag,
   deriveLibraryImageTypes,
+  entrySystemId,
   favoriteUpdateParams,
   hasFavoriteTag,
   isMediaCapableEntry,
@@ -11,8 +12,10 @@ import {
   libraryEntryDisplayName,
   libraryEntryTags,
   mediaImageDataUrl,
+  MAX_SINGLETON_FOLDER_RESOLUTIONS_PER_PAGE,
   organizeLibraryDetailTags,
   resolveLibraryLaunchText,
+  resolveSingletonFolderEntries,
   resolveSingletonFolderEntry,
   soleInitialRootPath,
 } from "@/lib/libraryMedia";
@@ -64,6 +67,14 @@ function browseResponse(entries: MediaBrowseEntry[]): MediaBrowseResponse {
 }
 
 describe("Library media helpers", () => {
+  it("should return a trimmed fallback system ID from entry system IDs", () => {
+    expect(
+      entrySystemId(
+        browseEntry({ systemId: undefined, systemIds: ["", "  SNES  "] }),
+      ),
+    ).toBe("SNES");
+  });
+
   it("should distinguish folders from media-capable directories", () => {
     const folder = browseEntry({ type: "directory", mediaId: undefined });
     const container = browseEntry({ type: "directory", mediaId: 42 });
@@ -231,6 +242,33 @@ describe("Library media helpers", () => {
 
     expect(result).toBeNull();
     expect(mediaBrowse).not.toHaveBeenCalled();
+  });
+
+  it("should bound singleton folder resolution work per page", async () => {
+    const folders = Array.from(
+      { length: MAX_SINGLETON_FOLDER_RESOLUTIONS_PER_PAGE + 3 },
+      (_, index) =>
+        browseEntry({
+          mediaId: undefined,
+          name: `Folder ${index}`,
+          path: `/roms/SNES/Folder ${index}`,
+          type: "directory",
+          fileCount: 1,
+        }),
+    );
+    const mediaBrowse = vi.fn().mockResolvedValue(browseResponse([]));
+
+    const result = await resolveSingletonFolderEntries(
+      folders,
+      "SNES",
+      undefined,
+      { mediaBrowse },
+    );
+
+    expect(result).toEqual(folders);
+    expect(mediaBrowse).toHaveBeenCalledTimes(
+      MAX_SINGLETON_FOLDER_RESOLUTIONS_PER_PAGE,
+    );
   });
 
   it("should honor filename display preference for media only", () => {

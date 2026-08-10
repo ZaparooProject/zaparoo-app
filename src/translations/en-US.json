@@ -206,7 +206,8 @@
       "nfcNotSupported": "NFC is not supported on this device"
     },
     "accessibility": {
-      "skipToContent": "Skip to main content"
+      "skipToContent": "Skip to main content",
+      "logo": "Zaparoo logo"
     },
     "tokenStaging": {
       "title": "Confirm staged token?",

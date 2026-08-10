@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@/test-utils";
 import { CoreAPI } from "@/lib/coreApi";
 import type { MediaBrowseEntry, MediaBrowseParams } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 import {
   libraryBrowseScrollKey,
   useLibrarySessionStore,
@@ -65,39 +66,13 @@ vi.mock("@/hooks/useHaptics", () => ({
   useHaptics: () => ({ impact: vi.fn() }),
 }));
 
-vi.mock("@/components/library/LibraryArtwork", () => ({
-  LibraryArtwork: () => <span aria-hidden="true" />,
-}));
-
-vi.mock("@/components/library/LibraryMediaDetailsModal", () => ({
-  LibraryMediaDetailsModal: ({
-    isOpen,
-    entry,
-  }: {
-    isOpen: boolean;
-    entry: MediaBrowseEntry | null;
-  }) =>
-    isOpen && entry ? (
-      <div role="dialog" aria-label={entry.name}>
-        {entry.name}
-      </div>
-    ) : null,
-}));
-
-vi.mock("@/components/library/LibraryGameSearch", () => ({
-  LibraryGameSearch: ({
-    initialSystemId,
-    onBack,
-  }: {
-    initialSystemId?: string;
-    onBack?: () => void;
-  }) => (
-    <div aria-label="contextual library search">
-      <span>{initialSystemId}</span>
-      <button onClick={onBack}>close contextual search</button>
-    </div>
-  ),
-}));
+vi.mock("@/lib/libraryImages", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/libraryImages")>();
+  return {
+    ...actual,
+    requestLibraryImage: vi.fn().mockResolvedValue(null),
+  };
+});
 
 function mediaEntry(
   overrides: Partial<MediaBrowseEntry> = {},
@@ -121,14 +96,41 @@ function browseResult(path: string, entries: MediaBrowseEntry[]) {
   };
 }
 
+function metadataResult(name: string, path: string) {
+  return {
+    media: {
+      path,
+      parentDir: path.slice(0, path.lastIndexOf("/")),
+      isMissing: false,
+      tags: [],
+      properties: {},
+      title: {
+        slug: name.toLowerCase().replaceAll(" ", "-"),
+        name,
+        slugLength: name.length,
+        slugWordCount: name.split(" ").length,
+        system: { id: "SNES", name: "Super Nintendo" },
+        tags: [],
+        properties: {},
+      },
+    },
+  };
+}
+
 describe("Library system browser", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    CoreAPI.reset();
     mockNavigate.mockReset();
     mockOutOfRangeScroll.mockReset();
     mockScrollToIndex.mockReset();
     useLibrarySessionStore.getState().reset();
     useTabSessionStore.getState().reset();
+    usePreferencesStore.setState({
+      _hasHydrated: true,
+      nfcAvailable: true,
+      showFilenames: false,
+    });
     useStatusStore.setState({
       connected: true,
       targetDeviceAddress: "device-a",
@@ -140,6 +142,9 @@ describe("Library system browser", () => {
     vi.spyOn(CoreAPI, "systems").mockResolvedValue({
       systems: [{ id: "SNES", name: "Super Nintendo" }],
     });
+    vi.spyOn(CoreAPI, "mediaMeta").mockResolvedValue(
+      metadataResult("Super Game", "/roms/SNES/Super Game.sfc"),
+    );
   });
 
   it("should browse into folders and return to system roots", async () => {
@@ -254,37 +259,37 @@ describe("Library system browser", () => {
       await screen.findByRole("heading", { name: "library.searchTitle" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByLabelText("contextual library search"),
-    ).toHaveTextContent("SNES");
+      screen.getByRole("search", { name: "library.searchTitle" }),
+    ).toBeInTheDocument();
   });
 
   it("should keep one loader visible while entering a sole root", async () => {
-    vi.useFakeTimers();
-    let resolveRoots!: (value: ReturnType<typeof browseResult>) => void;
-    let resolveFolder!: (value: ReturnType<typeof browseResult>) => void;
-    const rootsPromise = new Promise<ReturnType<typeof browseResult>>(
-      (resolve) => {
-        resolveRoots = resolve;
-      },
-    );
-    const folderPromise = new Promise<ReturnType<typeof browseResult>>(
-      (resolve) => {
-        resolveFolder = resolve;
-      },
-    );
-    const root = mediaEntry({
-      mediaId: undefined,
-      name: "SNES Games",
-      path: "/roms/SNES",
-      type: "root",
-    });
-    const browseSpy = vi
-      .spyOn(CoreAPI, "mediaBrowse")
-      .mockImplementation((params: MediaBrowseParams) =>
-        params.path ? folderPromise : rootsPromise,
-      );
-
     try {
+      vi.useFakeTimers();
+      let resolveRoots!: (value: ReturnType<typeof browseResult>) => void;
+      let resolveFolder!: (value: ReturnType<typeof browseResult>) => void;
+      const rootsPromise = new Promise<ReturnType<typeof browseResult>>(
+        (resolve) => {
+          resolveRoots = resolve;
+        },
+      );
+      const folderPromise = new Promise<ReturnType<typeof browseResult>>(
+        (resolve) => {
+          resolveFolder = resolve;
+        },
+      );
+      const root = mediaEntry({
+        mediaId: undefined,
+        name: "SNES Games",
+        path: "/roms/SNES",
+        type: "root",
+      });
+      const browseSpy = vi
+        .spyOn(CoreAPI, "mediaBrowse")
+        .mockImplementation((params: MediaBrowseParams) =>
+          params.path ? folderPromise : rootsPromise,
+        );
+
       render(<LibrarySystem />);
       await act(() => vi.advanceTimersByTimeAsync(300));
       const loading = screen.getByText("library.loadingFolder");
@@ -385,6 +390,12 @@ describe("Library system browser", () => {
           : browseResult("", [singleton, collection]),
       );
     const user = userEvent.setup();
+    vi.mocked(CoreAPI.mediaMeta).mockResolvedValue(
+      metadataResult(
+        "Game Title",
+        "/media/fat/games/SNES/Game Folder/Game.sfc",
+      ),
+    );
 
     render(<LibrarySystem />);
     await user.click(await screen.findByRole("button", { name: /Game Title/ }));
@@ -442,6 +453,15 @@ describe("Library system browser", () => {
   });
 
   it("should open system-scoped search and return to the same folder", async () => {
+    const searchSpy = vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValue({
+      results: [],
+      total: 0,
+      pagination: {
+        hasNextPage: false,
+        nextCursor: null,
+        pageSize: 100,
+      },
+    });
     const folder = mediaEntry({
       mediaId: undefined,
       name: "Games",
@@ -477,11 +497,18 @@ describe("Library system browser", () => {
     ).toBe(scrollContainer);
     expect(scrollContainer.scrollTop).toBe(0);
     expect(
-      screen.getByLabelText("contextual library search"),
-    ).toHaveTextContent("SNES");
+      screen.getByRole("search", { name: "library.searchTitle" }),
+    ).toBeInTheDocument();
     await user.click(
-      screen.getByRole("button", { name: "close contextual search" }),
+      screen.getByRole("button", { name: "library.searchAction" }),
     );
+    await waitFor(() =>
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ systems: ["SNES"] }),
+        expect.any(AbortSignal),
+      ),
+    );
+    await user.click(screen.getByRole("button", { name: "nav.back" }));
 
     expect(
       await screen.findByRole("heading", { name: "Games" }),
@@ -657,7 +684,7 @@ describe("Library system browser", () => {
     expect(browseSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         cursor: "next-page",
-        maxResults: 500,
+        maxResults: 100,
       }),
       expect.any(AbortSignal),
     );

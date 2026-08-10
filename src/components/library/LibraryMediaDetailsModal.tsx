@@ -80,7 +80,8 @@ function TagRow(props: { label: string; tags: TagInfo[] }) {
           <TagBadge
             key={`${tag.type}:${tag.tag}:${index}`}
             type={tag.type}
-            tag={tag.label || tag.tag}
+            tag={tag.tag}
+            displayTag={tag.label || tag.tag}
           />
         ))}
       </span>
@@ -110,6 +111,8 @@ export function LibraryMediaDetailsModal(props: {
   const [preparingWrite, setPreparingWrite] = useState(false);
   const launchControllerRef = useRef<AbortController | null>(null);
   const writeControllerRef = useRef<AbortController | null>(null);
+  const previousImageButtonRef = useRef<HTMLButtonElement>(null);
+  const nextImageButtonRef = useRef<HTMLButtonElement>(null);
   const entry = props.entry;
   const metadataQuery = useQuery({
     queryKey: [
@@ -292,6 +295,24 @@ export function LibraryMediaDetailsModal(props: {
     title,
     type: t(`library.imageTypes.${imageType}`),
   });
+  const showPreviousImage = () => {
+    const nextIndex = Math.max(0, imageIndex - 1);
+    setImageIndex(nextIndex);
+    if (nextIndex === 0) {
+      requestAnimationFrame(() => {
+        nextImageButtonRef.current?.focus({ preventScroll: true });
+      });
+    }
+  };
+  const showNextImage = () => {
+    const nextIndex = Math.min(imageOptions.length - 1, imageIndex + 1);
+    setImageIndex(nextIndex);
+    if (nextIndex === imageOptions.length - 1) {
+      requestAnimationFrame(() => {
+        previousImageButtonRef.current?.focus({ preventScroll: true });
+      });
+    }
+  };
 
   return (
     <SlideModal
@@ -307,7 +328,7 @@ export function LibraryMediaDetailsModal(props: {
               label={launching ? t("library.launching") : t("library.launch")}
               icon={
                 launching ? (
-                  <LoadingSpinner size={20} />
+                  <LoadingSpinner size={20} decorative />
                 ) : (
                   <PlayIcon size={20} />
                 )
@@ -329,7 +350,7 @@ export function LibraryMediaDetailsModal(props: {
               <Button
                 icon={
                   preparingWrite ? (
-                    <LoadingSpinner size={20} />
+                    <LoadingSpinner size={20} decorative />
                   ) : (
                     <NfcIcon size="20" />
                   )
@@ -370,11 +391,12 @@ export function LibraryMediaDetailsModal(props: {
               {imageOptions.length > 1 && (
                 <div className="flex items-center justify-center gap-3">
                   <Button
+                    ref={previousImageButtonRef}
                     icon={<ChevronLeftIcon size={20} />}
                     variant="text"
                     aria-label={t("library.previousImage")}
                     disabled={imageIndex === 0}
-                    onClick={() => setImageIndex((current) => current - 1)}
+                    onClick={showPreviousImage}
                   />
                   <span className="text-muted-foreground text-sm">
                     {t("library.imagePosition", {
@@ -383,11 +405,12 @@ export function LibraryMediaDetailsModal(props: {
                     })}
                   </span>
                   <Button
+                    ref={nextImageButtonRef}
                     icon={<ChevronRightIcon size={20} />}
                     variant="text"
                     aria-label={t("library.nextImage")}
                     disabled={imageIndex === imageOptions.length - 1}
-                    onClick={() => setImageIndex((current) => current + 1)}
+                    onClick={showNextImage}
                   />
                 </div>
               )}
@@ -404,7 +427,7 @@ export function LibraryMediaDetailsModal(props: {
                 className="text-muted-foreground flex items-center justify-center gap-2"
                 role="status"
               >
-                <LoadingSpinner size={16} className="text-primary" />
+                <LoadingSpinner size={16} className="text-primary" decorative />
                 <span>{t("library.loadingMetadata")}</span>
               </div>
             </DelayedLoading>

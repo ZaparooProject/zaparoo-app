@@ -161,7 +161,7 @@ export function OnlineDeviceSetup({
             ref={featuresHeadingRef}
             id="online-features-title"
             tabIndex={-1}
-            className="text-lg font-medium text-white outline-none"
+            className="rounded-sm text-lg font-medium text-white outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             {t("online.features.title")}
           </h2>

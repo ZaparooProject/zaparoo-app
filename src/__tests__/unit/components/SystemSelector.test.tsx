@@ -373,6 +373,28 @@ describe("SystemSelector", () => {
       });
     });
 
+    it("should keep a radio tabbable when selection is filtered out", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+      render(
+        <SystemSelector
+          {...defaultProps}
+          selectedSystems={["genesis"]}
+          mode="single"
+        />,
+      );
+
+      await user.type(
+        screen.getByPlaceholderText("systemSelector.searchPlaceholder"),
+        "nintendo",
+      );
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+
+      expect(screen.getAllByRole("radio")[0]).toHaveAttribute("tabindex", "0");
+    });
+
     it("should show no results message when search has no matches", async () => {
       // Arrange
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });

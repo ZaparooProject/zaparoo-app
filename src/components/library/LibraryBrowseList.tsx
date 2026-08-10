@@ -203,7 +203,7 @@ function LibraryBrowseRow(props: {
       </span>
       <span className="flex shrink-0 items-center gap-2">
         {!isFolder && hasFavoriteTag(entry.tags) && (
-          <span aria-label={t("library.favorite")}>
+          <span role="img" aria-label={t("library.favorite")}>
             <Heart size={18} fill="currentColor" aria-hidden="true" />
           </span>
         )}

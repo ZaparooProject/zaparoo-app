@@ -39,7 +39,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 
 // Mock NFC writer
 vi.mock("@/lib/writeNfcHook", () => ({
-  useNfcWriter: () => mockNfcWriter,
+  useNfcWriter: () => ({ ...mockNfcWriter }),
   WriteMethod: {
     Auto: "auto",
     LocalNFC: "local",

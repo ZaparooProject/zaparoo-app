@@ -161,7 +161,7 @@ describe("useLibraryBrowse", () => {
     );
   });
 
-  it("should use bounded larger pages when loading through a jump target", async () => {
+  it("should use deterministic page sizes when loading through a jump target", async () => {
     const requestedLimits: number[] = [];
     vi.spyOn(CoreAPI, "mediaBrowse").mockImplementation(
       async (params: MediaBrowseParams) => {
@@ -202,11 +202,15 @@ describe("useLibraryBrowse", () => {
     await waitFor(() => expect(result.current.entries).toHaveLength(2));
     let loaded = false;
     await act(async () => {
-      loaded = await result.current.loadThroughIndex(1000);
+      loaded = await result.current.loadThroughIndex(100);
     });
 
     expect(loaded).toBe(true);
-    expect(requestedLimits).toEqual([100, 1000]);
-    await waitFor(() => expect(result.current.entries).toHaveLength(1002));
+    expect(requestedLimits).toEqual([100, 100]);
+    await waitFor(() => expect(result.current.entries).toHaveLength(102));
+
+    await act(() => result.current.refetch());
+
+    expect(requestedLimits).toEqual([100, 100, 100, 100]);
   });
 });

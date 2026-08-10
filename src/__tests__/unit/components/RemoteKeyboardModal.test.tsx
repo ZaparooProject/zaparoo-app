@@ -28,15 +28,27 @@ vi.mock("react-simple-keyboard/build/index.modern.esm.js", () => ({
   }: KeyboardMockProps) => (
     <div data-use-button-tag={useButtonTag ? "true" : "false"}>
       {layout[layoutName]?.flatMap((row) =>
-        row.split(" ").map((button) => (
-          <button
-            key={`${layoutName}-${button}`}
-            type="button"
-            onClick={() => onKeyPress(button)}
-          >
-            {display[button] ?? button}
-          </button>
-        )),
+        row.split(" ").map((button) => {
+          const label = display[button] ?? button;
+          return useButtonTag ? (
+            <button
+              key={`${layoutName}-${button}`}
+              type="button"
+              onClick={() => onKeyPress(button)}
+            >
+              {label}
+            </button>
+          ) : (
+            <div
+              key={`${layoutName}-${button}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => onKeyPress(button)}
+            >
+              {label}
+            </div>
+          );
+        }),
       )}
     </div>
   ),
@@ -70,16 +82,14 @@ describe("RemoteKeyboardModal", () => {
 
   it("should render virtual keys as semantic buttons", async () => {
     const user = userEvent.setup();
-    const { baseElement, container } = render(
+    const { baseElement } = render(
       <RemoteKeyboardModal isOpen close={vi.fn()} />,
     );
     await user.click(
       screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
     );
 
-    expect(
-      container.querySelector('[data-use-button-tag="true"]'),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "q" })).toBeInTheDocument();
     expect(await findA11yViolations(baseElement)).toEqual([]);
   });
 

@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  findA11yViolations,
-  render,
-  screen,
-  fireEvent,
-} from "../../../test-utils";
-import { SlideModal } from "../../../components/SlideModal";
+import { findA11yViolations, render, screen, fireEvent } from "@/test-utils";
+import userEvent from "@testing-library/user-event";
+import { SlideModal } from "@/components/SlideModal";
 
 // Mock store for safe insets
 vi.mock("@/lib/store", () => ({
@@ -147,11 +143,12 @@ describe("SlideModal", () => {
     expect(screen.getByRole("heading", { name: "Test Modal" })).toHaveFocus();
   });
 
-  it("closes when Escape is pressed", () => {
+  it("closes when Escape is pressed", async () => {
+    const user = userEvent.setup();
     const closeMock = vi.fn();
     render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
 
-    fireEvent.keyDown(document, { key: "Escape" });
+    await user.keyboard("{Escape}");
 
     expect(closeMock).toHaveBeenCalledTimes(1);
   });

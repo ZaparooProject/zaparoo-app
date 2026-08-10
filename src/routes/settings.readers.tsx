@@ -216,7 +216,10 @@ export function ReadersSettings() {
                   coreSettings?.readersScanMode === "tap" && connected
                 }
                 tabIndex={
-                  coreSettings?.readersScanMode === "tap" && connected ? 0 : -1
+                  canWriteCoreSettings &&
+                  coreSettings?.readersScanMode !== "hold"
+                    ? 0
+                    : -1
                 }
                 className={classNames(
                   "flex",
