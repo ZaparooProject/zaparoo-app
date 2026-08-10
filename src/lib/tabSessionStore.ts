@@ -98,7 +98,11 @@ function scrollKeyBelongsToTab(key: string, tab: BottomTabId): boolean {
 
 function scrollKeyBelongsToTabRoot(key: string, tab: BottomTabId): boolean {
   const rootPath = defaultLastHref[tab];
-  return key === rootPath || key.startsWith(`${rootPath}?`);
+  return (
+    key === rootPath ||
+    (rootPath !== "/" && key === `${rootPath}/`) ||
+    key.startsWith(`${rootPath}?`)
+  );
 }
 
 function initialTabSessionState() {

@@ -1,9 +1,5 @@
-import {
-  findA11yViolations,
-  render,
-  screen,
-  fireEvent,
-} from "../../../test-utils";
+import userEvent from "@testing-library/user-event";
+import { findA11yViolations, render, screen } from "../../../test-utils";
 import { BottomNav } from "@/components/BottomNav";
 import { useStatusStore } from "@/lib/store";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
@@ -157,7 +153,8 @@ describe("BottomNav", () => {
     );
   });
 
-  it("resets active Library navigation to its root", () => {
+  it("resets active Library navigation to its root", async () => {
+    const user = userEvent.setup();
     mockUseLocation.mockReturnValue({
       pathname: "/library/SNES",
       href: "/library/SNES",
@@ -174,7 +171,7 @@ describe("BottomNav", () => {
 
     const libraryLink = screen.getByTestId("link-/library");
     expect(libraryLink).toHaveAttribute("data-reset-scroll", "false");
-    fireEvent.click(libraryLink);
+    await user.click(libraryLink);
 
     expect(useTabSessionStore.getState().lastHref.library).toBe("/library");
     expect(useTabSessionStore.getState().scrollPositions).toHaveProperty(
@@ -188,7 +185,8 @@ describe("BottomNav", () => {
     expect(useLibrarySessionStore.getState().embeddedSearchOpen).toEqual({});
   });
 
-  it("scrolls an active tab root to the top without clearing its state", () => {
+  it("scrolls an active tab root to the top without clearing its state", async () => {
+    const user = userEvent.setup();
     mockUseLocation.mockReturnValue({
       pathname: "/library",
       href: "/library",
@@ -214,7 +212,7 @@ describe("BottomNav", () => {
       </>,
     );
 
-    fireEvent.click(screen.getByTestId("link-/library"));
+    await user.click(screen.getByTestId("link-/library"));
 
     expect(scrollTo).toHaveBeenCalledWith({
       left: 0,
@@ -229,7 +227,8 @@ describe("BottomNav", () => {
     expect(mockImpact).toHaveBeenCalledWith("light");
   });
 
-  it("does nothing when an active tab root is already at the top", () => {
+  it("does nothing when an active tab root is already at the top", async () => {
+    const user = userEvent.setup();
     mockUseLocation.mockReturnValue({
       pathname: "/library",
       href: "/library",
@@ -247,7 +246,7 @@ describe("BottomNav", () => {
       </>,
     );
 
-    fireEvent.click(screen.getByTestId("link-/library"));
+    await user.click(screen.getByTestId("link-/library"));
 
     expect(scrollTo).not.toHaveBeenCalled();
     expect(mockImpact).not.toHaveBeenCalled();
@@ -324,10 +323,11 @@ describe("BottomNav", () => {
     );
   });
 
-  it("triggers haptic feedback when nav button is clicked", () => {
+  it("triggers haptic feedback when nav button is clicked", async () => {
+    const user = userEvent.setup();
     render(<BottomNav />);
 
-    fireEvent.click(screen.getByTestId("link-/library"));
+    await user.click(screen.getByTestId("link-/library"));
 
     expect(mockImpact).toHaveBeenCalledWith("light");
   });
