@@ -16,6 +16,7 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 // Mock state for tracking navigation and back button behavior
 const mockNavigate = vi.fn();
 const mockExitApp = vi.fn();
+const mockIsNativePlatform = vi.fn();
 
 // Capture the back button handler
 let capturedBackButtonHandler: (() => boolean | void) | null = null;
@@ -42,6 +43,12 @@ vi.mock("@capacitor/app", () => ({
   App: {
     exitApp: () => mockExitApp(),
     addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
+  },
+}));
+
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: () => mockIsNativePlatform(),
   },
 }));
 
@@ -97,6 +104,7 @@ import { ShakeDetector, BackHandler, RootLayout } from "@/routes/__root";
 describe("Root Layout Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsNativePlatform.mockReturnValue(true);
 
     // Reset stores
     useStatusStore.setState({
@@ -245,6 +253,16 @@ describe("Root Layout Integration", () => {
 
         expect(mockExitApp).toHaveBeenCalled();
         expect(result).toBe(true);
+      });
+
+      it("should leave root back navigation unhandled on web", () => {
+        mockIsNativePlatform.mockReturnValue(false);
+        setupBackHandler("/");
+
+        const result = capturedBackButtonHandler?.();
+
+        expect(mockExitApp).not.toHaveBeenCalled();
+        expect(result).toBe(false);
       });
 
       const navigateToRootCases = [

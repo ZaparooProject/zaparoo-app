@@ -1,10 +1,11 @@
+import type { ComponentType } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { mockReaderInfo } from "../../../test-utils/factories";
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
 const { componentRef, mockNavigate } = vi.hoisted(() => ({
-  componentRef: { current: null as any },
+  componentRef: { current: null as ComponentType | null },
   mockNavigate: vi.fn(),
 }));
 
@@ -120,7 +121,12 @@ vi.mock("@/components/ProPurchase", () => ({
 import "@/routes/settings.readers";
 
 // The component will be captured by the mock
-const getReadersSettings = () => componentRef.current;
+const getReadersSettings = () => {
+  if (!componentRef.current) {
+    throw new Error("Readers settings component was not captured");
+  }
+  return componentRef.current;
+};
 
 describe("Settings Readers Route", () => {
   beforeEach(() => {

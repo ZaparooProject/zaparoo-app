@@ -5,6 +5,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { App } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 import { useRef } from "react";
 import { SafeAreaHandler } from "@/lib/safeArea";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
@@ -45,6 +46,8 @@ export function BackHandler() {
     "navigation",
     () => {
       if (pathname === "/") {
+        if (!Capacitor.isNativePlatform()) return false;
+
         App.exitApp();
         return true;
       }

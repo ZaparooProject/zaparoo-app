@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, fireEvent, render, screen } from "../../../test-utils";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { act, fireEvent, render, screen, waitFor } from "@/test-utils";
 import { Search } from "@/routes/-pages/Search";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -48,6 +49,7 @@ vi.mock("@/lib/coreApi", () => ({
       active: [],
     }),
     run: vi.fn().mockResolvedValue(undefined),
+    reset: vi.fn(),
   },
   isExpectedMediaDatabaseError: (error: unknown) => {
     const msg = String(
@@ -109,29 +111,35 @@ vi.mock("@/lib/writeNfcHook", () => ({
 }));
 
 // Mock VirtualSearchResults since it has complex dependencies
-vi.mock("@/components/VirtualSearchResults", () => ({
-  VirtualSearchResults: ({
-    hasSearched,
-    isSearching,
-    onSearchComplete,
-    tags,
-  }: {
-    hasSearched: boolean;
-    isSearching: boolean;
-    onSearchComplete?: () => void;
-    tags: string[];
-  }) => {
-    if (isSearching) {
-      // Simulate search completion
-      setTimeout(() => onSearchComplete?.(), 10);
-    }
-    return (
-      <div data-testid="virtual-search-results" data-tags={tags.join(",")}>
-        {hasSearched ? "Results shown" : "No search yet"}
-      </div>
-    );
-  },
-}));
+vi.mock("@/components/VirtualSearchResults", async () => {
+  const { useEffect } = await import("react");
+
+  return {
+    VirtualSearchResults: ({
+      hasSearched,
+      isSearching,
+      onSearchComplete,
+      tags,
+    }: {
+      hasSearched: boolean;
+      isSearching: boolean;
+      onSearchComplete?: () => void;
+      tags: string[];
+    }) => {
+      useEffect(() => {
+        if (isSearching) {
+          onSearchComplete?.();
+        }
+      }, [isSearching, onSearchComplete]);
+
+      return (
+        <div data-testid="virtual-search-results" data-tags={tags.join(",")}>
+          {hasSearched ? "Results shown" : "No search yet"}
+        </div>
+      );
+    },
+  };
+});
 
 // Mock SystemSelector components
 vi.mock("@/components/SystemSelector", () => ({
@@ -308,7 +316,7 @@ vi.mock("@/components/BackToTop", () => ({
 describe("Search Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
+    CoreAPI.reset();
     useTabSessionStore.getState().reset();
     useStatusStore.setState({
       ...useStatusStore.getInitialState(),
@@ -326,10 +334,6 @@ describe("Search Component", () => {
       database: { exists: true, indexing: false },
       active: [],
     });
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   describe("rendering", () => {
@@ -367,10 +371,11 @@ describe("Search Component", () => {
       expect(screen.getByTestId("tag-selector-trigger")).toBeInTheDocument();
     });
 
-    it("should navigate to Create without resetting scroll", () => {
+    it("should navigate to Create without resetting scroll", async () => {
+      const user = userEvent.setup();
       render(<Search />);
 
-      fireEvent.click(screen.getByRole("button", { name: "nav.back" }));
+      await user.click(screen.getByRole("button", { name: "nav.back" }));
 
       expect(mockNavigate).toHaveBeenCalledWith({
         to: "/create",
@@ -574,7 +579,7 @@ describe("Search Component", () => {
       });
     });
 
-    it("should perform search when search button is clicked", () => {
+    it("should perform search when search button is clicked", async () => {
       render(<Search />);
 
       const input = screen.getByLabelText("create.search.gameInput");
@@ -590,6 +595,7 @@ describe("Search Component", () => {
         system: "all",
         tags: [],
       });
+      await waitFor(() => expect(searchButton).toBeEnabled());
     });
 
     it("should perform search on Enter key press", () => {

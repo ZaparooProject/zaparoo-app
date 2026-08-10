@@ -168,7 +168,7 @@ export function ScanSpinner(props: {
     </div>
   );
 
-  return props.onScan ? (
+  return props.onScan && !props.spinning ? (
     <button
       type="button"
       onClick={props.onScan}

@@ -245,21 +245,21 @@ describe("Settings Play Controls Route", () => {
       ).toBeInTheDocument();
     });
 
-    it("should programmatically group repeated duration fields", () => {
+    it("should programmatically group repeated duration fields", async () => {
       renderComponent();
 
       expect(
-        screen.getByRole("group", {
+        await screen.findByRole("group", {
           name: "settings.core.playtime.dailyLimit",
         }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("group", {
+        await screen.findByRole("group", {
           name: "settings.core.playtime.sessionLimit",
         }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("group", {
+        await screen.findByRole("group", {
           name: "settings.core.launchGuard.timeout",
         }),
       ).toBeInTheDocument();

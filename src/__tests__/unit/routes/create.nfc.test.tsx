@@ -395,7 +395,9 @@ describe("Create NFC Route", () => {
         expect(readTab).toHaveAttribute("aria-selected", "true"),
       );
       await waitFor(() => expect(readTab).toHaveFocus());
-      expect(screen.getByText("create.nfc.resultReady")).toBeInTheDocument();
+      expect(
+        await screen.findByText("create.nfc.resultReady"),
+      ).toBeInTheDocument();
     });
 
     it("should initially show read tab by default", () => {

@@ -226,7 +226,7 @@ export function VirtualSearchResults({
           className="text-muted-foreground mt-6 flex items-center justify-center gap-2"
           role="status"
         >
-          <LoadingSpinner size={16} className="text-primary" />
+          <LoadingSpinner size={16} className="text-primary" decorative />
           <span>{t("create.search.loading")}</span>
         </div>
       </DelayedLoading>
@@ -368,7 +368,11 @@ export function VirtualSearchResults({
                 >
                   <DelayedLoading delayMs={loadingDelayMs}>
                     <div className="text-muted-foreground flex items-center justify-center gap-2">
-                      <LoadingSpinner size={16} className="text-primary" />
+                      <LoadingSpinner
+                        size={16}
+                        className="text-primary"
+                        decorative
+                      />
                       <span>{t("create.search.loading")}</span>
                     </div>
                   </DelayedLoading>

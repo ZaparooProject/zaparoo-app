@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, waitFor } from "@/test-utils";
 import { LibraryArtwork } from "@/components/library/LibraryArtwork";
 import { requestLibraryImage } from "@/lib/libraryImages";
+import { CoreAPI } from "@/lib/coreApi";
 
 vi.mock("@/lib/libraryImages", () => ({
   requestLibraryImage: vi.fn(),
@@ -10,6 +11,7 @@ vi.mock("@/lib/libraryImages", () => ({
 describe("LibraryArtwork", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    CoreAPI.reset();
   });
 
   it("should report unavailable artwork when the image request fails", async () => {
