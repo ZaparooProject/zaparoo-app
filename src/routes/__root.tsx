@@ -15,6 +15,10 @@ import { SkipLink } from "@/components/SkipLink";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useShakeDetection } from "@/hooks/useShakeDetection";
+import {
+  appBackDestination,
+  appBackNavigationOptions,
+} from "@/lib/tabSessionStore";
 
 // Shake detection component - must be inside router context to access location
 // Exported for testing
@@ -35,41 +39,21 @@ export function ShakeDetector() {
 // Exported for testing
 export function BackHandler() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   useBackButtonHandler(
     "navigation",
     () => {
-      if (location.pathname === "/") {
+      if (pathname === "/") {
         App.exitApp();
         return true;
       }
 
-      if (
-        location.pathname === "/create" ||
-        location.pathname === "/library" ||
-        location.pathname === "/library/" ||
-        location.pathname === "/settings"
-      ) {
-        navigate({ to: "/" });
-        return true;
-      }
+      const destination = appBackDestination(pathname);
+      if (!destination) return false;
 
-      if (location.pathname.startsWith("/create")) {
-        navigate({ to: "/create" });
-        return true;
-      }
-
-      if (location.pathname.startsWith("/library")) {
-        navigate({ to: "/library" });
-        return true;
-      }
-
-      if (location.pathname.startsWith("/settings")) {
-        navigate({ to: "/settings" });
-        return true;
-      }
-
-      return false;
+      void navigate(appBackNavigationOptions(destination));
+      return true;
     },
     0, // Lowest priority - fallback navigation
   );

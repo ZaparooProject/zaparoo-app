@@ -234,12 +234,8 @@ describe("Root Layout Integration", () => {
     describe("navigation behavior", () => {
       // Helper to set up the handler and location for each test
       const setupBackHandler = (pathname: string) => {
+        mockPathname = pathname;
         render(<BackHandler />);
-        Object.defineProperty(globalThis, "location", {
-          value: { pathname },
-          writable: true,
-          configurable: true,
-        });
       };
 
       it("should exit app when on root path", () => {
@@ -264,7 +260,10 @@ describe("Root Layout Integration", () => {
 
           const result = capturedBackButtonHandler?.();
 
-          expect(mockNavigate).toHaveBeenCalledWith({ to: "/" });
+          expect(mockNavigate).toHaveBeenCalledWith({
+            to: "/",
+            resetScroll: false,
+          });
           expect(result).toBe(true);
         },
       );
@@ -283,7 +282,10 @@ describe("Root Layout Integration", () => {
 
           const result = capturedBackButtonHandler?.();
 
-          expect(mockNavigate).toHaveBeenCalledWith({ to: "/create" });
+          expect(mockNavigate).toHaveBeenCalledWith({
+            to: "/create",
+            resetScroll: false,
+          });
           expect(result).toBe(true);
         },
       );
@@ -300,7 +302,10 @@ describe("Root Layout Integration", () => {
 
           const result = capturedBackButtonHandler?.();
 
-          expect(mockNavigate).toHaveBeenCalledWith({ to: "/library" });
+          expect(mockNavigate).toHaveBeenCalledWith({
+            to: "/library",
+            resetScroll: false,
+          });
           expect(result).toBe(true);
         },
       );
@@ -319,10 +324,25 @@ describe("Root Layout Integration", () => {
 
           const result = capturedBackButtonHandler?.();
 
-          expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings" });
+          expect(mockNavigate).toHaveBeenCalledWith({
+            to: "/settings",
+            resetScroll: false,
+          });
           expect(result).toBe(true);
         },
       );
+
+      it("should navigate nested routes to their immediate parent", () => {
+        setupBackHandler("/settings/devices/device-a");
+
+        const result = capturedBackButtonHandler?.();
+
+        expect(mockNavigate).toHaveBeenCalledWith({
+          to: "/settings/devices",
+          resetScroll: false,
+        });
+        expect(result).toBe(true);
+      });
 
       it("should return false for unknown paths", () => {
         setupBackHandler("/unknown");

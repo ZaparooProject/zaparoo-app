@@ -7,6 +7,7 @@ import { Button } from "@/components/wui/Button.tsx";
 import { BackIcon, NextIcon } from "@/lib/images";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/settings/about")({
   component: About,
@@ -18,7 +19,8 @@ export function About() {
     t("settings.about.title"),
   );
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,

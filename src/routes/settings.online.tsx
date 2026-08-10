@@ -25,6 +25,7 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { BackIcon, GoogleIcon, AppleIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import {
   collectErrorSearchStrings,
@@ -133,7 +134,8 @@ export function OnlinePage() {
   const { t } = useTranslation();
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t("online.title"));
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

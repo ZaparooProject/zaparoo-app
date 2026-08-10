@@ -26,10 +26,10 @@ const mockLicenseNotices = {
   },
 };
 
-const { componentRef, mockBrowserOpen, mockGoBack } = vi.hoisted(() => ({
+const { componentRef, mockBrowserOpen, mockNavigate } = vi.hoisted(() => ({
   componentRef: { current: null as ComponentType | null },
   mockBrowserOpen: vi.fn(),
-  mockGoBack: vi.fn(),
+  mockNavigate: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -40,7 +40,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       componentRef.current = options.component;
       return { options };
     },
-    useRouter: () => ({ history: { back: mockGoBack } }),
+    useRouter: () => ({ navigate: mockNavigate }),
   };
 });
 
@@ -184,6 +184,9 @@ describe("Settings Licenses Route", () => {
     renderComponent();
 
     await user.click(screen.getByLabelText("nav.back"));
-    expect(mockGoBack).toHaveBeenCalledOnce();
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/settings",
+      resetScroll: false,
+    });
   });
 });

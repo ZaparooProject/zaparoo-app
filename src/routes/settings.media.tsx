@@ -8,6 +8,7 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { BackIcon } from "@/lib/images";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/settings/media")({
   component: MediaSettings,
@@ -19,7 +20,8 @@ export function MediaSettings() {
     t("settings.media.title"),
   );
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

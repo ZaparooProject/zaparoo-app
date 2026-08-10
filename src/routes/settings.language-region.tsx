@@ -8,6 +8,7 @@ import i18n from "@/i18n";
 import { BackIcon } from "@/lib/images";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import type { SystemNameRegionPreference } from "@/lib/systemNames";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/settings/language-region")({
   component: LanguageRegionSettings,
@@ -63,7 +64,8 @@ export function LanguageRegionSettings() {
     BASE_LANGUAGE_TO_LOCALE[resolvedLanguage] ?? resolvedLanguage;
 
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

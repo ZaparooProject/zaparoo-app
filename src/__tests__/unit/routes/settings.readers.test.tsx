@@ -3,9 +3,9 @@ import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { mockReaderInfo } from "../../../test-utils/factories";
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
-const { componentRef, mockGoBack } = vi.hoisted(() => ({
+const { componentRef, mockNavigate } = vi.hoisted(() => ({
   componentRef: { current: null as any },
-  mockGoBack: vi.fn(),
+  mockNavigate: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -16,7 +16,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       componentRef.current = options.component;
       return { options };
     },
-    useRouter: () => ({ history: { back: mockGoBack } }),
+    useRouter: () => ({ navigate: mockNavigate }),
   };
 });
 
@@ -164,7 +164,10 @@ describe("Settings Readers Route", () => {
       renderComponent();
 
       fireEvent.click(screen.getByLabelText("nav.back"));
-      expect(mockGoBack).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/settings",
+        resetScroll: false,
+      });
     });
   });
 

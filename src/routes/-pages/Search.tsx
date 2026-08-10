@@ -17,7 +17,10 @@ import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { DEFAULT_GAMES_INDEX, useStatusStore } from "@/lib/store";
-import { useTabSessionStore } from "@/lib/tabSessionStore";
+import {
+  appBackNavigationOptions,
+  useTabSessionStore,
+} from "@/lib/tabSessionStore";
 import { TextInput } from "@/components/wui/TextInput";
 import { WriteModal } from "@/components/WriteModal";
 import { PageFrame } from "@/components/PageFrame";
@@ -207,7 +210,8 @@ export function Search() {
   }, [mediaTagsAvailable]);
 
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/create"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

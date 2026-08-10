@@ -7,6 +7,7 @@ import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { PageFrame } from "@/components/PageFrame";
 import { BackIcon } from "@/lib/images";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/settings/help")({
   component: Help,
@@ -18,7 +19,8 @@ export function Help() {
     t("settings.help.title"),
   );
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

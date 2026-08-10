@@ -21,6 +21,7 @@ import { MappingRow } from "@/components/MappingRow";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/create/mappings")({
   component: Mappings,
@@ -34,7 +35,8 @@ export function Mappings() {
   const connected = useStatusStore((state) => state.connected);
   const router = useRouter();
   const navigate = useNavigate();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/create"));
   const [search, setSearch] = useState("");
   const [reloading, setReloading] = useState(false);
   const { available: readOnlyMappingsAvailable } = useCoreFeature(

@@ -33,7 +33,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       componentRef.current = options.component;
       return { options };
     },
-    useRouter: () => ({ history: { back: mockGoBack } }),
+    useRouter: () => ({ navigate: mockGoBack }),
   };
 });
 
@@ -246,7 +246,10 @@ describe("Create NFC Route", () => {
 
       await user.click(screen.getByLabelText("nav.back"));
 
-      expect(mockGoBack).toHaveBeenCalled();
+      expect(mockGoBack).toHaveBeenCalledWith({
+        to: "/create",
+        resetScroll: false,
+      });
     });
   });
 

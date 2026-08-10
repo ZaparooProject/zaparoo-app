@@ -16,6 +16,7 @@ import {
   selectShakeSettings,
 } from "@/lib/preferencesStore";
 import { BackIcon, CheckIcon } from "@/lib/images";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { SystemSelector } from "@/components/SystemSelector";
@@ -116,7 +117,8 @@ export function ReadersSettings() {
   const { PurchaseModal, setProPurchaseModalOpen } = useProPurchase();
 
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

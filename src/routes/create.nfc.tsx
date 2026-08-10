@@ -22,6 +22,7 @@ import { ReadTab } from "@/components/nfc/ReadTab";
 import { ToolsTab } from "@/components/nfc/ToolsTab";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/create/nfc")({
   component: NfcUtils,
@@ -74,7 +75,8 @@ export function NfcUtils() {
   }, [announce, nfcWriter, t]);
 
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/create"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

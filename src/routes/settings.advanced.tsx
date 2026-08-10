@@ -16,6 +16,7 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useClientCapability } from "@/hooks/useClientCapability";
 import { SlideModal } from "@/components/SlideModal";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { Button } from "@/components/wui/Button";
 import { ClientCapability } from "@/lib/models";
 import {
@@ -79,7 +80,8 @@ export function AdvancedSettings() {
   };
 
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

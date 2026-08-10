@@ -6,6 +6,8 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { CoreAPI } from "@/lib/coreApi";
 
+const mockNavigate = vi.fn();
+
 // Mock route
 vi.mock("@tanstack/react-router", () => ({
   getRouteApi: () => ({
@@ -20,11 +22,7 @@ vi.mock("@tanstack/react-router", () => ({
       },
     }),
   }),
-  useRouter: () => ({
-    history: {
-      back: vi.fn(),
-    },
-  }),
+  useRouter: () => ({ navigate: mockNavigate }),
 }));
 
 // Mock i18next
@@ -367,12 +365,15 @@ describe("Search Component", () => {
       expect(screen.getByTestId("tag-selector-trigger")).toBeInTheDocument();
     });
 
-    it("should render back button", () => {
+    it("should navigate to Create without resetting scroll", () => {
       render(<Search />);
 
-      expect(
-        screen.getByRole("button", { name: "nav.back" }),
-      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "nav.back" }));
+
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/create",
+        resetScroll: false,
+      });
     });
 
     it("should render recent searches button", () => {

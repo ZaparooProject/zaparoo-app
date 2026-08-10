@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { bottomTabForPath, useTabSessionStore } from "@/lib/tabSessionStore";
+import {
+  appBackDestination,
+  appBackNavigationOptions,
+  bottomTabForPath,
+  useTabSessionStore,
+} from "@/lib/tabSessionStore";
 
 describe("tabSessionStore", () => {
   beforeEach(() => {
@@ -12,6 +17,27 @@ describe("tabSessionStore", () => {
     expect(bottomTabForPath("/create/search")).toBe("create");
     expect(bottomTabForPath("/settings/advanced")).toBe("settings");
     expect(bottomTabForPath("/unknown")).toBeNull();
+  });
+
+  it("should resolve app Back within the active tab hierarchy", () => {
+    expect(appBackDestination("/")).toBeNull();
+    expect(appBackDestination("/settings")).toBe("/");
+    expect(appBackDestination("/settings/about")).toBe("/settings");
+    expect(appBackDestination("/settings/devices/device-a")).toBe(
+      "/settings/devices",
+    );
+    expect(appBackDestination("/create/search")).toBe("/create");
+    expect(appBackDestination("/create/mappings/42")).toBe("/create/mappings");
+    expect(appBackDestination("/library/SNES")).toBe("/library");
+    expect(appBackDestination("/library/")).toBe("/");
+    expect(appBackDestination("/unknown")).toBeNull();
+  });
+
+  it("should preserve parent scroll for app Back navigation", () => {
+    expect(appBackNavigationOptions("/settings")).toEqual({
+      to: "/settings",
+      resetScroll: false,
+    });
   });
 
   it("should remember each tab's last href for this session", () => {

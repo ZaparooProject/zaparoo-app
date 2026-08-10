@@ -19,7 +19,6 @@ import type { MappingResponse } from "@/lib/models";
 
 const {
   componentRef,
-  mockGoBack,
   mockNavigate,
   mockToastSuccess,
   mockToastError,
@@ -33,7 +32,6 @@ const {
   mockCoreVersionPending,
 } = vi.hoisted(() => ({
   componentRef: { current: null as any },
-  mockGoBack: vi.fn(),
   mockNavigate: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
@@ -61,7 +59,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       componentRef.current = options.component;
       return { options };
     },
-    useRouter: () => ({ history: { back: mockGoBack } }),
+    useRouter: () => ({ navigate: mockNavigate }),
     useNavigate: () => mockNavigate,
     Link: ({
       children,
@@ -408,7 +406,10 @@ describe("Create Mappings List Route", () => {
 
       await user.click(screen.getByLabelText("nav.back"));
 
-      expect(mockGoBack).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/create",
+        resetScroll: false,
+      });
     });
 
     it("should navigate to /create/mappings/new when '+ new' is clicked", async () => {

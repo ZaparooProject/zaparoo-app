@@ -13,6 +13,7 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { TextInput } from "@/components/wui/TextInput";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge, type BadgeVariant } from "@/components/wui/Badge";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import {
   formatDuration,
   formatDurationDisplay,
@@ -43,7 +44,8 @@ export function PlayControlsSettings() {
     connectionState === ConnectionState.RECONNECTING;
 
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

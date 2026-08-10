@@ -15,7 +15,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   return {
     ...actual,
     createFileRoute: () => (options: unknown) => ({ options }),
-    useRouter: () => ({ history: { back: mockBack } }),
+    useRouter: () => ({ navigate: mockBack }),
   };
 });
 
@@ -100,6 +100,9 @@ describe("Language & Region settings", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "nav.back" }));
 
-    expect(mockBack).toHaveBeenCalledOnce();
+    expect(mockBack).toHaveBeenCalledWith({
+      to: "/settings",
+      resetScroll: false,
+    });
   });
 });

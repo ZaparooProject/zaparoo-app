@@ -20,6 +20,7 @@ import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import licenseDataJson from "@/generated/thirdPartyLicenses.json";
 import { BackIcon, ExternalIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 interface ThirdPartyPackage {
   name: string;
@@ -77,7 +78,8 @@ export function ThirdPartyLicenses() {
     t("settings.licenses.title"),
   );
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

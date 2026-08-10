@@ -41,6 +41,44 @@ export function bottomTabForPath(pathname: string): BottomTabId | null {
   return null;
 }
 
+export type AppBackDestination =
+  | "/"
+  | "/library"
+  | "/create"
+  | "/create/mappings"
+  | "/settings"
+  | "/settings/devices";
+
+export function appBackDestination(
+  pathname: string,
+): AppBackDestination | null {
+  const normalizedPath =
+    pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+
+  if (normalizedPath === "/") return null;
+  if (
+    normalizedPath === "/library" ||
+    normalizedPath === "/create" ||
+    normalizedPath === "/settings"
+  ) {
+    return "/";
+  }
+  if (normalizedPath.startsWith("/create/mappings/")) {
+    return "/create/mappings";
+  }
+  if (normalizedPath.startsWith("/create/")) return "/create";
+  if (normalizedPath.startsWith("/library/")) return "/library";
+  if (normalizedPath.startsWith("/settings/devices/")) {
+    return "/settings/devices";
+  }
+  if (normalizedPath.startsWith("/settings/")) return "/settings";
+  return null;
+}
+
+export function appBackNavigationOptions<T extends AppBackDestination>(to: T) {
+  return { to, resetScroll: false } as const;
+}
+
 function scrollKeyBelongsToTab(key: string, tab: BottomTabId): boolean {
   switch (tab) {
     case "zap":

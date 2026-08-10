@@ -17,6 +17,7 @@ import { SlideModal } from "@/components/SlideModal";
 import { DeviceLinkButton } from "@/components/DeviceLinkButton";
 import { BackIcon } from "@/lib/images";
 import { Route } from "@/routes/settings.devices_.$address";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export function DeviceDetail() {
   const { t } = useTranslation();
@@ -30,7 +31,8 @@ export function DeviceDetail() {
     }
   }, [params.address]);
 
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings/devices"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

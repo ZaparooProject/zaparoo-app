@@ -13,6 +13,7 @@ import { logger } from "@/lib/logger";
 import { PageFrame } from "@/components/PageFrame";
 import { usePreferencesStore, selectCustomText } from "@/lib/preferencesStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/create/custom")({
   component: CustomText,
@@ -39,7 +40,8 @@ export function CustomText() {
   };
 
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/create"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

@@ -11,9 +11,9 @@ interface MockLinkProps extends Omit<
 }
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
-const { componentRef, mockGoBack, mockBrowserOpen } = vi.hoisted(() => ({
+const { componentRef, mockNavigate, mockBrowserOpen } = vi.hoisted(() => ({
   componentRef: { current: null as any },
-  mockGoBack: vi.fn(),
+  mockNavigate: vi.fn(),
   mockBrowserOpen: vi.fn(),
 }));
 
@@ -30,7 +30,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
         {children}
       </a>
     ),
-    useRouter: () => ({ history: { back: mockGoBack } }),
+    useRouter: () => ({ navigate: mockNavigate }),
   };
 });
 
@@ -167,7 +167,10 @@ describe("Settings About Route", () => {
     it("should navigate back when back button clicked", () => {
       renderComponent();
       fireEvent.click(screen.getByLabelText("nav.back"));
-      expect(mockGoBack).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/settings",
+        resetScroll: false,
+      });
     });
   });
 });

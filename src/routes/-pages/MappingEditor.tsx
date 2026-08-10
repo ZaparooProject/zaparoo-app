@@ -1,4 +1,4 @@
-import { useNavigate, useRouter } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CameraIcon, NfcIcon, SaveIcon, Trash2Icon } from "lucide-react";
@@ -27,6 +27,7 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { isWriteModalOpen, WriteModal } from "@/components/WriteModal";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 type MatchType = "exact" | "partial" | "regex";
 
@@ -93,18 +94,12 @@ interface MappingEditorProps {
 
 export function MappingEditor({ id }: MappingEditorProps) {
   const { t } = useTranslation();
-  const router = useRouter();
   const navigate = useNavigate();
   const editingId = id;
   const isEditing = editingId !== undefined;
 
-  const goBack = () => {
-    if (router.history.canGoBack()) {
-      router.history.back();
-    } else {
-      navigate({ to: "/create/mappings" });
-    }
-  };
+  const goBack = () =>
+    void navigate(appBackNavigationOptions("/create/mappings"));
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,

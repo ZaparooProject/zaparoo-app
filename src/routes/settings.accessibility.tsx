@@ -12,6 +12,7 @@ import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 import { useTextZoom } from "@/hooks/useTextZoom";
 import { useHaptics } from "@/hooks/useHaptics";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/settings/accessibility")({
   component: AccessibilitySettings,
@@ -54,7 +55,8 @@ export function AccessibilitySettings() {
   };
 
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

@@ -24,6 +24,7 @@ import { logger } from "@/lib/logger";
 import { uploadLogs } from "@/lib/logsApi";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 interface LogEntry {
   level: string;
@@ -39,7 +40,8 @@ export function Logs() {
     t("settings.logs.title"),
   );
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const connected = useStatusStore((state) => state.connected);
   const { impact } = useHaptics();
   const [searchTerm, setSearchTerm] = useState("");
