@@ -13,6 +13,7 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { TextInput } from "@/components/wui/TextInput";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge, type BadgeVariant } from "@/components/wui/Badge";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import {
   formatDuration,
   formatDurationDisplay,
@@ -29,7 +30,9 @@ export const Route = createFileRoute("/settings/play-controls")({
 
 export function PlayControlsSettings() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("settings.playControls.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.playControls.title"),
+  );
   const connected = useStatusStore((state) => state.connected);
   const connectionState = useStatusStore((state) => state.connectionState);
   const canWriteCoreSettings = useClientCapability(
@@ -41,7 +44,8 @@ export function PlayControlsSettings() {
     connectionState === ConnectionState.RECONNECTING;
 
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,
@@ -309,7 +313,7 @@ export function PlayControlsSettings() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">
+        <h1 ref={headingRef} className="text-foreground text-xl">
           {t("settings.playControls.title")}
         </h1>
       }
@@ -460,10 +464,10 @@ export function PlayControlsSettings() {
           )}
 
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">
+            <fieldset className="flex flex-col gap-2">
+              <legend className="text-sm font-medium">
                 {t("settings.core.playtime.dailyLimit")}
-              </label>
+              </legend>
               <div className="flex gap-2">
                 <TextInput
                   type="number"
@@ -482,12 +486,12 @@ export function PlayControlsSettings() {
                   disabled={!canWriteCoreSettings || !limitsConfig?.enabled}
                 />
               </div>
-            </div>
+            </fieldset>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">
+            <fieldset className="flex flex-col gap-2">
+              <legend className="text-sm font-medium">
                 {t("settings.core.playtime.sessionLimit")}
-              </label>
+              </legend>
               <div className="flex gap-2">
                 <TextInput
                   type="number"
@@ -506,12 +510,12 @@ export function PlayControlsSettings() {
                   disabled={!canWriteCoreSettings || !limitsConfig?.enabled}
                 />
               </div>
-            </div>
+            </fieldset>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">
+            <fieldset className="flex flex-col gap-2">
+              <legend className="text-sm font-medium">
                 {t("settings.core.playtime.sessionReset")}
-              </label>
+              </legend>
               <div className="flex gap-2">
                 <TextInput
                   type="number"
@@ -526,7 +530,7 @@ export function PlayControlsSettings() {
               <span className="text-muted-foreground text-xs">
                 {t("settings.core.playtime.neverReset")}
               </span>
-            </div>
+            </fieldset>
           </div>
         </section>
 
@@ -574,10 +578,10 @@ export function PlayControlsSettings() {
           />
 
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">
+            <fieldset className="flex flex-col gap-2">
+              <legend className="text-sm font-medium">
                 {t("settings.core.launchGuard.timeout")}
-              </label>
+              </legend>
               <div className="flex gap-2">
                 <TextInput
                   type="number"
@@ -589,12 +593,12 @@ export function PlayControlsSettings() {
                   className="max-w-[calc(50%-0.25rem)]"
                 />
               </div>
-            </div>
+            </fieldset>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">
+            <fieldset className="flex flex-col gap-2">
+              <legend className="text-sm font-medium">
                 {t("settings.core.launchGuard.delay")}
-              </label>
+              </legend>
               <div className="flex gap-2">
                 <TextInput
                   type="number"
@@ -606,7 +610,7 @@ export function PlayControlsSettings() {
                   className="max-w-[calc(50%-0.25rem)]"
                 />
               </div>
-            </div>
+            </fieldset>
           </div>
         </section>
       </div>

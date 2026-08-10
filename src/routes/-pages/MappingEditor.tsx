@@ -1,4 +1,4 @@
-import { useNavigate, useRouter } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CameraIcon, NfcIcon, SaveIcon, Trash2Icon } from "lucide-react";
@@ -27,6 +27,7 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { isWriteModalOpen, WriteModal } from "@/components/WriteModal";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 type MatchType = "exact" | "partial" | "regex";
 
@@ -93,18 +94,12 @@ interface MappingEditorProps {
 
 export function MappingEditor({ id }: MappingEditorProps) {
   const { t } = useTranslation();
-  const router = useRouter();
   const navigate = useNavigate();
   const editingId = id;
   const isEditing = editingId !== undefined;
 
-  const goBack = () => {
-    if (router.history.canGoBack()) {
-      router.history.back();
-    } else {
-      navigate({ to: "/create/mappings" });
-    }
-  };
+  const goBack = () =>
+    void navigate(appBackNavigationOptions("/create/mappings"));
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
@@ -114,7 +109,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
   const headingKey = isEditing
     ? "create.mappings.editor.titleEdit"
     : "create.mappings.editor.titleNew";
-  usePageHeadingFocus(t(headingKey));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t(headingKey));
 
   const connected = useStatusStore((state) => state.connected);
   const queryClient = useQueryClient();
@@ -300,7 +295,9 @@ export function MappingEditor({ id }: MappingEditorProps) {
           />
         }
         headerCenter={
-          <h1 className="text-foreground text-xl">{t(headingKey)}</h1>
+          <h1 ref={headingRef} className="text-foreground text-xl">
+            {t(headingKey)}
+          </h1>
         }
       >
         {isEditing && !hydrated ? null : (
@@ -365,10 +362,11 @@ export function MappingEditor({ id }: MappingEditorProps) {
             </div>
 
             <div className="flex flex-col">
-              <label className="mb-1 block">
+              <span id="mapping-override-label" className="mb-1 block">
                 {t("create.mappings.editor.override")}
-              </label>
+              </span>
               <ZapScriptInput
+                aria-labelledby="mapping-override-label"
                 value={override}
                 setValue={setOverride}
                 rows={4}

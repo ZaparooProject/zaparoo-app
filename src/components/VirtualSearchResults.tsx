@@ -1,19 +1,30 @@
-import React, { useCallback, useEffect, RefObject } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  RefObject,
+} from "react";
 import { useTranslation } from "react-i18next";
+import { Heart } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link } from "@tanstack/react-router";
 import { SearchResultGame } from "@/lib/models.ts";
 import { useStatusStore } from "@/lib/store.ts";
 import { usePreferencesStore } from "@/lib/preferencesStore.ts";
 import { filenameFromPath } from "@/lib/path.ts";
+import { hasFavoriteTag } from "@/lib/libraryMedia";
 import { Card } from "@/components/wui/Card.tsx";
 import { NextIcon, SettingsIcon, WarningIcon } from "@/lib/images.tsx";
 import { LoadingSpinner } from "@/components/ui/loading-spinner.tsx";
+import { DelayedLoading } from "@/components/DelayedLoading.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 import { EmptyState } from "@/components/wui/EmptyState.tsx";
+import { useInitialPageScrollOffset } from "@/lib/pageScrollContext";
 import { useVirtualInfiniteSearch } from "@/hooks/useVirtualInfiniteSearch";
 import { TagList } from "@/components/TagList.tsx";
-import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { useSystemNameResolver } from "@/hooks/useSystemName";
+import { useAccessibleLists } from "@/hooks/useAccessibleLists";
 
 export interface VirtualSearchResultsProps {
   query: string;
@@ -28,6 +39,7 @@ export interface VirtualSearchResultsProps {
   isSearching?: boolean;
   onSearchComplete?: () => void;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
+  loadingDelayMs?: number;
 }
 
 export function VirtualSearchResults({
@@ -43,13 +55,14 @@ export function VirtualSearchResults({
   isSearching = false,
   onSearchComplete,
   scrollContainerRef,
+  loadingDelayMs = 0,
 }: VirtualSearchResultsProps) {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  const { available: disambiguatingTagsAvailable } = useCoreFeature(
-    "mediaDisambiguatingTags",
-    { requireKnownSupport: true },
-  );
   const { t } = useTranslation();
+  const accessibleLists = useAccessibleLists();
+  const accessibleResultsRef = useRef<HTMLDivElement>(null);
+  const loadMoreStartRef = useRef<number | null>(null);
+  const resolveSystemName = useSystemNameResolver();
 
   const {
     allItems,
@@ -85,14 +98,13 @@ export function VirtualSearchResults({
       // Base height: 32px (pt-3 pb-5) + content + 1px border = total (gap handled by virtualizer)
       // Without tags: ~60px content + 32px padding + 1px border = 93px
       // With tags: ~80px content + 32px padding + 1px border = 113px
-      const displayTags = disambiguatingTagsAvailable
-        ? item?.disambiguatingTags
-        : item?.tags;
+      const displayTags = item?.disambiguatingTags;
       return displayTags && displayTags.length > 0 ? 113 : 93;
     },
-    [allItems, disambiguatingTagsAvailable],
+    [allItems],
   );
 
+  const initialScrollOffset = useInitialPageScrollOffset();
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: totalCount + (hasNextPage ? 1 : 0), // +1 for loading sentinel
@@ -100,11 +112,18 @@ export function VirtualSearchResults({
     estimateSize,
     overscan: 5,
     scrollMargin: 8,
+    initialOffset: initialScrollOffset,
     gap: 8,
   });
 
   // Fetch next page when approaching the end
   const virtualItems = virtualizer.getVirtualItems();
+
+  useLayoutEffect(() => {
+    // Cached route data can mount before TanStack Virtual's initial observer
+    // update rerenders the list, so force one post-attachment range update.
+    virtualizer.measure();
+  }, [virtualizer]);
 
   useEffect(() => {
     const [lastItem] = [...virtualItems].reverse();
@@ -112,6 +131,7 @@ export function VirtualSearchResults({
     if (!lastItem) return;
 
     if (
+      !accessibleLists &&
       lastItem.index >= totalCount - 5 &&
       hasNextPage &&
       !isFetchingNextPage
@@ -119,6 +139,7 @@ export function VirtualSearchResults({
       fetchNextPage();
     }
   }, [
+    accessibleLists,
     virtualItems,
     hasNextPage,
     fetchNextPage,
@@ -126,12 +147,35 @@ export function VirtualSearchResults({
     isFetchingNextPage,
   ]);
 
+  useEffect(() => {
+    const requestedAt = loadMoreStartRef.current;
+    if (requestedAt === null || isFetchingNextPage) return;
+
+    const appendedResults = allItems.length > requestedAt;
+    const reachedEnd = !hasNextPage;
+    if (!appendedResults && !reachedEnd) return;
+
+    if (reachedEnd) {
+      const focusIndex = appendedResults
+        ? requestedAt
+        : Math.max(0, requestedAt - 1);
+      requestAnimationFrame(() => {
+        accessibleResultsRef.current
+          ?.querySelector<HTMLButtonElement>(
+            `[data-testid="result-${focusIndex}"]`,
+          )
+          ?.focus({ preventScroll: true });
+      });
+    }
+    loadMoreStartRef.current = null;
+  }, [allItems.length, hasNextPage, isFetchingNextPage]);
+
   // Screen reader announcement for search results
   const getAriaLiveMessage = () => {
     if (isLoading) return t("create.search.loading");
     if (isError) return t("create.search.searchError");
     if (totalCount > 0) {
-      return `${totalCount} ${totalCount === 1 ? "result" : "results"} found`;
+      return t("create.search.resultsFound", { count: totalCount });
     }
     return "";
   };
@@ -153,12 +197,10 @@ export function VirtualSearchResults({
             search={{
               focus: "database",
             }}
+            aria-label={t("create.search.gamesDbSettings")}
+            className="focus-visible:ring-offset-background flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
-            <Button
-              icon={<SettingsIcon size="24" />}
-              variant="text"
-              aria-label={t("create.search.gamesDbSettings")}
-            />
+            <SettingsIcon size="24" aria-hidden="true" />
           </Link>
         </div>
       </Card>
@@ -179,17 +221,24 @@ export function VirtualSearchResults({
   // Show loading spinner when searching initially
   if (isLoading || isSearching) {
     return (
-      <div className="text-muted-foreground mt-6 flex items-center justify-center gap-2">
-        <LoadingSpinner size={16} className="text-primary" />
-        <span>{t("create.search.loading")}</span>
-      </div>
+      <DelayedLoading delayMs={loadingDelayMs}>
+        <div
+          className="text-muted-foreground mt-6 flex items-center justify-center gap-2"
+          role="status"
+        >
+          <LoadingSpinner size={16} className="text-primary" decorative />
+          <span>{t("create.search.loading")}</span>
+        </div>
+      </DelayedLoading>
     );
   }
 
   if (isError) {
     return (
       <div className="mt-6 flex flex-col items-center">
-        <p className="mb-3 text-white">{t("create.search.searchError")}</p>
+        <p className="mb-3 text-white" role="alert">
+          {t("create.search.searchError")}
+        </p>
         <Button
           label={t("create.search.tryAgain")}
           onClick={() => refetch()}
@@ -249,58 +298,128 @@ export function VirtualSearchResults({
         {getAriaLiveMessage()}
       </div>
 
-      {/* Virtual scrolling container */}
-      <div
-        style={{
-          height: `${virtualizer.getTotalSize()}px`,
-          width: "100%",
-          position: "relative",
-        }}
-        data-testid="search-results"
-      >
-        {virtualItems.map((virtualItem) => {
-          const isLoading = virtualItem.index >= totalCount;
-          const game = allItems[virtualItem.index];
-
-          return (
-            <div
-              key={virtualItem.key}
-              ref={virtualizer.measureElement}
-              data-index={virtualItem.index}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                transform: `translateY(${virtualItem.start}px)`,
-              }}
-            >
-              {isLoading ? (
-                <div className="text-muted-foreground flex items-center justify-center gap-2">
-                  <LoadingSpinner size={16} className="text-primary" />
-                  <span>{t("create.search.loading")}</span>
-                </div>
-              ) : game ? (
+      {accessibleLists ? (
+        <div ref={accessibleResultsRef} data-testid="search-results">
+          <div role="list" aria-label={t("create.search.resultsLabel")}>
+            {allItems.map((game, index) => (
+              <div
+                key={`${game.system.id}:${game.path}:${index}`}
+                role="listitem"
+                aria-posinset={index + 1}
+                aria-setsize={hasNextPage ? undefined : totalCount}
+              >
                 <SearchResultItem
                   game={game}
-                  disambiguatingTagsAvailable={disambiguatingTagsAvailable}
+                  systemName={resolveSystemName(
+                    game.system.id,
+                    game.system.name,
+                  )}
+                  selectedResult={selectedResult}
+                  setSelectedResult={setSelectedResult}
+                  isLast={!hasNextPage && index === allItems.length - 1}
+                  index={index}
+                />
+              </div>
+            ))}
+          </div>
+          {hasNextPage && (
+            <div className="flex justify-center py-3">
+              <Button
+                label={
+                  isFetchingNextPage
+                    ? t("create.search.loading")
+                    : t("create.search.loadMore")
+                }
+                variant="outline"
+                disabled={isFetchingNextPage}
+                onClick={() => {
+                  loadMoreStartRef.current = allItems.length;
+                  void fetchNextPage();
+                }}
+              />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div
+          role="list"
+          aria-label={t("create.search.resultsLabel")}
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            width: "100%",
+            position: "relative",
+          }}
+          data-testid="search-results"
+        >
+          {virtualItems.map((virtualItem) => {
+            const isLoadingRow = virtualItem.index >= totalCount;
+            const game = allItems[virtualItem.index];
+
+            if (isLoadingRow) {
+              return loadingDelayMs === 0 || isFetchingNextPage ? (
+                <div
+                  key={virtualItem.key}
+                  role="status"
+                  style={{
+                    position: "absolute",
+                    width: "100%",
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  <DelayedLoading delayMs={loadingDelayMs}>
+                    <div className="text-muted-foreground flex items-center justify-center gap-2">
+                      <LoadingSpinner
+                        size={16}
+                        className="text-primary"
+                        decorative
+                      />
+                      <span>{t("create.search.loading")}</span>
+                    </div>
+                  </DelayedLoading>
+                </div>
+              ) : null;
+            }
+            if (!game) return null;
+
+            return (
+              <div
+                key={virtualItem.key}
+                ref={virtualizer.measureElement}
+                data-index={virtualItem.index}
+                role="listitem"
+                aria-posinset={virtualItem.index + 1}
+                aria-setsize={hasNextPage ? undefined : totalCount}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              >
+                <SearchResultItem
+                  game={game}
+                  systemName={resolveSystemName(
+                    game.system.id,
+                    game.system.name,
+                  )}
                   selectedResult={selectedResult}
                   setSelectedResult={setSelectedResult}
                   isLast={virtualItem.index === totalCount - 1}
                   index={virtualItem.index}
                 />
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }
 
 interface SearchResultItemProps {
   game: SearchResultGame;
-  disambiguatingTagsAvailable: boolean;
+  systemName: string;
   selectedResult: SearchResultGame | null;
   setSelectedResult: (game: SearchResultGame | null) => void;
   isLast: boolean;
@@ -309,12 +428,13 @@ interface SearchResultItemProps {
 
 const SearchResultItem = React.memo(function SearchResultItem({
   game,
-  disambiguatingTagsAvailable,
+  systemName,
   selectedResult,
   setSelectedResult,
   isLast,
   index,
 }: SearchResultItemProps) {
+  const { t } = useTranslation();
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
 
   // Primary display: filename if global pref enabled, otherwise clean name
@@ -322,9 +442,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
     ? filenameFromPath(game.path) || game.name
     : game.name;
 
-  const displayTags = disambiguatingTagsAvailable
-    ? (game.disambiguatingTags ?? [])
-    : game.tags;
+  const displayTags = game.disambiguatingTags ?? [];
 
   const handleGameSelect = () => {
     if (selectedResult && selectedResult.path === game.path) {
@@ -340,38 +458,33 @@ const SearchResultItem = React.memo(function SearchResultItem({
   };
 
   return (
-    <div
-      className="flex cursor-pointer flex-row items-center justify-between gap-1 px-1 pt-3 pb-5"
+    <button
+      type="button"
+      className="flex w-full cursor-pointer flex-row items-center justify-between gap-1 px-1 pt-3 pb-5 text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
       style={{
         borderBottom: isLast ? "" : "1px solid rgba(255,255,255,0.6)",
       }}
-      role="button"
-      tabIndex={0}
       data-testid={`result-${index}`}
       onClick={(e) => {
         e.preventDefault();
         handleGameSelect();
       }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleGameSelect();
-        }
-      }}
     >
-      <div className="flex flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <p className="font-semibold">{displayName}</p>
-        <p className="text-sm">{game.system.name}</p>
-        <TagList
-          tags={displayTags}
-          maxMobile={2}
-          maxDesktop={4}
-          preserveOrder={disambiguatingTagsAvailable}
-        />
+        <p className="text-sm">{systemName}</p>
+        <TagList tags={displayTags} preserveOrder />
       </div>
-      <div>
-        <NextIcon size="20" />
+      <div className="flex shrink-0 items-center gap-2">
+        {hasFavoriteTag(game.tags) && (
+          <span role="img" aria-label={t("library.favorite")}>
+            <Heart size={18} fill="currentColor" aria-hidden="true" />
+          </span>
+        )}
+        <span aria-hidden="true">
+          <NextIcon size="20" />
+        </span>
       </div>
-    </div>
+    </button>
   );
 });

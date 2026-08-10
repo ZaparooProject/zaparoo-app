@@ -8,6 +8,7 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { BackIcon } from "@/lib/images";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/settings/media")({
   component: MediaSettings,
@@ -15,9 +16,12 @@ export const Route = createFileRoute("/settings/media")({
 
 export function MediaSettings() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("settings.media.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.media.title"),
+  );
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,
@@ -34,7 +38,9 @@ export function MediaSettings() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">{t("settings.media.title")}</h1>
+        <h1 ref={headingRef} className="text-foreground text-xl">
+          {t("settings.media.title")}
+        </h1>
       }
     >
       <div className="flex flex-col gap-5">

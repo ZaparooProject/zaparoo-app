@@ -16,6 +16,7 @@ import {
   selectShakeSettings,
 } from "@/lib/preferencesStore";
 import { BackIcon, CheckIcon } from "@/lib/images";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { SystemSelector } from "@/components/SystemSelector";
@@ -27,6 +28,7 @@ import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { CoreAPI } from "@/lib/coreApi";
 import { ClientCapability, UpdateSettingsRequest } from "@/lib/models.ts";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 import { useClientCapability } from "@/hooks/useClientCapability";
 
 export const Route = createFileRoute("/settings/readers")({
@@ -35,7 +37,9 @@ export const Route = createFileRoute("/settings/readers")({
 
 export function ReadersSettings() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("settings.readers.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.readers.title"),
+  );
   const connected = useStatusStore((state) => state.connected);
   const connectionState = useStatusStore((state) => state.connectionState);
   const canWriteCoreSettings = useClientCapability(
@@ -113,7 +117,8 @@ export function ReadersSettings() {
   const { PurchaseModal, setProPurchaseModalOpen } = useProPurchase();
 
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,
@@ -134,7 +139,7 @@ export function ReadersSettings() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">
+        <h1 ref={headingRef} className="text-foreground text-xl">
           {t("settings.readers.title")}
         </h1>
       }
@@ -166,6 +171,11 @@ export function ReadersSettings() {
                   <span className="text-foreground">
                     {reader.info || reader.id}
                   </span>
+                  <span className="text-muted-foreground text-sm">
+                    {reader.connected
+                      ? t("scan.connectedHeading")
+                      : t("settings.notConnected")}
+                  </span>
                 </div>
               ))
             ) : (
@@ -196,12 +206,20 @@ export function ReadersSettings() {
               className="mt-2 flex flex-row"
               role="radiogroup"
               aria-labelledby="scan-mode-label"
+              onKeyDown={handleRadioGroupKeyDown}
+              tabIndex={-1}
             >
               <button
                 type="button"
                 role="radio"
                 aria-checked={
                   coreSettings?.readersScanMode === "tap" && connected
+                }
+                tabIndex={
+                  canWriteCoreSettings &&
+                  coreSettings?.readersScanMode !== "hold"
+                    ? 0
+                    : -1
                 }
                 className={classNames(
                   "flex",
@@ -219,7 +237,7 @@ export function ReadersSettings() {
                   "border-solid",
                   "border-bd-filled",
                   {
-                    "bg-button-pattern":
+                    "bg-button-pattern text-primary-foreground":
                       coreSettings?.readersScanMode === "tap" && connected,
                   },
                   {
@@ -246,6 +264,9 @@ export function ReadersSettings() {
                 aria-checked={
                   coreSettings?.readersScanMode === "hold" && connected
                 }
+                tabIndex={
+                  coreSettings?.readersScanMode === "hold" && connected ? 0 : -1
+                }
                 className={classNames(
                   "flex",
                   "flex-row",
@@ -262,7 +283,7 @@ export function ReadersSettings() {
                   "border-solid",
                   "border-bd-filled",
                   {
-                    "bg-button-pattern":
+                    "bg-button-pattern text-primary-foreground":
                       coreSettings?.readersScanMode === "hold" && connected,
                   },
                   {
@@ -375,11 +396,14 @@ export function ReadersSettings() {
                 className="flex flex-row"
                 role="radiogroup"
                 aria-label={t("settings.app.shakeModeLabel")}
+                onKeyDown={handleRadioGroupKeyDown}
+                tabIndex={-1}
               >
                 <button
                   type="button"
                   role="radio"
                   aria-checked={shakeMode === "random" && connected}
+                  tabIndex={shakeMode === "random" && connected ? 0 : -1}
                   className={classNames(
                     "flex",
                     "flex-row",
@@ -396,7 +420,8 @@ export function ReadersSettings() {
                     "border-solid",
                     "border-bd-filled",
                     {
-                      "bg-button-pattern": shakeMode === "random" && connected,
+                      "bg-button-pattern text-primary-foreground":
+                        shakeMode === "random" && connected,
                       "bg-background": shakeMode !== "random" || !connected,
                       "border-foreground-disabled": !connected,
                       "text-foreground-disabled": !connected,
@@ -417,6 +442,7 @@ export function ReadersSettings() {
                   type="button"
                   role="radio"
                   aria-checked={shakeMode === "custom" && connected}
+                  tabIndex={shakeMode === "custom" && connected ? 0 : -1}
                   className={classNames(
                     "flex",
                     "flex-row",
@@ -433,7 +459,8 @@ export function ReadersSettings() {
                     "border-solid",
                     "border-bd-filled",
                     {
-                      "bg-button-pattern": shakeMode === "custom" && connected,
+                      "bg-button-pattern text-primary-foreground":
+                        shakeMode === "custom" && connected,
                       "bg-background": shakeMode !== "custom" || !connected,
                       "border-foreground-disabled": !connected,
                       "text-foreground-disabled": !connected,

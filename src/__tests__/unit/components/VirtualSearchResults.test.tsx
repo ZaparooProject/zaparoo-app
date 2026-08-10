@@ -1,4 +1,5 @@
 import { render, screen, waitFor, fireEvent } from "../../../test-utils";
+import userEvent from "@testing-library/user-event";
 import { vi, beforeEach, describe, it, expect } from "vitest";
 import { VirtualSearchResults } from "@/components/VirtualSearchResults";
 import { CoreAPI } from "@/lib/coreApi";
@@ -32,6 +33,8 @@ vi.mock("@/lib/store", () => ({
 // Flexible preferences mock
 const mockPreferencesState = {
   showFilenames: false,
+  systemNameRegion: "auto" as const,
+  accessibleLists: false,
 };
 
 vi.mock("@/lib/preferencesStore", () => ({
@@ -45,7 +48,8 @@ vi.mock("@tanstack/react-router", () => ({
     children,
     to,
     search,
-  }: {
+    ...props
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
     children: React.ReactNode;
     to: string;
     search?: Record<string, string>;
@@ -53,19 +57,25 @@ vi.mock("@tanstack/react-router", () => ({
     const searchParams = search
       ? "?" + new URLSearchParams(search).toString()
       : "";
-    return <a href={`${to}${searchParams}`}>{children}</a>;
+    return (
+      <a href={`${to}${searchParams}`} {...props}>
+        {children}
+      </a>
+    );
   },
 }));
 
 // Create mock for virtualizer
 const mockGetVirtualItems = vi.fn();
 const mockMeasureElement = vi.fn();
+const mockMeasure = vi.fn();
 
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: () => ({
     getVirtualItems: mockGetVirtualItems,
     getTotalSize: () => 5000,
     measureElement: mockMeasureElement,
+    measure: mockMeasure,
   }),
 }));
 
@@ -76,7 +86,7 @@ describe("VirtualSearchResults", () => {
       name: `Game ${startIndex + i}`,
       path: `/games/game${startIndex + i}.rom`,
       system: {
-        id: "snes",
+        id: "SNES",
         name: "Super Nintendo",
         category: "Console",
         manufacturer: "Nintendo",
@@ -95,6 +105,7 @@ describe("VirtualSearchResults", () => {
     mockStoreState.coreVersionPending = false;
     mockStoreState.gamesIndex = { exists: true, indexing: false };
     mockPreferencesState.showFilenames = false;
+    mockPreferencesState.accessibleLists = false;
   });
 
   const defaultProps = {
@@ -159,7 +170,7 @@ describe("VirtualSearchResults", () => {
       renderComponent();
 
       expect(
-        screen.getByRole("button", { name: "create.search.gamesDbSettings" }),
+        screen.getByRole("link", { name: "create.search.gamesDbSettings" }),
       ).toBeInTheDocument();
     });
   });
@@ -330,6 +341,129 @@ describe("VirtualSearchResults", () => {
       });
     });
 
+    it("should expose positional metadata in virtual mode", async () => {
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValueOnce({
+        results: createMockResults(2),
+        total: 2,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+      mockGetVirtualItems.mockReturnValue([
+        { index: 0, key: 0, start: 0, size: 100 },
+      ]);
+
+      renderComponent();
+
+      const item = await screen.findByRole("listitem");
+      expect(item).toHaveAttribute("aria-posinset", "1");
+      expect(item).toHaveAttribute("aria-setsize", "2");
+    });
+
+    it("should render every loaded result in accessible-list mode", async () => {
+      mockPreferencesState.accessibleLists = true;
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValueOnce({
+        results: createMockResults(2),
+        total: 2,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+      mockGetVirtualItems.mockReturnValue([
+        { index: 0, key: 0, start: 0, size: 100 },
+      ]);
+
+      renderComponent();
+
+      expect(await screen.findByText("Game 0")).toBeInTheDocument();
+      expect(screen.getByText("Game 1")).toBeInTheDocument();
+      expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    });
+
+    it("should omit the set size while more accessible results exist", async () => {
+      mockPreferencesState.accessibleLists = true;
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValueOnce({
+        results: createMockResults(1),
+        total: 2,
+        pagination: {
+          hasNextPage: true,
+          pageSize: 100,
+          nextCursor: "next",
+        },
+      });
+
+      renderComponent();
+
+      expect(await screen.findByRole("listitem")).not.toHaveAttribute(
+        "aria-setsize",
+      );
+    });
+
+    it("should load one explicit page in accessible-list mode", async () => {
+      const user = userEvent.setup();
+      mockPreferencesState.accessibleLists = true;
+      const mediaSearch = vi
+        .spyOn(CoreAPI, "mediaSearch")
+        .mockResolvedValueOnce({
+          results: createMockResults(1),
+          total: 2,
+          pagination: {
+            hasNextPage: true,
+            pageSize: 100,
+            nextCursor: "next",
+          },
+        })
+        .mockResolvedValueOnce({
+          results: createMockResults(1, 1),
+          total: 2,
+          pagination: {
+            hasNextPage: false,
+            pageSize: 100,
+            nextCursor: null,
+          },
+        });
+
+      renderComponent();
+      await user.click(
+        await screen.findByRole("button", {
+          name: "create.search.loadMore",
+        }),
+      );
+
+      expect(await screen.findByText("Game 1")).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByTestId("result-1")).toHaveFocus());
+      expect(mediaSearch).toHaveBeenCalledTimes(2);
+    });
+
+    it("should restore focus when the final page has no new results", async () => {
+      const user = userEvent.setup();
+      mockPreferencesState.accessibleLists = true;
+      vi.spyOn(CoreAPI, "mediaSearch")
+        .mockResolvedValueOnce({
+          results: createMockResults(1),
+          total: 1,
+          pagination: {
+            hasNextPage: true,
+            pageSize: 100,
+            nextCursor: "next",
+          },
+        })
+        .mockResolvedValueOnce({
+          results: [],
+          total: 1,
+          pagination: {
+            hasNextPage: false,
+            pageSize: 100,
+            nextCursor: null,
+          },
+        });
+
+      renderComponent();
+      await user.click(
+        await screen.findByRole("button", {
+          name: "create.search.loadMore",
+        }),
+      );
+
+      await waitFor(() => expect(screen.getByTestId("result-0")).toHaveFocus());
+    });
+
     it("should render result items with system names", async () => {
       const mediaSearchSpy = vi.spyOn(CoreAPI, "mediaSearch");
       mediaSearchSpy.mockResolvedValueOnce({
@@ -345,7 +479,7 @@ describe("VirtualSearchResults", () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText("Super Nintendo")).toBeInTheDocument();
+        expect(screen.getByText("SNES")).toBeInTheDocument();
       });
     });
 
@@ -403,7 +537,35 @@ describe("VirtualSearchResults", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("should fall back to full tags before Core 2.15.0", async () => {
+    it("should show favorite state as a heart, not a regular tag", async () => {
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValueOnce({
+        results: [
+          {
+            ...createMockResults(1)[0]!,
+            tags: [
+              { type: "user", tag: "favorite" },
+              { type: "extension", tag: "zip" },
+            ],
+            disambiguatingTags: [],
+          },
+        ],
+        total: 1,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+      mockGetVirtualItems.mockReturnValue([
+        { index: 0, key: 0, start: 0, size: 100 },
+      ]);
+
+      renderComponent();
+
+      expect(
+        await screen.findByRole("img", { name: "library.favorite" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByLabelText("user favorite")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("extension zip")).not.toBeInTheDocument();
+    });
+
+    it("should never fall back to regular tags on older Core", async () => {
       mockStoreState.coreVersion = "2.14.1";
       vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValueOnce({
         results: [
@@ -423,9 +585,9 @@ describe("VirtualSearchResults", () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByLabelText("genre action")).toBeInTheDocument();
+        expect(screen.getByLabelText("region usa")).toBeInTheDocument();
       });
-      expect(screen.queryByLabelText("region usa")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("genre action")).not.toBeInTheDocument();
     });
 
     it("should still honor the filename display preference", async () => {
@@ -493,6 +655,7 @@ describe("VirtualSearchResults", () => {
         expect.objectContaining({
           query: "test",
         }),
+        expect.any(AbortSignal),
       );
     });
 
@@ -531,6 +694,7 @@ describe("VirtualSearchResults", () => {
             systems: ["snes", "genesis"],
             tags: ["action", "rpg"],
           }),
+          expect.any(AbortSignal),
         );
       });
     });
@@ -550,6 +714,7 @@ describe("VirtualSearchResults", () => {
           expect.objectContaining({
             maxResults: 100,
           }),
+          expect.any(AbortSignal),
         );
       });
     });
@@ -680,7 +845,10 @@ describe("VirtualSearchResults", () => {
         expect(screen.getByTestId("result-0")).toBeInTheDocument();
       });
 
-      fireEvent.keyDown(screen.getByTestId("result-0"), { key: "Enter" });
+      const result = screen.getByTestId("result-0");
+      const user = userEvent.setup();
+      result.focus();
+      await user.keyboard("{Enter}");
 
       expect(setSelectedResult).toHaveBeenCalledWith(mockResults[0]);
     });
@@ -705,7 +873,10 @@ describe("VirtualSearchResults", () => {
         expect(screen.getByTestId("result-0")).toBeInTheDocument();
       });
 
-      fireEvent.keyDown(screen.getByTestId("result-0"), { key: " " });
+      const result = screen.getByTestId("result-0");
+      const user = userEvent.setup();
+      result.focus();
+      await user.keyboard(" ");
 
       expect(setSelectedResult).toHaveBeenCalledWith(mockResults[0]);
     });

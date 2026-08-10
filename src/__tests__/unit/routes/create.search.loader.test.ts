@@ -65,6 +65,28 @@ describe("Create Search Route Loader", () => {
     expect(mockCoreApiSystems).toHaveBeenCalledWith();
   });
 
+  it("should remove zero-count systems and reset a saved empty system", async () => {
+    mockPreferencesGet
+      .mockResolvedValueOnce({ value: "3do" })
+      .mockResolvedValueOnce({ value: "[]" });
+    mockCoreApiSystems.mockResolvedValue({
+      systems: [
+        { id: "snes", name: "Super Nintendo", mediaCount: 10 },
+        { id: "3do", name: "3DO", mediaCount: 0 },
+      ],
+    });
+
+    const result = await Route.options?.loader?.({} as any);
+
+    expect(result).toEqual({
+      systemQuery: "all",
+      tagQuery: [],
+      systems: {
+        systems: [{ id: "snes", name: "Super Nintendo", mediaCount: 10 }],
+      },
+    });
+  });
+
   it("should use default 'all' when no search system preference exists", async () => {
     const mockSystemsResponse = { systems: [] };
 

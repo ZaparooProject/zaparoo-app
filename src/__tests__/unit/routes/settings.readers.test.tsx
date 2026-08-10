@@ -1,11 +1,12 @@
+import type { ComponentType } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { mockReaderInfo } from "../../../test-utils/factories";
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
-const { componentRef, mockGoBack } = vi.hoisted(() => ({
-  componentRef: { current: null as any },
-  mockGoBack: vi.fn(),
+const { componentRef, mockNavigate } = vi.hoisted(() => ({
+  componentRef: { current: null as ComponentType | null },
+  mockNavigate: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -16,7 +17,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       componentRef.current = options.component;
       return { options };
     },
-    useRouter: () => ({ history: { back: mockGoBack } }),
+    useRouter: () => ({ navigate: mockNavigate }),
   };
 });
 
@@ -120,7 +121,12 @@ vi.mock("@/components/ProPurchase", () => ({
 import "@/routes/settings.readers";
 
 // The component will be captured by the mock
-const getReadersSettings = () => componentRef.current;
+const getReadersSettings = () => {
+  if (!componentRef.current) {
+    throw new Error("Readers settings component was not captured");
+  }
+  return componentRef.current;
+};
 
 describe("Settings Readers Route", () => {
   beforeEach(() => {
@@ -164,7 +170,10 @@ describe("Settings Readers Route", () => {
       renderComponent();
 
       fireEvent.click(screen.getByLabelText("nav.back"));
-      expect(mockGoBack).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/settings",
+        resetScroll: false,
+      });
     });
   });
 
@@ -221,6 +230,21 @@ describe("Settings Readers Route", () => {
       await waitFor(() => {
         expect(screen.getByText("PN532 NFC Reader")).toBeInTheDocument();
         expect(screen.getByText("ACR122U USB Reader")).toBeInTheDocument();
+      });
+    });
+
+    it("should identify reader connection states with text", async () => {
+      mockReaders.mockResolvedValue({
+        readers: [
+          mockReaderInfo({ id: "connected", connected: true }),
+          mockReaderInfo({ id: "disconnected", connected: false }),
+        ],
+      });
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("scan.connectedHeading")).toBeInTheDocument();
+        expect(screen.getByText("settings.notConnected")).toBeInTheDocument();
       });
     });
 
@@ -288,6 +312,21 @@ describe("Settings Readers Route", () => {
           name: /settings.insertMode/i,
         });
         expect(holdButton).toHaveAttribute("aria-checked", "true");
+      });
+    });
+
+    it("should keep tap mode tabbable when no mode is selected", async () => {
+      mockSettings.mockResolvedValue({
+        readersScanMode: "unknown",
+        audioScanFeedback: true,
+        readersAutoDetect: true,
+      });
+      renderComponent();
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("radio", { name: /settings.tapMode/i }),
+        ).toHaveAttribute("tabindex", "0");
       });
     });
 

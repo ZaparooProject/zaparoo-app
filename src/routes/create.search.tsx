@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Preferences } from "@capacitor/preferences";
 import { logger } from "@/lib/logger";
 import { CoreAPI, isRequestCancelledError } from "@/lib/coreApi";
+import { systemHasIndexedMedia } from "@/lib/systemFilters";
 import { Search, type LoaderData } from "./-pages/Search";
 
 export const Route = createFileRoute("/create/search")({
@@ -37,7 +38,7 @@ export const Route = createFileRoute("/create/search")({
 
     const savedSystem = systemPreference.value;
     const systems = Array.isArray(systemsResponse?.systems)
-      ? systemsResponse.systems
+      ? systemsResponse.systems.filter(systemHasIndexedMedia)
       : [];
     const savedSystemAvailable =
       systemsRequestCancelled ||
@@ -48,7 +49,9 @@ export const Route = createFileRoute("/create/search")({
     return {
       systemQuery: savedSystemAvailable && savedSystem ? savedSystem : "all",
       tagQuery: savedTags,
-      systems: systemsResponse,
+      systems: Array.isArray(systemsResponse?.systems)
+        ? { ...systemsResponse, systems }
+        : systemsResponse,
     };
   },
   // Disable caching to ensure fresh preference is always read

@@ -1,4 +1,11 @@
-import React, { RefObject, ReactNode, useLayoutEffect, useRef } from "react";
+import React, {
+  RefObject,
+  ReactNode,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import classNames from "classnames";
 import {
   useElementScrollRestoration,
   useRouter,
@@ -6,6 +13,8 @@ import {
 } from "@tanstack/react-router";
 import { ResponsiveContainer } from "@/components/ResponsiveContainer";
 import { useStatusStore } from "@/lib/store";
+import { useTabSessionStore } from "@/lib/tabSessionStore";
+import { InitialPageScrollOffsetContext } from "@/lib/pageScrollContext";
 
 export const PAGE_SCROLL_RESTORATION_ID = "page-scroll";
 export const PAGE_SCROLL_RESTORATION_SELECTOR = `[data-scroll-restoration-id="${PAGE_SCROLL_RESTORATION_ID}"]`;
@@ -14,13 +23,45 @@ interface PageFrameProps extends React.HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   /** Full custom header that replaces the default header structure */
   header?: ReactNode;
-  /** Content for the left side of the header (e.g., back button) */
+  /** Leading header content, such as a back button. */
   headerLeft?: ReactNode;
-  /** Content for the center of the header (e.g., title) */
+  /** Left-aligned title content that uses all remaining header width. */
   headerCenter?: ReactNode;
-  /** Content for the right side of the header (e.g., action buttons) */
+  /** Trailing header actions. */
   headerRight?: ReactNode;
   scrollRef?: RefObject<HTMLDivElement | null>;
+  /** In-memory scroll slot used when revisiting a bottom-tab screen. */
+  sessionScrollKey?: string;
+}
+
+interface PageHeaderProps {
+  left?: ReactNode;
+  title?: ReactNode;
+  actions?: ReactNode;
+}
+
+export function PageHeader({ left, title, actions }: PageHeaderProps) {
+  return (
+    <div className="grid min-h-8 grid-cols-[auto_minmax(0,1fr)_auto] items-center">
+      <div
+        className={classNames("flex shrink-0 -translate-x-1", {
+          "mr-1": left,
+        })}
+      >
+        {left}
+      </div>
+      <div className="min-w-0 overflow-hidden text-left [&>h1]:truncate">
+        {title}
+      </div>
+      <div
+        className={classNames("flex shrink-0 translate-x-1 justify-end", {
+          "ml-2": actions,
+        })}
+      >
+        {actions}
+      </div>
+    </div>
+  );
 }
 
 interface PageFrameLayoutProps extends PageFrameProps {
@@ -46,9 +87,12 @@ function RoutedPageFrame(props: PageFrameProps) {
   const restorationEntry = useElementScrollRestoration({
     id: PAGE_SCROLL_RESTORATION_ID,
   });
-  const restorationKey = useRouterState({
-    select: (state) =>
-      state.location.state.__TSR_key || state.location.href || "",
+  const { restorationKey, routeHref } = useRouterState({
+    select: (state) => ({
+      restorationKey:
+        state.location.state.__TSR_key || state.location.href || "",
+      routeHref: state.location.href,
+    }),
   });
 
   return (
@@ -56,6 +100,7 @@ function RoutedPageFrame(props: PageFrameProps) {
       {...props}
       restorationEntry={restorationEntry}
       restorationKey={restorationKey}
+      sessionScrollKey={props.sessionScrollKey ?? routeHref}
     />
   );
 }
@@ -64,7 +109,9 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
   const safeInsets = useStatusStore((state) => state.safeInsets);
   const internalScrollRef = useRef<HTMLDivElement>(null);
   const hasRestoredScroll = useRef(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
   const restoredEntryKey = useRef<string | undefined>(undefined);
+  const appliedRouterRestoration = useRef<string | null>(null);
 
   // Destructure known props and collect the rest
   const {
@@ -74,6 +121,7 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
     headerCenter,
     headerRight,
     scrollRef,
+    sessionScrollKey,
     restorationEntry,
     restorationKey,
     className,
@@ -82,24 +130,53 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
 
   const activeScrollRef = scrollRef ?? internalScrollRef;
   const hasHeaderContent = header || headerLeft || headerCenter || headerRight;
+  const initialScrollOffset = sessionScrollKey
+    ? (useTabSessionStore.getState().scrollPositions[sessionScrollKey]
+        ?.scrollY ?? 0)
+    : (restorationEntry?.scrollY ?? 0);
 
   useLayoutEffect(() => {
-    if (restoredEntryKey.current !== restorationKey) {
-      restoredEntryKey.current = restorationKey;
+    const entryKey = `${restorationKey ?? ""}\u0001${sessionScrollKey ?? ""}`;
+    if (restoredEntryKey.current !== entryKey) {
+      restoredEntryKey.current = entryKey;
       hasRestoredScroll.current = false;
+      appliedRouterRestoration.current = null;
     }
 
     const scrollContainer = activeScrollRef.current;
-    if (!scrollContainer || !restorationEntry || hasRestoredScroll.current) {
+    if (!scrollContainer) return;
+
+    const restoreScroll = (scrollX: number, scrollY: number) => {
+      scrollContainer.scrollLeft = scrollX;
+      scrollContainer.scrollTop = scrollY;
+      setHeaderScrolled(scrollY > 0);
+    };
+
+    const sessionPosition = sessionScrollKey
+      ? useTabSessionStore.getState().scrollPositions[sessionScrollKey]
+      : undefined;
+    if (sessionPosition) {
+      if (!hasRestoredScroll.current) {
+        hasRestoredScroll.current = true;
+        restoreScroll(sessionPosition.scrollX, sessionPosition.scrollY);
+      }
       return;
     }
 
-    // Restore once per history entry. Ordinary state updates keep the same
-    // entry key, while same-route parameter navigation receives a new key.
-    scrollContainer.scrollLeft = restorationEntry.scrollX;
-    scrollContainer.scrollTop = restorationEntry.scrollY;
+    if (restorationEntry) {
+      const routerPosition = `${restorationEntry.scrollX}:${restorationEntry.scrollY}`;
+      if (appliedRouterRestoration.current !== routerPosition) {
+        appliedRouterRestoration.current = routerPosition;
+        hasRestoredScroll.current = true;
+        restoreScroll(restorationEntry.scrollX, restorationEntry.scrollY);
+      }
+      return;
+    }
+
+    if (hasRestoredScroll.current) return;
     hasRestoredScroll.current = true;
-  }, [activeScrollRef, restorationEntry, restorationKey]);
+    restoreScroll(0, 0);
+  }, [activeScrollRef, restorationEntry, restorationKey, sessionScrollKey]);
 
   return (
     <div
@@ -107,7 +184,14 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
       {...restProps}
     >
       <div
-        className="bg-background sticky top-0 z-10"
+        className={classNames(
+          "bg-background sticky top-0 z-10 transition-colors duration-150",
+          {
+            "border-b": hasHeaderContent,
+            "border-b-[#ffffff21]": hasHeaderContent && headerScrolled,
+            "border-transparent": !hasHeaderContent || !headerScrolled,
+          },
+        )}
         style={{
           paddingTop: `calc(1rem + ${safeInsets.top})`,
           paddingRight: `calc(1rem + ${safeInsets.right})`,
@@ -120,13 +204,11 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
             {header ? (
               header
             ) : (
-              <div className="grid min-h-8 grid-cols-5 items-center justify-center gap-4">
-                <div className="col-span-1 flex">{headerLeft}</div>
-                <div className="col-span-3 flex items-center justify-center text-center">
-                  {headerCenter}
-                </div>
-                <div className="col-span-1 flex justify-end">{headerRight}</div>
-              </div>
+              <PageHeader
+                left={headerLeft}
+                title={headerCenter}
+                actions={headerRight}
+              />
             )}
           </ResponsiveContainer>
         )}
@@ -135,12 +217,29 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
         ref={activeScrollRef}
         data-scroll-restoration-id={PAGE_SCROLL_RESTORATION_ID}
         className="flex-1 overflow-y-auto pb-4"
+        onScroll={(event) => {
+          const scrollContainer = event.currentTarget;
+          setHeaderScrolled(scrollContainer.scrollTop > 0);
+          if (sessionScrollKey) {
+            useTabSessionStore
+              .getState()
+              .rememberScroll(
+                sessionScrollKey,
+                scrollContainer.scrollLeft,
+                scrollContainer.scrollTop,
+              );
+          }
+        }}
         style={{
           paddingRight: `calc(1rem + ${safeInsets.right})`,
           paddingLeft: `calc(1rem + ${safeInsets.left})`,
         }}
       >
-        <ResponsiveContainer>{children}</ResponsiveContainer>
+        <ResponsiveContainer>
+          <InitialPageScrollOffsetContext.Provider value={initialScrollOffset}>
+            {children}
+          </InitialPageScrollOffsetContext.Provider>
+        </ResponsiveContainer>
       </div>
     </div>
   );

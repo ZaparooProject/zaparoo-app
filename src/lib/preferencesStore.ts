@@ -8,6 +8,7 @@ import {
   recordSuccessfulAppReviewLaunch,
   type AppReviewCadenceState,
 } from "@/lib/appReview";
+import type { SystemNameRegionPreference } from "@/lib/systemNames";
 import { sessionManager } from "./nfc";
 import {
   isCapacitorPluginUnavailableError,
@@ -103,10 +104,12 @@ export interface PreferencesState {
 
   // Display settings
   showFilenames: boolean;
+  systemNameRegion: SystemNameRegionPreference;
 
   // Accessibility settings
   hapticsEnabled: boolean;
   textZoomLevel: number;
+  accessibleLists: boolean;
 
   // Hydration tracking (internal, not persisted)
   _hasHydrated: boolean;
@@ -165,8 +168,10 @@ export interface PreferencesActions {
   markWhatsNewSeen: (announcementId: string, runtimeKey: string) => void;
   setLogLevelFilters: (filters: PreferencesState["logLevelFilters"]) => void;
   setShowFilenames: (value: boolean) => void;
+  setSystemNameRegion: (value: SystemNameRegionPreference) => void;
   setHapticsEnabled: (value: boolean) => void;
   setTextZoomLevel: (value: number) => void;
+  setAccessibleLists: (value: boolean) => void;
 }
 
 export type PreferencesStore = PreferencesState & PreferencesActions;
@@ -213,8 +218,10 @@ const DEFAULT_PREFERENCES: Omit<
     error: true,
   },
   showFilenames: false,
+  systemNameRegion: "auto",
   hapticsEnabled: true,
   textZoomLevel: 1.0,
+  accessibleLists: false,
 };
 
 export const usePreferencesStore = create<PreferencesStore>()(
@@ -335,8 +342,10 @@ export const usePreferencesStore = create<PreferencesStore>()(
         })),
       setLogLevelFilters: (filters) => set({ logLevelFilters: filters }),
       setShowFilenames: (value) => set({ showFilenames: value }),
+      setSystemNameRegion: (value) => set({ systemNameRegion: value }),
       setHapticsEnabled: (value) => set({ hapticsEnabled: value }),
       setTextZoomLevel: (value) => set({ textZoomLevel: value }),
+      setAccessibleLists: (value) => set({ accessibleLists: value }),
     }),
     {
       name: "app-preferences",
@@ -359,8 +368,10 @@ export const usePreferencesStore = create<PreferencesStore>()(
         seenWhatsNewAnnouncementIds: state.seenWhatsNewAnnouncementIds,
         logLevelFilters: state.logLevelFilters,
         showFilenames: state.showFilenames,
+        systemNameRegion: state.systemNameRegion,
         hapticsEnabled: state.hapticsEnabled,
         textZoomLevel: state.textZoomLevel,
+        accessibleLists: state.accessibleLists,
       }),
 
       // Callback when hydration completes

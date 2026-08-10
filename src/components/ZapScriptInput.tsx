@@ -19,6 +19,8 @@ export function ZapScriptInput(props: {
   setValue: (value: string) => void;
   showPalette?: boolean;
   rows?: number;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 }) {
   const [showControls, setShowControls] = useState(props.showPalette ?? false);
   const connected = useStatusStore((state) => state.connected);
@@ -54,7 +56,8 @@ export function ZapScriptInput(props: {
         <textarea
           ref={textareaRef}
           className="border-bd-input bg-background rounded-b-none border border-solid p-3"
-          aria-label={t("create.custom.textareaLabel")}
+          aria-label={props["aria-label"] ?? t("create.custom.textareaLabel")}
+          aria-labelledby={props["aria-labelledby"]}
           aria-describedby="zapscript-char-count"
           placeholder={t("create.custom.textPlaceholder")}
           value={props.value}

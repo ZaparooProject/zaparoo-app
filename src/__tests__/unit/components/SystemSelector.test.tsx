@@ -16,6 +16,7 @@ import { render, screen, waitFor, act } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { useQuery } from "@tanstack/react-query";
 import { useStatusStore } from "@/lib/store";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 import {
   SystemSelector,
   SystemSelectorTrigger,
@@ -100,7 +101,8 @@ describe("SystemSelector", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockIsLoading = false;
 
-    // Reset store
+    // Reset stores
+    usePreferencesStore.setState({ systemNameRegion: "auto" });
     useStatusStore.setState({
       ...useStatusStore.getState(),
       targetDeviceAddress: "test-device",
@@ -119,6 +121,69 @@ describe("SystemSelector", () => {
   });
 
   describe("page rendering", () => {
+    it("should use the preferred regional system names", () => {
+      usePreferencesStore.setState({ systemNameRegion: "jp" });
+      vi.mocked(useQuery).mockReturnValueOnce({
+        data: {
+          systems: [
+            { id: "NES", name: "Nintendo Entertainment System" },
+            { id: "SNES", name: "Super Nintendo" },
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useQuery>);
+
+      render(<SystemSelector {...defaultProps} />);
+
+      expect(
+        screen.getByRole("radio", { name: "Famicom" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("radio", { name: "Super Famicom" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should hide systems with an explicit zero media count by default", () => {
+      vi.mocked(useQuery).mockReturnValueOnce({
+        data: {
+          systems: [
+            { id: "SNES", name: "Super Nintendo", mediaCount: 12 },
+            { id: "3DO", name: "3DO", mediaCount: 0 },
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useQuery>);
+
+      render(<SystemSelector {...defaultProps} />);
+
+      expect(screen.getByRole("radio", { name: "SNES" })).toBeInTheDocument();
+      expect(
+        screen.queryByRole("radio", { name: "3DO" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should include zero-count systems when requested", () => {
+      vi.mocked(useQuery).mockReturnValueOnce({
+        data: {
+          systems: [
+            { id: "SNES", name: "Super Nintendo", mediaCount: 12 },
+            { id: "3DO", name: "3DO", mediaCount: 0 },
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useQuery>);
+
+      render(<SystemSelector {...defaultProps} includeEmptySystems />);
+
+      expect(screen.getByRole("radio", { name: "3DO" })).toBeInTheDocument();
+    });
+
     it("should scope full system queries to the selected device", () => {
       useStatusStore.setState({ targetDeviceAddress: "10.0.0.5:7497" });
 
@@ -308,6 +373,28 @@ describe("SystemSelector", () => {
       });
     });
 
+    it("should keep a radio tabbable when selection is filtered out", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+      render(
+        <SystemSelector
+          {...defaultProps}
+          selectedSystems={["genesis"]}
+          mode="single"
+        />,
+      );
+
+      await user.type(
+        screen.getByPlaceholderText("systemSelector.searchPlaceholder"),
+        "nintendo",
+      );
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+
+      expect(screen.getAllByRole("radio")[0]).toHaveAttribute("tabindex", "0");
+    });
+
     it("should show no results message when search has no matches", async () => {
       // Arrange
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
@@ -381,6 +468,12 @@ describe("SystemSelector", () => {
       expect(onClose).toHaveBeenCalled();
     });
 
+    it("should expose the complete filtered system collection", () => {
+      render(<SystemSelector {...defaultProps} mode="single" />);
+
+      expect(screen.getAllByRole("radio")).toHaveLength(mockSystems.length);
+    });
+
     it("should render radio buttons in single mode", () => {
       // Act
       render(<SystemSelector {...defaultProps} mode="single" />);
@@ -389,6 +482,23 @@ describe("SystemSelector", () => {
       expect(
         screen.getByRole("radio", { name: "Nintendo Entertainment System" }),
       ).toBeInTheDocument();
+    });
+
+    it("should support radio-group arrow navigation", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onSelect = vi.fn();
+      render(
+        <SystemSelector {...defaultProps} mode="single" onSelect={onSelect} />,
+      );
+
+      const first = screen.getByRole("radio", {
+        name: "Nintendo Entertainment System",
+      });
+      first.focus();
+      await user.keyboard("{ArrowDown}");
+
+      expect(screen.getByRole("radio", { name: "PlayStation" })).toHaveFocus();
+      expect(onSelect).toHaveBeenCalledWith(["psx"]);
     });
 
     it("should announce selection for screen readers", async () => {
@@ -846,6 +956,36 @@ describe("SystemSelectorTrigger", () => {
       ).toBeInTheDocument();
     });
 
+    it("should exclude zero-count systems from trigger totals unless requested", () => {
+      const countedSystems = {
+        systems: [
+          { id: "snes", name: "Super Nintendo", mediaCount: 10 },
+          { id: "3do", name: "3DO", mediaCount: 0 },
+        ],
+      };
+      const { rerender } = render(
+        <SystemSelectorTrigger
+          selectedSystems={["snes"]}
+          systemsData={countedSystems}
+          mode="multi"
+          onClick={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText("systemSelector.allSystems")).toBeInTheDocument();
+
+      rerender(
+        <SystemSelectorTrigger
+          selectedSystems={["snes"]}
+          systemsData={countedSystems}
+          mode="multi"
+          onClick={vi.fn()}
+          includeEmptySystems
+        />,
+      );
+      expect(screen.getByText("Super Nintendo")).toBeInTheDocument();
+    });
+
     it("should display count when more than 3 tags selected", () => {
       // Act
       render(
@@ -860,6 +1000,26 @@ describe("SystemSelectorTrigger", () => {
       // Assert
       expect(
         screen.getByText("systemSelector.multipleSelected"),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("accessible naming", () => {
+    it("should use an associated visible label", () => {
+      render(
+        <div>
+          <span id="systems-label">Systems</span>
+          <SystemSelectorTrigger
+            selectedSystems={[]}
+            systemsData={systemsData}
+            onClick={vi.fn()}
+            aria-labelledby="systems-label"
+          />
+        </div>,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "Systems" }),
       ).toBeInTheDocument();
     });
   });

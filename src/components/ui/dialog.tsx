@@ -1,10 +1,46 @@
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 
-const Dialog = DialogPrimitive.Root;
+interface DialogState {
+  open: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+const DialogStateContext = React.createContext<DialogState>({ open: false });
+
+function Dialog({
+  open: controlledOpen,
+  defaultOpen = false,
+  onOpenChange,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen);
+  const isControlled = controlledOpen !== undefined;
+  const open = controlledOpen ?? uncontrolledOpen;
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      if (!isControlled) setUncontrolledOpen(nextOpen);
+      onOpenChange?.(nextOpen);
+    },
+    [isControlled, onOpenChange],
+  );
+
+  return (
+    <DialogStateContext.Provider
+      value={{ open, onOpenChange: handleOpenChange }}
+    >
+      <DialogPrimitive.Root
+        {...props}
+        open={open}
+        onOpenChange={handleOpenChange}
+      />
+    </DialogStateContext.Provider>
+  );
+}
 
 const DialogTrigger = DialogPrimitive.Trigger;
 
@@ -33,19 +69,16 @@ const DialogContent = React.forwardRef<
     onOpenChange?: (open: boolean) => void;
   }
 >(({ className, children, onOpenChange, ...props }, ref) => {
-  // Handle Android back button for dialogs
-  useBackButtonHandler(
-    "dialog-content",
-    () => {
-      if (onOpenChange) {
-        onOpenChange(false);
-        return true; // Consume the event
-      }
-      return false; // Let other handlers process it
-    },
-    100, // High priority
-    true, // Always enabled when dialog content is mounted
-  );
+  const { t } = useTranslation();
+  const dialogState = React.useContext(DialogStateContext);
+  const handleOpenChange = onOpenChange ?? dialogState.onOpenChange;
+  const handleBack = React.useCallback(() => {
+    if (!handleOpenChange) return false;
+    handleOpenChange(false);
+    return true;
+  }, [handleOpenChange]);
+
+  useBackButtonHandler("dialog-content", handleBack, 100, dialogState.open);
 
   return (
     <DialogPortal>
@@ -60,8 +93,8 @@ const DialogContent = React.forwardRef<
       >
         {children}
         <DialogPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:pointer-events-none">
-          <X className="h-4 w-4 text-white" />
-          <span className="sr-only">Close</span>
+          <X className="h-4 w-4 text-white" aria-hidden="true" />
+          <span className="sr-only">{t("nav.close")}</span>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPortal>

@@ -431,7 +431,10 @@ describe("Index Route Integration", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByAltText("Zaparoo logo")).toBeInTheDocument();
+      const logo = screen.getByRole("img", { name: "accessibility.logo" });
+      expect(logo).toBeInstanceOf(HTMLCanvasElement);
+      expect(logo).toHaveAttribute("width", "160");
+      expect(logo).toHaveAttribute("height", "36");
     });
 
     it("should render history toggle button", () => {

@@ -7,6 +7,7 @@ import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { PageFrame } from "@/components/PageFrame";
 import { BackIcon } from "@/lib/images";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/settings/help")({
   component: Help,
@@ -14,9 +15,12 @@ export const Route = createFileRoute("/settings/help")({
 
 export function Help() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("settings.help.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.help.title"),
+  );
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,
@@ -33,7 +37,9 @@ export function Help() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">{t("settings.help.title")}</h1>
+        <h1 ref={headingRef} className="text-foreground text-xl">
+          {t("settings.help.title")}
+        </h1>
       }
     >
       <div className="flex flex-col gap-4">

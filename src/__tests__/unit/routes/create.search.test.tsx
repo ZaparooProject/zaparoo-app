@@ -1,9 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "../../../test-utils";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { act, fireEvent, render, screen, waitFor } from "@/test-utils";
 import { Search } from "@/routes/-pages/Search";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { CoreAPI } from "@/lib/coreApi";
+
+const mockNavigate = vi.fn();
 
 // Mock route
 vi.mock("@tanstack/react-router", () => ({
@@ -19,11 +23,7 @@ vi.mock("@tanstack/react-router", () => ({
       },
     }),
   }),
-  useRouter: () => ({
-    history: {
-      back: vi.fn(),
-    },
-  }),
+  useRouter: () => ({ navigate: mockNavigate }),
 }));
 
 // Mock i18next
@@ -49,6 +49,7 @@ vi.mock("@/lib/coreApi", () => ({
       active: [],
     }),
     run: vi.fn().mockResolvedValue(undefined),
+    reset: vi.fn(),
   },
   isExpectedMediaDatabaseError: (error: unknown) => {
     const msg = String(
@@ -110,27 +111,35 @@ vi.mock("@/lib/writeNfcHook", () => ({
 }));
 
 // Mock VirtualSearchResults since it has complex dependencies
-vi.mock("@/components/VirtualSearchResults", () => ({
-  VirtualSearchResults: ({
-    hasSearched,
-    isSearching,
-    onSearchComplete,
-  }: {
-    hasSearched: boolean;
-    isSearching: boolean;
-    onSearchComplete?: () => void;
-  }) => {
-    if (isSearching) {
-      // Simulate search completion
-      setTimeout(() => onSearchComplete?.(), 10);
-    }
-    return (
-      <div data-testid="virtual-search-results">
-        {hasSearched ? "Results shown" : "No search yet"}
-      </div>
-    );
-  },
-}));
+vi.mock("@/components/VirtualSearchResults", async () => {
+  const { useEffect } = await import("react");
+
+  return {
+    VirtualSearchResults: ({
+      hasSearched,
+      isSearching,
+      onSearchComplete,
+      tags,
+    }: {
+      hasSearched: boolean;
+      isSearching: boolean;
+      onSearchComplete?: () => void;
+      tags: string[];
+    }) => {
+      useEffect(() => {
+        if (isSearching) {
+          onSearchComplete?.();
+        }
+      }, [isSearching, onSearchComplete]);
+
+      return (
+        <div data-testid="virtual-search-results" data-tags={tags.join(",")}>
+          {hasSearched ? "Results shown" : "No search yet"}
+        </div>
+      );
+    },
+  };
+});
 
 // Mock SystemSelector components
 vi.mock("@/components/SystemSelector", () => ({
@@ -307,7 +316,8 @@ vi.mock("@/components/BackToTop", () => ({
 describe("Search Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
+    CoreAPI.reset();
+    useTabSessionStore.getState().reset();
     useStatusStore.setState({
       ...useStatusStore.getInitialState(),
       connected: true,
@@ -324,10 +334,6 @@ describe("Search Component", () => {
       database: { exists: true, indexing: false },
       active: [],
     });
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   describe("rendering", () => {
@@ -365,12 +371,16 @@ describe("Search Component", () => {
       expect(screen.getByTestId("tag-selector-trigger")).toBeInTheDocument();
     });
 
-    it("should render back button", () => {
+    it("should navigate to Create without resetting scroll", async () => {
+      const user = userEvent.setup();
       render(<Search />);
 
-      expect(
-        screen.getByRole("button", { name: "nav.back" }),
-      ).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "nav.back" }));
+
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/create",
+        resetScroll: false,
+      });
     });
 
     it("should render recent searches button", () => {
@@ -383,6 +393,72 @@ describe("Search Component", () => {
   });
 
   describe("search functionality", () => {
+    it("should restore the last submitted search after a tab remount", () => {
+      useTabSessionStore.getState().setCreateSearch({
+        query: "zelda",
+        system: "snes",
+        tags: ["genre:rpg"],
+      });
+
+      render(<Search />);
+
+      expect(screen.getByLabelText("create.search.gameInput")).toHaveValue(
+        "zelda",
+      );
+      expect(screen.getByTestId("virtual-search-results")).toHaveTextContent(
+        "Results shown",
+      );
+    });
+
+    it("should restore tags after pending Core support resolves", () => {
+      useStatusStore.setState({
+        coreVersion: null,
+        coreVersionPending: true,
+      });
+      useTabSessionStore.getState().setCreateSearch({
+        query: "zelda",
+        system: "snes",
+        tags: ["genre:rpg"],
+      });
+
+      render(<Search />);
+
+      expect(screen.getByTestId("virtual-search-results")).toHaveTextContent(
+        "No search yet",
+      );
+
+      act(() => {
+        useStatusStore.setState({
+          coreVersion: "2.15.0",
+          coreVersionPending: false,
+        });
+      });
+
+      expect(screen.getByTestId("virtual-search-results")).toHaveAttribute(
+        "data-tags",
+        "genre:rpg",
+      );
+    });
+
+    it("should remove unsupported tags from a restored search", () => {
+      useStatusStore.setState({
+        coreVersion: "2.6.2",
+        coreVersionPending: false,
+      });
+      useTabSessionStore.getState().setCreateSearch({
+        query: "zelda",
+        system: "snes",
+        tags: ["genre:rpg"],
+      });
+
+      render(<Search />);
+
+      expect(screen.getByTestId("virtual-search-results")).toHaveAttribute(
+        "data-tags",
+        "",
+      );
+    });
+
     it("should update search input value", () => {
       render(<Search />);
 
@@ -503,7 +579,7 @@ describe("Search Component", () => {
       });
     });
 
-    it("should perform search when search button is clicked", () => {
+    it("should perform search when search button is clicked", async () => {
       render(<Search />);
 
       const input = screen.getByLabelText("create.search.gameInput");
@@ -519,6 +595,7 @@ describe("Search Component", () => {
         system: "all",
         tags: [],
       });
+      await waitFor(() => expect(searchButton).toBeEnabled());
     });
 
     it("should perform search on Enter key press", () => {

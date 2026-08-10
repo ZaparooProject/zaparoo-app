@@ -10,6 +10,7 @@ import { useStatusStore } from "@/lib/store";
 import { compareStrings } from "@/lib/utils";
 import { TagInfo } from "@/lib/models";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { useAccessibleLists } from "@/hooks/useAccessibleLists";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
@@ -36,6 +37,54 @@ interface GroupedTags {
 
 const ITEM_HEIGHT = 64; // Height of each tag item in pixels (increased for spacing)
 
+function TagSearchOption(props: {
+  tag: TagInfo;
+  selected: boolean;
+  fillHeight: boolean;
+  onSelect: () => void;
+}) {
+  const { t } = useTranslation();
+  const typeLabel = t(`tagSelector.type.${props.tag.type}`, {
+    defaultValue: props.tag.type,
+  });
+
+  return (
+    <button
+      className={classNames(
+        "flex min-h-16 w-full items-center justify-between px-4 py-3 text-left transition-colors",
+        "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+        "hover:bg-white/10 focus:bg-white/10",
+        {
+          "h-full": props.fillHeight,
+          "bg-white/10": props.selected,
+        },
+      )}
+      onClick={props.onSelect}
+      type="button"
+      role="checkbox"
+      aria-checked={props.selected}
+      aria-label={`${props.tag.tag}, ${typeLabel}`}
+    >
+      <span className="flex items-center space-x-3" aria-hidden="true">
+        <span
+          className={classNames(
+            "border-input flex h-5 w-5 items-center justify-center rounded border-2",
+            { "bg-primary border-primary": props.selected },
+          )}
+        >
+          {props.selected && (
+            <Check className="text-primary-foreground h-3 w-3" />
+          )}
+        </span>
+        <span className="flex flex-col">
+          <span className="text-foreground font-medium">{props.tag.tag}</span>
+          <span className="text-muted-foreground text-xs">{typeLabel}</span>
+        </span>
+      </span>
+    </button>
+  );
+}
+
 export function TagSelector({
   isOpen,
   onClose,
@@ -46,6 +95,7 @@ export function TagSelector({
 }: TagSelectorProps) {
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
+  const accessibleLists = useAccessibleLists();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const slideModalScrollRef = useRef<HTMLDivElement>(null);
 
@@ -248,7 +298,8 @@ export function TagSelector({
               aria-hidden="true"
             />
             <input
-              type="text"
+              type="search"
+              aria-label={t("tagSelector.searchTags")}
               placeholder={t("tagSelector.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -257,7 +308,7 @@ export function TagSelector({
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2"
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                 type="button"
                 aria-label={t("tagSelector.clearSearch")}
               >
@@ -293,12 +344,15 @@ export function TagSelector({
         {/* Content area */}
         <div className="min-h-0 flex-1 overflow-hidden" tabIndex={-1}>
           {isLoading ? (
-            <div className="flex h-32 items-center justify-center">
+            <div
+              className="flex h-32 items-center justify-center"
+              role="status"
+            >
               <span className="text-muted-foreground">{t("loading")}</span>
             </div>
           ) : isError ? (
             <div className="flex h-32 items-center justify-center">
-              <span className="text-muted-foreground">
+              <span className="text-muted-foreground" role="alert">
                 {t("tagSelector.unavailable", {
                   defaultValue: "Tags unavailable",
                 })}
@@ -315,84 +369,73 @@ export function TagSelector({
               <EmptyState className="h-32" title={t("tagSelector.noTags")} />
             )
           ) : debouncedSearchQuery ? (
-            // Search results - show virtualized list of all matching tags
             <div
               ref={scrollContainerRef}
-              className="h-full px-2 pb-4"
+              className="h-full overflow-auto px-2 pb-4"
               tabIndex={-1}
             >
-              <div
-                style={{
-                  height: `${virtualizer.getTotalSize()}px`,
-                  width: "100%",
-                  position: "relative",
-                }}
-                role="presentation"
-              >
-                {virtualizer.getVirtualItems().map((virtualItem) => {
-                  const tag = allTags[virtualItem.index];
-                  if (!tag) return null;
-                  const formattedTag = `${tag.type}:${tag.tag}`;
-                  const isSelected = selectedTags.includes(formattedTag);
-
-                  return (
-                    <div
-                      key={virtualItem.key}
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        height: `${virtualItem.size}px`,
-                        transform: `translateY(${virtualItem.start}px)`,
-                        padding: "2px 8px",
-                      }}
-                    >
-                      <button
-                        className={classNames(
-                          "flex h-full w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                          "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                          "hover:bg-white/10 focus:bg-white/10",
-                          { "bg-white/10": isSelected },
-                        )}
-                        onClick={() => handleTagSelect(tag)}
-                        type="button"
-                        role="checkbox"
-                        aria-checked={isSelected}
-                        aria-label={`${tag.tag}, ${t(`tagSelector.type.${tag.type}`, { defaultValue: tag.type })}`}
+              {accessibleLists ? (
+                <div role="list" aria-label={t("tagSelector.resultsLabel")}>
+                  {allTags.map((tag, index) => {
+                    const formattedTag = `${tag.type}:${tag.tag}`;
+                    return (
+                      <div
+                        key={formattedTag}
+                        role="listitem"
+                        aria-posinset={index + 1}
+                        aria-setsize={allTags.length}
                       >
-                        <div
-                          className="flex items-center space-x-3"
-                          aria-hidden="true"
-                        >
-                          <div
-                            className={classNames(
-                              "border-input flex h-5 w-5 items-center justify-center rounded border-2",
-                              {
-                                "bg-primary border-primary": isSelected,
-                              },
-                            )}
-                          >
-                            {isSelected && (
-                              <Check className="h-3 w-3 text-white" />
-                            )}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-foreground font-medium">
-                              {tag.tag}
-                            </span>
-                            <span className="text-muted-foreground text-xs">
-                              {t(`tagSelector.type.${tag.type}`, {
-                                defaultValue: tag.type,
-                              })}
-                            </span>
-                          </div>
-                        </div>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+                        <TagSearchOption
+                          tag={tag}
+                          selected={selectedTags.includes(formattedTag)}
+                          fillHeight={false}
+                          onSelect={() => handleTagSelect(tag)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    height: `${virtualizer.getTotalSize()}px`,
+                    width: "100%",
+                    position: "relative",
+                  }}
+                  role="list"
+                  aria-label={t("tagSelector.resultsLabel")}
+                >
+                  {virtualizer.getVirtualItems().map((virtualItem) => {
+                    const tag = allTags[virtualItem.index];
+                    if (!tag) return null;
+                    const formattedTag = `${tag.type}:${tag.tag}`;
+                    return (
+                      <div
+                        key={virtualItem.key}
+                        role="listitem"
+                        aria-posinset={virtualItem.index + 1}
+                        aria-setsize={allTags.length}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: `${virtualItem.size}px`,
+                          transform: `translateY(${virtualItem.start}px)`,
+                          padding: "2px 8px",
+                        }}
+                      >
+                        <TagSearchOption
+                          tag={tag}
+                          selected={selectedTags.includes(formattedTag)}
+                          fillHeight
+                          onSelect={() => handleTagSelect(tag)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ) : (
             // Accordion view for organized categories
@@ -466,7 +509,7 @@ export function TagSelector({
                                     )}
                                   >
                                     {isSelected && (
-                                      <Check className="h-3 w-3 text-white" />
+                                      <Check className="text-primary-foreground h-3 w-3" />
                                     )}
                                   </div>
                                   <span className="text-foreground text-sm font-medium">
@@ -500,22 +543,27 @@ export function TagSelector({
 // Helper component for displaying selected tags
 export function TagSelectorTrigger({
   selectedTags,
-  placeholder = "Select tags",
+  placeholder,
   className,
   onClick,
   disabled = false,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
 }: {
   selectedTags: string[];
   placeholder?: string;
   className?: string;
   onClick: () => void;
   disabled?: boolean;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 }) {
   const { t } = useTranslation();
+  const placeholderText = placeholder ?? t("tagSelector.title");
 
   const displayText = useMemo(() => {
     if (selectedTags.length === 0) {
-      return placeholder;
+      return placeholderText;
     }
 
     // Show full canonical "type:value" format
@@ -526,7 +574,7 @@ export function TagSelectorTrigger({
     return t("tagSelector.multipleSelected", {
       count: selectedTags.length,
     });
-  }, [selectedTags, placeholder, t]);
+  }, [selectedTags, placeholderText, t]);
 
   const handleClick = () => {
     if (disabled) return;
@@ -547,6 +595,8 @@ export function TagSelectorTrigger({
       style={{ backgroundColor: "var(--color-background)" }}
       disabled={disabled}
       type="button"
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
     >
       <span
         className={classNames({

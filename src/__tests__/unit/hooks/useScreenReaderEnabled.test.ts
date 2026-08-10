@@ -36,11 +36,11 @@ describe("useScreenReaderEnabled", () => {
 
     const { result } = renderHook(() => useScreenReaderEnabled());
 
-    // Initial state is false, wait for async check to complete
+    // Native sessions begin accessible until the async plugin check resolves.
+    expect(result.current).toBe(true);
     await waitFor(() => {
-      expect(ScreenReader.isEnabled).toHaveBeenCalled();
+      expect(result.current).toBe(false);
     });
-    expect(result.current).toBe(false);
   });
 
   it("should subscribe to state changes on native platform", async () => {
@@ -74,11 +74,10 @@ describe("useScreenReaderEnabled", () => {
 
     const { result } = renderHook(() => useScreenReaderEnabled());
 
-    // Initially false
+    // Native sessions begin accessible until the async plugin check resolves.
     await waitFor(() => {
-      expect(ScreenReader.addListener).toHaveBeenCalled();
+      expect(result.current).toBe(false);
     });
-    expect(result.current).toBe(false);
 
     // Simulate screen reader being enabled
     act(() => {

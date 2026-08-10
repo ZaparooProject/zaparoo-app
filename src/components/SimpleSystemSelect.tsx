@@ -1,9 +1,12 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
+import { systemHasIndexedMedia } from "@/lib/systemFilters";
 import { compareStrings } from "@/lib/utils";
+import { useSystemsWithDisplayNames } from "@/hooks/useSystemName";
 
 interface SimpleSystemSelectProps {
   value: string; // The currently selected system ID (or "all")
@@ -12,6 +15,8 @@ interface SimpleSystemSelectProps {
   includeAllOption?: boolean;
   className?: string;
   disabled?: boolean;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 }
 
 export function SimpleSystemSelect({
@@ -21,6 +26,8 @@ export function SimpleSystemSelect({
   includeAllOption = false,
   className,
   disabled = false,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
 }: SimpleSystemSelectProps) {
   const { t } = useTranslation();
   const targetDeviceAddress = useStatusStore(
@@ -35,8 +42,16 @@ export function SimpleSystemSelect({
     staleTime: 0,
   });
 
+  const catalogSystems = useMemo(
+    () => systemsData?.systems ?? [],
+    [systemsData?.systems],
+  );
+  const displaySystems = useSystemsWithDisplayNames(catalogSystems).filter(
+    (system) => system.id === value || systemHasIndexedMedia(system),
+  );
+
   // Group systems by category and sort
-  const groupedSystems = (systemsData?.systems || []).reduce(
+  const groupedSystems = displaySystems.reduce(
     (acc, system) => {
       const category = system.category || "Other";
       if (!acc[category]) {
@@ -68,6 +83,8 @@ export function SimpleSystemSelect({
       value={value}
       onChange={handleChange}
       disabled={disabled || isLoading}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
       className={classNames(
         "border-input text-foreground w-full rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
         {

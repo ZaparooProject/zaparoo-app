@@ -12,6 +12,7 @@ import { getDeviceAddress } from "@/lib/coreApi";
 import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
 import { encodeDeviceAddress } from "@/lib/deviceUrl";
 import { logger } from "@/lib/logger";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -24,7 +25,8 @@ export function Devices() {
     t("settings.deviceHistory"),
   );
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,

@@ -404,11 +404,13 @@ export function MediaDatabaseCard({
     <div className="space-y-3">
       {/* System selector for choosing which systems to update */}
       <SystemSelectorTrigger
+        aria-label={t("settings.updateDb.allSystems")}
         selectedSystems={selectedSystems}
         systemsData={systemsData}
         placeholder={t("settings.updateDb.allSystems")}
         mode="multi"
         onClick={() => setSystemSelectorOpen(true)}
+        includeEmptySystems
         disabled={
           !connected || !mediaGenerateAvailable || isScraping || isCleaning
         }
@@ -532,6 +534,7 @@ export function MediaDatabaseCard({
         title={t("settings.updateDb.selectSystemsTitle")}
         includeAllOption={true}
         allSystems={true}
+        includeEmptySystems={true}
       />
     </>
   );

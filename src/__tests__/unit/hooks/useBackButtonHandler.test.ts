@@ -141,6 +141,24 @@ describe("useBackButtonHandler", () => {
     expect(callOrder).toEqual(["high", "low"]);
   });
 
+  it("should keep another handler with the same id when one unmounts", () => {
+    const firstHandler = vi.fn();
+    const secondHandler = vi.fn();
+
+    const view = renderHook(() =>
+      useBackButtonHandler("shared-id", firstHandler, 50, true),
+    );
+    renderHook(() =>
+      useBackButtonHandler("shared-id", secondHandler, 50, true),
+    );
+
+    view.unmount();
+    backButtonCallback!();
+
+    expect(firstHandler).not.toHaveBeenCalled();
+    expect(secondHandler).toHaveBeenCalledTimes(1);
+  });
+
   it("should unregister handler on unmount", async () => {
     const handler = vi.fn();
 
@@ -177,6 +195,35 @@ describe("useBackButtonHandler", () => {
     await vi.waitFor(() => {
       expect(removeListenerMock).toHaveBeenCalled();
     });
+  });
+
+  it("should re-register when a handler is added during listener removal", async () => {
+    let resolveRemoval: (() => void) | undefined;
+    removeListenerMock.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveRemoval = resolve;
+      }),
+    );
+
+    const view = renderHook(() =>
+      useBackButtonHandler("first-handler", vi.fn(), 50, true),
+    );
+    view.unmount();
+
+    const replacementHandler = vi.fn();
+    renderHook(() =>
+      useBackButtonHandler("replacement-handler", replacementHandler, 50, true),
+    );
+
+    expect(App.addListener).toHaveBeenCalledTimes(1);
+
+    resolveRemoval?.();
+    await vi.waitFor(() => {
+      expect(App.addListener).toHaveBeenCalledTimes(2);
+    });
+
+    backButtonCallback?.();
+    expect(replacementHandler).toHaveBeenCalledTimes(1);
   });
 
   it("should use default priority of 50 when not specified", () => {

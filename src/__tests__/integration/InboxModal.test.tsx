@@ -81,9 +81,16 @@ describe("InboxModal", () => {
     });
     render(<InboxModal />);
     const toggle = screen.getByRole("button", { name: /Long alert/i });
+    const body = screen.getByText("Detailed body text");
     expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(body.id).not.toBe("");
+    expect(toggle).toHaveAttribute("aria-controls", body.id);
+    expect(body).toHaveAttribute("aria-hidden", "true");
+
     await user.click(toggle);
+
     expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(body).toHaveAttribute("aria-hidden", "false");
   });
 
   it("should call inboxDelete and remove the message when trash is clicked", async () => {

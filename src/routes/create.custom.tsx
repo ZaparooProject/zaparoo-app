@@ -13,6 +13,7 @@ import { logger } from "@/lib/logger";
 import { PageFrame } from "@/components/PageFrame";
 import { usePreferencesStore, selectCustomText } from "@/lib/preferencesStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/create/custom")({
   component: CustomText,
@@ -20,7 +21,9 @@ export const Route = createFileRoute("/create/custom")({
 
 export function CustomText() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("create.custom.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("create.custom.title"),
+  );
   const { customText, setCustomText } = usePreferencesStore(
     useShallow(selectCustomText),
   );
@@ -37,7 +40,8 @@ export function CustomText() {
   };
 
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/create"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,
@@ -55,7 +59,7 @@ export function CustomText() {
           />
         }
         headerCenter={
-          <h1 className="text-foreground text-xl">
+          <h1 ref={headingRef} className="text-foreground text-xl">
             {t("create.custom.title")}
           </h1>
         }

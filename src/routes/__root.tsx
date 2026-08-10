@@ -5,7 +5,8 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { App } from "@capacitor/app";
-import React, { useRef } from "react";
+import { Capacitor } from "@capacitor/core";
+import { useRef } from "react";
 import { SafeAreaHandler } from "@/lib/safeArea";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { BottomNav } from "@/components/BottomNav";
@@ -15,6 +16,10 @@ import { SkipLink } from "@/components/SkipLink";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useShakeDetection } from "@/hooks/useShakeDetection";
+import {
+  appBackDestination,
+  appBackNavigationOptions,
+} from "@/lib/tabSessionStore";
 
 // Shake detection component - must be inside router context to access location
 // Exported for testing
@@ -35,34 +40,23 @@ export function ShakeDetector() {
 // Exported for testing
 export function BackHandler() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   useBackButtonHandler(
     "navigation",
     () => {
-      if (location.pathname === "/") {
+      if (pathname === "/") {
+        if (!Capacitor.isNativePlatform()) return false;
+
         App.exitApp();
         return true;
       }
 
-      if (
-        location.pathname === "/create" ||
-        location.pathname === "/settings"
-      ) {
-        navigate({ to: "/" });
-        return true;
-      }
+      const destination = appBackDestination(pathname);
+      if (!destination) return false;
 
-      if (location.pathname.startsWith("/create")) {
-        navigate({ to: "/create" });
-        return true;
-      }
-
-      if (location.pathname.startsWith("/settings")) {
-        navigate({ to: "/settings" });
-        return true;
-      }
-
-      return false;
+      void navigate(appBackNavigationOptions(destination));
+      return true;
     },
     0, // Lowest priority - fallback navigation
   );
@@ -73,7 +67,6 @@ export function BackHandler() {
 // Exported for testing
 export function RootLayout() {
   const mainRef = useRef<HTMLElement>(null);
-  const safeInsets = useStatusStore((state) => state.safeInsets);
 
   return (
     <div className="flex h-screen w-screen flex-col">
@@ -90,14 +83,7 @@ export function RootLayout() {
       >
         <Outlet />
       </main>
-      <footer
-        className="z-30 flex-shrink-0"
-        style={
-          {
-            "--bottom-nav-height": `calc(80px + ${safeInsets.bottom})`,
-          } as React.CSSProperties
-        }
-      >
+      <footer className="z-30 flex-shrink-0">
         <BottomNav />
       </footer>
     </div>

@@ -49,14 +49,15 @@ describe("ScanControls", () => {
     expect(spinnerText).toBeInTheDocument();
   });
 
-  it("calls onScanButton when scan area is clicked", () => {
+  it("calls onScanButton when scan button is pressed", async () => {
+    const user = userEvent.setup();
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
 
     render(<ScanControls {...mockProps} />);
 
-    // The scan area is a div with onClick, not a button
-    const spinnerContainer = screen.getByText(/spinner\.pressToScan/);
-    spinnerContainer.click();
+    await user.click(
+      screen.getByRole("button", { name: "spinner.pressToScan" }),
+    );
 
     expect(mockProps.onScanButton).toHaveBeenCalledTimes(1);
   });

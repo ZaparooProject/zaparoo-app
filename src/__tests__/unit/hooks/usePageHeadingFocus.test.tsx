@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { renderHook, waitFor } from "../../../test-utils";
+import { renderHook } from "../../../test-utils";
 import { usePageHeadingFocus } from "../../../hooks/usePageHeadingFocus";
-import { Capacitor } from "@capacitor/core";
-import { ScreenReader } from "@capacitor/screen-reader";
 
 describe("usePageHeadingFocus", () => {
   const originalTitle = document.title;
@@ -50,38 +48,27 @@ describe("usePageHeadingFocus", () => {
     expect(document.title).toBe("Zaparoo");
   });
 
-  it("focuses element when screen reader is enabled", async () => {
-    // Enable screen reader for this test
-    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    vi.mocked(ScreenReader.isEnabled).mockResolvedValue({ value: true });
-
+  it("focuses the heading on every platform", () => {
     const heading = document.createElement("h1");
     heading.textContent = "Page Title";
     document.body.appendChild(heading);
 
     const { unmount } = renderHook(() => {
       const ref = usePageHeadingFocus<HTMLHeadingElement>("Test");
-      // Manually attach ref before effect runs
       (ref as React.MutableRefObject<HTMLHeadingElement>).current = heading;
       return ref;
     });
 
-    // Wait for screen reader check to complete
-    await waitFor(() => {
-      expect(heading.getAttribute("tabindex")).toBe("-1");
-    });
-    expect(document.activeElement).toBe(heading);
+    expect(heading).toHaveAttribute("tabindex", "-1");
+    expect(heading).toHaveFocus();
 
     document.body.removeChild(heading);
     unmount();
   });
 
-  it("does not focus element when screen reader is disabled", () => {
-    // Screen reader disabled (default mock behavior)
-    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
-
+  it("keeps the focused heading outside the normal tab order", () => {
     const heading = document.createElement("h1");
-    heading.textContent = "Page Title";
+    heading.id = "test-heading";
     document.body.appendChild(heading);
 
     renderHook(() => {
@@ -90,39 +77,26 @@ describe("usePageHeadingFocus", () => {
       return ref;
     });
 
-    // Element should NOT have tabindex set and should NOT be focused
-    expect(heading.getAttribute("tabindex")).toBeNull();
-    expect(document.activeElement).not.toBe(heading);
+    expect(heading).toHaveAttribute("tabindex", "-1");
 
     document.body.removeChild(heading);
   });
 
-  it("sets tabindex to -1 on focused element when screen reader enabled", async () => {
-    // Enable screen reader for this test
-    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    vi.mocked(ScreenReader.isEnabled).mockResolvedValue({ value: true });
-
-    const heading = document.createElement("h1");
-    heading.id = "test-heading";
-    document.body.appendChild(heading);
-
-    renderHook(
-      ({ title }) => {
-        const ref = usePageHeadingFocus<HTMLHeadingElement>(title);
-        if (!ref.current) {
-          (ref as React.MutableRefObject<HTMLHeadingElement>).current = heading;
-        }
-        return ref;
-      },
-      { initialProps: { title: "Test" } },
+  it("restores the previous page title when nested content unmounts", () => {
+    const view = renderHook(() =>
+      usePageHeadingFocus<HTMLHeadingElement>("Parent"),
+    );
+    const utils = renderHook(() =>
+      usePageHeadingFocus<HTMLHeadingElement>("Child"),
     );
 
-    // Wait for screen reader check to complete
-    await waitFor(() => {
-      expect(heading.getAttribute("tabindex")).toBe("-1");
-    });
+    expect(document.title).toBe("Child - Zaparoo");
 
-    document.body.removeChild(heading);
+    utils.unmount();
+    expect(document.title).toBe("Parent - Zaparoo");
+
+    view.unmount();
+    expect(document.title).toBe("Zaparoo");
   });
 
   it("updates title when title prop changes", () => {

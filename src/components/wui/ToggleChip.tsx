@@ -18,6 +18,8 @@ export function ToggleChip(props: ToggleChipProps) {
 
   return (
     <button
+      type="button"
+      disabled={props.disabled}
       aria-pressed={props.state}
       aria-label={props["aria-label"] || props.label}
       className={classNames(
@@ -48,6 +50,7 @@ export function ToggleChip(props: ToggleChipProps) {
         },
         {
           "bg-button-pattern": props.state && !props.disabled,
+          "text-primary-foreground": props.state && !props.disabled,
           "border-bd-filled": props.state && !props.disabled,
           "border-bd-outline": !props.state && !props.disabled,
           "border-foreground-disabled": props.disabled,

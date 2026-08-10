@@ -15,7 +15,9 @@ import {
   PAGE_SCROLL_RESTORATION_ID,
   PAGE_SCROLL_RESTORATION_SELECTOR,
 } from "@/components/PageFrame";
+import { useInitialPageScrollOffset } from "@/lib/pageScrollContext";
 import { useLayoutEffect, useRef, useState } from "react";
+import { useTabSessionStore } from "@/lib/tabSessionStore";
 
 // Mock store for safe insets
 vi.mock("@/lib/store", () => ({
@@ -41,6 +43,7 @@ const TestComponentWithRef = () => {
 describe("PageFrame", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useTabSessionStore.getState().reset();
   });
 
   it("should render children without header", () => {
@@ -87,6 +90,17 @@ describe("PageFrame", () => {
     expect(screen.getByText("Left")).toBeInTheDocument();
     expect(screen.getByText("Center")).toBeInTheDocument();
     expect(screen.getByText("Right")).toBeInTheDocument();
+    expect(screen.getByTestId("header-left").parentElement).toHaveClass(
+      "-translate-x-1",
+      "mr-1",
+    );
+    expect(screen.getByTestId("header-center").parentElement).not.toHaveClass(
+      "-translate-x-1",
+    );
+    expect(screen.getByTestId("header-right").parentElement).toHaveClass(
+      "translate-x-1",
+      "ml-2",
+    );
   });
 
   it("should render headerCenter with title styling", () => {
@@ -281,6 +295,58 @@ describe("PageFrame", () => {
     });
   });
 
+  it("should restore scroll when revisiting a tab route through a new history entry", async () => {
+    const rootRoute = createRootRoute({ component: () => <Outlet /> });
+    const libraryRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/library",
+      component: () => (
+        <PageFrame>
+          <div>Library page</div>
+        </PageFrame>
+      ),
+    });
+    const createRouteNode = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/create",
+      component: () => (
+        <PageFrame>
+          <div>Create page</div>
+        </PageFrame>
+      ),
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([libraryRoute, createRouteNode]),
+      history: createMemoryHistory({ initialEntries: ["/library"] }),
+      scrollRestoration: true,
+      scrollToTopSelectors: [PAGE_SCROLL_RESTORATION_SELECTOR],
+    });
+
+    render(<RouterProvider router={router} />);
+    await screen.findByText("Library page");
+    const libraryScrollContainer = document.querySelector(
+      PAGE_SCROLL_RESTORATION_SELECTOR,
+    );
+    expect(libraryScrollContainer).toBeInstanceOf(HTMLElement);
+    if (!(libraryScrollContainer instanceof HTMLElement)) return;
+    libraryScrollContainer.scrollTop = 280;
+    fireEvent.scroll(libraryScrollContainer);
+    expect(useTabSessionStore.getState().scrollPositions).toEqual({
+      "/library": { scrollX: 0, scrollY: 280 },
+    });
+
+    await act(() => router.navigate({ to: "/create", resetScroll: false }));
+    await screen.findByText("Create page");
+    await act(() => router.navigate({ to: "/library", resetScroll: false }));
+    await screen.findByText("Library page");
+
+    await waitFor(() =>
+      expect(
+        document.querySelector(PAGE_SCROLL_RESTORATION_SELECTOR),
+      ).toHaveProperty("scrollTop", 280),
+    );
+  });
+
   it("should preserve active scroll position across state updates", async () => {
     const user = userEvent.setup();
     const StatefulPage = () => {
@@ -319,6 +385,48 @@ describe("PageFrame", () => {
     await screen.findByRole("button", { name: "Update 1" });
 
     expect(scrollContainer.scrollTop).toBe(240);
+  });
+
+  it("should provide the restored offset to virtualized children", () => {
+    const VirtualizedContent = () => (
+      <div>Initial offset: {useInitialPageScrollOffset()}</div>
+    );
+    useTabSessionStore.getState().rememberScroll("library:SNES:browse", 0, 240);
+
+    render(
+      <PageFrame sessionScrollKey="library:SNES:browse">
+        <VirtualizedContent />
+      </PageFrame>,
+    );
+
+    expect(screen.getByText("Initial offset: 240")).toBeInTheDocument();
+  });
+
+  it("should restore session scroll after a tab screen remounts", () => {
+    const { container: firstContainer, unmount } = render(
+      <PageFrame sessionScrollKey="library:SNES:browse">
+        <div>Library content</div>
+      </PageFrame>,
+    );
+    const firstScrollContainer = firstContainer.querySelector(
+      PAGE_SCROLL_RESTORATION_SELECTOR,
+    );
+    expect(firstScrollContainer).toBeInstanceOf(HTMLElement);
+    if (!(firstScrollContainer instanceof HTMLElement)) return;
+    firstScrollContainer.scrollTop = 240;
+    fireEvent.scroll(firstScrollContainer);
+    unmount();
+
+    const { container: secondContainer } = render(
+      <PageFrame sessionScrollKey="library:SNES:browse">
+        <div>Library content</div>
+      </PageFrame>,
+    );
+    const restoredScrollContainer = secondContainer.querySelector(
+      PAGE_SCROLL_RESTORATION_SELECTOR,
+    );
+
+    expect(restoredScrollContainer).toHaveProperty("scrollTop", 240);
   });
 
   it("should handle scrollRef", () => {

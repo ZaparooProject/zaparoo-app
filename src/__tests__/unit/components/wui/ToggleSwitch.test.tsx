@@ -210,6 +210,17 @@ describe("ToggleSwitch", () => {
     expect(screen.getByTestId("custom-label")).toBeInTheDocument();
   });
 
+  it("shows a visible focus ring on the rendered track", () => {
+    render(
+      <ToggleSwitch label="Test Label" value={false} setValue={mockSetValue} />,
+    );
+
+    const checkbox = screen.getByRole("checkbox");
+    const track = checkbox.nextElementSibling;
+    expect(track).toHaveClass("peer-focus-visible:ring-2");
+    expect(track).toHaveClass("peer-focus-visible:ring-white/50");
+  });
+
   it("has proper accessibility - checkbox is present", () => {
     render(
       <ToggleSwitch label="Test Label" value={false} setValue={mockSetValue} />,

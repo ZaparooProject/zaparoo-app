@@ -593,7 +593,7 @@ describe("MediaDatabaseCard", () => {
     render(<MediaDatabaseCard />);
 
     expect(
-      screen.queryByRole("status", { name: "Loading" }),
+      screen.queryByRole("status", { name: "loading" }),
     ).not.toBeInTheDocument();
   });
 
@@ -610,7 +610,7 @@ describe("MediaDatabaseCard", () => {
     render(<MediaDatabaseCard />);
 
     expect(
-      screen.queryByRole("status", { name: "Loading" }),
+      screen.queryByRole("status", { name: "loading" }),
     ).not.toBeInTheDocument();
   });
 
@@ -626,7 +626,7 @@ describe("MediaDatabaseCard", () => {
 
     render(<MediaDatabaseCard />);
 
-    expect(screen.getByRole("status", { name: "Loading" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "loading" })).toBeInTheDocument();
   });
 
   it("should show Resume button and call mediaGenerateResume when paused", async () => {
@@ -719,7 +719,7 @@ describe("MediaDatabaseCard", () => {
     expect(screen.getAllByText("Sega Genesis").length).toBeGreaterThan(0);
     // Updates remain visibly paused without duplicating global status copy.
     expect(
-      screen.queryByRole("status", { name: "Loading" }),
+      screen.queryByRole("status", { name: "loading" }),
     ).not.toBeInTheDocument();
   });
 

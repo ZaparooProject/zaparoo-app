@@ -27,11 +27,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
-    useRouter: vi.fn(() => ({
-      history: {
-        back: mockGoBack,
-      },
-    })),
+    useRouter: vi.fn(() => ({ navigate: mockGoBack })),
     createFileRoute: () => (options: { component: React.ComponentType }) => {
       componentRef.current = options.component;
       return { options };

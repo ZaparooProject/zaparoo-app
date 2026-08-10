@@ -33,8 +33,8 @@ vi.mock("@/lib/preferencesStore", () => ({
 }));
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
-const { mockGoBack, componentRef } = vi.hoisted(() => ({
-  mockGoBack: vi.fn(),
+const { mockNavigate, componentRef } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
   componentRef: { current: null as any },
 }));
 
@@ -46,7 +46,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       componentRef.current = options.component;
       return { options };
     },
-    useRouter: () => ({ history: { back: mockGoBack } }),
+    useRouter: () => ({ navigate: mockNavigate }),
     Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
       <a href={to} data-testid="link">
         {children}
@@ -464,7 +464,10 @@ describe("Settings Advanced Route", () => {
 
       fireEvent.click(screen.getByLabelText("nav.back"));
 
-      expect(mockGoBack).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/settings",
+        resetScroll: false,
+      });
     });
   });
 });

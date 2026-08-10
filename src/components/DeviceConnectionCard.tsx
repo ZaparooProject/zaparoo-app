@@ -88,6 +88,7 @@ export function DeviceConnectionCard({
 
           {/* Connection status row */}
           <ConnectionStatusDisplay
+            headingId="device-connection-heading"
             connectionError={connectionError}
             connectedSubtitle={deviceDetails}
             connectedSubtitleLoading={isConnected && coreVersionPending}

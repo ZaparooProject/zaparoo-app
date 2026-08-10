@@ -56,9 +56,9 @@ describe("TextInput", () => {
 
     const input = screen.getByRole("textbox");
     await user.type(input, " edit");
-    expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "save" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Clear search" }),
+      screen.getByRole("button", { name: "clearSearch" }),
     ).toBeInTheDocument();
 
     rerender(
@@ -74,10 +74,10 @@ describe("TextInput", () => {
     expect(input).toHaveAttribute("readonly");
     expect(input).toHaveValue("initial edit");
     expect(
-      screen.queryByRole("button", { name: "Save" }),
+      screen.queryByRole("button", { name: "save" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Clear search" }),
+      screen.queryByRole("button", { name: "clearSearch" }),
     ).not.toBeInTheDocument();
     expect(mockSaveValue).not.toHaveBeenCalled();
   });

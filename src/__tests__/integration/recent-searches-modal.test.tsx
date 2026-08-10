@@ -33,9 +33,11 @@ describe("RecentSearchesModal", () => {
       // Arrange & Act
       render(<RecentSearchesModal {...defaultProps} />);
 
-      // Assert - SlideModal renders title twice (mobile + desktop)
-      const titles = screen.getAllByText("create.search.recentSearches");
-      expect(titles.length).toBeGreaterThan(0);
+      expect(
+        screen.getByRole("heading", {
+          name: "create.search.recentSearches",
+        }),
+      ).toBeInTheDocument();
     });
 
     it("should hide content via aria-hidden when closed", () => {
@@ -115,7 +117,7 @@ describe("RecentSearchesModal", () => {
       // Assert - Timestamps are formatted by toLocaleString
       // The exact format depends on locale, but the dates should be present
       const searchCards = screen.getAllByRole("button", {
-        name: "create.search.searchResult",
+        name: /Search: (mario|zelda)/,
       });
       expect(searchCards).toHaveLength(2);
     });
@@ -279,7 +281,7 @@ describe("RecentSearchesModal", () => {
       { query: "mario", system: "", tags: [], timestamp: Date.now() },
     ];
 
-    it("should have search result aria-label on icon buttons", () => {
+    it("should expose each search row as one meaningfully named control", () => {
       // Arrange & Act
       render(
         <RecentSearchesModal
@@ -290,8 +292,11 @@ describe("RecentSearchesModal", () => {
 
       // Assert
       expect(
-        screen.getByRole("button", { name: "create.search.searchResult" }),
+        screen.getByRole("button", { name: /Search: mario/ }),
       ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "create.search.searchResult" }),
+      ).not.toBeInTheDocument();
     });
   });
 });

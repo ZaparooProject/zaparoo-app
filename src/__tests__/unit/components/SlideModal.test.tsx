@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "../../../test-utils";
-import { SlideModal } from "../../../components/SlideModal";
+import { findA11yViolations, render, screen, fireEvent } from "@/test-utils";
+import userEvent from "@testing-library/user-event";
+import { SlideModal } from "@/components/SlideModal";
 
 // Mock store for safe insets
 vi.mock("@/lib/store", () => ({
@@ -61,6 +62,16 @@ vi.mock("@/lib/preferencesStore", () => ({
 }));
 
 describe("SlideModal", () => {
+  it("should have no detectable accessibility violations while open", async () => {
+    const { baseElement } = render(
+      <SlideModal isOpen close={vi.fn()} title="Accessible dialog">
+        <button type="button">Dialog action</button>
+      </SlideModal>,
+    );
+
+    expect(await findA11yViolations(baseElement)).toEqual([]);
+  });
+
   const mockProps = {
     isOpen: false,
     close: vi.fn(),
@@ -79,9 +90,9 @@ describe("SlideModal", () => {
   it("renders modal when open", () => {
     render(<SlideModal {...mockProps} isOpen={true} />);
 
-    // Title appears twice (mobile and desktop headers)
-    const titles = screen.getAllByText("Test Modal");
-    expect(titles.length).toBe(2);
+    expect(
+      screen.getByRole("heading", { name: "Test Modal" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Test Content")).toBeInTheDocument();
   });
 
@@ -117,12 +128,55 @@ describe("SlideModal", () => {
     expect(closeMock).toHaveBeenCalled();
   });
 
-  it("does not show content when closed", () => {
+  it("makes closed modal content inert", () => {
     render(<SlideModal {...mockProps} isOpen={false} />);
 
-    // Dialog should be hidden
     const dialog = screen.getByRole("dialog", { hidden: true });
     expect(dialog).toHaveAttribute("aria-hidden", "true");
+    expect(dialog).toHaveAttribute("inert");
+    expect(dialog).not.toHaveAttribute("aria-modal");
+  });
+
+  it("focuses its visible heading when opened", () => {
+    render(<SlideModal {...mockProps} isOpen={true} />);
+
+    expect(screen.getByRole("heading", { name: "Test Modal" })).toHaveFocus();
+  });
+
+  it("closes when Escape is pressed", async () => {
+    const user = userEvent.setup();
+    const closeMock = vi.fn();
+    render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
+
+    await user.keyboard("{Escape}");
+
+    expect(closeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("makes surrounding content inert only while open", () => {
+    const { rerender } = render(
+      <div>
+        <button type="button">Outside</button>
+        <SlideModal {...mockProps} isOpen={true} />
+      </div>,
+    );
+
+    const outside = screen.getByRole("button", {
+      name: "Outside",
+      hidden: true,
+    });
+    expect(outside).toHaveAttribute("inert");
+
+    rerender(
+      <div>
+        <button type="button">Outside</button>
+        <SlideModal {...mockProps} isOpen={false} />
+      </div>,
+    );
+
+    expect(screen.getByRole("button", { name: "Outside" })).not.toHaveAttribute(
+      "inert",
+    );
   });
 
   it("renders with custom className", () => {

@@ -16,6 +16,7 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 // Mock state for tracking navigation and back button behavior
 const mockNavigate = vi.fn();
 const mockExitApp = vi.fn();
+const mockIsNativePlatform = vi.fn();
 
 // Capture the back button handler
 let capturedBackButtonHandler: (() => boolean | void) | null = null;
@@ -42,6 +43,12 @@ vi.mock("@capacitor/app", () => ({
   App: {
     exitApp: () => mockExitApp(),
     addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
+  },
+}));
+
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: () => mockIsNativePlatform(),
   },
 }));
 
@@ -97,6 +104,7 @@ import { ShakeDetector, BackHandler, RootLayout } from "@/routes/__root";
 describe("Root Layout Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsNativePlatform.mockReturnValue(true);
 
     // Reset stores
     useStatusStore.setState({
@@ -143,19 +151,6 @@ describe("Root Layout Integration", () => {
       const footer = screen.getByRole("contentinfo");
       expect(footer).toBeInTheDocument();
       expect(screen.getByTestId("bottom-nav")).toBeInTheDocument();
-    });
-
-    it("should apply safe area insets to footer style", () => {
-      useStatusStore.setState({
-        safeInsets: { top: "0px", bottom: "20px", left: "0px", right: "0px" },
-      });
-
-      render(<RootLayout />);
-
-      const footer = screen.getByRole("contentinfo");
-      expect(footer).toHaveStyle({
-        "--bottom-nav-height": "calc(80px + 20px)",
-      });
     });
 
     it("should have main content with correct id for skip link", () => {
@@ -247,12 +242,8 @@ describe("Root Layout Integration", () => {
     describe("navigation behavior", () => {
       // Helper to set up the handler and location for each test
       const setupBackHandler = (pathname: string) => {
+        mockPathname = pathname;
         render(<BackHandler />);
-        Object.defineProperty(globalThis, "location", {
-          value: { pathname },
-          writable: true,
-          configurable: true,
-        });
       };
 
       it("should exit app when on root path", () => {
@@ -264,7 +255,21 @@ describe("Root Layout Integration", () => {
         expect(result).toBe(true);
       });
 
-      const navigateToRootCases = [["/create"], ["/settings"]] as const;
+      it("should leave root back navigation unhandled on web", () => {
+        mockIsNativePlatform.mockReturnValue(false);
+        setupBackHandler("/");
+
+        const result = capturedBackButtonHandler?.();
+
+        expect(mockExitApp).not.toHaveBeenCalled();
+        expect(result).toBe(false);
+      });
+
+      const navigateToRootCases = [
+        ["/create"],
+        ["/library"],
+        ["/settings"],
+      ] as const;
 
       it.each(navigateToRootCases)(
         "should navigate to root from %s",
@@ -273,7 +278,10 @@ describe("Root Layout Integration", () => {
 
           const result = capturedBackButtonHandler?.();
 
-          expect(mockNavigate).toHaveBeenCalledWith({ to: "/" });
+          expect(mockNavigate).toHaveBeenCalledWith({
+            to: "/",
+            resetScroll: false,
+          });
           expect(result).toBe(true);
         },
       );
@@ -292,7 +300,30 @@ describe("Root Layout Integration", () => {
 
           const result = capturedBackButtonHandler?.();
 
-          expect(mockNavigate).toHaveBeenCalledWith({ to: "/create" });
+          expect(mockNavigate).toHaveBeenCalledWith({
+            to: "/create",
+            resetScroll: false,
+          });
+          expect(result).toBe(true);
+        },
+      );
+
+      const navigateToLibraryCases = [
+        ["/library/SNES"],
+        ["/library/PlayStation"],
+      ] as const;
+
+      it.each(navigateToLibraryCases)(
+        "should navigate to /library from %s",
+        (pathname) => {
+          setupBackHandler(pathname);
+
+          const result = capturedBackButtonHandler?.();
+
+          expect(mockNavigate).toHaveBeenCalledWith({
+            to: "/library",
+            resetScroll: false,
+          });
           expect(result).toBe(true);
         },
       );
@@ -311,10 +342,25 @@ describe("Root Layout Integration", () => {
 
           const result = capturedBackButtonHandler?.();
 
-          expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings" });
+          expect(mockNavigate).toHaveBeenCalledWith({
+            to: "/settings",
+            resetScroll: false,
+          });
           expect(result).toBe(true);
         },
       );
+
+      it("should navigate nested routes to their immediate parent", () => {
+        setupBackHandler("/settings/devices/device-a");
+
+        const result = capturedBackButtonHandler?.();
+
+        expect(mockNavigate).toHaveBeenCalledWith({
+          to: "/settings/devices",
+          resetScroll: false,
+        });
+        expect(result).toBe(true);
+      });
 
       it("should return false for unknown paths", () => {
         setupBackHandler("/unknown");

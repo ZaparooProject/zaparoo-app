@@ -5,14 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { encodeDeviceAddress } from "@/lib/deviceUrl";
 import { useStatusStore } from "@/lib/store";
 
-const { componentRef, mockNavigate, mockGoBack, mockSelectDevice } = vi.hoisted(
-  () => ({
-    componentRef: { current: null as any },
-    mockNavigate: vi.fn(),
-    mockGoBack: vi.fn(),
-    mockSelectDevice: vi.fn(),
-  }),
-);
+const { componentRef, mockNavigate, mockSelectDevice } = vi.hoisted(() => ({
+  componentRef: { current: null as any },
+  mockNavigate: vi.fn(),
+  mockSelectDevice: vi.fn(),
+}));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
@@ -22,10 +19,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       componentRef.current = options.component;
       return { options };
     },
-    useRouter: () => ({
-      history: { back: mockGoBack },
-      navigate: mockNavigate,
-    }),
+    useRouter: () => ({ navigate: mockNavigate }),
     Link: ({
       children,
       to,
@@ -216,11 +210,14 @@ describe("Settings Devices Route", () => {
     });
   });
 
-  it("should call history.back when the back button is clicked", async () => {
+  it("should navigate to Settings without resetting scroll", async () => {
     const user = userEvent.setup();
     renderRoute();
 
     await user.click(screen.getByLabelText("nav.back"));
-    expect(mockGoBack).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/settings",
+      resetScroll: false,
+    });
   });
 });

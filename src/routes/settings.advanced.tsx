@@ -16,6 +16,7 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useClientCapability } from "@/hooks/useClientCapability";
 import { SlideModal } from "@/components/SlideModal";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { Button } from "@/components/wui/Button";
 import { ClientCapability } from "@/lib/models";
 import {
@@ -30,7 +31,9 @@ export const Route = createFileRoute("/settings/advanced")({
 
 export function AdvancedSettings() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("settings.advanced.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.advanced.title"),
+  );
   const connected = useStatusStore((state) => state.connected);
   const connectionState = useStatusStore((state) => state.connectionState);
   const canWriteCoreSettings = useClientCapability(
@@ -77,7 +80,8 @@ export function AdvancedSettings() {
   };
 
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,
@@ -97,7 +101,7 @@ export function AdvancedSettings() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">
+        <h1 ref={headingRef} className="text-foreground text-xl">
           {t("settings.advanced.title")}
         </h1>
       }

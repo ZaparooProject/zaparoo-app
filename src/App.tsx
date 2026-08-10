@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
-import toast, { Toaster, useToasterStore } from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
@@ -23,7 +23,7 @@ import {
 } from "@/lib/purchasesSetup";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
-import { DatabaseIcon, PlayIcon } from "./lib/images";
+import { DatabaseIcon, PlayIcon, preloadZapLogo } from "./lib/images";
 import { ConnectionProvider } from "./components/ConnectionProvider";
 import { ReconnectingIndicator } from "./components/ReconnectingIndicator";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
@@ -44,10 +44,9 @@ import { useLiveUpdate } from "./hooks/useLiveUpdate";
 import { WhatsNewInitializer } from "./components/WhatsNewInitializer";
 import { initDeviceInfo, logger } from "./lib/logger";
 import { getSubscriptionStatus } from "./lib/onlineApi";
-import {
-  A11yAnnouncerProvider,
-  useAnnouncer,
-} from "./components/A11yAnnouncer";
+import { A11yAnnouncerProvider } from "./components/A11yAnnouncer";
+
+void preloadZapLogo();
 
 const SUBSCRIPTION_STATUS_RETRY_DELAY_MS = 500;
 
@@ -139,52 +138,10 @@ function QueueProcessors() {
   );
 }
 
-// Component to announce all toasts for screen readers
-// This ensures TalkBack/VoiceOver users hear toast notifications
-function ToastAnnouncer() {
-  const { announce } = useAnnouncer();
-  const { toasts } = useToasterStore();
-  const announcedIds = React.useRef(new Set<string>());
-
-  useEffect(() => {
-    for (const t of toasts) {
-      // Only announce new, visible toasts
-      if (t.visible && !announcedIds.current.has(t.id)) {
-        announcedIds.current.add(t.id);
-
-        // Extract text content from the toast message
-        let message = "";
-        if (typeof t.message === "string") {
-          message = t.message;
-        } else if (typeof t.message === "function") {
-          // For function messages (like our custom toasts), we can't easily extract text
-          // The toast content will need to be announced separately if needed
-          // Skip announcement for complex toasts - they should handle their own a11y
-          continue;
-        }
-
-        if (message) {
-          announce(message);
-        }
-      }
-    }
-
-    // Clean up old toast IDs to prevent memory leak
-    const currentIds = new Set(toasts.map((t) => t.id));
-    for (const id of announcedIds.current) {
-      if (!currentIds.has(id)) {
-        announcedIds.current.delete(id);
-      }
-    }
-  }, [toasts, announce]);
-
-  return null;
-}
-
-// Component to show "now playing" toast with screen reader announcement
+// Component to show "now playing" toast.
+// react-hot-toast owns the single live-region announcement path.
 function NowPlayingToast() {
   const { t } = useTranslation();
-  const { announce } = useAnnouncer();
   const playing = useStatusStore((state) => state.playing);
   const prevPlaying = usePrevious(playing);
   const showFilenames = usePreferencesStore((state) => state.showFilenames);
@@ -202,18 +159,14 @@ function NowPlayingToast() {
 
       toast.success(
         (to) => (
-          <span
-            className="flex grow flex-col"
+          <button
+            type="button"
+            className="flex grow flex-col text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
             onClick={() => toast.dismiss(to.id)}
-            onKeyDown={(e) =>
-              (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
-            }
-            role="button"
-            tabIndex={0}
           >
             <span className="font-bold">{t("toast.nowPlayingHeading")}</span>
             <span>{displayName}</span>
-          </span>
+          </button>
         ),
         {
           id: "playingGame-" + Date.now(),
@@ -224,19 +177,14 @@ function NowPlayingToast() {
           ),
         },
       );
-
-      // Announce for screen readers (since this uses a function message)
-      announce(`${t("toast.nowPlayingHeading")}: ${displayName}`);
     }
-  }, [playing, prevPlaying, t, showFilenames, announce]);
+  }, [playing, prevPlaying, t, showFilenames]);
 
   return null;
 }
 
-// Component to show "media finished" toast with screen reader announcement
+// Component to show the media-finished toast.
 function MediaFinishedToastHandler() {
-  const { t } = useTranslation();
-  const { announce } = useAnnouncer();
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const prevGamesIndex = usePrevious(gamesIndex);
 
@@ -255,13 +203,8 @@ function MediaFinishedToastHandler() {
           </span>
         ),
       });
-
-      // Announce for screen readers
-      announce(
-        `${t("toast.updatedDb")}. ${t("toast.filesFound", { count: gamesIndex.totalFiles })}`,
-      );
     }
-  }, [gamesIndex, prevGamesIndex, t, announce]);
+  }, [gamesIndex, prevGamesIndex]);
 
   return null;
 }
@@ -510,7 +453,6 @@ export default function App() {
       <A11yAnnouncerProvider>
         <SlideModalProvider>
           <ConnectionProvider>
-            <ToastAnnouncer />
             <NowPlayingToast />
             <MediaFinishedToastHandler />
             <ReconnectingIndicator />

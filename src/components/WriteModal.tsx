@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { ScanResult } from "@/lib/models";
 import type { WriteNfcHook } from "@/lib/writeNfcHook";
 import { ScanSpinner } from "./ScanSpinner";
@@ -23,13 +24,22 @@ export function WriteModal(props: {
 }) {
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
+  const modalRef = useRef<HTMLDivElement>(null);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const retryButtonRef = useRef<HTMLButtonElement>(null);
   const verifyError = props.verifyError ?? false;
 
-  const swipeHandlers = useSmartSwipe({
+  const { ref: swipeRef = () => undefined, ...swipeHandlers } = useSmartSwipe({
     onSwipeRight: () => props.close(),
     preventScrollOnSwipe: false,
+  });
+
+  useFocusTrap({
+    isActive: props.isOpen,
+    containerRef: modalRef,
+    restoreFocus: true,
+    autoFocus: false,
+    onEscape: props.close,
   });
 
   // Handle Android back button
@@ -76,6 +86,10 @@ export function WriteModal(props: {
 
   return (
     <div
+      ref={(node) => {
+        modalRef.current = node;
+        swipeRef(node);
+      }}
       className="z-30 flex h-screen w-screen items-center justify-center bg-[#111928] pb-[90px]"
       style={{ position: "fixed", left: 0, top: 0 }}
       role="dialog"
@@ -83,6 +97,7 @@ export function WriteModal(props: {
       aria-label={
         verifyError ? t("spinner.verifyFailedRetry") : t("spinner.holdTag")
       }
+      tabIndex={-1}
       {...swipeHandlers}
     >
       <div className="flex flex-col items-center gap-8">

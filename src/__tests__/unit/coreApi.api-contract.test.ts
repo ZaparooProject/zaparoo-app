@@ -81,6 +81,146 @@ describe("CoreAPI API Contract", () => {
       expect(sentData.params).toEqual({ text: "**launch.system:snes" });
     });
 
+    it("mediaBrowse should send scoped cursor parameters", async () => {
+      const promise = CoreAPI.mediaBrowse({
+        path: "/roms/SNES",
+        systems: ["SNES"],
+        maxResults: 100,
+        cursor: "next-page",
+      });
+      simulateResponse(mockSend, {
+        path: "/roms/SNES",
+        entries: [],
+        totalFiles: 0,
+      });
+
+      await expect(promise).resolves.toEqual({
+        path: "/roms/SNES",
+        entries: [],
+        totalFiles: 0,
+      });
+      expect(JSON.parse(mockSend.mock.calls[0]![0])).toEqual(
+        expect.objectContaining({
+          method: "media.browse",
+          params: {
+            path: "/roms/SNES",
+            systems: ["SNES"],
+            maxResults: 100,
+            cursor: "next-page",
+          },
+        }),
+      );
+    });
+
+    it("mediaBrowseIndex should preserve opaque browse scope", async () => {
+      const promise = CoreAPI.mediaBrowseIndex({
+        path: "/roms/SNES",
+        systems: ["SNES"],
+        sort: "name-asc",
+      });
+      simulateResponse(mockSend, {
+        scheme: "latin",
+        totalFiles: 1,
+        groups: [
+          { key: "A", label: "A", count: 1, cursor: "opaque", offset: 0 },
+        ],
+      });
+
+      await expect(promise).resolves.toEqual(
+        expect.objectContaining({ scheme: "latin" }),
+      );
+      expect(JSON.parse(mockSend.mock.calls[0]![0]).method).toBe(
+        "media.browse.index",
+      );
+    });
+
+    it("mediaMeta and mediaImage should use media IDs and image sizing", async () => {
+      const metaPromise = CoreAPI.mediaMeta({ mediaId: 42 });
+      simulateResponse(mockSend, { media: { path: "/roms/game.sfc" } });
+      await expect(metaPromise).resolves.toEqual({
+        media: { path: "/roms/game.sfc" },
+      });
+
+      const imagePromise = CoreAPI.mediaImage({
+        mediaId: 42,
+        imageTypes: ["boxart", "image"],
+        maxSize: 512,
+      });
+      simulateResponse(
+        mockSend,
+        {
+          contentType: "image/webp",
+          extension: "webp",
+          data: "AAAA",
+          typeTag: "property:image-boxart",
+        },
+        1,
+      );
+      await expect(imagePromise).resolves.toEqual(
+        expect.objectContaining({ typeTag: "property:image-boxart" }),
+      );
+
+      expect(JSON.parse(mockSend.mock.calls[0]![0])).toEqual(
+        expect.objectContaining({
+          method: "media.meta",
+          params: { mediaId: 42 },
+        }),
+      );
+      expect(JSON.parse(mockSend.mock.calls[1]![0])).toEqual(
+        expect.objectContaining({
+          method: "media.image",
+          params: {
+            mediaId: 42,
+            imageTypes: ["boxart", "image"],
+            maxSize: 512,
+          },
+        }),
+      );
+    });
+
+    it("mediaTagsUpdate should mutate favorite by media ID", async () => {
+      const promise = CoreAPI.mediaTagsUpdate({
+        mediaId: 42,
+        add: ["user:favorite"],
+      });
+      simulateResponse(mockSend, {
+        tags: [{ type: "user", tag: "favorite" }],
+      });
+
+      await expect(promise).resolves.toEqual({
+        tags: [{ type: "user", tag: "favorite" }],
+      });
+      expect(JSON.parse(mockSend.mock.calls[0]![0])).toEqual(
+        expect.objectContaining({
+          method: "media.tags.update",
+          params: { mediaId: 42, add: ["user:favorite"] },
+        }),
+      );
+    });
+
+    it("mediaTagsUpdate should reject a non-delivered update", async () => {
+      const promise = CoreAPI.mediaTagsUpdate({
+        mediaId: 42,
+        add: ["user:favorite"],
+      });
+
+      CoreAPI.reset();
+
+      await expect(promise).rejects.toThrow("cancelled");
+    });
+
+    it("mediaBrowse should reject an aborted response as cancellation", async () => {
+      const controller = new AbortController();
+      const promise = CoreAPI.mediaBrowse(
+        { systems: ["SNES"] },
+        controller.signal,
+      );
+
+      controller.abort();
+
+      await expect(promise).rejects.toThrow("cancelled");
+    });
+
     it("mediaGenerate should send correct JSON-RPC format", () => {
       CoreAPI.mediaGenerate({ systems: ["snes"] }).catch(() => {});
 

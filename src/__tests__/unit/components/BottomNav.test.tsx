@@ -1,6 +1,13 @@
-import { render, screen, fireEvent } from "../../../test-utils";
+import {
+  findA11yViolations,
+  render,
+  screen,
+  fireEvent,
+} from "../../../test-utils";
 import { BottomNav } from "@/components/BottomNav";
 import { useStatusStore } from "@/lib/store";
+import { useTabSessionStore } from "@/lib/tabSessionStore";
+import { useLibrarySessionStore } from "@/lib/librarySessionStore";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mockInboxMessage } from "@/test-utils/factories";
 
@@ -27,22 +34,25 @@ vi.mock("@tanstack/react-router", () => ({
     onClick,
     "aria-current": ariaCurrent,
     "aria-label": ariaLabel,
+    className,
   }: {
     children: React.ReactNode;
     to: string;
-    onClick?: () => void;
+    onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
     "aria-current"?: "page" | "step" | "location" | "date" | "time" | boolean;
     "aria-label"?: string;
+    className?: string;
   }) => (
     <a
       href={to}
       data-testid={`link-${to}`}
       onClick={(e) => {
         e.preventDefault();
-        onClick?.();
+        onClick?.(e);
       }}
       aria-current={ariaCurrent}
       aria-label={ariaLabel}
+      className={className}
     >
       {children}
     </a>
@@ -59,7 +69,9 @@ describe("BottomNav", () => {
       coreVersion: "2.8.0",
       coreVersionPending: false,
     });
-    mockUseLocation.mockReturnValue({ pathname: "/" });
+    useTabSessionStore.getState().reset();
+    useLibrarySessionStore.getState().reset();
+    mockUseLocation.mockReturnValue({ pathname: "/", href: "/" });
     vi.clearAllMocks();
   });
 
@@ -67,10 +79,29 @@ describe("BottomNav", () => {
     vi.restoreAllMocks();
   });
 
+  it("has no detectable accessibility violations", async () => {
+    const { baseElement } = render(<BottomNav />);
+
+    expect(await findA11yViolations(baseElement)).toEqual([]);
+  });
+
+  it("allows navigation labels and height to reflow with text zoom", () => {
+    render(<BottomNav />);
+
+    expect(screen.getByRole("navigation")).toHaveClass(
+      "[height:calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset))]",
+    );
+    for (const link of screen.getAllByRole("link")) {
+      expect(link).toHaveClass("w-full", "min-w-0");
+    }
+    expect(screen.getByText("nav.settings")).toHaveClass("break-all");
+  });
+
   it("renders all navigation buttons", () => {
     render(<BottomNav />);
 
     expect(screen.getByText("nav.index")).toBeInTheDocument();
+    expect(screen.getByText("nav.library")).toBeInTheDocument();
     expect(screen.getByText("nav.create")).toBeInTheDocument();
     expect(screen.getByText("nav.settings")).toBeInTheDocument();
   });
@@ -79,20 +110,99 @@ describe("BottomNav", () => {
     render(<BottomNav />);
 
     expect(screen.getByTestId("link-/")).toBeInTheDocument();
+    expect(screen.getByTestId("link-/library")).toBeInTheDocument();
     expect(screen.getByTestId("link-/create")).toBeInTheDocument();
     expect(screen.getByTestId("link-/settings")).toBeInTheDocument();
   });
 
+  it("reopens the last screen visited in each tab", () => {
+    const session = useTabSessionStore.getState();
+    session.rememberLocation("/library/SNES", "/library/SNES");
+    session.rememberLocation("/create/search", "/create/search");
+    session.rememberLocation(
+      "/settings/language-region",
+      "/settings/language-region",
+    );
+
+    render(<BottomNav />);
+
+    expect(screen.getByTestId("link-/library/SNES")).toBeInTheDocument();
+    expect(screen.getByTestId("link-/create/search")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("link-/settings/language-region"),
+    ).toBeInTheDocument();
+  });
+
   it("marks Home as active when on root path", () => {
-    mockUseLocation.mockReturnValue({ pathname: "/" });
+    mockUseLocation.mockReturnValue({ pathname: "/", href: "/" });
     render(<BottomNav />);
 
     const homeLink = screen.getByTestId("link-/");
     expect(homeLink).toHaveAttribute("aria-current", "page");
   });
 
+  it("marks Library as active on Library routes", () => {
+    mockUseLocation.mockReturnValue({
+      pathname: "/library/SNES",
+      href: "/library/SNES",
+    });
+    render(<BottomNav />);
+
+    expect(screen.getByTestId("link-/library")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("resets active Library navigation to its root", () => {
+    mockUseLocation.mockReturnValue({
+      pathname: "/library/SNES",
+      href: "/library/SNES",
+    });
+    const librarySession = useLibrarySessionStore.getState();
+    librarySession.activateDevice("device-a");
+    librarySession.setFolderLevels("SNES", [
+      { name: "Games", path: "/roms/SNES" },
+    ]);
+    librarySession.setEmbeddedSearchOpen("SNES", true);
+    useTabSessionStore.getState().rememberScroll("library:SNES:browse", 0, 240);
+    render(<BottomNav />);
+
+    fireEvent.click(screen.getByTestId("link-/library"));
+
+    expect(useTabSessionStore.getState().lastHref.library).toBe("/library");
+    expect(useTabSessionStore.getState().scrollPositions).not.toHaveProperty(
+      "library:SNES:browse",
+    );
+    expect(useLibrarySessionStore.getState().folderLevels).toEqual({});
+    expect(useLibrarySessionStore.getState().embeddedSearchOpen).toEqual({});
+  });
+
+  it("does nothing when active Library root is pressed", () => {
+    mockUseLocation.mockReturnValue({
+      pathname: "/library",
+      href: "/library",
+    });
+    useTabSessionStore.getState().rememberScroll("/library", 0, 240);
+    useLibrarySessionStore.getState().setSearch("all", {
+      query: "mario",
+      system: "all",
+      tags: [],
+    });
+    render(<BottomNav />);
+
+    fireEvent.click(screen.getByTestId("link-/library"));
+
+    expect(useTabSessionStore.getState().scrollPositions).toHaveProperty(
+      "/library",
+      { scrollX: 0, scrollY: 240 },
+    );
+    expect(useLibrarySessionStore.getState().searches).toHaveProperty("all");
+    expect(mockImpact).not.toHaveBeenCalled();
+  });
+
   it("marks Create as active when on create path", () => {
-    mockUseLocation.mockReturnValue({ pathname: "/create" });
+    mockUseLocation.mockReturnValue({ pathname: "/create", href: "/create" });
     render(<BottomNav />);
 
     const createLink = screen.getByTestId("link-/create");
@@ -100,7 +210,10 @@ describe("BottomNav", () => {
   });
 
   it("marks Create as active when on create subpath", () => {
-    mockUseLocation.mockReturnValue({ pathname: "/create/search" });
+    mockUseLocation.mockReturnValue({
+      pathname: "/create/search",
+      href: "/create/search",
+    });
     render(<BottomNav />);
 
     const createLink = screen.getByTestId("link-/create");
@@ -108,7 +221,10 @@ describe("BottomNav", () => {
   });
 
   it("marks Settings as active when on settings path", () => {
-    mockUseLocation.mockReturnValue({ pathname: "/settings" });
+    mockUseLocation.mockReturnValue({
+      pathname: "/settings",
+      href: "/settings",
+    });
     render(<BottomNav />);
 
     const settingsLink = screen.getByTestId("link-/settings");
@@ -116,7 +232,10 @@ describe("BottomNav", () => {
   });
 
   it("marks Settings as active when on settings subpath", () => {
-    mockUseLocation.mockReturnValue({ pathname: "/settings/advanced" });
+    mockUseLocation.mockReturnValue({
+      pathname: "/settings/advanced",
+      href: "/settings/advanced",
+    });
     render(<BottomNav />);
 
     const settingsLink = screen.getByTestId("link-/settings");
@@ -140,7 +259,10 @@ describe("BottomNav", () => {
     useStatusStore.setState({
       inboxMessages: [mockInboxMessage({ id: 1 }), mockInboxMessage({ id: 2 })],
     });
-    mockUseLocation.mockReturnValue({ pathname: "/settings" });
+    mockUseLocation.mockReturnValue({
+      pathname: "/settings",
+      href: "/settings",
+    });
 
     render(<BottomNav />);
 

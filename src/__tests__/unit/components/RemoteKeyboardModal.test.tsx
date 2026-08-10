@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@/test-utils";
+import { findA11yViolations, render, screen, waitFor } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useStatusStore } from "@/lib/store";
 import { RemoteKeyboardModal } from "@/components/RemoteKeyboardModal";
@@ -15,21 +15,40 @@ interface KeyboardMockProps {
   layoutName: string;
   display: Record<string, string>;
   onKeyPress: (button: string) => void;
+  useButtonTag?: boolean;
 }
 
 vi.mock("react-simple-keyboard/build/index.modern.esm.js", () => ({
-  default: ({ layout, layoutName, display, onKeyPress }: KeyboardMockProps) => (
-    <div>
+  default: ({
+    layout,
+    layoutName,
+    display,
+    onKeyPress,
+    useButtonTag,
+  }: KeyboardMockProps) => (
+    <div data-use-button-tag={useButtonTag ? "true" : "false"}>
       {layout[layoutName]?.flatMap((row) =>
-        row.split(" ").map((button) => (
-          <button
-            key={`${layoutName}-${button}`}
-            type="button"
-            onClick={() => onKeyPress(button)}
-          >
-            {display[button] ?? button}
-          </button>
-        )),
+        row.split(" ").map((button) => {
+          const label = display[button] ?? button;
+          return useButtonTag ? (
+            <button
+              key={`${layoutName}-${button}`}
+              type="button"
+              onClick={() => onKeyPress(button)}
+            >
+              {label}
+            </button>
+          ) : (
+            <div
+              key={`${layoutName}-${button}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => onKeyPress(button)}
+            >
+              {label}
+            </div>
+          );
+        }),
       )}
     </div>
   ),
@@ -59,6 +78,19 @@ describe("RemoteKeyboardModal", () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
     CoreAPI.reset();
     useStatusStore.setState({ connected: true, corePlatform: null });
+  });
+
+  it("should render virtual keys as semantic buttons", async () => {
+    const user = userEvent.setup();
+    const { baseElement } = render(
+      <RemoteKeyboardModal isOpen close={vi.fn()} />,
+    );
+    await user.click(
+      screen.getByRole("radio", { name: "remoteKeyboard.keyboardMode" }),
+    );
+
+    expect(screen.getByRole("button", { name: "q" })).toBeInTheDocument();
+    expect(await findA11yViolations(baseElement)).toEqual([]);
   });
 
   it("should not render redundant description text", () => {

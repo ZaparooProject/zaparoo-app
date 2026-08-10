@@ -11,6 +11,7 @@ interface BackButtonHandler {
 class BackButtonManager {
   private handlers: BackButtonHandler[] = [];
   private listener: Promise<{ remove: () => void }> | null = null;
+  private removal: Promise<void> | null = null;
 
   addHandler(handler: BackButtonHandler) {
     this.handlers.push(handler);
@@ -18,8 +19,10 @@ class BackButtonManager {
     this.setupListener();
   }
 
-  removeHandler(id: string) {
-    this.handlers = this.handlers.filter((h) => h.id !== id);
+  removeHandler(handler: BackButtonHandler) {
+    this.handlers = this.handlers.filter(
+      (registered) => registered !== handler,
+    );
     if (this.handlers.length === 0) {
       this.removeListener().catch((e) => {
         logger.error("Failed to remove back button listener:", e, {
@@ -32,7 +35,7 @@ class BackButtonManager {
   }
 
   private setupListener() {
-    if (this.listener) return;
+    if (this.listener || this.removal) return;
 
     this.listener = App.addListener("backButton", () => {
       for (const { handler } of this.handlers) {
@@ -44,17 +47,29 @@ class BackButtonManager {
     });
   }
 
-  private async removeListener() {
-    if (this.listener) {
-      const handle = await this.listener;
-      handle.remove();
-      this.listener = null;
-    }
+  private removeListener(): Promise<void> {
+    if (this.removal) return this.removal;
+    const listener = this.listener;
+    if (!listener) return Promise.resolve();
+
+    this.removal = (async () => {
+      try {
+        const handle = await listener;
+        await handle.remove();
+      } finally {
+        if (this.listener === listener) this.listener = null;
+      }
+    })().finally(() => {
+      this.removal = null;
+      if (this.handlers.length > 0) this.setupListener();
+    });
+
+    return this.removal;
   }
 
   async destroy() {
-    await this.removeListener();
     this.handlers = [];
+    await this.removeListener();
   }
 }
 
@@ -78,7 +93,7 @@ export function useBackButtonHandler(
     backButtonManager.addHandler(handlerObj);
 
     return () => {
-      backButtonManager.removeHandler(id);
+      backButtonManager.removeHandler(handlerObj);
     };
   }, [id, handler, priority, enabled]);
 }

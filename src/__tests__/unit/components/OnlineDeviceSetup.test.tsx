@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { User } from "@capacitor-firebase/authentication";
-import { render, screen } from "@/test-utils";
+import { render, screen, waitFor } from "@/test-utils";
 import { useStatusStore } from "@/lib/store";
 
 const {
@@ -147,6 +147,27 @@ describe("OnlineDeviceSetup", () => {
     expect(screen.getByText("online.features.title")).toBeInTheDocument();
     expect(mockSettings).not.toHaveBeenCalled();
     expect(mockBackupStatus).not.toHaveBeenCalled();
+  });
+
+  it("should move focus to features when linking completes", async () => {
+    mockUseDeviceLinking.mockReturnValue({
+      state: "checking",
+      linkDevice: vi.fn(),
+    });
+    const { rerender } = render(
+      <OnlineDeviceSetup connected warpActive={false} />,
+    );
+
+    mockUseDeviceLinking.mockReturnValue({
+      state: "linked",
+      linkDevice: vi.fn(),
+    });
+    rerender(<OnlineDeviceSetup connected warpActive={false} />);
+
+    const heading = await screen.findByRole("heading", {
+      name: "online.features.title",
+    });
+    await waitFor(() => expect(heading).toHaveFocus());
   });
 
   it("should show free and Warp feature controls to admin clients", async () => {

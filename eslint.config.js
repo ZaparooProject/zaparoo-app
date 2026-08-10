@@ -16,6 +16,7 @@ export default defineConfig(
   // Global ignores
   globalIgnores([
     "dist/**",
+    "dist-core/**",
     "node_modules/**",
     "coverage/**",
     "android/**",

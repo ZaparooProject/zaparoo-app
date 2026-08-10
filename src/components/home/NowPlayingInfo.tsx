@@ -3,6 +3,7 @@ import { Pause, Play, SkipBack, SkipForward, Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { filenameFromPath } from "@/lib/path.ts";
 import { usePreferencesStore } from "@/lib/preferencesStore.ts";
+import { useSystemName } from "@/hooks/useSystemName";
 import type { PlaylistState } from "@/lib/models";
 import { Button } from "../wui/Button";
 
@@ -10,6 +11,7 @@ interface NowPlayingInfoProps {
   mediaName: string;
   mediaPath?: string;
   systemName: string;
+  systemId?: string;
   onStop: () => void;
   connected?: boolean;
   headingLabel?: string;
@@ -25,6 +27,7 @@ export function NowPlayingInfo({
   mediaName,
   mediaPath,
   systemName,
+  systemId = "",
   onStop,
   connected = true,
   headingLabel,
@@ -38,6 +41,7 @@ export function NowPlayingInfo({
   const { t } = useTranslation();
   const headingId = useId();
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
+  const displaySystemName = useSystemName(systemId, systemName);
 
   const activePlaylistItem = playlist?.items[playlist.index];
   const playlistItemName =
@@ -125,7 +129,9 @@ export function NowPlayingInfo({
         </p>
         <p>
           {t("scan.nowPlayingSystem", { system: "" })}
-          <span>{systemName === "" ? t("none") : systemName}</span>
+          <span>
+            {displaySystemName === "" ? t("none") : displaySystemName}
+          </span>
         </p>
         {playlist && (
           <>

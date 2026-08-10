@@ -8,12 +8,11 @@ import { useNfcWriter, WriteMethod } from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { isWriteModalOpen, WriteModal } from "@/components/WriteModal.tsx";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
-import logoImage from "@/assets/lockup.webp";
 import { cancelSession } from "@/lib/nfc";
 import { CoreAPI } from "@/lib/coreApi";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import type { MediaSlot, PlayingResponse } from "@/lib/models";
-import { HistoryIcon } from "@/lib/images";
+import { HistoryIcon, ZapLogo } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
 import { ToggleChip } from "@/components/wui/ToggleChip";
 import { PageFrame } from "@/components/PageFrame";
@@ -42,7 +41,7 @@ function canPausePlaylist(media: PlayingResponse) {
 
 export function Index() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("nav.index"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t("nav.index"));
   const { announce } = useAnnouncer();
   const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
@@ -253,10 +252,12 @@ export function Index() {
   return (
     <>
       <PageFrame>
-        <h1 className="sr-only">Zaparoo</h1>
+        <h1 ref={headingRef} className="sr-only">
+          Zaparoo
+        </h1>
         <div className="flex flex-row justify-between">
           <div>
-            <img src={logoImage} alt="Zaparoo logo" width="160px" />
+            <ZapLogo />
           </div>
           <ToggleChip
             icon={<HistoryIcon size="32" />}
@@ -299,6 +300,7 @@ export function Index() {
             mediaName={playing.mediaName}
             mediaPath={playing.mediaPath}
             systemName={playing.systemName}
+            systemId={playing.systemId}
             onStop={() => setStopTarget("primary")}
             connected={connected}
             playlist={primaryPlaylist}
@@ -319,6 +321,7 @@ export function Index() {
                 mediaName={backgroundPlaying.mediaName}
                 mediaPath={backgroundPlaying.mediaPath}
                 systemName={backgroundPlaying.systemName}
+                systemId={backgroundPlaying.systemId}
                 onStop={() => setStopTarget("background")}
                 connected={connected}
                 headingLabel={t("scan.backgroundMediaHeading")}

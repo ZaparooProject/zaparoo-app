@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "../../../test-utils";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MediaIndexingToast } from "../../../components/MediaIndexingToast";
 import toast from "react-hot-toast";
@@ -88,7 +89,7 @@ describe("MediaIndexingToast", () => {
 
     const buttons = screen.getAllByRole("button");
     const mainToastArea = buttons[0]!;
-    expect(mainToastArea).toHaveAttribute("tabIndex", "0");
+    expect(mainToastArea).toHaveProperty("tabIndex", 0);
   });
 
   it("should dismiss toast on main area click", () => {
@@ -111,22 +112,24 @@ describe("MediaIndexingToast", () => {
     expect(toast.dismiss).toHaveBeenCalledWith("test-id");
   });
 
-  it("should dismiss toast on Enter key press", () => {
+  it("should dismiss toast on Enter key press", async () => {
+    const user = userEvent.setup();
     render(<MediaIndexingToast id="test-id" setHideToast={mockSetHideToast} />);
 
-    const buttons = screen.getAllByRole("button");
-    const mainToastArea = buttons[0]!;
-    fireEvent.keyDown(mainToastArea, { key: "Enter" });
+    const mainToastArea = screen.getAllByRole("button")[0]!;
+    mainToastArea.focus();
+    await user.keyboard("{Enter}");
 
     expect(toast.dismiss).toHaveBeenCalledWith("test-id");
   });
 
-  it("should dismiss toast on Space key press", () => {
+  it("should dismiss toast on Space key press", async () => {
+    const user = userEvent.setup();
     render(<MediaIndexingToast id="test-id" setHideToast={mockSetHideToast} />);
 
-    const buttons = screen.getAllByRole("button");
-    const mainToastArea = buttons[0]!;
-    fireEvent.keyDown(mainToastArea, { key: " " });
+    const mainToastArea = screen.getAllByRole("button")[0]!;
+    mainToastArea.focus();
+    await user.keyboard(" ");
 
     expect(toast.dismiss).toHaveBeenCalledWith("test-id");
   });
@@ -145,7 +148,7 @@ describe("MediaIndexingToast", () => {
     render(<MediaIndexingToast id="test-id" setHideToast={mockSetHideToast} />);
 
     const progressBar = screen.getByRole("progressbar", {
-      name: "Database indexing progress",
+      name: "toast.indexingProgress",
     });
     expect(progressBar).toBeInTheDocument();
     // 5/10 steps = 50%

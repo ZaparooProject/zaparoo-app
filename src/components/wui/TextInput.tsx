@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/refs -- False positive: linter incorrectly flags all props as refs when component has a ref prop */
 import React, { KeyboardEventHandler, useEffect, useState, useId } from "react";
 import classNames from "classnames";
+import { useTranslation } from "react-i18next";
 import { useHaptics } from "@/hooks/useHaptics";
 import { SaveIcon, ClearIcon } from "@/lib/images";
 import { Button } from "./Button";
@@ -35,6 +36,7 @@ export function TextInput(props: {
   error?: string;
   autoComplete?: string;
 }) {
+  const { t } = useTranslation();
   const inputId = useId();
   const errorId = useId();
   const [value, setValue] = useState(props.value);
@@ -130,7 +132,7 @@ export function TextInput(props: {
                     props.setValue("");
                   }
                 }}
-                aria-label="Clear search"
+                aria-label={t("clearSearch")}
               >
                 <ClearIcon size="16" />
               </button>
@@ -140,7 +142,7 @@ export function TextInput(props: {
           <Button
             disabled={!modified || props.disabled || props.saveDisabled}
             icon={<SaveIcon size="20" />}
-            aria-label="Save"
+            aria-label={t("save")}
             className="h-12 w-12 rounded-s-lg pr-3"
             onClick={() => {
               if (

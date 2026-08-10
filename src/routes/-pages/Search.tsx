@@ -17,6 +17,10 @@ import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { DEFAULT_GAMES_INDEX, useStatusStore } from "@/lib/store";
+import {
+  appBackNavigationOptions,
+  useTabSessionStore,
+} from "@/lib/tabSessionStore";
 import { TextInput } from "@/components/wui/TextInput";
 import { WriteModal } from "@/components/WriteModal";
 import { PageFrame } from "@/components/PageFrame";
@@ -40,7 +44,9 @@ const route = getRouteApi("/create/search");
 
 export function Search() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("create.search.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("create.search.title"),
+  );
   const loaderData = route.useLoaderData();
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const setGamesIndex = useStatusStore((state) => state.setGamesIndex);
@@ -49,28 +55,46 @@ export function Search() {
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
+  const mediaTagsSupportKnown = !coreVersionPending && coreVersion !== null;
+  const mediaTagsAvailable =
+    connected &&
+    mediaTagsSupportKnown &&
+    isCoreFeatureAvailable("mediaTags", coreVersion);
+  const savedSearch = useTabSessionStore((state) => state.createSearch);
+  const setSessionSearch = useTabSessionStore((state) => state.setCreateSearch);
+  const restoredSearch =
+    savedSearch &&
+    (savedSearch.system === "all" ||
+      loaderData.systems.systems.some(
+        (system) => system.id === savedSearch.system,
+      ))
+      ? savedSearch
+      : null;
 
-  const [querySystem, setQuerySystem] = useState(loaderData.systemQuery);
-  const [queryTags, setQueryTags] = useState<string[]>(loaderData.tagQuery);
-  const [query, setQuery] = useState("");
+  const [querySystem, setQuerySystem] = useState(
+    restoredSearch?.system ?? loaderData.systemQuery,
+  );
+  const [queryTags, setQueryTags] = useState<string[]>(
+    restoredSearch?.tags ?? loaderData.tagQuery,
+  );
+  const [query, setQuery] = useState(restoredSearch?.query ?? "");
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
   const [tagSelectorOpen, setTagSelectorOpen] = useState(false);
   const [recentSearchesOpen, setRecentSearchesOpen] = useState(false);
 
   // State for tracking actual searched parameters and results
-  const [searchParams, setSearchParams] = useState<{
-    query: string;
-    system: string;
-    tags: string[];
-  } | null>(null);
+  const [searchParams, setSearchParams] = useState(restoredSearch);
   const [isSearching, setIsSearching] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const mediaTagsAvailable =
-    connected &&
-    !coreVersionPending &&
-    isCoreFeatureAvailable("mediaTags", coreVersion);
   const effectiveQueryTags = mediaTagsAvailable ? queryTags : [];
+  const effectiveSearchParams =
+    searchParams && (searchParams.tags.length === 0 || mediaTagsSupportKnown)
+      ? {
+          ...searchParams,
+          tags: mediaTagsAvailable ? searchParams.tags : [],
+        }
+      : null;
   const browseAllSearchAvailable =
     connected &&
     !coreVersionPending &&
@@ -107,11 +131,13 @@ export function Search() {
     setSelectedResult(null);
 
     setIsSearching(true);
-    setSearchParams({
-      query: query,
+    const nextSearch = {
+      query,
       system: querySystem,
       tags: effectiveQueryTags,
-    });
+    };
+    setSearchParams(nextSearch);
+    setSessionSearch(nextSearch);
 
     try {
       await addRecentSearch({
@@ -192,7 +218,8 @@ export function Search() {
   }, [mediaTagsAvailable]);
 
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/create"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,
@@ -253,7 +280,7 @@ export function Search() {
   const handleRecentSearchSelect = async (
     recentSearch: (typeof recentSearches)[0],
   ) => {
-    const searchTags = mediaTagsAvailable ? recentSearch.tags : [];
+    const searchTags = recentSearch.tags;
     setQuery(recentSearch.query);
     setQuerySystem(recentSearch.system);
     setQueryTags(searchTags);
@@ -287,11 +314,13 @@ export function Search() {
         ))
     ) {
       setIsSearching(true);
-      setSearchParams({
+      const nextSearch = {
         query: recentSearch.query,
         system: recentSearch.system,
         tags: searchTags,
-      });
+      };
+      setSearchParams(nextSearch);
+      setSessionSearch(nextSearch);
     }
   };
 
@@ -307,7 +336,7 @@ export function Search() {
           />
         }
         headerCenter={
-          <h1 className="text-foreground text-xl">
+          <h1 ref={headingRef} className="text-foreground text-xl">
             {t("create.search.title")}
           </h1>
         }
@@ -348,10 +377,11 @@ export function Search() {
 
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="flex flex-col md:flex-1">
-              <label className="mb-1 text-white">
+              <span id="search-system-label" className="mb-1 text-white">
                 {t("create.search.systemInput")}
-              </label>
+              </span>
               <SystemSelectorTrigger
+                aria-labelledby="search-system-label"
                 selectedSystems={querySystem === "all" ? [] : [querySystem]}
                 systemsData={loaderData.systems}
                 placeholder={t("create.search.allSystems")}
@@ -363,10 +393,11 @@ export function Search() {
 
             {mediaTagsAvailable && (
               <div className="flex flex-col md:flex-1">
-                <label className="mb-1 text-white">
+                <span id="search-tags-label" className="mb-1 text-white">
                   {t("create.search.tagsInput")}
-                </label>
+                </span>
                 <TagSelectorTrigger
+                  aria-labelledby="search-tags-label"
                   selectedTags={queryTags}
                   placeholder={t("create.search.allTags")}
                   onClick={() => setTagSelectorOpen(true)}
@@ -386,20 +417,20 @@ export function Search() {
         </div>
 
         <VirtualSearchResults
-          query={searchParams?.query || ""}
+          query={effectiveSearchParams?.query || ""}
           systems={
-            searchParams
-              ? searchParams.system === "all"
+            effectiveSearchParams
+              ? effectiveSearchParams.system === "all"
                 ? []
-                : [searchParams.system]
+                : [effectiveSearchParams.system]
               : []
           }
-          tags={searchParams?.tags || []}
+          tags={effectiveSearchParams?.tags || []}
           selectedResult={selectedResult}
           setSelectedResult={setSelectedResult}
-          hasSearched={searchParams !== null}
-          searchSystem={searchParams?.system || "all"}
-          searchTags={searchParams?.tags || []}
+          hasSearched={effectiveSearchParams !== null}
+          searchSystem={effectiveSearchParams?.system || "all"}
+          searchTags={effectiveSearchParams?.tags || []}
           onClearFilters={handleClearFilters}
           isSearching={isSearching}
           onSearchComplete={() => setIsSearching(false)}
@@ -478,7 +509,7 @@ export function Search() {
       <BackToTop
         scrollContainerRef={scrollContainerRef}
         threshold={200}
-        bottomOffset="calc(80px + 1rem)"
+        bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
       />
       <WriteModal
         isOpen={writeOpen}

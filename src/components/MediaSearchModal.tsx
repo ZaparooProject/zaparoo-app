@@ -105,10 +105,11 @@ export function MediaSearchModal(props: {
             />
 
             <div className="flex flex-col">
-              <label className="mb-1 text-white">
+              <span id="media-search-system-label" className="mb-1 text-white">
                 {t("create.search.systemInput")}
-              </label>
+              </span>
               <SimpleSystemSelect
+                aria-labelledby="media-search-system-label"
                 value={selectedSystem}
                 onSelect={handleSystemSelect}
                 includeAllOption={true}

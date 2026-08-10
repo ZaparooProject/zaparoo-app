@@ -100,9 +100,9 @@ export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
                 <div className="mt-3 flex items-start gap-2">
                   <AlertTriangleIcon
                     size={16}
-                    className="mt-0.5 flex-shrink-0 text-red-500"
+                    className="text-error mt-0.5 flex-shrink-0"
                   />
-                  <p className="text-sm font-medium text-red-600">
+                  <p className="text-error text-sm font-medium">
                     {tool.warning}
                   </p>
                 </div>

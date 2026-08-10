@@ -20,6 +20,7 @@ import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import licenseDataJson from "@/generated/thirdPartyLicenses.json";
 import { BackIcon, ExternalIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 interface ThirdPartyPackage {
   name: string;
@@ -73,9 +74,12 @@ export function ThirdPartyLicenses() {
   });
   const requestController = useRef<AbortController | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  usePageHeadingFocus(t("settings.licenses.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.licenses.title"),
+  );
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
     preventScrollOnSwipe: false,
@@ -150,7 +154,7 @@ export function ThirdPartyLicenses() {
           />
         }
         headerCenter={
-          <h1 className="text-foreground text-xl">
+          <h1 ref={headingRef} className="text-foreground text-xl">
             {t("settings.licenses.title")}
           </h1>
         }
@@ -266,7 +270,7 @@ export function ThirdPartyLicenses() {
       <BackToTop
         scrollContainerRef={scrollContainerRef}
         threshold={200}
-        bottomOffset="calc(80px + 1rem)"
+        bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
       />
     </>
   );

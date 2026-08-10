@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, act } from "@/test-utils";
+import { useState } from "react";
+import {
+  act,
+  findA11yViolations,
+  fireEvent,
+  render,
+  screen,
+} from "@/test-utils";
 import { WriteModal } from "@/components/WriteModal";
 import { useStatusStore } from "@/lib/store";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
@@ -33,7 +40,27 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
+function WriteModalHarness() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div>
+      <button type="button" onClick={() => setOpen(true)}>
+        Open writer
+      </button>
+      <WriteModal isOpen={open} close={() => setOpen(false)} />
+    </div>
+  );
+}
+
 describe("WriteModal", () => {
+  it("should have no detectable accessibility violations while open", async () => {
+    vi.useRealTimers();
+    const { baseElement } = render(<WriteModal isOpen close={vi.fn()} />);
+
+    expect(await findA11yViolations(baseElement)).toEqual([]);
+  });
+
   const mockAnnounce = vi.fn();
   const mockSwipeConfig: { onSwipeRight?: () => void } = {};
   const mockBackButtonConfig: {
@@ -176,13 +203,30 @@ describe("WriteModal", () => {
     it("focuses the cancel button after modal opens", async () => {
       render(<WriteModal isOpen={true} close={vi.fn()} />);
 
-      // Advance timer to trigger focus
       act(() => {
         vi.advanceTimersByTime(100);
       });
 
       const cancelButton = screen.getByRole("button", { name: "nav.cancel" });
       expect(cancelButton).toHaveFocus();
+    });
+
+    it("isolates the page, closes on Escape, and restores focus", () => {
+      render(<WriteModalHarness />);
+
+      const trigger = screen.getByRole("button", { name: "Open writer" });
+      trigger.focus();
+      fireEvent.click(trigger);
+
+      expect(
+        screen.getByRole("button", { name: "Open writer", hidden: true }),
+      ).toHaveAttribute("inert");
+
+      fireEvent.keyDown(document, { key: "Escape" });
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(trigger).toHaveFocus();
+      expect(trigger).not.toHaveAttribute("inert");
     });
   });
 

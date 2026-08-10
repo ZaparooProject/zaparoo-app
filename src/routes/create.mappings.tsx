@@ -21,6 +21,7 @@ import { MappingRow } from "@/components/MappingRow";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/create/mappings")({
   component: Mappings,
@@ -28,11 +29,14 @@ export const Route = createFileRoute("/create/mappings")({
 
 export function Mappings() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("create.mappings.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("create.mappings.title"),
+  );
   const connected = useStatusStore((state) => state.connected);
   const router = useRouter();
   const navigate = useNavigate();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/create"));
   const [search, setSearch] = useState("");
   const [reloading, setReloading] = useState(false);
   const { available: readOnlyMappingsAvailable } = useCoreFeature(
@@ -117,7 +121,7 @@ export function Mappings() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">
+        <h1 ref={headingRef} className="text-foreground text-xl">
           {t("create.mappings.title")}
         </h1>
       }

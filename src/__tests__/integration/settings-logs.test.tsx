@@ -21,11 +21,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
-    useRouter: vi.fn(() => ({
-      history: {
-        back: vi.fn(),
-      },
-    })),
+    useRouter: vi.fn(() => ({ navigate: vi.fn() })),
   };
 });
 

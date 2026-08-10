@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "../../../test-utils";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MediaFinishedToast } from "../../../components/MediaFinishedToast";
 import toast from "react-hot-toast";
@@ -46,7 +47,7 @@ describe("MediaFinishedToast", () => {
     render(<MediaFinishedToast id="test-id" />);
 
     const button = screen.getByRole("button");
-    expect(button).toHaveAttribute("tabIndex", "0");
+    expect(button).toHaveProperty("tabIndex", 0);
   });
 
   it("should dismiss toast and trigger haptic on click", () => {
@@ -59,21 +60,25 @@ describe("MediaFinishedToast", () => {
     expect(toast.dismiss).toHaveBeenCalledWith("test-id");
   });
 
-  it("should dismiss toast on Enter key press", () => {
+  it("should dismiss toast on Enter key press", async () => {
+    const user = userEvent.setup();
     render(<MediaFinishedToast id="test-id" />);
 
     const button = screen.getByRole("button");
-    fireEvent.keyDown(button, { key: "Enter" });
+    button.focus();
+    await user.keyboard("{Enter}");
 
     expect(mockNotification).toHaveBeenCalledWith("success");
     expect(toast.dismiss).toHaveBeenCalledWith("test-id");
   });
 
-  it("should dismiss toast on Space key press", () => {
+  it("should dismiss toast on Space key press", async () => {
+    const user = userEvent.setup();
     render(<MediaFinishedToast id="test-id" />);
 
     const button = screen.getByRole("button");
-    fireEvent.keyDown(button, { key: " " });
+    button.focus();
+    await user.keyboard(" ");
 
     expect(mockNotification).toHaveBeenCalledWith("success");
     expect(toast.dismiss).toHaveBeenCalledWith("test-id");

@@ -17,6 +17,7 @@ export function ScanSpinner(props: {
   status: ScanResult;
   spinning?: boolean;
   write?: boolean;
+  onScan?: () => void;
 }) {
   const nfcSupported = usePreferencesStore((state) => state.nfcAvailable);
   const [nfcEnabled, setNfcEnabled] = useState(true);
@@ -60,7 +61,7 @@ export function ScanSpinner(props: {
     );
   }
 
-  return (
+  const spinner = (
     <div>
       <p className="text-3xl">
         {props.write
@@ -165,5 +166,18 @@ export function ScanSpinner(props: {
         </div>
       </div>
     </div>
+  );
+
+  return props.onScan && !props.spinning ? (
+    <button
+      type="button"
+      onClick={props.onScan}
+      aria-label={t("spinner.pressToScan")}
+      className="focus-visible:ring-offset-background inline-block cursor-pointer rounded-full focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-4 focus-visible:outline-none"
+    >
+      {spinner}
+    </button>
+  ) : (
+    spinner
   );
 }

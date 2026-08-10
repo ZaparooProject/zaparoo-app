@@ -2,9 +2,9 @@ import type { ComponentType } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "../../../test-utils";
 
-const { componentRef, mockGoBack } = vi.hoisted(() => ({
+const { componentRef, mockNavigate } = vi.hoisted(() => ({
   componentRef: { current: null as ComponentType | null },
-  mockGoBack: vi.fn(),
+  mockNavigate: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -16,7 +16,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       componentRef.current = options.component;
       return { options };
     },
-    useRouter: () => ({ history: { back: mockGoBack } }),
+    useRouter: () => ({ navigate: mockNavigate }),
   };
 });
 

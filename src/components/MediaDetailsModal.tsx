@@ -3,13 +3,17 @@ import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { Copy, FileCode, Folder, Tag } from "lucide-react";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { CreateIcon, DeviceIcon, PlayIcon } from "@/lib/images";
 import type { SearchResultGame } from "@/lib/models";
+import { isFavoriteTag, searchResultToBrowseEntry } from "@/lib/libraryMedia";
 import { filenameFromPath } from "@/lib/path";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+import { useStatusStore } from "@/lib/store";
 import { SlideModal } from "@/components/SlideModal";
 import { TagBadge } from "@/components/TagBadge";
 import { Button } from "@/components/wui/Button";
+import { FavoriteButton } from "@/components/library/FavoriteButton";
 import {
   buildTitleZapScript,
   parseTitleZapScript,
@@ -44,6 +48,10 @@ export function MediaDetailsModal({
   const { t } = useTranslation();
   const { impact } = useHaptics();
   const showFilenames = usePreferencesStore((state) => state.showFilenames);
+  const targetDeviceAddress = useStatusStore(
+    (state) => state.targetDeviceAddress,
+  );
+  const resolveSystemName = useSystemNameResolver();
   const radioGroupName = useId();
   const pathInputId = `${radioGroupName}-path`;
   const zapScriptInputId = `${radioGroupName}-zapscript`;
@@ -76,6 +84,11 @@ export function MediaDetailsModal({
       return true;
     });
   }, [media, parsedZapScript, selectedTagKeys]);
+  const favoriteEntry = useMemo(
+    () => (media ? searchResultToBrowseEntry(media) : null),
+    [media],
+  );
+  const visibleTags = media?.tags.filter((tag) => !isFavoriteTag(tag)) ?? [];
   const customizedZapScript = parsedZapScript
     ? buildTitleZapScript(parsedZapScript, selectedZapScriptTags)
     : media?.zapScript;
@@ -101,9 +114,11 @@ export function MediaDetailsModal({
                   {t("create.search.systemLabel")}
                 </span>
               </div>
-              <span className="flex-1 font-medium">{media.system.name}</span>
+              <span className="flex-1 font-medium">
+                {resolveSystemName(media.system.id, media.system.name)}
+              </span>
             </div>
-            {media.tags.length > 0 && (
+            {visibleTags.length > 0 && (
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
                 <div className="flex items-center gap-2 sm:min-w-[100px]">
                   <Tag size={16} className="text-white/60" />
@@ -112,7 +127,7 @@ export function MediaDetailsModal({
                   </span>
                 </div>
                 <div className="flex flex-1 flex-wrap gap-1.5">
-                  {media.tags.map((tag, index) => {
+                  {visibleTags.map((tag, index) => {
                     const key = titleTagKey(tag);
                     const selected = selectedTagKeys.has(key);
 
@@ -285,6 +300,13 @@ export function MediaDetailsModal({
           </fieldset>
 
           <div className="flex flex-col gap-2 pt-2">
+            {favoriteEntry && (
+              <FavoriteButton
+                entry={favoriteEntry}
+                fallbackSystemId={media.system.id}
+                targetDeviceAddress={targetDeviceAddress}
+              />
+            )}
             <Button
               label={primaryActionLabel ?? t("create.search.writeLabel")}
               icon={primaryActionIcon ?? <CreateIcon size="20" />}

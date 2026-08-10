@@ -7,6 +7,7 @@ import { Button } from "@/components/wui/Button.tsx";
 import { BackIcon, NextIcon } from "@/lib/images";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
 export const Route = createFileRoute("/settings/about")({
   component: About,
@@ -14,9 +15,12 @@ export const Route = createFileRoute("/settings/about")({
 
 export function About() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("settings.about.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.about.title"),
+  );
   const router = useRouter();
-  const goBack = () => router.history.back();
+  const goBack = () =>
+    void router.navigate(appBackNavigationOptions("/settings"));
 
   const swipeHandlers = useSmartSwipe({
     onSwipeRight: goBack,
@@ -34,7 +38,9 @@ export function About() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">{t("settings.about.title")}</h1>
+        <h1 ref={headingRef} className="text-foreground text-xl">
+          {t("settings.about.title")}
+        </h1>
       }
     >
       <div className="flex flex-col gap-8">
@@ -109,7 +115,7 @@ export function About() {
             <span style={{ color: "#F1C40D" }}>Clinton Cronin</span>,{" "}
             Tuxosaurus,{" "}
             <span style={{ color: "#E74C3C" }}>Retrosoft Studios</span>, Casey
-            McGinty, <span style={{ color: "#E91E63" }}>Biddle</span>,{" "}
+            McGinty, <span style={{ color: "#F06292" }}>Biddle</span>,{" "}
             <span style={{ color: "#F1C40D" }}>Shijuro</span>,{" "}
             <span style={{ color: "#F1C40D" }}>TheJesusFish</span>,{" "}
             <span style={{ color: "#F1C40D" }}>disctoad</span>,{" "}

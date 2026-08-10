@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen } from "../../test-utils";
+import { findA11yViolations, render, screen } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
 
 // Use vi.hoisted for variables accessed in mock factories
@@ -32,7 +32,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       componentRef.current = options.component;
       return { options };
     },
-    useRouter: () => ({ history: { back: mockGoBack } }),
+    useRouter: () => ({ navigate: mockGoBack }),
   };
 });
 
@@ -68,6 +68,8 @@ let mockStoreState = {
   textZoomLevel: 1.0,
   setHapticsEnabled: vi.fn(),
   setTextZoomLevel: vi.fn(),
+  accessibleLists: false,
+  setAccessibleLists: vi.fn(),
   safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
 };
 
@@ -110,6 +112,8 @@ describe("Accessibility Settings Route", () => {
       textZoomLevel: 1.0,
       setHapticsEnabled: vi.fn(),
       setTextZoomLevel: vi.fn(),
+      accessibleLists: false,
+      setAccessibleLists: vi.fn(),
       safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
     };
   });
@@ -124,6 +128,12 @@ describe("Accessibility Settings Route", () => {
   };
 
   describe("rendering", () => {
+    it("should have no detectable accessibility violations", async () => {
+      const { baseElement } = renderComponent();
+
+      expect(await findA11yViolations(baseElement)).toEqual([]);
+    });
+
     it("should render the page title", () => {
       renderComponent();
       expect(
@@ -245,6 +255,24 @@ describe("Accessibility Settings Route", () => {
       },
     );
 
+    it("should support radio-group arrow navigation", async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      const defaultOption = screen.getByRole("radio", {
+        name: /settings\.accessibility\.textSizeDefault/i,
+      });
+      defaultOption.focus();
+      await user.keyboard("{ArrowRight}");
+
+      expect(
+        screen.getByRole("radio", {
+          name: /settings\.accessibility\.textSizeLarge/i,
+        }),
+      ).toHaveFocus();
+      expect(mockStoreState.setTextZoomLevel).toHaveBeenCalledWith(1.15);
+    });
+
     it("should provide haptic feedback when changing text size", async () => {
       const user = userEvent.setup();
       renderComponent();
@@ -256,6 +284,35 @@ describe("Accessibility Settings Route", () => {
       );
 
       expect(mockImpact).toHaveBeenCalledWith("light");
+    });
+  });
+
+  describe("accessible lists toggle", () => {
+    it.each([false, true])(
+      "should be available when native platform is %s",
+      (isNative) => {
+        mockIsNativePlatform = isNative;
+        renderComponent();
+
+        expect(
+          screen.getByRole("checkbox", {
+            name: /settings\.accessibility\.accessibleLists/i,
+          }),
+        ).toBeInTheDocument();
+      },
+    );
+
+    it("should update the manual accessible-list preference", async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("checkbox", {
+          name: /settings\.accessibility\.accessibleLists/i,
+        }),
+      );
+
+      expect(mockStoreState.setAccessibleLists).toHaveBeenCalledWith(true);
     });
   });
 
@@ -325,7 +382,10 @@ describe("Accessibility Settings Route", () => {
 
       await user.click(screen.getByLabelText("nav.back"));
 
-      expect(mockGoBack).toHaveBeenCalled();
+      expect(mockGoBack).toHaveBeenCalledWith({
+        to: "/settings",
+        resetScroll: false,
+      });
     });
   });
 });

@@ -132,6 +132,7 @@
     "@vitest/eslint-plugin": "^1.6.24",
     "@vitest/ui": "~4.1.10",
     "autoprefixer": "^10.4.22",
+    "axe-core": "^4.13.0",
     "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",

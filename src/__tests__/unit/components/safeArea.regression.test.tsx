@@ -143,8 +143,10 @@ describe("Safe Area Regression Tests", () => {
       expect(nav).toBeInTheDocument();
 
       const style = (nav as HTMLElement).style;
-      // Height should include safe insets
-      expect(style.height).toBe("calc(80px + 34px)");
+      expect(nav).toHaveClass(
+        "[height:calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset))]",
+      );
+      expect(style.getPropertyValue("--bottom-nav-safe-inset")).toBe("34px");
       // Padding bottom should be the safe inset
       expect(style.paddingBottom).toBe("34px");
     });
@@ -161,8 +163,10 @@ describe("Safe Area Regression Tests", () => {
       expect(indicator).toBeInTheDocument();
 
       const style = (indicator as HTMLElement).style;
-      // Should be positioned above nav (80px) + safe area (34px) + margin (1rem)
-      expect(style.bottom).toBe("calc(80px + 34px + 1rem)");
+      expect(indicator).toHaveClass(
+        "bottom-[calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset)+1rem)]",
+      );
+      expect(style.getPropertyValue("--bottom-nav-safe-inset")).toBe("34px");
     });
   });
 });

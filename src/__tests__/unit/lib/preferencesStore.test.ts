@@ -45,6 +45,8 @@ describe("usePreferencesStore", () => {
       shakeEnabled: false,
       shakeMode: "random",
       shakeZapscript: "",
+      systemNameRegion: "auto",
+      accessibleLists: false,
       appReviewCadence: { ...DEFAULT_APP_REVIEW_CADENCE },
       _hasHydrated: true, // Pretend it's hydrated for tests
     });
@@ -126,6 +128,48 @@ describe("usePreferencesStore", () => {
         lastSuccessfulDay: null,
         lastAttemptAt: secondDay + 1_000,
       });
+    });
+  });
+
+  describe("accessible list persistence", () => {
+    it("should update the manual screen-reader list preference", () => {
+      usePreferencesStore.getState().setAccessibleLists(true);
+
+      expect(usePreferencesStore.getState().accessibleLists).toBe(true);
+    });
+
+    it("should hydrate a saved accessible-list preference", async () => {
+      vi.mocked(Preferences.get).mockResolvedValueOnce({
+        value: JSON.stringify({
+          state: { accessibleLists: true },
+          version: 0,
+        }),
+      });
+
+      await usePreferencesStore.persist.rehydrate();
+
+      expect(usePreferencesStore.getState().accessibleLists).toBe(true);
+    });
+  });
+
+  describe("system name region persistence", () => {
+    it("should update the preferred system-name region", () => {
+      usePreferencesStore.getState().setSystemNameRegion("jp");
+
+      expect(usePreferencesStore.getState().systemNameRegion).toBe("jp");
+    });
+
+    it("should hydrate a saved system-name region", async () => {
+      vi.mocked(Preferences.get).mockResolvedValueOnce({
+        value: JSON.stringify({
+          state: { systemNameRegion: "eu" },
+          version: 0,
+        }),
+      });
+
+      await usePreferencesStore.persist.rehydrate();
+
+      expect(usePreferencesStore.getState().systemNameRegion).toBe("eu");
     });
   });
 

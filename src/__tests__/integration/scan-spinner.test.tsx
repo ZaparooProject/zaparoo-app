@@ -206,6 +206,21 @@ describe("ScanSpinner", () => {
       expect(screen.getByText("spinner.pressToScan")).toBeInTheDocument();
     });
 
+    it("should not expose scan activation while spinning", () => {
+      render(
+        <ScanSpinner
+          status={ScanResult.Default}
+          spinning={true}
+          onScan={vi.fn()}
+        />,
+      );
+
+      expect(
+        screen.queryByRole("button", { name: "spinner.pressToScan" }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText("spinner.scanning")).toBeInTheDocument();
+    });
+
     it("should maintain consistent structure across spinning state changes", () => {
       const { rerender } = render(
         <ScanSpinner status={ScanResult.Default} spinning={false} />,

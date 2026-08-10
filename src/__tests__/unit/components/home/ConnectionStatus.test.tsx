@@ -33,7 +33,8 @@ vi.mock("@tanstack/react-router", () => ({
     children,
     to,
     search,
-  }: {
+    ...props
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
     children: React.ReactNode;
     to: string;
     search?: Record<string, string>;
@@ -42,6 +43,7 @@ vi.mock("@tanstack/react-router", () => ({
       href={to}
       data-testid="settings-link"
       data-search={JSON.stringify(search)}
+      {...props}
     >
       {children}
     </a>
@@ -79,7 +81,12 @@ describe("ConnectionStatus", () => {
     render(<ConnectionStatus />);
 
     expect(screen.getByText("settings.notConnected")).toBeInTheDocument();
-    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "settings.notConnected" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "nav.settings" }),
+    ).toBeInTheDocument();
   });
 
   it("renders connected state with device address", () => {
@@ -95,7 +102,9 @@ describe("ConnectionStatus", () => {
 
     expect(screen.getByText("scan.connectedHeading")).toBeInTheDocument();
     expect(screen.getByText("Address: 192.168.1.100")).toBeInTheDocument();
-    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "nav.settings" }),
+    ).toBeInTheDocument();
   });
 
   it("renders connecting state with loading indicator", () => {
@@ -110,7 +119,9 @@ describe("ConnectionStatus", () => {
     render(<ConnectionStatus />);
 
     expect(screen.getByText("connection.connecting")).toBeInTheDocument();
-    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "nav.settings" }),
+    ).toBeInTheDocument();
   });
 
   it("renders reconnecting state with loading indicator", () => {
@@ -125,7 +136,9 @@ describe("ConnectionStatus", () => {
     render(<ConnectionStatus />);
 
     expect(screen.getByText("connection.reconnecting")).toBeInTheDocument();
-    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "nav.settings" }),
+    ).toBeInTheDocument();
   });
 
   it("renders disconnected state when address exists but not connected", () => {

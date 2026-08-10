@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
@@ -46,8 +46,21 @@ export function OnlineDeviceSetup({
   const [linkState, setLinkState] = useState<DeviceLinkState>(
     connected ? "checking" : "unavailable",
   );
+  const featuresHeadingRef = useRef<HTMLHeadingElement>(null);
+  const previousLinkStateRef = useRef(linkState);
   const linked = linkState === "linked";
   const featuresPending = linkState === "checking" || linkState === "linking";
+
+  useEffect(() => {
+    const becameLinked =
+      linkState === "linked" && previousLinkStateRef.current !== "linked";
+    previousLinkStateRef.current = linkState;
+    if (becameLinked) {
+      requestAnimationFrame(() => {
+        featuresHeadingRef.current?.focus({ preventScroll: true });
+      });
+    }
+  }, [linkState]);
 
   const settingsQuery = useQuery({
     queryKey: ["settings", "online"],
@@ -145,8 +158,10 @@ export function OnlineDeviceSetup({
           aria-labelledby="online-features-title"
         >
           <h2
+            ref={featuresHeadingRef}
             id="online-features-title"
-            className="text-lg font-medium text-white"
+            tabIndex={-1}
+            className="rounded-sm text-lg font-medium text-white outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             {t("online.features.title")}
           </h2>

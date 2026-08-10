@@ -46,6 +46,16 @@ export const FEATURE_GATES: Record<string, FeatureGate> = {
     marquee: false,
     labelKey: "features.mediaDisambiguatingTags",
   },
+  mediaLibrary: {
+    since: "2.15.0",
+    marquee: false,
+    labelKey: "features.mediaLibrary",
+  },
+  mediaFavorites: {
+    since: "2.15.0",
+    marquee: false,
+    labelKey: "features.mediaFavorites",
+  },
   activeMediaZapScript: {
     since: "2.9.0",
     marquee: false,

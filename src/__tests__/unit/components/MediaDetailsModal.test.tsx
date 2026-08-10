@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen } from "@/test-utils";
 import { MediaDetailsModal } from "@/components/MediaDetailsModal";
+import { CoreAPI } from "@/lib/coreApi";
 import type { SearchResultGame } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+import { useStatusStore } from "@/lib/store";
 
 vi.mock("@/hooks/useHaptics", () => ({
   useHaptics: () => ({
@@ -44,7 +46,14 @@ function renderModal(
 
 describe("MediaDetailsModal", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     usePreferencesStore.setState({ showFilenames: false });
+    useStatusStore.setState({
+      connected: true,
+      targetDeviceAddress: "device-a",
+      coreVersion: "2.15.0",
+      coreVersionPending: false,
+    });
   });
 
   it("should show available media details", () => {
@@ -53,7 +62,7 @@ describe("MediaDetailsModal", () => {
     expect(
       screen.getByRole("dialog", { name: "Super Mario World" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Super Nintendo")).toBeInTheDocument();
+    expect(screen.getByText("SNES")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "genre platformer" }),
     ).toBeInTheDocument();
@@ -64,6 +73,24 @@ describe("MediaDetailsModal", () => {
       screen.getByText("/games/snes/Super Mario World.sfc"),
     ).toBeInTheDocument();
     expect(screen.getByText("@SNES/Super Mario World")).toBeInTheDocument();
+  });
+
+  it("should add a favorite from indexed-media details", async () => {
+    const updateSpy = vi.spyOn(CoreAPI, "mediaTagsUpdate").mockResolvedValue({
+      tags: [{ type: "user", tag: "favorite" }],
+    });
+    const user = userEvent.setup();
+    renderModal();
+
+    await user.click(
+      screen.getByRole("button", { name: "library.addFavorite" }),
+    );
+
+    expect(updateSpy).toHaveBeenCalledWith({
+      system: "SNES",
+      path: "/games/snes/Super Mario World.sfc",
+      add: ["user:favorite"],
+    });
   });
 
   it("should default to ZapScript when available", () => {

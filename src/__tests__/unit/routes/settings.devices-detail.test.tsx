@@ -7,7 +7,6 @@ import { encodeDeviceAddress } from "@/lib/deviceUrl";
 const {
   componentRef,
   mockNavigate,
-  mockGoBack,
   mockSelectDevice,
   mockParams,
   mockCoreReset,
@@ -17,7 +16,6 @@ const {
 } = vi.hoisted(() => ({
   componentRef: { current: null as any },
   mockNavigate: vi.fn(),
-  mockGoBack: vi.fn(),
   mockSelectDevice: vi.fn(),
   mockParams: { current: { address: "192.168.1.50" } },
   mockCoreReset: vi.fn(),
@@ -37,10 +35,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
         useParams: () => mockParams.current,
       };
     },
-    useRouter: () => ({
-      history: { back: mockGoBack },
-      navigate: mockNavigate,
-    }),
+    useRouter: () => ({ navigate: mockNavigate }),
   };
 });
 
@@ -173,7 +168,7 @@ describe("Settings Device Detail Route", () => {
     const user = userEvent.setup();
     renderRoute();
 
-    const saveButton = screen.getByRole("button", { name: "Save" });
+    const saveButton = screen.getByRole("button", { name: "save" });
     expect(saveButton).toBeDisabled();
 
     const input = screen.getByDisplayValue("Living Room");
@@ -190,7 +185,7 @@ describe("Settings Device Detail Route", () => {
     const input = screen.getByDisplayValue("Living Room");
     await user.clear(input);
     await user.type(input, "  Bedroom  ");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "save" }));
 
     expect(mockUpdateDeviceHistoryMeta).toHaveBeenCalledWith(
       "192.168.1.50",
@@ -205,7 +200,7 @@ describe("Settings Device Detail Route", () => {
 
     const input = screen.getByDisplayValue("Living Room");
     await user.clear(input);
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "save" }));
 
     expect(mockUpdateDeviceHistoryMeta).toHaveBeenCalledWith(
       "192.168.1.50",
@@ -230,6 +225,18 @@ describe("Settings Device Detail Route", () => {
     expect(
       screen.getByText("online.deviceLink.description"),
     ).toBeInTheDocument();
+  });
+
+  it("navigates back to the device list without resetting scroll", async () => {
+    const user = userEvent.setup();
+    renderRoute();
+
+    await user.click(screen.getByLabelText("nav.back"));
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/settings/devices",
+      resetScroll: false,
+    });
   });
 
   it("calls selectDevice when 'Use this device' is tapped", async () => {

@@ -4,7 +4,6 @@ import { memo } from "react";
 import { getDeviceAddress } from "@/lib/coreApi";
 import { SettingsIcon } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
-import { Button } from "../wui/Button";
 import { Card } from "../wui/Card";
 import { ConnectionStatusDisplay } from "../ConnectionStatusDisplay";
 
@@ -22,6 +21,7 @@ export const ConnectionStatus = memo(function ConnectionStatus() {
     <section aria-labelledby="connection-status-heading">
       <Card className="mb-4">
         <ConnectionStatusDisplay
+          headingId="connection-status-heading"
           connectionError={connectionError}
           connectedSubtitle={connectedSubtitle}
           action={
@@ -29,8 +29,9 @@ export const ConnectionStatus = memo(function ConnectionStatus() {
               to="/settings"
               search={{ focus: "address" }}
               aria-label={t("nav.settings")}
+              className="focus-visible:ring-offset-background flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
-              <Button icon={<SettingsIcon size="24" />} variant="text" />
+              <SettingsIcon size="24" aria-hidden="true" />
             </Link>
           }
         />

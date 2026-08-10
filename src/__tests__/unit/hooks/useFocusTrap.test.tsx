@@ -51,19 +51,30 @@ function FocusTrapTestComponent({
   isActive,
   autoFocus = true,
   restoreFocus = true,
+  onEscape,
 }: {
   isActive: boolean;
   autoFocus?: boolean;
   restoreFocus?: boolean;
+  onEscape?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  useFocusTrap({ isActive, containerRef, autoFocus, restoreFocus });
+  useFocusTrap({
+    isActive,
+    containerRef,
+    autoFocus,
+    restoreFocus,
+    onEscape,
+  });
 
   return (
-    <div ref={containerRef} data-testid="trap-container">
-      <button>First</button>
-      <input type="text" aria-label="Middle input" />
-      <button>Last</button>
+    <div>
+      <button>Outside</button>
+      <div ref={containerRef} data-testid="trap-container" tabIndex={-1}>
+        <button>First</button>
+        <input type="text" aria-label="Middle input" />
+        <button>Last</button>
+      </div>
     </div>
   );
 }
@@ -91,6 +102,76 @@ function FocusTrapWithTrigger() {
         </div>
       )}
     </div>
+  );
+}
+
+function NestedFocusTraps({
+  onOuterEscape,
+  onInnerEscape,
+}: {
+  onOuterEscape: () => void;
+  onInnerEscape: () => void;
+}) {
+  const outerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  useFocusTrap({
+    isActive: true,
+    containerRef: outerRef,
+    autoFocus: false,
+    restoreFocus: false,
+    onEscape: onOuterEscape,
+    inertBackground: false,
+  });
+  useFocusTrap({
+    isActive: true,
+    containerRef: innerRef,
+    autoFocus: false,
+    restoreFocus: false,
+    onEscape: onInnerEscape,
+    inertBackground: false,
+  });
+
+  return (
+    <div ref={outerRef}>
+      <button>Outer first</button>
+      <div ref={innerRef}>
+        <button>Inner first</button>
+        <button>Inner last</button>
+      </div>
+    </div>
+  );
+}
+
+function FocusTrapWithRemovedTrigger() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [showTrigger, setShowTrigger] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  useFocusTrap({
+    isActive: isOpen,
+    containerRef,
+    autoFocus: true,
+    restoreFocus: true,
+  });
+
+  return (
+    <main id="main-content">
+      <h1 tabIndex={-1}>Page heading</h1>
+      {showTrigger && (
+        <button type="button" onClick={() => setIsOpen(true)}>
+          Open removable trap
+        </button>
+      )}
+      {isOpen && (
+        <div ref={containerRef} role="dialog">
+          <button type="button" onClick={() => setShowTrigger(false)}>
+            Remove trigger
+          </button>
+          <button type="button" onClick={() => setIsOpen(false)}>
+            Close removable trap
+          </button>
+        </div>
+      )}
+    </main>
   );
 }
 
@@ -199,6 +280,42 @@ describe("useFocusTrap", () => {
         expect(openButton).toHaveFocus();
       });
     });
+
+    it("should focus the page heading when the trigger was removed", async () => {
+      const user = userEvent.setup();
+      render(<FocusTrapWithRemovedTrigger />);
+
+      const trigger = screen.getByRole("button", {
+        name: "Open removable trap",
+      });
+      await user.click(trigger);
+      await user.click(screen.getByRole("button", { name: "Remove trigger" }));
+      await user.click(
+        screen.getByRole("button", { name: "Close removable trap" }),
+      );
+
+      expect(
+        screen.getByRole("heading", { name: "Page heading" }),
+      ).toHaveFocus();
+    });
+  });
+
+  describe("modal isolation", () => {
+    it("should make surrounding content inert only while active", () => {
+      const { rerender } = render(
+        <FocusTrapTestComponent isActive={true} autoFocus={false} />,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "Outside", hidden: true }),
+      ).toHaveAttribute("inert");
+
+      rerender(<FocusTrapTestComponent isActive={false} autoFocus={false} />);
+
+      expect(
+        screen.getByRole("button", { name: "Outside" }),
+      ).not.toHaveAttribute("inert");
+    });
   });
 
   describe("inactive state", () => {
@@ -219,6 +336,36 @@ describe("useFocusTrap", () => {
   });
 
   describe("keyboard handling", () => {
+    it("should invoke dismissal when Escape is pressed", async () => {
+      const user = userEvent.setup();
+      const onEscape = vi.fn();
+      render(
+        <FocusTrapTestComponent
+          isActive={true}
+          autoFocus={false}
+          onEscape={onEscape}
+        />,
+      );
+
+      await user.keyboard("{Escape}");
+
+      expect(onEscape).toHaveBeenCalledTimes(1);
+    });
+
+    it("should return escaped focus to the trap on Tab", async () => {
+      const user = userEvent.setup();
+      render(<FocusTrapTestComponent isActive={true} autoFocus={false} />);
+
+      const outside = screen.getByRole("button", {
+        name: "Outside",
+        hidden: true,
+      });
+      outside.focus();
+      await user.tab();
+
+      expect(screen.getByRole("button", { name: "First" })).toHaveFocus();
+    });
+
     it("should not intercept non-Tab keys", async () => {
       // Arrange
       const user = userEvent.setup();
@@ -238,6 +385,42 @@ describe("useFocusTrap", () => {
       expect(handleKeyDown).toHaveBeenCalledWith(
         expect.objectContaining({ key: "Enter" }),
       );
+    });
+  });
+
+  describe("nested traps", () => {
+    it("should send Escape only to the topmost trap", async () => {
+      const user = userEvent.setup();
+      const onOuterEscape = vi.fn();
+      const onInnerEscape = vi.fn();
+      render(
+        <NestedFocusTraps
+          onOuterEscape={onOuterEscape}
+          onInnerEscape={onInnerEscape}
+        />,
+      );
+
+      await user.keyboard("{Escape}");
+
+      expect(onInnerEscape).toHaveBeenCalledTimes(1);
+      expect(onOuterEscape).not.toHaveBeenCalled();
+    });
+
+    it("should trap Tab only in the topmost trap", async () => {
+      const user = userEvent.setup();
+      render(
+        <NestedFocusTraps onOuterEscape={vi.fn()} onInnerEscape={vi.fn()} />,
+      );
+      const outerFirst = screen.getByRole("button", { name: "Outer first" });
+      const innerFirst = screen.getByRole("button", { name: "Inner first" });
+      const innerLast = screen.getByRole("button", { name: "Inner last" });
+      const outerFocus = vi.spyOn(outerFirst, "focus");
+      innerLast.focus();
+
+      await user.tab();
+
+      expect(innerFirst).toHaveFocus();
+      expect(outerFocus).not.toHaveBeenCalled();
     });
   });
 

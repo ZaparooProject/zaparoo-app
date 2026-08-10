@@ -17,7 +17,6 @@ import { render, screen, waitFor } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
 
 const {
-  mockGoBack,
   mockNavigate,
   mockToastSuccess,
   mockToastError,
@@ -28,9 +27,7 @@ const {
   mockMappingsData,
   mockNfcWriter,
   mockBarcodeScan,
-  mockCanGoBack,
 } = vi.hoisted(() => ({
-  mockGoBack: vi.fn(),
   mockNavigate: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
@@ -50,16 +47,12 @@ const {
     getVerifyError: vi.fn(() => null),
   },
   mockBarcodeScan: vi.fn(),
-  mockCanGoBack: vi.fn(() => true),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
   return {
     ...actual,
-    useRouter: () => ({
-      history: { back: mockGoBack, canGoBack: mockCanGoBack },
-    }),
     useNavigate: () => mockNavigate,
     Link: ({
       children,
@@ -208,7 +201,6 @@ describe("Create Mappings Edit Route", () => {
     mockNfcWriter.write.mockClear();
     mockNfcWriter.end.mockClear();
     mockBarcodeScan.mockReset();
-    mockCanGoBack.mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -216,6 +208,18 @@ describe("Create Mappings Edit Route", () => {
   });
 
   const renderEditor = (id?: number) => render(<MappingEditor id={id} />);
+
+  it("should navigate back to Mappings without resetting scroll", async () => {
+    const user = userEvent.setup();
+    renderEditor(1);
+
+    await user.click(screen.getByLabelText("nav.back"));
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/create/mappings",
+      resetScroll: false,
+    });
+  });
 
   describe("new mapping (no id)", () => {
     it("should render the 'new mapping' heading", () => {
