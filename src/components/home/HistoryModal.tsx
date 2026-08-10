@@ -67,6 +67,9 @@ export const HistoryModal = memo(function HistoryModal({
               >
                 <div className="flex items-start gap-2">
                   <div className="min-w-0 flex-1">
+                    {!item.success && (
+                      <p className="font-medium">{t("scan.historyFailed")}</p>
+                    )}
                     <p>
                       {t("scan.lastScannedTime", {
                         time:

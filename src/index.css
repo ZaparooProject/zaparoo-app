@@ -261,8 +261,8 @@
   .bg-wui-button {
     background-image: radial-gradient(
       164.29% 190% at center top,
-      var(--primary) 0%,
-      hsl(227 100% 62%) 100%
+      var(--color-button-start) 0%,
+      var(--color-button-end) 100%
     );
   }
   .bg-wui-card {
@@ -325,6 +325,7 @@
 /* Light mode (fallback) */
 :root {
   --radius: 0.625rem;
+  --bottom-nav-base-height: max(80px, 5rem);
   /* wui legacy colors for backwards compatibility */
   --color-background: #111928;
   --color-foreground: #fff;
@@ -337,7 +338,7 @@
   --color-border-outline: #b4bbd9;
   --color-border-input: #9197ae;
   --color-button-start: #34c8e8;
-  --color-button-end: #4e4af2;
+  --color-button-end: #7c78ff;
 
   /* shadcn colors using wui theme (light mode) */
   --background: transparent; /* Keep background transparent for proper layering */
@@ -347,7 +348,7 @@
   --popover: hsl(210 22% 15%);
   --popover-foreground: hsl(0 0% 100%);
   --primary: hsl(195 88% 60%); /* wui primary #3faeec */
-  --primary-foreground: hsl(0 0% 100%);
+  --primary-foreground: hsl(217 40% 11%);
   --secondary: hsl(210 22% 20%);
   --secondary-foreground: hsl(0 0% 100%);
   --muted: hsl(210 22% 20%);
@@ -356,7 +357,7 @@
     0 0% 100% / 40%
   ); /* subtle UI elements like help icons */
   --accent: hsl(195 88% 60%); /* wui primary */
-  --accent-foreground: hsl(0 0% 100%);
+  --accent-foreground: hsl(217 40% 11%);
   --destructive: hsl(0 60% 68%); /* wui error #e87171 */
   --border: hsl(0 0% 100% / 13%); /* wui border rgba(255,255,255,0.13) */
   --input: hsl(220 13% 59%); /* wui border input #9197ae */
@@ -385,7 +386,7 @@
   --popover: hsl(210 22% 15%);
   --popover-foreground: hsl(0 0% 100%);
   --primary: hsl(195 88% 60%); /* wui primary #3faeec */
-  --primary-foreground: hsl(0 0% 100%);
+  --primary-foreground: hsl(217 40% 11%);
   --secondary: hsl(210 22% 20%);
   --secondary-foreground: hsl(0 0% 100%);
   --muted: hsl(210 22% 20%);
@@ -394,7 +395,7 @@
     0 0% 100% / 40%
   ); /* subtle UI elements like help icons */
   --accent: hsl(195 88% 60%);
-  --accent-foreground: hsl(0 0% 100%);
+  --accent-foreground: hsl(217 40% 11%);
   --destructive: hsl(0 60% 68%); /* wui error */
   --border: hsl(0 0% 100% / 13%);
   --input: hsl(220 13% 59%);

@@ -242,6 +242,26 @@ describe("Settings Play Controls Route", () => {
       ).toBeInTheDocument();
     });
 
+    it("should programmatically group repeated duration fields", () => {
+      renderComponent();
+
+      expect(
+        screen.getByRole("group", {
+          name: "settings.core.playtime.dailyLimit",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("group", {
+          name: "settings.core.playtime.sessionLimit",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("group", {
+          name: "settings.core.launchGuard.timeout",
+        }),
+      ).toBeInTheDocument();
+    });
+
     it("should show reset hint text", () => {
       renderComponent();
 

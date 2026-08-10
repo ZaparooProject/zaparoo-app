@@ -5,7 +5,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { App } from "@capacitor/app";
-import React, { useRef } from "react";
+import { useRef } from "react";
 import { SafeAreaHandler } from "@/lib/safeArea";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { BottomNav } from "@/components/BottomNav";
@@ -80,7 +80,6 @@ export function BackHandler() {
 // Exported for testing
 export function RootLayout() {
   const mainRef = useRef<HTMLElement>(null);
-  const safeInsets = useStatusStore((state) => state.safeInsets);
 
   return (
     <div className="flex h-screen w-screen flex-col">
@@ -97,14 +96,7 @@ export function RootLayout() {
       >
         <Outlet />
       </main>
-      <footer
-        className="z-30 flex-shrink-0"
-        style={
-          {
-            "--bottom-nav-height": `calc(80px + ${safeInsets.bottom})`,
-          } as React.CSSProperties
-        }
-      >
+      <footer className="z-30 flex-shrink-0">
         <BottomNav />
       </footer>
     </div>

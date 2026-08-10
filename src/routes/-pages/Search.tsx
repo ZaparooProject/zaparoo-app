@@ -41,7 +41,9 @@ const route = getRouteApi("/create/search");
 
 export function Search() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("create.search.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("create.search.title"),
+  );
   const loaderData = route.useLoaderData();
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const setGamesIndex = useStatusStore((state) => state.setGamesIndex);
@@ -322,7 +324,7 @@ export function Search() {
           />
         }
         headerCenter={
-          <h1 className="text-foreground text-xl">
+          <h1 ref={headingRef} className="text-foreground text-xl">
             {t("create.search.title")}
           </h1>
         }
@@ -363,10 +365,11 @@ export function Search() {
 
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="flex flex-col md:flex-1">
-              <label className="mb-1 text-white">
+              <span id="search-system-label" className="mb-1 text-white">
                 {t("create.search.systemInput")}
-              </label>
+              </span>
               <SystemSelectorTrigger
+                aria-labelledby="search-system-label"
                 selectedSystems={querySystem === "all" ? [] : [querySystem]}
                 systemsData={loaderData.systems}
                 placeholder={t("create.search.allSystems")}
@@ -378,10 +381,11 @@ export function Search() {
 
             {mediaTagsAvailable && (
               <div className="flex flex-col md:flex-1">
-                <label className="mb-1 text-white">
+                <span id="search-tags-label" className="mb-1 text-white">
                   {t("create.search.tagsInput")}
-                </label>
+                </span>
                 <TagSelectorTrigger
+                  aria-labelledby="search-tags-label"
                   selectedTags={queryTags}
                   placeholder={t("create.search.allTags")}
                   onClick={() => setTagSelectorOpen(true)}
@@ -493,7 +497,7 @@ export function Search() {
       <BackToTop
         scrollContainerRef={scrollContainerRef}
         threshold={200}
-        bottomOffset="calc(80px + 1rem)"
+        bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
       />
       <WriteModal
         isOpen={writeOpen}

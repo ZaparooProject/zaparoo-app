@@ -30,7 +30,9 @@ export const Route = createFileRoute("/settings/advanced")({
 
 export function AdvancedSettings() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("settings.advanced.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.advanced.title"),
+  );
   const connected = useStatusStore((state) => state.connected);
   const connectionState = useStatusStore((state) => state.connectionState);
   const canWriteCoreSettings = useClientCapability(
@@ -97,7 +99,7 @@ export function AdvancedSettings() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">
+        <h1 ref={headingRef} className="text-foreground text-xl">
           {t("settings.advanced.title")}
         </h1>
       }

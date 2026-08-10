@@ -15,7 +15,9 @@ export const Route = createFileRoute("/settings/media")({
 
 export function MediaSettings() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("settings.media.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.media.title"),
+  );
   const router = useRouter();
   const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
@@ -34,7 +36,9 @@ export function MediaSettings() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">{t("settings.media.title")}</h1>
+        <h1 ref={headingRef} className="text-foreground text-xl">
+          {t("settings.media.title")}
+        </h1>
       }
     >
       <div className="flex flex-col gap-5">

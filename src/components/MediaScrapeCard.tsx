@@ -543,6 +543,7 @@ export function MediaScrapeCard() {
             </div>
 
             <SystemSelectorTrigger
+              aria-label={t("settings.scrapeMedia.allSystems")}
               selectedSystems={selectedSystems}
               systemsData={eligibleSystemsData}
               placeholder={t("settings.scrapeMedia.allSystems")}

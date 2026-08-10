@@ -9,6 +9,7 @@
  * that let users continue using cached data.
  */
 
+import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
@@ -19,15 +20,16 @@ export function ReconnectingIndicator() {
   const { showConnecting, showReconnecting } = useConnection();
   const safeInsets = useStatusStore((state) => state.safeInsets);
 
-  // Position above the bottom nav (80px) + safe area + some margin (16px)
-  const bottomPosition = `calc(80px + ${safeInsets.bottom} + 1rem)`;
+  const positionStyle = {
+    "--bottom-nav-safe-inset": safeInsets.bottom,
+  } as CSSProperties;
 
   // Show "Connecting..." for initial connection to new device
   if (showConnecting) {
     return (
       <div
-        className="bg-muted/90 text-muted-foreground fixed left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg"
-        style={{ bottom: bottomPosition }}
+        className="bg-muted/90 text-muted-foreground fixed bottom-[calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset)+1rem)] left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg"
+        style={positionStyle}
         role="status"
         aria-live="polite"
       >
@@ -41,8 +43,8 @@ export function ReconnectingIndicator() {
   if (showReconnecting) {
     return (
       <div
-        className="fixed left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-amber-600/80 px-4 py-2 text-sm font-medium text-amber-50 shadow-lg"
-        style={{ bottom: bottomPosition }}
+        className="fixed bottom-[calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset)+1rem)] left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-amber-600/80 px-4 py-2 text-sm font-medium text-amber-50 shadow-lg"
+        style={positionStyle}
         role="status"
         aria-live="polite"
       >

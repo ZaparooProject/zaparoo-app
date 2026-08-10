@@ -224,6 +224,21 @@ describe("Settings Readers Route", () => {
       });
     });
 
+    it("should identify reader connection states with text", async () => {
+      mockReaders.mockResolvedValue({
+        readers: [
+          mockReaderInfo({ id: "connected", connected: true }),
+          mockReaderInfo({ id: "disconnected", connected: false }),
+        ],
+      });
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("scan.connectedHeading")).toBeInTheDocument();
+        expect(screen.getByText("settings.notConnected")).toBeInTheDocument();
+      });
+    });
+
     it("should fallback to reader id when info is empty", async () => {
       const reader = mockReaderInfo({
         id: "simple_serial_1",

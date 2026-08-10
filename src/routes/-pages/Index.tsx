@@ -12,7 +12,7 @@ import { cancelSession } from "@/lib/nfc";
 import { CoreAPI } from "@/lib/coreApi";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import type { MediaSlot, PlayingResponse } from "@/lib/models";
-import { HistoryIcon, ZAP_LOGO_URL } from "@/lib/images";
+import { HistoryIcon, ZapLogo } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
 import { ToggleChip } from "@/components/wui/ToggleChip";
 import { PageFrame } from "@/components/PageFrame";
@@ -41,7 +41,7 @@ function canPausePlaylist(media: PlayingResponse) {
 
 export function Index() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("nav.index"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t("nav.index"));
   const { announce } = useAnnouncer();
   const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
@@ -252,18 +252,12 @@ export function Index() {
   return (
     <>
       <PageFrame>
-        <h1 className="sr-only">Zaparoo</h1>
+        <h1 ref={headingRef} className="sr-only">
+          Zaparoo
+        </h1>
         <div className="flex flex-row justify-between">
           <div>
-            <img
-              src={ZAP_LOGO_URL}
-              alt="Zaparoo logo"
-              width={160}
-              height={36}
-              loading="eager"
-              fetchPriority="high"
-              decoding="sync"
-            />
+            <ZapLogo />
           </div>
           <ToggleChip
             icon={<HistoryIcon size="32" />}

@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { Check } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import classNames from "classnames";
@@ -11,6 +10,7 @@ import {
   filterSystemCatalog,
   systemHasIndexedMedia,
 } from "@/lib/systemFilters";
+import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 import { useStatusStore } from "@/lib/store";
 import { useSystemsWithDisplayNames } from "@/hooks/useSystemName";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -38,8 +38,6 @@ interface SystemSelectorProps {
   includeEmptySystems?: boolean;
 }
 
-const ITEM_HEIGHT = 56; // Height of each system item in pixels
-
 export function SystemSelector({
   isOpen,
   onClose,
@@ -55,7 +53,6 @@ export function SystemSelector({
 }: SystemSelectorProps) {
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const slideModalScrollRef = useRef<HTMLDivElement>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -146,21 +143,21 @@ export function SystemSelector({
     onClose();
   }, [onClose]);
 
-  // Set up virtualizer
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const virtualizer = useVirtualizer({
-    count: filteredSystems.length,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => ITEM_HEIGHT,
-    overscan: 5,
-  });
-
   const systemTabIdPrefix = "system-category-tab";
   const selectedCategoryTabId = getTabBarTabId(
     selectedCategory,
     systemTabIdPrefix,
   );
   const selectedCategoryPanelId = getTabBarPanelId(selectedCategoryTabId);
+  const allOptionVisible =
+    (mode === "single" || mode === "insert") &&
+    includeAllOption &&
+    selectedCategory === "all" &&
+    !debouncedSearchQuery.trim();
+  const allOptionSelected =
+    allOptionVisible &&
+    defaultSelection === "all" &&
+    selectedSystems.length === 0;
 
   // Footer for multi-select mode
   const footer =
@@ -238,148 +235,121 @@ export function SystemSelector({
                 />
               )
             ) : (
-              <>
+              <div
+                className="flex min-h-0 flex-1 flex-col"
+                role={mode === "multi" ? "group" : "radiogroup"}
+                aria-label={t("systemSelector.title")}
+                onKeyDown={
+                  mode === "multi" ? undefined : handleRadioGroupKeyDown
+                }
+              >
                 {/* Add "All Systems" option for single/insert mode */}
-                {(mode === "single" || mode === "insert") &&
-                  includeAllOption &&
-                  selectedCategory === "all" &&
-                  !debouncedSearchQuery.trim() && (
-                    <div className="px-2 pb-2">
+                {allOptionVisible && (
+                  <div className="px-2 pb-2">
+                    <button
+                      className={classNames(
+                        "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
+                        "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                        "hover:bg-white/10 focus:bg-white/10",
+                        {
+                          "bg-white/10": allOptionSelected,
+                        },
+                      )}
+                      onClick={() => handleSystemSelect("all")}
+                      type="button"
+                      role="radio"
+                      aria-checked={allOptionSelected}
+                      tabIndex={allOptionSelected ? 0 : -1}
+                      aria-label={t("systemSelector.allSystems")}
+                    >
+                      <div
+                        className="flex items-center space-x-3"
+                        aria-hidden="true"
+                      >
+                        {mode !== "insert" && (
+                          <div
+                            className={classNames(
+                              "border-input h-5 w-5 rounded-full border-2",
+                              {
+                                "bg-primary border-primary": allOptionSelected,
+                              },
+                            )}
+                          >
+                            {allOptionSelected && (
+                              <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
+                            )}
+                          </div>
+                        )}
+                        <span className="text-foreground font-medium">
+                          {t("systemSelector.allSystems")}
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                )}
+                <div className="flex-1 overflow-auto px-2" tabIndex={-1}>
+                  {filteredSystems.map((system, index) => {
+                    const isSelected = selectedSystems.includes(system.id);
+                    return (
                       <button
+                        key={system.id}
                         className={classNames(
-                          "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
+                          "flex min-h-14 w-full items-center justify-between px-4 py-3 text-left transition-colors",
                           "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
                           "hover:bg-white/10 focus:bg-white/10",
-                          {
-                            "bg-white/10":
-                              defaultSelection === "all" &&
-                              selectedSystems.length === 0,
-                          },
+                          { "bg-white/10": isSelected },
                         )}
-                        onClick={() => handleSystemSelect("all")}
+                        onClick={() => handleSystemSelect(system.id)}
                         type="button"
-                        role="radio"
-                        aria-checked={
-                          defaultSelection === "all" &&
-                          selectedSystems.length === 0
+                        role={mode === "multi" ? "checkbox" : "radio"}
+                        aria-checked={isSelected}
+                        aria-label={system.name}
+                        tabIndex={
+                          mode === "multi" ||
+                          isSelected ||
+                          (!allOptionSelected &&
+                            selectedSystems.length === 0 &&
+                            index === 0)
+                            ? 0
+                            : -1
                         }
-                        aria-label={t("systemSelector.allSystems")}
                       >
                         <div
                           className="flex items-center space-x-3"
                           aria-hidden="true"
                         >
-                          {mode !== "insert" && (
+                          {mode === "insert" ? null : mode === "multi" ? (
+                            <div
+                              className={classNames(
+                                "border-input flex h-5 w-5 items-center justify-center rounded border-2",
+                                { "bg-primary border-primary": isSelected },
+                              )}
+                            >
+                              {isSelected && (
+                                <Check className="text-primary-foreground h-3 w-3" />
+                              )}
+                            </div>
+                          ) : (
                             <div
                               className={classNames(
                                 "border-input h-5 w-5 rounded-full border-2",
-                                {
-                                  "bg-primary border-primary":
-                                    defaultSelection === "all" &&
-                                    selectedSystems.length === 0,
-                                },
+                                { "bg-primary border-primary": isSelected },
                               )}
                             >
-                              {defaultSelection === "all" &&
-                                selectedSystems.length === 0 && (
-                                  <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
-                                )}
+                              {isSelected && (
+                                <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
+                              )}
                             </div>
                           )}
                           <span className="text-foreground font-medium">
-                            {t("systemSelector.allSystems")}
+                            {system.name}
                           </span>
                         </div>
                       </button>
-                    </div>
-                  )}
-                <div
-                  ref={scrollContainerRef}
-                  className="flex-1 overflow-auto px-2"
-                  tabIndex={-1}
-                >
-                  <div
-                    style={{
-                      height: `${virtualizer.getTotalSize()}px`,
-                      width: "100%",
-                      position: "relative",
-                    }}
-                    role="presentation"
-                  >
-                    {virtualizer.getVirtualItems().map((virtualItem) => {
-                      const system = filteredSystems[virtualItem.index];
-                      if (!system) return null;
-                      const isSelected = selectedSystems.includes(system.id);
-
-                      return (
-                        <div
-                          key={virtualItem.key}
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            width: "100%",
-                            height: `${virtualItem.size}px`,
-                            transform: `translateY(${virtualItem.start}px)`,
-                          }}
-                        >
-                          <button
-                            className={classNames(
-                              "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                              "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                              "hover:bg-white/10 focus:bg-white/10",
-                              {
-                                "bg-white/10": isSelected,
-                              },
-                            )}
-                            onClick={() => handleSystemSelect(system.id)}
-                            type="button"
-                            role={mode === "multi" ? "checkbox" : "radio"}
-                            aria-checked={isSelected}
-                            aria-label={system.name}
-                          >
-                            <div
-                              className="flex items-center space-x-3"
-                              aria-hidden="true"
-                            >
-                              {mode === "insert" ? null : mode === "multi" ? (
-                                <div
-                                  className={classNames(
-                                    "border-input flex h-5 w-5 items-center justify-center rounded border-2",
-                                    {
-                                      "bg-primary border-primary": isSelected,
-                                    },
-                                  )}
-                                >
-                                  {isSelected && (
-                                    <Check className="h-3 w-3 text-white" />
-                                  )}
-                                </div>
-                              ) : (
-                                <div
-                                  className={classNames(
-                                    "border-input h-5 w-5 rounded-full border-2",
-                                    {
-                                      "bg-primary border-primary": isSelected,
-                                    },
-                                  )}
-                                >
-                                  {isSelected && (
-                                    <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
-                                  )}
-                                </div>
-                              )}
-                              <span className="text-foreground font-medium">
-                                {system.name}
-                              </span>
-                            </div>
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
+                    );
+                  })}
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -403,12 +373,14 @@ export function SystemSelector({
 export function SystemSelectorTrigger({
   selectedSystems,
   systemsData,
-  placeholder = "Select systems",
+  placeholder,
   mode = "multi",
   className,
   onClick,
   disabled = false,
   includeEmptySystems = false,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
 }: {
   selectedSystems: string[];
   systemsData?: { systems: System[] };
@@ -418,8 +390,11 @@ export function SystemSelectorTrigger({
   onClick: () => void;
   disabled?: boolean;
   includeEmptySystems?: boolean;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 }) {
   const { t } = useTranslation();
+  const placeholderText = placeholder ?? t("systemSelector.title");
   const catalogSystems = useMemo(() => {
     const systems = systemsData?.systems ?? [];
     return includeEmptySystems
@@ -429,12 +404,12 @@ export function SystemSelectorTrigger({
   const displaySystems = useSystemsWithDisplayNames(catalogSystems);
 
   const displayText = useMemo(() => {
-    if (!systemsData?.systems) return placeholder;
+    if (!systemsData?.systems) return placeholderText;
 
     if (selectedSystems.length === 0) {
       return mode === "single" || mode === "insert"
         ? t("systemSelector.allSystems")
-        : placeholder;
+        : placeholderText;
     }
 
     if (selectedSystems.length === displaySystems.length) {
@@ -465,7 +440,7 @@ export function SystemSelectorTrigger({
     selectedSystems,
     systemsData?.systems,
     displaySystems,
-    placeholder,
+    placeholderText,
     mode,
     t,
   ]);
@@ -491,6 +466,8 @@ export function SystemSelectorTrigger({
       style={{ backgroundColor: "var(--color-background)" }}
       disabled={isDisabled}
       type="button"
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
     >
       <span
         className={classNames({

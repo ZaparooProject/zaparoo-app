@@ -21,6 +21,7 @@ import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { ReadTab } from "@/components/nfc/ReadTab";
 import { ToolsTab } from "@/components/nfc/ToolsTab";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { useAnnouncer } from "@/components/A11yAnnouncer";
 
 export const Route = createFileRoute("/create/nfc")({
   component: NfcUtils,
@@ -28,7 +29,10 @@ export const Route = createFileRoute("/create/nfc")({
 
 export function NfcUtils() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("create.nfc.title"));
+  const { announce } = useAnnouncer();
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("create.nfc.title"),
+  );
   const preferRemoteWriter = usePreferencesStore(
     (state) => state.preferRemoteWriter,
   );
@@ -55,13 +59,19 @@ export function NfcUtils() {
     if (justCompleted) {
       logger.log(JSON.stringify(nfcWriter.result?.info.rawTag));
 
-      // Switch to read tab after operation to show results
+      // Switch to read tab after operation to show results.
       if (nfcWriter.result?.info?.tag || nfcWriter.result?.info?.rawTag) {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: navigating to results tab after async NFC operation
         setActiveTab("read");
+        announce(t("create.nfc.resultReady"));
+        requestAnimationFrame(() => {
+          document
+            .getElementById(getTabBarTabId("read", "nfc-tab"))
+            ?.focus({ preventScroll: true });
+        });
       }
     }
-  }, [nfcWriter]);
+  }, [announce, nfcWriter, t]);
 
   const router = useRouter();
   const goBack = () => router.history.back();
@@ -107,7 +117,9 @@ export function NfcUtils() {
             />
           }
           headerCenter={
-            <h1 className="text-foreground text-xl">{t("create.nfc.title")}</h1>
+            <h1 ref={headingRef} className="text-foreground text-xl">
+              {t("create.nfc.title")}
+            </h1>
           }
         >
           <div className="flex h-full flex-col">
@@ -117,12 +129,12 @@ export function NfcUtils() {
               options={[
                 {
                   value: "read",
-                  label: "Read",
+                  label: t("create.nfc.tabs.read"),
                   id: getTabBarTabId("read", "nfc-tab"),
                 },
                 {
                   value: "tools",
-                  label: "Tools",
+                  label: t("create.nfc.tabs.tools"),
                   id: getTabBarTabId("tools", "nfc-tab"),
                 },
               ]}

@@ -29,7 +29,13 @@ const resources = {
   es: es_ES,
 };
 
-i18n
+function updateDocumentLanguage(language: string) {
+  document.documentElement.lang = language || "en-US";
+}
+
+i18n.on("languageChanged", updateDocumentLanguage);
+
+void i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
@@ -39,6 +45,7 @@ i18n
     interpolation: {
       escapeValue: false,
     },
-  });
+  })
+  .then(() => updateDocumentLanguage(i18n.resolvedLanguage ?? "en-US"));
 
 export default i18n;

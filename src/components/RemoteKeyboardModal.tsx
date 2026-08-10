@@ -493,6 +493,7 @@ export function RemoteKeyboardModal(props: {
               display={display}
               onKeyPress={handleKeyPress}
               disableButtonHold
+              useButtonTag
               theme="hg-theme-default remote-keyboard"
             />
           </div>

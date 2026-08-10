@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 interface LoadingSpinnerProps {
@@ -10,11 +11,12 @@ export const LoadingSpinner = React.forwardRef<
   SVGSVGElement,
   LoadingSpinnerProps
 >(({ className, size = 24 }, ref) => {
+  const { t } = useTranslation();
   return (
     <svg
       ref={ref}
       role="status"
-      aria-label="Loading"
+      aria-label={t("loading")}
       xmlns="http://www.w3.org/2000/svg"
       width={size}
       height={size}

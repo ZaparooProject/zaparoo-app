@@ -76,6 +76,10 @@ export function ToggleSwitch(props: {
               "rounded-full",
               "border",
               "border-solid",
+              "peer-focus-visible:ring-2",
+              "peer-focus-visible:ring-white/50",
+              "peer-focus-visible:ring-offset-2",
+              "peer-focus-visible:ring-offset-background",
               {
                 "bg-button-pattern": props.value && !props.disabled,
                 "bg-background": !props.value && !props.disabled,
@@ -88,7 +92,7 @@ export function ToggleSwitch(props: {
             className={classNames(
               "dot",
               "bg-bd-outline",
-              "peer-checked:bg-white",
+              "peer-checked:bg-primary-foreground",
               "absolute",
               "left-1.5",
               "top-2",

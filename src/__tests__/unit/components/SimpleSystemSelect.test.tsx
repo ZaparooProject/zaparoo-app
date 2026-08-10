@@ -29,6 +29,23 @@ describe("SimpleSystemSelect", () => {
     vi.mocked(CoreAPI.systems).mockResolvedValue(mockSystems);
   });
 
+  it("uses an associated visible label", () => {
+    render(
+      <div>
+        <span id="system-label">System</span>
+        <SimpleSystemSelect
+          value=""
+          onSelect={vi.fn()}
+          aria-labelledby="system-label"
+        />
+      </div>,
+    );
+
+    expect(
+      screen.getByRole("combobox", { name: "System" }),
+    ).toBeInTheDocument();
+  });
+
   it("renders a select element", () => {
     const onSelect = vi.fn();
     render(<SimpleSystemSelect value="" onSelect={onSelect} />);

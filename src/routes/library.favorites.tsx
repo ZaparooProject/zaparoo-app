@@ -244,7 +244,7 @@ export function LibraryFavorites() {
             <BackToTop
               scrollContainerRef={scrollRef}
               threshold={200}
-              bottomOffset="calc(80px + 1rem)"
+              bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
             />
           </>
         )}

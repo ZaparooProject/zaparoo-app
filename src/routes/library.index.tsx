@@ -215,8 +215,12 @@ export function Library() {
       <EmptyState
         title={t("library.databaseRequired")}
         action={
-          <Link to="/settings" search={{ focus: "database" }}>
-            <Button label={t("library.openMediaSettings")} variant="outline" />
+          <Link
+            to="/settings"
+            search={{ focus: "database" }}
+            className="border-bd-outline focus-visible:ring-offset-background flex items-center justify-center rounded-[20px] border border-solid px-6 py-1.5 font-medium text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
+          >
+            {t("library.openMediaSettings")}
           </Link>
         }
       />
@@ -348,7 +352,7 @@ export function Library() {
         <BackToTop
           scrollContainerRef={scrollRef}
           threshold={200}
-          bottomOffset="calc(80px + 1rem)"
+          bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
         />
       </PageFrame>
       <LibrarySystemFiltersModal

@@ -130,29 +130,37 @@ export function TagList({
 
   if (displayTags.length === 0) return null;
 
+  const accessibleTags = displayTags
+    .map((tag) => `${tag.type} ${tag.label || tag.tag}`)
+    .join(", ");
+
   return (
-    <div
-      ref={containerRef}
-      className="mt-1 flex min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden whitespace-nowrap"
-    >
-      {displayTags.slice(0, visibleCount).map((tag, tagIndex) => (
-        <span
-          key={`${tag.type}:${tag.tag}:${tagIndex}`}
-          ref={(element) => {
-            tagRefs.current[tagIndex] = element;
-          }}
-          className="shrink-0"
-        >
-          <TagBadge
-            type={tag.type}
-            tag={tag.tag}
-            displayTag={formatTag?.(tag)}
-          />
-        </span>
-      ))}
-      {visibleCount < displayTags.length && (
-        <Badge>+{displayTags.length - visibleCount}</Badge>
-      )}
-    </div>
+    <>
+      <span className="sr-only">{accessibleTags}</span>
+      <div
+        ref={containerRef}
+        aria-hidden="true"
+        className="mt-1 flex min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden whitespace-nowrap"
+      >
+        {displayTags.slice(0, visibleCount).map((tag, tagIndex) => (
+          <span
+            key={`${tag.type}:${tag.tag}:${tagIndex}`}
+            ref={(element) => {
+              tagRefs.current[tagIndex] = element;
+            }}
+            className="shrink-0"
+          >
+            <TagBadge
+              type={tag.type}
+              tag={tag.tag}
+              displayTag={formatTag?.(tag)}
+            />
+          </span>
+        ))}
+        {visibleCount < displayTags.length && (
+          <Badge>+{displayTags.length - visibleCount}</Badge>
+        )}
+      </div>
+    </>
   );
 }

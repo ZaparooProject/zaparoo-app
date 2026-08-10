@@ -1,4 +1,5 @@
 import { render, screen, waitFor, fireEvent } from "../../../test-utils";
+import userEvent from "@testing-library/user-event";
 import { vi, beforeEach, describe, it, expect } from "vitest";
 import { VirtualSearchResults } from "@/components/VirtualSearchResults";
 import { CoreAPI } from "@/lib/coreApi";
@@ -33,6 +34,7 @@ vi.mock("@/lib/store", () => ({
 const mockPreferencesState = {
   showFilenames: false,
   systemNameRegion: "auto" as const,
+  accessibleLists: false,
 };
 
 vi.mock("@/lib/preferencesStore", () => ({
@@ -46,7 +48,8 @@ vi.mock("@tanstack/react-router", () => ({
     children,
     to,
     search,
-  }: {
+    ...props
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
     children: React.ReactNode;
     to: string;
     search?: Record<string, string>;
@@ -54,7 +57,11 @@ vi.mock("@tanstack/react-router", () => ({
     const searchParams = search
       ? "?" + new URLSearchParams(search).toString()
       : "";
-    return <a href={`${to}${searchParams}`}>{children}</a>;
+    return (
+      <a href={`${to}${searchParams}`} {...props}>
+        {children}
+      </a>
+    );
   },
 }));
 
@@ -98,6 +105,7 @@ describe("VirtualSearchResults", () => {
     mockStoreState.coreVersionPending = false;
     mockStoreState.gamesIndex = { exists: true, indexing: false };
     mockPreferencesState.showFilenames = false;
+    mockPreferencesState.accessibleLists = false;
   });
 
   const defaultProps = {
@@ -162,7 +170,7 @@ describe("VirtualSearchResults", () => {
       renderComponent();
 
       expect(
-        screen.getByRole("button", { name: "create.search.gamesDbSettings" }),
+        screen.getByRole("link", { name: "create.search.gamesDbSettings" }),
       ).toBeInTheDocument();
     });
   });
@@ -331,6 +339,77 @@ describe("VirtualSearchResults", () => {
         expect(screen.getByText("Game 0")).toBeInTheDocument();
         expect(screen.getByText("Game 1")).toBeInTheDocument();
       });
+    });
+
+    it("should expose positional metadata in virtual mode", async () => {
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValueOnce({
+        results: createMockResults(2),
+        total: 2,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+      mockGetVirtualItems.mockReturnValue([
+        { index: 0, key: 0, start: 0, size: 100 },
+      ]);
+
+      renderComponent();
+
+      const item = await screen.findByRole("listitem");
+      expect(item).toHaveAttribute("aria-posinset", "1");
+      expect(item).toHaveAttribute("aria-setsize", "2");
+    });
+
+    it("should render every loaded result in accessible-list mode", async () => {
+      mockPreferencesState.accessibleLists = true;
+      vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValueOnce({
+        results: createMockResults(2),
+        total: 2,
+        pagination: { hasNextPage: false, pageSize: 100, nextCursor: null },
+      });
+      mockGetVirtualItems.mockReturnValue([
+        { index: 0, key: 0, start: 0, size: 100 },
+      ]);
+
+      renderComponent();
+
+      expect(await screen.findByText("Game 0")).toBeInTheDocument();
+      expect(screen.getByText("Game 1")).toBeInTheDocument();
+      expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    });
+
+    it("should load one explicit page in accessible-list mode", async () => {
+      const user = userEvent.setup();
+      mockPreferencesState.accessibleLists = true;
+      const mediaSearch = vi
+        .spyOn(CoreAPI, "mediaSearch")
+        .mockResolvedValueOnce({
+          results: createMockResults(1),
+          total: 2,
+          pagination: {
+            hasNextPage: true,
+            pageSize: 100,
+            nextCursor: "next",
+          },
+        })
+        .mockResolvedValueOnce({
+          results: createMockResults(1, 1),
+          total: 2,
+          pagination: {
+            hasNextPage: false,
+            pageSize: 100,
+            nextCursor: null,
+          },
+        });
+
+      renderComponent();
+      await user.click(
+        await screen.findByRole("button", {
+          name: "create.search.loadMore",
+        }),
+      );
+
+      expect(await screen.findByText("Game 1")).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByTestId("result-1")).toHaveFocus());
+      expect(mediaSearch).toHaveBeenCalledTimes(2);
     });
 
     it("should render result items with system names", async () => {
@@ -714,7 +793,10 @@ describe("VirtualSearchResults", () => {
         expect(screen.getByTestId("result-0")).toBeInTheDocument();
       });
 
-      fireEvent.keyDown(screen.getByTestId("result-0"), { key: "Enter" });
+      const result = screen.getByTestId("result-0");
+      const user = userEvent.setup();
+      result.focus();
+      await user.keyboard("{Enter}");
 
       expect(setSelectedResult).toHaveBeenCalledWith(mockResults[0]);
     });
@@ -739,7 +821,10 @@ describe("VirtualSearchResults", () => {
         expect(screen.getByTestId("result-0")).toBeInTheDocument();
       });
 
-      fireEvent.keyDown(screen.getByTestId("result-0"), { key: " " });
+      const result = screen.getByTestId("result-0");
+      const user = userEvent.setup();
+      result.focus();
+      await user.keyboard(" ");
 
       expect(setSelectedResult).toHaveBeenCalledWith(mockResults[0]);
     });

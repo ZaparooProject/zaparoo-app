@@ -9,7 +9,9 @@ import { Capacitor } from "@capacitor/core";
  *          Always returns false on web since detection isn't available there.
  */
 export function useScreenReaderEnabled(): boolean {
-  const [isEnabled, setIsEnabled] = useState(false);
+  // Start native sessions in accessible mode until plugin detection resolves,
+  // avoiding a brief inaccessible virtualized tree for screen-reader users.
+  const [isEnabled, setIsEnabled] = useState(Capacitor.isNativePlatform());
 
   useEffect(() => {
     // Screen reader detection only works on native platforms
@@ -18,9 +20,11 @@ export function useScreenReaderEnabled(): boolean {
     }
 
     // Check initial state
-    ScreenReader.isEnabled().then(({ value }) => {
-      setIsEnabled(value);
-    });
+    ScreenReader.isEnabled()
+      .then(({ value }) => {
+        setIsEnabled(value);
+      })
+      .catch(() => setIsEnabled(false));
 
     // Listen for changes
     const listener = ScreenReader.addListener("stateChange", ({ value }) => {

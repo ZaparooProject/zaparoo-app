@@ -73,4 +73,5 @@ function customRenderHook<Result, Props>(
 
 // Re-export everything from testing library
 export * from "@testing-library/react";
+export { findA11yViolations } from "./axe";
 export { customRender as render, customRenderHook as renderHook };

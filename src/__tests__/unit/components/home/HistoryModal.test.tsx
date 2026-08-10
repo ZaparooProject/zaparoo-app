@@ -145,6 +145,17 @@ describe("HistoryModal", () => {
       expect(screen.getByText(/scan\.lastScannedText/)).toBeInTheDocument();
     });
 
+    it("should identify failed entries without relying on color", () => {
+      render(
+        <HistoryModal
+          {...defaultProps}
+          historyData={{ entries: [createHistoryEntry({ success: false })] }}
+        />,
+      );
+
+      expect(screen.getByText("scan.historyFailed")).toBeInTheDocument();
+    });
+
     it("should display multiple history entries", () => {
       // Arrange
       const historyData = {

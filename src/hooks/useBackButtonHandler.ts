@@ -18,8 +18,10 @@ class BackButtonManager {
     this.setupListener();
   }
 
-  removeHandler(id: string) {
-    this.handlers = this.handlers.filter((h) => h.id !== id);
+  removeHandler(handler: BackButtonHandler) {
+    this.handlers = this.handlers.filter(
+      (registered) => registered !== handler,
+    );
     if (this.handlers.length === 0) {
       this.removeListener().catch((e) => {
         logger.error("Failed to remove back button listener:", e, {
@@ -78,7 +80,7 @@ export function useBackButtonHandler(
     backButtonManager.addHandler(handlerObj);
 
     return () => {
-      backButtonManager.removeHandler(id);
+      backButtonManager.removeHandler(handlerObj);
     };
   }, [id, handler, priority, enabled]);
 }

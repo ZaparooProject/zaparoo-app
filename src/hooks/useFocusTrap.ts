@@ -6,8 +6,75 @@ const FOCUSABLE_SELECTORS = [
   "textarea:not([disabled])",
   "input:not([disabled])",
   "select:not([disabled])",
+  '[contenteditable="true"]',
   '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
+
+interface InertState {
+  count: number;
+  originallyInert: boolean;
+}
+
+const inertStates = new WeakMap<HTMLElement, InertState>();
+
+function setInert(element: HTMLElement): () => void {
+  const current = inertStates.get(element);
+  if (current) {
+    current.count += 1;
+  } else {
+    inertStates.set(element, {
+      count: 1,
+      originallyInert: element.inert,
+    });
+    element.inert = true;
+  }
+
+  return () => {
+    const state = inertStates.get(element);
+    if (!state) return;
+
+    state.count -= 1;
+    if (state.count === 0) {
+      element.inert = state.originallyInert;
+      inertStates.delete(element);
+    }
+  };
+}
+
+function isolateContainer(container: HTMLElement): () => void {
+  const restoreFunctions: Array<() => void> = [];
+  let current: HTMLElement = container;
+
+  while (current.parentElement) {
+    const parent = current.parentElement;
+    for (const sibling of Array.from(parent.children)) {
+      if (
+        sibling instanceof HTMLElement &&
+        sibling !== current &&
+        !sibling.hasAttribute("data-focus-trap-exempt")
+      ) {
+        restoreFunctions.push(setInert(sibling));
+      }
+    }
+
+    if (parent === document.body) break;
+    current = parent;
+  }
+
+  return () => {
+    for (const restore of restoreFunctions.reverse()) restore();
+  };
+}
+
+function canRestoreFocus(element: HTMLElement): boolean {
+  if (!element.isConnected) return false;
+  if (element.closest('[aria-hidden="true"], [inert], [hidden]')) return false;
+  if (element instanceof HTMLButtonElement && element.disabled) return false;
+  if (element instanceof HTMLInputElement && element.disabled) return false;
+  if (element instanceof HTMLSelectElement && element.disabled) return false;
+  if (element instanceof HTMLTextAreaElement && element.disabled) return false;
+  return true;
+}
 
 interface UseFocusTrapOptions {
   /** Whether the focus trap is active */
@@ -18,6 +85,10 @@ interface UseFocusTrapOptions {
   restoreFocus?: boolean;
   /** Whether to focus the first focusable element when activated */
   autoFocus?: boolean;
+  /** Called when Escape is pressed while the trap is active */
+  onEscape?: () => void;
+  /** Whether content outside the container should be made inert */
+  inertBackground?: boolean;
 }
 
 /**
@@ -29,8 +100,15 @@ export function useFocusTrap({
   containerRef,
   restoreFocus = true,
   autoFocus = true,
+  onEscape,
+  inertBackground = true,
 }: UseFocusTrapOptions): void {
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const onEscapeRef = useRef(onEscape);
+
+  useEffect(() => {
+    onEscapeRef.current = onEscape;
+  }, [onEscape]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -38,10 +116,14 @@ export function useFocusTrap({
     const container = containerRef.current;
     if (!container) return;
 
-    // Store the currently focused element to restore later
-    if (restoreFocus) {
-      previouslyFocusedRef.current = document.activeElement as HTMLElement;
+    // Store focus before isolating the modal from the surrounding page.
+    if (restoreFocus && document.activeElement instanceof HTMLElement) {
+      previouslyFocusedRef.current = document.activeElement;
     }
+
+    const restoreIsolation = inertBackground
+      ? isolateContainer(container)
+      : undefined;
 
     // Get all focusable elements within the container
     const getFocusableElements = (): HTMLElement[] => {
@@ -65,29 +147,36 @@ export function useFocusTrap({
       }
     }
 
-    // Handle Tab key to trap focus
+    // Handle keyboard navigation and dismissal while the trap is active.
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && onEscapeRef.current) {
+        event.preventDefault();
+        onEscapeRef.current();
+        return;
+      }
+
       if (event.key !== "Tab") return;
 
       const focusableElements = getFocusableElements();
-      if (focusableElements.length === 0) return;
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        container.focus();
+        return;
+      }
 
       const firstElement = focusableElements[0];
       const lastElement = focusableElements[focusableElements.length - 1];
       if (!firstElement || !lastElement) return;
 
-      // Shift + Tab: if on first element, move to last
-      if (event.shiftKey) {
-        if (document.activeElement === firstElement) {
-          event.preventDefault();
-          lastElement.focus();
-        }
-      } else {
-        // Tab: if on last element, move to first
-        if (document.activeElement === lastElement) {
-          event.preventDefault();
-          firstElement.focus();
-        }
+      if (!container.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? lastElement : firstElement).focus();
+      } else if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
       }
     };
 
@@ -95,12 +184,26 @@ export function useFocusTrap({
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
+      restoreIsolation?.();
 
-      // Restore focus to the previously focused element
-      if (restoreFocus && previouslyFocusedRef.current) {
-        previouslyFocusedRef.current.focus();
-        previouslyFocusedRef.current = null;
+      const previouslyFocused = previouslyFocusedRef.current;
+      previouslyFocusedRef.current = null;
+      if (!restoreFocus) return;
+      if (previouslyFocused && canRestoreFocus(previouslyFocused)) {
+        previouslyFocused.focus();
+        return;
+      }
+
+      const anotherDialog = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '[role="dialog"][aria-modal="true"]',
+        ),
+      ).some((dialog) => dialog !== container);
+      if (!anotherDialog) {
+        const pageHeading =
+          document.querySelector<HTMLElement>("#main-content h1");
+        pageHeading?.focus({ preventScroll: true });
       }
     };
-  }, [isActive, containerRef, restoreFocus, autoFocus]);
+  }, [isActive, containerRef, restoreFocus, autoFocus, inertBackground]);
 }

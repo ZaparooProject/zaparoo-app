@@ -48,7 +48,9 @@ export function LibraryGameSearch({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const pageTitle = title ?? t("library.searchTitle");
-  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(pageTitle);
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    embedded ? undefined : pageTitle,
+  );
   const internalScrollRef = useRef<HTMLDivElement>(null);
   const scrollRef = externalScrollRef ?? internalScrollRef;
   const connected = useStatusStore((state) => state.connected);
@@ -157,10 +159,11 @@ export function LibraryGameSearch({
 
         <div className="flex flex-col gap-3 md:flex-row">
           <div className="flex flex-col md:flex-1">
-            <label className="mb-1 text-white">
+            <span id="library-search-system-label" className="mb-1 text-white">
               {t("create.search.systemInput")}
-            </label>
+            </span>
             <SystemSelectorTrigger
+              aria-labelledby="library-search-system-label"
               selectedSystems={querySystem === "all" ? [] : [querySystem]}
               systemsData={systemsQuery.data}
               placeholder={t("create.search.allSystems")}
@@ -172,10 +175,11 @@ export function LibraryGameSearch({
 
           {mediaTagsFeature.available && (
             <div className="flex flex-col md:flex-1">
-              <label className="mb-1 text-white">
+              <span id="library-search-tags-label" className="mb-1 text-white">
                 {t("create.search.tagsInput")}
-              </label>
+              </span>
               <TagSelectorTrigger
+                aria-labelledby="library-search-tags-label"
                 selectedTags={queryTags}
                 placeholder={t("create.search.allTags")}
                 onClick={() => setTagSelectorOpen(true)}
@@ -220,7 +224,7 @@ export function LibraryGameSearch({
       <BackToTop
         scrollContainerRef={scrollRef}
         threshold={200}
-        bottomOffset="calc(80px + 1rem)"
+        bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
       />
     </>
   );

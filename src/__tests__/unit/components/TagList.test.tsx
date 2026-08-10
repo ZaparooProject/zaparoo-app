@@ -92,6 +92,11 @@ describe("TagList", () => {
     expect(screen.getAllByText("+2")).toHaveLength(1);
     expect(screen.queryByText("+1")).not.toBeInTheDocument();
     expect(screen.queryByText("+3")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "genre action, genre rpg, genre adventure, genre puzzle",
+      ),
+    ).toBeInTheDocument();
 
     clientWidth.mockRestore();
     offsetWidth.mockRestore();

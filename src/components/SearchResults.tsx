@@ -39,7 +39,7 @@ export function SearchResults(props: {
       const count = props.resp.results.length;
       return count === 0
         ? t("create.search.noResultsFoundSimple")
-        : `${count} ${count === 1 ? "result" : "results"} found`;
+        : t("create.search.resultsFound", { count });
     }
     return "";
   };
@@ -61,12 +61,10 @@ export function SearchResults(props: {
             search={{
               focus: "database",
             }}
+            aria-label={t("create.search.gamesDbSettings")}
+            className="focus-visible:ring-offset-background flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
-            <Button
-              icon={<SettingsIcon size="24" />}
-              variant="text"
-              aria-label={t("create.search.gamesDbSettings")}
-            />
+            <SettingsIcon size="24" aria-hidden="true" />
           </Link>
         </div>
       </Card>
@@ -183,26 +181,19 @@ export function SearchResults(props: {
             };
 
             return (
-              <div
+              <button
                 key={i}
-                className="flex cursor-pointer flex-row items-center justify-between gap-1 p-1 py-3"
+                type="button"
+                className="flex w-full cursor-pointer flex-row items-center justify-between gap-1 p-1 py-3 text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                 style={{
                   borderBottom:
                     i === (props.resp ? props.resp.results.length : 0) - 1
                       ? ""
                       : "1px solid rgba(255,255,255,0.6)",
                 }}
-                role="button"
-                tabIndex={0}
                 onClick={(e) => {
                   e.preventDefault();
                   handleGameSelect();
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleGameSelect();
-                  }
                 }}
               >
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -222,7 +213,7 @@ export function SearchResults(props: {
                     <NextIcon size="20" />
                   </span>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

@@ -35,7 +35,9 @@ interface LogEntry {
 
 export function Logs() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("settings.logs.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.logs.title"),
+  );
   const router = useRouter();
   const goBack = () => router.history.back();
   const connected = useStatusStore((state) => state.connected);
@@ -256,7 +258,7 @@ export function Logs() {
           />
         }
         headerCenter={
-          <h1 className="text-foreground text-xl">
+          <h1 ref={headingRef} className="text-foreground text-xl">
             {t("settings.logs.title")}
           </h1>
         }
@@ -338,6 +340,7 @@ export function Logs() {
             {/* Search */}
             <TextInput
               label=""
+              aria-label={t("settings.logs.searchPlaceholder")}
               placeholder={t("settings.logs.searchPlaceholder")}
               value={searchTerm}
               setValue={setSearchTerm}
@@ -509,7 +512,7 @@ export function Logs() {
       <BackToTop
         scrollContainerRef={scrollContainerRef}
         threshold={200}
-        bottomOffset="calc(80px + 1rem)"
+        bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
       />
     </>
   );

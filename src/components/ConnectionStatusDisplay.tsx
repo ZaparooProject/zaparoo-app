@@ -40,6 +40,8 @@ export interface ConnectionStatusDisplayProps {
   connectedName?: string;
   /** Optional compact label shown after the connected lock state. */
   connectedTitleSuffix?: string;
+  /** Optional id for the rendered status heading */
+  headingId?: string;
   /** Optional action slot (e.g., settings button, history button) */
   action?: ReactNode;
   /** Optional className for the outer container */
@@ -56,6 +58,7 @@ export function ConnectionStatusDisplay({
   connectedSubtitleLoading,
   connectedName,
   connectedTitleSuffix,
+  headingId,
   action,
   className,
 }: ConnectionStatusDisplayProps) {
@@ -160,7 +163,7 @@ export function ConnectionStatusDisplay({
 
       {/* Text content */}
       <div className="min-w-0 flex-1">
-        <h2 className="flex items-center gap-1.5 font-medium">
+        <h2 id={headingId} className="flex items-center gap-1.5 font-medium">
           {config.title}
           {showLock && (
             <Lock

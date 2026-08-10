@@ -145,19 +145,6 @@ describe("Root Layout Integration", () => {
       expect(screen.getByTestId("bottom-nav")).toBeInTheDocument();
     });
 
-    it("should apply safe area insets to footer style", () => {
-      useStatusStore.setState({
-        safeInsets: { top: "0px", bottom: "20px", left: "0px", right: "0px" },
-      });
-
-      render(<RootLayout />);
-
-      const footer = screen.getByRole("contentinfo");
-      expect(footer).toHaveStyle({
-        "--bottom-nav-height": "calc(80px + 20px)",
-      });
-    });
-
     it("should have main content with correct id for skip link", () => {
       render(<RootLayout />);
 

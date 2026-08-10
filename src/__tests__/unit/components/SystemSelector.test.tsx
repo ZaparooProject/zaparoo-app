@@ -446,6 +446,12 @@ describe("SystemSelector", () => {
       expect(onClose).toHaveBeenCalled();
     });
 
+    it("should expose the complete filtered system collection", () => {
+      render(<SystemSelector {...defaultProps} mode="single" />);
+
+      expect(screen.getAllByRole("radio")).toHaveLength(mockSystems.length);
+    });
+
     it("should render radio buttons in single mode", () => {
       // Act
       render(<SystemSelector {...defaultProps} mode="single" />);
@@ -454,6 +460,23 @@ describe("SystemSelector", () => {
       expect(
         screen.getByRole("radio", { name: "Nintendo Entertainment System" }),
       ).toBeInTheDocument();
+    });
+
+    it("should support radio-group arrow navigation", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onSelect = vi.fn();
+      render(
+        <SystemSelector {...defaultProps} mode="single" onSelect={onSelect} />,
+      );
+
+      const first = screen.getByRole("radio", {
+        name: "Nintendo Entertainment System",
+      });
+      first.focus();
+      await user.keyboard("{ArrowDown}");
+
+      expect(screen.getByRole("radio", { name: "PlayStation" })).toHaveFocus();
+      expect(onSelect).toHaveBeenCalledWith(["psx"]);
     });
 
     it("should announce selection for screen readers", async () => {
@@ -955,6 +978,26 @@ describe("SystemSelectorTrigger", () => {
       // Assert
       expect(
         screen.getByText("systemSelector.multipleSelected"),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("accessible naming", () => {
+    it("should use an associated visible label", () => {
+      render(
+        <div>
+          <span id="systems-label">Systems</span>
+          <SystemSelectorTrigger
+            selectedSystems={[]}
+            systemsData={systemsData}
+            onClick={vi.fn()}
+            aria-labelledby="systems-label"
+          />
+        </div>,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "Systems" }),
       ).toBeInTheDocument();
     });
   });

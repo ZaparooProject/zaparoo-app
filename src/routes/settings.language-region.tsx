@@ -48,7 +48,9 @@ const BASE_LANGUAGE_TO_LOCALE: Record<string, string> = {
 
 export function LanguageRegionSettings() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("settings.languageRegion.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.languageRegion.title"),
+  );
 
   const systemNameRegion = usePreferencesStore(
     (state) => state.systemNameRegion,
@@ -78,7 +80,7 @@ export function LanguageRegionSettings() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">
+        <h1 ref={headingRef} className="text-foreground text-xl">
           {t("settings.languageRegion.title")}
         </h1>
       }

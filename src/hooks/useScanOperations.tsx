@@ -8,7 +8,6 @@ import { ScanResult, TokenResponse } from "@/lib/models";
 import { WriteAction, WriteNfcHook } from "@/lib/writeNfcHook";
 import { runToken } from "@/lib/tokenOperations.tsx";
 import { logger } from "@/lib/logger";
-import { useAnnouncer } from "@/components/A11yAnnouncer";
 import { useHaptics } from "@/hooks/useHaptics";
 import {
   BarcodeScanCancelledError,
@@ -36,7 +35,6 @@ export function useScanOperations({
   nfcWriter,
 }: UseScanOperationsProps) {
   const { t } = useTranslation();
-  const { announce } = useAnnouncer();
   const { impact, notification } = useHaptics();
   const [scanSession, setScanSession] = useState(false);
   const [scanStatus, setScanStatus] = useState<ScanResult>(ScanResult.Default);
@@ -95,7 +93,6 @@ export function useScanOperations({
         }
 
         setScanStatus(ScanResult.Success);
-        announce(t("scan.scanSuccess"));
         scheduleStatusReset();
 
         if (result.info.tag) {
@@ -168,7 +165,6 @@ export function useScanOperations({
     setProPurchaseModalOpen,
     scheduleStatusReset,
     t,
-    announce,
   ]);
 
   const handleScanButton = useCallback(async () => {

@@ -57,7 +57,7 @@ export function SkipLink({ targetId, label }: SkipLinkProps) {
       href={`#${targetId}`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className="focus:bg-primary sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-1/2 focus:z-[100] focus:-translate-x-1/2 focus:rounded-lg focus:px-4 focus:py-2 focus:text-white focus:shadow-lg focus:ring-2 focus:ring-white/50 focus:outline-none"
+      className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-1/2 focus:z-[100] focus:-translate-x-1/2 focus:rounded-lg focus:px-4 focus:py-2 focus:shadow-lg focus:ring-2 focus:ring-white/50 focus:outline-none"
     >
       {displayLabel}
     </a>

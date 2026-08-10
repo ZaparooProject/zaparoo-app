@@ -1,12 +1,18 @@
 import { useEffect, useRef } from "react";
-import { useScreenReaderEnabled } from "./useScreenReaderEnabled";
+
+const activePageTitles = new Map<symbol, string>();
+
+function applyCurrentPageTitle() {
+  const titles = Array.from(activePageTitles.values());
+  document.title = titles.at(-1) ?? "Zaparoo";
+}
 
 /**
- * Hook that focuses an element on mount for screen reader accessibility.
- * Use this on page headings so screen readers announce the page when navigating.
+ * Hook that focuses a page heading on mount so route changes have a clear
+ * keyboard and screen-reader destination.
  *
- * Focus is only applied when a screen reader is enabled, to avoid showing
- * distracting focus rings during normal usage.
+ * Programmatic focus uses `preventScroll` and a temporary tab stop, so it does
+ * not alter restored page scroll positions or normal tab order.
  *
  * Optionally sets the document title, which helps TalkBack announce the page
  * name instead of "webview" when navigating.
@@ -22,26 +28,29 @@ import { useScreenReaderEnabled } from "./useScreenReaderEnabled";
  */
 export function usePageHeadingFocus<T extends HTMLElement>(title?: string) {
   const ref = useRef<T>(null);
-  const screenReaderEnabled = useScreenReaderEnabled();
+  const titleOwner = useRef(Symbol("page-title"));
 
   useEffect(() => {
-    // Set document title for screen reader announcement (always)
+    const owner = titleOwner.current;
     if (title) {
-      document.title = `${title} - Zaparoo`;
+      activePageTitles.delete(owner);
+      activePageTitles.set(owner, `${title} - Zaparoo`);
+      applyCurrentPageTitle();
     }
 
-    // Only force focus when screen reader is active
-    if (screenReaderEnabled && ref.current) {
-      // Make focusable without affecting tab order
-      ref.current.setAttribute("tabindex", "-1");
-      ref.current.focus();
+    const heading = ref.current;
+    if (heading) {
+      heading.setAttribute("tabindex", "-1");
+      heading.focus({ preventScroll: true });
     }
 
-    // Reset title on unmount
     return () => {
-      document.title = "Zaparoo";
+      if (title) {
+        activePageTitles.delete(owner);
+        applyCurrentPageTitle();
+      }
     };
-  }, [title, screenReaderEnabled]);
+  }, [title]);
 
   return ref;
 }

@@ -147,7 +147,7 @@ describe("LibraryMediaDetailsModal", () => {
     ).not.toBeInTheDocument();
 
     const launch = screen.getByRole("button", { name: "library.launch" });
-    const cover = screen.getByRole("img", { name: "library.coverAlt" });
+    const cover = screen.getByRole("img", { name: "library.imageAlt" });
     expect(
       launch.compareDocumentPosition(cover) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();

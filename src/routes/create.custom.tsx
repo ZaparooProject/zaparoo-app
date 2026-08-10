@@ -20,7 +20,9 @@ export const Route = createFileRoute("/create/custom")({
 
 export function CustomText() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("create.custom.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("create.custom.title"),
+  );
   const { customText, setCustomText } = usePreferencesStore(
     useShallow(selectCustomText),
   );
@@ -55,7 +57,7 @@ export function CustomText() {
           />
         }
         headerCenter={
-          <h1 className="text-foreground text-xl">
+          <h1 ref={headingRef} className="text-foreground text-xl">
             {t("create.custom.title")}
           </h1>
         }

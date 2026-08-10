@@ -124,6 +124,7 @@ describe("ToggleChip", () => {
       await user.click(screen.getByRole("button", { name: "Disabled" }));
 
       // Assert
+      expect(screen.getByRole("button", { name: "Disabled" })).toBeDisabled();
       expect(setState).not.toHaveBeenCalled();
     });
 

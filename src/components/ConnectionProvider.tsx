@@ -600,27 +600,25 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             const warningMessage = t("settings.core.playtime.warningToast", {
               remaining: remainingTimeAccessible,
             });
-            announce(warningMessage, "assertive");
             toast(
               (to) => (
-                <span
-                  className="flex grow flex-col"
+                <button
+                  type="button"
+                  className="flex grow flex-col text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                   onClick={() => toast.dismiss(to.id)}
-                  onKeyUp={(e) =>
-                    (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
-                  }
-                  role="button"
-                  tabIndex={0}
-                  aria-hidden="true"
                 >
-                  {t("settings.core.playtime.warningToast", {
-                    remaining: remainingTime,
-                  })}
-                </span>
+                  <span aria-hidden="true">
+                    {t("settings.core.playtime.warningToast", {
+                      remaining: remainingTime,
+                    })}
+                  </span>
+                  <span className="sr-only">{warningMessage}</span>
+                </button>
               ),
               {
+                ariaProps: { role: "alert", "aria-live": "assertive" },
                 icon: (
-                  <span className="pr-1 pl-1 text-amber-500">
+                  <span className="pr-1 pl-1 text-amber-500" aria-hidden="true">
                     <Clock size={20} />
                   </span>
                 ),
@@ -640,35 +638,29 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             if (inboxMessage.severity >= InboxSeverity.Warning) {
               const severityIconNode =
                 inboxMessage.severity === InboxSeverity.Error ? (
-                  <span className="text-error pr-1 pl-1">
+                  <span className="text-error pr-1 pl-1" aria-hidden="true">
                     <OctagonAlert size={20} />
                   </span>
                 ) : (
-                  <span className="pr-1 pl-1 text-amber-400">
+                  <span className="pr-1 pl-1 text-amber-400" aria-hidden="true">
                     <TriangleAlert size={20} />
                   </span>
                 );
               toast(
                 (to) => (
-                  <span
-                    className="flex grow flex-col"
+                  <button
+                    type="button"
+                    className="flex grow flex-col text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                     onClick={() => {
                       toast.dismiss(to.id);
                       setInboxModalOpen(true);
                     }}
-                    onKeyUp={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        toast.dismiss(to.id);
-                        setInboxModalOpen(true);
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
                   >
                     {inboxMessage.title}
-                  </span>
+                  </button>
                 ),
                 {
+                  ariaProps: { role: "alert", "aria-live": "assertive" },
                   icon: severityIconNode,
                   duration: 6000,
                 },
@@ -687,25 +679,20 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             const reachedMessage = t("settings.core.playtime.reachedToast", {
               type: limitType,
             });
-            announce(reachedMessage, "assertive");
             toast(
               (to) => (
-                <span
-                  className="flex grow flex-col"
+                <button
+                  type="button"
+                  className="flex grow flex-col text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                   onClick={() => toast.dismiss(to.id)}
-                  onKeyUp={(e) =>
-                    (e.key === "Enter" || e.key === " ") && toast.dismiss(to.id)
-                  }
-                  role="button"
-                  tabIndex={0}
-                  aria-hidden="true"
                 >
                   {reachedMessage}
-                </span>
+                </button>
               ),
               {
+                ariaProps: { role: "alert", "aria-live": "assertive" },
                 icon: (
-                  <span className="text-error pr-1 pl-1">
+                  <span className="text-error pr-1 pl-1" aria-hidden="true">
                     <AlertTriangle size={20} />
                   </span>
                 ),

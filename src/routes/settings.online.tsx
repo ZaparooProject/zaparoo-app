@@ -131,7 +131,7 @@ function hasPasswordProvider(
 
 export function OnlinePage() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("online.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t("online.title"));
   const router = useRouter();
   const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
@@ -592,7 +592,9 @@ export function OnlinePage() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">{t("online.title")}</h1>
+        <h1 ref={headingRef} className="text-foreground text-xl">
+          {t("online.title")}
+        </h1>
       }
     >
       <div className="flex flex-col gap-4">
@@ -1003,10 +1005,14 @@ export function OnlinePage() {
               {t("online.deleteAccountGracePeriod")}
             </p>
             <div>
-              <label className="text-sm text-white">
+              <label
+                htmlFor="delete-account-confirmation"
+                className="text-sm text-white"
+              >
                 {t("online.deleteConfirmLabel")}
               </label>
               <input
+                id="delete-account-confirmation"
                 type="text"
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}

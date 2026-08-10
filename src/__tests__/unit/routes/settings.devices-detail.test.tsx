@@ -173,7 +173,7 @@ describe("Settings Device Detail Route", () => {
     const user = userEvent.setup();
     renderRoute();
 
-    const saveButton = screen.getByRole("button", { name: "Save" });
+    const saveButton = screen.getByRole("button", { name: "save" });
     expect(saveButton).toBeDisabled();
 
     const input = screen.getByDisplayValue("Living Room");
@@ -190,7 +190,7 @@ describe("Settings Device Detail Route", () => {
     const input = screen.getByDisplayValue("Living Room");
     await user.clear(input);
     await user.type(input, "  Bedroom  ");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "save" }));
 
     expect(mockUpdateDeviceHistoryMeta).toHaveBeenCalledWith(
       "192.168.1.50",
@@ -205,7 +205,7 @@ describe("Settings Device Detail Route", () => {
 
     const input = screen.getByDisplayValue("Living Room");
     await user.clear(input);
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "save" }));
 
     expect(mockUpdateDeviceHistoryMeta).toHaveBeenCalledWith(
       "192.168.1.50",

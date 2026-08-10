@@ -141,6 +141,24 @@ describe("useBackButtonHandler", () => {
     expect(callOrder).toEqual(["high", "low"]);
   });
 
+  it("should keep another handler with the same id when one unmounts", () => {
+    const firstHandler = vi.fn();
+    const secondHandler = vi.fn();
+
+    const view = renderHook(() =>
+      useBackButtonHandler("shared-id", firstHandler, 50, true),
+    );
+    renderHook(() =>
+      useBackButtonHandler("shared-id", secondHandler, 50, true),
+    );
+
+    view.unmount();
+    backButtonCallback!();
+
+    expect(firstHandler).not.toHaveBeenCalled();
+    expect(secondHandler).toHaveBeenCalledTimes(1);
+  });
+
   it("should unregister handler on unmount", async () => {
     const handler = vi.fn();
 

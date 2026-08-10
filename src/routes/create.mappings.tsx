@@ -28,7 +28,9 @@ export const Route = createFileRoute("/create/mappings")({
 
 export function Mappings() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("create.mappings.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("create.mappings.title"),
+  );
   const connected = useStatusStore((state) => state.connected);
   const router = useRouter();
   const navigate = useNavigate();
@@ -117,7 +119,7 @@ export function Mappings() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">
+        <h1 ref={headingRef} className="text-foreground text-xl">
           {t("create.mappings.title")}
         </h1>
       }

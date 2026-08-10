@@ -69,7 +69,7 @@ describe("BackToTop", () => {
     expect(button).toBeInTheDocument();
   });
 
-  it("should be hidden by default when scroll position is 0", () => {
+  it("should be hidden and inert by default when scroll position is 0", () => {
     render(<TestWrapper />);
 
     const button = screen.getByRole("button", {
@@ -77,6 +77,7 @@ describe("BackToTop", () => {
       hidden: true,
     });
     expect(button.parentElement).toHaveAttribute("aria-hidden", "true");
+    expect(button.parentElement).toHaveAttribute("inert");
   });
 
   it("should show when scrolled past threshold", async () => {
@@ -99,6 +100,7 @@ describe("BackToTop", () => {
 
     await waitFor(() => {
       expect(button.parentElement).toHaveAttribute("aria-hidden", "false");
+      expect(button.parentElement).not.toHaveAttribute("inert");
     });
   });
 
@@ -202,6 +204,7 @@ describe("BackToTop", () => {
     });
     expect(button).toBeInTheDocument();
     expect(button.parentElement).toHaveAttribute("aria-hidden", "true");
+    expect(button.parentElement).toHaveAttribute("inert");
 
     // Clicking should not throw even without a scroll container
     fireEvent.click(button);

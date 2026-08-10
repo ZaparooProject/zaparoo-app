@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import {
@@ -59,6 +59,7 @@ function formatTimestamp(iso: string): string {
 function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
+  const bodyId = useId();
   const hasBody = !!props.message.body;
 
   const severityLabel = t(severityKey(props.message.severity));
@@ -70,6 +71,8 @@ function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
         </span>
         {hasBody && (
           <span
+            id={bodyId}
+            aria-hidden={!expanded}
             className={classNames("text-muted-foreground text-sm", {
               "line-clamp-2": !expanded,
             })}
@@ -108,6 +111,7 @@ function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
           type="button"
           onClick={() => setExpanded((prev) => !prev)}
           aria-expanded={expanded}
+          aria-controls={bodyId}
           className="focus-visible:ring-offset-background flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded-md text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           {messageContent}

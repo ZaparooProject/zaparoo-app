@@ -404,6 +404,7 @@ export function MediaDatabaseCard({
     <div className="space-y-3">
       {/* System selector for choosing which systems to update */}
       <SystemSelectorTrigger
+        aria-label={t("settings.updateDb.allSystems")}
         selectedSystems={selectedSystems}
         systemsData={systemsData}
         placeholder={t("settings.updateDb.allSystems")}

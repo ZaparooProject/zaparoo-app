@@ -287,6 +287,11 @@ export function LibraryMediaDetailsModal(props: {
   const summaryItems = [resolvedSystemName, year, playersSummary].filter(
     Boolean,
   );
+  const imageType = currentImageType ?? resolvedDefaultType ?? "artwork";
+  const imageAlt = t("library.imageAlt", {
+    title,
+    type: t(`library.imageTypes.${imageType}`),
+  });
 
   return (
     <SlideModal
@@ -353,7 +358,7 @@ export function LibraryMediaDetailsModal(props: {
                   priority="detail"
                   imageTypes={currentImageType ? [currentImageType] : undefined}
                   className="h-full w-full object-contain"
-                  alt={t("library.coverAlt", { title })}
+                  alt={imageAlt}
                   onTypeTag={
                     currentImageType ? undefined : rememberResolvedType
                   }
@@ -395,7 +400,10 @@ export function LibraryMediaDetailsModal(props: {
 
           {metadataQuery.isLoading && (
             <DelayedLoading>
-              <div className="text-muted-foreground flex items-center justify-center gap-2">
+              <div
+                className="text-muted-foreground flex items-center justify-center gap-2"
+                role="status"
+              >
                 <LoadingSpinner size={16} className="text-primary" />
                 <span>{t("library.loadingMetadata")}</span>
               </div>
@@ -403,7 +411,7 @@ export function LibraryMediaDetailsModal(props: {
           )}
           {metadataQuery.isError && (
             <div className="flex flex-col items-center gap-2">
-              <span className="text-muted-foreground text-sm">
+              <span className="text-muted-foreground text-sm" role="alert">
                 {t("library.metadataError")}
               </span>
               <Button

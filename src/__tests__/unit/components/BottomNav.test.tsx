@@ -1,4 +1,9 @@
-import { render, screen, fireEvent } from "../../../test-utils";
+import {
+  findA11yViolations,
+  render,
+  screen,
+  fireEvent,
+} from "../../../test-utils";
 import { BottomNav } from "@/components/BottomNav";
 import { useStatusStore } from "@/lib/store";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
@@ -29,22 +34,25 @@ vi.mock("@tanstack/react-router", () => ({
     onClick,
     "aria-current": ariaCurrent,
     "aria-label": ariaLabel,
+    className,
   }: {
     children: React.ReactNode;
     to: string;
-    onClick?: () => void;
+    onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
     "aria-current"?: "page" | "step" | "location" | "date" | "time" | boolean;
     "aria-label"?: string;
+    className?: string;
   }) => (
     <a
       href={to}
       data-testid={`link-${to}`}
       onClick={(e) => {
         e.preventDefault();
-        onClick?.();
+        onClick?.(e);
       }}
       aria-current={ariaCurrent}
       aria-label={ariaLabel}
+      className={className}
     >
       {children}
     </a>
@@ -69,6 +77,24 @@ describe("BottomNav", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("has no detectable accessibility violations", async () => {
+    const { baseElement } = render(<BottomNav />);
+
+    expect(await findA11yViolations(baseElement)).toEqual([]);
+  });
+
+  it("allows navigation labels and height to reflow with text zoom", () => {
+    render(<BottomNav />);
+
+    expect(screen.getByRole("navigation")).toHaveClass(
+      "[height:calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset))]",
+    );
+    for (const link of screen.getAllByRole("link")) {
+      expect(link).toHaveClass("w-full", "min-w-0");
+    }
+    expect(screen.getByText("nav.settings")).toHaveClass("break-all");
   });
 
   it("renders all navigation buttons", () => {
@@ -150,6 +176,29 @@ describe("BottomNav", () => {
     );
     expect(useLibrarySessionStore.getState().folderLevels).toEqual({});
     expect(useLibrarySessionStore.getState().embeddedSearchOpen).toEqual({});
+  });
+
+  it("does nothing when active Library root is pressed", () => {
+    mockUseLocation.mockReturnValue({
+      pathname: "/library",
+      href: "/library",
+    });
+    useTabSessionStore.getState().rememberScroll("/library", 0, 240);
+    useLibrarySessionStore.getState().setSearch("all", {
+      query: "mario",
+      system: "all",
+      tags: [],
+    });
+    render(<BottomNav />);
+
+    fireEvent.click(screen.getByTestId("link-/library"));
+
+    expect(useTabSessionStore.getState().scrollPositions).toHaveProperty(
+      "/library",
+      { scrollX: 0, scrollY: 240 },
+    );
+    expect(useLibrarySessionStore.getState().searches).toHaveProperty("all");
+    expect(mockImpact).not.toHaveBeenCalled();
   });
 
   it("marks Create as active when on create path", () => {

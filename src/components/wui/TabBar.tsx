@@ -122,7 +122,7 @@ export function TabBar<T extends string>({
               "focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
               layout === "scroll" && "shrink-0",
               {
-                "bg-button-pattern text-white": active,
+                "bg-button-pattern text-primary-foreground": active,
                 "text-muted-foreground": !active,
                 "cursor-not-allowed opacity-60": disabled,
               },

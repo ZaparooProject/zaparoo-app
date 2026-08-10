@@ -11,25 +11,23 @@ export const MediaIndexingToast = (props: {
   const { t } = useTranslation();
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   return (
-    <div
-      className="flex grow cursor-pointer flex-row items-center justify-between"
-      onClick={() => toast.dismiss(props.id)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          toast.dismiss(props.id);
-        }
-      }}
-      role="button"
-      tabIndex={0}
-    >
+    <div className="flex grow flex-row items-center justify-between">
       <div className="flex grow flex-col pr-3">
-        <div className="font-semibold">{t("toast.updateDbHeading")}</div>
-        <div className="text-sm">
-          {gamesIndex.currentStepDisplay && gamesIndex.currentStepDisplay !== ""
-            ? gamesIndex.currentStepDisplay
-            : t("toast.preparingDb")}
-        </div>
+        <button
+          type="button"
+          onClick={() => toast.dismiss(props.id)}
+          className="rounded text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+        >
+          <span className="block font-semibold">
+            {t("toast.updateDbHeading")}
+          </span>
+          <span className="block text-sm">
+            {gamesIndex.currentStepDisplay &&
+            gamesIndex.currentStepDisplay !== ""
+              ? gamesIndex.currentStepDisplay
+              : t("toast.preparingDb")}
+          </span>
+        </button>
         <div
           role="progressbar"
           aria-valuenow={
@@ -41,7 +39,7 @@ export const MediaIndexingToast = (props: {
           }
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label="Database indexing progress"
+          aria-label={t("toast.indexingProgress")}
           className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
         >
           <div

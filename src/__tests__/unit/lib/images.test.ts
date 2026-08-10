@@ -1,7 +1,10 @@
+import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@/test-utils";
 
 describe("Zap logo preload", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.resetModules();
   });
@@ -47,6 +50,56 @@ describe("Zap logo preload", () => {
       width: 160,
     });
     expect(decode).toHaveBeenCalledOnce();
+  });
+
+  it("should synchronously paint the decoded logo into a canvas", async () => {
+    const imageInstances: MockImage[] = [];
+
+    class MockImage {
+      complete = true;
+      decoding = "auto";
+      fetchPriority = "auto";
+      naturalWidth = 1200;
+      src = "";
+      decode = vi.fn().mockResolvedValue(undefined);
+
+      constructor(
+        public width: number,
+        public height: number,
+      ) {
+        imageInstances.push(this);
+      }
+    }
+
+    const context = {
+      clearRect: vi.fn(),
+      drawImage: vi.fn(),
+      imageSmoothingEnabled: false,
+      imageSmoothingQuality: "low",
+      setTransform: vi.fn(),
+    };
+    vi.stubGlobal("Image", MockImage);
+    vi.stubGlobal("CanvasRenderingContext2D", class {});
+    vi.stubGlobal("devicePixelRatio", 2);
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+      context as unknown as CanvasRenderingContext2D,
+    );
+    const { preloadZapLogo, ZapLogo } = await import("@/lib/images");
+    await preloadZapLogo();
+
+    render(createElement(ZapLogo));
+
+    const canvas = screen.getByRole("img", { name: "Zaparoo logo" });
+    expect(canvas).toHaveAttribute("width", "320");
+    expect(canvas).toHaveAttribute("height", "72");
+    expect(context.setTransform).toHaveBeenCalledWith(2, 0, 0, 2, 0, 0);
+    expect(context.drawImage).toHaveBeenCalledWith(
+      imageInstances[0],
+      0,
+      0,
+      160,
+      36,
+    );
   });
 
   it("should not block navigation when decoding fails", async () => {

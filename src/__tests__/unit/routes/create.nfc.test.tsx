@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "../../../test-utils";
+import { act, render, screen, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
@@ -187,9 +187,12 @@ describe("Create NFC Route", () => {
 
     it("should render tab triggers for Read and Tools", () => {
       renderComponent();
-      // Check for tab trigger text
-      expect(screen.getByText("Read")).toBeInTheDocument();
-      expect(screen.getByText("Tools")).toBeInTheDocument();
+      expect(
+        screen.getByRole("tab", { name: "create.nfc.tabs.read" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("tab", { name: "create.nfc.tabs.tools" }),
+      ).toBeInTheDocument();
     });
 
     it("should show Read tab content by default", () => {
@@ -368,11 +371,29 @@ describe("Create NFC Route", () => {
   });
 
   describe("operation completion", () => {
-    // Note: Testing the auto-switch-to-read-tab effect on operation completion
-    // is difficult because it depends on internal useNfcWriter hook state changes.
-    // The useEffect in the component listens for nfcWriter.result?.info?.tag changes
-    // which can't be easily triggered through our mock approach.
-    // The core functionality (switching tabs, tool actions) is covered above.
+    it("should announce results, select Read, and move focus after completion", async () => {
+      const user = userEvent.setup();
+      const NfcUtils = getNfcUtils();
+      const { rerender } = render(<NfcUtils />);
+      await user.click(
+        screen.getByRole("tab", { name: "create.nfc.tabs.tools" }),
+      );
+
+      act(() => {
+        mockNfcWriter.status = "success";
+        mockNfcWriter.result = { info: { tag: "abc123" } };
+      });
+      rerender(<NfcUtils />);
+
+      const readTab = screen.getByRole("tab", {
+        name: "create.nfc.tabs.read",
+      });
+      await waitFor(() =>
+        expect(readTab).toHaveAttribute("aria-selected", "true"),
+      );
+      await waitFor(() => expect(readTab).toHaveFocus());
+      expect(screen.getByText("create.nfc.resultReady")).toBeInTheDocument();
+    });
 
     it("should initially show read tab by default", () => {
       mockNfcWriter.status = null;

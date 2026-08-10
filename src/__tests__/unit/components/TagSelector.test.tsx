@@ -16,6 +16,7 @@ import { render, screen, waitFor, act } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { TagSelector, TagSelectorTrigger } from "@/components/TagSelector";
 import { useStatusStore } from "@/lib/store";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 import { CoreAPI, MalformedCoreResponseError } from "@/lib/coreApi";
 import { TagInfo } from "@/lib/models";
 
@@ -85,6 +86,7 @@ describe("TagSelector", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     // Reset stores
+    usePreferencesStore.setState({ accessibleLists: false });
     useStatusStore.setState({
       ...useStatusStore.getState(),
       targetDeviceAddress: "device-a",
@@ -328,6 +330,32 @@ describe("TagSelector", () => {
         // Non-matching tags should not be visible in the virtualized list
         // Since we're mocking useVirtualizer, it will show all items
       });
+    });
+
+    it("should render all matching tags in normal flow for accessible lists", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      usePreferencesStore.setState({ accessibleLists: true });
+      vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
+        tags: createMockTags(),
+      });
+
+      render(<TagSelector {...defaultProps} />);
+      await user.type(
+        await screen.findByRole("searchbox", {
+          name: "tagSelector.searchTags",
+        }),
+        "199",
+      );
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+
+      await waitFor(() => {
+        expect(screen.getAllByRole("listitem")).toHaveLength(2);
+      });
+      expect(
+        screen.getByText("1990").closest('[role="listitem"]'),
+      ).not.toHaveStyle({ position: "absolute" });
     });
 
     it("should show no-results title and hint when search has no matches", async () => {
@@ -753,6 +781,17 @@ describe("TagSelectorTrigger", () => {
     expect(button).toBeEnabled();
     await userEvent.click(button);
     expect(onClick).toHaveBeenCalled();
+  });
+
+  it("should use an associated visible label", () => {
+    render(
+      <div>
+        <span id="tags-label">Tags</span>
+        <TagSelectorTrigger {...defaultProps} aria-labelledby="tags-label" />
+      </div>,
+    );
+
+    expect(screen.getByRole("button", { name: "Tags" })).toBeInTheDocument();
   });
 
   it("should call onClick when enabled", async () => {

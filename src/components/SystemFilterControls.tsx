@@ -53,7 +53,7 @@ export function SystemFilterControls(props: {
             {query && (
               <button
                 onClick={() => props.onQueryChange?.("")}
-                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                 type="button"
                 aria-label={t("systemSelector.clearSearch")}
               >

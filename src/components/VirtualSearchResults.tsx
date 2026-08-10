@@ -2,6 +2,7 @@ import React, {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useRef,
   RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,6 +24,7 @@ import { useInitialPageScrollOffset } from "@/lib/pageScrollContext";
 import { useVirtualInfiniteSearch } from "@/hooks/useVirtualInfiniteSearch";
 import { TagList } from "@/components/TagList.tsx";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
+import { useAccessibleLists } from "@/hooks/useAccessibleLists";
 
 export interface VirtualSearchResultsProps {
   query: string;
@@ -57,6 +59,9 @@ export function VirtualSearchResults({
 }: VirtualSearchResultsProps) {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const { t } = useTranslation();
+  const accessibleLists = useAccessibleLists();
+  const accessibleResultsRef = useRef<HTMLDivElement>(null);
+  const loadMoreStartRef = useRef<number | null>(null);
   const resolveSystemName = useSystemNameResolver();
 
   const {
@@ -126,6 +131,7 @@ export function VirtualSearchResults({
     if (!lastItem) return;
 
     if (
+      !accessibleLists &&
       lastItem.index >= totalCount - 5 &&
       hasNextPage &&
       !isFetchingNextPage
@@ -133,6 +139,7 @@ export function VirtualSearchResults({
       fetchNextPage();
     }
   }, [
+    accessibleLists,
     virtualItems,
     hasNextPage,
     fetchNextPage,
@@ -140,12 +147,28 @@ export function VirtualSearchResults({
     isFetchingNextPage,
   ]);
 
+  useEffect(() => {
+    const requestedAt = loadMoreStartRef.current;
+    if (requestedAt === null || allItems.length <= requestedAt) return;
+
+    if (!hasNextPage) {
+      requestAnimationFrame(() => {
+        accessibleResultsRef.current
+          ?.querySelector<HTMLButtonElement>(
+            `[data-testid="result-${requestedAt}"]`,
+          )
+          ?.focus({ preventScroll: true });
+      });
+    }
+    loadMoreStartRef.current = null;
+  }, [allItems.length, hasNextPage]);
+
   // Screen reader announcement for search results
   const getAriaLiveMessage = () => {
     if (isLoading) return t("create.search.loading");
     if (isError) return t("create.search.searchError");
     if (totalCount > 0) {
-      return `${totalCount} ${totalCount === 1 ? "result" : "results"} found`;
+      return t("create.search.resultsFound", { count: totalCount });
     }
     return "";
   };
@@ -167,12 +190,10 @@ export function VirtualSearchResults({
             search={{
               focus: "database",
             }}
+            aria-label={t("create.search.gamesDbSettings")}
+            className="focus-visible:ring-offset-background flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
-            <Button
-              icon={<SettingsIcon size="24" />}
-              variant="text"
-              aria-label={t("create.search.gamesDbSettings")}
-            />
+            <SettingsIcon size="24" aria-hidden="true" />
           </Link>
         </div>
       </Card>
@@ -194,7 +215,10 @@ export function VirtualSearchResults({
   if (isLoading || isSearching) {
     return (
       <DelayedLoading delayMs={loadingDelayMs}>
-        <div className="text-muted-foreground mt-6 flex items-center justify-center gap-2">
+        <div
+          className="text-muted-foreground mt-6 flex items-center justify-center gap-2"
+          role="status"
+        >
           <LoadingSpinner size={16} className="text-primary" />
           <span>{t("create.search.loading")}</span>
         </div>
@@ -205,7 +229,9 @@ export function VirtualSearchResults({
   if (isError) {
     return (
       <div className="mt-6 flex flex-col items-center">
-        <p className="mb-3 text-white">{t("create.search.searchError")}</p>
+        <p className="mb-3 text-white" role="alert">
+          {t("create.search.searchError")}
+        </p>
         <Button
           label={t("create.search.tryAgain")}
           onClick={() => refetch()}
@@ -265,42 +291,101 @@ export function VirtualSearchResults({
         {getAriaLiveMessage()}
       </div>
 
-      {/* Virtual scrolling container */}
-      <div
-        style={{
-          height: `${virtualizer.getTotalSize()}px`,
-          width: "100%",
-          position: "relative",
-        }}
-        data-testid="search-results"
-      >
-        {virtualItems.map((virtualItem) => {
-          const isLoadingRow = virtualItem.index >= totalCount;
-          const game = allItems[virtualItem.index];
+      {accessibleLists ? (
+        <div ref={accessibleResultsRef} data-testid="search-results">
+          <div role="list" aria-label={t("create.search.resultsLabel")}>
+            {allItems.map((game, index) => (
+              <div
+                key={`${game.system.id}:${game.path}:${index}`}
+                role="listitem"
+                aria-posinset={index + 1}
+                aria-setsize={totalCount}
+              >
+                <SearchResultItem
+                  game={game}
+                  systemName={resolveSystemName(
+                    game.system.id,
+                    game.system.name,
+                  )}
+                  selectedResult={selectedResult}
+                  setSelectedResult={setSelectedResult}
+                  isLast={!hasNextPage && index === allItems.length - 1}
+                  index={index}
+                />
+              </div>
+            ))}
+          </div>
+          {hasNextPage && (
+            <div className="flex justify-center py-3">
+              <Button
+                label={
+                  isFetchingNextPage
+                    ? t("create.search.loading")
+                    : t("create.search.loadMore")
+                }
+                variant="outline"
+                disabled={isFetchingNextPage}
+                onClick={() => {
+                  loadMoreStartRef.current = allItems.length;
+                  void fetchNextPage();
+                }}
+              />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div
+          role="list"
+          aria-label={t("create.search.resultsLabel")}
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            width: "100%",
+            position: "relative",
+          }}
+          data-testid="search-results"
+        >
+          {virtualItems.map((virtualItem) => {
+            const isLoadingRow = virtualItem.index >= totalCount;
+            const game = allItems[virtualItem.index];
 
-          return (
-            <div
-              key={virtualItem.key}
-              ref={virtualizer.measureElement}
-              data-index={virtualItem.index}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                transform: `translateY(${virtualItem.start}px)`,
-              }}
-            >
-              {isLoadingRow ? (
-                (loadingDelayMs === 0 || isFetchingNextPage) && (
+            if (isLoadingRow) {
+              return loadingDelayMs === 0 || isFetchingNextPage ? (
+                <div
+                  key={virtualItem.key}
+                  role="status"
+                  style={{
+                    position: "absolute",
+                    width: "100%",
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
                   <DelayedLoading delayMs={loadingDelayMs}>
                     <div className="text-muted-foreground flex items-center justify-center gap-2">
                       <LoadingSpinner size={16} className="text-primary" />
                       <span>{t("create.search.loading")}</span>
                     </div>
                   </DelayedLoading>
-                )
-              ) : game ? (
+                </div>
+              ) : null;
+            }
+            if (!game) return null;
+
+            return (
+              <div
+                key={virtualItem.key}
+                ref={virtualizer.measureElement}
+                data-index={virtualItem.index}
+                role="listitem"
+                aria-posinset={virtualItem.index + 1}
+                aria-setsize={totalCount}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              >
                 <SearchResultItem
                   game={game}
                   systemName={resolveSystemName(
@@ -312,11 +397,11 @@ export function VirtualSearchResults({
                   isLast={virtualItem.index === totalCount - 1}
                   index={virtualItem.index}
                 />
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }
@@ -362,23 +447,16 @@ const SearchResultItem = React.memo(function SearchResultItem({
   };
 
   return (
-    <div
-      className="flex cursor-pointer flex-row items-center justify-between gap-1 px-1 pt-3 pb-5"
+    <button
+      type="button"
+      className="flex w-full cursor-pointer flex-row items-center justify-between gap-1 px-1 pt-3 pb-5 text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
       style={{
         borderBottom: isLast ? "" : "1px solid rgba(255,255,255,0.6)",
       }}
-      role="button"
-      tabIndex={0}
       data-testid={`result-${index}`}
       onClick={(e) => {
         e.preventDefault();
         handleGameSelect();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleGameSelect();
-        }
       }}
     >
       <div className="flex min-w-0 flex-1 flex-col">
@@ -396,6 +474,6 @@ const SearchResultItem = React.memo(function SearchResultItem({
           <NextIcon size="20" />
         </span>
       </div>
-    </div>
+    </button>
   );
 });

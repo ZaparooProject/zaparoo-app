@@ -215,7 +215,7 @@ describe("MediaScrapeCard", () => {
         name: "settings.scrapeMedia.starting",
       }),
     ).toBeDisabled();
-    expect(screen.getByRole("status", { name: "Loading" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "loading" })).toBeInTheDocument();
   });
 
   it("should render one visible force toggle label", async () => {

@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import type { MediaBrowseSort } from "@/lib/models";
+import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 
@@ -31,7 +32,12 @@ export function LibraryMediaOptionsModal(props: {
       <div className="flex flex-col gap-5 py-3">
         <section className="flex flex-col gap-2">
           <h2 className="font-semibold">{t("library.sortMedia")}</h2>
-          <div role="radiogroup" aria-label={t("library.sortMedia")}>
+          <div
+            role="radiogroup"
+            aria-label={t("library.sortMedia")}
+            onKeyDown={handleRadioGroupKeyDown}
+            tabIndex={-1}
+          >
             {SORT_OPTIONS.map((option, index) => {
               const selected = props.value === option.value;
               return (
@@ -40,6 +46,7 @@ export function LibraryMediaOptionsModal(props: {
                   type="button"
                   role="radio"
                   aria-checked={selected}
+                  tabIndex={selected ? 0 : -1}
                   className={classNames(
                     "flex min-h-12 w-full items-center justify-between gap-3 px-2 py-3 text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
                     {

@@ -14,7 +14,9 @@ export const Route = createFileRoute("/settings/help")({
 
 export function Help() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("settings.help.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.help.title"),
+  );
   const router = useRouter();
   const goBack = () => router.history.back();
   const swipeHandlers = useSmartSwipe({
@@ -33,7 +35,9 @@ export function Help() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">{t("settings.help.title")}</h1>
+        <h1 ref={headingRef} className="text-foreground text-xl">
+          {t("settings.help.title")}
+        </h1>
       }
     >
       <div className="flex flex-col gap-4">

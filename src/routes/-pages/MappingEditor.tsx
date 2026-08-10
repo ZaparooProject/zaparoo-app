@@ -114,7 +114,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
   const headingKey = isEditing
     ? "create.mappings.editor.titleEdit"
     : "create.mappings.editor.titleNew";
-  usePageHeadingFocus(t(headingKey));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t(headingKey));
 
   const connected = useStatusStore((state) => state.connected);
   const queryClient = useQueryClient();
@@ -300,7 +300,9 @@ export function MappingEditor({ id }: MappingEditorProps) {
           />
         }
         headerCenter={
-          <h1 className="text-foreground text-xl">{t(headingKey)}</h1>
+          <h1 ref={headingRef} className="text-foreground text-xl">
+            {t(headingKey)}
+          </h1>
         }
       >
         {isEditing && !hydrated ? null : (
@@ -365,10 +367,11 @@ export function MappingEditor({ id }: MappingEditorProps) {
             </div>
 
             <div className="flex flex-col">
-              <label className="mb-1 block">
+              <span id="mapping-override-label" className="mb-1 block">
                 {t("create.mappings.editor.override")}
-              </label>
+              </span>
               <ZapScriptInput
+                aria-labelledby="mapping-override-label"
                 value={override}
                 setValue={setOverride}
                 rows={4}

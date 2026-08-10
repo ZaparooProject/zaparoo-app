@@ -15,6 +15,8 @@ interface SimpleSystemSelectProps {
   includeAllOption?: boolean;
   className?: string;
   disabled?: boolean;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 }
 
 export function SimpleSystemSelect({
@@ -24,6 +26,8 @@ export function SimpleSystemSelect({
   includeAllOption = false,
   className,
   disabled = false,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
 }: SimpleSystemSelectProps) {
   const { t } = useTranslation();
   const targetDeviceAddress = useStatusStore(
@@ -79,6 +83,8 @@ export function SimpleSystemSelect({
       value={value}
       onChange={handleChange}
       disabled={disabled || isLoading}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
       className={classNames(
         "border-input text-foreground w-full rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
         {

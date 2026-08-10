@@ -8,26 +8,18 @@ export const MediaFinishedToast = (props: { id: string }) => {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const { notification } = useHaptics();
   return (
-    <div
-      className="flex grow cursor-pointer flex-col"
+    <button
+      type="button"
+      className="flex grow cursor-pointer flex-col text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
       onClick={() => {
         notification("success");
         toast.dismiss(props.id);
       }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          notification("success");
-          toast.dismiss(props.id);
-        }
-      }}
-      role="button"
-      tabIndex={0}
     >
       <div className="font-semibold">{t("toast.updatedDb")}</div>
       <div className="text-sm">
         {t("toast.filesFound", { count: gamesIndex.totalFiles })}
       </div>
-    </div>
+    </button>
   );
 };

@@ -62,6 +62,7 @@ export function BackToTop({
           : "pointer-events-none opacity-0"
       }`}
       aria-hidden={!isVisible}
+      inert={!isVisible}
       style={{
         zIndex: 30,
         transform: "translateZ(0)",
@@ -75,7 +76,7 @@ export function BackToTop({
         className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full p-3 shadow-lg transition-transform hover:scale-105 active:scale-95"
         aria-label={t("backToTop")}
       >
-        <ChevronUp size={24} />
+        <ChevronUp size={24} aria-hidden="true" />
       </button>
     </div>
   );

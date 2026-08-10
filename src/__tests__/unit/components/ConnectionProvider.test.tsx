@@ -1202,6 +1202,9 @@ describe("notification processing", () => {
         expect(mockToast).toHaveBeenCalled();
       });
 
+      expect(mockToast.mock.calls[0]?.[1]).toMatchObject({
+        ariaProps: { role: "alert", "aria-live": "assertive" },
+      });
       const toastRenderer = mockToast.mock.calls[0]![0] as (to: {
         id: string;
       }) => React.ReactNode;
@@ -1213,7 +1216,7 @@ describe("notification processing", () => {
   });
 
   describe("playtime notifications", () => {
-    it("should show toast and announce when daily playtime limit reached", async () => {
+    it("should expose daily playtime limit through one assertive toast", async () => {
       const playtimeLimitReachedNotification: NotificationRequest = {
         method: Notification.PlaytimeLimitReached,
         params: {
@@ -1234,9 +1237,10 @@ describe("notification processing", () => {
       expect(capturedEventHandlers.onMessage).toBeDefined();
       await capturedEventHandlers.onMessage!("test-device", {});
 
-      await waitFor(() => {
-        expect(mockAnnounce).toHaveBeenCalled();
-        expect(mockToast).toHaveBeenCalled();
+      await waitFor(() => expect(mockToast).toHaveBeenCalled());
+      expect(mockAnnounce).not.toHaveBeenCalled();
+      expect(mockToast.mock.calls[0]?.[1]).toMatchObject({
+        ariaProps: { role: "alert", "aria-live": "assertive" },
       });
     });
 
@@ -1261,9 +1265,10 @@ describe("notification processing", () => {
       expect(capturedEventHandlers.onMessage).toBeDefined();
       await capturedEventHandlers.onMessage!("test-device", {});
 
-      await waitFor(() => {
-        expect(mockAnnounce).toHaveBeenCalled();
-        expect(mockToast).toHaveBeenCalled();
+      await waitFor(() => expect(mockToast).toHaveBeenCalled());
+      expect(mockAnnounce).not.toHaveBeenCalled();
+      expect(mockToast.mock.calls[0]?.[1]).toMatchObject({
+        ariaProps: { role: "alert", "aria-live": "assertive" },
       });
     });
   });
@@ -1829,7 +1834,7 @@ describe("notification processing", () => {
   });
 
   describe("playtimeLimitWarning", () => {
-    it("should show toast and announce when playtime warning is received", async () => {
+    it("should expose playtime warning through one assertive toast", async () => {
       const playtimeLimitWarningNotification: NotificationRequest = {
         method: Notification.PlaytimeLimitWarning,
         params: {
@@ -1851,9 +1856,10 @@ describe("notification processing", () => {
       expect(capturedEventHandlers.onMessage).toBeDefined();
       await capturedEventHandlers.onMessage!("test-device", {});
 
-      await waitFor(() => {
-        expect(mockAnnounce).toHaveBeenCalled();
-        expect(mockToast).toHaveBeenCalled();
+      await waitFor(() => expect(mockToast).toHaveBeenCalled());
+      expect(mockAnnounce).not.toHaveBeenCalled();
+      expect(mockToast.mock.calls[0]?.[1]).toMatchObject({
+        ariaProps: { role: "alert", "aria-live": "assertive" },
       });
     });
   });

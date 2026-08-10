@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
+import classNames from "classnames";
 import { ListPlusIcon, NfcIcon } from "lucide-react";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "@/lib/images";
@@ -14,7 +15,6 @@ import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import type { PlayingResponse, SearchResultGame } from "@/lib/models";
 import { MediaDetailsModal } from "@/components/MediaDetailsModal";
 import { Card } from "@/components/wui/Card";
-import { Button } from "@/components/wui/Button";
 import { isWriteModalOpen, WriteModal } from "@/components/WriteModal";
 import { PageFrame } from "@/components/PageFrame";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -22,6 +22,24 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 export const Route = createFileRoute("/create/")({
   component: Create,
 });
+
+function CreateActionIcon(props: { icon: ReactNode; disabled?: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={classNames(
+        "flex h-10 w-10 min-w-10 items-center justify-center rounded-full border border-solid px-1.5",
+        {
+          "bg-button-pattern border-bd-filled text-primary-foreground":
+            !props.disabled,
+          "border-foreground-disabled text-foreground-disabled": props.disabled,
+        },
+      )}
+    >
+      {props.icon}
+    </span>
+  );
+}
 
 function toMediaDetails(
   playing: PlayingResponse,
@@ -116,10 +134,9 @@ export function Create() {
           >
             <Card disabled={!connected}>
               <div className="flex flex-row items-center gap-3">
-                <Button
+                <CreateActionIcon
                   disabled={!connected}
                   icon={<SearchIcon size="20" />}
-                  decorative
                 />
                 <div className="flex grow flex-col">
                   <span className="font-semibold">
@@ -140,10 +157,9 @@ export function Create() {
             onClick={() => void openCurrentMediaDetails()}
           >
             <div className="flex flex-row items-center gap-3">
-              <Button
+              <CreateActionIcon
                 icon={<PlayIcon size="26" />}
                 disabled={playing.mediaPath === "" && playing.mediaName === ""}
-                decorative
               />
               <div className="flex grow flex-col">
                 <span className="font-semibold">
@@ -165,10 +181,9 @@ export function Create() {
           >
             <Card disabled={!connected}>
               <div className="flex flex-row items-center gap-3">
-                <Button
+                <CreateActionIcon
                   icon={<ListPlusIcon size="20" />}
                   disabled={!connected}
-                  decorative
                 />
                 <div className="flex grow flex-col">
                   <span className="font-semibold">
@@ -186,7 +201,7 @@ export function Create() {
           <Link to="/create/custom">
             <Card>
               <div className="flex flex-row items-center gap-3">
-                <Button icon={<TextIcon size="20" />} decorative />
+                <CreateActionIcon icon={<TextIcon size="20" />} />
                 <div className="flex grow flex-col">
                   <span className="font-semibold">
                     {t("create.customHeading")}
@@ -207,10 +222,9 @@ export function Create() {
           >
             <Card disabled={!Capacitor.isNativePlatform() || !nfcAvailable}>
               <div className="flex flex-row items-center gap-3">
-                <Button
+                <CreateActionIcon
                   icon={<NfcIcon size="24" />}
                   disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
-                  decorative
                 />
                 <div className="flex grow flex-col">
                   <span className="font-semibold">

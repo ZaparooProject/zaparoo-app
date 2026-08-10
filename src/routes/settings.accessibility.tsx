@@ -9,6 +9,7 @@ import { PageFrame } from "@/components/PageFrame";
 import { BackIcon, CheckIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 import { useTextZoom } from "@/hooks/useTextZoom";
 import { useHaptics } from "@/hooks/useHaptics";
 
@@ -25,12 +26,16 @@ const TEXT_ZOOM_PRESETS = [
 
 export function AccessibilitySettings() {
   const { t } = useTranslation();
-  usePageHeadingFocus(t("settings.accessibility.title"));
+  const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
+    t("settings.accessibility.title"),
+  );
 
   const hapticsEnabled = usePreferencesStore((s) => s.hapticsEnabled);
   const setHapticsEnabled = usePreferencesStore((s) => s.setHapticsEnabled);
   const textZoomLevel = usePreferencesStore((s) => s.textZoomLevel);
   const setTextZoomLevel = usePreferencesStore((s) => s.setTextZoomLevel);
+  const accessibleLists = usePreferencesStore((s) => s.accessibleLists);
+  const setAccessibleLists = usePreferencesStore((s) => s.setAccessibleLists);
 
   const { set: applyZoomLevel, isAvailable: textZoomAvailable } = useTextZoom();
   const { impact } = useHaptics();
@@ -66,7 +71,7 @@ export function AccessibilitySettings() {
         />
       }
       headerCenter={
-        <h1 className="text-foreground text-xl">
+        <h1 ref={headingRef} className="text-foreground text-xl">
           {t("settings.accessibility.title")}
         </h1>
       }
@@ -82,6 +87,8 @@ export function AccessibilitySettings() {
               className="mt-2 flex flex-row"
               role="radiogroup"
               aria-labelledby="text-size-label"
+              onKeyDown={handleRadioGroupKeyDown}
+              tabIndex={-1}
             >
               {TEXT_ZOOM_PRESETS.map((preset, index) => {
                 const isFirst = index === 0;
@@ -94,6 +101,7 @@ export function AccessibilitySettings() {
                     type="button"
                     role="radio"
                     aria-checked={isSelected}
+                    tabIndex={isSelected ? 0 : -1}
                     className={classNames(
                       "flex",
                       "flex-row",
@@ -111,7 +119,7 @@ export function AccessibilitySettings() {
                       {
                         "rounded-s-full": isFirst,
                         "rounded-e-full": isLast,
-                        "bg-button-pattern": isSelected,
+                        "bg-button-pattern text-primary-foreground": isSelected,
                         "bg-background": !isSelected,
                       },
                     )}
@@ -131,6 +139,12 @@ export function AccessibilitySettings() {
             </div>
           </div>
         )}
+
+        <ToggleSwitch
+          label={t("settings.accessibility.accessibleLists")}
+          value={accessibleLists}
+          setValue={setAccessibleLists}
+        />
 
         {/* Haptic Feedback - native only */}
         {Capacitor.isNativePlatform() && (
