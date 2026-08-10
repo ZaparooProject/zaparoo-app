@@ -14,6 +14,7 @@ import { useLibrarySessionStore } from "@/lib/librarySessionStore";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { NotificationBadge } from "@/components/NotificationBadge";
+import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 import { ResponsiveContainer } from "./ResponsiveContainer";
 
 function NavButton(props: {
@@ -22,11 +23,12 @@ function NavButton(props: {
   path: string;
   rootPath: string;
   isActive: boolean;
-  onReset: () => void;
+  isAtRoot: boolean;
+  onPopToRoot: () => void;
+  onScrollToTop: () => boolean;
   className?: string;
   notificationCount?: number;
   ariaLabel?: string;
-  noOpWhenActive?: boolean;
   "data-tour"?: string;
 }) {
   const { impact } = useHaptics();
@@ -41,14 +43,16 @@ function NavButton(props: {
     >
       <Link
         to={props.isActive ? props.rootPath : props.path}
-        resetScroll={props.isActive}
+        resetScroll={false}
         onClick={(event) => {
-          if (props.isActive && props.noOpWhenActive) {
+          if (props.isActive && props.isAtRoot) {
             event.preventDefault();
+            if (props.onScrollToTop()) impact("light");
             return;
           }
+
           impact("light");
-          if (props.isActive) props.onReset();
+          if (props.isActive) props.onPopToRoot();
         }}
         aria-current={props.isActive ? "page" : undefined}
         aria-label={props.ariaLabel}
@@ -77,7 +81,7 @@ export function BottomNav() {
   const rememberLocation = useTabSessionStore(
     (state) => state.rememberLocation,
   );
-  const resetTab = useTabSessionStore((state) => state.resetTab);
+  const popTabToRoot = useTabSessionStore((state) => state.popTabToRoot);
   const resetLibraryNavigation = useLibrarySessionStore(
     (state) => state.resetNavigation,
   );
@@ -97,9 +101,28 @@ export function BottomNav() {
 
   const settingsNotificationCount =
     inboxFeature.available && !isSettings ? inboxCount : 0;
-  const resetNavigation = (tab: BottomTabId) => {
-    resetTab(tab);
+  const popNavigationToRoot = (tab: BottomTabId) => {
+    popTabToRoot(tab);
     if (tab === "library") resetLibraryNavigation();
+  };
+  const isAtRoot = (rootPath: string) =>
+    pathname === rootPath || (rootPath !== "/" && pathname === `${rootPath}/`);
+  const scrollActivePageToTop = () => {
+    const scrollContainer = document.querySelector(
+      PAGE_SCROLL_RESTORATION_SELECTOR,
+    );
+    if (
+      !(scrollContainer instanceof HTMLElement) ||
+      scrollContainer.scrollTop <= 0
+    ) {
+      return false;
+    }
+
+    useTabSessionStore
+      .getState()
+      .rememberScroll(location.href ?? pathname, 0, 0);
+    scrollContainer.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+    return true;
   };
 
   const settingsLabel =
@@ -134,7 +157,9 @@ export function BottomNav() {
             path={lastHref.zap}
             rootPath="/"
             isActive={isHome}
-            onReset={() => resetNavigation("zap")}
+            isAtRoot={isAtRoot("/")}
+            onPopToRoot={() => popNavigationToRoot("zap")}
+            onScrollToTop={scrollActivePageToTop}
           />
           <NavButton
             text={t("nav.library")}
@@ -142,8 +167,9 @@ export function BottomNav() {
             path={lastHref.library}
             rootPath="/library"
             isActive={isLibrary}
-            onReset={() => resetNavigation("library")}
-            noOpWhenActive={pathname === "/library"}
+            isAtRoot={isAtRoot("/library")}
+            onPopToRoot={() => popNavigationToRoot("library")}
+            onScrollToTop={scrollActivePageToTop}
           />
           <NavButton
             text={t("nav.create")}
@@ -151,7 +177,9 @@ export function BottomNav() {
             path={lastHref.create}
             rootPath="/create"
             isActive={isCreate}
-            onReset={() => resetNavigation("create")}
+            isAtRoot={isAtRoot("/create")}
+            onPopToRoot={() => popNavigationToRoot("create")}
+            onScrollToTop={scrollActivePageToTop}
             data-tour="nav-create"
           />
           <NavButton
@@ -160,7 +188,9 @@ export function BottomNav() {
             path={lastHref.settings}
             rootPath="/settings"
             isActive={isSettings}
-            onReset={() => resetNavigation("settings")}
+            isAtRoot={isAtRoot("/settings")}
+            onPopToRoot={() => popNavigationToRoot("settings")}
+            onScrollToTop={scrollActivePageToTop}
             notificationCount={settingsNotificationCount}
             ariaLabel={settingsLabel}
             data-tour="nav-settings"
