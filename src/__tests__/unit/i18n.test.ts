@@ -17,4 +17,11 @@ describe("document language", () => {
 
     expect(document.documentElement).toHaveAttribute("lang", "es-ES");
   });
+
+  it("should use British English copy for en-GB", async () => {
+    await i18n.changeLanguage("en-GB");
+
+    expect(i18n.t("library.favorites")).toBe("Favourites");
+    expect(document.documentElement).toHaveAttribute("lang", "en-GB");
+  });
 });

@@ -1,6 +1,7 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
+import en_GB from "./translations/en-GB.json";
 import en_US from "./translations/en-US.json";
 import zh_CN from "./translations/zh-CN.json";
 import ko_KR from "./translations/ko-KR.json";
@@ -13,7 +14,7 @@ import es_ES from "./translations/es-ES.json";
 const resources = {
   en: en_US,
   "en-US": en_US,
-  "en-GB": en_US,
+  "en-GB": en_GB,
   fr: fr_FR,
   "fr-FR": fr_FR,
   zh: zh_CN,
