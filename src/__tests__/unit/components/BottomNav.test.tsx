@@ -1,9 +1,5 @@
-import {
-  findA11yViolations,
-  render,
-  screen,
-  fireEvent,
-} from "../../../test-utils";
+import userEvent from "@testing-library/user-event";
+import { findA11yViolations, render, screen } from "../../../test-utils";
 import { BottomNav } from "@/components/BottomNav";
 import { useStatusStore } from "@/lib/store";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
@@ -35,6 +31,7 @@ vi.mock("@tanstack/react-router", () => ({
     "aria-current": ariaCurrent,
     "aria-label": ariaLabel,
     className,
+    resetScroll,
   }: {
     children: React.ReactNode;
     to: string;
@@ -42,6 +39,7 @@ vi.mock("@tanstack/react-router", () => ({
     "aria-current"?: "page" | "step" | "location" | "date" | "time" | boolean;
     "aria-label"?: string;
     className?: string;
+    resetScroll?: boolean;
   }) => (
     <a
       href={to}
@@ -53,6 +51,7 @@ vi.mock("@tanstack/react-router", () => ({
       aria-current={ariaCurrent}
       aria-label={ariaLabel}
       className={className}
+      data-reset-scroll={String(resetScroll)}
     >
       {children}
     </a>
@@ -154,7 +153,8 @@ describe("BottomNav", () => {
     );
   });
 
-  it("resets active Library navigation to its root", () => {
+  it("resets active Library navigation to its root", async () => {
+    const user = userEvent.setup();
     mockUseLocation.mockReturnValue({
       pathname: "/library/SNES",
       href: "/library/SNES",
@@ -165,12 +165,19 @@ describe("BottomNav", () => {
       { name: "Games", path: "/roms/SNES" },
     ]);
     librarySession.setEmbeddedSearchOpen("SNES", true);
+    useTabSessionStore.getState().rememberScroll("/library", 0, 160);
     useTabSessionStore.getState().rememberScroll("library:SNES:browse", 0, 240);
     render(<BottomNav />);
 
-    fireEvent.click(screen.getByTestId("link-/library"));
+    const libraryLink = screen.getByTestId("link-/library");
+    expect(libraryLink).toHaveAttribute("data-reset-scroll", "false");
+    await user.click(libraryLink);
 
     expect(useTabSessionStore.getState().lastHref.library).toBe("/library");
+    expect(useTabSessionStore.getState().scrollPositions).toHaveProperty(
+      "/library",
+      { scrollX: 0, scrollY: 160 },
+    );
     expect(useTabSessionStore.getState().scrollPositions).not.toHaveProperty(
       "library:SNES:browse",
     );
@@ -178,7 +185,8 @@ describe("BottomNav", () => {
     expect(useLibrarySessionStore.getState().embeddedSearchOpen).toEqual({});
   });
 
-  it("does nothing when active Library root is pressed", () => {
+  it("scrolls an active tab root to the top without clearing its state", async () => {
+    const user = userEvent.setup();
     mockUseLocation.mockReturnValue({
       pathname: "/library",
       href: "/library",
@@ -189,15 +197,58 @@ describe("BottomNav", () => {
       system: "all",
       tags: [],
     });
-    render(<BottomNav />);
+    const scrollTo = vi.fn();
+    render(
+      <>
+        <div
+          ref={(element) => {
+            if (!element) return;
+            element.scrollTop = 240;
+            element.scrollTo = scrollTo;
+          }}
+          data-scroll-restoration-id="page-scroll"
+        />
+        <BottomNav />
+      </>,
+    );
 
-    fireEvent.click(screen.getByTestId("link-/library"));
+    await user.click(screen.getByTestId("link-/library"));
 
+    expect(scrollTo).toHaveBeenCalledWith({
+      left: 0,
+      top: 0,
+      behavior: "smooth",
+    });
     expect(useTabSessionStore.getState().scrollPositions).toHaveProperty(
       "/library",
-      { scrollX: 0, scrollY: 240 },
+      { scrollX: 0, scrollY: 0 },
     );
     expect(useLibrarySessionStore.getState().searches).toHaveProperty("all");
+    expect(mockImpact).toHaveBeenCalledWith("light");
+  });
+
+  it("does nothing when an active tab root is already at the top", async () => {
+    const user = userEvent.setup();
+    mockUseLocation.mockReturnValue({
+      pathname: "/library",
+      href: "/library",
+    });
+    const scrollTo = vi.fn();
+    render(
+      <>
+        <div
+          ref={(element) => {
+            if (element) element.scrollTo = scrollTo;
+          }}
+          data-scroll-restoration-id="page-scroll"
+        />
+        <BottomNav />
+      </>,
+    );
+
+    await user.click(screen.getByTestId("link-/library"));
+
+    expect(scrollTo).not.toHaveBeenCalled();
     expect(mockImpact).not.toHaveBeenCalled();
   });
 
@@ -272,11 +323,11 @@ describe("BottomNav", () => {
     );
   });
 
-  it("triggers haptic feedback when nav button is clicked", () => {
+  it("triggers haptic feedback when nav button is clicked", async () => {
+    const user = userEvent.setup();
     render(<BottomNav />);
 
-    const homeLink = screen.getByTestId("link-/");
-    fireEvent.click(homeLink);
+    await user.click(screen.getByTestId("link-/library"));
 
     expect(mockImpact).toHaveBeenCalledWith("light");
   });

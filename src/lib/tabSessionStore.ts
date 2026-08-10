@@ -16,7 +16,7 @@ interface TabSessionState {
   rememberScroll: (key: string, scrollX: number, scrollY: number) => void;
   forgetScroll: (key: string) => void;
   setCreateSearch: (search: SessionSearchParams) => void;
-  resetTab: (tab: BottomTabId) => void;
+  popTabToRoot: (tab: BottomTabId) => void;
   reset: () => void;
 }
 
@@ -96,6 +96,15 @@ function scrollKeyBelongsToTab(key: string, tab: BottomTabId): boolean {
   }
 }
 
+function scrollKeyBelongsToTabRoot(key: string, tab: BottomTabId): boolean {
+  const rootPath = defaultLastHref[tab];
+  return (
+    key === rootPath ||
+    (rootPath !== "/" && key === `${rootPath}/`) ||
+    key.startsWith(`${rootPath}?`)
+  );
+}
+
 function initialTabSessionState() {
   return {
     lastHref: { ...defaultLastHref },
@@ -131,12 +140,14 @@ export const useTabSessionStore = create<TabSessionState>()((set) => ({
       return { scrollPositions };
     }),
   setCreateSearch: (createSearch) => set({ createSearch }),
-  resetTab: (tab) =>
+  popTabToRoot: (tab) =>
     set((state) => ({
       lastHref: { ...state.lastHref, [tab]: defaultLastHref[tab] },
       scrollPositions: Object.fromEntries(
         Object.entries(state.scrollPositions).filter(
-          ([key]) => !scrollKeyBelongsToTab(key, tab),
+          ([key]) =>
+            !scrollKeyBelongsToTab(key, tab) ||
+            scrollKeyBelongsToTabRoot(key, tab),
         ),
       ),
       createSearch: tab === "create" ? null : state.createSearch,

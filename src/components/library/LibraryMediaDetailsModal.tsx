@@ -319,7 +319,7 @@ export function LibraryMediaDetailsModal(props: {
       isOpen={props.isOpen}
       close={closeModal}
       title={title}
-      fixedHeight="90vh"
+      fixedHeight="85vh"
     >
       {entry && (
         <div className="flex flex-col gap-4 py-2">

@@ -85,19 +85,29 @@ describe("tabSessionStore", () => {
     });
   });
 
-  it("should reset only the active tab's navigation state", () => {
+  it("should pop only the active tab to its root", () => {
     const store = useTabSessionStore.getState();
     store.rememberLocation("/create/search", "/create/search");
     store.rememberLocation("/settings/media", "/settings/media");
+    store.rememberScroll("/create", 0, 120);
+    store.rememberScroll("/create/", 0, 140);
     store.rememberScroll("/create/search", 0, 200);
     store.rememberScroll("/settings/media", 0, 300);
     store.setCreateSearch({ query: "game", system: "all", tags: [] });
 
-    store.resetTab("create");
+    store.popTabToRoot("create");
 
     const state = useTabSessionStore.getState();
     expect(state.lastHref.create).toBe("/create");
     expect(state.lastHref.settings).toBe("/settings/media");
+    expect(state.scrollPositions["/create"]).toEqual({
+      scrollX: 0,
+      scrollY: 120,
+    });
+    expect(state.scrollPositions["/create/"]).toEqual({
+      scrollX: 0,
+      scrollY: 140,
+    });
     expect(state.scrollPositions["/create/search"]).toBeUndefined();
     expect(state.scrollPositions["/settings/media"]).toEqual({
       scrollX: 0,
