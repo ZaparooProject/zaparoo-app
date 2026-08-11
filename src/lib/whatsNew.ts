@@ -79,7 +79,13 @@ export async function resolveRuntimeReleaseIdentity(): Promise<RuntimeReleaseIde
 export function getWhatsNewAnnouncement(
   releaseKey: string,
 ): WhatsNewAnnouncement | undefined {
+  const bundleSuffixIndex = releaseKey.indexOf(":bundle:");
+  const announcementReleaseKey =
+    releaseKey.startsWith("native:") && bundleSuffixIndex !== -1
+      ? releaseKey.slice(0, bundleSuffixIndex)
+      : releaseKey;
+
   return WHATS_NEW_ANNOUNCEMENTS.find((announcement) =>
-    announcement.releaseKeys.includes(releaseKey),
+    announcement.releaseKeys.includes(announcementReleaseKey),
   );
 }

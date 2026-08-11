@@ -54,7 +54,7 @@ describe("release configuration", () => {
       new Set([packageJson.version]),
     );
     expect(new Set(iosBuildNumbers)).toEqual(new Set([androidVersionCode]));
-    expect(androidVersionCode).toBeGreaterThan(27);
+    expect(androidVersionCode).toBe(28);
   });
 
   it("should use versioned Capawesome live update channels", () => {
