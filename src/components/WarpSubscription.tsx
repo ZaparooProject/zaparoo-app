@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   useWarpSubscription,
+  type WarpAction,
   type WarpPlan,
 } from "@/hooks/useWarpSubscription";
 import {
@@ -47,12 +48,116 @@ export function WarpSubscription(props: WarpSubscriptionProps) {
   );
 }
 
+interface WarpPurchaseDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  selectedPlan: WarpPlan;
+  setSelectedPlan: (plan: WarpPlan) => void;
+  priceString: string | null;
+  action: WarpAction;
+  onPurchase: () => void;
+  purchaseEnabled: boolean;
+}
+
+function WarpPurchaseDialog({
+  open,
+  onOpenChange,
+  selectedPlan,
+  setSelectedPlan,
+  priceString,
+  action,
+  onPurchase,
+  purchaseEnabled,
+}: WarpPurchaseDialogProps) {
+  const { t } = useTranslation();
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent onOpenChange={onOpenChange}>
+        <DialogHeader>
+          <DialogTitle>{t("online.warp.purchaseTitle")}</DialogTitle>
+          <DialogDescription>
+            {t("online.warp.purchaseDescription")}
+          </DialogDescription>
+        </DialogHeader>
+
+        <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
+          <li>{t("online.warp.benefitBackup")}</li>
+          <li>{t("online.warp.benefitPro")}</li>
+          <li>{t("online.warp.benefitDevelopment")}</li>
+        </ul>
+
+        <Segmented
+          label={t("online.warp.choosePlan")}
+          options={[
+            { value: "annual", label: t("online.warp.annual") },
+            { value: "monthly", label: t("online.warp.monthly") },
+          ]}
+          value={selectedPlan}
+          onChange={setSelectedPlan}
+          disabled={action !== null}
+        />
+
+        {priceString && (
+          <div className="flex flex-col gap-1 text-center">
+            <p className="text-xl font-semibold text-white">{priceString}</p>
+            <p className="text-muted-foreground text-sm">
+              {selectedPlan === "annual"
+                ? t("online.warp.billedAnnually")
+                : t("online.warp.billedMonthly")}
+            </p>
+          </div>
+        )}
+
+        <p className="text-muted-foreground text-sm">
+          {t("online.warp.autoRenewDisclosure")}
+        </p>
+        <p className="text-muted-foreground text-center text-xs">
+          {t("online.warp.agreementPrefix")}{" "}
+          <a
+            href="https://zaparoo.com/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-sm underline focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+          >
+            {t("online.termsOfService")}
+          </a>{" "}
+          {t("online.and")}{" "}
+          <a
+            href="https://zaparoo.com/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-sm underline focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+          >
+            {t("online.privacyPolicy")}
+          </a>
+          .
+        </p>
+
+        <Button
+          label={
+            action === "purchase"
+              ? t("online.warp.purchasing")
+              : t("online.warp.subscribe")
+          }
+          onClick={onPurchase}
+          disabled={action !== null || !purchaseEnabled}
+          intent="primary"
+          className="w-full"
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function WarpSubscriptionPreview({
   state,
 }: {
   state: Exclude<PurchasePreviewState, "live">;
 }) {
   const { t } = useTranslation();
+  const [selectedPlan, setSelectedPlan] = useState<WarpPlan>("annual");
+  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(true);
   const previewAction = () => undefined;
   const previewDate = formatSubscriptionDate("2030-01-01T00:00:00Z");
 
@@ -139,7 +244,7 @@ function WarpSubscriptionPreview({
         />
       )}
 
-      {state !== "loading" && (
+      {state !== "loading" && state !== "checkout" && (
         <Button
           label={t("online.warp.restore")}
           variant="text"
@@ -147,6 +252,17 @@ function WarpSubscriptionPreview({
           className="w-full"
         />
       )}
+
+      <WarpPurchaseDialog
+        open={state === "checkout" && purchaseDialogOpen}
+        onOpenChange={setPurchaseDialogOpen}
+        selectedPlan={selectedPlan}
+        setSelectedPlan={setSelectedPlan}
+        priceString={selectedPlan === "annual" ? "$29.99" : "$3.99"}
+        action={null}
+        onPurchase={previewAction}
+        purchaseEnabled
+      />
     </section>
   );
 }
@@ -397,88 +513,18 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
         />
       )}
 
-      <Dialog
+      <WarpPurchaseDialog
         open={purchaseDialogOpen && Boolean(packages)}
         onOpenChange={(open) => {
           if (action === null) setPurchaseDialogOpen(open);
         }}
-      >
-        <DialogContent onOpenChange={setPurchaseDialogOpen}>
-          <DialogHeader>
-            <DialogTitle>{t("online.warp.purchaseTitle")}</DialogTitle>
-            <DialogDescription>
-              {t("online.warp.purchaseDescription")}
-            </DialogDescription>
-          </DialogHeader>
-
-          <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
-            <li>{t("online.warp.benefitBackup")}</li>
-            <li>{t("online.warp.benefitPro")}</li>
-            <li>{t("online.warp.benefitDevelopment")}</li>
-          </ul>
-
-          <Segmented
-            label={t("online.warp.choosePlan")}
-            options={[
-              { value: "annual", label: t("online.warp.annual") },
-              { value: "monthly", label: t("online.warp.monthly") },
-            ]}
-            value={selectedPlan}
-            onChange={(plan: WarpPlan) => setSelectedPlan(plan)}
-            disabled={action !== null}
-          />
-
-          {selectedPackage && (
-            <div className="flex flex-col gap-1 text-center">
-              <p className="text-xl font-semibold text-white">
-                {selectedPackage.product.priceString}
-              </p>
-              <p className="text-muted-foreground text-sm">
-                {selectedPlan === "annual"
-                  ? t("online.warp.billedAnnually")
-                  : t("online.warp.billedMonthly")}
-              </p>
-            </div>
-          )}
-
-          <p className="text-muted-foreground text-sm">
-            {t("online.warp.autoRenewDisclosure")}
-          </p>
-          <p className="text-muted-foreground text-center text-xs">
-            {t("online.warp.agreementPrefix")}{" "}
-            <a
-              href="https://zaparoo.com/terms"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-sm underline focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-            >
-              {t("online.termsOfService")}
-            </a>{" "}
-            {t("online.and")}{" "}
-            <a
-              href="https://zaparoo.com/privacy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-sm underline focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-            >
-              {t("online.privacyPolicy")}
-            </a>
-            .
-          </p>
-
-          <Button
-            label={
-              action === "purchase"
-                ? t("online.warp.purchasing")
-                : t("online.warp.subscribe")
-            }
-            onClick={handlePurchase}
-            disabled={action !== null || !selectedPackage}
-            intent="primary"
-            className="w-full"
-          />
-        </DialogContent>
-      </Dialog>
+        selectedPlan={selectedPlan}
+        setSelectedPlan={setSelectedPlan}
+        priceString={selectedPackage?.product.priceString ?? null}
+        action={action}
+        onPurchase={handlePurchase}
+        purchaseEnabled={Boolean(selectedPackage)}
+      />
     </section>
   );
 }

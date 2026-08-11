@@ -174,6 +174,9 @@ export function AdvancedSettings() {
               <option value="free">
                 {t("settings.advanced.purchasePreviewFree")}
               </option>
+              <option value="checkout">
+                {t("settings.advanced.purchasePreviewCheckout")}
+              </option>
               <option value="pro">
                 {t("settings.advanced.purchasePreviewPro")}
               </option>

@@ -206,7 +206,8 @@
       "nfcNotSupported": "이 기기는 NFC를 지원하지 않습니다"
     },
     "accessibility": {
-      "skipToContent": "기본 콘텐츠로 건너뛰기"
+      "skipToContent": "기본 콘텐츠로 건너뛰기",
+      "logo": "Zaparoo 로고"
     },
     "tokenStaging": {
       "title": "대기 중인 토큰을 확인할까요?",
@@ -859,6 +860,7 @@
         "purchasePreview": "구매 미리 보기",
         "purchasePreviewLive": "실제 상태",
         "purchasePreviewFree": "무료 계정",
+        "purchasePreviewCheckout": "Warp 결제",
         "purchasePreviewPro": "평생 Pro",
         "purchasePreviewWarp": "Warp 활성화됨",
         "purchasePreviewLoading": "불러오는 중",

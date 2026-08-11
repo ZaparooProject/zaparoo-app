@@ -206,7 +206,8 @@
       "nfcNotSupported": "NFC wordt niet ondersteund op dit apparaat"
     },
     "accessibility": {
-      "skipToContent": "Naar hoofdinhoud"
+      "skipToContent": "Naar hoofdinhoud",
+      "logo": "Zaparoo-logo"
     },
     "tokenStaging": {
       "title": "Klaargezet token bevestigen?",
@@ -859,6 +860,7 @@
         "purchasePreview": "Aankoopvoorbeeld",
         "purchasePreviewLive": "Livestatus",
         "purchasePreviewFree": "Gratis account",
+        "purchasePreviewCheckout": "Warp-betaalproces",
         "purchasePreviewPro": "Levenslange Pro",
         "purchasePreviewWarp": "Warp actief",
         "purchasePreviewLoading": "Laden",
@@ -1041,7 +1043,7 @@
         "region": "Regio",
         "rerelease": "Heruitgave",
         "rev": "Revisie",
-        "save": "Opslag",
+        "save": "Savegame",
         "search": "Zoeken",
         "series": "Serie",
         "set": "Set",

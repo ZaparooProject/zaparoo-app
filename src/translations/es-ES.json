@@ -206,7 +206,8 @@
       "nfcNotSupported": "Este dispositivo no admite NFC"
     },
     "accessibility": {
-      "skipToContent": "Saltar al contenido principal"
+      "skipToContent": "Saltar al contenido principal",
+      "logo": "Logotipo de Zaparoo"
     },
     "tokenStaging": {
       "title": "¿Confirmar token pendiente?",
@@ -605,7 +606,7 @@
       "agreementSignUp": "Al pulsar Registrarse o Iniciar sesión, aceptas nuestros",
       "termsOfService": "Términos del servicio",
       "privacyPolicy": "Política de privacidad",
-      "and": "y",
+      "and": "y nuestra",
       "warp": {
         "title": "Zaparoo Warp",
         "description": "Protege los datos compatibles del dispositivo con copias de seguridad en la nube y usa Zaparoo Pro mientras Warp esté activo.",
@@ -859,6 +860,7 @@
         "purchasePreview": "Vista previa de compra",
         "purchasePreviewLive": "Estado real",
         "purchasePreviewFree": "Cuenta gratuita",
+        "purchasePreviewCheckout": "Pago de Warp",
         "purchasePreviewPro": "Pro permanente",
         "purchasePreviewWarp": "Warp activo",
         "purchasePreviewLoading": "Cargando",
@@ -884,7 +886,7 @@
           "neverReset": "No restablecer nunca (0 = mantiene la sesión activa hasta el límite diario)",
           "currentSession": "Sesión actual",
           "dailyUsage": "Uso diario",
-          "stateReset": "Restablecer",
+          "stateReset": "Restablecido",
           "stateActive": "Activo",
           "stateCooldown": "Tiempo de espera",
           "sessionDuration": "Duración",
@@ -893,7 +895,7 @@
           "dailyRemaining": "Restante",
           "cooldownRemaining": "El tiempo de espera termina en",
           "warningToast": "Quedan {{remaining}} de tiempo de juego",
-          "reachedToast": "Se ha alcanzado {{type}}"
+          "reachedToast": "Se ha alcanzado el {{type}}"
         },
         "launchGuard": {
           "title": "Protección de inicio",
@@ -920,7 +922,7 @@
         "shakeCustom": "Personalizado",
         "shakeSelectSystem": "Seleccionar sistema",
         "shakeZapscript": "ZapScript que se ejecutará",
-        "shakeModeLabel": "Modo de agitado"
+        "shakeModeLabel": "Acción al agitar"
       },
       "logs": {
         "title": "Registros",

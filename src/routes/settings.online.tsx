@@ -182,7 +182,9 @@ export function OnlinePage() {
       ? onlinePremiumAccess
       : purchasePreview === "warp"
         ? true
-        : purchasePreview === "free" || purchasePreview === "pro"
+        : purchasePreview === "free" ||
+            purchasePreview === "checkout" ||
+            purchasePreview === "pro"
           ? false
           : null;
 
@@ -746,6 +748,10 @@ export function OnlinePage() {
                 />
               )}
             </section>
+          </div>
+        ) : purchasePreview !== "live" ? (
+          <div className="flex flex-col gap-6 py-4">
+            <WarpSubscription appUserID="purchase-preview" />
           </div>
         ) : mfaPending ? (
           <div className="flex flex-col gap-4">

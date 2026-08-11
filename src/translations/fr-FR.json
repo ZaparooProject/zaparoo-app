@@ -206,7 +206,8 @@
       "nfcNotSupported": "Le NFC n’est pas pris en charge sur cet appareil"
     },
     "accessibility": {
-      "skipToContent": "Aller au contenu principal"
+      "skipToContent": "Aller au contenu principal",
+      "logo": "Logo Zaparoo"
     },
     "tokenStaging": {
       "title": "Confirmer le token en attente ?",
@@ -859,6 +860,7 @@
         "purchasePreview": "Aperçu des achats",
         "purchasePreviewLive": "État réel",
         "purchasePreviewFree": "Compte gratuit",
+        "purchasePreviewCheckout": "Paiement Warp",
         "purchasePreviewPro": "Pro à vie",
         "purchasePreviewWarp": "Warp actif",
         "purchasePreviewLoading": "Chargement",

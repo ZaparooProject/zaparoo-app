@@ -76,6 +76,7 @@ function hookState(overrides: Record<string, unknown> = {}) {
 describe("WarpSubscription", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    usePurchasePreviewStore.setState({ state: "live" });
     usePreferencesStore.setState({
       _hasHydrated: true,
       lifetimeProAccess: false,
@@ -211,6 +212,34 @@ describe("WarpSubscription", () => {
     expect(
       screen.getByRole("button", { name: "online.warp.manage" }),
     ).toBeInTheDocument();
+    expect(mockUseWarpSubscription).not.toHaveBeenCalled();
+  });
+
+  it("should render a screenshot-ready checkout preview", async () => {
+    const user = userEvent.setup();
+    usePurchasePreviewStore.getState().setPreviewState("checkout");
+
+    render(<WarpSubscription appUserID="purchase-preview" />);
+
+    expect(
+      screen.getByRole("dialog", { name: "online.warp.purchaseTitle" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("radio", { name: "online.warp.annual" }),
+    ).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByText("$29.99")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("radio", { name: "online.warp.monthly" }),
+    );
+
+    expect(screen.getByText("$3.99")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "nav.close" }));
+
+    expect(
+      screen.queryByRole("dialog", { name: "online.warp.purchaseTitle" }),
+    ).not.toBeInTheDocument();
     expect(mockUseWarpSubscription).not.toHaveBeenCalled();
   });
 

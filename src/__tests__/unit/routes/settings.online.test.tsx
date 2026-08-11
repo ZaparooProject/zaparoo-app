@@ -209,6 +209,7 @@ describe("Settings Online Route", () => {
     mockState.platform = "web";
     mockState.connected = false;
     mockState.loggedInUser = null;
+    usePurchasePreviewStore.setState({ state: "live" });
 
     // Reset Firebase mocks with default implementations
     mockFirebaseAuth.signOut.mockResolvedValue(undefined);
@@ -293,6 +294,19 @@ describe("Settings Online Route", () => {
       renderComponent();
       expect(screen.getByText("online.termsOfService")).toBeInTheDocument();
       expect(screen.getByText("online.privacyPolicy")).toBeInTheDocument();
+    });
+
+    it("should render the purchase preview without authentication", () => {
+      usePurchasePreviewStore.getState().setPreviewState("checkout");
+
+      renderComponent();
+
+      expect(screen.getByTestId("warp-subscription")).toHaveTextContent(
+        "purchase-preview",
+      );
+      expect(
+        screen.queryByRole("button", { name: "online.login" }),
+      ).not.toBeInTheDocument();
     });
   });
 

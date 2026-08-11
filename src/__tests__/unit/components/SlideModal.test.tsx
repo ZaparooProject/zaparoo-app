@@ -128,6 +128,24 @@ describe("SlideModal", () => {
     expect(closeMock).toHaveBeenCalled();
   });
 
+  it("should close when swiping down from the modal title", () => {
+    const closeMock = vi.fn();
+    render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
+
+    const title = screen.getByRole("heading", { name: "Test Modal" });
+    fireEvent.touchStart(title, {
+      touches: [{ clientX: 100, clientY: 20 }],
+    });
+    fireEvent.touchMove(title, {
+      touches: [{ clientX: 100, clientY: 100 }],
+    });
+    fireEvent.touchEnd(title, {
+      changedTouches: [{ clientX: 100, clientY: 100 }],
+    });
+
+    expect(closeMock).toHaveBeenCalledTimes(1);
+  });
+
   it("makes closed modal content inert", () => {
     render(<SlideModal {...mockProps} isOpen={false} />);
 

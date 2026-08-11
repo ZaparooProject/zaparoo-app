@@ -148,39 +148,38 @@ export function SlideModal(props: {
             : { maxHeight: `calc(100vh - ${safeInsets.top} - 75px)` }),
         }}
       >
-        {/* Swipeable mobile drag handle */}
-        <div
-          className="sm:hidden"
-          style={{ touchAction: "pan-x" }}
-          {...swipeHandlers}
-        >
-          <div className="flex w-full justify-center pb-3">
+        {/* Swipeable handle and title area */}
+        <div style={{ touchAction: "pan-x" }} {...swipeHandlers}>
+          {/* Mobile drag handle */}
+          <div className="sm:hidden">
+            <div className="flex w-full justify-center pb-3">
+              <button
+                type="button"
+                onClick={props.close}
+                aria-label={t("nav.close")}
+                className="h-[5px] w-[80px] rounded-full bg-[#00E0FF] focus:ring-2 focus:ring-white/50 focus:outline-none"
+              />
+            </div>
+          </div>
+          {/* Shared visible title and desktop close action */}
+          <div className="relative pb-2">
+            <h2
+              ref={titleRef}
+              id={`${modalId}-title`}
+              tabIndex={-1}
+              className="text-center text-lg outline-none"
+            >
+              {props.title}
+            </h2>
             <button
               type="button"
               onClick={props.close}
+              className="absolute top-[-5px] right-0 hidden h-8 w-8 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-white/10 hover:opacity-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none sm:flex"
               aria-label={t("nav.close")}
-              className="h-[5px] w-[80px] rounded-full bg-[#00E0FF] focus:ring-2 focus:ring-white/50 focus:outline-none"
-            />
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
           </div>
-        </div>
-        {/* Shared visible title and desktop close action */}
-        <div className="relative pb-2">
-          <h2
-            ref={titleRef}
-            id={`${modalId}-title`}
-            tabIndex={-1}
-            className="text-center text-lg outline-none"
-          >
-            {props.title}
-          </h2>
-          <button
-            type="button"
-            onClick={props.close}
-            className="absolute top-[-5px] right-0 hidden h-8 w-8 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-white/10 hover:opacity-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none sm:flex"
-            aria-label={t("nav.close")}
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
         </div>
         {/* eslint-disable react-hooks/refs -- False positives: scrollRef is passed as ref prop, children/footer are ReactNode props */}
         <div ref={props.scrollRef} className="flex-1 overflow-y-auto">
