@@ -104,7 +104,7 @@ Required for:
 7. Check About page credits in `src/routes/settings.about.tsx`:
    - translation credits
    - active Patreon CSV export names
-   - Patreon tier coloring (`#F1C40D` Supporter/Sponsor, `#E74C3C` Mega Supporter, `#E91E63` Ultra Supporter)
+   - Patreon tier coloring (`#F1C40D` Sponsor styling for active pledges of US$25/month or more; all lower pledges use the default white text)
 8. Run validation:
    - `npm run typecheck`
    - `npm run format:check`

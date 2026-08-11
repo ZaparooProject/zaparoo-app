@@ -104,25 +104,22 @@ export function About() {
           </h3>
 
           <div className="text-center">
-            Jon, <span style={{ color: "#F1C40D" }}>RetroRGB</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Jose BG</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Dan Doyle</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Phil Felice</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Glenn</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Alexander Facchini</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Lu&apos;s Retro Source</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Tony Shadwick</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Clinton Cronin</span>,{" "}
-            Tuxosaurus,{" "}
-            <span style={{ color: "#E74C3C" }}>Retrosoft Studios</span>, Casey
-            McGinty, <span style={{ color: "#F06292" }}>Biddle</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Shijuro</span>,{" "}
+            <span>Jon</span>, <span>RetroRGB</span>, <span>theypsilon</span>,{" "}
+            <span>Dan Doyle</span>, <span>Phil Felice</span>,{" "}
+            <span>The8Flux</span>, <span>Alexander Facchini</span>,{" "}
+            <span>Lu&apos;s Retro Source</span>, <span>Tony Shadwick</span>,{" "}
+            <span>Clinton Cronin</span>, <span>Tuxosaurus</span>,{" "}
+            <span>Retrosoft Studios</span>, <span>Casey McGinty</span>,{" "}
+            <span style={{ color: "#F1C40D" }}>Biddle</span>,{" "}
+            <span>Shijuro</span>,{" "}
             <span style={{ color: "#F1C40D" }}>TheJesusFish</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>disctoad</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Mark Dodsworth</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>ayoub</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Michael Quinn</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Lina Blue</span>
+            <span>disctoad</span>, <span>Mark Dodsworth</span>,{" "}
+            <span>ayoub</span>, <span>Michael Quinn</span>,{" "}
+            <span>Lina Blue</span>,{" "}
+            <span style={{ color: "#F1C40D" }}>Filip Kindt</span>,{" "}
+            <span>Not Work</span>, <span>angel rooney</span>,{" "}
+            <span>Danny Garfield</span>, <span>pxa</span>,{" "}
+            <span>Antony Boudreau</span>
           </div>
 
           <Button
