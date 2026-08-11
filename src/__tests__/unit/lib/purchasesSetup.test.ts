@@ -70,8 +70,8 @@ function offerings(): PurchasesOfferings {
       availablePackages: [fallback],
     },
     all: {
-      pro: {
-        identifier: "pro",
+      tapto_basic: {
+        identifier: "tapto_basic",
         availablePackages: [lifetime],
         lifetime,
       },

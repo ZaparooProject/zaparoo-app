@@ -11,7 +11,7 @@ import {
 } from "@/lib/errors";
 
 export const PRO_ENTITLEMENT_ID = "tapto_launcher";
-export const PRO_OFFERING_ID = "pro";
+export const PRO_OFFERING_ID = "tapto_basic";
 export const PRO_PACKAGE_ID = "$rc_lifetime";
 export const WARP_ENTITLEMENT_ID = "warp";
 export const WARP_OFFERING_ID = "warp";

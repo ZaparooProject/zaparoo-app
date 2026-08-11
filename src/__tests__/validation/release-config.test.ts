@@ -89,6 +89,16 @@ describe("release configuration", () => {
     expect(mainActivity).not.toContain('android:launchMode="singleTask"');
   });
 
+  it("should enable the iOS In-App Purchase capability", () => {
+    const xcodeProject = readProjectFile(
+      "ios/App/App.xcodeproj/project.pbxproj",
+    );
+
+    expect(xcodeProject).toMatch(
+      /com\.apple\.InAppPurchase = \{\s+enabled = 1;/,
+    );
+  });
+
   it("should keep purchase previews out of release workflow builds", () => {
     const releaseWorkflow = readProjectFile(".github/workflows/build.yaml");
 

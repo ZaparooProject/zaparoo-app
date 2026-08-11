@@ -27,7 +27,7 @@
       "minutes_other": "{{count}} minutes"
     },
     "selected": "selected",
-    "stopPlaying": "This will stop the playing media. You may lose any unsaved progress.",
+    "stopPlaying": "This will stop the currently playing media. You may lose any unsaved progress.",
     "stopBackgroundMedia": "This will stop the background media.",
     "nav": {
       "back": "Back",
@@ -206,7 +206,8 @@
       "nfcNotSupported": "NFC is not supported on this device"
     },
     "accessibility": {
-      "skipToContent": "Skip to main content"
+      "skipToContent": "Skip to main content",
+      "logo": "Zaparoo logo"
     },
     "tokenStaging": {
       "title": "Confirm staged token?",
@@ -502,7 +503,7 @@
       "loginGoogle": "Log in with Google",
       "loginApple": "Log in with Apple",
       "logout": "Log out",
-      "loginSuccess": "Log in successful",
+      "loginSuccess": "Logged in successfully",
       "loginWrong": "Invalid email or password",
       "loginFail": "Error occurred while logging in",
       "mfaTitle": "Two-factor authentication",
@@ -714,7 +715,7 @@
       "updateDb.cleanOrphansConfirmAction": "Clean",
       "updateDb.cleanOrphansSuccess": "Removed {{count}} missing media entries",
       "updateDb.cleanOrphansNone": "No missing media entries found",
-      "updateDb.cleanOrphansError": "Clean missing media failed",
+      "updateDb.cleanOrphansError": "Failed to clean missing media",
       "scrapeMedia": "Scrape media metadata",
       "scrapeMedia.cancel": "Cancel",
       "scrapeMedia.starting": "Starting...",
@@ -859,6 +860,7 @@
         "purchasePreview": "Purchase preview",
         "purchasePreviewLive": "Live state",
         "purchasePreviewFree": "Free account",
+        "purchasePreviewCheckout": "Warp checkout",
         "purchasePreviewPro": "Lifetime Pro",
         "purchasePreviewWarp": "Warp active",
         "purchasePreviewLoading": "Loading",

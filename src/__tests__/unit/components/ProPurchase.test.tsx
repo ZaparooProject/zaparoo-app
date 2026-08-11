@@ -107,7 +107,7 @@ vi.mock("i18next", () => ({
 }));
 
 const presentedOfferingContext = {
-  offeringIdentifier: "pro",
+  offeringIdentifier: "tapto_basic",
   placementIdentifier: null,
   targetingContext: null,
 } as const;
@@ -133,7 +133,7 @@ function createProduct(): PurchasesStoreProduct {
     subscriptionPeriod: null,
     defaultOption: null,
     subscriptionOptions: null,
-    presentedOfferingIdentifier: "pro",
+    presentedOfferingIdentifier: "tapto_basic",
     presentedOfferingContext,
   };
 }
@@ -143,7 +143,7 @@ function createPackage(): PurchasesPackage {
     identifier: "$rc_lifetime",
     packageType: PACKAGE_TYPE.LIFETIME,
     product: createProduct(),
-    offeringIdentifier: "pro",
+    offeringIdentifier: "tapto_basic",
     presentedOfferingContext,
     webCheckoutUrl: null,
   };
@@ -153,7 +153,7 @@ function createOffering(
   availablePackages: PurchasesPackage[] = [],
 ): PurchasesOffering {
   return {
-    identifier: "pro",
+    identifier: "tapto_basic",
     serverDescription: "Pro offering",
     metadata: {},
     availablePackages,
@@ -300,7 +300,7 @@ describe("useProPurchase", () => {
         "RevenueCat offerings returned no packages",
         expect.objectContaining({
           platform: "ios",
-          offeringIdentifier: "pro",
+          offeringIdentifier: "tapto_basic",
           offeringFound: true,
           packageIdentifiers: [],
         }),
@@ -401,7 +401,7 @@ describe("useProPurchase", () => {
     };
     vi.mocked(Purchases.getOfferings).mockResolvedValue({
       current: warpOffering,
-      all: { pro: proOffering, warp: warpOffering },
+      all: { tapto_basic: proOffering, warp: warpOffering },
     });
     vi.mocked(Purchases.purchasePackage).mockResolvedValue({
       customerInfo: {

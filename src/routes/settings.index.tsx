@@ -53,7 +53,9 @@ export function Settings() {
   const displayedOnlinePremiumAccess = purchasePreviewEnabled
     ? purchasePreview === "warp"
       ? true
-      : purchasePreview === "free" || purchasePreview === "pro"
+      : purchasePreview === "free" ||
+          purchasePreview === "checkout" ||
+          purchasePreview === "pro"
         ? false
         : null
     : onlinePremiumAccess;

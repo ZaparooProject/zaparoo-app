@@ -4,7 +4,11 @@ import userEvent from "@testing-library/user-event";
 import type { User } from "@capacitor-firebase/authentication";
 import toast from "react-hot-toast";
 import { NotSignedInError } from "@/lib/onlineApi";
+import { CoreAPI } from "@/lib/coreApi";
 import { usePurchasePreviewStore } from "@/lib/purchasePreviewStore";
+import { useStatusStore } from "@/lib/store";
+
+type StatusStoreState = ReturnType<typeof useStatusStore.getState>;
 
 // Use vi.hoisted for all variables that need to be accessed in mock factories
 const {
@@ -18,6 +22,7 @@ const {
   mockCancelAccountDeletion,
   mockUpdateRequirements,
   mockSetLoggedInUser,
+  defaultStatusStoreState,
   mockState,
 } = vi.hoisted(() => ({
   componentRef: { current: null as any },
@@ -44,7 +49,8 @@ const {
   mockDeleteAccount: vi.fn(),
   mockCancelAccountDeletion: vi.fn(),
   mockUpdateRequirements: vi.fn(),
-  mockSetLoggedInUser: vi.fn(),
+  mockSetLoggedInUser: vi.fn<(loggedInUser: User | null) => void>(),
+  defaultStatusStoreState: {} as StatusStoreState,
   mockState: {
     loggedInUser: null as User | null,
     platform: "web" as string,
@@ -148,16 +154,26 @@ vi.mock("@/lib/onlineApi", async (importOriginal) => {
 
 // Mock store
 vi.mock("@/lib/store", async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
+  const actual = await importOriginal<typeof import("@/lib/store")>();
+  Object.assign(defaultStatusStoreState, actual.useStatusStore.getState());
+
+  const mockUseStatusStore = <T,>(
+    selector: (state: StatusStoreState) => T,
+  ): T =>
+    selector({
+      ...actual.useStatusStore.getState(),
+      loggedInUser: mockState.loggedInUser,
+      connected: mockState.connected,
+      setLoggedInUser: mockSetLoggedInUser,
+    });
+  const useStatusStoreAdapter = Object.assign(
+    mockUseStatusStore,
+    actual.useStatusStore,
+  );
+
   return {
     ...actual,
-    useStatusStore: (selector: any) =>
-      selector({
-        loggedInUser: mockState.loggedInUser,
-        connected: mockState.connected,
-        setLoggedInUser: mockSetLoggedInUser,
-        safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
-      }),
+    useStatusStore: useStatusStoreAdapter,
   };
 });
 
@@ -172,7 +188,7 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
 
 // Mock logger
 vi.mock("@/lib/logger", () => ({
-  logger: { error: vi.fn() },
+  logger: { error: vi.fn(), log: vi.fn() },
 }));
 
 vi.mock("@/components/WarpSubscription", () => ({
@@ -209,6 +225,17 @@ describe("Settings Online Route", () => {
     mockState.platform = "web";
     mockState.connected = false;
     mockState.loggedInUser = null;
+    useStatusStore.setState(
+      {
+        ...defaultStatusStoreState,
+        connected: false,
+        loggedInUser: null,
+        setLoggedInUser: mockSetLoggedInUser,
+      },
+      true,
+    );
+    usePurchasePreviewStore.setState({ state: "live" });
+    CoreAPI.reset();
 
     // Reset Firebase mocks with default implementations
     mockFirebaseAuth.signOut.mockResolvedValue(undefined);
@@ -293,6 +320,17 @@ describe("Settings Online Route", () => {
       renderComponent();
       expect(screen.getByText("online.termsOfService")).toBeInTheDocument();
       expect(screen.getByText("online.privacyPolicy")).toBeInTheDocument();
+    });
+
+    it("should render the purchase preview without authentication", () => {
+      usePurchasePreviewStore.getState().setPreviewState("checkout");
+
+      renderComponent();
+
+      expect(screen.getByText("purchase-preview")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "online.login" }),
+      ).not.toBeInTheDocument();
     });
   });
 
