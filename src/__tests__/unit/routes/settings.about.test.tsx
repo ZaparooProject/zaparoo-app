@@ -127,13 +127,44 @@ describe("Settings About Route", () => {
       expect(screen.getByText("German/Deutsch")).toBeInTheDocument();
     });
 
-    it("should display patron credits section", () => {
+    it("should display current patron credits", () => {
       renderComponent();
       expect(screen.getByText("settings.about.wizzodev")).toBeInTheDocument();
-      expect(screen.getByText("RetroRGB")).toBeInTheDocument();
-      expect(screen.getByText("Jose BG")).toBeInTheDocument();
-      expect(screen.getByText("Biddle")).toBeInTheDocument();
-      expect(screen.getByText("Retrosoft Studios")).toBeInTheDocument();
+
+      for (const patron of [
+        "Jon",
+        "RetroRGB",
+        "theypsilon",
+        "Dan Doyle",
+        "Phil Felice",
+        "The8Flux",
+        "Alexander Facchini",
+        "Lu's Retro Source",
+        "Tony Shadwick",
+        "Clinton Cronin",
+        "Tuxosaurus",
+        "Retrosoft Studios",
+        "Casey McGinty",
+        "Biddle",
+        "Shijuro",
+        "TheJesusFish",
+        "disctoad",
+        "Mark Dodsworth",
+        "ayoub",
+        "Michael Quinn",
+        "Lina Blue",
+        "Filip Kindt",
+        "Not Work",
+        "angel rooney",
+        "Danny Garfield",
+        "pxa",
+        "Antony Boudreau",
+      ]) {
+        expect(screen.getByText(patron)).toBeInTheDocument();
+      }
+
+      expect(screen.queryByText("Jose BG")).not.toBeInTheDocument();
+      expect(screen.queryByText("Glenn")).not.toBeInTheDocument();
     });
 
     it("should render join patreon button", () => {
