@@ -151,15 +151,18 @@ export function SlideModal(props: {
         {/* Swipeable handle and title area */}
         <div style={{ touchAction: "pan-x" }} {...swipeHandlers}>
           {/* Mobile drag handle */}
-          <div className="sm:hidden">
-            <div className="flex w-full justify-center pb-3">
-              <button
-                type="button"
-                onClick={props.close}
-                aria-label={t("nav.close")}
-                className="h-[5px] w-[80px] rounded-full bg-[#00E0FF] focus:ring-2 focus:ring-white/50 focus:outline-none"
+          <div className="-mt-3 sm:hidden">
+            <button
+              type="button"
+              onClick={props.close}
+              aria-label={t("nav.close")}
+              className="flex h-[29px] w-full items-center justify-center bg-transparent focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            >
+              <span
+                aria-hidden="true"
+                className="h-[5px] w-[80px] rounded-full bg-[#00E0FF]"
               />
-            </div>
+            </button>
           </div>
           {/* Shared visible title and desktop close action */}
           <div className="relative pb-2">
@@ -174,7 +177,7 @@ export function SlideModal(props: {
             <button
               type="button"
               onClick={props.close}
-              className="absolute top-[-5px] right-0 hidden h-8 w-8 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-white/10 hover:opacity-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none sm:flex"
+              className="absolute top-[-5px] right-0 hidden h-8 w-8 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-white/10 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none sm:flex"
               aria-label={t("nav.close")}
             >
               <X className="h-5 w-5" aria-hidden="true" />

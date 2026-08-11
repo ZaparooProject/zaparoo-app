@@ -206,8 +206,7 @@
       "nfcNotSupported": "NFC wordt niet ondersteund op dit apparaat"
     },
     "accessibility": {
-      "skipToContent": "Naar hoofdinhoud",
-      "logo": "Zaparoo-logo"
+      "skipToContent": "Naar hoofdinhoud"
     },
     "tokenStaging": {
       "title": "Klaargezet token bevestigen?",
@@ -860,7 +859,6 @@
         "purchasePreview": "Aankoopvoorbeeld",
         "purchasePreviewLive": "Livestatus",
         "purchasePreviewFree": "Gratis account",
-        "purchasePreviewCheckout": "Warp-betaalproces",
         "purchasePreviewPro": "Levenslange Pro",
         "purchasePreviewWarp": "Warp actief",
         "purchasePreviewLoading": "Laden",

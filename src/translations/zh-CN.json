@@ -206,8 +206,7 @@
       "nfcNotSupported": "此设备不支持 NFC"
     },
     "accessibility": {
-      "skipToContent": "跳到主要内容",
-      "logo": "Zaparoo 徽标"
+      "skipToContent": "跳到主要内容"
     },
     "tokenStaging": {
       "title": "确认暂存的令牌？",
@@ -860,7 +859,6 @@
         "purchasePreview": "购买预览",
         "purchasePreviewLive": "实时状态",
         "purchasePreviewFree": "免费账户",
-        "purchasePreviewCheckout": "Warp 结账",
         "purchasePreviewPro": "终身 Pro",
         "purchasePreviewWarp": "Warp 已启用",
         "purchasePreviewLoading": "正在加载",

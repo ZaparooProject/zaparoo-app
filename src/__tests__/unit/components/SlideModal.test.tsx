@@ -133,6 +133,7 @@ describe("SlideModal", () => {
     render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
 
     const title = screen.getByRole("heading", { name: "Test Modal" });
+    // react-swipeable consumes legacy touch events; userEvent.pointer cannot drive this path.
     fireEvent.touchStart(title, {
       touches: [{ clientX: 100, clientY: 20 }],
     });

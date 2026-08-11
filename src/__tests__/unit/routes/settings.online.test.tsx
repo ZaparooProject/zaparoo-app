@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { User } from "@capacitor-firebase/authentication";
 import toast from "react-hot-toast";
 import { NotSignedInError } from "@/lib/onlineApi";
+import { CoreAPI } from "@/lib/coreApi";
 import { usePurchasePreviewStore } from "@/lib/purchasePreviewStore";
 
 // Use vi.hoisted for all variables that need to be accessed in mock factories
@@ -18,6 +19,7 @@ const {
   mockCancelAccountDeletion,
   mockUpdateRequirements,
   mockSetLoggedInUser,
+  mockUseStatusStore,
   mockState,
 } = vi.hoisted(() => ({
   componentRef: { current: null as any },
@@ -45,6 +47,7 @@ const {
   mockCancelAccountDeletion: vi.fn(),
   mockUpdateRequirements: vi.fn(),
   mockSetLoggedInUser: vi.fn(),
+  mockUseStatusStore: vi.fn(),
   mockState: {
     loggedInUser: null as User | null,
     platform: "web" as string,
@@ -151,13 +154,7 @@ vi.mock("@/lib/store", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
   return {
     ...actual,
-    useStatusStore: (selector: any) =>
-      selector({
-        loggedInUser: mockState.loggedInUser,
-        connected: mockState.connected,
-        setLoggedInUser: mockSetLoggedInUser,
-        safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
-      }),
+    useStatusStore: (selector: any) => mockUseStatusStore(selector),
   };
 });
 
@@ -172,7 +169,7 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
 
 // Mock logger
 vi.mock("@/lib/logger", () => ({
-  logger: { error: vi.fn() },
+  logger: { error: vi.fn(), log: vi.fn() },
 }));
 
 vi.mock("@/components/WarpSubscription", () => ({
@@ -209,7 +206,17 @@ describe("Settings Online Route", () => {
     mockState.platform = "web";
     mockState.connected = false;
     mockState.loggedInUser = null;
+    mockUseStatusStore.mockReset();
+    mockUseStatusStore.mockImplementation((selector) =>
+      selector({
+        loggedInUser: mockState.loggedInUser,
+        connected: mockState.connected,
+        setLoggedInUser: mockSetLoggedInUser,
+        safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+      }),
+    );
     usePurchasePreviewStore.setState({ state: "live" });
+    CoreAPI.reset();
 
     // Reset Firebase mocks with default implementations
     mockFirebaseAuth.signOut.mockResolvedValue(undefined);
