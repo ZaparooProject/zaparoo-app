@@ -2945,7 +2945,7 @@ describe("API error handling", () => {
     expect(mockToastError).not.toHaveBeenCalled();
   });
 
-  it("should suppress error toast when tokens fetch fails after RECONNECTING", async () => {
+  it("should suppress a stale tokens error after reconnect succeeds", async () => {
     let rejectTokens: (e: Error) => void = () => {};
     vi.mocked(CoreAPI.tokens).mockReturnValueOnce(
       new Promise<never>((_, rej) => {
@@ -2966,13 +2966,27 @@ describe("API error handling", () => {
     });
 
     await waitFor(() => {
-      expect(CoreAPI.tokens).toHaveBeenCalled();
+      expect(CoreAPI.tokens).toHaveBeenCalledTimes(1);
     });
 
-    useStatusStore.setState({
-      connectionState: ConnectionState.RECONNECTING,
-      connected: true,
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "reconnecting",
+      hasData: true,
+      hasConnectedBefore: true,
     });
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "connected",
+      hasData: true,
+      hasConnectedBefore: true,
+    });
+
+    await waitFor(() => {
+      expect(CoreAPI.tokens).toHaveBeenCalledTimes(2);
+    });
+    expect(useStatusStore.getState().connectionState).toBe(
+      ConnectionState.CONNECTED,
+    );
+
     rejectTokens(new Error("Request cancelled: connection reset"));
 
     await Promise.resolve();
