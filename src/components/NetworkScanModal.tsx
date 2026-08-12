@@ -7,6 +7,7 @@ import {
   type DiscoveredDevice,
 } from "@/hooks/useNetworkScan";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
 import { SlideModal } from "./SlideModal";
 import { DeviceRow } from "./DeviceRow";
 
@@ -23,14 +24,15 @@ interface NetworkScanModalProps {
   onSelectDevice: (device: SelectedScanDevice) => void;
 }
 
+function formatConnectionString(host: string, port: number): string {
+  const formattedHost = host.includes(":") ? `[${host}]` : host;
+  return port === 7497 ? formattedHost : `${formattedHost}:${port}`;
+}
+
 function buildConnectionString(device: DiscoveredDevice): string {
   // Prefer the DNS-SD hostname so one saved pairing survives interface and
   // DHCP address changes. Services without a hostname still connect by IP.
-  const host = device.hostname || device.address;
-  const formattedHost = host.includes(":") ? `[${host}]` : host;
-  return device.port === 7497
-    ? formattedHost
-    : `${formattedHost}:${device.port}`;
+  return formatConnectionString(device.hostname || device.address, device.port);
 }
 
 export function NetworkScanModal({
@@ -52,8 +54,20 @@ export function NetworkScanModal({
 
   const handleSelectDevice = (device: DiscoveredDevice) => {
     stopScan();
+    const address = buildConnectionString(device);
+
+    if (device.hostname) {
+      // Before 1.12, scan selections were saved by IP. Register that key as a
+      // one-shot fallback so selecting the new stable hostname preserves the
+      // existing pairing and migrates it on the first credential lookup.
+      credentialStore.registerFallback(
+        normalizeDeviceKey(address),
+        normalizeDeviceKey(formatConnectionString(device.address, device.port)),
+      );
+    }
+
     onSelectDevice({
-      address: buildConnectionString(device),
+      address,
       name: device.name,
       platform: device.platform,
       version: device.version,

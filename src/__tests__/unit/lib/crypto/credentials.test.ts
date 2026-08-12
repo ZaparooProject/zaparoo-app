@@ -64,6 +64,28 @@ describe("SecureCredentialStore", () => {
     expect(await store.get("unknown-device")).toBeNull();
   });
 
+  it("should migrate credentials from a registered fallback key", async () => {
+    await store.set("192.168.1.50", creds);
+    store.registerFallback("mister.local", "192.168.1.50");
+
+    const migratedResult = await store.get("mister.local");
+
+    const fresh = new SecureCredentialStore();
+    const persistedResult = await fresh.get("mister.local");
+
+    expect(migratedResult).toEqual(creds);
+    expect(persistedResult).toEqual(creds);
+  });
+
+  it("should prefer credentials already stored under the stable key", async () => {
+    const stableCreds = { ...creds, clientId: "stable-client" };
+    await store.set("192.168.1.50", creds);
+    await store.set("mister.local", stableCreds);
+    store.registerFallback("mister.local", "192.168.1.50");
+
+    expect(await store.get("mister.local")).toEqual(stableCreds);
+  });
+
   it("should remove key on delete", async () => {
     await store.set("192.168.1.50", creds);
     await store.delete("192.168.1.50");

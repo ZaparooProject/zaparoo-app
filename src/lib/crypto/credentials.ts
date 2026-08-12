@@ -17,6 +17,7 @@ export interface CredentialStore {
   set(deviceKey: string, creds: StoredCredentials): Promise<void>;
   delete(deviceKey: string): Promise<boolean>;
   list(): Promise<Array<{ deviceKey: string; creds: StoredCredentials }>>;
+  registerFallback(deviceKey: string, fallbackKey: string): void;
 }
 
 // Normalize an address to a stable device key for credential lookup.
@@ -41,6 +42,11 @@ export class SecureCredentialStore implements CredentialStore {
   // after a later set on the same key, even when callers fire them in parallel
   // (e.g., removeDeviceHistory + a re-pair flow on the same address).
   private readonly keyLocks = new Map<string, Promise<unknown>>();
+  // Network discovery now prefers stable mDNS hostnames, but older app builds
+  // stored credentials by IP address. A scan can register the discovered IP as
+  // a one-shot fallback before switching to the hostname; get() copies a match
+  // to the stable key so subsequent launches no longer need the fallback.
+  private readonly fallbackKeys = new Map<string, Set<string>>();
 
   constructor() {
     this.initPromise = SecureStorage.setKeyPrefix(KEY_PREFIX);
@@ -58,13 +64,53 @@ export class SecureCredentialStore implements CredentialStore {
     return next;
   }
 
+  registerFallback(deviceKey: string, fallbackKey: string): void {
+    if (deviceKey === fallbackKey) return;
+    const keys = this.fallbackKeys.get(deviceKey) ?? new Set<string>();
+    keys.add(fallbackKey);
+    this.fallbackKeys.set(deviceKey, keys);
+  }
+
   async get(deviceKey: string): Promise<StoredCredentials | null> {
     await this.initPromise;
     return this.enqueue(deviceKey, async () => {
+      const fallbackKeys = this.fallbackKeys.get(deviceKey) ?? [];
+      this.fallbackKeys.delete(deviceKey);
+
       try {
         const value = await SecureStorage.get(deviceKey, false);
-        if (value == null) return null;
-        return value as unknown as StoredCredentials;
+        if (value != null) {
+          return value as unknown as StoredCredentials;
+        }
+
+        for (const fallbackKey of fallbackKeys) {
+          const fallbackValue = await SecureStorage.get(fallbackKey, false);
+          if (fallbackValue == null) continue;
+
+          const credentials = fallbackValue as unknown as StoredCredentials;
+          try {
+            await SecureStorage.set(
+              deviceKey,
+              credentials as unknown as Record<string, unknown>,
+            );
+          } catch (err) {
+            // The recovered credentials still work for this connection even if
+            // persisting the stable hostname alias fails. Report the migration
+            // failure without forcing an unnecessary re-pair.
+            logger.error(
+              "Failed to migrate credentials to stable device key",
+              err,
+              {
+                category: "storage",
+                action: "migrateCredentials",
+                severity: "error",
+              },
+            );
+          }
+          return credentials;
+        }
+
+        return null;
       } catch (err) {
         logger.error("SecureStorage.get failed", err, {
           category: "storage",
