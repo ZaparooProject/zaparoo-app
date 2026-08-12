@@ -3,6 +3,7 @@ import { render, screen, waitFor, act } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { NetworkScanModal } from "@/components/NetworkScanModal";
 import { Capacitor } from "@capacitor/core";
+import { credentialStore } from "@/lib/crypto/credentials";
 import {
   __simulateDeviceDiscovered,
   type ZeroConfService,
@@ -343,10 +344,11 @@ describe("NetworkScanModal", () => {
   });
 
   describe("device selection", () => {
-    it("should select normalized hostname when device clicked", async () => {
+    it("should select normalized hostname and register its IP credential fallback", async () => {
       // Arrange
       const user = userEvent.setup();
       const onSelectDevice = vi.fn();
+      const registerFallback = vi.spyOn(credentialStore, "registerFallback");
 
       render(
         <NetworkScanModal
@@ -383,6 +385,10 @@ describe("NetworkScanModal", () => {
       // Assert
       expect(onSelectDevice).toHaveBeenCalledWith(
         expect.objectContaining({ address: "mister.local", name: "MiSTer" }),
+      );
+      expect(registerFallback).toHaveBeenCalledWith(
+        "mister.local",
+        "192.168.1.100",
       );
     });
 
