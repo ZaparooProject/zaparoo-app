@@ -1000,6 +1000,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // Fetch tokens information
     CoreAPI.tokens()
       .then((v) => {
+        if (clientRequestToken !== currentClientRequestToken.current) {
+          return;
+        }
         // Skip processing if request was cancelled (stale, aborted, or connection reset)
         if (isCancelled(v)) {
           logger.log("Tokens request was cancelled, skipping");
@@ -1016,6 +1019,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         }
       })
       .catch((e) => {
+        // A request from the previous socket can reject after reconnection has
+        // already restored CONNECTED. Ignore that stale failure rather than
+        // showing an error for the healthy replacement connection.
+        if (clientRequestToken !== currentClientRequestToken.current) {
+          return;
+        }
         logger.error("Failed to get tokens information:", e);
         if (
           useStatusStore.getState().connectionState ===
