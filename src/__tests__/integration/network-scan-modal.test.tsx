@@ -348,7 +348,9 @@ describe("NetworkScanModal", () => {
       // Arrange
       const user = userEvent.setup();
       const onSelectDevice = vi.fn();
-      const registerFallback = vi.spyOn(credentialStore, "registerFallback");
+      const registerFallback = vi
+        .spyOn(credentialStore, "registerFallback")
+        .mockImplementation(() => undefined);
 
       render(
         <NetworkScanModal
