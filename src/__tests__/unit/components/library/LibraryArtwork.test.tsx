@@ -38,5 +38,38 @@ describe("LibraryArtwork", () => {
     await waitFor(() =>
       expect(onAvailabilityChange).toHaveBeenCalledWith(false),
     );
+    expect(requestLibraryImage).toHaveBeenCalledTimes(1);
+  });
+
+  it("should retry one transient connection failure", async () => {
+    vi.mocked(requestLibraryImage)
+      .mockRejectedValueOnce(new Error("Request timeout"))
+      .mockResolvedValueOnce({
+        url: "data:image/webp;base64,AAAA",
+        typeTag: "property:image-boxart",
+      });
+    const onAvailabilityChange = vi.fn();
+
+    render(
+      <LibraryArtwork
+        entry={{
+          mediaId: 42,
+          name: "Super Game",
+          path: "/roms/SNES/Super Game.sfc",
+          type: "media",
+          systemId: "SNES",
+        }}
+        systemId="SNES"
+        targetDeviceAddress="device-a"
+        maxSize={320}
+        priority="thumbnail"
+        onAvailabilityChange={onAvailabilityChange}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(onAvailabilityChange).toHaveBeenCalledWith(true),
+    );
+    expect(requestLibraryImage).toHaveBeenCalledTimes(2);
   });
 });

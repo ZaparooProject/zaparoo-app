@@ -161,6 +161,29 @@ export function isMissingMediaImageError(error: unknown): boolean {
   );
 }
 
+export function isMediaIdLookupError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes("media id not found") ||
+    message.includes("media not found") ||
+    message.includes("no media found")
+  );
+}
+
+export function isTransientApiConnectionError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return [
+    "request timeout",
+    "request requires active connection",
+    "connection reset",
+    "connection closed",
+    "transport send error",
+    "websocket",
+    "socket is not open",
+    "readystate",
+  ].some((token) => message.includes(token));
+}
+
 export function isMissingMediaDatabaseSetupError(error: unknown): boolean {
   const message = getErrorMessage(error).toLowerCase();
   return (
@@ -436,15 +459,15 @@ class CoreApi {
     }
   }
 
-  // Method to reset all internal state - useful when reconnecting to a different device
-  reset() {
-    logger.log("Resetting CoreAPI state");
-
+  /**
+   * Reject requests sent through a socket that is no longer usable. Requests
+   * created after this point remain in requestQueue for the next connection.
+   */
+  handleDisconnect() {
     const cancelError = new RequestCancelledError(
       "Request cancelled: connection reset",
     );
 
-    // Clear all pending response promises with rejection
     Object.keys(this.responsePool).forEach((id) => {
       const responsePromise = this.responsePool[id];
       if (!responsePromise) return;
@@ -452,12 +475,19 @@ class CoreApi {
         clearTimeout(responsePromise.timeoutId);
       }
       responsePromise.reject(cancelError);
-    });
-
-    // Clear response pool contents
-    Object.keys(this.responsePool).forEach((id) => {
       delete this.responsePool[id];
     });
+    this.pendingWriteId = null;
+  }
+
+  // Method to reset all internal state - useful when reconnecting to a different device
+  reset() {
+    logger.log("Resetting CoreAPI state");
+    this.handleDisconnect();
+
+    const cancelError = new RequestCancelledError(
+      "Request cancelled: connection reset",
+    );
 
     // Clear request queue
     this.requestQueue.forEach((queued) => {

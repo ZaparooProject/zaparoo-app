@@ -1,10 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { CoreAPI } from "../../../lib/coreApi";
 
 describe("CoreAPI reset method", () => {
   beforeEach(() => {
     // Clear any existing state
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    CoreAPI.reset();
   });
 
   it("should clear response pool and cancel pending requests", async () => {
@@ -26,6 +30,40 @@ describe("CoreAPI reset method", () => {
 
     // The pending request should be rejected with cancellation error
     await expect(pendingPromise).rejects.toThrow(
+      "Request cancelled: connection reset",
+    );
+  });
+
+  it("should reject sent requests on disconnect without clearing reconnect queue", async () => {
+    let isConnected = true;
+    const mockWsManager = {
+      send: vi.fn(),
+      get isConnected() {
+        return isConnected;
+      },
+    } satisfies Parameters<typeof CoreAPI.setWsInstance>[0];
+
+    CoreAPI.setWsInstance(mockWsManager);
+    const sentPromise = CoreAPI.version();
+
+    isConnected = false;
+    CoreAPI.handleDisconnect();
+    const queuedPromise = CoreAPI.media();
+
+    await expect(sentPromise).rejects.toThrow(
+      "Request cancelled: connection reset",
+    );
+
+    isConnected = true;
+    CoreAPI.flushQueue();
+
+    expect(mockWsManager.send).toHaveBeenCalledTimes(2);
+    expect(mockWsManager.send).toHaveBeenLastCalledWith(
+      expect.stringContaining('"method":"media"'),
+    );
+
+    CoreAPI.reset();
+    await expect(queuedPromise).rejects.toThrow(
       "Request cancelled: connection reset",
     );
   });

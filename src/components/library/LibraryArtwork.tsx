@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FileIcon } from "lucide-react";
+import { isTransientApiConnectionError } from "@/lib/coreApi";
 import { requestLibraryImage } from "@/lib/libraryImages";
 import { LIBRARY_QUERY_KEYS, mediaRefKey } from "@/lib/libraryMedia";
 import type { MediaBrowseEntry } from "@/lib/models";
@@ -44,7 +45,8 @@ export function LibraryArtwork(props: {
     enabled,
     staleTime: Infinity,
     gcTime: 2 * 60 * 1000,
-    retry: false,
+    retry: (failureCount, error) =>
+      failureCount < 1 && isTransientApiConnectionError(error),
   });
 
   useEffect(() => {

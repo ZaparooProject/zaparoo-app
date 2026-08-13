@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { WebSocketTransport } from "../../../../lib/transport/WebSocketTransport";
 import type { TransportState } from "../../../../lib/transport/types";
+import { logger } from "@/lib/logger";
 
 /**
  * MockWebSocket that allows manual triggering of WebSocket events.
@@ -159,6 +160,34 @@ describe("WebSocketTransport lifecycle", () => {
 
       expect(transport.state).toBe("reconnecting");
       expect(stateChanges).toContain("reconnecting");
+
+      transport.destroy();
+    });
+
+    it("should log close metadata for unexpected disconnects", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+      });
+      const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+
+      transport.connect();
+      const ws = MockWebSocket.getLatest()!;
+      ws.simulateOpen();
+      ws.simulateClose(1006, "network lost");
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        "[Transport:test-device] WebSocket closed",
+        undefined,
+        expect.objectContaining({
+          action: "socket-close",
+          category: "websocket",
+          code: 1006,
+          reason: "network lost",
+          severity: "warning",
+          wasClean: false,
+        }),
+      );
 
       transport.destroy();
     });
