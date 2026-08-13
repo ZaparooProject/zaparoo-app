@@ -1,9 +1,14 @@
+import type { ComponentType } from "react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import { CoreAPI } from "@/lib/coreApi";
+
+type RouteComponent = ComponentType;
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
 const { componentRef, mockNavigate, mockCoreState } = vi.hoisted(() => ({
-  componentRef: { current: null as any },
+  componentRef: { current: null as RouteComponent | null },
   mockNavigate: vi.fn(),
   mockCoreState: {
     version: "2.15.0",
@@ -34,6 +39,7 @@ const mockActiveProfile = vi.fn();
 
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
+    reset: vi.fn(),
     playtimeLimits: () => mockPlaytimeLimits(),
     playtime: () => mockPlaytime(),
     playtimeLimitsUpdate: (params: any) => mockPlaytimeLimitsUpdate(params),
@@ -91,11 +97,16 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
 import "@/routes/settings.play-controls";
 
 // The component will be captured by the mock
-const getPlayControlsSettings = () => componentRef.current;
+const getPlayControlsSettings = () => {
+  if (!componentRef.current)
+    throw new Error("Route component was not captured");
+  return componentRef.current;
+};
 
 describe("Settings Play Controls Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    CoreAPI.reset();
     mockCoreState.version = "2.15.0";
     mockCoreState.versionPending = false;
 
@@ -291,13 +302,14 @@ describe("Settings Play Controls Route", () => {
 
   describe("API interactions", () => {
     it("should persist the require-profile setting on supported Core", async () => {
+      const user = userEvent.setup();
       mockCoreState.version = "2.16.0";
       renderComponent();
 
       const requireProfileToggle = await screen.findByRole("checkbox", {
         name: "settings.core.profiles.requireForLaunch",
       });
-      fireEvent.click(requireProfileToggle);
+      await user.click(requireProfileToggle);
 
       await waitFor(() => {
         expect(mockSettingsUpdate).toHaveBeenCalledWith({
