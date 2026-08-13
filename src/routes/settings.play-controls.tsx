@@ -23,6 +23,8 @@ import {
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useClientCapability } from "@/hooks/useClientCapability";
 import { ClientCapability, type UpdateSettingsRequest } from "@/lib/models";
+import { ProfileManager } from "@/components/ProfileManager";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
 
 export const Route = createFileRoute("/settings/play-controls")({
   component: PlayControlsSettings,
@@ -38,6 +40,12 @@ export function PlayControlsSettings() {
   const canWriteCoreSettings = useClientCapability(
     ClientCapability.SettingsWrite,
   );
+  const canManageProfiles = useClientCapability(
+    ClientCapability.ProfilesManage,
+  );
+  const { available: profilesAvailable } = useCoreFeature("profiles", {
+    requireKnownSupport: true,
+  });
 
   const isConnecting =
     connectionState === ConnectionState.CONNECTING ||
@@ -319,6 +327,18 @@ export function PlayControlsSettings() {
       }
     >
       <div className="flex flex-col gap-6">
+        <ProfileManager
+          connected={connected}
+          canManage={canManageProfiles}
+          canWriteSettings={canWriteCoreSettings}
+          requireForLaunch={coreSettings?.profilesRequireForLaunch ?? false}
+          settingsLoading={isConnecting || (connected && !coreSettings)}
+          onRequireForLaunchChange={(profilesRequireForLaunch) => {
+            updateCoreSetting.mutate({ profilesRequireForLaunch });
+          }}
+          available={profilesAvailable}
+        />
+
         <section className="flex flex-col gap-3">
           <h2 className="text-foreground text-lg font-semibold">
             {t("settings.core.playtime.title")}

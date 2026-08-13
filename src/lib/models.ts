@@ -38,6 +38,12 @@ export enum Method {
   ReadersWriteCancel = "readers.write.cancel",
   Version = "version",
   Playtime = "playtime",
+  Profiles = "profiles",
+  ProfilesNew = "profiles.new",
+  ProfilesUpdate = "profiles.update",
+  ProfilesDelete = "profiles.delete",
+  ProfilesActive = "profiles.active",
+  ProfilesSwitch = "profiles.switch",
   PlaytimeLimits = "settings.playtime.limits",
   PlaytimeLimitsUpdate = "settings.playtime.limits.update",
   Inbox = "inbox",
@@ -100,6 +106,63 @@ export interface LaunchRequest {
 
 export interface WriteRequest {
   text: string;
+}
+
+export interface Profile {
+  profileId: string;
+  name: string;
+  role: ClientRole;
+  switchId?: string;
+  hasPin: boolean;
+  limitsEnabled?: boolean;
+  dailyLimit?: string;
+  sessionLimit?: string;
+  lastUsedAt?: number;
+  createdAt: number;
+  lastUpdatedAt: number;
+}
+
+export interface ProfilesResponse {
+  profiles: Profile[];
+}
+
+export type ActiveProfile = Pick<
+  Profile,
+  | "profileId"
+  | "name"
+  | "role"
+  | "hasPin"
+  | "limitsEnabled"
+  | "dailyLimit"
+  | "sessionLimit"
+>;
+
+export interface NewProfileRequest {
+  name: string;
+  role?: ClientRole;
+  pin?: string;
+  limitsEnabled?: boolean;
+  dailyLimit?: string;
+  sessionLimit?: string;
+}
+
+export interface UpdateProfileRequest {
+  profileId: string;
+  name?: string;
+  role?: ClientRole;
+  pin?: string;
+  clearPin?: boolean;
+  limitsEnabled?: boolean;
+  dailyLimit?: string;
+  sessionLimit?: string;
+  clearLimits?: boolean;
+  regenerateSwitchId?: boolean;
+}
+
+export interface SwitchProfileRequest {
+  profileId?: string;
+  switchId?: string;
+  pin?: string;
 }
 
 export interface InputKeyboardRequest {
@@ -438,6 +501,8 @@ export interface SettingsResponse {
   launchGuardTimeout?: number;
   launchGuardDelay?: number;
   launchGuardRequireConfirm?: boolean;
+  profilesRequireForLaunch?: boolean;
+  profilesSwapData?: boolean;
 }
 
 export interface UpdateSettingsRequest {
@@ -456,6 +521,8 @@ export interface UpdateSettingsRequest {
   launchGuardTimeout?: number;
   launchGuardDelay?: number;
   launchGuardRequireConfirm?: boolean;
+  profilesRequireForLaunch?: boolean;
+  profilesSwapData?: boolean;
 }
 
 export interface TokenResponse {

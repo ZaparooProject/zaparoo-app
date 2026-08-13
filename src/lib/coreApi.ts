@@ -36,6 +36,12 @@ import {
   MediaTagsUpdateResponse,
   Method,
   Notification,
+  type ActiveProfile,
+  type NewProfileRequest,
+  type Profile,
+  type ProfilesResponse,
+  type SwitchProfileRequest,
+  type UpdateProfileRequest,
   PlaytimeLimitsConfig,
   PlaytimeLimitsUpdateRequest,
   PlaytimeStatus,
@@ -1521,6 +1527,111 @@ class CoreApi {
           reject(error);
         });
     });
+  }
+
+  async profiles(): Promise<ProfilesResponse> {
+    try {
+      const result = await this.callConnected(Method.Profiles);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Profiles request was cancelled");
+      }
+      return result as ProfilesResponse;
+    } catch (error) {
+      logger.error("Profiles API call failed:", error, {
+        category: "api",
+        action: "profiles",
+        severity: "error",
+      });
+      throw error;
+    }
+  }
+
+  async newProfile(params: NewProfileRequest): Promise<Profile> {
+    try {
+      const result = await this.callConnected(Method.ProfilesNew, params);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("New profile request was cancelled");
+      }
+      return result as Profile;
+    } catch (error) {
+      logger.error("New profile API call failed:", error, {
+        category: "api",
+        action: "newProfile",
+        severity: "error",
+      });
+      throw error;
+    }
+  }
+
+  async updateProfile(params: UpdateProfileRequest): Promise<Profile> {
+    try {
+      const result = await this.callConnected(Method.ProfilesUpdate, params);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Update profile request was cancelled");
+      }
+      return result as Profile;
+    } catch (error) {
+      logger.error("Update profile API call failed:", error, {
+        category: "api",
+        action: "updateProfile",
+        severity: "error",
+      });
+      throw error;
+    }
+  }
+
+  async deleteProfile(profileId: string): Promise<void> {
+    try {
+      const result = await this.callConnected(Method.ProfilesDelete, {
+        profileId,
+      });
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Delete profile request was cancelled");
+      }
+    } catch (error) {
+      logger.error("Delete profile API call failed:", error, {
+        category: "api",
+        action: "deleteProfile",
+        severity: "error",
+      });
+      throw error;
+    }
+  }
+
+  async activeProfile(): Promise<ActiveProfile | null> {
+    try {
+      const result = await this.callConnected(Method.ProfilesActive);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Active profile request was cancelled");
+      }
+      return result as ActiveProfile | null;
+    } catch (error) {
+      logger.error("Active profile API call failed:", error, {
+        category: "api",
+        action: "activeProfile",
+        severity: "error",
+      });
+      throw error;
+    }
+  }
+
+  async switchProfile(
+    params?: SwitchProfileRequest,
+  ): Promise<ActiveProfile | null> {
+    try {
+      const result = await this.callConnected(Method.ProfilesSwitch, params);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Switch profile request was cancelled");
+      }
+      return result as ActiveProfile | null;
+    } catch (error) {
+      logger.error("Switch profile API call failed:", error, {
+        category: "api",
+        action: "switchProfile",
+        severity: "error",
+      });
+      throw error;
+    }
   }
 
   async settingsAuthClaim(

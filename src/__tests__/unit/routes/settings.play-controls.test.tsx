@@ -1,10 +1,19 @@
+import type { ComponentType } from "react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import { render, screen, fireEvent, waitFor } from "@/test-utils";
+import { CoreAPI } from "@/lib/coreApi";
+
+type RouteComponent = ComponentType;
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
-const { componentRef, mockNavigate } = vi.hoisted(() => ({
-  componentRef: { current: null as any },
+const { componentRef, mockNavigate, mockCoreState } = vi.hoisted(() => ({
+  componentRef: { current: null as RouteComponent | null },
   mockNavigate: vi.fn(),
+  mockCoreState: {
+    version: "2.15.0",
+    versionPending: false,
+  },
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -25,14 +34,19 @@ const mockPlaytime = vi.fn();
 const mockPlaytimeLimitsUpdate = vi.fn();
 const mockSettings = vi.fn();
 const mockSettingsUpdate = vi.fn();
+const mockProfiles = vi.fn();
+const mockActiveProfile = vi.fn();
 
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
+    reset: vi.fn(),
     playtimeLimits: () => mockPlaytimeLimits(),
     playtime: () => mockPlaytime(),
     playtimeLimitsUpdate: (params: any) => mockPlaytimeLimitsUpdate(params),
     settings: () => mockSettings(),
     settingsUpdate: (params: any) => mockSettingsUpdate(params),
+    profiles: () => mockProfiles(),
+    activeProfile: () => mockActiveProfile(),
   },
 }));
 
@@ -45,10 +59,12 @@ vi.mock("@/lib/store", async (importOriginal) => {
       selector({
         connected: true,
         connectionState: "CONNECTED",
+        coreVersion: mockCoreState.version,
+        coreVersionPending: mockCoreState.versionPending,
         currentClient: {
           paired: true,
           role: "admin",
-          capabilities: ["settings.write"],
+          capabilities: ["profiles.manage", "settings.write"],
         },
         safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
         gamesIndex: {
@@ -81,11 +97,18 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
 import "@/routes/settings.play-controls";
 
 // The component will be captured by the mock
-const getPlayControlsSettings = () => componentRef.current;
+const getPlayControlsSettings = () => {
+  if (!componentRef.current)
+    throw new Error("Route component was not captured");
+  return componentRef.current;
+};
 
 describe("Settings Play Controls Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    CoreAPI.reset();
+    mockCoreState.version = "2.15.0";
+    mockCoreState.versionPending = false;
 
     mockPlaytimeLimits.mockResolvedValue({
       enabled: true,
@@ -117,9 +140,12 @@ describe("Settings Play Controls Route", () => {
       launchGuardTimeout: 15,
       launchGuardDelay: 0,
       launchGuardRequireConfirm: true,
+      profilesRequireForLaunch: false,
     });
 
     mockSettingsUpdate.mockResolvedValue({});
+    mockProfiles.mockResolvedValue({ profiles: [] });
+    mockActiveProfile.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -275,6 +301,34 @@ describe("Settings Play Controls Route", () => {
   });
 
   describe("API interactions", () => {
+    it("should hide the require-profile setting on unsupported Core", () => {
+      mockCoreState.version = "2.15.0";
+      renderComponent();
+
+      expect(
+        screen.queryByRole("checkbox", {
+          name: "settings.core.profiles.requireForLaunch",
+        }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should persist the require-profile setting on supported Core", async () => {
+      const user = userEvent.setup();
+      mockCoreState.version = "2.16.0";
+      renderComponent();
+
+      const requireProfileToggle = await screen.findByRole("checkbox", {
+        name: "settings.core.profiles.requireForLaunch",
+      });
+      await user.click(requireProfileToggle);
+
+      await waitFor(() => {
+        expect(mockSettingsUpdate).toHaveBeenCalledWith({
+          profilesRequireForLaunch: true,
+        });
+      });
+    });
+
     it("should call playtime limits API", async () => {
       renderComponent();
 
