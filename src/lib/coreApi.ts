@@ -36,6 +36,12 @@ import {
   MediaTagsUpdateResponse,
   Method,
   Notification,
+  type ActiveProfile,
+  type NewProfileRequest,
+  type Profile,
+  type ProfilesResponse,
+  type SwitchProfileRequest,
+  type UpdateProfileRequest,
   PlaytimeLimitsConfig,
   PlaytimeLimitsUpdateRequest,
   PlaytimeStatus,
@@ -1521,6 +1527,94 @@ class CoreApi {
           reject(error);
         });
     });
+  }
+
+  async profiles(): Promise<ProfilesResponse> {
+    try {
+      return (await this.callConnected(Method.Profiles)) as ProfilesResponse;
+    } catch (error) {
+      logger.error("Profiles API call failed:", error, {
+        category: "api",
+        action: "profiles",
+        severity: "error",
+      });
+      throw error;
+    }
+  }
+
+  async newProfile(params: NewProfileRequest): Promise<Profile> {
+    try {
+      return (await this.callConnected(Method.ProfilesNew, params)) as Profile;
+    } catch (error) {
+      logger.error("New profile API call failed:", error, {
+        category: "api",
+        action: "newProfile",
+        severity: "error",
+      });
+      throw error;
+    }
+  }
+
+  async updateProfile(params: UpdateProfileRequest): Promise<Profile> {
+    try {
+      return (await this.callConnected(
+        Method.ProfilesUpdate,
+        params,
+      )) as Profile;
+    } catch (error) {
+      logger.error("Update profile API call failed:", error, {
+        category: "api",
+        action: "updateProfile",
+        severity: "error",
+      });
+      throw error;
+    }
+  }
+
+  async deleteProfile(profileId: string): Promise<void> {
+    try {
+      await this.callConnected(Method.ProfilesDelete, { profileId });
+    } catch (error) {
+      logger.error("Delete profile API call failed:", error, {
+        category: "api",
+        action: "deleteProfile",
+        severity: "error",
+      });
+      throw error;
+    }
+  }
+
+  async activeProfile(): Promise<ActiveProfile | null> {
+    try {
+      return (await this.callConnected(
+        Method.ProfilesActive,
+      )) as ActiveProfile | null;
+    } catch (error) {
+      logger.error("Active profile API call failed:", error, {
+        category: "api",
+        action: "activeProfile",
+        severity: "error",
+      });
+      throw error;
+    }
+  }
+
+  async switchProfile(
+    params?: SwitchProfileRequest,
+  ): Promise<ActiveProfile | null> {
+    try {
+      return (await this.callConnected(
+        Method.ProfilesSwitch,
+        params,
+      )) as ActiveProfile | null;
+    } catch (error) {
+      logger.error("Switch profile API call failed:", error, {
+        category: "api",
+        action: "switchProfile",
+        severity: "error",
+      });
+      throw error;
+    }
   }
 
   async settingsAuthClaim(

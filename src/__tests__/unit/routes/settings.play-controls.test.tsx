@@ -25,6 +25,8 @@ const mockPlaytime = vi.fn();
 const mockPlaytimeLimitsUpdate = vi.fn();
 const mockSettings = vi.fn();
 const mockSettingsUpdate = vi.fn();
+const mockProfiles = vi.fn();
+const mockActiveProfile = vi.fn();
 
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
@@ -33,6 +35,8 @@ vi.mock("@/lib/coreApi", () => ({
     playtimeLimitsUpdate: (params: any) => mockPlaytimeLimitsUpdate(params),
     settings: () => mockSettings(),
     settingsUpdate: (params: any) => mockSettingsUpdate(params),
+    profiles: () => mockProfiles(),
+    activeProfile: () => mockActiveProfile(),
   },
 }));
 
@@ -48,7 +52,7 @@ vi.mock("@/lib/store", async (importOriginal) => {
         currentClient: {
           paired: true,
           role: "admin",
-          capabilities: ["settings.write"],
+          capabilities: ["profiles.manage", "settings.write"],
         },
         safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
         gamesIndex: {
@@ -117,9 +121,12 @@ describe("Settings Play Controls Route", () => {
       launchGuardTimeout: 15,
       launchGuardDelay: 0,
       launchGuardRequireConfirm: true,
+      profilesRequireForLaunch: false,
     });
 
     mockSettingsUpdate.mockResolvedValue({});
+    mockProfiles.mockResolvedValue({ profiles: [] });
+    mockActiveProfile.mockResolvedValue(null);
   });
 
   afterEach(() => {

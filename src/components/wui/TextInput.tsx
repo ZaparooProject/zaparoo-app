@@ -30,6 +30,10 @@ export function TextInput(props: {
     | "decimal"
     | "search";
   maxLength?: number;
+  min?: number;
+  max?: number;
+  step?: number;
+  required?: boolean;
   onKeyUp?: KeyboardEventHandler<HTMLInputElement>;
   ref?: React.RefObject<HTMLInputElement | null>;
   /** Error message to display below the input */
@@ -70,6 +74,10 @@ export function TextInput(props: {
             type={type}
             inputMode={props.inputMode}
             maxLength={props.maxLength}
+            min={props.min}
+            max={props.max}
+            step={props.step}
+            required={props.required}
             aria-invalid={!!props.error}
             aria-describedby={props.error ? errorId : undefined}
             className={classNames(
