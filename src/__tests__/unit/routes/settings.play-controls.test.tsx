@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import { render, screen, fireEvent, waitFor } from "@/test-utils";
 import { CoreAPI } from "@/lib/coreApi";
 
 type RouteComponent = ComponentType;
@@ -301,6 +301,17 @@ describe("Settings Play Controls Route", () => {
   });
 
   describe("API interactions", () => {
+    it("should hide the require-profile setting on unsupported Core", () => {
+      mockCoreState.version = "2.15.0";
+      renderComponent();
+
+      expect(
+        screen.queryByRole("checkbox", {
+          name: "settings.core.profiles.requireForLaunch",
+        }),
+      ).not.toBeInTheDocument();
+    });
+
     it("should persist the require-profile setting on supported Core", async () => {
       const user = userEvent.setup();
       mockCoreState.version = "2.16.0";
