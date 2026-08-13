@@ -35,16 +35,18 @@ describe("CoreAPI reset method", () => {
   });
 
   it("should reject sent requests on disconnect without clearing reconnect queue", async () => {
+    let isConnected = true;
     const mockWsManager = {
       send: vi.fn(),
-      isConnected: true,
-      destroy: vi.fn(),
-    };
+      get isConnected() {
+        return isConnected;
+      },
+    } satisfies Parameters<typeof CoreAPI.setWsInstance>[0];
 
-    CoreAPI.setWsInstance(mockWsManager as any);
+    CoreAPI.setWsInstance(mockWsManager);
     const sentPromise = CoreAPI.version();
 
-    mockWsManager.isConnected = false;
+    isConnected = false;
     CoreAPI.handleDisconnect();
     const queuedPromise = CoreAPI.media();
 
@@ -52,7 +54,7 @@ describe("CoreAPI reset method", () => {
       "Request cancelled: connection reset",
     );
 
-    mockWsManager.isConnected = true;
+    isConnected = true;
     CoreAPI.flushQueue();
 
     expect(mockWsManager.send).toHaveBeenCalledTimes(2);
