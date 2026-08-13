@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { WebSocketTransport } from "../../../../lib/transport/WebSocketTransport";
 import type { TransportState } from "../../../../lib/transport/types";
-import { logger } from "../../../../lib/logger";
+import { logger } from "@/lib/logger";
 
 /**
  * MockWebSocket that allows manual triggering of WebSocket events.
@@ -181,8 +181,10 @@ describe("WebSocketTransport lifecycle", () => {
         undefined,
         expect.objectContaining({
           action: "socket-close",
+          category: "websocket",
           code: 1006,
           reason: "network lost",
+          severity: "warning",
           wasClean: false,
         }),
       );

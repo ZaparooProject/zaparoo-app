@@ -67,9 +67,8 @@ describe("LibraryArtwork", () => {
       />,
     );
 
-    await waitFor(
-      () => expect(onAvailabilityChange).toHaveBeenCalledWith(true),
-      { timeout: 3000 },
+    await waitFor(() =>
+      expect(onAvailabilityChange).toHaveBeenCalledWith(true),
     );
     expect(requestLibraryImage).toHaveBeenCalledTimes(2);
   });

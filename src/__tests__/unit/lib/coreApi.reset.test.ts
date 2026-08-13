@@ -1,10 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { CoreAPI } from "../../../lib/coreApi";
 
 describe("CoreAPI reset method", () => {
   beforeEach(() => {
     // Clear any existing state
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    CoreAPI.reset();
   });
 
   it("should clear response pool and cancel pending requests", async () => {
