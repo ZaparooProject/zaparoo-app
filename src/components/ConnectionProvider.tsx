@@ -50,6 +50,7 @@ import {
 } from "@/lib/models";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
+import { clearQueuedLibraryImages } from "@/lib/libraryImages";
 import { LIBRARY_QUERY_KEYS } from "@/lib/libraryMedia";
 import { satisfies as versionSatisfies } from "@/lib/coreVersion";
 import {
@@ -925,7 +926,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     queryClient.invalidateQueries({
       queryKey: [LIBRARY_QUERY_KEYS.meta],
     });
-    queryClient.removeQueries({ queryKey: [LIBRARY_QUERY_KEYS.image] });
+    void queryClient.invalidateQueries({
+      queryKey: [LIBRARY_QUERY_KEYS.image],
+      refetchType: "active",
+    });
 
     const fetchMediaState = (retryDelayMs: number) => {
       const scheduledFor = currentConnectionId.current;
@@ -1151,6 +1155,26 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           if (connection.state !== "connected") {
             invalidateCurrentClientRequest();
             setCurrentClient(null);
+            CoreAPI.handleDisconnect();
+            void queryClient.cancelQueries({
+              queryKey: [LIBRARY_QUERY_KEYS.image],
+            });
+            const imageRequests = clearQueuedLibraryImages();
+            if (
+              imageRequests.activeRequests > 0 ||
+              imageRequests.queuedRequests > 0
+            ) {
+              logger.error(
+                "Library image requests cancelled after connection reset",
+                undefined,
+                {
+                  category: "queue",
+                  action: "library-images-disconnect",
+                  severity: "info",
+                  ...imageRequests,
+                },
+              );
+            }
           }
 
           // Each new connect attempt starts unverified — clear stale signals
@@ -1332,6 +1356,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setPairingRequired,
     setDeviceHistory,
     mapTransportState,
+    queryClient,
     // Note: handleConnectionOpen, processNotification, and t are accessed via refs
     // to prevent this effect from re-running when those callbacks change
   ]);

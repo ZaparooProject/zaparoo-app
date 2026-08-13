@@ -90,6 +90,7 @@ vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
     setWsInstance: vi.fn(),
     flushQueue: vi.fn(),
+    handleDisconnect: vi.fn(),
     reset: vi.fn(),
     processReceived: vi.fn().mockResolvedValue(null),
     media: vi.fn().mockResolvedValue({ database: {}, active: [] }),
@@ -2266,6 +2267,27 @@ describe("connection event handling", () => {
     },
   );
 
+  it("should cancel pending RPCs and image queries while reconnecting", () => {
+    const cancelSpy = vi.spyOn(QueryClient.prototype, "cancelQueries");
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+    cancelSpy.mockClear();
+
+    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      state: "reconnecting",
+      hasData: true,
+      hasConnectedBefore: true,
+    });
+
+    expect(CoreAPI.handleDisconnect).toHaveBeenCalledTimes(1);
+    expect(cancelSpy).toHaveBeenCalledWith({ queryKey: ["mediaImage"] });
+    cancelSpy.mockRestore();
+  });
+
   it("should clear stale client capabilities while reconnecting", () => {
     useStatusStore.setState({
       currentClient: {
@@ -2298,7 +2320,6 @@ describe("connection event handling", () => {
 
   it("should invalidate library queries after reconnecting", async () => {
     const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
-    const removeSpy = vi.spyOn(QueryClient.prototype, "removeQueries");
 
     render(
       <ConnectionProvider>
@@ -2306,7 +2327,6 @@ describe("connection event handling", () => {
       </ConnectionProvider>,
     );
     invalidateSpy.mockClear();
-    removeSpy.mockClear();
 
     capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
       state: "connected",
@@ -2323,9 +2343,11 @@ describe("connection event handling", () => {
     });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["mediaBrowse"] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["mediaMeta"] });
-    expect(removeSpy).toHaveBeenCalledWith({ queryKey: ["mediaImage"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["mediaImage"],
+      refetchType: "active",
+    });
     invalidateSpy.mockRestore();
-    removeSpy.mockRestore();
   });
 
   it("should fetch inbox messages when connected Core supports inbox", async () => {

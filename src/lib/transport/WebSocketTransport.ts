@@ -354,8 +354,15 @@ export class WebSocketTransport implements Transport {
       void this.initEncryption();
     };
 
-    this.ws.onclose = () => {
-      logger.debug(`[Transport:${this.deviceId}] WebSocket closed`);
+    this.ws.onclose = (event) => {
+      logger.error(`[Transport:${this.deviceId}] WebSocket closed`, undefined, {
+        category: "websocket",
+        action: "socket-close",
+        severity: "warning",
+        code: event.code,
+        reason: event.reason || "none",
+        wasClean: event.wasClean,
+      });
       this.clearConnectionTimeout();
       this.heartReset();
       // Silent close while attempting encrypted handshake — server likely
@@ -870,8 +877,14 @@ export class WebSocketTransport implements Transport {
 
           // Start pong timeout - if no response, force disconnect
           this.pongTimeoutId = setTimeout(() => {
-            logger.warn(
+            logger.error(
               `[Transport:${this.deviceId}] Pong timeout - forcing disconnect`,
+              undefined,
+              {
+                category: "websocket",
+                action: "heartbeat-timeout",
+                severity: "warning",
+              },
             );
             // Close and null handlers before triggering disconnect to prevent
             // onclose from firing a duplicate handleDisconnection()
@@ -907,7 +920,15 @@ export class WebSocketTransport implements Transport {
   private startConnectionTimeout(): void {
     this.clearConnectionTimeout();
     this.connectionTimer = setTimeout(() => {
-      logger.warn(`[Transport:${this.deviceId}] Connection timeout`);
+      logger.error(
+        `[Transport:${this.deviceId}] Connection timeout`,
+        undefined,
+        {
+          category: "websocket",
+          action: "connection-timeout",
+          severity: "warning",
+        },
+      );
       if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
         this.ws.close();
       }

@@ -1,5 +1,6 @@
 import {
   CoreAPI,
+  isMediaIdLookupError,
   isMissingMediaImageError,
   isRequestCancelledError,
 } from "@/lib/coreApi";
@@ -30,21 +31,45 @@ interface QueuedImageRequest {
 export type LibraryImageResult = CachedLibraryImage;
 
 const MAX_CONCURRENT_IMAGE_REQUESTS = 2;
+const THUMBNAIL_START_INTERVAL_MS = 800;
 let activeRequests = 0;
 let thumbnailsPaused = false;
+let lastThumbnailStartedAt: number | null = null;
+let thumbnailStartTimer: ReturnType<typeof setTimeout> | undefined;
 const queue: QueuedImageRequest[] = [];
+
+function scheduleThumbnailDrain(delay: number): void {
+  if (thumbnailStartTimer) return;
+  thumbnailStartTimer = setTimeout(() => {
+    thumbnailStartTimer = undefined;
+    drainQueue();
+  }, delay);
+}
 
 function drainQueue(): void {
   while (activeRequests < MAX_CONCURRENT_IMAGE_REQUESTS && queue.length > 0) {
-    const request = queue.shift();
+    const request = queue[0];
     if (!request) return;
     if (request.signal?.aborted) {
+      queue.shift();
       request.removeAbortListener();
       request.reject(
         new RequestCancelledError("Media image request cancelled"),
       );
       continue;
     }
+    if (request.priority === "thumbnail") {
+      const elapsed = Date.now() - (lastThumbnailStartedAt ?? 0);
+      if (
+        lastThumbnailStartedAt !== null &&
+        elapsed < THUMBNAIL_START_INTERVAL_MS
+      ) {
+        scheduleThumbnailDrain(THUMBNAIL_START_INTERVAL_MS - elapsed);
+        return;
+      }
+      lastThumbnailStartedAt = Date.now();
+    }
+    queue.shift();
 
     activeRequests++;
     void request
@@ -123,6 +148,12 @@ function requestParams(
   return { ...shared, system, path: entry.path };
 }
 
+function throwIfImageRequestCancelled(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new RequestCancelledError("Media image request cancelled");
+  }
+}
+
 async function fetchImage(
   entry: MediaBrowseEntry,
   fallbackSystemId: string,
@@ -141,11 +172,17 @@ async function fetchImage(
 
   let response: MediaImageResponse;
   try {
-    response = await CoreAPI.mediaImage(primary, signal);
+    // Once sent, keep this scheduler slot occupied until Core settles the RPC.
+    // Aborting only the local promise would let rapid scrolling exceed the
+    // physical concurrency limit while Core continues processing old requests.
+    response = await CoreAPI.mediaImage(primary, undefined);
+    throwIfImageRequestCancelled(signal);
   } catch (error) {
+    throwIfImageRequestCancelled(signal);
     if (isRequestCancelledError(error)) throw error;
     if (isMissingMediaImageError(error)) return null;
-    if (entry.mediaId === undefined) throw error;
+    if (entry.mediaId === undefined || !isMediaIdLookupError(error))
+      throw error;
     const fallback = requestParams(
       entry,
       fallbackSystemId,
@@ -155,8 +192,10 @@ async function fetchImage(
     );
     if (!fallback) throw error;
     try {
-      response = await CoreAPI.mediaImage(fallback, signal);
+      response = await CoreAPI.mediaImage(fallback, undefined);
+      throwIfImageRequestCancelled(signal);
     } catch (fallbackError) {
+      throwIfImageRequestCancelled(signal);
       if (isMissingMediaImageError(fallbackError)) return null;
       throw fallbackError;
     }
@@ -185,7 +224,7 @@ function persistentCacheKey(
   )}\u0000size:${maxSize}`;
 }
 
-export function requestLibraryImage(
+export async function requestLibraryImage(
   entry: MediaBrowseEntry,
   fallbackSystemId: string,
   options: {
@@ -196,25 +235,23 @@ export function requestLibraryImage(
     signal?: AbortSignal;
   },
 ): Promise<LibraryImageResult | null> {
+  const cacheKey = persistentCacheKey(
+    entry,
+    fallbackSystemId,
+    options.imageTypes,
+    options.maxSize,
+  );
+  if (cacheKey) {
+    const cached = await readLibraryImageCache(
+      options.targetDeviceAddress,
+      cacheKey,
+    );
+    throwIfImageRequestCancelled(options.signal);
+    if (cached.hit) return cached.value;
+  }
+
   return scheduleImageRequest(
     async () => {
-      const cacheKey = persistentCacheKey(
-        entry,
-        fallbackSystemId,
-        options.imageTypes,
-        options.maxSize,
-      );
-      if (cacheKey) {
-        const cached = await readLibraryImageCache(
-          options.targetDeviceAddress,
-          cacheKey,
-        );
-        if (options.signal?.aborted) {
-          throw new RequestCancelledError("Media image request cancelled");
-        }
-        if (cached.hit) return cached.value;
-      }
-
       const result = await fetchImage(
         entry,
         fallbackSystemId,
@@ -248,11 +285,24 @@ export function resumeLibraryThumbnails(): void {
   drainQueue();
 }
 
-export function clearQueuedLibraryImages(): void {
+export function clearQueuedLibraryImages(): {
+  activeRequests: number;
+  queuedRequests: number;
+} {
+  if (thumbnailStartTimer) {
+    clearTimeout(thumbnailStartTimer);
+    thumbnailStartTimer = undefined;
+  }
+  lastThumbnailStartedAt = null;
+  const requestCounts = {
+    activeRequests,
+    queuedRequests: queue.length,
+  };
   while (queue.length > 0) {
     const request = queue.shift();
     if (!request) continue;
     request.removeAbortListener();
     request.reject(new RequestCancelledError("Media image queue cleared"));
   }
+  return requestCounts;
 }

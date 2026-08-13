@@ -30,6 +30,38 @@ describe("CoreAPI reset method", () => {
     );
   });
 
+  it("should reject sent requests on disconnect without clearing reconnect queue", async () => {
+    const mockWsManager = {
+      send: vi.fn(),
+      isConnected: true,
+      destroy: vi.fn(),
+    };
+
+    CoreAPI.setWsInstance(mockWsManager as any);
+    const sentPromise = CoreAPI.version();
+
+    mockWsManager.isConnected = false;
+    CoreAPI.handleDisconnect();
+    const queuedPromise = CoreAPI.media();
+
+    await expect(sentPromise).rejects.toThrow(
+      "Request cancelled: connection reset",
+    );
+
+    mockWsManager.isConnected = true;
+    CoreAPI.flushQueue();
+
+    expect(mockWsManager.send).toHaveBeenCalledTimes(2);
+    expect(mockWsManager.send).toHaveBeenLastCalledWith(
+      expect.stringContaining('"method":"media"'),
+    );
+
+    CoreAPI.reset();
+    await expect(queuedPromise).rejects.toThrow(
+      "Request cancelled: connection reset",
+    );
+  });
+
   it("should clear request queue", async () => {
     // Set up a mock WebSocket manager that's not connected
     const mockWsManager = {
