@@ -1531,7 +1531,11 @@ class CoreApi {
 
   async profiles(): Promise<ProfilesResponse> {
     try {
-      return (await this.callConnected(Method.Profiles)) as ProfilesResponse;
+      const result = await this.callConnected(Method.Profiles);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Profiles request was cancelled");
+      }
+      return result as ProfilesResponse;
     } catch (error) {
       logger.error("Profiles API call failed:", error, {
         category: "api",
@@ -1544,7 +1548,11 @@ class CoreApi {
 
   async newProfile(params: NewProfileRequest): Promise<Profile> {
     try {
-      return (await this.callConnected(Method.ProfilesNew, params)) as Profile;
+      const result = await this.callConnected(Method.ProfilesNew, params);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("New profile request was cancelled");
+      }
+      return result as Profile;
     } catch (error) {
       logger.error("New profile API call failed:", error, {
         category: "api",
@@ -1557,10 +1565,11 @@ class CoreApi {
 
   async updateProfile(params: UpdateProfileRequest): Promise<Profile> {
     try {
-      return (await this.callConnected(
-        Method.ProfilesUpdate,
-        params,
-      )) as Profile;
+      const result = await this.callConnected(Method.ProfilesUpdate, params);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Update profile request was cancelled");
+      }
+      return result as Profile;
     } catch (error) {
       logger.error("Update profile API call failed:", error, {
         category: "api",
@@ -1573,7 +1582,12 @@ class CoreApi {
 
   async deleteProfile(profileId: string): Promise<void> {
     try {
-      await this.callConnected(Method.ProfilesDelete, { profileId });
+      const result = await this.callConnected(Method.ProfilesDelete, {
+        profileId,
+      });
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Delete profile request was cancelled");
+      }
     } catch (error) {
       logger.error("Delete profile API call failed:", error, {
         category: "api",
@@ -1586,9 +1600,11 @@ class CoreApi {
 
   async activeProfile(): Promise<ActiveProfile | null> {
     try {
-      return (await this.callConnected(
-        Method.ProfilesActive,
-      )) as ActiveProfile | null;
+      const result = await this.callConnected(Method.ProfilesActive);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Active profile request was cancelled");
+      }
+      return result as ActiveProfile | null;
     } catch (error) {
       logger.error("Active profile API call failed:", error, {
         category: "api",
@@ -1603,10 +1619,11 @@ class CoreApi {
     params?: SwitchProfileRequest,
   ): Promise<ActiveProfile | null> {
     try {
-      return (await this.callConnected(
-        Method.ProfilesSwitch,
-        params,
-      )) as ActiveProfile | null;
+      const result = await this.callConnected(Method.ProfilesSwitch, params);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Switch profile request was cancelled");
+      }
+      return result as ActiveProfile | null;
     } catch (error) {
       logger.error("Switch profile API call failed:", error, {
         category: "api",

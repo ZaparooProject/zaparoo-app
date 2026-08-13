@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor } from "@/test-utils";
+import { render, screen, waitFor, within } from "@/test-utils";
 import { ProfileManager } from "@/components/ProfileManager";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
@@ -49,8 +49,10 @@ describe("ProfileManager", () => {
       role: profile.role,
       hasPin: profile.hasPin,
     });
-    vi.mocked(CoreAPI.newProfile).mockResolvedValue(profile);
-    vi.mocked(CoreAPI.switchProfile).mockResolvedValue(null);
+    vi.mocked(CoreAPI.newProfile).mockReset().mockResolvedValue(profile);
+    vi.mocked(CoreAPI.updateProfile).mockReset().mockResolvedValue(profile);
+    vi.mocked(CoreAPI.deleteProfile).mockReset().mockResolvedValue();
+    vi.mocked(CoreAPI.switchProfile).mockReset().mockResolvedValue(null);
     useStatusStore.setState({ writeQueue: "", writeOpen: false });
   });
 
@@ -213,6 +215,81 @@ describe("ProfileManager", () => {
     ).toBeInTheDocument();
   });
 
+  it("should remove an existing member PIN when requested", async () => {
+    const user = userEvent.setup();
+    renderManager();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "settings.core.profiles.openProfile",
+      }),
+    );
+    await user.click(
+      screen.getByRole("radio", {
+        name: "settings.core.profiles.pinRemove",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "save" }));
+
+    await waitFor(() => {
+      expect(CoreAPI.updateProfile).toHaveBeenCalledWith({
+        profileId: "profile-1",
+        name: "Kid A",
+        role: "member",
+        clearLimits: true,
+        clearPin: true,
+      });
+    });
+  });
+
+  it("should reset existing profile cards after confirmation", async () => {
+    const user = userEvent.setup();
+    renderManager();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "settings.core.profiles.openProfile",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.core.profiles.resetCards",
+      }),
+    );
+    const resetDialog = screen.getByRole("dialog", {
+      name: "settings.core.profiles.resetCardsTitle",
+    });
+    await user.click(
+      within(resetDialog).getByRole("button", {
+        name: "settings.core.profiles.resetCards",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(CoreAPI.updateProfile).toHaveBeenCalledWith({
+        profileId: "profile-1",
+        regenerateSwitchId: true,
+      });
+    });
+  });
+
+  it("should show a retry action when profiles fail to load", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.profiles)
+      .mockRejectedValueOnce(new Error("unavailable"))
+      .mockResolvedValueOnce({ profiles: [profile] });
+
+    renderManager();
+
+    await user.click(await screen.findByRole("button", { name: "retry" }));
+
+    expect(
+      await screen.findByRole("button", {
+        name: "settings.core.profiles.openProfile",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("should queue profile switch card contents", async () => {
     const user = userEvent.setup();
     renderManager();
@@ -233,6 +310,146 @@ describe("ProfileManager", () => {
     );
   });
 
+  it("should update an existing profile with enabled limits", async () => {
+    const user = userEvent.setup();
+    renderManager();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "settings.core.profiles.openProfile",
+      }),
+    );
+    await user.click(
+      screen.getByRole("radio", {
+        name: "settings.core.profiles.limitsOn",
+      }),
+    );
+    const dailyGroup = screen.getByRole("group", {
+      name: "settings.core.profiles.dailyLimit",
+    });
+    const sessionGroup = screen.getByRole("group", {
+      name: "settings.core.profiles.sessionLimit",
+    });
+    await user.clear(
+      within(dailyGroup).getByLabelText("settings.core.playtime.hours"),
+    );
+    await user.type(
+      within(dailyGroup).getByLabelText("settings.core.playtime.hours"),
+      "2",
+    );
+    await user.clear(
+      within(dailyGroup).getByLabelText("settings.core.playtime.minutes"),
+    );
+    await user.type(
+      within(dailyGroup).getByLabelText("settings.core.playtime.minutes"),
+      "30",
+    );
+    await user.clear(
+      within(sessionGroup).getByLabelText("settings.core.playtime.hours"),
+    );
+    await user.type(
+      within(sessionGroup).getByLabelText("settings.core.playtime.hours"),
+      "1",
+    );
+    await user.clear(
+      within(sessionGroup).getByLabelText("settings.core.playtime.minutes"),
+    );
+    await user.type(
+      within(sessionGroup).getByLabelText("settings.core.playtime.minutes"),
+      "15",
+    );
+    await user.click(screen.getByRole("button", { name: "save" }));
+
+    await waitFor(() => {
+      expect(CoreAPI.updateProfile).toHaveBeenCalledWith({
+        profileId: "profile-1",
+        name: "Kid A",
+        role: "member",
+        clearLimits: true,
+        limitsEnabled: true,
+        dailyLimit: "2h30m",
+        sessionLimit: "1h15m",
+      });
+    });
+  });
+
+  it("should delete an existing profile after confirmation", async () => {
+    const user = userEvent.setup();
+    renderManager();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "settings.core.profiles.openProfile",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "settings.core.profiles.delete" }),
+    );
+    const deleteDialog = screen.getByRole("dialog", {
+      name: "settings.core.profiles.deleteTitle",
+    });
+    await user.click(
+      within(deleteDialog).getByRole("button", {
+        name: "settings.core.profiles.delete",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(CoreAPI.deleteProfile).toHaveBeenCalledWith("profile-1");
+    });
+  });
+
+  it("should report a profile save failure without closing the editor", async () => {
+    const user = userEvent.setup();
+    vi.mocked(CoreAPI.updateProfile).mockRejectedValueOnce(
+      new Error("save failed"),
+    );
+    renderManager();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "settings.core.profiles.openProfile",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "save" }));
+
+    await waitFor(() => {
+      expect(CoreAPI.updateProfile).toHaveBeenCalled();
+    });
+    expect(
+      screen.getByRole("dialog", { name: "settings.core.profiles.edit" }),
+    ).toBeInTheDocument();
+  });
+
+  it("should switch to the shared profile without a PIN", async () => {
+    const user = userEvent.setup();
+    renderManager(false);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "settings.core.profiles.switch",
+      }),
+    );
+    const switchDialog = screen.getByRole("dialog", {
+      name: "settings.core.profiles.switch",
+    });
+    expect(
+      within(switchDialog).getByRole("button", {
+        name: "settings.core.profiles.shared",
+        pressed: true,
+      }),
+    ).toBeInTheDocument();
+    await user.click(
+      within(switchDialog).getByRole("button", {
+        name: "settings.core.profiles.switch",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(CoreAPI.switchProfile).toHaveBeenCalledWith();
+    });
+  });
+
   it("should require PIN when switching to protected profile", async () => {
     const user = userEvent.setup();
     renderManager(false);
@@ -247,14 +464,24 @@ describe("ProfileManager", () => {
         name: "Kid A settings.core.profiles.active",
       }),
     );
+    expect(
+      screen.getByRole("button", {
+        name: "Kid A settings.core.profiles.active",
+        pressed: true,
+      }),
+    ).toBeInTheDocument();
     await user.type(
       screen.getByLabelText("settings.core.profiles.pin"),
       "1234",
     );
-    const switchButtons = screen.getAllByRole("button", {
+    const switchDialog = screen.getByRole("dialog", {
       name: "settings.core.profiles.switch",
     });
-    await user.click(switchButtons.at(-1)!);
+    await user.click(
+      within(switchDialog).getByRole("button", {
+        name: "settings.core.profiles.switch",
+      }),
+    );
 
     await waitFor(() => {
       expect(CoreAPI.switchProfile).toHaveBeenCalledWith({

@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CoreAPI } from "@/lib/coreApi";
+import { RequestCancelledError } from "@/lib/errors";
 
 describe("CoreAPI profile methods", () => {
   let mockSend: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    CoreAPI.reset();
     mockSend = vi.fn();
     CoreAPI.setWsInstance({
       isConnected: true,
@@ -86,5 +88,26 @@ describe("CoreAPI profile methods", () => {
 
     expect(sentRequest().method).toBe("profiles.switch");
     expect(sentRequest().params).toBeUndefined();
+  });
+
+  it("should reject cancelled profile responses", async () => {
+    const promise = CoreAPI.profiles();
+    const request = sentRequest();
+    const payload = JSON.parse(mockSend.mock.calls[0]![0] as string) as {
+      id: string;
+    };
+
+    await CoreAPI.processReceived(
+      new MessageEvent("message", {
+        data: JSON.stringify({
+          jsonrpc: "2.0",
+          id: payload.id,
+          result: { cancelled: true },
+        }),
+      }),
+    );
+
+    expect(request.method).toBe("profiles");
+    await expect(promise).rejects.toBeInstanceOf(RequestCancelledError);
   });
 });

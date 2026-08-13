@@ -2,9 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
-const { componentRef, mockNavigate } = vi.hoisted(() => ({
+const { componentRef, mockNavigate, mockCoreState } = vi.hoisted(() => ({
   componentRef: { current: null as any },
   mockNavigate: vi.fn(),
+  mockCoreState: {
+    version: "2.15.0",
+    versionPending: false,
+  },
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -49,6 +53,8 @@ vi.mock("@/lib/store", async (importOriginal) => {
       selector({
         connected: true,
         connectionState: "CONNECTED",
+        coreVersion: mockCoreState.version,
+        coreVersionPending: mockCoreState.versionPending,
         currentClient: {
           paired: true,
           role: "admin",
@@ -90,6 +96,8 @@ const getPlayControlsSettings = () => componentRef.current;
 describe("Settings Play Controls Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCoreState.version = "2.15.0";
+    mockCoreState.versionPending = false;
 
     mockPlaytimeLimits.mockResolvedValue({
       enabled: true,
@@ -282,6 +290,22 @@ describe("Settings Play Controls Route", () => {
   });
 
   describe("API interactions", () => {
+    it("should persist the require-profile setting on supported Core", async () => {
+      mockCoreState.version = "2.16.0";
+      renderComponent();
+
+      const requireProfileToggle = await screen.findByRole("checkbox", {
+        name: "settings.core.profiles.requireForLaunch",
+      });
+      fireEvent.click(requireProfileToggle);
+
+      await waitFor(() => {
+        expect(mockSettingsUpdate).toHaveBeenCalledWith({
+          profilesRequireForLaunch: true,
+        });
+      });
+    });
+
     it("should call playtime limits API", async () => {
       renderComponent();
 

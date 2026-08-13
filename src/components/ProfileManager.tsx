@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { PlusIcon } from "lucide-react";
+import classNames from "classnames";
 import toast from "react-hot-toast";
 import { CoreAPI } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
@@ -25,6 +26,7 @@ import { formatDuration, parseDuration } from "@/lib/utils";
 
 const PROFILE_QUERY_KEY = ["profiles"];
 const ACTIVE_PROFILE_QUERY_KEY = ["profiles", "active"];
+const PIN_PATTERN = /^\d{4,8}$/;
 
 type LimitsMode = "inherit" | "on" | "off";
 type PinMode = "keep" | "change" | "remove";
@@ -307,7 +309,7 @@ export function ProfileManager(props: {
   const validationError = useMemo(() => {
     if (!editor) return null;
     if (!editor.name.trim()) return t("settings.core.profiles.nameRequired");
-    if (editor.pin && !/^\d{4,8}$/.test(editor.pin)) {
+    if (editor.pin && !PIN_PATTERN.test(editor.pin)) {
       return t("settings.core.profiles.pinInvalid");
     }
     const adminNeedsPin =
@@ -355,7 +357,11 @@ export function ProfileManager(props: {
     switchProfile.hasPin;
   const canSubmitSwitch =
     switchProfile !== null &&
-    (!selectedSwitchNeedsPin || /^\d{4,8}$/.test(switchPin));
+    (!selectedSwitchNeedsPin || PIN_PATTERN.test(switchPin));
+  const selectedProfileId =
+    switchProfile !== null && switchProfile !== "shared"
+      ? switchProfile.profileId
+      : null;
 
   return (
     <section className="flex flex-col gap-3">
@@ -574,7 +580,7 @@ export function ProfileManager(props: {
                 required={editorPinRequired}
                 autoComplete="new-password"
                 error={
-                  editor.pin.length > 0 && !/^\d{4,8}$/.test(editor.pin)
+                  editor.pin.length > 0 && !PIN_PATTERN.test(editor.pin)
                     ? t("settings.core.profiles.pinInvalid")
                     : undefined
                 }
@@ -790,7 +796,11 @@ export function ProfileManager(props: {
             <button
               type="button"
               onClick={() => selectSwitchProfile("shared")}
-              className="border-bd-outline flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+              aria-pressed={switchProfile === "shared"}
+              className={classNames(
+                "border-bd-outline flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
+                { "bg-white/10": switchProfile === "shared" },
+              )}
             >
               <span>{t("settings.core.profiles.shared")}</span>
               {activeQuery.data === null && (
@@ -804,7 +814,13 @@ export function ProfileManager(props: {
                 type="button"
                 key={profile.profileId}
                 onClick={() => selectSwitchProfile(profile)}
-                className="border-bd-outline flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                aria-pressed={selectedProfileId === profile.profileId}
+                className={classNames(
+                  "border-bd-outline flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
+                  {
+                    "bg-white/10": selectedProfileId === profile.profileId,
+                  },
+                )}
               >
                 <span>{profile.name}</span>
                 {activeQuery.data?.profileId === profile.profileId && (
