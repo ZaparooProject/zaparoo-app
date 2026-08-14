@@ -23,7 +23,8 @@ import {
 } from "@/lib/purchasesSetup";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
-import { DatabaseIcon, PlayIcon, preloadZapLogo } from "./lib/images";
+import { DatabaseIcon, PlayIcon } from "./lib/images";
+import { preloadZapLogo } from "./lib/zapLogo";
 import { ConnectionProvider } from "./components/ConnectionProvider";
 import { ReconnectingIndicator } from "./components/ReconnectingIndicator";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";

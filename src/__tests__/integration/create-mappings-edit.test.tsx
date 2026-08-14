@@ -144,17 +144,9 @@ vi.mock("react-hot-toast", () => ({
   },
 }));
 
-vi.mock("@/lib/writeNfcHook", () => ({
+vi.mock("@/lib/writeNfcHook", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/writeNfcHook")>()),
   useNfcWriter: () => mockNfcWriter,
-  WriteMethod: {
-    Auto: "auto",
-    LocalNFC: "local",
-    RemoteReader: "remote",
-  },
-  WriteAction: {
-    Write: "write",
-    Read: "read",
-  },
 }));
 
 vi.mock("@capacitor-mlkit/barcode-scanning", () => ({
