@@ -19,6 +19,9 @@ vi.mock("@/lib/coreApi", () => ({
 // Mock stores
 const mockUseStatusStore = vi.fn();
 const mockUsePreferencesStore = vi.fn();
+const { mockIsNativePluginAvailable } = vi.hoisted(() => ({
+  mockIsNativePluginAvailable: vi.fn(),
+}));
 
 vi.mock("@/lib/store", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
@@ -30,6 +33,10 @@ vi.mock("@/lib/store", async (importOriginal) => {
 
 vi.mock("@/lib/preferencesStore", () => ({
   usePreferencesStore: (selector: any) => mockUsePreferencesStore(selector),
+}));
+
+vi.mock("@/lib/capacitorBridge", () => ({
+  isNativePluginAvailable: mockIsNativePluginAvailable,
 }));
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
@@ -94,6 +101,8 @@ describe("Settings Advanced Route", () => {
   const defaultPreferencesState = {
     showFilenames: false,
     setShowFilenames: vi.fn(),
+    appBadgeEnabled: true,
+    setAppBadgeEnabled: vi.fn(),
   };
 
   beforeEach(() => {
@@ -113,6 +122,7 @@ describe("Settings Advanced Route", () => {
       readersAutoDetect: false,
     });
     mockSettingsUpdate.mockResolvedValue({});
+    mockIsNativePluginAvailable.mockReturnValue(false);
 
     mockUseStatusStore.mockImplementation((selector) =>
       selector(defaultStoreState),
@@ -276,6 +286,29 @@ describe("Settings Advanced Route", () => {
       expect(errorReporting).toBeDisabled();
       expect(debugLogging).toBeDisabled();
       expect(showFilenames).toBeEnabled();
+    });
+
+    it("should update app icon badge preference on native platforms", async () => {
+      const user = userEvent.setup();
+      const setAppBadgeEnabled = vi.fn();
+      mockIsNativePluginAvailable.mockImplementation(
+        (pluginName: string) => pluginName === "Badge",
+      );
+      mockUsePreferencesStore.mockImplementation((selector) =>
+        selector({
+          ...defaultPreferencesState,
+          setAppBadgeEnabled,
+        }),
+      );
+
+      renderComponent();
+
+      const appBadgeToggle = await screen.findByRole("checkbox", {
+        name: /settings.advanced.appIconBadges/i,
+      });
+      await user.click(appBadgeToggle);
+
+      expect(setAppBadgeEnabled).toHaveBeenCalledWith(false);
     });
 
     it("should call setShowFilenames when show filenames is toggled", async () => {

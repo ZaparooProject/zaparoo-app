@@ -19,6 +19,7 @@ import { SlideModal } from "@/components/SlideModal";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { Button } from "@/components/wui/Button";
 import { ClientCapability } from "@/lib/models";
+import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 import {
   isPurchasePreviewEnabled,
   usePurchasePreviewStore,
@@ -41,6 +42,8 @@ export function AdvancedSettings() {
   );
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
   const setShowFilenames = usePreferencesStore((s) => s.setShowFilenames);
+  const appBadgeEnabled = usePreferencesStore((s) => s.appBadgeEnabled);
+  const setAppBadgeEnabled = usePreferencesStore((s) => s.setAppBadgeEnabled);
   const purchasePreviewState = usePurchasePreviewStore((state) => state.state);
   const setPurchasePreviewState = usePurchasePreviewStore(
     (state) => state.setPreviewState,
@@ -152,6 +155,22 @@ export function AdvancedSettings() {
           value={showFilenames}
           setValue={setShowFilenames}
         />
+
+        {isNativePluginAvailable("Badge") && (
+          <ToggleSwitch
+            label={
+              <span className="flex items-center">
+                {t("settings.advanced.appIconBadges")}
+                <SettingHelp
+                  title={t("settings.advanced.appIconBadges")}
+                  description={t("settings.advanced.appIconBadgesHelp")}
+                />
+              </span>
+            }
+            value={appBadgeEnabled}
+            setValue={setAppBadgeEnabled}
+          />
+        )}
 
         {isPurchasePreviewEnabled() && (
           <div className="flex flex-col">

@@ -105,6 +105,7 @@ export interface PreferencesState {
   // Display settings
   showFilenames: boolean;
   systemNameRegion: SystemNameRegionPreference;
+  appBadgeEnabled: boolean;
 
   // Accessibility settings
   hapticsEnabled: boolean;
@@ -169,6 +170,7 @@ export interface PreferencesActions {
   setLogLevelFilters: (filters: PreferencesState["logLevelFilters"]) => void;
   setShowFilenames: (value: boolean) => void;
   setSystemNameRegion: (value: SystemNameRegionPreference) => void;
+  setAppBadgeEnabled: (value: boolean) => void;
   setHapticsEnabled: (value: boolean) => void;
   setTextZoomLevel: (value: number) => void;
   setAccessibleLists: (value: boolean) => void;
@@ -219,6 +221,7 @@ const DEFAULT_PREFERENCES: Omit<
   },
   showFilenames: false,
   systemNameRegion: "auto",
+  appBadgeEnabled: true,
   hapticsEnabled: true,
   textZoomLevel: 1.0,
   accessibleLists: false,
@@ -343,6 +346,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
       setLogLevelFilters: (filters) => set({ logLevelFilters: filters }),
       setShowFilenames: (value) => set({ showFilenames: value }),
       setSystemNameRegion: (value) => set({ systemNameRegion: value }),
+      setAppBadgeEnabled: (value) => set({ appBadgeEnabled: value }),
       setHapticsEnabled: (value) => set({ hapticsEnabled: value }),
       setTextZoomLevel: (value) => set({ textZoomLevel: value }),
       setAccessibleLists: (value) => set({ accessibleLists: value }),
@@ -369,6 +373,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
         logLevelFilters: state.logLevelFilters,
         showFilenames: state.showFilenames,
         systemNameRegion: state.systemNameRegion,
+        appBadgeEnabled: state.appBadgeEnabled,
         hapticsEnabled: state.hapticsEnabled,
         textZoomLevel: state.textZoomLevel,
         accessibleLists: state.accessibleLists,

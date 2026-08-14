@@ -44,6 +44,14 @@
       "run": "Ejecutar",
       "mainNavigation": "Navegación principal"
     },
+    "appBadge": {
+      "title": "Indicadores en el icono",
+      "description": "Zaparoo puede mostrar el número de mensajes de la bandeja de entrada en el icono de la aplicación. iOS lo describe como permiso para enviar notificaciones, pero Zaparoo solo solicita permiso para actualizar el indicador. No solicita alertas ni sonidos de notificación.",
+      "noThanks": "No, gracias",
+      "continue": "Continuar",
+      "requesting": "Solicitando...",
+      "deniedDescription": "Los indicadores del icono están bloqueados en los ajustes de iOS. Abre Ajustes, selecciona Zaparoo y activa Notificaciones e Indicadores."
+    },
     "library": {
       "title": "Biblioteca",
       "collections": "Colecciones",
@@ -857,6 +865,8 @@
         "debugLoggingHelp": "Genera archivos de registro más detallados en el dispositivo conectado. Puede resultar útil para solucionar problemas.",
         "showFilenames": "Mostrar nombres de archivo del contenido multimedia",
         "showFilenamesHelp": "En los resultados de búsqueda de la aplicación, muestra el nombre de archivo completo del contenido multimedia en la lista en lugar de la versión simplificada. Puede resultar útil si utilizas muchas etiquetas personalizadas en los nombres de archivo.",
+        "appIconBadges": "Indicadores en el icono",
+        "appIconBadgesHelp": "Muestra el número de mensajes no leídos de la bandeja de entrada en el icono de la aplicación. iOS puede solicitar permiso para enviar notificaciones porque los indicadores se gestionan mediante los ajustes de notificaciones.",
         "purchasePreview": "Vista previa de compra",
         "purchasePreviewLive": "Estado real",
         "purchasePreviewFree": "Cuenta gratuita",

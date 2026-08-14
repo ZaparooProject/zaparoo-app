@@ -44,6 +44,14 @@
       "run": "Uitvoeren",
       "mainNavigation": "Hoofdnavigatie"
     },
+    "appBadge": {
+      "title": "Badges op het app-icoon",
+      "description": "Zaparoo kan het aantal inboxberichten op het app-icoon tonen. iOS omschrijft dit als toestemming voor meldingen, maar Zaparoo vraagt alleen toestemming om de badge bij te werken. Er wordt geen toestemming gevraagd voor meldingswaarschuwingen of geluiden.",
+      "noThanks": "Nee, bedankt",
+      "continue": "Doorgaan",
+      "requesting": "Aanvragen...",
+      "deniedDescription": "Badges op het app-icoon zijn geblokkeerd in de iOS-instellingen. Open Instellingen, selecteer Zaparoo en schakel Meldingen en Badges in."
+    },
     "library": {
       "title": "Bibliotheek",
       "collections": "Collecties",
@@ -856,6 +864,8 @@
         "debugLoggingHelp": "Schakelt uitgebreidere logbestanden in op het verbonden apparaat. Dit kan nuttig zijn bij het oplossen van problemen.",
         "showFilenames": "Bestandsnamen voor media tonen",
         "showFilenamesHelp": "Toon in zoekresultaten in de app de volledige bestandsnaam van media in plaats van de opgeschoonde versie. Dit kan nuttig zijn als je veel aangepaste tags in je bestandsnamen gebruikt.",
+        "appIconBadges": "Badges op het app-icoon",
+        "appIconBadgesHelp": "Toon het aantal ongelezen inboxberichten op het app-icoon. iOS kan toestemming voor meldingen vragen omdat badges via de meldingsinstellingen worden beheerd.",
         "purchasePreview": "Aankoopvoorbeeld",
         "purchasePreviewLive": "Livestatus",
         "purchasePreviewFree": "Gratis account",
