@@ -9,6 +9,7 @@ export function AppBadgeManager() {
     showPermissionRationale,
     showPermissionDeniedHelp,
     isRequestingPermission,
+    dismissPermissionRationale,
     declinePermissionRationale,
     dismissPermissionDeniedHelp,
     requestPermission,
@@ -18,7 +19,7 @@ export function AppBadgeManager() {
     <>
       <SlideModal
         isOpen={showPermissionRationale}
-        close={declinePermissionRationale}
+        close={dismissPermissionRationale}
         title={t("appBadge.title")}
       >
         <div className="flex flex-col gap-4 p-4">

@@ -44,14 +44,6 @@
       "run": "Exécuter",
       "mainNavigation": "Navigation principale"
     },
-    "appBadge": {
-      "title": "Pastilles sur l’icône",
-      "description": "Zaparoo peut afficher le nombre de messages reçus sur l’icône de l’application. iOS décrit cela comme une autorisation de notification, mais Zaparoo demande uniquement l’autorisation de mettre à jour la pastille. Aucune alerte ni aucun son de notification ne sont demandés.",
-      "noThanks": "Non merci",
-      "continue": "Continuer",
-      "requesting": "Demande en cours...",
-      "deniedDescription": "Les pastilles sur l’icône sont bloquées dans les réglages iOS. Ouvrez Réglages, sélectionnez Zaparoo, puis activez Notifications et Pastilles."
-    },
     "library": {
       "title": "Bibliothèque",
       "collections": "Collections",
@@ -865,8 +857,6 @@
         "debugLoggingHelp": "Active des fichiers journaux plus détaillés sur l’appareil connecté. Peut faciliter le diagnostic des problèmes.",
         "showFilenames": "Afficher les noms de fichiers des médias",
         "showFilenamesHelp": "Dans les résultats de recherche de l’application, affiche le nom de fichier complet du média au lieu de sa version simplifiée. Utile si les noms de vos fichiers contiennent de nombreux tags personnalisés.",
-        "appIconBadges": "Pastilles sur l’icône",
-        "appIconBadgesHelp": "Affiche le nombre de messages non lus sur l’icône de l’application. iOS peut demander l’autorisation d’envoyer des notifications, car les pastilles sont gérées dans les réglages de notifications.",
         "purchasePreview": "Aperçu des achats",
         "purchasePreviewLive": "État réel",
         "purchasePreviewFree": "Compte gratuit",

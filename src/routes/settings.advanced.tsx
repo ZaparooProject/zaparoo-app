@@ -3,6 +3,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
+import { Capacitor } from "@capacitor/core";
 import { CoreAPI } from "@/lib/coreApi";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
@@ -156,21 +157,22 @@ export function AdvancedSettings() {
           setValue={setShowFilenames}
         />
 
-        {isNativePluginAvailable("Badge") && (
-          <ToggleSwitch
-            label={
-              <span className="flex items-center">
-                {t("settings.advanced.appIconBadges")}
-                <SettingHelp
-                  title={t("settings.advanced.appIconBadges")}
-                  description={t("settings.advanced.appIconBadgesHelp")}
-                />
-              </span>
-            }
-            value={appBadgeEnabled}
-            setValue={setAppBadgeEnabled}
-          />
-        )}
+        {Capacitor.getPlatform() === "ios" &&
+          isNativePluginAvailable("Badge") && (
+            <ToggleSwitch
+              label={
+                <span className="flex items-center">
+                  {t("settings.advanced.appIconBadges")}
+                  <SettingHelp
+                    title={t("settings.advanced.appIconBadges")}
+                    description={t("settings.advanced.appIconBadgesHelp")}
+                  />
+                </span>
+              }
+              value={appBadgeEnabled}
+              setValue={setAppBadgeEnabled}
+            />
+          )}
 
         {isPurchasePreviewEnabled() && (
           <div className="flex flex-col">

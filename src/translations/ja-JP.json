@@ -44,14 +44,6 @@
       "run": "実行",
       "mainNavigation": "メインナビゲーション"
     },
-    "appBadge": {
-      "title": "アプリアイコンのバッジ",
-      "description": "Zaparooは、受信トレイのメッセージ数をアプリアイコンに表示できます。iOSでは通知の許可と表示されますが、Zaparooが求めるのはバッジを更新する許可のみです。通知のアラートやサウンドは要求しません。",
-      "noThanks": "使用しない",
-      "continue": "続ける",
-      "requesting": "許可をリクエスト中...",
-      "deniedDescription": "アプリアイコンのバッジはiOSの設定でブロックされています。設定を開いてZaparooを選択し、通知とバッジを有効にしてください。"
-    },
     "library": {
       "title": "ライブラリ",
       "collections": "コレクション",
@@ -865,8 +857,6 @@
         "debugLoggingHelp": "接続中のデバイスで、より詳細なログファイルを有効にします。問題のトラブルシューティングに役立つ場合があります。",
         "showFilenames": "メディアのファイル名を表示",
         "showFilenamesHelp": "アプリ内の検索結果で、整形された名前ではなくメディアの完全なファイル名を一覧に表示します。ファイル名に多数のカスタムタグを使用している場合に便利です。",
-        "appIconBadges": "アプリアイコンのバッジ",
-        "appIconBadgesHelp": "受信トレイの未読件数をアプリアイコンに表示します。バッジは通知設定で管理されるため、iOSから通知の許可を求められる場合があります。",
         "purchasePreview": "購入状態のプレビュー",
         "purchasePreviewLive": "現在の状態",
         "purchasePreviewFree": "無料アカウント",

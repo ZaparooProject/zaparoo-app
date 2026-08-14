@@ -19,8 +19,9 @@ vi.mock("@/lib/coreApi", () => ({
 // Mock stores
 const mockUseStatusStore = vi.fn();
 const mockUsePreferencesStore = vi.fn();
-const { mockIsNativePluginAvailable } = vi.hoisted(() => ({
+const { mockIsNativePluginAvailable, mockGetPlatform } = vi.hoisted(() => ({
   mockIsNativePluginAvailable: vi.fn(),
+  mockGetPlatform: vi.fn(),
 }));
 
 vi.mock("@/lib/store", async (importOriginal) => {
@@ -75,6 +76,7 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: vi.fn(() => false),
+    getPlatform: mockGetPlatform,
   },
 }));
 
@@ -123,6 +125,7 @@ describe("Settings Advanced Route", () => {
     });
     mockSettingsUpdate.mockResolvedValue({});
     mockIsNativePluginAvailable.mockReturnValue(false);
+    mockGetPlatform.mockReturnValue("web");
 
     mockUseStatusStore.mockImplementation((selector) =>
       selector(defaultStoreState),
@@ -288,9 +291,10 @@ describe("Settings Advanced Route", () => {
       expect(showFilenames).toBeEnabled();
     });
 
-    it("should update app icon badge preference on native platforms", async () => {
+    it("should update app icon badge preference on iOS", async () => {
       const user = userEvent.setup();
       const setAppBadgeEnabled = vi.fn();
+      mockGetPlatform.mockReturnValue("ios");
       mockIsNativePluginAvailable.mockImplementation(
         (pluginName: string) => pluginName === "Badge",
       );
@@ -309,6 +313,19 @@ describe("Settings Advanced Route", () => {
       await user.click(appBadgeToggle);
 
       expect(setAppBadgeEnabled).toHaveBeenCalledWith(false);
+    });
+
+    it("should hide the app icon badge preference on Android", () => {
+      mockGetPlatform.mockReturnValue("android");
+      mockIsNativePluginAvailable.mockImplementation(
+        (pluginName: string) => pluginName === "Badge",
+      );
+
+      renderComponent();
+
+      expect(
+        screen.queryByText("settings.advanced.appIconBadges"),
+      ).not.toBeInTheDocument();
     });
 
     it("should call setShowFilenames when show filenames is toggled", async () => {

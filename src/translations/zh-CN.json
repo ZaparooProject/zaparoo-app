@@ -44,14 +44,6 @@
       "run": "运行",
       "mainNavigation": "主导航"
     },
-    "appBadge": {
-      "title": "应用图标角标",
-      "description": "Zaparoo 可以在应用图标上显示收件箱消息数量。iOS 将此描述为通知权限，但 Zaparoo 只会请求更新角标的权限，不会请求显示通知提醒或播放提示音的权限。",
-      "noThanks": "不用了",
-      "continue": "继续",
-      "requesting": "正在请求...",
-      "deniedDescription": "应用图标角标已在 iOS 设置中被阻止。请打开“设置”，选择 Zaparoo，然后启用“通知”和“角标”。"
-    },
     "library": {
       "title": "媒体库",
       "collections": "合集",
@@ -864,8 +856,6 @@
         "debugLoggingHelp": "在已连接的设备上启用更详细的日志文件，有助于排查问题。",
         "showFilenames": "显示媒体文件名",
         "showFilenamesHelp": "在应用内搜索结果中显示媒体的完整文件名，而不是整理后的版本。如果文件名中使用了大量自定义标签，此选项会很有帮助。",
-        "appIconBadges": "应用图标角标",
-        "appIconBadgesHelp": "在应用图标上显示收件箱未读消息数量。由于角标通过通知设置进行管理，iOS 可能会请求通知权限。",
         "purchasePreview": "购买预览",
         "purchasePreviewLive": "实时状态",
         "purchasePreviewFree": "免费账户",

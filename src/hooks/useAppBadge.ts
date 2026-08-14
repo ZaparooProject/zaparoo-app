@@ -16,6 +16,7 @@ export function useAppBadge() {
   );
   const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
   const previousEnabledRef = useRef(appBadgeEnabled);
+  const pendingEnableTransitionRef = useRef(false);
   const rationaleHandledRef = useRef(false);
   const [showPermissionRationale, setShowPermissionRationale] = useState(false);
   const [showPermissionDeniedHelp, setShowPermissionDeniedHelp] =
@@ -26,7 +27,10 @@ export function useAppBadge() {
     const enabledByUser = appBadgeEnabled && !previousEnabledRef.current;
     previousEnabledRef.current = appBadgeEnabled;
     if (enabledByUser) {
+      pendingEnableTransitionRef.current = true;
       rationaleHandledRef.current = false;
+    } else if (!appBadgeEnabled) {
+      pendingEnableTransitionRef.current = false;
     }
 
     if (!isNativePluginAvailable("Badge")) return;
@@ -38,10 +42,16 @@ export function useAppBadge() {
 
       try {
         const support = await Badge.isSupported();
-        if (!support.isSupported || cancelled) return;
+        if (cancelled) return;
+        if (!support.isSupported) {
+          pendingEnableTransitionRef.current = false;
+          return;
+        }
 
         const permission = await Badge.checkPermissions();
         if (cancelled) return;
+
+        const isEnableTransition = pendingEnableTransitionRef.current;
 
         if (!appBadgeEnabled) {
           if (permission.display === "granted") {
@@ -52,24 +62,29 @@ export function useAppBadge() {
 
         if (permission.display === "granted") {
           await Badge.set({ count: inboxCount });
+          if (!cancelled) {
+            pendingEnableTransitionRef.current = false;
+          }
           return;
         }
 
         if (
           isPromptPermission(permission.display) &&
-          (inboxCount > 0 || enabledByUser) &&
+          (inboxCount > 0 || isEnableTransition) &&
           !rationaleHandledRef.current
         ) {
           setShowPermissionRationale(true);
+          pendingEnableTransitionRef.current = false;
           return;
         }
 
         if (permission.display === "denied") {
           setAppBadgeEnabled(false);
-          if (enabledByUser) {
+          if (isEnableTransition) {
             setShowPermissionDeniedHelp(true);
           }
         }
+        pendingEnableTransitionRef.current = false;
       } catch (error) {
         if (cancelled) return;
 
@@ -90,11 +105,15 @@ export function useAppBadge() {
     };
   }, [appBadgeEnabled, inboxCount, setAppBadgeEnabled]);
 
-  const declinePermissionRationale = useCallback(() => {
+  const dismissPermissionRationale = useCallback(() => {
     rationaleHandledRef.current = true;
-    setAppBadgeEnabled(false);
     setShowPermissionRationale(false);
-  }, [setAppBadgeEnabled]);
+  }, []);
+
+  const declinePermissionRationale = useCallback(() => {
+    dismissPermissionRationale();
+    setAppBadgeEnabled(false);
+  }, [dismissPermissionRationale, setAppBadgeEnabled]);
 
   const dismissPermissionDeniedHelp = useCallback(() => {
     setShowPermissionDeniedHelp(false);
@@ -131,6 +150,7 @@ export function useAppBadge() {
     showPermissionRationale,
     showPermissionDeniedHelp,
     isRequestingPermission,
+    dismissPermissionRationale,
     declinePermissionRationale,
     dismissPermissionDeniedHelp,
     requestPermission,

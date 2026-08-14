@@ -154,6 +154,26 @@ describe("useAppBadge", () => {
     expect(Badge.requestPermissions).not.toHaveBeenCalled();
   });
 
+  it("should dismiss the rationale without disabling badges", async () => {
+    vi.mocked(Badge.checkPermissions).mockResolvedValue({ display: "prompt" });
+    useStatusStore.setState({
+      inboxMessages: [mockInboxMessage({ id: 1 })],
+    });
+
+    const { result } = renderHook(() => useAppBadge());
+
+    await waitFor(() => {
+      expect(result.current.showPermissionRationale).toBe(true);
+    });
+
+    act(() => {
+      result.current.dismissPermissionRationale();
+    });
+
+    expect(usePreferencesStore.getState().appBadgeEnabled).toBe(true);
+    expect(result.current.showPermissionRationale).toBe(false);
+  });
+
   it("should show the rationale when badges are re-enabled in settings", async () => {
     vi.mocked(Badge.checkPermissions).mockResolvedValue({ display: "prompt" });
     usePreferencesStore.setState({ appBadgeEnabled: false });
@@ -168,6 +188,90 @@ describe("useAppBadge", () => {
 
     await waitFor(() => {
       expect(result.current.showPermissionRationale).toBe(true);
+    });
+  });
+
+  it("should preserve a re-enable transition across cancelled syncs", async () => {
+    usePreferencesStore.setState({ appBadgeEnabled: false });
+    const { result } = renderHook(() => useAppBadge());
+
+    await waitFor(() => {
+      expect(Badge.set).toHaveBeenCalledWith({ count: 0 });
+    });
+
+    vi.clearAllMocks();
+    let resolveSupport: ((value: { isSupported: boolean }) => void) | undefined;
+    const delayedSupport = new Promise<{ isSupported: boolean }>((resolve) => {
+      resolveSupport = resolve;
+    });
+    vi.mocked(Badge.isSupported)
+      .mockImplementationOnce(() => delayedSupport)
+      .mockResolvedValue({ isSupported: true });
+    vi.mocked(Badge.checkPermissions).mockResolvedValue({ display: "prompt" });
+
+    act(() => {
+      usePreferencesStore.getState().setAppBadgeEnabled(true);
+    });
+    await waitFor(() => {
+      expect(Badge.isSupported).toHaveBeenCalledOnce();
+    });
+
+    act(() => {
+      useStatusStore.setState({
+        inboxMessages: [mockInboxMessage({ id: 1 })],
+      });
+    });
+    act(() => {
+      useStatusStore.setState({ inboxMessages: [] });
+    });
+    act(() => {
+      resolveSupport?.({ isSupported: true });
+    });
+
+    await waitFor(() => {
+      expect(result.current.showPermissionRationale).toBe(true);
+    });
+  });
+
+  it("should preserve denied help across cancelled re-enable syncs", async () => {
+    usePreferencesStore.setState({ appBadgeEnabled: false });
+    const { result } = renderHook(() => useAppBadge());
+
+    await waitFor(() => {
+      expect(Badge.set).toHaveBeenCalledWith({ count: 0 });
+    });
+
+    vi.clearAllMocks();
+    let resolveSupport: ((value: { isSupported: boolean }) => void) | undefined;
+    const delayedSupport = new Promise<{ isSupported: boolean }>((resolve) => {
+      resolveSupport = resolve;
+    });
+    vi.mocked(Badge.isSupported)
+      .mockImplementationOnce(() => delayedSupport)
+      .mockResolvedValue({ isSupported: true });
+    vi.mocked(Badge.checkPermissions).mockResolvedValue({ display: "denied" });
+
+    act(() => {
+      usePreferencesStore.getState().setAppBadgeEnabled(true);
+    });
+    await waitFor(() => {
+      expect(Badge.isSupported).toHaveBeenCalledOnce();
+    });
+
+    act(() => {
+      useStatusStore.setState({
+        inboxMessages: [mockInboxMessage({ id: 1 })],
+      });
+    });
+    act(() => {
+      useStatusStore.setState({ inboxMessages: [] });
+    });
+    act(() => {
+      resolveSupport?.({ isSupported: true });
+    });
+
+    await waitFor(() => {
+      expect(result.current.showPermissionDeniedHelp).toBe(true);
     });
   });
 

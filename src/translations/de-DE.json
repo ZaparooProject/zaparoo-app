@@ -44,14 +44,6 @@
       "run": "Ausführen",
       "mainNavigation": "Hauptnavigation"
     },
-    "appBadge": {
-      "title": "App-Symbol-Badges",
-      "description": "Zaparoo kann die Anzahl der Posteingangsnachrichten auf dem App-Symbol anzeigen. iOS bezeichnet dies als Mitteilungsberechtigung, aber Zaparoo fordert nur die Berechtigung zum Aktualisieren des Badges an. Es werden keine Mitteilungshinweise oder Töne angefordert.",
-      "noThanks": "Nein, danke",
-      "continue": "Weiter",
-      "requesting": "Wird angefordert...",
-      "deniedDescription": "App-Symbol-Badges sind in den iOS-Einstellungen blockiert. Öffne Einstellungen, wähle Zaparoo und aktiviere Mitteilungen und Badges."
-    },
     "library": {
       "title": "Bibliothek",
       "collections": "Sammlungen",
@@ -865,8 +857,6 @@
         "debugLoggingHelp": "Aktiviert ausführlichere Protokolldateien auf dem verbundenen Gerät. Dies kann bei der Fehlerbehebung hilfreich sein.",
         "showFilenames": "Dateinamen für Medien anzeigen",
         "showFilenamesHelp": "Zeige in den Suchergebnissen der App den vollständigen Dateinamen eines Mediums statt der bereinigten Version an. Dies kann hilfreich sein, wenn deine Dateinamen viele benutzerdefinierte Tags enthalten.",
-        "appIconBadges": "App-Symbol-Badges",
-        "appIconBadgesHelp": "Zeigt die Anzahl ungelesener Posteingangsnachrichten auf dem App-Symbol. iOS kann um Mitteilungsberechtigung bitten, da Badges über die Mitteilungseinstellungen verwaltet werden.",
         "purchasePreview": "Kaufvorschau",
         "purchasePreviewLive": "Live-Status",
         "purchasePreviewFree": "Kostenloses Konto",

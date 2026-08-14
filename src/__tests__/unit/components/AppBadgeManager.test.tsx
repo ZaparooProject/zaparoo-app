@@ -5,6 +5,7 @@ import { SlideModalProvider } from "@/components/SlideModalProvider";
 import { useAppBadge } from "@/hooks/useAppBadge";
 import { render, screen } from "@/test-utils";
 
+const dismissPermissionRationale = vi.fn();
 const declinePermissionRationale = vi.fn();
 const dismissPermissionDeniedHelp = vi.fn();
 const requestPermission = vi.fn();
@@ -32,6 +33,7 @@ describe("AppBadgeManager", () => {
       showPermissionRationale: true,
       showPermissionDeniedHelp: false,
       isRequestingPermission: false,
+      dismissPermissionRationale,
       declinePermissionRationale,
       dismissPermissionDeniedHelp,
       requestPermission,
@@ -57,6 +59,16 @@ describe("AppBadgeManager", () => {
     expect(requestPermission).not.toHaveBeenCalled();
   });
 
+  it("should dismiss the rationale without persisting opt-out", async () => {
+    const user = userEvent.setup();
+    renderManager();
+
+    await user.click(screen.getAllByTestId("modal-overlay")[0]!);
+
+    expect(dismissPermissionRationale).toHaveBeenCalledOnce();
+    expect(declinePermissionRationale).not.toHaveBeenCalled();
+  });
+
   it("should request permission only after the user continues", async () => {
     const user = userEvent.setup();
     renderManager();
@@ -71,6 +83,7 @@ describe("AppBadgeManager", () => {
       showPermissionRationale: false,
       showPermissionDeniedHelp: true,
       isRequestingPermission: false,
+      dismissPermissionRationale,
       declinePermissionRationale,
       dismissPermissionDeniedHelp,
       requestPermission,
