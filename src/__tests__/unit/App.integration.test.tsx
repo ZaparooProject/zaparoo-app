@@ -204,6 +204,10 @@ vi.mock("@/components/InboxModal", () => ({
   InboxModal: () => <div data-testid="inbox-modal" />,
 }));
 
+vi.mock("@/components/AppBadgeManager", () => ({
+  AppBadgeManager: () => <div data-testid="app-badge-manager" />,
+}));
+
 vi.mock("@/components/home/StagedTokenModal", () => ({
   StagedTokenModal: () => <div data-testid="staged-token-modal" />,
 }));

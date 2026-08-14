@@ -246,6 +246,10 @@ vi.mock("@/components/InboxModal", () => ({
   InboxModal: () => <div data-testid="inbox-modal" />,
 }));
 
+vi.mock("@/components/AppBadgeManager", () => ({
+  AppBadgeManager: () => <div data-testid="app-badge-manager" />,
+}));
+
 vi.mock("@/components/A11yAnnouncer", () => ({
   A11yAnnouncerProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="a11y-provider">{children}</div>

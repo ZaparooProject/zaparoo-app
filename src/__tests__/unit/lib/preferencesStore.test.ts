@@ -46,6 +46,7 @@ describe("usePreferencesStore", () => {
       shakeMode: "random",
       shakeZapscript: "",
       systemNameRegion: "auto",
+      appBadgeEnabled: true,
       accessibleLists: false,
       appReviewCadence: { ...DEFAULT_APP_REVIEW_CADENCE },
       _hasHydrated: true, // Pretend it's hydrated for tests
@@ -128,6 +129,33 @@ describe("usePreferencesStore", () => {
         lastSuccessfulDay: null,
         lastAttemptAt: secondDay + 1_000,
       });
+    });
+  });
+
+  describe("app badge persistence", () => {
+    it("should persist the app badge opt-out", async () => {
+      usePreferencesStore.getState().setAppBadgeEnabled(false);
+
+      expect(usePreferencesStore.getState().appBadgeEnabled).toBe(false);
+
+      await waitFor(() => {
+        expect(Preferences.set).toHaveBeenCalled();
+      });
+      const persisted = vi.mocked(Preferences.set).mock.calls.at(-1)?.[0];
+      expect(persisted?.value).toContain('"appBadgeEnabled":false');
+    });
+
+    it("should default to enabled for preferences saved before badge control", async () => {
+      vi.mocked(Preferences.get).mockResolvedValueOnce({
+        value: JSON.stringify({
+          state: { showFilenames: true },
+          version: 0,
+        }),
+      });
+
+      await usePreferencesStore.persist.rehydrate();
+
+      expect(usePreferencesStore.getState().appBadgeEnabled).toBe(true);
     });
   });
 
