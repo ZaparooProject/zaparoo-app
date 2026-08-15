@@ -129,6 +129,20 @@ function parseUrlInput(input: string): DeviceEndpointParseResult | null {
   return { ok: true, endpoint: formatDeviceEndpoint(host, port, scheme) };
 }
 
+/**
+ * The same endpoint reached through a different host — an mDNS `.local` name
+ * swapped for the IP the advertisement resolved to. An unusable host is
+ * ignored rather than thrown so a bad advertisement degrades to the hostname
+ * the record already had.
+ */
+export function replaceDeviceEndpointHost(
+  endpoint: ParsedDeviceEndpoint,
+  host: string,
+): ParsedDeviceEndpoint {
+  if (!isValidHost(host.toLowerCase())) return endpoint;
+  return formatDeviceEndpoint(host, endpoint.port, endpoint.scheme);
+}
+
 export function parseDeviceEndpoint(input: string): DeviceEndpointParseResult {
   const address = input.trim();
   if (!address || /\s/.test(address)) return { ok: false };

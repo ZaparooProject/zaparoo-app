@@ -5,8 +5,14 @@
  * connection lifecycle handling, and notification processing.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
+import {
+  __simulateDeviceDiscovered,
+  ZeroConf,
+  type ZeroConfService,
+} from "../../../../__mocks__/capacitor-zeroconf";
 import { QueryClient } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "../../../test-utils";
 import { ConnectionProvider } from "../../../components/ConnectionProvider";
@@ -178,13 +184,10 @@ vi.mock("@capacitor/app", () => ({
   },
 }));
 
-vi.mock("@capacitor/core", () => ({
-  Capacitor: {
-    isNativePlatform: vi.fn(() => false),
-    isPluginAvailable: vi.fn(() => true),
-  },
-}));
-
+// `@capacitor/core` deliberately uses the shared `__mocks__` module rather than
+// a local factory: test-setup imports `useNetworkScan`, so that hook resolves
+// the shared mock, and a local factory here would leave the provider and the
+// hook disagreeing about whether the platform is native.
 vi.mock("@capacitor/network", () => ({
   Network: {
     addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
@@ -405,6 +408,251 @@ describe("ConnectionProvider", () => {
       expect(connectionManager.restartActiveConnection).toHaveBeenCalledTimes(
         1,
       );
+    });
+  });
+
+  // iOS WebSockets do not reliably bootstrap `.local` resolution themselves, so
+  // the provider browses mDNS and dials the address it resolves while the record
+  // keeps the hostname that survives the device moving.
+  describe("resolving a .local device", () => {
+    const MDNS_RECORD_ID = "record-mdns";
+
+    const advertise = (
+      overrides: Partial<ZeroConfService> = {},
+    ): ZeroConfService => ({
+      domain: "local.",
+      type: "_zaparoo._tcp.",
+      name: "Steam Deck",
+      port: 7497,
+      hostname: "steamdeck.local",
+      ipv4Addresses: ["10.0.0.206"],
+      ipv6Addresses: [],
+      txtRecord: { id: "core-id" },
+      ...overrides,
+    });
+
+    async function seedMdnsDevice() {
+      await seedDeviceRegistry(
+        [
+          mockDeviceRecord({
+            recordId: MDNS_RECORD_ID,
+            address: "steamdeck.local",
+            source: "mdns",
+            discoveryId: "core-id",
+          }),
+        ],
+        MDNS_RECORD_ID,
+      );
+    }
+
+    beforeEach(async () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
+        MDNS_RECORD_ID,
+      );
+      await seedMdnsDevice();
+    });
+
+    afterEach(() => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+    });
+
+    it("should browse for a hostname it has not resolved yet", async () => {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(ZeroConf.watch).toHaveBeenCalled();
+      });
+    });
+
+    it("should not browse for a device reached by address", async () => {
+      await resetStore();
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalled();
+      });
+      expect(ZeroConf.watch).not.toHaveBeenCalled();
+    });
+
+    it("should dial the resolved address while the record keeps its hostname", async () => {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(ZeroConf.watch).toHaveBeenCalled();
+      });
+      act(() => {
+        __simulateDeviceDiscovered(advertise());
+      });
+
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({
+            deviceId: MDNS_RECORD_ID,
+            address: "ws://10.0.0.206:7497/api/v0.1",
+          }),
+        );
+      });
+      expect(deviceRegistry.activeEndpoint()?.address).toBe("steamdeck.local");
+    });
+
+    it("should follow the hostname to a new address", async () => {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(ZeroConf.watch).toHaveBeenCalled();
+      });
+      act(() => {
+        __simulateDeviceDiscovered(advertise());
+      });
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({ address: "ws://10.0.0.206:7497/api/v0.1" }),
+        );
+      });
+
+      act(() => {
+        __simulateDeviceDiscovered(
+          advertise({ ipv4Addresses: ["10.0.0.219"] }),
+        );
+      });
+
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({ address: "ws://10.0.0.219:7497/api/v0.1" }),
+        );
+      });
+    });
+
+    // DHCP hands leases around, so adopting a stranger's resolution because it
+    // happens to answer on a familiar address would point the socket at the
+    // wrong box entirely.
+    it("should ignore an announcement from a different device", async () => {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(ZeroConf.watch).toHaveBeenCalled();
+      });
+      act(() => {
+        __simulateDeviceDiscovered(
+          advertise({
+            name: "Someone else",
+            hostname: "basement.local",
+            txtRecord: { id: "other-core" },
+          }),
+        );
+      });
+
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalled();
+      });
+      expect(connectionManager.addDevice).not.toHaveBeenCalledWith(
+        expect.objectContaining({ address: "ws://10.0.0.206:7497/api/v0.1" }),
+      );
+    });
+
+    it("should match an announcement without a device id on hostname and port", async () => {
+      await seedDeviceRegistry(
+        [
+          mockDeviceRecord({
+            recordId: MDNS_RECORD_ID,
+            address: "steamdeck.local",
+            source: "mdns",
+          }),
+        ],
+        MDNS_RECORD_ID,
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(ZeroConf.watch).toHaveBeenCalled();
+      });
+      act(() => {
+        __simulateDeviceDiscovered(advertise({ txtRecord: {} }));
+      });
+
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({ address: "ws://10.0.0.206:7497/api/v0.1" }),
+        );
+      });
+    });
+
+    // Browsing costs battery and multicast traffic, so it runs only until the
+    // hostname is resolved on a live connection.
+    it("should stop browsing once the connection is up", async () => {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(ZeroConf.watch).toHaveBeenCalled();
+      });
+      act(() => {
+        __simulateDeviceDiscovered(advertise());
+      });
+
+      act(() => {
+        capturedEventHandlers.onConnectionChange!(MDNS_RECORD_ID, {
+          state: "connected",
+          hasData: false,
+          hasConnectedBefore: false,
+        });
+      });
+
+      await waitFor(() => {
+        expect(ZeroConf.unwatch).toHaveBeenCalled();
+      });
+    });
+
+    it("should keep browsing while the connection is still down", async () => {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(ZeroConf.watch).toHaveBeenCalled();
+      });
+      act(() => {
+        __simulateDeviceDiscovered(advertise());
+      });
+
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({ address: "ws://10.0.0.206:7497/api/v0.1" }),
+        );
+      });
+      expect(ZeroConf.unwatch).not.toHaveBeenCalled();
     });
   });
 

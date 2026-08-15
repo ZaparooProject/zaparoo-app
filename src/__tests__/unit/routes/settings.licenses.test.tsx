@@ -78,7 +78,10 @@ const getLicenses = (): ComponentType => {
   return componentRef.current;
 };
 
-describe("Settings Licenses Route", () => {
+// Every test here renders the full production dependency list, which is slow
+// enough on its own to reach the default 10s timeout when the suite runs all
+// files in parallel.
+describe("Settings Licenses Route", { timeout: 30000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal(

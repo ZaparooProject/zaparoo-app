@@ -12,6 +12,7 @@ import {
   formatDeviceEndpoint,
   isValidHost,
   parseDeviceEndpoint,
+  replaceDeviceEndpointHost,
 } from "@/lib/devices/endpoint";
 
 function endpointOf(input: string) {
@@ -153,6 +154,45 @@ describe("formatDeviceEndpoint", () => {
       "mydevice.local",
     );
   });
+});
+
+describe("replaceDeviceEndpointHost", () => {
+  it("should keep the port and scheme when swapping the host", () => {
+    const swapped = replaceDeviceEndpointHost(
+      endpointOf("wss://steamdeck.local:8080"),
+      "10.0.0.206",
+    );
+
+    expect(swapped.wsUrl).toBe("wss://10.0.0.206:8080/api/v0.1");
+  });
+
+  it("should bracket an IPv6 replacement", () => {
+    const swapped = replaceDeviceEndpointHost(
+      endpointOf("steamdeck.local"),
+      "fe80::1",
+    );
+
+    expect(swapped.address).toBe("[fe80::1]");
+  });
+
+  it("should give the swapped host its own endpoint id", () => {
+    const original = endpointOf("steamdeck.local");
+
+    const swapped = replaceDeviceEndpointHost(original, "10.0.0.206");
+
+    expect(swapped.endpointId).not.toBe(original.endpointId);
+  });
+
+  // A bad advertisement degrades to the hostname the record already had rather
+  // than pointing the socket at nonsense.
+  it.each(["", "999.999.999.999", "not a host"])(
+    "should keep the original endpoint when handed %s",
+    (host) => {
+      const original = endpointOf("steamdeck.local");
+
+      expect(replaceDeviceEndpointHost(original, host)).toEqual(original);
+    },
+  );
 });
 
 describe("isValidHost", () => {

@@ -70,9 +70,9 @@ import {
   credentialStore,
 } from "@/lib/crypto/credentials";
 import {
-  activeAddressOf,
   deviceRegistry,
   parsedEndpointForRecord,
+  resolvedEndpointForRecord,
   useDeviceRegistry,
   type DeviceRegistrySnapshot,
 } from "@/lib/devices/deviceRegistry";
@@ -82,6 +82,7 @@ import {
   ConnectionContext,
   type ConnectionContextValue,
 } from "@/hooks/useConnection";
+import { useNetworkScan } from "@/hooks/useNetworkScan";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { PairingModal } from "./PairingModal";
 
@@ -92,17 +93,43 @@ interface ConnectionProviderProps {
 const selectActiveRecordId = (state: DeviceRegistrySnapshot) =>
   state.activeRecordId;
 
+const activeRecordOf = (state: DeviceRegistrySnapshot) =>
+  state.activeRecordId ? (state.records[state.activeRecordId] ?? null) : null;
+
 /**
  * The WebSocket URL the active record connects through, or `""` when there is
  * no usable device. Selected as a primitive so a metadata-only registry write
  * cannot tear the socket down and rebuild it.
+ *
+ * Resolved rather than canonical: on iOS a WebSocket to a `.local` name does
+ * not reliably bootstrap multicast resolution, so the socket dials the address
+ * mDNS resolved while the record keeps the hostname.
  */
-const selectActiveWsUrl = (state: DeviceRegistrySnapshot) => {
-  const record = state.activeRecordId
-    ? state.records[state.activeRecordId]
-    : null;
-  return parsedEndpointForRecord(record)?.wsUrl ?? "";
+const selectConnectionWsUrl = (state: DeviceRegistrySnapshot) =>
+  resolvedEndpointForRecord(activeRecordOf(state))?.wsUrl ?? "";
+
+/** The address pairing runs against — resolved, for the same reason. */
+const selectConnectionAddress = (state: DeviceRegistrySnapshot) =>
+  resolvedEndpointForRecord(activeRecordOf(state))?.address ?? "";
+
+/**
+ * The `.local` name the active record connects through, or `""` when it does
+ * not use one. mDNS browsing only exists to resolve these.
+ */
+const selectMdnsHostname = (state: DeviceRegistrySnapshot) => {
+  const host = parsedEndpointForRecord(activeRecordOf(state))?.host ?? "";
+  return host.endsWith(".local") ? host : "";
 };
+
+const selectMdnsPort = (state: DeviceRegistrySnapshot) =>
+  parsedEndpointForRecord(activeRecordOf(state))?.port ?? 0;
+
+const selectActiveDiscoveryId = (state: DeviceRegistrySnapshot) =>
+  activeRecordOf(state)?.discoveryId ?? "";
+
+function normalizeMdnsHostname(hostname: string): string {
+  return hostname.trim().toLowerCase().replace(/\.+$/, "");
+}
 
 const CLIENT_CAPABILITIES_SINCE = "2.16.0";
 const MEDIA_TRANSITION_GRACE_MS = 250;
@@ -236,8 +263,16 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   );
 
   const activeRecordId = useDeviceRegistry(selectActiveRecordId);
-  const connectionWsUrl = useDeviceRegistry(selectActiveWsUrl);
-  const connectionAddress = useDeviceRegistry(activeAddressOf);
+  const connectionWsUrl = useDeviceRegistry(selectConnectionWsUrl);
+  const connectionAddress = useDeviceRegistry(selectConnectionAddress);
+  const mdnsHostname = useDeviceRegistry(selectMdnsHostname);
+  const mdnsPort = useDeviceRegistry(selectMdnsPort);
+  const activeDiscoveryId = useDeviceRegistry(selectActiveDiscoveryId);
+  const {
+    devices: discoveredDevices,
+    startScan: startMdnsScan,
+    stopScan: stopMdnsScan,
+  } = useNetworkScan();
 
   // Connection state tracked via useState to prevent unnecessary re-renders
   // These are updated via onConnectionChange callback
@@ -261,6 +296,58 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
   // Show "Reconnecting..." for devices that had prior successful connection
   const showReconnecting = !isConnected && (hasData || hasConnectedBefore);
+
+  // The announcement for the device this record names, matched on its service
+  // name when it has one and on hostname + port otherwise. An address is never
+  // matched on: DHCP hands leases around, and adopting the wrong device's
+  // resolution would point the socket at a stranger.
+  const resolvedMdnsDevice = useMemo(() => {
+    if (mdnsHostname === "") return null;
+    const discoveryId = activeDiscoveryId.toLowerCase();
+
+    return (
+      discoveredDevices.find((device) => {
+        if (
+          discoveryId &&
+          device.deviceId?.trim().toLowerCase() === discoveryId
+        ) {
+          return true;
+        }
+        return (
+          device.hostname !== undefined &&
+          normalizeMdnsHostname(device.hostname) === mdnsHostname &&
+          device.port === mdnsPort
+        );
+      }) ?? null
+    );
+  }, [activeDiscoveryId, discoveredDevices, mdnsHostname, mdnsPort]);
+
+  useEffect(() => {
+    if (!resolvedMdnsDevice || !activeRecordId) return;
+    void deviceRegistry.noteResolvedAddresses(
+      activeRecordId,
+      resolvedMdnsDevice.addresses,
+    );
+  }, [activeRecordId, resolvedMdnsDevice]);
+
+  // Browsing costs battery and multicast traffic, so it runs only until this
+  // device's hostname has been resolved on a live connection.
+  //
+  // Gate on the boolean, not on `resolvedMdnsDevice` itself: a re-announcement
+  // produces a fresh object every time, and depending on the object would tear
+  // the watch down and rebuild it on each one. The module-level device cache in
+  // useNetworkScan outlives stopScan(), so the resolution survives the teardown
+  // and a later reconnect does not have to rediscover it.
+  const mdnsBrowseSettled = resolvedMdnsDevice !== null && isConnected;
+  useEffect(() => {
+    if (mdnsHostname === "" || mdnsBrowseSettled) return;
+    if (!Capacitor.isNativePlatform()) return;
+
+    void startMdnsScan();
+    return () => {
+      stopMdnsScan();
+    };
+  }, [mdnsBrowseSettled, mdnsHostname, startMdnsScan, stopMdnsScan]);
 
   // Keep refs updated with latest callbacks (but don't trigger effect re-runs)
   useEffect(() => {
