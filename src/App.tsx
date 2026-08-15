@@ -16,14 +16,15 @@ import {
   isPluginAvailable,
 } from "@/lib/capacitorBridge";
 import { useDeepLinks } from "@/lib/deepLinks";
+import { DatabaseIcon, PlayIcon } from "@/lib/images";
 import {
   ensurePurchasesUser,
   getPurchaseAccess,
   resetPurchasesUser,
 } from "@/lib/purchasesSetup";
+import { preloadZapLogo } from "@/lib/zapLogo";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
-import { DatabaseIcon, PlayIcon, preloadZapLogo } from "./lib/images";
 import { ConnectionProvider } from "./components/ConnectionProvider";
 import { ReconnectingIndicator } from "./components/ReconnectingIndicator";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";

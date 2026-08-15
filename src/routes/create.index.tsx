@@ -7,7 +7,12 @@ import { ListPlusIcon, NfcIcon } from "lucide-react";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
-import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
+import {
+  isWriteModalOpen,
+  useNfcWriter,
+  WriteAction,
+  WriteMethod,
+} from "@/lib/writeNfcHook";
 import { CoreAPI } from "@/lib/coreApi";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import { logger } from "@/lib/logger";
@@ -15,7 +20,7 @@ import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import type { PlayingResponse, SearchResultGame } from "@/lib/models";
 import { MediaDetailsModal } from "@/components/MediaDetailsModal";
 import { Card } from "@/components/wui/Card";
-import { isWriteModalOpen, WriteModal } from "@/components/WriteModal";
+import { WriteModal } from "@/components/WriteModal";
 import { PageFrame } from "@/components/PageFrame";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 
