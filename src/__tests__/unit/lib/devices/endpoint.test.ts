@@ -96,6 +96,25 @@ describe("parseDeviceEndpoint", () => {
     it("should reject malformed IPv6", () => {
       expect(parseDeviceEndpoint("2001:::1").ok).toBe(false);
     });
+
+    // Two spellings of one address must not become two devices, so the
+    // canonical form is what gets stored and compared.
+    it.each([
+      ["an expanded loopback", "0:0:0:0:0:0:0:1"],
+      ["a zero-padded group", "::0001"],
+      ["a bracketed expanded address", "[0:0:0:0:0:0:0:1]"],
+    ])("should canonicalise %s", (_label, input) => {
+      expect(endpointOf(input).host).toBe("::1");
+      expect(endpointOf(input).endpointId).toBe(endpointOf("::1").endpointId);
+    });
+
+    it("should lowercase and compress a link-local address", () => {
+      expect(endpointOf("[FE80::0001]:8080")).toMatchObject({
+        host: "fe80::1",
+        port: 8080,
+        wsUrl: "ws://[fe80::1]:8080/api/v0.1",
+      });
+    });
   });
 
   describe("pasted URLs", () => {
@@ -117,12 +136,39 @@ describe("parseDeviceEndpoint", () => {
       expect(endpointOf("wss://mydevice.local:9000").scheme).toBe("wss");
     });
 
+    // A port matching the scheme default is erased by the URL parser, so
+    // without recovering it from the raw authority these all silently became
+    // 7497 — a device the user never asked to dial.
+    it.each([
+      ["http and 80", "http://mydevice.local:80", 80],
+      ["https and 443", "https://mydevice.local:443", 443],
+      ["ws and 80", "ws://mydevice.local:80", 80],
+      ["wss and 443", "wss://mydevice.local:443", 443],
+      ["a zero-padded default port", "http://mydevice.local:080", 80],
+    ])("should keep an explicit port matching %s", (_label, input, port) => {
+      expect(endpointOf(input).port).toBe(port);
+    });
+
+    it("should not read an IPv6 group as a port", () => {
+      expect(endpointOf("http://[::80]")).toMatchObject({
+        host: "::80",
+        port: DEFAULT_DEVICE_PORT,
+      });
+    });
+
+    it("should still default the port when none is given", () => {
+      expect(endpointOf("http://mydevice.local").port).toBe(
+        DEFAULT_DEVICE_PORT,
+      );
+    });
+
     it.each([
       ["an unsupported scheme", "ftp://mydevice.local"],
       ["a path beyond the Core API endpoint", "http://mydevice.local/other"],
       ["a query string", "http://mydevice.local/?x=1"],
       ["a fragment", "http://mydevice.local/#x"],
       ["embedded credentials", "http://user:pass@mydevice.local"],
+      ["a trailing colon with no port", "http://mydevice.local:"],
     ])("should reject %s", (_label, input) => {
       expect(parseDeviceEndpoint(input).ok).toBe(false);
     });

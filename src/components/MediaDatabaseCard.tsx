@@ -51,6 +51,15 @@ export function MediaDatabaseCard({
   );
   const [cleanError, setCleanError] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [trackedDeviceKey, setTrackedDeviceKey] = useState(deviceKey);
+
+  // System ids are only meaningful to the device that listed them, so a
+  // selection carried across a switch would ask the new Core to index systems
+  // it may not even have.
+  if (deviceKey !== trackedDeviceKey) {
+    setTrackedDeviceKey(deviceKey);
+    setSelectedSystems([]);
+  }
 
   const isPaused = gamesIndex.paused === true;
   const isScraping = scrapingStatus?.scraping === true;
@@ -78,7 +87,10 @@ export function MediaDatabaseCard({
     isLoading,
     error: mediaStatusError,
   } = useQuery({
-    queryKey: ["media"],
+    // Namespaced on the device: media counts belong to one Core, and without
+    // this a switch shows the previous device's totals until the refetch lands.
+    // Invalidations still use the bare ["media"] prefix, which matches.
+    queryKey: ["media", deviceKey],
     queryFn: () => CoreAPI.media(),
     enabled: connected,
     staleTime: 30000, // Cache for 30 seconds

@@ -86,7 +86,20 @@ export function Devices() {
     return Object.values(records)
       .flatMap((record) => {
         const endpoint = parsedEndpointForRecord(record);
-        return endpoint ? [{ record, endpoint } satisfies DeviceListEntry] : [];
+        if (!endpoint) {
+          // A record with no parseable endpoint is unreachable and cannot be
+          // rendered, so it is dropped — but silently vanishing from the list
+          // looks to the user like the app forgot their device. Name it so the
+          // stored value can be recovered from a report.
+          logger.warn("Device record has no usable endpoint", {
+            category: "storage",
+            action: "listDeviceRecords",
+            recordId: record.recordId,
+            preferredEndpointId: record.preferredEndpointId,
+          });
+          return [];
+        }
+        return [{ record, endpoint } satisfies DeviceListEntry];
       })
       .sort((left, right) =>
         (left.record.name || left.endpoint.address).localeCompare(

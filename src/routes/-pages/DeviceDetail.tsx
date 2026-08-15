@@ -29,6 +29,15 @@ const selectRecords = (state: { records: Record<string, DeviceRecord> }) =>
   state.records;
 const selectActiveRecordId = (state: { activeRecordId: string | null }) =>
   state.activeRecordId;
+/**
+ * True once the stored devices have been read, either successfully or not.
+ * A failed read never becomes hydrated, so waiting on `hydrated` alone would
+ * leave this page blank for good.
+ */
+const selectRegistrySettled = (state: {
+  hydrated: boolean;
+  hydrationError: string | null;
+}) => state.hydrated || state.hydrationError !== null;
 
 export function DeviceDetail() {
   const { t } = useTranslation();
@@ -37,6 +46,7 @@ export function DeviceDetail() {
   const params = Route.useParams();
   const records = useDeviceRegistry(selectRecords);
   const activeRecordId = useDeviceRegistry(selectActiveRecordId);
+  const registrySettled = useDeviceRegistry(selectRegistrySettled);
 
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings/devices"));
@@ -66,11 +76,15 @@ export function DeviceDetail() {
     setDraftName(initialName);
   }
 
+  // Records arrive asynchronously, so a page opened cold — a deep link, or a
+  // reload sitting on this route — has no record yet through no fault of the
+  // id in the URL. Redirecting before the read has settled would bounce the
+  // user off a device that was about to appear.
   useEffect(() => {
-    if (!record || !endpoint) {
+    if (registrySettled && (!record || !endpoint)) {
       router.navigate({ to: "/settings/devices", replace: true });
     }
-  }, [endpoint, record, router]);
+  }, [endpoint, record, registrySettled, router]);
 
   if (!record || !endpoint) return null;
 
@@ -94,7 +108,15 @@ export function DeviceDetail() {
       resetConnectionState();
       CoreAPI.reset();
     }
-    await deviceRegistry.removeRecord(record.recordId);
+    try {
+      await deviceRegistry.removeRecord(record.recordId);
+    } catch {
+      // The record has already left the snapshot — the registry publishes
+      // before it persists — so the list will not show it again either way.
+      // Finish the teardown rather than stranding the user in a modal for a
+      // device that is visibly gone; the registry has already reported the
+      // write failure itself.
+    }
 
     invalidateLibraryImageCache(record.recordId);
     queryClient.removeQueries({

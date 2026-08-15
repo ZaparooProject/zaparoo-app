@@ -38,12 +38,19 @@ function isValidIPv4(host: string): boolean {
   );
 }
 
-function isValidIPv6(host: string): boolean {
+/**
+ * The canonical spelling of an IPv6 host, or null if it is not one.
+ *
+ * The URL parser already collapses equivalent forms — `0:0:0:0:0:0:0:1`, `::1`
+ * and `FE80::0001` each have exactly one canonical spelling — and returning it
+ * rather than a bare boolean is what stops two spellings of a single address
+ * becoming two endpoint identities, and therefore two devices.
+ */
+function canonicalIPv6(host: string): string | null {
   try {
-    new URL(`ws://[${host}]`);
-    return true;
+    return new URL(`ws://[${host}]`).hostname.replace(/^\[|\]$/g, "");
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -70,7 +77,9 @@ function isValidHostname(host: string): boolean {
  * only fails later as an opaque socket error.
  */
 export function isValidHost(host: string): boolean {
-  return isValidIPv4(host) || isValidIPv6(host) || isValidHostname(host);
+  return (
+    isValidIPv4(host) || canonicalIPv6(host) !== null || isValidHostname(host)
+  );
 }
 
 function formatHost(host: string): string {
@@ -99,6 +108,26 @@ export function formatDeviceEndpoint(
   };
 }
 
+/**
+ * The port the user actually typed, read back off the raw authority.
+ *
+ * `URL` erases a port that matches the scheme default, so `http://core:80` and
+ * `wss://core:443` both arrive with an empty `port` and would silently fall
+ * back to 7497 — dialling somewhere the user never asked for. Only the
+ * authority is inspected, and a bracketed literal is stepped over first, so
+ * `http://[::80]` is read as a host rather than as port 80.
+ */
+function explicitAuthorityPort(input: string): string | undefined {
+  const authority = input.slice(input.indexOf("://") + 3).split(/[/?#]/)[0];
+  if (authority === undefined) return undefined;
+
+  const hostAndPort = authority.slice(authority.lastIndexOf("@") + 1);
+  const separator = hostAndPort.startsWith("[")
+    ? hostAndPort.indexOf(":", hostAndPort.indexOf("]"))
+    : hostAndPort.indexOf(":");
+  return separator === -1 ? undefined : hostAndPort.slice(separator + 1);
+}
+
 function parseUrlInput(input: string): DeviceEndpointParseResult | null {
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(input)) return null;
 
@@ -120,7 +149,7 @@ function parseUrlInput(input: string): DeviceEndpointParseResult | null {
   }
 
   const host = url.hostname.replace(/^\[|\]$/g, "").toLowerCase();
-  const port = parsePort(url.port || undefined);
+  const port = parsePort(url.port || explicitAuthorityPort(input));
   if (port === null || !isValidHost(host)) return { ok: false };
 
   const scheme: DeviceEndpointScheme = ["https:", "wss:"].includes(url.protocol)
@@ -140,16 +169,16 @@ export function parseDeviceEndpoint(input: string): DeviceEndpointParseResult {
     const match = /^\[([^\]]+)](?::([^:]+))?$/.exec(address);
     if (!match) return { ok: false };
     const [, rawHost, portInput] = match;
-    const host = rawHost?.toLowerCase();
+    const host = rawHost === undefined ? null : canonicalIPv6(rawHost);
     const port = parsePort(portInput);
-    if (!host || port === null || !isValidIPv6(host)) return { ok: false };
+    if (host === null || port === null) return { ok: false };
     return { ok: true, endpoint: formatDeviceEndpoint(host, port) };
   }
 
   const colonCount = (address.match(/:/g) ?? []).length;
   if (colonCount > 1) {
-    const host = address.toLowerCase();
-    if (!isValidIPv6(host)) return { ok: false };
+    const host = canonicalIPv6(address);
+    if (host === null) return { ok: false };
     return {
       ok: true,
       endpoint: formatDeviceEndpoint(host, DEFAULT_DEVICE_PORT),

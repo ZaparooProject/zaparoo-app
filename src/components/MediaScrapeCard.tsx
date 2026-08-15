@@ -43,6 +43,16 @@ export function MediaScrapeCard() {
   const [cancelRequested, setCancelRequested] = useState(false);
   const [resumeRequested, setResumeRequested] = useState(false);
   const [force, setForce] = useState(false);
+  const [trackedDeviceKey, setTrackedDeviceKey] = useState(deviceKey);
+
+  // Scraper ids and system ids are both listed by the connected device, so a
+  // selection made against one Core means nothing to the next one — and
+  // submitting it would start a scrape the user never chose.
+  if (deviceKey !== trackedDeviceKey) {
+    setTrackedDeviceKey(deviceKey);
+    setSelectedScraper("");
+    setSelectedSystems([]);
+  }
 
   const isLiveConnected = connectionState === ConnectionState.CONNECTED;
   const isScraping = scrapingStatus?.scraping === true;
@@ -75,13 +85,13 @@ export function MediaScrapeCard() {
   }, [isPaused, isScraping, resumeRequested]);
 
   const { data: scrapersData, isLoading: scrapersLoading } = useQuery({
-    queryKey: ["scrapers"],
+    queryKey: ["scrapers", deviceKey],
     queryFn: () => CoreAPI.scrapers(),
     enabled: connected && featureAvailable,
   });
 
   const { data: scrapeStatusData } = useQuery({
-    queryKey: ["mediaScrapeStatus"],
+    queryKey: ["mediaScrapeStatus", deviceKey],
     queryFn: () => CoreAPI.mediaScrapeStatus(),
     enabled: connected && featureAvailable,
     refetchOnMount: "always",

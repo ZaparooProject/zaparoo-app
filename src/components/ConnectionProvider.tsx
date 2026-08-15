@@ -104,6 +104,18 @@ const selectActiveWsUrl = (state: DeviceRegistrySnapshot) => {
   return parsedEndpointForRecord(record)?.wsUrl ?? "";
 };
 
+/**
+ * Absorb a registry write failure that has already been reported.
+ *
+ * Both rejection paths log for themselves — `commit` for a write attempted
+ * before hydration, `persist` for a write that never reached storage — so the
+ * only thing left to do here is stop the same failure surfacing a second time
+ * as an unhandled rejection, which reaches Rollbar as a duplicate. The
+ * connection is unaffected either way: the snapshot is published before it is
+ * persisted, so the UI already reflects the change.
+ */
+const ignoreReportedRegistryFailure = () => {};
+
 const CLIENT_CAPABILITIES_SINCE = "2.16.0";
 const MEDIA_TRANSITION_GRACE_MS = 250;
 const MEDIA_INDEX_RECONCILE_MS = 2000;
@@ -787,10 +799,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         setCoreVersionPending(false);
         const recordId = deviceRegistry.getSnapshot().activeRecordId;
         if (recordId) {
-          void deviceRegistry.applyDiscoveredMetadata(recordId, {
-            platform: res.platform,
-            version: res.version,
-          });
+          void deviceRegistry
+            .applyDiscoveredMetadata(recordId, {
+              platform: res.platform,
+              version: res.version,
+            })
+            .catch(ignoreReportedRegistryFailure);
         }
 
         if (versionSatisfies(res.version, CLIENT_CAPABILITIES_SINCE)) {
@@ -1202,18 +1216,22 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           provenKey === null
             ? Promise.resolve(true)
             : credentialStore.promoteRecordCredentials(recordId, provenKey)
-        ).then((migrationSettled) =>
-          deviceRegistry.markConnected(recordId, {
-            ...(provenKey === null ? {} : { provenLegacyKey: provenKey }),
-            migrationSettled,
-          }),
-        );
+        )
+          .then((migrationSettled) =>
+            deviceRegistry.markConnected(recordId, {
+              ...(provenKey === null ? {} : { provenLegacyKey: provenKey }),
+              migrationSettled,
+            }),
+          )
+          .catch(ignoreReportedRegistryFailure);
       },
       onPlaintextMode: () => {
         setEncryptionState("plaintext");
         setPairingRequired(false);
         // Nothing was proven, so the legacy key pointer stays put.
-        void deviceRegistry.markConnected(recordId);
+        void deviceRegistry
+          .markConnected(recordId)
+          .catch(ignoreReportedRegistryFailure);
       },
       onEncryptionRequired: () => {
         // Server demands encryption but we have no credentials — open the
