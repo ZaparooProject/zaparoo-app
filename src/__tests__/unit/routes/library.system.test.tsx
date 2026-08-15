@@ -11,6 +11,7 @@ import {
 } from "@/lib/librarySessionStore";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { LibrarySystem } from "@/routes/library.$system";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 
 const { mockNavigate, mockOutOfRangeScroll, mockScrollToIndex } = vi.hoisted(
   () => ({
@@ -118,7 +119,7 @@ function metadataResult(name: string, path: string) {
 }
 
 describe("Library system browser", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.restoreAllMocks();
     CoreAPI.reset();
     mockNavigate.mockReset();
@@ -131,9 +132,9 @@ describe("Library system browser", () => {
       nfcAvailable: true,
       showFilenames: false,
     });
+    await seedActiveDevice({ recordId: "device-a" });
     useStatusStore.setState({
       connected: true,
-      targetDeviceAddress: "device-a",
       coreVersion: "2.15.0",
       coreVersionPending: false,
       corePlatform: null,

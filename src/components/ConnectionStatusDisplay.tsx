@@ -11,7 +11,10 @@ import {
 } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
 import { useStatusStore } from "@/lib/store";
-import { getDeviceAddress } from "@/lib/coreApi";
+import {
+  activeAddressOf,
+  useDeviceRegistry,
+} from "@/lib/devices/deviceRegistry";
 
 type ConnectionUIState =
   | "connecting"
@@ -66,7 +69,7 @@ export function ConnectionStatusDisplay({
   const { isConnected, showConnecting, showReconnecting } = useConnection();
   const encryptionState = useStatusStore((s) => s.encryptionState);
   const pairingRequired = useStatusStore((s) => s.pairingRequired);
-  const savedAddress = getDeviceAddress();
+  const savedAddress = useDeviceRegistry(activeAddressOf);
 
   // Derive UI state from connection context
   const deriveUIState = (): ConnectionUIState => {

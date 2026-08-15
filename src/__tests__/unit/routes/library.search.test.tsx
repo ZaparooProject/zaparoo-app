@@ -5,6 +5,7 @@ import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
 import { useLibrarySessionStore } from "@/lib/librarySessionStore";
 import { LibraryGameSearch } from "@/components/library/LibraryGameSearch";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 
 const { mockNavigate, mockSearchOptions } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
@@ -129,15 +130,15 @@ vi.mock("@/hooks/useHaptics", () => ({
 }));
 
 describe("Library game search", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.restoreAllMocks();
     CoreAPI.reset();
     mockNavigate.mockClear();
     mockSearchOptions.mockClear();
     useLibrarySessionStore.getState().reset();
+    await seedActiveDevice({ recordId: "device-a" });
     useStatusStore.setState({
       connected: true,
-      targetDeviceAddress: "device-a",
       coreVersion: "2.15.0",
       coreVersionPending: false,
       gamesIndex: { exists: true, indexing: false },

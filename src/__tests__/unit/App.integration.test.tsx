@@ -168,7 +168,6 @@ vi.mock("@/lib/store", () => {
 });
 
 vi.mock("@/lib/coreApi", () => ({
-  getDeviceAddress: vi.fn(() => "192.168.1.100"),
   coreApi: {
     addListener: vi.fn(() => ({ remove: vi.fn() })),
   },

@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import {
@@ -31,9 +32,7 @@ export function MediaDatabaseCard({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const connected = useStatusStore((state) => state.connected);
-  const targetDeviceAddress = useStatusStore(
-    (state) => state.targetDeviceAddress,
-  );
+  const deviceKey = useActiveDeviceKey();
   const connectionState = useStatusStore((state) => state.connectionState);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
@@ -89,7 +88,7 @@ export function MediaDatabaseCard({
   // Include unavailable launcher-backed systems so users can run their first
   // partial index for a system. CoreAPI removes virtual ZapScript launchables.
   const { data: systemsData } = useQuery({
-    queryKey: ["systems", targetDeviceAddress, { all: true }],
+    queryKey: ["systems", deviceKey, { all: true }],
     queryFn: () => CoreAPI.systems({ all: true }),
     enabled: connected,
   });

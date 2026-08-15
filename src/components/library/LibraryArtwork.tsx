@@ -11,7 +11,7 @@ import { DelayedLoading } from "@/components/DelayedLoading";
 export function LibraryArtwork(props: {
   entry: MediaBrowseEntry;
   systemId: string;
-  targetDeviceAddress: string;
+  deviceKey: string;
   maxSize: number;
   priority: "detail" | "thumbnail";
   imageTypes?: string[];
@@ -25,18 +25,18 @@ export function LibraryArtwork(props: {
   const enabled =
     props.enabled !== false &&
     props.entry.hasCover !== false &&
-    props.targetDeviceAddress !== "";
+    props.deviceKey !== "";
   const imageQuery = useQuery({
     queryKey: [
       LIBRARY_QUERY_KEYS.image,
-      props.targetDeviceAddress,
+      props.deviceKey,
       ...mediaRefKey(props.entry, props.systemId),
       props.imageTypes ?? ["default"],
       props.maxSize,
     ],
     queryFn: ({ signal }) =>
       requestLibraryImage(props.entry, props.systemId, {
-        targetDeviceAddress: props.targetDeviceAddress,
+        deviceKey: props.deviceKey,
         imageTypes: props.imageTypes,
         maxSize: props.maxSize,
         priority: props.priority,

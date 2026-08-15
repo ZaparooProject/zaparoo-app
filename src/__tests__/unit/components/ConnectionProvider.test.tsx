@@ -12,7 +12,16 @@ import { act, render, screen, waitFor } from "../../../test-utils";
 import { ConnectionProvider } from "../../../components/ConnectionProvider";
 import { useConnection } from "../../../hooks/useConnection";
 import { connectionManager } from "../../../lib/transport";
-import { CoreAPI, isCancelled } from "../../../lib/coreApi";
+import { CoreAPI } from "../../../lib/coreApi";
+import {
+  credentialKeyForRecord,
+  credentialStore,
+} from "@/lib/crypto/credentials";
+import { deviceRegistry } from "@/lib/devices/deviceRegistry";
+import {
+  mockDeviceRecord,
+  seedDeviceRegistry,
+} from "@/test-utils/deviceRegistry";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import type { TransportState } from "../../../lib/transport/types";
 import type { NotificationRequest } from "../../../lib/coreApi";
@@ -25,6 +34,9 @@ let capturedEventHandlers: {
   onConnectionChange?: (deviceId: string, connection: unknown) => void;
   onMessage?: (deviceId: string, event: unknown) => void;
   onError?: (deviceId: string, error: Error) => void;
+  onEncryptedHandshakeOk?: () => void;
+  onPlaintextMode?: () => void;
+  onCredentialsRevoked?: () => void;
 } = {};
 
 const pairingModalCapture = vi.hoisted(() => ({
@@ -113,8 +125,6 @@ vi.mock("../../../lib/coreApi", () => ({
       paused: false,
     }),
   },
-  getDeviceAddress: vi.fn(() => "192.168.1.100:7497"),
-  getWsUrl: vi.fn(() => "ws://192.168.1.100:7497"),
   validateDeviceAddress: vi.fn((address: string) => {
     if (address.includes("286")) {
       return {
@@ -135,7 +145,15 @@ vi.mock("../../../lib/coreApi", () => ({
       wsUrl: `ws://${host}:${port}/api/v0.1`,
     };
   }),
-  isCancelled: vi.fn(() => false),
+  // Mirror the real predicate rather than a call counter: several responses are
+  // in flight at once after a connect, and a `mockReturnValueOnce` would attach
+  // itself to whichever happened to resolve first.
+  isCancelled: vi.fn(
+    (response: unknown) =>
+      typeof response === "object" &&
+      response !== null &&
+      (response as { cancelled?: unknown }).cancelled === true,
+  ),
   isExpectedMediaDatabaseError: (error: unknown) => {
     if (!(error instanceof Error)) return false;
     const msg = error.message.toLowerCase();
@@ -150,6 +168,7 @@ vi.mock("@capacitor/preferences", () => ({
   Preferences: {
     get: vi.fn().mockResolvedValue({ value: null }),
     set: vi.fn().mockResolvedValue(undefined),
+    remove: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -225,18 +244,27 @@ function ConnectionConsumer() {
   );
 }
 
-// Pre-set targetDeviceAddress to skip the async polling initialization
-function resetStore() {
-  useStatusStore.setState({
-    ...useStatusStore.getInitialState(),
-    targetDeviceAddress: "192.168.1.100:7497",
-  });
+/**
+ * The transport keys devices by record id now, so the id the provider hands to
+ * `connectionManager` is this, not an address. Tests drive the connection
+ * handlers with it for the same reason.
+ */
+const RECORD_ID = "record-under-test";
+const DEVICE_ADDRESS = "192.168.1.100:7497";
+
+/** A hydrated registry holding one device, so the connection effect can run. */
+async function resetStore() {
+  useStatusStore.setState({ ...useStatusStore.getInitialState() });
+  await seedDeviceRegistry(
+    [mockDeviceRecord({ recordId: RECORD_ID, address: DEVICE_ADDRESS })],
+    RECORD_ID,
+  );
 }
 
 describe("ConnectionProvider", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    resetStore();
+    await resetStore();
 
     const bridge = await import("@/lib/capacitorBridge");
     vi.mocked(bridge.isPluginAvailable).mockReturnValue(true);
@@ -278,9 +306,7 @@ describe("ConnectionProvider", () => {
       vi.mocked(bridge.isNativePluginAvailable).mockImplementation(
         (pluginName: string) => !["App", "Network"].includes(pluginName),
       );
-      vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
-        "192.168.1.100:7497",
-      );
+      vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(RECORD_ID);
 
       render(
         <ConnectionProvider>
@@ -292,7 +318,7 @@ describe("ConnectionProvider", () => {
         expect(connectionManager.setEventHandlers).toHaveBeenCalled();
       });
 
-      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, {
         state: "connected",
         hasData: false,
         hasConnectedBefore: false,
@@ -326,9 +352,11 @@ describe("ConnectionProvider", () => {
         </ConnectionProvider>,
       );
 
+      // The transport is keyed by the record, not the address it happens to be
+      // reachable at today — that is what lets a device survive a DHCP move.
       expect(connectionManager.addDevice).toHaveBeenCalledWith(
         expect.objectContaining({
-          deviceId: "192.168.1.100:7497",
+          deviceId: RECORD_ID,
           type: "websocket",
           address: "ws://192.168.1.100:7497/api/v0.1",
           encryption: expect.objectContaining({
@@ -338,11 +366,8 @@ describe("ConnectionProvider", () => {
       );
     });
 
-    it("should not create a transport for invalid target address", () => {
-      useStatusStore.setState({
-        ...useStatusStore.getInitialState(),
-        targetDeviceAddress: "192.168.1.286",
-      });
+    it("should not create a transport when no device is active", async () => {
+      await seedDeviceRegistry([]);
 
       render(
         <ConnectionProvider>
@@ -353,10 +378,7 @@ describe("ConnectionProvider", () => {
       expect(connectionManager.addDevice).not.toHaveBeenCalled();
       expect(connectionManager.setActiveDevice).not.toHaveBeenCalled();
       expect(useStatusStore.getState().connectionState).toBe(
-        ConnectionState.ERROR,
-      );
-      expect(useStatusStore.getState().connectionError).toBe(
-        "settings.deviceAddressInvalid",
+        ConnectionState.DISCONNECTED,
       );
     });
 
@@ -367,9 +389,7 @@ describe("ConnectionProvider", () => {
         </ConnectionProvider>,
       );
 
-      expect(connectionManager.setActiveDevice).toHaveBeenCalledWith(
-        "192.168.1.100:7497",
-      );
+      expect(connectionManager.setActiveDevice).toHaveBeenCalledWith(RECORD_ID);
     });
 
     it("should restart the active connection after pairing succeeds", () => {
@@ -398,9 +418,7 @@ describe("ConnectionProvider", () => {
 
       unmount();
 
-      expect(connectionManager.removeDevice).toHaveBeenCalledWith(
-        "192.168.1.100:7497",
-      );
+      expect(connectionManager.removeDevice).toHaveBeenCalledWith(RECORD_ID);
     });
   });
 
@@ -428,9 +446,9 @@ describe("ConnectionProvider", () => {
 });
 
 describe("useConnection hook", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
-    resetStore();
+    await resetStore();
   });
 
   it("should return connection context values with expected initial state", () => {
@@ -454,7 +472,7 @@ describe("useConnection hook", () => {
 });
 
 describe("notification processing", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     vi.mocked(CoreAPI.processReceived).mockReset().mockResolvedValue(null);
     vi.mocked(CoreAPI.media)
@@ -464,7 +482,7 @@ describe("notification processing", () => {
         active: [],
       });
     capturedEventHandlers = {};
-    resetStore();
+    await resetStore();
     mockToast.mockClear();
     mockAnnounce.mockClear();
   });
@@ -1605,12 +1623,8 @@ describe("notification processing", () => {
         },
       });
       vi.mocked(CoreAPI.processReceived).mockReturnValueOnce(messagePromise);
-      vi.mocked(isCancelled).mockReturnValueOnce(true);
       vi.mocked(CoreAPI.media)
-        .mockResolvedValueOnce({
-          database: { exists: true, indexing: true },
-          active: [],
-        })
+        .mockResolvedValueOnce({ cancelled: true } as any)
         .mockRejectedValueOnce(new Error("Temporary media status failure"))
         .mockResolvedValueOnce({
           database: {
@@ -1663,7 +1677,6 @@ describe("notification processing", () => {
       } finally {
         view.unmount();
         loggerSpy.mockRestore();
-        vi.mocked(isCancelled).mockReturnValue(false);
         vi.useRealTimers();
       }
     });
@@ -1708,9 +1721,7 @@ describe("notification processing", () => {
       });
       expect(removeSpy).toHaveBeenCalledWith({ queryKey: ["mediaImage"] });
       await waitFor(() =>
-        expect(invalidateLibraryImageCache).toHaveBeenCalledWith(
-          "192.168.1.100:7497",
-        ),
+        expect(invalidateLibraryImageCache).toHaveBeenCalledWith(RECORD_ID),
       );
       invalidateSpy.mockRestore();
       removeSpy.mockRestore();
@@ -1867,14 +1878,12 @@ describe("notification processing", () => {
 });
 
 describe("connection event handling", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
-    resetStore();
+    await resetStore();
     // Re-setup mock after clearAllMocks - use the address from store mock
-    vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
-      "192.168.1.100:7497",
-    );
+    vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(RECORD_ID);
   });
 
   it("should call handleConnectionOpen when connection state becomes connected", async () => {
@@ -1887,7 +1896,7 @@ describe("connection event handling", () => {
     expect(capturedEventHandlers.onConnectionChange).toBeDefined();
 
     // Simulate connection becoming connected using the correct device ID
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -1934,7 +1943,7 @@ describe("connection event handling", () => {
 
     try {
       await act(async () => {
-        capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+        capturedEventHandlers.onConnectionChange!(RECORD_ID, {
           state: "connected",
           hasData: false,
           hasConnectedBefore: false,
@@ -2016,7 +2025,7 @@ describe("connection event handling", () => {
         <ConnectionConsumer />
       </ConnectionProvider>,
     );
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2079,7 +2088,7 @@ describe("connection event handling", () => {
       </ConnectionProvider>,
     );
     act(() => {
-      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, {
         state: "connected",
         hasData: false,
         hasConnectedBefore: false,
@@ -2139,7 +2148,7 @@ describe("connection event handling", () => {
         <ConnectionConsumer />
       </ConnectionProvider>,
     );
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2160,7 +2169,7 @@ describe("connection event handling", () => {
       </ConnectionProvider>,
     );
 
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2196,7 +2205,7 @@ describe("connection event handling", () => {
       </ConnectionProvider>,
     );
 
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2233,7 +2242,7 @@ describe("connection event handling", () => {
           <ConnectionConsumer />
         </ConnectionProvider>,
       );
-      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, {
         state: "connected",
         hasData: false,
         hasConnectedBefore: false,
@@ -2242,7 +2251,7 @@ describe("connection event handling", () => {
         expect(CoreAPI.clientsCurrent).toHaveBeenCalledTimes(1);
       });
 
-      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, {
         state: "reconnecting",
         hasData: true,
         hasConnectedBefore: true,
@@ -2277,7 +2286,7 @@ describe("connection event handling", () => {
     );
     cancelSpy.mockClear();
 
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "reconnecting",
       hasData: true,
       hasConnectedBefore: true,
@@ -2309,7 +2318,7 @@ describe("connection event handling", () => {
       },
     });
 
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "reconnecting",
       hasData: true,
       hasConnectedBefore: true,
@@ -2328,7 +2337,7 @@ describe("connection event handling", () => {
     );
     invalidateSpy.mockClear();
 
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2372,7 +2381,7 @@ describe("connection event handling", () => {
     );
 
     expect(capturedEventHandlers.onConnectionChange).toBeDefined();
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2408,7 +2417,7 @@ describe("connection event handling", () => {
     );
 
     expect(capturedEventHandlers.onConnectionChange).toBeDefined();
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2446,7 +2455,7 @@ describe("connection event handling", () => {
     );
 
     expect(capturedEventHandlers.onConnectionChange).toBeDefined();
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2475,7 +2484,7 @@ describe("connection event handling", () => {
     );
 
     expect(capturedEventHandlers.onConnectionChange).toBeDefined();
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2516,7 +2525,7 @@ describe("connection event handling", () => {
     );
 
     expect(capturedEventHandlers.onConnectionChange).toBeDefined();
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2528,7 +2537,7 @@ describe("connection event handling", () => {
     });
   });
 
-  it("should merge platform, version, and lastConnectedAt into deviceHistory entry", async () => {
+  it("should store the platform and version the peer reports on its record", async () => {
     render(
       <ConnectionProvider>
         <ConnectionConsumer />
@@ -2537,35 +2546,34 @@ describe("connection event handling", () => {
 
     expect(capturedEventHandlers.onConnectionChange).toBeDefined();
 
-    const before = Date.now();
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
     });
 
+    // The device list renders these between connects, so they have to outlive
+    // the socket that fetched them.
     await waitFor(() => {
-      const entry = useStatusStore
-        .getState()
-        .deviceHistory.find((e) => e.address === "192.168.1.100:7497");
-      expect(entry).toBeDefined();
-      expect(entry!.platform).toBe("test");
-      expect(entry!.version).toBe("2.5.0");
-      expect(typeof entry!.lastConnectedAt).toBe("number");
-      expect(entry!.lastConnectedAt!).toBeGreaterThanOrEqual(before);
+      expect(deviceRegistry.getSnapshot().records[RECORD_ID]).toMatchObject({
+        platform: "test",
+        version: "2.5.0",
+      });
     });
   });
 
-  it("should preserve fresh metadata when stored deviceHistory hydrates from Preferences", async () => {
-    // Pre-existing history on disk has no metadata. The fix sequences the two
-    // chains so the version() merge runs after Preferences.get hydrates state
-    // — this test guards against regressing back to a parallel race where the
-    // stored hydrate would clobber the merged metadata.
-    const stored = JSON.stringify([
-      { address: "192.168.1.100:7497", name: "Old Name" },
-      { address: "10.0.0.1:7497" },
-    ]);
-    vi.mocked(Preferences.get).mockResolvedValueOnce({ value: stored });
+  it("should leave the user's own name alone when the peer reports its metadata", async () => {
+    await seedDeviceRegistry(
+      [
+        mockDeviceRecord({
+          recordId: RECORD_ID,
+          address: DEVICE_ADDRESS,
+          name: "Old Name",
+          nameIsCustom: true,
+        }),
+      ],
+      RECORD_ID,
+    );
 
     render(
       <ConnectionProvider>
@@ -2573,27 +2581,79 @@ describe("connection event handling", () => {
       </ConnectionProvider>,
     );
 
-    expect(capturedEventHandlers.onConnectionChange).toBeDefined();
-
-    const before = Date.now();
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
     });
 
     await waitFor(() => {
-      const history = useStatusStore.getState().deviceHistory;
-      const entry = history.find((e) => e.address === "192.168.1.100:7497");
-      // Stored entry is preserved (name retained), AND fresh metadata merged.
-      expect(entry?.name).toBe("Old Name");
-      expect(entry?.platform).toBe("test");
-      expect(entry?.version).toBe("2.5.0");
-      expect(typeof entry?.lastConnectedAt).toBe("number");
-      expect(entry!.lastConnectedAt!).toBeGreaterThanOrEqual(before);
-      // Other stored entries are not lost.
-      expect(history.find((e) => e.address === "10.0.0.1:7497")).toBeDefined();
+      expect(deviceRegistry.getSnapshot().records[RECORD_ID]).toMatchObject({
+        name: "Old Name",
+        platform: "test",
+      });
     });
+  });
+
+  it("should stamp the record as connected once the peer settles on plaintext", async () => {
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    const before = Date.now();
+    capturedEventHandlers.onPlaintextMode!();
+
+    await waitFor(() => {
+      const record = deviceRegistry.getSnapshot().records[RECORD_ID];
+      expect(record?.lastConnectedAt).toBeGreaterThanOrEqual(before);
+    });
+  });
+
+  it("should move a pre-V2 pairing onto the record once the peer authenticates with it", async () => {
+    // Nothing before the handshake proves the credential stored at an address
+    // belongs to this record — a recycled DHCP lease would look identical. The
+    // key only moves after the peer has actually authenticated with it.
+    await seedDeviceRegistry(
+      [
+        mockDeviceRecord({
+          recordId: RECORD_ID,
+          address: DEVICE_ADDRESS,
+          legacyCredentialKey: "192.168.1.100",
+        }),
+      ],
+      RECORD_ID,
+    );
+    await credentialStore.set("192.168.1.100", {
+      authToken: "token-abc",
+      pairingKey: "a".repeat(64),
+      clientId: "client-uuid-1234",
+      pairedAt: 1700000000000,
+    });
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    const [config] = vi.mocked(connectionManager.addDevice).mock.calls.at(-1)!;
+    await expect(config.encryption!.getCredentials()).resolves.toMatchObject({
+      authToken: "token-abc",
+    });
+
+    capturedEventHandlers.onEncryptedHandshakeOk!();
+
+    await waitFor(async () => {
+      await expect(
+        credentialStore.get(credentialKeyForRecord(RECORD_ID)),
+      ).resolves.toMatchObject({ authToken: "token-abc" });
+    });
+    expect(await credentialStore.get("192.168.1.100")).toBeNull();
+    expect(
+      deviceRegistry.getSnapshot().records[RECORD_ID]?.legacyCredentialKey,
+    ).toBeUndefined();
   });
 
   it("should set coreVersion to null when version fetch fails", async () => {
@@ -2607,7 +2667,7 @@ describe("connection event handling", () => {
       </ConnectionProvider>,
     );
 
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2673,14 +2733,12 @@ describe("connection event handling", () => {
 });
 
 describe("cancelled request handling", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
-    resetStore();
+    await resetStore();
     // Ensure getActiveDeviceId returns the device we're testing with
-    vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
-      "192.168.1.100:7497",
-    );
+    vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(RECORD_ID);
   });
 
   it("should handle cancelled media response gracefully", async () => {
@@ -2693,7 +2751,7 @@ describe("cancelled request handling", () => {
     );
 
     // Trigger connection open with the deviceId that matches our mock
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2712,10 +2770,6 @@ describe("cancelled request handling", () => {
     // resolve as cancelled (request reset). We schedule one delayed retry —
     // without it the settings card and store stay stale until the next
     // notification arrives.
-    const { isCancelled } = await import("../../../lib/coreApi");
-    vi.mocked(isCancelled)
-      .mockReturnValueOnce(true) // first call: cancelled, schedules retry
-      .mockReturnValue(false); // retry: not cancelled, processed normally
     vi.mocked(CoreAPI.media)
       .mockResolvedValueOnce({ cancelled: true } as any)
       .mockResolvedValueOnce({
@@ -2732,7 +2786,7 @@ describe("cancelled request handling", () => {
         </ConnectionProvider>,
       );
 
-      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, {
         state: "connected",
         hasData: false,
         hasConnectedBefore: false,
@@ -2750,15 +2804,12 @@ describe("cancelled request handling", () => {
       });
     } finally {
       vi.useRealTimers();
-      vi.mocked(isCancelled).mockReturnValue(false);
     }
   });
 
   it("should clear a pending media retry timer on unmount", async () => {
     // If the user switches devices while a retry is pending the timer must
     // not fire and write stale data into the new connection's store.
-    const { isCancelled } = await import("../../../lib/coreApi");
-    vi.mocked(isCancelled).mockReturnValueOnce(true);
     vi.mocked(CoreAPI.media).mockResolvedValueOnce({ cancelled: true } as any);
 
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -2770,7 +2821,7 @@ describe("cancelled request handling", () => {
         </ConnectionProvider>,
       );
 
-      capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, {
         state: "connected",
         hasData: false,
         hasConnectedBefore: false,
@@ -2787,7 +2838,6 @@ describe("cancelled request handling", () => {
       expect(CoreAPI.media).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
-      vi.mocked(isCancelled).mockReturnValue(false);
     }
   });
 
@@ -2803,7 +2853,7 @@ describe("cancelled request handling", () => {
     );
 
     // Trigger connection open with the deviceId that matches our mock
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2822,11 +2872,9 @@ describe("API error handling", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
-    resetStore();
+    await resetStore();
     // Ensure getActiveDeviceId returns the device we're testing with
-    vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
-      "192.168.1.100:7497",
-    );
+    vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(RECORD_ID);
     // Reset rate limiter so toast assertions aren't masked by inter-test cooldown.
     const { resetToastRateLimiter } = await import("@/lib/toastUtils");
     resetToastRateLimiter();
@@ -2842,7 +2890,7 @@ describe("API error handling", () => {
     );
 
     // Trigger connection open with the deviceId that matches our mock
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2867,7 +2915,7 @@ describe("API error handling", () => {
       </ConnectionProvider>,
     );
 
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2893,7 +2941,7 @@ describe("API error handling", () => {
     );
 
     // Trigger connection open with the deviceId that matches our mock
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2916,7 +2964,7 @@ describe("API error handling", () => {
       </ConnectionProvider>,
     );
 
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2943,7 +2991,7 @@ describe("API error handling", () => {
       </ConnectionProvider>,
     );
 
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2981,7 +3029,7 @@ describe("API error handling", () => {
       </ConnectionProvider>,
     );
 
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: false,
       hasConnectedBefore: false,
@@ -2991,12 +3039,12 @@ describe("API error handling", () => {
       expect(CoreAPI.tokens).toHaveBeenCalledTimes(1);
     });
 
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "reconnecting",
       hasData: true,
       hasConnectedBefore: true,
     });
-    capturedEventHandlers.onConnectionChange!("192.168.1.100:7497", {
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
       hasData: true,
       hasConnectedBefore: true,
@@ -3026,7 +3074,7 @@ describe("app lifecycle handling", () => {
     vi.clearAllMocks();
     resumeCallback = null;
     pauseCallback = null;
-    resetStore();
+    await resetStore();
 
     // Capture the callbacks passed to App.addListener
     const { App } = await import("@capacitor/app");
@@ -3120,7 +3168,7 @@ describe("app lifecycle handling", () => {
 describe("browser visibility handling (web platform)", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    resetStore();
+    await resetStore();
 
     const { Capacitor } = await import("@capacitor/core");
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
@@ -3183,10 +3231,10 @@ describe("browser visibility handling (web platform)", () => {
 });
 
 describe("edge cases", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
-    resetStore();
+    await resetStore();
   });
 
   describe("stale connection events", () => {
@@ -3235,7 +3283,7 @@ describe("network status handling (native platform)", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     networkListener = null;
-    resetStore();
+    await resetStore();
 
     // Mock Capacitor as native platform
     const { Capacitor } = await import("@capacitor/core");
@@ -3356,7 +3404,7 @@ describe("processNotification error handling", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     capturedEventHandlers = {};
-    resetStore();
+    await resetStore();
     mockToast.mockClear();
     mockToastError.mockClear();
     // Reset toast rate limiter to ensure toast shows

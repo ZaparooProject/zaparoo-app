@@ -3,6 +3,7 @@ import type { RefObject } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import type { SearchResultGame } from "@/lib/models";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
@@ -55,22 +56,18 @@ export function LibraryGameSearch({
   const scrollRef = externalScrollRef ?? internalScrollRef;
   const connected = useStatusStore((state) => state.connected);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  const targetDeviceAddress = useStatusStore(
-    (state) => state.targetDeviceAddress,
-  );
+  const deviceKey = useActiveDeviceKey();
   const searchScope = sessionScope ?? initialSystemId ?? "all";
   const savedSearch = useLibrarySessionStore((state) =>
-    state.deviceAddress === targetDeviceAddress
-      ? state.searches[searchScope]
-      : undefined,
+    state.deviceAddress === deviceKey ? state.searches[searchScope] : undefined,
   );
   const setSessionSearch = useLibrarySessionStore((state) => state.setSearch);
   const activateLibraryDevice = useLibrarySessionStore(
     (state) => state.activateDevice,
   );
   useLayoutEffect(() => {
-    activateLibraryDevice(targetDeviceAddress);
-  }, [activateLibraryDevice, targetDeviceAddress]);
+    activateLibraryDevice(deviceKey);
+  }, [activateLibraryDevice, deviceKey]);
   const libraryFeature = useCoreFeature("mediaLibrary");
   const mediaTagsFeature = useCoreFeature("mediaTags", {
     requireKnownSupport: true,
@@ -79,7 +76,7 @@ export function LibraryGameSearch({
     requireKnownSupport: true,
   });
   const systemsQuery = useQuery({
-    queryKey: ["systems", targetDeviceAddress, { all: false }],
+    queryKey: ["systems", deviceKey, { all: false }],
     queryFn: () => CoreAPI.systems(),
     enabled: connected && gamesIndex.exists,
     staleTime: 60 * 1000,
@@ -236,7 +233,7 @@ export function LibraryGameSearch({
         close={() => setSelectedResult(null)}
         entry={selectedEntry}
         systemId={selectedResult?.system.id ?? ""}
-        targetDeviceAddress={targetDeviceAddress}
+        deviceKey={deviceKey}
       />
       <SystemSelector
         isOpen={systemSelectorOpen}

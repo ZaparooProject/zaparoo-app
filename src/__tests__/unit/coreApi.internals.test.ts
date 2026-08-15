@@ -1,23 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  CoreAPI,
-  MalformedCoreResponseError,
-  getDeviceAddress,
-  setDeviceAddress,
-  getWsUrl,
-} from "../../lib/coreApi";
+import { CoreAPI, MalformedCoreResponseError } from "../../lib/coreApi";
 import { Method } from "../../lib/models";
 
 const mockSend = vi.fn();
-import { Preferences } from "@capacitor/preferences";
-
-// Mock localStorage
-const mockLocalStorage = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-};
 
 // Mock Capacitor
 vi.mock("@capacitor/core", () => ({
@@ -26,30 +11,9 @@ vi.mock("@capacitor/core", () => ({
   },
 }));
 
-// Mock Preferences
-vi.mock("@capacitor/preferences", () => ({
-  Preferences: {
-    set: vi.fn(),
-    get: vi.fn(),
-  },
-}));
-
 describe("CoreAPI Internals", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset mock implementations (not just call history)
-    mockLocalStorage.getItem.mockReset();
-    mockLocalStorage.setItem.mockReset();
-
-    Object.defineProperty(window, "localStorage", {
-      value: mockLocalStorage,
-      writable: true,
-    });
-
-    Object.defineProperty(window, "location", {
-      value: { hostname: "test-hostname" },
-      writable: true,
-    });
 
     // Mock WebSocket connection as connected so requests are sent immediately
     CoreAPI.setWsInstance({ isConnected: true, send: mockSend } as any);
@@ -57,44 +21,6 @@ describe("CoreAPI Internals", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-  });
-
-  describe("Storage error handling", () => {
-    it("should throw when localStorage fails in getDeviceAddress", () => {
-      // Make localStorage.getItem throw an error
-      mockLocalStorage.getItem.mockImplementation(() => {
-        throw new Error("localStorage failed");
-      });
-
-      expect(() => getDeviceAddress()).toThrow("localStorage failed");
-    });
-
-    it("should not throw when localStorage fails in setDeviceAddress", () => {
-      // Make localStorage.setItem throw an error
-      mockLocalStorage.setItem.mockImplementation(() => {
-        throw new Error("localStorage setItem failed");
-      });
-
-      // Should not throw
-      expect(() => setDeviceAddress("test-address")).not.toThrow();
-    });
-
-    it("should not throw when Preferences.set fails in setDeviceAddress", async () => {
-      // Make Preferences.set reject
-      vi.mocked(Preferences.set).mockRejectedValue(
-        new Error("Preferences failed"),
-      );
-
-      // Should not throw
-      expect(() => setDeviceAddress("test-address")).not.toThrow();
-    });
-
-    it("should not throw for invalid saved device address", () => {
-      mockLocalStorage.getItem.mockReturnValue("192.168.1.286");
-
-      expect(() => getWsUrl()).not.toThrow();
-      expect(getWsUrl()).toBe("");
-    });
   });
 
   describe("setSend edge cases", () => {

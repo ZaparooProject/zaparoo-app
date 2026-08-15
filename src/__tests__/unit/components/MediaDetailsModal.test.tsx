@@ -6,6 +6,7 @@ import { CoreAPI } from "@/lib/coreApi";
 import type { SearchResultGame } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useStatusStore } from "@/lib/store";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 
 vi.mock("@/hooks/useHaptics", () => ({
   useHaptics: () => ({
@@ -45,12 +46,12 @@ function renderModal(
 }
 
 describe("MediaDetailsModal", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.restoreAllMocks();
     usePreferencesStore.setState({ showFilenames: false });
+    await seedActiveDevice({ recordId: "device-a" });
     useStatusStore.setState({
       connected: true,
-      targetDeviceAddress: "device-a",
       coreVersion: "2.15.0",
       coreVersionPending: false,
     });

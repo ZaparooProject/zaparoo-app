@@ -34,7 +34,6 @@ describe("FavoriteButton", () => {
     mockErrorToast.mockClear();
     useStatusStore.setState({
       connected: true,
-      targetDeviceAddress: "device-a",
       coreVersion: "2.15.0",
       coreVersionPending: false,
     });
@@ -50,7 +49,7 @@ describe("FavoriteButton", () => {
       <FavoriteButton
         entry={mediaEntry()}
         fallbackSystemId="SNES"
-        targetDeviceAddress="device-a"
+        deviceKey="device-a"
       />,
     );
     const button = screen.getByRole("button", {
@@ -82,7 +81,7 @@ describe("FavoriteButton", () => {
           tags: [{ type: "user", tag: "favorite" }],
         })}
         fallbackSystemId="SNES"
-        targetDeviceAddress="device-a"
+        deviceKey="device-a"
       />,
     );
     await user.click(
@@ -109,7 +108,7 @@ describe("FavoriteButton", () => {
       <FavoriteButton
         entry={mediaEntry()}
         fallbackSystemId="SNES"
-        targetDeviceAddress="device-a"
+        deviceKey="device-a"
       />,
     );
     await user.click(
@@ -129,7 +128,7 @@ describe("FavoriteButton", () => {
       <FavoriteButton
         entry={mediaEntry()}
         fallbackSystemId="SNES"
-        targetDeviceAddress="device-a"
+        deviceKey="device-a"
         iconOnly
       />,
     );
@@ -149,7 +148,7 @@ describe("FavoriteButton", () => {
       <FavoriteButton
         entry={mediaEntry()}
         fallbackSystemId="SNES"
-        targetDeviceAddress="device-a"
+        deviceKey="device-a"
       />,
     );
 

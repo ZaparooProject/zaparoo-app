@@ -7,6 +7,7 @@ import {
   within,
 } from "../../../test-utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { deviceRegistry } from "@/lib/devices/deviceRegistry";
 import { usePurchasePreviewStore } from "@/lib/purchasePreviewStore";
 
 // Mock CoreAPI
@@ -14,8 +15,6 @@ vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
     reset: vi.fn(),
   },
-  getDeviceAddress: vi.fn(() => "192.168.1.100"),
-  setDeviceAddress: vi.fn(),
   validateDeviceAddress: vi.fn((address: string) => {
     if (address.includes("286")) {
       return {
@@ -196,7 +195,6 @@ describe("Settings Index Route", () => {
     setDeviceHistory: vi.fn(),
     removeDeviceHistory: vi.fn(),
     resetConnectionState: vi.fn(),
-    setTargetDeviceAddress: vi.fn(),
     safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
     inboxMessages: [],
     setInboxModalOpen: vi.fn(),
@@ -347,13 +345,11 @@ describe("Settings Index Route", () => {
   describe("device address changes", () => {
     it("should reset connection state when address changes", async () => {
       const mockResetConnectionState = vi.fn();
-      const mockSetTargetDeviceAddress = vi.fn();
 
       mockUseStatusStore.mockImplementation((selector) =>
         selector({
           ...defaultStoreState,
           resetConnectionState: mockResetConnectionState,
-          setTargetDeviceAddress: mockSetTargetDeviceAddress,
         }),
       );
 
@@ -380,13 +376,11 @@ describe("Settings Index Route", () => {
 
     it("should show validation message and not select invalid address", async () => {
       const mockResetConnectionState = vi.fn();
-      const mockSetTargetDeviceAddress = vi.fn();
 
       mockUseStatusStore.mockImplementation((selector) =>
         selector({
           ...defaultStoreState,
           resetConnectionState: mockResetConnectionState,
-          setTargetDeviceAddress: mockSetTargetDeviceAddress,
         }),
       );
 
@@ -398,7 +392,9 @@ describe("Settings Index Route", () => {
         await screen.findByText("settings.deviceAddressInvalid"),
       ).toBeInTheDocument();
       expect(mockResetConnectionState).not.toHaveBeenCalled();
-      expect(mockSetTargetDeviceAddress).not.toHaveBeenCalled();
+      // An address that fails validation must not reach the registry — a record
+      // written here would outlive the error message.
+      expect(deviceRegistry.getSnapshot().records).toEqual({});
     });
 
     it("should clear validation message after a valid address", async () => {

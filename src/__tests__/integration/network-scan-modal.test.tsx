@@ -3,7 +3,6 @@ import { render, screen, waitFor, act } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { NetworkScanModal } from "@/components/NetworkScanModal";
 import { Capacitor } from "@capacitor/core";
-import { credentialStore } from "@/lib/crypto/credentials";
 import {
   __simulateDeviceDiscovered,
   type ZeroConfService,
@@ -344,13 +343,10 @@ describe("NetworkScanModal", () => {
   });
 
   describe("device selection", () => {
-    it("should select normalized hostname and register its IP credential fallback", async () => {
+    it("should hand over the hostname and the IP it resolved to", async () => {
       // Arrange
       const user = userEvent.setup();
       const onSelectDevice = vi.fn();
-      const registerFallback = vi
-        .spyOn(credentialStore, "registerFallback")
-        .mockImplementation(() => undefined);
 
       render(
         <NetworkScanModal
@@ -384,17 +380,19 @@ describe("NetworkScanModal", () => {
       // Act - Click the device card
       await user.click(screen.getByText("MiSTer"));
 
-      // Assert
+      // Assert — the registry needs both: the hostname is what the record is
+      // built around, the IP is what the socket can actually reach today.
       expect(onSelectDevice).toHaveBeenCalledWith(
-        expect.objectContaining({ address: "mister.local", name: "MiSTer" }),
-      );
-      expect(registerFallback).toHaveBeenCalledWith(
-        "mister.local",
-        "192.168.1.100",
+        expect.objectContaining({
+          hostname: "mister.local",
+          addresses: ["192.168.1.100"],
+          port: 7497,
+          name: "MiSTer",
+        }),
       );
     });
 
-    it("should include port in selection when not default", async () => {
+    it("should carry the announced port through to the selection", async () => {
       // Arrange
       const user = userEvent.setup();
       const onSelectDevice = vi.fn();
@@ -433,7 +431,8 @@ describe("NetworkScanModal", () => {
       // Assert
       expect(onSelectDevice).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: "test-device.local:9000",
+          hostname: "test-device.local",
+          port: 9000,
           name: "Custom Device",
         }),
       );
@@ -470,9 +469,11 @@ describe("NetworkScanModal", () => {
 
       await user.click(await screen.findByText("Fallback Device"));
 
+      // With no hostname announced there is nothing but the IP to build on.
       expect(onSelectDevice).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: "192.168.1.100",
+          hostname: undefined,
+          addresses: ["192.168.1.100"],
           name: "Fallback Device",
         }),
       );

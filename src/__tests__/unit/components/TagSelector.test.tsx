@@ -17,6 +17,11 @@ import userEvent from "@testing-library/user-event";
 import { TagSelector, TagSelectorTrigger } from "@/components/TagSelector";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+import {
+  mockDeviceRecord,
+  seedActiveDevice,
+  seedDeviceRegistry,
+} from "@/test-utils/deviceRegistry";
 import { CoreAPI, MalformedCoreResponseError } from "@/lib/coreApi";
 import { TagInfo } from "@/lib/models";
 
@@ -83,13 +88,13 @@ describe("TagSelector", () => {
     selectedTags: [] as string[],
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     // Reset stores
     usePreferencesStore.setState({ accessibleLists: false });
+    await seedActiveDevice({ recordId: "device-a" });
     useStatusStore.setState({
       ...useStatusStore.getState(),
-      targetDeviceAddress: "device-a",
       gamesIndex: {
         exists: true,
         indexing: false,
@@ -192,8 +197,8 @@ describe("TagSelector", () => {
         await screen.findByRole("checkbox", { name: /action/i }),
       ).toBeInTheDocument();
 
-      act(() => {
-        useStatusStore.setState({ targetDeviceAddress: "device-b" });
+      await act(async () => {
+        await seedDeviceRegistry([mockDeviceRecord({ recordId: "device-b" })]);
       });
 
       expect(

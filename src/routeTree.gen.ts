@@ -34,7 +34,7 @@ import { Route as SettingsOnlineRouteImport } from "./routes/settings.online";
 import { Route as SettingsPlayControlsRouteImport } from "./routes/settings.play-controls";
 import { Route as SettingsReadersRouteImport } from "./routes/settings.readers";
 import { Route as CreateMappingsNewRouteImport } from "./routes/create.mappings_.new";
-import { Route as SettingsDevicesAddressRouteImport } from "./routes/settings.devices_.$address";
+import { Route as SettingsDevicesRecordIdRouteImport } from "./routes/settings.devices_.$recordId";
 import { Route as CreateMappingsEditIdRouteImport } from "./routes/create.mappings_.edit_.$id";
 
 const IndexRoute = IndexRouteImport.update({
@@ -162,9 +162,9 @@ const CreateMappingsNewRoute = CreateMappingsNewRouteImport.update({
   path: "/create/mappings/new",
   getParentRoute: () => rootRouteImport,
 } as any);
-const SettingsDevicesAddressRoute = SettingsDevicesAddressRouteImport.update({
-  id: "/settings/devices_/$address",
-  path: "/settings/devices/$address",
+const SettingsDevicesRecordIdRoute = SettingsDevicesRecordIdRouteImport.update({
+  id: "/settings/devices_/$recordId",
+  path: "/settings/devices/$recordId",
   getParentRoute: () => rootRouteImport,
 } as any);
 const CreateMappingsEditIdRoute = CreateMappingsEditIdRouteImport.update({
@@ -199,7 +199,7 @@ export interface FileRoutesByFullPath {
   "/library/": typeof LibraryIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
   "/create/mappings/new": typeof CreateMappingsNewRoute;
-  "/settings/devices/$address": typeof SettingsDevicesAddressRoute;
+  "/settings/devices/$recordId": typeof SettingsDevicesRecordIdRoute;
   "/create/mappings/edit/$id": typeof CreateMappingsEditIdRoute;
 }
 export interface FileRoutesByTo {
@@ -228,7 +228,7 @@ export interface FileRoutesByTo {
   "/library": typeof LibraryIndexRoute;
   "/settings": typeof SettingsIndexRoute;
   "/create/mappings/new": typeof CreateMappingsNewRoute;
-  "/settings/devices/$address": typeof SettingsDevicesAddressRoute;
+  "/settings/devices/$recordId": typeof SettingsDevicesRecordIdRoute;
   "/create/mappings/edit/$id": typeof CreateMappingsEditIdRoute;
 }
 export interface FileRoutesById {
@@ -258,7 +258,7 @@ export interface FileRoutesById {
   "/library/": typeof LibraryIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
   "/create/mappings_/new": typeof CreateMappingsNewRoute;
-  "/settings/devices_/$address": typeof SettingsDevicesAddressRoute;
+  "/settings/devices_/$recordId": typeof SettingsDevicesRecordIdRoute;
   "/create/mappings_/edit_/$id": typeof CreateMappingsEditIdRoute;
 }
 export interface FileRouteTypes {
@@ -289,7 +289,7 @@ export interface FileRouteTypes {
     | "/library/"
     | "/settings/"
     | "/create/mappings/new"
-    | "/settings/devices/$address"
+    | "/settings/devices/$recordId"
     | "/create/mappings/edit/$id";
   fileRoutesByTo: FileRoutesByTo;
   to:
@@ -318,7 +318,7 @@ export interface FileRouteTypes {
     | "/library"
     | "/settings"
     | "/create/mappings/new"
-    | "/settings/devices/$address"
+    | "/settings/devices/$recordId"
     | "/create/mappings/edit/$id";
   id:
     | "__root__"
@@ -347,7 +347,7 @@ export interface FileRouteTypes {
     | "/library/"
     | "/settings/"
     | "/create/mappings_/new"
-    | "/settings/devices_/$address"
+    | "/settings/devices_/$recordId"
     | "/create/mappings_/edit_/$id";
   fileRoutesById: FileRoutesById;
 }
@@ -377,7 +377,7 @@ export interface RootRouteChildren {
   LibraryIndexRoute: typeof LibraryIndexRoute;
   SettingsIndexRoute: typeof SettingsIndexRoute;
   CreateMappingsNewRoute: typeof CreateMappingsNewRoute;
-  SettingsDevicesAddressRoute: typeof SettingsDevicesAddressRoute;
+  SettingsDevicesRecordIdRoute: typeof SettingsDevicesRecordIdRoute;
   CreateMappingsEditIdRoute: typeof CreateMappingsEditIdRoute;
 }
 
@@ -558,11 +558,11 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof CreateMappingsNewRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    "/settings/devices_/$address": {
-      id: "/settings/devices_/$address";
-      path: "/settings/devices/$address";
-      fullPath: "/settings/devices/$address";
-      preLoaderRoute: typeof SettingsDevicesAddressRouteImport;
+    "/settings/devices_/$recordId": {
+      id: "/settings/devices_/$recordId";
+      path: "/settings/devices/$recordId";
+      fullPath: "/settings/devices/$recordId";
+      preLoaderRoute: typeof SettingsDevicesRecordIdRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/create/mappings_/edit_/$id": {
@@ -601,7 +601,7 @@ const rootRouteChildren: RootRouteChildren = {
   LibraryIndexRoute: LibraryIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   CreateMappingsNewRoute: CreateMappingsNewRoute,
-  SettingsDevicesAddressRoute: SettingsDevicesAddressRoute,
+  SettingsDevicesRecordIdRoute: SettingsDevicesRecordIdRoute,
   CreateMappingsEditIdRoute: CreateMappingsEditIdRoute,
 };
 export const routeTree = rootRouteImport

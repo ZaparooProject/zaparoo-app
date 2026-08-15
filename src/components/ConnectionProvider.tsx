@@ -15,7 +15,6 @@ import {
 } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
-import { Preferences } from "@capacitor/preferences";
 import { App } from "@capacitor/app";
 import { Network } from "@capacitor/network";
 import toast from "react-hot-toast";
@@ -56,10 +55,8 @@ import { satisfies as versionSatisfies } from "@/lib/coreVersion";
 import {
   CoreAPI,
   CoreApiError,
-  getDeviceAddress,
   isCancelled,
   isExpectedMediaDatabaseError,
-  validateDeviceAddress,
   type NotificationRequest,
 } from "@/lib/coreApi";
 import {
@@ -68,11 +65,18 @@ import {
   useStatusStore,
   ConnectionState,
 } from "@/lib/store";
-import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
 import {
-  isNativePluginAvailable,
-  isPluginAvailable,
-} from "@/lib/capacitorBridge";
+  credentialKeyForRecord,
+  credentialStore,
+} from "@/lib/crypto/credentials";
+import {
+  activeAddressOf,
+  deviceRegistry,
+  parsedEndpointForRecord,
+  useDeviceRegistry,
+  type DeviceRegistrySnapshot,
+} from "@/lib/devices/deviceRegistry";
+import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 import { formatDurationDisplay, formatDurationAccessible } from "@/lib/utils";
 import {
   ConnectionContext,
@@ -84,6 +88,21 @@ import { PairingModal } from "./PairingModal";
 interface ConnectionProviderProps {
   children: ReactNode;
 }
+
+const selectActiveRecordId = (state: DeviceRegistrySnapshot) =>
+  state.activeRecordId;
+
+/**
+ * The WebSocket URL the active record connects through, or `""` when there is
+ * no usable device. Selected as a primitive so a metadata-only registry write
+ * cannot tear the socket down and rebuild it.
+ */
+const selectActiveWsUrl = (state: DeviceRegistrySnapshot) => {
+  const record = state.activeRecordId
+    ? state.records[state.activeRecordId]
+    : null;
+  return parsedEndpointForRecord(record)?.wsUrl ?? "";
+};
 
 const CLIENT_CAPABILITIES_SINCE = "2.16.0";
 const MEDIA_TRANSITION_GRACE_MS = 250;
@@ -169,8 +188,6 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
   // Store state
   const {
-    targetDeviceAddress,
-    setTargetDeviceAddress,
     setConnectionState,
     setConnectionError,
     setPlaying,
@@ -183,9 +200,6 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     clearActiveTokens,
     setStagedToken,
     clearStagedToken,
-    addDeviceHistory,
-    setDeviceHistory,
-    updateDeviceHistoryMeta,
     setCoreVersion,
     setCorePlatform,
     setCoreVersionPending,
@@ -197,8 +211,6 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setInboxModalOpen,
   } = useStatusStore(
     useShallow((state) => ({
-      targetDeviceAddress: state.targetDeviceAddress,
-      setTargetDeviceAddress: state.setTargetDeviceAddress,
       setConnectionState: state.setConnectionState,
       setConnectionError: state.setConnectionError,
       setPlaying: state.setPlaying,
@@ -211,9 +223,6 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       clearActiveTokens: state.clearActiveTokens,
       setStagedToken: state.setStagedToken,
       clearStagedToken: state.clearStagedToken,
-      addDeviceHistory: state.addDeviceHistory,
-      setDeviceHistory: state.setDeviceHistory,
-      updateDeviceHistoryMeta: state.updateDeviceHistoryMeta,
       setCoreVersion: state.setCoreVersion,
       setCorePlatform: state.setCorePlatform,
       setCoreVersionPending: state.setCoreVersionPending,
@@ -225,6 +234,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setInboxModalOpen: state.setInboxModalOpen,
     })),
   );
+
+  const activeRecordId = useDeviceRegistry(selectActiveRecordId);
+  const connectionWsUrl = useDeviceRegistry(selectActiveWsUrl);
+  const connectionAddress = useDeviceRegistry(activeAddressOf);
 
   // Connection state tracked via useState to prevent unnecessary re-renders
   // These are updated via onConnectionChange callback
@@ -242,7 +255,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     !isConnected &&
     !hasConnectedBefore &&
     (localConnection === null
-      ? targetDeviceAddress !== ""
+      ? connectionWsUrl !== ""
       : localConnection.state === "connecting" ||
         localConnection.state === "reconnecting");
 
@@ -541,7 +554,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               queryClient.removeQueries({
                 queryKey: [LIBRARY_QUERY_KEYS.image],
               });
-              invalidateLibraryImageCache(targetDeviceAddress);
+              invalidateLibraryImageCache(activeRecordId ?? "");
             }
             break;
           }
@@ -742,7 +755,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       announce,
       addInboxMessage,
       setInboxModalOpen,
-      targetDeviceAddress,
+      activeRecordId,
     ],
   );
 
@@ -756,156 +769,125 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // Flush any queued API requests
     CoreAPI.flushQueue();
 
-    // Hydrate device history from Preferences first, THEN call version() and
-    // merge platform/version metadata in .finally(). Do not parallelise: a
-    // late setDeviceHistory(stored) would wholesale overwrite the
-    // freshly-merged metadata from updateDeviceHistoryMeta().
+    // Fetch Core version for feature gating, then persist platform/version on
+    // the device record so the device list can render them between connects.
     setCoreVersionPending(true);
-    const deviceHistory = isPluginAvailable("Preferences")
-      ? Preferences.get({ key: "deviceHistory" })
-      : Promise.resolve({ value: null });
+    CoreAPI.version()
+      .then((res) => {
+        if (isCancelled(res)) {
+          // Don't clear pending — a new connection will manage its own pending state
+          logger.log("Version request was cancelled, skipping");
+          return;
+        }
+        if (clientRequestToken !== currentClientRequestToken.current) {
+          return;
+        }
+        setCoreVersion(res.version);
+        setCorePlatform(res.platform);
+        setCoreVersionPending(false);
+        const recordId = deviceRegistry.getSnapshot().activeRecordId;
+        if (recordId) {
+          void deviceRegistry.applyDiscoveredMetadata(recordId, {
+            platform: res.platform,
+            version: res.version,
+          });
+        }
 
-    deviceHistory
-      .then((v) => {
-        try {
-          if (v.value) {
-            setDeviceHistory(JSON.parse(v.value));
-          }
-          addDeviceHistory(getDeviceAddress());
-        } catch (e) {
-          logger.error("Error processing device history:", e);
-          toast.error(t("error", { msg: "Failed to load device history" }));
+        if (versionSatisfies(res.version, CLIENT_CAPABILITIES_SINCE)) {
+          CoreAPI.clientsCurrent()
+            .then((clientRes) => {
+              if (clientRequestToken !== currentClientRequestToken.current) {
+                return;
+              }
+              if (isCancelled(clientRes)) {
+                logger.log("Current client request was cancelled, skipping");
+                return;
+              }
+              setCurrentClient(clientRes);
+            })
+            .catch((err) => {
+              if (clientRequestToken !== currentClientRequestToken.current) {
+                return;
+              }
+              setCurrentClient(null);
+              if (err instanceof CoreApiError && err.code === -32601) {
+                logger.warn(
+                  "Current client capabilities are unavailable on this Core build",
+                );
+                return;
+              }
+              logger.error(
+                "Failed to fetch current client capabilities:",
+                err,
+                {
+                  category: "api",
+                  action: "clientsCurrent",
+                  severity: "warning",
+                },
+              );
+            });
+        } else {
+          // Roles did not exist before Core 2.16, so older connections
+          // retain their legacy unrestricted settings access.
+          setCurrentClient(LEGACY_CLIENT_ACCESS);
+        }
+
+        if (isCoreFeatureAvailable("mediaScrapers", res.version)) {
+          CoreAPI.mediaScrapeStatus()
+            .then((statusRes) => {
+              if (isCancelled(statusRes)) {
+                logger.log(
+                  "Media scrape status request was cancelled, skipping",
+                );
+                return;
+              }
+              setScrapingStatus(statusRes);
+            })
+            .catch((err) => {
+              setScrapingStatus(null);
+              logger.error("Failed to fetch media scrape status:", err, {
+                category: "api",
+                action: "mediaScrapeStatus",
+                severity: "warning",
+              });
+            });
+        } else {
+          setScrapingStatus(null);
+        }
+        if (isCoreFeatureAvailable("inbox", res.version)) {
+          CoreAPI.inbox()
+            .then((inboxRes) => {
+              if (isCancelled(inboxRes)) {
+                logger.log("Inbox request was cancelled, skipping");
+                return;
+              }
+              setInboxMessages(inboxRes.messages);
+            })
+            .catch((err) => {
+              logger.error("Failed to fetch inbox:", err, {
+                category: "api",
+                action: "inbox",
+                severity: "warning",
+              });
+            });
+        } else {
+          setInboxMessages([]);
+          setInboxModalOpen(false);
         }
       })
       .catch((e) => {
-        logger.error("Failed to get device history:", e);
-      })
-      .finally(() => {
-        // Fetch Core version for feature gating, then persist platform/version
-        // on the device-history entry so the device list can render them
-        // between connects. lastConnectedAt powers the "recently used"
-        // sort/subtitle (no UI yet, but stored for free).
-        CoreAPI.version()
-          .then((res) => {
-            if (isCancelled(res)) {
-              // Don't clear pending — a new connection will manage its own pending state
-              logger.log("Version request was cancelled, skipping");
-              return;
-            }
-            if (clientRequestToken !== currentClientRequestToken.current) {
-              return;
-            }
-            setCoreVersion(res.version);
-            setCorePlatform(res.platform);
-            setCoreVersionPending(false);
-            updateDeviceHistoryMeta(getDeviceAddress(), {
-              platform: res.platform,
-              version: res.version,
-              lastConnectedAt: Date.now(),
-            });
-
-            if (versionSatisfies(res.version, CLIENT_CAPABILITIES_SINCE)) {
-              CoreAPI.clientsCurrent()
-                .then((clientRes) => {
-                  if (
-                    clientRequestToken !== currentClientRequestToken.current
-                  ) {
-                    return;
-                  }
-                  if (isCancelled(clientRes)) {
-                    logger.log(
-                      "Current client request was cancelled, skipping",
-                    );
-                    return;
-                  }
-                  setCurrentClient(clientRes);
-                })
-                .catch((err) => {
-                  if (
-                    clientRequestToken !== currentClientRequestToken.current
-                  ) {
-                    return;
-                  }
-                  setCurrentClient(null);
-                  if (err instanceof CoreApiError && err.code === -32601) {
-                    logger.warn(
-                      "Current client capabilities are unavailable on this Core build",
-                    );
-                    return;
-                  }
-                  logger.error(
-                    "Failed to fetch current client capabilities:",
-                    err,
-                    {
-                      category: "api",
-                      action: "clientsCurrent",
-                      severity: "warning",
-                    },
-                  );
-                });
-            } else {
-              // Roles did not exist before Core 2.16, so older connections
-              // retain their legacy unrestricted settings access.
-              setCurrentClient(LEGACY_CLIENT_ACCESS);
-            }
-
-            if (isCoreFeatureAvailable("mediaScrapers", res.version)) {
-              CoreAPI.mediaScrapeStatus()
-                .then((statusRes) => {
-                  if (isCancelled(statusRes)) {
-                    logger.log(
-                      "Media scrape status request was cancelled, skipping",
-                    );
-                    return;
-                  }
-                  setScrapingStatus(statusRes);
-                })
-                .catch((err) => {
-                  setScrapingStatus(null);
-                  logger.error("Failed to fetch media scrape status:", err, {
-                    category: "api",
-                    action: "mediaScrapeStatus",
-                    severity: "warning",
-                  });
-                });
-            } else {
-              setScrapingStatus(null);
-            }
-            if (isCoreFeatureAvailable("inbox", res.version)) {
-              CoreAPI.inbox()
-                .then((inboxRes) => {
-                  if (isCancelled(inboxRes)) {
-                    logger.log("Inbox request was cancelled, skipping");
-                    return;
-                  }
-                  setInboxMessages(inboxRes.messages);
-                })
-                .catch((err) => {
-                  logger.error("Failed to fetch inbox:", err, {
-                    category: "api",
-                    action: "inbox",
-                    severity: "warning",
-                  });
-                });
-            } else {
-              setInboxMessages([]);
-              setInboxModalOpen(false);
-            }
-          })
-          .catch((e) => {
-            if (clientRequestToken !== currentClientRequestToken.current) {
-              return;
-            }
-            logger.error("Failed to get Core version:", e, {
-              category: "api",
-              action: "version",
-              severity: "warning",
-            });
-            setCoreVersion(null);
-            setCorePlatform(null);
-            setCoreVersionPending(false);
-            setCurrentClient(null);
-          });
+        if (clientRequestToken !== currentClientRequestToken.current) {
+          return;
+        }
+        logger.error("Failed to get Core version:", e, {
+          category: "api",
+          action: "version",
+          severity: "warning",
+        });
+        setCoreVersion(null);
+        setCorePlatform(null);
+        setCoreVersionPending(false);
+        setCurrentClient(null);
       });
 
     // Refetch device-scoped library data after every connection. This handles
@@ -1043,9 +1025,6 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     cancelMediaIndexReconciliation,
     scheduleMediaIndexReconciliation,
     setConnectionError,
-    setDeviceHistory,
-    addDeviceHistory,
-    updateDeviceHistoryMeta,
     setGamesIndex,
     applyMediaState,
     setLastToken,
@@ -1067,37 +1046,14 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     processNotificationRef.current = processNotification;
   }, [handleConnectionOpen, processNotification]);
 
-  // Initialize device address from localStorage
+  // Load stored devices. Everything below reads the registry, so this is the
+  // one place that has to wait for storage; the connection effect simply sees
+  // an empty wsUrl until it lands.
   useEffect(() => {
-    if (targetDeviceAddress !== "") return;
+    void deviceRegistry.hydrate();
+  }, []);
 
-    let attempts = 0;
-    const maxAttempts = 5;
-    const checkInterval = 100;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-
-    const checkAddress = () => {
-      attempts++;
-      const addr = getDeviceAddress();
-
-      if (addr !== "") {
-        setTargetDeviceAddress(addr);
-        return;
-      }
-
-      if (attempts < maxAttempts) {
-        timer = setTimeout(checkAddress, checkInterval);
-      }
-    };
-
-    checkAddress();
-
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [targetDeviceAddress, setTargetDeviceAddress]);
-
-  // Setup connection when device address changes
+  // Setup connection when the active device changes
   useEffect(() => {
     // Reset local connection state when device changes so UI doesn't show stale data
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: reset state for the newly selected external device.
@@ -1108,23 +1064,20 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setPairingRequired(false);
     setPairingOpen(false);
 
-    if (targetDeviceAddress === "") {
+    if (connectionWsUrl === "" || activeRecordId === null) {
       setConnectionState(ConnectionState.DISCONNECTED);
       return;
     }
 
-    const addressResult = validateDeviceAddress(targetDeviceAddress);
-    if (!addressResult.ok) {
-      logger.warn(
-        `[ConnectionProvider] Invalid device address: ${targetDeviceAddress}`,
-      );
-      setConnectionState(ConnectionState.ERROR);
-      setConnectionError(tRef.current(addressResult.errorKey));
-      return;
-    }
+    const recordId = activeRecordId;
+    // The transport keys devices by this id, and a record id is stable across
+    // address changes — the point of the registry. Addresses are never used.
+    const deviceId = recordId;
 
-    const wsUrl = addressResult.wsUrl;
-    const deviceAddress = addressResult.address;
+    // Which key answered `getCredentials` for this connection. Non-null only
+    // while a pre-V2 pairing has not yet been moved to the canonical key, and
+    // trustworthy only after the peer authenticates with it.
+    let legacyKeyUsed: string | null = null;
 
     // Generate unique ID for this connection session to prevent stale events
     // Use crypto.randomUUID if available, fallback for older Android WebViews
@@ -1138,7 +1091,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     CoreAPI.reset();
 
     logger.log(
-      `[ConnectionProvider] Setting up connection to: ${deviceAddress} (id: ${connectionId.slice(0, 8)})`,
+      `[ConnectionProvider] Setting up connection to: ${connectionWsUrl} (id: ${connectionId.slice(0, 8)})`,
     );
 
     // Setup connection manager event handlers
@@ -1239,10 +1192,28 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       onEncryptedHandshakeOk: () => {
         setEncryptionState("encrypted");
         setPairingRequired(false);
+        // The peer authenticated with whatever key answered getCredentials, so
+        // this is the one moment the app can be sure the record and the
+        // credential belong to the same physical device. Move a pre-V2 pairing
+        // to the canonical key now, and only drop the pointer to the old key
+        // once that has actually landed.
+        const provenKey = legacyKeyUsed;
+        void (
+          provenKey === null
+            ? Promise.resolve(true)
+            : credentialStore.promoteRecordCredentials(recordId, provenKey)
+        ).then((migrationSettled) =>
+          deviceRegistry.markConnected(recordId, {
+            ...(provenKey === null ? {} : { provenLegacyKey: provenKey }),
+            migrationSettled,
+          }),
+        );
       },
       onPlaintextMode: () => {
         setEncryptionState("plaintext");
         setPairingRequired(false);
+        // Nothing was proven, so the legacy key pointer stays put.
+        void deviceRegistry.markConnected(recordId);
       },
       onEncryptionRequired: () => {
         // Server demands encryption but we have no credentials — open the
@@ -1264,21 +1235,15 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       onCredentialsRevoked: () => {
         // Server rejected our stored credentials — clear them and prompt
         // the user to pair again.
-        const deviceKey = normalizeDeviceKey(deviceAddress);
-        credentialStore.delete(deviceKey).catch((err) => {
+        // Delete exactly the key the server rejected — which may still be the
+        // pre-V2 one on a migrated device that has not connected since.
+        const revokedKey = legacyKeyUsed ?? credentialKeyForRecord(recordId);
+        credentialStore.delete(revokedKey).catch((err) => {
           logger.error("Failed to delete revoked credentials", err, {
             category: "storage",
             action: "deleteCredentials",
           });
         });
-        const updated = useStatusStore
-          .getState()
-          .deviceHistory.map((entry) =>
-            entry.address === deviceAddress
-              ? { ...entry, paired: undefined }
-              : entry,
-          );
-        setDeviceHistory(updated);
         setEncryptionState("plaintext");
         setPairingRequired(true);
         setConnectionError(
@@ -1290,16 +1255,23 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
     // Add device and set as active
     const transport = connectionManager.addDevice({
-      deviceId: deviceAddress,
+      deviceId,
       type: "websocket",
-      address: wsUrl,
+      address: connectionWsUrl,
       encryption: {
-        getCredentials: () =>
-          credentialStore.get(normalizeDeviceKey(deviceAddress)),
+        getCredentials: async () => {
+          const record = deviceRegistry.getSnapshot().records[recordId];
+          const lookup = await credentialStore.getForRecord(
+            recordId,
+            record?.legacyCredentialKey,
+          );
+          legacyKeyUsed = lookup.legacyKeyUsed;
+          return lookup.credentials;
+        },
       },
     });
 
-    connectionManager.setActiveDevice(deviceAddress);
+    connectionManager.setActiveDevice(deviceId);
 
     // Create a compatibility wrapper for CoreAPI
     const transportWrapper = {
@@ -1338,13 +1310,14 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       invalidateMediaStateRequest();
       // Reset CoreAPI to clear any pending requests for this connection
       CoreAPI.reset();
-      connectionManager.removeDevice(deviceAddress);
+      connectionManager.removeDevice(deviceId);
       invalidateCurrentClientRequest();
       setCurrentClient(null);
       setConnectionState(ConnectionState.DISCONNECTED);
     };
   }, [
-    targetDeviceAddress,
+    activeRecordId,
+    connectionWsUrl,
     invalidateCurrentClientRequest,
     invalidateMediaStateRequest,
     cancelMediaIndexReconciliation,
@@ -1354,7 +1327,6 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setCurrentClient,
     setEncryptionState,
     setPairingRequired,
-    setDeviceHistory,
     mapTransportState,
     queryClient,
     // Note: handleConnectionOpen, processNotification, and t are accessed via refs
@@ -1473,7 +1445,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       <PairingModal
         isOpen={pairingOpen}
         close={() => setPairingOpen(false)}
-        address={targetDeviceAddress}
+        address={connectionAddress}
+        recordId={activeRecordId ?? ""}
         onSuccess={() => connectionManager.restartActiveConnection()}
       />
     </ConnectionContext.Provider>
