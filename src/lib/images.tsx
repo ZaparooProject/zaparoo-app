@@ -5,7 +5,7 @@ import {
   preloadZapLogo,
   ZAP_LOGO_HEIGHT,
   ZAP_LOGO_WIDTH,
-} from "./zapLogo";
+} from "@/lib/zapLogo";
 
 export function ZapLogo() {
   const { t } = useTranslation();
