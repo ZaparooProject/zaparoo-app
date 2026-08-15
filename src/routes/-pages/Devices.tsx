@@ -21,6 +21,8 @@ import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { DelayedLoading } from "@/components/DelayedLoading";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { BackIcon } from "@/lib/images";
 import { DeviceRow } from "@/components/DeviceRow";
 
@@ -35,6 +37,15 @@ const selectActiveRecordId = (state: { activeRecordId: string | null }) =>
   state.activeRecordId;
 const selectHydrationError = (state: { hydrationError: string | null }) =>
   state.hydrationError;
+/**
+ * True once the stored devices have been read, either successfully or not.
+ * A failed read never becomes hydrated, so gating on `hydrated` alone would
+ * hold this page on the spinner instead of showing the error.
+ */
+const selectRegistrySettled = (state: {
+  hydrated: boolean;
+  hydrationError: string | null;
+}) => state.hydrated || state.hydrationError !== null;
 
 export function Devices() {
   const { t } = useTranslation();
@@ -55,6 +66,10 @@ export function Devices() {
   // would tell the user they have never saved a device — the opposite of what
   // happened, and an invitation to re-pair devices they already own.
   const hydrationError = useDeviceRegistry(selectHydrationError);
+  // Records arrive asynchronously, so before the read lands this page looks
+  // exactly like one belonging to a user who has never saved a device — the
+  // same misleading empty state, just from a different cause.
+  const registrySettled = useDeviceRegistry(selectRegistrySettled);
   const { isConnected } = useConnection();
 
   const { selectRecord } = useSelectDevice();
@@ -130,7 +145,14 @@ export function Devices() {
       }
     >
       <div className="flex flex-col gap-3 pt-2">
-        {sortedRecords.length === 0 ? (
+        {!registrySettled ? (
+          <DelayedLoading>
+            <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
+              <LoadingSpinner size={16} className="text-primary" />
+              <span>{t("settings.deviceHistoryLoading")}</span>
+            </div>
+          </DelayedLoading>
+        ) : sortedRecords.length === 0 ? (
           <EmptyState
             size="compact"
             title={t(

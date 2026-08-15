@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "../../../test-utils";
+import { act, render, screen, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
@@ -122,6 +122,29 @@ describe("Settings Devices Route", () => {
     expect(
       await screen.findByText("settings.deviceHistoryEmpty"),
     ).toBeInTheDocument();
+  });
+
+  it("should not claim there are no devices while the registry is still loading", async () => {
+    // An unhydrated registry holds no records for the same reason a brand new
+    // install holds none. Telling the second story to the first user invites
+    // them to re-pair devices they already own.
+    renderRoute();
+
+    expect(
+      screen.queryByText("settings.deviceHistoryEmpty"),
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByText("settings.deviceHistoryLoading"),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await seedRecords([{ address: "192.168.1.10", name: "Alpha" }]);
+    });
+
+    expect(await screen.findByText("Alpha")).toBeInTheDocument();
+    expect(
+      screen.queryByText("settings.deviceHistoryLoading"),
+    ).not.toBeInTheDocument();
   });
 
   it("should distinguish a failed registry read from having no devices", async () => {
