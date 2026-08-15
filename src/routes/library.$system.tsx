@@ -13,6 +13,7 @@ import {
 } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { CoreAPI } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
 import {
@@ -102,22 +103,20 @@ export function LibrarySystem() {
     generation: number;
     targetIndex: number;
   } | null>(null);
-  const targetDeviceAddress = useStatusStore(
-    (state) => state.targetDeviceAddress,
-  );
+  const deviceKey = useActiveDeviceKey();
   const levels = useLibrarySessionStore((state) =>
-    state.deviceAddress === targetDeviceAddress
+    state.deviceAddress === deviceKey
       ? (state.folderLevels[systemId] ?? EMPTY_FOLDER_LEVELS)
       : EMPTY_FOLDER_LEVELS,
   );
   const autoEnteredRoot = useLibrarySessionStore(
     (state) =>
-      state.deviceAddress === targetDeviceAddress &&
+      state.deviceAddress === deviceKey &&
       state.autoEnteredRoots[systemId] === true,
   );
   const searchOpen = useLibrarySessionStore(
     (state) =>
-      state.deviceAddress === targetDeviceAddress &&
+      state.deviceAddress === deviceKey &&
       state.embeddedSearchOpen[systemId] === true,
   );
   const mediaSort = useLibrarySessionStore((state) => state.mediaSort);
@@ -138,8 +137,8 @@ export function LibrarySystem() {
   const corePlatform = useStatusStore((state) => state.corePlatform);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   useLayoutEffect(() => {
-    activateLibraryDevice(targetDeviceAddress);
-  }, [activateLibraryDevice, targetDeviceAddress]);
+    activateLibraryDevice(deviceKey);
+  }, [activateLibraryDevice, deviceKey]);
   const libraryFeature = useCoreFeature("mediaLibrary");
   const currentPath = levels.at(-1)?.path ?? "";
   const browseScrollKey = libraryBrowseScrollKey(
@@ -151,7 +150,7 @@ export function LibrarySystem() {
   const sessionScrollKey = searchOpen ? searchScrollKey : browseScrollKey;
   const forgetScroll = useTabSessionStore((state) => state.forgetScroll);
   const systemsQuery = useQuery({
-    queryKey: ["systems", targetDeviceAddress, { all: false }],
+    queryKey: ["systems", deviceKey, { all: false }],
     queryFn: () => CoreAPI.systems(),
     enabled: connected,
     staleTime: 60 * 1000,
@@ -164,7 +163,7 @@ export function LibrarySystem() {
   const pageHeading = searchOpen ? t("library.searchTitle") : heading;
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(pageHeading);
   const browse = useLibraryBrowse({
-    targetDeviceAddress,
+    deviceKey,
     systemId,
     path: currentPath,
     sort: mediaSort,
@@ -312,7 +311,7 @@ export function LibrarySystem() {
     const generation = ++jumpGenerationRef.current;
     pauseLibraryThumbnails();
     await queryClient.cancelQueries({
-      queryKey: [LIBRARY_QUERY_KEYS.image, targetDeviceAddress],
+      queryKey: [LIBRARY_QUERY_KEYS.image, deviceKey],
     });
     if (jumpGenerationRef.current !== generation) return;
     const targetIndex = browse.totalDirs + group.offset;
@@ -383,7 +382,7 @@ export function LibrarySystem() {
         ref={listRef}
         entries={browse.entries}
         systemId={systemId}
-        targetDeviceAddress={targetDeviceAddress}
+        deviceKey={deviceKey}
         scrollRef={scrollRef}
         hasNextPage={Boolean(browse.hasNextPage)}
         isFetchingNextPage={browse.isFetchingNextPage}
@@ -501,7 +500,7 @@ export function LibrarySystem() {
         close={() => setLetterModalOpen(false)}
         systemId={systemId}
         path={currentPath}
-        targetDeviceAddress={targetDeviceAddress}
+        deviceKey={deviceKey}
         sort={mediaSort}
         onSelect={(group) => void selectLetter(group)}
       />
@@ -510,7 +509,7 @@ export function LibrarySystem() {
         close={() => setSelectedEntry(null)}
         entry={selectedEntry}
         systemId={systemId}
-        targetDeviceAddress={targetDeviceAddress}
+        deviceKey={deviceKey}
       />
     </>
   );

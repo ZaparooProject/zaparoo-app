@@ -3,10 +3,12 @@ import { render, screen, waitFor } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { PairingModal } from "@/components/PairingModal";
 import { performPairing, PairingError } from "@/lib/crypto/pairing";
-import { credentialStore } from "@/lib/crypto/credentials";
+import {
+  credentialKeyForRecord,
+  credentialStore,
+} from "@/lib/crypto/credentials";
 import { Capacitor } from "@capacitor/core";
 import { Device } from "@capacitor/device";
-import { useStatusStore } from "@/lib/store";
 
 vi.mock("@/lib/crypto/pairing", async () => {
   const actual = await vi.importActual<typeof import("@/lib/crypto/pairing")>(
@@ -17,16 +19,6 @@ vi.mock("@/lib/crypto/pairing", async () => {
     performPairing: vi.fn(),
   };
 });
-
-vi.mock("@/lib/crypto/credentials", () => ({
-  credentialStore: {
-    set: vi.fn().mockResolvedValue(undefined),
-    delete: vi.fn().mockResolvedValue(true),
-    get: vi.fn().mockResolvedValue(null),
-    list: vi.fn().mockResolvedValue([]),
-  },
-  normalizeDeviceKey: (s: string) => s,
-}));
 
 vi.mock("@/lib/transport", () => ({
   connectionManager: {
@@ -43,14 +35,9 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 const mockedPerformPairing = vi.mocked(performPairing);
-const mockedCredentialStoreSet = vi.mocked(credentialStore.set);
 const mockedDeviceGetInfo = vi.mocked(Device.getInfo);
 
-function setStoreHistory(address: string) {
-  useStatusStore.setState({
-    deviceHistory: [{ address }],
-  });
-}
+const RECORD_ID = "record-under-test";
 
 describe("PairingModal", () => {
   beforeEach(() => {
@@ -58,7 +45,6 @@ describe("PairingModal", () => {
     // Default to native platform so Device.getInfo is exercised. Individual
     // tests can override this for the web-fallback path.
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    setStoreHistory("192.168.1.10:7497");
     mockedDeviceGetInfo.mockResolvedValue({
       name: "Pixel 8",
       model: "Pixel 8",
@@ -78,6 +64,7 @@ describe("PairingModal", () => {
           isOpen={true}
           close={vi.fn()}
           address="192.168.1.10:7497"
+          recordId={RECORD_ID}
         />,
       );
 
@@ -91,6 +78,7 @@ describe("PairingModal", () => {
           isOpen={true}
           close={vi.fn()}
           address="192.168.1.10:7497"
+          recordId={RECORD_ID}
         />,
       );
 
@@ -98,9 +86,37 @@ describe("PairingModal", () => {
     });
 
     it("should show noAddress message when address is empty", () => {
-      render(<PairingModal isOpen={true} close={vi.fn()} address="" />);
+      render(
+        <PairingModal
+          isOpen={true}
+          close={vi.fn()}
+          address=""
+          recordId={RECORD_ID}
+        />,
+      );
 
       expect(screen.getByText("pairing.noAddress")).toBeInTheDocument();
+    });
+
+    it("should refuse to pair before the device has a record", async () => {
+      // Credentials are stored against the record, so pairing without one would
+      // produce a key nothing can ever look up again.
+      const user = userEvent.setup();
+      render(
+        <PairingModal
+          isOpen={true}
+          close={vi.fn()}
+          address="192.168.1.10:7497"
+          recordId=""
+        />,
+      );
+
+      await user.type(screen.getByLabelText("pairing.pinLabel"), "123456");
+
+      expect(
+        screen.getByRole("button", { name: "pairing.startPairing" }),
+      ).toBeDisabled();
+      expect(mockedPerformPairing).not.toHaveBeenCalled();
     });
 
     it("should disable Pair button until 6 digits are entered", async () => {
@@ -110,6 +126,7 @@ describe("PairingModal", () => {
           isOpen={true}
           close={vi.fn()}
           address="192.168.1.10:7497"
+          recordId={RECORD_ID}
         />,
       );
 
@@ -132,6 +149,7 @@ describe("PairingModal", () => {
           isOpen={true}
           close={vi.fn()}
           address="192.168.1.10:7497"
+          recordId={RECORD_ID}
         />,
       );
 
@@ -161,6 +179,7 @@ describe("PairingModal", () => {
           isOpen={true}
           close={vi.fn()}
           address="192.168.1.10:7497"
+          recordId={RECORD_ID}
         />,
       );
 
@@ -181,6 +200,7 @@ describe("PairingModal", () => {
           isOpen={true}
           close={vi.fn()}
           address="192.168.1.10:7497"
+          recordId={RECORD_ID}
         />,
       );
 
@@ -202,6 +222,7 @@ describe("PairingModal", () => {
           isOpen={true}
           close={vi.fn()}
           address="192.168.1.10:7497"
+          recordId={RECORD_ID}
         />,
       );
 
@@ -230,6 +251,7 @@ describe("PairingModal", () => {
           isOpen={true}
           close={close}
           address="192.168.1.10:7497"
+          recordId={RECORD_ID}
           onSuccess={onSuccess}
         />,
       );
@@ -248,54 +270,22 @@ describe("PairingModal", () => {
         expect.stringContaining("Pixel 8"),
       );
 
-      await waitFor(() => {
-        expect(mockedCredentialStoreSet).toHaveBeenCalledWith(
-          "192.168.1.10:7497",
-          expect.objectContaining({
-            authToken: "test-token",
-            clientId: "client-abc",
-            pairingKey: "deadbeef",
-          }),
-        );
+      // The pairing belongs to the record, not to the address it was performed
+      // over — that is what lets it survive the device moving.
+      await waitFor(async () => {
+        await expect(
+          credentialStore.get(credentialKeyForRecord(RECORD_ID)),
+        ).resolves.toMatchObject({
+          authToken: "test-token",
+          clientId: "client-abc",
+          pairingKey: "deadbeef",
+        });
       });
 
       await waitFor(() => {
         expect(onSuccess).toHaveBeenCalledTimes(1);
         expect(close).toHaveBeenCalledTimes(1);
       });
-    });
-
-    it("should mark the matching device history entry as paired", async () => {
-      const user = userEvent.setup();
-      mockedPerformPairing.mockResolvedValue({
-        authToken: "tok",
-        clientId: "cid",
-        pairingKey: new Uint8Array([0x01, 0x02]),
-      });
-
-      render(
-        <PairingModal
-          isOpen={true}
-          close={vi.fn()}
-          address="192.168.1.10:7497"
-        />,
-      );
-
-      // Typing 6 digits triggers PinInput.onComplete → handlePair, so do not
-      // also click the submit button — that's a duplicate submission path.
-      await user.type(screen.getByLabelText("pairing.pinLabel"), "111111");
-
-      await waitFor(() => {
-        const entry = useStatusStore
-          .getState()
-          .deviceHistory.find((e) => e.address === "192.168.1.10:7497");
-        expect(entry?.paired).toEqual({
-          clientId: "cid",
-          pairedAt: expect.any(Number),
-        });
-      });
-
-      expect(mockedPerformPairing).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -311,6 +301,7 @@ describe("PairingModal", () => {
           isOpen={true}
           close={vi.fn()}
           address="192.168.1.10:7497"
+          recordId={RECORD_ID}
         />,
       );
 
@@ -332,6 +323,7 @@ describe("PairingModal", () => {
           isOpen={true}
           close={vi.fn()}
           address="192.168.1.10:7497"
+          recordId={RECORD_ID}
         />,
       );
 
@@ -357,6 +349,7 @@ describe("PairingModal", () => {
           isOpen={true}
           close={close}
           address="192.168.1.10:7497"
+          recordId={RECORD_ID}
           onSuccess={onSuccess}
         />,
       );

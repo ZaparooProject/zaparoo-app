@@ -1,15 +1,18 @@
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { memo } from "react";
-import { getDeviceAddress } from "@/lib/coreApi";
 import { SettingsIcon } from "@/lib/images";
+import {
+  activeAddressOf,
+  useDeviceRegistry,
+} from "@/lib/devices/deviceRegistry";
 import { useStatusStore } from "@/lib/store";
 import { Card } from "../wui/Card";
 import { ConnectionStatusDisplay } from "../ConnectionStatusDisplay";
 
 export const ConnectionStatus = memo(function ConnectionStatus() {
   const { t } = useTranslation();
-  const address = getDeviceAddress();
+  const address = useDeviceRegistry(activeAddressOf);
   const connectionError = useStatusStore((state) => state.connectionError);
 
   // Zap page shows IP address as subtitle

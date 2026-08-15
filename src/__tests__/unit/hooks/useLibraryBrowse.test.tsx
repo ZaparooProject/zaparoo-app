@@ -42,7 +42,7 @@ describe("useLibraryBrowse", () => {
     });
     const { result } = renderHook(() =>
       useLibraryBrowse({
-        targetDeviceAddress: "device-a",
+        deviceKey: "device-a",
         systemId: "SNES",
         path: "",
         sort: "name-desc",
@@ -79,7 +79,7 @@ describe("useLibraryBrowse", () => {
     });
     const { result } = renderHook(() =>
       useLibraryBrowse({
-        targetDeviceAddress: "device-a",
+        deviceKey: "device-a",
         systemId: "SNES",
         path: "/roms/SNES",
         enabled: true,
@@ -138,7 +138,7 @@ describe("useLibraryBrowse", () => {
       });
     const { result } = renderHook(() =>
       useLibraryBrowse({
-        targetDeviceAddress: "device-a",
+        deviceKey: "device-a",
         systemId: "SNES",
         path: "/roms/SNES",
         sort: "filename-asc",
@@ -192,7 +192,7 @@ describe("useLibraryBrowse", () => {
     );
     const { result } = renderHook(() =>
       useLibraryBrowse({
-        targetDeviceAddress: "device-a",
+        deviceKey: "device-a",
         systemId: "SNES",
         path: "/roms/SNES",
         enabled: true,

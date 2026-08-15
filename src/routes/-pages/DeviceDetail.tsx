@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useStatusStore } from "@/lib/store";
@@ -6,9 +7,14 @@ import { useConnection } from "@/hooks/useConnection";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useSelectDevice } from "@/hooks/useSelectDevice";
-import { CoreAPI, getDeviceAddress, setDeviceAddress } from "@/lib/coreApi";
-import { normalizeDeviceKey } from "@/lib/crypto/credentials";
-import { decodeDeviceAddress } from "@/lib/deviceUrl";
+import { CoreAPI } from "@/lib/coreApi";
+import {
+  deviceRegistry,
+  parsedEndpointForRecord,
+  useDeviceRegistry,
+  type DeviceRecord,
+} from "@/lib/devices/deviceRegistry";
+import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
@@ -16,20 +22,21 @@ import { TextInput } from "@/components/wui/TextInput";
 import { SlideModal } from "@/components/SlideModal";
 import { DeviceLinkButton } from "@/components/DeviceLinkButton";
 import { BackIcon } from "@/lib/images";
-import { Route } from "@/routes/settings.devices_.$address";
+import { Route } from "@/routes/settings.devices_.$recordId";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
+
+const selectRecords = (state: { records: Record<string, DeviceRecord> }) =>
+  state.records;
+const selectActiveRecordId = (state: { activeRecordId: string | null }) =>
+  state.activeRecordId;
 
 export function DeviceDetail() {
   const { t } = useTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const params = Route.useParams();
-  const decoded = useMemo(() => {
-    try {
-      return decodeDeviceAddress(params.address);
-    } catch {
-      return "";
-    }
-  }, [params.address]);
+  const records = useDeviceRegistry(selectRecords);
+  const activeRecordId = useDeviceRegistry(selectActiveRecordId);
 
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings/devices"));
@@ -38,78 +45,69 @@ export function DeviceDetail() {
     preventScrollOnSwipe: false,
   });
 
-  const deviceHistory = useStatusStore((s) => s.deviceHistory);
-  const removeDeviceHistory = useStatusStore((s) => s.removeDeviceHistory);
-  const updateDeviceHistoryMeta = useStatusStore(
-    (s) => s.updateDeviceHistoryMeta,
-  );
-  const setTargetDeviceAddress = useStatusStore(
-    (s) => s.setTargetDeviceAddress,
-  );
   const resetConnectionState = useStatusStore((s) => s.resetConnectionState);
 
-  const entry = deviceHistory.find((e) => e.address === decoded);
+  const record = records[params.recordId];
+  const endpoint = parsedEndpointForRecord(record);
   const { isConnected } = useConnection();
-  const { selectDevice } = useSelectDevice();
+  const { selectRecord } = useSelectDevice();
 
-  const headingTitle = entry?.name ?? entry?.address ?? decoded;
+  const headingTitle = record?.name ?? endpoint?.address ?? "";
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(headingTitle);
 
-  const initialName = entry?.name ?? "";
+  const initialName = record?.name ?? "";
   const [draftName, setDraftName] = useState(initialName);
-  const [trackedAddress, setTrackedAddress] = useState(entry?.address);
+  const [trackedRecordId, setTrackedRecordId] = useState(record?.recordId);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // Reset the draft when navigating between different device entries.
-  if (entry?.address !== trackedAddress) {
-    setTrackedAddress(entry?.address);
+  // Reset the draft when navigating between different device records.
+  if (record?.recordId !== trackedRecordId) {
+    setTrackedRecordId(record?.recordId);
     setDraftName(initialName);
   }
 
   useEffect(() => {
-    if (!entry) {
+    if (!record || !endpoint) {
       router.navigate({ to: "/settings/devices", replace: true });
     }
-  }, [entry, router]);
+  }, [endpoint, record, router]);
 
-  if (!entry) return null;
+  if (!record || !endpoint) return null;
 
-  const isCurrentDevice =
-    normalizeDeviceKey(entry.address) ===
-    normalizeDeviceKey(getDeviceAddress());
+  const isCurrentDevice = activeRecordId === record.recordId;
   const isActive = isCurrentDevice && isConnected;
 
   const handleSaveName = (next: string) => {
-    const trimmed = next.trim();
-    updateDeviceHistoryMeta(
-      entry.address,
-      { name: trimmed === "" ? undefined : trimmed },
-      { source: "manual" },
-    );
+    void deviceRegistry.setCustomName(record.recordId, next);
   };
 
   const handleUseThisDevice = () => {
-    selectDevice(entry.address);
+    void selectRecord(record.recordId);
     router.navigate({ to: "/settings" });
   };
 
-  const handleConfirmForget = () => {
-    const wasCurrent = isCurrentDevice;
-    removeDeviceHistory(entry.address);
-    if (wasCurrent) {
-      setDeviceAddress("");
-      setTargetDeviceAddress("");
+  const handleConfirmForget = async () => {
+    // Tear the connection down before dropping the record. A still-live
+    // transport can finish its handshake at any point and write the pairing it
+    // just proved straight back into storage after removeRecord deleted it.
+    if (isCurrentDevice) {
       resetConnectionState();
       CoreAPI.reset();
     }
+    await deviceRegistry.removeRecord(record.recordId);
+
+    invalidateLibraryImageCache(record.recordId);
+    queryClient.removeQueries({
+      predicate: (query) => query.queryKey.includes(record.recordId),
+    });
     setConfirmOpen(false);
     router.navigate({ to: "/settings/devices", replace: true });
   };
 
   const lastConnectedLine =
-    entry.lastConnectedAt !== undefined
+    record.lastConnectedAt !== undefined
       ? t("settings.deviceDetail.lastConnected", {
-          when: new Date(entry.lastConnectedAt).toLocaleString(),
+          when: new Date(record.lastConnectedAt).toLocaleString(),
         })
       : t("settings.deviceDetail.neverConnected");
 
@@ -143,7 +141,7 @@ export function DeviceDetail() {
       <div className="flex flex-col gap-6 p-3">
         <TextInput
           label={t("settings.deviceDetail.nameLabel")}
-          placeholder={entry.address}
+          placeholder={endpoint.address}
           value={draftName}
           setValue={setDraftName}
           saveValue={handleSaveName}
@@ -159,16 +157,16 @@ export function DeviceDetail() {
             {t("settings.deviceDetail.infoHeading")}
           </h2>
           <p style={{ wordBreak: "break-all" }}>
-            {t("settings.deviceDetail.address", { value: entry.address })}
+            {t("settings.deviceDetail.address", { value: endpoint.address })}
           </p>
-          {entry.platform && (
+          {record.platform && (
             <p>
-              {t("settings.deviceDetail.platform", { value: entry.platform })}
+              {t("settings.deviceDetail.platform", { value: record.platform })}
             </p>
           )}
-          {entry.version && (
+          {record.version && (
             <p>
-              {t("settings.deviceDetail.version", { value: entry.version })}
+              {t("settings.deviceDetail.version", { value: record.version })}
             </p>
           )}
           <p>{lastConnectedLine}</p>
@@ -229,7 +227,7 @@ export function DeviceDetail() {
               variant="outline"
               intent="destructive"
               label={t("settings.deviceDetail.forgetConfirm")}
-              onClick={handleConfirmForget}
+              onClick={() => void handleConfirmForget()}
               className="border-error text-error flex-1"
             />
           </div>

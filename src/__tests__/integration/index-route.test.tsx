@@ -25,6 +25,7 @@ import {
   ConnectionContext,
   ConnectionContextValue,
 } from "@/hooks/useConnection";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 
 function expectVisibleEmptyValues(regionName: string, count: number) {
   const region = screen.getByRole("region", { name: regionName });
@@ -194,7 +195,6 @@ vi.mock("@/lib/coreApi", () => ({
     run: vi.fn().mockResolvedValue(undefined),
     mediaControl: vi.fn().mockResolvedValue(undefined),
   },
-  getDeviceAddress: vi.fn(() => "192.168.1.100"),
 }));
 
 vi.mock("@/lib/toastUtils", () => ({
@@ -318,7 +318,7 @@ function seedPrimaryPlaylist({
 }
 
 describe("Index Route Integration", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     // Drop the setWriteOpen callback captured from a prior Index render
     mockScanOperationsProps.current = null;
@@ -392,12 +392,11 @@ describe("Index Route Integration", () => {
     // Reset announcer mock
     mockAnnounce.mockClear();
 
-    localStorage.setItem("deviceAddress", "192.168.1.100");
+    await seedActiveDevice({ address: "192.168.1.100" });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    localStorage.clear();
   });
 
   describe("Page Structure", () => {

@@ -46,7 +46,6 @@ vi.mock("@/lib/coreApi", () => ({
     settingsAuthClaim: mockSettingsAuthClaim,
     settingsAuthStatus: mockSettingsAuthStatus,
   },
-  getDeviceAddress: () => "192.168.1.50",
   isRequestCancelledError: (error: unknown) =>
     error instanceof Error && /cancelled|aborted/i.test(error.message),
 }));

@@ -1,16 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { Preferences } from "@capacitor/preferences";
 import { Pencil } from "lucide-react";
-import { useStatusStore } from "@/lib/store";
 import { useConnection } from "@/hooks/useConnection";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useSelectDevice } from "@/hooks/useSelectDevice";
-import { getDeviceAddress } from "@/lib/coreApi";
-import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
-import { encodeDeviceAddress } from "@/lib/deviceUrl";
+import {
+  credentialKeyForRecord,
+  credentialStore,
+} from "@/lib/crypto/credentials";
+import {
+  parsedEndpointForRecord,
+  useDeviceRegistry,
+  type DeviceRecord,
+} from "@/lib/devices/deviceRegistry";
+import type { ParsedDeviceEndpoint } from "@/lib/devices/endpoint";
 import { logger } from "@/lib/logger";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { PageFrame } from "@/components/PageFrame";
@@ -18,6 +23,18 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { BackIcon } from "@/lib/images";
 import { DeviceRow } from "@/components/DeviceRow";
+
+interface DeviceListEntry {
+  record: DeviceRecord;
+  endpoint: ParsedDeviceEndpoint;
+}
+
+const selectRecords = (state: { records: Record<string, DeviceRecord> }) =>
+  state.records;
+const selectActiveRecordId = (state: { activeRecordId: string | null }) =>
+  state.activeRecordId;
+const selectHydrationError = (state: { hydrationError: string | null }) =>
+  state.hydrationError;
 
 export function Devices() {
   const { t } = useTranslation();
@@ -32,41 +49,16 @@ export function Devices() {
     preventScrollOnSwipe: false,
   });
 
-  const deviceHistory = useStatusStore((s) => s.deviceHistory);
-  const setDeviceHistory = useStatusStore((s) => s.setDeviceHistory);
+  const records = useDeviceRegistry(selectRecords);
+  const activeRecordId = useDeviceRegistry(selectActiveRecordId);
+  // A registry that failed to load also has no records, and the empty state
+  // would tell the user they have never saved a device — the opposite of what
+  // happened, and an invitation to re-pair devices they already own.
+  const hydrationError = useDeviceRegistry(selectHydrationError);
   const { isConnected } = useConnection();
-  const savedAddress = getDeviceAddress();
-  const activeKey =
-    isConnected && savedAddress ? normalizeDeviceKey(savedAddress) : null;
 
-  const { selectDevice } = useSelectDevice();
+  const { selectRecord } = useSelectDevice();
   const [pairedKeys, setPairedKeys] = useState<Set<string>>(new Set());
-
-  // Hydrate from Preferences in case the user reaches this page before
-  // ConnectionProvider has populated deviceHistory (e.g. offline deep-link).
-  // Only seed when the in-memory store is empty so we never clobber newer
-  // metadata that ConnectionProvider may have already written.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (useStatusStore.getState().deviceHistory.length > 0) return;
-      try {
-        const v = await Preferences.get({ key: "deviceHistory" });
-        if (cancelled || !v.value) return;
-        if (useStatusStore.getState().deviceHistory.length > 0) return;
-        setDeviceHistory(JSON.parse(v.value));
-      } catch (err) {
-        logger.error("Failed to hydrate deviceHistory", err, {
-          category: "storage",
-          action: "hydrateDeviceHistory",
-          severity: "warning",
-        });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [setDeviceHistory]);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,14 +82,21 @@ export function Devices() {
     };
   }, []);
 
-  const sortedHistory = useMemo(() => {
-    return deviceHistory
-      .slice()
-      .sort((a, b) => (a.name || a.address).localeCompare(b.name || b.address));
-  }, [deviceHistory]);
+  const sortedRecords = useMemo(() => {
+    return Object.values(records)
+      .flatMap((record) => {
+        const endpoint = parsedEndpointForRecord(record);
+        return endpoint ? [{ record, endpoint } satisfies DeviceListEntry] : [];
+      })
+      .sort((left, right) =>
+        (left.record.name || left.endpoint.address).localeCompare(
+          right.record.name || right.endpoint.address,
+        ),
+      );
+  }, [records]);
 
-  const handleSelect = (address: string) => {
-    selectDevice(address);
+  const handleSelect = (recordId: string) => {
+    void selectRecord(recordId);
     router.navigate({ to: "/settings" });
   };
 
@@ -118,23 +117,39 @@ export function Devices() {
       }
     >
       <div className="flex flex-col gap-3 pt-2">
-        {sortedHistory.length === 0 ? (
-          <EmptyState size="compact" title={t("settings.deviceHistoryEmpty")} />
+        {sortedRecords.length === 0 ? (
+          <EmptyState
+            size="compact"
+            title={t(
+              hydrationError
+                ? "settings.deviceHistoryError"
+                : "settings.deviceHistoryEmpty",
+            )}
+          />
         ) : (
-          sortedHistory.map((entry) => (
+          sortedRecords.map(({ record, endpoint }) => (
             <DeviceRow
-              key={entry.address}
-              entry={entry}
-              isActive={
-                activeKey !== null &&
-                normalizeDeviceKey(entry.address) === activeKey
+              key={record.recordId}
+              entry={{
+                address: endpoint.address,
+                name: record.name,
+                platform: record.platform,
+                version: record.version,
+              }}
+              isActive={isConnected && activeRecordId === record.recordId}
+              // A record migrated from an older build still holds its pairing
+              // under the pre-V2 address key until its first encrypted connect,
+              // so the lock icon has to accept either key.
+              isPaired={
+                pairedKeys.has(credentialKeyForRecord(record.recordId)) ||
+                (record.legacyCredentialKey !== undefined &&
+                  pairedKeys.has(record.legacyCredentialKey))
               }
-              isPaired={pairedKeys.has(normalizeDeviceKey(entry.address))}
-              onSelect={() => handleSelect(entry.address)}
+              onSelect={() => handleSelect(record.recordId)}
               rightSlot={
                 <Link
-                  to="/settings/devices/$address"
-                  params={{ address: encodeDeviceAddress(entry.address) }}
+                  to="/settings/devices/$recordId"
+                  params={{ recordId: record.recordId }}
                   aria-label={t("settings.deviceDetails")}
                   className="bg-background border-bd-outline focus-visible:ring-offset-background flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-solid px-1.5 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
                 >

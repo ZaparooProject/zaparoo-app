@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
-import { useStatusStore } from "@/lib/store";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { systemHasIndexedMedia } from "@/lib/systemFilters";
 import { compareStrings } from "@/lib/utils";
 import { useSystemsWithDisplayNames } from "@/hooks/useSystemName";
@@ -30,13 +30,11 @@ export function SimpleSystemSelect({
   "aria-labelledby": ariaLabelledBy,
 }: SimpleSystemSelectProps) {
   const { t } = useTranslation();
-  const targetDeviceAddress = useStatusStore(
-    (state) => state.targetDeviceAddress,
-  );
+  const deviceKey = useActiveDeviceKey();
 
   // Fetch systems data
   const { data: systemsData, isLoading } = useQuery({
-    queryKey: ["systems", targetDeviceAddress, { all: false }],
+    queryKey: ["systems", deviceKey, { all: false }],
     queryFn: () => CoreAPI.systems(),
     enabled: !disabled,
     staleTime: 0,

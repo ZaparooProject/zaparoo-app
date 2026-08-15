@@ -2,13 +2,22 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { encodeDeviceAddress } from "@/lib/deviceUrl";
-import { useStatusStore } from "@/lib/store";
+import { Preferences } from "@capacitor/preferences";
+import {
+  credentialKeyForRecord,
+  credentialStore,
+  type StoredCredentials,
+} from "@/lib/crypto/credentials";
+import { deviceRegistry } from "@/lib/devices/deviceRegistry";
+import {
+  mockDeviceRecord,
+  seedDeviceRegistry,
+  type DeviceRecordOptions,
+} from "@/test-utils/deviceRegistry";
 
-const { componentRef, mockNavigate, mockSelectDevice } = vi.hoisted(() => ({
+const { componentRef, mockNavigate } = vi.hoisted(() => ({
   componentRef: { current: null as any },
   mockNavigate: vi.fn(),
-  mockSelectDevice: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -34,7 +43,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       className?: string;
     }) => {
       const href = params
-        ? to.replace(/\$(\w+)/g, (_m, k) => params[k] ?? "")
+        ? to.replace(/\$(\w+)/g, (_m, key) => params[key] ?? "")
         : to;
       return (
         <a href={href} aria-label={ariaLabel} className={className}>
@@ -57,48 +66,28 @@ vi.mock("@/hooks/useConnection", () => ({
   useConnection: () => ({ isConnected: true }),
 }));
 
-vi.mock("@/hooks/useSelectDevice", () => ({
-  useSelectDevice: () => ({
-    selectDevice: mockSelectDevice,
-    selectScanDevice: vi.fn(),
-  }),
-}));
-
-vi.mock("@/lib/coreApi", () => ({
-  CoreAPI: { reset: vi.fn() },
-  getDeviceAddress: vi.fn(() => "192.168.1.10"),
-  setDeviceAddress: vi.fn(),
-}));
-
-const mockCredentialList = vi.fn();
-vi.mock("@/lib/crypto/credentials", () => ({
-  credentialStore: {
-    list: () => mockCredentialList(),
-  },
-  normalizeDeviceKey: (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/^wss?:\/\//, "")
-      .replace(/\/$/, ""),
-}));
-
 import "@/routes/settings.devices";
 
 const getDevices = () => componentRef.current;
 
-type DeviceEntry = {
-  address: string;
-  name?: string;
-  platform?: string;
-  version?: string;
+const credentials: StoredCredentials = {
+  authToken: "token-abc",
+  pairingKey: "a".repeat(64),
+  clientId: "client-uuid-1234",
+  pairedAt: 1700000000000,
 };
 
-const seedDeviceHistory = (deviceHistory: DeviceEntry[]) => {
-  useStatusStore.setState({
-    deviceHistory,
-    safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
-  });
-};
+async function seedRecords(
+  entries: DeviceRecordOptions[],
+  activeIndex: number | null = null,
+) {
+  const records = entries.map((entry) => mockDeviceRecord(entry));
+  await seedDeviceRegistry(
+    records,
+    activeIndex === null ? null : (records[activeIndex]?.recordId ?? null),
+  );
+  return records;
+}
 
 describe("Settings Devices Route", () => {
   let queryClient: QueryClient;
@@ -111,8 +100,6 @@ describe("Settings Devices Route", () => {
         mutations: { retry: false },
       },
     });
-    mockCredentialList.mockResolvedValue([]);
-    seedDeviceHistory([]);
   });
 
   afterEach(() => {
@@ -129,16 +116,33 @@ describe("Settings Devices Route", () => {
   };
 
   it("should render the empty state when no devices are saved", async () => {
+    await seedDeviceRegistry([]);
     renderRoute();
-    await waitFor(() => {
-      expect(
-        screen.getByText("settings.deviceHistoryEmpty"),
-      ).toBeInTheDocument();
-    });
+
+    expect(
+      await screen.findByText("settings.deviceHistoryEmpty"),
+    ).toBeInTheDocument();
   });
 
-  it("should render one row per device entry, sorted alphabetically", async () => {
-    seedDeviceHistory([
+  it("should distinguish a failed registry read from having no devices", async () => {
+    // Telling a user whose registry failed to load that they have never saved a
+    // device invites them to re-pair devices they already own.
+    vi.mocked(Preferences.get).mockRejectedValueOnce(
+      new Error("storage unavailable"),
+    );
+    await deviceRegistry.hydrate();
+    renderRoute();
+
+    expect(
+      await screen.findByText("settings.deviceHistoryError"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("settings.deviceHistoryEmpty"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should render one row per record, sorted alphabetically", async () => {
+    await seedRecords([
       { address: "192.168.1.10", name: "Zulu" },
       { address: "192.168.1.11", name: "Alpha" },
       { address: "192.168.1.12", name: "Mike" },
@@ -149,69 +153,98 @@ describe("Settings Devices Route", () => {
     await waitFor(() => {
       const names = screen
         .getAllByText(/Alpha|Mike|Zulu/)
-        .map((el) => el.textContent);
+        .map((element) => element.textContent);
       expect(names).toEqual(["Alpha", "Mike", "Zulu"]);
     });
   });
 
   it("should mark the currently connected device as active", async () => {
-    seedDeviceHistory([
-      { address: "192.168.1.10", name: "Active" },
-      { address: "192.168.1.11", name: "Other" },
-    ]);
+    await seedRecords(
+      [
+        { address: "192.168.1.10", name: "Active" },
+        { address: "192.168.1.11", name: "Other" },
+      ],
+      0,
+    );
 
     renderRoute();
 
-    await waitFor(() => {
-      expect(
-        screen.getByLabelText("settings.activeDevice"),
-      ).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByLabelText("settings.activeDevice"),
+    ).toBeInTheDocument();
   });
 
-  it("should show the lock icon only on rows with stored credentials", async () => {
-    mockCredentialList.mockResolvedValue([{ deviceKey: "192.168.1.11" }]);
-    seedDeviceHistory([
+  it("should show the lock icon only on rows whose record holds credentials", async () => {
+    const [, paired] = await seedRecords([
       { address: "192.168.1.10", name: "Unpaired" },
       { address: "192.168.1.11", name: "Paired" },
     ]);
+    await credentialStore.set(
+      credentialKeyForRecord(paired!.recordId),
+      credentials,
+    );
 
     renderRoute();
 
     await waitFor(() => {
-      const locks = screen.getAllByLabelText("connection.encrypted");
-      expect(locks).toHaveLength(1);
+      expect(screen.getAllByLabelText("connection.encrypted")).toHaveLength(1);
     });
   });
 
-  it("should call selectDevice and navigate back to /settings on row tap", async () => {
-    const user = userEvent.setup();
-    seedDeviceHistory([{ address: "192.168.1.20", name: "Pick me" }]);
+  it("should show the lock icon for a migrated record still on its pre-V2 key", async () => {
+    // The pairing only moves to the canonical key on the first encrypted
+    // connect, so until then the address key is where it lives.
+    await seedRecords([
+      {
+        address: "192.168.1.10",
+        name: "Migrated",
+        legacyCredentialKey: "192.168.1.10",
+      },
+    ]);
+    await credentialStore.set("192.168.1.10", credentials);
 
     renderRoute();
 
+    await waitFor(() => {
+      expect(screen.getAllByLabelText("connection.encrypted")).toHaveLength(1);
+    });
+  });
+
+  it("should make the tapped record active and return to settings", async () => {
+    const user = userEvent.setup();
+    const [first, second] = await seedRecords(
+      [
+        { address: "192.168.1.20", name: "Pick me" },
+        { address: "192.168.1.21", name: "Not me" },
+      ],
+      1,
+    );
+    expect(deviceRegistry.getSnapshot().activeRecordId).toBe(second!.recordId);
+
+    renderRoute();
     await user.click(screen.getByText("Pick me"));
 
-    expect(mockSelectDevice).toHaveBeenCalledWith("192.168.1.20");
+    await waitFor(() => {
+      expect(deviceRegistry.getSnapshot().activeRecordId).toBe(first!.recordId);
+    });
     expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings" });
   });
 
-  it("should render an info link per row pointing to /settings/devices/$address", async () => {
-    seedDeviceHistory([{ address: "192.168.1.30", name: "With Info" }]);
+  it("should link each row to its record's detail page", async () => {
+    const [record] = await seedRecords([
+      { address: "192.168.1.30", name: "With Info" },
+    ]);
 
     renderRoute();
 
-    await waitFor(() => {
-      const infoLink = screen.getByLabelText("settings.deviceDetails");
-      expect(infoLink).toHaveAttribute(
-        "href",
-        `/settings/devices/${encodeDeviceAddress("192.168.1.30")}`,
-      );
-    });
+    expect(
+      await screen.findByLabelText("settings.deviceDetails"),
+    ).toHaveAttribute("href", `/settings/devices/${record!.recordId}`);
   });
 
   it("should navigate to Settings without resetting scroll", async () => {
     const user = userEvent.setup();
+    await seedDeviceRegistry([]);
     renderRoute();
 
     await user.click(screen.getByLabelText("nav.back"));

@@ -15,6 +15,10 @@ import {
   ConnectionContext,
   ConnectionContextValue,
 } from "@/hooks/useConnection";
+import {
+  seedActiveDevice,
+  seedDeviceRegistry,
+} from "@/test-utils/deviceRegistry";
 import { ReactNode } from "react";
 
 // Test wrapper that provides connection context
@@ -33,14 +37,13 @@ function ConnectionWrapper({
 }
 
 describe("Connection Flow Integration", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset stores to initial state
     useStatusStore.setState({
       ...useStatusStore.getState(),
       connected: false,
       connectionState: ConnectionState.IDLE,
       connectionError: "",
-      targetDeviceAddress: "",
       // Seed encryptionState as plaintext so connected-state assertions don't
       // hit the verifying UI gate (encryptionState === "unknown" -> connecting).
       encryptionState: "plaintext",
@@ -51,13 +54,13 @@ describe("Connection Flow Integration", () => {
       _hasHydrated: true,
     });
 
-    // Set a default device address for most tests
-    localStorage.setItem("deviceAddress", "192.168.1.100");
+    // Most tests just need a device to be selected; the address is whatever
+    // its active endpoint resolves to.
+    await seedActiveDevice({ address: "192.168.1.100" });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    localStorage.clear();
   });
 
   describe("connection state transitions", () => {
@@ -207,13 +210,8 @@ describe("Connection Flow Integration", () => {
   });
 
   describe("device address handling", () => {
-    it("should show placeholder text when no address is set on native platform", async () => {
-      // Clear localStorage to simulate no address
-      localStorage.removeItem("deviceAddress");
-
-      // Mock native platform so getDeviceAddress returns empty (on web it falls back to hostname)
-      const { Capacitor } = await import("@capacitor/core");
-      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    it("should show placeholder text when no device has been saved", async () => {
+      await seedDeviceRegistry([]);
 
       const connectionValue: ConnectionContextValue = {
         activeConnection: null,
@@ -234,14 +232,10 @@ describe("Connection Flow Integration", () => {
       expect(
         screen.getByText("settings.enterDeviceAddress"),
       ).toBeInTheDocument();
-
-      // Reset mock
-      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
     });
 
-    it("should show device address in subtitle when connecting", () => {
-      // Set actual localStorage value for the test
-      localStorage.setItem("deviceAddress", "10.0.0.50");
+    it("should show device address in subtitle when connecting", async () => {
+      await seedActiveDevice({ address: "10.0.0.50" });
 
       const connectionValue: ConnectionContextValue = {
         activeConnection: null,
@@ -259,9 +253,6 @@ describe("Connection Flow Integration", () => {
       );
 
       expect(screen.getByText("10.0.0.50")).toBeInTheDocument();
-
-      // Clean up
-      localStorage.removeItem("deviceAddress");
     });
   });
 

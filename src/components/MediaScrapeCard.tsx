@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { CoreAPI } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
@@ -30,9 +31,7 @@ export function MediaScrapeCard() {
   const resolveSystemName = useSystemNameResolver();
   const featureAvailable = useStrictMediaScrapersFeature();
   const connected = useStatusStore((state) => state.connected);
-  const targetDeviceAddress = useStatusStore(
-    (state) => state.targetDeviceAddress,
-  );
+  const deviceKey = useActiveDeviceKey();
   const connectionState = useStatusStore((state) => state.connectionState);
   const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
   const setScrapingStatus = useStatusStore((state) => state.setScrapingStatus);
@@ -95,7 +94,7 @@ export function MediaScrapeCard() {
   }, [scrapeStatusData, setScrapingStatus]);
 
   const { data: systemsData } = useQuery({
-    queryKey: ["systems", targetDeviceAddress, { all: false }],
+    queryKey: ["systems", deviceKey, { all: false }],
     queryFn: () => CoreAPI.systems(),
     enabled: connected && featureAvailable,
   });

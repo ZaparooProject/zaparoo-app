@@ -1,244 +1,302 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "../../../test-utils";
+/**
+ * Unit Tests: useSelectDevice
+ *
+ * Switching devices is the one moment where everything cached for the old box
+ * has to go with it — connection state, in-flight API requests, query cache and
+ * the saved search filters, none of which mean anything on the new device. The
+ * other half of the contract matters just as much: picking the device you are
+ * already on must not tear any of that down.
+ */
 
-const {
-  mockGetDeviceAddress,
-  mockSetDeviceAddress,
-  mockValidateDeviceAddress,
-  mockCoreReset,
-  mockPreferencesRemove,
-  mockResetConnectionState,
-  mockSetTargetDeviceAddress,
-  mockAddDeviceHistory,
-  mockUpdateDeviceHistoryMeta,
-  storeState,
-} = vi.hoisted(() => ({
-  mockGetDeviceAddress: vi.fn(() => "192.168.1.10:7497"),
-  mockSetDeviceAddress: vi.fn(),
-  mockValidateDeviceAddress: vi.fn((address: string): unknown => {
-    const [host = address, portInput] = address.split(":");
-    const port = portInput ? Number(portInput) : 7497;
-
-    return {
-      ok: true,
-      address,
-      host,
-      port,
-      wsUrl: `ws://${host}:${port}/api/v0.1`,
-    };
-  }),
-  mockCoreReset: vi.fn(),
-  mockPreferencesRemove: vi.fn().mockResolvedValue(undefined),
-  mockResetConnectionState: vi.fn(),
-  mockSetTargetDeviceAddress: vi.fn(),
-  mockAddDeviceHistory: vi.fn(),
-  mockUpdateDeviceHistoryMeta: vi.fn(),
-  storeState: {
-    resetConnectionState: vi.fn(),
-    setTargetDeviceAddress: vi.fn(),
-    addDeviceHistory: vi.fn(),
-    updateDeviceHistoryMeta: vi.fn(),
-  },
-}));
-
-vi.mock("@capacitor/preferences", () => ({
-  Preferences: {
-    remove: mockPreferencesRemove,
-  },
-}));
-
-vi.mock("@/lib/coreApi", () => ({
-  CoreAPI: { reset: mockCoreReset },
-  getDeviceAddress: () => mockGetDeviceAddress(),
-  setDeviceAddress: (v: string) => mockSetDeviceAddress(v),
-  validateDeviceAddress: (v: string) => mockValidateDeviceAddress(v),
-}));
-
-vi.mock("@/lib/store", () => ({
-  useStatusStore: (selector: (s: typeof storeState) => unknown) =>
-    selector({
-      resetConnectionState: mockResetConnectionState,
-      setTargetDeviceAddress: mockSetTargetDeviceAddress,
-      addDeviceHistory: mockAddDeviceHistory,
-      updateDeviceHistoryMeta: mockUpdateDeviceHistoryMeta,
-    } as unknown as typeof storeState),
-}));
-
+import { beforeEach, describe, expect, it } from "vitest";
+import { Preferences } from "@capacitor/preferences";
+import { QueryClient } from "@tanstack/react-query";
+import {
+  act,
+  createProvidersWithQueryClient,
+  renderHook,
+  waitFor,
+} from "@/test-utils";
 import { useSelectDevice } from "@/hooks/useSelectDevice";
+import { CoreAPI } from "@/lib/coreApi";
+import { deviceRegistry } from "@/lib/devices/deviceRegistry";
+import { ConnectionState, useStatusStore } from "@/lib/store";
+import {
+  mockDeviceRecord,
+  seedActiveDevice,
+  seedDeviceRegistry,
+} from "@/test-utils/deviceRegistry";
+
+const CACHED_QUERY_KEY = ["media", "search"];
+
+let queryClient: QueryClient;
+
+function renderSelectDevice() {
+  return renderHook(() => useSelectDevice(), {
+    wrapper: createProvidersWithQueryClient(queryClient),
+  });
+}
+
+/**
+ * `selectDevice` hands back its validation result before the registry write it
+ * kicks off has resolved, so tests that assert nothing happened have to let that
+ * write finish first. Every step of it is a microtask, so draining the queue is
+ * enough — there is nothing to wait on the clock for.
+ */
+async function settleSelection(): Promise<void> {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
+/** Everything the teardown is supposed to clear, all present. */
+async function primeDeviceScopedState(): Promise<void> {
+  useStatusStore.setState({
+    connectionState: ConnectionState.CONNECTED,
+    connected: true,
+    connectionError: "previous device error",
+  });
+  CoreAPI.setWsInstance({
+    isConnected: true,
+    send: () => {},
+  } as unknown as Parameters<typeof CoreAPI.setWsInstance>[0]);
+  queryClient.setQueryData(CACHED_QUERY_KEY, { results: [] });
+  await Preferences.set({ key: "searchSystem", value: "snes" });
+  await Preferences.set({ key: "searchTags", value: "favourite" });
+}
+
+async function deviceScopedStateWasCleared(): Promise<boolean> {
+  const { connectionState, connectionError } = useStatusStore.getState();
+  const [searchSystem, searchTags] = await Promise.all([
+    Preferences.get({ key: "searchSystem" }),
+    Preferences.get({ key: "searchTags" }),
+  ]);
+
+  return (
+    connectionState === ConnectionState.IDLE &&
+    connectionError === "" &&
+    !CoreAPI.isConnected() &&
+    queryClient.getQueryState(CACHED_QUERY_KEY)?.isInvalidated === true &&
+    searchSystem.value === null &&
+    searchTags.value === null
+  );
+}
 
 describe("useSelectDevice", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetDeviceAddress.mockReturnValue("192.168.1.10:7497");
-    mockValidateDeviceAddress.mockImplementation((address: string) => {
-      const [host = address, portInput] = address.split(":");
-      const port = portInput ? Number(portInput) : 7497;
-
-      return {
-        ok: true,
-        address,
-        host,
-        port,
-        wsUrl: `ws://${host}:${port}/api/v0.1`,
-      };
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
     });
   });
 
   describe("selectDevice", () => {
-    it("should short-circuit when the new address equals the current address", () => {
-      const { result } = renderHook(() => useSelectDevice());
+    it("should make the typed address the active device", async () => {
+      const { result } = renderSelectDevice();
 
-      let selectionResult: unknown;
+      let validation: unknown;
       act(() => {
-        selectionResult = result.current.selectDevice("192.168.1.10:7497");
+        validation = result.current.selectDevice("10.0.0.5:7497");
       });
 
-      expect(mockSetDeviceAddress).not.toHaveBeenCalled();
-      expect(mockResetConnectionState).not.toHaveBeenCalled();
-      expect(mockSetTargetDeviceAddress).not.toHaveBeenCalled();
-      expect(mockCoreReset).not.toHaveBeenCalled();
-      expect(mockPreferencesRemove).not.toHaveBeenCalled();
-      expect(selectionResult).toMatchObject({
-        ok: true,
-        address: "192.168.1.10:7497",
+      // The default port is implied, so it never survives into the address the
+      // user is shown or the endpoint the record stores.
+      expect(validation).toMatchObject({ ok: true, address: "10.0.0.5" });
+      await waitFor(() => {
+        expect(deviceRegistry.activeEndpoint()?.address).toBe("10.0.0.5");
       });
     });
 
-    it("should reset connection, target, API state, and search filters when switching devices", () => {
-      const { result } = renderHook(() => useSelectDevice());
+    it("should clear state scoped to the device being left", async () => {
+      await seedActiveDevice({ address: "192.168.1.10" });
+      await primeDeviceScopedState();
+      const { result } = renderSelectDevice();
 
-      act(() => result.current.selectDevice("10.0.0.5:7497"));
-
-      expect(mockSetDeviceAddress).toHaveBeenCalledWith("10.0.0.5:7497");
-      expect(mockResetConnectionState).toHaveBeenCalledTimes(1);
-      expect(mockSetTargetDeviceAddress).toHaveBeenCalledWith("10.0.0.5:7497");
-      expect(mockCoreReset).toHaveBeenCalledTimes(1);
-      expect(mockPreferencesRemove).toHaveBeenCalledWith({
-        key: "searchSystem",
+      act(() => {
+        result.current.selectDevice("10.0.0.5");
       });
-      expect(mockPreferencesRemove).toHaveBeenCalledWith({
-        key: "searchTags",
+
+      await waitFor(async () => {
+        expect(await deviceScopedStateWasCleared()).toBe(true);
       });
     });
 
-    it("should save normalized address when switching devices", () => {
-      mockValidateDeviceAddress.mockReturnValue({
-        ok: true,
-        address: "10.0.0.5:8080",
-        host: "10.0.0.5",
-        port: 8080,
-        wsUrl: "ws://10.0.0.5:8080/api/v0.1",
+    it("should keep device state when the address is already active", async () => {
+      await seedActiveDevice({ address: "192.168.1.10" });
+      await primeDeviceScopedState();
+      const { result } = renderSelectDevice();
+
+      act(() => {
+        result.current.selectDevice("192.168.1.10:7497");
       });
-      const { result } = renderHook(() => useSelectDevice());
+      await settleSelection();
 
-      act(() => result.current.selectDevice(" http://10.0.0.5:8080/api/v0.1 "));
-
-      expect(mockSetDeviceAddress).toHaveBeenCalledWith("10.0.0.5:8080");
-      expect(mockSetTargetDeviceAddress).toHaveBeenCalledWith("10.0.0.5:8080");
+      expect(await deviceScopedStateWasCleared()).toBe(false);
+      expect(useStatusStore.getState().connectionError).toBe(
+        "previous device error",
+      );
+      expect(queryClient.getQueryState(CACHED_QUERY_KEY)?.isInvalidated).toBe(
+        false,
+      );
     });
 
-    it("should not save or reconnect when address is invalid", () => {
-      mockValidateDeviceAddress.mockReturnValue({
+    it("should store the normalized form of the address the user typed", async () => {
+      const { result } = renderSelectDevice();
+
+      act(() => {
+        result.current.selectDevice(" http://10.0.0.5:8080/api/v0.1 ");
+      });
+
+      await waitFor(() => {
+        expect(deviceRegistry.activeEndpoint()?.address).toBe("10.0.0.5:8080");
+      });
+    });
+
+    it("should reject an invalid address without touching any state", async () => {
+      await seedActiveDevice({ address: "192.168.1.10" });
+      await primeDeviceScopedState();
+      const { result } = renderSelectDevice();
+
+      let validation: unknown;
+      act(() => {
+        validation = result.current.selectDevice("192.168.1.286");
+      });
+      await settleSelection();
+
+      expect(validation).toMatchObject({
         ok: false,
         errorKey: "settings.deviceAddressInvalid",
-        message: "Invalid device address",
       });
-      const { result } = renderHook(() => useSelectDevice());
+      expect(deviceRegistry.activeEndpoint()?.address).toBe("192.168.1.10");
+      expect(await deviceScopedStateWasCleared()).toBe(false);
+    });
 
-      let selectionResult: unknown;
+    it("should report an empty address as required rather than invalid", () => {
+      const { result } = renderSelectDevice();
+
+      let validation: unknown;
       act(() => {
-        selectionResult = result.current.selectDevice("192.168.1.286");
+        validation = result.current.selectDevice("   ");
       });
 
-      expect(selectionResult).toMatchObject({
+      expect(validation).toMatchObject({
         ok: false,
-        errorKey: "settings.deviceAddressInvalid",
+        errorKey: "settings.deviceAddressRequired",
       });
-      expect(mockSetDeviceAddress).not.toHaveBeenCalled();
-      expect(mockResetConnectionState).not.toHaveBeenCalled();
-      expect(mockSetTargetDeviceAddress).not.toHaveBeenCalled();
-      expect(mockCoreReset).not.toHaveBeenCalled();
-      expect(mockPreferencesRemove).not.toHaveBeenCalled();
     });
   });
 
   describe("selectScanDevice", () => {
-    it("should capture scan metadata immediately after selecting a new device", () => {
-      const { result } = renderHook(() => useSelectDevice());
+    it("should activate the scanned device and keep the metadata it announced", async () => {
+      const { result } = renderSelectDevice();
 
-      act(() =>
-        result.current.selectScanDevice({
-          address: "10.0.0.5:7497",
+      await act(async () => {
+        await result.current.selectScanDevice({
+          discoveryId: "living-room._zaparoo._tcp.",
+          hostname: "living-room.local",
+          addresses: ["10.0.0.5"],
+          port: 7497,
           name: "Living Room",
           platform: "linux",
           version: "1.2.3",
-        }),
-      );
-
-      expect(mockSetDeviceAddress).toHaveBeenCalledWith("10.0.0.5:7497");
-      expect(mockAddDeviceHistory).toHaveBeenCalledWith("10.0.0.5:7497");
-      expect(mockUpdateDeviceHistoryMeta).toHaveBeenCalledWith(
-        "10.0.0.5:7497",
-        {
-          name: "Living Room",
-          platform: "linux",
-          version: "1.2.3",
-        },
-      );
-    });
-
-    it("should still record metadata when the scan device matches the current address", () => {
-      // selectDevice short-circuits, but selectScanDevice still wants to capture
-      // freshly-discovered metadata onto the existing history entry.
-      const { result } = renderHook(() => useSelectDevice());
-
-      act(() =>
-        result.current.selectScanDevice({
-          address: "192.168.1.10:7497",
-          name: "Office",
-          platform: "linux",
-          version: "1.0.0",
-        }),
-      );
-
-      expect(mockResetConnectionState).not.toHaveBeenCalled();
-      expect(mockAddDeviceHistory).toHaveBeenCalledWith("192.168.1.10:7497");
-      expect(mockUpdateDeviceHistoryMeta).toHaveBeenCalledWith(
-        "192.168.1.10:7497",
-        {
-          name: "Office",
-          platform: "linux",
-          version: "1.0.0",
-        },
-      );
-    });
-
-    it("should not save or write history when scanned address is invalid", () => {
-      mockValidateDeviceAddress.mockReturnValue({
-        ok: false,
-        errorKey: "settings.deviceAddressInvalid",
-        message: "Invalid device address",
-      });
-      const { result } = renderHook(() => useSelectDevice());
-
-      let selectionResult: unknown;
-      act(() => {
-        selectionResult = result.current.selectScanDevice({
-          address: "192.168.1.286",
         });
       });
 
-      expect(selectionResult).toMatchObject({
-        ok: false,
-        errorKey: "settings.deviceAddressInvalid",
+      const active = deviceRegistry.activeRecord();
+      expect(active).toMatchObject({
+        name: "Living Room",
+        platform: "linux",
+        version: "1.2.3",
       });
-      expect(mockSetDeviceAddress).not.toHaveBeenCalled();
-      expect(mockSetTargetDeviceAddress).not.toHaveBeenCalled();
-      expect(mockResetConnectionState).not.toHaveBeenCalled();
-      expect(mockCoreReset).not.toHaveBeenCalled();
-      expect(mockPreferencesRemove).not.toHaveBeenCalled();
-      expect(mockAddDeviceHistory).not.toHaveBeenCalled();
-      expect(mockUpdateDeviceHistoryMeta).not.toHaveBeenCalled();
+      expect(deviceRegistry.activeEndpoint()?.address).toBe(
+        "living-room.local",
+      );
+    });
+
+    it("should clear state scoped to the device being left", async () => {
+      await seedActiveDevice({ address: "192.168.1.10" });
+      await primeDeviceScopedState();
+      const { result } = renderSelectDevice();
+
+      await act(async () => {
+        await result.current.selectScanDevice({
+          discoveryId: "living-room._zaparoo._tcp.",
+          hostname: "living-room.local",
+          addresses: ["10.0.0.5"],
+          port: 7497,
+        });
+      });
+
+      expect(await deviceScopedStateWasCleared()).toBe(true);
+    });
+
+    it("should keep device state when the scan re-announces the active device", async () => {
+      const { result } = renderSelectDevice();
+      const announcement = {
+        discoveryId: "living-room._zaparoo._tcp.",
+        hostname: "living-room.local",
+        addresses: ["10.0.0.5"],
+        port: 7497,
+      };
+
+      await act(async () => {
+        await result.current.selectScanDevice(announcement);
+      });
+      await primeDeviceScopedState();
+
+      await act(async () => {
+        await result.current.selectScanDevice(announcement);
+      });
+
+      expect(await deviceScopedStateWasCleared()).toBe(false);
+    });
+
+    it("should ignore an announcement with no usable address", async () => {
+      await seedActiveDevice({ address: "192.168.1.10" });
+      await primeDeviceScopedState();
+      const { result } = renderSelectDevice();
+
+      await act(async () => {
+        await result.current.selectScanDevice({
+          discoveryId: "broken._zaparoo._tcp.",
+          addresses: [],
+          port: 7497,
+        });
+      });
+
+      expect(deviceRegistry.activeEndpoint()?.address).toBe("192.168.1.10");
+      expect(await deviceScopedStateWasCleared()).toBe(false);
+    });
+  });
+
+  describe("selectRecord", () => {
+    it("should activate a stored record and clear the previous device's state", async () => {
+      const other = mockDeviceRecord({ address: "192.168.1.10" });
+      const target = mockDeviceRecord({ address: "192.168.1.11" });
+      await seedDeviceRegistry([other, target], other.recordId);
+      await primeDeviceScopedState();
+      const { result } = renderSelectDevice();
+
+      await act(async () => {
+        await result.current.selectRecord(target.recordId);
+      });
+
+      expect(deviceRegistry.getSnapshot().activeRecordId).toBe(target.recordId);
+      expect(await deviceScopedStateWasCleared()).toBe(true);
+    });
+
+    it("should do nothing for a record that no longer exists", async () => {
+      const record = await seedActiveDevice({ address: "192.168.1.10" });
+      await primeDeviceScopedState();
+      const { result } = renderSelectDevice();
+
+      await act(async () => {
+        await result.current.selectRecord("record-that-was-forgotten");
+      });
+
+      expect(deviceRegistry.getSnapshot().activeRecordId).toBe(record.recordId);
+      expect(await deviceScopedStateWasCleared()).toBe(false);
     });
   });
 });

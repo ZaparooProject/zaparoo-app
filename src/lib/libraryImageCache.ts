@@ -220,12 +220,12 @@ function removeManifestEntry(id: string): void {
 }
 
 export async function readLibraryImageCache(
-  targetDeviceAddress: string,
+  deviceKey: string,
   cacheKey: string,
 ): Promise<LibraryImageCacheLookup> {
-  if (!targetDeviceAddress || !cacheKey) return { hit: false, value: null };
+  if (!deviceKey || !cacheKey) return { hit: false, value: null };
 
-  const id = hashValue(`${targetDeviceAddress}\u0000${cacheKey}`);
+  const id = hashValue(`${deviceKey}\u0000${cacheKey}`);
   const manifest = await loadManifest();
   const entry = manifest.entries[id];
   if (!entry) return { hit: false, value: null };
@@ -253,14 +253,14 @@ export async function readLibraryImageCache(
 }
 
 export function writeLibraryImageCache(
-  targetDeviceAddress: string,
+  deviceKey: string,
   cacheKey: string,
   result: CachedLibraryImage | null,
 ): void {
-  if (!targetDeviceAddress || !cacheKey) return;
+  if (!deviceKey || !cacheKey) return;
 
-  const id = hashValue(`${targetDeviceAddress}\u0000${cacheKey}`);
-  const deviceKey = hashValue(targetDeviceAddress);
+  const id = hashValue(`${deviceKey}\u0000${cacheKey}`);
+  const deviceKeyHash = hashValue(deviceKey);
   const file = `${CACHE_DIRECTORY}/${id}.json`;
   const payload: CachePayload = { version: CACHE_VERSION, result };
   const serialized = JSON.stringify(payload);
@@ -279,7 +279,7 @@ export function writeLibraryImageCache(
     manifest.entries[id] = {
       bytes: serialized.length,
       createdAt: now,
-      deviceKey,
+      deviceKey: deviceKeyHash,
       file,
       lastAccess: now,
       missing: result === null,
@@ -295,14 +295,14 @@ export function writeLibraryImageCache(
   });
 }
 
-export function invalidateLibraryImageCache(targetDeviceAddress: string): void {
-  if (!targetDeviceAddress) return;
-  const deviceKey = hashValue(targetDeviceAddress);
+export function invalidateLibraryImageCache(deviceKey: string): void {
+  if (!deviceKey) return;
+  const deviceKeyHash = hashValue(deviceKey);
 
   void queueMutation(async () => {
     const manifest = await loadManifest();
     for (const [id, entry] of Object.entries(manifest.entries)) {
-      if (entry.deviceKey !== deviceKey) continue;
+      if (entry.deviceKey !== deviceKeyHash) continue;
       delete manifest.entries[id];
       await deleteCacheFile(entry.file);
     }

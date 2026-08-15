@@ -6,6 +6,7 @@ import type { SearchResultsResponse } from "@/lib/models";
 import { useLibrarySessionStore } from "@/lib/librarySessionStore";
 import { useStatusStore } from "@/lib/store";
 import { LibraryFavorites } from "@/routes/library.favorites";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 
 const { mockNavigate } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
@@ -88,14 +89,14 @@ function favoritesResponse(
 }
 
 describe("Library Favorites route", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.restoreAllMocks();
     CoreAPI.reset();
     mockNavigate.mockClear();
     useLibrarySessionStore.getState().reset();
+    await seedActiveDevice({ recordId: "device-a" });
     useStatusStore.setState({
       connected: true,
-      targetDeviceAddress: "device-a",
       coreVersion: "2.15.0",
       coreVersionPending: false,
       gamesIndex: { exists: true, indexing: false },

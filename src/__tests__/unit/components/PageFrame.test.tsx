@@ -243,7 +243,7 @@ describe("PageFrame", () => {
     const rootRoute = createRootRoute({ component: () => <Outlet /> });
     const itemRoute = createRoute({
       getParentRoute: () => rootRoute,
-      path: "/settings/devices/$address",
+      path: "/settings/devices/$recordId",
       component: ItemPage,
     });
     const history = createMemoryHistory({
@@ -270,8 +270,8 @@ describe("PageFrame", () => {
 
     await act(() =>
       router.navigate({
-        to: "/settings/devices/$address",
-        params: { address: "two" },
+        to: "/settings/devices/$recordId",
+        params: { recordId: "two" },
       }),
     );
     await waitFor(() => {

@@ -20,7 +20,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 export function FavoriteButton(props: {
   entry: MediaBrowseEntry;
   fallbackSystemId: string;
-  targetDeviceAddress: string;
+  deviceKey: string;
   metadataTags?: TagInfo[];
   className?: string;
   iconOnly?: boolean;
@@ -68,13 +68,13 @@ export function FavoriteButton(props: {
       setFavorite(hasFavoriteTag(response.tags));
       void Promise.all([
         queryClient.invalidateQueries({
-          queryKey: [LIBRARY_QUERY_KEYS.favorites, props.targetDeviceAddress],
+          queryKey: [LIBRARY_QUERY_KEYS.favorites, props.deviceKey],
         }),
         queryClient.invalidateQueries({
-          queryKey: [LIBRARY_QUERY_KEYS.browse, props.targetDeviceAddress],
+          queryKey: [LIBRARY_QUERY_KEYS.browse, props.deviceKey],
         }),
         queryClient.invalidateQueries({
-          queryKey: [LIBRARY_QUERY_KEYS.meta, props.targetDeviceAddress],
+          queryKey: [LIBRARY_QUERY_KEYS.meta, props.deviceKey],
         }),
         queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] }),
         queryClient.invalidateQueries({ queryKey: ["tags"] }),
