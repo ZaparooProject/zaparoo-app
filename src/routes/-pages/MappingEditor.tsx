@@ -22,9 +22,14 @@ import {
 import { Button } from "@/components/wui/Button";
 import { PageFrame } from "@/components/PageFrame";
 import { SlideModal } from "@/components/SlideModal";
-import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
+import {
+  isWriteModalOpen,
+  useNfcWriter,
+  WriteAction,
+  WriteMethod,
+} from "@/lib/writeNfcHook";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { isWriteModalOpen, WriteModal } from "@/components/WriteModal";
+import { WriteModal } from "@/components/WriteModal";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";

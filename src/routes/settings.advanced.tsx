@@ -3,6 +3,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
+import { Capacitor } from "@capacitor/core";
 import { CoreAPI } from "@/lib/coreApi";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
@@ -19,6 +20,7 @@ import { SlideModal } from "@/components/SlideModal";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { Button } from "@/components/wui/Button";
 import { ClientCapability } from "@/lib/models";
+import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 import {
   isPurchasePreviewEnabled,
   usePurchasePreviewStore,
@@ -41,6 +43,8 @@ export function AdvancedSettings() {
   );
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
   const setShowFilenames = usePreferencesStore((s) => s.setShowFilenames);
+  const appBadgeEnabled = usePreferencesStore((s) => s.appBadgeEnabled);
+  const setAppBadgeEnabled = usePreferencesStore((s) => s.setAppBadgeEnabled);
   const purchasePreviewState = usePurchasePreviewStore((state) => state.state);
   const setPurchasePreviewState = usePurchasePreviewStore(
     (state) => state.setPreviewState,
@@ -152,6 +156,23 @@ export function AdvancedSettings() {
           value={showFilenames}
           setValue={setShowFilenames}
         />
+
+        {Capacitor.getPlatform() === "ios" &&
+          isNativePluginAvailable("Badge") && (
+            <ToggleSwitch
+              label={
+                <span className="flex items-center">
+                  {t("settings.advanced.appIconBadges")}
+                  <SettingHelp
+                    title={t("settings.advanced.appIconBadges")}
+                    description={t("settings.advanced.appIconBadgesHelp")}
+                  />
+                </span>
+              }
+              value={appBadgeEnabled}
+              setValue={setAppBadgeEnabled}
+            />
+          )}
 
         {isPurchasePreviewEnabled() && (
           <div className="flex flex-col">

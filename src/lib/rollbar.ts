@@ -80,6 +80,13 @@ const scrubFields = [
   "mac_address",
   "imei",
   "udid",
+  // Device registry fields — these name a device on the user's network
+  "host",
+  "hostname",
+  "wsUrl",
+  "recordId",
+  "endpointId",
+  "legacyCredentialKey",
   // Firebase/Auth related
   "idToken",
   "id_token",

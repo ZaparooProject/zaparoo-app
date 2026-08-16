@@ -11,7 +11,7 @@ import {
   systemHasIndexedMedia,
 } from "@/lib/systemFilters";
 import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
-import { useStatusStore } from "@/lib/store";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useSystemsWithDisplayNames } from "@/hooks/useSystemName";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
@@ -58,13 +58,11 @@ export function SystemSelector({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
-  const targetDeviceAddress = useStatusStore(
-    (state) => state.targetDeviceAddress,
-  );
+  const deviceKey = useActiveDeviceKey();
 
   // Fetch systems data
   const { data: systemsData, isLoading } = useQuery({
-    queryKey: ["systems", targetDeviceAddress, { all: allSystems }],
+    queryKey: ["systems", deviceKey, { all: allSystems }],
     queryFn: () => CoreAPI.systems(allSystems ? { all: true } : undefined),
     enabled: isOpen,
     staleTime: 0,

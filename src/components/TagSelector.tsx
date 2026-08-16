@@ -6,7 +6,7 @@ import { Search, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
-import { useStatusStore } from "@/lib/store";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { compareStrings } from "@/lib/utils";
 import { TagInfo } from "@/lib/models";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -103,9 +103,7 @@ export function TagSelector({
   const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [allExpanded, setAllExpanded] = useState(false);
-  const targetDeviceAddress = useStatusStore(
-    (state) => state.targetDeviceAddress,
-  );
+  const deviceKey = useActiveDeviceKey();
 
   // Fetch tags data
   const {
@@ -113,7 +111,7 @@ export function TagSelector({
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["tags", targetDeviceAddress, systems],
+    queryKey: ["tags", deviceKey, systems],
     queryFn: () => CoreAPI.mediaTags(systems.length > 0 ? systems : undefined),
     enabled: isOpen, // Only fetch when modal is open
     staleTime: 0,

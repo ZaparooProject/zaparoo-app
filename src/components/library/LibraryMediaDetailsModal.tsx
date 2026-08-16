@@ -94,7 +94,7 @@ export function LibraryMediaDetailsModal(props: {
   close: () => void;
   entry: MediaBrowseEntry | null;
   systemId: string;
-  targetDeviceAddress: string;
+  deviceKey: string;
 }) {
   const { t } = useTranslation();
   const showFilenames = usePreferencesStore((state) => state.showFilenames);
@@ -117,7 +117,7 @@ export function LibraryMediaDetailsModal(props: {
   const metadataQuery = useQuery({
     queryKey: [
       LIBRARY_QUERY_KEYS.meta,
-      props.targetDeviceAddress,
+      props.deviceKey,
       ...(entry ? mediaRefKey(entry, props.systemId) : [null, "", ""]),
     ],
     queryFn: ({ signal }) => {
@@ -130,7 +130,7 @@ export function LibraryMediaDetailsModal(props: {
     retry: false,
   });
   const writeCapabilityQuery = useQuery({
-    queryKey: ["nfcWriteCapability", props.targetDeviceAddress],
+    queryKey: ["nfcWriteCapability", props.deviceKey],
     queryFn: () => CoreAPI.hasWriteCapableReader(),
     enabled: props.isOpen && connected && !nfcAvailable,
     staleTime: 60 * 1000,
@@ -342,7 +342,7 @@ export function LibraryMediaDetailsModal(props: {
             <FavoriteButton
               entry={entry}
               fallbackSystemId={props.systemId}
-              targetDeviceAddress={props.targetDeviceAddress}
+              deviceKey={props.deviceKey}
               metadataTags={metadata?.tags}
               iconOnly
             />
@@ -374,7 +374,7 @@ export function LibraryMediaDetailsModal(props: {
                 <LibraryArtwork
                   entry={entry}
                   systemId={props.systemId}
-                  targetDeviceAddress={props.targetDeviceAddress}
+                  deviceKey={props.deviceKey}
                   maxSize={512}
                   priority="detail"
                   imageTypes={currentImageType ? [currentImageType] : undefined}

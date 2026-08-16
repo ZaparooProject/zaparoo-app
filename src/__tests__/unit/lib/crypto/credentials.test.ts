@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SecureStorage } from "@aparajita/capacitor-secure-storage";
 import {
+  credentialKeyForRecord,
   normalizeDeviceKey,
   SecureCredentialStore,
 } from "@/lib/crypto/credentials";
@@ -64,26 +65,14 @@ describe("SecureCredentialStore", () => {
     expect(await store.get("unknown-device")).toBeNull();
   });
 
-  it("should migrate credentials from a registered fallback key", async () => {
-    await store.set("192.168.1.50", creds);
-    store.registerFallback("mister.local", "192.168.1.50");
+  it("should ignore a stored value that is not a credential", async () => {
+    // Secure storage returns whatever was written; a half-written entry must
+    // read as "not paired" rather than reach the handshake with holes in it.
+    vi.mocked(SecureStorage.get).mockResolvedValueOnce({
+      authToken: "token",
+    } as never);
 
-    const migratedResult = await store.get("mister.local");
-
-    const fresh = new SecureCredentialStore();
-    const persistedResult = await fresh.get("mister.local");
-
-    expect(migratedResult).toEqual(creds);
-    expect(persistedResult).toEqual(creds);
-  });
-
-  it("should prefer credentials already stored under the stable key", async () => {
-    const stableCreds = { ...creds, clientId: "stable-client" };
-    await store.set("192.168.1.50", creds);
-    await store.set("mister.local", stableCreds);
-    store.registerFallback("mister.local", "192.168.1.50");
-
-    expect(await store.get("mister.local")).toEqual(stableCreds);
+    expect(await store.get("192.168.1.50")).toBeNull();
   });
 
   it("should remove key on delete", async () => {
@@ -140,5 +129,110 @@ describe("SecureCredentialStore", () => {
     const setPromise = fresh.set("race-key", creds);
     await Promise.all([deletePromise, setPromise]);
     expect(events).toEqual(["remove-resolved", "set-invoked"]);
+  });
+});
+
+/**
+ * A record's pairing lives under `record:<id>`, but a device migrated from a
+ * pre-V2 install still has its only copy under the address it was paired at.
+ * These cover the one-way trip between the two.
+ */
+describe("record credentials", () => {
+  let store: SecureCredentialStore;
+
+  beforeEach(async () => {
+    store = new SecureCredentialStore();
+    await SecureStorage.clear();
+  });
+
+  it("should read the canonical key without consulting the legacy one", async () => {
+    await store.set(credentialKeyForRecord("record-1"), creds);
+    await store.set("192.168.1.50", { ...creds, clientId: "stale" });
+
+    await expect(
+      store.getForRecord("record-1", "192.168.1.50"),
+    ).resolves.toEqual({ credentials: creds, legacyKeyUsed: null });
+  });
+
+  it("should fall back to the legacy key and report which one answered", async () => {
+    await store.set("192.168.1.50", creds);
+
+    await expect(
+      store.getForRecord("record-1", "192.168.1.50"),
+    ).resolves.toEqual({ credentials: creds, legacyKeyUsed: "192.168.1.50" });
+  });
+
+  it("should report no pairing when neither key holds one", async () => {
+    await expect(
+      store.getForRecord("record-1", "192.168.1.50"),
+    ).resolves.toEqual({ credentials: null, legacyKeyUsed: null });
+  });
+
+  it("should not rewrite anything on a read", async () => {
+    await store.set("192.168.1.50", creds);
+    vi.mocked(SecureStorage.set).mockClear();
+
+    await store.getForRecord("record-1", "192.168.1.50");
+
+    expect(SecureStorage.set).not.toHaveBeenCalled();
+  });
+
+  it("should move a proven pairing onto the canonical key", async () => {
+    await store.set("192.168.1.50", creds);
+
+    await expect(
+      store.promoteRecordCredentials("record-1", "192.168.1.50"),
+    ).resolves.toBe(true);
+
+    expect(await store.get(credentialKeyForRecord("record-1"))).toEqual(creds);
+    expect(await store.get("192.168.1.50")).toBeNull();
+  });
+
+  it("should keep a legacy pairing that never made it across", async () => {
+    // A write that resolves without persisting would otherwise take the only
+    // copy of the pairing with it.
+    await store.set("192.168.1.50", creds);
+    vi.mocked(SecureStorage.set).mockImplementationOnce(async () => undefined);
+
+    await expect(
+      store.promoteRecordCredentials("record-1", "192.168.1.50"),
+    ).resolves.toBe(false);
+
+    expect(await store.get("192.168.1.50")).toEqual(creds);
+  });
+
+  it("should leave an existing canonical pairing in place", async () => {
+    const current = { ...creds, clientId: "current-client" };
+    await store.set(credentialKeyForRecord("record-1"), current);
+    await store.set("192.168.1.50", creds);
+
+    await expect(
+      store.promoteRecordCredentials("record-1", "192.168.1.50"),
+    ).resolves.toBe(true);
+
+    expect(await store.get(credentialKeyForRecord("record-1"))).toEqual(
+      current,
+    );
+    // Another record may still be paired under that address.
+    expect(await store.get("192.168.1.50")).toEqual(creds);
+  });
+
+  it("should settle when there was nothing under the legacy key", async () => {
+    await expect(
+      store.promoteRecordCredentials("record-1", "192.168.1.50"),
+    ).resolves.toBe(true);
+  });
+
+  it("should report a storage failure as unsettled", async () => {
+    await store.set("192.168.1.50", creds);
+    vi.mocked(SecureStorage.set).mockRejectedValueOnce(
+      new Error("keychain locked"),
+    );
+
+    await expect(
+      store.promoteRecordCredentials("record-1", "192.168.1.50"),
+    ).resolves.toBe(false);
+
+    expect(await store.get("192.168.1.50")).toEqual(creds);
   });
 });

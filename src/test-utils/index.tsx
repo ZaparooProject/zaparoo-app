@@ -64,10 +64,12 @@ function customRender(
   return render(ui, { wrapper: AllProviders, ...options });
 }
 
-// Custom renderHook function that wraps hooks with necessary providers
+// Custom renderHook function that wraps hooks with necessary providers.
+// Passing an explicit `wrapper` replaces the defaults — that is how a test
+// supplies its own QueryClient (see `createProvidersWithQueryClient`).
 function customRenderHook<Result, Props>(
   hook: (props: Props) => Result,
-  options?: Omit<RenderHookOptions<Props>, "wrapper">,
+  options?: RenderHookOptions<Props>,
 ): RenderHookResult<Result, Props> {
   return renderHook(hook, { wrapper: AllProviders, ...options });
 }

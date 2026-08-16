@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen } from "@/test-utils";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
+import { deviceRegistry } from "@/lib/devices/deviceRegistry";
 import { CoreAPI } from "@/lib/coreApi";
 import { useStatusStore } from "@/lib/store";
 import {
@@ -55,16 +57,16 @@ vi.mock("@/hooks/useHaptics", () => ({
 }));
 
 describe("Library index route", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.restoreAllMocks();
     CoreAPI.reset();
     mockNavigate.mockClear();
     usePreferencesStore.setState({ systemNameRegion: "auto" });
     useLibrarySessionStore.getState().reset();
     useTabSessionStore.getState().reset();
+    await seedActiveDevice({ recordId: "device-a" });
     useStatusStore.setState({
       connected: true,
-      targetDeviceAddress: "device-a",
       coreVersion: "2.15.0",
       coreVersionPending: false,
       gamesIndex: {
@@ -385,7 +387,7 @@ describe("Library index route", () => {
     );
     view.unmount();
 
-    useStatusStore.setState({ targetDeviceAddress: "device-b" });
+    await deviceRegistry.selectAddress("192.168.1.55");
     render(<Library />);
 
     expect(

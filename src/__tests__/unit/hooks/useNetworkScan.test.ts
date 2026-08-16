@@ -293,6 +293,7 @@ describe("useNetworkScan", () => {
       expect(result.current.devices[0]).toEqual({
         name: "test-device",
         address: "192.168.1.100",
+        addresses: ["192.168.1.100"],
         hostname: "test-device.local",
         port: 7497,
         deviceId: "device-123",
@@ -325,6 +326,59 @@ describe("useNetworkScan", () => {
       expect(result.current.devices).toHaveLength(1);
       const device = result.current.devices[0];
       expect(device?.address).toBe("fe80::1");
+    });
+
+    // The first address is the one the socket dials, and IPv6 link-local needs
+    // a scope id the WebSocket URL has nowhere to put.
+    it("should prefer IPv4 over IPv6 for the address it hands out", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result } = renderHook(() => hook());
+
+      await act(async () => {
+        await result.current.startScan();
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "dual-stack",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.100"],
+            ipv6Addresses: ["fe80::1"],
+          },
+        });
+      });
+
+      expect(result.current.devices[0]).toMatchObject({
+        address: "192.168.1.100",
+        addresses: ["192.168.1.100", "fe80::1"],
+      });
+    });
+
+    it("should not repeat an address advertised on both stacks", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result } = renderHook(() => hook());
+
+      await act(async () => {
+        await result.current.startScan();
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "duplicated",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.100"],
+            ipv6Addresses: ["192.168.1.100"],
+          },
+        });
+      });
+
+      expect(result.current.devices[0]?.addresses).toEqual(["192.168.1.100"]);
     });
 
     it("should ignore service without IP address", async () => {
@@ -745,8 +799,96 @@ describe("useNetworkScan", () => {
       expect(result.current.devices[0]).toEqual({
         name: "basic-device",
         address: "192.168.1.100",
+        addresses: ["192.168.1.100"],
         port: 7497,
         // No deviceId, version, platform
+      });
+    });
+  });
+
+  // A multi-homed device announces one interface at a time, so a re-announcement
+  // is usually a partial view rather than a correction.
+  describe("re-announcements from a multi-homed device", () => {
+    const announce = (
+      ipv4Addresses: string[],
+      hostname = "steamdeck.local.",
+    ) => ({
+      action: "resolved" as const,
+      service: {
+        name: "steamdeck",
+        hostname,
+        port: 7497,
+        ipv4Addresses,
+        ipv6Addresses: [],
+        txtRecord: { id: "device-123" },
+      },
+    });
+
+    it("should collect every interface it hears about", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result } = renderHook(() => hook());
+
+      await act(async () => {
+        await result.current.startScan();
+      });
+
+      act(() => {
+        watchCallback?.(announce(["192.168.1.100"]));
+      });
+      act(() => {
+        watchCallback?.(announce(["192.168.1.100", "10.0.0.5"]));
+      });
+
+      expect(result.current.devices).toHaveLength(1);
+      expect(result.current.devices[0]?.addresses).toEqual([
+        "192.168.1.100",
+        "10.0.0.5",
+      ]);
+    });
+
+    // Flipping `address` here would repoint a live socket at the other
+    // interface for no reason.
+    it("should keep the address in use while it is still advertised", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result } = renderHook(() => hook());
+
+      await act(async () => {
+        await result.current.startScan();
+      });
+
+      act(() => {
+        watchCallback?.(announce(["192.168.1.100"]));
+      });
+      act(() => {
+        watchCallback?.(announce(["10.0.0.5", "192.168.1.100"]));
+      });
+
+      expect(result.current.devices[0]?.address).toBe("192.168.1.100");
+    });
+
+    it("should follow the device when its address stops being advertised", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result } = renderHook(() => hook());
+
+      await act(async () => {
+        await result.current.startScan();
+      });
+
+      act(() => {
+        watchCallback?.(announce(["192.168.1.100"]));
+      });
+      // The DHCP lease moved, so the old address is dropped rather than kept
+      // around as an address that no longer answers.
+      act(() => {
+        watchCallback?.(announce(["10.0.0.5"]));
+      });
+
+      expect(result.current.devices[0]).toMatchObject({
+        address: "10.0.0.5",
+        addresses: ["10.0.0.5"],
       });
     });
   });
@@ -769,26 +911,96 @@ describe("useNetworkScan", () => {
     });
   });
 
-  describe("restarting scan", () => {
-    it("should stop existing scan before starting new one", async () => {
+  // There is one ZeroConf watch for the whole app. The connection provider
+  // browses to resolve a `.local` hostname at the same time the scan modal
+  // browses to list devices, so ownership is counted rather than toggled.
+  describe("sharing one watch between callers", () => {
+    it("should not restart the watch when the same caller scans again", async () => {
       const { useNetworkScan: hook } =
         await import("../../../hooks/useNetworkScan");
       const { result } = renderHook(() => hook());
 
-      // Start first scan
+      await act(async () => {
+        await result.current.startScan();
+      });
       await act(async () => {
         await result.current.startScan();
       });
 
-      // Start second scan
+      expect(mockWatch).toHaveBeenCalledTimes(1);
+      expect(mockUnwatch).not.toHaveBeenCalled();
+    });
+
+    it("should keep watching while a second caller is still scanning", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result: modalScan } = renderHook(() => hook());
+      const { result: providerScan } = renderHook(() => hook());
+
       await act(async () => {
-        await result.current.startScan();
+        await modalScan.current.startScan();
+        await providerScan.current.startScan();
       });
 
-      // unwatch should have been called for the first scan
-      expect(mockUnwatch).toHaveBeenCalledTimes(1);
-      // watch should have been called twice
-      expect(mockWatch).toHaveBeenCalledTimes(2);
+      expect(mockWatch).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        modalScan.current.stopScan();
+      });
+
+      expect(mockUnwatch).not.toHaveBeenCalled();
+      expect(providerScan.current.isScanning).toBe(true);
+    });
+
+    it("should stop watching once the last caller stops", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result: modalScan } = renderHook(() => hook());
+      const { result: providerScan } = renderHook(() => hook());
+
+      await act(async () => {
+        await modalScan.current.startScan();
+        await providerScan.current.startScan();
+      });
+
+      await act(async () => {
+        modalScan.current.stopScan();
+        providerScan.current.stopScan();
+      });
+
+      await waitFor(() => {
+        expect(mockUnwatch).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("should deliver discoveries to every scanning caller", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result: modalScan } = renderHook(() => hook());
+      const { result: providerScan } = renderHook(() => hook());
+
+      await act(async () => {
+        await modalScan.current.startScan();
+        await providerScan.current.startScan();
+      });
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "test-device",
+            hostname: "test-device.local",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.100"],
+            ipv6Addresses: [],
+          },
+        });
+      });
+
+      await waitFor(() => {
+        expect(modalScan.current.devices).toHaveLength(1);
+        expect(providerScan.current.devices).toHaveLength(1);
+      });
     });
   });
 });

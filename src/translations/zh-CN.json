@@ -433,7 +433,7 @@
           "eraseDescription": "移除标签上的所有 NDEF 数据",
           "eraseWarning": "这将删除所有内容，但保留标签结构",
           "makeReadOnlyDescription": "永久锁定标签，防止以后写入",
-          "makeReadOnlyWarning": "此操作无法撤销——标签将永久变为只读"
+          "makeReadOnlyWarning": "此操作无法撤销。标签将永久变为只读"
         }
       },
       "mappings": {

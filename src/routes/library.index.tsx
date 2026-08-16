@@ -9,6 +9,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Heart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { CoreAPI } from "@/lib/coreApi";
 import {
   filterSystemCatalog,
@@ -81,16 +82,14 @@ export function Library() {
   const [draftSort, setDraftSort] = useState<SystemSort>("name-asc");
   const connected = useStatusStore((state) => state.connected);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  const targetDeviceAddress = useStatusStore(
-    (state) => state.targetDeviceAddress,
-  );
+  const deviceKey = useActiveDeviceKey();
   useLayoutEffect(() => {
-    activateLibraryDevice(targetDeviceAddress);
-  }, [activateLibraryDevice, targetDeviceAddress]);
+    activateLibraryDevice(deviceKey);
+  }, [activateLibraryDevice, deviceKey]);
   const libraryFeature = useCoreFeature("mediaLibrary");
   const favoritesFeature = useCoreFeature("mediaFavorites");
   const systemsQuery = useQuery({
-    queryKey: ["systems", targetDeviceAddress, { all: false }],
+    queryKey: ["systems", deviceKey, { all: false }],
     queryFn: () => CoreAPI.systems(),
     enabled: connected && gamesIndex.exists && libraryFeature.available,
     staleTime: 60 * 1000,

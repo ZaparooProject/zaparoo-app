@@ -5,9 +5,8 @@
  * that were missing coverage.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI, setDeviceAddress } from "@/lib/coreApi";
-import { Preferences } from "@capacitor/preferences";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { CoreAPI } from "@/lib/coreApi";
 
 // Mock Capacitor
 vi.mock("@capacitor/core", () => ({
@@ -15,19 +14,6 @@ vi.mock("@capacitor/core", () => ({
     isNativePlatform: vi.fn(() => false),
   },
 }));
-
-// Mock localStorage
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-};
-
-Object.defineProperty(window, "localStorage", {
-  value: localStorageMock,
-  writable: true,
-});
 
 describe("CoreAPI playtime methods", () => {
   let mockSend: ReturnType<typeof vi.fn>;
@@ -176,79 +162,5 @@ describe("CoreAPI utility methods", () => {
       CoreAPI.reset();
       expect(CoreAPI.isConnected()).toBe(false);
     });
-  });
-});
-
-describe("setDeviceAddress", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    localStorageMock.setItem.mockClear();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("should save address to localStorage", () => {
-    setDeviceAddress("192.168.1.200");
-
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      "deviceAddress",
-      "192.168.1.200",
-    );
-  });
-
-  it("should save address to Preferences", async () => {
-    setDeviceAddress("192.168.1.200:8080");
-
-    // Wait for the async Preferences.set to be called
-    await vi.waitFor(() => {
-      expect(Preferences.set).toHaveBeenCalledWith({
-        key: "deviceAddress",
-        value: "192.168.1.200:8080",
-      });
-    });
-  });
-
-  it("should handle localStorage error gracefully", () => {
-    localStorageMock.setItem.mockImplementationOnce(() => {
-      throw new Error("Storage full");
-    });
-
-    // Should not throw
-    expect(() => setDeviceAddress("192.168.1.100")).not.toThrow();
-  });
-
-  it("should handle Preferences.set error gracefully", async () => {
-    vi.mocked(Preferences.set).mockRejectedValueOnce(
-      new Error("Storage error"),
-    );
-
-    // Should not throw
-    expect(() => setDeviceAddress("192.168.1.100")).not.toThrow();
-  });
-
-  it("should save empty string address", () => {
-    setDeviceAddress("");
-
-    expect(localStorageMock.setItem).toHaveBeenCalledWith("deviceAddress", "");
-  });
-
-  it("should save address with port", () => {
-    setDeviceAddress("192.168.1.100:8080");
-
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      "deviceAddress",
-      "192.168.1.100:8080",
-    );
-  });
-
-  it("should save hostname address", () => {
-    setDeviceAddress("zaparoo.local");
-
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      "deviceAddress",
-      "zaparoo.local",
-    );
   });
 });

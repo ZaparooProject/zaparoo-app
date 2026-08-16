@@ -741,7 +741,7 @@
       "scrapeMedia.details.unknown": "Inconnu",
       "scrapeMedia.blockedByIndex": "La mise à jour de la base de données de médias est en cours. La récupération des métadonnées est indisponible jusqu’à la fin de l’opération.",
       "scrapeMedia.stats": "Correspondances : {{matched}}, éléments ignorés : {{skipped}}",
-      "scrapeMedia.done": "Récupération terminée — correspondances : {{matched}}, éléments ignorés : {{skipped}}",
+      "scrapeMedia.done": "Récupération terminée. Correspondances : {{matched}}, éléments ignorés : {{skipped}}",
       "scrapeMedia.status.noConnection": "Non connecté",
       "scrapeMedia.status.paused": "En pause",
       "scrapeMedia.status.reconnecting": "Reconnexion...",

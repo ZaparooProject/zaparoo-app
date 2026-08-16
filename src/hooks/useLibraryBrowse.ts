@@ -38,7 +38,7 @@ function sortRootEntries(
 }
 
 export function useLibraryBrowse(options: {
-  targetDeviceAddress: string;
+  deviceKey: string;
   systemId: string;
   path: string;
   sort?: MediaBrowseSort;
@@ -48,7 +48,7 @@ export function useLibraryBrowse(options: {
   const browseQuery = useInfiniteQuery({
     queryKey: [
       LIBRARY_QUERY_KEYS.browse,
-      options.targetDeviceAddress,
+      options.deviceKey,
       options.systemId,
       options.path,
       sort,

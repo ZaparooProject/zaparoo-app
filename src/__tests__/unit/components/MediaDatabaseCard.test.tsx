@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MediaDatabaseCard } from "../../../components/MediaDatabaseCard";
 import { CoreAPI } from "../../../lib/coreApi";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 
 // Mock dependencies
 vi.mock("../../../lib/coreApi", () => ({
@@ -64,7 +65,6 @@ const { ConnectionState, mockStore } = vi.hoisted(() => {
   } as const;
   const mockStore = {
     connected: true,
-    targetDeviceAddress: "test-device",
     connectionState: ConnectionState.CONNECTED as string,
     gamesIndex: {
       indexing: false,
@@ -103,11 +103,11 @@ vi.mock("../../../lib/store", () => ({
 }));
 
 describe("MediaDatabaseCard", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await seedActiveDevice({ recordId: "test-device" });
     // Reset mock store state
     mockStore.connected = true;
-    mockStore.targetDeviceAddress = "test-device";
     mockStore.connectionState = ConnectionState.CONNECTED;
     mockStore.gamesIndex = {
       indexing: false,

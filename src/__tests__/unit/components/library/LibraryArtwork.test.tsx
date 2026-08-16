@@ -28,7 +28,7 @@ describe("LibraryArtwork", () => {
           systemId: "SNES",
         }}
         systemId="SNES"
-        targetDeviceAddress="device-a"
+        deviceKey="device-a"
         maxSize={320}
         priority="thumbnail"
         onAvailabilityChange={onAvailabilityChange}
@@ -60,7 +60,7 @@ describe("LibraryArtwork", () => {
           systemId: "SNES",
         }}
         systemId="SNES"
-        targetDeviceAddress="device-a"
+        deviceKey="device-a"
         maxSize={320}
         priority="thumbnail"
         onAvailabilityChange={onAvailabilityChange}

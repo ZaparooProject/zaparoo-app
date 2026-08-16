@@ -18,6 +18,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import {
+  seedActiveDevice,
+  seedDeviceRegistry,
+  mockDeviceRecord,
+} from "@/test-utils/deviceRegistry";
+import {
   SystemSelector,
   SystemSelectorTrigger,
   System,
@@ -96,16 +101,16 @@ describe("SystemSelector", () => {
     mode: "single" as const,
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockIsLoading = false;
 
     // Reset stores
     usePreferencesStore.setState({ systemNameRegion: "auto" });
+    await seedActiveDevice({ recordId: "test-device" });
     useStatusStore.setState({
       ...useStatusStore.getState(),
-      targetDeviceAddress: "test-device",
       gamesIndex: {
         exists: true,
         indexing: false,
@@ -184,14 +189,16 @@ describe("SystemSelector", () => {
       expect(screen.getByRole("radio", { name: "3DO" })).toBeInTheDocument();
     });
 
-    it("should scope full system queries to the selected device", () => {
-      useStatusStore.setState({ targetDeviceAddress: "10.0.0.5:7497" });
+    it("should scope full system queries to the selected device", async () => {
+      await seedDeviceRegistry([
+        mockDeviceRecord({ recordId: "other-device" }),
+      ]);
 
       render(<SystemSelector {...defaultProps} allSystems={true} />);
 
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ["systems", "10.0.0.5:7497", { all: true }],
+          queryKey: ["systems", "other-device", { all: true }],
           enabled: true,
           staleTime: 0,
         }),

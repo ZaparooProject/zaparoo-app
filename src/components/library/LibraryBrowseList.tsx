@@ -89,7 +89,7 @@ function AdaptiveLibraryTitle({
 function LibraryBrowseRow(props: {
   entry: MediaBrowseEntry;
   systemId: string;
-  targetDeviceAddress: string;
+  deviceKey: string;
   showFilenames: boolean;
   corePlatform: string | null;
   imagesPaused: boolean;
@@ -153,7 +153,7 @@ function LibraryBrowseRow(props: {
         <LibraryArtwork
           entry={entry}
           systemId={rowSystemId}
-          targetDeviceAddress={props.targetDeviceAddress}
+          deviceKey={props.deviceKey}
           maxSize={128}
           priority="thumbnail"
           enabled={!props.imagesPaused && (!props.deferImages || imageVisible)}
@@ -224,7 +224,7 @@ export const LibraryBrowseList = forwardRef<
   {
     entries: MediaBrowseEntry[];
     systemId: string;
-    targetDeviceAddress: string;
+    deviceKey: string;
     scrollRef: RefObject<HTMLDivElement | null>;
     hasNextPage: boolean;
     isFetchingNextPage: boolean;
@@ -328,7 +328,7 @@ export const LibraryBrowseList = forwardRef<
     <LibraryBrowseRow
       entry={entry}
       systemId={props.systemId}
-      targetDeviceAddress={props.targetDeviceAddress}
+      deviceKey={props.deviceKey}
       showFilenames={showFilenames}
       corePlatform={corePlatform}
       imagesPaused={props.imagesPaused}
