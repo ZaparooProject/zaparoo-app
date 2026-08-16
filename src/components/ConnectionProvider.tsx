@@ -347,20 +347,22 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     void deviceRegistry
       .noteResolvedAddresses(activeRecordId, resolvedMdnsDevice.addresses)
       .then(() => {
-        // A persisted mDNS address can be correct while iOS still rejects the
-        // first socket attempt because local-network resolution has not been
-        // primed. When ZeroConf confirms that same route, the registry does not
-        // change, so explicitly retry now that the probe has completed.
+        // A persisted mDNS address can be correct while iOS still rejects a
+        // socket because local-network resolution has not been primed. The
+        // registry does not change when ZeroConf confirms the same route, and
+        // the plugin may not re-announce a device cached from an earlier watch.
+        // Retry when that route is first confirmed and whenever its connection
+        // drops as the shared mDNS watch restarts.
         if (
           confirmedCurrentRoute &&
-          deviceRegistry.getSnapshot().activeRecordId === activeRecordId &&
-          connectionManager.getActiveConnection()?.state !== "connected"
+          !isConnected &&
+          deviceRegistry.getSnapshot().activeRecordId === activeRecordId
         ) {
           connectionManager.immediateReconnectActive();
         }
       })
       .catch(ignoreReportedRegistryFailure);
-  }, [activeRecordId, connectionWsUrl, resolvedMdnsDevice]);
+  }, [activeRecordId, connectionWsUrl, isConnected, resolvedMdnsDevice]);
 
   // Browsing costs battery and multicast traffic, so it runs only until this
   // device's hostname has been resolved on a live connection.

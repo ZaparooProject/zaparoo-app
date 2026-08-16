@@ -662,6 +662,53 @@ describe("ConnectionProvider", () => {
       });
     });
 
+    it("should retry immediately when a resolved mDNS connection drops", async () => {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(ZeroConf.watch).toHaveBeenCalled();
+      });
+      act(() => {
+        __simulateDeviceDiscovered(advertise());
+      });
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({ address: "ws://10.0.0.206:7497/api/v0.1" }),
+        );
+      });
+
+      act(() => {
+        capturedEventHandlers.onConnectionChange!(MDNS_RECORD_ID, {
+          state: "connected",
+          hasData: true,
+          hasConnectedBefore: true,
+        });
+      });
+      await waitFor(() => {
+        expect(ZeroConf.unwatch).toHaveBeenCalled();
+      });
+      vi.mocked(connectionManager.immediateReconnectActive).mockClear();
+
+      act(() => {
+        capturedEventHandlers.onConnectionChange!(MDNS_RECORD_ID, {
+          state: "reconnecting",
+          hasData: true,
+          hasConnectedBefore: true,
+        });
+      });
+
+      await waitFor(() => {
+        expect(ZeroConf.watch).toHaveBeenCalledTimes(2);
+        expect(
+          connectionManager.immediateReconnectActive,
+        ).toHaveBeenCalledTimes(1);
+      });
+    });
+
     it("should keep browsing while the connection is still down", async () => {
       render(
         <ConnectionProvider>
