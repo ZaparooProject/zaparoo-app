@@ -2,26 +2,26 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { encodeDeviceAddress } from "@/lib/deviceUrl";
+import { CoreAPI } from "@/lib/coreApi";
+import {
+  credentialKeyForRecord,
+  credentialStore,
+  type StoredCredentials,
+} from "@/lib/crypto/credentials";
+import {
+  deviceRegistry,
+  type DeviceRecord,
+} from "@/lib/devices/deviceRegistry";
+import { ConnectionState, useStatusStore } from "@/lib/store";
+import {
+  mockDeviceRecord,
+  seedDeviceRegistry,
+} from "@/test-utils/deviceRegistry";
 
-const {
-  componentRef,
-  mockNavigate,
-  mockSelectDevice,
-  mockParams,
-  mockCoreReset,
-  mockSetDeviceAddress,
-  mockGetDeviceAddress,
-  mockUseDeviceLinking,
-} = vi.hoisted(() => ({
+const { componentRef, mockNavigate, mockParams } = vi.hoisted(() => ({
   componentRef: { current: null as any },
   mockNavigate: vi.fn(),
-  mockSelectDevice: vi.fn(),
-  mockParams: { current: { address: "192.168.1.50" } },
-  mockCoreReset: vi.fn(),
-  mockSetDeviceAddress: vi.fn(),
-  mockGetDeviceAddress: vi.fn(() => "192.168.1.10"),
-  mockUseDeviceLinking: vi.fn(),
+  mockParams: { current: { recordId: "" } },
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -47,77 +47,45 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
   usePageHeadingFocus: vi.fn(),
 }));
 
+const mockIsConnected = vi.fn(() => true);
 vi.mock("@/hooks/useConnection", () => ({
-  useConnection: () => ({ isConnected: true }),
+  useConnection: () => ({ isConnected: mockIsConnected() }),
 }));
 
-vi.mock("@/hooks/useSelectDevice", () => ({
-  useSelectDevice: () => ({
-    selectDevice: mockSelectDevice,
-    selectScanDevice: vi.fn(),
-  }),
-}));
-
-vi.mock("@/hooks/useDeviceLinking", () => ({
-  useDeviceLinking: (enabled: boolean) => mockUseDeviceLinking(enabled),
-}));
-
-vi.mock("@/lib/coreApi", () => ({
-  CoreAPI: { reset: mockCoreReset },
-  getDeviceAddress: () => mockGetDeviceAddress(),
-  setDeviceAddress: (v: string) => mockSetDeviceAddress(v),
-}));
-
-vi.mock("@/lib/crypto/credentials", () => ({
-  credentialStore: { list: vi.fn().mockResolvedValue([]) },
-  normalizeDeviceKey: (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/^wss?:\/\//, "")
-      .replace(/\/$/, ""),
-}));
-
-const mockUseStatusStore = vi.fn();
-const mockUpdateDeviceHistoryMeta = vi.fn();
-const mockRemoveDeviceHistory = vi.fn();
-const mockResetConnectionState = vi.fn();
-const mockSetTargetDeviceAddress = vi.fn();
-
-vi.mock("@/lib/store", async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
-  return {
-    ...actual,
-    useStatusStore: (selector: any) => mockUseStatusStore(selector),
-  };
-});
-
-import "@/routes/settings.devices_.$address";
+import "@/routes/settings.devices_.$recordId";
 
 const getDeviceDetail = () => componentRef.current;
 
+const credentials: StoredCredentials = {
+  authToken: "token-abc",
+  pairingKey: "a".repeat(64),
+  clientId: "client-uuid-1234",
+  pairedAt: 1700000000000,
+};
+
 describe("Settings Device Detail Route", () => {
   let queryClient: QueryClient;
+  let record: DeviceRecord;
 
-  const sampleEntry = {
-    address: "192.168.1.50",
-    name: "Living Room",
-    platform: "linux",
-    version: "1.0.0",
-    lastConnectedAt: new Date("2026-01-01T12:00:00Z").getTime(),
-  };
+  /** Seed the viewed record, optionally as the active device. */
+  async function seedRecord(isActive = false): Promise<DeviceRecord> {
+    record = mockDeviceRecord({
+      address: "192.168.1.50",
+      name: "Living Room",
+      platform: "linux",
+      version: "1.0.0",
+      lastConnectedAt: new Date("2026-01-01T12:00:00Z").getTime(),
+    });
+    const other = mockDeviceRecord({ address: "192.168.1.10", name: "Other" });
+    await seedDeviceRegistry(
+      [record, other],
+      isActive ? record.recordId : other.recordId,
+    );
+    mockParams.current = { recordId: record.recordId };
+    return record;
+  }
 
-  const buildState = (overrides: Partial<any> = {}) => ({
-    deviceHistory: [sampleEntry],
-    removeDeviceHistory: mockRemoveDeviceHistory,
-    updateDeviceHistoryMeta: mockUpdateDeviceHistoryMeta,
-    setTargetDeviceAddress: mockSetTargetDeviceAddress,
-    resetConnectionState: mockResetConnectionState,
-    safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
-    coreVersion: "2.16.0",
-    ...overrides,
-  });
-
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     queryClient = new QueryClient({
       defaultOptions: {
@@ -125,15 +93,8 @@ describe("Settings Device Detail Route", () => {
         mutations: { retry: false },
       },
     });
-    mockParams.current = {
-      address: encodeDeviceAddress("192.168.1.50"),
-    };
-    mockGetDeviceAddress.mockReturnValue("192.168.1.10");
-    mockUseDeviceLinking.mockReturnValue({
-      state: "unlinked",
-      linkDevice: vi.fn(),
-    });
-    mockUseStatusStore.mockImplementation((selector) => selector(buildState()));
+    mockIsConnected.mockReturnValue(true);
+    await seedRecord();
   });
 
   afterEach(() => {
@@ -149,7 +110,7 @@ describe("Settings Device Detail Route", () => {
     );
   };
 
-  it("should render the entry's metadata", () => {
+  it("should render the record's metadata", () => {
     renderRoute();
 
     expect(screen.getAllByText("Living Room").length).toBeGreaterThan(0);
@@ -164,7 +125,7 @@ describe("Settings Device Detail Route", () => {
     ).toBeInTheDocument();
   });
 
-  it("disables Save until the name draft changes", async () => {
+  it("should disable Save until the name draft changes", async () => {
     const user = userEvent.setup();
     renderRoute();
 
@@ -178,7 +139,7 @@ describe("Settings Device Detail Route", () => {
     expect(saveButton).toBeEnabled();
   });
 
-  it("calls updateDeviceHistoryMeta with the trimmed name on Save", async () => {
+  it("should store the trimmed name as the user's own on Save", async () => {
     const user = userEvent.setup();
     renderRoute();
 
@@ -187,14 +148,14 @@ describe("Settings Device Detail Route", () => {
     await user.type(input, "  Bedroom  ");
     await user.click(screen.getByRole("button", { name: "save" }));
 
-    expect(mockUpdateDeviceHistoryMeta).toHaveBeenCalledWith(
-      "192.168.1.50",
-      { name: "Bedroom" },
-      { source: "manual" },
-    );
+    await waitFor(() => {
+      expect(
+        deviceRegistry.getSnapshot().records[record.recordId],
+      ).toMatchObject({ name: "Bedroom", nameIsCustom: true });
+    });
   });
 
-  it("clears the custom name when Save is pressed with empty input", async () => {
+  it("should hand the name back to the device when Save is pressed empty", async () => {
     const user = userEvent.setup();
     renderRoute();
 
@@ -202,15 +163,15 @@ describe("Settings Device Detail Route", () => {
     await user.clear(input);
     await user.click(screen.getByRole("button", { name: "save" }));
 
-    expect(mockUpdateDeviceHistoryMeta).toHaveBeenCalledWith(
-      "192.168.1.50",
-      { name: undefined },
-      { source: "manual" },
-    );
+    await waitFor(() => {
+      const updated = deviceRegistry.getSnapshot().records[record.recordId];
+      expect(updated?.name).toBeUndefined();
+      expect(updated?.nameIsCustom).toBe(false);
+    });
   });
 
-  it("hides 'Use this device' on the active connected device", () => {
-    mockGetDeviceAddress.mockReturnValue("192.168.1.50");
+  it("should hide 'Use this device' and Online linking on the active connected device", async () => {
+    await seedRecord(true);
     renderRoute();
 
     expect(
@@ -220,14 +181,14 @@ describe("Settings Device Detail Route", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByLabelText("settings.activeDevice")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "online.deviceLink.link" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "online.deviceLink.link" }),
+    ).not.toBeInTheDocument();
     expect(
-      screen.getByText("online.deviceLink.description"),
-    ).toBeInTheDocument();
+      screen.queryByText("online.deviceLink.description"),
+    ).not.toBeInTheDocument();
   });
 
-  it("navigates back to the device list without resetting scroll", async () => {
+  it("should navigate back to the device list without resetting scroll", async () => {
     const user = userEvent.setup();
     renderRoute();
 
@@ -239,7 +200,7 @@ describe("Settings Device Detail Route", () => {
     });
   });
 
-  it("calls selectDevice when 'Use this device' is tapped", async () => {
+  it("should make the record active when 'Use this device' is tapped", async () => {
     const user = userEvent.setup();
     renderRoute();
 
@@ -249,12 +210,18 @@ describe("Settings Device Detail Route", () => {
       }),
     );
 
-    expect(mockSelectDevice).toHaveBeenCalledWith("192.168.1.50");
+    await waitFor(() => {
+      expect(deviceRegistry.getSnapshot().activeRecordId).toBe(record.recordId);
+    });
     expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings" });
   });
 
-  it("opens the forget confirm modal and removes the device on confirm", async () => {
+  it("should forget the device and its pairing on confirm", async () => {
     const user = userEvent.setup();
+    await credentialStore.set(
+      credentialKeyForRecord(record.recordId),
+      credentials,
+    );
     renderRoute();
 
     await user.click(
@@ -273,16 +240,34 @@ describe("Settings Device Detail Route", () => {
       }),
     );
 
-    expect(mockRemoveDeviceHistory).toHaveBeenCalledWith("192.168.1.50");
+    await waitFor(() => {
+      expect(
+        deviceRegistry.getSnapshot().records[record.recordId],
+      ).toBeUndefined();
+    });
+    // Leaving the pairing behind would let a later device at the same address
+    // inherit it.
+    await expect(
+      credentialStore.get(credentialKeyForRecord(record.recordId)),
+    ).resolves.toBeNull();
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/settings/devices",
       replace: true,
     });
   });
 
-  it("clears connection state when forgetting the active device", async () => {
-    mockGetDeviceAddress.mockReturnValue("192.168.1.50");
+  it("should tear the connection down when forgetting the active device", async () => {
+    await seedRecord(true);
     const user = userEvent.setup();
+    useStatusStore.setState({
+      connectionState: ConnectionState.CONNECTED,
+      connected: true,
+      connectionError: "stale error",
+    });
+    CoreAPI.setWsInstance({
+      isConnected: true,
+      send: () => {},
+    } as unknown as Parameters<typeof CoreAPI.setWsInstance>[0]);
     renderRoute();
 
     await user.click(
@@ -294,14 +279,18 @@ describe("Settings Device Detail Route", () => {
       }),
     );
 
-    expect(mockSetDeviceAddress).toHaveBeenCalledWith("");
-    expect(mockSetTargetDeviceAddress).toHaveBeenCalledWith("");
-    expect(mockResetConnectionState).toHaveBeenCalled();
-    expect(mockCoreReset).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(useStatusStore.getState().connectionState).toBe(
+        ConnectionState.IDLE,
+      );
+    });
+    expect(useStatusStore.getState().connectionError).toBe("");
+    expect(CoreAPI.isConnected()).toBe(false);
+    expect(deviceRegistry.getSnapshot().activeRecordId).toBeNull();
   });
 
-  it("redirects to the device list when the address is unknown", () => {
-    mockParams.current = { address: encodeDeviceAddress("unknown.device") };
+  it("should redirect to the device list when the record is unknown", () => {
+    mockParams.current = { recordId: "record-that-was-forgotten" };
     renderRoute();
 
     expect(mockNavigate).toHaveBeenCalledWith({

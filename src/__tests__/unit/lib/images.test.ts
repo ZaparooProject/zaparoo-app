@@ -34,7 +34,7 @@ describe("Zap logo preload", () => {
     }
 
     vi.stubGlobal("Image", MockImage);
-    const { preloadZapLogo, ZAP_LOGO_URL } = await import("@/lib/images");
+    const { preloadZapLogo, ZAP_LOGO_URL } = await import("@/lib/zapLogo");
 
     const first = preloadZapLogo();
     const second = preloadZapLogo();
@@ -84,7 +84,8 @@ describe("Zap logo preload", () => {
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
       context as unknown as CanvasRenderingContext2D,
     );
-    const { preloadZapLogo, ZapLogo } = await import("@/lib/images");
+    const { preloadZapLogo } = await import("@/lib/zapLogo");
+    const { ZapLogo } = await import("@/lib/images");
     await preloadZapLogo();
 
     render(createElement(ZapLogo));
@@ -140,7 +141,7 @@ describe("Zap logo preload", () => {
     }
 
     vi.stubGlobal("Image", MockImage);
-    const { preloadZapLogo } = await import("@/lib/images");
+    const { preloadZapLogo } = await import("@/lib/zapLogo");
 
     await expect(preloadZapLogo()).resolves.toBeUndefined();
   });

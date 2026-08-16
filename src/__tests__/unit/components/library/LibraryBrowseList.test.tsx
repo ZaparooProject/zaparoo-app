@@ -59,7 +59,7 @@ function renderList(
     <LibraryBrowseList
       entries={entries}
       systemId="snes"
-      targetDeviceAddress="device-a"
+      deviceKey="device-a"
       scrollRef={{ current: scrollContainer }}
       hasNextPage={false}
       isFetchingNextPage={false}
@@ -163,7 +163,7 @@ describe("LibraryBrowseList", () => {
         ref={listRef}
         entries={entries}
         systemId="snes"
-        targetDeviceAddress="device-a"
+        deviceKey="device-a"
         scrollRef={{ current: document.createElement("div") }}
         hasNextPage={false}
         isFetchingNextPage={false}

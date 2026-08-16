@@ -1,9 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
-import { Preferences } from "@capacitor/preferences";
 import { Check } from "lucide-react";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
 import { NetworkScanModal } from "@/components/NetworkScanModal";
@@ -15,7 +14,10 @@ import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Button } from "@/components/wui/Button";
 import { ExternalIcon, NextIcon } from "@/lib/images";
-import { getDeviceAddress } from "@/lib/coreApi";
+import {
+  activeAddressOf,
+  useDeviceRegistry,
+} from "@/lib/devices/deviceRegistry";
 import { MediaDatabaseCard } from "@/components/MediaDatabaseCard";
 import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
 import { CoreOutdatedNotice } from "@/components/CoreOutdatedNotice";
@@ -68,24 +70,27 @@ export function Settings() {
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
-  const setDeviceHistory = useStatusStore((state) => state.setDeviceHistory);
   const showMediaScraper =
     coreVersion !== null &&
     !coreVersionPending &&
     isCoreFeatureAvailable("mediaScrapers", coreVersion);
-  const [address, setAddress] = useState(getDeviceAddress());
+  const activeAddress = useDeviceRegistry(activeAddressOf);
+  const [address, setAddress] = useState(activeAddress);
+  const [trackedAddress, setTrackedAddress] = useState(activeAddress);
   const [addressError, setAddressError] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
 
-  const { selectDevice, selectScanDevice } = useSelectDevice();
+  // The field is a draft the user can edit, so it can't just mirror the store.
+  // Re-seed it whenever the active device actually changes — registry hydration
+  // is async, and picking a device from the scan list resolves asynchronously
+  // too, so the address arrives after the first render either way.
+  if (activeAddress !== trackedAddress) {
+    setTrackedAddress(activeAddress);
+    setAddress(activeAddress);
+    setAddressError("");
+  }
 
-  useEffect(() => {
-    Preferences.get({ key: "deviceHistory" }).then((v) => {
-      if (v.value) {
-        setDeviceHistory(JSON.parse(v.value));
-      }
-    });
-  }, [setDeviceHistory]);
+  const { selectDevice, selectScanDevice } = useSelectDevice();
 
   const handleAddressInputChange = (newAddress: string) => {
     setAddress(newAddress);
@@ -104,14 +109,7 @@ export function Settings() {
   };
 
   const handleScanDeviceSelect = (device: ScanDeviceSelection) => {
-    const result = selectScanDevice(device);
-    if (!result.ok) {
-      setAddressError(t(result.errorKey));
-      return;
-    }
-
-    setAddress(result.address);
-    setAddressError("");
+    void selectScanDevice(device);
   };
 
   return (

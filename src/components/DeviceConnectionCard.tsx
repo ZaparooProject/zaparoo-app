@@ -3,14 +3,24 @@ import { Capacitor } from "@capacitor/core";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeftRightIcon, KeyRoundIcon, SearchIcon } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
-import { getDeviceAddress } from "@/lib/coreApi";
-import { normalizeDeviceKey } from "@/lib/crypto/credentials";
 import { satisfies as versionSatisfies } from "@/lib/coreVersion";
+import {
+  activeAddressOf,
+  useDeviceRegistry,
+  type DeviceRegistrySnapshot,
+} from "@/lib/devices/deviceRegistry";
 import { useStatusStore } from "@/lib/store";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 import { TextInput } from "./wui/TextInput";
 import { ConnectionStatusDisplay } from "./ConnectionStatusDisplay";
+
+function activeRecordName(state: DeviceRegistrySnapshot): string | undefined {
+  const record = state.activeRecordId
+    ? state.records[state.activeRecordId]
+    : undefined;
+  return record?.name;
+}
 
 interface DeviceConnectionCardProps {
   address: string;
@@ -32,19 +42,14 @@ export function DeviceConnectionCard({
   const { t } = useTranslation();
   const { isConnected, openPairingModal } = useConnection();
 
-  const savedAddress = getDeviceAddress();
+  const savedAddress = useDeviceRegistry(activeAddressOf);
+  const activeName = useDeviceRegistry(activeRecordName);
   const coreVersion = useStatusStore((state) => state.coreVersion);
   const corePlatform = useStatusStore((state) => state.corePlatform);
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
   const currentClient = useStatusStore((state) => state.currentClient);
-  const deviceHistory = useStatusStore((state) => state.deviceHistory);
-
-  const savedKey = savedAddress ? normalizeDeviceKey(savedAddress) : "";
-  const currentEntry = savedKey
-    ? deviceHistory.find((e) => normalizeDeviceKey(e.address) === savedKey)
-    : undefined;
 
   const versionLabel =
     coreVersion !== null
@@ -92,7 +97,7 @@ export function DeviceConnectionCard({
             connectionError={connectionError}
             connectedSubtitle={deviceDetails}
             connectedSubtitleLoading={isConnected && coreVersionPending}
-            connectedName={currentEntry?.name}
+            connectedName={activeName}
             connectedTitleSuffix={clientRoleLabel}
             action={
               <div className="flex items-center gap-1">

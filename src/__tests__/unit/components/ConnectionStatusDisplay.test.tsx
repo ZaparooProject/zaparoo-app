@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "../../../test-utils";
 import { ConnectionStatusDisplay } from "@/components/ConnectionStatusDisplay";
 import {
@@ -6,15 +6,8 @@ import {
   ConnectionContextValue,
 } from "@/hooks/useConnection";
 import { useStatusStore } from "@/lib/store";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 import { ReactNode } from "react";
-
-vi.mock("@/lib/coreApi", async () => {
-  const actual = await vi.importActual<object>("@/lib/coreApi");
-  return {
-    ...actual,
-    getDeviceAddress: () => "192.168.1.100",
-  };
-});
 
 function wrap(
   children: ReactNode,
@@ -37,11 +30,14 @@ function wrap(
 }
 
 describe("ConnectionStatusDisplay encryption gate", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     useStatusStore.setState({
       encryptionState: "unknown",
       pairingRequired: false,
     });
+    // Without a saved device the component reports "disconnected" regardless of
+    // the connection context, so every state below needs one selected.
+    await seedActiveDevice({ address: "192.168.1.100" });
   });
 
   it("should show Connecting when isConnected=true but encryptionState is unknown", () => {

@@ -168,7 +168,6 @@ vi.mock("@/lib/store", () => {
 });
 
 vi.mock("@/lib/coreApi", () => ({
-  getDeviceAddress: vi.fn(() => "192.168.1.100"),
   coreApi: {
     addListener: vi.fn(() => ({ remove: vi.fn() })),
   },
@@ -202,6 +201,10 @@ vi.mock("@/components/MediaFinishedToast", () => ({
 
 vi.mock("@/components/InboxModal", () => ({
   InboxModal: () => <div data-testid="inbox-modal" />,
+}));
+
+vi.mock("@/components/AppBadgeManager", () => ({
+  AppBadgeManager: () => <div data-testid="app-badge-manager" />,
 }));
 
 vi.mock("@/components/home/StagedTokenModal", () => ({

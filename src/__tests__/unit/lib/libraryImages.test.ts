@@ -23,12 +23,12 @@ function requestLibraryImage(
   fallbackSystemId: string,
   options: Omit<
     Parameters<typeof requestLibraryImageForDevice>[2],
-    "targetDeviceAddress"
+    "deviceKey"
   >,
 ) {
   return requestLibraryImageForDevice(media, fallbackSystemId, {
     ...options,
-    targetDeviceAddress: "device-a",
+    deviceKey: "device-a",
   });
 }
 

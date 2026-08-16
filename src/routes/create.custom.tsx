@@ -7,8 +7,13 @@ import { BackIcon, CreateIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
-import { isWriteModalOpen, WriteModal } from "@/components/WriteModal";
-import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
+import { WriteModal } from "@/components/WriteModal";
+import {
+  isWriteModalOpen,
+  useNfcWriter,
+  WriteAction,
+  WriteMethod,
+} from "@/lib/writeNfcHook";
 import { logger } from "@/lib/logger";
 import { PageFrame } from "@/components/PageFrame";
 import { usePreferencesStore, selectCustomText } from "@/lib/preferencesStore";

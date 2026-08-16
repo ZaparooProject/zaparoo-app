@@ -6,24 +6,25 @@ import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
+import { AppBadgeManager } from "@/components/AppBadgeManager";
 import { InboxModal } from "@/components/InboxModal";
 import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 import { StagedTokenModal } from "@/components/home/StagedTokenModal";
 import { useAppReviewPrompt } from "@/hooks/useAppReviewPrompt";
-import { useAppBadge } from "@/hooks/useAppBadge";
 import {
   isNativePluginAvailable,
   isPluginAvailable,
 } from "@/lib/capacitorBridge";
 import { useDeepLinks } from "@/lib/deepLinks";
+import { DatabaseIcon, PlayIcon } from "@/lib/images";
 import {
   ensurePurchasesUser,
   getPurchaseAccess,
   resetPurchasesUser,
 } from "@/lib/purchasesSetup";
+import { preloadZapLogo } from "@/lib/zapLogo";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
-import { DatabaseIcon, PlayIcon, preloadZapLogo } from "./lib/images";
 import { ConnectionProvider } from "./components/ConnectionProvider";
 import { ReconnectingIndicator } from "./components/ReconnectingIndicator";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
@@ -263,7 +264,6 @@ export default function App() {
   useNfcAvailabilityCheck();
   useCameraAvailabilityCheck();
   useAccelerometerAvailabilityCheck();
-  useAppBadge();
   useAppReviewPrompt();
   // Initialize live updates - must be called after app renders successfully
   useLiveUpdate();
@@ -468,6 +468,7 @@ export default function App() {
             <RequirementsModal />
             <InboxModal />
             <StagedTokenModal />
+            <AppBadgeManager />
             {/* Must live inside A11yAnnouncerProvider and SlideModalProvider:
                 its WriteModal uses useAnnouncer and its confirm modal renders
                 a SlideModal */}

@@ -3,11 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import {
-  CoreAPI,
-  getDeviceAddress,
-  isRequestCancelledError,
-} from "@/lib/coreApi";
+import { CoreAPI, isRequestCancelledError } from "@/lib/coreApi";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { createDeviceClaim, NotSignedInError } from "@/lib/onlineApi";
 import { logger } from "@/lib/logger";
 
@@ -25,10 +22,10 @@ export type DeviceLinkState =
 export function useDeviceLinking(enabled: boolean) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const deviceAddress = getDeviceAddress();
+  const deviceKey = useActiveDeviceKey();
   const statusQueryKey = useMemo(
-    () => ["deviceLinkStatus", deviceAddress] as const,
-    [deviceAddress],
+    () => ["deviceLinkStatus", deviceKey] as const,
+    [deviceKey],
   );
   const [linking, setLinking] = useState(false);
   const mountedRef = useRef(true);

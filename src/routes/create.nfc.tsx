@@ -10,8 +10,13 @@ import { logger } from "@/lib/logger";
 // } from "lucide-react";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useHaptics } from "@/hooks/useHaptics";
-import { isWriteModalOpen, WriteModal } from "@/components/WriteModal";
-import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
+import { WriteModal } from "@/components/WriteModal";
+import {
+  isWriteModalOpen,
+  useNfcWriter,
+  WriteAction,
+  WriteMethod,
+} from "@/lib/writeNfcHook";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";

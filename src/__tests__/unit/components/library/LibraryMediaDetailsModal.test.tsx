@@ -84,7 +84,7 @@ function renderModal(
     close: vi.fn(),
     entry: ENTRY,
     systemId: "SNES",
-    targetDeviceAddress: "device-a",
+    deviceKey: "device-a",
     ...overrides,
   };
   return { ...render(<LibraryMediaDetailsModal {...props} />), props };
@@ -102,7 +102,6 @@ describe("LibraryMediaDetailsModal", () => {
     vi.spyOn(CoreAPI, "hasWriteCapableReader").mockResolvedValue(false);
     useStatusStore.setState({
       connected: true,
-      targetDeviceAddress: "device-a",
       coreVersion: "2.15.0",
       coreVersionPending: false,
     });

@@ -44,6 +44,14 @@
       "run": "Run",
       "mainNavigation": "Main navigation"
     },
+    "appBadge": {
+      "title": "App icon badges",
+      "description": "Zaparoo can show the number of inbox messages on its app icon. iOS describes this as notification permission, but Zaparoo only requests permission to update the badge. It does not request notification alerts or sounds.",
+      "noThanks": "No thanks",
+      "continue": "Continue",
+      "requesting": "Requesting...",
+      "deniedDescription": "App icon badges are blocked in iOS Settings. Open Settings, select Zaparoo, then enable Notifications and Badges."
+    },
     "library": {
       "title": "Library",
       "collections": "Collections",
@@ -783,6 +791,8 @@
       },
       "enterDeviceAddress": "Enter a device address",
       "deviceHistoryEmpty": "No saved devices yet.",
+      "deviceHistoryError": "Saved devices could not be loaded.",
+      "deviceHistoryLoading": "Loading saved devices...",
       "deviceDetails": "Device details",
       "activeDevice": "Active device",
       "deviceDetail": {
@@ -857,6 +867,8 @@
         "debugLoggingHelp": "Enables more verbose log files on the connected device. Can be useful for troubleshooting issues.",
         "showFilenames": "Show filenames for media",
         "showFilenamesHelp": "For in-app search results, display media's full filename in the list instead of the cleaned up version. Can be useful if you use a lot of custom tags in your filenames.",
+        "appIconBadges": "App icon badges",
+        "appIconBadgesHelp": "Show the unread inbox count on the app icon. iOS may ask for notification permission because badges are managed through notification settings.",
         "purchasePreview": "Purchase preview",
         "purchasePreviewLive": "Live state",
         "purchasePreviewFree": "Free account",

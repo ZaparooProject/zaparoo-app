@@ -114,18 +114,10 @@ vi.mock("@/lib/toastUtils", () => ({
   showRateLimitedErrorToast: mockShowRateLimitedErrorToast,
 }));
 
-// Mock NFC writer
-vi.mock("@/lib/writeNfcHook", () => ({
+// Mock NFC writer, keeping the real enums and isWriteModalOpen
+vi.mock("@/lib/writeNfcHook", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/writeNfcHook")>()),
   useNfcWriter: () => mockNfcWriter,
-  WriteMethod: {
-    Auto: "auto",
-    LocalNFC: "local",
-    RemoteReader: "remote",
-  },
-  WriteAction: {
-    Write: "write",
-    Read: "read",
-  },
 }));
 
 // Mock Capacitor
@@ -143,10 +135,6 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
 
 // Mock WriteModal to simplify testing
 vi.mock("@/components/WriteModal", () => ({
-  isWriteModalOpen: (
-    writeIntent: boolean,
-    writer: { status: unknown; verifyError: unknown },
-  ) => writeIntent && (writer.status === null || writer.verifyError !== null),
   WriteModal: ({ isOpen, close }: { isOpen: boolean; close: () => void }) =>
     isOpen ? (
       <div data-testid="write-modal">

@@ -228,7 +228,7 @@ export async function requestLibraryImage(
   entry: MediaBrowseEntry,
   fallbackSystemId: string,
   options: {
-    targetDeviceAddress: string;
+    deviceKey: string;
     imageTypes?: string[];
     maxSize: number;
     priority: LibraryImagePriority;
@@ -242,10 +242,7 @@ export async function requestLibraryImage(
     options.maxSize,
   );
   if (cacheKey) {
-    const cached = await readLibraryImageCache(
-      options.targetDeviceAddress,
-      cacheKey,
-    );
+    const cached = await readLibraryImageCache(options.deviceKey, cacheKey);
     throwIfImageRequestCancelled(options.signal);
     if (cached.hit) return cached.value;
   }
@@ -260,7 +257,7 @@ export async function requestLibraryImage(
         options.signal,
       );
       if (cacheKey) {
-        writeLibraryImageCache(options.targetDeviceAddress, cacheKey, result);
+        writeLibraryImageCache(options.deviceKey, cacheKey, result);
       }
       return result;
     },

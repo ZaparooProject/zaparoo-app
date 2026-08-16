@@ -7,16 +7,12 @@ import {
   type DiscoveredDevice,
 } from "@/hooks/useNetworkScan";
 import { EmptyState } from "@/components/wui/EmptyState";
-import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
+import { formatDeviceEndpoint, isValidHost } from "@/lib/devices/endpoint";
+import type { DiscoveredDeviceRegistration } from "@/lib/devices/deviceRegistry";
 import { SlideModal } from "./SlideModal";
 import { DeviceRow } from "./DeviceRow";
 
-export interface SelectedScanDevice {
-  address: string;
-  name?: string;
-  platform?: string;
-  version?: string;
-}
+export type SelectedScanDevice = DiscoveredDeviceRegistration;
 
 interface NetworkScanModalProps {
   isOpen: boolean;
@@ -24,15 +20,30 @@ interface NetworkScanModalProps {
   onSelectDevice: (device: SelectedScanDevice) => void;
 }
 
-function formatConnectionString(host: string, port: number): string {
-  const formattedHost = host.includes(":") ? `[${host}]` : host;
-  return port === 7497 ? formattedHost : `${formattedHost}:${port}`;
+function toRegistration(
+  device: DiscoveredDevice,
+): DiscoveredDeviceRegistration {
+  return {
+    discoveryId: device.deviceId,
+    hostname: device.hostname,
+    addresses: device.addresses,
+    port: device.port,
+    name: device.name,
+    platform: device.platform,
+    version: device.version,
+  };
 }
 
-function buildConnectionString(device: DiscoveredDevice): string {
-  // Prefer the DNS-SD hostname so one saved pairing survives interface and
-  // DHCP address changes. Services without a hostname still connect by IP.
-  return formatConnectionString(device.hostname || device.address, device.port);
+/**
+ * The address shown for a scan result.
+ *
+ * Prefer the DNS-SD hostname so the row reads the same as the record the
+ * registry will create for it; services without a hostname still show an IP.
+ */
+function displayAddress(device: DiscoveredDevice): string {
+  const host = device.hostname?.replace(/\.+$/, "") || device.address;
+  if (!isValidHost(host)) return device.address;
+  return formatDeviceEndpoint(host, device.port).address;
 }
 
 export function NetworkScanModal({
@@ -54,24 +65,7 @@ export function NetworkScanModal({
 
   const handleSelectDevice = (device: DiscoveredDevice) => {
     stopScan();
-    const address = buildConnectionString(device);
-
-    if (device.hostname) {
-      // Before 1.12, scan selections were saved by IP. Register that key as a
-      // one-shot fallback so selecting the new stable hostname preserves the
-      // existing pairing and migrates it on the first credential lookup.
-      credentialStore.registerFallback(
-        normalizeDeviceKey(address),
-        normalizeDeviceKey(formatConnectionString(device.address, device.port)),
-      );
-    }
-
-    onSelectDevice({
-      address,
-      name: device.name,
-      platform: device.platform,
-      version: device.version,
-    });
+    onSelectDevice(toRegistration(device));
     onClose();
   };
 
@@ -111,7 +105,7 @@ export function NetworkScanModal({
               <DeviceRow
                 key={getDiscoveredDeviceIdentity(device)}
                 entry={{
-                  address: buildConnectionString(device),
+                  address: displayAddress(device),
                   name: device.name,
                   platform: device.platform,
                   version: device.version,

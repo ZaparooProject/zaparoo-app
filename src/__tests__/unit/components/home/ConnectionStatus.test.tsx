@@ -2,12 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "../../../../test-utils";
 import { ConnectionStatus } from "../../../../components/home/ConnectionStatus";
 import { useStatusStore } from "@/lib/store";
-
-// Mock coreApi
-const mockGetDeviceAddress = vi.fn(() => "192.168.1.100");
-vi.mock("../../../../lib/coreApi", () => ({
-  getDeviceAddress: () => mockGetDeviceAddress(),
-}));
+import {
+  seedActiveDevice,
+  seedDeviceRegistry,
+} from "@/test-utils/deviceRegistry";
 
 // Mock useConnection hook
 const mockUseConnection = vi.fn();
@@ -51,8 +49,8 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 describe("ConnectionStatus", () => {
-  beforeEach(() => {
-    mockGetDeviceAddress.mockReturnValue("192.168.1.100");
+  beforeEach(async () => {
+    await seedActiveDevice({ address: "192.168.1.100" });
     mockUseConnection.mockReturnValue({
       isConnected: false,
       showConnecting: false,
@@ -75,8 +73,8 @@ describe("ConnectionStatus", () => {
     );
   });
 
-  it("renders disconnected state when no address is saved", () => {
-    mockGetDeviceAddress.mockReturnValue("");
+  it("renders disconnected state when no device is saved", async () => {
+    await seedDeviceRegistry([]);
 
     render(<ConnectionStatus />);
 
@@ -141,8 +139,7 @@ describe("ConnectionStatus", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders disconnected state when address exists but not connected", () => {
-    mockGetDeviceAddress.mockReturnValue("192.168.1.100");
+  it("renders disconnected state when a device is saved but not connected", () => {
     mockUseConnection.mockReturnValue({
       isConnected: false,
       showConnecting: false,

@@ -24,6 +24,7 @@ import {
   ConnectionContext,
   ConnectionContextValue,
 } from "@/hooks/useConnection";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 import { ReactNode } from "react";
 
 function expectVisibleEmptyValues(regionName: string, count: number) {
@@ -59,7 +60,7 @@ const connectedContext: ConnectionContextValue = {
 };
 
 describe("Home Page Integration", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     // Seed a deterministic baseline for every store field these tests touch
     // so prior-test mutations cannot leak in. encryptionState: "plaintext"
     // keeps connected-state assertions out of the verifying UI gate
@@ -86,12 +87,11 @@ describe("Home Page Integration", () => {
       showFilenames: false,
     });
 
-    localStorage.setItem("deviceAddress", "192.168.1.100");
+    await seedActiveDevice({ address: "192.168.1.100" });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    localStorage.clear();
   });
 
   describe("Last Scanned Info", () => {

@@ -9,7 +9,7 @@ import type { SearchResultGame } from "@/lib/models";
 import { isFavoriteTag, searchResultToBrowseEntry } from "@/lib/libraryMedia";
 import { filenameFromPath } from "@/lib/path";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { useStatusStore } from "@/lib/store";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { SlideModal } from "@/components/SlideModal";
 import { TagBadge } from "@/components/TagBadge";
 import { Button } from "@/components/wui/Button";
@@ -48,9 +48,7 @@ export function MediaDetailsModal({
   const { t } = useTranslation();
   const { impact } = useHaptics();
   const showFilenames = usePreferencesStore((state) => state.showFilenames);
-  const targetDeviceAddress = useStatusStore(
-    (state) => state.targetDeviceAddress,
-  );
+  const deviceKey = useActiveDeviceKey();
   const resolveSystemName = useSystemNameResolver();
   const radioGroupName = useId();
   const pathInputId = `${radioGroupName}-path`;
@@ -304,7 +302,7 @@ export function MediaDetailsModal({
               <FavoriteButton
                 entry={favoriteEntry}
                 fallbackSystemId={media.system.id}
-                targetDeviceAddress={targetDeviceAddress}
+                deviceKey={deviceKey}
               />
             )}
             <Button

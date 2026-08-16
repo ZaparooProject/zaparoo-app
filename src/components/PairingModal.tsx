@@ -9,8 +9,10 @@ import { TextInput } from "@/components/wui/TextInput";
 import { PinInput } from "@/components/wui/PinInput";
 import { parseDeviceAddress } from "@/lib/coreApi";
 import { performPairing, PairingError } from "@/lib/crypto/pairing";
-import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
-import { useStatusStore } from "@/lib/store";
+import {
+  credentialKeyForRecord,
+  credentialStore,
+} from "@/lib/crypto/credentials";
 import { connectionManager } from "@/lib/transport";
 import { logger } from "@/lib/logger";
 
@@ -25,7 +27,10 @@ function safePlatform(): string {
 interface PairingModalProps {
   isOpen: boolean;
   close: () => void;
+  /** Where the pairing handshake is sent. */
   address: string;
+  /** The device record the resulting credentials belong to. */
+  recordId: string;
   onSuccess?: () => void;
 }
 
@@ -33,12 +38,10 @@ export function PairingModal({
   isOpen,
   close,
   address,
+  recordId,
   onSuccess,
 }: PairingModalProps) {
   const { t } = useTranslation();
-  const updateDeviceHistoryMeta = useStatusStore(
-    (s) => s.updateDeviceHistoryMeta,
-  );
 
   const [pin, setPin] = useState("");
   const [clientName, setClientName] = useState("");
@@ -91,7 +94,7 @@ export function PairingModal({
 
   const handlePair = async (pinOverride?: string) => {
     const submittedPin = pinOverride ?? pin;
-    if (!/^\d{6}$/.test(submittedPin) || !address) return;
+    if (!/^\d{6}$/.test(submittedPin) || !address || !recordId) return;
     if (pairingInFlight.current) return;
     pairingInFlight.current = true;
     setError(null);
@@ -103,19 +106,15 @@ export function PairingModal({
       const hexKey = Array.from(result.pairingKey)
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
-      const pairedAt = Date.now();
-      const deviceKey = normalizeDeviceKey(address);
-      await credentialStore.set(deviceKey, {
+      // Pairing always belongs to the record we are connected through, so the
+      // credential goes straight to the canonical key — there is no address to
+      // migrate from.
+      await credentialStore.set(credentialKeyForRecord(recordId), {
         authToken: result.authToken,
         pairingKey: hexKey,
         clientId: result.clientId,
-        pairedAt,
+        pairedAt: Date.now(),
       });
-      updateDeviceHistoryMeta(
-        address,
-        { paired: { clientId: result.clientId, pairedAt } },
-        { source: "manual" },
-      );
       toast.success(t("pairing.success"));
       connectionManager.clearEncryptionBlockActive();
       onSuccess?.();
@@ -153,7 +152,7 @@ export function PairingModal({
         <div className="pt-3">
           <Button
             label={isPairing ? t("pairing.pairing") : t("pairing.startPairing")}
-            disabled={isPairing || pin.length !== 6 || !address}
+            disabled={isPairing || pin.length !== 6 || !address || !recordId}
             onClick={() => void handlePair()}
             intent="primary"
             className="w-full"

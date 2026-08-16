@@ -1,6 +1,8 @@
-import { Preferences } from "@capacitor/preferences";
 import { v4 as uuidv4 } from "uuid";
-import { Capacitor } from "@capacitor/core";
+import {
+  DEFAULT_DEVICE_PORT,
+  parseDeviceEndpoint,
+} from "@/lib/devices/endpoint.ts";
 import { logger } from "./logger.ts";
 import { RequestCancelledError } from "./errors";
 import {
@@ -2102,8 +2104,6 @@ class CoreApi {
 
 export const CoreAPI = new CoreApi();
 
-const addrKey = "deviceAddress";
-const DEFAULT_DEVICE_PORT = 7497;
 const INVALID_DEVICE_ADDRESS_MESSAGE = "Invalid device address";
 
 export class InvalidDeviceAddressError extends Error {
@@ -2144,192 +2144,25 @@ function invalidDeviceAddress(
   };
 }
 
-function parsePort(port: string | undefined): number | null {
-  if (port === undefined) return DEFAULT_DEVICE_PORT;
-  if (!/^\d+$/.test(port)) return null;
-
-  const parsed = Number(port);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) return null;
-  return parsed;
-}
-
-function isValidIPv4(host: string): boolean {
-  const octets = host.split(".");
-  return (
-    octets.length === 4 &&
-    octets.every((octet) => {
-      if (!/^\d+$/.test(octet)) return false;
-      if (octet.length > 1 && octet.startsWith("0")) return false;
-      const parsed = Number(octet);
-      return parsed >= 0 && parsed <= 255;
-    })
-  );
-}
-
-function isValidIPv6(host: string): boolean {
-  try {
-    new URL(`ws://[${host}]`);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function isValidHostname(host: string): boolean {
-  if (host.length === 0 || host.length > 253) return false;
-  if (/^[0-9.]+$/.test(host)) return false;
-
-  const labels = host.split(".");
-  return labels.every(
-    (label) =>
-      label.length > 0 &&
-      label.length <= 63 &&
-      /^[a-zA-Z0-9-]+$/.test(label) &&
-      !label.startsWith("-") &&
-      !label.endsWith("-"),
-  );
-}
-
-function validateHost(host: string): boolean {
-  if (isValidIPv4(host) || isValidHostname(host)) return true;
-
-  if (/^[0-9.]+$/.test(host)) return false;
-  return false;
-}
-
-type DeviceAddressScheme = "http" | "https" | "ws" | "wss";
-
-type WebSocketScheme = "ws" | "wss";
-
-function formatDeviceAddress(
-  host: string,
-  port: number,
-  scheme?: DeviceAddressScheme,
-): string {
-  const hostPart = host.includes(":") ? `[${host}]` : host;
-  const address =
-    port === DEFAULT_DEVICE_PORT ? hostPart : `${hostPart}:${port}`;
-  return scheme ? `${scheme}://${address}` : address;
-}
-
-function formatWsUrl(
-  host: string,
-  port: number,
-  scheme: WebSocketScheme = "ws",
-): string {
-  const hostPart = host.includes(":") ? `[${host}]` : host;
-  return `${scheme}://${hostPart}:${port}/api/v0.1`;
-}
-
-function validateHostAndPort(
-  host: string,
-  port: number | null,
-  addressScheme?: DeviceAddressScheme,
-  wsScheme?: WebSocketScheme,
-): DeviceAddressValidationResult {
-  if (port === null) return invalidDeviceAddress();
-  if (!validateHost(host)) return invalidDeviceAddress();
-
-  return {
-    ok: true,
-    address: formatDeviceAddress(host, port, addressScheme),
-    host,
-    port,
-    wsUrl: formatWsUrl(host, port, wsScheme),
-  };
-}
-
-function normalizeUrlInput(
-  input: string,
-): DeviceAddressValidationResult | null {
-  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(input)) return null;
-
-  let url: URL;
-  try {
-    url = new URL(input);
-  } catch {
-    return invalidDeviceAddress();
-  }
-
-  if (!["ws:", "wss:", "http:", "https:"].includes(url.protocol)) {
-    return invalidDeviceAddress();
-  }
-  if (url.username || url.password || url.search || url.hash) {
-    return invalidDeviceAddress();
-  }
-  if (!["", "/", "/api/v0.1"].includes(url.pathname)) {
-    return invalidDeviceAddress();
-  }
-
-  const addressScheme = url.protocol.slice(0, -1) as DeviceAddressScheme;
-  const wsScheme: WebSocketScheme = ["https:", "wss:"].includes(url.protocol)
-    ? "wss"
-    : "ws";
-  const host = url.hostname.replace(/^\[|\]$/g, "");
-  const port = parsePort(url.port || undefined);
-  if (host.includes(":")) {
-    if (port === null || !isValidIPv6(host)) return invalidDeviceAddress();
-    return {
-      ok: true,
-      address: formatDeviceAddress(host, port, addressScheme),
-      host,
-      port,
-      wsUrl: formatWsUrl(host, port, wsScheme),
-    };
-  }
-
-  return validateHostAndPort(host, port, addressScheme, wsScheme);
-}
-
+/**
+ * Validate an address the user typed, in the shape the settings form wants.
+ *
+ * Parsing lives in `@/lib/devices/endpoint` so that a stored endpoint and a
+ * typed one can never disagree about what a given host means; this is the
+ * translation to a form-facing result with an i18n error key.
+ */
 export function validateDeviceAddress(
   input: string,
 ): DeviceAddressValidationResult {
-  const address = input.trim();
-  if (!address) return invalidDeviceAddress("settings.deviceAddressRequired");
-
-  const urlResult = normalizeUrlInput(address);
-  if (urlResult) return urlResult;
-
-  if (/\s/.test(address)) return invalidDeviceAddress();
-
-  if (address.startsWith("[")) {
-    const match = /^\[([^\]]+)](?::([^:]+))?$/.exec(address);
-    if (!match) return invalidDeviceAddress();
-
-    const [, host, portInput] = match;
-    if (!host || !isValidIPv6(host)) return invalidDeviceAddress();
-
-    const port = parsePort(portInput);
-    if (port === null) return invalidDeviceAddress();
-
-    return {
-      ok: true,
-      address: formatDeviceAddress(host, port),
-      host,
-      port,
-      wsUrl: formatWsUrl(host, port),
-    };
+  if (!input.trim()) {
+    return invalidDeviceAddress("settings.deviceAddressRequired");
   }
 
-  const colonCount = (address.match(/:/g) || []).length;
-  if (colonCount > 1) {
-    if (!isValidIPv6(address)) return invalidDeviceAddress();
-    return {
-      ok: true,
-      address: formatDeviceAddress(address, DEFAULT_DEVICE_PORT),
-      host: address,
-      port: DEFAULT_DEVICE_PORT,
-      wsUrl: formatWsUrl(address, DEFAULT_DEVICE_PORT),
-    };
-  }
+  const parsed = parseDeviceEndpoint(input);
+  if (!parsed.ok) return invalidDeviceAddress();
 
-  if (colonCount === 1) {
-    const [host, portInput] = address.split(":");
-    if (!host || !portInput) return invalidDeviceAddress();
-    return validateHostAndPort(host, parsePort(portInput));
-  }
-
-  return validateHostAndPort(address, DEFAULT_DEVICE_PORT);
+  const { address, host, port, wsUrl } = parsed.endpoint;
+  return { ok: true, address, host, port, wsUrl };
 }
 
 export function isInvalidDeviceAddressError(error: unknown): boolean {
@@ -2339,44 +2172,14 @@ export function isInvalidDeviceAddressError(error: unknown): boolean {
   );
 }
 
-export function getDeviceAddress() {
-  const addr = localStorage.getItem(addrKey) || "";
-  if (!Capacitor.isNativePlatform() && addr === "") {
-    return window.location.hostname;
-  }
-  return addr;
-}
-
-export function setDeviceAddress(addr: string) {
-  try {
-    localStorage.setItem(addrKey, addr);
-    Preferences.set({ key: addrKey, value: addr })
-      .then(() => logger.log("Set device address to: " + addr))
-      .catch((e) => logger.error("Failed to set device address: " + e));
-  } catch (e) {
-    logger.error("Error setting device address:", e);
-  }
-}
-
 /** Parse a device address into host and numeric port. Handles IPv4, hostname, and IPv6. */
 export function parseDeviceAddress(address: string): {
   host: string;
   port: number;
 } {
-  const result = validateDeviceAddress(address);
-  if (result.ok) return { host: result.host, port: result.port };
-  return { host: "", port: DEFAULT_DEVICE_PORT };
-}
-
-export function getWsUrl() {
-  const address = getDeviceAddress();
-  if (!address) return "";
-
-  const result = validateDeviceAddress(address);
-  if (!result.ok) {
-    logger.warn(`Invalid device address format: ${address}`);
-    return "";
+  const parsed = parseDeviceEndpoint(address);
+  if (parsed.ok) {
+    return { host: parsed.endpoint.host, port: parsed.endpoint.port };
   }
-
-  return result.wsUrl;
+  return { host: "", port: DEFAULT_DEVICE_PORT };
 }

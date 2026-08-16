@@ -19,6 +19,12 @@ vi.mock("@/lib/coreApi", () => ({
 // Mock stores
 const mockUseStatusStore = vi.fn();
 const mockUsePreferencesStore = vi.fn();
+const { mockIsNativePluginAvailable, mockIsNativePlatform, mockGetPlatform } =
+  vi.hoisted(() => ({
+    mockIsNativePluginAvailable: vi.fn(),
+    mockIsNativePlatform: vi.fn(),
+    mockGetPlatform: vi.fn(),
+  }));
 
 vi.mock("@/lib/store", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
@@ -30,6 +36,11 @@ vi.mock("@/lib/store", async (importOriginal) => {
 
 vi.mock("@/lib/preferencesStore", () => ({
   usePreferencesStore: (selector: any) => mockUsePreferencesStore(selector),
+}));
+
+vi.mock("@/lib/capacitorBridge", () => ({
+  isNativePluginAvailable: (pluginName: string) =>
+    mockIsNativePlatform() && mockIsNativePluginAvailable(pluginName),
 }));
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
@@ -67,7 +78,8 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
 // Mock Capacitor
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
-    isNativePlatform: vi.fn(() => false),
+    isNativePlatform: mockIsNativePlatform,
+    getPlatform: mockGetPlatform,
   },
 }));
 
@@ -94,6 +106,8 @@ describe("Settings Advanced Route", () => {
   const defaultPreferencesState = {
     showFilenames: false,
     setShowFilenames: vi.fn(),
+    appBadgeEnabled: true,
+    setAppBadgeEnabled: vi.fn(),
   };
 
   beforeEach(() => {
@@ -113,6 +127,9 @@ describe("Settings Advanced Route", () => {
       readersAutoDetect: false,
     });
     mockSettingsUpdate.mockResolvedValue({});
+    mockIsNativePluginAvailable.mockReturnValue(false);
+    mockIsNativePlatform.mockReturnValue(false);
+    mockGetPlatform.mockReturnValue("web");
 
     mockUseStatusStore.mockImplementation((selector) =>
       selector(defaultStoreState),
@@ -276,6 +293,47 @@ describe("Settings Advanced Route", () => {
       expect(errorReporting).toBeDisabled();
       expect(debugLogging).toBeDisabled();
       expect(showFilenames).toBeEnabled();
+    });
+
+    it("should update app icon badge preference on iOS", async () => {
+      const user = userEvent.setup();
+      const setAppBadgeEnabled = vi.fn();
+      mockIsNativePlatform.mockReturnValue(true);
+      mockGetPlatform.mockReturnValue("ios");
+      mockIsNativePluginAvailable.mockImplementation(
+        (pluginName: string) => pluginName === "Badge",
+      );
+      mockUsePreferencesStore.mockImplementation((selector) =>
+        selector({
+          ...defaultPreferencesState,
+          setAppBadgeEnabled,
+        }),
+      );
+
+      renderComponent();
+
+      const appBadgeToggle = await screen.findByRole("checkbox", {
+        name: /settings.advanced.appIconBadges/i,
+      });
+      await user.click(appBadgeToggle);
+
+      expect(setAppBadgeEnabled).toHaveBeenCalledWith(false);
+    });
+
+    it("should hide the app icon badge preference on Android", () => {
+      mockIsNativePlatform.mockReturnValue(true);
+      mockGetPlatform.mockReturnValue("android");
+      mockIsNativePluginAvailable.mockImplementation(
+        (pluginName: string) => pluginName === "Badge",
+      );
+
+      renderComponent();
+
+      expect(
+        screen.queryByRole("checkbox", {
+          name: /settings.advanced.appIconBadges/i,
+        }),
+      ).not.toBeInTheDocument();
     });
 
     it("should call setShowFilenames when show filenames is toggled", async () => {
