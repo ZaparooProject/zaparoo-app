@@ -11,7 +11,14 @@ import {
 } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
 import { useStatusStore } from "@/lib/store";
-import { getDeviceAddress } from "@/lib/coreApi";
+import {
+  activeAddressOf,
+  useDeviceRegistry,
+  type DeviceRegistrySnapshot,
+} from "@/lib/devices/deviceRegistry";
+
+const selectRegistryHydrated = (snapshot: DeviceRegistrySnapshot) =>
+  snapshot.hydrated;
 
 type ConnectionUIState =
   | "connecting"
@@ -66,10 +73,16 @@ export function ConnectionStatusDisplay({
   const { isConnected, showConnecting, showReconnecting } = useConnection();
   const encryptionState = useStatusStore((s) => s.encryptionState);
   const pairingRequired = useStatusStore((s) => s.pairingRequired);
-  const savedAddress = getDeviceAddress();
+  const savedAddress = useDeviceRegistry(activeAddressOf);
+  const registryHydrated = useDeviceRegistry(selectRegistryHydrated);
 
   // Derive UI state from connection context
   const deriveUIState = (): ConnectionUIState => {
+    // Devices are read from storage asynchronously, so on a cold start there is
+    // a moment where a user who has a saved device looks like one who has none.
+    // Hold the spinner rather than flashing the "enter an address" placeholder
+    // and snatching it back.
+    if (!registryHydrated) return "connecting";
     if (!savedAddress) return "disconnected";
     // The transport flips to "connected" when the WebSocket opens, before the
     // server has confirmed the encryption mode. Hold the UI in connecting/

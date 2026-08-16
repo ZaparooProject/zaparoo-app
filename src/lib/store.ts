@@ -1,8 +1,5 @@
 import { create } from "zustand";
 import { User } from "@capacitor-firebase/authentication";
-import { Preferences } from "@capacitor/preferences";
-import { credentialStore, normalizeDeviceKey } from "@/lib/crypto/credentials";
-import { logger } from "@/lib/logger";
 import {
   ClientsCurrentResponse,
   IndexResponse,
@@ -31,23 +28,6 @@ export enum ConnectionState {
   DISCONNECTED = "DISCONNECTED",
 }
 
-export interface DeviceHistoryEntry {
-  address: string;
-  name?: string;
-  nameIsCustom?: boolean;
-  platform?: string;
-  version?: string;
-  lastConnectedAt?: number;
-  paired?: { clientId: string; pairedAt: number; label?: string };
-}
-
-export type DeviceHistoryMeta = Partial<
-  Pick<
-    DeviceHistoryEntry,
-    "name" | "platform" | "version" | "lastConnectedAt" | "paired"
-  >
->;
-
 export type EncryptionState = "unknown" | "plaintext" | "encrypted";
 
 export interface StagedTokenState {
@@ -67,10 +47,6 @@ export interface RunQueueItem {
 interface StatusState {
   connected: boolean;
   setConnected: (status: boolean) => void;
-
-  // Target device address - triggers WebSocket reconnection when changed
-  targetDeviceAddress: string;
-  setTargetDeviceAddress: (address: string) => void;
 
   connectionState: ConnectionState;
   setConnectionState: (state: ConnectionState) => void;
@@ -118,17 +94,6 @@ interface StatusState {
 
   safeInsets: SafeAreaInsets;
   setSafeInsets: (insets: SafeAreaInsets) => void;
-
-  deviceHistory: DeviceHistoryEntry[];
-  setDeviceHistory: (history: DeviceHistoryEntry[]) => void;
-  addDeviceHistory: (address: string) => void;
-  removeDeviceHistory: (address: string) => void;
-  clearDeviceHistory: () => void;
-  updateDeviceHistoryMeta: (
-    address: string,
-    meta: DeviceHistoryMeta,
-    opts?: { source?: "auto" | "manual" },
-  ) => void;
 
   runQueue: RunQueueItem | null;
   setRunQueue: (runQueue: RunQueueItem | null) => void;
@@ -186,9 +151,6 @@ export const DEFAULT_GAMES_INDEX: IndexResponse = {
 export const useStatusStore = create<StatusState>()((set) => ({
   connected: false,
   setConnected: (status) => set({ connected: status }),
-
-  targetDeviceAddress: "", // Initialized empty, will be set by ConnectionProvider on mount
-  setTargetDeviceAddress: (address) => set({ targetDeviceAddress: address }),
 
   connectionState: ConnectionState.IDLE,
   setConnectionState: (state) =>
@@ -263,143 +225,6 @@ export const useStatusStore = create<StatusState>()((set) => ({
   safeInsets: defaultSafeAreaInsets,
   setSafeInsets: (insets) => set({ safeInsets: insets }),
 
-  deviceHistory: [],
-  setDeviceHistory: (history: DeviceHistoryEntry[]) =>
-    set({ deviceHistory: history }),
-  addDeviceHistory: (address) =>
-    set((state) => {
-      // Preserve any existing metadata (name, platform, version, paired, etc.)
-      // — re-adding on reconnect must not wipe fields populated by earlier paths.
-      const existing = state.deviceHistory.find(
-        (entry) => entry.address === address,
-      );
-      const devices = [
-        ...state.deviceHistory.filter((entry) => entry.address !== address),
-        existing ? { ...existing, address } : { address },
-      ];
-      Preferences.set({
-        key: "deviceHistory",
-        value: JSON.stringify(devices),
-      }).catch((err) => {
-        logger.warn("Preferences.set failed saving deviceHistory", err, {
-          category: "storage",
-          action: "addDeviceHistory",
-          severity: "warning",
-        });
-      });
-      return {
-        deviceHistory: devices,
-      };
-    }),
-  removeDeviceHistory: (address) =>
-    set((state) => {
-      const devices = state.deviceHistory.filter(
-        (entry) => entry.address !== address,
-      );
-      Preferences.set({
-        key: "deviceHistory",
-        value: JSON.stringify(devices),
-      }).catch((err) => {
-        logger.warn("Preferences.set failed saving deviceHistory", err, {
-          category: "storage",
-          action: "removeDeviceHistory",
-          severity: "warning",
-        });
-      });
-      // Removing a device clears any stored pairing — encryption credentials
-      // and the device entry are managed as one unit.
-      credentialStore.delete(normalizeDeviceKey(address)).catch((err) => {
-        logger.error("Failed to delete credentials for removed device", err, {
-          category: "storage",
-          action: "deleteCredentials",
-          severity: "error",
-        });
-      });
-      return {
-        deviceHistory: devices,
-      };
-    }),
-  clearDeviceHistory: () => {
-    Preferences.set({
-      key: "deviceHistory",
-      value: JSON.stringify([]),
-    }).catch((err) => {
-      logger.warn("Preferences.set failed saving deviceHistory", err, {
-        category: "storage",
-        action: "clearDeviceHistory",
-        severity: "warning",
-      });
-    });
-    set((state) => {
-      // Wipe credentials for every removed device.
-      for (const entry of state.deviceHistory) {
-        credentialStore
-          .delete(normalizeDeviceKey(entry.address))
-          .catch((err) => {
-            logger.error(
-              "Failed to delete credentials during clearDeviceHistory",
-              err,
-              {
-                category: "storage",
-                action: "deleteCredentials",
-                severity: "error",
-              },
-            );
-          });
-      }
-      return { deviceHistory: [] };
-    });
-  },
-  updateDeviceHistoryMeta: (address, meta, opts) =>
-    set((state) => {
-      const idx = state.deviceHistory.findIndex(
-        (entry) => entry.address === address,
-      );
-      const existing = state.deviceHistory[idx];
-      if (!existing) return {};
-      const source = opts?.source ?? "auto";
-      const next: DeviceHistoryEntry = { ...existing };
-      if (source === "auto") {
-        if (meta.platform !== undefined) next.platform = meta.platform;
-        if (meta.version !== undefined) next.version = meta.version;
-        if (meta.lastConnectedAt !== undefined)
-          next.lastConnectedAt = meta.lastConnectedAt;
-        // Auto callers (e.g. ZeroConf scan with an unset service name) may
-        // pass `""` — treat that as "no information" rather than overwriting
-        // a previously-good name with a blank.
-        if (meta.name && !existing.nameIsCustom) {
-          next.name = meta.name;
-        }
-      } else {
-        if (meta.platform !== undefined) next.platform = meta.platform;
-        if (meta.version !== undefined) next.version = meta.version;
-        if (meta.lastConnectedAt !== undefined)
-          next.lastConnectedAt = meta.lastConnectedAt;
-        if ("name" in meta) {
-          if (meta.name === undefined || meta.name === "") {
-            next.name = undefined;
-            next.nameIsCustom = false;
-          } else {
-            next.name = meta.name;
-            next.nameIsCustom = true;
-          }
-        }
-      }
-      if ("paired" in meta) next.paired = meta.paired;
-      const devices = [...state.deviceHistory];
-      devices[idx] = next;
-      Preferences.set({
-        key: "deviceHistory",
-        value: JSON.stringify(devices),
-      }).catch((err) => {
-        logger.warn("Preferences.set failed saving deviceHistory", err, {
-          category: "storage",
-          action: "updateDeviceHistoryMeta",
-          severity: "warning",
-        });
-      });
-      return { deviceHistory: devices };
-    }),
   runQueue: null,
   setRunQueue: (runQueue) => set({ runQueue }),
   writeQueue: "",

@@ -166,7 +166,7 @@ describe("Library image disk cache", () => {
       systemId: "SNES",
     };
     const options = {
-      targetDeviceAddress: "device-a",
+      deviceKey: "device-a",
       maxSize: 128,
       priority: "thumbnail" as const,
     };

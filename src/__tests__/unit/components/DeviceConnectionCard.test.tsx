@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { render, screen, fireEvent } from "../../../test-utils";
 import { DeviceConnectionCard } from "@/components/DeviceConnectionCard";
 import { useStatusStore } from "@/lib/store";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 
 // Mock useConnection hook
 const mockUseConnection = vi.fn();
@@ -18,7 +19,6 @@ vi.mock("@/lib/coreApi", () => ({
       platform: "linux",
     }),
   },
-  getDeviceAddress: vi.fn(() => "192.168.1.100"),
 }));
 
 // Mock TanStack Query
@@ -71,8 +71,11 @@ describe("DeviceConnectionCard", () => {
     connectionError: "",
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    // The card compares the typed address against the active record's, and the
+    // status display falls back to "disconnected" without one.
+    await seedActiveDevice({ address: "192.168.1.100" });
     mockUseConnection.mockReturnValue({
       isConnected: true,
       showConnecting: false,
@@ -291,7 +294,7 @@ describe("DeviceConnectionCard", () => {
 
     it("should not call onAddressChange when Enter is pressed with same address", () => {
       const onAddressChange = vi.fn();
-      // savedAddress from mock is "192.168.1.100"
+      // The active record is already at this address, so Enter is a no-op.
       render(
         <DeviceConnectionCard
           {...defaultProps}

@@ -3,7 +3,8 @@ import { render, screen, waitFor, act } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { SimpleSystemSelect } from "@/components/SimpleSystemSelect";
 import { CoreAPI } from "@/lib/coreApi";
-import { useStatusStore } from "@/lib/store";
+import { deviceRegistry } from "@/lib/devices/deviceRegistry";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 
 // Mock CoreAPI
 vi.mock("@/lib/coreApi", () => ({
@@ -24,8 +25,8 @@ const mockSystems = {
 };
 
 describe("SimpleSystemSelect", () => {
-  beforeEach(() => {
-    useStatusStore.setState({ targetDeviceAddress: "device-a" });
+  beforeEach(async () => {
+    await seedActiveDevice({ recordId: "device-a" });
     vi.mocked(CoreAPI.systems).mockResolvedValue(mockSystems);
   });
 
@@ -69,8 +70,8 @@ describe("SimpleSystemSelect", () => {
       await screen.findByRole("option", { name: "Super Nintendo" }),
     ).toBeInTheDocument();
 
-    act(() => {
-      useStatusStore.setState({ targetDeviceAddress: "device-b" });
+    await act(async () => {
+      await deviceRegistry.selectAddress("192.168.1.55");
     });
 
     expect(

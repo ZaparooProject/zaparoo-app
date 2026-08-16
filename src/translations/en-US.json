@@ -791,6 +791,8 @@
       },
       "enterDeviceAddress": "Enter a device address",
       "deviceHistoryEmpty": "No saved devices yet.",
+      "deviceHistoryError": "Saved devices could not be loaded.",
+      "deviceHistoryLoading": "Loading saved devices...",
       "deviceDetails": "Device details",
       "activeDevice": "Active device",
       "deviceDetail": {

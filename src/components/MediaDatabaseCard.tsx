@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import {
@@ -31,9 +32,7 @@ export function MediaDatabaseCard({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const connected = useStatusStore((state) => state.connected);
-  const targetDeviceAddress = useStatusStore(
-    (state) => state.targetDeviceAddress,
-  );
+  const deviceKey = useActiveDeviceKey();
   const connectionState = useStatusStore((state) => state.connectionState);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
@@ -52,6 +51,15 @@ export function MediaDatabaseCard({
   );
   const [cleanError, setCleanError] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [trackedDeviceKey, setTrackedDeviceKey] = useState(deviceKey);
+
+  // System ids are only meaningful to the device that listed them, so a
+  // selection carried across a switch would ask the new Core to index systems
+  // it may not even have.
+  if (deviceKey !== trackedDeviceKey) {
+    setTrackedDeviceKey(deviceKey);
+    setSelectedSystems([]);
+  }
 
   const isPaused = gamesIndex.paused === true;
   const isScraping = scrapingStatus?.scraping === true;
@@ -79,7 +87,10 @@ export function MediaDatabaseCard({
     isLoading,
     error: mediaStatusError,
   } = useQuery({
-    queryKey: ["media"],
+    // Namespaced on the device: media counts belong to one Core, and without
+    // this a switch shows the previous device's totals until the refetch lands.
+    // Invalidations still use the bare ["media"] prefix, which matches.
+    queryKey: ["media", deviceKey],
     queryFn: () => CoreAPI.media(),
     enabled: connected,
     staleTime: 30000, // Cache for 30 seconds
@@ -89,7 +100,7 @@ export function MediaDatabaseCard({
   // Include unavailable launcher-backed systems so users can run their first
   // partial index for a system. CoreAPI removes virtual ZapScript launchables.
   const { data: systemsData } = useQuery({
-    queryKey: ["systems", targetDeviceAddress, { all: true }],
+    queryKey: ["systems", deviceKey, { all: true }],
     queryFn: () => CoreAPI.systems({ all: true }),
     enabled: connected,
   });

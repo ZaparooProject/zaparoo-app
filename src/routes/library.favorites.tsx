@@ -9,6 +9,7 @@ import {
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { CoreAPI } from "@/lib/coreApi";
 import {
   entrySystemId,
@@ -55,9 +56,7 @@ export function LibraryFavorites() {
   );
   const connected = useStatusStore((state) => state.connected);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  const targetDeviceAddress = useStatusStore(
-    (state) => state.targetDeviceAddress,
-  );
+  const deviceKey = useActiveDeviceKey();
   const activateLibraryDevice = useLibrarySessionStore(
     (state) => state.activateDevice,
   );
@@ -75,11 +74,11 @@ export function LibraryFavorites() {
   const favoritesFeature = useCoreFeature("mediaFavorites");
 
   useLayoutEffect(() => {
-    activateLibraryDevice(targetDeviceAddress);
-  }, [activateLibraryDevice, targetDeviceAddress]);
+    activateLibraryDevice(deviceKey);
+  }, [activateLibraryDevice, deviceKey]);
 
   const favoritesQuery = useInfiniteQuery({
-    queryKey: [LIBRARY_QUERY_KEYS.favorites, targetDeviceAddress],
+    queryKey: [LIBRARY_QUERY_KEYS.favorites, deviceKey],
     queryFn: ({ pageParam, signal }) =>
       CoreAPI.mediaSearch(
         {
@@ -182,7 +181,7 @@ export function LibraryFavorites() {
       <LibraryBrowseList
         entries={entries}
         systemId=""
-        targetDeviceAddress={targetDeviceAddress}
+        deviceKey={deviceKey}
         scrollRef={scrollRef}
         hasNextPage={hasNextPage}
         isFetchingNextPage={favoritesQuery.isFetchingNextPage}
@@ -259,7 +258,7 @@ export function LibraryFavorites() {
         close={() => setSelectedEntry(null)}
         entry={selectedEntry}
         systemId={selectedEntry ? entrySystemId(selectedEntry) : ""}
-        targetDeviceAddress={targetDeviceAddress}
+        deviceKey={deviceKey}
       />
     </>
   );

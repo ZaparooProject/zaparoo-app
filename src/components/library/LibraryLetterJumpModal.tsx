@@ -14,7 +14,7 @@ export function LibraryLetterJumpModal(props: {
   close: () => void;
   systemId: string;
   path: string;
-  targetDeviceAddress: string;
+  deviceKey: string;
   sort: MediaBrowseSort;
   onSelect: (group: MediaBrowseIndexGroup) => void;
 }) {
@@ -22,7 +22,7 @@ export function LibraryLetterJumpModal(props: {
   const indexQuery = useQuery({
     queryKey: [
       LIBRARY_QUERY_KEYS.browseIndex,
-      props.targetDeviceAddress,
+      props.deviceKey,
       props.systemId,
       props.path,
       props.sort,
