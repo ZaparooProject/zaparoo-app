@@ -15,6 +15,8 @@ import {
   DEVICE_REGISTRY_KEY,
   deviceRegistry,
   parseDeviceRegistry,
+  parsedEndpointForRecord,
+  resolvedEndpointForRecord,
   type DeviceRecord,
 } from "@/lib/devices/deviceRegistry";
 import {
@@ -39,6 +41,11 @@ async function storedRegistry() {
 
 function records(): DeviceRecord[] {
   return Object.values(deviceRegistry.getSnapshot().records);
+}
+
+/** Re-read a record from the live snapshot rather than trusting a stale copy. */
+function recordById(recordId: string): DeviceRecord | undefined {
+  return deviceRegistry.getSnapshot().records[recordId];
 }
 
 beforeEach(async () => {
@@ -590,6 +597,123 @@ describe("selecting a discovered device", () => {
     expect(
       await deviceRegistry.selectDiscovered({ addresses: [], port: 7497 }),
     ).toBeNull();
+  });
+
+  it("should rewrite the record when the announced addresses change", async () => {
+    await deviceRegistry.selectDiscovered(announcement);
+    vi.clearAllMocks();
+
+    const moved = await deviceRegistry.selectDiscovered({
+      ...announcement,
+      addresses: ["10.0.0.219"],
+    });
+
+    expect(Preferences.set).toHaveBeenCalled();
+    expect(resolvedEndpointForRecord(moved)?.host).toBe("10.0.0.219");
+  });
+});
+
+// iOS WebSockets don't reliably resolve `.local` themselves, so the socket
+// dials a resolved address while the record keeps the hostname that survives
+// the device moving.
+describe("resolving an mDNS hostname to an address", () => {
+  const announcement = {
+    discoveryId: "core-id",
+    hostname: "steamdeck.local",
+    addresses: ["10.0.0.206", "fe80::1"],
+    port: 7497,
+  };
+
+  it("should dial the resolved address while displaying the hostname", async () => {
+    const record = await deviceRegistry.selectDiscovered(announcement);
+
+    expect(parsedEndpointForRecord(record)?.address).toBe("steamdeck.local");
+    expect(resolvedEndpointForRecord(record)?.host).toBe("10.0.0.206");
+    expect(resolvedEndpointForRecord(record)?.wsUrl).toBe(
+      "ws://10.0.0.206:7497/api/v0.1",
+    );
+  });
+
+  it("should keep the endpoint's port and scheme when swapping the host", async () => {
+    const record = await deviceRegistry.selectDiscovered({
+      ...announcement,
+      port: 8080,
+    });
+
+    expect(resolvedEndpointForRecord(record)?.wsUrl).toBe(
+      "ws://10.0.0.206:8080/api/v0.1",
+    );
+  });
+
+  it("should dial the hostname when nothing has resolved it", async () => {
+    const record = await deviceRegistry.selectAddress("steamdeck.local");
+
+    expect(resolvedEndpointForRecord(record)?.host).toBe("steamdeck.local");
+  });
+
+  it("should attach resolution to a record the user typed by hand", async () => {
+    const typed = await deviceRegistry.selectAddress("steamdeck.local");
+
+    await deviceRegistry.noteResolvedAddresses(typed!.recordId, ["10.0.0.206"]);
+
+    expect(resolvedEndpointForRecord(recordById(typed!.recordId))?.host).toBe(
+      "10.0.0.206",
+    );
+  });
+
+  // A background browse runs behind a live connection, so it must never create
+  // a record or move the user off the one they selected.
+  it("should not create or activate a record it does not already know", async () => {
+    const typed = await deviceRegistry.selectAddress("steamdeck.local");
+
+    await deviceRegistry.noteResolvedAddresses("no-such-record", [
+      "10.0.0.206",
+    ]);
+
+    expect(records()).toHaveLength(1);
+    expect(deviceRegistry.getSnapshot().activeRecordId).toBe(typed!.recordId);
+  });
+
+  it("should not write when the resolution is unchanged", async () => {
+    const typed = await deviceRegistry.selectAddress("steamdeck.local");
+    await deviceRegistry.noteResolvedAddresses(typed!.recordId, ["10.0.0.206"]);
+    vi.clearAllMocks();
+
+    await deviceRegistry.noteResolvedAddresses(typed!.recordId, ["10.0.0.206"]);
+
+    expect(Preferences.set).not.toHaveBeenCalled();
+  });
+
+  it("should ignore an announcement that resolved to nothing", async () => {
+    const typed = await deviceRegistry.selectAddress("steamdeck.local");
+    await deviceRegistry.noteResolvedAddresses(typed!.recordId, ["10.0.0.206"]);
+
+    await deviceRegistry.noteResolvedAddresses(typed!.recordId, []);
+
+    expect(resolvedEndpointForRecord(recordById(typed!.recordId))?.host).toBe(
+      "10.0.0.206",
+    );
+  });
+
+  it("should follow the device to its new address", async () => {
+    const typed = await deviceRegistry.selectAddress("steamdeck.local");
+    await deviceRegistry.noteResolvedAddresses(typed!.recordId, ["10.0.0.206"]);
+
+    await deviceRegistry.noteResolvedAddresses(typed!.recordId, ["10.0.0.219"]);
+
+    expect(resolvedEndpointForRecord(recordById(typed!.recordId))?.host).toBe(
+      "10.0.0.219",
+    );
+  });
+
+  it("should survive a reload", async () => {
+    const discovered = await deviceRegistry.selectDiscovered(announcement);
+    __resetDeviceRegistryForTests();
+    await deviceRegistry.hydrate();
+
+    expect(
+      resolvedEndpointForRecord(recordById(discovered!.recordId))?.host,
+    ).toBe("10.0.0.206");
   });
 });
 

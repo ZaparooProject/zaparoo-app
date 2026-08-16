@@ -1,6 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
-import { ZeroConf, ZeroConfService } from "capacitor-zeroconf";
+import {
+  ZeroConf,
+  type ZeroConfService,
+  type ZeroConfWatchResult,
+} from "capacitor-zeroconf";
 import { logger } from "@/lib/logger";
 
 const ZAPAROO_SERVICE_TYPE = "_zaparoo._tcp.";
@@ -8,6 +12,16 @@ const ZAPAROO_SERVICE_DOMAIN = "local.";
 
 // Session cache for discovered devices (persists across hook instances until app restart)
 let deviceCache: DiscoveredDevice[] = [];
+const deviceListeners = new Set<(devices: DiscoveredDevice[]) => void>();
+
+// There is one ZeroConf watch for the whole app, shared by however many callers
+// want discovery at once — the scan modal and the connection provider both do.
+// Owners are counted rather than toggled so the modal closing cannot stop a
+// browse the connection provider still needs.
+const scanOwners = new Set<symbol>();
+let watchPromise: Promise<void> | null = null;
+let unwatchPromise: Promise<void> | null = null;
+let isWatching = false;
 
 /**
  * Reset the device cache. Used for testing to prevent cache pollution between tests.
@@ -15,13 +29,20 @@ let deviceCache: DiscoveredDevice[] = [];
  */
 export function __resetDeviceCache(): void {
   deviceCache = [];
+  deviceListeners.clear();
+  scanOwners.clear();
+  watchPromise = null;
+  unwatchPromise = null;
+  isWatching = false;
 }
 
 export interface DiscoveredDevice {
   /** Instance name (usually hostname) */
   name: string;
-  /** IP address to use when no service hostname is available */
+  /** Preferred resolved IP address */
   address: string;
+  /** Every resolved IP address the service advertised */
+  addresses: string[];
   /** mDNS hostname shared across the device's network interfaces */
   hostname?: string;
   /** Port number */
@@ -115,8 +136,21 @@ function parseTxtRecord(txtRecord: Record<string, string> | undefined): {
  * Convert a ZeroConfService to our DiscoveredDevice format.
  * Returns null if the service doesn't have a valid IP address.
  */
+/**
+ * IPv4 before IPv6, deliberately: callers take `[0]` as the address to dial,
+ * and IPv4 is the one that works on every network the app is likely to meet.
+ */
+function serviceAddresses(service: ZeroConfService): string[] {
+  return [
+    ...new Set([
+      ...(service.ipv4Addresses ?? []),
+      ...(service.ipv6Addresses ?? []),
+    ]),
+  ];
+}
+
 function serviceToIdentity(service: ZeroConfService): DeviceIdentity {
-  const address = service.ipv4Addresses?.[0] || service.ipv6Addresses?.[0];
+  const address = serviceAddresses(service)[0];
   const hostname = normalizeHostname(service.hostname);
   const deviceId = normalizeIdentityValue(service.txtRecord?.["id"]);
 
@@ -138,10 +172,154 @@ function serviceToDevice(service: ZeroConfService): DiscoveredDevice | null {
   return {
     name: service.name,
     address: identity.address,
+    addresses: serviceAddresses(service),
     ...(identity.hostname ? { hostname: identity.hostname } : {}),
     port: service.port,
     ...txtData,
   };
+}
+
+/**
+ * Fold a re-announcement into the cached device.
+ *
+ * If the address already in use is still advertised, this is an additive
+ * announcement from a multi-homed device: union the sets and do not move, so a
+ * partial announcement cannot flip `address` and tear down a live connection.
+ * If it is no longer advertised the device genuinely moved, so take the new set
+ * wholesale rather than keeping addresses that no longer answer.
+ */
+function mergeDiscoveredDevice(
+  existing: DiscoveredDevice,
+  incoming: DiscoveredDevice,
+): DiscoveredDevice {
+  const stillAdvertised = incoming.addresses.includes(existing.address);
+  const addresses = stillAdvertised
+    ? [...new Set([...existing.addresses, ...incoming.addresses])]
+    : incoming.addresses;
+
+  return {
+    ...existing,
+    ...incoming,
+    addresses,
+    address: stillAdvertised ? existing.address : incoming.address,
+  };
+}
+
+function publishDevices(devices: DiscoveredDevice[]): void {
+  deviceCache = devices;
+  deviceListeners.forEach((listener) => listener(devices));
+}
+
+function handleDiscoveryResult(result: ZeroConfWatchResult): void {
+  if (result.action === "resolved") {
+    const device = serviceToDevice(result.service);
+    if (!device) return;
+
+    const existingIndex = deviceCache.findIndex((existing) =>
+      isSameDiscoveredDevice(existing, device),
+    );
+    const existing = deviceCache[existingIndex];
+    const updated = [...deviceCache];
+    if (existing === undefined) {
+      updated.push(device);
+    } else {
+      updated[existingIndex] = mergeDiscoveredDevice(existing, device);
+    }
+    publishDevices(updated);
+    return;
+  }
+
+  if (result.action === "removed") {
+    const removedIdentity = serviceToIdentity(result.service);
+    if (
+      !removedIdentity.deviceId &&
+      !removedIdentity.hostname &&
+      !removedIdentity.address
+    ) {
+      return;
+    }
+
+    const updated = deviceCache.filter(
+      (device) => !isSameDiscoveredDevice(device, removedIdentity),
+    );
+    if (updated.length !== deviceCache.length) {
+      publishDevices(updated);
+    }
+  }
+}
+
+/**
+ * Register `owner` as needing discovery, starting the shared watch if it is not
+ * already running.
+ *
+ * A teardown in flight is awaited first: `unwatch` and `watch` against the same
+ * service type race inside the plugin, and losing that race leaves the watch
+ * believing it is running with no listener attached.
+ */
+async function acquireNetworkScan(owner: symbol): Promise<void> {
+  scanOwners.add(owner);
+
+  if (unwatchPromise) {
+    await unwatchPromise;
+  }
+  // Released while we waited, or someone else already started the watch.
+  if (!scanOwners.has(owner) || isWatching) return;
+
+  if (!watchPromise) {
+    watchPromise = ZeroConf.watch(
+      {
+        type: ZAPAROO_SERVICE_TYPE,
+        domain: ZAPAROO_SERVICE_DOMAIN,
+      },
+      handleDiscoveryResult,
+    )
+      .then(() => {
+        isWatching = true;
+      })
+      .finally(() => {
+        watchPromise = null;
+      });
+  }
+
+  await watchPromise;
+}
+
+/** Drop `owner`'s claim, stopping the shared watch once nobody holds one. */
+function releaseNetworkScan(owner: symbol): void {
+  scanOwners.delete(owner);
+  if (scanOwners.size > 0 || unwatchPromise) return;
+
+  const stopPromise = (async () => {
+    if (watchPromise) {
+      try {
+        await watchPromise;
+      } catch {
+        // The watch never started, so there is nothing to unwatch.
+        return;
+      }
+    }
+    // A new owner may have arrived while the watch was still starting.
+    if (scanOwners.size > 0 || !isWatching) return;
+
+    isWatching = false;
+    try {
+      // unwatch() rather than close(): it only removes the service listener,
+      // where close() tears down JmDNS and makes the next scan much slower.
+      await ZeroConf.unwatch({
+        type: ZAPAROO_SERVICE_TYPE,
+        domain: ZAPAROO_SERVICE_DOMAIN,
+      });
+    } catch (e) {
+      logger.debug("Error stopping zeroconf watch", e);
+    }
+  })();
+
+  unwatchPromise = stopPromise;
+  void stopPromise.finally(() => {
+    if (unwatchPromise === stopPromise) {
+      unwatchPromise = null;
+    }
+  });
 }
 
 /**
@@ -166,31 +344,12 @@ export function useNetworkScan(): UseNetworkScanResult {
   const [error, setError] = useState<string | null>(null);
 
   const isScanningRef = useRef(false);
-
-  useEffect(() => {
-    deviceCache = devices;
-  }, [devices]);
+  const scanOwnerRef = useRef(Symbol("network-scan"));
 
   const stopScan = useCallback(() => {
-    // Update UI state immediately
-    const wasScanning = isScanningRef.current;
     isScanningRef.current = false;
     setIsScanning(false);
-
-    // Stop watching if we were scanning
-    if (wasScanning) {
-      // Use unwatch() instead of close() - it's much faster because it only
-      // removes the service listener without tearing down JmDNS.
-      // Note: Due to a bug in capacitor-zeroconf, the BrowserManager is reused
-      // and subsequent watch() calls won't re-discover already-cached devices.
-      // This is acceptable since we maintain a session cache.
-      ZeroConf.unwatch({
-        type: ZAPAROO_SERVICE_TYPE,
-        domain: ZAPAROO_SERVICE_DOMAIN,
-      }).catch((e) => {
-        logger.debug("Error stopping zeroconf watch", e);
-      });
-    }
+    releaseNetworkScan(scanOwnerRef.current);
   }, []);
 
   const startScan = useCallback(async () => {
@@ -200,63 +359,23 @@ export function useNetworkScan(): UseNetworkScanResult {
       return;
     }
 
-    // Stop any existing scan
-    stopScan();
-
-    // Keep cached devices (due to plugin bug, already-discovered devices
-    // won't be re-announced, so we rely on the cache)
+    // Keep cached devices (due to a plugin bug, already-discovered devices
+    // aren't re-announced to a second watch, so we rely on the cache)
     setDevices(deviceCache);
     setError(null);
     setIsScanning(true);
     isScanningRef.current = true;
 
     try {
-      // Start watching for Zaparoo services with callback
-      // Note: This plugin uses the callback parameter, not addListener events
-      await ZeroConf.watch(
-        {
-          type: ZAPAROO_SERVICE_TYPE,
-          domain: ZAPAROO_SERVICE_DOMAIN,
-        },
-        (result) => {
-          if (result.action === "resolved") {
-            const device = serviceToDevice(result.service);
-            if (device) {
-              setDevices((prev) => {
-                const existingIndex = prev.findIndex((existing) =>
-                  isSameDiscoveredDevice(existing, device),
-                );
-                const updated = [...prev];
-                if (existingIndex === -1) {
-                  updated.push(device);
-                } else {
-                  updated[existingIndex] = {
-                    ...updated[existingIndex],
-                    ...device,
-                  };
-                }
-                return updated;
-              });
-            }
-          } else if (result.action === "removed") {
-            const removedIdentity = serviceToIdentity(result.service);
-            if (
-              removedIdentity.deviceId ||
-              removedIdentity.hostname ||
-              removedIdentity.address
-            ) {
-              setDevices((prev) => {
-                return prev.filter(
-                  (device) => !isSameDiscoveredDevice(device, removedIdentity),
-                );
-              });
-            }
-          }
-        },
-      );
-
-      // Scan continuously until stopScan() is called (no auto-timeout)
+      // Scans continuously until stopScan() is called (no auto-timeout)
+      await acquireNetworkScan(scanOwnerRef.current);
     } catch (e) {
+      releaseNetworkScan(scanOwnerRef.current);
+      // stopScan() already ran, so this failure belongs to a scan the caller
+      // has abandoned — reporting it would surface an error for a scan the
+      // user is no longer waiting on.
+      if (!isScanningRef.current) return;
+
       logger.error("Failed to start network scan", e, {
         category: "connection",
         action: "networkScan",
@@ -266,11 +385,16 @@ export function useNetworkScan(): UseNetworkScanResult {
       setIsScanning(false);
       isScanningRef.current = false;
     }
-  }, [stopScan]);
+  }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
+    const handleDevicesChanged = (updated: DiscoveredDevice[]) => {
+      setDevices(updated);
+    };
+    deviceListeners.add(handleDevicesChanged);
+
     return () => {
+      deviceListeners.delete(handleDevicesChanged);
       stopScan();
     };
   }, [stopScan]);

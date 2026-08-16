@@ -117,6 +117,20 @@ export function formatDeviceEndpoint(
  * authority is inspected, and a bracketed literal is stepped over first, so
  * `http://[::80]` is read as a host rather than as port 80.
  */
+/**
+ * The same endpoint reached through a different host — an mDNS `.local` name
+ * swapped for the IP the advertisement resolved to. An unusable host is
+ * ignored rather than thrown so a bad advertisement degrades to the hostname
+ * the record already had.
+ */
+export function replaceDeviceEndpointHost(
+  endpoint: ParsedDeviceEndpoint,
+  host: string,
+): ParsedDeviceEndpoint {
+  if (!isValidHost(host.toLowerCase())) return endpoint;
+  return formatDeviceEndpoint(host, endpoint.port, endpoint.scheme);
+}
+
 function explicitAuthorityPort(input: string): string | undefined {
   const authority = input.slice(input.indexOf("://") + 3).split(/[/?#]/)[0];
   if (authority === undefined) return undefined;

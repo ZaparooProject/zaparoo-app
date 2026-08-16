@@ -26,7 +26,7 @@ function toRegistration(
   return {
     discoveryId: device.deviceId,
     hostname: device.hostname,
-    addresses: [device.address],
+    addresses: device.addresses,
     port: device.port,
     name: device.name,
     platform: device.platform,

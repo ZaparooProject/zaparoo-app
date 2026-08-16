@@ -9,6 +9,7 @@ import {
 } from "@/lib/crypto/credentials";
 import {
   parseDeviceEndpoint,
+  replaceDeviceEndpointHost,
   type DeviceEndpointScheme,
   type ParsedDeviceEndpoint,
 } from "@/lib/devices/endpoint";
@@ -28,6 +29,15 @@ export interface DeviceEndpoint {
   port: number;
   source: DeviceEndpointSource;
   lastSeenAt?: number;
+  /**
+   * Addresses the last mDNS advertisement for this endpoint resolved to.
+   *
+   * The endpoint keeps its `.local` hostname as the canonical identity — that
+   * is what survives the device changing IP — but iOS WebSockets do not
+   * reliably resolve `.local` themselves, so the socket dials one of these
+   * instead when they are known.
+   */
+  resolvedAddresses?: string[];
 }
 
 export interface DeviceRecord {
@@ -104,10 +114,29 @@ function normalizeDiscoveryId(value: string | undefined): string | undefined {
   return normalized || undefined;
 }
 
+function unique(values: readonly string[]): string[] {
+  return [...new Set(values)];
+}
+
+/**
+ * Set equality, not sequence equality. Both sides are deduped, so matching
+ * lengths plus containment is enough. An mDNS re-announcement is free to list
+ * the same addresses in a different order, and treating that as a change would
+ * rewrite the record and republish the registry for nothing.
+ */
+function sameAddressSet(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
+  if (left.length !== right.length) return false;
+  const existing = new Set(left);
+  return right.every((address) => existing.has(address));
+}
+
 function endpointFromParsed(
   endpoint: ParsedDeviceEndpoint,
   source: DeviceEndpointSource,
-  lastSeenAt?: number,
+  details: Pick<DeviceEndpoint, "lastSeenAt" | "resolvedAddresses"> = {},
 ): DeviceEndpoint {
   return {
     endpointId: endpoint.endpointId,
@@ -115,13 +144,22 @@ function endpointFromParsed(
     host: endpoint.host,
     port: endpoint.port,
     source,
-    ...(lastSeenAt !== undefined ? { lastSeenAt } : {}),
+    ...(details.lastSeenAt !== undefined
+      ? { lastSeenAt: details.lastSeenAt }
+      : {}),
+    ...(details.resolvedAddresses
+      ? { resolvedAddresses: unique(details.resolvedAddresses) }
+      : {}),
   };
 }
 
 /**
  * The endpoint a record connects through, falling back to the first one when
  * `preferredEndpointId` no longer names an endpoint the record holds.
+ *
+ * Both public accessors go through here so they can never disagree about which
+ * endpoint is preferred — resolving it twice once dropped `resolvedAddresses`
+ * in exactly the case the fallback exists for.
  */
 function preferredEndpointFor(
   record: DeviceRecord | null | undefined,
@@ -143,6 +181,26 @@ export function parsedEndpointForRecord(
   if (!preferred) return null;
   const result = parseDeviceEndpoint(preferred.endpointId);
   return result.ok ? result.endpoint : null;
+}
+
+/**
+ * The endpoint to actually dial: the preferred one, with its host swapped for
+ * a resolved address when mDNS supplied one.
+ *
+ * The record keeps the `.local` hostname — that is the identity that survives
+ * a DHCP move — while the socket gets an address iOS can reach without doing
+ * its own multicast resolution.
+ */
+export function resolvedEndpointForRecord(
+  record: DeviceRecord | null | undefined,
+): ParsedDeviceEndpoint | null {
+  const preferred = preferredEndpointFor(record);
+  const parsed = parsedEndpointForRecord(record);
+  if (!parsed || !preferred) return parsed;
+  const resolvedAddress = preferred.resolvedAddresses?.[0];
+  return resolvedAddress
+    ? replaceDeviceEndpointHost(parsed, resolvedAddress)
+    : parsed;
 }
 
 /** The active record's display address, or `""` before hydration. */
@@ -170,7 +228,12 @@ function validEndpoint(value: unknown): value is DeviceEndpoint {
     parsed.ok &&
     parsed.endpoint.scheme === endpoint.scheme &&
     parsed.endpoint.host === endpoint.host &&
-    parsed.endpoint.port === endpoint.port
+    parsed.endpoint.port === endpoint.port &&
+    (endpoint.resolvedAddresses === undefined ||
+      (Array.isArray(endpoint.resolvedAddresses) &&
+        endpoint.resolvedAddresses.every(
+          (address) => typeof address === "string",
+        )))
   );
 }
 
@@ -635,6 +698,11 @@ class DeviceRegistryRepository {
             ),
         );
 
+    const resolvedAddresses = unique(device.addresses);
+    const existingEndpoint = existing?.endpoints.find(
+      (endpoint) => endpoint.endpointId === parsed.endpoint.endpointId,
+    );
+
     // Compare against what the commit below would actually write: a custom name
     // is never overwritten and empty metadata is never applied, so testing
     // fields the commit refuses to change would make this permanently false and
@@ -643,6 +711,11 @@ class DeviceRegistryRepository {
       existing !== undefined &&
       existing.discoveryId === discoveryId &&
       existing.preferredEndpointId === parsed.endpoint.endpointId &&
+      existingEndpoint?.source === "mdns" &&
+      sameAddressSet(
+        existingEndpoint.resolvedAddresses ?? [],
+        resolvedAddresses,
+      ) &&
       (!device.name ||
         existing.nameIsCustom === true ||
         existing.name === device.name) &&
@@ -655,11 +728,10 @@ class DeviceRegistryRepository {
       return existing;
     }
 
-    const discoveredEndpoint = endpointFromParsed(
-      parsed.endpoint,
-      "mdns",
-      Date.now(),
-    );
+    const discoveredEndpoint = endpointFromParsed(parsed.endpoint, "mdns", {
+      lastSeenAt: Date.now(),
+      resolvedAddresses,
+    });
     const base =
       existing ??
       // Before the registry, picking a device from a scan saved it by IP even
@@ -785,6 +857,49 @@ class DeviceRegistryRepository {
     ) {
       return;
     }
+
+    await this.commit((registry) => ({
+      ...registry,
+      records: { ...registry.records, [recordId]: next },
+    }));
+  }
+
+  /**
+   * Record the addresses an mDNS advertisement resolved this record's preferred
+   * endpoint to, so the socket can dial one instead of a `.local` hostname.
+   *
+   * Deliberately narrower than `selectDiscovered`: this only annotates the
+   * record the caller names, where `selectDiscovered` matches an announcement
+   * against the whole registry and may create a record or switch the active
+   * one. A background browse running behind a live connection must never do
+   * either of those things.
+   */
+  async noteResolvedAddresses(
+    recordId: string,
+    addresses: readonly string[],
+  ): Promise<void> {
+    await this.hydrate();
+    const record = this.snapshot.records[recordId];
+    const preferred = preferredEndpointFor(record);
+    if (!record || !preferred) return;
+
+    const resolved = unique(addresses.filter((address) => address.length > 0));
+    if (
+      resolved.length === 0 ||
+      sameAddressSet(preferred.resolvedAddresses ?? [], resolved)
+    ) {
+      // mDNS re-announces constantly; only a genuine change is worth a write.
+      return;
+    }
+
+    const next: DeviceRecord = {
+      ...record,
+      endpoints: record.endpoints.map((endpoint) =>
+        endpoint.endpointId === preferred.endpointId
+          ? { ...endpoint, resolvedAddresses: resolved }
+          : endpoint,
+      ),
+    };
 
     await this.commit((registry) => ({
       ...registry,
