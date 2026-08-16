@@ -4,9 +4,13 @@ import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { logger } from "@/lib/logger";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
-import { useNfcWriter, WriteMethod } from "@/lib/writeNfcHook.tsx";
+import {
+  isWriteModalOpen,
+  useNfcWriter,
+  WriteMethod,
+} from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
-import { isWriteModalOpen, WriteModal } from "@/components/WriteModal.tsx";
+import { WriteModal } from "@/components/WriteModal.tsx";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
 import { cancelSession } from "@/lib/nfc";
 import { CoreAPI } from "@/lib/coreApi";

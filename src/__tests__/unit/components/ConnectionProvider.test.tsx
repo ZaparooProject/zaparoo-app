@@ -18,7 +18,7 @@ import { act, render, screen, waitFor } from "../../../test-utils";
 import { ConnectionProvider } from "../../../components/ConnectionProvider";
 import { useConnection } from "../../../hooks/useConnection";
 import { connectionManager } from "../../../lib/transport";
-import { CoreAPI } from "../../../lib/coreApi";
+import { CoreAPI } from "@/lib/coreApi";
 import {
   credentialKeyForRecord,
   credentialStore,
@@ -30,7 +30,7 @@ import {
 } from "@/test-utils/deviceRegistry";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import type { TransportState } from "../../../lib/transport/types";
-import type { NotificationRequest } from "../../../lib/coreApi";
+import type { NotificationRequest } from "@/lib/coreApi";
 import { ClientCapability, InboxSeverity, Notification } from "@/lib/models";
 import { logger } from "@/lib/logger";
 import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
@@ -1871,8 +1871,14 @@ describe("notification processing", () => {
         },
       });
       vi.mocked(CoreAPI.processReceived).mockReturnValueOnce(messagePromise);
+      // CoreAPI.media is declared as returning MediaResponse, but a stale or
+      // reset request resolves with a CancelledResponse instead — which is why
+      // the provider guards with isCancelled. The cast is what lets the test
+      // reproduce that real resolution against the narrower declared type.
       vi.mocked(CoreAPI.media)
-        .mockResolvedValueOnce({ cancelled: true } as any)
+        .mockResolvedValueOnce({
+          cancelled: true,
+        } as unknown as Awaited<ReturnType<typeof CoreAPI.media>>)
         .mockRejectedValueOnce(new Error("Temporary media status failure"))
         .mockResolvedValueOnce({
           database: {
@@ -2893,15 +2899,18 @@ describe("connection event handling", () => {
 
     capturedEventHandlers.onEncryptedHandshakeOk!();
 
+    // The promotion and the record update land on separate ticks, so all three
+    // assertions have to be inside the same waitFor — asserting the last two
+    // after it would read state the handler has not finished writing.
     await waitFor(async () => {
       await expect(
         credentialStore.get(credentialKeyForRecord(RECORD_ID)),
       ).resolves.toMatchObject({ authToken: "token-abc" });
+      await expect(credentialStore.get("192.168.1.100")).resolves.toBeNull();
+      expect(
+        deviceRegistry.getSnapshot().records[RECORD_ID]?.legacyCredentialKey,
+      ).toBeUndefined();
     });
-    expect(await credentialStore.get("192.168.1.100")).toBeNull();
-    expect(
-      deviceRegistry.getSnapshot().records[RECORD_ID]?.legacyCredentialKey,
-    ).toBeUndefined();
   });
 
   it("should set coreVersion to null when version fetch fails", async () => {

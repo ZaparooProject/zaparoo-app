@@ -18,13 +18,11 @@ import {
   seedDeviceRegistry,
 } from "@/test-utils/deviceRegistry";
 
-const { componentRef, mockNavigate, mockParams, mockUseDeviceLinking } =
-  vi.hoisted(() => ({
-    componentRef: { current: null as any },
-    mockNavigate: vi.fn(),
-    mockParams: { current: { recordId: "" } },
-    mockUseDeviceLinking: vi.fn(),
-  }));
+const { componentRef, mockNavigate, mockParams } = vi.hoisted(() => ({
+  componentRef: { current: null as any },
+  mockNavigate: vi.fn(),
+  mockParams: { current: { recordId: "" } },
+}));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
@@ -52,10 +50,6 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
 const mockIsConnected = vi.fn(() => true);
 vi.mock("@/hooks/useConnection", () => ({
   useConnection: () => ({ isConnected: mockIsConnected() }),
-}));
-
-vi.mock("@/hooks/useDeviceLinking", () => ({
-  useDeviceLinking: (enabled: boolean) => mockUseDeviceLinking(enabled),
 }));
 
 import "@/routes/settings.devices_.$recordId";
@@ -100,10 +94,6 @@ describe("Settings Device Detail Route", () => {
       },
     });
     mockIsConnected.mockReturnValue(true);
-    mockUseDeviceLinking.mockReturnValue({
-      state: "unlinked",
-      linkDevice: vi.fn(),
-    });
     await seedRecord();
   });
 
@@ -180,14 +170,8 @@ describe("Settings Device Detail Route", () => {
     });
   });
 
-  it("should hide 'Use this device' on the active connected device", async () => {
+  it("should hide 'Use this device' and Online linking on the active connected device", async () => {
     await seedRecord(true);
-    // Device linking is only offered to a signed-in user; without one the
-    // section renders its sign-in prompt instead.
-    useStatusStore.setState({
-      loggedInUser: { uid: "test-user" } as never,
-      coreVersion: "2.16.0",
-    });
     renderRoute();
 
     expect(
@@ -197,11 +181,11 @@ describe("Settings Device Detail Route", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByLabelText("settings.activeDevice")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "online.deviceLink.link" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "online.deviceLink.link" }),
+    ).not.toBeInTheDocument();
     expect(
-      screen.getByText("online.deviceLink.description"),
-    ).toBeInTheDocument();
+      screen.queryByText("online.deviceLink.description"),
+    ).not.toBeInTheDocument();
   });
 
   it("should navigate back to the device list without resetting scroll", async () => {

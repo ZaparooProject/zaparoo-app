@@ -117,20 +117,9 @@ vi.mock("@/hooks/useScanOperations", () => ({
 }));
 
 // Mock useNfcWriter
-vi.mock("@/lib/writeNfcHook", () => ({
+vi.mock("@/lib/writeNfcHook", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/writeNfcHook")>()),
   useNfcWriter: vi.fn(() => mockNfcWriterState),
-  WriteMethod: {
-    Auto: "auto",
-    LocalNFC: "local",
-    RemoteReader: "remote",
-  },
-  WriteAction: {
-    Write: "write",
-    Read: "read",
-    Format: "format",
-    Erase: "erase",
-    MakeReadOnly: "makeReadOnly",
-  },
 }));
 
 // Use vi.hoisted for pro purchase mock

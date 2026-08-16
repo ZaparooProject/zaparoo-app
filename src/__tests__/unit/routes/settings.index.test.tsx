@@ -191,9 +191,6 @@ describe("Settings Index Route", () => {
   const defaultStoreState = {
     connectionError: "",
     loggedInUser: null,
-    deviceHistory: [] as Array<{ address: string }>,
-    setDeviceHistory: vi.fn(),
-    removeDeviceHistory: vi.fn(),
     resetConnectionState: vi.fn(),
     safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
     inboxMessages: [],

@@ -41,6 +41,14 @@ export interface WriteNfcHook {
   getVerifyError: () => NfcVerificationError | null;
 }
 
+/** The write modal stays open until a write settles, or while a verify failed. */
+export function isWriteModalOpen(
+  writeIntent: boolean,
+  writer: Pick<WriteNfcHook, "status" | "verifyError">,
+): boolean {
+  return writeIntent && (writer.status === null || writer.verifyError !== null);
+}
+
 export enum WriteMethod {
   Auto = "auto",
   LocalNFC = "local",

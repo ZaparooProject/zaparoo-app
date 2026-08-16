@@ -2,7 +2,6 @@ import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
 import {
-  CoreAPI,
   validateDeviceAddress,
   type DeviceAddressValidationResult,
 } from "@/lib/coreApi";
@@ -32,7 +31,10 @@ export function useSelectDevice() {
       if (!record || record.recordId === previousRecordId) return;
 
       resetConnectionState();
-      CoreAPI.reset();
+      // ConnectionProvider resets CoreAPI during the active-record effect
+      // cleanup. The registry publishes before its asynchronous persistence
+      // finishes, so resetting here can detach the replacement transport that
+      // the new connection effect has already installed.
       queryClient.invalidateQueries();
 
       // Saved search filters may not exist on the new device — drop them so we
