@@ -20,7 +20,6 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
 import { TextInput } from "@/components/wui/TextInput";
 import { SlideModal } from "@/components/SlideModal";
-import { DeviceLinkButton } from "@/components/DeviceLinkButton";
 import { BackIcon } from "@/lib/images";
 import { Route } from "@/routes/settings.devices_.$recordId";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
@@ -201,26 +200,6 @@ export function DeviceDetail() {
             onClick={handleUseThisDevice}
             className="w-full"
           />
-        )}
-
-        {isActive && (
-          <section
-            className="flex flex-col gap-3"
-            aria-labelledby="device-online-heading"
-          >
-            <div>
-              <h2
-                id="device-online-heading"
-                className="font-bold text-gray-400 capitalize"
-              >
-                {t("online.title")}
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {t("online.deviceLink.description")}
-              </p>
-            </div>
-            <DeviceLinkButton enabled />
-          </section>
         )}
 
         <Button
