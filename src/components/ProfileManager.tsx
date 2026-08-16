@@ -23,6 +23,7 @@ import { SettingHelp } from "@/components/wui/SettingHelp";
 import { SlideModal } from "@/components/SlideModal";
 import { NextIcon } from "@/lib/images";
 import { formatDuration, parseDuration } from "@/lib/utils";
+import { useHapticPress } from "@/hooks/useHapticPress";
 
 const PROFILE_QUERY_KEY = ["profiles"];
 const ACTIVE_PROFILE_QUERY_KEY = ["profiles", "active"];
@@ -106,10 +107,12 @@ function ProfileRow(props: {
 }) {
   const { t } = useTranslation();
   const { profile } = props;
+  const handleHapticPress = useHapticPress();
 
   return (
     <button
       type="button"
+      onPointerUp={handleHapticPress}
       onClick={props.onOpen}
       className="border-bd-outline flex w-full flex-row items-center justify-between gap-3 border-b border-solid px-1 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
       aria-label={t("settings.core.profiles.openProfile", {

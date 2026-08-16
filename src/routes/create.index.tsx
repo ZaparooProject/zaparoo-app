@@ -137,7 +137,7 @@ export function Create() {
             aria-disabled={!connected}
             data-tour="create-search"
           >
-            <Card disabled={!connected}>
+            <Card disabled={!connected} pressable>
               <div className="flex flex-row items-center gap-3">
                 <CreateActionIcon
                   disabled={!connected}
@@ -184,7 +184,7 @@ export function Create() {
             disabled={!connected}
             aria-disabled={!connected}
           >
-            <Card disabled={!connected}>
+            <Card disabled={!connected} pressable>
               <div className="flex flex-row items-center gap-3">
                 <CreateActionIcon
                   icon={<ListPlusIcon size="20" />}
@@ -204,7 +204,7 @@ export function Create() {
           </Link>
 
           <Link to="/create/custom">
-            <Card>
+            <Card pressable>
               <div className="flex flex-row items-center gap-3">
                 <CreateActionIcon icon={<TextIcon size="20" />} />
                 <div className="flex grow flex-col">
@@ -225,7 +225,10 @@ export function Create() {
             disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
             aria-disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
           >
-            <Card disabled={!Capacitor.isNativePlatform() || !nfcAvailable}>
+            <Card
+              disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
+              pressable
+            >
               <div className="flex flex-row items-center gap-3">
                 <CreateActionIcon
                   icon={<NfcIcon size="24" />}

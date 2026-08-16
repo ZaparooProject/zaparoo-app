@@ -11,6 +11,7 @@ import { compareStrings } from "@/lib/utils";
 import { TagInfo } from "@/lib/models";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { useAccessibleLists } from "@/hooks/useAccessibleLists";
+import { useHapticPress } from "@/hooks/useHapticPress";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
@@ -44,6 +45,7 @@ function TagSearchOption(props: {
   onSelect: () => void;
 }) {
   const { t } = useTranslation();
+  const handleHapticPress = useHapticPress();
   const typeLabel = t(`tagSelector.type.${props.tag.type}`, {
     defaultValue: props.tag.type,
   });
@@ -59,6 +61,7 @@ function TagSearchOption(props: {
           "bg-white/10": props.selected,
         },
       )}
+      onPointerUp={handleHapticPress}
       onClick={props.onSelect}
       type="button"
       role="checkbox"
@@ -96,6 +99,7 @@ export function TagSelector({
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
   const accessibleLists = useAccessibleLists();
+  const handleHapticPress = useHapticPress();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const slideModalScrollRef = useRef<HTMLDivElement>(null);
 
@@ -488,6 +492,7 @@ export function TagSelector({
                                   "hover:bg-white/5 focus:bg-white/5",
                                   { "bg-white/10": isSelected },
                                 )}
+                                onPointerUp={handleHapticPress}
                                 onClick={() => handleTagSelect(tag)}
                                 type="button"
                                 role="checkbox"

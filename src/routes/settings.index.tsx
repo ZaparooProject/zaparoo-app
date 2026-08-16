@@ -28,6 +28,7 @@ import {
   getPurchasePreviewState,
   usePurchasePreviewStore,
 } from "@/lib/purchasePreviewStore";
+import { useHapticPress } from "@/hooks/useHapticPress";
 
 export const Route = createFileRoute("/settings/")({
   component: Settings,
@@ -35,6 +36,7 @@ export const Route = createFileRoute("/settings/")({
 
 export function Settings() {
   const { t } = useTranslation();
+  const handleHapticPress = useHapticPress();
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
     t("settings.title"),
   );
@@ -184,6 +186,7 @@ export function Settings() {
           <div className="flex flex-col gap-1">
             <Link
               to="/settings/online"
+              onPointerUp={handleHapticPress}
               className="flex min-h-[48px] flex-row items-center justify-between"
             >
               <span>{t("online.title")}</span>
@@ -205,6 +208,7 @@ export function Settings() {
 
             <Link
               to="/settings/language-region"
+              onPointerUp={handleHapticPress}
               className="flex min-h-[48px] flex-row items-center justify-between"
             >
               <span>{t("settings.languageRegion.title")}</span>
@@ -224,6 +228,7 @@ export function Settings() {
               {showMediaScraper && (
                 <Link
                   to="/settings/media"
+                  onPointerUp={handleHapticPress}
                   className="flex min-h-[48px] flex-row items-center justify-between"
                 >
                   <span>{t("settings.media.title")}</span>
@@ -235,6 +240,7 @@ export function Settings() {
 
               <Link
                 to="/settings/play-controls"
+                onPointerUp={handleHapticPress}
                 className="flex min-h-[48px] flex-row items-center justify-between"
               >
                 <p>{t("settings.playControls.title")}</p>
@@ -245,6 +251,7 @@ export function Settings() {
 
               <Link
                 to="/settings/readers"
+                onPointerUp={handleHapticPress}
                 className="flex min-h-[48px] flex-row items-center justify-between"
               >
                 <p>{t("settings.readers.title")}</p>
@@ -256,6 +263,7 @@ export function Settings() {
               {Capacitor.isNativePlatform() && (
                 <Link
                   to="/settings/accessibility"
+                  onPointerUp={handleHapticPress}
                   className="flex min-h-[48px] flex-row items-center justify-between"
                 >
                   <p>{t("settings.accessibility.title")}</p>
@@ -267,6 +275,7 @@ export function Settings() {
 
               <Link
                 to="/settings/advanced"
+                onPointerUp={handleHapticPress}
                 className="flex min-h-[48px] flex-row items-center justify-between"
               >
                 <p>{t("settings.advanced.title")}</p>
@@ -277,6 +286,7 @@ export function Settings() {
 
               <Link
                 to="/settings/help"
+                onPointerUp={handleHapticPress}
                 className="flex min-h-[48px] flex-row items-center justify-between"
               >
                 <p>{t("settings.help.title")}</p>
@@ -287,6 +297,7 @@ export function Settings() {
 
               <Link
                 to="/settings/about"
+                onPointerUp={handleHapticPress}
                 className="flex min-h-[48px] flex-row items-center justify-between"
               >
                 <p>{t("settings.about.title")}</p>

@@ -4,6 +4,7 @@ import classNames from "classnames";
 import type { SystemSort } from "@/lib/systemFilters";
 import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 import { SlideModal } from "@/components/SlideModal";
+import { useHapticPress } from "@/hooks/useHapticPress";
 
 const SORT_OPTIONS: Array<{ value: SystemSort; labelKey: string }> = [
   { value: "name-asc", labelKey: "library.sortNameAsc" },
@@ -19,6 +20,7 @@ export function LibrarySystemSortModal(props: {
   onChange: (sort: SystemSort) => void;
 }) {
   const { t } = useTranslation();
+  const handleHapticPress = useHapticPress();
 
   return (
     <SlideModal
@@ -49,6 +51,7 @@ export function LibrarySystemSortModal(props: {
                   "bg-white/10": selected,
                 },
               )}
+              onPointerUp={handleHapticPress}
               onClick={() => {
                 props.onChange(option.value);
                 props.close();

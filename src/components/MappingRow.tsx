@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { MappingResponse } from "@/lib/models";
 import { NextIcon } from "@/lib/images";
 import { Badge } from "@/components/wui/Badge";
+import { useHapticPress } from "@/hooks/useHapticPress";
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
   uid: "create.mappings.editor.typeId",
@@ -27,6 +28,7 @@ interface MappingRowProps {
 export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
   const { t } = useTranslation();
   const isInteractive = !mapping.readOnly && onTap !== undefined;
+  const handleHapticPress = useHapticPress("light", isInteractive);
 
   const primaryText =
     mapping.label.trim() !== ""
@@ -47,6 +49,7 @@ export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
       role={isInteractive ? "button" : undefined}
       tabIndex={isInteractive ? 0 : undefined}
       onClick={isInteractive ? onTap : undefined}
+      onPointerUp={isInteractive ? handleHapticPress : undefined}
       onKeyDown={
         isInteractive
           ? (e) => {

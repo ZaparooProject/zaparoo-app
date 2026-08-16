@@ -431,18 +431,20 @@ describe("ConnectionProvider", () => {
       ...overrides,
     });
 
-    async function seedMdnsDevice() {
-      await seedDeviceRegistry(
-        [
-          mockDeviceRecord({
-            recordId: MDNS_RECORD_ID,
-            address: "steamdeck.local",
-            source: "mdns",
-            discoveryId: "core-id",
-          }),
-        ],
-        MDNS_RECORD_ID,
-      );
+    async function seedMdnsDevice(resolvedAddresses?: string[]) {
+      const record = mockDeviceRecord({
+        recordId: MDNS_RECORD_ID,
+        address: "steamdeck.local",
+        source: "mdns",
+        discoveryId: "core-id",
+      });
+      if (resolvedAddresses) {
+        record.endpoints = record.endpoints.map((endpoint) => ({
+          ...endpoint,
+          resolvedAddresses,
+        }));
+      }
+      await seedDeviceRegistry([record], MDNS_RECORD_ID);
     }
 
     beforeEach(async () => {
@@ -507,6 +509,33 @@ describe("ConnectionProvider", () => {
         );
       });
       expect(deviceRegistry.activeEndpoint()?.address).toBe("steamdeck.local");
+    });
+
+    it("should retry after mDNS confirms an already-known route", async () => {
+      await seedMdnsDevice(["10.0.0.206"]);
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({ address: "ws://10.0.0.206:7497/api/v0.1" }),
+        );
+      });
+      vi.mocked(connectionManager.immediateReconnectActive).mockClear();
+
+      act(() => {
+        __simulateDeviceDiscovered(advertise());
+      });
+
+      await waitFor(() => {
+        expect(
+          connectionManager.immediateReconnectActive,
+        ).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("should follow the hostname to a new address", async () => {

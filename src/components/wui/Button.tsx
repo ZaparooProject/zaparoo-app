@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import { ReactElement, useState, memo, useRef, forwardRef } from "react";
-import { useHaptics } from "@/hooks/useHaptics";
+import { useHapticPress } from "@/hooks/useHapticPress";
 
 interface ButtonProps {
   onClick?: () => void;
@@ -31,7 +31,16 @@ export const Button = memo(
     const [isPressed, setIsPressed] = useState(false);
     const touchStartPos = useRef<{ x: number; y: number } | null>(null);
     const hasMoved = useRef(false);
-    const { impact } = useHaptics();
+    const hapticStyle =
+      props.intent === "destructive"
+        ? "heavy"
+        : props.intent === "primary"
+          ? "medium"
+          : "light";
+    const handleHapticPress = useHapticPress(
+      hapticStyle,
+      !props.disabled && !props.decorative && props.onClick !== undefined,
+    );
 
     return (
       <button
@@ -117,21 +126,13 @@ export const Button = memo(
             props.onClick();
           }
         }}
+        onPointerUp={handleHapticPress}
         onTouchStart={(e) => {
           const touch = e.touches[0];
           if (!touch) return;
           touchStartPos.current = { x: touch.clientX, y: touch.clientY };
           hasMoved.current = false;
           setIsPressed(true);
-          if (!props.disabled) {
-            const hapticStyle =
-              props.intent === "destructive"
-                ? "heavy"
-                : props.intent === "primary"
-                  ? "medium"
-                  : "light";
-            impact(hapticStyle);
-          }
         }}
         onTouchMove={(e) => {
           if (touchStartPos.current) {

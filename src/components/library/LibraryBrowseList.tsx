@@ -28,6 +28,7 @@ import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/wui/Button";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
+import { useHapticPress } from "@/hooks/useHapticPress";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { useInitialPageScrollOffset } from "@/lib/pageScrollContext";
 import { TagList } from "@/components/TagList";
@@ -103,6 +104,7 @@ function LibraryBrowseRow(props: {
 }) {
   const { t } = useTranslation();
   const resolveSystemName = useSystemNameResolver();
+  const handleHapticPress = useHapticPress("light", !props.interactionDisabled);
   const rowSystemId = entrySystemId(props.entry, props.systemId);
   const entry = props.entry;
   const isFolder = isPlainFolderEntry(entry);
@@ -140,6 +142,7 @@ function LibraryBrowseRow(props: {
       )}
       style={{ minHeight: `${props.minHeight}px` }}
       disabled={props.interactionDisabled}
+      onPointerUp={handleHapticPress}
       onClick={() => props.onSelect(entry)}
     >
       {isFolder ? (

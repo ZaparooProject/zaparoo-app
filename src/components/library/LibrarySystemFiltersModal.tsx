@@ -6,6 +6,7 @@ import type { SystemReleasePeriod, SystemSort } from "@/lib/systemFilters";
 import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
+import { useHapticPress } from "@/hooks/useHapticPress";
 
 const SORT_OPTIONS: Array<{ value: SystemSort; labelKey: string }> = [
   { value: "name-asc", labelKey: "library.sortNameAsc" },
@@ -42,6 +43,7 @@ export function LibrarySystemFiltersModal(props: {
   onApply: () => void;
 }) {
   const { t } = useTranslation();
+  const handleHapticPress = useHapticPress();
   const manufacturerId = useId();
   const releasePeriodId = useId();
   const hasDraftOptions =
@@ -100,6 +102,7 @@ export function LibrarySystemFiltersModal(props: {
                       "bg-white/10": selected,
                     },
                   )}
+                  onPointerUp={handleHapticPress}
                   onClick={() => props.onSortChange(option.value)}
                 >
                   <span>{t(option.labelKey)}</span>

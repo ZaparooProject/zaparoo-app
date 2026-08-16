@@ -76,6 +76,19 @@ describe("Library index route", () => {
     });
   });
 
+  it("should show row skeletons while systems load", () => {
+    vi.spyOn(CoreAPI, "systems").mockImplementation(
+      () => new Promise(() => undefined),
+    );
+
+    render(<Library />);
+
+    expect(
+      screen.getByRole("status", { name: "library.loadingSystems" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByTestId("library-system-skeleton")).toHaveLength(5);
+  });
+
   it("should list indexed systems alphabetically", async () => {
     vi.spyOn(CoreAPI, "systems").mockResolvedValue({
       systems: [

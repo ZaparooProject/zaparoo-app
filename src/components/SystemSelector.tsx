@@ -13,6 +13,7 @@ import {
 import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useSystemsWithDisplayNames } from "@/hooks/useSystemName";
+import { useHapticPress } from "@/hooks/useHapticPress";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { SystemFilterControls } from "@/components/SystemFilterControls";
@@ -54,6 +55,7 @@ export function SystemSelector({
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
   const slideModalScrollRef = useRef<HTMLDivElement>(null);
+  const handleHapticPress = useHapticPress();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -256,6 +258,7 @@ export function SystemSelector({
                           "bg-white/10": allOptionSelected,
                         },
                       )}
+                      onPointerUp={handleHapticPress}
                       onClick={() => handleSystemSelect("all")}
                       type="button"
                       role="radio"
@@ -300,6 +303,7 @@ export function SystemSelector({
                           "hover:bg-white/10 focus:bg-white/10",
                           { "bg-white/10": isSelected },
                         )}
+                        onPointerUp={handleHapticPress}
                         onClick={() => handleSystemSelect(system.id)}
                         type="button"
                         role={mode === "multi" ? "checkbox" : "radio"}

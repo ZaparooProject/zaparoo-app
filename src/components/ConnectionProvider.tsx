@@ -77,6 +77,7 @@ import {
   type DeviceRegistrySnapshot,
 } from "@/lib/devices/deviceRegistry";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
+import { parseDeviceEndpoint } from "@/lib/devices/endpoint";
 import { formatDurationDisplay, formatDurationAccessible } from "@/lib/utils";
 import {
   ConnectionContext,
@@ -336,10 +337,30 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
   useEffect(() => {
     if (!resolvedMdnsDevice || !activeRecordId) return;
+
+    const parsedConnection = parseDeviceEndpoint(connectionWsUrl);
+    const dialHost = parsedConnection.ok ? parsedConnection.endpoint.host : "";
+    const confirmedCurrentRoute = resolvedMdnsDevice.addresses.some(
+      (address) => address.toLowerCase() === dialHost,
+    );
+
     void deviceRegistry
       .noteResolvedAddresses(activeRecordId, resolvedMdnsDevice.addresses)
+      .then(() => {
+        // A persisted mDNS address can be correct while iOS still rejects the
+        // first socket attempt because local-network resolution has not been
+        // primed. When ZeroConf confirms that same route, the registry does not
+        // change, so explicitly retry now that the probe has completed.
+        if (
+          confirmedCurrentRoute &&
+          deviceRegistry.getSnapshot().activeRecordId === activeRecordId &&
+          connectionManager.getActiveConnection()?.state !== "connected"
+        ) {
+          connectionManager.immediateReconnectActive();
+        }
+      })
       .catch(ignoreReportedRegistryFailure);
-  }, [activeRecordId, resolvedMdnsDevice]);
+  }, [activeRecordId, connectionWsUrl, resolvedMdnsDevice]);
 
   // Browsing costs battery and multicast traffic, so it runs only until this
   // device's hostname has been resolved on a live connection.

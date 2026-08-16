@@ -2,6 +2,11 @@ import { render, screen, fireEvent } from "../../../../test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Card } from "../../../../components/wui/Card";
 
+const mockHapticPress = vi.fn();
+vi.mock("@/hooks/useHapticPress", () => ({
+  useHapticPress: () => mockHapticPress,
+}));
+
 describe("Card", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -21,6 +26,28 @@ describe("Card", () => {
     fireEvent.click(card);
 
     expect(mockOnClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("should provide haptic feedback for a touchscreen press", () => {
+    render(<Card onClick={() => {}}>Clickable content</Card>);
+
+    fireEvent.pointerUp(screen.getByRole("button"), {
+      pointerType: "touch",
+      isPrimary: true,
+    });
+
+    expect(mockHapticPress).toHaveBeenCalledTimes(1);
+  });
+
+  it("should provide haptic feedback when pressable inside a link", () => {
+    render(<Card pressable>Linked card</Card>);
+
+    fireEvent.pointerUp(screen.getByText("Linked card"), {
+      pointerType: "touch",
+      isPrimary: true,
+    });
+
+    expect(mockHapticPress).toHaveBeenCalledTimes(1);
   });
 
   it("should handle Enter key for keyboard navigation", () => {
@@ -65,5 +92,6 @@ describe("Card", () => {
     fireEvent.click(card);
 
     expect(mockOnClick).not.toHaveBeenCalled();
+    expect(mockHapticPress).not.toHaveBeenCalled();
   });
 });
