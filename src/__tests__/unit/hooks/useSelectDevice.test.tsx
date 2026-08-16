@@ -8,7 +8,7 @@
  * already on must not tear any of that down.
  */
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Preferences } from "@capacitor/preferences";
 import { QueryClient } from "@tanstack/react-query";
 import {
@@ -77,7 +77,6 @@ async function deviceScopedStateWasCleared(): Promise<boolean> {
   return (
     connectionState === ConnectionState.IDLE &&
     connectionError === "" &&
-    !CoreAPI.isConnected() &&
     queryClient.getQueryState(CACHED_QUERY_KEY)?.isInvalidated === true &&
     searchSystem.value === null &&
     searchTags.value === null
@@ -229,6 +228,55 @@ describe("useSelectDevice", () => {
       });
 
       expect(await deviceScopedStateWasCleared()).toBe(true);
+    });
+
+    it("should keep the replacement transport attached while the registry persists", async () => {
+      await seedActiveDevice({ address: "192.168.1.10" });
+
+      let resolvePersistence = () => {};
+      const persistence = new Promise<void>((resolve) => {
+        resolvePersistence = resolve;
+      });
+      const persistSpy = vi
+        .spyOn(Preferences, "set")
+        .mockImplementationOnce(() => persistence);
+      const { result } = renderSelectDevice();
+
+      let selection: Promise<void> | undefined;
+      try {
+        act(() => {
+          selection = result.current.selectScanDevice({
+            discoveryId: "living-room._zaparoo._tcp.",
+            hostname: "living-room.local",
+            addresses: ["10.0.0.5"],
+            port: 7497,
+          });
+        });
+
+        await waitFor(() => {
+          expect(deviceRegistry.activeEndpoint()?.address).toBe(
+            "living-room.local",
+          );
+        });
+
+        // The registry publishes before Preferences confirms persistence, so
+        // ConnectionProvider can install the new transport while selection is
+        // still awaiting the write.
+        CoreAPI.setWsInstance({
+          isConnected: true,
+          send: () => {},
+        } as unknown as Parameters<typeof CoreAPI.setWsInstance>[0]);
+
+        await act(async () => {
+          resolvePersistence();
+          await selection;
+        });
+
+        expect(CoreAPI.isConnected()).toBe(true);
+      } finally {
+        resolvePersistence();
+        persistSpy.mockRestore();
+      }
     });
 
     it("should keep device state when the scan re-announces the active device", async () => {
