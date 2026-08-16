@@ -341,7 +341,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     const parsedConnection = parseDeviceEndpoint(connectionWsUrl);
     const dialHost = parsedConnection.ok ? parsedConnection.endpoint.host : "";
     const confirmedCurrentRoute = resolvedMdnsDevice.addresses.some(
-      (address) => address.toLowerCase() === dialHost,
+      (address) => {
+        const parsedAddress = parseDeviceEndpoint(address);
+        return parsedAddress.ok && parsedAddress.endpoint.host === dialHost;
+      },
     );
 
     void deviceRegistry

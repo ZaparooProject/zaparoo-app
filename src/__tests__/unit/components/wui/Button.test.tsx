@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, act } from "../../../../test-utils";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Button } from "@/components/wui/Button";
 
@@ -114,38 +115,42 @@ describe("Button", () => {
   });
 
   describe("haptic feedback", () => {
-    it("should trigger light haptic feedback when a default press completes", () => {
+    it("should trigger light haptic feedback when a default press completes", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Button label="Test button" onClick={() => {}} />);
 
       const button = screen.getByRole("button");
-      fireEvent.pointerUp(button, { pointerType: "touch", isPrimary: true });
+      await user.pointer({ keys: "[TouchA]", target: button });
 
       expect(mockImpact).toHaveBeenCalledWith("light");
     });
 
-    it("should trigger medium haptic feedback when a primary press completes", () => {
+    it("should trigger medium haptic feedback when a primary press completes", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(
         <Button label="Test button" intent="primary" onClick={() => {}} />,
       );
 
       const button = screen.getByRole("button", { name: "Test button" });
-      fireEvent.pointerUp(button, { pointerType: "touch", isPrimary: true });
+      await user.pointer({ keys: "[TouchA]", target: button });
 
       expect(mockImpact).toHaveBeenCalledWith("medium");
     });
 
-    it("should trigger heavy haptic feedback when a destructive press completes", () => {
+    it("should trigger heavy haptic feedback when a destructive press completes", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(
         <Button label="Test button" intent="destructive" onClick={() => {}} />,
       );
 
       const button = screen.getByRole("button");
-      fireEvent.pointerUp(button, { pointerType: "touch", isPrimary: true });
+      await user.pointer({ keys: "[TouchA]", target: button });
 
       expect(mockImpact).toHaveBeenCalledWith("heavy");
     });
 
-    it("should not trigger haptic feedback when disabled", () => {
+    it("should not trigger haptic feedback when disabled", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(
         <Button
           label="Test button"
@@ -156,17 +161,18 @@ describe("Button", () => {
       );
 
       const button = screen.getByRole("button", { name: "Test button" });
-      fireEvent.pointerUp(button, { pointerType: "touch", isPrimary: true });
+      await user.pointer({ keys: "[TouchA]", target: button });
 
       expect(mockImpact).not.toHaveBeenCalled();
     });
 
-    it("should not trigger haptic feedback for decorative buttons", () => {
+    it("should not trigger haptic feedback for decorative buttons", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Button icon={<span>Icon</span>} decorative />);
 
       const button = screen.getByText("Icon").closest("button");
       if (!button) throw new Error("Expected decorative button");
-      fireEvent.pointerUp(button, { pointerType: "touch", isPrimary: true });
+      await user.pointer({ keys: "[TouchA]", target: button });
 
       expect(mockImpact).not.toHaveBeenCalled();
     });

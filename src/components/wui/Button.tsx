@@ -126,7 +126,11 @@ export const Button = memo(
             props.onClick();
           }
         }}
-        onPointerUp={handleHapticPress}
+        onPointerUp={(event) => {
+          if (!hasMoved.current) {
+            handleHapticPress(event);
+          }
+        }}
         onTouchStart={(e) => {
           const touch = e.touches[0];
           if (!touch) return;

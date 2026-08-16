@@ -76,7 +76,7 @@ describe("Library index route", () => {
     });
   });
 
-  it("should show row skeletons while systems load", () => {
+  it("should show row skeletons while systems load", async () => {
     vi.spyOn(CoreAPI, "systems").mockImplementation(
       () => new Promise(() => undefined),
     );
@@ -84,9 +84,11 @@ describe("Library index route", () => {
     render(<Library />);
 
     expect(
-      screen.getByRole("status", { name: "library.loadingSystems" }),
+      await screen.findByRole("status", { name: "library.loadingSystems" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByTestId("library-system-skeleton")).toHaveLength(5);
+    expect(
+      await screen.findAllByTestId("library-system-skeleton"),
+    ).toHaveLength(5);
   });
 
   it("should list indexed systems alphabetically", async () => {
