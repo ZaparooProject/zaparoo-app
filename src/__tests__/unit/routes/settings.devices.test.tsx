@@ -320,6 +320,45 @@ describe("Settings Devices Route", () => {
     ).toBeUndefined();
   });
 
+  it("should keep the paired indicator after moving source credentials", async () => {
+    const user = userEvent.setup();
+    const [activeTarget, pairedSource] = await seedRecords(
+      [
+        { address: "steamdeck.local", name: "Steamdeck" },
+        { address: "10.0.0.206", name: "Steamdeck alias" },
+      ],
+      0,
+    );
+    await credentialStore.set(
+      credentialKeyForRecord(pairedSource!.recordId),
+      credentials,
+    );
+    renderRoute();
+    expect(
+      await screen.findByLabelText("connection.encrypted"),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "settings.deviceCombine.edit" }),
+    );
+    for (const checkbox of screen.getAllByRole("checkbox")) {
+      await user.click(checkbox);
+    }
+    await user.click(
+      screen.getByRole("button", { name: "settings.deviceCombine.action" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "settings.deviceCombine.confirm" }),
+    );
+
+    await waitFor(() => {
+      expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual([
+        activeTarget!.recordId,
+      ]);
+    });
+    expect(screen.getByLabelText("connection.encrypted")).toBeInTheDocument();
+  });
+
   it("should retain both selected records when combining fails", async () => {
     const user = userEvent.setup();
     const records = await seedRecords([

@@ -1609,13 +1609,16 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     ],
   );
 
+  const pairingAddress =
+    connectionManager.getActiveConnection()?.address ?? connectionAddress;
+
   return (
     <ConnectionContext.Provider value={contextValue}>
       {children}
       <PairingModal
         isOpen={pairingOpen}
         close={() => setPairingOpen(false)}
-        address={connectionAddress}
+        address={pairingAddress}
         recordId={activeRecordId ?? ""}
         onSuccess={() => connectionManager.restartActiveConnection()}
       />

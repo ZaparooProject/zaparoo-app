@@ -186,6 +186,8 @@ export function Devices() {
     if (!combineTarget || !combineSource || isCombining) return;
     setIsCombining(true);
     setCombineFailed(false);
+    const mergedPairing =
+      hasCredentials(combineTarget) || hasCredentials(combineSource);
     try {
       await deviceRegistry.mergeRecords(
         combineTarget.recordId,
@@ -197,6 +199,21 @@ export function Devices() {
           predicate: (query) => query.queryKey.includes(recordId),
         });
       }
+      setPairedKeys((current) => {
+        const next = new Set(current);
+        next.delete(credentialKeyForRecord(combineTarget.recordId));
+        next.delete(credentialKeyForRecord(combineSource.recordId));
+        if (combineTarget.legacyCredentialKey) {
+          next.delete(combineTarget.legacyCredentialKey);
+        }
+        if (combineSource.legacyCredentialKey) {
+          next.delete(combineSource.legacyCredentialKey);
+        }
+        if (mergedPairing) {
+          next.add(credentialKeyForRecord(combineTarget.recordId));
+        }
+        return next;
+      });
       setIsEditing(false);
       setSelectedRecordIds(new Set());
       setCombineOpen(false);

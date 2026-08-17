@@ -47,8 +47,8 @@ export interface TransportConfig {
  * Event handlers for transport events.
  */
 export interface TransportEventHandlers {
-  /** Called when the transport opens successfully */
-  onOpen?: () => void;
+  /** Called when the transport opens successfully at the selected address. */
+  onOpen?: (address: string) => void;
   /** Called when the transport closes */
   onClose?: () => void;
   /** Called when an error occurs */

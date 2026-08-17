@@ -47,6 +47,7 @@ let capturedEventHandlers: {
 } = {};
 
 const pairingModalCapture = vi.hoisted(() => ({
+  address: "",
   onSuccess: undefined as (() => void) | undefined,
 }));
 
@@ -95,7 +96,14 @@ vi.mock("../../../lib/transport", () => {
 });
 
 vi.mock("../../../components/PairingModal", () => ({
-  PairingModal: ({ onSuccess }: { onSuccess?: () => void }) => {
+  PairingModal: ({
+    address,
+    onSuccess,
+  }: {
+    address: string;
+    onSuccess?: () => void;
+  }) => {
+    pairingModalCapture.address = address;
     pairingModalCapture.onSuccess = onSuccess;
     return null;
   },
@@ -398,6 +406,20 @@ describe("ConnectionProvider", () => {
       );
 
       expect(connectionManager.setActiveDevice).toHaveBeenCalledWith(RECORD_ID);
+    });
+
+    it("should pair through the candidate that actually connected", () => {
+      vi.mocked(connectionManager.getActiveConnection).mockReturnValueOnce({
+        address: "ws://10.0.0.206:7497/api/v0.1",
+      } as never);
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(pairingModalCapture.address).toBe("ws://10.0.0.206:7497/api/v0.1");
     });
 
     it("should restart the active connection after pairing succeeds", () => {

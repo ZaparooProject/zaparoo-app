@@ -463,7 +463,7 @@ export class WebSocketTransport implements Transport {
     if (!enc) {
       this.setState("connected");
       this.startHeartbeat();
-      this.handlers.onOpen?.();
+      this.handlers.onOpen?.(this.candidateUrls[this.candidateIndex]!);
       // onPlaintextMode deferred — fires from handlePlaintextMessage after the
       // first non-error reply confirms the server speaks plaintext.
       return;
@@ -494,7 +494,7 @@ export class WebSocketTransport implements Transport {
         // encMode already "plaintext" from above.
         this.setState("connected");
         this.startHeartbeat();
-        this.handlers.onOpen?.();
+        this.handlers.onOpen?.(this.candidateUrls[this.candidateIndex]!);
         // onPlaintextMode deferred — fires from handlePlaintextMessage after
         // the first non-error reply confirms plaintext is accepted.
         return;
@@ -561,7 +561,7 @@ export class WebSocketTransport implements Transport {
 
     this.setState("connected");
     this.startHeartbeat();
-    this.handlers.onOpen?.();
+    this.handlers.onOpen?.(this.candidateUrls[this.candidateIndex]!);
   }
 
   private enqueueEncryptedMessage(event: MessageEvent): void {

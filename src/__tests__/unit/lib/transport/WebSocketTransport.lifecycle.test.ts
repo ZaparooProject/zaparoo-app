@@ -134,7 +134,7 @@ describe("WebSocketTransport lifecycle", () => {
       transport.connect();
       MockWebSocket.getLatest()!.simulateOpen();
 
-      expect(onOpen).toHaveBeenCalledTimes(1);
+      expect(onOpen).toHaveBeenCalledWith("ws://localhost:7497");
 
       transport.destroy();
     });
@@ -520,6 +520,27 @@ describe("WebSocketTransport lifecycle", () => {
       MockWebSocket.getLatest()!.simulateClose();
       vi.advanceTimersByTime(100);
       expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.218:7497");
+
+      transport.destroy();
+    });
+
+    it("should report the fallback address that opens", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://10.0.0.218:7497",
+        fallbackUrls: ["ws://10.0.0.107:7497"],
+        reconnectInterval: 100,
+      });
+      const onOpen = vi.fn();
+      transport.setEventHandlers({ onOpen });
+
+      transport.connect();
+      MockWebSocket.getLatest()!.simulateError();
+      MockWebSocket.getLatest()!.simulateClose();
+      vi.advanceTimersByTime(100);
+      MockWebSocket.getLatest()!.simulateOpen();
+
+      expect(onOpen).toHaveBeenCalledWith("ws://10.0.0.107:7497");
 
       transport.destroy();
     });
