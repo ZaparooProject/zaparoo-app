@@ -134,7 +134,7 @@ describe("WebSocketTransport lifecycle", () => {
       transport.connect();
       MockWebSocket.getLatest()!.simulateOpen();
 
-      expect(onOpen).toHaveBeenCalledTimes(1);
+      expect(onOpen).toHaveBeenCalledWith("ws://localhost:7497");
 
       transport.destroy();
     });
@@ -339,6 +339,26 @@ describe("WebSocketTransport lifecycle", () => {
       transport.destroy();
     });
 
+    it("should retry the proven URL after a pong timeout", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://10.0.0.218:7497",
+        fallbackUrls: ["ws://10.0.0.107:7497"],
+        pingInterval: 1000,
+        pongTimeout: 500,
+        reconnectInterval: 100,
+      });
+
+      transport.connect();
+      MockWebSocket.getLatest()!.simulateOpen();
+      vi.advanceTimersByTime(1500);
+      vi.advanceTimersByTime(100);
+
+      expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.218:7497");
+
+      transport.destroy();
+    });
+
     it("should clear pong timeout when pong received", () => {
       const transport = new WebSocketTransport({
         deviceId: "test-device",
@@ -480,6 +500,74 @@ describe("WebSocketTransport lifecycle", () => {
   });
 
   describe("reconnection", () => {
+    it("should try each candidate without skipping after error and close", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://10.0.0.218:7497",
+        fallbackUrls: ["ws://10.0.0.107:7497"],
+        reconnectInterval: 100,
+      });
+
+      transport.connect();
+      expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.218:7497");
+
+      MockWebSocket.getLatest()!.simulateError();
+      MockWebSocket.getLatest()!.simulateClose();
+      vi.advanceTimersByTime(100);
+      expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.107:7497");
+
+      MockWebSocket.getLatest()!.simulateError();
+      MockWebSocket.getLatest()!.simulateClose();
+      vi.advanceTimersByTime(100);
+      expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.218:7497");
+
+      transport.destroy();
+    });
+
+    it("should report the fallback address that opens", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://10.0.0.218:7497",
+        fallbackUrls: ["ws://10.0.0.107:7497"],
+        reconnectInterval: 100,
+      });
+      const onOpen = vi.fn();
+      transport.setEventHandlers({ onOpen });
+
+      transport.connect();
+      MockWebSocket.getLatest()!.simulateError();
+      MockWebSocket.getLatest()!.simulateClose();
+      vi.advanceTimersByTime(100);
+      MockWebSocket.getLatest()!.simulateOpen();
+
+      expect(onOpen).toHaveBeenCalledWith("ws://10.0.0.107:7497");
+
+      transport.destroy();
+    });
+
+    it("should retry a proven route before advancing to its fallback", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://10.0.0.218:7497",
+        fallbackUrls: ["ws://10.0.0.107:7497"],
+        reconnectInterval: 100,
+      });
+
+      transport.connect();
+      const established = MockWebSocket.getLatest()!;
+      established.simulateOpen();
+      established.simulateClose();
+      vi.advanceTimersByTime(100);
+      expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.218:7497");
+
+      MockWebSocket.getLatest()!.simulateError();
+      MockWebSocket.getLatest()!.simulateClose();
+      vi.advanceTimersByTime(100);
+      expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.107:7497");
+
+      transport.destroy();
+    });
+
     it("should schedule reconnect with correct delay after disconnect", () => {
       const transport = new WebSocketTransport({
         deviceId: "test-device",

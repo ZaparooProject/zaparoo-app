@@ -25,6 +25,7 @@ import { useVirtualInfiniteSearch } from "@/hooks/useVirtualInfiniteSearch";
 import { TagList } from "@/components/TagList.tsx";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { useAccessibleLists } from "@/hooks/useAccessibleLists";
+import { useHapticPress } from "@/hooks/useHapticPress";
 
 export interface VirtualSearchResultsProps {
   query: string;
@@ -436,6 +437,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
 }: SearchResultItemProps) {
   const { t } = useTranslation();
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
+  const handleHapticPress = useHapticPress();
 
   // Primary display: filename if global pref enabled, otherwise clean name
   const displayName = showFilenames
@@ -465,6 +467,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
         borderBottom: isLast ? "" : "1px solid rgba(255,255,255,0.6)",
       }}
       data-testid={`result-${index}`}
+      onPointerUp={handleHapticPress}
       onClick={(e) => {
         e.preventDefault();
         handleGameSelect();

@@ -35,6 +35,12 @@ export interface CredentialStore {
     recordId: string,
     legacyKey: string,
   ): Promise<boolean>;
+  prepareRecordMerge(
+    targetRecordId: string,
+    sourceRecordId: string,
+    legacyKeys?: readonly string[],
+    provenCredentials?: StoredCredentials,
+  ): Promise<string[]>;
 }
 
 /**
@@ -68,6 +74,17 @@ export function credentialKeyForRecord(recordId: string): string {
  * with undefined fields, failing as an opaque protocol error rather than as a
  * missing pairing.
  */
+function sameCredentialIdentity(
+  left: StoredCredentials,
+  right: StoredCredentials,
+): boolean {
+  return (
+    left.authToken === right.authToken &&
+    left.pairingKey === right.pairingKey &&
+    left.clientId === right.clientId
+  );
+}
+
 function isStoredCredentials(value: unknown): value is StoredCredentials {
   if (typeof value !== "object" || value === null) return false;
   const credentials = value as Partial<StoredCredentials>;
@@ -110,21 +127,27 @@ export class SecureCredentialStore implements CredentialStore {
     return next;
   }
 
-  async get(deviceKey: string): Promise<StoredCredentials | null> {
+  private async getStrict(
+    deviceKey: string,
+  ): Promise<StoredCredentials | null> {
     await this.initPromise;
     return this.enqueue(deviceKey, async () => {
-      try {
-        const value = await SecureStorage.get(deviceKey, false);
-        return isStoredCredentials(value) ? value : null;
-      } catch (err) {
-        logger.error("SecureStorage.get failed", err, {
-          category: "storage",
-          action: "getCredentials",
-          severity: "error",
-        });
-        return null;
-      }
+      const value = await SecureStorage.get(deviceKey, false);
+      return isStoredCredentials(value) ? value : null;
     });
+  }
+
+  async get(deviceKey: string): Promise<StoredCredentials | null> {
+    try {
+      return await this.getStrict(deviceKey);
+    } catch (err) {
+      logger.error("SecureStorage.get failed", err, {
+        category: "storage",
+        action: "getCredentials",
+        severity: "error",
+      });
+      return null;
+    }
   }
 
   async set(deviceKey: string, creds: StoredCredentials): Promise<void> {
@@ -204,6 +227,64 @@ export class SecureCredentialStore implements CredentialStore {
       });
       return false;
     }
+  }
+
+  /**
+   * Ensure the surviving record owns a verified credential copy before its
+   * source record is removed. Distinct pairings are ambiguous unless the caller
+   * supplies credentials just proven by an encrypted connection. Cleanup is
+   * returned so keys are deleted only after the registry write succeeds.
+   */
+  async prepareRecordMerge(
+    targetRecordId: string,
+    sourceRecordId: string,
+    legacyKeys: readonly string[] = [],
+    provenCredentials?: StoredCredentials,
+  ): Promise<string[]> {
+    const targetKey = credentialKeyForRecord(targetRecordId);
+    const sourceKey = credentialKeyForRecord(sourceRecordId);
+    const candidates = [...new Set([targetKey, sourceKey, ...legacyKeys])];
+    const available: Array<{
+      key: string;
+      credentials: StoredCredentials;
+    }> = [];
+
+    for (const key of candidates) {
+      const credentials = await this.getStrict(key);
+      if (credentials) available.push({ key, credentials });
+    }
+
+    let winner = available[0];
+    if (provenCredentials) {
+      winner = available.find(({ credentials }) =>
+        sameCredentialIdentity(credentials, provenCredentials),
+      );
+      if (!winner) {
+        throw new Error("Proven credentials are unavailable for merge");
+      }
+    } else if (winner) {
+      const baseline = winner.credentials;
+      if (
+        available.some(
+          ({ credentials }) => !sameCredentialIdentity(credentials, baseline),
+        )
+      ) {
+        throw new Error("Device records have conflicting credentials");
+      }
+    }
+
+    if (winner && winner.key !== targetKey) {
+      await this.set(targetKey, winner.credentials);
+      const persisted = await this.getStrict(targetKey);
+      if (
+        !persisted ||
+        !sameCredentialIdentity(persisted, winner.credentials)
+      ) {
+        throw new Error("Merged credentials did not persist");
+      }
+    }
+
+    return candidates.filter((key) => key !== targetKey);
   }
 
   async list(): Promise<

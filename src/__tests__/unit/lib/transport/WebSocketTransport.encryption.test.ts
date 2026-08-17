@@ -113,6 +113,18 @@ function makeTransport(hasCreds = true) {
   });
 }
 
+function makeTransportWithFallback(hasCreds = true) {
+  return new WebSocketTransport({
+    deviceId: "test-device",
+    url: "ws://10.0.0.218:7497",
+    fallbackUrls: ["ws://10.0.0.107:7497"],
+    reconnectInterval: 1,
+    encryption: {
+      getCredentials: () => Promise.resolve(hasCreds ? mockCreds : null),
+    },
+  });
+}
+
 function makeTransportWithCreds(creds: typeof mockCreds) {
   return new WebSocketTransport({
     deviceId: "test-device",
@@ -428,6 +440,69 @@ describe("WebSocketTransport encryption", () => {
       expect(transport.state).toBe("disconnected");
       // Auto-reconnect must not loop on encryption-blocked failures.
       expect(MockWebSocket.instances).toHaveLength(1);
+
+      transport.destroy();
+    });
+
+    it("should try a fallback before reporting credentials revoked", async () => {
+      const onCredentialsRevoked = vi.fn();
+      const transport = makeTransportWithFallback();
+      transport.setEventHandlers({ onCredentialsRevoked });
+      transport.connect();
+
+      const staleRoute = MockWebSocket.getLatest()!;
+      staleRoute.simulateOpen();
+      await flushPromises();
+      staleRoute.simulateMessage(
+        JSON.stringify({ jsonrpc: "2.0", error: { code: -32002 } }),
+      );
+      await vi.waitFor(() => {
+        expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.107:7497");
+      });
+
+      expect(onCredentialsRevoked).not.toHaveBeenCalled();
+      expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.107:7497");
+
+      const fallbackRoute = MockWebSocket.getLatest()!;
+      fallbackRoute.simulateOpen();
+      await flushPromises();
+      fallbackRoute.simulateMessage(
+        JSON.stringify({ e: btoa('{"jsonrpc":"2.0","id":1,"result":{}}') }),
+      );
+      await flushPromises();
+
+      expect(onCredentialsRevoked).not.toHaveBeenCalled();
+      expect(transport.state).toBe("connected");
+
+      transport.destroy();
+    });
+
+    it("should report credentials revoked after every fallback rejects them", async () => {
+      const onCredentialsRevoked = vi.fn();
+      const transport = makeTransportWithFallback();
+      transport.setEventHandlers({ onCredentialsRevoked });
+      transport.connect();
+
+      const primary = MockWebSocket.getLatest()!;
+      primary.simulateOpen();
+      await flushPromises();
+      primary.simulateMessage(
+        JSON.stringify({ jsonrpc: "2.0", error: { code: -32002 } }),
+      );
+      await vi.waitFor(() => {
+        expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.107:7497");
+      });
+
+      const fallback = MockWebSocket.getLatest()!;
+      fallback.simulateOpen();
+      await flushPromises();
+      fallback.simulateMessage(
+        JSON.stringify({ jsonrpc: "2.0", error: { code: -32002 } }),
+      );
+      await flushPromises();
+
+      expect(onCredentialsRevoked).toHaveBeenCalledTimes(1);
+      expect(transport.state).toBe("disconnected");
 
       transport.destroy();
     });

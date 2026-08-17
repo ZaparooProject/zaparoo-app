@@ -77,9 +77,14 @@ export class ConnectionManager {
 
     // Setup event handlers
     const transportHandlers: TransportEventHandlers = {
-      onOpen: () => {
-        // State change is handled by onStateChange callback
-        logger.debug(`[ConnectionManager] Transport ${config.deviceId} opened`);
+      onOpen: (address) => {
+        // Keep the route that actually opened so pairing and diagnostics do not
+        // fall back to a stale primary candidate.
+        connection.address = address;
+        this.connections.set(config.deviceId, { ...connection });
+        logger.debug(
+          `[ConnectionManager] Transport ${config.deviceId} opened at ${address}`,
+        );
       },
       onClose: () => {
         // State will be updated by onStateChange
@@ -362,6 +367,7 @@ export class ConnectionManager {
         return new WebSocketTransport({
           deviceId: config.deviceId,
           url: config.address,
+          fallbackUrls: config.fallbackAddresses,
           pingInterval: 15000,
           pongTimeout: 10000,
           reconnectInterval: 2000,

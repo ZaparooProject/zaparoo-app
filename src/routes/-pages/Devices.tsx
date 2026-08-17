@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { Pencil } from "lucide-react";
+import { ListChecks, Pencil, X } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -11,16 +12,21 @@ import {
   credentialStore,
 } from "@/lib/crypto/credentials";
 import {
+  deviceRegistry,
   parsedEndpointForRecord,
   useDeviceRegistry,
   type DeviceRecord,
 } from "@/lib/devices/deviceRegistry";
 import type { ParsedDeviceEndpoint } from "@/lib/devices/endpoint";
+import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
 import { logger } from "@/lib/logger";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
+import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { SlideModal } from "@/components/SlideModal";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { BackIcon } from "@/lib/images";
@@ -53,6 +59,7 @@ export function Devices() {
     t("settings.deviceHistory"),
   );
   const router = useRouter();
+  const queryClient = useQueryClient();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
   const swipeHandlers = useSmartSwipe({
@@ -74,6 +81,13 @@ export function Devices() {
 
   const { selectRecord } = useSelectDevice();
   const [pairedKeys, setPairedKeys] = useState<Set<string>>(new Set());
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [combineOpen, setCombineOpen] = useState(false);
+  const [combineFailed, setCombineFailed] = useState(false);
+  const [isCombining, setIsCombining] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,9 +137,99 @@ export function Devices() {
       );
   }, [records]);
 
+  const hasCredentials = (record: DeviceRecord) =>
+    pairedKeys.has(credentialKeyForRecord(record.recordId)) ||
+    (record.legacyCredentialKey !== undefined &&
+      pairedKeys.has(record.legacyCredentialKey));
+
+  const toggleSelected = (recordId: string) => {
+    setSelectedRecordIds((current) => {
+      const next = new Set(current);
+      if (next.has(recordId)) {
+        next.delete(recordId);
+      } else if (next.size < 2) {
+        next.add(recordId);
+      }
+      return next;
+    });
+  };
+
   const handleSelect = (recordId: string) => {
+    if (isEditing) {
+      toggleSelected(recordId);
+      return;
+    }
     void selectRecord(recordId);
     router.navigate({ to: "/settings" });
+  };
+
+  const closeEditMode = () => {
+    if (isCombining) return;
+    setIsEditing(false);
+    setSelectedRecordIds(new Set());
+    setCombineOpen(false);
+    setCombineFailed(false);
+  };
+
+  const selectedRecords = [...selectedRecordIds]
+    .map((recordId) => records[recordId])
+    .filter((record): record is DeviceRecord => record !== undefined);
+  const combineTarget =
+    selectedRecords.find((record) => record.recordId === activeRecordId) ??
+    selectedRecords.find(hasCredentials) ??
+    selectedRecords[0];
+  const combineSource = selectedRecords.find(
+    (record) => record.recordId !== combineTarget?.recordId,
+  );
+
+  const handleConfirmCombine = async () => {
+    if (!combineTarget || !combineSource || isCombining) return;
+    setIsCombining(true);
+    setCombineFailed(false);
+    const mergedPairing =
+      hasCredentials(combineTarget) || hasCredentials(combineSource);
+    try {
+      await deviceRegistry.mergeRecords(
+        combineTarget.recordId,
+        combineSource.recordId,
+      );
+      for (const recordId of [combineTarget.recordId, combineSource.recordId]) {
+        invalidateLibraryImageCache(recordId);
+        queryClient.removeQueries({
+          predicate: (query) => query.queryKey.includes(recordId),
+        });
+      }
+      setPairedKeys((current) => {
+        const next = new Set(current);
+        next.delete(credentialKeyForRecord(combineTarget.recordId));
+        next.delete(credentialKeyForRecord(combineSource.recordId));
+        if (combineTarget.legacyCredentialKey) {
+          next.delete(combineTarget.legacyCredentialKey);
+        }
+        if (combineSource.legacyCredentialKey) {
+          next.delete(combineSource.legacyCredentialKey);
+        }
+        if (mergedPairing) {
+          next.add(credentialKeyForRecord(combineTarget.recordId));
+        }
+        return next;
+      });
+      setIsEditing(false);
+      setSelectedRecordIds(new Set());
+      setCombineOpen(false);
+      setCombineFailed(false);
+    } catch (error) {
+      logger.error("Failed to combine device records", error, {
+        category: "storage",
+        action: "combineDeviceRecords",
+        severity: "error",
+        targetRecordId: combineTarget.recordId,
+        sourceRecordId: combineSource.recordId,
+      });
+      setCombineFailed(true);
+    } finally {
+      setIsCombining(false);
+    }
   };
 
   return (
@@ -142,6 +246,27 @@ export function Devices() {
         <h1 ref={headingRef} className="text-foreground text-xl">
           {t("settings.deviceHistory")}
         </h1>
+      }
+      headerRight={
+        sortedRecords.length >= 2 ? (
+          <HeaderButton
+            onClick={() => {
+              if (isEditing) {
+                closeEditMode();
+              } else {
+                setIsEditing(true);
+              }
+            }}
+            icon={isEditing ? <X size={20} /> : <ListChecks size={20} />}
+            aria-label={t(
+              isEditing
+                ? "settings.deviceCombine.cancelEdit"
+                : "settings.deviceCombine.edit",
+            )}
+            active={isEditing}
+            disabled={isCombining}
+          />
+        ) : undefined
       }
     >
       <div className="flex flex-col gap-3 pt-2">
@@ -175,26 +300,92 @@ export function Devices() {
               // A record migrated from an older build still holds its pairing
               // under the pre-V2 address key until its first encrypted connect,
               // so the lock icon has to accept either key.
-              isPaired={
-                pairedKeys.has(credentialKeyForRecord(record.recordId)) ||
-                (record.legacyCredentialKey !== undefined &&
-                  pairedKeys.has(record.legacyCredentialKey))
-              }
+              isPaired={hasCredentials(record)}
               onSelect={() => handleSelect(record.recordId)}
               rightSlot={
-                <Link
-                  to="/settings/devices/$recordId"
-                  params={{ recordId: record.recordId }}
-                  aria-label={t("settings.deviceDetails")}
-                  className="bg-background border-bd-outline focus-visible:ring-offset-background flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-solid px-1.5 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
-                >
-                  <Pencil size={18} />
-                </Link>
+                isEditing ? (
+                  <Checkbox
+                    checked={selectedRecordIds.has(record.recordId)}
+                    onCheckedChange={() => toggleSelected(record.recordId)}
+                    aria-label={t("settings.deviceCombine.select", {
+                      device: record.name || endpoint.address,
+                    })}
+                    disabled={
+                      selectedRecordIds.size >= 2 &&
+                      !selectedRecordIds.has(record.recordId)
+                    }
+                  />
+                ) : (
+                  <Link
+                    to="/settings/devices/$recordId"
+                    params={{ recordId: record.recordId }}
+                    aria-label={t("settings.deviceDetails")}
+                    className="bg-background border-bd-outline focus-visible:ring-offset-background flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-solid px-1.5 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
+                  >
+                    <Pencil size={18} />
+                  </Link>
+                )
               }
             />
           ))
         )}
+        {isEditing && sortedRecords.length > 0 && (
+          <Button
+            label={t("settings.deviceCombine.action")}
+            intent="primary"
+            onClick={() => {
+              setCombineFailed(false);
+              setCombineOpen(true);
+            }}
+            disabled={selectedRecordIds.size !== 2}
+            className="mt-3 w-full"
+          />
+        )}
       </div>
+
+      <SlideModal
+        isOpen={combineOpen}
+        close={() => {
+          if (!isCombining) setCombineOpen(false);
+        }}
+        title={t("settings.deviceCombine.title")}
+      >
+        <div className="flex flex-col gap-4 py-4">
+          <p className="text-center">
+            {t("settings.deviceCombine.body", {
+              first:
+                combineTarget?.name ??
+                parsedEndpointForRecord(combineTarget)?.address ??
+                "",
+              second:
+                combineSource?.name ??
+                parsedEndpointForRecord(combineSource)?.address ??
+                "",
+            })}
+          </p>
+          {combineFailed && (
+            <p className="text-error text-center text-sm" role="alert">
+              {t("settings.deviceCombine.failed")}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              label={t("settings.deviceCombine.cancel")}
+              onClick={() => setCombineOpen(false)}
+              disabled={isCombining}
+              className="flex-1"
+            />
+            <Button
+              intent="primary"
+              label={t("settings.deviceCombine.confirm")}
+              onClick={() => void handleConfirmCombine()}
+              disabled={isCombining}
+              className="flex-1"
+            />
+          </div>
+        </div>
+      </SlideModal>
     </PageFrame>
   );
 }

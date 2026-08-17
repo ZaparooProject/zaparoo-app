@@ -68,15 +68,19 @@ import {
 import {
   credentialKeyForRecord,
   credentialStore,
+  type StoredCredentials,
 } from "@/lib/crypto/credentials";
+import { reconcileCredentialProvenAliases } from "@/lib/devices/credentialProof";
 import {
   deviceRegistry,
   parsedEndpointForRecord,
   resolvedEndpointForRecord,
+  resolvedEndpointsForRecord,
   useDeviceRegistry,
   type DeviceRegistrySnapshot,
 } from "@/lib/devices/deviceRegistry";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
+import { parseDeviceEndpoint } from "@/lib/devices/endpoint";
 import { formatDurationDisplay, formatDurationAccessible } from "@/lib/utils";
 import {
   ConnectionContext,
@@ -97,16 +101,17 @@ const activeRecordOf = (state: DeviceRegistrySnapshot) =>
   state.activeRecordId ? (state.records[state.activeRecordId] ?? null) : null;
 
 /**
- * The WebSocket URL the active record connects through, or `""` when there is
- * no usable device. Selected as a primitive so a metadata-only registry write
- * cannot tear the socket down and rebuild it.
+ * WebSocket candidates for the active record, serialized as a primitive so a
+ * metadata-only registry write cannot tear the socket down and rebuild it.
  *
  * Resolved rather than canonical: on iOS a WebSocket to a `.local` name does
- * not reliably bootstrap multicast resolution, so the socket dials the address
- * mDNS resolved while the record keeps the hostname.
+ * not reliably bootstrap multicast resolution, so the socket dials every
+ * address mDNS resolved while the record keeps the hostname.
  */
-const selectConnectionWsUrl = (state: DeviceRegistrySnapshot) =>
-  resolvedEndpointForRecord(activeRecordOf(state))?.wsUrl ?? "";
+const selectConnectionWsUrlsKey = (state: DeviceRegistrySnapshot) =>
+  resolvedEndpointsForRecord(activeRecordOf(state))
+    .map((endpoint) => endpoint.wsUrl)
+    .join("\n");
 
 /** The address pairing runs against — resolved, for the same reason. */
 const selectConnectionAddress = (state: DeviceRegistrySnapshot) =>
@@ -193,6 +198,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const isInitialized = useRef(false);
   // Track current connection to prevent stale events from old connections
   const currentConnectionId = useRef<string | null>(null);
+  const mdnsRetryPendingForRecord = useRef<string | null>(null);
   // Monotonically identifies the latest current-client capability request.
   // Connection transitions invalidate older callbacks before they can write.
   const currentClientRequestToken = useRef(0);
@@ -275,7 +281,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   );
 
   const activeRecordId = useDeviceRegistry(selectActiveRecordId);
-  const connectionWsUrl = useDeviceRegistry(selectConnectionWsUrl);
+  const connectionWsUrlsKey = useDeviceRegistry(selectConnectionWsUrlsKey);
+  const connectionWsUrls = useMemo(
+    () => (connectionWsUrlsKey ? connectionWsUrlsKey.split("\n") : []),
+    [connectionWsUrlsKey],
+  );
+  const connectionWsUrl = connectionWsUrls[0] ?? "";
   const connectionAddress = useDeviceRegistry(selectConnectionAddress);
   const mdnsHostname = useDeviceRegistry(selectMdnsHostname);
   const mdnsPort = useDeviceRegistry(selectMdnsPort);
@@ -335,11 +346,43 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   }, [activeDiscoveryId, discoveredDevices, mdnsHostname, mdnsPort]);
 
   useEffect(() => {
+    if (isConnected) mdnsRetryPendingForRecord.current = null;
     if (!resolvedMdnsDevice || !activeRecordId) return;
+
+    const dialHosts = new Set(
+      connectionWsUrls.flatMap((url) => {
+        const parsedConnection = parseDeviceEndpoint(url);
+        return parsedConnection.ok ? [parsedConnection.endpoint.host] : [];
+      }),
+    );
+    const confirmedCurrentRoute = resolvedMdnsDevice.addresses.some(
+      (address) => {
+        const parsedAddress = parseDeviceEndpoint(address);
+        return parsedAddress.ok && dialHosts.has(parsedAddress.endpoint.host);
+      },
+    );
+
     void deviceRegistry
       .noteResolvedAddresses(activeRecordId, resolvedMdnsDevice.addresses)
+      .then(() => {
+        // A persisted mDNS address can be correct while iOS still rejects a
+        // socket because local-network resolution has not been primed. The
+        // registry does not change when ZeroConf confirms the same route, and
+        // the plugin may not re-announce a device cached from an earlier watch.
+        // Retry when that route is first confirmed and whenever its connection
+        // drops as the shared mDNS watch restarts.
+        if (
+          confirmedCurrentRoute &&
+          !isConnected &&
+          mdnsRetryPendingForRecord.current !== activeRecordId &&
+          deviceRegistry.getSnapshot().activeRecordId === activeRecordId
+        ) {
+          mdnsRetryPendingForRecord.current = activeRecordId;
+          connectionManager.immediateReconnectActive();
+        }
+      })
       .catch(ignoreReportedRegistryFailure);
-  }, [activeRecordId, resolvedMdnsDevice]);
+  }, [activeRecordId, connectionWsUrls, isConnected, resolvedMdnsDevice]);
 
   // Browsing costs battery and multicast traffic, so it runs only until this
   // device's hostname has been resolved on a live connection.
@@ -1178,6 +1221,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // while a pre-V2 pairing has not yet been moved to the canonical key, and
     // trustworthy only after the peer authenticates with it.
     let legacyKeyUsed: string | null = null;
+    let credentialsUsed: StoredCredentials | null = null;
+    let aliasReconciliationInFlight = false;
 
     // Generate unique ID for this connection session to prevent stale events
     // Use crypto.randomUUID if available, fallback for older Android WebViews
@@ -1309,6 +1354,24 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               migrationSettled,
             }),
           )
+          .then(async () => {
+            if (!credentialsUsed || aliasReconciliationInFlight) return;
+            aliasReconciliationInFlight = true;
+            try {
+              const mergedRecordIds = await reconcileCredentialProvenAliases(
+                recordId,
+                credentialsUsed,
+              );
+              for (const mergedRecordId of mergedRecordIds) {
+                invalidateLibraryImageCache(mergedRecordId);
+                queryClient.removeQueries({
+                  predicate: (query) => query.queryKey.includes(mergedRecordId),
+                });
+              }
+            } finally {
+              aliasReconciliationInFlight = false;
+            }
+          })
           .catch(ignoreReportedRegistryFailure);
       },
       onPlaintextMode: () => {
@@ -1362,6 +1425,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       deviceId,
       type: "websocket",
       address: connectionWsUrl,
+      fallbackAddresses: connectionWsUrls.slice(1),
       encryption: {
         getCredentials: async () => {
           const record = deviceRegistry.getSnapshot().records[recordId];
@@ -1370,6 +1434,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             record?.legacyCredentialKey,
           );
           legacyKeyUsed = lookup.legacyKeyUsed;
+          credentialsUsed = lookup.credentials;
           return lookup.credentials;
         },
       },
@@ -1422,6 +1487,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   }, [
     activeRecordId,
     connectionWsUrl,
+    connectionWsUrls,
     invalidateCurrentClientRequest,
     invalidateMediaStateRequest,
     cancelMediaIndexReconciliation,
@@ -1543,13 +1609,16 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     ],
   );
 
+  const pairingAddress =
+    connectionManager.getActiveConnection()?.address ?? connectionAddress;
+
   return (
     <ConnectionContext.Provider value={contextValue}>
       {children}
       <PairingModal
         isOpen={pairingOpen}
         close={() => setPairingOpen(false)}
-        address={connectionAddress}
+        address={pairingAddress}
         recordId={activeRecordId ?? ""}
         onSuccess={() => connectionManager.restartActiveConnection()}
       />

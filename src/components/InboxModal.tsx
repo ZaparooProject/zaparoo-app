@@ -18,6 +18,7 @@ import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Card } from "@/components/wui/Card";
+import { useHapticPress } from "@/hooks/useHapticPress";
 
 function severityIcon(severity: InboxSeverity) {
   switch (severity) {
@@ -61,6 +62,7 @@ function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const bodyId = useId();
   const hasBody = !!props.message.body;
+  const handleHapticPress = useHapticPress("light", hasBody);
 
   const severityLabel = t(severityKey(props.message.severity));
   const messageContent = (
@@ -109,6 +111,7 @@ function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
       {hasBody ? (
         <button
           type="button"
+          onPointerUp={handleHapticPress}
           onClick={() => setExpanded((prev) => !prev)}
           aria-expanded={expanded}
           aria-controls={bodyId}

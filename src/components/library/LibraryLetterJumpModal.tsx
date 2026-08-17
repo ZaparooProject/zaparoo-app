@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/wui/EmptyState";
 import { Button } from "@/components/wui/Button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
+import { useHapticPress } from "@/hooks/useHapticPress";
 
 export function LibraryLetterJumpModal(props: {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export function LibraryLetterJumpModal(props: {
   onSelect: (group: MediaBrowseIndexGroup) => void;
 }) {
   const { t } = useTranslation();
+  const handleHapticPress = useHapticPress();
   const indexQuery = useQuery({
     queryKey: [
       LIBRARY_QUERY_KEYS.browseIndex,
@@ -75,6 +77,7 @@ export function LibraryLetterJumpModal(props: {
               key={group.key}
               type="button"
               className="flex min-h-[48px] items-center justify-between rounded-lg px-4 py-3 text-left hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+              onPointerUp={handleHapticPress}
               onClick={() => props.onSelect(group)}
             >
               <span className="font-medium">{group.label}</span>

@@ -34,6 +34,7 @@ import type { NotificationRequest } from "@/lib/coreApi";
 import { ClientCapability, InboxSeverity, Notification } from "@/lib/models";
 import { logger } from "@/lib/logger";
 import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
+import { reconcileCredentialProvenAliases } from "@/lib/devices/credentialProof";
 
 // Capture event handlers for notification testing
 let capturedEventHandlers: {
@@ -46,12 +47,17 @@ let capturedEventHandlers: {
 } = {};
 
 const pairingModalCapture = vi.hoisted(() => ({
+  address: "",
   onSuccess: undefined as (() => void) | undefined,
 }));
 
 // Mock dependencies
 vi.mock("@/lib/libraryImageCache", () => ({
   invalidateLibraryImageCache: vi.fn(),
+}));
+
+vi.mock("@/lib/devices/credentialProof", () => ({
+  reconcileCredentialProvenAliases: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("../../../lib/transport", () => {
@@ -90,7 +96,14 @@ vi.mock("../../../lib/transport", () => {
 });
 
 vi.mock("../../../components/PairingModal", () => ({
-  PairingModal: ({ onSuccess }: { onSuccess?: () => void }) => {
+  PairingModal: ({
+    address,
+    onSuccess,
+  }: {
+    address: string;
+    onSuccess?: () => void;
+  }) => {
+    pairingModalCapture.address = address;
     pairingModalCapture.onSuccess = onSuccess;
     return null;
   },
@@ -395,6 +408,20 @@ describe("ConnectionProvider", () => {
       expect(connectionManager.setActiveDevice).toHaveBeenCalledWith(RECORD_ID);
     });
 
+    it("should pair through the candidate that actually connected", () => {
+      vi.mocked(connectionManager.getActiveConnection).mockReturnValueOnce({
+        address: "ws://10.0.0.206:7497/api/v0.1",
+      } as never);
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      expect(pairingModalCapture.address).toBe("ws://10.0.0.206:7497/api/v0.1");
+    });
+
     it("should restart the active connection after pairing succeeds", () => {
       render(
         <ConnectionProvider>
@@ -431,18 +458,20 @@ describe("ConnectionProvider", () => {
       ...overrides,
     });
 
-    async function seedMdnsDevice() {
-      await seedDeviceRegistry(
-        [
-          mockDeviceRecord({
-            recordId: MDNS_RECORD_ID,
-            address: "steamdeck.local",
-            source: "mdns",
-            discoveryId: "core-id",
-          }),
-        ],
-        MDNS_RECORD_ID,
-      );
+    async function seedMdnsDevice(resolvedAddresses?: string[]) {
+      const record = mockDeviceRecord({
+        recordId: MDNS_RECORD_ID,
+        address: "steamdeck.local",
+        source: "mdns",
+        discoveryId: "core-id",
+      });
+      if (resolvedAddresses) {
+        record.endpoints = record.endpoints.map((endpoint) => ({
+          ...endpoint,
+          resolvedAddresses,
+        }));
+      }
+      await seedDeviceRegistry([record], MDNS_RECORD_ID);
     }
 
     beforeEach(async () => {
@@ -507,6 +536,96 @@ describe("ConnectionProvider", () => {
         );
       });
       expect(deviceRegistry.activeEndpoint()?.address).toBe("steamdeck.local");
+    });
+
+    it("should pass every resolved address to the transport", async () => {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(ZeroConf.watch).toHaveBeenCalled();
+      });
+      act(() => {
+        __simulateDeviceDiscovered(
+          advertise({ ipv4Addresses: ["10.0.0.206", "10.0.0.218"] }),
+        );
+      });
+
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({
+            address: "ws://10.0.0.206:7497/api/v0.1",
+            fallbackAddresses: [
+              "ws://10.0.0.218:7497/api/v0.1",
+              "ws://steamdeck.local:7497/api/v0.1",
+            ],
+          }),
+        );
+      });
+    });
+
+    it("should retry after mDNS confirms an already-known route", async () => {
+      await seedMdnsDevice(["10.0.0.206"]);
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({ address: "ws://10.0.0.206:7497/api/v0.1" }),
+        );
+      });
+      vi.mocked(connectionManager.immediateReconnectActive).mockClear();
+
+      act(() => {
+        __simulateDeviceDiscovered(advertise());
+      });
+
+      await waitFor(() => {
+        expect(
+          connectionManager.immediateReconnectActive,
+        ).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("should retry when mDNS confirms a fallback route", async () => {
+      await seedMdnsDevice(["10.0.0.205", "10.0.0.206"]);
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({
+            address: "ws://10.0.0.205:7497/api/v0.1",
+            fallbackAddresses: expect.arrayContaining([
+              "ws://10.0.0.206:7497/api/v0.1",
+            ]),
+          }),
+        );
+      });
+      vi.mocked(connectionManager.immediateReconnectActive).mockClear();
+
+      act(() => {
+        __simulateDeviceDiscovered(
+          advertise({ ipv4Addresses: ["10.0.0.206"] }),
+        );
+      });
+
+      await waitFor(() => {
+        expect(
+          connectionManager.immediateReconnectActive,
+        ).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("should follow the hostname to a new address", async () => {
@@ -630,6 +749,53 @@ describe("ConnectionProvider", () => {
 
       await waitFor(() => {
         expect(ZeroConf.unwatch).toHaveBeenCalled();
+      });
+    });
+
+    it("should retry immediately when a resolved mDNS connection drops", async () => {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(ZeroConf.watch).toHaveBeenCalled();
+      });
+      act(() => {
+        __simulateDeviceDiscovered(advertise());
+      });
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({ address: "ws://10.0.0.206:7497/api/v0.1" }),
+        );
+      });
+
+      act(() => {
+        capturedEventHandlers.onConnectionChange!(MDNS_RECORD_ID, {
+          state: "connected",
+          hasData: true,
+          hasConnectedBefore: true,
+        });
+      });
+      await waitFor(() => {
+        expect(ZeroConf.unwatch).toHaveBeenCalled();
+      });
+      vi.mocked(connectionManager.immediateReconnectActive).mockClear();
+
+      act(() => {
+        capturedEventHandlers.onConnectionChange!(MDNS_RECORD_ID, {
+          state: "reconnecting",
+          hasData: true,
+          hasConnectedBefore: true,
+        });
+      });
+
+      await waitFor(() => {
+        expect(ZeroConf.watch).toHaveBeenCalledTimes(2);
+        expect(
+          connectionManager.immediateReconnectActive,
+        ).toHaveBeenCalledTimes(1);
       });
     });
 
@@ -2863,6 +3029,7 @@ describe("connection event handling", () => {
       const record = deviceRegistry.getSnapshot().records[RECORD_ID];
       expect(record?.lastConnectedAt).toBeGreaterThanOrEqual(before);
     });
+    expect(reconcileCredentialProvenAliases).not.toHaveBeenCalled();
   });
 
   it("should move a pre-V2 pairing onto the record once the peer authenticates with it", async () => {
@@ -2910,6 +3077,10 @@ describe("connection event handling", () => {
       expect(
         deviceRegistry.getSnapshot().records[RECORD_ID]?.legacyCredentialKey,
       ).toBeUndefined();
+      expect(reconcileCredentialProvenAliases).toHaveBeenCalledWith(
+        RECORD_ID,
+        expect.objectContaining({ authToken: "token-abc" }),
+      );
     });
   });
 

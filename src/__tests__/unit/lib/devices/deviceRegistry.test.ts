@@ -17,6 +17,7 @@ import {
   parseDeviceRegistry,
   parsedEndpointForRecord,
   resolvedEndpointForRecord,
+  resolvedEndpointsForRecord,
   type DeviceRecord,
 } from "@/lib/devices/deviceRegistry";
 import {
@@ -634,6 +635,14 @@ describe("resolving an mDNS hostname to an address", () => {
     );
   });
 
+  it("should expose every resolved address as a connection candidate", async () => {
+    const record = await deviceRegistry.selectDiscovered(announcement);
+
+    expect(
+      resolvedEndpointsForRecord(record).map((endpoint) => endpoint.host),
+    ).toEqual(["10.0.0.206", "fe80::1", "steamdeck.local"]);
+  });
+
   it("should keep the endpoint's port and scheme when swapping the host", async () => {
     const record = await deviceRegistry.selectDiscovered({
       ...announcement,
@@ -659,6 +668,61 @@ describe("resolving an mDNS hostname to an address", () => {
     expect(resolvedEndpointForRecord(recordById(typed!.recordId))?.host).toBe(
       "10.0.0.206",
     );
+  });
+
+  it("should upgrade an exact manual hostname selected from mDNS", async () => {
+    const typed = await deviceRegistry.selectAddress("steamdeck.local");
+
+    const discovered = await deviceRegistry.selectDiscovered(announcement);
+
+    expect(discovered?.recordId).toBe(typed?.recordId);
+    expect(records()).toHaveLength(1);
+    expect(discovered?.endpoints).toEqual([
+      expect.objectContaining({
+        endpointId: "ws://steamdeck.local:7497",
+        source: "mdns",
+        resolvedAddresses: ["10.0.0.206", "fe80::1"],
+      }),
+    ]);
+  });
+
+  it("should retain a known discovery id when an exact hostname omits it", async () => {
+    const typed = await deviceRegistry.selectAddress("steamdeck.local");
+    deviceRegistry.installForTests({
+      schemaVersion: 2,
+      activeRecordId: typed!.recordId,
+      records: {
+        [typed!.recordId]: { ...typed!, discoveryId: "core-a" },
+      },
+    });
+
+    const discovered = await deviceRegistry.selectDiscovered({
+      ...announcement,
+      discoveryId: undefined,
+    });
+
+    expect(discovered?.recordId).toBe(typed?.recordId);
+    expect(discovered?.discoveryId).toBe("core-a");
+    expect(records()).toHaveLength(1);
+  });
+
+  it("should not reuse an exact hostname with a conflicting discovery id", async () => {
+    const typed = await deviceRegistry.selectAddress("steamdeck.local");
+    deviceRegistry.installForTests({
+      schemaVersion: 2,
+      activeRecordId: typed!.recordId,
+      records: {
+        [typed!.recordId]: { ...typed!, discoveryId: "core-a" },
+      },
+    });
+
+    const discovered = await deviceRegistry.selectDiscovered({
+      ...announcement,
+      discoveryId: "core-b",
+    });
+
+    expect(discovered?.recordId).not.toBe(typed?.recordId);
+    expect(records()).toHaveLength(2);
   });
 
   // A background browse runs behind a live connection, so it must never create
@@ -714,6 +778,255 @@ describe("resolving an mDNS hostname to an address", () => {
     expect(
       resolvedEndpointForRecord(recordById(discovered!.recordId))?.host,
     ).toBe("10.0.0.206");
+  });
+});
+
+describe("merging confirmed device aliases", () => {
+  it("should preserve the target id and active source endpoint", async () => {
+    const target = await deviceRegistry.selectAddress("mistuh.local");
+    await deviceRegistry.setCustomName(target!.recordId, "My MiSTer");
+    const source = await deviceRegistry.selectAddress("10.0.0.218");
+    await deviceRegistry.applyDiscoveredMetadata(source!.recordId, {
+      platform: "mister",
+      version: "2.16.0",
+    });
+
+    const merged = await deviceRegistry.mergeRecords(
+      target!.recordId,
+      source!.recordId,
+    );
+
+    expect(records()).toHaveLength(1);
+    expect(deviceRegistry.getSnapshot().activeRecordId).toBe(target!.recordId);
+    expect(merged).toMatchObject({
+      recordId: target!.recordId,
+      preferredEndpointId: "ws://10.0.0.218:7497",
+      name: "My MiSTer",
+      nameIsCustom: true,
+      platform: "mister",
+      version: "2.16.0",
+    });
+    expect(merged.endpoints.map((endpoint) => endpoint.endpointId)).toEqual([
+      "ws://mistuh.local:7497",
+      "ws://10.0.0.218:7497",
+    ]);
+  });
+
+  it("should retain mDNS resolution when endpoint ids collide", async () => {
+    const target = await deviceRegistry.selectAddress("mistuh.local");
+    const source = await deviceRegistry.selectAddress("10.0.0.218");
+    const mdnsSource: DeviceRecord = {
+      ...source!,
+      endpoints: [
+        {
+          ...target!.endpoints[0]!,
+          source: "mdns",
+          resolvedAddresses: ["10.0.0.107", "10.0.0.218"],
+        },
+      ],
+      preferredEndpointId: target!.preferredEndpointId,
+    };
+    deviceRegistry.installForTests({
+      schemaVersion: 2,
+      activeRecordId: target!.recordId,
+      records: {
+        [target!.recordId]: target!,
+        [mdnsSource.recordId]: mdnsSource,
+      },
+    });
+
+    const merged = await deviceRegistry.mergeRecords(
+      target!.recordId,
+      mdnsSource.recordId,
+    );
+
+    expect(merged.endpoints).toEqual([
+      expect.objectContaining({
+        endpointId: "ws://mistuh.local:7497",
+        source: "mdns",
+        resolvedAddresses: ["10.0.0.107", "10.0.0.218"],
+      }),
+    ]);
+  });
+
+  it("should move source credentials and remove their old record key", async () => {
+    const target = await deviceRegistry.selectAddress("mistuh.local");
+    const source = await deviceRegistry.selectAddress("10.0.0.218");
+    await credentialStore.set(credentialKeyForRecord(source!.recordId), creds);
+
+    await deviceRegistry.mergeRecords(target!.recordId, source!.recordId);
+
+    await expect(
+      credentialStore.get(credentialKeyForRecord(target!.recordId)),
+    ).resolves.toEqual(creds);
+    await expect(
+      credentialStore.get(credentialKeyForRecord(source!.recordId)),
+    ).resolves.toBeNull();
+  });
+
+  it("should retain both records when their pairings conflict", async () => {
+    const target = await deviceRegistry.selectAddress("mistuh.local");
+    const source = await deviceRegistry.selectAddress("10.0.0.218");
+    const sourceCredentials = {
+      ...creds,
+      authToken: "source-token",
+      pairingKey: "b".repeat(64),
+      clientId: "source-client",
+    };
+    await credentialStore.set(credentialKeyForRecord(target!.recordId), creds);
+    await credentialStore.set(
+      credentialKeyForRecord(source!.recordId),
+      sourceCredentials,
+    );
+
+    await expect(
+      deviceRegistry.mergeRecords(target!.recordId, source!.recordId),
+    ).rejects.toThrow("conflicting credentials");
+
+    expect(records()).toHaveLength(2);
+    await expect(
+      credentialStore.get(credentialKeyForRecord(target!.recordId)),
+    ).resolves.toEqual(creds);
+    await expect(
+      credentialStore.get(credentialKeyForRecord(source!.recordId)),
+    ).resolves.toEqual(sourceCredentials);
+  });
+
+  it("should reject records proven to have different discovery ids", async () => {
+    const target = await deviceRegistry.selectAddress("mistuh.local");
+    const source = await deviceRegistry.selectAddress("10.0.0.218");
+    deviceRegistry.installForTests({
+      schemaVersion: 2,
+      activeRecordId: target!.recordId,
+      records: {
+        [target!.recordId]: { ...target!, discoveryId: "core-a" },
+        [source!.recordId]: { ...source!, discoveryId: "core-b" },
+      },
+    });
+
+    await expect(
+      deviceRegistry.mergeRecords(target!.recordId, source!.recordId),
+    ).rejects.toThrow("different discovery IDs");
+    expect(records()).toHaveLength(2);
+  });
+
+  it("should restore both records when merge persistence fails", async () => {
+    const target = await deviceRegistry.selectAddress("mistuh.local");
+    const source = await deviceRegistry.selectAddress("10.0.0.218");
+    vi.mocked(Preferences.set).mockRejectedValueOnce(new Error("storage full"));
+
+    await expect(
+      deviceRegistry.mergeRecords(target!.recordId, source!.recordId),
+    ).rejects.toThrow("storage full");
+
+    const snapshot = deviceRegistry.getSnapshot();
+    expect(Object.keys(snapshot.records)).toEqual([
+      target!.recordId,
+      source!.recordId,
+    ]);
+    expect(snapshot.activeRecordId).toBe(source!.recordId);
+  });
+
+  it("should restore the durable snapshot after two queued writes fail", async () => {
+    const record = await deviceRegistry.selectAddress("mistuh.local");
+    let rejectFirst!: (reason: Error) => void;
+    let rejectSecond!: (reason: Error) => void;
+    vi.mocked(Preferences.set)
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            rejectFirst = reject;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            rejectSecond = reject;
+          }),
+      );
+
+    const first = deviceRegistry.setCustomName(record!.recordId, "First");
+    await vi.waitFor(() => {
+      expect(deviceRegistry.getSnapshot().records[record!.recordId]?.name).toBe(
+        "First",
+      );
+    });
+    const second = deviceRegistry.setCustomName(record!.recordId, "Second");
+
+    rejectFirst(new Error("first write failed"));
+    await expect(first).rejects.toThrow("first write failed");
+    await vi.waitFor(() => {
+      expect(deviceRegistry.getSnapshot().records[record!.recordId]?.name).toBe(
+        "Second",
+      );
+    });
+
+    rejectSecond(new Error("second write failed"));
+    await expect(second).rejects.toThrow("second write failed");
+    expect(
+      deviceRegistry.getSnapshot().records[record!.recordId]?.name,
+    ).toBeUndefined();
+  });
+
+  it("should preserve a queued update without persisting a failed merge", async () => {
+    const target = await deviceRegistry.selectAddress("mistuh.local");
+    const source = await deviceRegistry.selectAddress("10.0.0.218");
+    let rejectMerge!: (reason: Error) => void;
+    vi.mocked(Preferences.set)
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            rejectMerge = reject;
+          }),
+      )
+      .mockResolvedValueOnce();
+
+    const merge = deviceRegistry.mergeRecords(
+      target!.recordId,
+      source!.recordId,
+    );
+    await vi.waitFor(() => {
+      expect(
+        deviceRegistry.getSnapshot().records[source!.recordId],
+      ).toBeUndefined();
+    });
+    const addressUpdate = deviceRegistry.noteResolvedAddresses(
+      target!.recordId,
+      ["10.0.0.107"],
+    );
+
+    rejectMerge(new Error("merge write failed"));
+    await expect(merge).rejects.toThrow("merge write failed");
+    await addressUpdate;
+
+    const snapshot = deviceRegistry.getSnapshot();
+    expect(snapshot.records[source!.recordId]).toBeDefined();
+    expect(
+      snapshot.records[target!.recordId]?.endpoints.some(
+        (endpoint) => endpoint.resolvedAddresses?.[0] === "10.0.0.107",
+      ),
+    ).toBe(true);
+    const persisted = JSON.parse(
+      vi.mocked(Preferences.set).mock.calls.at(-1)![0].value,
+    ) as { records: Record<string, unknown> };
+    expect(persisted.records[source!.recordId]).toBeDefined();
+  });
+
+  it("should leave both records when credential preparation fails", async () => {
+    const target = await deviceRegistry.selectAddress("mistuh.local");
+    const source = await deviceRegistry.selectAddress("10.0.0.218");
+    vi.spyOn(credentialStore, "prepareRecordMerge").mockRejectedValueOnce(
+      new Error("keychain locked"),
+    );
+    const beforeCommit = vi.fn();
+
+    await expect(
+      deviceRegistry.mergeRecords(target!.recordId, source!.recordId, {
+        beforeCommit,
+      }),
+    ).rejects.toThrow("keychain locked");
+    expect(beforeCommit).not.toHaveBeenCalled();
+    expect(records()).toHaveLength(2);
   });
 });
 

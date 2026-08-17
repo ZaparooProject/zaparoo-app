@@ -8,6 +8,7 @@ export interface DeviceRowEntry {
   name?: string;
   platform?: string;
   version?: string;
+  resolvedAddresses?: string[];
 }
 
 interface DeviceRowProps {
@@ -63,6 +64,14 @@ export function DeviceRow({
                 </span>
               )}
             </div>
+          )}
+          {entry.resolvedAddresses && entry.resolvedAddresses.length > 0 && (
+            <span className="text-muted-foreground text-xs break-all">
+              {t("settings.networkScan.addresses", {
+                addresses: entry.resolvedAddresses.join(", "),
+                count: entry.resolvedAddresses.length,
+              })}
+            </span>
           )}
           {entry.version && (
             <div className="flex items-center justify-between gap-2">

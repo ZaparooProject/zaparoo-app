@@ -10,6 +10,7 @@ vi.mock("../../../../lib/transport/WebSocketTransport", () => {
   // Define mock class inside factory to avoid hoisting issues
   class MockWebSocketTransport {
     deviceId: string;
+    url: string;
     _state: TransportState = "disconnected";
     _hasConnected = false;
     handlers: Record<string, (...args: unknown[]) => void> = {};
@@ -29,6 +30,7 @@ vi.mock("../../../../lib/transport/WebSocketTransport", () => {
 
     constructor(config: { deviceId: string; url: string }) {
       this.deviceId = config.deviceId;
+      this.url = config.url;
     }
 
     get state(): TransportState {
@@ -55,7 +57,7 @@ vi.mock("../../../../lib/transport/WebSocketTransport", () => {
         this._state = "connected";
         this._hasConnected = true;
         this.handlers.onStateChange?.("connected");
-        this.handlers.onOpen?.();
+        this.handlers.onOpen?.(this.url);
       }, 0);
     }
 
@@ -70,6 +72,10 @@ vi.mock("../../../../lib/transport/WebSocketTransport", () => {
         this._hasConnected = true;
       }
       this.handlers.onStateChange?.(newState);
+    }
+
+    simulateOpenAt(address: string): void {
+      this.handlers.onOpen?.(address);
     }
   }
 
@@ -95,6 +101,7 @@ interface MockTransport {
   resumeHeartbeat: ReturnType<typeof vi.fn>;
   simulateMessage: (data: string) => void;
   simulateStateChange: (state: TransportState) => void;
+  simulateOpenAt: (address: string) => void;
 }
 
 describe("ConnectionManager", () => {
@@ -133,6 +140,21 @@ describe("ConnectionManager", () => {
       expect(connection).toBeDefined();
       expect(connection?.hasConnectedBefore).toBe(false);
       expect(connection?.hasData).toBe(false);
+    });
+
+    it("should track the candidate address that actually opened", () => {
+      const transport = manager.addDevice({
+        deviceId: "device-1",
+        type: "websocket",
+        address: "ws://10.0.0.205:7497",
+        fallbackAddresses: ["ws://10.0.0.206:7497"],
+      }) as unknown as MockTransport;
+
+      transport.simulateOpenAt("ws://10.0.0.206:7497");
+
+      expect(manager.getConnection("device-1")?.address).toBe(
+        "ws://10.0.0.206:7497",
+      );
     });
 
     it("should remove existing device with same ID before adding", () => {

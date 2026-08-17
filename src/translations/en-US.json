@@ -781,6 +781,8 @@
         "searching": "Searching for devices...",
         "stillSearching": "Still searching...",
         "noDevices": "No devices found",
+        "addresses_one": "IP address: {{addresses}}",
+        "addresses_other": "IP addresses: {{addresses}}",
         "version": "v{{version}}"
       },
       "connectionFailed": "Unable to connect to device",
@@ -809,6 +811,17 @@
         "forgetBody": "This will remove it from your saved devices and erase the pairing credentials.",
         "forgetCancel": "Cancel",
         "forgetConfirm": "Forget device"
+      },
+      "deviceCombine": {
+        "edit": "Combine devices",
+        "cancelEdit": "Cancel selection",
+        "select": "Select {{device}}",
+        "action": "Combine selected",
+        "title": "Combine devices?",
+        "body": "Combine {{first}} and {{second}}? Saved addresses and pairing will be kept.",
+        "cancel": "Cancel",
+        "confirm": "Combine",
+        "failed": "Devices could not be combined. Nothing was removed."
       },
       "about": {
         "title": "About",

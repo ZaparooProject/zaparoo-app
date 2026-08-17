@@ -38,9 +38,9 @@ import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Button } from "@/components/wui/Button";
 import { Card } from "@/components/wui/Card";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { DelayedLoading } from "@/components/DelayedLoading";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NextIcon } from "@/lib/images";
+import { useHapticPress } from "@/hooks/useHapticPress";
 
 export const Route = createFileRoute("/library/")({
   component: Library,
@@ -49,6 +49,7 @@ export const Route = createFileRoute("/library/")({
 export function Library() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const handleHapticPress = useHapticPress();
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
     t("library.title"),
   );
@@ -169,7 +170,10 @@ export function Library() {
               onClick={() => forgetScroll("library:favorites:list")}
               className="block rounded-xl focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none sm:w-[calc(50%_-_0.375rem)]"
             >
-              <Card className="flex min-h-16 items-center justify-between gap-3">
+              <Card
+                className="flex min-h-16 items-center justify-between gap-3"
+                pressable
+              >
                 <span className="flex items-center gap-3 font-semibold">
                   <Heart size={20} aria-hidden="true" />
                   {t("library.favorites")}
@@ -226,12 +230,24 @@ export function Library() {
     );
   } else if (systemsQuery.isLoading) {
     content = withLibrarySections(
-      <DelayedLoading>
-        <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
-          <LoadingSpinner size={16} className="text-primary" />
-          <span>{t("library.loadingSystems")}</span>
+      <div role="status" aria-label={t("library.loadingSystems")}>
+        <span className="sr-only">{t("library.loadingSystems")}</span>
+        <div aria-hidden="true">
+          {["w-40", "w-52", "w-36", "w-48", "w-44"].map((titleWidth) => (
+            <div
+              key={titleWidth}
+              data-testid="library-system-skeleton"
+              className="flex min-h-[56px] items-center justify-between gap-3 border-b border-white/25 px-1 py-3 last:border-b-0"
+            >
+              <div className="flex flex-1 flex-col gap-2">
+                <Skeleton className={`h-5 ${titleWidth}`} />
+                <Skeleton className="h-4 w-28" />
+              </div>
+              <Skeleton className="h-5 w-5" />
+            </div>
+          ))}
         </div>
-      </DelayedLoading>,
+      </div>,
     );
   } else if (systemsQuery.isError) {
     content = withLibrarySections(
@@ -289,6 +305,7 @@ export function Library() {
                     to="/library/$system"
                     params={{ system: system.id }}
                     onClick={() => beginSystemNavigation(system.id)}
+                    onPointerUp={handleHapticPress}
                     className="flex min-h-[56px] items-center justify-between gap-3 px-1 py-3 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                     style={{
                       borderBottom:

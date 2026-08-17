@@ -5,6 +5,7 @@ import type { MediaBrowseSort } from "@/lib/models";
 import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
+import { useHapticPress } from "@/hooks/useHapticPress";
 
 const SORT_OPTIONS: Array<{ value: MediaBrowseSort; labelKey: string }> = [
   { value: "name-asc", labelKey: "library.sortTitleAsc" },
@@ -22,6 +23,7 @@ export function LibraryMediaOptionsModal(props: {
   onGoToLetter: () => void;
 }) {
   const { t } = useTranslation();
+  const handleHapticPress = useHapticPress();
 
   return (
     <SlideModal
@@ -55,6 +57,7 @@ export function LibraryMediaOptionsModal(props: {
                       "bg-white/10": selected,
                     },
                   )}
+                  onPointerUp={handleHapticPress}
                   onClick={() => {
                     props.onChange(option.value);
                     props.close();

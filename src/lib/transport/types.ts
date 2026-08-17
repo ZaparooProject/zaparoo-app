@@ -35,8 +35,10 @@ export interface TransportConfig {
   deviceId: string;
   /** Transport type */
   type: "websocket" | "bluetooth";
-  /** Connection address (IP:port for WS, device ID for BT) */
+  /** Primary connection address (IP:port for WS, device ID for BT) */
   address: string;
+  /** Alternate addresses for the same canonical device. */
+  fallbackAddresses?: readonly string[];
   /** Optional encryption config */
   encryption?: TransportEncryptionConfig;
 }
@@ -45,8 +47,8 @@ export interface TransportConfig {
  * Event handlers for transport events.
  */
 export interface TransportEventHandlers {
-  /** Called when the transport opens successfully */
-  onOpen?: () => void;
+  /** Called when the transport opens successfully at the selected address. */
+  onOpen?: (address: string) => void;
   /** Called when the transport closes */
   onClose?: () => void;
   /** Called when an error occurs */

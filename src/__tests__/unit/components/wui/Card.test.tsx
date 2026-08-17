@@ -1,6 +1,19 @@
 import { render, screen, fireEvent } from "../../../../test-utils";
+import userEvent from "@testing-library/user-event";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  Link,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Card } from "../../../../components/wui/Card";
+
+const mockHapticPress = vi.fn();
+vi.mock("@/hooks/useHapticPress", () => ({
+  useHapticPress: () => mockHapticPress,
+}));
 
 describe("Card", () => {
   beforeEach(() => {
@@ -21,6 +34,41 @@ describe("Card", () => {
     fireEvent.click(card);
 
     expect(mockOnClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("should provide haptic feedback for a touchscreen press", async () => {
+    const user = userEvent.setup();
+    render(<Card onClick={() => {}}>Clickable content</Card>);
+
+    await user.pointer({
+      keys: "[TouchA]",
+      target: screen.getByRole("button"),
+    });
+
+    expect(mockHapticPress).toHaveBeenCalledTimes(1);
+  });
+
+  it("should provide haptic feedback when pressable inside a link", async () => {
+    const user = userEvent.setup();
+    const rootRoute = createRootRoute({
+      component: () => (
+        <Link to="/">
+          <Card pressable>Linked card</Card>
+        </Link>
+      ),
+    });
+    const router = createRouter({
+      routeTree: rootRoute,
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+    render(<RouterProvider router={router} />);
+
+    await user.pointer({
+      keys: "[TouchA]",
+      target: await screen.findByText("Linked card"),
+    });
+
+    expect(mockHapticPress).toHaveBeenCalledTimes(1);
   });
 
   it("should handle Enter key for keyboard navigation", () => {
@@ -65,5 +113,6 @@ describe("Card", () => {
     fireEvent.click(card);
 
     expect(mockOnClick).not.toHaveBeenCalled();
+    expect(mockHapticPress).not.toHaveBeenCalled();
   });
 });

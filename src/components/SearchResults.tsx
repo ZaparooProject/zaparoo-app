@@ -13,6 +13,7 @@ import { Button } from "@/components/wui/Button.tsx";
 import { EmptyState } from "@/components/wui/EmptyState.tsx";
 import { TagList } from "@/components/TagList.tsx";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
+import { useHapticPress } from "@/hooks/useHapticPress";
 
 export function SearchResults(props: {
   loading: boolean;
@@ -30,6 +31,7 @@ export function SearchResults(props: {
   const showFilenames = usePreferencesStore((s) => s.showFilenames);
   const resolveSystemName = useSystemNameResolver();
   const { t } = useTranslation();
+  const handleHapticPress = useHapticPress();
 
   // Screen reader announcement for search results
   const getAriaLiveMessage = () => {
@@ -191,6 +193,7 @@ export function SearchResults(props: {
                       ? ""
                       : "1px solid rgba(255,255,255,0.6)",
                 }}
+                onPointerUp={handleHapticPress}
                 onClick={(e) => {
                   e.preventDefault();
                   handleGameSelect();
