@@ -76,6 +76,7 @@ export class WebSocketTransport implements Transport {
   private isDestroyed = false;
   private _hasConnectedBefore = false;
   private currentAttemptConnected = false;
+  private readonly encryptionRejectedCandidates = new Set<number>();
   private heartbeatPaused = false;
 
   // Encryption state for the current connect cycle.
@@ -286,6 +287,7 @@ export class WebSocketTransport implements Transport {
       );
     }
     this.encryptionBlocked = false;
+    this.encryptionRejectedCandidates.clear();
   }
 
   // Private methods
@@ -379,9 +381,10 @@ export class WebSocketTransport implements Transport {
       // Silent close while attempting encrypted handshake — server likely
       // doesn't speak our encryption protocol. Surface as an error and stop.
       if (this.encMode === "trying-encrypted") {
-        this.handlers.onError?.(new Error("Encrypted handshake failed"));
         this.failConnectionForEncryption(
           "silent close during encrypted handshake",
+          () =>
+            this.handlers.onError?.(new Error("Encrypted handshake failed")),
         );
         return;
       }
@@ -407,9 +410,9 @@ export class WebSocketTransport implements Transport {
             severity: "warning",
           },
         );
-        this.handlers.onEncryptionRequired?.();
         this.failConnectionForEncryption(
           "silent close before plaintext verified",
+          () => this.handlers.onEncryptionRequired?.(),
         );
         return;
       }
@@ -513,8 +516,11 @@ export class WebSocketTransport implements Transport {
           undefined,
           { category: "crypto", action: "init-failed", severity: "error" },
         );
-        this.handlers.onCredentialsRevoked?.();
-        this.failConnectionForEncryption("malformed pairing key");
+        this.failConnectionForEncryption(
+          "malformed pairing key",
+          () => this.handlers.onCredentialsRevoked?.(),
+          false,
+        );
         return;
       }
       const pairingKeyHex = creds.pairingKey.match(/.{2}/g) ?? [];
@@ -627,8 +633,9 @@ export class WebSocketTransport implements Transport {
           action: "unsupported-version",
         },
       );
-      this.handlers.onUnsupportedVersion?.();
-      this.failConnectionForEncryption("unsupported encryption version");
+      this.failConnectionForEncryption("unsupported encryption version", () =>
+        this.handlers.onUnsupportedVersion?.(),
+      );
       return;
     }
     if (code === ENCRYPTION_REQUIRED_CODE) {
@@ -637,8 +644,9 @@ export class WebSocketTransport implements Transport {
         `[Transport:${this.deviceId}] Credentials rejected in encrypted mode (-32002)`,
         { category: "crypto", action: "credentials-revoked" },
       );
-      this.handlers.onCredentialsRevoked?.();
-      this.failConnectionForEncryption("credentials revoked");
+      this.failConnectionForEncryption("credentials revoked", () =>
+        this.handlers.onCredentialsRevoked?.(),
+      );
       return;
     }
 
@@ -657,8 +665,9 @@ export class WebSocketTransport implements Transport {
         });
         // Either the handshake never verified or an established session
         // produced a bad frame — both are fatal in the binary model.
-        this.handlers.onError?.(new Error("Encrypted handshake failed"));
-        this.failConnectionForEncryption("decrypt failure");
+        this.failConnectionForEncryption("decrypt failure", () =>
+          this.handlers.onError?.(new Error("Encrypted handshake failed")),
+        );
         return;
       }
 
@@ -669,6 +678,7 @@ export class WebSocketTransport implements Transport {
       // Success.
       if (this.encMode === "trying-encrypted") {
         this.encMode = "encrypted-verified";
+        this.encryptionRejectedCandidates.clear();
         logger.debug(`[Transport:${this.deviceId}] Encrypted handshake OK`, {
           category: "crypto",
           action: "handshake-ok",
@@ -700,13 +710,15 @@ export class WebSocketTransport implements Transport {
           `[Transport:${this.deviceId}] Encryption required (-32002)`,
           { category: "crypto", action: "encryption-required" },
         );
-        this.handlers.onEncryptionRequired?.();
-        this.failConnectionForEncryption("encryption required");
+        this.failConnectionForEncryption("encryption required", () =>
+          this.handlers.onEncryptionRequired?.(),
+        );
         return;
       }
       if (code === UNSUPPORTED_VERSION_CODE) {
-        this.handlers.onUnsupportedVersion?.();
-        this.failConnectionForEncryption("unsupported encryption version");
+        this.failConnectionForEncryption("unsupported encryption version", () =>
+          this.handlers.onUnsupportedVersion?.(),
+        );
         return;
       }
     } catch {
@@ -718,24 +730,52 @@ export class WebSocketTransport implements Transport {
     // so the green Connected indicator does not flash before a possible -32002.
     if (!this.plaintextVerified && this.encMode === "plaintext") {
       this.plaintextVerified = true;
+      this.encryptionRejectedCandidates.clear();
       this.handlers.onPlaintextMode?.();
     }
 
     this.handlers.onMessage?.(event);
   }
 
-  // Encryption-related failure: stop the connection and suppress the
-  // auto-reconnect loop. The consumer (ConnectionProvider) drives recovery
-  // via PairingModal + immediateReconnect once the user pairs.
-  private failConnectionForEncryption(reason: string): void {
+  // A route-level rejection does not prove credentials are revoked: resolved
+  // addresses can be stale or reassigned. Keep credentials until every
+  // candidate explicitly rejects the same encryption attempt.
+  private failConnectionForEncryption(
+    reason: string,
+    onBlocked?: () => void,
+    tryFallbacks = true,
+  ): void {
+    if (tryFallbacks && this.candidateUrls.length > 1) {
+      this.encryptionRejectedCandidates.add(this.candidateIndex);
+      if (this.encryptionRejectedCandidates.size < this.candidateUrls.length) {
+        logger.warn(
+          `[Transport:${this.deviceId}] Encryption rejected by candidate; trying fallback: ${reason}`,
+          { category: "crypto", action: "encryption-fallback" },
+        );
+        this.cleanup();
+        this.currentAttemptConnected = false;
+        this.handleConnectionError();
+        return;
+      }
+    }
+
     logger.warn(
       `[Transport:${this.deviceId}] Encryption-blocked disconnect: ${reason}`,
       { category: "crypto", action: "encryption-blocked" },
     );
+    onBlocked?.();
     this.encryptionBlocked = true;
     this.cleanup();
     this.setState("disconnected");
     this.handlers.onClose?.();
+  }
+
+  private nextCandidateIndex(): number {
+    for (let offset = 1; offset <= this.candidateUrls.length; offset++) {
+      const index = (this.candidateIndex + offset) % this.candidateUrls.length;
+      if (!this.encryptionRejectedCandidates.has(index)) return index;
+    }
+    return this.candidateIndex;
   }
 
   private kickDrain(): void {
@@ -833,8 +873,7 @@ export class WebSocketTransport implements Transport {
     // connect, its fresh attempt has this flag reset and advances normally.
     // The timer guard still prevents an error + close pair from rotating twice.
     if (!this.currentAttemptConnected) {
-      this.candidateIndex =
-        (this.candidateIndex + 1) % this.candidateUrls.length;
+      this.candidateIndex = this.nextCandidateIndex();
     }
 
     // Use fixed interval for local network devices - no backoff needed

@@ -504,6 +504,8 @@ class DeviceRegistryRepository {
   private readonly listeners = new Set<() => void>();
   private hydrationPromise: Promise<void> | null = null;
   private writeChain: Promise<void> = Promise.resolve();
+  private commitChain: Promise<void> = Promise.resolve();
+  private pendingCommits = 0;
 
   getSnapshot = (): DeviceRegistrySnapshot => this.snapshot;
 
@@ -567,36 +569,56 @@ class DeviceRegistryRepository {
   private commit(
     update: (registry: DeviceRegistryV2) => DeviceRegistryV2,
   ): Promise<void> {
-    if (!this.snapshot.hydrated) {
-      const error = new Error(
-        "Device registry was never read successfully; refusing to overwrite stored devices",
-      );
-      logger.error("Refused device registry write before hydration", error, {
-        category: "storage",
-        action: "commitDeviceRegistry",
-        severity: "error",
-      });
-      return Promise.reject(error);
-    }
+    const execute = async () => {
+      if (!this.snapshot.hydrated) {
+        const error = new Error(
+          "Device registry was never read successfully; refusing to overwrite stored devices",
+        );
+        logger.error("Refused device registry write before hydration", error, {
+          category: "storage",
+          action: "commitDeviceRegistry",
+          severity: "error",
+        });
+        throw error;
+      }
 
-    const previous = this.snapshot;
-    const next = update({
-      schemaVersion: SCHEMA_VERSION,
-      activeRecordId: previous.activeRecordId,
-      records: previous.records,
-    });
-    const published: DeviceRegistrySnapshot = {
-      ...next,
-      hydrated: true,
-      hydrationError: null,
+      const previous = this.snapshot;
+      const next = update({
+        schemaVersion: SCHEMA_VERSION,
+        activeRecordId: previous.activeRecordId,
+        records: previous.records,
+      });
+      const published: DeviceRegistrySnapshot = {
+        ...next,
+        hydrated: true,
+        hydrationError: null,
+      };
+      this.publish(published);
+      try {
+        await this.persist(next);
+      } catch (error) {
+        this.publish(previous);
+        throw error;
+      }
     };
-    this.publish(published);
-    return this.persist(next).catch((error) => {
-      // Roll back only when no newer commit has published over this one. A
-      // later queued write already includes this update and owns current state.
-      if (this.snapshot === published) this.publish(previous);
-      throw error;
-    });
+
+    // Publish the first optimistic update synchronously, but do not let a newer
+    // update publish until its predecessor either persists or rolls back. This
+    // prevents failed state from being captured by a queued durable write.
+    const startsImmediately = this.pendingCommits === 0;
+    this.pendingCommits++;
+    const operation = startsImmediately
+      ? execute()
+      : this.commitChain.then(execute, execute);
+    this.commitChain = operation.then(
+      () => {
+        this.pendingCommits--;
+      },
+      () => {
+        this.pendingCommits--;
+      },
+    );
+    return operation;
   }
 
   hydrate(): Promise<void> {
@@ -1183,6 +1205,8 @@ class DeviceRegistryRepository {
     this.snapshot = emptySnapshot();
     this.hydrationPromise = null;
     this.writeChain = Promise.resolve();
+    this.commitChain = Promise.resolve();
+    this.pendingCommits = 0;
     this.listeners.clear();
   }
 

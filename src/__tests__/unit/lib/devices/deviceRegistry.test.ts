@@ -927,6 +927,91 @@ describe("merging confirmed device aliases", () => {
     expect(snapshot.activeRecordId).toBe(source!.recordId);
   });
 
+  it("should restore the durable snapshot after two queued writes fail", async () => {
+    const record = await deviceRegistry.selectAddress("mistuh.local");
+    let rejectFirst!: (reason: Error) => void;
+    let rejectSecond!: (reason: Error) => void;
+    vi.mocked(Preferences.set)
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            rejectFirst = reject;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            rejectSecond = reject;
+          }),
+      );
+
+    const first = deviceRegistry.setCustomName(record!.recordId, "First");
+    await vi.waitFor(() => {
+      expect(deviceRegistry.getSnapshot().records[record!.recordId]?.name).toBe(
+        "First",
+      );
+    });
+    const second = deviceRegistry.setCustomName(record!.recordId, "Second");
+
+    rejectFirst(new Error("first write failed"));
+    await expect(first).rejects.toThrow("first write failed");
+    await vi.waitFor(() => {
+      expect(deviceRegistry.getSnapshot().records[record!.recordId]?.name).toBe(
+        "Second",
+      );
+    });
+
+    rejectSecond(new Error("second write failed"));
+    await expect(second).rejects.toThrow("second write failed");
+    expect(
+      deviceRegistry.getSnapshot().records[record!.recordId]?.name,
+    ).toBeUndefined();
+  });
+
+  it("should preserve a queued update without persisting a failed merge", async () => {
+    const target = await deviceRegistry.selectAddress("mistuh.local");
+    const source = await deviceRegistry.selectAddress("10.0.0.218");
+    let rejectMerge!: (reason: Error) => void;
+    vi.mocked(Preferences.set)
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            rejectMerge = reject;
+          }),
+      )
+      .mockResolvedValueOnce();
+
+    const merge = deviceRegistry.mergeRecords(
+      target!.recordId,
+      source!.recordId,
+    );
+    await vi.waitFor(() => {
+      expect(
+        deviceRegistry.getSnapshot().records[source!.recordId],
+      ).toBeUndefined();
+    });
+    const addressUpdate = deviceRegistry.noteResolvedAddresses(
+      target!.recordId,
+      ["10.0.0.107"],
+    );
+
+    rejectMerge(new Error("merge write failed"));
+    await expect(merge).rejects.toThrow("merge write failed");
+    await addressUpdate;
+
+    const snapshot = deviceRegistry.getSnapshot();
+    expect(snapshot.records[source!.recordId]).toBeDefined();
+    expect(
+      snapshot.records[target!.recordId]?.endpoints.some(
+        (endpoint) => endpoint.resolvedAddresses?.[0] === "10.0.0.107",
+      ),
+    ).toBe(true);
+    const persisted = JSON.parse(
+      vi.mocked(Preferences.set).mock.calls.at(-1)![0].value,
+    ) as { records: Record<string, unknown> };
+    expect(persisted.records[source!.recordId]).toBeDefined();
+  });
+
   it("should leave both records when credential preparation fails", async () => {
     const target = await deviceRegistry.selectAddress("mistuh.local");
     const source = await deviceRegistry.selectAddress("10.0.0.218");
