@@ -362,6 +362,7 @@ export class ConnectionManager {
         return new WebSocketTransport({
           deviceId: config.deviceId,
           url: config.address,
+          fallbackUrls: config.fallbackAddresses,
           pingInterval: 15000,
           pongTimeout: 10000,
           reconnectInterval: 2000,

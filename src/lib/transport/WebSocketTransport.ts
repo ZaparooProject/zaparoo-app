@@ -18,8 +18,10 @@ import type {
 export interface WebSocketTransportConfig {
   /** Device identifier */
   deviceId: string;
-  /** WebSocket URL */
+  /** Primary WebSocket URL */
   url: string;
+  /** Alternate URLs for the same canonical device. */
+  fallbackUrls?: readonly string[];
   /** Interval between ping messages (ms) */
   pingInterval?: number;
   /** Timeout waiting for pong response (ms) */
@@ -44,7 +46,7 @@ type EncMode = "idle" | "trying-encrypted" | "encrypted-verified" | "plaintext";
 
 const DEFAULT_CONFIG: Omit<
   Required<WebSocketTransportConfig>,
-  "deviceId" | "url" | "encryption"
+  "deviceId" | "url" | "fallbackUrls" | "encryption"
 > = {
   pingInterval: 15000,
   pongTimeout: 10000,
@@ -56,9 +58,13 @@ const DEFAULT_CONFIG: Omit<
 
 export class WebSocketTransport implements Transport {
   private ws: WebSocket | null = null;
-  private config: Required<Omit<WebSocketTransportConfig, "encryption">> & {
+  private config: Required<
+    Omit<WebSocketTransportConfig, "encryption" | "fallbackUrls">
+  > & {
     encryption?: TransportEncryptionConfig;
   };
+  private readonly candidateUrls: string[];
+  private candidateIndex = 0;
   private handlers: TransportEventHandlers = {};
   private _state: TransportState = "disconnected";
   private reconnectAttempts = 0;
@@ -90,12 +96,13 @@ export class WebSocketTransport implements Transport {
   readonly deviceId: string;
 
   constructor(config: WebSocketTransportConfig) {
-    const { encryption, ...rest } = config;
+    const { encryption, fallbackUrls = [], ...rest } = config;
     this.config = {
       ...DEFAULT_CONFIG,
       ...rest,
       encryption,
     };
+    this.candidateUrls = [...new Set([config.url, ...fallbackUrls])];
     this.deviceId = config.deviceId;
   }
 
@@ -314,8 +321,9 @@ export class WebSocketTransport implements Transport {
     // Close any existing WebSocket to prevent stale handlers from corrupting state
     this.closeWebSocket();
 
+    const candidateUrl = this.candidateUrls[this.candidateIndex]!;
     try {
-      this.ws = new WebSocket(this.config.url);
+      this.ws = new WebSocket(candidateUrl);
       this.setupEventHandlers();
       this.startConnectionTimeout();
     } catch (error) {
@@ -411,7 +419,8 @@ export class WebSocketTransport implements Transport {
       this.clearConnectionTimeout();
       const errorEvent = event as ErrorEvent;
       const message =
-        errorEvent.message || `Failed to connect to ${this.config.url}`;
+        errorEvent.message ||
+        `Failed to connect to ${this.candidateUrls[this.candidateIndex]}`;
       this.handlers.onError?.(new Error(message));
       this.handleConnectionError();
     };
@@ -815,6 +824,11 @@ export class WebSocketTransport implements Transport {
     if (this.reconnectTimer) {
       return;
     }
+
+    // Advance exactly once per scheduled retry. Browsers commonly emit both
+    // error and close for one failed socket, and the reconnect-timer guard
+    // keeps that pair from skipping a candidate.
+    this.candidateIndex = (this.candidateIndex + 1) % this.candidateUrls.length;
 
     // Use fixed interval for local network devices - no backoff needed
     const delay = this.config.reconnectInterval;

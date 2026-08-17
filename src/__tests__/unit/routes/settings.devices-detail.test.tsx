@@ -98,6 +98,7 @@ describe("Settings Device Detail Route", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     queryClient.clear();
   });
 

@@ -109,6 +109,9 @@ export function NetworkScanModal({
                   name: device.name,
                   platform: device.platform,
                   version: device.version,
+                  ...(device.hostname && device.addresses.length > 0
+                    ? { resolvedAddresses: device.addresses }
+                    : {}),
                 }}
                 onSelect={() => handleSelectDevice(device)}
               />

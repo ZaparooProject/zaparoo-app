@@ -133,6 +133,35 @@ function sameAddressSet(
   return right.every((address) => existing.has(address));
 }
 
+function discoveryIdsConflict(left: DeviceRecord, right: DeviceRecord) {
+  const leftId = normalizeDiscoveryId(left.discoveryId);
+  const rightId = normalizeDiscoveryId(right.discoveryId);
+  return Boolean(leftId && rightId && leftId !== rightId);
+}
+
+function mergeEndpoint(
+  existing: DeviceEndpoint,
+  incoming: DeviceEndpoint,
+): DeviceEndpoint {
+  const resolvedAddresses = unique([
+    ...(existing.resolvedAddresses ?? []),
+    ...(incoming.resolvedAddresses ?? []),
+  ]);
+  const lastSeenAt = Math.max(
+    existing.lastSeenAt ?? 0,
+    incoming.lastSeenAt ?? 0,
+  );
+  return {
+    ...existing,
+    source:
+      existing.source === "mdns" || incoming.source === "mdns"
+        ? "mdns"
+        : "manual",
+    ...(resolvedAddresses.length > 0 ? { resolvedAddresses } : {}),
+    ...(lastSeenAt > 0 ? { lastSeenAt } : {}),
+  };
+}
+
 function endpointFromParsed(
   endpoint: ParsedDeviceEndpoint,
   source: DeviceEndpointSource,
@@ -184,23 +213,44 @@ export function parsedEndpointForRecord(
 }
 
 /**
- * The endpoint to actually dial: the preferred one, with its host swapped for
- * a resolved address when mDNS supplied one.
- *
- * The record keeps the `.local` hostname — that is the identity that survives
- * a DHCP move — while the socket gets an address iOS can reach without doing
- * its own multicast resolution.
+ * Connection candidates for a record, preferred route first. mDNS hostnames
+ * are replaced by their resolved addresses because iOS WebSockets do not
+ * reliably resolve `.local`; merged manual aliases remain later fallbacks.
  */
+export function resolvedEndpointsForRecord(
+  record: DeviceRecord | null | undefined,
+): ParsedDeviceEndpoint[] {
+  const preferred = preferredEndpointFor(record);
+  if (!record || !preferred) return [];
+
+  const ordered = [
+    preferred,
+    ...record.endpoints.filter(
+      (endpoint) => endpoint.endpointId !== preferred.endpointId,
+    ),
+  ];
+  const endpointIds = unique(
+    ordered.flatMap((endpoint) => {
+      const parsed = parseDeviceEndpoint(endpoint.endpointId);
+      if (!parsed.ok) return [];
+      const resolved = (endpoint.resolvedAddresses ?? []).map(
+        (address) =>
+          replaceDeviceEndpointHost(parsed.endpoint, address).endpointId,
+      );
+      return resolved.length > 0 ? resolved : [parsed.endpoint.endpointId];
+    }),
+  );
+
+  return endpointIds
+    .map((endpointId) => parseDeviceEndpoint(endpointId))
+    .filter((result) => result.ok)
+    .map((result) => result.endpoint);
+}
+
 export function resolvedEndpointForRecord(
   record: DeviceRecord | null | undefined,
 ): ParsedDeviceEndpoint | null {
-  const preferred = preferredEndpointFor(record);
-  const parsed = parsedEndpointForRecord(record);
-  if (!parsed || !preferred) return parsed;
-  const resolvedAddress = preferred.resolvedAddresses?.[0];
-  return resolvedAddress
-    ? replaceDeviceEndpointHost(parsed, resolvedAddress)
-    : parsed;
+  return resolvedEndpointsForRecord(record)[0] ?? null;
 }
 
 /** The active record's display address, or `""` before hydration. */
@@ -677,26 +727,26 @@ class DeviceRegistryRepository {
     );
     if (!parsed.ok) return null;
 
-    // A service name identifies a device; an address does not. When the
-    // announcement carries one, it is the only thing matched on — falling back
-    // to the address would hand a device that inherited a DHCP lease the
-    // previous occupant's record, and with it that record's credentials. Only
-    // an announcement with no service name at all may match on its address, and
-    // then only against records that are themselves unidentified.
+    // A stable service id wins. Without one, only the exact advertised
+    // hostname can reuse a record; an IP is never identity because DHCP can
+    // hand it to another device. Explicitly selecting a scan result may upgrade
+    // an unidentified manual hostname record to mDNS instead of creating the
+    // same endpoint twice.
     const discoveryId = normalizeDiscoveryId(device.discoveryId);
-    const existing = discoveryId
-      ? Object.values(this.snapshot.records).find(
-          (record) => record.discoveryId === discoveryId,
-        )
-      : Object.values(this.snapshot.records).find(
+    const records = Object.values(this.snapshot.records);
+    const byDiscoveryId = discoveryId
+      ? records.find((record) => record.discoveryId === discoveryId)
+      : undefined;
+    const byExactHostname = hostname
+      ? records.find(
           (record) =>
             record.discoveryId === undefined &&
             record.endpoints.some(
-              (endpoint) =>
-                endpoint.source === "mdns" &&
-                endpoint.endpointId === parsed.endpoint.endpointId,
+              (endpoint) => endpoint.endpointId === parsed.endpoint.endpointId,
             ),
-        );
+        )
+      : undefined;
+    const existing = byDiscoveryId ?? byExactHostname;
 
     const resolvedAddresses = unique(device.addresses);
     const existingEndpoint = existing?.endpoints.find(
@@ -905,6 +955,136 @@ class DeviceRegistryRepository {
       ...registry,
       records: { ...registry.records, [recordId]: next },
     }));
+  }
+
+  /**
+   * Combine two records after the user confirms they name the same device.
+   * Credential preparation happens first so a failed keychain write cannot
+   * strand the surviving record without the source record's pairing.
+   */
+  async mergeRecords(
+    targetRecordId: string,
+    sourceRecordId: string,
+    options: { beforeCommit?: () => void } = {},
+  ): Promise<DeviceRecord> {
+    await this.hydrate();
+    let target = this.snapshot.records[targetRecordId];
+    let source = this.snapshot.records[sourceRecordId];
+    if (!target || !source || targetRecordId === sourceRecordId) {
+      throw new Error("Device records are unavailable for merge");
+    }
+    if (discoveryIdsConflict(target, source)) {
+      throw new Error("Devices with different discovery IDs cannot be merged");
+    }
+
+    const legacyKeys = [
+      target.legacyCredentialKey,
+      source.legacyCredentialKey,
+    ].filter((key): key is string => key !== undefined);
+    const credentialCleanupKeys = await credentialStore.prepareRecordMerge(
+      targetRecordId,
+      sourceRecordId,
+      legacyKeys,
+    );
+
+    // Keychain access crosses an async boundary. Re-read before constructing
+    // the commit so metadata or endpoint updates that landed meanwhile are not
+    // overwritten by the older snapshot captured above.
+    target = this.snapshot.records[targetRecordId];
+    source = this.snapshot.records[sourceRecordId];
+    if (!target || !source || discoveryIdsConflict(target, source)) {
+      throw new Error("Device records changed while preparing the merge");
+    }
+
+    const endpoints = new Map(
+      target.endpoints.map((endpoint) => [endpoint.endpointId, endpoint]),
+    );
+    for (const endpoint of source.endpoints) {
+      const existing = endpoints.get(endpoint.endpointId);
+      endpoints.set(
+        endpoint.endpointId,
+        existing ? mergeEndpoint(existing, endpoint) : endpoint,
+      );
+    }
+
+    const sourceWasActive = this.snapshot.activeRecordId === sourceRecordId;
+    const sourceIsNewer =
+      (source.lastConnectedAt ?? 0) > (target.lastConnectedAt ?? 0);
+    const newest = sourceIsNewer ? source : target;
+    const oldest = sourceIsNewer ? target : source;
+    const customNameOwner = target.nameIsCustom
+      ? target
+      : source.nameIsCustom
+        ? source
+        : null;
+    const name = customNameOwner?.name ?? newest.name ?? oldest.name;
+    const lastConnectedAt = Math.max(
+      target.lastConnectedAt ?? 0,
+      source.lastConnectedAt ?? 0,
+    );
+
+    const merged: DeviceRecord = {
+      ...target,
+      ...((target.discoveryId ?? source.discoveryId)
+        ? { discoveryId: target.discoveryId ?? source.discoveryId }
+        : {}),
+      endpoints: [...endpoints.values()],
+      preferredEndpointId: sourceWasActive
+        ? source.preferredEndpointId
+        : target.preferredEndpointId,
+      ...(name ? { name } : {}),
+      nameIsCustom: customNameOwner !== null,
+      ...((newest.platform ?? oldest.platform)
+        ? { platform: newest.platform ?? oldest.platform }
+        : {}),
+      ...((newest.version ?? oldest.version)
+        ? { version: newest.version ?? oldest.version }
+        : {}),
+      ...(lastConnectedAt > 0 ? { lastConnectedAt } : {}),
+    };
+    delete merged.legacyCredentialKey;
+
+    // Callers use this last synchronous boundary to destroy an active source
+    // transport. Nothing awaited after it can fail before the merged snapshot
+    // is published, so a preparation error never disconnects an intact record.
+    options.beforeCommit?.();
+    await this.commit((registry) => {
+      const records = { ...registry.records, [targetRecordId]: merged };
+      delete records[sourceRecordId];
+      return {
+        ...registry,
+        activeRecordId: sourceWasActive
+          ? targetRecordId
+          : registry.activeRecordId,
+        records,
+      };
+    });
+
+    const referencedLegacyKeys = new Set(
+      Object.values(this.snapshot.records)
+        .map((record) => record.legacyCredentialKey)
+        .filter((key): key is string => key !== undefined),
+    );
+    const cleanupResults = await Promise.allSettled(
+      credentialCleanupKeys
+        .filter((key) => !referencedLegacyKeys.has(key))
+        .map((key) => credentialStore.delete(key)),
+    );
+    for (const result of cleanupResults) {
+      if (result.status === "rejected") {
+        logger.error(
+          "Failed to clean merged device credentials",
+          result.reason,
+          {
+            category: "storage",
+            action: "mergeDeviceCredentials",
+            severity: "error",
+          },
+        );
+      }
+    }
+
+    return merged;
   }
 
   /** Set or clear the user's own name for a record. Blank clears it. */

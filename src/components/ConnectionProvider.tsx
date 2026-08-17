@@ -68,11 +68,14 @@ import {
 import {
   credentialKeyForRecord,
   credentialStore,
+  type StoredCredentials,
 } from "@/lib/crypto/credentials";
+import { reconcileCredentialProvenAliases } from "@/lib/devices/credentialProof";
 import {
   deviceRegistry,
   parsedEndpointForRecord,
   resolvedEndpointForRecord,
+  resolvedEndpointsForRecord,
   useDeviceRegistry,
   type DeviceRegistrySnapshot,
 } from "@/lib/devices/deviceRegistry";
@@ -98,16 +101,17 @@ const activeRecordOf = (state: DeviceRegistrySnapshot) =>
   state.activeRecordId ? (state.records[state.activeRecordId] ?? null) : null;
 
 /**
- * The WebSocket URL the active record connects through, or `""` when there is
- * no usable device. Selected as a primitive so a metadata-only registry write
- * cannot tear the socket down and rebuild it.
+ * WebSocket candidates for the active record, serialized as a primitive so a
+ * metadata-only registry write cannot tear the socket down and rebuild it.
  *
  * Resolved rather than canonical: on iOS a WebSocket to a `.local` name does
- * not reliably bootstrap multicast resolution, so the socket dials the address
- * mDNS resolved while the record keeps the hostname.
+ * not reliably bootstrap multicast resolution, so the socket dials every
+ * address mDNS resolved while the record keeps the hostname.
  */
-const selectConnectionWsUrl = (state: DeviceRegistrySnapshot) =>
-  resolvedEndpointForRecord(activeRecordOf(state))?.wsUrl ?? "";
+const selectConnectionWsUrlsKey = (state: DeviceRegistrySnapshot) =>
+  resolvedEndpointsForRecord(activeRecordOf(state))
+    .map((endpoint) => endpoint.wsUrl)
+    .join("\n");
 
 /** The address pairing runs against — resolved, for the same reason. */
 const selectConnectionAddress = (state: DeviceRegistrySnapshot) =>
@@ -276,7 +280,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   );
 
   const activeRecordId = useDeviceRegistry(selectActiveRecordId);
-  const connectionWsUrl = useDeviceRegistry(selectConnectionWsUrl);
+  const connectionWsUrlsKey = useDeviceRegistry(selectConnectionWsUrlsKey);
+  const connectionWsUrls = useMemo(
+    () => (connectionWsUrlsKey ? connectionWsUrlsKey.split("\n") : []),
+    [connectionWsUrlsKey],
+  );
+  const connectionWsUrl = connectionWsUrls[0] ?? "";
   const connectionAddress = useDeviceRegistry(selectConnectionAddress);
   const mdnsHostname = useDeviceRegistry(selectMdnsHostname);
   const mdnsPort = useDeviceRegistry(selectMdnsPort);
@@ -1204,6 +1213,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // while a pre-V2 pairing has not yet been moved to the canonical key, and
     // trustworthy only after the peer authenticates with it.
     let legacyKeyUsed: string | null = null;
+    let credentialsUsed: StoredCredentials | null = null;
+    let aliasReconciliationInFlight = false;
 
     // Generate unique ID for this connection session to prevent stale events
     // Use crypto.randomUUID if available, fallback for older Android WebViews
@@ -1335,6 +1346,24 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               migrationSettled,
             }),
           )
+          .then(async () => {
+            if (!credentialsUsed || aliasReconciliationInFlight) return;
+            aliasReconciliationInFlight = true;
+            try {
+              const mergedRecordIds = await reconcileCredentialProvenAliases(
+                recordId,
+                credentialsUsed,
+              );
+              for (const mergedRecordId of mergedRecordIds) {
+                invalidateLibraryImageCache(mergedRecordId);
+                queryClient.removeQueries({
+                  predicate: (query) => query.queryKey.includes(mergedRecordId),
+                });
+              }
+            } finally {
+              aliasReconciliationInFlight = false;
+            }
+          })
           .catch(ignoreReportedRegistryFailure);
       },
       onPlaintextMode: () => {
@@ -1388,6 +1417,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       deviceId,
       type: "websocket",
       address: connectionWsUrl,
+      fallbackAddresses: connectionWsUrls.slice(1),
       encryption: {
         getCredentials: async () => {
           const record = deviceRegistry.getSnapshot().records[recordId];
@@ -1396,6 +1426,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             record?.legacyCredentialKey,
           );
           legacyKeyUsed = lookup.legacyKeyUsed;
+          credentialsUsed = lookup.credentials;
           return lookup.credentials;
         },
       },
@@ -1448,6 +1479,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   }, [
     activeRecordId,
     connectionWsUrl,
+    connectionWsUrls,
     invalidateCurrentClientRequest,
     invalidateMediaStateRequest,
     cancelMediaIndexReconciliation,

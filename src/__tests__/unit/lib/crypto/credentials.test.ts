@@ -235,4 +235,49 @@ describe("record credentials", () => {
 
     expect(await store.get("192.168.1.50")).toEqual(creds);
   });
+
+  it("should copy source credentials to the surviving record before merge", async () => {
+    await store.set(credentialKeyForRecord("source"), creds);
+
+    await expect(store.prepareRecordMerge("target", "source")).resolves.toEqual(
+      [credentialKeyForRecord("source")],
+    );
+
+    expect(await store.get(credentialKeyForRecord("target"))).toEqual(creds);
+    expect(await store.get(credentialKeyForRecord("source"))).toEqual(creds);
+  });
+
+  it("should keep existing target credentials during merge", async () => {
+    const targetCredentials = { ...creds, clientId: "target-client" };
+    await store.set(credentialKeyForRecord("target"), targetCredentials);
+    await store.set(credentialKeyForRecord("source"), creds);
+
+    await store.prepareRecordMerge("target", "source");
+
+    expect(await store.get(credentialKeyForRecord("target"))).toEqual(
+      targetCredentials,
+    );
+  });
+
+  it("should abort merge preparation when target credentials do not persist", async () => {
+    await store.set(credentialKeyForRecord("source"), creds);
+    vi.mocked(SecureStorage.set).mockImplementationOnce(async () => undefined);
+
+    await expect(store.prepareRecordMerge("target", "source")).rejects.toThrow(
+      "Merged credentials did not persist",
+    );
+
+    expect(await store.get(credentialKeyForRecord("target"))).toBeNull();
+    expect(await store.get(credentialKeyForRecord("source"))).toEqual(creds);
+  });
+
+  it("should abort merge preparation when keychain reads fail", async () => {
+    vi.mocked(SecureStorage.get).mockRejectedValueOnce(
+      new Error("keychain locked"),
+    );
+
+    await expect(store.prepareRecordMerge("target", "source")).rejects.toThrow(
+      "keychain locked",
+    );
+  });
 });

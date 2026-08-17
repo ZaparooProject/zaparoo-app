@@ -34,6 +34,7 @@ import type { NotificationRequest } from "@/lib/coreApi";
 import { ClientCapability, InboxSeverity, Notification } from "@/lib/models";
 import { logger } from "@/lib/logger";
 import { invalidateLibraryImageCache } from "@/lib/libraryImageCache";
+import { reconcileCredentialProvenAliases } from "@/lib/devices/credentialProof";
 
 // Capture event handlers for notification testing
 let capturedEventHandlers: {
@@ -52,6 +53,10 @@ const pairingModalCapture = vi.hoisted(() => ({
 // Mock dependencies
 vi.mock("@/lib/libraryImageCache", () => ({
   invalidateLibraryImageCache: vi.fn(),
+}));
+
+vi.mock("@/lib/devices/credentialProof", () => ({
+  reconcileCredentialProvenAliases: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("../../../lib/transport", () => {
@@ -509,6 +514,32 @@ describe("ConnectionProvider", () => {
         );
       });
       expect(deviceRegistry.activeEndpoint()?.address).toBe("steamdeck.local");
+    });
+
+    it("should pass every resolved address to the transport", async () => {
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(ZeroConf.watch).toHaveBeenCalled();
+      });
+      act(() => {
+        __simulateDeviceDiscovered(
+          advertise({ ipv4Addresses: ["10.0.0.206", "10.0.0.218"] }),
+        );
+      });
+
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({
+            address: "ws://10.0.0.206:7497/api/v0.1",
+            fallbackAddresses: ["ws://10.0.0.218:7497/api/v0.1"],
+          }),
+        );
+      });
     });
 
     it("should retry after mDNS confirms an already-known route", async () => {
@@ -2939,6 +2970,7 @@ describe("connection event handling", () => {
       const record = deviceRegistry.getSnapshot().records[RECORD_ID];
       expect(record?.lastConnectedAt).toBeGreaterThanOrEqual(before);
     });
+    expect(reconcileCredentialProvenAliases).not.toHaveBeenCalled();
   });
 
   it("should move a pre-V2 pairing onto the record once the peer authenticates with it", async () => {
@@ -2986,6 +3018,10 @@ describe("connection event handling", () => {
       expect(
         deviceRegistry.getSnapshot().records[RECORD_ID]?.legacyCredentialKey,
       ).toBeUndefined();
+      expect(reconcileCredentialProvenAliases).toHaveBeenCalledWith(
+        RECORD_ID,
+        expect.objectContaining({ authToken: "token-abc" }),
+      );
     });
   });
 

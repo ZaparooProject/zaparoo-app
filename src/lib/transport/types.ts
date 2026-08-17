@@ -35,8 +35,10 @@ export interface TransportConfig {
   deviceId: string;
   /** Transport type */
   type: "websocket" | "bluetooth";
-  /** Connection address (IP:port for WS, device ID for BT) */
+  /** Primary connection address (IP:port for WS, device ID for BT) */
   address: string;
+  /** Alternate addresses for the same canonical device. */
+  fallbackAddresses?: readonly string[];
   /** Optional encryption config */
   encryption?: TransportEncryptionConfig;
 }

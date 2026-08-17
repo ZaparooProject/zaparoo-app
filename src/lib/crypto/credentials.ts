@@ -35,6 +35,11 @@ export interface CredentialStore {
     recordId: string,
     legacyKey: string,
   ): Promise<boolean>;
+  prepareRecordMerge(
+    targetRecordId: string,
+    sourceRecordId: string,
+    legacyKeys?: readonly string[],
+  ): Promise<string[]>;
 }
 
 /**
@@ -110,21 +115,27 @@ export class SecureCredentialStore implements CredentialStore {
     return next;
   }
 
-  async get(deviceKey: string): Promise<StoredCredentials | null> {
+  private async getStrict(
+    deviceKey: string,
+  ): Promise<StoredCredentials | null> {
     await this.initPromise;
     return this.enqueue(deviceKey, async () => {
-      try {
-        const value = await SecureStorage.get(deviceKey, false);
-        return isStoredCredentials(value) ? value : null;
-      } catch (err) {
-        logger.error("SecureStorage.get failed", err, {
-          category: "storage",
-          action: "getCredentials",
-          severity: "error",
-        });
-        return null;
-      }
+      const value = await SecureStorage.get(deviceKey, false);
+      return isStoredCredentials(value) ? value : null;
     });
+  }
+
+  async get(deviceKey: string): Promise<StoredCredentials | null> {
+    try {
+      return await this.getStrict(deviceKey);
+    } catch (err) {
+      logger.error("SecureStorage.get failed", err, {
+        category: "storage",
+        action: "getCredentials",
+        severity: "error",
+      });
+      return null;
+    }
   }
 
   async set(deviceKey: string, creds: StoredCredentials): Promise<void> {
@@ -204,6 +215,42 @@ export class SecureCredentialStore implements CredentialStore {
       });
       return false;
     }
+  }
+
+  /**
+   * Ensure the surviving record owns a verified credential copy before its
+   * source record is removed. Cleanup is returned to the registry so keys are
+   * deleted only after the registry write succeeds and shared legacy keys can
+   * be retained.
+   */
+  async prepareRecordMerge(
+    targetRecordId: string,
+    sourceRecordId: string,
+    legacyKeys: readonly string[] = [],
+  ): Promise<string[]> {
+    const targetKey = credentialKeyForRecord(targetRecordId);
+    const sourceKey = credentialKeyForRecord(sourceRecordId);
+    const candidates = [...new Set([targetKey, sourceKey, ...legacyKeys])];
+
+    let winner: StoredCredentials | null = null;
+    let winnerKey: string | null = null;
+    for (const key of candidates) {
+      const credentials = await this.getStrict(key);
+      if (credentials) {
+        winner = credentials;
+        winnerKey = key;
+        break;
+      }
+    }
+
+    if (winner && winnerKey !== targetKey) {
+      await this.set(targetKey, winner);
+      if (!(await this.getStrict(targetKey))) {
+        throw new Error("Merged credentials did not persist");
+      }
+    }
+
+    return candidates.filter((key) => key !== targetKey);
   }
 
   async list(): Promise<

@@ -236,9 +236,13 @@ describe("NetworkScanModal", () => {
         );
       });
 
-      // Assert - mDNS hostname is preferred and default port is hidden
+      // Assert - show both stable-looking hostname and concrete route so the
+      // user can verify which host the app is about to contact.
       await waitFor(() => {
         expect(screen.getByText("test-device.local")).toBeInTheDocument();
+        expect(
+          screen.getByText("settings.networkScan.addresses"),
+        ).toBeInTheDocument();
       });
     });
 

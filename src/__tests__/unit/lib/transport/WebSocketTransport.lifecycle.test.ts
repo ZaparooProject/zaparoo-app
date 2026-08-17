@@ -480,6 +480,30 @@ describe("WebSocketTransport lifecycle", () => {
   });
 
   describe("reconnection", () => {
+    it("should try each candidate without skipping after error and close", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://10.0.0.218:7497",
+        fallbackUrls: ["ws://10.0.0.107:7497"],
+        reconnectInterval: 100,
+      });
+
+      transport.connect();
+      expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.218:7497");
+
+      MockWebSocket.getLatest()!.simulateError();
+      MockWebSocket.getLatest()!.simulateClose();
+      vi.advanceTimersByTime(100);
+      expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.107:7497");
+
+      MockWebSocket.getLatest()!.simulateError();
+      MockWebSocket.getLatest()!.simulateClose();
+      vi.advanceTimersByTime(100);
+      expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.218:7497");
+
+      transport.destroy();
+    });
+
     it("should schedule reconnect with correct delay after disconnect", () => {
       const transport = new WebSocketTransport({
         deviceId: "test-device",
