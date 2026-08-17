@@ -21,14 +21,7 @@ function recordsMayShareIdentity(
 ): boolean {
   const targetId = target.discoveryId?.trim().toLowerCase();
   const candidateId = candidate.discoveryId?.trim().toLowerCase();
-  if (targetId && candidateId) return targetId === candidateId;
-
-  const targetEndpoints = new Set(
-    target.endpoints.map((endpoint) => endpoint.endpointId),
-  );
-  return candidate.endpoints.some((endpoint) =>
-    targetEndpoints.has(endpoint.endpointId),
-  );
+  return Boolean(targetId && candidateId && targetId === candidateId);
 }
 
 async function probeUrl(
@@ -125,8 +118,8 @@ export const proveSavedRecordCredentials: CredentialProofProbe = async (
 /**
  * Merge saved aliases only after their endpoint answers with data encrypted by
  * the active record's pairing key. Probes are restricted to records already
- * linked by a stable discovery ID or exact endpoint so the cleartext auth token
- * is never disclosed based only on a name or mutable network route.
+ * linked by the same stable discovery ID so the cleartext auth token is never
+ * disclosed based only on a name or mutable network route.
  */
 export async function reconcileCredentialProvenAliases(
   targetRecordId: string,

@@ -252,6 +252,20 @@ describe("credential-proven device aliases", () => {
     expect(probe).not.toHaveBeenCalled();
   });
 
+  it("should not expose credentials based only on an exact mutable endpoint", async () => {
+    const target = mockDeviceRecord({ address: "10.0.0.80" });
+    const oldRecord = mockDeviceRecord({ address: "10.0.0.80" });
+    await seedDeviceRegistry([target, oldRecord], target.recordId);
+    const probe = vi.fn<CredentialProofProbe>().mockResolvedValue(true);
+
+    await reconcileCredentialProvenAliases(target.recordId, credentials, probe);
+
+    expect(probe).not.toHaveBeenCalled();
+    expect(
+      deviceRegistry.getSnapshot().records[oldRecord.recordId],
+    ).toBeDefined();
+  });
+
   it("should limit concurrent credential probes", async () => {
     const target = mockDeviceRecord({
       address: "steamdeck.local",
