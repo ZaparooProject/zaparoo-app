@@ -8,37 +8,12 @@ import {
 import { logger } from "@/lib/logger";
 
 const PROBE_TIMEOUT_MS = 2500;
+const PROBE_CONCURRENCY = 3;
 
 export type CredentialProofProbe = (
   urls: readonly string[],
   credentials: StoredCredentials,
 ) => Promise<boolean>;
-
-function normalizedIdentityHints(record: DeviceRecord): Set<string> {
-  const hints = new Set<string>();
-  const add = (value: string | undefined) => {
-    const normalized = value
-      ?.trim()
-      .toLowerCase()
-      .replace(/\.local\.?$/, "")
-      .replace(/[^a-z0-9]+/g, "");
-    if (normalized) hints.add(normalized);
-  };
-
-  add(record.name);
-  for (const endpoint of record.endpoints) {
-    // Numeric addresses are routes, not useful names. Hostnames only narrow
-    // which saved records receive a cryptographic proof attempt; they never
-    // authorize a merge themselves.
-    if (
-      !endpoint.host.includes(":") &&
-      !/^\d{1,3}(?:\.\d{1,3}){3}$/.test(endpoint.host)
-    ) {
-      add(endpoint.host);
-    }
-  }
-  return hints;
-}
 
 function recordsMayShareIdentity(
   target: DeviceRecord,
@@ -46,38 +21,13 @@ function recordsMayShareIdentity(
 ): boolean {
   const targetId = target.discoveryId?.trim().toLowerCase();
   const candidateId = candidate.discoveryId?.trim().toLowerCase();
-  if (targetId && candidateId && targetId !== candidateId) return false;
+  if (targetId && candidateId) return targetId === candidateId;
 
   const targetEndpoints = new Set(
     target.endpoints.map((endpoint) => endpoint.endpointId),
   );
-  if (
-    candidate.endpoints.some((endpoint) =>
-      targetEndpoints.has(endpoint.endpointId),
-    )
-  ) {
-    return true;
-  }
-
-  const sharesRoute = candidate.endpoints.some((right) =>
-    target.endpoints.some((left) => {
-      if (left.scheme !== right.scheme || left.port !== right.port)
-        return false;
-      const leftHosts = new Set(
-        [left.host, ...(left.resolvedAddresses ?? [])].map((host) =>
-          host.toLowerCase(),
-        ),
-      );
-      return [right.host, ...(right.resolvedAddresses ?? [])].some((host) =>
-        leftHosts.has(host.toLowerCase()),
-      );
-    }),
-  );
-  if (sharesRoute) return true;
-
-  const targetHints = normalizedIdentityHints(target);
-  return [...normalizedIdentityHints(candidate)].some((hint) =>
-    targetHints.has(hint),
+  return candidate.endpoints.some((endpoint) =>
+    targetEndpoints.has(endpoint.endpointId),
   );
 }
 
@@ -174,8 +124,9 @@ export const proveSavedRecordCredentials: CredentialProofProbe = async (
 
 /**
  * Merge saved aliases only after their endpoint answers with data encrypted by
- * the active record's pairing key. Names and routes merely bound the probe set;
- * successful authenticated decryption is the identity decision.
+ * the active record's pairing key. Probes are restricted to records already
+ * linked by a stable discovery ID or exact endpoint so the cleartext auth token
+ * is never disclosed based only on a name or mutable network route.
  */
 export async function reconcileCredentialProvenAliases(
   targetRecordId: string,
@@ -191,17 +142,22 @@ export async function reconcileCredentialProvenAliases(
       candidate.recordId !== targetRecordId &&
       recordsMayShareIdentity(target, candidate),
   );
-  const proofResults = await Promise.all(
-    candidates.map(async (candidate) => {
-      const urls = resolvedEndpointsForRecord(candidate).map(
-        (endpoint) => endpoint.wsUrl,
-      );
-      return {
-        candidateId: candidate.recordId,
-        proved: urls.length > 0 && (await probe(urls, credentials)),
-      };
-    }),
-  );
+  const proofResults: Array<{ candidateId: string; proved: boolean }> = [];
+  for (let index = 0; index < candidates.length; index += PROBE_CONCURRENCY) {
+    const batch = candidates.slice(index, index + PROBE_CONCURRENCY);
+    const batchResults = await Promise.all(
+      batch.map(async (candidate) => {
+        const urls = resolvedEndpointsForRecord(candidate).map(
+          (endpoint) => endpoint.wsUrl,
+        );
+        return {
+          candidateId: candidate.recordId,
+          proved: urls.length > 0 && (await probe(urls, credentials)),
+        };
+      }),
+    );
+    for (const result of batchResults) proofResults.push(result);
+  }
 
   const mergedIds: string[] = [];
   for (const result of proofResults) {

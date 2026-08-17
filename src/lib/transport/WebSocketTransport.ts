@@ -75,6 +75,7 @@ export class WebSocketTransport implements Transport {
   private connectionTimer?: ReturnType<typeof setTimeout>;
   private isDestroyed = false;
   private _hasConnectedBefore = false;
+  private currentAttemptConnected = false;
   private heartbeatPaused = false;
 
   // Encryption state for the current connect cycle.
@@ -290,6 +291,7 @@ export class WebSocketTransport implements Transport {
   // Private methods
 
   private setState(newState: TransportState): void {
+    if (newState === "connected") this.currentAttemptConnected = true;
     if (this._state !== newState) {
       logger.debug(
         `[Transport:${this.deviceId}] State: ${this._state} -> ${newState}`,
@@ -322,6 +324,7 @@ export class WebSocketTransport implements Transport {
     this.closeWebSocket();
 
     const candidateUrl = this.candidateUrls[this.candidateIndex]!;
+    this.currentAttemptConnected = false;
     try {
       this.ws = new WebSocket(candidateUrl);
       this.setupEventHandlers();
@@ -825,10 +828,14 @@ export class WebSocketTransport implements Transport {
       return;
     }
 
-    // Advance exactly once per scheduled retry. Browsers commonly emit both
-    // error and close for one failed socket, and the reconnect-timer guard
-    // keeps that pair from skipping a candidate.
-    this.candidateIndex = (this.candidateIndex + 1) % this.candidateUrls.length;
+    // Rotate only when this socket never became usable. A dropped established
+    // route (including pong timeout) retries itself first; if that retry cannot
+    // connect, its fresh attempt has this flag reset and advances normally.
+    // The timer guard still prevents an error + close pair from rotating twice.
+    if (!this.currentAttemptConnected) {
+      this.candidateIndex =
+        (this.candidateIndex + 1) % this.candidateUrls.length;
+    }
 
     // Use fixed interval for local network devices - no backoff needed
     const delay = this.config.reconnectInterval;

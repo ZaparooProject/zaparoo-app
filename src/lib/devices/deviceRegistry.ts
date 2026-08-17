@@ -237,7 +237,9 @@ export function resolvedEndpointsForRecord(
         (address) =>
           replaceDeviceEndpointHost(parsed.endpoint, address).endpointId,
       );
-      return resolved.length > 0 ? resolved : [parsed.endpoint.endpointId];
+      return resolved.length > 0
+        ? [...resolved, parsed.endpoint.endpointId]
+        : [parsed.endpoint.endpointId];
     }),
   );
 
@@ -740,13 +742,16 @@ class DeviceRegistryRepository {
     const byExactHostname = hostname
       ? records.find(
           (record) =>
-            record.discoveryId === undefined &&
+            (!discoveryId ||
+              !record.discoveryId ||
+              normalizeDiscoveryId(record.discoveryId) === discoveryId) &&
             record.endpoints.some(
               (endpoint) => endpoint.endpointId === parsed.endpoint.endpointId,
             ),
         )
       : undefined;
     const existing = byDiscoveryId ?? byExactHostname;
+    const effectiveDiscoveryId = discoveryId ?? existing?.discoveryId;
 
     const resolvedAddresses = unique(device.addresses);
     const existingEndpoint = existing?.endpoints.find(
@@ -759,7 +764,7 @@ class DeviceRegistryRepository {
     // rewrite the record on every mDNS announcement.
     const unchanged =
       existing !== undefined &&
-      existing.discoveryId === discoveryId &&
+      existing.discoveryId === effectiveDiscoveryId &&
       existing.preferredEndpointId === parsed.endpoint.endpointId &&
       existingEndpoint?.source === "mdns" &&
       sameAddressSet(

@@ -536,7 +536,10 @@ describe("ConnectionProvider", () => {
         expect(connectionManager.addDevice).toHaveBeenCalledWith(
           expect.objectContaining({
             address: "ws://10.0.0.206:7497/api/v0.1",
-            fallbackAddresses: ["ws://10.0.0.218:7497/api/v0.1"],
+            fallbackAddresses: [
+              "ws://10.0.0.218:7497/api/v0.1",
+              "ws://steamdeck.local:7497/api/v0.1",
+            ],
           }),
         );
       });
@@ -560,6 +563,40 @@ describe("ConnectionProvider", () => {
 
       act(() => {
         __simulateDeviceDiscovered(advertise());
+      });
+
+      await waitFor(() => {
+        expect(
+          connectionManager.immediateReconnectActive,
+        ).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("should retry when mDNS confirms a fallback route", async () => {
+      await seedMdnsDevice(["10.0.0.205", "10.0.0.206"]);
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledWith(
+          expect.objectContaining({
+            address: "ws://10.0.0.205:7497/api/v0.1",
+            fallbackAddresses: expect.arrayContaining([
+              "ws://10.0.0.206:7497/api/v0.1",
+            ]),
+          }),
+        );
+      });
+      vi.mocked(connectionManager.immediateReconnectActive).mockClear();
+
+      act(() => {
+        __simulateDeviceDiscovered(
+          advertise({ ipv4Addresses: ["10.0.0.206"] }),
+        );
       });
 
       await waitFor(() => {

@@ -8,6 +8,22 @@ import {
   type ZeroConfService,
 } from "../../../__mocks__/capacitor-zeroconf";
 
+const { mockT } = vi.hoisted(() => ({
+  mockT: vi.fn((key: string) => key),
+}));
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: mockT,
+    i18n: {
+      changeLanguage: vi.fn(() => Promise.resolve()),
+      language: "en",
+    },
+  }),
+  Trans: ({ children }: { children: React.ReactNode }) => children,
+  initReactI18next: { type: "3rdParty", init: () => {} },
+}));
+
 // Helper to create mock ZeroConf services
 const createMockService = (
   overrides: Partial<ZeroConfService> = {},
@@ -243,6 +259,10 @@ describe("NetworkScanModal", () => {
         expect(
           screen.getByText("settings.networkScan.addresses"),
         ).toBeInTheDocument();
+        expect(mockT).toHaveBeenCalledWith("settings.networkScan.addresses", {
+          addresses: "192.168.1.100",
+          count: 1,
+        });
       });
     });
 

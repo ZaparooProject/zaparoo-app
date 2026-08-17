@@ -198,6 +198,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const isInitialized = useRef(false);
   // Track current connection to prevent stale events from old connections
   const currentConnectionId = useRef<string | null>(null);
+  const mdnsRetryPendingForRecord = useRef<string | null>(null);
   // Monotonically identifies the latest current-client capability request.
   // Connection transitions invalidate older callbacks before they can write.
   const currentClientRequestToken = useRef(0);
@@ -345,14 +346,19 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   }, [activeDiscoveryId, discoveredDevices, mdnsHostname, mdnsPort]);
 
   useEffect(() => {
+    if (isConnected) mdnsRetryPendingForRecord.current = null;
     if (!resolvedMdnsDevice || !activeRecordId) return;
 
-    const parsedConnection = parseDeviceEndpoint(connectionWsUrl);
-    const dialHost = parsedConnection.ok ? parsedConnection.endpoint.host : "";
+    const dialHosts = new Set(
+      connectionWsUrls.flatMap((url) => {
+        const parsedConnection = parseDeviceEndpoint(url);
+        return parsedConnection.ok ? [parsedConnection.endpoint.host] : [];
+      }),
+    );
     const confirmedCurrentRoute = resolvedMdnsDevice.addresses.some(
       (address) => {
         const parsedAddress = parseDeviceEndpoint(address);
-        return parsedAddress.ok && parsedAddress.endpoint.host === dialHost;
+        return parsedAddress.ok && dialHosts.has(parsedAddress.endpoint.host);
       },
     );
 
@@ -368,13 +374,15 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         if (
           confirmedCurrentRoute &&
           !isConnected &&
+          mdnsRetryPendingForRecord.current !== activeRecordId &&
           deviceRegistry.getSnapshot().activeRecordId === activeRecordId
         ) {
+          mdnsRetryPendingForRecord.current = activeRecordId;
           connectionManager.immediateReconnectActive();
         }
       })
       .catch(ignoreReportedRegistryFailure);
-  }, [activeRecordId, connectionWsUrl, isConnected, resolvedMdnsDevice]);
+  }, [activeRecordId, connectionWsUrls, isConnected, resolvedMdnsDevice]);
 
   // Browsing costs battery and multicast traffic, so it runs only until this
   // device's hostname has been resolved on a live connection.

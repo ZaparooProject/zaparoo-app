@@ -125,10 +125,12 @@ describe("credential-proven device aliases", () => {
     const target = mockDeviceRecord({
       address: "steamdeck.local",
       name: "Steamdeck",
+      discoveryId: "core-a",
     });
     const alias = mockDeviceRecord({
       address: "10.0.0.206",
       name: "Steamdeck",
+      discoveryId: "core-a",
     });
     await seedDeviceRegistry([target, alias], target.recordId);
     await credentialStore.set(
@@ -165,10 +167,12 @@ describe("credential-proven device aliases", () => {
     const target = mockDeviceRecord({
       address: "steamdeck.local",
       name: "Steamdeck",
+      discoveryId: "core-a",
     });
     const alias = mockDeviceRecord({
       address: "10.0.0.206",
       name: "Steamdeck",
+      discoveryId: "core-a",
     });
     await seedDeviceRegistry([target, alias], target.recordId);
     const probe = vi.fn<CredentialProofProbe>().mockResolvedValue(false);
@@ -219,14 +223,14 @@ describe("credential-proven device aliases", () => {
     expect(deviceRegistry.getSnapshot().records[other.recordId]).toBeDefined();
   });
 
-  it("should not expose credentials to unrelated saved endpoints", async () => {
+  it("should not expose credentials based only on matching names", async () => {
     const target = mockDeviceRecord({
       address: "steamdeck.local",
       name: "Steamdeck",
     });
     const other = mockDeviceRecord({
       address: "10.0.0.80",
-      name: "Living Room MiSTer",
+      name: "Steamdeck",
     });
     await seedDeviceRegistry([target, other], target.recordId);
     const probe = vi.fn<CredentialProofProbe>().mockResolvedValue(true);
@@ -234,5 +238,33 @@ describe("credential-proven device aliases", () => {
     await reconcileCredentialProvenAliases(target.recordId, credentials, probe);
 
     expect(probe).not.toHaveBeenCalled();
+  });
+
+  it("should limit concurrent credential probes", async () => {
+    const target = mockDeviceRecord({
+      address: "steamdeck.local",
+      discoveryId: "core-a",
+    });
+    const candidates = Array.from({ length: 7 }, (_, index) =>
+      mockDeviceRecord({
+        address: `10.0.0.${index + 1}`,
+        discoveryId: "core-a",
+      }),
+    );
+    await seedDeviceRegistry([target, ...candidates], target.recordId);
+    let activeProbes = 0;
+    let maxActiveProbes = 0;
+    const probe = vi.fn<CredentialProofProbe>().mockImplementation(async () => {
+      activeProbes += 1;
+      maxActiveProbes = Math.max(maxActiveProbes, activeProbes);
+      await Promise.resolve();
+      activeProbes -= 1;
+      return false;
+    });
+
+    await reconcileCredentialProvenAliases(target.recordId, credentials, probe);
+
+    expect(probe).toHaveBeenCalledTimes(7);
+    expect(maxActiveProbes).toBe(3);
   });
 });

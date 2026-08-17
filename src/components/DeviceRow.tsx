@@ -69,6 +69,7 @@ export function DeviceRow({
             <span className="text-muted-foreground text-xs break-all">
               {t("settings.networkScan.addresses", {
                 addresses: entry.resolvedAddresses.join(", "),
+                count: entry.resolvedAddresses.length,
               })}
             </span>
           )}

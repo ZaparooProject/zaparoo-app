@@ -247,6 +247,7 @@ export function Devices() {
                 : "settings.deviceCombine.edit",
             )}
             active={isEditing}
+            disabled={isCombining}
           />
         ) : undefined
       }
@@ -282,11 +283,7 @@ export function Devices() {
               // A record migrated from an older build still holds its pairing
               // under the pre-V2 address key until its first encrypted connect,
               // so the lock icon has to accept either key.
-              isPaired={
-                pairedKeys.has(credentialKeyForRecord(record.recordId)) ||
-                (record.legacyCredentialKey !== undefined &&
-                  pairedKeys.has(record.legacyCredentialKey))
-              }
+              isPaired={hasCredentials(record)}
               onSelect={() => handleSelect(record.recordId)}
               rightSlot={
                 isEditing ? (

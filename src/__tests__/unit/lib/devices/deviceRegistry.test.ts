@@ -640,7 +640,7 @@ describe("resolving an mDNS hostname to an address", () => {
 
     expect(
       resolvedEndpointsForRecord(record).map((endpoint) => endpoint.host),
-    ).toEqual(["10.0.0.206", "fe80::1"]);
+    ).toEqual(["10.0.0.206", "fe80::1", "steamdeck.local"]);
   });
 
   it("should keep the endpoint's port and scheme when swapping the host", async () => {
@@ -684,6 +684,45 @@ describe("resolving an mDNS hostname to an address", () => {
         resolvedAddresses: ["10.0.0.206", "fe80::1"],
       }),
     ]);
+  });
+
+  it("should retain a known discovery id when an exact hostname omits it", async () => {
+    const typed = await deviceRegistry.selectAddress("steamdeck.local");
+    deviceRegistry.installForTests({
+      schemaVersion: 2,
+      activeRecordId: typed!.recordId,
+      records: {
+        [typed!.recordId]: { ...typed!, discoveryId: "core-a" },
+      },
+    });
+
+    const discovered = await deviceRegistry.selectDiscovered({
+      ...announcement,
+      discoveryId: undefined,
+    });
+
+    expect(discovered?.recordId).toBe(typed?.recordId);
+    expect(discovered?.discoveryId).toBe("core-a");
+    expect(records()).toHaveLength(1);
+  });
+
+  it("should not reuse an exact hostname with a conflicting discovery id", async () => {
+    const typed = await deviceRegistry.selectAddress("steamdeck.local");
+    deviceRegistry.installForTests({
+      schemaVersion: 2,
+      activeRecordId: typed!.recordId,
+      records: {
+        [typed!.recordId]: { ...typed!, discoveryId: "core-a" },
+      },
+    });
+
+    const discovered = await deviceRegistry.selectDiscovered({
+      ...announcement,
+      discoveryId: "core-b",
+    });
+
+    expect(discovered?.recordId).not.toBe(typed?.recordId);
+    expect(records()).toHaveLength(2);
   });
 
   // A background browse runs behind a live connection, so it must never create
