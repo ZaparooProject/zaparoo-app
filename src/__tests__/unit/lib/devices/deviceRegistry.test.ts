@@ -910,6 +910,23 @@ describe("merging confirmed device aliases", () => {
     expect(records()).toHaveLength(2);
   });
 
+  it("should restore both records when merge persistence fails", async () => {
+    const target = await deviceRegistry.selectAddress("mistuh.local");
+    const source = await deviceRegistry.selectAddress("10.0.0.218");
+    vi.mocked(Preferences.set).mockRejectedValueOnce(new Error("storage full"));
+
+    await expect(
+      deviceRegistry.mergeRecords(target!.recordId, source!.recordId),
+    ).rejects.toThrow("storage full");
+
+    const snapshot = deviceRegistry.getSnapshot();
+    expect(Object.keys(snapshot.records)).toEqual([
+      target!.recordId,
+      source!.recordId,
+    ]);
+    expect(snapshot.activeRecordId).toBe(source!.recordId);
+  });
+
   it("should leave both records when credential preparation fails", async () => {
     const target = await deviceRegistry.selectAddress("mistuh.local");
     const source = await deviceRegistry.selectAddress("10.0.0.218");

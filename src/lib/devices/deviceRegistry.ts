@@ -579,13 +579,24 @@ class DeviceRegistryRepository {
       return Promise.reject(error);
     }
 
+    const previous = this.snapshot;
     const next = update({
       schemaVersion: SCHEMA_VERSION,
-      activeRecordId: this.snapshot.activeRecordId,
-      records: this.snapshot.records,
+      activeRecordId: previous.activeRecordId,
+      records: previous.records,
     });
-    this.publish({ ...next, hydrated: true, hydrationError: null });
-    return this.persist(next);
+    const published: DeviceRegistrySnapshot = {
+      ...next,
+      hydrated: true,
+      hydrationError: null,
+    };
+    this.publish(published);
+    return this.persist(next).catch((error) => {
+      // Roll back only when no newer commit has published over this one. A
+      // later queued write already includes this update and owns current state.
+      if (this.snapshot === published) this.publish(previous);
+      throw error;
+    });
   }
 
   hydrate(): Promise<void> {
