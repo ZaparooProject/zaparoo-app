@@ -456,7 +456,9 @@ describe("WebSocketTransport encryption", () => {
       staleRoute.simulateMessage(
         JSON.stringify({ jsonrpc: "2.0", error: { code: -32002 } }),
       );
-      await new Promise((resolve) => setTimeout(resolve, 5));
+      await vi.waitFor(() => {
+        expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.107:7497");
+      });
 
       expect(onCredentialsRevoked).not.toHaveBeenCalled();
       expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.107:7497");
@@ -487,7 +489,9 @@ describe("WebSocketTransport encryption", () => {
       primary.simulateMessage(
         JSON.stringify({ jsonrpc: "2.0", error: { code: -32002 } }),
       );
-      await new Promise((resolve) => setTimeout(resolve, 5));
+      await vi.waitFor(() => {
+        expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.107:7497");
+      });
 
       const fallback = MockWebSocket.getLatest()!;
       fallback.simulateOpen();
