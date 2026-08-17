@@ -864,6 +864,34 @@ describe("merging confirmed device aliases", () => {
     ).resolves.toBeNull();
   });
 
+  it("should retain both records when their pairings conflict", async () => {
+    const target = await deviceRegistry.selectAddress("mistuh.local");
+    const source = await deviceRegistry.selectAddress("10.0.0.218");
+    const sourceCredentials = {
+      ...creds,
+      authToken: "source-token",
+      pairingKey: "b".repeat(64),
+      clientId: "source-client",
+    };
+    await credentialStore.set(credentialKeyForRecord(target!.recordId), creds);
+    await credentialStore.set(
+      credentialKeyForRecord(source!.recordId),
+      sourceCredentials,
+    );
+
+    await expect(
+      deviceRegistry.mergeRecords(target!.recordId, source!.recordId),
+    ).rejects.toThrow("conflicting credentials");
+
+    expect(records()).toHaveLength(2);
+    await expect(
+      credentialStore.get(credentialKeyForRecord(target!.recordId)),
+    ).resolves.toEqual(creds);
+    await expect(
+      credentialStore.get(credentialKeyForRecord(source!.recordId)),
+    ).resolves.toEqual(sourceCredentials);
+  });
+
   it("should reject records proven to have different discovery ids", async () => {
     const target = await deviceRegistry.selectAddress("mistuh.local");
     const source = await deviceRegistry.selectAddress("10.0.0.218");

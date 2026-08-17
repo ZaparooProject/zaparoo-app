@@ -247,15 +247,47 @@ describe("record credentials", () => {
     expect(await store.get(credentialKeyForRecord("source"))).toEqual(creds);
   });
 
-  it("should keep existing target credentials during merge", async () => {
+  it("should reject distinct unproven credentials during merge", async () => {
     const targetCredentials = { ...creds, clientId: "target-client" };
+    const sourceCredentials = {
+      ...creds,
+      authToken: "source-token",
+      pairingKey: "b".repeat(64),
+      clientId: "source-client",
+    };
     await store.set(credentialKeyForRecord("target"), targetCredentials);
-    await store.set(credentialKeyForRecord("source"), creds);
+    await store.set(credentialKeyForRecord("source"), sourceCredentials);
 
-    await store.prepareRecordMerge("target", "source");
+    await expect(store.prepareRecordMerge("target", "source")).rejects.toThrow(
+      "conflicting credentials",
+    );
 
     expect(await store.get(credentialKeyForRecord("target"))).toEqual(
       targetCredentials,
+    );
+    expect(await store.get(credentialKeyForRecord("source"))).toEqual(
+      sourceCredentials,
+    );
+  });
+
+  it("should retain the credential proven by an encrypted connection", async () => {
+    const targetCredentials = { ...creds, clientId: "target-client" };
+    const sourceCredentials = {
+      ...creds,
+      authToken: "source-token",
+      pairingKey: "b".repeat(64),
+      clientId: "source-client",
+    };
+    await store.set(credentialKeyForRecord("target"), targetCredentials);
+    await store.set(credentialKeyForRecord("source"), sourceCredentials);
+
+    await store.prepareRecordMerge("target", "source", [], sourceCredentials);
+
+    expect(await store.get(credentialKeyForRecord("target"))).toEqual(
+      sourceCredentials,
+    );
+    expect(await store.get(credentialKeyForRecord("source"))).toEqual(
+      sourceCredentials,
     );
   });
 

@@ -6,6 +6,7 @@ import {
   credentialKeyForRecord,
   credentialStore,
   normalizeDeviceKey,
+  type StoredCredentials,
 } from "@/lib/crypto/credentials";
 import {
   parseDeviceEndpoint,
@@ -970,7 +971,10 @@ class DeviceRegistryRepository {
   async mergeRecords(
     targetRecordId: string,
     sourceRecordId: string,
-    options: { beforeCommit?: () => void } = {},
+    options: {
+      beforeCommit?: () => void;
+      provenCredentials?: StoredCredentials;
+    } = {},
   ): Promise<DeviceRecord> {
     await this.hydrate();
     let target = this.snapshot.records[targetRecordId];
@@ -990,6 +994,7 @@ class DeviceRegistryRepository {
       targetRecordId,
       sourceRecordId,
       legacyKeys,
+      options.provenCredentials,
     );
 
     // Keychain access crosses an async boundary. Re-read before constructing

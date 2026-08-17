@@ -137,6 +137,12 @@ describe("credential-proven device aliases", () => {
       credentialKeyForRecord(target.recordId),
       credentials,
     );
+    await credentialStore.set(credentialKeyForRecord(alias.recordId), {
+      ...credentials,
+      authToken: "alias-token",
+      pairingKey: "b".repeat(64),
+      clientId: "alias-client",
+    });
     const probe = vi.fn<CredentialProofProbe>().mockResolvedValue(true);
 
     const mergedIds = await reconcileCredentialProvenAliases(
@@ -161,6 +167,12 @@ describe("credential-proven device aliases", () => {
         expect.objectContaining({ host: "10.0.0.206" }),
       ]),
     );
+    await expect(
+      credentialStore.get(credentialKeyForRecord(target.recordId)),
+    ).resolves.toEqual(credentials);
+    await expect(
+      credentialStore.get(credentialKeyForRecord(alias.recordId)),
+    ).resolves.toBeNull();
   });
 
   it("should retain both records when encrypted proof fails", async () => {

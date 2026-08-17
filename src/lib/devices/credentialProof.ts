@@ -172,7 +172,9 @@ export async function reconcileCredentialProvenAliases(
     }
 
     try {
-      await deviceRegistry.mergeRecords(targetRecordId, result.candidateId);
+      await deviceRegistry.mergeRecords(targetRecordId, result.candidateId, {
+        provenCredentials: credentials,
+      });
       mergedIds.push(result.candidateId);
     } catch (error) {
       logger.error("Failed to merge credential-proven device alias", error, {
