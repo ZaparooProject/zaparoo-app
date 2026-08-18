@@ -61,6 +61,39 @@ vi.mock("@/lib/preferencesStore", () => ({
   }),
 }));
 
+let mockScreenReaderEnabled = false;
+vi.mock("@/hooks/useScreenReaderEnabled", () => ({
+  useScreenReaderEnabled: () => mockScreenReaderEnabled,
+}));
+
+function mockAnimationFrame(): () => void {
+  let callback: ((time: number) => void) | undefined;
+  vi.spyOn(window, "requestAnimationFrame").mockImplementation((next) => {
+    callback = next;
+    return 1;
+  });
+
+  return () => {
+    const next = callback;
+    callback = undefined;
+    next?.(0);
+  };
+}
+
+function mockDialogHeight(dialog: HTMLElement, height: number): void {
+  vi.spyOn(dialog, "getBoundingClientRect").mockReturnValue({
+    x: 0,
+    y: 0,
+    top: 0,
+    right: 320,
+    bottom: height,
+    left: 0,
+    width: 320,
+    height,
+    toJSON: () => ({}),
+  });
+}
+
 describe("SlideModal", () => {
   it("should have no detectable accessibility violations while open", async () => {
     const { baseElement } = render(
@@ -81,6 +114,7 @@ describe("SlideModal", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockScreenReaderEnabled = false;
   });
 
   afterEach(() => {
@@ -133,7 +167,6 @@ describe("SlideModal", () => {
     render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
 
     const title = screen.getByRole("heading", { name: "Test Modal" });
-    // react-swipeable consumes legacy touch events; userEvent.pointer cannot drive this path.
     fireEvent.touchStart(title, {
       touches: [{ clientX: 100, clientY: 20 }],
     });
@@ -144,6 +177,184 @@ describe("SlideModal", () => {
       changedTouches: [{ clientX: 100, clientY: 100 }],
     });
 
+    expect(closeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("should follow the finger when dragging static content", () => {
+    const flushAnimationFrame = mockAnimationFrame();
+    render(
+      <SlideModal {...mockProps} isOpen={true}>
+        <p>Static area</p>
+      </SlideModal>,
+    );
+
+    const staticArea = screen.getByText("Static area");
+    const dialog = screen.getByRole("dialog");
+    fireEvent.touchStart(staticArea, {
+      touches: [{ clientX: 100, clientY: 20 }],
+    });
+    fireEvent.touchMove(staticArea, {
+      touches: [{ clientX: 100, clientY: 140 }],
+    });
+    flushAnimationFrame();
+
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 120px, 0)" });
+    expect(mockProps.close).not.toHaveBeenCalled();
+
+    fireEvent.touchCancel(staticArea);
+  });
+
+  it("should snap back when drag stays below close thresholds", () => {
+    const closeMock = vi.fn();
+    render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
+
+    const title = screen.getByRole("heading", { name: "Test Modal" });
+    const dialog = screen.getByRole("dialog");
+    mockDialogHeight(dialog, 400);
+    fireEvent.touchStart(title, {
+      touches: [{ clientX: 100, clientY: 20 }],
+    });
+    fireEvent.touchMove(title, {
+      touches: [{ clientX: 100, clientY: 40 }],
+    });
+    fireEvent.touchEnd(title, {
+      changedTouches: [{ clientX: 100, clientY: 40 }],
+    });
+
+    expect(closeMock).not.toHaveBeenCalled();
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 0, 0)" });
+  });
+
+  it("should request close when drag passes the distance threshold", () => {
+    const closeMock = vi.fn();
+    render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
+
+    const staticArea = screen.getByText("Test Content");
+    const dialog = screen.getByRole("dialog");
+    mockDialogHeight(dialog, 400);
+    fireEvent.touchStart(staticArea, {
+      touches: [{ clientX: 100, clientY: 20 }],
+    });
+    fireEvent.touchMove(staticArea, {
+      touches: [{ clientX: 100, clientY: 140 }],
+    });
+    fireEvent.touchEnd(staticArea, {
+      changedTouches: [{ clientX: 100, clientY: 140 }],
+    });
+
+    expect(closeMock).toHaveBeenCalledTimes(1);
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 0, 0)" });
+  });
+
+  it("should not start dragging from interactive content", () => {
+    const closeMock = vi.fn();
+    render(
+      <SlideModal {...mockProps} isOpen={true} close={closeMock}>
+        <button type="button">Action</button>
+      </SlideModal>,
+    );
+
+    const action = screen.getByRole("button", { name: "Action" });
+    const dialog = screen.getByRole("dialog");
+    fireEvent.touchStart(action, {
+      touches: [{ clientX: 100, clientY: 20 }],
+    });
+    fireEvent.touchMove(action, {
+      touches: [{ clientX: 100, clientY: 160 }],
+    });
+    fireEvent.touchEnd(action, {
+      changedTouches: [{ clientX: 100, clientY: 160 }],
+    });
+
+    expect(closeMock).not.toHaveBeenCalled();
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 0, 0)" });
+  });
+
+  it("should leave scrolling content alone when it is not at the top", () => {
+    const closeMock = vi.fn();
+    render(
+      <SlideModal {...mockProps} isOpen={true} close={closeMock}>
+        <div style={{ height: 100, overflowY: "auto" }}>
+          <p>Scrollable content</p>
+        </div>
+      </SlideModal>,
+    );
+
+    const content = screen.getByText("Scrollable content");
+    const scrollContainer = content.parentElement!;
+    Object.defineProperties(scrollContainer, {
+      clientHeight: { configurable: true, value: 100 },
+      scrollHeight: { configurable: true, value: 400 },
+    });
+    scrollContainer.scrollTop = 40;
+
+    fireEvent.touchStart(content, {
+      touches: [{ clientX: 100, clientY: 20 }],
+    });
+    fireEvent.touchMove(content, {
+      touches: [{ clientX: 100, clientY: 160 }],
+    });
+    fireEvent.touchEnd(content, {
+      changedTouches: [{ clientX: 100, clientY: 160 }],
+    });
+
+    expect(closeMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toHaveStyle({
+      transform: "translate3d(0, 0, 0)",
+    });
+  });
+
+  it("should allow dragging scrollable content when it is at the top", () => {
+    const closeMock = vi.fn();
+    render(
+      <SlideModal {...mockProps} isOpen={true} close={closeMock}>
+        <div style={{ height: 100, overflowY: "auto" }}>
+          <p>Scrollable content</p>
+        </div>
+      </SlideModal>,
+    );
+
+    const content = screen.getByText("Scrollable content");
+    const scrollContainer = content.parentElement!;
+    Object.defineProperties(scrollContainer, {
+      clientHeight: { configurable: true, value: 100 },
+      scrollHeight: { configurable: true, value: 400 },
+    });
+    scrollContainer.scrollTop = 0;
+    mockDialogHeight(screen.getByRole("dialog"), 400);
+
+    fireEvent.touchStart(content, {
+      touches: [{ clientX: 100, clientY: 20 }],
+    });
+    fireEvent.touchMove(content, {
+      touches: [{ clientX: 100, clientY: 140 }],
+    });
+    fireEvent.touchEnd(content, {
+      changedTouches: [{ clientX: 100, clientY: 140 }],
+    });
+
+    expect(closeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("should disable drag dismissal while a screen reader is active", () => {
+    mockScreenReaderEnabled = true;
+    const closeMock = vi.fn();
+    render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
+
+    const title = screen.getByRole("heading", { name: "Test Modal" });
+    fireEvent.touchStart(title, {
+      touches: [{ clientX: 100, clientY: 20 }],
+    });
+    fireEvent.touchMove(title, {
+      touches: [{ clientX: 100, clientY: 160 }],
+    });
+    fireEvent.touchEnd(title, {
+      changedTouches: [{ clientX: 100, clientY: 160 }],
+    });
+
+    expect(closeMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "nav.close" })[0]!);
     expect(closeMock).toHaveBeenCalledTimes(1);
   });
 
