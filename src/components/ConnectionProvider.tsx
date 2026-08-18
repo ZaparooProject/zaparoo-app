@@ -196,19 +196,11 @@ function indexResponsesEqual(
   current: IndexResponse,
   next: IndexResponse,
 ): boolean {
-  return (
-    current.exists === next.exists &&
-    current.indexing === next.indexing &&
-    current.optimizing === next.optimizing &&
-    current.paused === next.paused &&
-    current.totalSteps === next.totalSteps &&
-    current.currentStep === next.currentStep &&
-    current.currentStepDisplay === next.currentStepDisplay &&
-    current.totalFiles === next.totalFiles &&
-    current.totalMedia === next.totalMedia &&
-    current.systemsCompleted === next.systemsCompleted &&
-    current.systemsTotal === next.systemsTotal
-  );
+  const keys = new Set<keyof IndexResponse>([
+    ...(Object.keys(current) as (keyof IndexResponse)[]),
+    ...(Object.keys(next) as (keyof IndexResponse)[]),
+  ]);
+  return [...keys].every((key) => current[key] === next[key]);
 }
 
 export function ConnectionProvider({ children }: ConnectionProviderProps) {

@@ -6,9 +6,9 @@
 
 import { Capacitor } from "@capacitor/core";
 import { Device } from "@capacitor/device";
+import { isCancellationError } from "@/lib/errors";
 import { useStatusStore } from "./store";
 import { isPluginAvailable } from "./capacitorBridge";
-import { isCancellationError } from "./errors";
 
 // Check if Rollbar should be enabled (native + production + token present)
 const isNative = Capacitor.isNativePlatform();

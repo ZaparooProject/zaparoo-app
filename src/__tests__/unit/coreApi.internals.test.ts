@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CoreAPI, MalformedCoreResponseError } from "../../lib/coreApi";
+import { logger } from "../../lib/logger";
 import { Method } from "../../lib/models";
 
 const mockSend = vi.fn();
@@ -164,22 +165,50 @@ describe("CoreAPI Internals", () => {
       {
         name: "systems",
         call: () => CoreAPI.systems(),
+        validEntry: { id: "snes", name: "Super Nintendo" },
       },
       {
         name: "scrapers",
         call: () => CoreAPI.scrapers(),
+        validEntry: { id: "gamelist.xml", name: "Gamelist" },
       },
       {
         name: "mappings",
         call: () => CoreAPI.mappings(),
+        validEntry: {
+          id: "1",
+          added: "2026-08-18T00:00:00Z",
+          label: "Mapping",
+          enabled: true,
+          type: "uid",
+          match: "exact",
+          pattern: "AABB",
+          override: "@snes/game",
+          source: "database",
+          readOnly: false,
+        },
       },
     ])(
-      "should reject malformed $name array entries",
-      async ({ name, call }) => {
-        vi.spyOn(CoreAPI, "call").mockResolvedValue({ [name]: [null] });
+      "should filter malformed $name entries and retain valid entries",
+      async ({ name, call, validEntry }) => {
+        const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+        vi.spyOn(CoreAPI, "call").mockResolvedValue({
+          [name]: [null, validEntry],
+        });
 
-        await expect(call()).rejects.toThrow(
-          `Invalid ${name} response: ${name}[0] is invalid`,
+        await expect(call()).resolves.toMatchObject({
+          [name]: [validEntry],
+        });
+        expect(errorSpy).toHaveBeenCalledWith(
+          "Invalid Core response entries:",
+          expect.any(Error),
+          expect.objectContaining({
+            category: "api",
+            action: "validateResponse",
+            responseName: name,
+            property: name,
+            invalidEntryCount: 1,
+          }),
         );
       },
     );
@@ -237,20 +266,27 @@ describe("CoreAPI Internals", () => {
       );
     });
 
-    it.each([
-      { property: "active", value: [null] },
-      { property: "playlists", value: [null] },
-    ])(
-      "should reject malformed media $property entries",
-      async ({ property, value }) => {
+    it.each(["active", "playlists"])(
+      "should filter malformed media $property entries",
+      async (property) => {
+        const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
         vi.spyOn(CoreAPI, "call").mockResolvedValue({
           database: { exists: true, indexing: false },
           active: [],
-          [property]: value,
+          [property]: [null],
         });
 
-        await expect(CoreAPI.media()).rejects.toThrow(
-          `Invalid media response: ${property}[0] is invalid`,
+        await expect(CoreAPI.media()).resolves.toMatchObject({
+          [property]: [],
+        });
+        expect(errorSpy).toHaveBeenCalledWith(
+          "Invalid Core response entries:",
+          expect.any(Error),
+          expect.objectContaining({
+            responseName: "media",
+            property,
+            invalidEntryCount: 1,
+          }),
         );
       },
     );
@@ -284,6 +320,32 @@ describe("CoreAPI Internals", () => {
 
         await expect(CoreAPI.media()).resolves.toMatchObject({
           active: [{ slot: "primary" }],
+        });
+      },
+    );
+
+    it.each([undefined, null, ""])(
+      "should normalize legacy primary playlist slot %j",
+      async (slot) => {
+        vi.spyOn(CoreAPI, "call").mockResolvedValue({
+          database: { exists: true, indexing: false },
+          active: [],
+          playlists: [
+            {
+              id: "primary",
+              name: "Queue",
+              slot,
+              repeat: "none",
+              items: [{ name: "Game", zapScript: "@snes/game" }],
+              index: 0,
+              total: 1,
+              playing: true,
+            },
+          ],
+        });
+
+        await expect(CoreAPI.media()).resolves.toMatchObject({
+          playlists: [{ slot: "primary" }],
         });
       },
     );

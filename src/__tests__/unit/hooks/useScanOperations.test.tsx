@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act } from "../../../test-utils";
+import { renderHook, act, waitFor } from "../../../test-utils";
 import { useScanOperations } from "@/hooks/useScanOperations";
 import { ScanResult } from "@/lib/models";
 import { sessionManager } from "@/lib/nfc";
@@ -29,6 +29,15 @@ const mockLogger = vi.hoisted(() => ({
 
 vi.mock("@/lib/logger", () => ({
   logger: mockLogger,
+}));
+
+const mockHaptics = vi.hoisted(() => ({
+  impact: vi.fn(),
+  notification: vi.fn(),
+}));
+
+vi.mock("@/hooks/useHaptics", () => ({
+  useHaptics: () => mockHaptics,
 }));
 
 const createMockBarcode = (rawValue: string): Barcode => ({
@@ -349,16 +358,24 @@ describe("useScanOperations", () => {
     });
 
     it("should not report denied camera access", async () => {
-      vi.mocked(BarcodeScanner.scan).mockRejectedValue(
-        new Error("User denied access to camera."),
-      );
-      const { result } = renderHook(() => useScanOperations(defaultProps));
+      vi.useRealTimers();
+      try {
+        vi.mocked(BarcodeScanner.scan).mockRejectedValue(
+          new Error("User denied access to camera."),
+        );
+        const { result } = renderHook(() => useScanOperations(defaultProps));
 
-      await act(async () => {
-        await result.current.handleCameraScan();
-      });
+        await act(async () => {
+          await result.current.handleCameraScan();
+        });
 
-      expect(mockLogger.error).not.toHaveBeenCalled();
+        await waitFor(() => {
+          expect(mockHaptics.notification).toHaveBeenCalledWith("error");
+        });
+        expect(mockLogger.error).not.toHaveBeenCalled();
+      } finally {
+        vi.useFakeTimers();
+      }
     });
   });
 

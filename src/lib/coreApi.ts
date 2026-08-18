@@ -50,6 +50,7 @@ import {
   PlaytimeLimitsUpdateRequest,
   PlaytimeStatus,
   PlayingResponse,
+  PlaylistState,
   ReadersResponse,
   ScrapersResponse,
   ScrapingStatusNotification,
@@ -182,13 +183,25 @@ function requireArrayPropertyResponse<TResponse>(
     );
   }
   const entries = result[property];
-  const invalidIndex = entries.findIndex((entry) => !isValidEntry(entry));
-  if (invalidIndex !== -1) {
-    throw new Error(
-      `Invalid ${responseName} response: ${property}[${invalidIndex}] is invalid`,
+  const validEntries = entries.filter(isValidEntry);
+  const invalidEntryCount = entries.length - validEntries.length;
+  if (invalidEntryCount > 0) {
+    logger.error(
+      "Invalid Core response entries:",
+      new Error(
+        `Filtered ${invalidEntryCount} invalid ${property} entries from ${responseName} response`,
+      ),
+      {
+        category: "api",
+        action: "validateResponse",
+        severity: "error",
+        responseName,
+        property,
+        invalidEntryCount,
+      },
     );
   }
-  return result as TResponse;
+  return { ...result, [property]: validEntries } as TResponse;
 }
 
 function isSystem(value: unknown): boolean {
@@ -298,7 +311,11 @@ function isPlaylistState(value: unknown): boolean {
     isRecord(value) &&
     typeof value.id === "string" &&
     typeof value.name === "string" &&
-    (value.slot === "primary" || value.slot === "background") &&
+    (value.slot === undefined ||
+      value.slot === null ||
+      value.slot === "" ||
+      value.slot === "primary" ||
+      value.slot === "background") &&
     (value.repeat === "none" ||
       value.repeat === "all" ||
       value.repeat === "one") &&
@@ -316,17 +333,18 @@ function requireMediaResponse(result: unknown): MediaResponse {
       "Invalid media response: database must include valid index fields",
     );
   }
-  if (result.active !== undefined) {
-    requireArrayPropertyResponse<MediaResponse>(
-      result,
+  let validatedResult: Record<string, unknown> = result;
+  if (validatedResult.active !== undefined) {
+    validatedResult = requireArrayPropertyResponse<Record<string, unknown>>(
+      validatedResult,
       "active",
       "media",
       isPlayingResponse,
     );
   }
-  if (result.playlists !== undefined) {
-    requireArrayPropertyResponse<MediaResponse>(
-      result,
+  if (validatedResult.playlists !== undefined) {
+    validatedResult = requireArrayPropertyResponse<Record<string, unknown>>(
+      validatedResult,
       "playlists",
       "media",
       isPlaylistState,
@@ -336,16 +354,30 @@ function requireMediaResponse(result: unknown): MediaResponse {
     slot?: PlayingResponse["slot"] | null | "";
   };
   const active = (
-    (result.active as LegacyPlayingResponse[] | undefined) ?? []
+    (validatedResult.active as LegacyPlayingResponse[] | undefined) ?? []
   ).map(
     (entry): PlayingResponse =>
       entry.slot === null || entry.slot === ""
         ? { ...entry, slot: "primary" }
         : (entry as PlayingResponse),
   );
+  type LegacyPlaylistState = Omit<PlaylistState, "slot"> & {
+    slot?: PlaylistState["slot"] | null | "";
+  };
+  const playlists = (
+    validatedResult.playlists as LegacyPlaylistState[] | undefined
+  )?.map(
+    (playlist): PlaylistState =>
+      playlist.slot === undefined ||
+      playlist.slot === null ||
+      playlist.slot === ""
+        ? { ...playlist, slot: "primary" }
+        : (playlist as PlaylistState),
+  );
   return {
-    ...(result as unknown as MediaResponse),
+    ...(validatedResult as unknown as MediaResponse),
     active,
+    ...(playlists === undefined ? {} : { playlists }),
   };
 }
 
@@ -353,7 +385,7 @@ export function isUnsupportedCoreApiError(error: unknown): boolean {
   const message = getErrorMessage(error).toLowerCase();
   return (
     (error instanceof CoreApiError && error.code === -32601) ||
-    message.includes("method not found")
+    /^(?:json-rpc(?: error)?:\s*)?method not found\b/.test(message)
   );
 }
 

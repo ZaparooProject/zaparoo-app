@@ -109,7 +109,7 @@ vi.mock("../../../components/PairingModal", () => ({
   },
 }));
 
-vi.mock("../../../lib/coreApi", () => ({
+vi.mock("../../../lib/coreApi", async (importOriginal) => ({
   CoreApiError: class extends Error {
     constructor(
       message: string,
@@ -181,25 +181,9 @@ vi.mock("../../../lib/coreApi", () => ({
       msg.includes("method not found")
     );
   },
-  isIndexResponse: (value: unknown) => {
-    if (typeof value !== "object" || value === null) return false;
-    const index = value as Record<string, unknown>;
-    const hasOptionalType = (property: string, type: string) =>
-      index[property] === undefined || typeof index[property] === type;
-    return (
-      typeof index.exists === "boolean" &&
-      typeof index.indexing === "boolean" &&
-      hasOptionalType("optimizing", "boolean") &&
-      hasOptionalType("paused", "boolean") &&
-      hasOptionalType("totalSteps", "number") &&
-      hasOptionalType("currentStep", "number") &&
-      hasOptionalType("currentStepDisplay", "string") &&
-      hasOptionalType("totalFiles", "number") &&
-      hasOptionalType("totalMedia", "number") &&
-      hasOptionalType("systemsCompleted", "number") &&
-      hasOptionalType("systemsTotal", "number")
-    );
-  },
+  isIndexResponse: (
+    await importOriginal<typeof import("../../../lib/coreApi")>()
+  ).isIndexResponse,
 }));
 
 vi.mock("@capacitor/preferences", () => ({
@@ -1846,6 +1830,33 @@ describe("notification processing", () => {
       await capturedEventHandlers.onMessage!("test-device", {});
 
       expect(useStatusStore.getState().gamesIndex).toBe(currentState);
+    });
+
+    it("should update games index state when a new field changes", async () => {
+      useStatusStore.setState({
+        gamesIndex: { exists: true, indexing: false },
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.MediaIndexing,
+        params: {
+          exists: true,
+          indexing: false,
+          futureMetric: 1,
+        },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      expect(useStatusStore.getState().gamesIndex).toHaveProperty(
+        "futureMetric",
+        1,
+      );
     });
 
     it.each([

@@ -187,7 +187,7 @@ export function useScanOperations({
   }, [scanSession, doScan]);
 
   const handleCameraScan = useCallback(async () => {
-    BarcodeScanner.scan()
+    await BarcodeScanner.scan()
       .then((res) => {
         if (res.barcodes.length < 1) {
           return;

@@ -5,6 +5,7 @@ import {
   MalformedCoreResponseError,
   isExpectedMediaDatabaseError,
   isMissingMediaDatabaseSetupError,
+  isUnsupportedCoreApiError,
   isUnsupportedMediaApiError,
 } from "@/lib/coreApi";
 import { Method, Notification } from "@/lib/models.ts";
@@ -26,6 +27,20 @@ describe("media API error classification", () => {
     ).toBe(true);
     expect(
       isUnsupportedMediaApiError(new CoreApiError("Other failure", -32000)),
+    ).toBe(false);
+  });
+
+  it("should only match canonical message-based unsupported-method errors", () => {
+    expect(isUnsupportedCoreApiError("Method not found: media.tags")).toBe(
+      true,
+    );
+    expect(isUnsupportedCoreApiError("JSON-RPC error: Method not found")).toBe(
+      true,
+    );
+    expect(
+      isUnsupportedCoreApiError(
+        "Request failed because method not found in cached metadata",
+      ),
     ).toBe(false);
   });
 
