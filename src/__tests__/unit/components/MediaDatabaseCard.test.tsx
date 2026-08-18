@@ -184,7 +184,8 @@ describe("MediaDatabaseCard", () => {
     expect(updateButton).toBeDisabled();
   });
 
-  it("should replace database controls with compact scrape progress", () => {
+  it("should replace database controls with compact scrape progress", async () => {
+    const user = userEvent.setup();
     const onViewScrapeDetails = vi.fn();
     mockStore.scrapingStatus = {
       scraperId: "gamelist.xml",
@@ -221,7 +222,7 @@ describe("MediaDatabaseCard", () => {
       screen.getByText("settings.scrapeMedia.systemProgressCount"),
     ).toBeInTheDocument();
 
-    fireEvent.click(
+    await user.click(
       screen.getByRole("button", {
         name: "settings.scrapeMedia.viewDetails",
       }),

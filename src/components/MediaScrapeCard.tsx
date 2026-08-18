@@ -56,6 +56,7 @@ export function MediaScrapeCard() {
     setTrackedDeviceKey(deviceKey);
     setSelectedSystems([]);
     setStartError(null);
+    setScrapingStatus(null);
   }
 
   const isLiveConnected = connectionState === ConnectionState.CONNECTED;

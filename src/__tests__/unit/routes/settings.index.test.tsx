@@ -1,3 +1,5 @@
+import userEvent from "@testing-library/user-event";
+import type { ComponentType } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   render,
@@ -49,7 +51,7 @@ vi.mock("@/lib/store", async (importOriginal) => {
 // Mock router - use vi.hoisted to make variables accessible in mocks
 const { componentRef, mockBrowserOpen, mockRouterNavigate } = vi.hoisted(
   () => ({
-    componentRef: { current: null as any },
+    componentRef: { current: null as ComponentType | null },
     mockBrowserOpen: vi.fn(),
     mockRouterNavigate: vi.fn(),
   }),
@@ -194,7 +196,13 @@ vi.mock("@/components/NetworkScanModal", () => ({
 import "@/routes/settings.index";
 
 // The component will be captured by the mock
-const getSettings = () => componentRef.current;
+const getSettings = (): ComponentType => {
+  const Settings = componentRef.current;
+  if (!Settings) {
+    throw new Error("Settings route component was not captured");
+  }
+  return Settings;
+};
 
 describe("Settings Index Route", () => {
   let queryClient: QueryClient;
@@ -261,10 +269,11 @@ describe("Settings Index Route", () => {
       expect(screen.getByTestId("media-database-card")).toBeInTheDocument();
     });
 
-    it("should open Manage Media from scrape details", () => {
+    it("should open Manage Media from scrape details", async () => {
+      const user = userEvent.setup();
       renderComponent();
 
-      fireEvent.click(
+      await user.click(
         screen.getByRole("button", { name: "View scrape details" }),
       );
 

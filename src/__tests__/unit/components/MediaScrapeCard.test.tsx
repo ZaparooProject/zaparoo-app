@@ -1,11 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor } from "@/test-utils";
+import {
+  act,
+  mockDeviceRecord,
+  render,
+  screen,
+  seedActiveDevice,
+  seedDeviceRegistry,
+  waitFor,
+} from "@/test-utils";
 import { MediaScrapeCard } from "@/components/MediaScrapeCard";
 import { CoreAPI } from "@/lib/coreApi";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
-import { seedActiveDevice } from "@/test-utils/deviceRegistry";
+import { deviceRegistry } from "@/lib/devices/deviceRegistry";
 
 vi.mock("@/lib/coreApi", () => ({
   CoreAPI: {
@@ -108,6 +116,55 @@ describe("MediaScrapeCard", () => {
 
     expect(CoreAPI.scrapers).not.toHaveBeenCalled();
     expect(CoreAPI.mediaScrapeStatus).not.toHaveBeenCalled();
+  });
+
+  it("should clear the previous scrape status when switching devices", async () => {
+    const sourceDevice = mockDeviceRecord({
+      recordId: "source-device",
+      address: "192.168.1.100",
+    });
+    const targetDevice = mockDeviceRecord({
+      recordId: "target-device",
+      address: "192.168.1.101",
+    });
+    await seedDeviceRegistry(
+      [sourceDevice, targetDevice],
+      sourceDevice.recordId,
+    );
+
+    const previousStatus = {
+      scraperId: "gamelist.xml",
+      systemId: "snes",
+      processed: 25,
+      total: 100,
+      matched: 20,
+      skipped: 5,
+      totalScraped: 12,
+      scraping: true,
+      done: false,
+      paused: false,
+    };
+    useStatusStore.setState({ scrapingStatus: previousStatus });
+    vi.mocked(CoreAPI.mediaScrapeStatus)
+      .mockResolvedValueOnce(previousStatus)
+      .mockReturnValueOnce(new Promise(() => {}));
+
+    render(<MediaScrapeCard />);
+
+    expect(
+      await screen.findByText("settings.scrapeMedia.activeTitle"),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await deviceRegistry.setActiveRecord(targetDevice.recordId);
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().scrapingStatus).toBeNull();
+    });
+    expect(
+      screen.queryByText("settings.scrapeMedia.activeTitle"),
+    ).not.toBeInTheDocument();
   });
 
   it("should select ES gamelist.xml by default", async () => {
