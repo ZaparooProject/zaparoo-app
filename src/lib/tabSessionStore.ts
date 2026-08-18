@@ -12,10 +12,12 @@ interface TabSessionState {
   lastHref: Record<BottomTabId, string>;
   scrollPositions: Record<string, { scrollX: number; scrollY: number }>;
   createSearch: SessionSearchParams | null;
+  mediaScraperByDevice: Record<string, string>;
   rememberLocation: (pathname: string, href: string) => void;
   rememberScroll: (key: string, scrollX: number, scrollY: number) => void;
   forgetScroll: (key: string) => void;
   setCreateSearch: (search: SessionSearchParams) => void;
+  setMediaScraper: (deviceKey: string, scraperId: string) => void;
   popTabToRoot: (tab: BottomTabId) => void;
   reset: () => void;
 }
@@ -110,6 +112,7 @@ function initialTabSessionState() {
     lastHref: { ...defaultLastHref },
     scrollPositions: {},
     createSearch: null,
+    mediaScraperByDevice: {},
   };
 }
 
@@ -140,6 +143,13 @@ export const useTabSessionStore = create<TabSessionState>()((set) => ({
       return { scrollPositions };
     }),
   setCreateSearch: (createSearch) => set({ createSearch }),
+  setMediaScraper: (deviceKey, scraperId) =>
+    set((state) => ({
+      mediaScraperByDevice: {
+        ...state.mediaScraperByDevice,
+        [deviceKey]: scraperId,
+      },
+    })),
   popTabToRoot: (tab) =>
     set((state) => ({
       lastHref: { ...state.lastHref, [tab]: defaultLastHref[tab] },

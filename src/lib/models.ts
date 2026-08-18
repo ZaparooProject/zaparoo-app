@@ -539,11 +539,13 @@ export interface IndexResponse {
   indexing: boolean;
   optimizing?: boolean;
   paused?: boolean;
+  throttled?: boolean;
   totalSteps?: number;
   currentStep?: number;
   currentStepDisplay?: string;
   totalFiles?: number;
   totalMedia?: number;
+  missingMedia?: number;
   systemsCompleted?: number;
   systemsTotal?: number;
 }
@@ -837,9 +839,23 @@ export interface ScrapeSystemProgress {
   skipped: number;
 }
 
+export type ScrapeState =
+  | "idle"
+  | "running"
+  | "paused"
+  | "completed"
+  | "cancelled"
+  | "failed";
+
 export interface ScrapingStatusNotification {
   /** ID of the scraper that is running, e.g. "gamelist.xml". */
   scraperId?: string;
+  /** Explicit lifecycle state supplied by current Core versions. */
+  state?: ScrapeState;
+  /** Fatal error supplied with a failed terminal state. */
+  error?: string;
+  /** Whether this run re-scrapes records already marked by the scraper. */
+  force?: boolean;
   /** 1-based current system step in the overall scrape run. */
   currentStep?: number;
   /** Display name for the current overall step. */
@@ -866,4 +882,6 @@ export interface ScrapingStatusNotification {
   done: boolean;
   /** True when the active scrape is paused. */
   paused: boolean;
+  /** True when Core is running the scrape at reduced speed. */
+  throttled?: boolean;
 }

@@ -4,6 +4,8 @@ import {
   CoreApiError,
   MalformedCoreResponseError,
   isExpectedMediaDatabaseError,
+  isIndexResponse,
+  isMediaOperationConflictError,
   isMissingMediaDatabaseSetupError,
   isUnsupportedCoreApiError,
   isUnsupportedMediaApiError,
@@ -77,6 +79,33 @@ describe("media API error classification", () => {
       isExpectedMediaDatabaseError(new Error("no such table: DBConfig")),
     ).toBe(true);
     expect(isExpectedMediaDatabaseError(new Error("network down"))).toBe(false);
+  });
+
+  it.each([
+    "scraping is in progress",
+    "scraping already in progress",
+    "media indexing is in progress",
+    "indexing already in progress",
+    "database optimization in progress",
+    "selective indexing cannot be performed while database optimization is running",
+  ])("should classify media operation conflict: %s", (message) => {
+    const error = new Error(message);
+
+    expect(isMediaOperationConflictError(error)).toBe(true);
+    expect(isExpectedMediaDatabaseError(error)).toBe(true);
+  });
+
+  it("should accept current Core index status fields", () => {
+    expect(
+      isIndexResponse({
+        exists: true,
+        indexing: true,
+        optimizing: false,
+        paused: false,
+        throttled: true,
+        missingMedia: 3,
+      }),
+    ).toBe(true);
   });
 });
 

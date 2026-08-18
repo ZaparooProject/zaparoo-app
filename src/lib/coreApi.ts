@@ -261,11 +261,13 @@ export function isIndexResponse(value: unknown): value is IndexResponse {
   return (
     hasOptionalType(value, "optimizing", "boolean") &&
     hasOptionalType(value, "paused", "boolean") &&
+    hasOptionalType(value, "throttled", "boolean") &&
     hasOptionalType(value, "totalSteps", "number") &&
     hasOptionalType(value, "currentStep", "number") &&
     hasOptionalType(value, "currentStepDisplay", "string") &&
     hasOptionalType(value, "totalFiles", "number") &&
     hasOptionalType(value, "totalMedia", "number") &&
+    hasOptionalType(value, "missingMedia", "number") &&
     hasOptionalType(value, "systemsCompleted", "number") &&
     hasOptionalType(value, "systemsTotal", "number")
   );
@@ -438,9 +440,25 @@ export function isMissingMediaDatabaseSetupError(error: unknown): boolean {
   );
 }
 
+export function isMediaOperationConflictError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes("scraping is in progress") ||
+    message.includes("scraping already in progress") ||
+    message.includes("media indexing is in progress") ||
+    message.includes("indexing already in progress") ||
+    message.includes("database optimization in progress") ||
+    message.includes(
+      "selective indexing cannot be performed while database optimization is running",
+    )
+  );
+}
+
 export function isExpectedMediaDatabaseError(error: unknown): boolean {
   return (
-    isUnsupportedMediaApiError(error) || isMissingMediaDatabaseSetupError(error)
+    isUnsupportedMediaApiError(error) ||
+    isMissingMediaDatabaseSetupError(error) ||
+    isMediaOperationConflictError(error)
   );
 }
 
