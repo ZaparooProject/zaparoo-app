@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { findA11yViolations, render, screen, fireEvent } from "@/test-utils";
+import {
+  createEvent,
+  findA11yViolations,
+  fireEvent,
+  render,
+  screen,
+} from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { SlideModal } from "@/components/SlideModal";
 
@@ -92,6 +98,11 @@ function mockDialogHeight(dialog: HTMLElement, height: number): void {
     height,
     toJSON: () => ({}),
   });
+}
+
+function withTimeStamp<T extends Event>(event: T, timeStamp: number): T {
+  Object.defineProperty(event, "timeStamp", { value: timeStamp });
+  return event;
 }
 
 describe("SlideModal", () => {
@@ -204,6 +215,35 @@ describe("SlideModal", () => {
     fireEvent.touchCancel(staticArea);
   });
 
+  it("should reset an active drag when a second touch starts", () => {
+    const flushAnimationFrame = mockAnimationFrame();
+    render(
+      <SlideModal {...mockProps} isOpen={true}>
+        <p>Static area</p>
+      </SlideModal>,
+    );
+
+    const staticArea = screen.getByText("Static area");
+    const dialog = screen.getByRole("dialog");
+    fireEvent.touchStart(staticArea, {
+      touches: [{ clientX: 100, clientY: 20 }],
+    });
+    fireEvent.touchMove(staticArea, {
+      touches: [{ clientX: 100, clientY: 140 }],
+    });
+    flushAnimationFrame();
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 120px, 0)" });
+
+    fireEvent.touchStart(staticArea, {
+      touches: [
+        { clientX: 100, clientY: 140 },
+        { clientX: 140, clientY: 140 },
+      ],
+    });
+
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 0, 0)" });
+  });
+
   it("should snap back when drag stays below close thresholds", () => {
     const closeMock = vi.fn();
     render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
@@ -232,18 +272,74 @@ describe("SlideModal", () => {
     const staticArea = screen.getByText("Test Content");
     const dialog = screen.getByRole("dialog");
     mockDialogHeight(dialog, 400);
-    fireEvent.touchStart(staticArea, {
-      touches: [{ clientX: 100, clientY: 20 }],
-    });
-    fireEvent.touchMove(staticArea, {
-      touches: [{ clientX: 100, clientY: 140 }],
-    });
-    fireEvent.touchEnd(staticArea, {
-      changedTouches: [{ clientX: 100, clientY: 140 }],
-    });
+    fireEvent(
+      staticArea,
+      withTimeStamp(
+        createEvent.touchStart(staticArea, {
+          touches: [{ clientX: 100, clientY: 20 }],
+        }),
+        100,
+      ),
+    );
+    fireEvent(
+      staticArea,
+      withTimeStamp(
+        createEvent.touchMove(staticArea, {
+          touches: [{ clientX: 100, clientY: 140 }],
+        }),
+        600,
+      ),
+    );
+    fireEvent(
+      staticArea,
+      withTimeStamp(
+        createEvent.touchEnd(staticArea, {
+          changedTouches: [{ clientX: 100, clientY: 140 }],
+        }),
+        1100,
+      ),
+    );
 
     expect(closeMock).toHaveBeenCalledTimes(1);
     expect(dialog).toHaveStyle({ transform: "translate3d(0, 0, 0)" });
+  });
+
+  it("should request close for a short fast flick", () => {
+    const closeMock = vi.fn();
+    render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
+
+    const staticArea = screen.getByText("Test Content");
+    const dialog = screen.getByRole("dialog");
+    mockDialogHeight(dialog, 400);
+    fireEvent(
+      staticArea,
+      withTimeStamp(
+        createEvent.touchStart(staticArea, {
+          touches: [{ clientX: 100, clientY: 20 }],
+        }),
+        100,
+      ),
+    );
+    fireEvent(
+      staticArea,
+      withTimeStamp(
+        createEvent.touchMove(staticArea, {
+          touches: [{ clientX: 100, clientY: 60 }],
+        }),
+        110,
+      ),
+    );
+    fireEvent(
+      staticArea,
+      withTimeStamp(
+        createEvent.touchEnd(staticArea, {
+          changedTouches: [{ clientX: 100, clientY: 60 }],
+        }),
+        120,
+      ),
+    );
+
+    expect(closeMock).toHaveBeenCalledTimes(1);
   });
 
   it("should not start dragging from interactive content", () => {
@@ -336,7 +432,8 @@ describe("SlideModal", () => {
     expect(closeMock).toHaveBeenCalledTimes(1);
   });
 
-  it("should disable drag dismissal while a screen reader is active", () => {
+  it("should disable drag dismissal while a screen reader is active", async () => {
+    const user = userEvent.setup();
     mockScreenReaderEnabled = true;
     const closeMock = vi.fn();
     render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
@@ -354,7 +451,7 @@ describe("SlideModal", () => {
 
     expect(closeMock).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getAllByRole("button", { name: "nav.close" })[0]!);
+    await user.click(screen.getAllByRole("button", { name: "nav.close" })[0]!);
     expect(closeMock).toHaveBeenCalledTimes(1);
   });
 

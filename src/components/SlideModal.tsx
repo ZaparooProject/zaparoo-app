@@ -184,7 +184,7 @@ export function SlideModal(props: {
         isDragExcluded(target) ||
         window.getSelection()?.toString()
       ) {
-        dragState = null;
+        finishDrag(false);
         return;
       }
 
