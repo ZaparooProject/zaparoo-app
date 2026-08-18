@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import {
   CoreAPI,
@@ -23,13 +24,16 @@ import { SlideModal } from "./SlideModal";
 interface MediaDatabaseCardProps {
   showMaintenanceActions?: boolean;
   variant?: "card" | "plain";
+  onViewScrapeDetails?: () => void;
 }
 
 export function MediaDatabaseCard({
   showMaintenanceActions = false,
   variant = "card",
+  onViewScrapeDetails,
 }: MediaDatabaseCardProps) {
   const { t } = useTranslation();
+  const resolveSystemName = useSystemNameResolver();
   const queryClient = useQueryClient();
   const connected = useStatusStore((state) => state.connected);
   const deviceKey = useActiveDeviceKey();
@@ -62,6 +66,7 @@ export function MediaDatabaseCard({
   }
 
   const isPaused = gamesIndex.paused === true;
+  const isThrottled = gamesIndex.throttled === true && !isPaused;
   const isScraping = scrapingStatus?.scraping === true;
   const mediaGenerateAvailable =
     coreVersion !== null &&
@@ -178,10 +183,39 @@ export function MediaDatabaseCard({
     }
   };
 
-  // Check various states from both store and API
-  const isOptimizing =
-    gamesIndex.optimizing || mediaStatus?.database?.optimizing;
-  const isIndexing = gamesIndex.indexing || mediaStatus?.database?.indexing;
+  // WebSocket notifications and ConnectionProvider reconciliation own live
+  // operation state. The media query supplies counts/existence only; combining
+  // cached operation state with a newer terminal notification can resurrect indexing.
+  const isOptimizing = gamesIndex.optimizing === true;
+  const isIndexing = gamesIndex.indexing;
+  const showCompactScrapeStatus =
+    variant === "card" && !showMaintenanceActions && isScraping;
+  const scrapeSystemId =
+    scrapingStatus?.currentSystem?.systemId ?? scrapingStatus?.systemId ?? "";
+  const scrapeCoreSystemName =
+    scrapingStatus?.currentSystem?.systemName ??
+    scrapingStatus?.currentStepDisplay ??
+    scrapeSystemId;
+  const scrapeStepText = scrapeSystemId
+    ? resolveSystemName(scrapeSystemId, scrapeCoreSystemName)
+    : scrapeCoreSystemName || t("settings.scrapeMedia.preparing");
+  const scrapeCurrentStep = scrapingStatus?.currentStep ?? 0;
+  const scrapeTotalSteps = scrapingStatus?.totalSteps ?? 0;
+  const hasScrapeProgress = scrapeTotalSteps > 0;
+  const scrapeProgressPercent = hasScrapeProgress
+    ? Math.min(100, Math.max(0, (scrapeCurrentStep / scrapeTotalSteps) * 100))
+    : 0;
+  const roundedScrapeProgress = Math.round(scrapeProgressPercent);
+  const isScrapePaused = scrapingStatus?.paused === true;
+  const isScrapeThrottled =
+    scrapingStatus?.throttled === true && !isScrapePaused;
+  const scrapeStatusSuffix = isScrapePaused
+    ? t("settings.scrapeMedia.status.paused")
+    : !isLiveConnected
+      ? t("settings.scrapeMedia.status.reconnecting")
+      : isScrapeThrottled
+        ? t("settings.scrapeMedia.status.throttled")
+        : "";
 
   const cleanMutation = useMutation({
     mutationFn: () => CoreAPI.mediaCleanOrphans(),
@@ -233,8 +267,8 @@ export function MediaDatabaseCard({
       : t("toast.preparingDb");
 
   const renderStatus = () => {
-    // Check optimization status first - this takes priority
-    if (isOptimizing) {
+    // Core gives indexing priority if operation signals ever overlap.
+    if (isOptimizing && !isIndexing) {
       return (
         <div className="mt-3 space-y-2">
           <div className="flex items-center justify-between text-sm">
@@ -257,7 +291,7 @@ export function MediaDatabaseCard({
       );
     }
 
-    // Show progress when indexing (either from store or API)
+    // Show progress from the live store while indexing.
     if (isIndexing) {
       const totalSteps = gamesIndex.totalSteps ?? 0;
       const currentStep = gamesIndex.currentStep ?? 0;
@@ -280,9 +314,11 @@ export function MediaDatabaseCard({
                 <LoadingSpinner size={16} className="text-muted-foreground" />
               ) : null}
             </div>
-            {isPaused && (
+            {(isPaused || isThrottled) && (
               <div className="text-muted-foreground text-xs">
-                {t("settings.updateDb.status.paused")}
+                {isPaused
+                  ? t("settings.updateDb.status.paused")
+                  : t("settings.updateDb.status.throttled")}
               </div>
             )}
             <div
@@ -293,27 +329,27 @@ export function MediaDatabaseCard({
               aria-label={t("settings.updateDb.progressLabel")}
               className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
             >
-              <div
-                className={classNames(
-                  "border-background bg-button-pattern h-[8px] rounded-full border border-solid",
-                  {
-                    hidden: hasDetailedProgress && currentStep === 0,
-                    "animate-pulse":
-                      isLiveConnected &&
-                      !isPaused &&
-                      (!hasDetailedProgress || !isSystemStep),
-                  },
-                )}
-                style={{
-                  width: hasDetailedProgress
-                    ? currentStep === 0
-                      ? "0%"
-                      : currentStep >= totalSteps
-                        ? "100%"
-                        : `${((currentStep / totalSteps) * 100).toFixed(2)}%`
-                    : "100%",
-                }}
-              />
+              {/* Distinct nodes prevent iOS WebKit from retaining the solid system-progress layer when final-phase pulsing begins. */}
+              {hasDetailedProgress &&
+              currentStep === 0 ? null : isSystemStep ? (
+                <div
+                  key="determinate"
+                  className="border-background bg-button-pattern h-[8px] rounded-full border border-solid"
+                  style={{
+                    width: `${((currentStep / totalSteps) * 100).toFixed(2)}%`,
+                  }}
+                />
+              ) : (
+                <div
+                  key="indeterminate"
+                  className={classNames(
+                    "border-background bg-button-pattern h-[8px] w-full rounded-full border border-solid",
+                    {
+                      "animate-pulse": isLiveConnected && !isPaused,
+                    },
+                  )}
+                />
+              )}
             </div>
           </div>
           {isPaused ? (
@@ -399,19 +435,88 @@ export function MediaDatabaseCard({
     return null;
   };
 
+  const renderCompactScrapeStatus = () => (
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <h2 className="text-sm font-medium">
+          {t("settings.scrapeMedia.activeTitle")}
+        </h2>
+        <p className="text-sm">{scrapeStepText}</p>
+      </div>
+      <div className="space-y-2">
+        <div
+          role="progressbar"
+          aria-valuenow={hasScrapeProgress ? roundedScrapeProgress : undefined}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={t("settings.scrapeMedia.overallProgressLabel")}
+          className="border-bd-filled bg-background h-[10px] w-full rounded-full border border-solid"
+        >
+          <div
+            className={classNames(
+              "border-background bg-button-pattern h-[8px] rounded-full border border-solid",
+              {
+                hidden: hasScrapeProgress && scrapeCurrentStep === 0,
+                "animate-pulse": !hasScrapeProgress,
+              },
+            )}
+            style={{
+              width: hasScrapeProgress
+                ? `${scrapeProgressPercent.toFixed(2)}%`
+                : "100%",
+            }}
+          />
+        </div>
+        <div className="text-muted-foreground flex justify-between text-sm">
+          <span>
+            {hasScrapeProgress
+              ? t("settings.scrapeMedia.systemProgressCount", {
+                  current: scrapeCurrentStep.toLocaleString(),
+                  total: scrapeTotalSteps.toLocaleString(),
+                })
+              : t("settings.scrapeMedia.preparing")}
+          </span>
+          <span>{hasScrapeProgress ? `${roundedScrapeProgress}%` : ""}</span>
+        </div>
+      </div>
+      {scrapeStatusSuffix ? (
+        <p className="text-muted-foreground text-sm">{scrapeStatusSuffix}</p>
+      ) : null}
+      <Button
+        label={t("settings.scrapeMedia.viewDetails")}
+        variant="outline"
+        className="w-full"
+        disabled={!onViewScrapeDetails}
+        onClick={onViewScrapeDetails}
+      />
+    </div>
+  );
+
   // Get status text for screen reader announcement
   const getStatusText = (): string => {
-    if (isOptimizing) return t("settings.updateDb.status.optimizing");
+    if (showCompactScrapeStatus) {
+      return [
+        t("settings.scrapeMedia.activeTitle"),
+        scrapeStepText,
+        scrapeStatusSuffix,
+      ]
+        .filter(Boolean)
+        .join(": ");
+    }
     if (isIndexing) {
       if (isPaused) {
         return `${stepText}: ${t("settings.updateDb.status.paused")}`;
       }
+      if (isThrottled) {
+        return `${stepText}: ${t("settings.updateDb.status.throttled")}`;
+      }
       return stepText;
     }
+    if (isOptimizing) return t("settings.updateDb.status.optimizing");
     return "";
   };
 
-  const content = (
+  const databaseContent = (
     <div className="space-y-3">
       {/* System selector for choosing which systems to update */}
       <SystemSelectorTrigger
@@ -495,6 +600,10 @@ export function MediaDatabaseCard({
       ) : null}
     </div>
   );
+
+  const content = showCompactScrapeStatus
+    ? renderCompactScrapeStatus()
+    : databaseContent;
 
   return (
     <>

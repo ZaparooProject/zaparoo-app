@@ -73,6 +73,17 @@ describe("tabSessionStore", () => {
     });
   });
 
+  it("should remember media scraper choices separately per device", () => {
+    const store = useTabSessionStore.getState();
+    store.setMediaScraper("device-a", "gamelist.xml");
+    store.setMediaScraper("device-b", "other");
+
+    expect(useTabSessionStore.getState().mediaScraperByDevice).toEqual({
+      "device-a": "gamelist.xml",
+      "device-b": "other",
+    });
+  });
+
   it("should forget only the requested scroll position", () => {
     const store = useTabSessionStore.getState();
     store.rememberScroll("library:SNES:browse:name-asc:/roms", 0, 200);
@@ -127,5 +138,6 @@ describe("tabSessionStore", () => {
     expect(useTabSessionStore.getState().lastHref.settings).toBe("/settings");
     expect(useTabSessionStore.getState().scrollPositions).toEqual({});
     expect(useTabSessionStore.getState().createSearch).toBeNull();
+    expect(useTabSessionStore.getState().mediaScraperByDevice).toEqual({});
   });
 });

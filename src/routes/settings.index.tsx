@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
@@ -36,6 +36,7 @@ export const Route = createFileRoute("/settings/")({
 
 export function Settings() {
   const { t } = useTranslation();
+  const router = useRouter();
   const handleHapticPress = useHapticPress();
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
     t("settings.title"),
@@ -149,7 +150,11 @@ export function Settings() {
             onSelectDevice={handleScanDeviceSelect}
           />
 
-          <MediaDatabaseCard />
+          <MediaDatabaseCard
+            onViewScrapeDetails={() =>
+              void router.navigate({ to: "/settings/media" })
+            }
+          />
 
           {!Capacitor.isNativePlatform() && (
             <div>

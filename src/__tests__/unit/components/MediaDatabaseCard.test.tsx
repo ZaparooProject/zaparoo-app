@@ -5,6 +5,7 @@ import { MediaDatabaseCard } from "../../../components/MediaDatabaseCard";
 import { CoreAPI } from "../../../lib/coreApi";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
+import type { ScrapingStatusNotification } from "@/lib/models";
 
 // Mock dependencies
 vi.mock("../../../lib/coreApi", () => ({
@@ -83,8 +84,9 @@ const { ConnectionState, mockStore } = vi.hoisted(() => {
       totalSteps: number;
       currentStepDisplay: string;
       paused?: boolean;
+      throttled?: boolean;
     },
-    scrapingStatus: null as { scraping: boolean } | null,
+    scrapingStatus: null as ScrapingStatusNotification | null,
     coreVersion: "2.12.0" as string | null,
     coreVersionPending: false,
     safeInsets: {
@@ -182,17 +184,77 @@ describe("MediaDatabaseCard", () => {
     expect(updateButton).toBeDisabled();
   });
 
-  it("should explain why database updates are disabled while scraping", () => {
-    mockStore.scrapingStatus = { scraping: true };
+  it("should replace database controls with compact scrape progress", () => {
+    const onViewScrapeDetails = vi.fn();
+    mockStore.scrapingStatus = {
+      scraperId: "gamelist.xml",
+      currentStep: 2,
+      totalSteps: 4,
+      currentStepDisplay: "Super Nintendo",
+      systemId: "snes",
+      processed: 25,
+      total: 100,
+      matched: 20,
+      skipped: 5,
+      totalScraped: 12,
+      scraping: true,
+      done: false,
+      paused: false,
+      state: "running",
+      force: false,
+    };
 
-    render(<MediaDatabaseCard />);
+    render(<MediaDatabaseCard onViewScrapeDetails={onViewScrapeDetails} />);
 
     expect(
-      screen.getByRole("button", { name: "settings.updateDb" }),
-    ).toBeDisabled();
+      screen.queryByRole("button", { name: "settings.updateDb" }),
+    ).not.toBeInTheDocument();
     expect(
-      screen.getByText("settings.updateDb.blockedByScrape"),
+      screen.getByText("settings.scrapeMedia.activeTitle"),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("progressbar", {
+        name: "settings.scrapeMedia.overallProgressLabel",
+      }),
+    ).toHaveAttribute("aria-valuenow", "50");
+    expect(
+      screen.getByText("settings.scrapeMedia.systemProgressCount"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings.scrapeMedia.viewDetails",
+      }),
+    );
+    expect(onViewScrapeDetails).toHaveBeenCalledOnce();
+  });
+
+  it("should show reconnecting indeterminate compact scrape progress", () => {
+    mockStore.connectionState = ConnectionState.RECONNECTING;
+    mockStore.scrapingStatus = {
+      scraperId: "gamelist.xml",
+      currentStepDisplay: "Preparing media scrape",
+      processed: 0,
+      total: 0,
+      matched: 0,
+      skipped: 0,
+      totalScraped: 0,
+      scraping: true,
+      done: false,
+      paused: false,
+      state: "running",
+      force: false,
+    };
+
+    render(<MediaDatabaseCard onViewScrapeDetails={vi.fn()} />);
+
+    const progress = screen.getByRole("progressbar", {
+      name: "settings.scrapeMedia.overallProgressLabel",
+    });
+    expect(progress).not.toHaveAttribute("aria-valuenow");
+    expect(
+      screen.getAllByText("settings.scrapeMedia.status.reconnecting").length,
+    ).toBeGreaterThan(0);
   });
 
   it("should hide clean missing media action by default", () => {
@@ -293,7 +355,16 @@ describe("MediaDatabaseCard", () => {
   });
 
   it("should disable clean missing media while scraping", () => {
-    mockStore.scrapingStatus = { scraping: true };
+    mockStore.scrapingStatus = {
+      processed: 0,
+      total: 0,
+      matched: 0,
+      skipped: 0,
+      totalScraped: 0,
+      scraping: true,
+      done: false,
+      paused: false,
+    };
 
     render(<MediaDatabaseCard showMaintenanceActions />);
 
@@ -477,6 +548,27 @@ describe("MediaDatabaseCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("should not resurrect terminal indexing from stale query data", async () => {
+    vi.mocked(CoreAPI.media).mockResolvedValue({
+      database: {
+        exists: true,
+        indexing: true,
+        currentStepDisplay: "Building search caches",
+      },
+      active: [],
+    });
+
+    render(<MediaDatabaseCard />);
+
+    expect(
+      await screen.findByText("settings.updateDb.status.ready"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("toast.preparingDb")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Building search caches"),
+    ).not.toBeInTheDocument();
+  });
+
   it("should show checking status when loading", async () => {
     // For this test, we need to mock useQuery to control loading state
     // Use a partial mock with type assertion
@@ -516,6 +608,98 @@ describe("MediaDatabaseCard", () => {
       name: "settings.updateDb.progressLabel",
     });
     expect(progressBar).toHaveAttribute("aria-valuenow", "50");
+  });
+
+  it("should replace the progress fill when entering a final phase", () => {
+    mockStore.gamesIndex = {
+      indexing: true,
+      exists: true,
+      totalFiles: 100,
+      currentStep: 2,
+      totalSteps: 3,
+      currentStepDisplay: "Super Nintendo",
+    };
+
+    const { rerender } = render(<MediaDatabaseCard />);
+    const systemProgress = screen.getByRole("progressbar", {
+      name: "settings.updateDb.progressLabel",
+    });
+    const systemProgressFill = systemProgress.firstElementChild;
+    expect(systemProgressFill).not.toBeNull();
+
+    mockStore.gamesIndex = {
+      ...mockStore.gamesIndex,
+      currentStep: 3,
+      currentStepDisplay: "Creating indexes",
+    };
+    rerender(<MediaDatabaseCard />);
+
+    const finalPhaseProgress = screen.getByRole("progressbar", {
+      name: "settings.updateDb.progressLabel",
+    });
+    expect(finalPhaseProgress).toHaveAttribute("aria-valuenow", "100");
+    expect(finalPhaseProgress.firstElementChild).not.toBe(systemProgressFill);
+  });
+
+  it.each([
+    "Preparing media database update",
+    "Finding media folders",
+    "Initializing database",
+    "Writing database",
+    "Creating indexes",
+    "Building search caches",
+  ])("should render current Core phase text: %s", (phase) => {
+    mockStore.gamesIndex = {
+      indexing: true,
+      exists: true,
+      totalFiles: 100,
+      currentStep: 10,
+      totalSteps: 10,
+      currentStepDisplay: phase,
+    };
+
+    render(<MediaDatabaseCard />);
+
+    expect(screen.getAllByText(phase).length).toBeGreaterThan(0);
+  });
+
+  it("should give indexing display priority over optimization", () => {
+    mockStore.gamesIndex = {
+      indexing: true,
+      optimizing: true,
+      exists: true,
+      totalFiles: 100,
+      currentStep: 10,
+      totalSteps: 10,
+      currentStepDisplay: "Building search caches",
+    };
+
+    render(<MediaDatabaseCard />);
+
+    expect(
+      screen.getAllByText("Building search caches").length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByText("settings.updateDb.status.optimizing"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should show when indexing is throttled", () => {
+    mockStore.gamesIndex = {
+      indexing: true,
+      throttled: true,
+      exists: true,
+      totalFiles: 25,
+      currentStep: 2,
+      totalSteps: 5,
+      currentStepDisplay: "Super Nintendo",
+    };
+
+    render(<MediaDatabaseCard />);
+
+    expect(
+      screen.getAllByText("settings.updateDb.status.throttled").length,
+    ).toBeGreaterThan(0);
   });
 
   it("should show preparing message when currentStepDisplay is empty", () => {

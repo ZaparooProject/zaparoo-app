@@ -47,10 +47,13 @@ vi.mock("@/lib/store", async (importOriginal) => {
 });
 
 // Mock router - use vi.hoisted to make variables accessible in mocks
-const { componentRef, mockBrowserOpen } = vi.hoisted(() => ({
-  componentRef: { current: null as any },
-  mockBrowserOpen: vi.fn(),
-}));
+const { componentRef, mockBrowserOpen, mockRouterNavigate } = vi.hoisted(
+  () => ({
+    componentRef: { current: null as any },
+    mockBrowserOpen: vi.fn(),
+    mockRouterNavigate: vi.fn(),
+  }),
+);
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
@@ -65,6 +68,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
         {children}
       </a>
     ),
+    useRouter: () => ({ navigate: mockRouterNavigate }),
   };
 });
 
@@ -112,8 +116,15 @@ vi.mock("@/components/ProPurchase.tsx", () => ({
 
 // Mock child components that have their own complex dependencies
 vi.mock("@/components/MediaDatabaseCard", () => ({
-  MediaDatabaseCard: () => (
-    <div data-testid="media-database-card">Media Database Card</div>
+  MediaDatabaseCard: ({
+    onViewScrapeDetails,
+  }: {
+    onViewScrapeDetails?: () => void;
+  }) => (
+    <div data-testid="media-database-card">
+      Media Database Card
+      <button onClick={onViewScrapeDetails}>View scrape details</button>
+    </div>
   ),
 }));
 
@@ -248,6 +259,18 @@ describe("Settings Index Route", () => {
     it("should render the media database card", () => {
       renderComponent();
       expect(screen.getByTestId("media-database-card")).toBeInTheDocument();
+    });
+
+    it("should open Manage Media from scrape details", () => {
+      renderComponent();
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "View scrape details" }),
+      );
+
+      expect(mockRouterNavigate).toHaveBeenCalledWith({
+        to: "/settings/media",
+      });
     });
 
     it("should render navigation links to settings subpages", () => {

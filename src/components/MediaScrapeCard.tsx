@@ -4,8 +4,9 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useStatusStore, ConnectionState } from "@/lib/store";
-import { CoreAPI } from "@/lib/coreApi";
+import { CoreAPI, isMediaOperationConflictError } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
+import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { isCoreFeatureAvailable } from "@/lib/featureGates";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { Button } from "./wui/Button";
@@ -36,32 +37,42 @@ export function MediaScrapeCard() {
   const scrapingStatus = useStatusStore((state) => state.scrapingStatus);
   const setScrapingStatus = useStatusStore((state) => state.setScrapingStatus);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
-  const [selectedScraper, setSelectedScraper] = useState("");
+  const selectedScraper = useTabSessionStore(
+    (state) => state.mediaScraperByDevice[deviceKey] ?? "",
+  );
+  const setMediaScraper = useTabSessionStore((state) => state.setMediaScraper);
   const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
   const [startRequested, setStartRequested] = useState(false);
   const [cancelRequested, setCancelRequested] = useState(false);
   const [resumeRequested, setResumeRequested] = useState(false);
   const [force, setForce] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
   const [trackedDeviceKey, setTrackedDeviceKey] = useState(deviceKey);
 
-  // Scraper ids and system ids are both listed by the connected device, so a
-  // selection made against one Core means nothing to the next one — and
-  // submitting it would start a scrape the user never chose.
+  // Scraper choice is session-scoped by device, but system selection and
+  // transient errors belong only to the currently rendered device.
   if (deviceKey !== trackedDeviceKey) {
     setTrackedDeviceKey(deviceKey);
-    setSelectedScraper("");
     setSelectedSystems([]);
+    setStartError(null);
   }
 
   const isLiveConnected = connectionState === ConnectionState.CONNECTED;
   const isScraping = scrapingStatus?.scraping === true;
   const isPaused = isScraping && scrapingStatus?.paused === true;
-  const isDone = scrapingStatus?.done === true && !isScraping;
+  const isThrottled =
+    isScraping && scrapingStatus?.throttled === true && !isPaused;
+  const isFailed = !isScraping && scrapingStatus?.state === "failed";
+  const isCancelled = !isScraping && scrapingStatus?.state === "cancelled";
+  const isCompleted =
+    !isScraping &&
+    (scrapingStatus?.state === "completed" ||
+      (scrapingStatus?.state === undefined && scrapingStatus?.done === true));
   const isStarting = startRequested && !isScraping;
   const isCancelling = cancelRequested && isScraping;
   const isResuming = resumeRequested && isPaused;
-  const isIndexing = gamesIndex.indexing || gamesIndex.optimizing === true;
+  const isDatabaseBusy = gamesIndex.indexing || gamesIndex.optimizing === true;
 
   useEffect(() => {
     if (isScraping && startRequested) {
@@ -89,6 +100,23 @@ export function MediaScrapeCard() {
     queryFn: () => CoreAPI.scrapers(),
     enabled: connected && featureAvailable,
   });
+
+  useEffect(() => {
+    if (!deviceKey || !scrapersData) return;
+    const rememberedAvailable = scrapersData.scrapers.some(
+      (scraper) => scraper.id === selectedScraper,
+    );
+    if (rememberedAvailable) return;
+
+    const defaultScraper =
+      scrapersData.scrapers.find((scraper) => scraper.id === "gamelist.xml")
+        ?.id ?? "";
+    if (selectedScraper !== defaultScraper) {
+      setMediaScraper(deviceKey, defaultScraper);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Scraper eligibility changed, so its system selection cannot carry over.
+      setSelectedSystems([]);
+    }
+  }, [deviceKey, scrapersData, selectedScraper, setMediaScraper]);
 
   const { data: scrapeStatusData } = useQuery({
     queryKey: ["mediaScrapeStatus", deviceKey],
@@ -160,6 +188,7 @@ export function MediaScrapeCard() {
         : allowedSystemIds;
 
     setScrapingStatus(null);
+    setStartError(null);
     setStartRequested(true);
     try {
       await CoreAPI.mediaScrape({
@@ -168,11 +197,18 @@ export function MediaScrapeCard() {
         force,
       });
     } catch (error) {
-      logger.error("Failed to start media scrape:", error, {
-        category: "api",
-        action: "mediaScrape",
-        severity: "error",
-      });
+      if (!isMediaOperationConflictError(error)) {
+        logger.error("Failed to start media scrape:", error, {
+          category: "api",
+          action: "mediaScrape",
+          severity: "error",
+        });
+      }
+      setStartError(
+        error instanceof Error
+          ? error.message
+          : t("settings.scrapeMedia.startError"),
+      );
       setStartRequested(false);
     }
   };
@@ -206,7 +242,16 @@ export function MediaScrapeCard() {
   };
 
   const getStatusText = (): string => {
-    if (isDone) {
+    if (isFailed) {
+      const failed = t("settings.scrapeMedia.failed");
+      return scrapingStatus?.error
+        ? `${failed}: ${scrapingStatus.error}`
+        : failed;
+    }
+    if (isCancelled) {
+      return t("settings.scrapeMedia.cancelled");
+    }
+    if (isCompleted) {
       return t("settings.scrapeMedia.done", {
         matched: scrapingStatus?.matched ?? 0,
         skipped: scrapingStatus?.skipped ?? 0,
@@ -230,13 +275,32 @@ export function MediaScrapeCard() {
       if (!isLiveConnected) {
         return `${step}, ${t("settings.scrapeMedia.status.reconnecting")}`;
       }
+      if (isThrottled) {
+        return `${step}, ${t("settings.scrapeMedia.status.throttled")}`;
+      }
       return step;
     }
     return "";
   };
 
   const renderStatus = () => {
-    if (isDone) {
+    if (isFailed || isCancelled) {
+      const title = isFailed
+        ? t("settings.scrapeMedia.failed")
+        : t("settings.scrapeMedia.cancelled");
+      return (
+        <section className="space-y-2" aria-labelledby="last-scrape-title">
+          <h2 id="last-scrape-title" className="text-sm font-medium">
+            {title}
+          </h2>
+          {isFailed && scrapingStatus?.error ? (
+            <p className="text-error text-sm">{scrapingStatus.error}</p>
+          ) : null}
+        </section>
+      );
+    }
+
+    if (isCompleted) {
       const formattedMatched = (scrapingStatus?.matched ?? 0).toLocaleString();
       const formattedSkipped = (scrapingStatus?.skipped ?? 0).toLocaleString();
       const formattedScraped = (
@@ -338,11 +402,13 @@ export function MediaScrapeCard() {
                 </span>
                 <span>{currentSystem}</span>
               </div>
-              {(isPaused || !isLiveConnected) && (
+              {(isPaused || !isLiveConnected || isThrottled) && (
                 <div className="text-muted-foreground text-sm">
                   {isPaused
                     ? t("settings.scrapeMedia.status.paused")
-                    : t("settings.scrapeMedia.status.reconnecting")}
+                    : !isLiveConnected
+                      ? t("settings.scrapeMedia.status.reconnecting")
+                      : t("settings.scrapeMedia.status.throttled")}
                 </div>
               )}
             </div>
@@ -473,7 +539,9 @@ export function MediaScrapeCard() {
               <span className="text-muted-foreground">
                 {t("settings.scrapeMedia.forceLabel")}
               </span>
-              <span>{force ? t("yes") : t("no")}</span>
+              <span>
+                {(scrapingStatus.force ?? force) ? t("yes") : t("no")}
+              </span>
             </div>
           </section>
 
@@ -507,7 +575,8 @@ export function MediaScrapeCard() {
     return null;
   };
 
-  const controlsDisabled = !connected || isScraping || isIndexing || isStarting;
+  const controlsDisabled =
+    !connected || isScraping || isDatabaseBusy || isStarting;
 
   return (
     <>
@@ -528,8 +597,11 @@ export function MediaScrapeCard() {
                 id="scraper-select"
                 value={selectedScraper}
                 onChange={(e) => {
-                  setSelectedScraper(e.target.value);
+                  if (deviceKey) {
+                    setMediaScraper(deviceKey, e.target.value);
+                  }
                   setSelectedSystems([]);
+                  setStartError(null);
                 }}
                 disabled={controlsDisabled || scrapersLoading}
                 className={classNames(
@@ -569,7 +641,7 @@ export function MediaScrapeCard() {
               label={t("settings.scrapeMedia.force")}
             />
 
-            {isIndexing ? (
+            {isDatabaseBusy ? (
               <div className="text-muted-foreground text-sm">
                 {t("settings.scrapeMedia.blockedByIndex")}
               </div>
@@ -591,10 +663,16 @@ export function MediaScrapeCard() {
               }
               className="w-full"
               disabled={
-                !connected || !selectedScraper || isIndexing || isStarting
+                !connected || !selectedScraper || isDatabaseBusy || isStarting
               }
               onClick={handleScrape}
             />
+
+            {startError ? (
+              <p className="text-error text-sm">
+                {t("error", { msg: startError })}
+              </p>
+            ) : null}
 
             {renderStatus()}
           </>
