@@ -347,6 +347,19 @@ describe("useScanOperations", () => {
       // Assert - No token set, error handled gracefully
       expect(setLastToken).not.toHaveBeenCalled();
     });
+
+    it("should not report denied camera access", async () => {
+      vi.mocked(BarcodeScanner.scan).mockRejectedValue(
+        new Error("User denied access to camera."),
+      );
+      const { result } = renderHook(() => useScanOperations(defaultProps));
+
+      await act(async () => {
+        await result.current.handleCameraScan();
+      });
+
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
   });
 
   describe("handleStopConfirm", () => {

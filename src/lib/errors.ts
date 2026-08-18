@@ -122,6 +122,16 @@ export class BarcodeScanCancelledError extends ZaparooError {
   }
 }
 
+/**
+ * Returned when camera access was denied for a barcode scan.
+ * User settings can resolve this; it is not an application defect.
+ */
+export class BarcodePermissionDeniedError extends ZaparooError {
+  constructor(message = "Camera permission was denied") {
+    super(message);
+  }
+}
+
 // =============================================================================
 // Purchase Errors
 // =============================================================================
@@ -359,7 +369,7 @@ export function wrapNfcError(error: unknown): Error {
   // Check for transient tag/session loss during normal NFC operations
   if (
     msg.includes("no nfc tag was detected") ||
-    msg.includes("the tag is not connected") ||
+    msg.includes("tag is not connected") ||
     msg.includes("tag was lost") ||
     msg.includes("taglostexception") ||
     msg.includes("tag is out of date") ||
@@ -367,7 +377,9 @@ export function wrapNfcError(error: unknown): Error {
     msg.includes("could not connect to tag") ||
     msg.includes("session invalidated unexpectedly") ||
     msg.includes("reader session invalidated") ||
-    msg.includes("connection lost")
+    msg.includes("connection lost") ||
+    msg === "stack error" ||
+    msg.includes("system resource unavailable")
   ) {
     return new NfcTransientError(normalizedError.message, normalizedError);
   }
@@ -402,6 +414,15 @@ export function wrapBarcodeScannerError(error: unknown): Error {
   // Check for cancellation (plugin uses both spellings)
   if (msg.includes("canceled") || msg.includes("cancelled")) {
     return new BarcodeScanCancelledError(error.message);
+  }
+
+  if (
+    msg.includes("denied access to camera") ||
+    msg.includes("camera permission denied") ||
+    msg.includes("camera access denied") ||
+    msg.includes("not authorized to use camera")
+  ) {
+    return new BarcodePermissionDeniedError(error.message);
   }
 
   return error;

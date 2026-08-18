@@ -27,6 +27,7 @@ const {
   mockMappingsData,
   mockNfcWriter,
   mockBarcodeScan,
+  MockBarcodePermissionDeniedError,
 } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockToastSuccess: vi.fn(),
@@ -47,6 +48,7 @@ const {
     getVerifyError: vi.fn(() => null),
   },
   mockBarcodeScan: vi.fn(),
+  MockBarcodePermissionDeniedError: class extends Error {},
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -163,6 +165,7 @@ vi.mock("@/lib/errors", () => ({
       this.name = "BarcodeScanCancelledError";
     }
   },
+  BarcodePermissionDeniedError: MockBarcodePermissionDeniedError,
 }));
 
 import { MappingEditor } from "@/routes/-pages/MappingEditor";
@@ -379,6 +382,22 @@ describe("Create Mappings Edit Route", () => {
         expect(
           screen.getByLabelText("create.mappings.editor.pattern"),
         ).toHaveValue("FROMCAM");
+      });
+    });
+
+    it("should explain denied camera permission", async () => {
+      mockBarcodeScan.mockRejectedValue(new MockBarcodePermissionDeniedError());
+      const user = userEvent.setup();
+      renderEditor();
+
+      await user.click(
+        screen.getByRole("button", { name: /scan\.cameraMode/i }),
+      );
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith(
+          "create.mappings.editor.cameraPermissionDenied",
+        );
       });
     });
   });

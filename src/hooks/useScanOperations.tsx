@@ -10,6 +10,7 @@ import { runToken } from "@/lib/tokenOperations.tsx";
 import { logger } from "@/lib/logger";
 import { useHaptics } from "@/hooks/useHaptics";
 import {
+  BarcodePermissionDeniedError,
   BarcodeScanCancelledError,
   isExpectedNfcError,
   wrapBarcodeScannerError,
@@ -232,9 +233,14 @@ export function useScanOperations({
         // Wrap barcode scanner errors to get typed errors
         const wrappedError = wrapBarcodeScannerError(error);
 
-        // User canceling the scan is not an error
+        // User cancellation and denied camera access are expected outcomes.
         if (wrappedError instanceof BarcodeScanCancelledError) {
           logger.debug("Barcode scan canceled by user");
+          return;
+        }
+        if (wrappedError instanceof BarcodePermissionDeniedError) {
+          logger.debug("Barcode camera permission denied");
+          notification("error");
           return;
         }
 

@@ -178,6 +178,28 @@ describe("CoreAPI API Contract", () => {
       );
     });
 
+    it("mediaImage should not report missing artwork", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const warnSpy = vi.spyOn(logger, "warn");
+      const promise = CoreAPI.mediaImage({
+        system: "Jaguar",
+        path: "/media/fat/games/Jaguar/SFDX.rom",
+      });
+      simulateError(
+        mockSend,
+        'no image found for media: system="Jaguar" path="/media/fat/games/Jaguar/SFDX.rom"',
+        0,
+        -32000,
+      );
+
+      await expect(promise).rejects.toThrow("no image found for media");
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        "Media image unavailable:",
+        expect.any(Error),
+      );
+    });
+
     it("mediaTagsUpdate should mutate favorite by media ID", async () => {
       const promise = CoreAPI.mediaTagsUpdate({
         mediaId: 42,

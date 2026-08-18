@@ -133,6 +133,211 @@ describe("CoreAPI Internals", () => {
       expect(callSpy).toHaveBeenCalledWith(Method.Systems, { all: true });
     });
 
+    it.each([
+      {
+        name: "systems",
+        property: "systems",
+        call: () => CoreAPI.systems(),
+      },
+      {
+        name: "scrapers",
+        property: "scrapers",
+        call: () => CoreAPI.scrapers(),
+      },
+      {
+        name: "mappings",
+        property: "mappings",
+        call: () => CoreAPI.mappings(),
+      },
+    ])(
+      "should reject malformed $name array responses",
+      async ({ name, property, call }) => {
+        vi.spyOn(CoreAPI, "call").mockResolvedValue({});
+
+        await expect(call()).rejects.toThrow(
+          `Invalid ${name} response: ${property} must be an array`,
+        );
+      },
+    );
+
+    it.each([
+      {
+        name: "systems",
+        call: () => CoreAPI.systems(),
+      },
+      {
+        name: "scrapers",
+        call: () => CoreAPI.scrapers(),
+      },
+      {
+        name: "mappings",
+        call: () => CoreAPI.mappings(),
+      },
+    ])(
+      "should reject malformed $name array entries",
+      async ({ name, call }) => {
+        vi.spyOn(CoreAPI, "call").mockResolvedValue({ [name]: [null] });
+
+        await expect(call()).rejects.toThrow(
+          `Invalid ${name} response: ${name}[0] is invalid`,
+        );
+      },
+    );
+
+    it("should reject media responses without a valid database state", async () => {
+      vi.spyOn(CoreAPI, "call").mockResolvedValue({ active: [] });
+
+      await expect(CoreAPI.media()).rejects.toThrow(
+        "Invalid media response: database must include valid index fields",
+      );
+    });
+
+    it.each([
+      {
+        name: "systems",
+        call: () => CoreAPI.systems(),
+      },
+      {
+        name: "scrapers",
+        call: () => CoreAPI.scrapers(),
+      },
+      {
+        name: "mappings",
+        call: () => CoreAPI.mappings(),
+      },
+    ])(
+      "should reject cancelled $name requests as typed errors",
+      async ({ call }) => {
+        vi.spyOn(CoreAPI, "call").mockResolvedValue({ cancelled: true });
+
+        await expect(call()).rejects.toMatchObject({
+          name: "RequestCancelledError",
+        });
+      },
+    );
+
+    it("should preserve cancelled media responses for reconnect handling", async () => {
+      vi.spyOn(CoreAPI, "call").mockResolvedValue({ cancelled: true });
+
+      await expect(CoreAPI.media()).resolves.toEqual({ cancelled: true });
+    });
+
+    it("should reject invalid optional media index fields", async () => {
+      vi.spyOn(CoreAPI, "call").mockResolvedValue({
+        database: {
+          exists: true,
+          indexing: true,
+          currentStepDisplay: {},
+        },
+        active: [],
+      });
+
+      await expect(CoreAPI.media()).rejects.toThrow(
+        "Invalid media response: database must include valid index fields",
+      );
+    });
+
+    it.each([
+      { property: "active", value: [null] },
+      { property: "playlists", value: [null] },
+    ])(
+      "should reject malformed media $property entries",
+      async ({ property, value }) => {
+        vi.spyOn(CoreAPI, "call").mockResolvedValue({
+          database: { exists: true, indexing: false },
+          active: [],
+          [property]: value,
+        });
+
+        await expect(CoreAPI.media()).rejects.toThrow(
+          `Invalid media response: ${property}[0] is invalid`,
+        );
+      },
+    );
+
+    it("should normalize omitted active media to an empty array", async () => {
+      vi.spyOn(CoreAPI, "call").mockResolvedValue({
+        database: { exists: true, indexing: false },
+      });
+
+      await expect(CoreAPI.media()).resolves.toEqual({
+        database: { exists: true, indexing: false },
+        active: [],
+      });
+    });
+
+    it.each([null, ""])(
+      "should normalize legacy primary media slot %j",
+      async (slot) => {
+        vi.spyOn(CoreAPI, "call").mockResolvedValue({
+          database: { exists: true, indexing: false },
+          active: [
+            {
+              systemId: "snes",
+              systemName: "Super Nintendo",
+              mediaName: "Super Mario World",
+              mediaPath: "/games/smw.sfc",
+              slot,
+            },
+          ],
+        });
+
+        await expect(CoreAPI.media()).resolves.toMatchObject({
+          active: [{ slot: "primary" }],
+        });
+      },
+    );
+
+    it("should normalize legacy mappings without read-only metadata", async () => {
+      vi.spyOn(CoreAPI, "call").mockResolvedValue({
+        mappings: [
+          {
+            id: "1",
+            added: "2026-08-18T00:00:00Z",
+            label: "Legacy mapping",
+            enabled: true,
+            type: "uid",
+            match: "exact",
+            pattern: "AABB",
+            override: "@snes/game",
+          },
+        ],
+      });
+
+      await expect(CoreAPI.mappings()).resolves.toMatchObject({
+        mappings: [{ source: "database", readOnly: false }],
+      });
+    });
+
+    it.each([
+      ["id", "uid"],
+      ["value", "text"],
+    ] as const)(
+      "should normalize Core mapping type %s to %s",
+      async (wireType, appType) => {
+        vi.spyOn(CoreAPI, "call").mockResolvedValue({
+          mappings: [
+            {
+              id: "1",
+              added: "2026-08-18T00:00:00Z",
+              label: "Current mapping",
+              enabled: true,
+              type: wireType,
+              match: "exact",
+              pattern: "AABB",
+              override: "@snes/game",
+              source: "database",
+              readOnly: false,
+            },
+          ],
+        });
+
+        await expect(CoreAPI.mappings()).resolves.toMatchObject({
+          mappings: [{ type: appType }],
+        });
+      },
+    );
+
     it("should propagate settings method errors", async () => {
       // Mock call to throw error
       vi.spyOn(CoreAPI, "call").mockImplementation(() => {

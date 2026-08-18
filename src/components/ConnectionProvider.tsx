@@ -57,6 +57,7 @@ import {
   CoreApiError,
   isCancelled,
   isExpectedMediaDatabaseError,
+  isIndexResponse,
   type NotificationRequest,
 } from "@/lib/coreApi";
 import {
@@ -188,6 +189,25 @@ function getPlayingForSlot(response: MediaResponse, slot: MediaSlot) {
     response.active?.find(
       (activeMedia) => getMediaSlot(activeMedia.slot) === slot,
     ) ?? null
+  );
+}
+
+function indexResponsesEqual(
+  current: IndexResponse,
+  next: IndexResponse,
+): boolean {
+  return (
+    current.exists === next.exists &&
+    current.indexing === next.indexing &&
+    current.optimizing === next.optimizing &&
+    current.paused === next.paused &&
+    current.totalSteps === next.totalSteps &&
+    current.currentStep === next.currentStep &&
+    current.currentStepDisplay === next.currentStepDisplay &&
+    current.totalFiles === next.totalFiles &&
+    current.totalMedia === next.totalMedia &&
+    current.systemsCompleted === next.systemsCompleted &&
+    current.systemsTotal === next.systemsTotal
   );
 }
 
@@ -512,6 +532,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const applyGamesIndexState = useCallback(
     (nextState: IndexResponse) => {
       const currentState = useStatusStore.getState().gamesIndex;
+      if (indexResponsesEqual(currentState, nextState)) {
+        return;
+      }
       setGamesIndex(nextState);
 
       const mediaStateChanged =
@@ -657,8 +680,22 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           }
 
           case Notification.MediaIndexing: {
-            const params = notification.params as IndexResponse;
+            const params = notification.params;
             logger.log("mediaIndexing", params);
+            if (!isIndexResponse(params)) {
+              logger.error(
+                "Invalid media indexing notification",
+                new Error(
+                  "Media indexing notification contains invalid fields",
+                ),
+                {
+                  category: "api",
+                  action: "media-index-notification",
+                  severity: "warning",
+                },
+              );
+              break;
+            }
 
             applyGamesIndexState(params);
             if (params.indexing) {

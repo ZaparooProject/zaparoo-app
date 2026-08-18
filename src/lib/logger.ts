@@ -8,6 +8,7 @@ import { Capacitor } from "@capacitor/core";
 import { Device } from "@capacitor/device";
 import { useStatusStore } from "./store";
 import { isPluginAvailable } from "./capacitorBridge";
+import { isCancellationError } from "./errors";
 
 // Check if Rollbar should be enabled (native + production + token present)
 const isNative = Capacitor.isNativePlatform();
@@ -63,6 +64,9 @@ function redactSensitiveString(value: string): string {
 function sanitizeError(error: Error): Error {
   const safeError = new Error(redactSensitiveString(error.message));
   safeError.name = error.name;
+  if (isCancellationError(error)) {
+    Object.setPrototypeOf(safeError, Object.getPrototypeOf(error));
+  }
   if (error.stack) {
     safeError.stack = redactSensitiveString(error.stack);
   }
