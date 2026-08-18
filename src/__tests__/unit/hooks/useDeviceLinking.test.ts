@@ -48,6 +48,8 @@ vi.mock("@/lib/coreApi", () => ({
   },
   isRequestCancelledError: (error: unknown) =>
     error instanceof Error && /cancelled|aborted/i.test(error.message),
+  isUnsupportedCoreApiError: (error: unknown) =>
+    error instanceof Error && /method not found/i.test(error.message),
 }));
 
 vi.mock("@/lib/onlineApi", () => ({
@@ -85,6 +87,15 @@ describe("useDeviceLinking", () => {
       { url: "https://api.zaparoo.com" },
       expect.any(AbortSignal),
     );
+  });
+
+  it("should mark unsupported Core device linking unavailable", async () => {
+    mockSettingsAuthStatus.mockRejectedValue(new Error("Method not found"));
+
+    const { result } = renderHook(() => useDeviceLinking(true));
+
+    await waitFor(() => expect(result.current.state).toBe("unavailable"));
+    expect(mockLoggerError).not.toHaveBeenCalled();
   });
 
   it("should clear linked state when device becomes unavailable", async () => {

@@ -109,7 +109,7 @@ vi.mock("../../../components/PairingModal", () => ({
   },
 }));
 
-vi.mock("../../../lib/coreApi", () => ({
+vi.mock("../../../lib/coreApi", async (importOriginal) => ({
   CoreApiError: class extends Error {
     constructor(
       message: string,
@@ -181,6 +181,9 @@ vi.mock("../../../lib/coreApi", () => ({
       msg.includes("method not found")
     );
   },
+  isIndexResponse: (
+    await importOriginal<typeof import("../../../lib/coreApi")>()
+  ).isIndexResponse,
 }));
 
 vi.mock("@capacitor/preferences", () => ({
@@ -1796,6 +1799,96 @@ describe("notification processing", () => {
           totalMedia: 150,
         });
       });
+    });
+
+    it("should ignore repeated games index state", async () => {
+      useStatusStore.setState({
+        gamesIndex: {
+          exists: true,
+          indexing: false,
+          optimizing: false,
+          totalMedia: 150,
+        },
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.MediaIndexing,
+        params: {
+          exists: true,
+          indexing: false,
+          optimizing: false,
+          totalMedia: 150,
+        },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      const currentState = useStatusStore.getState().gamesIndex;
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      expect(useStatusStore.getState().gamesIndex).toBe(currentState);
+    });
+
+    it("should update games index state when a new field changes", async () => {
+      useStatusStore.setState({
+        gamesIndex: { exists: true, indexing: false },
+      });
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.MediaIndexing,
+        params: {
+          exists: true,
+          indexing: false,
+          futureMetric: 1,
+        },
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      expect(useStatusStore.getState().gamesIndex).toHaveProperty(
+        "futureMetric",
+        1,
+      );
+    });
+
+    it.each([
+      { indexing: true },
+      { exists: true, indexing: true, currentStepDisplay: {} },
+    ])("should reject malformed games index notifications", async (params) => {
+      const loggerSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.MediaIndexing,
+        params,
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      const currentState = useStatusStore.getState().gamesIndex;
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      expect(useStatusStore.getState().gamesIndex).toBe(currentState);
+      expect(loggerSpy).toHaveBeenCalledWith(
+        "Invalid media indexing notification",
+        expect.any(Error),
+        {
+          category: "api",
+          action: "media-index-notification",
+          severity: "warning",
+        },
+      );
+      loggerSpy.mockRestore();
     });
 
     it("should reconcile until authoritative media status is terminal", async () => {

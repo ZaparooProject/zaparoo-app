@@ -3,7 +3,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { CoreAPI, isRequestCancelledError } from "@/lib/coreApi";
+import {
+  CoreAPI,
+  isRequestCancelledError,
+  isUnsupportedCoreApiError,
+} from "@/lib/coreApi";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { createDeviceClaim, NotSignedInError } from "@/lib/onlineApi";
 import { logger } from "@/lib/logger";
@@ -50,6 +54,7 @@ export function useDeviceLinking(enabled: boolean) {
         );
       } catch (error) {
         if (isRequestCancelledError(error)) throw error;
+        if (isUnsupportedCoreApiError(error)) return null;
         logger.error("Device link status check failed", error, {
           category: "api",
           action: "deviceLink.status",
@@ -69,9 +74,11 @@ export function useDeviceLinking(enabled: boolean) {
       ? "linking"
       : statusQuery.isPending
         ? "checking"
-        : statusQuery.data?.linked
-          ? "linked"
-          : "unlinked";
+        : statusQuery.data === null
+          ? "unavailable"
+          : statusQuery.data?.linked
+            ? "linked"
+            : "unlinked";
 
   const linkDevice = useCallback(async () => {
     if (!enabled || linkingRef.current) return;

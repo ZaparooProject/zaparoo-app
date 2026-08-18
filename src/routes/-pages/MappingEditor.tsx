@@ -17,6 +17,7 @@ import { MappingType } from "@/lib/models.ts";
 import { logger } from "@/lib/logger";
 import {
   wrapBarcodeScannerError,
+  BarcodePermissionDeniedError,
   BarcodeScanCancelledError,
 } from "@/lib/errors";
 import { Button } from "@/components/wui/Button";
@@ -210,6 +211,10 @@ export function MappingEditor({ id }: MappingEditorProps) {
       .catch((error) => {
         const wrapped = wrapBarcodeScannerError(error);
         if (wrapped instanceof BarcodeScanCancelledError) return;
+        if (wrapped instanceof BarcodePermissionDeniedError) {
+          toast.error(t("create.mappings.editor.cameraPermissionDenied"));
+          return;
+        }
         logger.error("Barcode scan error:", wrapped, {
           category: "camera",
           action: "barcodeScan",

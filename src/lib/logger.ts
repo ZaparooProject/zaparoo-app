@@ -6,6 +6,7 @@
 
 import { Capacitor } from "@capacitor/core";
 import { Device } from "@capacitor/device";
+import { isCancellationError } from "@/lib/errors";
 import { useStatusStore } from "./store";
 import { isPluginAvailable } from "./capacitorBridge";
 
@@ -63,6 +64,9 @@ function redactSensitiveString(value: string): string {
 function sanitizeError(error: Error): Error {
   const safeError = new Error(redactSensitiveString(error.message));
   safeError.name = error.name;
+  if (isCancellationError(error)) {
+    Object.setPrototypeOf(safeError, Object.getPrototypeOf(error));
+  }
   if (error.stack) {
     safeError.stack = redactSensitiveString(error.stack);
   }

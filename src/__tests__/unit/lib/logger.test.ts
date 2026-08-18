@@ -216,6 +216,19 @@ describe("Logger Rate Limiting", () => {
     );
   });
 
+  it("should preserve cancellation error prototypes after sanitizing", async () => {
+    const { RequestCancelledError } = await import("../../../lib/errors");
+
+    logger.error(
+      "Request failed",
+      new RequestCancelledError("Request expired while waiting for connection"),
+      { category: "api", action: "media" },
+    );
+
+    const [safeError] = mockRollbar.error.mock.calls.at(-1) ?? [];
+    expect(safeError).toBeInstanceOf(RequestCancelledError);
+  });
+
   it("should redact auth secrets from nested log values and strings", () => {
     const sanitized = sanitizeLogValue({
       headers: { Authorization: "Bearer firebase-secret" },

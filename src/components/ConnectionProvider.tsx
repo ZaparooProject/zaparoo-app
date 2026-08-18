@@ -57,6 +57,7 @@ import {
   CoreApiError,
   isCancelled,
   isExpectedMediaDatabaseError,
+  isIndexResponse,
   type NotificationRequest,
 } from "@/lib/coreApi";
 import {
@@ -189,6 +190,17 @@ function getPlayingForSlot(response: MediaResponse, slot: MediaSlot) {
       (activeMedia) => getMediaSlot(activeMedia.slot) === slot,
     ) ?? null
   );
+}
+
+function indexResponsesEqual(
+  current: IndexResponse,
+  next: IndexResponse,
+): boolean {
+  const keys = new Set<keyof IndexResponse>([
+    ...(Object.keys(current) as (keyof IndexResponse)[]),
+    ...(Object.keys(next) as (keyof IndexResponse)[]),
+  ]);
+  return [...keys].every((key) => current[key] === next[key]);
 }
 
 export function ConnectionProvider({ children }: ConnectionProviderProps) {
@@ -512,6 +524,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const applyGamesIndexState = useCallback(
     (nextState: IndexResponse) => {
       const currentState = useStatusStore.getState().gamesIndex;
+      if (indexResponsesEqual(currentState, nextState)) {
+        return;
+      }
       setGamesIndex(nextState);
 
       const mediaStateChanged =
@@ -657,8 +672,22 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           }
 
           case Notification.MediaIndexing: {
-            const params = notification.params as IndexResponse;
+            const params = notification.params;
             logger.log("mediaIndexing", params);
+            if (!isIndexResponse(params)) {
+              logger.error(
+                "Invalid media indexing notification",
+                new Error(
+                  "Media indexing notification contains invalid fields",
+                ),
+                {
+                  category: "api",
+                  action: "media-index-notification",
+                  severity: "warning",
+                },
+              );
+              break;
+            }
 
             applyGamesIndexState(params);
             if (params.indexing) {

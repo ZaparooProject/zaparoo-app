@@ -14,6 +14,7 @@ import {
   DeleteInboxRequest,
   HistoryResponse,
   InboxResponse,
+  IndexResponse,
   InputGamepadRequest,
   InputKeyboardRequest,
   LaunchRequest,
@@ -36,6 +37,7 @@ import {
   MediaTagsResponse,
   MediaTagsUpdateParams,
   MediaTagsUpdateResponse,
+  MappingType,
   Method,
   Notification,
   type ActiveProfile,
@@ -48,6 +50,7 @@ import {
   PlaytimeLimitsUpdateRequest,
   PlaytimeStatus,
   PlayingResponse,
+  PlaylistState,
   ReadersResponse,
   ScrapersResponse,
   ScrapingStatusNotification,
@@ -150,11 +153,246 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
-export function isUnsupportedMediaApiError(error: unknown): boolean {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasOptionalType(
+  value: Record<string, unknown>,
+  property: string,
+  type: "boolean" | "number" | "string",
+): boolean {
+  return value[property] === undefined || typeof value[property] === type;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((entry) => typeof entry === "string")
+  );
+}
+
+function requireArrayPropertyResponse<TResponse>(
+  result: unknown,
+  property: string,
+  responseName: string,
+  isValidEntry: (entry: unknown) => boolean,
+): TResponse {
+  if (!isRecord(result) || !Array.isArray(result[property])) {
+    throw new Error(
+      `Invalid ${responseName} response: ${property} must be an array`,
+    );
+  }
+  const entries = result[property];
+  const validEntries = entries.filter(isValidEntry);
+  const invalidEntryCount = entries.length - validEntries.length;
+  if (invalidEntryCount > 0) {
+    logger.error(
+      "Invalid Core response entries:",
+      new Error(
+        `Filtered ${invalidEntryCount} invalid ${property} entries from ${responseName} response`,
+      ),
+      {
+        category: "api",
+        action: "validateResponse",
+        severity: "error",
+        responseName,
+        property,
+        invalidEntryCount,
+      },
+    );
+  }
+  return { ...result, [property]: validEntries } as TResponse;
+}
+
+function isSystem(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    hasOptionalType(value, "category", "string") &&
+    hasOptionalType(value, "releaseDate", "string") &&
+    hasOptionalType(value, "manufacturer", "string") &&
+    hasOptionalType(value, "zapScript", "string") &&
+    hasOptionalType(value, "mediaCount", "number")
+  );
+}
+
+function isScraper(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    (value.supportedSystems === undefined ||
+      isStringArray(value.supportedSystems))
+  );
+}
+
+function isMapping(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.added === "string" &&
+    typeof value.label === "string" &&
+    typeof value.enabled === "boolean" &&
+    (value.type === "uid" ||
+      value.type === "text" ||
+      value.type === "data" ||
+      value.type === "id" ||
+      value.type === "value") &&
+    typeof value.match === "string" &&
+    typeof value.pattern === "string" &&
+    typeof value.override === "string" &&
+    (value.source === undefined ||
+      value.source === "database" ||
+      value.source === "file") &&
+    (value.readOnly === undefined || typeof value.readOnly === "boolean")
+  );
+}
+
+export function isIndexResponse(value: unknown): value is IndexResponse {
+  if (
+    !isRecord(value) ||
+    typeof value.exists !== "boolean" ||
+    typeof value.indexing !== "boolean"
+  ) {
+    return false;
+  }
+
+  return (
+    hasOptionalType(value, "optimizing", "boolean") &&
+    hasOptionalType(value, "paused", "boolean") &&
+    hasOptionalType(value, "totalSteps", "number") &&
+    hasOptionalType(value, "currentStep", "number") &&
+    hasOptionalType(value, "currentStepDisplay", "string") &&
+    hasOptionalType(value, "totalFiles", "number") &&
+    hasOptionalType(value, "totalMedia", "number") &&
+    hasOptionalType(value, "systemsCompleted", "number") &&
+    hasOptionalType(value, "systemsTotal", "number")
+  );
+}
+
+function normalizeMappingType(type: string): MappingType {
+  if (type === "id") return "uid";
+  if (type === "value") return "text";
+  if (type === "text" || type === "data") return type;
+  return "uid";
+}
+
+function isPlayingResponse(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.systemId === "string" &&
+    typeof value.systemName === "string" &&
+    typeof value.mediaName === "string" &&
+    typeof value.mediaPath === "string" &&
+    hasOptionalType(value, "zapScript", "string") &&
+    hasOptionalType(value, "started", "string") &&
+    hasOptionalType(value, "launcherId", "string") &&
+    (value.launcherControls === undefined ||
+      isStringArray(value.launcherControls)) &&
+    (value.slot === undefined ||
+      value.slot === null ||
+      value.slot === "" ||
+      value.slot === "primary" ||
+      value.slot === "background")
+  );
+}
+
+function isPlaylistItem(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.name === "string" &&
+    typeof value.zapScript === "string"
+  );
+}
+
+function isPlaylistState(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    (value.slot === undefined ||
+      value.slot === null ||
+      value.slot === "" ||
+      value.slot === "primary" ||
+      value.slot === "background") &&
+    (value.repeat === "none" ||
+      value.repeat === "all" ||
+      value.repeat === "one") &&
+    Array.isArray(value.items) &&
+    value.items.every(isPlaylistItem) &&
+    typeof value.index === "number" &&
+    typeof value.total === "number" &&
+    typeof value.playing === "boolean"
+  );
+}
+
+function requireMediaResponse(result: unknown): MediaResponse {
+  if (!isRecord(result) || !isIndexResponse(result.database)) {
+    throw new Error(
+      "Invalid media response: database must include valid index fields",
+    );
+  }
+  let validatedResult: Record<string, unknown> = result;
+  if (validatedResult.active !== undefined) {
+    validatedResult = requireArrayPropertyResponse<Record<string, unknown>>(
+      validatedResult,
+      "active",
+      "media",
+      isPlayingResponse,
+    );
+  }
+  if (validatedResult.playlists !== undefined) {
+    validatedResult = requireArrayPropertyResponse<Record<string, unknown>>(
+      validatedResult,
+      "playlists",
+      "media",
+      isPlaylistState,
+    );
+  }
+  type LegacyPlayingResponse = Omit<PlayingResponse, "slot"> & {
+    slot?: PlayingResponse["slot"] | null | "";
+  };
+  const active = (
+    (validatedResult.active as LegacyPlayingResponse[] | undefined) ?? []
+  ).map(
+    (entry): PlayingResponse =>
+      entry.slot === null || entry.slot === ""
+        ? { ...entry, slot: "primary" }
+        : (entry as PlayingResponse),
+  );
+  type LegacyPlaylistState = Omit<PlaylistState, "slot"> & {
+    slot?: PlaylistState["slot"] | null | "";
+  };
+  const playlists = (
+    validatedResult.playlists as LegacyPlaylistState[] | undefined
+  )?.map(
+    (playlist): PlaylistState =>
+      playlist.slot === undefined ||
+      playlist.slot === null ||
+      playlist.slot === ""
+        ? { ...playlist, slot: "primary" }
+        : (playlist as PlaylistState),
+  );
+  return {
+    ...(validatedResult as unknown as MediaResponse),
+    active,
+    ...(playlists === undefined ? {} : { playlists }),
+  };
+}
+
+export function isUnsupportedCoreApiError(error: unknown): boolean {
   const message = getErrorMessage(error).toLowerCase();
   return (
     (error instanceof CoreApiError && error.code === -32601) ||
-    message.includes("method not found") ||
+    /^(?:json-rpc(?: error)?:\s*)?method not found\b/.test(message)
+  );
+}
+
+export function isUnsupportedMediaApiError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    isUnsupportedCoreApiError(error) ||
     message === "query or system is required"
   );
 }
@@ -1173,12 +1411,16 @@ class CoreApi {
       return result as MediaImageResponse;
     } catch (error) {
       if (isRequestCancelledError(error)) throw error;
-      logMediaApiFailure(
-        "Media image API call failed",
-        "mediaImage",
-        error,
-        "warning",
-      );
+      if (isMissingMediaImageError(error)) {
+        logger.warn("Media image unavailable:", error);
+      } else {
+        logMediaApiFailure(
+          "Media image API call failed",
+          "mediaImage",
+          error,
+          "warning",
+        );
+      }
       throw error;
     }
   }
@@ -1319,8 +1561,17 @@ class CoreApi {
     return new Promise<ScrapersResponse>((resolve, reject) => {
       this.call(Method.Scrapers)
         .then((result) => {
+          if (isCancelled(result)) {
+            reject(new RequestCancelledError("Scrapers request was cancelled"));
+            return;
+          }
           try {
-            const response = result as ScrapersResponse;
+            const response = requireArrayPropertyResponse<ScrapersResponse>(
+              result,
+              "scrapers",
+              "scrapers",
+              isScraper,
+            );
             logger.debug(response);
             resolve(response);
           } catch (e) {
@@ -1463,8 +1714,17 @@ class CoreApi {
     return new Promise<SystemsResponse>((resolve, reject) => {
       this.call(Method.Systems, params)
         .then((result) => {
+          if (isCancelled(result)) {
+            reject(new RequestCancelledError("Systems request was cancelled"));
+            return;
+          }
           try {
-            const response = result as SystemsResponse;
+            const response = requireArrayPropertyResponse<SystemsResponse>(
+              result,
+              "systems",
+              "systems",
+              isSystem,
+            );
             // Virtual launchables execute ZapScript directly and never own media
             // rows, so they are not valid choices in app game-system filters.
             const gameSystems = response.systems.filter(
@@ -1688,10 +1948,28 @@ class CoreApi {
     return new Promise<AllMappingsResponse>((resolve, reject) => {
       this.call(Method.Mappings, params)
         .then((result) => {
+          if (isCancelled(result)) {
+            reject(new RequestCancelledError("Mappings request was cancelled"));
+            return;
+          }
           try {
-            const response = result as AllMappingsResponse;
-            logger.debug(response);
-            resolve(response);
+            const response = requireArrayPropertyResponse<AllMappingsResponse>(
+              result,
+              "mappings",
+              "mappings",
+              isMapping,
+            );
+            const normalizedResponse = {
+              ...response,
+              mappings: response.mappings.map((mapping) => ({
+                ...mapping,
+                type: normalizeMappingType(mapping.type),
+                source: mapping.source ?? "database",
+                readOnly: mapping.readOnly ?? false,
+              })),
+            };
+            logger.debug(normalizedResponse);
+            resolve(normalizedResponse);
           } catch (e) {
             logger.error("Error processing mappings response:", e);
             reject(
@@ -1767,8 +2045,12 @@ class CoreApi {
     return new Promise<MediaResponse>((resolve, reject) => {
       this.call(Method.Media)
         .then((result) => {
+          if (isCancelled(result)) {
+            resolve(result as unknown as MediaResponse);
+            return;
+          }
           try {
-            const response = result as MediaResponse;
+            const response = requireMediaResponse(result);
             logger.debug(response);
             resolve(response);
           } catch (e) {

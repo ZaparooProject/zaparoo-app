@@ -496,6 +496,7 @@
           "deletedSuccess": "Mapping deleted",
           "saveFailed": "Failed to save mapping",
           "deleteFailed": "Failed to delete mapping",
+          "cameraPermissionDenied": "Camera access is disabled. Enable it in system settings.",
           "notFound": "Mapping not found"
         }
       }

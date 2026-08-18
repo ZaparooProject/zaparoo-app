@@ -12,7 +12,9 @@ import {
   NfcTransientError,
   NfcUnformattedTagError,
   NfcFormatError,
+  BarcodePermissionDeniedError,
   BarcodeScanCancelledError,
+  RequestCancelledError,
   PurchaseCancelledError,
   PurchasePendingError,
   PurchaseIdentityError,
@@ -206,6 +208,15 @@ describe("errors", () => {
     });
   });
 
+  describe("BarcodePermissionDeniedError", () => {
+    it("should identify denied camera access as expected", () => {
+      const error = new BarcodePermissionDeniedError();
+
+      expect(error).toBeInstanceOf(ZaparooError);
+      expect(error.message).toBe("Camera permission was denied");
+    });
+  });
+
   describe("PurchaseCancelledError", () => {
     it("should extend ZaparooError", () => {
       const error = new PurchaseCancelledError();
@@ -244,6 +255,10 @@ describe("errors", () => {
 
     it("should return true for PurchaseCancelledError", () => {
       expect(isCancellationError(new PurchaseCancelledError())).toBe(true);
+    });
+
+    it("should return true for RequestCancelledError", () => {
+      expect(isCancellationError(new RequestCancelledError())).toBe(true);
     });
 
     it("should return false for other ZaparooErrors", () => {
@@ -384,9 +399,12 @@ describe("errors", () => {
       );
     });
 
-    it("should return false for unexpected errors", () => {
-      expect(isExpectedNfcError(new Error("Permission denied"))).toBe(false);
-    });
+    it.each(["Permission denied", "Feature not supported"])(
+      "should return false for unexpected error: %s",
+      (message) => {
+        expect(isExpectedNfcError(new Error(message))).toBe(false);
+      },
+    );
   });
 
   describe("isTransientNfcError", () => {
@@ -430,6 +448,7 @@ describe("errors", () => {
       const messages = [
         "No NFC tag was detected.",
         "The tag is not connected.",
+        "Tag is not connected.",
         "Tag was lost.",
         "android.nfc.TagLostException",
         "Tag is out of date.",
@@ -438,6 +457,8 @@ describe("errors", () => {
         "Session invalidated unexpectedly.",
         "Reader session invalidated.",
         "Connection lost.",
+        "Stack Error",
+        "System resource unavailable",
       ];
 
       for (const message of messages) {
@@ -550,13 +571,25 @@ describe("errors", () => {
       );
     });
 
-    it("should return original error for non-cancellation errors", () => {
-      const originalError = new Error("Camera permission denied");
+    it.each([
+      "User denied access to camera.",
+      "Camera permission denied",
+      "Camera access denied",
+      "Not authorized to use camera",
+    ])("should wrap denied camera access: %s", (message) => {
+      expect(wrapBarcodeScannerError(new Error(message))).toBeInstanceOf(
+        BarcodePermissionDeniedError,
+      );
+    });
+
+    it("should return original error for unexpected scanner errors", () => {
+      const originalError = new Error("Camera hardware unavailable");
 
       const wrapped = wrapBarcodeScannerError(originalError);
 
       expect(wrapped).toBe(originalError);
       expect(wrapped).not.toBeInstanceOf(BarcodeScanCancelledError);
+      expect(wrapped).not.toBeInstanceOf(BarcodePermissionDeniedError);
     });
 
     it("should convert non-Error values to Error", () => {
