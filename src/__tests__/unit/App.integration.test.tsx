@@ -1,5 +1,7 @@
-import { render, screen, waitFor } from "../../test-utils";
-import { vi, beforeEach, describe, it, expect } from "vitest";
+import { act, render, screen, waitFor } from "../../test-utils";
+import { vi, beforeEach, afterEach, describe, it, expect } from "vitest";
+import { Capacitor } from "@capacitor/core";
+import { LiveUpdate } from "@capawesome/capacitor-live-update";
 import App from "@/App";
 import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
@@ -36,6 +38,7 @@ const {
   },
   mockPreferencesState: {
     _hasHydrated: true,
+    _preferencesHydrationSucceeded: true,
     _proAccessHydrated: true,
     _nfcAvailabilityHydrated: true,
     _cameraAvailabilityHydrated: true,
@@ -270,9 +273,11 @@ vi.mock("@/lib/purchasesSetup", () => ({ purchasesReady: Promise.resolve() }));
 
 describe("App Integration", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     Object.assign(mockPreferencesState, {
       _hasHydrated: true,
+      _preferencesHydrationSucceeded: true,
       _proAccessHydrated: true,
       _nfcAvailabilityHydrated: true,
       _cameraAvailabilityHydrated: true,
@@ -282,6 +287,10 @@ describe("App Integration", () => {
       launcherAccess: false,
     });
     vi.mocked(isNativePluginAvailable).mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("should reset page scroll containers on forward navigation", () => {
@@ -326,6 +335,75 @@ describe("App Integration", () => {
     expect(mockUseRunQueueProcessor).not.toHaveBeenCalled();
     expect(mockUseWriteQueueProcessor).not.toHaveBeenCalled();
     expect(container.textContent).toBe("");
+  });
+
+  it("should mark a native live update ready only after startup hydration", async () => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(LiveUpdate.ready).mockResolvedValue({
+      previousBundleId: null,
+      currentBundleId: null,
+      rollback: false,
+    });
+    vi.mocked(LiveUpdate.sync).mockResolvedValue({ nextBundleId: null });
+    mockPreferencesState._hasHydrated = false;
+
+    const { rerender } = render(<App />);
+
+    expect(LiveUpdate.ready).not.toHaveBeenCalled();
+    expect(LiveUpdate.sync).not.toHaveBeenCalled();
+
+    mockPreferencesState._hasHydrated = true;
+    rerender(<App />);
+
+    await waitFor(() => {
+      expect(LiveUpdate.ready).toHaveBeenCalledTimes(1);
+      expect(LiveUpdate.sync).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("should render degraded preferences without accepting the live update", () => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    mockPreferencesState._preferencesHydrationSucceeded = false;
+
+    render(<App />);
+
+    expect(screen.getByTestId("router")).toBeInTheDocument();
+    expect(LiveUpdate.ready).not.toHaveBeenCalled();
+    expect(LiveUpdate.sync).not.toHaveBeenCalled();
+  });
+
+  it("should continue startup when a capability probe never settles", async () => {
+    vi.useFakeTimers();
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(LiveUpdate.ready).mockResolvedValue({
+      previousBundleId: null,
+      currentBundleId: null,
+      rollback: false,
+    });
+    vi.mocked(LiveUpdate.sync).mockResolvedValue({ nextBundleId: null });
+    mockPreferencesState._nfcAvailabilityHydrated = false;
+
+    render(<App />);
+
+    expect(screen.queryByTestId("router")).not.toBeInTheDocument();
+    expect(LiveUpdate.ready).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6_000);
+    });
+
+    expect(screen.getByTestId("router")).toBeInTheDocument();
+    expect(LiveUpdate.ready).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(
+      "Startup capability hydration timed out",
+      {
+        category: "lifecycle",
+        action: "hydrateStartupCapabilities",
+        severity: "warning",
+        timeoutMs: 6_000,
+        unresolvedGates: ["nfc"],
+      },
+    );
   });
 
   it("should skip StatusBar setup when native plugin is unavailable", async () => {

@@ -1,4 +1,4 @@
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { SafeArea } from "capacitor-plugin-safe-area";
 import { useEffect } from "react";
 import { useStatusStore } from "./store";
@@ -25,17 +25,34 @@ const webInsets = {
   right: "env(safe-area-inset-right, 0px)",
 };
 
+async function removeSafeAreaListener(
+  handle: PluginListenerHandle,
+): Promise<void> {
+  try {
+    await handle.remove();
+  } catch (error) {
+    logger.error("Failed to remove safe area listener", error, {
+      category: "lifecycle",
+      action: "removeSafeAreaListener",
+      severity: "warning",
+    });
+  }
+}
+
 export const initSafeAreaInsets = async (
   setInsets: (insets: SafeAreaInsets) => void,
   listen = true,
-) => {
+  isActive: () => boolean = () => true,
+): Promise<PluginListenerHandle | null> => {
   if (!Capacitor.isNativePlatform()) {
-    setInsets(webInsets);
-    return;
+    if (isActive()) setInsets(webInsets);
+    return null;
   }
 
   try {
     const { insets } = await SafeArea.getSafeAreaInsets();
+    if (!isActive()) return null;
+
     setInsets({
       top: `${insets.top}px`,
       bottom: `${insets.bottom}px`,
@@ -44,10 +61,11 @@ export const initSafeAreaInsets = async (
     });
 
     if (!listen) {
-      return;
+      return null;
     }
 
-    await SafeArea.addListener("safeAreaChanged", (data) => {
+    return await SafeArea.addListener("safeAreaChanged", (data) => {
+      if (!isActive()) return;
       setInsets({
         top: `${data.insets.top}px`,
         bottom: `${data.insets.bottom}px`,
@@ -57,6 +75,7 @@ export const initSafeAreaInsets = async (
     });
   } catch (e) {
     logger.error("Failed to get safe area insets:", e);
+    return null;
   }
 };
 
@@ -64,7 +83,23 @@ export const SafeAreaHandler = () => {
   const setSafeInsets = useStatusStore((state) => state.setSafeInsets);
 
   useEffect(() => {
-    initSafeAreaInsets(setSafeInsets);
+    let disposed = false;
+    let listener: PluginListenerHandle | null = null;
+
+    void initSafeAreaInsets(setSafeInsets, true, () => !disposed).then(
+      (handle) => {
+        if (disposed) {
+          if (handle) void removeSafeAreaListener(handle);
+          return;
+        }
+        listener = handle;
+      },
+    );
+
+    return () => {
+      disposed = true;
+      if (listener) void removeSafeAreaListener(listener);
+    };
   }, [setSafeInsets]);
 
   return null;

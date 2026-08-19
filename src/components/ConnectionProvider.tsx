@@ -101,6 +101,22 @@ const selectActiveRecordId = (state: DeviceRegistrySnapshot) =>
 const activeRecordOf = (state: DeviceRegistrySnapshot) =>
   state.activeRecordId ? (state.records[state.activeRecordId] ?? null) : null;
 
+async function removeNativeListener(
+  handle: PluginListenerHandle,
+  label: string,
+): Promise<void> {
+  try {
+    await handle.remove();
+  } catch (error) {
+    logger.error("Failed to remove native listener", error, {
+      category: "lifecycle",
+      action: "removeNativeListener",
+      severity: "warning",
+      listener: label,
+    });
+  }
+}
+
 /**
  * WebSocket candidates for the active record, serialized as a primitive so a
  * metadata-only registry write cannot tear the socket down and rebuild it.
@@ -1534,6 +1550,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
   // App lifecycle listeners (Capacitor)
   useEffect(() => {
+    let disposed = false;
     let resumeListener: Awaited<ReturnType<typeof App.addListener>> | null =
       null;
     let pauseListener: Awaited<ReturnType<typeof App.addListener>> | null =
@@ -1542,15 +1559,27 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     const setupListeners = async () => {
       if (!isNativePluginAvailable("App")) return;
 
-      resumeListener = await App.addListener("resume", () => {
+      const resumeHandle = await App.addListener("resume", () => {
+        if (disposed) return;
         logger.log("[ConnectionProvider] App resumed");
         connectionManager.resumeAll();
       });
+      if (disposed) {
+        void removeNativeListener(resumeHandle, "resume");
+        return;
+      }
+      resumeListener = resumeHandle;
 
-      pauseListener = await App.addListener("pause", () => {
+      const pauseHandle = await App.addListener("pause", () => {
+        if (disposed) return;
         logger.log("[ConnectionProvider] App paused");
         connectionManager.pauseAll();
       });
+      if (disposed) {
+        void removeNativeListener(pauseHandle, "pause");
+        return;
+      }
+      pauseListener = pauseHandle;
     };
 
     setupListeners().catch((e) => {
@@ -1558,8 +1587,13 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     });
 
     return () => {
-      resumeListener?.remove();
-      pauseListener?.remove();
+      disposed = true;
+      if (resumeListener) {
+        void removeNativeListener(resumeListener, "resume");
+      }
+      if (pauseListener) {
+        void removeNativeListener(pauseListener, "pause");
+      }
     };
   }, []);
 
@@ -1589,12 +1623,14 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       return;
     }
 
+    let disposed = false;
     let networkListener: PluginListenerHandle | null = null;
 
     const setup = async () => {
-      networkListener = await Network.addListener(
+      const handle = await Network.addListener(
         "networkStatusChange",
         (status) => {
+          if (disposed) return;
           logger.log(
             `[ConnectionProvider] Network status changed: ${status.connected ? "connected" : "disconnected"} (${status.connectionType})`,
           );
@@ -1603,6 +1639,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           }
         },
       );
+      if (disposed) {
+        void removeNativeListener(handle, "network status");
+        return;
+      }
+      networkListener = handle;
     };
 
     setup().catch((e) => {
@@ -1610,7 +1651,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     });
 
     return () => {
-      networkListener?.remove();
+      disposed = true;
+      if (networkListener) {
+        void removeNativeListener(networkListener, "network status");
+      }
     };
   }, []);
 

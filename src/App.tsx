@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import toast, { Toaster } from "react-hot-toast";
 import { StatusBar, Style } from "@capacitor/status-bar";
@@ -50,6 +50,7 @@ import { A11yAnnouncerProvider } from "./components/A11yAnnouncer";
 void preloadZapLogo();
 
 const SUBSCRIPTION_STATUS_RETRY_DELAY_MS = 500;
+const STARTUP_CAPABILITY_TIMEOUT_MS = 6_000;
 
 function waitForSubscriptionRetry(signal: AbortSignal): Promise<void> {
   if (signal.aborted) return Promise.reject(signal.reason);
@@ -229,6 +230,9 @@ export default function App() {
 
   // Wait for preferences to hydrate before rendering to prevent layout shifts
   const hasHydrated = usePreferencesStore((state) => state._hasHydrated);
+  const preferencesHydrationSucceeded = usePreferencesStore(
+    (state) => state._preferencesHydrationSucceeded,
+  );
   const proAccessHydrated = usePreferencesStore(
     (state) => state._proAccessHydrated,
   );
@@ -265,8 +269,52 @@ export default function App() {
   useCameraAvailabilityCheck();
   useAccelerometerAvailabilityCheck();
   useAppReviewPrompt();
-  // Initialize live updates - must be called after app renders successfully
-  useLiveUpdate();
+
+  const capabilityHydrationReady =
+    proAccessHydrated &&
+    nfcAvailabilityHydrated &&
+    cameraAvailabilityHydrated &&
+    accelerometerAvailabilityHydrated;
+  const [capabilityHydrationTimedOut, setCapabilityHydrationTimedOut] =
+    useState(false);
+  const unresolvedCapabilityGatesRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    unresolvedCapabilityGatesRef.current = [
+      !proAccessHydrated && "proAccess",
+      !nfcAvailabilityHydrated && "nfc",
+      !cameraAvailabilityHydrated && "camera",
+      !accelerometerAvailabilityHydrated && "accelerometer",
+    ].filter((gate): gate is string => Boolean(gate));
+  }, [
+    proAccessHydrated,
+    nfcAvailabilityHydrated,
+    cameraAvailabilityHydrated,
+    accelerometerAvailabilityHydrated,
+  ]);
+
+  useEffect(() => {
+    if (capabilityHydrationReady) return;
+
+    const timeout = window.setTimeout(() => {
+      logger.error("Startup capability hydration timed out", {
+        category: "lifecycle",
+        action: "hydrateStartupCapabilities",
+        severity: "warning",
+        timeoutMs: STARTUP_CAPABILITY_TIMEOUT_MS,
+        unresolvedGates: unresolvedCapabilityGatesRef.current,
+      });
+      setCapabilityHydrationTimedOut(true);
+    }, STARTUP_CAPABILITY_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [capabilityHydrationReady]);
+
+  const startupReady =
+    hasHydrated && (capabilityHydrationReady || capabilityHydrationTimedOut);
+  // A degraded preference fallback may render the shell, but must not accept
+  // an OTA bundle that failed its durable-storage compatibility check.
+  useLiveUpdate(startupReady && preferencesHydrationSucceeded);
 
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
   const setLifetimeProAccess = usePreferencesStore(
@@ -417,13 +465,7 @@ export default function App() {
   ]);
 
   // Block rendering until preferences, Pro access, and hardware availability are hydrated to prevent layout shifts
-  if (
-    !hasHydrated ||
-    !proAccessHydrated ||
-    !nfcAvailabilityHydrated ||
-    !cameraAvailabilityHydrated ||
-    !accelerometerAvailabilityHydrated
-  ) {
+  if (!startupReady) {
     return null; // Keep splash screen visible
   }
 

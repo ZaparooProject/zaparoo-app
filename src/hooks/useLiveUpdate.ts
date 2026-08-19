@@ -13,11 +13,12 @@ import { isNativePluginAvailable } from "@/lib/capacitorBridge";
  * Must be called after the app has successfully rendered to prevent
  * automatic rollback of bad updates.
  */
-export function useLiveUpdate() {
+export function useLiveUpdate(appReady: boolean) {
   const initialized = useRef(false);
 
   useEffect(() => {
     if (
+      !appReady ||
       !Capacitor.isNativePlatform() ||
       !isNativePluginAvailable("LiveUpdate") ||
       initialized.current
@@ -47,5 +48,5 @@ export function useLiveUpdate() {
     };
 
     initLiveUpdate();
-  }, []);
+  }, [appReady]);
 }

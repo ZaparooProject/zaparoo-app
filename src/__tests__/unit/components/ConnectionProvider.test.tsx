@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
+import type { ConnectionStatus } from "@capacitor/network";
 import {
   __simulateDeviceDiscovered,
   ZeroConf,
@@ -288,6 +289,10 @@ describe("ConnectionProvider", () => {
     const bridge = await import("@/lib/capacitorBridge");
     vi.mocked(bridge.isPluginAvailable).mockReturnValue(true);
     vi.mocked(bridge.isNativePluginAvailable).mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe("rendering", () => {
@@ -3684,6 +3689,58 @@ describe("app lifecycle handling", () => {
     });
     expect(removePause).toHaveBeenCalled();
   });
+
+  it("should contain a lifecycle removal failure after unmount", async () => {
+    const removalError = new Error("App listener removal failed");
+    const removeResume = vi.fn().mockRejectedValue(removalError);
+    const loggerError = vi.spyOn(logger, "error").mockImplementation(() => {});
+    let resumeCallback: (() => void) | null = null;
+    let resolveResume:
+      | ((handle: { remove: () => Promise<void> }) => void)
+      | null = null;
+
+    const { App } = await import("@capacitor/app");
+    vi.mocked(App.addListener).mockImplementation((eventName, callback) => {
+      if ((eventName as string) === "resume") {
+        resumeCallback = () => callback({ canGoBack: false });
+        return new Promise<{ remove: () => Promise<void> }>((resolve) => {
+          resolveResume = resolve;
+        }) as never;
+      }
+      return Promise.resolve({ remove: vi.fn() }) as never;
+    });
+
+    const { unmount } = render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(resolveResume).not.toBeNull();
+    });
+    unmount();
+    resolveResume!({ remove: removeResume });
+    resumeCallback!();
+
+    await waitFor(() => {
+      expect(loggerError).toHaveBeenCalledWith(
+        "Failed to remove native listener",
+        removalError,
+        {
+          category: "lifecycle",
+          action: "removeNativeListener",
+          severity: "warning",
+          listener: "resume",
+        },
+      );
+    });
+    expect(connectionManager.resumeAll).not.toHaveBeenCalled();
+    expect(App.addListener).not.toHaveBeenCalledWith(
+      "pause",
+      expect.any(Function),
+    );
+  });
 });
 
 describe("browser visibility handling (web platform)", () => {
@@ -3857,6 +3914,50 @@ describe("network status handling (native platform)", () => {
     await waitFor(() => {
       expect(removeListener).toHaveBeenCalled();
     });
+  });
+
+  it("should contain a network removal failure after unmount", async () => {
+    const { Network } = await import("@capacitor/network");
+    const removalError = new Error("Network listener removal failed");
+    const removeListener = vi.fn().mockRejectedValue(removalError);
+    const loggerError = vi.spyOn(logger, "error").mockImplementation(() => {});
+    let networkCallback: ((status: ConnectionStatus) => void) | null = null;
+    let resolveListener:
+      | ((handle: { remove: () => Promise<void> }) => void)
+      | null = null;
+    vi.mocked(Network.addListener).mockImplementation((_event, callback) => {
+      networkCallback = callback;
+      return new Promise((resolve) => {
+        resolveListener = resolve;
+      });
+    });
+
+    const { unmount } = render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(resolveListener).not.toBeNull();
+    });
+    unmount();
+    resolveListener!({ remove: removeListener });
+    networkCallback!({ connected: true, connectionType: "wifi" });
+
+    await waitFor(() => {
+      expect(loggerError).toHaveBeenCalledWith(
+        "Failed to remove native listener",
+        removalError,
+        {
+          category: "lifecycle",
+          action: "removeNativeListener",
+          severity: "warning",
+          listener: "network status",
+        },
+      );
+    });
+    expect(connectionManager.immediateReconnectActive).not.toHaveBeenCalled();
   });
 
   it("should trigger immediate reconnect when network reconnects", async () => {

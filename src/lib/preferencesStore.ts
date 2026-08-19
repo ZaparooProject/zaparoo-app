@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
+import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { TextZoom } from "@capacitor/text-zoom";
 import {
@@ -9,6 +10,7 @@ import {
   type AppReviewCadenceState,
 } from "@/lib/appReview";
 import type { SystemNameRegionPreference } from "@/lib/systemNames";
+import { logger } from "./logger";
 import { sessionManager } from "./nfc";
 import {
   isCapacitorPluginUnavailableError,
@@ -31,17 +33,51 @@ import {
 // useNfcAvailabilityCheck) trigger a persist write with default values,
 // clobbering the stored state (e.g. tourCompleted: true → false).
 let _storageWritesEnabled = false;
+const PREFERENCE_HYDRATION_MAX_ATTEMPTS = 3;
+const PREFERENCE_HYDRATION_RETRY_DELAY_MS = 250;
+const PREFERENCE_READ_TIMEOUT_MS = 1_500;
+let _preferenceHydrationAttempts = 0;
+let _preferenceHydrationRetryTimer: ReturnType<typeof setTimeout> | null = null;
+
+async function getPreferenceWithTimeout(
+  name: string,
+): Promise<{ value: string | null }> {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    return await Promise.race([
+      Preferences.get({ key: name }),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(new Error("Preferences read timed out"));
+        }, PREFERENCE_READ_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
 
 // Custom storage adapter for Capacitor Preferences
 const capacitorPreferencesStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
-    if (!isPluginAvailable("Preferences")) return null;
+    if (!isPluginAvailable("Preferences")) {
+      if (Capacitor.isNativePlatform()) {
+        throw new Error("Preferences plugin unavailable on native platform");
+      }
+      return null;
+    }
 
     try {
-      const result = await Preferences.get({ key: name });
+      const result = await getPreferenceWithTimeout(name);
       return result.value;
     } catch (e) {
-      if (isCapacitorPluginUnavailableError(e)) return null;
+      if (
+        isCapacitorPluginUnavailableError(e) &&
+        !Capacitor.isNativePlatform()
+      ) {
+        return null;
+      }
       throw e;
     }
   },
@@ -114,6 +150,7 @@ export interface PreferencesState {
 
   // Hydration tracking (internal, not persisted)
   _hasHydrated: boolean;
+  _preferencesHydrationSucceeded: boolean;
   setHasHydrated: (state: boolean) => void;
 
   // Pro access hydration tracking (internal, not persisted)
@@ -182,6 +219,7 @@ export type PreferencesStore = PreferencesState & PreferencesActions;
 const DEFAULT_PREFERENCES: Omit<
   PreferencesState,
   | "_hasHydrated"
+  | "_preferencesHydrationSucceeded"
   | "setHasHydrated"
   | "_proAccessHydrated"
   | "setProAccessHydrated"
@@ -235,6 +273,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
 
       // Hydration tracking
       _hasHydrated: false,
+      _preferencesHydrationSucceeded: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
 
       // Pro access hydration tracking
@@ -380,25 +419,78 @@ export const usePreferencesStore = create<PreferencesStore>()(
       }),
 
       // Callback when hydration completes
-      onRehydrateStorage: () => (state) => {
-        _storageWritesEnabled = true;
-        if (state) {
-          // Initialize sessionManager with hydrated values
-          sessionManager.setShouldRestart(state.restartScan);
-          sessionManager.setLaunchOnScan(state.launchOnScan);
+      onRehydrateStorage: () => (state, error) => {
+        if (error || !state) {
+          _storageWritesEnabled = false;
+          usePreferencesStore.setState({
+            _preferencesHydrationSucceeded: false,
+          });
+          _preferenceHydrationAttempts += 1;
+          logger.error("Failed to hydrate app preferences", error, {
+            category: "storage",
+            action: "hydratePreferences",
+            severity: "error",
+            attempt: _preferenceHydrationAttempts,
+          });
 
-          // Apply text zoom on native platforms
           if (
-            isNativePluginAvailable("TextZoom") &&
-            state.textZoomLevel !== 1.0
+            _preferenceHydrationAttempts < PREFERENCE_HYDRATION_MAX_ATTEMPTS
           ) {
-            TextZoom.set({ value: state.textZoomLevel }).catch(() => {
-              // Silently ignore - text zoom may not be available
-            });
+            if (_preferenceHydrationRetryTimer) {
+              clearTimeout(_preferenceHydrationRetryTimer);
+            }
+            _preferenceHydrationRetryTimer = setTimeout(() => {
+              _preferenceHydrationRetryTimer = null;
+              void usePreferencesStore.persist.rehydrate();
+            }, PREFERENCE_HYDRATION_RETRY_DELAY_MS);
+            return;
           }
 
-          state.setHasHydrated(true);
+          logger.error(
+            "Preference persistence disabled after hydration retries",
+            error,
+            {
+              category: "storage",
+              action: "disablePreferencePersistence",
+              severity: "error",
+              attempts: _preferenceHydrationAttempts,
+            },
+          );
+          // Keep persistence disabled so unread saved data cannot be replaced
+          // by defaults, but let the app start with in-memory defaults. A new
+          // app launch will retry storage from a clean process.
+          usePreferencesStore.setState({
+            _hasHydrated: true,
+            _preferencesHydrationSucceeded: false,
+          });
+          return;
         }
+
+        _preferenceHydrationAttempts = 0;
+        if (_preferenceHydrationRetryTimer) {
+          clearTimeout(_preferenceHydrationRetryTimer);
+          _preferenceHydrationRetryTimer = null;
+        }
+        _storageWritesEnabled = true;
+
+        // Initialize sessionManager with hydrated values
+        sessionManager.setShouldRestart(state.restartScan);
+        sessionManager.setLaunchOnScan(state.launchOnScan);
+
+        // Apply text zoom on native platforms
+        if (
+          isNativePluginAvailable("TextZoom") &&
+          state.textZoomLevel !== 1.0
+        ) {
+          TextZoom.set({ value: state.textZoomLevel }).catch(() => {
+            // Silently ignore - text zoom may not be available
+          });
+        }
+
+        usePreferencesStore.setState({
+          _hasHydrated: true,
+          _preferencesHydrationSucceeded: true,
+        });
       },
 
       // Custom merge to prevent race conditions where empty store overwrites saved data
