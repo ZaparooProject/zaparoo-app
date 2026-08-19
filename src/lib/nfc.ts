@@ -176,6 +176,9 @@ async function withNfcSession<T>(
       waiter.resolve(event);
     };
 
+    const ownsActiveSession = () =>
+      !settled && activeSessionToken === sessionToken;
+
     const cleanup = async () => {
       if (timeoutId !== undefined) {
         clearTimeout(timeoutId);
@@ -186,13 +189,34 @@ async function withNfcSession<T>(
       resolvePendingWaiter(null);
       // Remove listeners BEFORE releasing the session lock - a successor
       // session may start the moment the lock frees, and this session's
-      // listeners must not still be attached when it does.
-      await Promise.all(listeners.map((listener) => listener.remove()));
+      // listeners must not still be attached when it does. Native listener
+      // removal is best-effort: one rejected handle must not strand the lock or
+      // leave the operation promise unsettled.
+      const sessionListeners = listeners;
       listeners = [];
-      if (activeSessionToken === sessionToken) {
-        activeSessionToken = null;
-        activeSessionCancel = null;
-        sessionManager.setIsScanning(false);
+      try {
+        const removalResults = await Promise.allSettled(
+          sessionListeners.map(async (listener) => listener.remove()),
+        );
+        for (const result of removalResults) {
+          if (result.status === "rejected") {
+            logger.error(
+              "Failed to remove NFC session listener",
+              result.reason,
+              {
+                category: "nfc",
+                action: "removeSessionListener",
+                severity: "warning",
+              },
+            );
+          }
+        }
+      } finally {
+        if (activeSessionToken === sessionToken) {
+          activeSessionToken = null;
+          activeSessionCancel = null;
+          sessionManager.setIsScanning(false);
+        }
       }
     };
 
@@ -246,6 +270,8 @@ async function withNfcSession<T>(
         const nfcTagScannedHandle = await Nfc.addListener(
           "nfcTagScanned",
           async (event) => {
+            if (!ownsActiveSession()) return;
+
             // iOS restartPolling re-fires scans while the tag stays in the
             // field; re-running the handler would repeat its side effects
             // (e.g. double-write), so later events only feed waiters.
@@ -298,6 +324,7 @@ async function withNfcSession<T>(
         const scanCanceledHandle = await Nfc.addListener(
           "scanSessionCanceled",
           async () => {
+            if (!ownsActiveSession()) return;
             await stopScanSessionSafely();
             await handleError(new NfcCancelledError());
           },
@@ -306,6 +333,7 @@ async function withNfcSession<T>(
         const scanErrorHandle = await Nfc.addListener(
           "scanSessionError",
           async (err) => {
+            if (!ownsActiveSession()) return;
             const wrappedError = wrapNfcError(err);
             if (isExpectedNfcError(wrappedError)) {
               logger.debug("Expected NFC scan session failure:", wrappedError);
@@ -338,6 +366,7 @@ async function withNfcSession<T>(
 
         if (Capacitor.getPlatform() === "android") {
           timeoutId = setTimeout(() => {
+            if (!ownsActiveSession()) return;
             void stopScanSessionSafely();
             void handleError(
               new NfcCancelledError("NFC scan session timed out"),

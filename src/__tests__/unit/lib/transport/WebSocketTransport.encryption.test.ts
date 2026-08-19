@@ -192,6 +192,56 @@ describe("WebSocketTransport encryption", () => {
       transport.destroy();
     });
 
+    it("should discard encryption that finishes after the socket is replaced", async () => {
+      let resolveStaleEncryption!: (frame: string) => void;
+      const staleSession = {
+        ...makeMockSession(),
+        encryptAndFrame: vi.fn(
+          () =>
+            new Promise<string>((resolve) => {
+              resolveStaleEncryption = resolve;
+            }),
+        ),
+      };
+      const replacementSession = makeMockSession();
+      vi.mocked(EncryptedSession.create)
+        .mockResolvedValueOnce(staleSession as unknown as EncryptedSession)
+        .mockResolvedValueOnce(
+          replacementSession as unknown as EncryptedSession,
+        );
+
+      const transport = makeTransport();
+      transport.connect();
+
+      const staleSocket = MockWebSocket.getLatest()!;
+      staleSocket.simulateOpen();
+      await flushPromises();
+      transport.send("stale-request");
+      await flushPromises();
+      expect(staleSession.encryptAndFrame).toHaveBeenCalledWith(
+        "stale-request",
+      );
+
+      transport.disconnect();
+      transport.connect();
+      const replacementSocket = MockWebSocket.getLatest()!;
+      replacementSocket.simulateOpen();
+      await flushPromises();
+
+      transport.send("replacement-request");
+      await flushPromises();
+      expect(replacementSocket.sentMessages).toHaveLength(1);
+
+      resolveStaleEncryption("stale-frame");
+      await flushPromises();
+
+      expect(staleSocket.sentMessages).toHaveLength(0);
+      expect(replacementSocket.sentMessages).toHaveLength(1);
+      expect(replacementSocket.sentMessages[0]).not.toBe("stale-frame");
+
+      transport.destroy();
+    });
+
     it("should decrypt incoming frames and fire onMessage + onEncryptedHandshakeOk", async () => {
       const onMessage = vi.fn();
       const onEncryptedHandshakeOk = vi.fn();

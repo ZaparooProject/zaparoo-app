@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { useStatusStore } from "@/lib/store";
-import { useConnection } from "@/hooks/useConnection";
+import toast from "react-hot-toast";
+import {
+  useConnection,
+  useDeviceConnectionActions,
+} from "@/hooks/useConnection";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useSelectDevice } from "@/hooks/useSelectDevice";
-import { CoreAPI } from "@/lib/coreApi";
 import {
   deviceRegistry,
   parsedEndpointForRecord,
@@ -54,11 +56,10 @@ export function DeviceDetail() {
     preventScrollOnSwipe: false,
   });
 
-  const resetConnectionState = useStatusStore((s) => s.resetConnectionState);
-
   const record = records[params.recordId];
   const endpoint = parsedEndpointForRecord(record);
   const { isConnected } = useConnection();
+  const { forgetDevice } = useDeviceConnectionActions();
   const { selectRecord } = useSelectDevice();
 
   const headingTitle = record?.name ?? endpoint?.address ?? "";
@@ -68,6 +69,7 @@ export function DeviceDetail() {
   const [draftName, setDraftName] = useState(initialName);
   const [trackedRecordId, setTrackedRecordId] = useState(record?.recordId);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [forgetting, setForgetting] = useState(false);
 
   // Reset the draft when navigating between different device records.
   if (record?.recordId !== trackedRecordId) {
@@ -80,10 +82,10 @@ export function DeviceDetail() {
   // id in the URL. Redirecting before the read has settled would bounce the
   // user off a device that was about to appear.
   useEffect(() => {
-    if (registrySettled && (!record || !endpoint)) {
+    if (!forgetting && registrySettled && (!record || !endpoint)) {
       router.navigate({ to: "/settings/devices", replace: true });
     }
-  }, [endpoint, record, registrySettled, router]);
+  }, [endpoint, forgetting, record, registrySettled, router]);
 
   if (!record || !endpoint) return null;
 
@@ -100,29 +102,24 @@ export function DeviceDetail() {
   };
 
   const handleConfirmForget = async () => {
-    // Tear the connection down before dropping the record. A still-live
-    // transport can finish its handshake at any point and write the pairing it
-    // just proved straight back into storage after removeRecord deleted it.
-    if (isCurrentDevice) {
-      resetConnectionState();
-      CoreAPI.reset();
-    }
-    try {
-      await deviceRegistry.removeRecord(record.recordId);
-    } catch {
-      // The record has already left the snapshot — the registry publishes
-      // before it persists — so the list will not show it again either way.
-      // Finish the teardown rather than stranding the user in a modal for a
-      // device that is visibly gone; the registry has already reported the
-      // write failure itself.
-    }
+    if (forgetting) return;
+    setForgetting(true);
 
-    invalidateLibraryImageCache(record.recordId);
-    queryClient.removeQueries({
-      predicate: (query) => query.queryKey.includes(record.recordId),
-    });
-    setConfirmOpen(false);
-    router.navigate({ to: "/settings/devices", replace: true });
+    try {
+      await forgetDevice(record.recordId);
+      invalidateLibraryImageCache(record.recordId);
+      queryClient.removeQueries({
+        predicate: (query) => query.queryKey.includes(record.recordId),
+      });
+      setConfirmOpen(false);
+      router.navigate({ to: "/settings/devices", replace: true });
+    } catch {
+      // Registry writes roll back automatically. Credential cleanup failures
+      // leave the record unchanged, so the user can retry from the same
+      // confirmation instead of receiving a false success.
+      setForgetting(false);
+      toast.error(t("settings.deviceDetail.forgetFailed"));
+    }
   };
 
   const lastConnectedLine =
@@ -212,7 +209,9 @@ export function DeviceDetail() {
 
       <SlideModal
         isOpen={confirmOpen}
-        close={() => setConfirmOpen(false)}
+        close={() => {
+          if (!forgetting) setConfirmOpen(false);
+        }}
         title={t("settings.deviceDetail.forgetTitle")}
       >
         <div className="flex flex-col gap-4 py-4">
@@ -222,6 +221,7 @@ export function DeviceDetail() {
               variant="outline"
               label={t("settings.deviceDetail.forgetCancel")}
               onClick={() => setConfirmOpen(false)}
+              disabled={forgetting}
               className="flex-1"
             />
             <Button
@@ -229,7 +229,10 @@ export function DeviceDetail() {
               intent="destructive"
               label={t("settings.deviceDetail.forgetConfirm")}
               onClick={() => void handleConfirmForget()}
-              className="border-error text-error flex-1"
+              disabled={forgetting}
+              className={
+                forgetting ? "flex-1" : "border-error text-error flex-1"
+              }
             />
           </div>
         </div>

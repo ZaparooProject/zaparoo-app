@@ -26,6 +26,11 @@ export interface ConnectionContextValue {
   openPairingModal: () => void;
 }
 
+export interface DeviceConnectionActionsContextValue {
+  /** Forget a device after its owned transport and credential work are quiet. */
+  forgetDevice: (recordId: string) => Promise<void>;
+}
+
 export const ConnectionContext = createContext<ConnectionContextValue>({
   activeConnection: null,
   isConnected: false,
@@ -35,9 +40,18 @@ export const ConnectionContext = createContext<ConnectionContextValue>({
   openPairingModal: () => {},
 });
 
+export const DeviceConnectionActionsContext =
+  createContext<DeviceConnectionActionsContextValue>({
+    forgetDevice: () => Promise.resolve(),
+  });
+
 /**
  * Hook to access connection state from ConnectionProvider.
  */
 export function useConnection() {
   return useContext(ConnectionContext);
+}
+
+export function useDeviceConnectionActions() {
+  return useContext(DeviceConnectionActionsContext);
 }

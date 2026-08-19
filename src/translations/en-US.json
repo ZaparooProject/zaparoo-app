@@ -817,7 +817,8 @@
         "forgetTitle": "Forget this device?",
         "forgetBody": "This will remove it from your saved devices and erase the pairing credentials.",
         "forgetCancel": "Cancel",
-        "forgetConfirm": "Forget device"
+        "forgetConfirm": "Forget device",
+        "forgetFailed": "Device could not be forgotten. Try again."
       },
       "deviceCombine": {
         "edit": "Combine devices",

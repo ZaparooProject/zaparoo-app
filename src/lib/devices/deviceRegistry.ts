@@ -566,8 +566,8 @@ class DeviceRegistryRepository {
     }
   }
 
-  private commit(
-    update: (registry: DeviceRegistryV2) => DeviceRegistryV2,
+  private applyCommit(
+    update: (registry: DeviceRegistryV2) => DeviceRegistryV2 | null,
   ): Promise<void> {
     const execute = async () => {
       if (!this.snapshot.hydrated) {
@@ -588,6 +588,7 @@ class DeviceRegistryRepository {
         activeRecordId: previous.activeRecordId,
         records: previous.records,
       });
+      if (next === null) return;
       const published: DeviceRegistrySnapshot = {
         ...next,
         hydrated: true,
@@ -602,15 +603,19 @@ class DeviceRegistryRepository {
       }
     };
 
-    // Publish the first optimistic update synchronously, but do not let a newer
-    // update publish until its predecessor either persists or rolls back. This
-    // prevents failed state from being captured by a queued durable write.
+    return execute();
+  }
+
+  private enqueueMutation<T>(operation: () => Promise<T>): Promise<T> {
+    // Start the first mutation synchronously, but do not let a newer mutation
+    // observe or publish state until its predecessor settles. Credential
+    // ownership decisions use the same queue as durable registry writes.
     const startsImmediately = this.pendingCommits === 0;
     this.pendingCommits++;
-    const operation = startsImmediately
-      ? execute()
-      : this.commitChain.then(execute, execute);
-    this.commitChain = operation.then(
+    const result = startsImmediately
+      ? operation()
+      : this.commitChain.then(operation, operation);
+    this.commitChain = result.then(
       () => {
         this.pendingCommits--;
       },
@@ -618,7 +623,13 @@ class DeviceRegistryRepository {
         this.pendingCommits--;
       },
     );
-    return operation;
+    return result;
+  }
+
+  private commit(
+    update: (registry: DeviceRegistryV2) => DeviceRegistryV2 | null,
+  ): Promise<void> {
+    return this.enqueueMutation(() => this.applyCommit(update));
   }
 
   hydrate(): Promise<void> {
@@ -724,30 +735,35 @@ class DeviceRegistryRepository {
     const parsed = parseDeviceEndpoint(address);
     if (!parsed.ok) return null;
 
-    const existing = Object.values(this.snapshot.records).find((record) =>
-      record.endpoints.some(
-        (endpoint) => endpoint.endpointId === parsed.endpoint.endpointId,
-      ),
-    );
-    const record =
-      existing ??
-      createRecord(
-        parsed.endpoint,
-        "manual",
-        {},
-        // Keyed off the address the user actually typed, not the canonical
-        // form, so a pairing stored by an older build is still found.
-        normalizeDeviceKey(address),
+    let selected: DeviceRecord | null = null;
+    await this.commit((registry) => {
+      const existing = Object.values(registry.records).find((record) =>
+        record.endpoints.some(
+          (endpoint) => endpoint.endpointId === parsed.endpoint.endpointId,
+        ),
       );
+      const record =
+        existing ??
+        createRecord(
+          parsed.endpoint,
+          "manual",
+          {},
+          // Keyed off the address the user actually typed, not the canonical
+          // form, so a pairing stored by an older build is still found.
+          normalizeDeviceKey(address),
+        );
+      selected = record;
 
-    await this.commit((registry) => ({
-      ...registry,
-      activeRecordId: record.recordId,
-      records: existing
-        ? registry.records
-        : { ...registry.records, [record.recordId]: record },
-    }));
-    return record;
+      if (existing && registry.activeRecordId === record.recordId) return null;
+      return {
+        ...registry,
+        activeRecordId: record.recordId,
+        records: existing
+          ? registry.records
+          : { ...registry.records, [record.recordId]: record },
+      };
+    });
+    return selected;
   }
 
   /** Make the record for an mDNS announcement active, creating it if it is new. */
@@ -763,98 +779,97 @@ class DeviceRegistryRepository {
     );
     if (!parsed.ok) return null;
 
-    // A stable service id wins. Without one, only the exact advertised
-    // hostname can reuse a record; an IP is never identity because DHCP can
-    // hand it to another device. Explicitly selecting a scan result may upgrade
-    // an unidentified manual hostname record to mDNS instead of creating the
-    // same endpoint twice.
     const discoveryId = normalizeDiscoveryId(device.discoveryId);
-    const records = Object.values(this.snapshot.records);
-    const byDiscoveryId = discoveryId
-      ? records.find((record) => record.discoveryId === discoveryId)
-      : undefined;
-    const byExactHostname = hostname
-      ? records.find(
-          (record) =>
-            (!discoveryId ||
-              !record.discoveryId ||
-              normalizeDiscoveryId(record.discoveryId) === discoveryId) &&
-            record.endpoints.some(
-              (endpoint) => endpoint.endpointId === parsed.endpoint.endpointId,
-            ),
-        )
-      : undefined;
-    const existing = byDiscoveryId ?? byExactHostname;
-    const effectiveDiscoveryId = discoveryId ?? existing?.discoveryId;
-
     const resolvedAddresses = unique(device.addresses);
-    const existingEndpoint = existing?.endpoints.find(
-      (endpoint) => endpoint.endpointId === parsed.endpoint.endpointId,
-    );
+    let selected: DeviceRecord | null = null;
 
-    // Compare against what the commit below would actually write: a custom name
-    // is never overwritten and empty metadata is never applied, so testing
-    // fields the commit refuses to change would make this permanently false and
-    // rewrite the record on every mDNS announcement.
-    const unchanged =
-      existing !== undefined &&
-      existing.discoveryId === effectiveDiscoveryId &&
-      existing.preferredEndpointId === parsed.endpoint.endpointId &&
-      existingEndpoint?.source === "mdns" &&
-      sameAddressSet(
-        existingEndpoint.resolvedAddresses ?? [],
-        resolvedAddresses,
-      ) &&
-      (!device.name ||
-        existing.nameIsCustom === true ||
-        existing.name === device.name) &&
-      (!device.platform || existing.platform === device.platform) &&
-      (!device.version || existing.version === device.version);
-    if (unchanged) {
-      if (this.snapshot.activeRecordId !== existing.recordId) {
-        await this.setActiveRecord(existing.recordId);
-      }
-      return existing;
-    }
-
-    const discoveredEndpoint = endpointFromParsed(parsed.endpoint, "mdns", {
-      lastSeenAt: Date.now(),
-      resolvedAddresses,
-    });
-    const base =
-      existing ??
-      // Before the registry, picking a device from a scan saved it by IP even
-      // when it advertised a hostname. A new record connects by hostname, so
-      // the advertised address is where any existing pairing still lives.
-      createRecord(
-        parsed.endpoint,
-        "mdns",
-        {},
-        device.addresses[0]
-          ? normalizeDeviceKey(`${device.addresses[0]}:${device.port}`)
-          : normalizeDeviceKey(parsed.endpoint.address),
+    await this.commit((registry) => {
+      // A stable service id wins. Without one, only the exact advertised
+      // hostname can reuse a record; an IP is never identity because DHCP can
+      // hand it to another device.
+      const records = Object.values(registry.records);
+      const byDiscoveryId = discoveryId
+        ? records.find((record) => record.discoveryId === discoveryId)
+        : undefined;
+      const byExactHostname = hostname
+        ? records.find(
+            (record) =>
+              (!discoveryId ||
+                !record.discoveryId ||
+                normalizeDiscoveryId(record.discoveryId) === discoveryId) &&
+              record.endpoints.some(
+                (endpoint) =>
+                  endpoint.endpointId === parsed.endpoint.endpointId,
+              ),
+          )
+        : undefined;
+      const existing = byDiscoveryId ?? byExactHostname;
+      const effectiveDiscoveryId = discoveryId ?? existing?.discoveryId;
+      const existingEndpoint = existing?.endpoints.find(
+        (endpoint) => endpoint.endpointId === parsed.endpoint.endpointId,
       );
-    const record: DeviceRecord = {
-      ...base,
-      ...(discoveryId ? { discoveryId } : {}),
-      endpoints: [
-        ...base.endpoints.filter(
-          (endpoint) => endpoint.endpointId !== discoveredEndpoint.endpointId,
-        ),
-        discoveredEndpoint,
-      ],
-      preferredEndpointId: discoveredEndpoint.endpointId,
-      ...(device.name && !base.nameIsCustom ? { name: device.name } : {}),
-      ...(device.platform ? { platform: device.platform } : {}),
-      ...(device.version ? { version: device.version } : {}),
-    };
 
-    await this.commit((registry) => ({
-      ...registry,
-      activeRecordId: record.recordId,
-      records: { ...registry.records, [record.recordId]: record },
-    }));
-    return record;
+      const unchanged =
+        existing !== undefined &&
+        existing.discoveryId === effectiveDiscoveryId &&
+        existing.preferredEndpointId === parsed.endpoint.endpointId &&
+        existingEndpoint?.source === "mdns" &&
+        sameAddressSet(
+          existingEndpoint.resolvedAddresses ?? [],
+          resolvedAddresses,
+        ) &&
+        (!device.name ||
+          existing.nameIsCustom === true ||
+          existing.name === device.name) &&
+        (!device.platform || existing.platform === device.platform) &&
+        (!device.version || existing.version === device.version);
+      if (unchanged) {
+        selected = existing;
+        return registry.activeRecordId === existing.recordId
+          ? null
+          : { ...registry, activeRecordId: existing.recordId };
+      }
+
+      const discoveredEndpoint = endpointFromParsed(parsed.endpoint, "mdns", {
+        lastSeenAt: Date.now(),
+        resolvedAddresses,
+      });
+      const base =
+        existing ??
+        // Before the registry, picking a device from a scan saved it by IP even
+        // when it advertised a hostname. A new record connects by hostname, so
+        // the advertised address is where any existing pairing still lives.
+        createRecord(
+          parsed.endpoint,
+          "mdns",
+          {},
+          device.addresses[0]
+            ? normalizeDeviceKey(`${device.addresses[0]}:${device.port}`)
+            : normalizeDeviceKey(parsed.endpoint.address),
+        );
+      const record: DeviceRecord = {
+        ...base,
+        ...(discoveryId ? { discoveryId } : {}),
+        endpoints: [
+          ...base.endpoints.filter(
+            (endpoint) => endpoint.endpointId !== discoveredEndpoint.endpointId,
+          ),
+          discoveredEndpoint,
+        ],
+        preferredEndpointId: discoveredEndpoint.endpointId,
+        ...(device.name && !base.nameIsCustom ? { name: device.name } : {}),
+        ...(device.platform ? { platform: device.platform } : {}),
+        ...(device.version ? { version: device.version } : {}),
+      };
+      selected = record;
+      return {
+        ...registry,
+        activeRecordId: record.recordId,
+        records: { ...registry.records, [record.recordId]: record },
+      };
+    });
+
+    return selected;
   }
 
   /**
@@ -876,44 +891,43 @@ class DeviceRegistryRepository {
     options: { provenLegacyKey?: string; migrationSettled?: boolean } = {},
   ): Promise<void> {
     await this.hydrate();
-    const target = this.snapshot.records[recordId];
-    if (!target) return;
+    await this.commit((registry) => {
+      const target = registry.records[recordId];
+      if (!target) return null;
 
-    const provenKey = options.provenLegacyKey;
-    const absorbed = provenKey
-      ? Object.values(this.snapshot.records).filter(
-          (record) =>
-            record.recordId !== recordId &&
-            record.legacyCredentialKey === provenKey,
-        )
-      : [];
-
-    const endpoints = new Map(
-      target.endpoints.map((endpoint) => [endpoint.endpointId, endpoint]),
-    );
-    for (const source of absorbed) {
-      for (const endpoint of source.endpoints) {
-        if (!endpoints.has(endpoint.endpointId)) {
-          endpoints.set(endpoint.endpointId, endpoint);
+      const provenKey = options.provenLegacyKey;
+      const absorbed = provenKey
+        ? Object.values(registry.records).filter(
+            (record) =>
+              record.recordId !== recordId &&
+              record.legacyCredentialKey === provenKey,
+          )
+        : [];
+      const endpoints = new Map(
+        target.endpoints.map((endpoint) => [endpoint.endpointId, endpoint]),
+      );
+      for (const source of absorbed) {
+        for (const endpoint of source.endpoints) {
+          if (!endpoints.has(endpoint.endpointId)) {
+            endpoints.set(endpoint.endpointId, endpoint);
+          }
         }
       }
-    }
 
-    const donor = absorbed[0];
-    const merged: DeviceRecord = {
-      ...target,
-      endpoints: [...endpoints.values()],
-      lastConnectedAt: Date.now(),
-      name: target.name ?? donor?.name,
-      nameIsCustom: target.nameIsCustom ?? donor?.nameIsCustom,
-      platform: target.platform ?? donor?.platform,
-      version: target.version ?? donor?.version,
-    };
-    if (options.migrationSettled) {
-      delete merged.legacyCredentialKey;
-    }
+      const donor = absorbed[0];
+      const merged: DeviceRecord = {
+        ...target,
+        endpoints: [...endpoints.values()],
+        lastConnectedAt: Date.now(),
+        name: target.name ?? donor?.name,
+        nameIsCustom: target.nameIsCustom ?? donor?.nameIsCustom,
+        platform: target.platform ?? donor?.platform,
+        version: target.version ?? donor?.version,
+      };
+      if (options.migrationSettled) {
+        delete merged.legacyCredentialKey;
+      }
 
-    await this.commit((registry) => {
       const records = { ...registry.records, [recordId]: merged };
       for (const source of absorbed) delete records[source.recordId];
       return { ...registry, activeRecordId: recordId, records };
@@ -930,27 +944,30 @@ class DeviceRegistryRepository {
     metadata: DiscoveredDeviceMetadata,
   ): Promise<void> {
     await this.hydrate();
-    const record = this.snapshot.records[recordId];
-    if (!record) return;
+    await this.commit((registry) => {
+      const record = registry.records[recordId];
+      if (!record) return null;
 
-    const next: DeviceRecord = {
-      ...record,
-      ...(metadata.name && !record.nameIsCustom ? { name: metadata.name } : {}),
-      ...(metadata.platform ? { platform: metadata.platform } : {}),
-      ...(metadata.version ? { version: metadata.version } : {}),
-    };
-    if (
-      next.name === record.name &&
-      next.platform === record.platform &&
-      next.version === record.version
-    ) {
-      return;
-    }
-
-    await this.commit((registry) => ({
-      ...registry,
-      records: { ...registry.records, [recordId]: next },
-    }));
+      const next: DeviceRecord = {
+        ...record,
+        ...(metadata.name && !record.nameIsCustom
+          ? { name: metadata.name }
+          : {}),
+        ...(metadata.platform ? { platform: metadata.platform } : {}),
+        ...(metadata.version ? { version: metadata.version } : {}),
+      };
+      if (
+        next.name === record.name &&
+        next.platform === record.platform &&
+        next.version === record.version
+      ) {
+        return null;
+      }
+      return {
+        ...registry,
+        records: { ...registry.records, [recordId]: next },
+      };
+    });
   }
 
   /**
@@ -968,32 +985,34 @@ class DeviceRegistryRepository {
     addresses: readonly string[],
   ): Promise<void> {
     await this.hydrate();
-    const record = this.snapshot.records[recordId];
-    const preferred = preferredEndpointFor(record);
-    if (!record || !preferred) return;
-
     const resolved = unique(addresses.filter((address) => address.length > 0));
-    if (
-      resolved.length === 0 ||
-      sameAddressSet(preferred.resolvedAddresses ?? [], resolved)
-    ) {
-      // mDNS re-announces constantly; only a genuine change is worth a write.
-      return;
-    }
+    if (resolved.length === 0) return;
 
-    const next: DeviceRecord = {
-      ...record,
-      endpoints: record.endpoints.map((endpoint) =>
-        endpoint.endpointId === preferred.endpointId
-          ? { ...endpoint, resolvedAddresses: resolved }
-          : endpoint,
-      ),
-    };
+    await this.commit((registry) => {
+      const record = registry.records[recordId];
+      const preferred = preferredEndpointFor(record);
+      if (
+        !record ||
+        !preferred ||
+        sameAddressSet(preferred.resolvedAddresses ?? [], resolved)
+      ) {
+        // mDNS re-announces constantly; only a genuine change is worth a write.
+        return null;
+      }
 
-    await this.commit((registry) => ({
-      ...registry,
-      records: { ...registry.records, [recordId]: next },
-    }));
+      const next: DeviceRecord = {
+        ...record,
+        endpoints: record.endpoints.map((endpoint) =>
+          endpoint.endpointId === preferred.endpointId
+            ? { ...endpoint, resolvedAddresses: resolved }
+            : endpoint,
+        ),
+      };
+      return {
+        ...registry,
+        records: { ...registry.records, [recordId]: next },
+      };
+    });
   }
 
   /**
@@ -1050,7 +1069,8 @@ class DeviceRegistryRepository {
       );
     }
 
-    const sourceWasActive = this.snapshot.activeRecordId === sourceRecordId;
+    const activeRecordIdAtMerge = this.snapshot.activeRecordId;
+    const sourceWasActive = activeRecordIdAtMerge === sourceRecordId;
     const sourceIsNewer =
       (source.lastConnectedAt ?? 0) > (target.lastConnectedAt ?? 0);
     const newest = sourceIsNewer ? source : target;
@@ -1092,6 +1112,13 @@ class DeviceRegistryRepository {
     // is published, so a preparation error never disconnects an intact record.
     options.beforeCommit?.();
     await this.commit((registry) => {
+      if (
+        registry.records[targetRecordId] !== target ||
+        registry.records[sourceRecordId] !== source ||
+        registry.activeRecordId !== activeRecordIdAtMerge
+      ) {
+        throw new Error("Device records changed while preparing the merge");
+      }
       const records = { ...registry.records, [targetRecordId]: merged };
       delete records[sourceRecordId];
       return {
@@ -1133,23 +1160,24 @@ class DeviceRegistryRepository {
   /** Set or clear the user's own name for a record. Blank clears it. */
   async setCustomName(recordId: string, name: string): Promise<void> {
     await this.hydrate();
-    const record = this.snapshot.records[recordId];
-    if (!record) return;
-
     const trimmed = name.trim();
-    const next: DeviceRecord = { ...record };
-    if (trimmed) {
-      next.name = trimmed;
-      next.nameIsCustom = true;
-    } else {
-      delete next.name;
-      next.nameIsCustom = false;
-    }
+    await this.commit((registry) => {
+      const record = registry.records[recordId];
+      if (!record) return null;
 
-    await this.commit((registry) => ({
-      ...registry,
-      records: { ...registry.records, [recordId]: next },
-    }));
+      const next: DeviceRecord = { ...record };
+      if (trimmed) {
+        next.name = trimmed;
+        next.nameIsCustom = true;
+      } else {
+        delete next.name;
+        next.nameIsCustom = false;
+      }
+      return {
+        ...registry,
+        records: { ...registry.records, [recordId]: next },
+      };
+    });
   }
 
   /**
@@ -1162,43 +1190,79 @@ class DeviceRegistryRepository {
    */
   async removeRecord(recordId: string): Promise<DeviceRecord | null> {
     await this.hydrate();
-    const removed = this.snapshot.records[recordId] ?? null;
-    if (!removed) return null;
+    if (!this.snapshot.records[recordId]) return null;
 
-    await this.commit((registry) => {
-      const records = { ...registry.records };
-      delete records[recordId];
-      return {
-        ...registry,
-        activeRecordId:
-          registry.activeRecordId === recordId ? null : registry.activeRecordId,
-        records,
-      };
-    });
-
-    const keys = [credentialKeyForRecord(recordId)];
-    const legacyKey = removed.legacyCredentialKey;
-    if (
-      legacyKey &&
-      !Object.values(this.snapshot.records).some(
-        (record) => record.legacyCredentialKey === legacyKey,
-      )
-    ) {
-      keys.push(legacyKey);
+    // Delete the record-specific key first. Other registry mutations may land
+    // during this native-storage await, so shared legacy ownership is checked
+    // again only after entering the registry mutation queue below.
+    try {
+      await credentialStore.delete(credentialKeyForRecord(recordId));
+    } catch (error) {
+      logger.error("Failed to delete forgotten device credentials", error, {
+        category: "storage",
+        action: "deleteDeviceCredentials",
+        severity: "error",
+        recordId,
+      });
+      throw error;
     }
-    await Promise.all(keys.map((key) => credentialStore.delete(key)));
 
-    return removed;
+    return this.enqueueMutation(async () => {
+      const removed = this.snapshot.records[recordId] ?? null;
+      if (!removed) return null;
+
+      const legacyKey = removed.legacyCredentialKey;
+      const legacyKeyHasAnotherOwner =
+        legacyKey !== undefined &&
+        Object.values(this.snapshot.records).some(
+          (record) =>
+            record.recordId !== recordId &&
+            record.legacyCredentialKey === legacyKey,
+        );
+
+      // Hold the registry mutation queue across the shared-key decision and
+      // deletion so no new claimant can appear between them.
+      if (legacyKey && !legacyKeyHasAnotherOwner) {
+        try {
+          await credentialStore.delete(legacyKey);
+        } catch (error) {
+          logger.error("Failed to delete forgotten device credentials", error, {
+            category: "storage",
+            action: "deleteDeviceCredentials",
+            severity: "error",
+            recordId,
+          });
+          throw error;
+        }
+      }
+
+      // Secrets are gone before the durable registry record. Secure-storage
+      // failure leaves the record as a retry path; registry failure leaves a
+      // visible record that can be paired again rather than an orphan secret.
+      await this.applyCommit((registry) => {
+        const records = { ...registry.records };
+        delete records[recordId];
+        return {
+          ...registry,
+          activeRecordId:
+            registry.activeRecordId === recordId
+              ? null
+              : registry.activeRecordId,
+          records,
+        };
+      });
+
+      return removed;
+    });
   }
 
   async setActiveRecord(recordId: string | null): Promise<void> {
     await this.hydrate();
-    if (recordId !== null && !this.snapshot.records[recordId]) return;
-    if (this.snapshot.activeRecordId === recordId) return;
-    await this.commit((registry) => ({
-      ...registry,
-      activeRecordId: recordId,
-    }));
+    await this.commit((registry) => {
+      if (recordId !== null && !registry.records[recordId]) return null;
+      if (registry.activeRecordId === recordId) return null;
+      return { ...registry, activeRecordId: recordId };
+    });
   }
 
   resetForTests(): void {
