@@ -27,10 +27,34 @@ describe("useLiveUpdate", () => {
     vi.restoreAllMocks();
   });
 
+  it("should wait until the app is ready", async () => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(LiveUpdate.ready).mockResolvedValue({
+      previousBundleId: null,
+      currentBundleId: null,
+      rollback: false,
+    });
+    vi.mocked(LiveUpdate.sync).mockResolvedValue({ nextBundleId: null });
+
+    const { rerender } = renderHook(({ appReady }) => useLiveUpdate(appReady), {
+      initialProps: { appReady: false },
+    });
+
+    expect(LiveUpdate.ready).not.toHaveBeenCalled();
+    expect(LiveUpdate.sync).not.toHaveBeenCalled();
+
+    rerender({ appReady: true });
+
+    await waitFor(() => {
+      expect(LiveUpdate.ready).toHaveBeenCalledTimes(1);
+      expect(LiveUpdate.sync).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("should skip execution on non-native platform", async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
 
-    renderHook(() => useLiveUpdate());
+    renderHook(() => useLiveUpdate(true));
 
     // Wait a tick to ensure effect has run
     await waitFor(() => {
@@ -48,7 +72,7 @@ describe("useLiveUpdate", () => {
     });
     vi.mocked(LiveUpdate.sync).mockResolvedValue({ nextBundleId: null });
 
-    renderHook(() => useLiveUpdate());
+    renderHook(() => useLiveUpdate(true));
 
     await waitFor(() => {
       expect(LiveUpdate.ready).toHaveBeenCalled();
@@ -66,7 +90,7 @@ describe("useLiveUpdate", () => {
     });
     vi.mocked(LiveUpdate.sync).mockResolvedValue({ nextBundleId: null });
 
-    renderHook(() => useLiveUpdate());
+    renderHook(() => useLiveUpdate(true));
 
     await waitFor(() => {
       expect(LiveUpdate.ready).toHaveBeenCalled();
@@ -92,7 +116,7 @@ describe("useLiveUpdate", () => {
       nextBundleId: "bundle-v2.0.0",
     });
 
-    renderHook(() => useLiveUpdate());
+    renderHook(() => useLiveUpdate(true));
 
     await waitFor(() => {
       expect(logger.log).toHaveBeenCalledWith(
@@ -108,7 +132,7 @@ describe("useLiveUpdate", () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     vi.mocked(LiveUpdate.ready).mockRejectedValue(readyError);
 
-    renderHook(() => useLiveUpdate());
+    renderHook(() => useLiveUpdate(true));
 
     await waitFor(() => {
       expect(logger.warn).toHaveBeenCalledWith(
@@ -133,7 +157,7 @@ describe("useLiveUpdate", () => {
     });
     vi.mocked(LiveUpdate.sync).mockRejectedValue(syncError);
 
-    renderHook(() => useLiveUpdate());
+    renderHook(() => useLiveUpdate(true));
 
     await waitFor(() => {
       expect(logger.warn).toHaveBeenCalledWith(
@@ -152,7 +176,7 @@ describe("useLiveUpdate", () => {
     });
     vi.mocked(LiveUpdate.sync).mockResolvedValue({ nextBundleId: null });
 
-    const { rerender } = renderHook(() => useLiveUpdate());
+    const { rerender } = renderHook(() => useLiveUpdate(true));
 
     await waitFor(() => {
       expect(LiveUpdate.ready).toHaveBeenCalledTimes(1);

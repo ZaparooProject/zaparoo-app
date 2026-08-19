@@ -1,9 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { DEFAULT_APP_REVIEW_CADENCE } from "@/lib/appReview";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { act, renderHook, waitFor } from "@/test-utils";
 import { isPluginAvailable } from "@/lib/capacitorBridge";
+import { logger } from "@/lib/logger";
+
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: vi.fn(() => false),
+  },
+}));
 
 // Mock Capacitor Preferences
 vi.mock("@capacitor/preferences", () => ({
@@ -22,6 +30,12 @@ vi.mock("@/lib/capacitorBridge", () => ({
   isPluginAvailable: vi.fn(() => true),
 }));
 
+vi.mock("@/lib/logger", () => ({
+  logger: {
+    error: vi.fn(),
+  },
+}));
+
 // Mock sessionManager
 vi.mock("@/lib/nfc", () => ({
   sessionManager: {
@@ -31,10 +45,16 @@ vi.mock("@/lib/nfc", () => ({
 }));
 
 describe("usePreferencesStore", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     vi.mocked(isPluginAvailable).mockReturnValue(true);
-    // Reset store state between tests
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+    vi.mocked(Preferences.get).mockResolvedValue({ value: null });
+
+    // A successful hydration resets module-level retry/write bookkeeping left
+    // by a prior failure-path test, keeping tests independent of execution order.
+    await usePreferencesStore.persist.rehydrate();
     usePreferencesStore.setState({
       restartScan: false,
       launchOnScan: true,
@@ -51,20 +71,47 @@ describe("usePreferencesStore", () => {
       appReviewCadence: { ...DEFAULT_APP_REVIEW_CADENCE },
       _hasHydrated: true, // Pretend it's hydrated for tests
     });
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
   describe("Capacitor Preferences bridge guards", () => {
-    it("should hydrate with defaults without reading storage when Preferences is unavailable", async () => {
+    it("should hydrate web defaults without reading unavailable storage", async () => {
       vi.mocked(isPluginAvailable).mockReturnValue(false);
 
       await usePreferencesStore.persist.rehydrate();
 
       expect(Preferences.get).not.toHaveBeenCalled();
       expect(usePreferencesStore.getState()._hasHydrated).toBe(true);
+      expect(
+        usePreferencesStore.getState()._preferencesHydrationSucceeded,
+      ).toBe(true);
+    });
+
+    it("should reject native OTA trust when Preferences is unavailable", async () => {
+      vi.useFakeTimers();
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(isPluginAvailable).mockReturnValue(false);
+      usePreferencesStore.setState({
+        _hasHydrated: false,
+        _preferencesHydrationSucceeded: true,
+      });
+      vi.mocked(Preferences.set).mockClear();
+
+      await usePreferencesStore.persist.rehydrate();
+      await vi.advanceTimersByTimeAsync(250);
+      await vi.advanceTimersByTimeAsync(250);
+
+      expect(Preferences.get).not.toHaveBeenCalled();
+      expect(Preferences.set).not.toHaveBeenCalled();
+      expect(usePreferencesStore.getState()._hasHydrated).toBe(true);
+      expect(
+        usePreferencesStore.getState()._preferencesHydrationSucceeded,
+      ).toBe(false);
     });
 
     it("should skip persistence writes when Preferences is unavailable", async () => {
@@ -83,6 +130,110 @@ describe("usePreferencesStore", () => {
         expect(result.current.showFilenames).toBe(true);
       });
       expect(Preferences.set).not.toHaveBeenCalled();
+    });
+
+    it("should retry a failed read before enabling persistence writes", async () => {
+      vi.useFakeTimers();
+      usePreferencesStore.setState({
+        _hasHydrated: false,
+        showFilenames: false,
+      });
+      vi.mocked(Preferences.set).mockClear();
+      vi.mocked(Preferences.get)
+        .mockRejectedValueOnce(new Error("Preferences bridge failed"))
+        .mockResolvedValueOnce({
+          value: JSON.stringify({
+            state: { showFilenames: true },
+            version: 0,
+          }),
+        });
+
+      await usePreferencesStore.persist.rehydrate();
+
+      expect(usePreferencesStore.getState()._hasHydrated).toBe(false);
+      expect(
+        usePreferencesStore.getState()._preferencesHydrationSucceeded,
+      ).toBe(false);
+      expect(Preferences.set).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(250);
+      await vi.waitFor(() => {
+        expect(Preferences.get).toHaveBeenCalledTimes(2);
+        expect(usePreferencesStore.getState()._hasHydrated).toBe(true);
+      });
+
+      expect(usePreferencesStore.getState().showFilenames).toBe(true);
+      expect(
+        usePreferencesStore.getState()._preferencesHydrationSucceeded,
+      ).toBe(true);
+    });
+
+    it("should bound hanging reads and continue with nonpersistent defaults", async () => {
+      vi.useFakeTimers();
+      usePreferencesStore.setState({
+        _hasHydrated: false,
+        showFilenames: false,
+      });
+      vi.mocked(Preferences.set).mockClear();
+      vi.mocked(Preferences.get).mockImplementation(
+        () => new Promise(() => undefined),
+      );
+
+      const firstHydration = usePreferencesStore.persist.rehydrate();
+      await vi.advanceTimersByTimeAsync(1_500);
+      await firstHydration;
+      expect(Preferences.get).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(250);
+      expect(Preferences.get).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(1_500);
+      await vi.advanceTimersByTimeAsync(250);
+      expect(Preferences.get).toHaveBeenCalledTimes(3);
+      await vi.advanceTimersByTimeAsync(1_500);
+
+      expect(usePreferencesStore.getState()._hasHydrated).toBe(true);
+      expect(
+        usePreferencesStore.getState()._preferencesHydrationSucceeded,
+      ).toBe(false);
+      expect(Preferences.set).not.toHaveBeenCalled();
+    });
+
+    it("should start with defaults without overwriting storage after retries fail", async () => {
+      vi.useFakeTimers();
+      usePreferencesStore.setState({
+        _hasHydrated: false,
+        showFilenames: false,
+      });
+      vi.mocked(Preferences.set).mockClear();
+      vi.mocked(Preferences.get).mockRejectedValue(
+        new Error("Preferences bridge failed"),
+      );
+
+      await usePreferencesStore.persist.rehydrate();
+      await vi.advanceTimersByTimeAsync(250);
+      await vi.waitFor(() => {
+        expect(Preferences.get).toHaveBeenCalledTimes(2);
+      });
+      await vi.advanceTimersByTimeAsync(250);
+      await vi.waitFor(() => {
+        expect(Preferences.get).toHaveBeenCalledTimes(3);
+        expect(usePreferencesStore.getState()._hasHydrated).toBe(true);
+      });
+
+      expect(Preferences.set).not.toHaveBeenCalled();
+      expect(
+        usePreferencesStore.getState()._preferencesHydrationSucceeded,
+      ).toBe(false);
+      expect(logger.error).toHaveBeenCalledWith(
+        "Preference persistence disabled after hydration retries",
+        expect.any(Error),
+        {
+          category: "storage",
+          action: "disablePreferencePersistence",
+          severity: "error",
+          attempts: 3,
+        },
+      );
     });
   });
 

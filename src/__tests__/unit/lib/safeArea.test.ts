@@ -1,6 +1,9 @@
+import { createElement } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Capacitor } from "@capacitor/core";
 import { SafeArea } from "capacitor-plugin-safe-area";
+import { render, waitFor } from "@/test-utils";
+import { logger } from "@/lib/logger";
 
 // Mock dependencies
 vi.mock("@capacitor/core", () => ({
@@ -113,7 +116,7 @@ describe("safeArea", () => {
       const setInsets = vi.fn();
 
       // Should not throw
-      await expect(initSafeAreaInsets(setInsets)).resolves.toBeUndefined();
+      await expect(initSafeAreaInsets(setInsets)).resolves.toBeNull();
     });
 
     it("should update insets when safeAreaChanged event fires", async () => {
@@ -145,6 +148,83 @@ describe("safeArea", () => {
         bottom: "34px",
         left: "47px",
         right: "47px",
+      });
+    });
+
+    it("should ignore safe area events after its owner is inactive", async () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(SafeArea.getSafeAreaInsets).mockResolvedValue({
+        insets: { top: 47, bottom: 34, left: 0, right: 0 },
+      });
+      let active = true;
+      let listenerCallback:
+        | ((data: {
+            insets: {
+              top: number;
+              bottom: number;
+              left: number;
+              right: number;
+            };
+          }) => void)
+        | null = null;
+      vi.mocked(SafeArea.addListener).mockImplementation(
+        async (_event, callback) => {
+          listenerCallback = callback;
+          return { remove: vi.fn() };
+        },
+      );
+
+      const { initSafeAreaInsets } = await import("@/lib/safeArea");
+      const setInsets = vi.fn();
+      await initSafeAreaInsets(setInsets, true, () => active);
+      setInsets.mockClear();
+      active = false;
+
+      listenerCallback!({
+        insets: { top: 0, bottom: 34, left: 47, right: 47 },
+      });
+
+      expect(setInsets).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("SafeAreaHandler", () => {
+    it("should contain removal failures after unmount", async () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(SafeArea.getSafeAreaInsets).mockResolvedValue({
+        insets: { top: 47, bottom: 34, left: 0, right: 0 },
+      });
+      const removalError = new Error("Safe area listener removal failed");
+      const removeListener = vi.fn().mockRejectedValue(removalError);
+      let resolveListener:
+        | ((handle: { remove: () => Promise<void> }) => void)
+        | null = null;
+      vi.mocked(SafeArea.addListener).mockImplementation(
+        () =>
+          new Promise<{ remove: () => Promise<void> }>((resolve) => {
+            resolveListener = resolve;
+          }),
+      );
+
+      const { SafeAreaHandler } = await import("@/lib/safeArea");
+      const { unmount } = render(createElement(SafeAreaHandler));
+
+      await waitFor(() => {
+        expect(resolveListener).not.toBeNull();
+      });
+      unmount();
+      resolveListener!({ remove: removeListener });
+
+      await waitFor(() => {
+        expect(logger.error).toHaveBeenCalledWith(
+          "Failed to remove safe area listener",
+          removalError,
+          {
+            category: "lifecycle",
+            action: "removeSafeAreaListener",
+            severity: "warning",
+          },
+        );
       });
     });
   });
