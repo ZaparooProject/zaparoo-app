@@ -38,7 +38,7 @@ describe("useSwipeBack", () => {
     swipeOptions = undefined;
   });
 
-  it("tracks rightward progress up to the trigger distance", () => {
+  it("should track rightward progress up to the trigger distance", () => {
     const { result } = renderHook(() => useSwipeBack(vi.fn()));
 
     act(() => {
@@ -62,7 +62,7 @@ describe("useSwipeBack", () => {
     expect(result.current.progress).toBe(1);
   });
 
-  it("latches cancellation after a meaningful reversal", () => {
+  it("should latch cancellation after a meaningful reversal", () => {
     const onSwipeBack = vi.fn();
     const { result } = renderHook(() => useSwipeBack(onSwipeBack));
 
@@ -83,7 +83,7 @@ describe("useSwipeBack", () => {
     expect(onSwipeBack).not.toHaveBeenCalled();
   });
 
-  it("latches cancellation after cumulative gradual reversal", () => {
+  it("should latch cancellation after cumulative gradual reversal", () => {
     const onSwipeBack = vi.fn();
     const { result } = renderHook(() => useSwipeBack(onSwipeBack));
 
@@ -103,7 +103,7 @@ describe("useSwipeBack", () => {
     expect(onSwipeBack).not.toHaveBeenCalled();
   });
 
-  it("latches cancellation after vertical movement", () => {
+  it("should latch cancellation after vertical movement", () => {
     const onSwipeBack = vi.fn();
     const { result } = renderHook(() => useSwipeBack(onSwipeBack));
 
@@ -144,7 +144,7 @@ describe("useSwipeBack", () => {
     expect(onSwipeBack).not.toHaveBeenCalled();
   });
 
-  it("resets cancellation when the next gesture starts", () => {
+  it("should reset cancellation when the next gesture starts", () => {
     const onSwipeBack = vi.fn();
     renderHook(() => useSwipeBack(onSwipeBack));
 
@@ -166,7 +166,7 @@ describe("useSwipeBack", () => {
     expect(onSwipeBack).toHaveBeenCalledOnce();
   });
 
-  it("cancels visual progress when an incomplete swipe ends", () => {
+  it("should cancel visual progress when an incomplete swipe ends", () => {
     const onSwipeBack = vi.fn();
     const { result } = renderHook(() => useSwipeBack(onSwipeBack));
 
@@ -195,7 +195,7 @@ describe("useSwipeBack", () => {
     expect(onSwipeBack).not.toHaveBeenCalled();
   });
 
-  it("blocks completion after touch cancellation", () => {
+  it("should block completion after touch cancellation", () => {
     const onSwipeBack = vi.fn();
     const { result } = renderHook(() => useSwipeBack(onSwipeBack));
 
@@ -212,7 +212,7 @@ describe("useSwipeBack", () => {
     expect(onSwipeBack).not.toHaveBeenCalled();
   });
 
-  it("configures distance-based back navigation", () => {
+  it("should configure distance-based back navigation", () => {
     const onSwipeBack = vi.fn();
     renderHook(() => useSwipeBack(onSwipeBack));
 
@@ -231,7 +231,7 @@ describe("useSwipeBack", () => {
     expect(onSwipeBack).toHaveBeenCalledOnce();
   });
 
-  it("does not track progress when back navigation is unavailable", () => {
+  it("should not track progress when back navigation is unavailable", () => {
     const { result } = renderHook(() => useSwipeBack());
 
     expect(swipeOptions?.onSwipeRight).toBeUndefined();

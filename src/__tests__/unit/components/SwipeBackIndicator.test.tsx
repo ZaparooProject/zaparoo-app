@@ -16,7 +16,7 @@ vi.mock("@/lib/store", () => ({
 }));
 
 describe("SwipeBackIndicator", () => {
-  it("fades and moves the arrow with gesture progress", () => {
+  it("should fade and move the arrow with gesture progress", () => {
     const { container, rerender } = render(<SwipeBackIndicator progress={0} />);
     const indicator = container.querySelector("[data-swipe-back-indicator]");
 
@@ -36,7 +36,7 @@ describe("SwipeBackIndicator", () => {
     expect(indicator).toHaveAttribute("data-ready", "true");
   });
 
-  it("clamps progress outside the supported range", () => {
+  it("should clamp progress outside the supported range", () => {
     const { container, rerender } = render(
       <SwipeBackIndicator progress={-1} />,
     );
