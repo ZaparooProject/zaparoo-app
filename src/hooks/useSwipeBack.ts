@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import type { SwipeEventData, SwipeableHandlers } from "react-swipeable";
 import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 
-export const SWIPE_BACK_TRIGGER_DISTANCE = 96;
+export const SWIPE_BACK_TRIGGER_DISTANCE = 72;
 const SWIPE_BACK_REVERSAL_TOLERANCE = 8;
 
 interface SwipeBackGesture {

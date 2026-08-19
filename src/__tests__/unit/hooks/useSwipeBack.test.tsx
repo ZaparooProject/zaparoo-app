@@ -170,14 +170,24 @@ describe("useSwipeBack", () => {
     const onSwipeBack = vi.fn();
     const { result } = renderHook(() => useSwipeBack(onSwipeBack));
 
+    const incompleteDistance = SWIPE_BACK_TRIGGER_DISTANCE - 1;
+
     act(() => {
       swipeOptions?.onSwiping?.(
-        swipeData({ absX: 48, deltaX: 48, velocity: 0.5 }),
+        swipeData({
+          absX: incompleteDistance,
+          deltaX: incompleteDistance,
+          velocity: 0.5,
+        }),
       );
     });
     act(() => {
       swipeOptions?.onSwiped?.(
-        swipeData({ absX: 48, deltaX: 48, velocity: 0.5 }),
+        swipeData({
+          absX: incompleteDistance,
+          deltaX: incompleteDistance,
+          velocity: 0.5,
+        }),
       );
     });
 
