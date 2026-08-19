@@ -18,7 +18,6 @@ import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { PageFrame } from "@/components/PageFrame";
 import { MappingRow } from "@/components/MappingRow";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
@@ -43,11 +42,6 @@ export function Mappings() {
     "readOnlyMappings",
     { requireKnownSupport: true },
   );
-
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   const mappings = useQuery({
     queryKey: ["mappings", { includeReadOnly: readOnlyMappingsAvailable }],
@@ -112,7 +106,7 @@ export function Mappings() {
 
   return (
     <PageFrame
-      {...swipeHandlers}
+      onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
           onClick={goBack}

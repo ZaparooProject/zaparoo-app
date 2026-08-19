@@ -28,7 +28,6 @@ import { BackIcon, SearchIcon } from "@/lib/images";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { PageFrame } from "@/components/PageFrame";
 import { BackToTop } from "@/components/BackToTop";
 import { DelayedLoading } from "@/components/DelayedLoading";
@@ -128,10 +127,6 @@ export function LibraryFavorites() {
     return true;
   }, [goBack]);
   useBackButtonHandler("library-favorites", handleBackButton);
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   let content: ReactNode;
   if (!connected) {
@@ -198,7 +193,7 @@ export function LibraryFavorites() {
   return (
     <>
       <PageFrame
-        {...swipeHandlers}
+        onSwipeBack={goBack}
         scrollRef={scrollRef}
         sessionScrollKey={`library:favorites:${searchOpen ? "search" : "list"}`}
         headerLeft={

@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { PageFrame } from "@/components/PageFrame";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import i18n from "@/i18n";
 import { BackIcon } from "@/lib/images";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -66,14 +65,10 @@ export function LanguageRegionSettings() {
   const router = useRouter();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   return (
     <PageFrame
-      {...swipeHandlers}
+      onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
           onClick={goBack}

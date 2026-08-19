@@ -46,7 +46,6 @@ import { useLibraryBrowse } from "@/hooks/useLibraryBrowse";
 import { useSystemName } from "@/hooks/useSystemName";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { PageFrame } from "@/components/PageFrame";
 import { BackToTop } from "@/components/BackToTop";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -276,10 +275,6 @@ export function LibrarySystem() {
     goBack();
     return true;
   });
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   const changeMediaSort = (nextSort: MediaBrowseSort) => {
     forgetScroll(libraryBrowseScrollKey(systemId, nextSort, currentPath));
@@ -397,7 +392,7 @@ export function LibrarySystem() {
   return (
     <>
       <PageFrame
-        {...swipeHandlers}
+        onSwipeBack={goBack}
         scrollRef={scrollRef}
         sessionScrollKey={sessionScrollKey}
         headerLeft={

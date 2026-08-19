@@ -1,4 +1,9 @@
-import { useSwipeable, SwipeableHandlers } from "react-swipeable";
+import {
+  useSwipeable,
+  SwipeableHandlers,
+  type SwipeCallback,
+  type SwipeEventData,
+} from "react-swipeable";
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { useHaptics } from "./useHaptics";
 
@@ -7,6 +12,10 @@ interface SmartSwipeOptions {
   onSwipeRight?: () => void;
   onSwipeUp?: () => void;
   onSwipeDown?: () => void;
+  onSwipeStart?: SwipeCallback;
+  onSwiping?: SwipeCallback;
+  onSwiped?: SwipeCallback;
+  shouldHandleSwipe?: (eventData: SwipeEventData) => boolean;
   preventScrollOnSwipe?: boolean;
   swipeThreshold?: number;
   velocityThreshold?: number;
@@ -29,6 +38,10 @@ export function useSmartSwipe(
     onSwipeRight,
     onSwipeUp,
     onSwipeDown,
+    onSwipeStart,
+    onSwiping,
+    onSwiped,
+    shouldHandleSwipe,
     preventScrollOnSwipe = false,
     swipeThreshold = 50,
     velocityThreshold = 0.3,
@@ -37,14 +50,15 @@ export function useSmartSwipe(
 
   // Enable mouse tracking only on mobile-sized screens, unless forced
   const enableMouseTracking = forceEnable || isMobile;
+  const meetsThreshold = (distance: number, eventData: SwipeEventData) =>
+    Math.abs(distance) >= swipeThreshold &&
+    eventData.velocity >= velocityThreshold &&
+    (shouldHandleSwipe?.(eventData) ?? true);
 
   return useSwipeable({
     onSwipedLeft: onSwipeLeft
       ? (eventData) => {
-          if (
-            Math.abs(eventData.deltaX) > swipeThreshold &&
-            eventData.velocity > velocityThreshold
-          ) {
+          if (meetsThreshold(eventData.deltaX, eventData)) {
             impact("light");
             onSwipeLeft();
           }
@@ -53,10 +67,7 @@ export function useSmartSwipe(
 
     onSwipedRight: onSwipeRight
       ? (eventData) => {
-          if (
-            Math.abs(eventData.deltaX) > swipeThreshold &&
-            eventData.velocity > velocityThreshold
-          ) {
+          if (meetsThreshold(eventData.deltaX, eventData)) {
             impact("light");
             onSwipeRight();
           }
@@ -65,10 +76,7 @@ export function useSmartSwipe(
 
     onSwipedUp: onSwipeUp
       ? (eventData) => {
-          if (
-            Math.abs(eventData.deltaY) > swipeThreshold &&
-            eventData.velocity > velocityThreshold
-          ) {
+          if (meetsThreshold(eventData.deltaY, eventData)) {
             impact("light");
             onSwipeUp();
           }
@@ -77,16 +85,16 @@ export function useSmartSwipe(
 
     onSwipedDown: onSwipeDown
       ? (eventData) => {
-          if (
-            Math.abs(eventData.deltaY) > swipeThreshold &&
-            eventData.velocity > velocityThreshold
-          ) {
+          if (meetsThreshold(eventData.deltaY, eventData)) {
             impact("light");
             onSwipeDown();
           }
         }
       : undefined,
 
+    onSwipeStart,
+    onSwiping,
+    onSwiped,
     preventScrollOnSwipe,
     delta: 10,
     trackMouse: enableMouseTracking,

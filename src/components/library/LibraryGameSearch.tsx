@@ -11,7 +11,6 @@ import { useLibrarySessionStore } from "@/lib/librarySessionStore";
 import { BackIcon, SearchIcon } from "@/lib/images";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { PageFrame } from "@/components/PageFrame";
 import { VirtualSearchResults } from "@/components/VirtualSearchResults";
 import { BackToTop } from "@/components/BackToTop";
@@ -111,10 +110,6 @@ export function LibraryGameSearch({
     canUseSearch && (browseAllSearchFeature.available || hasSearchConstraint);
   const goBack =
     onBack ?? (() => navigate({ to: "/library", resetScroll: false }));
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   const search = () => {
     if (!canSubmitSearch) return;
@@ -276,7 +271,7 @@ export function LibraryGameSearch({
   return (
     <>
       <PageFrame
-        {...swipeHandlers}
+        onSwipeBack={goBack}
         scrollRef={scrollRef}
         headerLeft={
           <HeaderButton

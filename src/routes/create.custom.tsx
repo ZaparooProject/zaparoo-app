@@ -6,7 +6,6 @@ import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
 import { BackIcon, CreateIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { WriteModal } from "@/components/WriteModal";
 import {
   isWriteModalOpen,
@@ -47,15 +46,11 @@ export function CustomText() {
   const router = useRouter();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/create"));
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   return (
     <>
       <PageFrame
-        {...swipeHandlers}
+        onSwipeBack={goBack}
         headerLeft={
           <HeaderButton
             onClick={goBack}

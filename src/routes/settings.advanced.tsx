@@ -7,7 +7,6 @@ import { Capacitor } from "@capacitor/core";
 import { CoreAPI } from "@/lib/coreApi";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
@@ -86,17 +85,13 @@ export function AdvancedSettings() {
   const router = useRouter();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   // Show loading skeletons when connecting or when connected but data is loading
   const isLoading = isConnecting || (connected && isPending);
 
   return (
     <PageFrame
-      {...swipeHandlers}
+      onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
           onClick={goBack}

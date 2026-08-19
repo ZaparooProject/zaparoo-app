@@ -12,9 +12,11 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { ResponsiveContainer } from "@/components/ResponsiveContainer";
+import { SwipeBackIndicator } from "@/components/SwipeBackIndicator";
 import { useStatusStore } from "@/lib/store";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { InitialPageScrollOffsetContext } from "@/lib/pageScrollContext";
+import { useSwipeBack } from "@/hooks/useSwipeBack";
 
 export const PAGE_SCROLL_RESTORATION_ID = "page-scroll";
 export const PAGE_SCROLL_RESTORATION_SELECTOR = `[data-scroll-restoration-id="${PAGE_SCROLL_RESTORATION_ID}"]`;
@@ -32,6 +34,8 @@ interface PageFrameProps extends React.HTMLAttributes<HTMLDivElement> {
   scrollRef?: RefObject<HTMLDivElement | null>;
   /** In-memory scroll slot used when revisiting a bottom-tab screen. */
   sessionScrollKey?: string;
+  /** Navigate to this page's parent after a completed rightward swipe. */
+  onSwipeBack?: () => void;
 }
 
 interface PageHeaderProps {
@@ -124,10 +128,26 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
     sessionScrollKey,
     restorationEntry,
     restorationKey,
+    onSwipeBack,
+    onMouseDown,
+    onTouchCancel,
     className,
     ...restProps
   } = props;
 
+  const { cancelSwipeBack, progress, swipeHandlers } =
+    useSwipeBack(onSwipeBack);
+  const { ref: swipeRef, onMouseDown: onSwipeMouseDown } = swipeHandlers;
+  const rootSwipeHandlers = {
+    ref: onSwipeBack ? swipeRef : undefined,
+    onMouseDown:
+      onSwipeBack || onMouseDown
+        ? (event: React.MouseEvent<HTMLDivElement>) => {
+            if (onSwipeBack) onSwipeMouseDown?.(event);
+            onMouseDown?.(event);
+          }
+        : undefined,
+  };
   const activeScrollRef = scrollRef ?? internalScrollRef;
   const hasHeaderContent = header || headerLeft || headerCenter || headerRight;
   const initialScrollOffset = sessionScrollKey
@@ -182,6 +202,15 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
     <div
       className={`flex h-full w-full flex-col ${className || ""}`}
       {...restProps}
+      {...rootSwipeHandlers}
+      onTouchCancel={
+        onSwipeBack || onTouchCancel
+          ? (event) => {
+              cancelSwipeBack();
+              onTouchCancel?.(event);
+            }
+          : undefined
+      }
     >
       <div
         className={classNames(
@@ -241,6 +270,7 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
           </InitialPageScrollOffsetContext.Provider>
         </ResponsiveContainer>
       </div>
+      {onSwipeBack && <SwipeBackIndicator progress={progress} />}
     </div>
   );
 }
