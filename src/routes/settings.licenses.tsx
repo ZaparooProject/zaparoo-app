@@ -16,7 +16,6 @@ import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
 import { TextInput } from "@/components/wui/TextInput";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import licenseDataJson from "@/generated/thirdPartyLicenses.json";
 import { BackIcon, ExternalIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
@@ -80,10 +79,6 @@ export function ThirdPartyLicenses() {
   const router = useRouter();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   const filteredPackages = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -144,7 +139,7 @@ export function ThirdPartyLicenses() {
   return (
     <>
       <PageFrame
-        {...swipeHandlers}
+        onSwipeBack={goBack}
         scrollRef={scrollContainerRef}
         headerLeft={
           <HeaderButton

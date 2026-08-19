@@ -8,7 +8,6 @@ import { Clipboard } from "@capacitor/clipboard";
 import toast from "react-hot-toast";
 import { BackToTop } from "@/components/BackToTop";
 import { CoreAPI } from "@/lib/coreApi";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -52,11 +51,6 @@ export function Logs() {
     new Set(),
   );
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
-
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   const logsQuery = useQuery({
     queryKey: ["logs"],
@@ -251,7 +245,7 @@ export function Logs() {
   return (
     <>
       <PageFrame
-        {...swipeHandlers}
+        onSwipeBack={goBack}
         headerLeft={
           <HeaderButton
             onClick={goBack}

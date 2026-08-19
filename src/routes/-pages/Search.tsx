@@ -15,7 +15,6 @@ import { SearchResultGame, SystemsResponse } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { DEFAULT_GAMES_INDEX, useStatusStore } from "@/lib/store";
 import {
   appBackNavigationOptions,
@@ -220,10 +219,6 @@ export function Search() {
   const router = useRouter();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/create"));
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   // Handle system selection from selector
   const handleSystemSelect = async (systems: string[]) => {
@@ -327,7 +322,7 @@ export function Search() {
   return (
     <>
       <PageFrame
-        {...swipeHandlers}
+        onSwipeBack={goBack}
         headerLeft={
           <HeaderButton
             onClick={goBack}

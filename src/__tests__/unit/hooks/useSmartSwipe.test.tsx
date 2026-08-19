@@ -224,6 +224,92 @@ describe("useSmartSwipe", () => {
       // Assert
       expect(onSwipeLeft).toHaveBeenCalled();
     });
+
+    it("should trigger at the exact distance without a velocity requirement", () => {
+      const onSwipeRight = vi.fn();
+      renderHook(() =>
+        useSmartSwipe({
+          onSwipeRight,
+          swipeThreshold: 96,
+          velocityThreshold: 0,
+        }),
+      );
+
+      const swipeData = {
+        deltaX: 96,
+        deltaY: 0,
+        velocity: 0,
+        dir: "Right" as const,
+        event: {} as TouchEvent,
+        initial: [0, 0] as [number, number],
+        absX: 96,
+        absY: 0,
+        first: false,
+        vxvy: [0, 0] as [number, number],
+      };
+
+      lastSwipeableConfig?.onSwipedRight?.(swipeData);
+
+      expect(onSwipeRight).toHaveBeenCalledOnce();
+    });
+
+    it("should suppress callbacks and haptics when the swipe guard rejects", () => {
+      const onSwipeRight = vi.fn();
+      renderHook(() =>
+        useSmartSwipe({
+          onSwipeRight,
+          shouldHandleSwipe: () => false,
+        }),
+      );
+
+      const swipeData = {
+        deltaX: 100,
+        deltaY: 0,
+        velocity: 0.5,
+        dir: "Right" as const,
+        event: {} as TouchEvent,
+        initial: [0, 0] as [number, number],
+        absX: 100,
+        absY: 0,
+        first: false,
+        vxvy: [0.5, 0] as [number, number],
+      };
+
+      lastSwipeableConfig?.onSwipedRight?.(swipeData);
+
+      expect(onSwipeRight).not.toHaveBeenCalled();
+      expect(mockImpact).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("swipe lifecycle", () => {
+    it("should forward start, progress, and completion callbacks", () => {
+      const onSwipeStart = vi.fn();
+      const onSwiping = vi.fn();
+      const onSwiped = vi.fn();
+      renderHook(() => useSmartSwipe({ onSwipeStart, onSwiping, onSwiped }));
+
+      const swipeData = {
+        deltaX: 30,
+        deltaY: 0,
+        velocity: 0.5,
+        dir: "Right" as const,
+        event: {} as TouchEvent,
+        initial: [0, 0] as [number, number],
+        absX: 30,
+        absY: 0,
+        first: false,
+        vxvy: [0.5, 0] as [number, number],
+      };
+
+      lastSwipeableConfig?.onSwipeStart?.(swipeData);
+      lastSwipeableConfig?.onSwiping?.(swipeData);
+      lastSwipeableConfig?.onSwiped?.(swipeData);
+
+      expect(onSwipeStart).toHaveBeenCalledWith(swipeData);
+      expect(onSwiping).toHaveBeenCalledWith(swipeData);
+      expect(onSwiped).toHaveBeenCalledWith(swipeData);
+    });
   });
 
   describe("haptic feedback", () => {

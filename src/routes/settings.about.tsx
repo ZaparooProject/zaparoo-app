@@ -5,7 +5,6 @@ import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button.tsx";
 import { BackIcon, NextIcon } from "@/lib/images";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
@@ -22,14 +21,9 @@ export function About() {
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
 
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
-
   return (
     <PageFrame
-      {...swipeHandlers}
+      onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
           onClick={goBack}

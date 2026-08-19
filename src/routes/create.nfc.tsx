@@ -8,7 +8,6 @@ import { logger } from "@/lib/logger";
 //   WrenchIcon,
 //   ClockIcon
 // } from "lucide-react";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useHaptics } from "@/hooks/useHaptics";
 import { WriteModal } from "@/components/WriteModal";
 import {
@@ -82,10 +81,6 @@ export function NfcUtils() {
   const router = useRouter();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/create"));
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   const handleScan = () => {
     nfcWriter.write(WriteAction.Read).catch((e) => {
@@ -114,8 +109,9 @@ export function NfcUtils() {
 
   return (
     <>
-      <div {...swipeHandlers} className="flex h-full w-full flex-col">
+      <div className="flex h-full w-full flex-col">
         <PageFrame
+          onSwipeBack={goBack}
           headerLeft={
             <HeaderButton
               onClick={goBack}

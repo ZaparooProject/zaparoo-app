@@ -5,7 +5,6 @@ import { useState, useEffect, useRef } from "react";
 import { CoreAPI } from "@/lib/coreApi";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { PageFrame } from "@/components/PageFrame";
 import { BackIcon } from "@/lib/images";
@@ -54,10 +53,6 @@ export function PlayControlsSettings() {
   const router = useRouter();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   const [dailyHours, setDailyHours] = useState("0");
   const [dailyMinutes, setDailyMinutes] = useState("0");
@@ -312,7 +307,7 @@ export function PlayControlsSettings() {
 
   return (
     <PageFrame
-      {...swipeHandlers}
+      onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
           onClick={goBack}

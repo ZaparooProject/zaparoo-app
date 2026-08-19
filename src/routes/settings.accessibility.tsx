@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import classNames from "classnames";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
 import { BackIcon, CheckIcon } from "@/lib/images";
@@ -57,14 +56,10 @@ export function AccessibilitySettings() {
   const router = useRouter();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   return (
     <PageFrame
-      {...swipeHandlers}
+      onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
           onClick={goBack}

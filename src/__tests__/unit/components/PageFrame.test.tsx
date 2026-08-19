@@ -139,6 +139,71 @@ describe("PageFrame", () => {
     expect(pageFrame).toHaveAttribute("role", "main");
   });
 
+  it("should render the swipe-back indicator only on back-navigable pages", () => {
+    const { container, rerender } = render(
+      <PageFrame>
+        <div>Root page</div>
+      </PageFrame>,
+    );
+
+    expect(
+      container.querySelector("[data-swipe-back-indicator]"),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <PageFrame onSwipeBack={vi.fn()}>
+        <div>Child page</div>
+      </PageFrame>,
+    );
+
+    expect(
+      container.querySelector("[data-swipe-back-indicator]"),
+    ).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("should keep a gradually reversed swipe canceled until the next gesture", () => {
+    const onSwipeBack = vi.fn();
+    const { container } = render(
+      <PageFrame onSwipeBack={onSwipeBack}>
+        <div>Child page</div>
+      </PageFrame>,
+    );
+    const pageFrame = container.firstElementChild;
+    const indicator = container.querySelector("[data-swipe-back-indicator]");
+    expect(pageFrame).toBeInstanceOf(HTMLElement);
+    if (!(pageFrame instanceof HTMLElement)) return;
+
+    fireEvent.touchStart(pageFrame, {
+      touches: [{ clientX: 0, clientY: 100 }],
+    });
+    fireEvent.touchMove(pageFrame, {
+      touches: [{ clientX: 120, clientY: 100 }],
+    });
+    fireEvent.touchMove(pageFrame, {
+      touches: [{ clientX: 114, clientY: 100 }],
+    });
+    fireEvent.touchMove(pageFrame, {
+      touches: [{ clientX: 108, clientY: 100 }],
+    });
+    fireEvent.touchMove(pageFrame, {
+      touches: [{ clientX: 102, clientY: 100 }],
+    });
+    expect(indicator).toHaveStyle({ opacity: "0" });
+    fireEvent.touchEnd(pageFrame, { touches: [] });
+
+    expect(onSwipeBack).not.toHaveBeenCalled();
+
+    fireEvent.touchStart(pageFrame, {
+      touches: [{ clientX: 0, clientY: 100 }],
+    });
+    fireEvent.touchMove(pageFrame, {
+      touches: [{ clientX: 100, clientY: 100 }],
+    });
+    fireEvent.touchEnd(pageFrame, { touches: [] });
+
+    expect(onSwipeBack).toHaveBeenCalledOnce();
+  });
+
   it("should identify its scroll container for router restoration", () => {
     const { container } = render(
       <PageFrame>

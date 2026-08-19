@@ -31,7 +31,6 @@ import {
 } from "@/lib/writeNfcHook";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { WriteModal } from "@/components/WriteModal";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
@@ -106,11 +105,6 @@ export function MappingEditor({ id }: MappingEditorProps) {
 
   const goBack = () =>
     void navigate(appBackNavigationOptions("/create/mappings"));
-
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   const headingKey = isEditing
     ? "create.mappings.editor.titleEdit"
@@ -296,7 +290,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
   return (
     <>
       <PageFrame
-        {...swipeHandlers}
+        onSwipeBack={goBack}
         headerLeft={
           <HeaderButton
             onClick={goBack}

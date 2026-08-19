@@ -4,7 +4,6 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { ListChecks, Pencil, X } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useSelectDevice } from "@/hooks/useSelectDevice";
 import {
@@ -62,10 +61,6 @@ export function Devices() {
   const queryClient = useQueryClient();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   const records = useDeviceRegistry(selectRecords);
   const activeRecordId = useDeviceRegistry(selectActiveRecordId);
@@ -234,7 +229,7 @@ export function Devices() {
 
   return (
     <PageFrame
-      {...swipeHandlers}
+      onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
           onClick={goBack}

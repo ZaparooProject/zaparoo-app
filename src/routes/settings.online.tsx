@@ -22,7 +22,6 @@ import { Label } from "@/components/ui/label";
 import { useStatusStore } from "@/lib/store.ts";
 import { PageFrame } from "@/components/PageFrame.tsx";
 import { HeaderButton } from "@/components/wui/HeaderButton";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { BackIcon, GoogleIcon, AppleIcon } from "@/lib/images";
 import { logger } from "@/lib/logger";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
@@ -136,10 +135,6 @@ export function OnlinePage() {
   const router = useRouter();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   const loggedInUser = useStatusStore((state) => state.loggedInUser);
   const connected = useStatusStore((state) => state.connected);
@@ -587,7 +582,7 @@ export function OnlinePage() {
 
   return (
     <PageFrame
-      {...swipeHandlers}
+      onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
           onClick={goBack}

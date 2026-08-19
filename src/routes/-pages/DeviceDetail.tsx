@@ -7,7 +7,6 @@ import {
   useConnection,
   useDeviceConnectionActions,
 } from "@/hooks/useConnection";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useSelectDevice } from "@/hooks/useSelectDevice";
 import {
@@ -51,10 +50,6 @@ export function DeviceDetail() {
 
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings/devices"));
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   const record = records[params.recordId];
   const endpoint = parsedEndpointForRecord(record);
@@ -131,7 +126,7 @@ export function DeviceDetail() {
 
   return (
     <PageFrame
-      {...swipeHandlers}
+      onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
           onClick={goBack}

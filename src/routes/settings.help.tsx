@@ -3,7 +3,6 @@ import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/wui/Button";
 import { HeaderButton } from "@/components/wui/HeaderButton";
-import { useSmartSwipe } from "@/hooks/useSmartSwipe";
 import { PageFrame } from "@/components/PageFrame";
 import { BackIcon } from "@/lib/images";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -21,14 +20,10 @@ export function Help() {
   const router = useRouter();
   const goBack = () =>
     void router.navigate(appBackNavigationOptions("/settings"));
-  const swipeHandlers = useSmartSwipe({
-    onSwipeRight: goBack,
-    preventScrollOnSwipe: false,
-  });
 
   return (
     <PageFrame
-      {...swipeHandlers}
+      onSwipeBack={goBack}
       headerLeft={
         <HeaderButton
           onClick={goBack}
