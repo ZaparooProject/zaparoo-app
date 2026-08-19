@@ -157,7 +157,16 @@ describe("safeArea", () => {
         insets: { top: 47, bottom: 34, left: 0, right: 0 },
       });
       let active = true;
-      let listenerCallback: ((data: { insets: any }) => void) | null = null;
+      let listenerCallback:
+        | ((data: {
+            insets: {
+              top: number;
+              bottom: number;
+              left: number;
+              right: number;
+            };
+          }) => void)
+        | null = null;
       vi.mocked(SafeArea.addListener).mockImplementation(
         async (_event, callback) => {
           listenerCallback = callback;
