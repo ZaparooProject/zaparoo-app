@@ -348,6 +348,95 @@ describe("nfc", () => {
       }
     });
 
+    it.each(["success", "cancellation"] as const)(
+      "should release the session when listener removal rejects after %s",
+      async (outcome) => {
+        const firstRead = readTag();
+
+        await vi.waitFor(() => {
+          expect(mockState.listenerHandles.length).toBe(3);
+        });
+        mockState.listenerHandles[0]!.remove.mockRejectedValueOnce(
+          new Error("native listener removal failed"),
+        );
+
+        if (outcome === "success") {
+          mockState.nfcTagScannedCallback?.({
+            nfcTag: { id: [1, 2, 3, 4] },
+          } as NfcTagScannedEvent);
+        } else {
+          mockState.scanSessionCanceledCallback?.();
+        }
+
+        await expect(firstRead).resolves.toMatchObject({
+          status: outcome === "success" ? Status.Success : Status.Cancelled,
+        });
+        expect(sessionManager.isScanning).toBe(false);
+        expect(logger.error).toHaveBeenCalledWith(
+          "Failed to remove NFC session listener",
+          expect.any(Error),
+          expect.objectContaining({ action: "removeSessionListener" }),
+        );
+
+        const secondRead = readTag();
+        await vi.waitFor(() => {
+          expect(mockState.listenerHandles.length).toBe(6);
+        });
+        mockState.nfcTagScannedCallback?.({
+          nfcTag: { id: [5, 6, 7, 8] },
+        } as NfcTagScannedEvent);
+
+        await expect(secondRead).resolves.toMatchObject({
+          status: Status.Success,
+        });
+      },
+    );
+
+    it("should ignore stale callbacks when listener removal fails", async () => {
+      const firstWrite = writeTag("old operation");
+
+      await vi.waitFor(() => {
+        expect(mockState.listenerHandles.length).toBe(3);
+      });
+      const staleTagCallback = mockState.nfcTagScannedCallback!;
+      const staleCancelCallback = mockState.scanSessionCanceledCallback!;
+      const staleErrorCallback = mockState.scanSessionErrorCallback!;
+      for (const handle of mockState.listenerHandles) {
+        handle.remove.mockRejectedValueOnce(
+          new Error("native listener removal failed"),
+        );
+      }
+
+      await cancelSession();
+      await expect(firstWrite).resolves.toMatchObject({
+        status: Status.Cancelled,
+      });
+
+      const stopCallsAfterCancellation = mockStopScanSession.mock.calls.length;
+      const secondRead = readTag();
+      await vi.waitFor(() => {
+        expect(mockState.listenerHandles.length).toBe(6);
+      });
+
+      await staleTagCallback({
+        nfcTag: { id: [1, 2, 3, 4] },
+      } as NfcTagScannedEvent);
+      await staleCancelCallback();
+      await staleErrorCallback(new Error("stale native error"));
+
+      expect(mockWrite).not.toHaveBeenCalled();
+      expect(mockStopScanSession).toHaveBeenCalledTimes(
+        stopCallsAfterCancellation,
+      );
+
+      mockState.nfcTagScannedCallback?.({
+        nfcTag: { id: [5, 6, 7, 8] },
+      } as NfcTagScannedEvent);
+      await expect(secondRead).resolves.toMatchObject({
+        status: Status.Success,
+      });
+    });
+
     it("should return Cancelled status when scan is cancelled", async () => {
       const readPromise = readTag();
 

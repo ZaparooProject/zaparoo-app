@@ -85,7 +85,9 @@ import { parseDeviceEndpoint } from "@/lib/devices/endpoint";
 import { formatDurationDisplay, formatDurationAccessible } from "@/lib/utils";
 import {
   ConnectionContext,
+  DeviceConnectionActionsContext,
   type ConnectionContextValue,
+  type DeviceConnectionActionsContextValue,
 } from "@/hooks/useConnection";
 import { useNetworkScan } from "@/hooks/useNetworkScan";
 import { useAnnouncer } from "./A11yAnnouncer";
@@ -226,6 +228,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const isInitialized = useRef(false);
   // Track current connection to prevent stale events from old connections
   const currentConnectionId = useRef<string | null>(null);
+  const credentialWorkRef = useRef(
+    new Map<symbol, { recordId: string; promise: Promise<void> }>(),
+  );
+  const forgettingRecordIdsRef = useRef(new Set<string>());
   const mdnsRetryPendingForRecord = useRef<string | null>(null);
   // Monotonically identifies the latest current-client capability request.
   // Connection transitions invalidate older callbacks before they can write.
@@ -279,6 +285,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setCurrentClient,
     setEncryptionState,
     setPairingRequired,
+    resetConnectionState,
     addInboxMessage,
     setInboxMessages,
     setInboxModalOpen,
@@ -302,6 +309,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       setCurrentClient: state.setCurrentClient,
       setEncryptionState: state.setEncryptionState,
       setPairingRequired: state.setPairingRequired,
+      resetConnectionState: state.resetConnectionState,
       addInboxMessage: state.addInboxMessage,
       setInboxMessages: state.setInboxMessages,
       setInboxModalOpen: state.setInboxModalOpen,
@@ -329,6 +337,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   // These are updated via onConnectionChange callback
   const [localConnection, setLocalConnection] =
     useState<DeviceConnection | null>(null);
+  const [connectionRevision, setConnectionRevision] = useState(0);
 
   // Derive display states from local connection state
   const isConnected = localConnection?.state === "connected";
@@ -1252,7 +1261,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setPairingRequired(false);
     setPairingOpen(false);
 
-    if (connectionWsUrl === "" || activeRecordId === null) {
+    if (
+      connectionWsUrl === "" ||
+      activeRecordId === null ||
+      forgettingRecordIdsRef.current.has(activeRecordId)
+    ) {
       setConnectionState(ConnectionState.DISCONNECTED);
       return;
     }
@@ -1274,8 +1287,11 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     const connectionId =
       typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        : `${Date.now()}-${connectionRevision}-${Math.random().toString(36).slice(2)}`;
     currentConnectionId.current = connectionId;
+    const isCurrentConnection = () =>
+      currentConnectionId.current === connectionId &&
+      !forgettingRecordIdsRef.current.has(recordId);
 
     // Reset CoreAPI to clear any zombie requests from previous connections
     CoreAPI.reset();
@@ -1380,6 +1396,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         }
       },
       onEncryptedHandshakeOk: () => {
+        if (!isCurrentConnection()) return;
         setEncryptionState("encrypted");
         setPairingRequired(false);
         // The peer authenticated with whatever key answered getCredentials, so
@@ -1388,19 +1405,25 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         // to the canonical key now, and only drop the pointer to the old key
         // once that has actually landed.
         const provenKey = legacyKeyUsed;
-        void (
+        const workToken = Symbol("credentialWork");
+        const work = (
           provenKey === null
             ? Promise.resolve(true)
             : credentialStore.promoteRecordCredentials(recordId, provenKey)
         )
-          .then((migrationSettled) =>
-            deviceRegistry.markConnected(recordId, {
+          .then(async (migrationSettled) => {
+            if (!isCurrentConnection()) return;
+            await deviceRegistry.markConnected(recordId, {
               ...(provenKey === null ? {} : { provenLegacyKey: provenKey }),
               migrationSettled,
-            }),
-          )
-          .then(async () => {
-            if (!credentialsUsed || aliasReconciliationInFlight) return;
+            });
+            if (
+              !isCurrentConnection() ||
+              !credentialsUsed ||
+              aliasReconciliationInFlight
+            ) {
+              return;
+            }
             aliasReconciliationInFlight = true;
             try {
               const mergedRecordIds = await reconcileCredentialProvenAliases(
@@ -1417,9 +1440,15 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               aliasReconciliationInFlight = false;
             }
           })
-          .catch(ignoreReportedRegistryFailure);
+          .catch(ignoreReportedRegistryFailure)
+          .finally(() => {
+            credentialWorkRef.current.delete(workToken);
+          });
+        credentialWorkRef.current.set(workToken, { recordId, promise: work });
+        void work;
       },
       onPlaintextMode: () => {
+        if (!isCurrentConnection()) return;
         setEncryptionState("plaintext");
         setPairingRequired(false);
         // Nothing was proven, so the legacy key pointer stays put.
@@ -1445,6 +1474,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         );
       },
       onCredentialsRevoked: () => {
+        if (!isCurrentConnection()) return;
         // Server rejected our stored credentials — clear them and prompt
         // the user to pair again.
         // Delete exactly the key the server rejected — which may still be the
@@ -1531,6 +1561,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     };
   }, [
     activeRecordId,
+    connectionRevision,
     connectionWsUrl,
     connectionWsUrls,
     invalidateCurrentClientRequest,
@@ -1662,6 +1693,44 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     setPairingOpen(true);
   }, []);
 
+  const forgetDevice = useCallback(
+    async (recordId: string): Promise<void> => {
+      forgettingRecordIdsRef.current.add(recordId);
+      const isActive = deviceRegistry.getSnapshot().activeRecordId === recordId;
+
+      if (isActive) {
+        // ConnectionProvider owns transport lifetime. Invalidate callbacks before
+        // destroying the transport, then wait for credential work that already
+        // started so the final delete cannot be followed by a stale promotion.
+        currentConnectionId.current = null;
+        setPairingOpen(false);
+        setLocalConnection(null);
+        resetConnectionState();
+        CoreAPI.reset();
+        connectionManager.removeDevice(recordId);
+      }
+
+      const credentialWork = [...credentialWorkRef.current.values()]
+        .filter((work) => work.recordId === recordId)
+        .map((work) => work.promise);
+      await Promise.all(credentialWork);
+
+      try {
+        await deviceRegistry.removeRecord(recordId);
+      } catch (error) {
+        // Secure-storage failure leaves the record unchanged. If it became or
+        // remained active while fenced, recreate and rebind its transport.
+        if (deviceRegistry.getSnapshot().activeRecordId === recordId) {
+          setConnectionRevision((revision) => revision + 1);
+        }
+        throw error;
+      } finally {
+        forgettingRecordIdsRef.current.delete(recordId);
+      }
+    },
+    [resetConnectionState],
+  );
+
   // Memoize context value to prevent unnecessary re-renders of consumers
   const contextValue = useMemo<ConnectionContextValue>(
     () => ({
@@ -1681,20 +1750,26 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       openPairingModal,
     ],
   );
+  const connectionActions = useMemo<DeviceConnectionActionsContextValue>(
+    () => ({ forgetDevice }),
+    [forgetDevice],
+  );
 
   const pairingAddress =
     connectionManager.getActiveConnection()?.address ?? connectionAddress;
 
   return (
     <ConnectionContext.Provider value={contextValue}>
-      {children}
-      <PairingModal
-        isOpen={pairingOpen}
-        close={() => setPairingOpen(false)}
-        address={pairingAddress}
-        recordId={activeRecordId ?? ""}
-        onSuccess={() => connectionManager.restartActiveConnection()}
-      />
+      <DeviceConnectionActionsContext.Provider value={connectionActions}>
+        {children}
+        <PairingModal
+          isOpen={pairingOpen}
+          close={() => setPairingOpen(false)}
+          address={pairingAddress}
+          recordId={activeRecordId ?? ""}
+          onSuccess={() => connectionManager.restartActiveConnection()}
+        />
+      </DeviceConnectionActionsContext.Provider>
     </ConnectionContext.Provider>
   );
 }

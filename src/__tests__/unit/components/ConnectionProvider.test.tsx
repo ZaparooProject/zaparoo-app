@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
+import { SecureStorage } from "@aparajita/capacitor-secure-storage";
 import type { ConnectionStatus } from "@capacitor/network";
 import {
   __simulateDeviceDiscovered,
@@ -17,7 +18,10 @@ import {
 import { QueryClient } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "../../../test-utils";
 import { ConnectionProvider } from "../../../components/ConnectionProvider";
-import { useConnection } from "../../../hooks/useConnection";
+import {
+  useConnection,
+  useDeviceConnectionActions,
+} from "../../../hooks/useConnection";
 import { connectionManager } from "../../../lib/transport";
 import { CoreAPI } from "@/lib/coreApi";
 import {
@@ -250,10 +254,14 @@ vi.mock("../../../components/A11yAnnouncer", () => ({
 
 // test-utils already provides QueryClientProvider, so we use render directly
 
+let forgetDeviceFromContext: ((recordId: string) => Promise<void>) | null =
+  null;
+
 // Test component that uses the connection context
 function ConnectionConsumer() {
   const { isConnected, hasData, showConnecting, showReconnecting } =
     useConnection();
+  forgetDeviceFromContext = useDeviceConnectionActions().forgetDevice;
   return (
     <div>
       <span data-testid="isConnected">{String(isConnected)}</span>
@@ -284,6 +292,7 @@ async function resetStore() {
 describe("ConnectionProvider", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    forgetDeviceFromContext = null;
     await resetStore();
 
     const bridge = await import("@/lib/capacitorBridge");
@@ -355,6 +364,159 @@ describe("ConnectionProvider", () => {
       expect(Preferences.get).not.toHaveBeenCalled();
       expect(App.addListener).not.toHaveBeenCalled();
       expect(Network.addListener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("forgetting the active device", () => {
+    it("should recreate the owned transport when credential deletion fails", async () => {
+      vi.mocked(SecureStorage.remove).mockRejectedValueOnce(
+        new Error("secure storage deletion failed"),
+      );
+      render(
+        <ConnectionProvider>
+          <ConnectionConsumer />
+        </ConnectionProvider>,
+      );
+
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledTimes(1);
+      });
+
+      let caught: unknown;
+      await act(async () => {
+        try {
+          await forgetDeviceFromContext!(RECORD_ID);
+        } catch (error) {
+          caught = error;
+        }
+      });
+
+      expect(caught).toEqual(new Error("secure storage deletion failed"));
+      expect(connectionManager.removeDevice).toHaveBeenCalledWith(RECORD_ID);
+      expect(deviceRegistry.getSnapshot().records[RECORD_ID]).toBeDefined();
+      await waitFor(() => {
+        expect(connectionManager.addDevice).toHaveBeenCalledTimes(2);
+        expect(CoreAPI.setWsInstance).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it("should not connect a device activated while it is being forgotten", async () => {
+      const inactiveRecordId = "inactive-record";
+      await seedDeviceRegistry(
+        [
+          mockDeviceRecord({ recordId: RECORD_ID, address: DEVICE_ADDRESS }),
+          mockDeviceRecord({
+            recordId: inactiveRecordId,
+            address: "192.168.1.101:7497",
+          }),
+        ],
+        RECORD_ID,
+      );
+
+      let releaseCanonicalDelete!: () => void;
+      vi.mocked(SecureStorage.remove).mockImplementationOnce(
+        () =>
+          new Promise<boolean>((resolve) => {
+            releaseCanonicalDelete = () => resolve(false);
+          }),
+      );
+      render(
+        <ConnectionProvider>
+          <ConnectionConsumer />
+        </ConnectionProvider>,
+      );
+
+      let forgetting!: Promise<void>;
+      await act(async () => {
+        forgetting = forgetDeviceFromContext!(inactiveRecordId);
+        await Promise.resolve();
+      });
+      await vi.waitFor(() => {
+        expect(SecureStorage.remove).toHaveBeenCalledWith(
+          credentialKeyForRecord(inactiveRecordId),
+        );
+      });
+
+      await act(async () => {
+        await deviceRegistry.setActiveRecord(inactiveRecordId);
+      });
+      expect(connectionManager.addDevice).not.toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: inactiveRecordId }),
+      );
+
+      releaseCanonicalDelete();
+      await act(async () => {
+        await forgetting;
+      });
+
+      expect(
+        deviceRegistry.getSnapshot().records[inactiveRecordId],
+      ).toBeUndefined();
+      expect(connectionManager.addDevice).not.toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: inactiveRecordId }),
+      );
+    });
+
+    it("should await started credential work before deleting the record", async () => {
+      await seedDeviceRegistry(
+        [
+          mockDeviceRecord({
+            recordId: RECORD_ID,
+            address: DEVICE_ADDRESS,
+            legacyCredentialKey: "192.168.1.100",
+          }),
+        ],
+        RECORD_ID,
+      );
+      await credentialStore.set("192.168.1.100", {
+        authToken: "token-abc",
+        pairingKey: "a".repeat(64),
+        clientId: "client-uuid-1234",
+        pairedAt: 1700000000000,
+      });
+
+      let finishPromotion!: (settled: boolean) => void;
+      vi.spyOn(
+        credentialStore,
+        "promoteRecordCredentials",
+      ).mockImplementationOnce(
+        () =>
+          new Promise<boolean>((resolve) => {
+            finishPromotion = resolve;
+          }),
+      );
+      const removeRecord = vi.spyOn(deviceRegistry, "removeRecord");
+
+      render(
+        <ConnectionProvider>
+          <ConnectionConsumer />
+        </ConnectionProvider>,
+      );
+      const [config] = vi
+        .mocked(connectionManager.addDevice)
+        .mock.calls.at(-1)!;
+      await config.encryption!.getCredentials();
+      capturedEventHandlers.onEncryptedHandshakeOk!();
+
+      let forgetting!: Promise<void>;
+      await act(async () => {
+        forgetting = forgetDeviceFromContext!(RECORD_ID);
+        await Promise.resolve();
+      });
+
+      expect(connectionManager.removeDevice).toHaveBeenCalledWith(RECORD_ID);
+      expect(removeRecord).not.toHaveBeenCalled();
+
+      finishPromotion(true);
+      await act(async () => {
+        await forgetting;
+      });
+
+      expect(removeRecord).toHaveBeenCalledWith(RECORD_ID);
+      expect(deviceRegistry.getSnapshot().records[RECORD_ID]).toBeUndefined();
+      await expect(
+        credentialStore.get(credentialKeyForRecord(RECORD_ID)),
+      ).resolves.toBeNull();
     });
   });
 

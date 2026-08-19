@@ -9,6 +9,7 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
+import { SecureStorage } from "@aparajita/capacitor-secure-storage";
 import {
   __resetDeviceRegistryForTests,
   activeAddressOf,
@@ -482,6 +483,71 @@ describe("forgetting a device", () => {
     // `typed` is still paired under that key and was not the record forgotten.
     expect(deviceRegistry.getSnapshot().records[typed!.recordId]).toBeDefined();
     await expect(credentialStore.get("10.0.0.206")).resolves.toEqual(creds);
+  });
+
+  it("should preserve a legacy pairing claimed during canonical deletion", async () => {
+    const target = await deviceRegistry.selectAddress("10.0.0.206");
+    await credentialStore.set("10.0.0.206", creds);
+
+    let releaseCanonicalDelete!: () => void;
+    vi.mocked(SecureStorage.remove).mockImplementationOnce(
+      () =>
+        new Promise<boolean>((resolve) => {
+          releaseCanonicalDelete = () => resolve(false);
+        }),
+    );
+
+    const removal = deviceRegistry.removeRecord(target!.recordId);
+    await vi.waitFor(() => {
+      expect(SecureStorage.remove).toHaveBeenCalledWith(
+        credentialKeyForRecord(target!.recordId),
+      );
+    });
+
+    const discovered = await deviceRegistry.selectDiscovered({
+      discoveryId: "device-a",
+      hostname: "steamdeck.local",
+      addresses: ["10.0.0.206"],
+      port: 7497,
+    });
+    expect(discovered?.legacyCredentialKey).toBe("10.0.0.206");
+
+    releaseCanonicalDelete();
+    await removal;
+
+    expect(
+      deviceRegistry.getSnapshot().records[discovered!.recordId],
+    ).toBeDefined();
+    await expect(credentialStore.get("10.0.0.206")).resolves.toEqual(creds);
+  });
+
+  it("should not resurrect a removed record from a queued update", async () => {
+    const target = await deviceRegistry.selectAddress("10.0.0.207");
+    await credentialStore.set("10.0.0.207", creds);
+
+    let releaseLegacyDelete!: () => void;
+    vi.mocked(SecureStorage.remove)
+      .mockResolvedValueOnce(false)
+      .mockImplementationOnce(
+        () =>
+          new Promise<boolean>((resolve) => {
+            releaseLegacyDelete = () => resolve(true);
+          }),
+      );
+
+    const removal = deviceRegistry.removeRecord(target!.recordId);
+    await vi.waitFor(() => {
+      expect(SecureStorage.remove).toHaveBeenCalledWith("10.0.0.207");
+    });
+    const rename = deviceRegistry.setCustomName(target!.recordId, "Too late");
+
+    releaseLegacyDelete();
+    await removal;
+    await rename;
+
+    expect(
+      deviceRegistry.getSnapshot().records[target!.recordId],
+    ).toBeUndefined();
   });
 
   it("should ignore removal of an unknown record", async () => {

@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { CoreAPI } from "@/lib/coreApi";
+import { Preferences } from "@capacitor/preferences";
+import { SecureStorage } from "@aparajita/capacitor-secure-storage";
+import toast from "react-hot-toast";
 import {
   credentialKeyForRecord,
   credentialStore,
@@ -12,17 +14,19 @@ import {
   deviceRegistry,
   type DeviceRecord,
 } from "@/lib/devices/deviceRegistry";
-import { ConnectionState, useStatusStore } from "@/lib/store";
 import {
   mockDeviceRecord,
   seedDeviceRegistry,
 } from "@/test-utils/deviceRegistry";
 
-const { componentRef, mockNavigate, mockParams } = vi.hoisted(() => ({
-  componentRef: { current: null as any },
-  mockNavigate: vi.fn(),
-  mockParams: { current: { recordId: "" } },
-}));
+const { componentRef, mockForgetDevice, mockNavigate, mockParams } = vi.hoisted(
+  () => ({
+    componentRef: { current: null as any },
+    mockForgetDevice: vi.fn(),
+    mockNavigate: vi.fn(),
+    mockParams: { current: { recordId: "" } },
+  }),
+);
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
@@ -47,9 +51,16 @@ vi.mock("@/hooks/usePageHeadingFocus", () => ({
   usePageHeadingFocus: vi.fn(),
 }));
 
+vi.mock("react-hot-toast", () => ({
+  default: {
+    error: vi.fn(),
+  },
+}));
+
 const mockIsConnected = vi.fn(() => true);
 vi.mock("@/hooks/useConnection", () => ({
   useConnection: () => ({ isConnected: mockIsConnected() }),
+  useDeviceConnectionActions: () => ({ forgetDevice: mockForgetDevice }),
 }));
 
 import "@/routes/settings.devices_.$recordId";
@@ -94,6 +105,9 @@ describe("Settings Device Detail Route", () => {
       },
     });
     mockIsConnected.mockReturnValue(true);
+    mockForgetDevice.mockImplementation((recordId: string) =>
+      deviceRegistry.removeRecord(recordId),
+    );
     await seedRecord();
   });
 
@@ -257,18 +271,13 @@ describe("Settings Device Detail Route", () => {
     });
   });
 
-  it("should tear the connection down when forgetting the active device", async () => {
-    await seedRecord(true);
+  it("should keep the device available without orphaning credentials when registry persistence fails", async () => {
     const user = userEvent.setup();
-    useStatusStore.setState({
-      connectionState: ConnectionState.CONNECTED,
-      connected: true,
-      connectionError: "stale error",
-    });
-    CoreAPI.setWsInstance({
-      isConnected: true,
-      send: () => {},
-    } as unknown as Parameters<typeof CoreAPI.setWsInstance>[0]);
+    const credentialKey = credentialKeyForRecord(record.recordId);
+    await credentialStore.set(credentialKey, credentials);
+    vi.mocked(Preferences.set).mockRejectedValueOnce(
+      new Error("preferences write failed"),
+    );
     renderRoute();
 
     await user.click(
@@ -281,12 +290,80 @@ describe("Settings Device Detail Route", () => {
     );
 
     await waitFor(() => {
-      expect(useStatusStore.getState().connectionState).toBe(
-        ConnectionState.IDLE,
+      expect(toast.error).toHaveBeenCalledWith(
+        "settings.deviceDetail.forgetFailed",
       );
     });
-    expect(useStatusStore.getState().connectionError).toBe("");
-    expect(CoreAPI.isConnected()).toBe(false);
+    expect(deviceRegistry.getSnapshot().records[record.recordId]).toBeDefined();
+    await expect(credentialStore.get(credentialKey)).resolves.toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: "settings.deviceDetail.forgetConfirm",
+      }),
+    ).toBeEnabled();
+    expect(mockNavigate).not.toHaveBeenCalledWith({
+      to: "/settings/devices",
+      replace: true,
+    });
+  });
+
+  it("should keep the device without writing the registry when credential deletion fails", async () => {
+    const user = userEvent.setup();
+    const credentialKey = credentialKeyForRecord(record.recordId);
+    await credentialStore.set(credentialKey, credentials);
+    vi.mocked(SecureStorage.remove).mockRejectedValueOnce(
+      new Error("secure storage deletion failed"),
+    );
+    vi.mocked(Preferences.set).mockClear();
+    renderRoute();
+
+    await user.click(
+      screen.getByRole("button", { name: "settings.deviceDetail.forget" }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.deviceDetail.forgetConfirm",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "settings.deviceDetail.forgetFailed",
+      );
+    });
+    expect(deviceRegistry.getSnapshot().records[record.recordId]).toBeDefined();
+    await expect(credentialStore.get(credentialKey)).resolves.toEqual(
+      credentials,
+    );
+    expect(Preferences.set).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", {
+        name: "settings.deviceDetail.forgetConfirm",
+      }),
+    ).toBeEnabled();
+    expect(mockNavigate).not.toHaveBeenCalledWith({
+      to: "/settings/devices",
+      replace: true,
+    });
+  });
+
+  it("should delegate active-device teardown to the connection owner", async () => {
+    await seedRecord(true);
+    const user = userEvent.setup();
+    renderRoute();
+
+    await user.click(
+      screen.getByRole("button", { name: "settings.deviceDetail.forget" }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.deviceDetail.forgetConfirm",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(mockForgetDevice).toHaveBeenCalledWith(record.recordId);
+    });
     expect(deviceRegistry.getSnapshot().activeRecordId).toBeNull();
   });
 

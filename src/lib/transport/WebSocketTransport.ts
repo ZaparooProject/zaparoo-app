@@ -84,6 +84,7 @@ export class WebSocketTransport implements Transport {
   private session: EncryptedSession | null = null;
   private outboundQueue: string[] = [];
   private drainInFlight = false;
+  private outboundGeneration = 0;
   private inboundMessageChain: Promise<void> = Promise.resolve();
   private inboundGeneration = 0;
   // True once the server has answered a plaintext request without a -32002/-32001
@@ -322,6 +323,7 @@ export class WebSocketTransport implements Transport {
   private createWebSocket(): void {
     // Invalidate queued work from the previous socket before creating another.
     this.resetEncryptedInbound();
+    this.resetEncryptedOutbound();
     // Close any existing WebSocket to prevent stale handlers from corrupting state
     this.closeWebSocket();
 
@@ -784,28 +786,53 @@ export class WebSocketTransport implements Transport {
     void this.drain();
   }
 
+  private resetEncryptedOutbound(): void {
+    this.outboundGeneration++;
+    this.outboundQueue = [];
+    this.drainInFlight = false;
+  }
+
   private async drain(): Promise<void> {
-    while (this.outboundQueue.length > 0) {
-      if (this.ws?.readyState !== WebSocket.OPEN) {
+    const generation = this.outboundGeneration;
+    const session = this.session;
+    const ws = this.ws;
+
+    if (!session || !ws) {
+      if (generation === this.outboundGeneration) {
         this.drainInFlight = false;
-        return;
       }
-      const item = this.outboundQueue.shift()!;
-      try {
-        const frame = await this.session!.encryptAndFrame(item);
-        if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(frame);
+      return;
+    }
+
+    try {
+      while (this.outboundQueue.length > 0) {
+        if (ws.readyState !== WebSocket.OPEN) return;
+
+        const item = this.outboundQueue.shift()!;
+        const frame = await session.encryptAndFrame(item);
+        if (
+          generation !== this.outboundGeneration ||
+          session !== this.session ||
+          ws !== this.ws
+        ) {
+          return;
         }
-      } catch (err) {
-        logger.error(`[Transport:${this.deviceId}] Encrypt failed:`, err, {
-          category: "crypto",
-          action: "encrypt-failed",
-        });
-        this.handleConnectionError();
-        break;
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(frame);
+        }
+      }
+    } catch (err) {
+      if (generation !== this.outboundGeneration) return;
+      logger.error(`[Transport:${this.deviceId}] Encrypt failed:`, err, {
+        category: "crypto",
+        action: "encrypt-failed",
+      });
+      this.handleConnectionError();
+    } finally {
+      if (generation === this.outboundGeneration) {
+        this.drainInFlight = false;
       }
     }
-    this.drainInFlight = false;
   }
 
   // ── End encryption helpers ───────────────────────────────────────────────
@@ -1018,11 +1045,10 @@ export class WebSocketTransport implements Transport {
 
     this.closeWebSocket();
     this.resetEncryptedInbound();
+    this.resetEncryptedOutbound();
 
     // Reset encryption state for next connect cycle.
     this.session = null;
-    this.outboundQueue = [];
-    this.drainInFlight = false;
     this.encMode = "idle";
     this.plaintextVerified = false;
   }

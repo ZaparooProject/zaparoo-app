@@ -27,6 +27,7 @@ vi.mock("@capacitor/core", () => ({
   Capacitor: {
     getPlatform: vi.fn().mockReturnValue("ios"),
     isNativePlatform: vi.fn().mockReturnValue(true),
+    isPluginAvailable: vi.fn().mockReturnValue(true),
   },
 }));
 
