@@ -3,7 +3,7 @@ import {
   Purchases,
   type PurchasesPackage,
 } from "@revenuecat/purchases-capacitor";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import toast from "react-hot-toast";
 import { SlideModal } from "@/components/SlideModal";
@@ -69,9 +69,14 @@ const ProPurchaseModal = (props: {
   offeringsStatus: OfferingsStatus;
   setLifetimeProAccess: (access: boolean) => void;
 }) => {
-  const handlePurchase = () => {
-    if (!props.purchasePackage) return;
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const purchasePendingRef = useRef(false);
 
+  const handlePurchase = () => {
+    if (!props.purchasePackage || purchasePendingRef.current) return;
+
+    purchasePendingRef.current = true;
+    setIsPurchasing(true);
     const purchasePackage = props.purchasePackage;
     const user = useStatusStore.getState().loggedInUser;
     void (async () => {
@@ -101,6 +106,9 @@ const ProPurchaseModal = (props: {
           severity: "warning",
         });
         toast.error(t("scan.purchaseProFailed"));
+      } finally {
+        purchasePendingRef.current = false;
+        setIsPurchasing(false);
       }
     })();
   };
@@ -108,12 +116,21 @@ const ProPurchaseModal = (props: {
   return (
     <SlideModal
       isOpen={props.proPurchaseModalOpen}
-      close={() => props.setProPurchaseModalOpen(false)}
+      close={() => {
+        if (!purchasePendingRef.current) {
+          props.setProPurchaseModalOpen(false);
+        }
+      }}
+      dismissible={!isPurchasing}
       title={t("scan.purchaseProTitle")}
       footer={
         <Button
-          label={getPurchaseActionLabel(props.offeringsStatus)}
-          disabled={!props.purchasePackage}
+          label={
+            isPurchasing
+              ? t("loading")
+              : getPurchaseActionLabel(props.offeringsStatus)
+          }
+          disabled={!props.purchasePackage || isPurchasing}
           onClick={handlePurchase}
           intent="primary"
           className="w-full"

@@ -1,4 +1,4 @@
-import { render, screen, within } from "../../../../test-utils";
+import { render, screen, within } from "@/test-utils";
 import { describe, expect, it } from "vitest";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
 import { Button } from "@/components/wui/Button";
@@ -19,7 +19,7 @@ function renderRail() {
 }
 
 describe("ModalActionRail", () => {
-  it("groups direct actions separately from the primary action", () => {
+  it("should group direct actions separately from the primary action", () => {
     renderRail();
 
     const actions = screen.getByRole("group", { name: "Media actions" });
@@ -35,7 +35,7 @@ describe("ModalActionRail", () => {
     expect(screen.getByRole("button", { name: "Launch" })).toBeVisible();
   });
 
-  it("keeps larger action sets directly available", () => {
+  it("should keep larger action sets directly available", () => {
     render(
       <ModalActionRail
         aria-label="Media actions"
@@ -50,7 +50,7 @@ describe("ModalActionRail", () => {
     expect(within(actions).getAllByRole("button")).toHaveLength(7);
   });
 
-  it("preserves secondary-to-primary focus order", () => {
+  it("should preserve secondary-to-primary focus order", () => {
     renderRail();
 
     const favorite = screen.getByRole("button", { name: "Favorite" });

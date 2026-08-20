@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor } from "@/test-utils";
+import { render, screen, waitFor, within } from "@/test-utils";
 import { SettingHelp } from "@/components/wui/SettingHelp";
 
 describe("SettingHelp", () => {
-  it("opens formatted help in a slide modal and restores trigger focus", async () => {
+  it("should open formatted help in a slide modal and restore trigger focus", async () => {
     const user = userEvent.setup();
     render(
       <SettingHelp
@@ -27,7 +27,9 @@ describe("SettingHelp", () => {
     expect(screen.getByText("reader mode").tagName).toBe("STRONG");
     expect(screen.getByText("Second paragraph.")).toBeInTheDocument();
 
-    await user.click(screen.getAllByRole("button", { name: "nav.close" })[0]!);
+    await user.click(
+      within(dialog).getAllByRole("button", { name: "nav.close" })[0]!,
+    );
 
     expect(
       screen.queryByRole("dialog", { name: "Reader mode" }),

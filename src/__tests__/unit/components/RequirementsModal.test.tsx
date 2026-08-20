@@ -1,4 +1,4 @@
-import { act, render, screen, fireEvent, waitFor } from "../../../test-utils";
+import { act, render, screen, fireEvent, waitFor } from "@/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { RequirementsModal } from "@/components/RequirementsModal";
@@ -129,6 +129,38 @@ describe("RequirementsModal", () => {
       /requirements\.privacyLabel/,
     );
     expect(privacyLabels.length).toBeGreaterThan(0);
+  });
+
+  it("should expose legal agreements as links outside checkbox labels", () => {
+    useRequirementsStore.setState({
+      isOpen: true,
+      pendingRequirements: [
+        {
+          type: "terms_acceptance",
+          description: "Accept terms",
+          endpoint: "/account/requirements",
+        },
+      ],
+    });
+
+    render(<RequirementsModal />);
+
+    const termsLink = screen.getByRole("link", {
+      name: /requirements\.tosLink/,
+    });
+    const privacyLink = screen.getByRole("link", {
+      name: /requirements\.privacyLink/,
+    });
+    expect(termsLink).toHaveAttribute("href", "https://zaparoo.com/terms");
+    expect(privacyLink).toHaveAttribute("href", "https://zaparoo.com/privacy");
+    expect(termsLink.closest("label")).toBeNull();
+    expect(privacyLink.closest("label")).toBeNull();
+    expect(
+      screen.getByRole("checkbox", { name: "requirements.tosLabel" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: "requirements.privacyLabel" }),
+    ).toBeInTheDocument();
   });
 
   it("should render age verification checkbox when required", () => {
@@ -381,6 +413,7 @@ describe("RequirementsModal", () => {
       expect.anything(),
       expect.anything(),
     );
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it("should log unexpected RevenueCat logout errors", async () => {

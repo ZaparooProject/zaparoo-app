@@ -219,10 +219,6 @@ export function RequirementsModal() {
     }
   }, [close, pendingRequirements, setLoggedInUser, t]);
 
-  const openExternalLink = (url: string) => {
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
   return (
     <SlideModal
       isOpen={isOpen}
@@ -275,17 +271,20 @@ export function RequirementsModal() {
                 checked={tosChecked}
                 onCheckedChange={(checked) => setTosChecked(checked === true)}
               />
-              <Label htmlFor="tos" className="text-sm leading-tight text-white">
-                {t("requirements.tosLabel")}{" "}
-                <button
-                  type="button"
-                  onClick={() => openExternalLink(TOS_URL)}
-                  className="inline-flex items-center gap-1 text-blue-400 underline hover:text-blue-300"
+              <div className="text-sm leading-tight text-white">
+                <Label htmlFor="tos" className="inline leading-tight">
+                  {t("requirements.tosLabel")}
+                </Label>{" "}
+                <a
+                  href={TOS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-sm text-blue-400 underline hover:text-blue-300 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                 >
                   {t("requirements.tosLink")}
                   <ExternalLinkIcon className="h-3 w-3" />
-                </button>
-              </Label>
+                </a>
+              </div>
             </div>
 
             {/* Privacy Policy */}
@@ -297,20 +296,20 @@ export function RequirementsModal() {
                   setPrivacyChecked(checked === true)
                 }
               />
-              <Label
-                htmlFor="privacy"
-                className="text-sm leading-tight text-white"
-              >
-                {t("requirements.privacyLabel")}{" "}
-                <button
-                  type="button"
-                  onClick={() => openExternalLink(PRIVACY_URL)}
-                  className="inline-flex items-center gap-1 text-blue-400 underline hover:text-blue-300"
+              <div className="text-sm leading-tight text-white">
+                <Label htmlFor="privacy" className="inline leading-tight">
+                  {t("requirements.privacyLabel")}
+                </Label>{" "}
+                <a
+                  href={PRIVACY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-sm text-blue-400 underline hover:text-blue-300 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                 >
                   {t("requirements.privacyLink")}
                   <ExternalLinkIcon className="h-3 w-3" />
-                </button>
-              </Label>
+                </a>
+              </div>
             </div>
           </div>
         )}
@@ -359,7 +358,7 @@ export function RequirementsModal() {
                 <button
                   type="button"
                   onClick={handleSendVerificationEmail}
-                  className="text-muted-foreground text-center text-sm underline hover:text-white"
+                  className="text-muted-foreground rounded-sm text-center text-sm underline hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                 >
                   {t("requirements.resendEmail")}
                 </button>

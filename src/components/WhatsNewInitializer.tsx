@@ -36,6 +36,7 @@ export function WhatsNewInitializer() {
   const [isOpen, setIsOpen] = useState(false);
   const processedRuntimeKeyRef = useRef<string | null>(null);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dismissingRef = useRef(false);
 
   useEffect(() => {
     if (!hasHydrated) return;
@@ -94,7 +95,14 @@ export function WhatsNewInitializer() {
   ]);
 
   useEffect(() => {
-    if (!pendingAnnouncement || !tourCompleted || isOpen) return;
+    if (
+      !pendingAnnouncement ||
+      !tourCompleted ||
+      isOpen ||
+      dismissingRef.current
+    ) {
+      return;
+    }
 
     const timer = setTimeout(() => {
       setIsOpen(true);
@@ -111,6 +119,7 @@ export function WhatsNewInitializer() {
   );
 
   const handleDismiss = useCallback(() => {
+    dismissingRef.current = true;
     if (pendingAnnouncement && pendingRuntimeKey) {
       markWhatsNewSeen(pendingAnnouncement.id, pendingRuntimeKey);
     }
@@ -119,6 +128,7 @@ export function WhatsNewInitializer() {
     dismissTimerRef.current = setTimeout(() => {
       setPendingAnnouncement(null);
       setPendingRuntimeKey(null);
+      dismissingRef.current = false;
       dismissTimerRef.current = null;
     }, MODAL_TRANSITION_MS);
   }, [markWhatsNewSeen, pendingAnnouncement, pendingRuntimeKey]);

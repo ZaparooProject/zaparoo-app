@@ -9,7 +9,11 @@ export function ModalActionBar({
   secondaryAction,
   primaryAction,
 }: ModalActionBarProps) {
-  if (!secondaryAction) {
+  if (
+    secondaryAction === null ||
+    secondaryAction === undefined ||
+    secondaryAction === false
+  ) {
     return <div className="[&>*]:min-h-12 [&>*]:w-full">{primaryAction}</div>;
   }
 

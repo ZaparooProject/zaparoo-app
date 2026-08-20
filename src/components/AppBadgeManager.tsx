@@ -56,7 +56,7 @@ export function AppBadgeManager() {
         footer={
           <Button
             label={t("nav.close")}
-            className="mx-auto"
+            className="mx-auto w-fit"
             onClick={dismissPermissionDeniedHelp}
           />
         }

@@ -4,7 +4,7 @@ import { render, screen } from "@/test-utils";
 import { LibraryMediaOptionsModal } from "@/components/library/LibraryMediaOptionsModal";
 
 describe("LibraryMediaOptionsModal", () => {
-  it("keeps Go to letter mounted and disables it when unavailable", () => {
+  it("should keep Go to letter mounted and disable it when unavailable", () => {
     render(
       <LibraryMediaOptionsModal
         isOpen
@@ -21,7 +21,7 @@ describe("LibraryMediaOptionsModal", () => {
     ).toBeDisabled();
   });
 
-  it("runs Go to letter when available", async () => {
+  it("should run Go to letter when available", async () => {
     const user = userEvent.setup();
     const onGoToLetter = vi.fn();
     render(

@@ -69,6 +69,7 @@ function WarpPurchaseModal({
     <SlideModal
       isOpen={open}
       close={() => onOpenChange(false)}
+      dismissible={action === null}
       title={t("online.warp.purchaseTitle")}
       footer={
         <Button

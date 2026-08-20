@@ -17,10 +17,10 @@ import { useHapticPress } from "@/hooks/useHapticPress";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { SystemFilterControls } from "@/components/SystemFilterControls";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
-import { ModalActionBar } from "./wui/ModalActionBar";
 import { BackToTop } from "./BackToTop";
 
 export type { System } from "@/lib/models";

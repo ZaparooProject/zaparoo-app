@@ -121,11 +121,7 @@ function BlockingModalHarness() {
 
   return (
     <>
-      <button
-        type="button"
-        data-testid="trigger-later-modal"
-        onClick={() => setLaterOpen(true)}
-      >
+      <button type="button" onClick={() => setLaterOpen(true)}>
         Trigger later modal
       </button>
       <SlideModal
@@ -243,22 +239,26 @@ describe("SlideModal", () => {
     expect(closeMock).toHaveBeenCalled();
   });
 
-  it("closes modal when close button is clicked", () => {
+  it("closes modal when close button is clicked", async () => {
+    const user = userEvent.setup();
     const closeMock = vi.fn();
     render(<SlideModal {...mockProps} isOpen={true} close={closeMock} />);
 
     // There are two close buttons (drag handle on mobile, X button on desktop)
     const closeButtons = screen.getAllByRole("button", { name: "nav.close" });
     expect(closeButtons.length).toBe(2);
-    fireEvent.click(closeButtons[0]!);
+    await user.click(closeButtons[0]!);
 
     expect(closeMock).toHaveBeenCalled();
   });
 
-  it("keeps a blocking modal active when a later modal is requested", () => {
+  it("keeps a blocking modal active when a later modal is requested", async () => {
+    const user = userEvent.setup();
     render(<BlockingModalHarness />);
 
-    fireEvent.click(screen.getByTestId("trigger-later-modal"));
+    await user.click(
+      screen.getByRole("button", { name: "Trigger later modal" }),
+    );
 
     expect(
       screen.getByRole("dialog", { name: "Mandatory blocker" }),

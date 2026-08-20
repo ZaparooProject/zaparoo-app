@@ -446,7 +446,7 @@ Persistent footer behavior:
 - current reference implementations are `MediaDetailsModal` and `LibraryMediaDetailsModal`
 - use `footerSkipLabel` when long content needs direct keyboard/screen-reader navigation to actions
 
-Use `dismissible={false}` only for mandatory blocking flows. This removes overlay, drag, Escape, Android-back, and close-button dismissal while preserving explicit completion/logout actions.
+Use `dismissible={false}` only for mandatory blocking flows. This keeps the visible overlay but disables overlay-click, drag, Escape, Android-back, and close-button dismissal while preserving explicit completion/logout actions.
 
 Do not implement one-off bottom-sheet shells.
 

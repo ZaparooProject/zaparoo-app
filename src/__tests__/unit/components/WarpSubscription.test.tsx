@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import toast from "react-hot-toast";
 import type { PurchasesPackage } from "@revenuecat/purchases-capacitor";
-import { render, screen, waitFor } from "@/test-utils";
+import { render, screen, waitFor, within } from "@/test-utils";
 import { usePurchasePreviewStore } from "@/lib/purchasePreviewStore";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 
@@ -114,6 +114,30 @@ describe("WarpSubscription", () => {
     expect(
       screen.getByText("online.warp.benefitDevelopment"),
     ).toBeInTheDocument();
+  });
+
+  it("should block dismissal while a purchase is pending", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<WarpSubscription appUserID="user-123" />);
+    await user.click(screen.getByRole("button", { name: "online.warp.get" }));
+    const dialog = screen.getByRole("dialog", {
+      name: "online.warp.purchaseTitle",
+    });
+
+    mockUseWarpSubscription.mockReturnValue(hookState({ action: "purchase" }));
+    rerender(<WarpSubscription appUserID="user-123" />);
+
+    expect(
+      within(dialog).queryByRole("button", { name: "nav.close" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", {
+        name: "online.warp.purchasing",
+      }),
+    ).toBeDisabled();
+
+    await user.keyboard("{Escape}");
+    expect(dialog).toBeInTheDocument();
   });
 
   it("should allow selecting monthly plan", async () => {
@@ -239,7 +263,12 @@ describe("WarpSubscription", () => {
 
     expect(screen.getByText("$3.99")).toBeInTheDocument();
 
-    await user.click(screen.getAllByRole("button", { name: "nav.close" })[0]!);
+    const dialog = screen.getByRole("dialog", {
+      name: "online.warp.purchaseTitle",
+    });
+    await user.click(
+      within(dialog).getAllByRole("button", { name: "nav.close" })[0]!,
+    );
 
     expect(
       screen.queryByRole("dialog", { name: "online.warp.purchaseTitle" }),

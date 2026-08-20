@@ -749,9 +749,7 @@ describe("Settings Online Route", () => {
     it("should open delete confirmation dialog", async () => {
       const user = userEvent.setup();
       renderComponent();
-      const dialog = screen
-        .getByText("online.deleteAccountConfirmTitle", { selector: "h2" })
-        .closest('[role="dialog"]')!;
+      const dialog = screen.getByRole("dialog", { hidden: true });
       expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
 
       await user.click(

@@ -10,12 +10,12 @@ import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { compareStrings } from "@/lib/utils";
 import { TagInfo } from "@/lib/models";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useAccessibleLists } from "@/hooks/useAccessibleLists";
 import { useHapticPress } from "@/hooks/useHapticPress";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
-import { ModalActionBar } from "./wui/ModalActionBar";
 import { BackToTop } from "./BackToTop";
 import {
   Accordion,

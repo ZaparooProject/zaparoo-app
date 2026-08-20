@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "../../../test-utils";
+import userEvent from "@testing-library/user-event";
 import { useContext } from "react";
 import { SlideModalProvider } from "@/components/SlideModalProvider";
 import { SlideModalContext } from "@/hooks/useSlideModalManager";
@@ -152,7 +153,8 @@ describe("SlideModalProvider", () => {
     expect(mockClose3).toHaveBeenCalled();
   });
 
-  it("should reject later modals while a blocking modal is registered", () => {
+  it("should reject later modals while a blocking modal is registered", async () => {
+    const user = userEvent.setup();
     const blockingClose = vi.fn();
     const laterClose = vi.fn();
     let accepted: boolean | undefined;
@@ -169,7 +171,6 @@ describe("SlideModalProvider", () => {
             accepted = manager?.closeAllExcept("later");
             if (accepted) manager?.registerModal("later", laterClose);
           }}
-          data-testid="try-later-modal"
         >
           Try later modal
         </button>
@@ -182,22 +183,21 @@ describe("SlideModalProvider", () => {
       </SlideModalProvider>,
     );
 
-    fireEvent.click(screen.getByTestId("try-later-modal"));
+    await user.click(screen.getByRole("button", { name: "Try later modal" }));
 
     expect(accepted).toBe(false);
     expect(blockingClose).not.toHaveBeenCalled();
     expect(laterClose).not.toHaveBeenCalled();
   });
 
-  it("should handle closeAllExcept when no modals are registered", () => {
+  it("should handle closeAllExcept when no modals are registered", async () => {
+    const user = userEvent.setup();
+
     function TestComponent() {
       const manager = useContext(SlideModalContext);
 
       return (
-        <button
-          onClick={() => manager?.closeAllExcept("nonexistent")}
-          data-testid="close-nonexistent"
-        >
+        <button onClick={() => manager?.closeAllExcept("nonexistent")}>
           Close All Except Nonexistent
         </button>
       );
@@ -209,9 +209,12 @@ describe("SlideModalProvider", () => {
       </SlideModalProvider>,
     );
 
-    // Should not throw error when no modals are registered
-    expect(() => {
-      fireEvent.click(screen.getByTestId("close-nonexistent"));
-    }).not.toThrow();
+    await user.click(
+      screen.getByRole("button", { name: "Close All Except Nonexistent" }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Close All Except Nonexistent" }),
+    ).toBeInTheDocument();
   });
 });

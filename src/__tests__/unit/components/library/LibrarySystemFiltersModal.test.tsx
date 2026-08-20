@@ -28,7 +28,7 @@ function renderModal(
 }
 
 describe("LibrarySystemFiltersModal", () => {
-  it("shows labelled Reset before the primary action", () => {
+  it("should show labelled Reset before the primary action", () => {
     renderModal();
 
     const reset = screen.getByRole("button", {
@@ -45,7 +45,7 @@ describe("LibrarySystemFiltersModal", () => {
     ).toBeTruthy();
   });
 
-  it("enables and runs Reset when draft filters differ", async () => {
+  it("should enable and run Reset when draft filters differ", async () => {
     const user = userEvent.setup();
     const { props } = renderModal({ selectedManufacturer: "Nintendo" });
 
