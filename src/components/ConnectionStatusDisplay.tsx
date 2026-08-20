@@ -10,6 +10,7 @@ import {
   LockOpen,
 } from "lucide-react";
 import { useConnection } from "@/hooks/useConnection";
+import { useConnectionPresentation } from "@/hooks/useConnectionPresentation";
 import { useStatusStore } from "@/lib/store";
 import {
   activeAddressOf,
@@ -24,6 +25,8 @@ type ConnectionUIState =
   | "connecting"
   | "reconnecting"
   | "connected"
+  | "unavailable"
+  | "networkUnavailable"
   | "error"
   | "disconnected"
   | "pairingRequired";
@@ -71,6 +74,9 @@ export function ConnectionStatusDisplay({
 }: ConnectionStatusDisplayProps) {
   const { t } = useTranslation();
   const { isConnected, showConnecting, showReconnecting } = useConnection();
+  const connectionPresentation = useConnectionPresentation({
+    immediate: true,
+  });
   const encryptionState = useStatusStore((s) => s.encryptionState);
   const pairingRequired = useStatusStore((s) => s.pairingRequired);
   const savedAddress = useDeviceRegistry(activeAddressOf);
@@ -84,6 +90,16 @@ export function ConnectionStatusDisplay({
     // and snatching it back.
     if (!registryHydrated) return "connecting";
     if (!savedAddress) return "disconnected";
+    // Pairing-required outranks reconnecting/error so the user sees the real
+    // blocker instead of a generic "Reconnecting..." spinner that won't resolve
+    // without their action.
+    if (pairingRequired) return "pairingRequired";
+    // Confirmed network and prolonged Core outages outrank optimistic transport
+    // state, including the open-but-unverified handshake window.
+    if (connectionPresentation.kind === "networkUnavailable") {
+      return "networkUnavailable";
+    }
+    if (connectionPresentation.kind === "unavailable") return "unavailable";
     // The transport flips to "connected" when the WebSocket opens, before the
     // server has confirmed the encryption mode. Hold the UI in connecting/
     // reconnecting until the consumer learns the mode (encryptionState is set
@@ -94,10 +110,6 @@ export function ConnectionStatusDisplay({
       return showReconnecting ? "reconnecting" : "connecting";
     }
     if (isConnected) return "connected";
-    // Pairing-required outranks reconnecting/error so the user sees the real
-    // blocker instead of a generic "Reconnecting..." spinner that won't resolve
-    // without their action.
-    if (pairingRequired) return "pairingRequired";
     // Show reconnecting state (previously connected, now retrying)
     if (showReconnecting) return "reconnecting";
     // Show error if we have one during initial connection attempts
@@ -112,16 +124,20 @@ export function ConnectionStatusDisplay({
   // State configuration - maps UI states to display values
   const stateConfig: Record<ConnectionUIState, ConnectionStatusConfig> = {
     connecting: {
-      icon: <Loader2 className="h-6 w-6 animate-spin" />,
+      icon: (
+        <Loader2 className="h-6 w-6 animate-spin motion-reduce:animate-none" />
+      ),
       iconColorClass: "text-primary",
-      title: t("connection.connecting"),
+      title: t("connection.connectingToCore"),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     reconnecting: {
-      icon: <Loader2 className="h-6 w-6 animate-spin" />,
+      icon: (
+        <Loader2 className="h-6 w-6 animate-spin motion-reduce:animate-none" />
+      ),
       iconColorClass: "text-primary",
-      title: t("connection.reconnecting"),
+      title: t("connection.reconnectingToCore"),
       subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
@@ -130,6 +146,20 @@ export function ConnectionStatusDisplay({
       iconColorClass: "text-success",
       title: t("scan.connectedHeading"),
       subtitle: connectedSubtitle || addressOrPlaceholder,
+      subtitleColorClass: "text-muted-foreground",
+    },
+    unavailable: {
+      icon: <AlertTriangle className="h-6 w-6" />,
+      iconColorClass: "text-warning",
+      title: t("connection.coreUnavailable"),
+      subtitle: addressOrPlaceholder,
+      subtitleColorClass: "text-muted-foreground",
+    },
+    networkUnavailable: {
+      icon: <WifiOff className="h-6 w-6" />,
+      iconColorClass: "text-warning",
+      title: t("connection.networkUnavailable"),
+      subtitle: addressOrPlaceholder,
       subtitleColorClass: "text-muted-foreground",
     },
     error: {
@@ -168,7 +198,7 @@ export function ConnectionStatusDisplay({
     <div className={`flex items-center gap-3 ${className || ""}`}>
       {/* Icon */}
       <div
-        className={`flex-shrink-0 px-1.5 ${config.iconColorClass}`}
+        className={`shrink-0 px-1.5 ${config.iconColorClass}`}
         aria-hidden="true"
       >
         {config.icon}

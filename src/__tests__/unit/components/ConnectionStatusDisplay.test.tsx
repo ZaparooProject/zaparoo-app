@@ -34,6 +34,8 @@ describe("ConnectionStatusDisplay encryption gate", () => {
     useStatusStore.setState({
       encryptionState: "unknown",
       pairingRequired: false,
+      networkAvailable: true,
+      connectionIssueStartedAt: null,
     });
     // Without a saved device the component reports "disconnected" regardless of
     // the connection context, so every state below needs one selected.
@@ -43,7 +45,7 @@ describe("ConnectionStatusDisplay encryption gate", () => {
   it("should show Connecting when isConnected=true but encryptionState is unknown", () => {
     render(wrap(<ConnectionStatusDisplay />, { isConnected: true }));
 
-    expect(screen.getByText("connection.connecting")).toBeInTheDocument();
+    expect(screen.getByText("connection.connectingToCore")).toBeInTheDocument();
     expect(screen.queryByText("scan.connectedHeading")).not.toBeInTheDocument();
   });
 
@@ -55,7 +57,9 @@ describe("ConnectionStatusDisplay encryption gate", () => {
       }),
     );
 
-    expect(screen.getByText("connection.reconnecting")).toBeInTheDocument();
+    expect(
+      screen.getByText("connection.reconnectingToCore"),
+    ).toBeInTheDocument();
     expect(screen.queryByText("scan.connectedHeading")).not.toBeInTheDocument();
   });
 
@@ -77,8 +81,48 @@ describe("ConnectionStatusDisplay encryption gate", () => {
     expect(screen.getByLabelText("connection.encrypted")).toBeInTheDocument();
   });
 
+  it("should show prolonged Core unavailability", () => {
+    useStatusStore.setState({
+      connectionIssueStartedAt: Date.now() - 10_000,
+    });
+
+    render(
+      wrap(<ConnectionStatusDisplay />, {
+        isConnected: true,
+        showReconnecting: true,
+      }),
+    );
+
+    expect(screen.getByText("connection.coreUnavailable")).toBeInTheDocument();
+  });
+
+  it("should prioritize explicit network unavailability", () => {
+    useStatusStore.setState({
+      encryptionState: "plaintext",
+      networkAvailable: false,
+      connectionIssueStartedAt: Date.now() - 10_000,
+    });
+
+    render(
+      wrap(<ConnectionStatusDisplay />, {
+        isConnected: true,
+        showReconnecting: true,
+      }),
+    );
+
+    expect(
+      screen.getByText("connection.networkUnavailable"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("connection.coreUnavailable"),
+    ).not.toBeInTheDocument();
+  });
+
   it("should show Pairing required when not connected and pairingRequired=true", () => {
-    useStatusStore.setState({ pairingRequired: true });
+    useStatusStore.setState({
+      pairingRequired: true,
+      connectionIssueStartedAt: Date.now() - 10_000,
+    });
 
     render(
       wrap(<ConnectionStatusDisplay />, {

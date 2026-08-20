@@ -258,7 +258,7 @@ describe("DeviceConnectionCard", () => {
     render(<DeviceConnectionCard {...defaultProps} />);
 
     // ConnectionStatusDisplay shows "Connecting..." when connecting
-    expect(screen.getByText("connection.connecting")).toBeInTheDocument();
+    expect(screen.getByText("connection.connectingToCore")).toBeInTheDocument();
   });
 
   it("shows reconnecting state", () => {
@@ -272,7 +272,9 @@ describe("DeviceConnectionCard", () => {
     render(<DeviceConnectionCard {...defaultProps} />);
 
     // ConnectionStatusDisplay shows "Reconnecting..." when reconnecting
-    expect(screen.getByText("connection.reconnecting")).toBeInTheDocument();
+    expect(
+      screen.getByText("connection.reconnectingToCore"),
+    ).toBeInTheDocument();
   });
 
   describe("keyboard interaction", () => {

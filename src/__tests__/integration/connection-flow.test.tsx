@@ -99,7 +99,9 @@ describe("Connection Flow Integration", () => {
         </ConnectionWrapper>,
       );
 
-      expect(screen.getByText("connection.connecting")).toBeInTheDocument();
+      expect(
+        screen.getByText("connection.connectingToCore"),
+      ).toBeInTheDocument();
     });
 
     it("should show connected state when connection is established", () => {
@@ -138,7 +140,9 @@ describe("Connection Flow Integration", () => {
         </ConnectionWrapper>,
       );
 
-      expect(screen.getByText("connection.reconnecting")).toBeInTheDocument();
+      expect(
+        screen.getByText("connection.reconnectingToCore"),
+      ).toBeInTheDocument();
     });
 
     it("should show error state with error message", () => {
@@ -284,7 +288,9 @@ describe("Connection Flow Integration", () => {
       );
 
       // Gate must hold UI in "Connecting" — no green flash.
-      expect(screen.getByText("connection.connecting")).toBeInTheDocument();
+      expect(
+        screen.getByText("connection.connectingToCore"),
+      ).toBeInTheDocument();
       expect(
         screen.queryByText("scan.connectedHeading"),
       ).not.toBeInTheDocument();
@@ -336,7 +342,9 @@ describe("Connection Flow Integration", () => {
         </ConnectionWrapper>,
       );
 
-      expect(screen.getByText("connection.reconnecting")).toBeInTheDocument();
+      expect(
+        screen.getByText("connection.reconnectingToCore"),
+      ).toBeInTheDocument();
 
       // Phase 4: WebSocket reopens with creds, transport reports connected,
       // encrypted handshake still in flight.
@@ -353,7 +361,9 @@ describe("Connection Flow Integration", () => {
       );
 
       // Gate keeps UI in "Reconnecting" — still no green flash.
-      expect(screen.getByText("connection.reconnecting")).toBeInTheDocument();
+      expect(
+        screen.getByText("connection.reconnectingToCore"),
+      ).toBeInTheDocument();
       expect(
         screen.queryByText("scan.connectedHeading"),
       ).not.toBeInTheDocument();
@@ -418,7 +428,7 @@ describe("Connection Flow Integration", () => {
         screen.getByText("connection.pairingRequired"),
       ).toBeInTheDocument();
       expect(
-        screen.queryByText("connection.reconnecting"),
+        screen.queryByText("connection.reconnectingToCore"),
       ).not.toBeInTheDocument();
 
       // Even if a future regression caused the transport to emit a transient
@@ -434,7 +444,7 @@ describe("Connection Flow Integration", () => {
         screen.getByText("connection.pairingRequired"),
       ).toBeInTheDocument();
       expect(
-        screen.queryByText("connection.reconnecting"),
+        screen.queryByText("connection.reconnectingToCore"),
       ).not.toBeInTheDocument();
     });
   });

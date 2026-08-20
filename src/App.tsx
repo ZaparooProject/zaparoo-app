@@ -26,7 +26,6 @@ import { preloadZapLogo } from "@/lib/zapLogo";
 import { routeTree } from "./routeTree.gen";
 import { useStatusStore } from "./lib/store";
 import { ConnectionProvider } from "./components/ConnectionProvider";
-import { ReconnectingIndicator } from "./components/ReconnectingIndicator";
 import { MediaFinishedToast } from "./components/MediaFinishedToast.tsx";
 import { SlideModalProvider } from "./components/SlideModalProvider";
 import { RequirementsModal } from "./components/RequirementsModal";
@@ -497,7 +496,6 @@ export default function App() {
           <ConnectionProvider>
             <NowPlayingToast />
             <MediaFinishedToastHandler />
-            <ReconnectingIndicator />
             <div
               className="app-frame h-screen w-screen"
               style={{

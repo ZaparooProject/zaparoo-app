@@ -151,24 +151,6 @@ describe("Safe Area Regression Tests", () => {
       expect(style.paddingBottom).toBe("34px");
     });
   });
-
-  describe("ReconnectingIndicator", () => {
-    it("should position above bottom nav accounting for safe insets", async () => {
-      const { ReconnectingIndicator } =
-        await import("@/components/ReconnectingIndicator");
-
-      const { container } = render(<ReconnectingIndicator />);
-
-      const indicator = container.querySelector('[role="status"]');
-      expect(indicator).toBeInTheDocument();
-
-      const style = (indicator as HTMLElement).style;
-      expect(indicator).toHaveClass(
-        "bottom-[calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset)+1rem)]",
-      );
-      expect(style.getPropertyValue("--bottom-nav-safe-inset")).toBe("34px");
-    });
-  });
 });
 
 describe("Safe Area Anti-Regression: No CSS env() in components", () => {

@@ -1158,6 +1158,11 @@
     "connection": {
       "connecting": "接続中...",
       "reconnecting": "再接続中...",
+      "connectingToCore": "Coreに接続中...",
+      "reconnectingToCore": "Coreに再接続中...",
+      "coreUnavailable": "Coreに接続できません。再試行中...",
+      "networkUnavailable": "ネットワーク接続がありません",
+      "restored": "Coreに接続しました",
       "pairingRequired": "ペアリングが必要です",
       "encrypted": "暗号化された接続",
       "unencrypted": "暗号化されていない接続",

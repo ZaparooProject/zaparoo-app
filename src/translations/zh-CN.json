@@ -1158,6 +1158,11 @@
     "connection": {
       "connecting": "正在连接...",
       "reconnecting": "正在重新连接...",
+      "connectingToCore": "正在连接 Core...",
+      "reconnectingToCore": "正在重新连接 Core...",
+      "coreUnavailable": "无法连接 Core。正在重试...",
+      "networkUnavailable": "无网络连接",
+      "restored": "已连接 Core",
       "pairingRequired": "需要配对",
       "encrypted": "加密连接",
       "unencrypted": "未加密连接",

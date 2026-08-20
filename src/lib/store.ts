@@ -54,6 +54,13 @@ interface StatusState {
   connectionError: string;
   setConnectionError: (error: string) => void;
 
+  networkAvailable: boolean | null;
+  setNetworkAvailable: (available: boolean | null) => void;
+
+  connectionIssueStartedAt: number | null;
+  beginConnectionIssue: () => void;
+  clearConnectionIssue: () => void;
+
   lastToken: TokenResponse;
   setLastToken: (token: TokenResponse) => void;
 
@@ -165,6 +172,16 @@ export const useStatusStore = create<StatusState>()((set) => ({
   connectionError: "",
   setConnectionError: (error) => set({ connectionError: error }),
 
+  networkAvailable: null,
+  setNetworkAvailable: (available) => set({ networkAvailable: available }),
+
+  connectionIssueStartedAt: null,
+  beginConnectionIssue: () =>
+    set((state) => ({
+      connectionIssueStartedAt: state.connectionIssueStartedAt ?? Date.now(),
+    })),
+  clearConnectionIssue: () => set({ connectionIssueStartedAt: null }),
+
   lastToken: { type: "", uid: "", text: "", data: "", scanTime: "" },
   setLastToken: (token) => set({ lastToken: token }),
 
@@ -268,6 +285,7 @@ export const useStatusStore = create<StatusState>()((set) => ({
       connected: false,
       connectionState: ConnectionState.IDLE,
       connectionError: "",
+      connectionIssueStartedAt: null,
       // Note: runQueue/writeQueue are deliberately NOT reset here. Queued
       // deep-link intents are device-independent and must survive device
       // switching and connection resets.
