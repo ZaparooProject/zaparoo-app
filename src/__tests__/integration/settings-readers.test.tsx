@@ -113,7 +113,7 @@ const mockProPurchaseState = {
 
 vi.mock("@/components/ProPurchase", () => ({
   useProPurchase: () => ({
-    PurchaseModal: () => <div data-testid="purchase-modal" />,
+    purchaseModal: <div data-testid="purchase-modal" />,
     setProPurchaseModalOpen: mockProPurchaseState.setProPurchaseModalOpen,
   }),
 }));
@@ -217,7 +217,9 @@ describe("Settings Readers Integration", () => {
       renderComponent();
 
       expect(
-        screen.getByText(/settings.readers.continuousScan/i),
+        screen.getByRole("checkbox", {
+          name: /settings.readers.continuousScan/i,
+        }),
       ).toBeInTheDocument();
     });
   });
@@ -232,7 +234,9 @@ describe("Settings Readers Integration", () => {
         renderComponent();
 
         expect(
-          screen.getByText(/settings.readers.launchOnScan/i),
+          screen.getByRole("checkbox", {
+            name: /settings.readers.launchOnScan/i,
+          }),
         ).toBeInTheDocument();
       });
 
@@ -249,11 +253,11 @@ describe("Settings Readers Integration", () => {
         usePreferencesStore.setState({ launcherAccess: false });
         renderComponent();
 
-        // Pro badge should be visible for launch on scan
-        const launchOnScanLabel = screen.getByText(
-          /settings.readers.launchOnScan/i,
-        );
-        expect(launchOnScanLabel).toBeInTheDocument();
+        expect(
+          screen.getByRole("checkbox", {
+            name: /settings.readers.launchOnScan/i,
+          }),
+        ).toBeInTheDocument();
       });
 
       it("should toggle launch on scan setting", async () => {
@@ -278,7 +282,9 @@ describe("Settings Readers Integration", () => {
         renderComponent();
 
         expect(
-          screen.getByText(/settings.readers.preferExternalReader/i),
+          screen.getByRole("checkbox", {
+            name: /settings.readers.preferExternalReader/i,
+          }),
         ).toBeInTheDocument();
       });
 
@@ -320,7 +326,9 @@ describe("Settings Readers Integration", () => {
       renderComponent();
 
       expect(
-        screen.getByText(/settings.readers.shakeToLaunch/i),
+        screen.getByRole("checkbox", {
+          name: /settings.readers.shakeToLaunch/i,
+        }),
       ).toBeInTheDocument();
     });
 
@@ -346,8 +354,11 @@ describe("Settings Readers Integration", () => {
       usePreferencesStore.setState({ launcherAccess: false });
       renderComponent();
 
-      const shakeLabel = screen.getByText(/settings.readers.shakeToLaunch/i);
-      expect(shakeLabel).toBeInTheDocument();
+      expect(
+        screen.getByRole("checkbox", {
+          name: /settings.readers.shakeToLaunch/i,
+        }),
+      ).toBeInTheDocument();
     });
 
     it("should enable shake when toggle is clicked", async () => {
@@ -688,9 +699,10 @@ describe("Settings Readers Integration", () => {
     it("should render help icon for scan mode", () => {
       renderComponent();
 
-      // Look for setting help components - they should have aria-labels or test ids
       expect(
-        screen.getByText(/settings.readers.scanMode/i),
+        screen.getByRole("button", {
+          name: /Help for settings.readers.scanMode/i,
+        }),
       ).toBeInTheDocument();
     });
 
@@ -698,7 +710,9 @@ describe("Settings Readers Integration", () => {
       renderComponent();
 
       expect(
-        screen.getByText(/settings.readers.continuousScan/i),
+        screen.getByRole("button", {
+          name: /Help for settings.readers.continuousScan/i,
+        }),
       ).toBeInTheDocument();
     });
 
@@ -706,7 +720,9 @@ describe("Settings Readers Integration", () => {
       renderComponent();
 
       expect(
-        screen.getByText(/settings.readers.audioFeedback/i),
+        screen.getByRole("button", {
+          name: /Help for settings.readers.audioFeedback/i,
+        }),
       ).toBeInTheDocument();
     });
   });

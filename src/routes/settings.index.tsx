@@ -42,7 +42,7 @@ export function Settings() {
     t("settings.title"),
   );
 
-  const { PurchaseModal, setProPurchaseModalOpen, proAccess } =
+  const { purchaseModal, setProPurchaseModalOpen, proAccess } =
     useProPurchase();
 
   const connectionError = useStatusStore((state) => state.connectionError);
@@ -315,7 +315,7 @@ export function Settings() {
         </div>
       </PageFrame>
 
-      <PurchaseModal />
+      {purchaseModal}
     </>
   );
 }

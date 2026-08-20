@@ -74,7 +74,7 @@ export function Index() {
       setWriteIntent(false);
     }
   };
-  const { PurchaseModal, proPurchaseModalOpen, setProPurchaseModalOpen } =
+  const { purchaseModal, proPurchaseModalOpen, setProPurchaseModalOpen } =
     useProPurchase();
 
   const connected = useStatusStore((state) => state.connected);
@@ -362,7 +362,7 @@ export function Index() {
         isOpen={remoteKeyboardOpen}
         close={() => setRemoteKeyboardOpen(false)}
       />
-      <PurchaseModal />
+      {purchaseModal}
       <StopConfirmModal
         isOpen={stopTarget !== null}
         onClose={() => setStopTarget(null)}

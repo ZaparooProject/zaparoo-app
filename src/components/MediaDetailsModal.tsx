@@ -13,6 +13,7 @@ import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { SlideModal } from "@/components/SlideModal";
 import { TagBadge } from "@/components/TagBadge";
 import { Button } from "@/components/wui/Button";
+import { ModalActionRail } from "@/components/wui/ModalActionRail";
 import { FavoriteButton } from "@/components/library/FavoriteButton";
 import {
   buildTitleZapScript,
@@ -99,11 +100,67 @@ export function MediaDetailsModal({
       ? filenameFromPath(media.path) || media.name
       : media.name
     : "";
+  const hasSecondaryActions = Boolean(favoriteEntry || onCopy || onPreview);
+  const primaryAction = media ? (
+    <Button
+      label={primaryActionLabel ?? t("create.search.writeLabel")}
+      icon={primaryActionIcon ?? <CreateIcon size="20" />}
+      intent="primary"
+      onClick={() => void onWrite(selectedValue)}
+    />
+  ) : undefined;
+  const footer =
+    media && primaryAction ? (
+      hasSecondaryActions ? (
+        <ModalActionRail
+          aria-label={t("create.search.mediaActions")}
+          actions={
+            <>
+              {favoriteEntry && (
+                <FavoriteButton
+                  entry={favoriteEntry}
+                  fallbackSystemId={media.system.id}
+                  deviceKey={deviceKey}
+                  displayLabel={t("library.favorite")}
+                  layout="responsive"
+                  variant="text"
+                  className="w-full whitespace-nowrap"
+                />
+              )}
+              {onCopy && (
+                <Button
+                  label={t("create.search.copyLabel")}
+                  icon={<Copy size="20" />}
+                  layout="responsive"
+                  variant="text"
+                  className="whitespace-nowrap"
+                  onClick={() => void onCopy(selectedValue)}
+                />
+              )}
+              {onPreview && (
+                <Button
+                  label={t("create.search.playLabel")}
+                  icon={<PlayIcon size="20" />}
+                  layout="responsive"
+                  variant="text"
+                  className="whitespace-nowrap"
+                  disabled={previewDisabled}
+                  onClick={() => void onPreview(selectedValue)}
+                />
+              )}
+            </>
+          }
+          primaryAction={primaryAction}
+        />
+      ) : (
+        primaryAction
+      )
+    ) : undefined;
 
   return (
-    <SlideModal isOpen={isOpen} close={close} title={title}>
+    <SlideModal isOpen={isOpen} close={close} title={title} footer={footer}>
       {media && (
-        <div className="flex flex-col gap-4 pt-2">
+        <div className="flex flex-col gap-4 py-2">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
               <div className="flex items-center gap-2 sm:min-w-[100px]">
@@ -296,46 +353,6 @@ export function MediaDetailsModal({
               </div>
             )}
           </fieldset>
-
-          <div className="flex flex-col gap-2 pt-2">
-            {favoriteEntry && (
-              <FavoriteButton
-                entry={favoriteEntry}
-                fallbackSystemId={media.system.id}
-                deviceKey={deviceKey}
-              />
-            )}
-            <Button
-              label={primaryActionLabel ?? t("create.search.writeLabel")}
-              icon={primaryActionIcon ?? <CreateIcon size="20" />}
-              intent="primary"
-              onClick={() => void onWrite(selectedValue)}
-              className="w-full"
-            />
-            {(onCopy || onPreview) && (
-              <div className="flex flex-row gap-2">
-                {onCopy && (
-                  <Button
-                    label={t("create.search.copyLabel")}
-                    icon={<Copy size="20" />}
-                    variant="outline"
-                    onClick={() => void onCopy(selectedValue)}
-                    className="flex-1"
-                  />
-                )}
-                {onPreview && (
-                  <Button
-                    label={t("create.search.playLabel")}
-                    icon={<PlayIcon size="20" />}
-                    variant="outline"
-                    disabled={previewDisabled}
-                    onClick={() => void onPreview(selectedValue)}
-                    className="flex-1"
-                  />
-                )}
-              </div>
-            )}
-          </div>
         </div>
       )}
     </SlideModal>

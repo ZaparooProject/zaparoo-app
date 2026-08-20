@@ -749,14 +749,21 @@ describe("Settings Online Route", () => {
     it("should open delete confirmation dialog", async () => {
       const user = userEvent.setup();
       renderComponent();
+      const dialog = screen
+        .getByText("online.deleteAccountConfirmTitle", { selector: "h2" })
+        .closest('[role="dialog"]')!;
+      expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
 
       await user.click(
         screen.getByRole("button", { name: "online.deleteAccount" }),
       );
 
       expect(
-        screen.getByText("online.deleteAccountConfirmTitle"),
-      ).toBeInTheDocument();
+        screen.getByRole("dialog", {
+          name: "online.deleteAccountConfirmTitle",
+        }),
+      ).toBe(dialog);
+      expect(dialog).toHaveStyle({ transform: "translate3d(0, 0, 0)" });
       expect(
         screen.getByText("online.deleteAccountConfirmMessage"),
       ).toBeInTheDocument();
@@ -820,7 +827,9 @@ describe("Settings Online Route", () => {
       await user.click(screen.getByRole("button", { name: "nav.cancel" }));
 
       expect(
-        screen.queryByText("online.deleteAccountConfirmTitle"),
+        screen.queryByRole("dialog", {
+          name: "online.deleteAccountConfirmTitle",
+        }),
       ).not.toBeInTheDocument();
     });
   });
@@ -1571,7 +1580,9 @@ describe("Settings Online Route", () => {
 
       await waitFor(() => {
         expect(
-          screen.queryByText("online.deleteAccountConfirmTitle"),
+          screen.queryByRole("dialog", {
+            name: "online.deleteAccountConfirmTitle",
+          }),
         ).not.toBeInTheDocument();
       });
 

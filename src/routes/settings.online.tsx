@@ -41,12 +41,7 @@ import {
   MfaAuthentication,
   type MfaSignInResult,
 } from "@/lib/mfaAuthentication";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { SlideModal } from "@/components/SlideModal";
 import {
   getPurchasePreviewState,
   usePurchasePreviewStore,
@@ -521,6 +516,12 @@ export function OnlinePage() {
     }
   };
 
+  const closeDeleteModal = () => {
+    if (isDeleting) return;
+    setDeleteModalOpen(false);
+    setConfirmText("");
+  };
+
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
     try {
@@ -984,70 +985,58 @@ export function OnlinePage() {
       </div>
 
       {/* Delete account confirmation modal */}
-      <Dialog
-        open={deleteModalOpen}
-        onOpenChange={(open) => {
-          setDeleteModalOpen(open);
-          if (!open) setConfirmText("");
-        }}
-      >
-        <DialogContent
-          onOpenChange={(open) => {
-            setDeleteModalOpen(open);
-            if (!open) setConfirmText("");
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>{t("online.deleteAccountConfirmTitle")}</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4">
-            <p className="text-muted-foreground text-sm">
-              {t("online.deleteAccountConfirmMessage")}
-            </p>
-            <p className="text-muted-foreground text-sm">
-              {t("online.deleteAccountGracePeriod")}
-            </p>
-            <div>
-              <label
-                htmlFor="delete-account-confirmation"
-                className="text-sm text-white"
-              >
-                {t("online.deleteConfirmLabel")}
-              </label>
-              <input
-                id="delete-account-confirmation"
-                type="text"
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                placeholder="DELETE MY ACCOUNT"
-                className="border-bd-input bg-background text-foreground mt-1 w-full rounded-md border p-3"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                label={t("nav.cancel")}
-                onClick={() => {
-                  setDeleteModalOpen(false);
-                  setConfirmText("");
-                }}
-                className="flex-1"
-                disabled={isDeleting}
-              />
-              <Button
-                variant="outline"
-                intent="destructive"
-                label={
-                  isDeleting ? t("spinner.deleting") : t("online.deleteAccount")
-                }
-                onClick={handleDeleteAccount}
-                className="border-error text-error flex-1"
-                disabled={isDeleting || confirmText !== "DELETE MY ACCOUNT"}
-              />
-            </div>
+      <SlideModal
+        isOpen={deleteModalOpen}
+        close={closeDeleteModal}
+        dismissible={!isDeleting}
+        title={t("online.deleteAccountConfirmTitle")}
+        footer={
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              label={t("nav.cancel")}
+              onClick={closeDeleteModal}
+              className="flex-1"
+              disabled={isDeleting}
+            />
+            <Button
+              variant="outline"
+              intent="destructive"
+              label={
+                isDeleting ? t("spinner.deleting") : t("online.deleteAccount")
+              }
+              onClick={handleDeleteAccount}
+              className="border-error text-error flex-1"
+              disabled={isDeleting || confirmText !== "DELETE MY ACCOUNT"}
+            />
           </div>
-        </DialogContent>
-      </Dialog>
+        }
+      >
+        <div className="flex flex-col gap-4 py-2">
+          <p className="text-muted-foreground text-sm">
+            {t("online.deleteAccountConfirmMessage")}
+          </p>
+          <p className="text-muted-foreground text-sm">
+            {t("online.deleteAccountGracePeriod")}
+          </p>
+          <div>
+            <label
+              htmlFor="delete-account-confirmation"
+              className="text-sm text-white"
+            >
+              {t("online.deleteConfirmLabel")}
+            </label>
+            <input
+              id="delete-account-confirmation"
+              type="text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="DELETE MY ACCOUNT"
+              className="border-bd-input bg-background text-foreground mt-1 w-full rounded-md border p-3"
+            />
+          </div>
+        </div>
+      </SlideModal>
     </PageFrame>
   );
 }

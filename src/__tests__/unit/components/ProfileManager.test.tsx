@@ -382,9 +382,11 @@ describe("ProfileManager", () => {
         name: "settings.core.profiles.openProfile",
       }),
     );
-    await user.click(
-      screen.getByRole("button", { name: "settings.core.profiles.delete" }),
-    );
+    const deleteAction = screen.getByRole("button", {
+      name: "settings.core.profiles.delete",
+    });
+    expect(deleteAction).toHaveTextContent("settings.core.profiles.delete");
+    await user.click(deleteAction);
     const deleteDialog = screen.getByRole("dialog", {
       name: "settings.core.profiles.deleteTitle",
     });

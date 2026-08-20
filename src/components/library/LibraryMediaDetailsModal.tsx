@@ -25,9 +25,10 @@ import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { SlideModal } from "@/components/SlideModal";
 import { TagBadge } from "@/components/TagBadge";
 import { Button } from "@/components/wui/Button";
+import { ModalActionRail } from "@/components/wui/ModalActionRail";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
-import { NfcIcon } from "@/lib/images";
+import { CreateIcon } from "@/lib/images";
 import { LibraryArtwork } from "@/components/library/LibraryArtwork";
 import { FavoriteButton } from "@/components/library/FavoriteButton";
 
@@ -113,16 +114,32 @@ export function LibraryMediaDetailsModal(props: {
   const writeControllerRef = useRef<AbortController | null>(null);
   const previousImageButtonRef = useRef<HTMLButtonElement>(null);
   const nextImageButtonRef = useRef<HTMLButtonElement>(null);
-  const entry = props.entry;
+  const [retainedSelection, setRetainedSelection] = useState<{
+    entry: MediaBrowseEntry;
+    systemId: string;
+  } | null>(() =>
+    props.entry ? { entry: props.entry, systemId: props.systemId } : null,
+  );
+  const entry = props.entry ?? retainedSelection?.entry ?? null;
+  const systemId = props.entry
+    ? props.systemId
+    : (retainedSelection?.systemId ?? props.systemId);
+
+  useEffect(() => {
+    if (!props.entry) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve full sheet content while its close transition runs.
+    setRetainedSelection({ entry: props.entry, systemId: props.systemId });
+  }, [props.entry, props.systemId]);
+
   const metadataQuery = useQuery({
     queryKey: [
       LIBRARY_QUERY_KEYS.meta,
       props.deviceKey,
-      ...(entry ? mediaRefKey(entry, props.systemId) : [null, "", ""]),
+      ...(entry ? mediaRefKey(entry, systemId) : [null, "", ""]),
     ],
     queryFn: ({ signal }) => {
       if (!entry) throw new Error("Media selection is unavailable");
-      return fetchLibraryMediaMeta(entry, props.systemId, signal);
+      return fetchLibraryMediaMeta(entry, systemId, signal);
     },
     enabled: props.isOpen && entry !== null,
     staleTime: 5 * 60 * 1000,
@@ -210,7 +227,7 @@ export function LibraryMediaDetailsModal(props: {
     try {
       const text = await resolveLibraryLaunchText(
         entry,
-        props.systemId,
+        systemId,
         controller.signal,
       );
       if (!text) throw new Error("Launch target could not be resolved");
@@ -240,7 +257,7 @@ export function LibraryMediaDetailsModal(props: {
     try {
       const text = await resolveLibraryLaunchText(
         entry,
-        props.systemId,
+        systemId,
         controller.signal,
       );
       if (!text) throw new Error("Write target could not be resolved");
@@ -278,8 +295,8 @@ export function LibraryMediaDetailsModal(props: {
     (fact) => fact.type !== "year" && fact.type !== "players",
   );
   const resolvedSystemName = resolveSystemName(
-    metadata?.title.system.id || props.systemId,
-    metadata?.title.system.name || props.systemId,
+    metadata?.title.system.id || systemId,
+    metadata?.title.system.name || systemId,
   );
   const numericPlayers = Number(players);
   const playersSummary = players
@@ -313,67 +330,75 @@ export function LibraryMediaDetailsModal(props: {
       });
     }
   };
+  const footer = entry ? (
+    <ModalActionRail
+      aria-label={t("library.mediaActions")}
+      actions={
+        <>
+          <FavoriteButton
+            entry={entry}
+            fallbackSystemId={systemId}
+            deviceKey={props.deviceKey}
+            metadataTags={metadata?.tags}
+            displayLabel={t("library.favorite")}
+            layout="responsive"
+            variant="text"
+            className="w-full whitespace-nowrap"
+          />
+          <Button
+            label={t("library.writeAction")}
+            aria-label={
+              preparingWrite ? t("library.preparingWrite") : t("library.write")
+            }
+            icon={
+              preparingWrite ? (
+                <LoadingSpinner size={20} decorative />
+              ) : (
+                <CreateIcon size="20" />
+              )
+            }
+            layout="responsive"
+            variant="text"
+            className="whitespace-nowrap"
+            disabled={!writeAvailable || preparingWrite || launching}
+            onClick={() => void write()}
+          />
+        </>
+      }
+      primaryAction={
+        <Button
+          label={launching ? t("library.launching") : t("library.launch")}
+          icon={
+            launching ? (
+              <LoadingSpinner size={20} decorative />
+            ) : (
+              <PlayIcon size={20} />
+            )
+          }
+          intent="primary"
+          disabled={!connected || launching || preparingWrite}
+          onClick={() => void launch()}
+        />
+      }
+    />
+  ) : undefined;
 
   return (
     <SlideModal
       isOpen={props.isOpen}
       close={closeModal}
       title={title}
-      fixedHeight="85vh"
+      footer={footer}
+      footerSkipLabel={t("accessibility.skipToActions")}
     >
       {entry && (
         <div className="flex flex-col gap-4 py-2">
-          <div className="flex items-center gap-2">
-            <Button
-              label={launching ? t("library.launching") : t("library.launch")}
-              icon={
-                launching ? (
-                  <LoadingSpinner size={20} decorative />
-                ) : (
-                  <PlayIcon size={20} />
-                )
-              }
-              size="lg"
-              intent="primary"
-              disabled={!connected || launching || preparingWrite}
-              onClick={() => void launch()}
-              className="min-h-12 flex-1"
-            />
-            <FavoriteButton
-              entry={entry}
-              fallbackSystemId={props.systemId}
-              deviceKey={props.deviceKey}
-              metadataTags={metadata?.tags}
-              iconOnly
-            />
-            {writeAvailable && (
-              <Button
-                icon={
-                  preparingWrite ? (
-                    <LoadingSpinner size={20} decorative />
-                  ) : (
-                    <NfcIcon size="20" />
-                  )
-                }
-                size="lg"
-                variant="outline"
-                aria-label={
-                  preparingWrite
-                    ? t("library.preparingWrite")
-                    : t("library.write")
-                }
-                disabled={preparingWrite || launching}
-                onClick={() => void write()}
-              />
-            )}
-          </div>
-
           {imageAvailable !== false && (
             <div className="flex flex-col gap-2">
               <div className="relative h-64 w-full">
                 <LibraryArtwork
                   entry={entry}
-                  systemId={props.systemId}
+                  systemId={systemId}
                   deviceKey={props.deviceKey}
                   maxSize={512}
                   priority="detail"

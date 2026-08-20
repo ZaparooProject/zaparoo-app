@@ -1,9 +1,18 @@
 import { createContext, useContext } from "react";
 
+export interface SlideModalRegistrationOptions {
+  blocking?: boolean;
+}
+
 export interface SlideModalManager {
-  registerModal: (id: string, closeFunction: () => void) => void;
+  registerModal: (
+    id: string,
+    closeFunction: () => void,
+    options?: SlideModalRegistrationOptions,
+  ) => void;
   unregisterModal: (id: string) => void;
-  closeAllExcept: (exceptId: string) => void;
+  /** Closes existing modals, or rejects opening when another modal is blocking. */
+  closeAllExcept: (exceptId: string) => boolean;
 }
 
 export const SlideModalContext = createContext<SlideModalManager | null>(null);

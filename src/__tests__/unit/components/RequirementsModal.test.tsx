@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import { act, render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { RequirementsModal } from "@/components/RequirementsModal";
@@ -79,11 +79,27 @@ describe("RequirementsModal", () => {
     });
   });
 
-  it("should not render when closed", () => {
+  it("should stay mounted and slide open for new requirements", () => {
     render(<RequirementsModal />);
-    expect(
-      screen.queryByRole("dialog", { name: /requirements\.title/i }),
-    ).not.toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { hidden: true });
+
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
+
+    act(() => {
+      useRequirementsStore.setState({
+        isOpen: true,
+        pendingRequirements: [
+          {
+            type: "terms_acceptance",
+            description: "Accept terms",
+            endpoint: "/account/requirements",
+          },
+        ],
+      });
+    });
+
+    expect(screen.getByRole("dialog")).toBe(dialog);
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 0, 0)" });
   });
 
   it("should render when open with TOS requirement", () => {
@@ -173,9 +189,13 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
+    const logoutButton = screen.getByRole("button", {
+      name: /requirements\.logout/i,
+    });
     const saveButton = screen.getByRole("button", {
       name: /requirements\.save/i,
     });
+    expect(logoutButton).toHaveTextContent("requirements.logout");
     expect(saveButton).toBeDisabled();
 
     // Check TOS - get first matching element
@@ -356,7 +376,11 @@ describe("RequirementsModal", () => {
       expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
     });
 
-    expect(logger.error).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalledWith(
+      "RevenueCat logout failed:",
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it("should log unexpected RevenueCat logout errors", async () => {

@@ -600,6 +600,20 @@ describe("TagSelector", () => {
       expect(onSelect).toHaveBeenCalledWith([]);
     });
 
+    it("should keep clear all mounted and disabled without a selection", async () => {
+      vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
+        tags: createMockTags(),
+      });
+
+      render(<TagSelector {...defaultProps} selectedTags={[]} />);
+
+      const clearButton = await screen.findByRole("button", {
+        name: /tagSelector\.clearAll/i,
+      });
+      expect(clearButton).toBeDisabled();
+      expect(clearButton).toHaveTextContent("tagSelector.clearAll");
+    });
+
     it("should close modal when apply clicked", async () => {
       // Arrange
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });

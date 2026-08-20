@@ -152,6 +152,43 @@ describe("SlideModalProvider", () => {
     expect(mockClose3).toHaveBeenCalled();
   });
 
+  it("should reject later modals while a blocking modal is registered", () => {
+    const blockingClose = vi.fn();
+    const laterClose = vi.fn();
+    let accepted: boolean | undefined;
+
+    function TestComponent() {
+      const manager = useContext(SlideModalContext);
+
+      return (
+        <button
+          onClick={() => {
+            manager?.registerModal("blocking", blockingClose, {
+              blocking: true,
+            });
+            accepted = manager?.closeAllExcept("later");
+            if (accepted) manager?.registerModal("later", laterClose);
+          }}
+          data-testid="try-later-modal"
+        >
+          Try later modal
+        </button>
+      );
+    }
+
+    render(
+      <SlideModalProvider>
+        <TestComponent />
+      </SlideModalProvider>,
+    );
+
+    fireEvent.click(screen.getByTestId("try-later-modal"));
+
+    expect(accepted).toBe(false);
+    expect(blockingClose).not.toHaveBeenCalled();
+    expect(laterClose).not.toHaveBeenCalled();
+  });
+
   it("should handle closeAllExcept when no modals are registered", () => {
     function TestComponent() {
       const manager = useContext(SlideModalContext);

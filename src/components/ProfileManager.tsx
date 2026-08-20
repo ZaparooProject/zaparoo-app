@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, Trash2Icon } from "lucide-react";
 import classNames from "classnames";
 import toast from "react-hot-toast";
 import { CoreAPI } from "@/lib/coreApi";
@@ -20,6 +20,7 @@ import { Segmented } from "@/components/wui/Segmented";
 import { TextInput } from "@/components/wui/TextInput";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { SlideModal } from "@/components/SlideModal";
 import { NextIcon } from "@/lib/images";
 import { formatDuration, parseDuration } from "@/lib/utils";
@@ -469,28 +470,34 @@ export function ProfileManager(props: {
         )}
         footer={
           editor && (
-            <div className="flex gap-2 pt-3">
-              {editor.action === "edit" && (
+            <ModalActionBar
+              secondaryAction={
+                editor.action === "edit" ? (
+                  <Button
+                    label={t("settings.core.profiles.delete")}
+                    icon={<Trash2Icon size={20} />}
+                    variant="outline"
+                    intent="destructive"
+                    className="border-error text-error"
+                    onClick={() => {
+                      setDeleteTarget(editor.profile);
+                      setEditor(null);
+                    }}
+                    disabled={
+                      saveMutation.isPending || deleteMutation.isPending
+                    }
+                  />
+                ) : undefined
+              }
+              primaryAction={
                 <Button
-                  label={t("settings.core.profiles.delete")}
-                  variant="outline"
-                  intent="destructive"
-                  className="border-error text-error flex-1"
-                  onClick={() => {
-                    setDeleteTarget(editor.profile);
-                    setEditor(null);
-                  }}
-                  disabled={saveMutation.isPending || deleteMutation.isPending}
+                  label={t("save")}
+                  intent="primary"
+                  onClick={() => editor && saveMutation.mutate(editor)}
+                  disabled={validationError !== null || saveMutation.isPending}
                 />
-              )}
-              <Button
-                label={t("save")}
-                intent="primary"
-                className="flex-1"
-                onClick={() => editor && saveMutation.mutate(editor)}
-                disabled={validationError !== null || saveMutation.isPending}
-              />
-            </div>
+              }
+            />
           )
         }
       >
@@ -728,13 +735,7 @@ export function ProfileManager(props: {
         isOpen={deleteTarget !== null}
         close={() => setDeleteTarget(null)}
         title={t("settings.core.profiles.deleteTitle")}
-      >
-        <div className="flex flex-col gap-4 py-4">
-          <p className="text-center">
-            {t("settings.core.profiles.deleteConfirm", {
-              name: deleteTarget?.name,
-            })}
-          </p>
+        footer={
           <div className="flex gap-2">
             <Button
               label={t("nav.cancel")}
@@ -753,6 +754,14 @@ export function ProfileManager(props: {
               disabled={deleteMutation.isPending}
             />
           </div>
+        }
+      >
+        <div className="py-4">
+          <p className="text-center">
+            {t("settings.core.profiles.deleteConfirm", {
+              name: deleteTarget?.name,
+            })}
+          </p>
         </div>
       </SlideModal>
 
@@ -760,13 +769,7 @@ export function ProfileManager(props: {
         isOpen={resetCardTarget !== null}
         close={() => setResetCardTarget(null)}
         title={t("settings.core.profiles.resetCardsTitle")}
-      >
-        <div className="flex flex-col gap-4 py-4">
-          <p className="text-center">
-            {t("settings.core.profiles.resetCardsConfirm", {
-              name: resetCardTarget?.name,
-            })}
-          </p>
+        footer={
           <div className="flex gap-2">
             <Button
               label={t("nav.cancel")}
@@ -786,6 +789,14 @@ export function ProfileManager(props: {
               disabled={resetCardMutation.isPending}
             />
           </div>
+        }
+      >
+        <div className="py-4">
+          <p className="text-center">
+            {t("settings.core.profiles.resetCardsConfirm", {
+              name: resetCardTarget?.name,
+            })}
+          </p>
         </div>
       </SlideModal>
 
@@ -793,6 +804,15 @@ export function ProfileManager(props: {
         isOpen={switchProfile !== null}
         close={() => selectSwitchProfile(null)}
         title={t("settings.core.profiles.switch")}
+        footer={
+          <Button
+            label={t("settings.core.profiles.switch")}
+            intent="primary"
+            className="w-full"
+            onClick={() => switchMutation.mutate()}
+            disabled={!canSubmitSwitch || switchMutation.isPending}
+          />
+        }
       >
         <div className="flex flex-col gap-3 py-4">
           <div className="flex flex-col">
@@ -847,13 +867,6 @@ export function ProfileManager(props: {
               autoComplete="current-password"
             />
           )}
-          <Button
-            label={t("settings.core.profiles.switch")}
-            intent="primary"
-            className="w-full"
-            onClick={() => switchMutation.mutate()}
-            disabled={!canSubmitSwitch || switchMutation.isPending}
-          />
         </div>
       </SlideModal>
     </section>

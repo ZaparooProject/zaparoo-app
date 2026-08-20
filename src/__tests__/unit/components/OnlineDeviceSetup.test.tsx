@@ -108,14 +108,13 @@ describe("OnlineDeviceSetup", () => {
     const user = userEvent.setup();
     render(<OnlineDeviceSetup connected={false} warpActive={false} />);
 
-    expect(
-      screen.queryByText("online.deviceLink.help"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await user.click(
       screen.getByRole("button", {
         name: "Help for online.deviceLink.title",
       }),
     );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("online.deviceLink.help")).toBeInTheDocument();
     expect(mockSettings).not.toHaveBeenCalled();
     expect(mockBackupStatus).not.toHaveBeenCalled();

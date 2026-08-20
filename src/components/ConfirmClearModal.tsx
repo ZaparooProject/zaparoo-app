@@ -13,8 +13,7 @@ export function ConfirmClearModal(props: {
       isOpen={props.isOpen}
       close={props.close}
       title={t("create.custom.clearConfirmTitle")}
-    >
-      <div className="flex flex-col gap-4 py-4">
+      footer={
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -33,7 +32,9 @@ export function ConfirmClearModal(props: {
             className="border-error text-error flex-1"
           />
         </div>
-      </div>
+      }
+    >
+      <div className="py-2" />
     </SlideModal>
   );
 }

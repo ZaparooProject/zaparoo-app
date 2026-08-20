@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
@@ -20,6 +20,7 @@ import { SystemFilterControls } from "@/components/SystemFilterControls";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
+import { ModalActionBar } from "./wui/ModalActionBar";
 import { BackToTop } from "./BackToTop";
 
 export type { System } from "@/lib/models";
@@ -165,7 +166,7 @@ export function SystemSelector({
   // Footer for multi-select mode
   const footer =
     mode === "multi" ? (
-      <div className="border-border flex flex-col gap-3 border-t p-2">
+      <div className="flex flex-col gap-3 px-2 pb-2">
         <div className="text-center">
           <span className="text-muted-foreground text-sm">
             {t("systemSelector.selectedCount", {
@@ -173,23 +174,24 @@ export function SystemSelector({
             })}
           </span>
         </div>
-        <div className="flex items-center gap-3">
-          {selectedSystems.length > 0 && (
-            <button
+        <ModalActionBar
+          secondaryAction={
+            <Button
+              label={t("systemSelector.clearAll")}
+              icon={<Trash2 size={20} />}
+              variant="outline"
               onClick={handleClearAll}
-              className="text-muted-foreground hover:text-foreground text-sm underline"
-              type="button"
-            >
-              {t("systemSelector.clearAll")}
-            </button>
-          )}
-          <Button
-            label={t("systemSelector.apply")}
-            onClick={handleApply}
-            className="flex-1"
-            disabled={selectedSystems.length === 0 && !includeAllOption}
-          />
-        </div>
+              disabled={selectedSystems.length === 0}
+            />
+          }
+          primaryAction={
+            <Button
+              label={t("systemSelector.apply")}
+              onClick={handleApply}
+              disabled={selectedSystems.length === 0 && !includeAllOption}
+            />
+          }
+        />
       </div>
     ) : undefined;
 

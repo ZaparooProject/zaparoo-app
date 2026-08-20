@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, waitFor } from "@/test-utils";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, waitFor } from "@/test-utils";
 import { LibraryArtwork } from "@/components/library/LibraryArtwork";
 import { requestLibraryImage } from "@/lib/libraryImages";
 import { CoreAPI } from "@/lib/coreApi";
@@ -12,6 +12,63 @@ describe("LibraryArtwork", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     CoreAPI.reset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("should use a delayed spinner for detail artwork loading", () => {
+    vi.useFakeTimers();
+    vi.mocked(requestLibraryImage).mockReturnValue(new Promise(() => {}));
+
+    const { container } = render(
+      <LibraryArtwork
+        entry={{
+          mediaId: 42,
+          name: "Super Game",
+          path: "/roms/SNES/Super Game.sfc",
+          type: "media",
+          systemId: "SNES",
+        }}
+        systemId="SNES"
+        deviceKey="device-a"
+        maxSize={512}
+        priority="detail"
+      />,
+    );
+
+    expect(container.querySelector("svg")).not.toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(300));
+
+    expect(container.querySelector("svg")).toBeInTheDocument();
+  });
+
+  it("should retain a skeleton for thumbnail artwork loading", () => {
+    vi.useFakeTimers();
+    vi.mocked(requestLibraryImage).mockReturnValue(new Promise(() => {}));
+
+    const { container } = render(
+      <LibraryArtwork
+        entry={{
+          mediaId: 42,
+          name: "Super Game",
+          path: "/roms/SNES/Super Game.sfc",
+          type: "media",
+          systemId: "SNES",
+        }}
+        systemId="SNES"
+        deviceKey="device-a"
+        maxSize={320}
+        priority="thumbnail"
+      />,
+    );
+
+    act(() => vi.advanceTimersByTime(300));
+
+    expect(container.querySelector("span > div")).toBeInTheDocument();
+    expect(container.querySelector("svg")).not.toBeInTheDocument();
   });
 
   it("should report unavailable artwork when the image request fails", async () => {

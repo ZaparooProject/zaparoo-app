@@ -41,6 +41,17 @@ export function RecentSearchesModal({
       isOpen={isOpen}
       close={onClose}
       title={t("create.search.recentSearches")}
+      footer={
+        recentSearches.length > 0 ? (
+          <Button
+            label={t("create.search.clearHistory")}
+            icon={<Trash2 size="20" />}
+            variant="outline"
+            onClick={handleClearHistory}
+            className="w-full"
+          />
+        ) : undefined
+      }
     >
       <div className="flex flex-col gap-3 pt-2">
         {recentSearches.length === 0 ? (
@@ -49,44 +60,32 @@ export function RecentSearchesModal({
             description={t("create.search.noRecentSearchesHint")}
           />
         ) : (
-          <>
-            <div className="flex flex-col gap-2">
-              {recentSearches.map((search, index) => (
-                <Card
-                  key={index}
-                  className="cursor-pointer"
-                  onClick={() => handleSearchSelect(search)}
-                >
-                  <div className="flex flex-row items-center gap-3">
-                    <span
-                      aria-hidden="true"
-                      className="bg-button-pattern border-bd-filled text-primary-foreground flex h-10 w-10 min-w-10 items-center justify-center rounded-full border border-solid px-1.5"
-                    >
-                      <SearchIcon size="20" />
+          <div className="flex flex-col gap-2">
+            {recentSearches.map((search, index) => (
+              <Card
+                key={index}
+                className="cursor-pointer"
+                onClick={() => handleSearchSelect(search)}
+              >
+                <div className="flex flex-row items-center gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="bg-button-pattern border-bd-filled text-primary-foreground flex h-10 w-10 min-w-10 items-center justify-center rounded-full border border-solid px-1.5"
+                  >
+                    <SearchIcon size="20" />
+                  </span>
+                  <div className="flex grow flex-col">
+                    <span className="text-sm font-semibold">
+                      {getSearchDisplayText(search)}
                     </span>
-                    <div className="flex grow flex-col">
-                      <span className="text-sm font-semibold">
-                        {getSearchDisplayText(search)}
-                      </span>
-                      <span className="text-muted-foreground text-xs">
-                        {new Date(search.timestamp).toLocaleString()}
-                      </span>
-                    </div>
+                    <span className="text-muted-foreground text-xs">
+                      {new Date(search.timestamp).toLocaleString()}
+                    </span>
                   </div>
-                </Card>
-              ))}
-            </div>
-
-            <div className="border-foreground-muted/20 border-t pt-3">
-              <Button
-                label={t("create.search.clearHistory")}
-                icon={<Trash2 size="20" />}
-                variant="outline"
-                onClick={handleClearHistory}
-                className="w-full"
-              />
-            </div>
-          </>
+                </div>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
     </SlideModal>

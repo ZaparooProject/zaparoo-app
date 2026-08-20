@@ -137,7 +137,7 @@ const { mockSetProPurchaseModalOpen, mockProPurchaseState } = vi.hoisted(
 vi.mock("@/components/ProPurchase", () => ({
   useProPurchase: vi.fn(() => ({
     proAccess: mockProPurchaseState.proAccess,
-    PurchaseModal: () => null,
+    purchaseModal: null,
     proPurchaseModalOpen: mockProPurchaseState.proPurchaseModalOpen,
     setProPurchaseModalOpen: mockSetProPurchaseModalOpen,
   })),

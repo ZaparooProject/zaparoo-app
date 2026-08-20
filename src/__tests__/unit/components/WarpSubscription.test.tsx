@@ -91,12 +91,16 @@ describe("WarpSubscription", () => {
   it("should open checkout with annual selected and localized full price", async () => {
     const user = userEvent.setup();
     render(<WarpSubscription appUserID="user-123" />);
+    const dialog = screen.getByRole("dialog", { hidden: true });
+
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
 
     await user.click(screen.getByRole("button", { name: "online.warp.get" }));
 
     expect(
       screen.getByRole("dialog", { name: "online.warp.purchaseTitle" }),
-    ).toBeInTheDocument();
+    ).toBe(dialog);
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 0, 0)" });
     expect(
       screen.getByRole("radio", { name: "online.warp.annual" }),
     ).toHaveAttribute("aria-checked", "true");
@@ -235,7 +239,7 @@ describe("WarpSubscription", () => {
 
     expect(screen.getByText("$3.99")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "nav.close" }));
+    await user.click(screen.getAllByRole("button", { name: "nav.close" })[0]!);
 
     expect(
       screen.queryByRole("dialog", { name: "online.warp.purchaseTitle" }),

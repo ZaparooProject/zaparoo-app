@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor } from "@/test-utils";
+import { render, screen, waitFor, within } from "@/test-utils";
 import { CoreAPI } from "@/lib/coreApi";
 import type { MediaBrowseEntry, MediaMetaResponse } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -112,12 +112,15 @@ describe("LibraryMediaDetailsModal", () => {
     useStatusStore.getState().setWriteQueue("");
   });
 
-  it("should prioritize actions and render curated game metadata", async () => {
+  it("should render persistent actions and curated game metadata", async () => {
     const user = userEvent.setup();
     renderModal();
 
     expect(
       await screen.findByRole("dialog", { name: "Super Game" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "accessibility.skipToActions" }),
     ).toBeInTheDocument();
     expect(
       await screen.findByText("A platform adventure."),
@@ -149,11 +152,29 @@ describe("LibraryMediaDetailsModal", () => {
       screen.queryByLabelText("scraper.gamelist.xml scraped"),
     ).not.toBeInTheDocument();
 
+    const actions = screen.getByRole("group", {
+      name: "library.mediaActions",
+    });
+    const favorite = screen.getByRole("button", {
+      name: "library.addFavorite",
+    });
+    const write = screen.getByRole("button", { name: "library.write" });
     const launch = screen.getByRole("button", { name: "library.launch" });
     const cover = screen.getByRole("img", { name: "library.imageAlt" });
+    expect(favorite).toHaveTextContent("library.favorite");
+    expect(write).toHaveTextContent("library.writeAction");
+    expect(within(actions).getByRole("button", { name: "library.write" })).toBe(
+      write,
+    );
     expect(
-      launch.compareDocumentPosition(cover) & Node.DOCUMENT_POSITION_FOLLOWING,
+      within(actions).queryByRole("button", { name: "library.launch" }),
+    ).not.toBeInTheDocument();
+    expect(write).toBeDisabled();
+    expect(
+      write.compareDocumentPosition(launch) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+    expect(launch).toBeVisible();
+    expect(launch).toBeEnabled();
     expect(cover).toHaveAttribute("src", "data:image/webp;base64,AAAA");
 
     const path = screen.getByText("/roms/SNES/Super Game.sfc");
@@ -163,6 +184,33 @@ describe("LibraryMediaDetailsModal", () => {
     );
     expect(path).toBeVisible();
     expect(screen.getByText("RetroArch")).toBeVisible();
+  });
+
+  it("should retain full content while the sheet closes", async () => {
+    const view = renderModal();
+    const dialog = await screen.findByRole("dialog", { name: "Super Game" });
+    await screen.findByText("A platform adventure.");
+
+    view.rerender(
+      <LibraryMediaDetailsModal
+        {...view.props}
+        isOpen={false}
+        entry={null}
+        systemId=""
+      />,
+    );
+
+    const closingDialog = screen.getByRole("dialog", { hidden: true });
+    expect(closingDialog).toBe(dialog);
+    expect(closingDialog).toHaveStyle({
+      transform: "translate3d(0, 100%, 0)",
+      transition: "transform 0.2s ease-in-out",
+    });
+    expect(closingDialog).toHaveTextContent("Super Game");
+    expect(closingDialog).toHaveTextContent("A platform adventure.");
+    expect(
+      screen.getByRole("button", { name: "library.launch", hidden: true }),
+    ).toBeInTheDocument();
   });
 
   it("should represent favorite state as an action, not a metadata tag", async () => {
@@ -183,7 +231,7 @@ describe("LibraryMediaDetailsModal", () => {
       name: "library.removeFavorite",
     });
     expect(favoriteButton).toHaveAccessibleName("library.removeFavorite");
-    expect(favoriteButton).not.toHaveTextContent("library.removeFavorite");
+    expect(favoriteButton).toHaveTextContent("library.favorite");
     expect(screen.queryByLabelText("user favorite")).not.toBeInTheDocument();
   });
 
@@ -281,7 +329,7 @@ describe("LibraryMediaDetailsModal", () => {
     });
   });
 
-  it("should omit NFC writing when no writer is available", async () => {
+  it("should keep writing disabled when no writer is available", async () => {
     renderModal();
 
     await screen.findByRole("dialog", { name: "Super Game" });
@@ -289,8 +337,8 @@ describe("LibraryMediaDetailsModal", () => {
       expect(CoreAPI.hasWriteCapableReader).toHaveBeenCalled(),
     );
     expect(
-      screen.queryByRole("button", { name: "library.write" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: "library.write" }),
+    ).toBeDisabled();
   });
 
   it("should retain browse details and launch action when metadata fails", async () => {

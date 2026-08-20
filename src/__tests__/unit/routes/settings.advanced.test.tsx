@@ -168,7 +168,9 @@ describe("Settings Advanced Route", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText("settings.advanced.errorReporting"),
+          screen.getByRole("checkbox", {
+            name: "settings.advanced.errorReporting",
+          }),
         ).toBeInTheDocument();
       });
     });
@@ -178,7 +180,9 @@ describe("Settings Advanced Route", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText("settings.advanced.debugLogging"),
+          screen.getByRole("checkbox", {
+            name: "settings.advanced.debugLogging",
+          }),
         ).toBeInTheDocument();
       });
     });
@@ -188,7 +192,9 @@ describe("Settings Advanced Route", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText("settings.advanced.showFilenames"),
+          screen.getByRole("checkbox", {
+            name: "settings.advanced.showFilenames",
+          }),
         ).toBeInTheDocument();
       });
     });

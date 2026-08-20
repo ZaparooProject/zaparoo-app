@@ -65,6 +65,7 @@
       "noFavoritesHint": "Add favorites from media details.",
       "searchFavorites": "Search favorites",
       "favorite": "Favorite",
+      "mediaActions": "Media actions",
       "addFavorite": "Add to Favorites",
       "removeFavorite": "Remove from Favorites",
       "updatingFavorite": "Updating favorite...",
@@ -138,6 +139,7 @@
       "launch": "Launch",
       "launchError": "Could not launch this media",
       "write": "Write to NFC tag",
+      "writeAction": "Write",
       "preparingWrite": "Preparing NFC write...",
       "writeError": "Could not prepare this media for writing",
       "optionsTitle": "Library options",
@@ -215,6 +217,7 @@
     },
     "accessibility": {
       "skipToContent": "Skip to main content",
+      "skipToActions": "Skip to actions",
       "logo": "Zaparoo logo"
     },
     "tokenStaging": {
@@ -317,6 +320,7 @@
         "writeLabel": "Write to tag",
         "copyLabel": "Copy",
         "playLabel": "Preview",
+        "mediaActions": "Media actions",
         "selectSystem": "Select System",
         "selectTags": "Select Tags",
         "loading": "Loading...",
@@ -819,17 +823,6 @@
         "forgetCancel": "Cancel",
         "forgetConfirm": "Forget device",
         "forgetFailed": "Device could not be forgotten. Try again."
-      },
-      "deviceCombine": {
-        "edit": "Combine devices",
-        "cancelEdit": "Cancel selection",
-        "select": "Select {{device}}",
-        "action": "Combine selected",
-        "title": "Combine devices?",
-        "body": "Combine {{first}} and {{second}}? Saved addresses and pairing will be kept.",
-        "cancel": "Cancel",
-        "confirm": "Combine",
-        "failed": "Devices could not be combined. Nothing was removed."
       },
       "about": {
         "title": "About",

@@ -1,11 +1,12 @@
 import { useId } from "react";
-import { Check } from "lucide-react";
+import { Check, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import type { SystemReleasePeriod, SystemSort } from "@/lib/systemFilters";
 import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 import { SlideModal } from "@/components/SlideModal";
 import { Button } from "@/components/wui/Button";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useHapticPress } from "@/hooks/useHapticPress";
 
 const SORT_OPTIONS: Array<{ value: SystemSort; labelKey: string }> = [
@@ -52,21 +53,24 @@ export function LibrarySystemFiltersModal(props: {
     props.sort !== "name-asc";
 
   const footer = (
-    <div className="border-border flex gap-3 border-t pt-3">
-      <Button
-        label={t("library.resetOptions")}
-        variant="outline"
-        className="flex-1"
-        disabled={!hasDraftOptions}
-        onClick={props.onReset}
-      />
-      <Button
-        label={t("library.showSystems", { count: props.resultCount })}
-        className="flex-1"
-        intent="primary"
-        onClick={props.onApply}
-      />
-    </div>
+    <ModalActionBar
+      secondaryAction={
+        <Button
+          label={t("library.resetOptions")}
+          icon={<RotateCcw size={20} />}
+          variant="outline"
+          disabled={!hasDraftOptions}
+          onClick={props.onReset}
+        />
+      }
+      primaryAction={
+        <Button
+          label={t("library.showSystems", { count: props.resultCount })}
+          intent="primary"
+          onClick={props.onApply}
+        />
+      }
+    />
   );
 
   return (

@@ -7,6 +7,8 @@ import {
   type WhatsNewAnnouncement,
 } from "@/lib/whatsNew";
 
+const MODAL_TRANSITION_MS = 200;
+
 export function WhatsNewInitializer() {
   const hasHydrated = usePreferencesStore((state) => state._hasHydrated);
   const tourCompleted = usePreferencesStore((state) => state.tourCompleted);
@@ -33,6 +35,7 @@ export function WhatsNewInitializer() {
   );
   const [isOpen, setIsOpen] = useState(false);
   const processedRuntimeKeyRef = useRef<string | null>(null);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!hasHydrated) return;
@@ -100,13 +103,24 @@ export function WhatsNewInitializer() {
     return () => clearTimeout(timer);
   }, [isOpen, pendingAnnouncement, tourCompleted]);
 
+  useEffect(
+    () => () => {
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    },
+    [],
+  );
+
   const handleDismiss = useCallback(() => {
     if (pendingAnnouncement && pendingRuntimeKey) {
       markWhatsNewSeen(pendingAnnouncement.id, pendingRuntimeKey);
     }
     setIsOpen(false);
-    setPendingAnnouncement(null);
-    setPendingRuntimeKey(null);
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    dismissTimerRef.current = setTimeout(() => {
+      setPendingAnnouncement(null);
+      setPendingRuntimeKey(null);
+      dismissTimerRef.current = null;
+    }, MODAL_TRANSITION_MS);
   }, [markWhatsNewSeen, pendingAnnouncement, pendingRuntimeKey]);
 
   return (

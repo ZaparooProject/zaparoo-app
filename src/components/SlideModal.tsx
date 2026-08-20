@@ -1,4 +1,11 @@
-import { ReactNode, RefObject, useEffect, useId, useRef } from "react";
+import {
+  ReactNode,
+  RefObject,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import classNames from "classnames";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -8,6 +15,7 @@ import { useSlideModalManager } from "@/hooks/useSlideModalManager";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useScreenReaderEnabled } from "@/hooks/useScreenReaderEnabled";
+import { SkipLink } from "@/components/SkipLink";
 
 const OPEN_TRANSFORM = "translate3d(0, 0, 0)";
 const CLOSED_TRANSFORM = "translate3d(0, 100%, 0)";
@@ -83,11 +91,17 @@ export function SlideModal(props: {
   children: ReactNode;
   className?: string;
   scrollRef?: RefObject<HTMLDivElement | null>;
+  /** Persistent actions shown below the body, with overflow fallback on short viewports. */
   footer?: ReactNode;
+  /** Optional label for an early link that moves focus to a long modal's footer. */
+  footerSkipLabel?: string;
+  /** Whether overlay, Escape, back, close buttons, and drag may dismiss the modal. */
+  dismissible?: boolean;
   fixedHeight?: string;
 }) {
   const { t } = useTranslation();
   const modalId = useId();
+  const footerId = `${modalId}-footer`;
   const modalManager = useSlideModalManager();
   const modalRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -95,6 +109,9 @@ export function SlideModal(props: {
   const { impact } = useHaptics();
   const screenReaderEnabled = useScreenReaderEnabled();
   const wasOpenRef = useRef(props.isOpen);
+  const dismissible = props.dismissible ?? true;
+  const requestedOpen = props.isOpen;
+  const requestClose = props.close;
 
   useEffect(() => {
     closeRef.current = props.close;
@@ -114,7 +131,7 @@ export function SlideModal(props: {
     containerRef: modalRef,
     restoreFocus: true,
     autoFocus: false, // The dialog heading receives initial focus.
-    onEscape: props.close,
+    onEscape: dismissible ? props.close : undefined,
   });
 
   // Focus the title when modal opens (better for screen readers)
@@ -126,7 +143,7 @@ export function SlideModal(props: {
     const modal = modalRef.current;
     if (!modal) return;
 
-    if (!props.isOpen || screenReaderEnabled) {
+    if (!props.isOpen || screenReaderEnabled || !dismissible) {
       modal.removeAttribute("data-dragging");
       modal.style.transition = DRAG_TRANSITION;
       modal.style.transform = props.isOpen ? OPEN_TRANSFORM : CLOSED_TRANSFORM;
@@ -280,14 +297,14 @@ export function SlideModal(props: {
       modal.removeEventListener("touchend", handleTouchEnd);
       modal.removeEventListener("touchcancel", handleTouchCancel);
     };
-  }, [props.isOpen, screenReaderEnabled, impact]);
+  }, [props.isOpen, screenReaderEnabled, dismissible, impact]);
 
   // Handle Android back button
   useBackButtonHandler(
     "slide-modal",
     () => {
       if (props.isOpen) {
-        props.close();
+        if (dismissible) props.close();
         return true; // Consume the event
       }
       return false; // Let other handlers process it
@@ -296,26 +313,31 @@ export function SlideModal(props: {
     props.isOpen, // Only active when modal is open
   );
 
-  // Register/unregister modal with manager and handle auto-close
-  useEffect(() => {
-    if (props.isOpen) {
-      // Close any other open modals before opening this one
-      modalManager.closeAllExcept(modalId);
+  // Register before paint so a blocking modal can reject later sheets without a visible or focusable flash.
+  useLayoutEffect(() => {
+    if (requestedOpen) {
+      const accepted = modalManager.closeAllExcept(modalId);
+      if (!accepted) {
+        requestClose();
+        return;
+      }
 
-      // Register this modal
-      modalManager.registerModal(modalId, props.close);
+      modalManager.registerModal(modalId, requestClose, {
+        blocking: !dismissible,
+      });
 
-      // Cleanup function to unregister when modal closes
       return () => {
         modalManager.unregisterModal(modalId);
       };
-    } else {
-      // Unregister when modal closes
-      modalManager.unregisterModal(modalId);
     }
-  }, [props.isOpen, modalId, modalManager, props.close]);
 
-  const safeInsets = useStatusStore((state) => state.safeInsets);
+    modalManager.unregisterModal(modalId);
+  }, [requestedOpen, requestClose, modalId, modalManager, dismissible]);
+
+  const safeInsets = useStatusStore((state) => state.safeInsets) ?? {
+    top: "0px",
+    bottom: "0px",
+  };
 
   return (
     <>
@@ -328,7 +350,7 @@ export function SlideModal(props: {
           opacity: props.isOpen ? 1 : 0,
           pointerEvents: props.isOpen ? "auto" : "none",
         }}
-        onClick={props.close}
+        onClick={dismissible ? props.close : undefined}
         aria-hidden="true"
       />
 
@@ -371,28 +393,29 @@ export function SlideModal(props: {
           willChange: props.isOpen ? "transform" : "auto",
           pointerEvents: props.isOpen ? "auto" : "none",
           paddingBottom: `calc(${safeInsets.bottom} + 0.75rem)`,
-          ...(props.fixedHeight
-            ? { height: props.fixedHeight }
-            : { maxHeight: `calc(100vh - ${safeInsets.top} - 75px)` }),
+          maxHeight: `min(80vh, calc(100vh - ${safeInsets.top} - 75px))`,
+          ...(props.fixedHeight ? { height: props.fixedHeight } : {}),
         }}
       >
         {/* Swipeable handle and title area */}
         <div style={{ touchAction: "pan-x pinch-zoom" }}>
           {/* Mobile drag handle */}
-          <div className="-mt-3 sm:hidden">
-            <button
-              type="button"
-              onClick={props.close}
-              aria-label={t("nav.close")}
-              data-slide-modal-drag-handle
-              className="flex h-[29px] w-full items-center justify-center bg-transparent focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-            >
-              <span
-                aria-hidden="true"
-                className="h-[5px] w-[80px] rounded-full bg-[#00E0FF]"
-              />
-            </button>
-          </div>
+          {dismissible && (
+            <div className="-mt-3 sm:hidden">
+              <button
+                type="button"
+                onClick={props.close}
+                aria-label={t("nav.close")}
+                data-slide-modal-drag-handle
+                className="flex h-[29px] w-full items-center justify-center bg-transparent focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+              >
+                <span
+                  aria-hidden="true"
+                  className="h-[5px] w-[80px] rounded-full bg-[#00E0FF]"
+                />
+              </button>
+            </div>
+          )}
           {/* Shared visible title and desktop close action */}
           <div className="relative pb-2">
             <h2
@@ -403,21 +426,34 @@ export function SlideModal(props: {
             >
               {props.title}
             </h2>
-            <button
-              type="button"
-              onClick={props.close}
-              className="absolute top-[-5px] right-0 hidden h-8 w-8 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-white/10 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none sm:flex"
-              aria-label={t("nav.close")}
-            >
-              <X className="h-5 w-5" aria-hidden="true" />
-            </button>
+            {dismissible && (
+              <button
+                type="button"
+                onClick={props.close}
+                className="absolute top-[-5px] right-0 hidden h-8 w-8 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-white/10 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none sm:flex"
+                aria-label={t("nav.close")}
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </button>
+            )}
           </div>
         </div>
+        {props.footer && props.footerSkipLabel && (
+          <SkipLink targetId={footerId} label={props.footerSkipLabel} />
+        )}
         {/* eslint-disable react-hooks/refs -- False positives: scrollRef is passed as ref prop, children/footer are ReactNode props */}
         <div ref={props.scrollRef} className="flex-1 overflow-y-auto">
           {props.children}
         </div>
-        {props.footer && <div className="flex-shrink-0">{props.footer}</div>}
+        {props.footer && (
+          <div
+            id={footerId}
+            tabIndex={props.footerSkipLabel ? -1 : undefined}
+            className="max-h-[33dvh] flex-shrink-0 overflow-y-auto overscroll-contain border-t border-solid border-[rgba(255,255,255,0.13)] pt-3"
+          >
+            {props.footer}
+          </div>
+        )}
         {/* eslint-enable react-hooks/refs */}
       </div>
     </>

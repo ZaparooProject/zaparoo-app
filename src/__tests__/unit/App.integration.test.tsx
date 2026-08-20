@@ -206,6 +206,10 @@ vi.mock("@/components/InboxModal", () => ({
   InboxModal: () => <div data-testid="inbox-modal" />,
 }));
 
+vi.mock("@/components/RequirementsModal", () => ({
+  RequirementsModal: () => null,
+}));
+
 vi.mock("@/components/AppBadgeManager", () => ({
   AppBadgeManager: () => <div data-testid="app-badge-manager" />,
 }));

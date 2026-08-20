@@ -149,15 +149,13 @@ export function PairingModal({
       close={close}
       title={t("pairing.title")}
       footer={
-        <div className="pt-3">
-          <Button
-            label={isPairing ? t("pairing.pairing") : t("pairing.startPairing")}
-            disabled={isPairing || pin.length !== 6 || !address || !recordId}
-            onClick={() => void handlePair()}
-            intent="primary"
-            className="w-full"
-          />
-        </div>
+        <Button
+          label={isPairing ? t("pairing.pairing") : t("pairing.startPairing")}
+          disabled={isPairing || pin.length !== 6 || !address || !recordId}
+          onClick={() => void handlePair()}
+          intent="primary"
+          className="w-full"
+        />
       }
     >
       <div className="flex flex-col gap-4 py-4">

@@ -4,15 +4,11 @@ import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { Capacitor } from "@capacitor/core";
 import { LogOutIcon, ExternalLinkIcon, MailIcon } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { SlideModal } from "@/components/SlideModal";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/wui/Button";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import { updateRequirements, getRequirements } from "@/lib/onlineApi";
 import { useStatusStore } from "@/lib/store";
@@ -227,157 +223,35 @@ export function RequirementsModal() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent
-        className="max-w-[340px]"
-        onEscapeKeyDown={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
-        {/* Hide the default close button */}
-        <style>{`.absolute.top-4.right-4 { display: none; }`}</style>
-
-        <DialogHeader>
-          <DialogTitle>{t("requirements.title")}</DialogTitle>
-        </DialogHeader>
-
-        <div className="flex flex-col gap-4">
-          {/* Legal Agreements Section */}
-          {needsTos && (
-            <div className="flex flex-col gap-3">
-              {/* Terms of Service */}
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="tos"
-                  checked={tosChecked}
-                  onCheckedChange={(checked) => setTosChecked(checked === true)}
-                />
-                <Label
-                  htmlFor="tos"
-                  className="text-sm leading-tight text-white"
-                >
-                  {t("requirements.tosLabel")}{" "}
-                  <button
-                    type="button"
-                    onClick={() => openExternalLink(TOS_URL)}
-                    className="inline-flex items-center gap-1 text-blue-400 underline hover:text-blue-300"
-                  >
-                    {t("requirements.tosLink")}
-                    <ExternalLinkIcon className="h-3 w-3" />
-                  </button>
-                </Label>
-              </div>
-
-              {/* Privacy Policy */}
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="privacy"
-                  checked={privacyChecked}
-                  onCheckedChange={(checked) =>
-                    setPrivacyChecked(checked === true)
-                  }
-                />
-                <Label
-                  htmlFor="privacy"
-                  className="text-sm leading-tight text-white"
-                >
-                  {t("requirements.privacyLabel")}{" "}
-                  <button
-                    type="button"
-                    onClick={() => openExternalLink(PRIVACY_URL)}
-                    className="inline-flex items-center gap-1 text-blue-400 underline hover:text-blue-300"
-                  >
-                    {t("requirements.privacyLink")}
-                    <ExternalLinkIcon className="h-3 w-3" />
-                  </button>
-                </Label>
-              </div>
-            </div>
-          )}
-
-          {/* Age Verification */}
-          {needsAge && (
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id="age"
-                checked={ageChecked}
-                onCheckedChange={(checked) => setAgeChecked(checked === true)}
-              />
-              <Label htmlFor="age" className="text-sm leading-tight text-white">
-                {t("requirements.ageLabel")}
-              </Label>
-            </div>
-          )}
-
-          {/* Email Verification */}
-          {needsEmailVerification && (
-            <div className="flex flex-col gap-2">
-              {!emailSent ? (
+    <SlideModal
+      isOpen={isOpen}
+      close={close}
+      dismissible={false}
+      title={t("requirements.title")}
+      footer={
+        <div className="flex flex-col gap-2">
+          {hasCheckboxRequirements ? (
+            <ModalActionBar
+              secondaryAction={
                 <Button
-                  label={t("requirements.sendVerificationEmail")}
-                  icon={<MailIcon size={18} />}
+                  label={isLoggingOut ? t("loading") : t("requirements.logout")}
+                  icon={<LogOutIcon size={18} />}
                   variant="outline"
-                  onClick={handleSendVerificationEmail}
-                  className="w-full"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
                 />
-              ) : (
-                <>
-                  <p className="text-muted-foreground text-sm">
-                    {t("requirements.emailSentMessage")}
-                  </p>
-                  <Button
-                    label={
-                      emailVerifying
-                        ? t("requirements.checking")
-                        : t("requirements.checkEmailVerified")
-                    }
-                    variant="outline"
-                    onClick={handleCheckEmailVerified}
-                    disabled={emailVerifying}
-                    className="w-full"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSendVerificationEmail}
-                    className="text-muted-foreground text-center text-sm underline hover:text-white"
-                  >
-                    {t("requirements.resendEmail")}
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Inline status message */}
-          {statusMessage && (
-            <p
-              className={
-                statusMessage.type === "error"
-                  ? "text-sm text-red-400"
-                  : "text-sm text-green-400"
               }
-            >
-              {statusMessage.text}
-            </p>
-          )}
-
-          {/* Action Buttons */}
-          <div className="mt-2 flex flex-col gap-3">
-            {hasCheckboxRequirements && (
-              <Button
-                label={isSaving ? t("loading") : t("requirements.save")}
-                onClick={handleSave}
-                disabled={!canSave || isSaving}
-                intent="primary"
-                className="w-full"
-              />
-            )}
-
+              primaryAction={
+                <Button
+                  label={isSaving ? t("loading") : t("requirements.save")}
+                  onClick={handleSave}
+                  disabled={!canSave || isSaving}
+                  intent="primary"
+                />
+              }
+            />
+          ) : (
             <Button
               label={isLoggingOut ? t("loading") : t("requirements.logout")}
               icon={<LogOutIcon size={18} />}
@@ -386,9 +260,127 @@ export function RequirementsModal() {
               disabled={isLoggingOut}
               className="w-full"
             />
-          </div>
+          )}
         </div>
-      </DialogContent>
-    </Dialog>
+      }
+    >
+      <div className="flex flex-col gap-4 py-2">
+        {/* Legal Agreements Section */}
+        {needsTos && (
+          <div className="flex flex-col gap-3">
+            {/* Terms of Service */}
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="tos"
+                checked={tosChecked}
+                onCheckedChange={(checked) => setTosChecked(checked === true)}
+              />
+              <Label htmlFor="tos" className="text-sm leading-tight text-white">
+                {t("requirements.tosLabel")}{" "}
+                <button
+                  type="button"
+                  onClick={() => openExternalLink(TOS_URL)}
+                  className="inline-flex items-center gap-1 text-blue-400 underline hover:text-blue-300"
+                >
+                  {t("requirements.tosLink")}
+                  <ExternalLinkIcon className="h-3 w-3" />
+                </button>
+              </Label>
+            </div>
+
+            {/* Privacy Policy */}
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="privacy"
+                checked={privacyChecked}
+                onCheckedChange={(checked) =>
+                  setPrivacyChecked(checked === true)
+                }
+              />
+              <Label
+                htmlFor="privacy"
+                className="text-sm leading-tight text-white"
+              >
+                {t("requirements.privacyLabel")}{" "}
+                <button
+                  type="button"
+                  onClick={() => openExternalLink(PRIVACY_URL)}
+                  className="inline-flex items-center gap-1 text-blue-400 underline hover:text-blue-300"
+                >
+                  {t("requirements.privacyLink")}
+                  <ExternalLinkIcon className="h-3 w-3" />
+                </button>
+              </Label>
+            </div>
+          </div>
+        )}
+
+        {/* Age Verification */}
+        {needsAge && (
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="age"
+              checked={ageChecked}
+              onCheckedChange={(checked) => setAgeChecked(checked === true)}
+            />
+            <Label htmlFor="age" className="text-sm leading-tight text-white">
+              {t("requirements.ageLabel")}
+            </Label>
+          </div>
+        )}
+
+        {/* Email Verification */}
+        {needsEmailVerification && (
+          <div className="flex flex-col gap-2">
+            {!emailSent ? (
+              <Button
+                label={t("requirements.sendVerificationEmail")}
+                icon={<MailIcon size={18} />}
+                variant="outline"
+                onClick={handleSendVerificationEmail}
+                className="w-full"
+              />
+            ) : (
+              <>
+                <p className="text-muted-foreground text-sm">
+                  {t("requirements.emailSentMessage")}
+                </p>
+                <Button
+                  label={
+                    emailVerifying
+                      ? t("requirements.checking")
+                      : t("requirements.checkEmailVerified")
+                  }
+                  variant="outline"
+                  onClick={handleCheckEmailVerified}
+                  disabled={emailVerifying}
+                  className="w-full"
+                />
+                <button
+                  type="button"
+                  onClick={handleSendVerificationEmail}
+                  className="text-muted-foreground text-center text-sm underline hover:text-white"
+                >
+                  {t("requirements.resendEmail")}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Inline status message */}
+        {statusMessage && (
+          <p
+            className={
+              statusMessage.type === "error"
+                ? "text-sm text-red-400"
+                : "text-sm text-green-400"
+            }
+          >
+            {statusMessage.text}
+          </p>
+        )}
+      </div>
+    </SlideModal>
   );
 }

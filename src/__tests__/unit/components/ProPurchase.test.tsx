@@ -177,6 +177,19 @@ function createOfferings(
   };
 }
 
+function ProPurchaseHarness() {
+  const { purchaseModal, setProPurchaseModalOpen } = useProPurchase();
+
+  return (
+    <>
+      <button type="button" onClick={() => setProPurchaseModalOpen(true)}>
+        Open Pro purchase
+      </button>
+      {purchaseModal}
+    </>
+  );
+}
+
 describe("useProPurchase", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -204,6 +217,19 @@ describe("useProPurchase", () => {
         },
       },
     } as any);
+  });
+
+  it("should slide the mounted purchase modal open", async () => {
+    const user = userEvent.setup();
+    render(<ProPurchaseHarness />);
+    const dialog = screen.getByRole("dialog", { hidden: true });
+
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
+
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+
+    expect(screen.getByRole("dialog")).toBe(dialog);
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 0, 0)" });
   });
 
   it("should read proAccess from store", async () => {
@@ -316,8 +342,7 @@ describe("useProPurchase", () => {
       result.current.setProPurchaseModalOpen(true);
     });
 
-    const PurchaseModalComponent = result.current.PurchaseModal;
-    render(<PurchaseModalComponent />);
+    render(result.current.purchaseModal);
 
     expect(screen.getByText("scan.purchaseProUnavailable")).toBeInTheDocument();
     expect(
@@ -349,8 +374,7 @@ describe("useProPurchase", () => {
       result.current.setProPurchaseModalOpen(true);
     });
 
-    const PurchaseModalComponent = result.current.PurchaseModal;
-    render(<PurchaseModalComponent />);
+    render(result.current.purchaseModal);
 
     expect(
       screen.getByText("scan.purchaseProOfferingsError"),
@@ -376,8 +400,7 @@ describe("useProPurchase", () => {
       result.current.setProPurchaseModalOpen(true);
     });
 
-    const PurchaseModalComponent = result.current.PurchaseModal;
-    render(<PurchaseModalComponent />);
+    render(result.current.purchaseModal);
 
     expect(screen.getByText("scan.purchaseProP1 $6.99")).toBeInTheDocument();
     expect(
@@ -412,7 +435,7 @@ describe("useProPurchase", () => {
     const { result } = renderHook(() => useProPurchase());
     await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
     act(() => result.current.setProPurchaseModalOpen(true));
-    render(<result.current.PurchaseModal />);
+    render(result.current.purchaseModal);
 
     await user.click(
       screen.getByRole("button", { name: "scan.purchaseProAction" }),
@@ -443,7 +466,7 @@ describe("useProPurchase", () => {
     const { result } = renderHook(() => useProPurchase());
     await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
     act(() => result.current.setProPurchaseModalOpen(true));
-    render(<result.current.PurchaseModal />);
+    render(result.current.purchaseModal);
 
     await user.click(
       screen.getByRole("button", { name: "scan.purchaseProAction" }),
@@ -472,18 +495,16 @@ describe("useProPurchase", () => {
       result.current.setProPurchaseModalOpen(true);
     });
 
-    const PurchaseModalComponent = result.current.PurchaseModal;
-    render(<PurchaseModalComponent />);
+    render(result.current.purchaseModal);
 
     expect(screen.getByText("scan.purchaseProUnavailable")).toBeInTheDocument();
     expect(screen.queryByText(/\$6\.99/)).not.toBeInTheDocument();
   });
 
-  it("should render PurchaseModal component", async () => {
+  it("should render purchase modal", async () => {
     const { result } = renderHook(() => useProPurchase());
 
-    const PurchaseModalComponent = result.current.PurchaseModal;
-    render(<PurchaseModalComponent />);
+    render(result.current.purchaseModal);
 
     // Modal should not be visible initially (proPurchaseModalOpen is false)
     expect(
@@ -498,8 +519,7 @@ describe("useProPurchase", () => {
       result.current.setProPurchaseModalOpen(true);
     });
 
-    const PurchaseModalComponent = result.current.PurchaseModal;
-    render(<PurchaseModalComponent />);
+    render(result.current.purchaseModal);
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     // Title may appear multiple times due to test-utils wrapper

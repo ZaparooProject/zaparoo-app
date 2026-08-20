@@ -1,3 +1,4 @@
+import { createRef, useState } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   createEvent,
@@ -8,6 +9,16 @@ import {
 } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { SlideModal } from "@/components/SlideModal";
+
+const backButtonMock = vi.hoisted(() => ({
+  handler: undefined as (() => boolean | void) | undefined,
+}));
+
+vi.mock("@/hooks/useBackButtonHandler", () => ({
+  useBackButtonHandler: (_id: string, handler: () => boolean | void): void => {
+    backButtonMock.handler = handler;
+  },
+}));
 
 // Mock store for safe insets
 vi.mock("@/lib/store", () => ({
@@ -105,10 +116,46 @@ function withTimeStamp<T extends Event>(event: T, timeStamp: number): T {
   return event;
 }
 
+function BlockingModalHarness() {
+  const [laterOpen, setLaterOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        data-testid="trigger-later-modal"
+        onClick={() => setLaterOpen(true)}
+      >
+        Trigger later modal
+      </button>
+      <SlideModal
+        isOpen
+        close={vi.fn()}
+        title="Mandatory blocker"
+        dismissible={false}
+      >
+        <p>Complete requirements</p>
+      </SlideModal>
+      <SlideModal
+        isOpen={laterOpen}
+        close={() => setLaterOpen(false)}
+        title="Later modal"
+      >
+        <button type="button">Later action</button>
+      </SlideModal>
+    </>
+  );
+}
+
 describe("SlideModal", () => {
   it("should have no detectable accessibility violations while open", async () => {
     const { baseElement } = render(
-      <SlideModal isOpen close={vi.fn()} title="Accessible dialog">
+      <SlideModal
+        isOpen
+        close={vi.fn()}
+        title="Accessible dialog"
+        footer={<button type="button">Persistent action</button>}
+      >
         <button type="button">Dialog action</button>
       </SlideModal>,
     );
@@ -126,6 +173,7 @@ describe("SlideModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockScreenReaderEnabled = false;
+    backButtonMock.handler = undefined;
   });
 
   afterEach(() => {
@@ -147,6 +195,40 @@ describe("SlideModal", () => {
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeInTheDocument();
     expect(dialog).toHaveAttribute("aria-modal", "true");
+  });
+
+  it("slides from its mounted closed state when opened", () => {
+    const { rerender } = render(<SlideModal {...mockProps} />);
+    const dialog = screen.getByRole("dialog", { hidden: true });
+
+    expect(dialog).toHaveStyle({
+      transform: "translate3d(0, 100%, 0)",
+      transition: "transform 0.2s ease-in-out",
+    });
+
+    rerender(<SlideModal {...mockProps} isOpen />);
+
+    expect(screen.getByRole("dialog")).toBe(dialog);
+    expect(dialog).toHaveStyle({
+      transform: "translate3d(0, 0, 0)",
+      transition: "transform 0.2s ease-in-out",
+    });
+  });
+
+  it("caps content-sized and requested-height modals at 80 percent", () => {
+    const { rerender } = render(<SlideModal {...mockProps} isOpen={true} />);
+
+    expect(screen.getByRole("dialog").style.maxHeight).toBe(
+      "min(80vh, calc(100vh - 44px - 75px))",
+    );
+    expect(screen.getByRole("dialog").style.height).toBe("");
+
+    rerender(<SlideModal {...mockProps} isOpen={true} fixedHeight="90vh" />);
+
+    expect(screen.getByRole("dialog").style.height).toBe("90vh");
+    expect(screen.getByRole("dialog").style.maxHeight).toBe(
+      "min(80vh, calc(100vh - 44px - 75px))",
+    );
   });
 
   it("closes modal when overlay is clicked", () => {
@@ -171,6 +253,59 @@ describe("SlideModal", () => {
     fireEvent.click(closeButtons[0]!);
 
     expect(closeMock).toHaveBeenCalled();
+  });
+
+  it("keeps a blocking modal active when a later modal is requested", () => {
+    render(<BlockingModalHarness />);
+
+    fireEvent.click(screen.getByTestId("trigger-later-modal"));
+
+    expect(
+      screen.getByRole("dialog", { name: "Mandatory blocker" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Later modal" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Later action" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("blocks every passive dismissal path when non-dismissible", async () => {
+    const user = userEvent.setup();
+    const closeMock = vi.fn();
+    render(
+      <SlideModal
+        {...mockProps}
+        isOpen={true}
+        close={closeMock}
+        dismissible={false}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "nav.close" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("modal-overlay"));
+    await user.keyboard("{Escape}");
+
+    const content = screen.getByText("Test Content");
+    fireEvent.touchStart(content, {
+      touches: [{ clientX: 100, clientY: 20 }],
+    });
+    fireEvent.touchMove(content, {
+      touches: [{ clientX: 100, clientY: 160 }],
+    });
+    fireEvent.touchEnd(content, {
+      changedTouches: [{ clientX: 100, clientY: 160 }],
+    });
+
+    expect(backButtonMock.handler?.()).toBe(true);
+    expect(closeMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toHaveStyle({
+      transform: "translate3d(0, 0, 0)",
+    });
   });
 
   it("should close when swiping down from the modal title", () => {
@@ -515,17 +650,31 @@ describe("SlideModal", () => {
     expect(dialog).toHaveClass("custom-class");
   });
 
-  it("renders footer when provided", () => {
+  it("keeps footer actions interactive outside the scrollable body", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn();
+    const scrollRef = createRef<HTMLDivElement>();
     render(
       <SlideModal
         {...mockProps}
         isOpen={true}
-        footer={<button>Footer Button</button>}
+        scrollRef={scrollRef}
+        footerSkipLabel="Skip to actions"
+        footer={
+          <button type="button" onClick={action}>
+            Footer Button
+          </button>
+        }
       />,
     );
 
-    expect(
-      screen.getByRole("button", { name: "Footer Button" }),
-    ).toBeInTheDocument();
+    const footerButton = screen.getByRole("button", { name: "Footer Button" });
+    expect(scrollRef.current).not.toContainElement(footerButton);
+
+    await user.click(screen.getByRole("link", { name: "Skip to actions" }));
+    expect(footerButton.parentElement).toHaveFocus();
+
+    await user.click(footerButton);
+    expect(action).toHaveBeenCalledTimes(1);
   });
 });

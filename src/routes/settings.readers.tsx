@@ -113,7 +113,7 @@ export function ReadersSettings() {
 
   const shakeSystem = getSystemFromZapscript();
 
-  const { PurchaseModal, setProPurchaseModalOpen } = useProPurchase();
+  const { purchaseModal, setProPurchaseModalOpen } = useProPurchase();
 
   const router = useRouter();
   const goBack = () =>
@@ -557,7 +557,7 @@ export function ReadersSettings() {
         includeAllOption={true}
       />
 
-      <PurchaseModal />
+      {purchaseModal}
     </PageFrame>
   );
 }
