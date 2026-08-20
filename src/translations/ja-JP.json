@@ -44,6 +44,14 @@
       "run": "実行",
       "mainNavigation": "メインナビゲーション"
     },
+    "appBadge": {
+      "title": "アプリアイコンのバッジ",
+      "description": "Zaparooでは、アプリアイコンに受信トレイのメッセージ件数を表示できます。iOSではこれを通知の許可として説明しますが、Zaparooが要求するのはバッジを更新するための許可のみです。通知アラートやサウンドの許可は要求しません。",
+      "noThanks": "今はしない",
+      "continue": "続ける",
+      "requesting": "許可をリクエスト中...",
+      "deniedDescription": "iOSの設定でアプリアイコンのバッジがブロックされています。設定を開いてZaparooを選択し、「通知」と「バッジ」を有効にしてください。"
+    },
     "library": {
       "title": "ライブラリ",
       "collections": "コレクション",
@@ -57,6 +65,7 @@
       "noFavoritesHint": "メディアの詳細からお気に入りに追加できます。",
       "searchFavorites": "お気に入りを検索",
       "favorite": "お気に入り",
+      "mediaActions": "メディア操作",
       "addFavorite": "お気に入りに追加",
       "removeFavorite": "お気に入りから削除",
       "updatingFavorite": "お気に入りを更新中...",
@@ -130,6 +139,7 @@
       "launch": "起動",
       "launchError": "このメディアを起動できませんでした",
       "write": "NFCタグに書き込む",
+      "writeAction": "書き込む",
       "preparingWrite": "NFC書き込みを準備中...",
       "writeError": "このメディアの書き込みを準備できませんでした",
       "optionsTitle": "ライブラリオプション",
@@ -169,6 +179,7 @@
       "notSupportedSub": "このアプリでは、NFCの読み取りや書き込み機能を使用できません",
       "nfcDisabledLabel": "NFCアクセスが無効になっています",
       "nfcDisabledSub": "NFCの読み取りおよび書き込み機能を使用するには、デバイスの設定でNFCアクセスを有効にしてください",
+      "openNfcSettings": "NFC設定を開く",
       "holdTag": "タグをスマートフォンにかざしてください",
       "holdTagReader": "タグをリーダーにかざしてください",
       "scanning": "スキャン中",
@@ -207,6 +218,7 @@
     },
     "accessibility": {
       "skipToContent": "メインコンテンツへスキップ",
+      "skipToActions": "操作へスキップ",
       "logo": "Zaparooのロゴ"
     },
     "tokenStaging": {
@@ -309,6 +321,7 @@
         "writeLabel": "タグに書き込む",
         "copyLabel": "コピー",
         "playLabel": "プレビュー",
+        "mediaActions": "メディア操作",
         "selectSystem": "システムを選択",
         "selectTags": "タグを選択",
         "loading": "読み込み中...",
@@ -488,6 +501,7 @@
           "deletedSuccess": "マッピングを削除しました",
           "saveFailed": "マッピングの保存に失敗しました",
           "deleteFailed": "マッピングの削除に失敗しました",
+          "cameraPermissionDenied": "カメラへのアクセスが無効になっています。システム設定で有効にしてください。",
           "notFound": "マッピングが見つかりません"
         }
       }
@@ -662,9 +676,10 @@
     },
     "requirements": {
       "title": "セットアップを完了",
-      "tosLabel": "以下に同意します",
+      "legalLabel": "利用規約およびプライバシーポリシーに同意します",
+      "legalPrefix": "以下に同意します：",
+      "legalAnd": "および",
       "tosLink": "利用規約",
-      "privacyLabel": "以下に同意します",
       "privacyLink": "プライバシーポリシー",
       "ageLabel": "13歳以上です",
       "sendVerificationEmail": "確認メールを送信",
@@ -679,6 +694,7 @@
       "emailVerified": "メールアドレスを確認しました",
       "saved": "保存しました",
       "save": "保存",
+      "continue": "同意して続ける",
       "logout": "サインアウト"
     },
     "settings": {
@@ -696,6 +712,7 @@
       "updateDb.status.ready": "データベースの準備完了",
       "updateDb.status.optimizing": "データベースを最適化中（使用可能）",
       "updateDb.status.paused": "一時停止中",
+      "updateDb.status.throttled": "低速で実行中",
       "updateDb.status.reconnecting": "再接続中...",
       "updateDb.status.mediaCount": "データベース準備完了: メディアタイトル{{formattedCount}}件",
       "updateDb.status.noConnection": "未接続",
@@ -719,6 +736,7 @@
       "scrapeMedia": "メディアのメタデータをスクレイピング",
       "scrapeMedia.cancel": "キャンセル",
       "scrapeMedia.starting": "開始中...",
+      "scrapeMedia.startError": "メディアのスクレイピングを開始できませんでした",
       "scrapeMedia.scraperPlaceholder": "スクレイパーを選択",
       "scrapeMedia.allSystems": "すべてのシステム",
       "scrapeMedia.selectSystemsTitle": "スクレイピングするシステムを選択",
@@ -727,6 +745,7 @@
       "scrapeMedia.preparing": "スクレイピングを準備中",
       "scrapeMedia.activeTitle": "メディアをスクレイピング中",
       "scrapeMedia.activeDescription": "現在のシステムのメタデータをスクレイピングしています",
+      "scrapeMedia.viewDetails": "詳細を表示",
       "scrapeMedia.lastScrapeTitle": "前回のスクレイピング",
       "scrapeMedia.currentSystem": "現在のシステム",
       "scrapeMedia.systemProgressCount": "{{current}} / {{total}}システム",
@@ -742,8 +761,11 @@
       "scrapeMedia.blockedByIndex": "メディアデータベースを更新中です。完了するまでスクレイピングできません。",
       "scrapeMedia.stats": "一致{{matched}}件、スキップ{{skipped}}件",
       "scrapeMedia.done": "スクレイピング完了: 一致{{matched}}件、スキップ{{skipped}}件",
+      "scrapeMedia.failed": "スクレイピングに失敗しました",
+      "scrapeMedia.cancelled": "スクレイピングをキャンセルしました",
       "scrapeMedia.status.noConnection": "未接続",
       "scrapeMedia.status.paused": "一時停止中",
+      "scrapeMedia.status.throttled": "低速で実行中",
       "scrapeMedia.status.reconnecting": "再接続中...",
       "scrapeMedia.status.totalScraped": "メディアレコード{{formattedCount}}件を取得しました",
       "scrapeMedia.force": "取得済みのメディアも再スクレイピング",
@@ -773,6 +795,8 @@
         "searching": "デバイスを検索中...",
         "stillSearching": "引き続き検索中...",
         "noDevices": "デバイスが見つかりません",
+        "addresses_one": "IPアドレス: {{addresses}}",
+        "addresses_other": "IPアドレス: {{addresses}}",
         "version": "v{{version}}"
       },
       "connectionFailed": "デバイスに接続できません",
@@ -783,6 +807,8 @@
       },
       "enterDeviceAddress": "デバイスアドレスを入力",
       "deviceHistoryEmpty": "保存済みのデバイスはまだありません。",
+      "deviceHistoryError": "保存済みのデバイスを読み込めませんでした。",
+      "deviceHistoryLoading": "保存済みのデバイスを読み込み中...",
       "deviceDetails": "デバイスの詳細",
       "activeDevice": "使用中のデバイス",
       "deviceDetail": {
@@ -798,7 +824,19 @@
         "forgetTitle": "このデバイスを削除しますか？",
         "forgetBody": "保存済みデバイスから削除し、ペアリング認証情報も消去します。",
         "forgetCancel": "キャンセル",
-        "forgetConfirm": "デバイスを削除"
+        "forgetConfirm": "デバイスを削除",
+        "forgetFailed": "デバイスを削除できませんでした。再試行してください。"
+      },
+      "deviceCombine": {
+        "edit": "デバイスを統合",
+        "cancelEdit": "選択をキャンセル",
+        "select": "{{device}}を選択",
+        "action": "選択したデバイスを統合",
+        "title": "デバイスを統合しますか？",
+        "body": "{{first}}と{{second}}を統合しますか？保存済みのアドレスとペアリング情報は保持されます。",
+        "cancel": "キャンセル",
+        "confirm": "統合",
+        "failed": "デバイスを統合できませんでした。何も削除されていません。"
       },
       "about": {
         "title": "このアプリについて",
@@ -857,6 +895,8 @@
         "debugLoggingHelp": "接続中のデバイスで、より詳細なログファイルを有効にします。問題のトラブルシューティングに役立つ場合があります。",
         "showFilenames": "メディアのファイル名を表示",
         "showFilenamesHelp": "アプリ内の検索結果で、整形された名前ではなくメディアの完全なファイル名を一覧に表示します。ファイル名に多数のカスタムタグを使用している場合に便利です。",
+        "appIconBadges": "アプリアイコンのバッジ",
+        "appIconBadgesHelp": "未読の受信トレイ件数をアプリアイコンに表示します。バッジは通知設定で管理されるため、iOSから通知の許可を求められる場合があります。",
         "purchasePreview": "購入状態のプレビュー",
         "purchasePreviewLive": "現在の状態",
         "purchasePreviewFree": "無料アカウント",

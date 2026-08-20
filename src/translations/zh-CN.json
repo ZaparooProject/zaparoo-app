@@ -44,6 +44,14 @@
       "run": "运行",
       "mainNavigation": "主导航"
     },
+    "appBadge": {
+      "title": "应用图标角标",
+      "description": "Zaparoo 可以在应用图标上显示收件箱消息数量。iOS 将此称为通知权限，但 Zaparoo 只会请求更新角标的权限，不会请求通知提醒或声音权限。",
+      "noThanks": "不用了",
+      "continue": "继续",
+      "requesting": "正在请求...",
+      "deniedDescription": "应用图标角标已在 iOS 设置中被阻止。请打开“设置”，选择 Zaparoo，然后启用“通知”和“标记”。"
+    },
     "library": {
       "title": "媒体库",
       "collections": "合集",
@@ -57,6 +65,7 @@
       "noFavoritesHint": "可在媒体详细信息中添加收藏。",
       "searchFavorites": "搜索收藏",
       "favorite": "收藏",
+      "mediaActions": "媒体操作",
       "addFavorite": "添加到收藏",
       "removeFavorite": "从收藏中移除",
       "updatingFavorite": "正在更新收藏...",
@@ -130,6 +139,7 @@
       "launch": "启动",
       "launchError": "无法启动此媒体",
       "write": "写入 NFC 标签",
+      "writeAction": "写入",
       "preparingWrite": "正在准备 NFC 写入...",
       "writeError": "无法准备将此媒体写入标签",
       "optionsTitle": "媒体库选项",
@@ -169,6 +179,7 @@
       "notSupportedSub": "您将无法使用此应用中的任何 NFC 读取或写入功能",
       "nfcDisabledLabel": "NFC 访问权限已禁用",
       "nfcDisabledSub": "请在设备设置中启用 NFC 访问权限，以使用 NFC 读取和写入功能",
+      "openNfcSettings": "打开 NFC 设置",
       "holdTag": "将标签贴近手机",
       "holdTagReader": "将标签贴近读卡器",
       "scanning": "正在扫描",
@@ -206,7 +217,9 @@
       "nfcNotSupported": "此设备不支持 NFC"
     },
     "accessibility": {
-      "skipToContent": "跳到主要内容"
+      "skipToContent": "跳到主要内容",
+      "skipToActions": "跳到操作",
+      "logo": "Zaparoo 徽标"
     },
     "tokenStaging": {
       "title": "确认暂存的令牌？",
@@ -308,6 +321,7 @@
         "writeLabel": "写入标签",
         "copyLabel": "复制",
         "playLabel": "预览",
+        "mediaActions": "媒体操作",
         "selectSystem": "选择系统",
         "selectTags": "选择标签",
         "loading": "正在加载...",
@@ -487,6 +501,7 @@
           "deletedSuccess": "映射已删除",
           "saveFailed": "映射保存失败",
           "deleteFailed": "映射删除失败",
+          "cameraPermissionDenied": "相机访问权限已禁用。请在系统设置中启用。",
           "notFound": "未找到映射"
         }
       }
@@ -661,9 +676,10 @@
     },
     "requirements": {
       "title": "完成设置",
-      "tosLabel": "我同意",
+      "legalLabel": "我同意服务条款和隐私政策",
+      "legalPrefix": "我同意",
+      "legalAnd": "和",
       "tosLink": "服务条款",
-      "privacyLabel": "我同意",
       "privacyLink": "隐私政策",
       "ageLabel": "我已年满 13 周岁",
       "sendVerificationEmail": "发送验证邮件",
@@ -678,6 +694,7 @@
       "emailVerified": "电子邮箱已验证",
       "saved": "已保存",
       "save": "保存",
+      "continue": "同意并继续",
       "logout": "退出登录"
     },
     "settings": {
@@ -695,6 +712,7 @@
       "updateDb.status.ready": "数据库已就绪",
       "updateDb.status.optimizing": "正在优化数据库（可正常使用）",
       "updateDb.status.paused": "已暂停",
+      "updateDb.status.throttled": "正在降速运行",
       "updateDb.status.reconnecting": "正在重新连接...",
       "updateDb.status.mediaCount": "数据库已就绪：{{formattedCount}} 个媒体标题",
       "updateDb.status.noConnection": "未连接",
@@ -718,6 +736,7 @@
       "scrapeMedia": "抓取媒体元数据",
       "scrapeMedia.cancel": "取消",
       "scrapeMedia.starting": "正在启动...",
+      "scrapeMedia.startError": "无法启动媒体抓取",
       "scrapeMedia.scraperPlaceholder": "选择抓取器",
       "scrapeMedia.allSystems": "所有系统",
       "scrapeMedia.selectSystemsTitle": "选择要抓取的系统",
@@ -726,6 +745,7 @@
       "scrapeMedia.preparing": "正在准备抓取",
       "scrapeMedia.activeTitle": "正在抓取媒体",
       "scrapeMedia.activeDescription": "正在抓取当前系统的元数据",
+      "scrapeMedia.viewDetails": "查看详细信息",
       "scrapeMedia.lastScrapeTitle": "上次抓取",
       "scrapeMedia.currentSystem": "当前系统",
       "scrapeMedia.systemProgressCount": "{{current}} / {{total}} 个系统",
@@ -741,8 +761,11 @@
       "scrapeMedia.blockedByIndex": "媒体数据库正在更新。完成前无法抓取。",
       "scrapeMedia.stats": "已匹配 {{matched}} 个，已跳过 {{skipped}} 个",
       "scrapeMedia.done": "抓取完成：已匹配 {{matched}} 个，已跳过 {{skipped}} 个",
+      "scrapeMedia.failed": "抓取失败",
+      "scrapeMedia.cancelled": "抓取已取消",
       "scrapeMedia.status.noConnection": "未连接",
       "scrapeMedia.status.paused": "已暂停",
+      "scrapeMedia.status.throttled": "正在降速运行",
       "scrapeMedia.status.reconnecting": "正在重新连接...",
       "scrapeMedia.status.totalScraped": "已抓取 {{formattedCount}} 条媒体记录",
       "scrapeMedia.force": "重新抓取已抓取的媒体",
@@ -772,6 +795,8 @@
         "searching": "正在搜索设备...",
         "stillSearching": "仍在搜索...",
         "noDevices": "未找到设备",
+        "addresses_one": "IP 地址：{{addresses}}",
+        "addresses_other": "IP 地址：{{addresses}}",
         "version": "v{{version}}"
       },
       "connectionFailed": "无法连接到设备",
@@ -782,6 +807,8 @@
       },
       "enterDeviceAddress": "输入设备地址",
       "deviceHistoryEmpty": "暂无已保存的设备。",
+      "deviceHistoryError": "无法加载已保存的设备。",
+      "deviceHistoryLoading": "正在加载已保存的设备...",
       "deviceDetails": "设备详细信息",
       "activeDevice": "当前设备",
       "deviceDetail": {
@@ -797,7 +824,19 @@
         "forgetTitle": "移除此设备？",
         "forgetBody": "这将从已保存的设备中移除此设备，并清除配对凭据。",
         "forgetCancel": "取消",
-        "forgetConfirm": "移除设备"
+        "forgetConfirm": "移除设备",
+        "forgetFailed": "无法移除设备。请重试。"
+      },
+      "deviceCombine": {
+        "edit": "合并设备",
+        "cancelEdit": "取消选择",
+        "select": "选择 {{device}}",
+        "action": "合并所选设备",
+        "title": "合并设备？",
+        "body": "要合并 {{first}} 和 {{second}} 吗？已保存的地址和配对信息将会保留。",
+        "cancel": "取消",
+        "confirm": "合并",
+        "failed": "无法合并设备。未移除任何内容。"
       },
       "about": {
         "title": "关于",
@@ -856,9 +895,12 @@
         "debugLoggingHelp": "在已连接的设备上启用更详细的日志文件，有助于排查问题。",
         "showFilenames": "显示媒体文件名",
         "showFilenamesHelp": "在应用内搜索结果中显示媒体的完整文件名，而不是整理后的版本。如果文件名中使用了大量自定义标签，此选项会很有帮助。",
+        "appIconBadges": "应用图标角标",
+        "appIconBadgesHelp": "在应用图标上显示收件箱未读消息数量。由于角标通过通知设置管理，iOS 可能会请求通知权限。",
         "purchasePreview": "购买预览",
         "purchasePreviewLive": "实时状态",
         "purchasePreviewFree": "免费账户",
+        "purchasePreviewCheckout": "Warp 结账",
         "purchasePreviewPro": "终身 Pro",
         "purchasePreviewWarp": "Warp 已启用",
         "purchasePreviewLoading": "正在加载",
