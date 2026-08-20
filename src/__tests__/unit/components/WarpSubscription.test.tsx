@@ -151,11 +151,16 @@ describe("WarpSubscription", () => {
     const checkoutButton = screen.getByRole("button", {
       name: "online.warp.get",
     });
+    const dialog = screen.getByRole("dialog", { hidden: true });
     expect(checkoutButton).toBeDisabled();
+    expect(dialog).toHaveAttribute("aria-hidden", "true");
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
+
     await user.click(checkoutButton);
-    expect(
-      screen.queryByRole("dialog", { name: "online.warp.purchaseTitle" }),
-    ).not.toBeInTheDocument();
+
+    expect(screen.getByRole("dialog", { hidden: true })).toBe(dialog);
+    expect(dialog).toHaveAttribute("aria-hidden", "true");
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
   });
 
   it("should allow selecting monthly plan", async () => {

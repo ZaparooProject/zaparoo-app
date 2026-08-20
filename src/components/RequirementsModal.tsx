@@ -20,7 +20,7 @@ const TOS_URL = "https://zaparoo.com/terms";
 const PRIVACY_URL = "https://zaparoo.com/privacy";
 
 export function RequirementsModal() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isOpen, pendingRequirements, close } = useRequirementsStore();
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
 
@@ -65,6 +65,11 @@ export function RequirementsModal() {
 
   // Check if Save button should be enabled
   const canSave = (!needsTos || legalChecked) && (!needsAge || ageChecked);
+  const legalSeparator = /^(ja|zh)(-|$)/i.test(
+    i18n.resolvedLanguage ?? i18n.language,
+  )
+    ? ""
+    : " ";
 
   // Check if there are checkbox-based requirements (not just email)
   const hasCheckboxRequirements = needsTos || needsAge;
@@ -275,7 +280,8 @@ export function RequirementsModal() {
             <div className="text-sm leading-tight text-white">
               <Label htmlFor="legal" className="inline leading-tight">
                 {t("requirements.legalPrefix")}
-              </Label>{" "}
+              </Label>
+              {legalSeparator}
               <a
                 href={TOS_URL}
                 target="_blank"
@@ -284,8 +290,10 @@ export function RequirementsModal() {
               >
                 {t("requirements.tosLink")}
                 <ExternalLinkIcon className="h-3 w-3" />
-              </a>{" "}
-              {t("requirements.legalAnd")}{" "}
+              </a>
+              {legalSeparator}
+              {t("requirements.legalAnd")}
+              {legalSeparator}
               <a
                 href={PRIVACY_URL}
                 target="_blank"

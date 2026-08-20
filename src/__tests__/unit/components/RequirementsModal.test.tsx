@@ -214,6 +214,7 @@ describe("RequirementsModal", () => {
   });
 
   it("should enable continue when legal consent is checked", async () => {
+    const user = userEvent.setup();
     const requirements: PendingRequirement[] = [
       {
         type: "terms_acceptance",
@@ -238,7 +239,7 @@ describe("RequirementsModal", () => {
     expect(logoutButton).toHaveTextContent("requirements.logout");
     expect(continueButton).toBeDisabled();
 
-    fireEvent.click(
+    await user.click(
       screen.getByRole("checkbox", { name: "requirements.legalLabel" }),
     );
 
@@ -269,7 +270,9 @@ describe("RequirementsModal", () => {
     expect(continueButton).toBeDisabled();
 
     // Check age
-    fireEvent.click(screen.getByLabelText(/requirements\.ageLabel/));
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "requirements.ageLabel" }),
+    );
 
     await waitFor(() => {
       expect(continueButton).not.toBeDisabled();
@@ -277,6 +280,7 @@ describe("RequirementsModal", () => {
   });
 
   it("should submit only pending legal requirements", async () => {
+    const user = userEvent.setup();
     const requirements: PendingRequirement[] = [
       {
         type: "terms_acceptance",
@@ -292,10 +296,10 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    fireEvent.click(
+    await user.click(
       screen.getByRole("checkbox", { name: "requirements.legalLabel" }),
     );
-    fireEvent.click(
+    await user.click(
       screen.getByRole("button", { name: /requirements\.continue/i }),
     );
 

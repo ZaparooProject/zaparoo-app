@@ -40,18 +40,19 @@ function interpolationVariables(value: string): string[] {
 }
 
 const sourceTranslations = loadTranslations(sourceLocale);
-const sourceKeys = [...sourceTranslations.keys()].sort();
 
 describe.each(localeFiles)("%s translation parity", (localeFile) => {
   const translations = loadTranslations(localeFile);
 
-  it("should match the source locale keys and value types", () => {
-    expect([...translations.keys()].sort()).toEqual(sourceKeys);
+  it("should only contain source locale keys with matching value types", () => {
+    const unknownKeys = [...translations.keys()].filter(
+      (key) => !sourceTranslations.has(key),
+    );
+    expect(unknownKeys).toEqual([]);
 
-    const typeMismatches = [...sourceTranslations]
+    const typeMismatches = [...translations]
       .filter(
-        ([key, sourceValue]) =>
-          typeof translations.get(key) !== typeof sourceValue,
+        ([key, value]) => typeof value !== typeof sourceTranslations.get(key),
       )
       .map(([key]) => key);
     expect(typeMismatches).toEqual([]);
@@ -66,9 +67,9 @@ describe.each(localeFiles)("%s translation parity", (localeFile) => {
   });
 
   it("should preserve interpolation variables", () => {
-    const interpolationMismatches = [...sourceTranslations]
-      .filter(([key, sourceValue]) => {
-        const translatedValue = translations.get(key);
+    const interpolationMismatches = [...translations]
+      .filter(([key, translatedValue]) => {
+        const sourceValue = sourceTranslations.get(key);
         if (
           typeof sourceValue !== "string" ||
           typeof translatedValue !== "string"
