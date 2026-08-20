@@ -14,7 +14,7 @@ import type { MediaBrowseEntry, TagInfo } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
-import { Button } from "@/components/wui/Button";
+import { Button, type ButtonLayout } from "@/components/wui/Button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export function FavoriteButton(props: {
@@ -24,6 +24,9 @@ export function FavoriteButton(props: {
   metadataTags?: TagInfo[];
   className?: string;
   iconOnly?: boolean;
+  displayLabel?: string;
+  layout?: ButtonLayout;
+  variant?: "fill" | "outline" | "text";
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -91,8 +94,6 @@ export function FavoriteButton(props: {
     },
   });
 
-  if (!feature.available) return null;
-
   const actionLabel = mutation.isPending
     ? t("library.updatingFavorite")
     : favorite
@@ -101,7 +102,7 @@ export function FavoriteButton(props: {
 
   return (
     <Button
-      label={props.iconOnly ? undefined : actionLabel}
+      label={props.iconOnly ? undefined : (props.displayLabel ?? actionLabel)}
       aria-label={actionLabel}
       icon={
         mutation.isPending ? (
@@ -110,10 +111,13 @@ export function FavoriteButton(props: {
           <Heart size={20} fill={favorite ? "currentColor" : "none"} />
         )
       }
-      variant="outline"
+      variant={props.variant ?? "outline"}
       size={props.iconOnly ? "lg" : "default"}
+      layout={props.layout}
       aria-pressed={favorite}
-      disabled={!connected || !canUpdate || mutation.isPending}
+      disabled={
+        !feature.available || !connected || !canUpdate || mutation.isPending
+      }
       onClick={() => mutation.mutate(!favorite)}
       className={props.className ?? (props.iconOnly ? undefined : "w-full")}
     />

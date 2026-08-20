@@ -420,11 +420,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
         isOpen={confirmOpen}
         close={() => setConfirmOpen(false)}
         title={t("create.mappings.editor.deleteConfirmTitle")}
-      >
-        <div className="flex flex-col gap-4 py-4">
-          <p className="text-center">
-            {t("create.mappings.editor.deleteConfirmBody")}
-          </p>
+        footer={
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -442,6 +438,12 @@ export function MappingEditor({ id }: MappingEditorProps) {
               className="border-error text-error flex-1"
             />
           </div>
+        }
+      >
+        <div className="py-4">
+          <p className="text-center">
+            {t("create.mappings.editor.deleteConfirmBody")}
+          </p>
         </div>
       </SlideModal>
     </>

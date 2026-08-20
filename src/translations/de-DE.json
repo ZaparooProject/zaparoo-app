@@ -44,6 +44,14 @@
       "run": "Ausführen",
       "mainNavigation": "Hauptnavigation"
     },
+    "appBadge": {
+      "title": "Kennzeichen auf dem App-Symbol",
+      "description": "Zaparoo kann die Anzahl der Nachrichten im Posteingang auf dem App-Symbol anzeigen. iOS bezeichnet dies als Mitteilungsberechtigung, Zaparoo fordert jedoch nur die Berechtigung zum Aktualisieren des Kennzeichens an. Mitteilungen und Töne werden nicht angefordert.",
+      "noThanks": "Nein, danke",
+      "continue": "Weiter",
+      "requesting": "Wird angefordert...",
+      "deniedDescription": "Kennzeichen für das App-Symbol sind in den iOS-Einstellungen blockiert. Öffne die Einstellungen, wähle Zaparoo und aktiviere dann Mitteilungen und Kennzeichen."
+    },
     "library": {
       "title": "Bibliothek",
       "collections": "Sammlungen",
@@ -57,6 +65,7 @@
       "noFavoritesHint": "Füge Favoriten über die Mediendetails hinzu.",
       "searchFavorites": "Favoriten durchsuchen",
       "favorite": "Favorit",
+      "mediaActions": "Medienaktionen",
       "addFavorite": "Zu Favoriten hinzufügen",
       "removeFavorite": "Aus Favoriten entfernen",
       "updatingFavorite": "Favorit wird aktualisiert...",
@@ -130,6 +139,7 @@
       "launch": "Starten",
       "launchError": "Dieses Medium konnte nicht gestartet werden",
       "write": "Auf NFC-Tag schreiben",
+      "writeAction": "Schreiben",
       "preparingWrite": "NFC-Schreibvorgang wird vorbereitet...",
       "writeError": "Dieses Medium konnte nicht zum Schreiben vorbereitet werden",
       "optionsTitle": "Bibliotheksoptionen",
@@ -169,6 +179,7 @@
       "notSupportedSub": "Du kannst in dieser App keine NFC-Lese- oder Schreibfunktionen verwenden",
       "nfcDisabledLabel": "NFC-Zugriff deaktiviert",
       "nfcDisabledSub": "Aktiviere bitte den NFC-Zugriff in den Geräteeinstellungen, um NFC lesen und schreiben zu können",
+      "openNfcSettings": "NFC-Einstellungen öffnen",
       "holdTag": "Tag an das Telefon halten",
       "holdTagReader": "Tag an das Lesegerät halten",
       "scanning": "Wird gescannt",
@@ -207,6 +218,7 @@
     },
     "accessibility": {
       "skipToContent": "Zum Hauptinhalt springen",
+      "skipToActions": "Zu den Aktionen springen",
       "logo": "Zaparoo-Logo"
     },
     "tokenStaging": {
@@ -309,6 +321,7 @@
         "writeLabel": "Auf Tag schreiben",
         "copyLabel": "Kopieren",
         "playLabel": "Vorschau",
+        "mediaActions": "Medienaktionen",
         "selectSystem": "System auswählen",
         "selectTags": "Tags auswählen",
         "loading": "Wird geladen...",
@@ -488,6 +501,7 @@
           "deletedSuccess": "Zuordnung gelöscht",
           "saveFailed": "Zuordnung konnte nicht gespeichert werden",
           "deleteFailed": "Zuordnung konnte nicht gelöscht werden",
+          "cameraPermissionDenied": "Der Kamerazugriff ist deaktiviert. Aktiviere ihn in den Systemeinstellungen.",
           "notFound": "Zuordnung nicht gefunden"
         }
       }
@@ -662,9 +676,10 @@
     },
     "requirements": {
       "title": "Einrichtung abschließen",
-      "tosLabel": "Ich stimme Folgendem zu:",
+      "legalLabel": "Ich akzeptiere die Nutzungsbedingungen und die Datenschutzerklärung",
+      "legalPrefix": "Ich akzeptiere die",
+      "legalAnd": "und die",
       "tosLink": "Nutzungsbedingungen",
-      "privacyLabel": "Ich stimme Folgendem zu:",
       "privacyLink": "Datenschutzerklärung",
       "ageLabel": "Ich bin mindestens 13 Jahre alt",
       "sendVerificationEmail": "Bestätigungs-E-Mail senden",
@@ -679,6 +694,7 @@
       "emailVerified": "E-Mail-Adresse bestätigt",
       "saved": "Gespeichert",
       "save": "Speichern",
+      "continue": "Zustimmen und fortfahren",
       "logout": "Abmelden"
     },
     "settings": {
@@ -696,6 +712,7 @@
       "updateDb.status.ready": "Datenbank ist bereit",
       "updateDb.status.optimizing": "Datenbank wird optimiert (einsatzbereit)",
       "updateDb.status.paused": "Pausiert",
+      "updateDb.status.throttled": "Läuft mit reduzierter Geschwindigkeit",
       "updateDb.status.reconnecting": "Verbindung wird wiederhergestellt...",
       "updateDb.status.mediaCount": "Datenbank bereit: {{formattedCount}} Medientitel",
       "updateDb.status.noConnection": "Nicht verbunden",
@@ -719,6 +736,7 @@
       "scrapeMedia": "Medienmetadaten abrufen",
       "scrapeMedia.cancel": "Abbrechen",
       "scrapeMedia.starting": "Wird gestartet...",
+      "scrapeMedia.startError": "Medien-Scraping konnte nicht gestartet werden",
       "scrapeMedia.scraperPlaceholder": "Scraper auswählen",
       "scrapeMedia.allSystems": "Alle Systeme",
       "scrapeMedia.selectSystemsTitle": "Zu scrapende Systeme auswählen",
@@ -727,6 +745,7 @@
       "scrapeMedia.preparing": "Scraping wird vorbereitet",
       "scrapeMedia.activeTitle": "Medien werden gescrapt",
       "scrapeMedia.activeDescription": "Metadaten für das aktuelle System werden gescrapt",
+      "scrapeMedia.viewDetails": "Details anzeigen",
       "scrapeMedia.lastScrapeTitle": "Letztes Scraping",
       "scrapeMedia.currentSystem": "Aktuelles System",
       "scrapeMedia.systemProgressCount": "{{current}} / {{total}} Systeme",
@@ -742,8 +761,11 @@
       "scrapeMedia.blockedByIndex": "Die Mediendatenbank wird aktualisiert. Scraping ist bis zum Abschluss nicht verfügbar.",
       "scrapeMedia.stats": "{{matched}} zugeordnet, {{skipped}} übersprungen",
       "scrapeMedia.done": "Scraping abgeschlossen: {{matched}} zugeordnet, {{skipped}} übersprungen",
+      "scrapeMedia.failed": "Scraping fehlgeschlagen",
+      "scrapeMedia.cancelled": "Scraping abgebrochen",
       "scrapeMedia.status.noConnection": "Nicht verbunden",
       "scrapeMedia.status.paused": "Pausiert",
+      "scrapeMedia.status.throttled": "Läuft mit reduzierter Geschwindigkeit",
       "scrapeMedia.status.reconnecting": "Verbindung wird wiederhergestellt...",
       "scrapeMedia.status.totalScraped": "{{formattedCount}} Mediendatensätze gescrapt",
       "scrapeMedia.force": "Bereits gescrapte Medien erneut scrapen",
@@ -773,6 +795,8 @@
         "searching": "Geräte werden gesucht...",
         "stillSearching": "Suche läuft weiter...",
         "noDevices": "Keine Geräte gefunden",
+        "addresses_one": "IP-Adresse: {{addresses}}",
+        "addresses_other": "IP-Adressen: {{addresses}}",
         "version": "v{{version}}"
       },
       "connectionFailed": "Verbindung zum Gerät konnte nicht hergestellt werden",
@@ -783,6 +807,8 @@
       },
       "enterDeviceAddress": "Geräteadresse eingeben",
       "deviceHistoryEmpty": "Noch keine gespeicherten Geräte.",
+      "deviceHistoryError": "Gespeicherte Geräte konnten nicht geladen werden.",
+      "deviceHistoryLoading": "Gespeicherte Geräte werden geladen...",
       "deviceDetails": "Gerätedetails",
       "activeDevice": "Aktives Gerät",
       "deviceDetail": {
@@ -798,7 +824,19 @@
         "forgetTitle": "Dieses Gerät vergessen?",
         "forgetBody": "Dadurch wird es aus deinen gespeicherten Geräten entfernt und die Kopplungsdaten werden gelöscht.",
         "forgetCancel": "Abbrechen",
-        "forgetConfirm": "Gerät vergessen"
+        "forgetConfirm": "Gerät vergessen",
+        "forgetFailed": "Das Gerät konnte nicht vergessen werden. Versuche es erneut."
+      },
+      "deviceCombine": {
+        "edit": "Geräte zusammenführen",
+        "cancelEdit": "Auswahl abbrechen",
+        "select": "{{device}} auswählen",
+        "action": "Ausgewählte zusammenführen",
+        "title": "Geräte zusammenführen?",
+        "body": "{{first}} und {{second}} zusammenführen? Gespeicherte Adressen und Kopplungsdaten bleiben erhalten.",
+        "cancel": "Abbrechen",
+        "confirm": "Zusammenführen",
+        "failed": "Geräte konnten nicht zusammengeführt werden. Es wurde nichts entfernt."
       },
       "about": {
         "title": "Über",
@@ -857,6 +895,8 @@
         "debugLoggingHelp": "Aktiviert ausführlichere Protokolldateien auf dem verbundenen Gerät. Dies kann bei der Fehlerbehebung hilfreich sein.",
         "showFilenames": "Dateinamen für Medien anzeigen",
         "showFilenamesHelp": "Zeige in den Suchergebnissen der App den vollständigen Dateinamen eines Mediums statt der bereinigten Version an. Dies kann hilfreich sein, wenn deine Dateinamen viele benutzerdefinierte Tags enthalten.",
+        "appIconBadges": "Kennzeichen auf dem App-Symbol",
+        "appIconBadgesHelp": "Zeige die Anzahl der ungelesenen Posteingangsnachrichten auf dem App-Symbol an. iOS fragt möglicherweise nach der Mitteilungsberechtigung, da Kennzeichen über die Mitteilungseinstellungen verwaltet werden.",
         "purchasePreview": "Kaufvorschau",
         "purchasePreviewLive": "Live-Status",
         "purchasePreviewFree": "Kostenloses Konto",

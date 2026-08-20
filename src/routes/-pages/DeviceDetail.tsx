@@ -208,9 +208,7 @@ export function DeviceDetail() {
           if (!forgetting) setConfirmOpen(false);
         }}
         title={t("settings.deviceDetail.forgetTitle")}
-      >
-        <div className="flex flex-col gap-4 py-4">
-          <p className="text-center">{t("settings.deviceDetail.forgetBody")}</p>
+        footer={
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -230,6 +228,10 @@ export function DeviceDetail() {
               }
             />
           </div>
+        }
+      >
+        <div className="py-4">
+          <p className="text-center">{t("settings.deviceDetail.forgetBody")}</p>
         </div>
       </SlideModal>
     </PageFrame>

@@ -646,6 +646,18 @@ describe("SystemSelector", () => {
       expect(onSelect).toHaveBeenCalledWith([]);
     });
 
+    it("should keep clear all mounted and disabled without a selection", () => {
+      render(
+        <SystemSelector {...defaultProps} mode="multi" selectedSystems={[]} />,
+      );
+
+      const clearButton = screen.getByRole("button", {
+        name: "systemSelector.clearAll",
+      });
+      expect(clearButton).toBeDisabled();
+      expect(clearButton).toHaveTextContent("systemSelector.clearAll");
+    });
+
     it("should close modal when apply clicked", async () => {
       // Arrange
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });

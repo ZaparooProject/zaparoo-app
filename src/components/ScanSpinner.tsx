@@ -53,6 +53,7 @@ export function ScanSpinner(props: {
           </div>
           <Button
             icon={<SettingsIcon size="24" />}
+            aria-label={t("spinner.openNfcSettings")}
             variant="text"
             onClick={() => Nfc.openSettings()}
           />

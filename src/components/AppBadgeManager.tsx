@@ -21,9 +21,7 @@ export function AppBadgeManager() {
         isOpen={showPermissionRationale}
         close={dismissPermissionRationale}
         title={t("appBadge.title")}
-      >
-        <div className="flex flex-col gap-4 p-4">
-          <p className="text-center">{t("appBadge.description")}</p>
+        footer={
           <div className="flex flex-row gap-2">
             <Button
               label={t("appBadge.noThanks")}
@@ -44,6 +42,10 @@ export function AppBadgeManager() {
               disabled={isRequestingPermission}
             />
           </div>
+        }
+      >
+        <div className="p-4">
+          <p className="text-center">{t("appBadge.description")}</p>
         </div>
       </SlideModal>
 
@@ -51,14 +53,16 @@ export function AppBadgeManager() {
         isOpen={showPermissionDeniedHelp}
         close={dismissPermissionDeniedHelp}
         title={t("appBadge.title")}
-      >
-        <div className="flex flex-col gap-4 p-4">
-          <p className="text-center">{t("appBadge.deniedDescription")}</p>
+        footer={
           <Button
             label={t("nav.close")}
-            className="self-center"
+            className="mx-auto w-fit"
             onClick={dismissPermissionDeniedHelp}
           />
+        }
+      >
+        <div className="p-4">
+          <p className="text-center">{t("appBadge.deniedDescription")}</p>
         </div>
       </SlideModal>
     </>

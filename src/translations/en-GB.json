@@ -44,6 +44,14 @@
       "run": "Run",
       "mainNavigation": "Main navigation"
     },
+    "appBadge": {
+      "title": "App icon badges",
+      "description": "Zaparoo can show the number of inbox messages on its app icon. iOS describes this as notification permission, but Zaparoo only requests permission to update the badge. It does not request notification alerts or sounds.",
+      "noThanks": "No thanks",
+      "continue": "Continue",
+      "requesting": "Requesting...",
+      "deniedDescription": "App icon badges are blocked in iOS Settings. Open Settings, select Zaparoo, then enable Notifications and Badges."
+    },
     "library": {
       "title": "Library",
       "collections": "Collections",
@@ -57,6 +65,7 @@
       "noFavoritesHint": "Add favourites from media details.",
       "searchFavorites": "Search favourites",
       "favorite": "Favourite",
+      "mediaActions": "Media actions",
       "addFavorite": "Add to Favourites",
       "removeFavorite": "Remove from Favourites",
       "updatingFavorite": "Updating favourite...",
@@ -130,6 +139,7 @@
       "launch": "Launch",
       "launchError": "Could not launch this media",
       "write": "Write to NFC tag",
+      "writeAction": "Write",
       "preparingWrite": "Preparing NFC write...",
       "writeError": "Could not prepare this media for writing",
       "optionsTitle": "Library options",
@@ -169,6 +179,7 @@
       "notSupportedSub": "You will not be able to use any NFC reading or writing features in this app",
       "nfcDisabledLabel": "NFC access disabled",
       "nfcDisabledSub": "Please enable NFC access in your device settings for NFC reading and writing features",
+      "openNfcSettings": "Open NFC settings",
       "holdTag": "Hold tag to phone",
       "holdTagReader": "Hold tag to reader",
       "scanning": "Scanning",
@@ -207,6 +218,7 @@
     },
     "accessibility": {
       "skipToContent": "Skip to main content",
+      "skipToActions": "Skip to actions",
       "logo": "Zaparoo logo"
     },
     "tokenStaging": {
@@ -309,6 +321,7 @@
         "writeLabel": "Write to tag",
         "copyLabel": "Copy",
         "playLabel": "Preview",
+        "mediaActions": "Media actions",
         "selectSystem": "Select System",
         "selectTags": "Select Tags",
         "loading": "Loading...",
@@ -488,6 +501,7 @@
           "deletedSuccess": "Mapping deleted",
           "saveFailed": "Failed to save mapping",
           "deleteFailed": "Failed to delete mapping",
+          "cameraPermissionDenied": "Camera access is disabled. Enable it in system settings.",
           "notFound": "Mapping not found"
         }
       }
@@ -662,9 +676,10 @@
     },
     "requirements": {
       "title": "Complete Setup",
-      "tosLabel": "I agree to the",
+      "legalLabel": "I agree to the Terms of Service and Privacy Policy",
+      "legalPrefix": "I agree to the",
+      "legalAnd": "and",
       "tosLink": "Terms of Service",
-      "privacyLabel": "I agree to the",
       "privacyLink": "Privacy Policy",
       "ageLabel": "I'm 13 years or older",
       "sendVerificationEmail": "Send Verification Email",
@@ -679,6 +694,7 @@
       "emailVerified": "Email verified",
       "saved": "Saved",
       "save": "Save",
+      "continue": "Agree & continue",
       "logout": "Log Out"
     },
     "settings": {
@@ -696,6 +712,7 @@
       "updateDb.status.ready": "Database is ready",
       "updateDb.status.optimizing": "Optimising database (ready to use)",
       "updateDb.status.paused": "Paused",
+      "updateDb.status.throttled": "Running at reduced speed",
       "updateDb.status.reconnecting": "Reconnecting...",
       "updateDb.status.mediaCount": "Database ready: {{formattedCount}} media titles",
       "updateDb.status.noConnection": "Not connected",
@@ -719,6 +736,7 @@
       "scrapeMedia": "Scrape media metadata",
       "scrapeMedia.cancel": "Cancel",
       "scrapeMedia.starting": "Starting...",
+      "scrapeMedia.startError": "Failed to start media scrape",
       "scrapeMedia.scraperPlaceholder": "Select a scraper",
       "scrapeMedia.allSystems": "All systems",
       "scrapeMedia.selectSystemsTitle": "Select systems to scrape",
@@ -727,6 +745,7 @@
       "scrapeMedia.preparing": "Preparing scrape",
       "scrapeMedia.activeTitle": "Scraping media",
       "scrapeMedia.activeDescription": "Scraping metadata for the current system",
+      "scrapeMedia.viewDetails": "View details",
       "scrapeMedia.lastScrapeTitle": "Last scrape",
       "scrapeMedia.currentSystem": "Current system",
       "scrapeMedia.systemProgressCount": "{{current}} / {{total}} systems",
@@ -742,8 +761,11 @@
       "scrapeMedia.blockedByIndex": "Media database update is running. Scraping is unavailable until it finishes.",
       "scrapeMedia.stats": "{{matched}} matched, {{skipped}} skipped",
       "scrapeMedia.done": "Scrape complete: {{matched}} matched, {{skipped}} skipped",
+      "scrapeMedia.failed": "Scrape failed",
+      "scrapeMedia.cancelled": "Scrape cancelled",
       "scrapeMedia.status.noConnection": "Not connected",
       "scrapeMedia.status.paused": "Paused",
+      "scrapeMedia.status.throttled": "Running at reduced speed",
       "scrapeMedia.status.reconnecting": "Reconnecting...",
       "scrapeMedia.status.totalScraped": "{{formattedCount}} media records scraped",
       "scrapeMedia.force": "Re-scrape already scraped media",
@@ -773,6 +795,8 @@
         "searching": "Searching for devices...",
         "stillSearching": "Still searching...",
         "noDevices": "No devices found",
+        "addresses_one": "IP address: {{addresses}}",
+        "addresses_other": "IP addresses: {{addresses}}",
         "version": "v{{version}}"
       },
       "connectionFailed": "Unable to connect to device",
@@ -783,6 +807,8 @@
       },
       "enterDeviceAddress": "Enter a device address",
       "deviceHistoryEmpty": "No saved devices yet.",
+      "deviceHistoryError": "Saved devices could not be loaded.",
+      "deviceHistoryLoading": "Loading saved devices...",
       "deviceDetails": "Device details",
       "activeDevice": "Active device",
       "deviceDetail": {
@@ -798,7 +824,19 @@
         "forgetTitle": "Forget this device?",
         "forgetBody": "This will remove it from your saved devices and erase the pairing credentials.",
         "forgetCancel": "Cancel",
-        "forgetConfirm": "Forget device"
+        "forgetConfirm": "Forget device",
+        "forgetFailed": "Device could not be forgotten. Try again."
+      },
+      "deviceCombine": {
+        "edit": "Combine devices",
+        "cancelEdit": "Cancel selection",
+        "select": "Select {{device}}",
+        "action": "Combine selected",
+        "title": "Combine devices?",
+        "body": "Combine {{first}} and {{second}}? Saved addresses and pairing will be kept.",
+        "cancel": "Cancel",
+        "confirm": "Combine",
+        "failed": "Devices could not be combined. Nothing was removed."
       },
       "about": {
         "title": "About",
@@ -857,6 +895,8 @@
         "debugLoggingHelp": "Enables more verbose log files on the connected device. Can be useful for troubleshooting issues.",
         "showFilenames": "Show filenames for media",
         "showFilenamesHelp": "For in-app search results, display media's full filename in the list instead of the cleaned up version. Can be useful if you use a lot of custom tags in your filenames.",
+        "appIconBadges": "App icon badges",
+        "appIconBadgesHelp": "Show the unread inbox count on the app icon. iOS may ask for notification permission because badges are managed through notification settings.",
         "purchasePreview": "Purchase preview",
         "purchasePreviewLive": "Live state",
         "purchasePreviewFree": "Free account",

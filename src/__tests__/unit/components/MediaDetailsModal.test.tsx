@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen } from "@/test-utils";
+import { render, screen, within } from "@/test-utils";
 import { MediaDetailsModal } from "@/components/MediaDetailsModal";
 import { CoreAPI } from "@/lib/coreApi";
 import type { SearchResultGame } from "@/lib/models";
@@ -74,6 +74,41 @@ describe("MediaDetailsModal", () => {
       screen.getByText("/games/snes/Super Mario World.sfc"),
     ).toBeInTheDocument();
     expect(screen.getByText("@SNES/Super Mario World")).toBeInTheDocument();
+  });
+
+  it("should show labelled secondary actions before the primary action", () => {
+    renderModal({ onCopy: vi.fn(), onPreview: vi.fn() });
+
+    const favorite = screen.getByRole("button", {
+      name: "library.addFavorite",
+    });
+    const copy = screen.getByRole("button", {
+      name: "create.search.copyLabel",
+    });
+    const preview = screen.getByRole("button", {
+      name: "create.search.playLabel",
+    });
+    const write = screen.getByRole("button", {
+      name: "create.search.writeLabel",
+    });
+
+    const actions = screen.getByRole("group", {
+      name: "create.search.mediaActions",
+    });
+    expect(favorite).toHaveTextContent("library.favorite");
+    expect(copy).toHaveTextContent("create.search.copyLabel");
+    expect(preview).toHaveTextContent("create.search.playLabel");
+    expect(
+      within(actions).getByRole("button", { name: "library.addFavorite" }),
+    ).toBe(favorite);
+    expect(
+      within(actions).queryByRole("button", {
+        name: "create.search.writeLabel",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      copy.compareDocumentPosition(write) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("should add a favorite from indexed-media details", async () => {

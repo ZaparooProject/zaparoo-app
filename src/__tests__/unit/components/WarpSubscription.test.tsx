@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import toast from "react-hot-toast";
 import type { PurchasesPackage } from "@revenuecat/purchases-capacitor";
-import { render, screen, waitFor } from "@/test-utils";
+import { render, screen, waitFor, within } from "@/test-utils";
 import { usePurchasePreviewStore } from "@/lib/purchasePreviewStore";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 
@@ -91,12 +91,16 @@ describe("WarpSubscription", () => {
   it("should open checkout with annual selected and localized full price", async () => {
     const user = userEvent.setup();
     render(<WarpSubscription appUserID="user-123" />);
+    const dialog = screen.getByRole("dialog", { hidden: true });
+
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
 
     await user.click(screen.getByRole("button", { name: "online.warp.get" }));
 
     expect(
       screen.getByRole("dialog", { name: "online.warp.purchaseTitle" }),
-    ).toBeInTheDocument();
+    ).toBe(dialog);
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 0, 0)" });
     expect(
       screen.getByRole("radio", { name: "online.warp.annual" }),
     ).toHaveAttribute("aria-checked", "true");
@@ -110,6 +114,53 @@ describe("WarpSubscription", () => {
     expect(
       screen.getByText("online.warp.benefitDevelopment"),
     ).toBeInTheDocument();
+  });
+
+  it("should block dismissal while a purchase is pending", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<WarpSubscription appUserID="user-123" />);
+    await user.click(screen.getByRole("button", { name: "online.warp.get" }));
+    const dialog = screen.getByRole("dialog", {
+      name: "online.warp.purchaseTitle",
+    });
+
+    mockUseWarpSubscription.mockReturnValue(hookState({ action: "purchase" }));
+    rerender(<WarpSubscription appUserID="user-123" />);
+
+    expect(
+      within(dialog).queryByRole("button", { name: "nav.close" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", {
+        name: "online.warp.purchasing",
+      }),
+    ).toBeDisabled();
+
+    await user.keyboard("{Escape}");
+    expect(
+      screen.getByRole("dialog", { name: "online.warp.purchaseTitle" }),
+    ).toBe(dialog);
+  });
+
+  it("should prevent opening checkout during another subscription action", async () => {
+    const user = userEvent.setup();
+    mockUseWarpSubscription.mockReturnValue(hookState({ action: "restore" }));
+
+    render(<WarpSubscription appUserID="user-123" />);
+
+    const checkoutButton = screen.getByRole("button", {
+      name: "online.warp.get",
+    });
+    const dialog = screen.getByRole("dialog", { hidden: true });
+    expect(checkoutButton).toBeDisabled();
+    expect(dialog).toHaveAttribute("aria-hidden", "true");
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
+
+    await user.click(checkoutButton);
+
+    expect(screen.getByRole("dialog", { hidden: true })).toBe(dialog);
+    expect(dialog).toHaveAttribute("aria-hidden", "true");
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
   });
 
   it("should allow selecting monthly plan", async () => {
@@ -235,7 +286,12 @@ describe("WarpSubscription", () => {
 
     expect(screen.getByText("$3.99")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "nav.close" }));
+    const dialog = screen.getByRole("dialog", {
+      name: "online.warp.purchaseTitle",
+    });
+    await user.click(
+      within(dialog).getAllByRole("button", { name: "nav.close" })[0]!,
+    );
 
     expect(
       screen.queryByRole("dialog", { name: "online.warp.purchaseTitle" }),

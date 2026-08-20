@@ -233,11 +233,7 @@ export function AdvancedSettings() {
         isOpen={showErrorReportingModal}
         close={() => setShowErrorReportingModal(false)}
         title={t("settings.advanced.errorReportingConfirmTitle")}
-      >
-        <div className="flex flex-col gap-4 p-4">
-          <p className="text-center">
-            {t("settings.advanced.errorReportingConfirmText")}
-          </p>
+        footer={
           <div className="flex flex-row justify-center gap-4">
             <Button
               label={t("nav.cancel")}
@@ -251,6 +247,12 @@ export function AdvancedSettings() {
               disabled={!canWriteCoreSettings}
             />
           </div>
+        }
+      >
+        <div className="p-4">
+          <p className="text-center">
+            {t("settings.advanced.errorReportingConfirmText")}
+          </p>
         </div>
       </SlideModal>
     </PageFrame>

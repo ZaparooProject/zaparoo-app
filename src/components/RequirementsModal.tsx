@@ -4,17 +4,14 @@ import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import { Capacitor } from "@capacitor/core";
 import { LogOutIcon, ExternalLinkIcon, MailIcon } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { SlideModal } from "@/components/SlideModal";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/wui/Button";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import { updateRequirements, getRequirements } from "@/lib/onlineApi";
+import type { UpdateRequirementsRequest } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 import { logger } from "@/lib/logger";
 import { isExpectedRevenueCatLogoutError } from "@/lib/errors";
@@ -23,13 +20,12 @@ const TOS_URL = "https://zaparoo.com/terms";
 const PRIVACY_URL = "https://zaparoo.com/privacy";
 
 export function RequirementsModal() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isOpen, pendingRequirements, close } = useRequirementsStore();
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
 
   // Local checkbox state - NOT live updating
-  const [tosChecked, setTosChecked] = useState(false);
-  const [privacyChecked, setPrivacyChecked] = useState(false);
+  const [legalChecked, setLegalChecked] = useState(false);
   const [ageChecked, setAgeChecked] = useState(false);
 
   // Email verification state
@@ -59,8 +55,7 @@ export function RequirementsModal() {
   useEffect(() => {
     if (isOpen) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Start each modal session with a clean requirements form.
-      setTosChecked(false);
-      setPrivacyChecked(false);
+      setLegalChecked(false);
       setAgeChecked(false);
       setEmailSent(false);
       setEmailVerifying(false);
@@ -69,8 +64,12 @@ export function RequirementsModal() {
   }, [isOpen]);
 
   // Check if Save button should be enabled
-  const canSave =
-    (!needsTos || (tosChecked && privacyChecked)) && (!needsAge || ageChecked);
+  const canSave = (!needsTos || legalChecked) && (!needsAge || ageChecked);
+  const legalSeparator = /^(ja|zh)(-|$)/i.test(
+    i18n.resolvedLanguage ?? i18n.language,
+  )
+    ? ""
+    : " ";
 
   // Check if there are checkbox-based requirements (not just email)
   const hasCheckboxRequirements = needsTos || needsAge;
@@ -79,11 +78,15 @@ export function RequirementsModal() {
     setIsSaving(true);
     setStatusMessage(null);
     try {
-      await updateRequirements({
-        accept_tos: tosChecked,
-        accept_privacy: privacyChecked,
-        age_verified: ageChecked,
-      });
+      const requirements: UpdateRequirementsRequest = {};
+      if (needsTos) {
+        requirements.accept_tos = true;
+        requirements.accept_privacy = true;
+      }
+      if (needsAge) {
+        requirements.age_verified = true;
+      }
+      await updateRequirements(requirements);
 
       // If email verification is still needed, don't close yet
       if (needsEmailVerification) {
@@ -223,161 +226,35 @@ export function RequirementsModal() {
     }
   }, [close, pendingRequirements, setLoggedInUser, t]);
 
-  const openExternalLink = (url: string) => {
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent
-        className="max-w-[340px]"
-        onEscapeKeyDown={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
-        {/* Hide the default close button */}
-        <style>{`.absolute.top-4.right-4 { display: none; }`}</style>
-
-        <DialogHeader>
-          <DialogTitle>{t("requirements.title")}</DialogTitle>
-        </DialogHeader>
-
-        <div className="flex flex-col gap-4">
-          {/* Legal Agreements Section */}
-          {needsTos && (
-            <div className="flex flex-col gap-3">
-              {/* Terms of Service */}
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="tos"
-                  checked={tosChecked}
-                  onCheckedChange={(checked) => setTosChecked(checked === true)}
-                />
-                <Label
-                  htmlFor="tos"
-                  className="text-sm leading-tight text-white"
-                >
-                  {t("requirements.tosLabel")}{" "}
-                  <button
-                    type="button"
-                    onClick={() => openExternalLink(TOS_URL)}
-                    className="inline-flex items-center gap-1 text-blue-400 underline hover:text-blue-300"
-                  >
-                    {t("requirements.tosLink")}
-                    <ExternalLinkIcon className="h-3 w-3" />
-                  </button>
-                </Label>
-              </div>
-
-              {/* Privacy Policy */}
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="privacy"
-                  checked={privacyChecked}
-                  onCheckedChange={(checked) =>
-                    setPrivacyChecked(checked === true)
-                  }
-                />
-                <Label
-                  htmlFor="privacy"
-                  className="text-sm leading-tight text-white"
-                >
-                  {t("requirements.privacyLabel")}{" "}
-                  <button
-                    type="button"
-                    onClick={() => openExternalLink(PRIVACY_URL)}
-                    className="inline-flex items-center gap-1 text-blue-400 underline hover:text-blue-300"
-                  >
-                    {t("requirements.privacyLink")}
-                    <ExternalLinkIcon className="h-3 w-3" />
-                  </button>
-                </Label>
-              </div>
-            </div>
-          )}
-
-          {/* Age Verification */}
-          {needsAge && (
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id="age"
-                checked={ageChecked}
-                onCheckedChange={(checked) => setAgeChecked(checked === true)}
-              />
-              <Label htmlFor="age" className="text-sm leading-tight text-white">
-                {t("requirements.ageLabel")}
-              </Label>
-            </div>
-          )}
-
-          {/* Email Verification */}
-          {needsEmailVerification && (
-            <div className="flex flex-col gap-2">
-              {!emailSent ? (
+    <SlideModal
+      isOpen={isOpen}
+      close={close}
+      dismissible={false}
+      title={t("requirements.title")}
+      footer={
+        <div className="flex flex-col gap-2">
+          {hasCheckboxRequirements ? (
+            <ModalActionBar
+              secondaryAction={
                 <Button
-                  label={t("requirements.sendVerificationEmail")}
-                  icon={<MailIcon size={18} />}
+                  label={isLoggingOut ? t("loading") : t("requirements.logout")}
+                  icon={<LogOutIcon size={18} />}
                   variant="outline"
-                  onClick={handleSendVerificationEmail}
-                  className="w-full"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
                 />
-              ) : (
-                <>
-                  <p className="text-muted-foreground text-sm">
-                    {t("requirements.emailSentMessage")}
-                  </p>
-                  <Button
-                    label={
-                      emailVerifying
-                        ? t("requirements.checking")
-                        : t("requirements.checkEmailVerified")
-                    }
-                    variant="outline"
-                    onClick={handleCheckEmailVerified}
-                    disabled={emailVerifying}
-                    className="w-full"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSendVerificationEmail}
-                    className="text-muted-foreground text-center text-sm underline hover:text-white"
-                  >
-                    {t("requirements.resendEmail")}
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Inline status message */}
-          {statusMessage && (
-            <p
-              className={
-                statusMessage.type === "error"
-                  ? "text-sm text-red-400"
-                  : "text-sm text-green-400"
               }
-            >
-              {statusMessage.text}
-            </p>
-          )}
-
-          {/* Action Buttons */}
-          <div className="mt-2 flex flex-col gap-3">
-            {hasCheckboxRequirements && (
-              <Button
-                label={isSaving ? t("loading") : t("requirements.save")}
-                onClick={handleSave}
-                disabled={!canSave || isSaving}
-                intent="primary"
-                className="w-full"
-              />
-            )}
-
+              primaryAction={
+                <Button
+                  label={isSaving ? t("loading") : t("requirements.continue")}
+                  onClick={handleSave}
+                  disabled={!canSave || isSaving}
+                  intent="primary"
+                />
+              }
+            />
+          ) : (
             <Button
               label={isLoggingOut ? t("loading") : t("requirements.logout")}
               icon={<LogOutIcon size={18} />}
@@ -386,9 +263,116 @@ export function RequirementsModal() {
               disabled={isLoggingOut}
               className="w-full"
             />
-          </div>
+          )}
         </div>
-      </DialogContent>
-    </Dialog>
+      }
+    >
+      <div className="flex flex-col gap-4 py-2">
+        {/* Legal Agreements Section */}
+        {needsTos && (
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="legal"
+              checked={legalChecked}
+              onCheckedChange={(checked) => setLegalChecked(checked === true)}
+              aria-label={t("requirements.legalLabel")}
+            />
+            <div className="text-sm leading-tight text-white">
+              <Label htmlFor="legal" className="inline leading-tight">
+                {t("requirements.legalPrefix")}
+              </Label>
+              {legalSeparator}
+              <a
+                href={TOS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-sm text-blue-400 underline hover:text-blue-300 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+              >
+                {t("requirements.tosLink")}
+                <ExternalLinkIcon className="h-3 w-3" />
+              </a>
+              {legalSeparator}
+              {t("requirements.legalAnd")}
+              {legalSeparator}
+              <a
+                href={PRIVACY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-sm text-blue-400 underline hover:text-blue-300 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+              >
+                {t("requirements.privacyLink")}
+                <ExternalLinkIcon className="h-3 w-3" />
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Age Verification */}
+        {needsAge && (
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="age"
+              checked={ageChecked}
+              onCheckedChange={(checked) => setAgeChecked(checked === true)}
+            />
+            <Label htmlFor="age" className="text-sm leading-tight text-white">
+              {t("requirements.ageLabel")}
+            </Label>
+          </div>
+        )}
+
+        {/* Email Verification */}
+        {needsEmailVerification && (
+          <div className="flex flex-col gap-2">
+            {!emailSent ? (
+              <Button
+                label={t("requirements.sendVerificationEmail")}
+                icon={<MailIcon size={18} />}
+                variant="outline"
+                onClick={handleSendVerificationEmail}
+                className="w-full"
+              />
+            ) : (
+              <>
+                <p className="text-muted-foreground text-sm">
+                  {t("requirements.emailSentMessage")}
+                </p>
+                <Button
+                  label={
+                    emailVerifying
+                      ? t("requirements.checking")
+                      : t("requirements.checkEmailVerified")
+                  }
+                  variant="outline"
+                  onClick={handleCheckEmailVerified}
+                  disabled={emailVerifying}
+                  className="w-full"
+                />
+                <button
+                  type="button"
+                  onClick={handleSendVerificationEmail}
+                  className="text-muted-foreground rounded-sm text-center text-sm underline hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                >
+                  {t("requirements.resendEmail")}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Inline status message */}
+        {statusMessage && (
+          <p
+            className={
+              statusMessage.type === "error"
+                ? "text-sm text-red-400"
+                : "text-sm text-green-400"
+            }
+          >
+            {statusMessage.text}
+          </p>
+        )}
+      </div>
+    </SlideModal>
   );
 }

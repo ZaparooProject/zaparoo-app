@@ -6,6 +6,7 @@ import { requestLibraryImage } from "@/lib/libraryImages";
 import { LIBRARY_QUERY_KEYS, mediaRefKey } from "@/lib/libraryMedia";
 import type { MediaBrowseEntry } from "@/lib/models";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
 
 export function LibraryArtwork(props: {
@@ -70,11 +71,19 @@ export function LibraryArtwork(props: {
   if (enabled && imageQuery.isLoading) {
     return (
       <span
-        className={`${props.className ?? ""} block overflow-hidden bg-white/5`}
+        className={`${props.className ?? ""} flex items-center justify-center overflow-hidden bg-white/5`}
         aria-hidden="true"
       >
         <DelayedLoading>
-          <Skeleton className="h-full w-full" />
+          {props.priority === "detail" ? (
+            <LoadingSpinner
+              size={20}
+              className="text-muted-foreground"
+              decorative
+            />
+          ) : (
+            <Skeleton className="h-full w-full" />
+          )}
         </DelayedLoading>
       </span>
     );

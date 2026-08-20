@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { act, render, screen, waitFor } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { WhatsNewDialog } from "@/components/WhatsNewDialog";
 import { WhatsNewInitializer } from "@/components/WhatsNewInitializer";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import {
@@ -23,6 +25,23 @@ const announcement = buildWhatsNewAnnouncement({
   releaseKeys: [identity.releaseKey],
 });
 
+function WhatsNewHarness() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        Open announcement
+      </button>
+      <WhatsNewDialog
+        isOpen={open}
+        announcement={announcement}
+        onDismiss={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
 function setPreferencesState(
   values: Partial<ReturnType<typeof usePreferencesStore.getState>>,
 ) {
@@ -43,6 +62,21 @@ describe("WhatsNewInitializer", () => {
     whatsNewMock.resolveRuntimeReleaseIdentity.mockResolvedValue(identity);
     whatsNewMock.getWhatsNewAnnouncement.mockReturnValue(announcement);
     setPreferencesState({});
+  });
+
+  it("should slide the mounted announcement open", async () => {
+    const user = userEvent.setup();
+    render(<WhatsNewHarness />);
+    const dialog = screen.getByRole("dialog", { hidden: true });
+
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
+
+    await user.click(screen.getByRole("button", { name: "Open announcement" }));
+
+    expect(screen.getByRole("dialog", { name: announcement.title })).toBe(
+      dialog,
+    );
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 0, 0)" });
   });
 
   it("should seed fresh installs without showing the dialog", async () => {

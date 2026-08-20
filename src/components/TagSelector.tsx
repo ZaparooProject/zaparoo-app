@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Search, Check, X, ChevronUp, ChevronDown } from "lucide-react";
+import { Search, Check, X, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
@@ -10,6 +10,7 @@ import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { compareStrings } from "@/lib/utils";
 import { TagInfo } from "@/lib/models";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useAccessibleLists } from "@/hooks/useAccessibleLists";
 import { useHapticPress } from "@/hooks/useHapticPress";
 import { useAnnouncer } from "./A11yAnnouncer";
@@ -254,7 +255,7 @@ export function TagSelector({
 
   // Footer for multi-select mode
   const footer = (
-    <div className="border-border flex flex-col gap-3 border-t p-2">
+    <div className="flex flex-col gap-3 px-2 pb-2">
       <div className="text-center">
         <span className="text-muted-foreground text-sm">
           {t("tagSelector.selectedCount", {
@@ -262,22 +263,20 @@ export function TagSelector({
           })}
         </span>
       </div>
-      <div className="flex items-center gap-3">
-        {selectedTags.length > 0 && (
-          <button
+      <ModalActionBar
+        secondaryAction={
+          <Button
+            label={t("tagSelector.clearAll")}
+            icon={<Trash2 size={20} />}
+            variant="outline"
             onClick={handleClearAll}
-            className="text-muted-foreground hover:text-foreground text-sm underline"
-            type="button"
-          >
-            {t("tagSelector.clearAll")}
-          </button>
-        )}
-        <Button
-          label={t("tagSelector.apply")}
-          onClick={handleApply}
-          className="flex-1"
-        />
-      </div>
+            disabled={selectedTags.length === 0}
+          />
+        }
+        primaryAction={
+          <Button label={t("tagSelector.apply")} onClick={handleApply} />
+        }
+      />
     </div>
   );
 

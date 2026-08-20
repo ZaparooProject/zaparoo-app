@@ -188,7 +188,7 @@ export function InboxModal() {
 
   const footer =
     messages.length > 0 ? (
-      <div className="flex flex-col gap-2 pt-3">
+      <div className="flex flex-col gap-2">
         {confirmingClear ? (
           <>
             <p className="text-center text-sm">{t("inbox.confirmClear")}</p>

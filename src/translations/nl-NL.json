@@ -44,6 +44,14 @@
       "run": "Uitvoeren",
       "mainNavigation": "Hoofdnavigatie"
     },
+    "appBadge": {
+      "title": "Badges op appicoon",
+      "description": "Zaparoo kan het aantal berichten in de inbox op het appicoon tonen. iOS omschrijft dit als toestemming voor meldingen, maar Zaparoo vraagt alleen toestemming om de badge bij te werken. Er wordt geen toestemming gevraagd voor meldingswaarschuwingen of -geluiden.",
+      "noThanks": "Nee, bedankt",
+      "continue": "Doorgaan",
+      "requesting": "Aanvragen...",
+      "deniedDescription": "Badges op het appicoon zijn geblokkeerd in de iOS-instellingen. Open Instellingen, selecteer Zaparoo en schakel vervolgens Meldingen en Badges in."
+    },
     "library": {
       "title": "Bibliotheek",
       "collections": "Collecties",
@@ -57,6 +65,7 @@
       "noFavoritesHint": "Voeg favorieten toe vanuit de mediadetails.",
       "searchFavorites": "Favorieten zoeken",
       "favorite": "Favoriet",
+      "mediaActions": "Media-acties",
       "addFavorite": "Toevoegen aan favorieten",
       "removeFavorite": "Verwijderen uit favorieten",
       "updatingFavorite": "Favoriet bijwerken...",
@@ -130,6 +139,7 @@
       "launch": "Starten",
       "launchError": "Deze media konden niet worden gestart",
       "write": "Naar NFC-tag schrijven",
+      "writeAction": "Schrijven",
       "preparingWrite": "NFC-schrijfactie voorbereiden...",
       "writeError": "Deze media konden niet worden voorbereid om te schrijven",
       "optionsTitle": "Bibliotheekopties",
@@ -169,6 +179,7 @@
       "notSupportedSub": "Je kunt de NFC-lees- en schrijffuncties in deze app niet gebruiken",
       "nfcDisabledLabel": "NFC-toegang uitgeschakeld",
       "nfcDisabledSub": "Schakel NFC-toegang in de apparaatinstellingen in om NFC te lezen en te schrijven",
+      "openNfcSettings": "NFC-instellingen openen",
       "holdTag": "Houd tag bij telefoon",
       "holdTagReader": "Houd tag bij lezer",
       "scanning": "Scannen",
@@ -206,7 +217,9 @@
       "nfcNotSupported": "NFC wordt niet ondersteund op dit apparaat"
     },
     "accessibility": {
-      "skipToContent": "Naar hoofdinhoud"
+      "skipToContent": "Naar hoofdinhoud",
+      "skipToActions": "Naar acties",
+      "logo": "Zaparoo-logo"
     },
     "tokenStaging": {
       "title": "Klaargezet token bevestigen?",
@@ -308,6 +321,7 @@
         "writeLabel": "Naar tag schrijven",
         "copyLabel": "Kopiëren",
         "playLabel": "Voorbeeld",
+        "mediaActions": "Media-acties",
         "selectSystem": "Systeem selecteren",
         "selectTags": "Tags selecteren",
         "loading": "Laden...",
@@ -487,6 +501,7 @@
           "deletedSuccess": "Mapping verwijderd",
           "saveFailed": "Mapping opslaan mislukt",
           "deleteFailed": "Mapping verwijderen mislukt",
+          "cameraPermissionDenied": "Cameratoegang is uitgeschakeld. Schakel deze in via de systeeminstellingen.",
           "notFound": "Mapping niet gevonden"
         }
       }
@@ -661,9 +676,10 @@
     },
     "requirements": {
       "title": "Installatie voltooien",
-      "tosLabel": "Ik ga akkoord met de",
+      "legalLabel": "Ik ga akkoord met de Servicevoorwaarden en het Privacybeleid",
+      "legalPrefix": "Ik ga akkoord met de",
+      "legalAnd": "en het",
       "tosLink": "Servicevoorwaarden",
-      "privacyLabel": "Ik ga akkoord met het",
       "privacyLink": "Privacybeleid",
       "ageLabel": "Ik ben 13 jaar of ouder",
       "sendVerificationEmail": "Verificatie-e-mail verzenden",
@@ -678,6 +694,7 @@
       "emailVerified": "E-mailadres geverifieerd",
       "saved": "Opgeslagen",
       "save": "Opslaan",
+      "continue": "Akkoord en doorgaan",
       "logout": "Uitloggen"
     },
     "settings": {
@@ -695,6 +712,7 @@
       "updateDb.status.ready": "Database is gereed",
       "updateDb.status.optimizing": "Database wordt geoptimaliseerd (klaar voor gebruik)",
       "updateDb.status.paused": "Gepauzeerd",
+      "updateDb.status.throttled": "Wordt op lagere snelheid uitgevoerd",
       "updateDb.status.reconnecting": "Opnieuw verbinden...",
       "updateDb.status.mediaCount": "Database gereed: {{formattedCount}} mediatitels",
       "updateDb.status.noConnection": "Niet verbonden",
@@ -718,6 +736,7 @@
       "scrapeMedia": "Mediametadata ophalen",
       "scrapeMedia.cancel": "Annuleren",
       "scrapeMedia.starting": "Starten...",
+      "scrapeMedia.startError": "Starten van mediascrape mislukt",
       "scrapeMedia.scraperPlaceholder": "Selecteer een scraper",
       "scrapeMedia.allSystems": "Alle systemen",
       "scrapeMedia.selectSystemsTitle": "Systemen selecteren om te scrapen",
@@ -726,6 +745,7 @@
       "scrapeMedia.preparing": "Scrape voorbereiden",
       "scrapeMedia.activeTitle": "Mediametadata scrapen",
       "scrapeMedia.activeDescription": "Metadata voor het huidige systeem scrapen",
+      "scrapeMedia.viewDetails": "Details bekijken",
       "scrapeMedia.lastScrapeTitle": "Laatste scrape",
       "scrapeMedia.currentSystem": "Huidig systeem",
       "scrapeMedia.systemProgressCount": "Systemen: {{current}} / {{total}}",
@@ -741,8 +761,11 @@
       "scrapeMedia.blockedByIndex": "De mediadatabase wordt bijgewerkt. Scrapen is pas beschikbaar als dit proces klaar is.",
       "scrapeMedia.stats": "{{matched}} gekoppeld, {{skipped}} overgeslagen",
       "scrapeMedia.done": "Scrape voltooid: {{matched}} gekoppeld, {{skipped}} overgeslagen",
+      "scrapeMedia.failed": "Scrape mislukt",
+      "scrapeMedia.cancelled": "Scrape geannuleerd",
       "scrapeMedia.status.noConnection": "Niet verbonden",
       "scrapeMedia.status.paused": "Gepauzeerd",
+      "scrapeMedia.status.throttled": "Wordt op lagere snelheid uitgevoerd",
       "scrapeMedia.status.reconnecting": "Opnieuw verbinden...",
       "scrapeMedia.status.totalScraped": "{{formattedCount}} mediarecords gescrapet",
       "scrapeMedia.force": "Al gescrapete media opnieuw scrapen",
@@ -772,6 +795,8 @@
         "searching": "Apparaten zoeken...",
         "stillSearching": "Nog steeds aan het zoeken...",
         "noDevices": "Geen apparaten gevonden",
+        "addresses_one": "IP-adres: {{addresses}}",
+        "addresses_other": "IP-adressen: {{addresses}}",
         "version": "v{{version}}"
       },
       "connectionFailed": "Kan geen verbinding maken met apparaat",
@@ -782,6 +807,8 @@
       },
       "enterDeviceAddress": "Voer een apparaatadres in",
       "deviceHistoryEmpty": "Nog geen opgeslagen apparaten.",
+      "deviceHistoryError": "Opgeslagen apparaten konden niet worden geladen.",
+      "deviceHistoryLoading": "Opgeslagen apparaten laden...",
       "deviceDetails": "Apparaatdetails",
       "activeDevice": "Actief apparaat",
       "deviceDetail": {
@@ -797,7 +824,19 @@
         "forgetTitle": "Dit apparaat vergeten?",
         "forgetBody": "Hiermee verwijder je het uit je opgeslagen apparaten en wis je de koppelingsgegevens.",
         "forgetCancel": "Annuleren",
-        "forgetConfirm": "Apparaat vergeten"
+        "forgetConfirm": "Apparaat vergeten",
+        "forgetFailed": "Apparaat kon niet worden vergeten. Probeer het opnieuw."
+      },
+      "deviceCombine": {
+        "edit": "Apparaten combineren",
+        "cancelEdit": "Selectie annuleren",
+        "select": "Selecteer {{device}}",
+        "action": "Geselecteerde apparaten combineren",
+        "title": "Apparaten combineren?",
+        "body": "{{first}} en {{second}} combineren? Opgeslagen adressen en koppeling blijven behouden.",
+        "cancel": "Annuleren",
+        "confirm": "Combineren",
+        "failed": "Apparaten konden niet worden gecombineerd. Er is niets verwijderd."
       },
       "about": {
         "title": "Over",
@@ -856,9 +895,12 @@
         "debugLoggingHelp": "Schakelt uitgebreidere logbestanden in op het verbonden apparaat. Dit kan nuttig zijn bij het oplossen van problemen.",
         "showFilenames": "Bestandsnamen voor media tonen",
         "showFilenamesHelp": "Toon in zoekresultaten in de app de volledige bestandsnaam van media in plaats van de opgeschoonde versie. Dit kan nuttig zijn als je veel aangepaste tags in je bestandsnamen gebruikt.",
+        "appIconBadges": "Badges op appicoon",
+        "appIconBadgesHelp": "Toon het aantal ongelezen inboxberichten op het appicoon. iOS kan om toestemming voor meldingen vragen, omdat badges via de meldingsinstellingen worden beheerd.",
         "purchasePreview": "Aankoopvoorbeeld",
         "purchasePreviewLive": "Livestatus",
         "purchasePreviewFree": "Gratis account",
+        "purchasePreviewCheckout": "Warp-afrekenen",
         "purchasePreviewPro": "Levenslange Pro",
         "purchasePreviewWarp": "Warp actief",
         "purchasePreviewLoading": "Laden",

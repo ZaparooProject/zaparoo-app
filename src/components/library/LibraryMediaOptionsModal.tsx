@@ -30,6 +30,15 @@ export function LibraryMediaOptionsModal(props: {
       isOpen={props.isOpen}
       close={props.close}
       title={t("library.optionsTitle")}
+      footer={
+        <Button
+          label={t("library.goToTitle")}
+          variant="outline"
+          className="w-full"
+          disabled={!props.canGoToLetter}
+          onClick={props.onGoToLetter}
+        />
+      }
     >
       <div className="flex flex-col gap-5 py-3">
         <section className="flex flex-col gap-2">
@@ -70,17 +79,6 @@ export function LibraryMediaOptionsModal(props: {
             })}
           </div>
         </section>
-
-        {props.canGoToLetter && (
-          <section className="border-t border-white/25 pt-4">
-            <Button
-              label={t("library.goToTitle")}
-              variant="outline"
-              className="w-full"
-              onClick={props.onGoToLetter}
-            />
-          </section>
-        )}
       </div>
     </SlideModal>
   );

@@ -112,7 +112,7 @@ vi.mock("@capacitor/core", () => ({
 // Mock Pro purchase hook
 vi.mock("@/components/ProPurchase", () => ({
   useProPurchase: () => ({
-    PurchaseModal: () => null,
+    purchaseModal: null,
     setProPurchaseModalOpen: vi.fn(),
   }),
 }));
@@ -267,7 +267,11 @@ describe("Settings Readers Route", () => {
     it("should render scan mode section", () => {
       renderComponent();
 
-      expect(screen.getByText("settings.readers.scanMode")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", {
+          name: "Help for settings.readers.scanMode",
+        }),
+      ).toBeInTheDocument();
     });
 
     it("should render tap and hold mode buttons", async () => {
@@ -359,7 +363,9 @@ describe("Settings Readers Route", () => {
       renderComponent();
 
       expect(
-        screen.getByText("settings.readers.audioFeedback"),
+        screen.getByRole("button", {
+          name: "Help for settings.readers.audioFeedback",
+        }),
       ).toBeInTheDocument();
     });
 
@@ -367,7 +373,9 @@ describe("Settings Readers Route", () => {
       renderComponent();
 
       expect(
-        screen.getByText("settings.readers.autoDetectReaders"),
+        screen.getByRole("button", {
+          name: "Help for settings.readers.autoDetectReaders",
+        }),
       ).toBeInTheDocument();
     });
   });
@@ -377,7 +385,9 @@ describe("Settings Readers Route", () => {
       renderComponent();
 
       expect(
-        screen.getByText("settings.readers.continuousScan"),
+        screen.getByRole("button", {
+          name: "Help for settings.readers.continuousScan",
+        }),
       ).toBeInTheDocument();
     });
   });

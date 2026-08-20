@@ -141,7 +141,37 @@ describe("FavoriteButton", () => {
     expect(button).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("should omit favorite controls on unsupported Core", () => {
+  it("should keep a stable visible label with a state-specific accessible name", async () => {
+    vi.spyOn(CoreAPI, "mediaTagsUpdate").mockResolvedValue({
+      tags: [{ type: "user", tag: "favorite" }],
+    });
+    const user = userEvent.setup();
+
+    render(
+      <FavoriteButton
+        entry={mediaEntry()}
+        fallbackSystemId="SNES"
+        deviceKey="device-a"
+        displayLabel="library.favorite"
+      />,
+    );
+
+    const button = screen.getByRole("button", {
+      name: "library.addFavorite",
+    });
+    expect(button).toHaveTextContent("library.favorite");
+    expect(button).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(button);
+
+    const favoritedButton = await screen.findByRole("button", {
+      name: "library.removeFavorite",
+    });
+    expect(favoritedButton).toHaveTextContent("library.favorite");
+    expect(favoritedButton).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("should keep favorite controls disabled on unsupported Core", () => {
     useStatusStore.setState({ coreVersion: "2.14.9" });
 
     render(
@@ -153,7 +183,7 @@ describe("FavoriteButton", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: "library.addFavorite" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: "library.addFavorite" }),
+    ).toBeDisabled();
   });
 });

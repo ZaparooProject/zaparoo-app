@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import { act, render, screen, fireEvent, waitFor } from "@/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { RequirementsModal } from "@/components/RequirementsModal";
@@ -68,6 +68,14 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
+vi.mock("@/hooks/useHaptics", () => ({
+  useHaptics: () => ({
+    impact: vi.fn(),
+    notification: vi.fn(),
+    vibrate: vi.fn(),
+  }),
+}));
+
 describe("RequirementsModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -79,11 +87,27 @@ describe("RequirementsModal", () => {
     });
   });
 
-  it("should not render when closed", () => {
+  it("should stay mounted and slide open for new requirements", () => {
     render(<RequirementsModal />);
-    expect(
-      screen.queryByRole("dialog", { name: /requirements\.title/i }),
-    ).not.toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { hidden: true });
+
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
+
+    act(() => {
+      useRequirementsStore.setState({
+        isOpen: true,
+        pendingRequirements: [
+          {
+            type: "terms_acceptance",
+            description: "Accept terms",
+            endpoint: "/account/requirements",
+          },
+        ],
+      });
+    });
+
+    expect(screen.getByRole("dialog")).toBe(dialog);
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 0, 0)" });
   });
 
   it("should render when open with TOS requirement", () => {
@@ -106,13 +130,45 @@ describe("RequirementsModal", () => {
     // Title may appear multiple times due to test-utils wrapper
     const titles = screen.getAllByText("requirements.title");
     expect(titles.length).toBeGreaterThan(0);
-    // Checkboxes have their labels - may have multiple due to wrapper
-    const tosLabels = screen.getAllByLabelText(/requirements\.tosLabel/);
-    expect(tosLabels.length).toBeGreaterThan(0);
-    const privacyLabels = screen.getAllByLabelText(
-      /requirements\.privacyLabel/,
-    );
-    expect(privacyLabels.length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("checkbox", { name: "requirements.legalLabel" }),
+    ).toBeInTheDocument();
+  });
+
+  it("should expose legal links without toggling combined consent", async () => {
+    const user = userEvent.setup();
+    useRequirementsStore.setState({
+      isOpen: true,
+      pendingRequirements: [
+        {
+          type: "terms_acceptance",
+          description: "Accept terms",
+          endpoint: "/account/requirements",
+        },
+      ],
+    });
+
+    render(<RequirementsModal />);
+
+    const termsLink = screen.getByRole("link", {
+      name: /requirements\.tosLink/,
+    });
+    const privacyLink = screen.getByRole("link", {
+      name: /requirements\.privacyLink/,
+    });
+    expect(termsLink).toHaveAttribute("href", "https://zaparoo.com/terms");
+    expect(privacyLink).toHaveAttribute("href", "https://zaparoo.com/privacy");
+    expect(termsLink.closest("label")).toBeNull();
+    expect(privacyLink.closest("label")).toBeNull();
+    const legalCheckbox = screen.getByRole("checkbox", {
+      name: "requirements.legalLabel",
+    });
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+
+    await user.click(termsLink);
+    expect(legalCheckbox).not.toBeChecked();
+    await user.click(privacyLink);
+    expect(legalCheckbox).not.toBeChecked();
   });
 
   it("should render age verification checkbox when required", () => {
@@ -157,7 +213,8 @@ describe("RequirementsModal", () => {
     ).toBeInTheDocument();
   });
 
-  it("should enable save button when TOS and privacy are checked", async () => {
+  it("should enable continue when legal consent is checked", async () => {
+    const user = userEvent.setup();
     const requirements: PendingRequirement[] = [
       {
         type: "terms_acceptance",
@@ -173,26 +230,25 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    const saveButton = screen.getByRole("button", {
-      name: /requirements\.save/i,
+    const logoutButton = screen.getByRole("button", {
+      name: /requirements\.logout/i,
     });
-    expect(saveButton).toBeDisabled();
+    const continueButton = screen.getByRole("button", {
+      name: /requirements\.continue/i,
+    });
+    expect(logoutButton).toHaveTextContent("requirements.logout");
+    expect(continueButton).toBeDisabled();
 
-    // Check TOS - get first matching element
-    const tosCheckboxes = screen.getAllByLabelText(/requirements\.tosLabel/);
-    fireEvent.click(tosCheckboxes[0]!);
-    // Check Privacy - get first matching element
-    const privacyCheckboxes = screen.getAllByLabelText(
-      /requirements\.privacyLabel/,
+    await user.click(
+      screen.getByRole("checkbox", { name: "requirements.legalLabel" }),
     );
-    fireEvent.click(privacyCheckboxes[0]!);
 
     await waitFor(() => {
-      expect(saveButton).not.toBeDisabled();
+      expect(continueButton).not.toBeDisabled();
     });
   });
 
-  it("should enable save button when age is checked", async () => {
+  it("should enable continue when age is checked", async () => {
     const requirements: PendingRequirement[] = [
       {
         type: "age_verified",
@@ -208,20 +264,23 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    const saveButton = screen.getByRole("button", {
-      name: /requirements\.save/i,
+    const continueButton = screen.getByRole("button", {
+      name: /requirements\.continue/i,
     });
-    expect(saveButton).toBeDisabled();
+    expect(continueButton).toBeDisabled();
 
     // Check age
-    fireEvent.click(screen.getByLabelText(/requirements\.ageLabel/));
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "requirements.ageLabel" }),
+    );
 
     await waitFor(() => {
-      expect(saveButton).not.toBeDisabled();
+      expect(continueButton).not.toBeDisabled();
     });
   });
 
-  it("should call updateRequirements when save is clicked", async () => {
+  it("should submit only pending legal requirements", async () => {
+    const user = userEvent.setup();
     const requirements: PendingRequirement[] = [
       {
         type: "terms_acceptance",
@@ -237,27 +296,58 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    // Check required checkboxes - get first matching elements
-    const tosCheckboxes = screen.getAllByLabelText(/requirements\.tosLabel/);
-    fireEvent.click(tosCheckboxes[0]!);
-    const privacyCheckboxes = screen.getAllByLabelText(
-      /requirements\.privacyLabel/,
+    await user.click(
+      screen.getByRole("checkbox", { name: "requirements.legalLabel" }),
     );
-    fireEvent.click(privacyCheckboxes[0]!);
-
-    // Click save
-    const saveButton = screen.getByRole("button", {
-      name: /requirements\.save/i,
-    });
-    fireEvent.click(saveButton);
+    await user.click(
+      screen.getByRole("button", { name: /requirements\.continue/i }),
+    );
 
     const { updateRequirements } = await import("@/lib/onlineApi");
     await waitFor(() => {
       expect(updateRequirements).toHaveBeenCalledWith({
         accept_tos: true,
         accept_privacy: true,
-        age_verified: false,
       });
+    });
+  });
+
+  it("should submit legal and age requirements together", async () => {
+    const user = userEvent.setup();
+    useRequirementsStore.setState({
+      isOpen: true,
+      pendingRequirements: [
+        {
+          type: "terms_acceptance",
+          description: "Accept terms",
+          endpoint: "/account/requirements",
+        },
+        {
+          type: "age_verified",
+          description: "Verify age",
+          endpoint: "/account/requirements",
+        },
+      ],
+    });
+
+    render(<RequirementsModal />);
+
+    await user.click(
+      screen.getByRole("checkbox", { name: "requirements.legalLabel" }),
+    );
+    await user.click(
+      screen.getByRole("checkbox", { name: "requirements.ageLabel" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "requirements.continue" }),
+    );
+
+    const { updateRequirements } = await import("@/lib/onlineApi");
+    expect(updateRequirements).toHaveBeenCalledOnce();
+    expect(updateRequirements).toHaveBeenCalledWith({
+      accept_tos: true,
+      accept_privacy: true,
+      age_verified: true,
     });
   });
 
@@ -356,6 +446,11 @@ describe("RequirementsModal", () => {
       expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
     });
 
+    expect(logger.error).not.toHaveBeenCalledWith(
+      "RevenueCat logout failed:",
+      expect.anything(),
+      expect.anything(),
+    );
     expect(logger.error).not.toHaveBeenCalled();
   });
 
@@ -484,15 +579,12 @@ describe("RequirementsModal", () => {
 
     render(<RequirementsModal />);
 
-    // All sections should be visible - use getAllBy since multiple may exist
-    const tosLabels = screen.getAllByLabelText(/requirements\.tosLabel/);
-    expect(tosLabels.length).toBeGreaterThan(0);
-    const privacyLabels = screen.getAllByLabelText(
-      /requirements\.privacyLabel/,
-    );
-    expect(privacyLabels.length).toBeGreaterThan(0);
-    const ageLabels = screen.getAllByLabelText(/requirements\.ageLabel/);
-    expect(ageLabels.length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("checkbox", { name: "requirements.legalLabel" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: "requirements.ageLabel" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
         name: /requirements\.sendVerificationEmail/i,
@@ -517,12 +609,11 @@ describe("RequirementsModal", () => {
 
     const { rerender } = render(<RequirementsModal />);
 
-    // Use getByRole to get the checkbox element with role="checkbox"
-    const tosCheckbox = screen.getByRole("checkbox", {
-      name: /requirements\.tosLabel/,
+    const legalCheckbox = screen.getByRole("checkbox", {
+      name: "requirements.legalLabel",
     });
-    fireEvent.click(tosCheckbox);
-    expect(tosCheckbox).toBeChecked();
+    fireEvent.click(legalCheckbox);
+    expect(legalCheckbox).toBeChecked();
 
     // Close modal
     useRequirementsStore.setState({
@@ -541,10 +632,10 @@ describe("RequirementsModal", () => {
     rerender(<RequirementsModal />);
 
     // Checkbox should be unchecked again - get by role again after rerender
-    const reopenedTosCheckbox = screen.getByRole("checkbox", {
-      name: /requirements\.tosLabel/,
+    const reopenedLegalCheckbox = screen.getByRole("checkbox", {
+      name: "requirements.legalLabel",
     });
-    expect(reopenedTosCheckbox).not.toBeChecked();
+    expect(reopenedLegalCheckbox).not.toBeChecked();
   });
 
   describe("email verification check flow", () => {

@@ -44,6 +44,14 @@
       "run": "Ejecutar",
       "mainNavigation": "Navegación principal"
     },
+    "appBadge": {
+      "title": "Globos en el icono de la App",
+      "description": "Zaparoo puede mostrar el número de mensajes de la bandeja de entrada en el icono de la App. iOS lo describe como un permiso de notificaciones, pero Zaparoo solo solicita permiso para actualizar el globo. No solicita alertas ni sonidos de notificación.",
+      "noThanks": "No, gracias",
+      "continue": "Continuar",
+      "requesting": "Solicitando...",
+      "deniedDescription": "Los globos del icono de la App están bloqueados en los Ajustes de iOS. Abre Ajustes, selecciona Zaparoo y activa Notificaciones y Globos."
+    },
     "library": {
       "title": "Biblioteca",
       "collections": "Colecciones",
@@ -57,6 +65,7 @@
       "noFavoritesHint": "Añade favoritos desde los detalles del contenido multimedia.",
       "searchFavorites": "Buscar favoritos",
       "favorite": "Favorito",
+      "mediaActions": "Acciones multimedia",
       "addFavorite": "Añadir a favoritos",
       "removeFavorite": "Eliminar de favoritos",
       "updatingFavorite": "Actualizando favorito...",
@@ -130,6 +139,7 @@
       "launch": "Iniciar",
       "launchError": "No se pudo iniciar este contenido multimedia",
       "write": "Escribir en etiqueta NFC",
+      "writeAction": "Escribir",
       "preparingWrite": "Preparando escritura NFC...",
       "writeError": "No se pudo preparar este contenido multimedia para escribirlo",
       "optionsTitle": "Opciones de la biblioteca",
@@ -169,6 +179,7 @@
       "notSupportedSub": "No podrás usar ninguna función de lectura o escritura NFC en esta aplicación",
       "nfcDisabledLabel": "Acceso NFC deshabilitado",
       "nfcDisabledSub": "Habilita el acceso NFC en los ajustes de tu dispositivo para usar las funciones de lectura y escritura NFC",
+      "openNfcSettings": "Abrir ajustes de NFC",
       "holdTag": "Mantén la etiqueta junto al teléfono",
       "holdTagReader": "Mantén la etiqueta junto al lector",
       "scanning": "Escaneando",
@@ -207,6 +218,7 @@
     },
     "accessibility": {
       "skipToContent": "Saltar al contenido principal",
+      "skipToActions": "Saltar a las acciones",
       "logo": "Logotipo de Zaparoo"
     },
     "tokenStaging": {
@@ -309,6 +321,7 @@
         "writeLabel": "Escribir en la etiqueta",
         "copyLabel": "Copiar",
         "playLabel": "Vista previa",
+        "mediaActions": "Acciones multimedia",
         "selectSystem": "Seleccionar sistema",
         "selectTags": "Seleccionar etiquetas",
         "loading": "Cargando...",
@@ -488,6 +501,7 @@
           "deletedSuccess": "Asignación eliminada",
           "saveFailed": "Error al guardar la asignación",
           "deleteFailed": "Error al eliminar la asignación",
+          "cameraPermissionDenied": "El acceso a la cámara está deshabilitado. Habilítalo en los ajustes del sistema.",
           "notFound": "Asignación no encontrada"
         }
       }
@@ -662,9 +676,10 @@
     },
     "requirements": {
       "title": "Completar configuración",
-      "tosLabel": "Acepto los",
+      "legalLabel": "Acepto los Términos del servicio y la Política de privacidad",
+      "legalPrefix": "Acepto los",
+      "legalAnd": "y la",
       "tosLink": "Términos del servicio",
-      "privacyLabel": "Acepto la",
       "privacyLink": "Política de privacidad",
       "ageLabel": "Tengo 13 años o más",
       "sendVerificationEmail": "Enviar correo de verificación",
@@ -679,6 +694,7 @@
       "emailVerified": "Correo electrónico verificado",
       "saved": "Guardado",
       "save": "Guardar",
+      "continue": "Aceptar y continuar",
       "logout": "Cerrar sesión"
     },
     "settings": {
@@ -696,6 +712,7 @@
       "updateDb.status.ready": "La base de datos está lista",
       "updateDb.status.optimizing": "Optimizando la base de datos (lista para usar)",
       "updateDb.status.paused": "En pausa",
+      "updateDb.status.throttled": "Ejecutándose a velocidad reducida",
       "updateDb.status.reconnecting": "Reconectando...",
       "updateDb.status.mediaCount": "Base de datos lista: {{formattedCount}} títulos multimedia",
       "updateDb.status.noConnection": "Sin conexión",
@@ -719,6 +736,7 @@
       "scrapeMedia": "Obtener metadatos multimedia",
       "scrapeMedia.cancel": "Cancelar",
       "scrapeMedia.starting": "Iniciando...",
+      "scrapeMedia.startError": "Error al iniciar la obtención de metadatos multimedia",
       "scrapeMedia.scraperPlaceholder": "Seleccionar proveedor de metadatos",
       "scrapeMedia.allSystems": "Todos los sistemas",
       "scrapeMedia.selectSystemsTitle": "Seleccionar sistemas para obtener metadatos",
@@ -727,6 +745,7 @@
       "scrapeMedia.preparing": "Preparando obtención de metadatos",
       "scrapeMedia.activeTitle": "Obteniendo metadatos multimedia",
       "scrapeMedia.activeDescription": "Obteniendo metadatos del sistema actual",
+      "scrapeMedia.viewDetails": "Ver detalles",
       "scrapeMedia.lastScrapeTitle": "Última obtención",
       "scrapeMedia.currentSystem": "Sistema actual",
       "scrapeMedia.systemProgressCount": "{{current}} / {{total}} sistemas",
@@ -742,8 +761,11 @@
       "scrapeMedia.blockedByIndex": "La base de datos multimedia se está actualizando. No se pueden obtener metadatos hasta que termine.",
       "scrapeMedia.stats": "{{matched}} coincidencias, {{skipped}} omitidos",
       "scrapeMedia.done": "Obtención completada: {{matched}} coincidencias, {{skipped}} omitidos",
+      "scrapeMedia.failed": "Error en la obtención de metadatos",
+      "scrapeMedia.cancelled": "Obtención de metadatos cancelada",
       "scrapeMedia.status.noConnection": "Sin conexión",
       "scrapeMedia.status.paused": "En pausa",
+      "scrapeMedia.status.throttled": "Ejecutándose a velocidad reducida",
       "scrapeMedia.status.reconnecting": "Reconectando...",
       "scrapeMedia.status.totalScraped": "{{formattedCount}} registros multimedia obtenidos",
       "scrapeMedia.force": "Volver a obtener metadatos del contenido multimedia ya procesado",
@@ -773,6 +795,8 @@
         "searching": "Buscando dispositivos...",
         "stillSearching": "Buscando todavía...",
         "noDevices": "No se encontraron dispositivos",
+        "addresses_one": "Dirección IP: {{addresses}}",
+        "addresses_other": "Direcciones IP: {{addresses}}",
         "version": "v{{version}}"
       },
       "connectionFailed": "No se puede conectar al dispositivo",
@@ -783,6 +807,8 @@
       },
       "enterDeviceAddress": "Introduce una dirección de dispositivo",
       "deviceHistoryEmpty": "Aún no hay dispositivos guardados.",
+      "deviceHistoryError": "No se pudieron cargar los dispositivos guardados.",
+      "deviceHistoryLoading": "Cargando dispositivos guardados...",
       "deviceDetails": "Detalles del dispositivo",
       "activeDevice": "Dispositivo activo",
       "deviceDetail": {
@@ -798,7 +824,19 @@
         "forgetTitle": "¿Olvidar este dispositivo?",
         "forgetBody": "Esto lo eliminará de tus dispositivos guardados y borrará las credenciales de emparejamiento.",
         "forgetCancel": "Cancelar",
-        "forgetConfirm": "Olvidar dispositivo"
+        "forgetConfirm": "Olvidar dispositivo",
+        "forgetFailed": "No se pudo olvidar el dispositivo. Inténtalo de nuevo."
+      },
+      "deviceCombine": {
+        "edit": "Combinar dispositivos",
+        "cancelEdit": "Cancelar selección",
+        "select": "Seleccionar {{device}}",
+        "action": "Combinar seleccionados",
+        "title": "¿Combinar dispositivos?",
+        "body": "¿Combinar {{first}} y {{second}}? Se conservarán las direcciones guardadas y el emparejamiento.",
+        "cancel": "Cancelar",
+        "confirm": "Combinar",
+        "failed": "No se pudieron combinar los dispositivos. No se eliminó nada."
       },
       "about": {
         "title": "Acerca de",
@@ -857,6 +895,8 @@
         "debugLoggingHelp": "Genera archivos de registro más detallados en el dispositivo conectado. Puede resultar útil para solucionar problemas.",
         "showFilenames": "Mostrar nombres de archivo del contenido multimedia",
         "showFilenamesHelp": "En los resultados de búsqueda de la aplicación, muestra el nombre de archivo completo del contenido multimedia en la lista en lugar de la versión simplificada. Puede resultar útil si utilizas muchas etiquetas personalizadas en los nombres de archivo.",
+        "appIconBadges": "Globos en el icono de la App",
+        "appIconBadgesHelp": "Muestra el número de mensajes no leídos de la bandeja de entrada en el icono de la App. iOS puede solicitar permiso de notificaciones porque los globos se gestionan mediante los ajustes de notificaciones.",
         "purchasePreview": "Vista previa de compra",
         "purchasePreviewLive": "Estado real",
         "purchasePreviewFree": "Cuenta gratuita",

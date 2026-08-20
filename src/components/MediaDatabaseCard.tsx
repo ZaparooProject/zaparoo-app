@@ -619,11 +619,7 @@ export function MediaDatabaseCard({
           isOpen={cleanConfirmOpen}
           close={() => setCleanConfirmOpen(false)}
           title={t("settings.updateDb.cleanOrphansConfirmTitle")}
-        >
-          <div className="flex flex-col gap-4 py-4">
-            <p className="text-muted-foreground text-sm">
-              {t("settings.updateDb.cleanOrphansConfirmDescription")}
-            </p>
+          footer={
             <div className="flex gap-2">
               <Button
                 label={t("nav.cancel")}
@@ -641,6 +637,12 @@ export function MediaDatabaseCard({
                 onClick={handleCleanConfirm}
               />
             </div>
+          }
+        >
+          <div className="py-4">
+            <p className="text-muted-foreground text-sm">
+              {t("settings.updateDb.cleanOrphansConfirmDescription")}
+            </p>
           </div>
         </SlideModal>
       ) : null}

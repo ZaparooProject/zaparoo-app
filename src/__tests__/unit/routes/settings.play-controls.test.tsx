@@ -188,7 +188,9 @@ describe("Settings Play Controls Route", () => {
       renderComponent();
 
       expect(
-        screen.getByText("settings.core.playtime.enabled"),
+        screen.getByRole("button", {
+          name: "Help for settings.core.playtime.enabled",
+        }),
       ).toBeInTheDocument();
     });
 
@@ -210,10 +212,14 @@ describe("Settings Play Controls Route", () => {
         await screen.findByText("settings.core.launchGuard.title"),
       ).toBeInTheDocument();
       expect(
-        screen.getByText("settings.core.launchGuard.enabled"),
+        screen.getByRole("button", {
+          name: "Help for settings.core.launchGuard.enabled",
+        }),
       ).toBeInTheDocument();
       expect(
-        screen.getByText("settings.core.launchGuard.requireConfirm"),
+        screen.getByRole("button", {
+          name: "Help for settings.core.launchGuard.requireConfirm",
+        }),
       ).toBeInTheDocument();
       expect(
         screen.getByText("settings.core.launchGuard.timeout"),
@@ -232,11 +238,10 @@ describe("Settings Play Controls Route", () => {
         );
       });
 
-      const launchGuardToggle = screen
-        .getAllByLabelText("settings.core.launchGuard.enabled")
-        .find((element) => element.tagName === "INPUT");
-      expect(launchGuardToggle).toBeDefined();
-      fireEvent.click(launchGuardToggle!);
+      const launchGuardToggle = screen.getByRole("checkbox", {
+        name: "settings.core.launchGuard.enabled",
+      });
+      fireEvent.click(launchGuardToggle);
 
       await waitFor(() => {
         expect(mockSettingsUpdate).toHaveBeenCalledWith({

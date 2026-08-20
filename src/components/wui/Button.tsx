@@ -2,11 +2,14 @@ import classNames from "classnames";
 import { ReactElement, useState, memo, useRef, forwardRef } from "react";
 import { useHapticPress } from "@/hooks/useHapticPress";
 
+export type ButtonLayout = "inline" | "stacked" | "responsive";
+
 interface ButtonProps {
   onClick?: () => void;
   label?: string;
   variant?: "fill" | "outline" | "text";
   size?: "default" | "sm" | "lg";
+  layout?: ButtonLayout;
   /** Semantic intent for haptic feedback: default (light), primary (medium), destructive (heavy) */
   intent?: "default" | "primary" | "destructive";
   icon?: ReactElement;
@@ -28,6 +31,7 @@ export const Button = memo(
   forwardRef<HTMLButtonElement, ButtonProps>(function Button(props, ref) {
     const variant = props.variant || "fill";
     const size = props.size || "default";
+    const layout = props.layout || "inline";
     const [isPressed, setIsPressed] = useState(false);
     const touchStartPos = useRef<{ x: number; y: number } | null>(null);
     const hasMoved = useRef(false);
@@ -55,12 +59,15 @@ export const Button = memo(
         tabIndex={props.decorative ? -1 : undefined}
         className={classNames(
           "flex",
-          "flex-row",
           "items-center",
           "justify-center",
           "font-medium",
-          "gap-2",
           "tracking-[0.1px]",
+          {
+            "flex-row gap-2": layout === "inline",
+            "flex-col gap-1": layout === "stacked",
+            "flex-col gap-1 sm:flex-row sm:gap-2": layout === "responsive",
+          },
           "cursor-pointer",
           "transition-all",
           "duration-100",
@@ -93,9 +100,10 @@ export const Button = memo(
           },
           // Label padding
           {
-            "px-4": props.label && size === "sm",
-            "px-6": props.label && size === "default",
-            "px-8": props.label && size === "lg",
+            "px-4": props.label && size === "sm" && layout === "inline",
+            "px-6": props.label && size === "default" && layout === "inline",
+            "px-8": props.label && size === "lg" && layout === "inline",
+            "px-2": props.label && layout !== "inline",
           },
           // Rounded corners
           {
@@ -169,7 +177,11 @@ export const Button = memo(
         onMouseUp={() => setIsPressed(false)}
         onMouseLeave={() => setIsPressed(false)}
       >
-        {props.icon}
+        {props.icon && (
+          <span className="flex shrink-0 items-center" aria-hidden="true">
+            {props.icon}
+          </span>
+        )}
         {props.label}
       </button>
     );

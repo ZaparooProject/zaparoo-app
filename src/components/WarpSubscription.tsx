@@ -4,13 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/wui/Button";
 import { Segmented } from "@/components/wui/Segmented";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { SlideModal } from "@/components/SlideModal";
 import {
   useWarpSubscription,
   type WarpAction,
@@ -48,7 +42,7 @@ export function WarpSubscription(props: WarpSubscriptionProps) {
   );
 }
 
-interface WarpPurchaseDialogProps {
+interface WarpPurchaseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedPlan: WarpPlan;
@@ -59,7 +53,7 @@ interface WarpPurchaseDialogProps {
   purchaseEnabled: boolean;
 }
 
-function WarpPurchaseDialog({
+function WarpPurchaseModal({
   open,
   onOpenChange,
   selectedPlan,
@@ -68,18 +62,33 @@ function WarpPurchaseDialog({
   action,
   onPurchase,
   purchaseEnabled,
-}: WarpPurchaseDialogProps) {
+}: WarpPurchaseModalProps) {
   const { t } = useTranslation();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onOpenChange={onOpenChange}>
-        <DialogHeader>
-          <DialogTitle>{t("online.warp.purchaseTitle")}</DialogTitle>
-          <DialogDescription>
-            {t("online.warp.purchaseDescription")}
-          </DialogDescription>
-        </DialogHeader>
+    <SlideModal
+      isOpen={open}
+      close={() => onOpenChange(false)}
+      dismissible={action !== "purchase"}
+      title={t("online.warp.purchaseTitle")}
+      footer={
+        <Button
+          label={
+            action === "purchase"
+              ? t("online.warp.purchasing")
+              : t("online.warp.subscribe")
+          }
+          onClick={onPurchase}
+          disabled={action !== null || !purchaseEnabled}
+          intent="primary"
+          className="w-full"
+        />
+      }
+    >
+      <div className="flex flex-col gap-4 py-2">
+        <p className="text-muted-foreground text-sm">
+          {t("online.warp.purchaseDescription")}
+        </p>
 
         <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
           <li>{t("online.warp.benefitBackup")}</li>
@@ -133,20 +142,8 @@ function WarpPurchaseDialog({
           </a>
           .
         </p>
-
-        <Button
-          label={
-            action === "purchase"
-              ? t("online.warp.purchasing")
-              : t("online.warp.subscribe")
-          }
-          onClick={onPurchase}
-          disabled={action !== null || !purchaseEnabled}
-          intent="primary"
-          className="w-full"
-        />
-      </DialogContent>
-    </Dialog>
+      </div>
+    </SlideModal>
   );
 }
 
@@ -253,7 +250,7 @@ function WarpSubscriptionPreview({
         />
       )}
 
-      <WarpPurchaseDialog
+      <WarpPurchaseModal
         open={state === "checkout" && purchaseDialogOpen}
         onOpenChange={setPurchaseDialogOpen}
         selectedPlan={selectedPlan}
@@ -444,7 +441,10 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
       {!checkoutSuppressed && packages && (
         <Button
           label={t("online.warp.get")}
-          onClick={() => setPurchaseDialogOpen(true)}
+          onClick={() => {
+            if (action === null) setPurchaseDialogOpen(true);
+          }}
+          disabled={action !== null}
           intent="primary"
           className="w-full"
         />
@@ -513,10 +513,10 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
         />
       )}
 
-      <WarpPurchaseDialog
+      <WarpPurchaseModal
         open={purchaseDialogOpen && Boolean(packages)}
         onOpenChange={(open) => {
-          if (action === null) setPurchaseDialogOpen(open);
+          if (action !== "purchase") setPurchaseDialogOpen(open);
         }}
         selectedPlan={selectedPlan}
         setSelectedPlan={setSelectedPlan}

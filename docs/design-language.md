@@ -13,7 +13,7 @@ Do not add decorative icons, new card styles, helper text, descriptions, badges,
 Use these before creating or changing UI:
 
 - App shell: `src/components/PageFrame.tsx`, `src/components/ResponsiveContainer.tsx`, `src/components/BottomNav.tsx`, `BackToTop.tsx`, `ReconnectingIndicator.tsx`
-- WUI primitives: `src/components/wui/Button.tsx`, `HeaderButton.tsx`, `Card.tsx`, `ToggleSwitch.tsx`, `TextInput.tsx`, `Badge.tsx`, `EmptyState.tsx`, `Segmented.tsx`, `ToggleChip.tsx`, `SettingHelp.tsx`
+- WUI primitives: `src/components/wui/Button.tsx`, `ModalActionBar.tsx`, `ModalActionRail.tsx`, `HeaderButton.tsx`, `Card.tsx`, `ToggleSwitch.tsx`, `TextInput.tsx`, `Badge.tsx`, `EmptyState.tsx`, `Segmented.tsx`, `ToggleChip.tsx`, `SettingHelp.tsx`
 - Modals: `src/components/SlideModal.tsx`, `ConfirmClearModal.tsx`, `PairingModal.tsx`, `WriteModal.tsx`, `RequirementsModal.tsx`, `ProPurchase.tsx`, `home/StopConfirmModal.tsx`, `home/StagedTokenModal.tsx`
 - Settings screens: `src/routes/settings.index.tsx`, `settings.readers.tsx`, `settings.advanced.tsx`, `settings.accessibility.tsx`, `settings.media.tsx`, `settings.play-controls.tsx`, `settings.about.tsx`, `settings.help.tsx`, `settings.online.tsx`, `src/routes/-pages/Devices.tsx`, `DeviceDetail.tsx`, `Logs.tsx`
 - Create/search flows: `src/routes/create.index.tsx`, `create.custom.tsx`, `create.nfc.tsx`, `create.mappings.tsx`, `src/routes/-pages/Search.tsx`, `MappingEditor.tsx`, `ZapScriptInput.tsx`
@@ -156,7 +156,9 @@ Shape is owned by Button:
 - labeled buttons use rounded pill-like corners
 - haptics derive from `intent`: default light, primary medium, destructive heavy
 
-Use `className="w-full"` for full-width primary page actions. Use `className="flex-1"` for equal-width modal footer buttons.
+Use `className="w-full"` for full-width primary page actions and complex-modal primary actions. Use `className="flex-1"` only for equal-width confirmation actions sharing one footer row.
+
+Button layout is inline by default. `layout="responsive"` is reserved for compact action-rail items: icon above caption on narrow screens, then icon beside caption from the `sm` breakpoint. Keep rail captions on one line.
 
 Do not build custom buttons with raw `<button>` unless implementing a specialized primitive already present in the codebase, such as selector rows or segmented radio buttons.
 
@@ -292,7 +294,7 @@ Real behavior:
 
 - inline circular help button with `HelpCircleIcon size={18}`
 - hint color `text-foreground-hint`, hover/focus muted
-- opens a shadcn `Dialog`, not `SlideModal`
+- opens a content-sized `SlideModal`
 - supports `**bold**` and paragraph breaks in description text
 
 Do not replace an existing help-icon pattern with visible helper paragraphs.
@@ -397,7 +399,7 @@ Use `SystemSelector`, `TagSelector`, and their trigger components for choosing s
 
 Selector modal pattern:
 
-- `SlideModal fixedHeight="90vh"`
+- `SlideModal fixedHeight="90vh"`; shared modal maximum clamps rendered height to 80% of viewport
 - search bar at top with icon inside input
 - category tabs/accordion where relevant
 - virtualized list rows
@@ -416,6 +418,8 @@ Visual behavior:
 
 - black overlay `bg-black/50`
 - bottom sheet on mobile, centered max width on desktop
+- content-sized by default and capped at 80% of viewport height
+- fixed-height selector/search requests are still capped at 80%
 - `bg-[rgba(17,25,40,0.7)]`
 - border `rgba(255,255,255,0.13)`
 - backdrop blur
@@ -424,16 +428,35 @@ Visual behavior:
 - safe-area bottom padding
 - focus trap and Android back handling
 
+Persistent footer behavior:
+
+- footer stays in normal flex flow below scrollable body; never float actions over content
+- body shrinks and scrolls before footer; footer gets its own constrained overflow only as short-viewport/text-zoom fallback
+- simple confirmations keep two labelled, equal-width actions on one row
+- form and selector footers with one secondary action plus one primary action use `ModalActionBar`, preserving the same labelled, equal-width pair; examples include Reset/Apply, Clear/Apply, Delete/Save, and Logout/Save
+- media/detail modals with several independent contextual actions use `ModalActionRail`; do not treat those actions as confirmation buttons
+- on narrow screens, the rail spans the footer above a full-width primary action; rail items use an icon above a short caption
+- from the `sm` breakpoint, the rail sits left of the primary action and its items switch to inline icon-and-caption layout
+- rail items share available width while they fit, never wrap onto another row, and scroll horizontally once their minimum widths exceed the available space; adding actions must not shrink the primary action or grow the footer vertically
+- use short, stable visual captions such as `Favorite`, `Write`, `Copy`, and `Preview`; communicate toggle or loading state through icon treatment, `aria-pressed`, disabled state, and a state-specific accessible name rather than changing caption width
+- rail icons never shrink, captions remain on one line, action order stays stable, every item remains directly reachable, and secondary actions precede the primary action in DOM and focus order
+- reserve icon-only buttons for established constrained controls and always provide an accessible `aria-label`
+- modal action targets stay at least 48px high; keep actions mounted and disable them during temporary unavailable, empty, disconnected, or loading states so the rail does not reflow
+- do not use action rails for confirmations, form submission pairs, single terminal actions, navigation, or unbounded destination data such as individual collections
+- current reference implementations are `MediaDetailsModal` and `LibraryMediaDetailsModal`
+- use `footerSkipLabel` when long content needs direct keyboard/screen-reader navigation to actions
+
+Use `dismissible={false}` only for mandatory blocking flows. This keeps the visible overlay but disables overlay-click, drag, Escape, Android-back, and close-button dismissal while preserving explicit completion/logout actions.
+
 Do not implement one-off bottom-sheet shells.
 
-### Dialog modals and full-screen write state
+### Full-screen write state
 
-`Dialog` is not the default for new app actions. Reserve shadcn `Dialog` for existing small/help/system-specific flows:
+Shadcn `Dialog` is no longer used for app modal flows; keep its primitive only while shared compatibility/tests require it.
 
-- `SettingHelp`, `ProPurchase`, `RequirementsModal`, and `NFCModal` use shadcn `Dialog`.
-- `WriteModal` is a special full-screen fixed overlay with scan spinner and cancel button, not a bottom sheet.
+`WriteModal` is a special full-screen fixed overlay with scan spinner and cancel button, not a bottom sheet.
 
-Copy the existing modal type for the same job. For new action confirmations, use `SlideModal` unless matching a strong existing Dialog precedent. Do not move help/purchase/write flows into `SlideModal` unless redesigning those flows deliberately.
+Copy existing `SlideModal` patterns for the same job. Help and purchase flows use `SlideModal`; `WriteModal` remains the deliberate full-screen exception.
 
 ### Confirm modals
 
@@ -451,7 +474,7 @@ Match the existing confirmation type closest to the action. Destructive actions 
 Launch Guard staged token modal pattern:
 
 - `SlideModal fixedHeight="auto"`
-- footer with two equal buttons in `flex gap-3 pt-4`
+- footer with two equal buttons in `flex gap-3`; shared footer owns separator and top padding
 - content `flex flex-col gap-4 py-4`
 - muted small description
 - token value `text-foreground text-sm font-medium break-all`

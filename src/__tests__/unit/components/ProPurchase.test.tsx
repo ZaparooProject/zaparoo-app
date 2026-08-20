@@ -1,4 +1,4 @@
-import { act, render, renderHook, screen, waitFor } from "@/test-utils";
+import { act, render, renderHook, screen, waitFor, within } from "@/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { useProPurchase } from "@/components/ProPurchase";
@@ -177,6 +177,19 @@ function createOfferings(
   };
 }
 
+function ProPurchaseHarness() {
+  const { purchaseModal, setProPurchaseModalOpen } = useProPurchase();
+
+  return (
+    <>
+      <button type="button" onClick={() => setProPurchaseModalOpen(true)}>
+        Open Pro purchase
+      </button>
+      {purchaseModal}
+    </>
+  );
+}
+
 describe("useProPurchase", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -204,6 +217,19 @@ describe("useProPurchase", () => {
         },
       },
     } as any);
+  });
+
+  it("should slide the mounted purchase modal open", async () => {
+    const user = userEvent.setup();
+    render(<ProPurchaseHarness />);
+    const dialog = screen.getByRole("dialog", { hidden: true });
+
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
+
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+
+    expect(screen.getByRole("dialog")).toBe(dialog);
+    expect(dialog).toHaveStyle({ transform: "translate3d(0, 0, 0)" });
   });
 
   it("should read proAccess from store", async () => {
@@ -289,11 +315,12 @@ describe("useProPurchase", () => {
   });
 
   it("should show unavailable state and report when offerings have no packages", async () => {
+    const user = userEvent.setup();
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     const { logger } = await import("@/lib/logger");
     vi.mocked(Purchases.getOfferings).mockResolvedValue(createOfferings());
 
-    const { result } = renderHook(() => useProPurchase());
+    render(<ProPurchaseHarness />);
 
     await waitFor(() => {
       expect(logger.error).toHaveBeenCalledWith(
@@ -311,13 +338,7 @@ describe("useProPurchase", () => {
         },
       );
     });
-
-    act(() => {
-      result.current.setProPurchaseModalOpen(true);
-    });
-
-    const PurchaseModalComponent = result.current.PurchaseModal;
-    render(<PurchaseModalComponent />);
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
 
     expect(screen.getByText("scan.purchaseProUnavailable")).toBeInTheDocument();
     expect(
@@ -326,12 +347,13 @@ describe("useProPurchase", () => {
   });
 
   it("should show error state and report when offerings fail to load", async () => {
+    const user = userEvent.setup();
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     const { logger } = await import("@/lib/logger");
     const error = new Error("Network unavailable");
     vi.mocked(Purchases.getOfferings).mockRejectedValue(error);
 
-    const { result } = renderHook(() => useProPurchase());
+    render(<ProPurchaseHarness />);
 
     await waitFor(() => {
       expect(logger.error).toHaveBeenCalledWith(
@@ -344,13 +366,7 @@ describe("useProPurchase", () => {
         },
       );
     });
-
-    act(() => {
-      result.current.setProPurchaseModalOpen(true);
-    });
-
-    const PurchaseModalComponent = result.current.PurchaseModal;
-    render(<PurchaseModalComponent />);
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
 
     expect(
       screen.getByText("scan.purchaseProOfferingsError"),
@@ -361,28 +377,75 @@ describe("useProPurchase", () => {
   });
 
   it("should show fetched package price and enable purchase action", async () => {
+    const user = userEvent.setup();
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     vi.mocked(Purchases.getOfferings).mockResolvedValue(
       createOfferings(createOffering([createPackage()])),
     );
 
-    const { result } = renderHook(() => useProPurchase());
+    render(<ProPurchaseHarness />);
 
     await waitFor(() => {
       expect(Purchases.getOfferings).toHaveBeenCalled();
     });
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
 
-    act(() => {
-      result.current.setProPurchaseModalOpen(true);
-    });
-
-    const PurchaseModalComponent = result.current.PurchaseModal;
-    render(<PurchaseModalComponent />);
-
-    expect(screen.getByText("scan.purchaseProP1 $6.99")).toBeInTheDocument();
+    expect(
+      await screen.findByText("scan.purchaseProP1 $6.99"),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "scan.purchaseProAction" }),
     ).toBeEnabled();
+  });
+
+  it("should ignore repeat activations and block dismissal while purchasing", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    let resolvePurchase:
+      | ((value: Awaited<ReturnType<typeof Purchases.purchasePackage>>) => void)
+      | undefined;
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+    vi.mocked(Purchases.purchasePackage).mockReturnValue(
+      new Promise((resolve) => {
+        resolvePurchase = resolve;
+      }) as ReturnType<typeof Purchases.purchasePackage>,
+    );
+
+    render(<ProPurchaseHarness />);
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+    const purchaseButton = await screen.findByRole("button", {
+      name: "scan.purchaseProAction",
+    });
+    const dialog = screen.getByRole("dialog", {
+      name: "scan.purchaseProTitle",
+    });
+
+    await user.dblClick(purchaseButton);
+
+    expect(Purchases.purchasePackage).toHaveBeenCalledTimes(1);
+    expect(
+      within(dialog).getByRole("button", { name: "loading" }),
+    ).toBeDisabled();
+    expect(
+      within(dialog).queryByRole("button", { name: "nav.close" }),
+    ).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog", { name: "scan.purchaseProTitle" })).toBe(
+      dialog,
+    );
+
+    act(() => {
+      resolvePurchase?.({
+        customerInfo: {
+          entitlements: { active: { tapto_launcher: {} } },
+        },
+      } as never);
+    });
+    await waitFor(() => {
+      expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
+    });
   });
 
   it("should never buy the current Warp package as Pro", async () => {
@@ -409,13 +472,12 @@ describe("useProPurchase", () => {
       },
     } as never);
 
-    const { result } = renderHook(() => useProPurchase());
+    render(<ProPurchaseHarness />);
+    const dialog = screen.getByRole("dialog", { hidden: true });
     await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
-    act(() => result.current.setProPurchaseModalOpen(true));
-    render(<result.current.PurchaseModal />);
-
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
     await user.click(
-      screen.getByRole("button", { name: "scan.purchaseProAction" }),
+      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
     );
 
     const { usePreferencesStore } = await import("@/lib/preferencesStore");
@@ -425,8 +487,11 @@ describe("useProPurchase", () => {
       });
       expect(usePreferencesStore.getState().lifetimeProAccess).toBe(true);
       expect(mockSetLaunchOnScan).toHaveBeenCalledWith(true);
-      expect(result.current.proPurchaseModalOpen).toBe(false);
+      expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
     });
+    expect(
+      screen.queryByRole("dialog", { name: "scan.purchaseProTitle" }),
+    ).not.toBeInTheDocument();
   });
 
   it("should show a purchase error without enabling launch on scan", async () => {
@@ -440,20 +505,23 @@ describe("useProPurchase", () => {
       new Error("payment declined"),
     );
 
-    const { result } = renderHook(() => useProPurchase());
+    render(<ProPurchaseHarness />);
     await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
-    act(() => result.current.setProPurchaseModalOpen(true));
-    render(<result.current.PurchaseModal />);
-
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
     await user.click(
-      screen.getByRole("button", { name: "scan.purchaseProAction" }),
+      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
     );
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("scan.purchaseProFailed");
     });
     expect(mockSetLaunchOnScan).not.toHaveBeenCalled();
-    expect(result.current.proPurchaseModalOpen).toBe(true);
+    expect(
+      screen.getByRole("dialog", { name: "scan.purchaseProTitle" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "scan.purchaseProAction" }),
+    ).toBeEnabled();
   });
 
   it("should show unsupported state on web platform", async () => {
@@ -462,48 +530,23 @@ describe("useProPurchase", () => {
     vi.mocked(Capacitor.getPlatform).mockReturnValue("web");
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
 
-    const { result } = renderHook(() => useProPurchase());
+    const user = userEvent.setup();
+    render(<ProPurchaseHarness />);
 
     await waitFor(() => {
       expect(Purchases.getOfferings).not.toHaveBeenCalled();
     });
-
-    act(() => {
-      result.current.setProPurchaseModalOpen(true);
-    });
-
-    const PurchaseModalComponent = result.current.PurchaseModal;
-    render(<PurchaseModalComponent />);
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
 
     expect(screen.getByText("scan.purchaseProUnavailable")).toBeInTheDocument();
     expect(screen.queryByText(/\$6\.99/)).not.toBeInTheDocument();
   });
 
-  it("should render PurchaseModal component", async () => {
-    const { result } = renderHook(() => useProPurchase());
+  it("should keep purchase modal hidden until opened", () => {
+    render(<ProPurchaseHarness />);
 
-    const PurchaseModalComponent = result.current.PurchaseModal;
-    render(<PurchaseModalComponent />);
-
-    // Modal should not be visible initially (proPurchaseModalOpen is false)
     expect(
       screen.queryByRole("dialog", { name: /scan\.purchaseProTitle/i }),
     ).not.toBeInTheDocument();
-  });
-
-  it("should open purchase modal", async () => {
-    const { result } = renderHook(() => useProPurchase());
-
-    act(() => {
-      result.current.setProPurchaseModalOpen(true);
-    });
-
-    const PurchaseModalComponent = result.current.PurchaseModal;
-    render(<PurchaseModalComponent />);
-
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    // Title may appear multiple times due to test-utils wrapper
-    const titles = screen.getAllByText("scan.purchaseProTitle");
-    expect(titles.length).toBeGreaterThan(0);
   });
 });

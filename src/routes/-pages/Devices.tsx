@@ -24,6 +24,7 @@ import { PageFrame } from "@/components/PageFrame";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { SlideModal } from "@/components/SlideModal";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DelayedLoading } from "@/components/DelayedLoading";
@@ -194,14 +195,25 @@ export function Devices() {
           predicate: (query) => query.queryKey.includes(recordId),
         });
       }
+      const referencedLegacyKeys = new Set(
+        Object.values(deviceRegistry.getSnapshot().records)
+          .map((record) => record.legacyCredentialKey)
+          .filter((key): key is string => key !== undefined),
+      );
       setPairedKeys((current) => {
         const next = new Set(current);
         next.delete(credentialKeyForRecord(combineTarget.recordId));
         next.delete(credentialKeyForRecord(combineSource.recordId));
-        if (combineTarget.legacyCredentialKey) {
+        if (
+          combineTarget.legacyCredentialKey &&
+          !referencedLegacyKeys.has(combineTarget.legacyCredentialKey)
+        ) {
           next.delete(combineTarget.legacyCredentialKey);
         }
-        if (combineSource.legacyCredentialKey) {
+        if (
+          combineSource.legacyCredentialKey &&
+          !referencedLegacyKeys.has(combineSource.legacyCredentialKey)
+        ) {
           next.delete(combineSource.legacyCredentialKey);
         }
         if (mergedPairing) {
@@ -343,7 +355,28 @@ export function Devices() {
         close={() => {
           if (!isCombining) setCombineOpen(false);
         }}
+        dismissible={!isCombining}
         title={t("settings.deviceCombine.title")}
+        footer={
+          <ModalActionBar
+            secondaryAction={
+              <Button
+                variant="outline"
+                label={t("settings.deviceCombine.cancel")}
+                onClick={() => setCombineOpen(false)}
+                disabled={isCombining}
+              />
+            }
+            primaryAction={
+              <Button
+                intent="primary"
+                label={t("settings.deviceCombine.confirm")}
+                onClick={() => void handleConfirmCombine()}
+                disabled={isCombining}
+              />
+            }
+          />
+        }
       >
         <div className="flex flex-col gap-4 py-4">
           <p className="text-center">
@@ -363,22 +396,6 @@ export function Devices() {
               {t("settings.deviceCombine.failed")}
             </p>
           )}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              label={t("settings.deviceCombine.cancel")}
-              onClick={() => setCombineOpen(false)}
-              disabled={isCombining}
-              className="flex-1"
-            />
-            <Button
-              intent="primary"
-              label={t("settings.deviceCombine.confirm")}
-              onClick={() => void handleConfirmCombine()}
-              disabled={isCombining}
-              className="flex-1"
-            />
-          </div>
         </div>
       </SlideModal>
     </PageFrame>

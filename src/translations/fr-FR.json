@@ -44,6 +44,14 @@
       "run": "Exécuter",
       "mainNavigation": "Navigation principale"
     },
+    "appBadge": {
+      "title": "Badges de l’icône de l’application",
+      "description": "Zaparoo peut afficher le nombre de messages de la boîte de réception sur l’icône de l’application. iOS présente cela comme une autorisation de notification, mais Zaparoo demande uniquement l’autorisation de mettre à jour le badge. L’application ne demande ni alertes ni sons de notification.",
+      "noThanks": "Non merci",
+      "continue": "Continuer",
+      "requesting": "Demande en cours...",
+      "deniedDescription": "Les badges de l’icône de l’application sont bloqués dans les réglages iOS. Ouvrez Réglages, sélectionnez Zaparoo, puis activez Notifications et Pastilles."
+    },
     "library": {
       "title": "Bibliothèque",
       "collections": "Collections",
@@ -57,6 +65,7 @@
       "noFavoritesHint": "Ajoutez des favoris depuis les détails du média.",
       "searchFavorites": "Rechercher dans les favoris",
       "favorite": "Favori",
+      "mediaActions": "Actions du média",
       "addFavorite": "Ajouter aux favoris",
       "removeFavorite": "Retirer des favoris",
       "updatingFavorite": "Mise à jour du favori...",
@@ -130,6 +139,7 @@
       "launch": "Lancer",
       "launchError": "Impossible de lancer ce média",
       "write": "Écrire sur un tag NFC",
+      "writeAction": "Écrire",
       "preparingWrite": "Préparation de l’écriture NFC...",
       "writeError": "Impossible de préparer ce média pour l’écriture",
       "optionsTitle": "Options de la bibliothèque",
@@ -169,6 +179,7 @@
       "notSupportedSub": "Les fonctions de lecture et d’écriture NFC ne seront pas disponibles dans cette application",
       "nfcDisabledLabel": "Accès NFC désactivé",
       "nfcDisabledSub": "Activez l’accès NFC dans les réglages de votre appareil pour utiliser les fonctions de lecture et d’écriture NFC",
+      "openNfcSettings": "Ouvrir les réglages NFC",
       "holdTag": "Maintenez le tag contre le téléphone",
       "holdTagReader": "Maintenez le tag contre le lecteur",
       "scanning": "Scan en cours",
@@ -207,6 +218,7 @@
     },
     "accessibility": {
       "skipToContent": "Aller au contenu principal",
+      "skipToActions": "Aller aux actions",
       "logo": "Logo Zaparoo"
     },
     "tokenStaging": {
@@ -309,6 +321,7 @@
         "writeLabel": "Écrire sur le tag",
         "copyLabel": "Copier",
         "playLabel": "Aperçu",
+        "mediaActions": "Actions du média",
         "selectSystem": "Sélectionner un système",
         "selectTags": "Sélectionner des tags",
         "loading": "Chargement...",
@@ -488,6 +501,7 @@
           "deletedSuccess": "Mappage supprimé",
           "saveFailed": "Échec de l’enregistrement du mappage",
           "deleteFailed": "Échec de la suppression du mappage",
+          "cameraPermissionDenied": "L’accès à l’appareil photo est désactivé. Activez-le dans les réglages système.",
           "notFound": "Mappage introuvable"
         }
       }
@@ -662,9 +676,10 @@
     },
     "requirements": {
       "title": "Terminer la configuration",
-      "tosLabel": "J’accepte les",
+      "legalLabel": "J’accepte les Conditions d’utilisation et la Politique de confidentialité",
+      "legalPrefix": "J’accepte les",
+      "legalAnd": "et la",
       "tosLink": "Conditions d’utilisation",
-      "privacyLabel": "J’accepte la",
       "privacyLink": "Politique de confidentialité",
       "ageLabel": "J’ai au moins 13 ans",
       "sendVerificationEmail": "Envoyer l’e-mail de vérification",
@@ -679,6 +694,7 @@
       "emailVerified": "E-mail vérifié",
       "saved": "Enregistré",
       "save": "Enregistrer",
+      "continue": "Accepter et continuer",
       "logout": "Se déconnecter"
     },
     "settings": {
@@ -696,6 +712,7 @@
       "updateDb.status.ready": "La base de données est prête",
       "updateDb.status.optimizing": "Optimisation de la base de données (prête à l’emploi)",
       "updateDb.status.paused": "En pause",
+      "updateDb.status.throttled": "Fonctionnement à vitesse réduite",
       "updateDb.status.reconnecting": "Reconnexion...",
       "updateDb.status.mediaCount": "Base de données prête : {{formattedCount}} titres multimédias",
       "updateDb.status.noConnection": "Non connecté",
@@ -719,6 +736,7 @@
       "scrapeMedia": "Récupérer les métadonnées des médias",
       "scrapeMedia.cancel": "Annuler",
       "scrapeMedia.starting": "Démarrage...",
+      "scrapeMedia.startError": "Échec du démarrage de la récupération des métadonnées",
       "scrapeMedia.scraperPlaceholder": "Sélectionner une source de métadonnées",
       "scrapeMedia.allSystems": "Tous les systèmes",
       "scrapeMedia.selectSystemsTitle": "Sélectionner les systèmes à traiter",
@@ -727,6 +745,7 @@
       "scrapeMedia.preparing": "Préparation de la récupération",
       "scrapeMedia.activeTitle": "Récupération des métadonnées",
       "scrapeMedia.activeDescription": "Récupération des métadonnées du système actuel",
+      "scrapeMedia.viewDetails": "Afficher les détails",
       "scrapeMedia.lastScrapeTitle": "Dernière récupération",
       "scrapeMedia.currentSystem": "Système actuel",
       "scrapeMedia.systemProgressCount": "Systèmes : {{current}} / {{total}}",
@@ -742,8 +761,11 @@
       "scrapeMedia.blockedByIndex": "La mise à jour de la base de données de médias est en cours. La récupération des métadonnées est indisponible jusqu’à la fin de l’opération.",
       "scrapeMedia.stats": "Correspondances : {{matched}}, éléments ignorés : {{skipped}}",
       "scrapeMedia.done": "Récupération terminée. Correspondances : {{matched}}, éléments ignorés : {{skipped}}",
+      "scrapeMedia.failed": "Échec de la récupération des métadonnées",
+      "scrapeMedia.cancelled": "Récupération des métadonnées annulée",
       "scrapeMedia.status.noConnection": "Non connecté",
       "scrapeMedia.status.paused": "En pause",
+      "scrapeMedia.status.throttled": "Fonctionnement à vitesse réduite",
       "scrapeMedia.status.reconnecting": "Reconnexion...",
       "scrapeMedia.status.totalScraped": "Enregistrements multimédias récupérés : {{formattedCount}}",
       "scrapeMedia.force": "Récupérer à nouveau les métadonnées déjà obtenues",
@@ -773,6 +795,8 @@
         "searching": "Recherche d’appareils...",
         "stillSearching": "Recherche toujours en cours...",
         "noDevices": "Aucun appareil trouvé",
+        "addresses_one": "Adresse IP : {{addresses}}",
+        "addresses_other": "Adresses IP : {{addresses}}",
         "version": "v{{version}}"
       },
       "connectionFailed": "Impossible de se connecter à l’appareil",
@@ -783,6 +807,8 @@
       },
       "enterDeviceAddress": "Saisissez une adresse d’appareil",
       "deviceHistoryEmpty": "Aucun appareil enregistré.",
+      "deviceHistoryError": "Impossible de charger les appareils enregistrés.",
+      "deviceHistoryLoading": "Chargement des appareils enregistrés...",
       "deviceDetails": "Détails de l’appareil",
       "activeDevice": "Appareil actif",
       "deviceDetail": {
@@ -798,7 +824,19 @@
         "forgetTitle": "Oublier cet appareil ?",
         "forgetBody": "Cette action le supprimera de vos appareils enregistrés et effacera les identifiants d’association.",
         "forgetCancel": "Annuler",
-        "forgetConfirm": "Oublier l’appareil"
+        "forgetConfirm": "Oublier l’appareil",
+        "forgetFailed": "Impossible d’oublier l’appareil. Réessayez."
+      },
+      "deviceCombine": {
+        "edit": "Combiner des appareils",
+        "cancelEdit": "Annuler la sélection",
+        "select": "Sélectionner {{device}}",
+        "action": "Combiner la sélection",
+        "title": "Combiner les appareils ?",
+        "body": "Combiner {{first}} et {{second}} ? Les adresses enregistrées et l’association seront conservées.",
+        "cancel": "Annuler",
+        "confirm": "Combiner",
+        "failed": "Impossible de combiner les appareils. Aucun élément n’a été supprimé."
       },
       "about": {
         "title": "À propos",
@@ -857,6 +895,8 @@
         "debugLoggingHelp": "Active des fichiers journaux plus détaillés sur l’appareil connecté. Peut faciliter le diagnostic des problèmes.",
         "showFilenames": "Afficher les noms de fichiers des médias",
         "showFilenamesHelp": "Dans les résultats de recherche de l’application, affiche le nom de fichier complet du média au lieu de sa version simplifiée. Utile si les noms de vos fichiers contiennent de nombreux tags personnalisés.",
+        "appIconBadges": "Badges de l’icône de l’application",
+        "appIconBadgesHelp": "Afficher le nombre de messages non lus de la boîte de réception sur l’icône de l’application. iOS peut demander l’autorisation d’envoyer des notifications, car les badges sont gérés dans les réglages des notifications.",
         "purchasePreview": "Aperçu des achats",
         "purchasePreviewLive": "État réel",
         "purchasePreviewFree": "Compte gratuit",

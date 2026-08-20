@@ -110,7 +110,7 @@ vi.mock("@/lib/preferencesStore", () => ({
 const mockSetProPurchaseModalOpen = vi.fn();
 vi.mock("@/components/ProPurchase.tsx", () => ({
   useProPurchase: () => ({
-    PurchaseModal: () => null,
+    purchaseModal: null,
     setProPurchaseModalOpen: mockSetProPurchaseModalOpen,
     proAccess: false,
   }),

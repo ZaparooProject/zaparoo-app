@@ -65,6 +65,7 @@
       "noFavoritesHint": "Add favorites from media details.",
       "searchFavorites": "Search favorites",
       "favorite": "Favorite",
+      "mediaActions": "Media actions",
       "addFavorite": "Add to Favorites",
       "removeFavorite": "Remove from Favorites",
       "updatingFavorite": "Updating favorite...",
@@ -138,6 +139,7 @@
       "launch": "Launch",
       "launchError": "Could not launch this media",
       "write": "Write to NFC tag",
+      "writeAction": "Write",
       "preparingWrite": "Preparing NFC write...",
       "writeError": "Could not prepare this media for writing",
       "optionsTitle": "Library options",
@@ -177,6 +179,7 @@
       "notSupportedSub": "You will not be able to use any NFC reading or writing features in this app",
       "nfcDisabledLabel": "NFC access disabled",
       "nfcDisabledSub": "Please enable NFC access in your device settings for NFC reading and writing features",
+      "openNfcSettings": "Open NFC settings",
       "holdTag": "Hold tag to phone",
       "holdTagReader": "Hold tag to reader",
       "scanning": "Scanning",
@@ -215,6 +218,7 @@
     },
     "accessibility": {
       "skipToContent": "Skip to main content",
+      "skipToActions": "Skip to actions",
       "logo": "Zaparoo logo"
     },
     "tokenStaging": {
@@ -317,6 +321,7 @@
         "writeLabel": "Write to tag",
         "copyLabel": "Copy",
         "playLabel": "Preview",
+        "mediaActions": "Media actions",
         "selectSystem": "Select System",
         "selectTags": "Select Tags",
         "loading": "Loading...",
@@ -671,11 +676,12 @@
     },
     "requirements": {
       "title": "Complete Setup",
-      "tosLabel": "I agree to the",
+      "legalLabel": "I agree to the Terms of Service and Privacy Policy",
+      "legalPrefix": "I agree to the",
+      "legalAnd": "and",
       "tosLink": "Terms of Service",
-      "privacyLabel": "I agree to the",
       "privacyLink": "Privacy Policy",
-      "ageLabel": "I'm 13 years or older",
+      "ageLabel": "I am 13 years of age or older",
       "sendVerificationEmail": "Send Verification Email",
       "emailSent": "Verification email sent",
       "emailSentMessage": "Check your inbox and click the link, then tap below.",
@@ -688,6 +694,7 @@
       "emailVerified": "Email verified",
       "saved": "Saved",
       "save": "Save",
+      "continue": "Agree & continue",
       "logout": "Log Out"
     },
     "settings": {

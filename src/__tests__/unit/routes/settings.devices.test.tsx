@@ -8,7 +8,9 @@ import {
   credentialStore,
   type StoredCredentials,
 } from "@/lib/crypto/credentials";
+import { CoreAPI } from "@/lib/coreApi";
 import { deviceRegistry } from "@/lib/devices/deviceRegistry";
+import { ConnectionState, useStatusStore } from "@/lib/store";
 import {
   mockDeviceRecord,
   seedDeviceRegistry,
@@ -94,6 +96,18 @@ describe("Settings Devices Route", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    CoreAPI.reset();
+    useStatusStore.setState({
+      connected: false,
+      connectionState: ConnectionState.IDLE,
+      connectionError: "",
+      coreVersion: null,
+      corePlatform: null,
+      coreVersionPending: false,
+      currentClient: null,
+      encryptionState: "unknown",
+      pairingRequired: false,
+    });
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -357,6 +371,59 @@ describe("Settings Devices Route", () => {
       ]);
     });
     expect(screen.getByLabelText("connection.encrypted")).toBeInTheDocument();
+  });
+
+  it("should keep shared legacy pairing visible on an unmerged record", async () => {
+    const user = userEvent.setup();
+    const sharedLegacyKey = "shared-device-key";
+    const [activeTarget, , sharedOwner] = await seedRecords(
+      [
+        { address: "steamdeck.local", name: "A target" },
+        {
+          address: "10.0.0.206",
+          name: "B source",
+          legacyCredentialKey: sharedLegacyKey,
+        },
+        {
+          address: "10.0.0.207",
+          name: "C shared owner",
+          legacyCredentialKey: sharedLegacyKey,
+        },
+      ],
+      0,
+    );
+    await credentialStore.set(sharedLegacyKey, credentials);
+    renderRoute();
+
+    expect(
+      await screen.findAllByLabelText("connection.encrypted"),
+    ).toHaveLength(2);
+    await user.click(
+      screen.getByRole("button", { name: "settings.deviceCombine.edit" }),
+    );
+    const selections = screen.getAllByRole("checkbox", {
+      name: "settings.deviceCombine.select",
+    });
+    await user.click(selections[0]!);
+    await user.click(selections[1]!);
+    await user.click(
+      screen.getByRole("button", { name: "settings.deviceCombine.action" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "settings.deviceCombine.confirm" }),
+    );
+
+    await waitFor(() => {
+      expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual([
+        activeTarget!.recordId,
+        sharedOwner!.recordId,
+      ]);
+    });
+    expect(await credentialStore.get(sharedLegacyKey)).toEqual(credentials);
+    expect(
+      await credentialStore.get(credentialKeyForRecord(activeTarget!.recordId)),
+    ).toEqual(credentials);
+    expect(screen.getAllByLabelText("connection.encrypted")).toHaveLength(2);
   });
 
   it("should retain both selected records when combining fails", async () => {

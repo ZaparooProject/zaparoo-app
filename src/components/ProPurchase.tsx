@@ -3,16 +3,10 @@ import {
   Purchases,
   type PurchasesPackage,
 } from "@revenuecat/purchases-capacitor";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import toast from "react-hot-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { SlideModal } from "@/components/SlideModal";
 import { logger } from "@/lib/logger";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useStatusStore } from "@/lib/store";
@@ -75,66 +69,79 @@ const ProPurchaseModal = (props: {
   offeringsStatus: OfferingsStatus;
   setLifetimeProAccess: (access: boolean) => void;
 }) => {
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const purchasePendingRef = useRef(false);
+
+  const handlePurchase = () => {
+    if (!props.purchasePackage || purchasePendingRef.current) return;
+
+    purchasePendingRef.current = true;
+    setIsPurchasing(true);
+    const purchasePackage = props.purchasePackage;
+    const user = useStatusStore.getState().loggedInUser;
+    void (async () => {
+      try {
+        const purchase = await runPurchasesOperation(user?.uid ?? null, () =>
+          Purchases.purchasePackage({
+            aPackage: purchasePackage,
+          }),
+        );
+        const access = getPurchaseAccess(purchase.customerInfo);
+        props.setLifetimeProAccess(access.lifetimePro);
+        if (access.lifetimePro) {
+          usePreferencesStore.getState().setLaunchOnScan(true);
+        }
+        props.setProPurchaseModalOpen(false);
+        logger.log("Pro purchase completed", {
+          platform: Capacitor.getPlatform(),
+          packageIdentifier: purchasePackage.identifier,
+        });
+      } catch (e) {
+        const wrappedError = wrapPurchaseError(e);
+        if (wrappedError instanceof PurchaseCancelledError) return;
+
+        logger.error("Pro purchase failed", wrappedError, {
+          category: "purchase",
+          action: "purchasePackage",
+          severity: "warning",
+        });
+        toast.error(t("scan.purchaseProFailed"));
+      } finally {
+        purchasePendingRef.current = false;
+        setIsPurchasing(false);
+      }
+    })();
+  };
+
   return (
-    <Dialog
-      open={props.proPurchaseModalOpen}
-      onOpenChange={props.setProPurchaseModalOpen}
-    >
-      <DialogContent onOpenChange={props.setProPurchaseModalOpen}>
-        <DialogHeader>
-          <DialogTitle>{t("scan.purchaseProTitle")}</DialogTitle>
-          <DialogDescription asChild>
-            <div className="flex flex-col gap-3">
-              <p>
-                {getPurchaseBody(props.offeringsStatus, props.purchasePackage)}
-              </p>
-              <p>{t("scan.purchaseProP2")}</p>
-            </div>
-          </DialogDescription>
-        </DialogHeader>
+    <SlideModal
+      isOpen={props.proPurchaseModalOpen}
+      close={() => {
+        if (!purchasePendingRef.current) {
+          props.setProPurchaseModalOpen(false);
+        }
+      }}
+      dismissible={!isPurchasing}
+      title={t("scan.purchaseProTitle")}
+      footer={
         <Button
-          label={getPurchaseActionLabel(props.offeringsStatus)}
-          disabled={!props.purchasePackage}
-          onClick={() => {
-            if (!props.purchasePackage) return;
-
-            const purchasePackage = props.purchasePackage;
-            const user = useStatusStore.getState().loggedInUser;
-            void (async () => {
-              try {
-                const purchase = await runPurchasesOperation(
-                  user?.uid ?? null,
-                  () =>
-                    Purchases.purchasePackage({
-                      aPackage: purchasePackage,
-                    }),
-                );
-                const access = getPurchaseAccess(purchase.customerInfo);
-                props.setLifetimeProAccess(access.lifetimePro);
-                if (access.lifetimePro) {
-                  usePreferencesStore.getState().setLaunchOnScan(true);
-                }
-                props.setProPurchaseModalOpen(false);
-                logger.log("Pro purchase completed", {
-                  platform: Capacitor.getPlatform(),
-                  packageIdentifier: purchasePackage.identifier,
-                });
-              } catch (e) {
-                const wrappedError = wrapPurchaseError(e);
-                if (wrappedError instanceof PurchaseCancelledError) return;
-
-                logger.error("Pro purchase failed", wrappedError, {
-                  category: "purchase",
-                  action: "purchasePackage",
-                  severity: "warning",
-                });
-                toast.error(t("scan.purchaseProFailed"));
-              }
-            })();
-          }}
+          label={
+            isPurchasing
+              ? t("loading")
+              : getPurchaseActionLabel(props.offeringsStatus)
+          }
+          disabled={!props.purchasePackage || isPurchasing}
+          onClick={handlePurchase}
+          intent="primary"
+          className="w-full"
         />
-      </DialogContent>
-    </Dialog>
+      }
+    >
+      <div className="text-muted-foreground flex flex-col gap-3 py-2">
+        <p>{getPurchaseBody(props.offeringsStatus, props.purchasePackage)}</p>
+        <p>{t("scan.purchaseProP2")}</p>
+      </div>
+    </SlideModal>
   );
 };
 
@@ -224,7 +231,7 @@ export const useProPurchase = () => {
 
   return {
     proAccess,
-    PurchaseModal: () => (
+    purchaseModal: (
       <ProPurchaseModal
         proPurchaseModalOpen={proPurchaseModalOpen}
         setProPurchaseModalOpen={setProPurchaseModalOpen}

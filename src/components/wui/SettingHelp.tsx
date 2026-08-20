@@ -1,11 +1,6 @@
-import { useState, useMemo, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { HelpCircleIcon } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { SlideModal } from "@/components/SlideModal";
 
 /**
  * Parses simple markdown-like formatting in text.
@@ -58,6 +53,7 @@ export function SettingHelp({
     () => parseFormattedText(description),
     [description],
   );
+  const close = useCallback(() => setOpen(false), []);
 
   return (
     <>
@@ -70,14 +66,9 @@ export function SettingHelp({
         <HelpCircleIcon size={18} />
       </button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent onOpenChange={setOpen}>
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-          </DialogHeader>
-          <div className="text-muted-foreground">{formattedDescription}</div>
-        </DialogContent>
-      </Dialog>
+      <SlideModal isOpen={open} close={close} title={title}>
+        <div className="text-muted-foreground py-2">{formattedDescription}</div>
+      </SlideModal>
     </>
   );
 }
