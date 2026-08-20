@@ -139,7 +139,9 @@ export function SlideModal(props: {
     if (props.isOpen) titleRef.current?.focus();
   }, [props.isOpen]);
 
-  useEffect(() => {
+  // Install drag handling before paint so a sheet revealed after a covering
+  // modal closes cannot briefly appear without responding to touchstart.
+  useLayoutEffect(() => {
     const modal = modalRef.current;
     if (!modal) return;
 

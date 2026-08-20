@@ -44,7 +44,9 @@ function setInert(element: HTMLElement): () => void {
 
     state.count -= 1;
     if (state.count === 0) {
-      element.inert = state.originallyInert;
+      // React may have removed inert while this trap was deactivating. Do not
+      // overwrite that newer owner state with the value captured on activation.
+      if (element.inert) element.inert = state.originallyInert;
       inertStates.delete(element);
     }
   };

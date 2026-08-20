@@ -27,6 +27,7 @@ const mediaWithZapScript: SearchResultGame = {
   tags: [
     { type: "genre", tag: "platformer" },
     { type: "year", tag: "1990" },
+    { type: "scraper.gamelist.xml", tag: "scraped" },
   ],
   disambiguatingTags: [{ type: "year", tag: "1990" }],
 };
@@ -70,6 +71,9 @@ describe("MediaDetailsModal", () => {
     expect(
       screen.getByRole("button", { name: "year 1990" }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("scraper.gamelist.xml scraped"),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByText("/games/snes/Super Mario World.sfc"),
     ).toBeInTheDocument();
@@ -136,6 +140,21 @@ describe("MediaDetailsModal", () => {
       screen.getByRole("radio", {
         name: /create\.search\.zapscriptLabel/i,
       }),
+    ).toBeChecked();
+  });
+
+  it("should remember the selected write mode for the session", async () => {
+    const user = userEvent.setup();
+    const view = renderModal();
+
+    await user.click(
+      screen.getByRole("radio", { name: /create\.search\.pathLabel/i }),
+    );
+    view.unmount();
+    renderModal();
+
+    expect(
+      screen.getByRole("radio", { name: /create\.search\.pathLabel/i }),
     ).toBeChecked();
   });
 
@@ -251,7 +270,15 @@ describe("MediaDetailsModal", () => {
     const onWrite = vi.fn();
     const onCopy = vi.fn();
     const onPreview = vi.fn();
-    renderModal({ onWrite, onCopy, onPreview });
+    renderModal({
+      media: {
+        ...mediaWithZapScript,
+        relativePath: "SNES/Super Mario World.sfc",
+      },
+      onWrite,
+      onCopy,
+      onPreview,
+    });
 
     await user.click(
       screen.getByRole("radio", { name: /create\.search\.pathLabel/i }),
@@ -266,9 +293,9 @@ describe("MediaDetailsModal", () => {
       screen.getByRole("button", { name: /create\.search\.playLabel/i }),
     );
 
-    expect(onWrite).toHaveBeenCalledWith(mediaWithZapScript.path);
-    expect(onCopy).toHaveBeenCalledWith(mediaWithZapScript.path);
-    expect(onPreview).toHaveBeenCalledWith(mediaWithZapScript.path);
+    expect(onWrite).toHaveBeenCalledWith("SNES/Super Mario World.sfc");
+    expect(onCopy).toHaveBeenCalledWith("SNES/Super Mario World.sfc");
+    expect(onPreview).toHaveBeenCalledWith("SNES/Super Mario World.sfc");
   });
 
   it("should omit optional copy and preview actions", () => {
