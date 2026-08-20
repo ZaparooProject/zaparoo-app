@@ -265,6 +265,67 @@ describe("ConnectionStatusBar", () => {
     expect(screen.queryByText("connection.restored")).not.toBeInTheDocument();
   });
 
+  it("clears recovery when connection confirmation is lost", () => {
+    const { rerender } = render(
+      <Wrapper value={connectionValue()}>
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+    act(() => vi.advanceTimersByTime(1_000));
+    act(() =>
+      useStatusStore.setState({
+        connectionIssueStartedAt: null,
+        connectionState: ConnectionState.CONNECTED,
+        encryptionState: "plaintext",
+      }),
+    );
+    rerender(
+      <Wrapper
+        value={connectionValue({
+          isConnected: true,
+          showConnecting: false,
+        })}
+      >
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+    act(() => vi.advanceTimersByTime(0));
+    expect(screen.getAllByText("connection.restored")).toHaveLength(2);
+
+    act(() =>
+      useStatusStore.setState({
+        connectionState: ConnectionState.RECONNECTING,
+        encryptionState: "unknown",
+      }),
+    );
+    rerender(
+      <Wrapper value={connectionValue()}>
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+    expect(screen.queryByText("connection.restored")).not.toBeInTheDocument();
+
+    act(() =>
+      useStatusStore.setState({
+        connectionState: ConnectionState.CONNECTED,
+        encryptionState: "plaintext",
+      }),
+    );
+    rerender(
+      <Wrapper
+        value={connectionValue({
+          isConnected: true,
+          showConnecting: false,
+        })}
+      >
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+    act(() => vi.advanceTimersByTime(0));
+
+    expect(screen.queryByText("connection.restored")).not.toBeInTheDocument();
+  });
+
   it("does not announce recovery when pairing becomes required", () => {
     const { rerender } = render(
       <Wrapper value={connectionValue()}>

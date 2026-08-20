@@ -52,11 +52,13 @@ export function ConnectionStatusBar() {
     !pairingRequired;
 
   useEffect(() => {
-    if (presentation.visible) {
-      hadPresented.current = true;
+    if (presentation.visible || !confirmedConnected) {
+      if (presentation.visible) hadPresented.current = true;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- External connection state invalidates an active recovery notice immediately.
+      setShowRestored(false);
       return;
     }
-    if (!hadPresented.current || !confirmedConnected) return;
+    if (!hadPresented.current) return;
 
     hadPresented.current = false;
     const revealTimer = setTimeout(() => {
