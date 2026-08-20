@@ -1158,6 +1158,11 @@
     "connection": {
       "connecting": "Verbinden...",
       "reconnecting": "Opnieuw verbinden...",
+      "connectingToCore": "Verbinden met Core...",
+      "reconnectingToCore": "Opnieuw verbinden met Core...",
+      "coreUnavailable": "Core is niet bereikbaar. Opnieuw proberen...",
+      "networkUnavailable": "Geen netwerkverbinding",
+      "restored": "Verbonden met Core",
       "pairingRequired": "Koppeling vereist",
       "encrypted": "Versleutelde verbinding",
       "unencrypted": "Niet-versleutelde verbinding",

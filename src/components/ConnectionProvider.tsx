@@ -228,6 +228,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const isInitialized = useRef(false);
   // Track current connection to prevent stale events from old connections
   const currentConnectionId = useRef<string | null>(null);
+  const previousConnectionRecordId = useRef<string | null>(null);
   const credentialWorkRef = useRef(
     new Map<symbol, { recordId: string; promise: Promise<void> }>(),
   );
@@ -269,6 +270,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const {
     setConnectionState,
     setConnectionError,
+    setNetworkAvailable,
+    beginConnectionIssue,
+    clearConnectionIssue,
     setPlaying,
     setBackgroundPlaying,
     setPlaylist,
@@ -293,6 +297,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     useShallow((state) => ({
       setConnectionState: state.setConnectionState,
       setConnectionError: state.setConnectionError,
+      setNetworkAvailable: state.setNetworkAvailable,
+      beginConnectionIssue: state.beginConnectionIssue,
+      clearConnectionIssue: state.clearConnectionIssue,
       setPlaying: state.setPlaying,
       setBackgroundPlaying: state.setBackgroundPlaying,
       setPlaylist: state.setPlaylist,
@@ -338,6 +345,26 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const [localConnection, setLocalConnection] =
     useState<DeviceConnection | null>(null);
   const [connectionRevision, setConnectionRevision] = useState(0);
+  const updateNetworkAvailability = useCallback(
+    (available: boolean) => {
+      setNetworkAvailable(available);
+      if (!available) {
+        if (deviceRegistry.getSnapshot().activeRecordId !== null) {
+          beginConnectionIssue();
+        }
+        return;
+      }
+
+      const status = useStatusStore.getState();
+      if (
+        status.connectionState === ConnectionState.CONNECTED &&
+        status.encryptionState !== "unknown"
+      ) {
+        clearConnectionIssue();
+      }
+    },
+    [beginConnectionIssue, clearConnectionIssue, setNetworkAvailable],
+  );
 
   // Derive display states from local connection state
   const isConnected = localConnection?.state === "connected";
@@ -957,16 +984,15 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   // Handle connection open - fetch initial data
   const handleConnectionOpen = useCallback(() => {
     const clientRequestToken = ++currentClientRequestToken.current;
+    const hasCachedCoreVersion = useStatusStore.getState().coreVersion !== null;
     setConnectionError("");
-    setInboxMessages([]);
-    setInboxModalOpen(false);
 
     // Flush any queued API requests
     CoreAPI.flushQueue();
 
     // Fetch Core version for feature gating, then persist platform/version on
     // the device record so the device list can render them between connects.
-    setCoreVersionPending(true);
+    setCoreVersionPending(!hasCachedCoreVersion);
     CoreAPI.version()
       .then((res) => {
         if (isCancelled(res)) {
@@ -1006,7 +1032,6 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               if (clientRequestToken !== currentClientRequestToken.current) {
                 return;
               }
-              setCurrentClient(null);
               if (err instanceof CoreApiError && err.code === -32601) {
                 logger.warn(
                   "Current client capabilities are unavailable on this Core build",
@@ -1081,10 +1106,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           action: "version",
           severity: "warning",
         });
-        setCoreVersion(null);
-        setCorePlatform(null);
+        if (!hasCachedCoreVersion) {
+          setCoreVersion(null);
+          setCorePlatform(null);
+          setCurrentClient(null);
+        }
         setCoreVersionPending(false);
-        setCurrentClient(null);
       });
 
     // Refetch device-scoped library data after every connection. This handles
@@ -1255,8 +1282,15 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // Reset local connection state when device changes so UI doesn't show stale data
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: reset state for the newly selected external device.
     setLocalConnection(null);
+    if (connectionWsUrl === "") {
+      clearConnectionIssue();
+    } else {
+      beginConnectionIssue();
+    }
     invalidateCurrentClientRequest();
-    setCurrentClient(null);
+    const deviceChanged = previousConnectionRecordId.current !== activeRecordId;
+    previousConnectionRecordId.current = activeRecordId;
+    if (deviceChanged) setCurrentClient(null);
     setEncryptionState("unknown");
     setPairingRequired(false);
     setPairingOpen(false);
@@ -1266,6 +1300,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       activeRecordId === null ||
       forgettingRecordIdsRef.current.has(activeRecordId)
     ) {
+      clearConnectionIssue();
       setConnectionState(ConnectionState.DISCONNECTED);
       return;
     }
@@ -1306,6 +1341,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       onConnectionChange: (deviceId, connection) => {
         if (deviceId === connectionManager.getActiveDeviceId()) {
           setConnectionState(mapTransportState(connection.state));
+          if (
+            connection.state !== "connected" &&
+            !useStatusStore.getState().pairingRequired
+          ) {
+            beginConnectionIssue();
+          }
 
           // Update local connection state for context consumers
           // Note: useState always triggers re-render when called with a new object reference
@@ -1313,7 +1354,6 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
           if (connection.state !== "connected") {
             invalidateCurrentClientRequest();
-            setCurrentClient(null);
             CoreAPI.handleDisconnect();
             void queryClient.cancelQueries({
               queryKey: [LIBRARY_QUERY_KEYS.image],
@@ -1397,6 +1437,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       },
       onEncryptedHandshakeOk: () => {
         if (!isCurrentConnection()) return;
+        clearConnectionIssue();
         setEncryptionState("encrypted");
         setPairingRequired(false);
         // The peer authenticated with whatever key answered getCredentials, so
@@ -1449,6 +1490,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       },
       onPlaintextMode: () => {
         if (!isCurrentConnection()) return;
+        clearConnectionIssue();
         setEncryptionState("plaintext");
         setPairingRequired(false);
         // Nothing was proven, so the legacy key pointer stays put.
@@ -1460,6 +1502,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         // Server demands encryption but we have no credentials — open the
         // pairing modal so the user can pair. Connection stays failed until
         // pairing succeeds and triggers an immediate reconnect.
+        clearConnectionIssue();
         setEncryptionState("plaintext");
         setPairingRequired(true);
         setConnectionError(
@@ -1468,6 +1511,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         setPairingOpen(true);
       },
       onUnsupportedVersion: () => {
+        clearConnectionIssue();
         setEncryptionState("plaintext");
         setConnectionError(
           tRef.current("pairing.connectionError.unsupportedVersion"),
@@ -1475,6 +1519,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       },
       onCredentialsRevoked: () => {
         if (!isCurrentConnection()) return;
+        clearConnectionIssue();
         // Server rejected our stored credentials — clear them and prompt
         // the user to pair again.
         // Delete exactly the key the server rejected — which may still be the
@@ -1531,7 +1576,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     // Set the wrapper on CoreAPI
     CoreAPI.setWsInstance(transportWrapper as never);
 
-    // Set initial state
+    // Set initial state. Presentation timing starts at effect setup because the
+    // transport's first event can precede ConnectionManager activation.
     setConnectionState(ConnectionState.CONNECTING);
 
     return () => {
@@ -1556,11 +1602,13 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       CoreAPI.reset();
       connectionManager.removeDevice(deviceId);
       invalidateCurrentClientRequest();
-      setCurrentClient(null);
+      clearConnectionIssue();
       setConnectionState(ConnectionState.DISCONNECTED);
     };
   }, [
     activeRecordId,
+    beginConnectionIssue,
+    clearConnectionIssue,
     connectionRevision,
     connectionWsUrl,
     connectionWsUrls,
@@ -1628,9 +1676,19 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     };
   }, []);
 
-  // Browser visibility change (web platform only)
+  // Browser visibility and network changes (web platform only)
   useEffect(() => {
     if (Capacitor.isNativePlatform()) return;
+
+    const initialNetworkAvailable = navigator.onLine;
+    const status = useStatusStore.getState();
+    status.setNetworkAvailable(initialNetworkAvailable);
+    if (
+      !initialNetworkAvailable &&
+      deviceRegistry.getSnapshot().activeRecordId
+    ) {
+      status.beginConnectionIssue();
+    }
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -1641,11 +1699,21 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         connectionManager.pauseAll();
       }
     };
+    const handleOnline = () => {
+      updateNetworkAvailability(true);
+      connectionManager.immediateReconnectActive();
+    };
+    const handleOffline = () => updateNetworkAvailability(false);
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () =>
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, []);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [updateNetworkAvailability]);
 
   // Network change detection (native platforms only)
   // Triggers immediate reconnect when network is restored (e.g., WiFi reconnects)
@@ -1658,6 +1726,18 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     let networkListener: PluginListenerHandle | null = null;
 
     const setup = async () => {
+      try {
+        const initialStatus = await Network.getStatus();
+        if (disposed) return;
+        updateNetworkAvailability(initialStatus.connected);
+      } catch (error) {
+        logger.warn(
+          "[ConnectionProvider] Failed to read initial network status:",
+          error,
+        );
+      }
+      if (disposed) return;
+
       const handle = await Network.addListener(
         "networkStatusChange",
         (status) => {
@@ -1665,6 +1745,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           logger.log(
             `[ConnectionProvider] Network status changed: ${status.connected ? "connected" : "disconnected"} (${status.connectionType})`,
           );
+          updateNetworkAvailability(status.connected);
           if (status.connected) {
             connectionManager.immediateReconnectActive();
           }
@@ -1687,7 +1768,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         void removeNativeListener(networkListener, "network status");
       }
     };
-  }, []);
+  }, [updateNetworkAvailability]);
 
   const openPairingModal = useCallback(() => {
     setPairingOpen(true);

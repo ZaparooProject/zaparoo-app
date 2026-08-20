@@ -74,9 +74,14 @@ vi.mock("@/lib/safeArea", () => ({
   SafeAreaHandler: () => <div data-testid="safe-area-handler" />,
 }));
 
-// Mock BottomNav
+// Mock BottomNav and its adjacent global connection status
 vi.mock("@/components/BottomNav", () => ({
   BottomNav: () => <nav data-testid="bottom-nav">Bottom Nav</nav>,
+}));
+vi.mock("@/components/ConnectionStatusBar", () => ({
+  ConnectionStatusBar: () => (
+    <div data-testid="connection-status-bar">Connection status</div>
+  ),
 }));
 
 // Mock TourInitializer
@@ -135,6 +140,7 @@ describe("Root Layout Integration", () => {
 
       expect(screen.getByTestId("skip-link")).toBeInTheDocument();
       expect(screen.getByTestId("safe-area-handler")).toBeInTheDocument();
+      expect(screen.getByTestId("connection-status-bar")).toBeInTheDocument();
       expect(screen.getByTestId("bottom-nav")).toBeInTheDocument();
       expect(screen.getByRole("main")).toBeInTheDocument();
     });
@@ -150,6 +156,7 @@ describe("Root Layout Integration", () => {
 
       const footer = screen.getByRole("contentinfo");
       expect(footer).toBeInTheDocument();
+      expect(screen.getByTestId("connection-status-bar")).toBeInTheDocument();
       expect(screen.getByTestId("bottom-nav")).toBeInTheDocument();
     });
 

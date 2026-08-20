@@ -1158,6 +1158,11 @@
     "connection": {
       "connecting": "Verbindung wird hergestellt...",
       "reconnecting": "Verbindung wird wiederhergestellt...",
+      "connectingToCore": "Verbindung zu Core wird hergestellt...",
+      "reconnectingToCore": "Verbindung zu Core wird wiederhergestellt...",
+      "coreUnavailable": "Core ist nicht erreichbar. Neuer Versuch...",
+      "networkUnavailable": "Keine Netzwerkverbindung",
+      "restored": "Mit Core verbunden",
       "pairingRequired": "Kopplung erforderlich",
       "encrypted": "Verschlüsselte Verbindung",
       "unencrypted": "Unverschlüsselte Verbindung",

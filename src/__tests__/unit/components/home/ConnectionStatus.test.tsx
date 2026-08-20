@@ -116,7 +116,7 @@ describe("ConnectionStatus", () => {
 
     render(<ConnectionStatus />);
 
-    expect(screen.getByText("connection.connecting")).toBeInTheDocument();
+    expect(screen.getByText("connection.connectingToCore")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "nav.settings" }),
     ).toBeInTheDocument();
@@ -133,7 +133,9 @@ describe("ConnectionStatus", () => {
 
     render(<ConnectionStatus />);
 
-    expect(screen.getByText("connection.reconnecting")).toBeInTheDocument();
+    expect(
+      screen.getByText("connection.reconnectingToCore"),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "nav.settings" }),
     ).toBeInTheDocument();

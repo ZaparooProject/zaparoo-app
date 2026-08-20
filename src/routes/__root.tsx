@@ -10,6 +10,7 @@ import { useRef } from "react";
 import { SafeAreaHandler } from "@/lib/safeArea";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { BottomNav } from "@/components/BottomNav";
+import { ConnectionStatusBar } from "@/components/ConnectionStatusBar";
 import { TourInitializer } from "@/components/TourInitializer";
 import { useBackButtonHandler } from "@/hooks/useBackButtonHandler";
 import { SkipLink } from "@/components/SkipLink";
@@ -84,6 +85,7 @@ export function RootLayout() {
         <Outlet />
       </main>
       <footer className="z-30 flex-shrink-0">
+        <ConnectionStatusBar />
         <BottomNav />
       </footer>
     </div>

@@ -12,7 +12,7 @@ Do not add decorative icons, new card styles, helper text, descriptions, badges,
 
 Use these before creating or changing UI:
 
-- App shell: `src/components/PageFrame.tsx`, `src/components/ResponsiveContainer.tsx`, `src/components/BottomNav.tsx`, `BackToTop.tsx`, `ReconnectingIndicator.tsx`
+- App shell: `src/components/PageFrame.tsx`, `src/components/ResponsiveContainer.tsx`, `src/components/BottomNav.tsx`, `BackToTop.tsx`, `ConnectionStatusBar.tsx`
 - WUI primitives: `src/components/wui/Button.tsx`, `ModalActionBar.tsx`, `ModalActionRail.tsx`, `HeaderButton.tsx`, `Card.tsx`, `ToggleSwitch.tsx`, `TextInput.tsx`, `Badge.tsx`, `EmptyState.tsx`, `Segmented.tsx`, `ToggleChip.tsx`, `SettingHelp.tsx`
 - Modals: `src/components/SlideModal.tsx`, `ConfirmClearModal.tsx`, `PairingModal.tsx`, `WriteModal.tsx`, `RequirementsModal.tsx`, `ProPurchase.tsx`, `home/StopConfirmModal.tsx`, `home/StagedTokenModal.tsx`
 - Settings screens: `src/routes/settings.index.tsx`, `settings.readers.tsx`, `settings.advanced.tsx`, `settings.accessibility.tsx`, `settings.media.tsx`, `settings.play-controls.tsx`, `settings.about.tsx`, `settings.help.tsx`, `settings.online.tsx`, `src/routes/-pages/Devices.tsx`, `DeviceDetail.tsx`, `Logs.tsx`
@@ -124,11 +124,13 @@ Bottom nav is its own pattern in `BottomNav`:
 - active state cyan `#3faeec` with matching drop-shadow glow
 - attention state uses `attention-throb` amber halo
 
-Global reconnecting/connecting status uses `ReconnectingIndicator`, a fixed rounded pill above bottom nav:
+Global connection status uses `ConnectionStatusBar`, an in-layout strip above bottom nav:
 
-- connecting: `bg-muted/90 text-muted-foreground`
-- reconnecting: amber background/text
-- inline `Loader2 h-4 w-4 animate-spin`
+- sub-second connecting/reconnecting stays hidden
+- routine connecting/reconnecting uses muted neutral styling and an inline spinner
+- prolonged Core/network unavailability uses warning styling and a Settings action
+- Home and Settings landing rely on their contextual connection cards instead of duplicating the visible strip
+- restored status appears briefly only after a connection issue was presented
 
 Do not use these styles for ordinary page content.
 

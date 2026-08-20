@@ -189,10 +189,6 @@ vi.mock("@/components/ConnectionProvider", () => ({
   }),
 }));
 
-vi.mock("@/components/ReconnectingIndicator", () => ({
-  ReconnectingIndicator: () => null,
-}));
-
 vi.mock("@/lib/deepLinks", () => ({
   useDeepLinks: mockUseDeepLinks,
   default: () => <div data-testid="deep-links" />,

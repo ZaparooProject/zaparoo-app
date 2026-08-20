@@ -1158,6 +1158,11 @@
     "connection": {
       "connecting": "연결하는 중...",
       "reconnecting": "다시 연결하는 중...",
+      "connectingToCore": "Core에 연결하는 중...",
+      "reconnectingToCore": "Core에 다시 연결하는 중...",
+      "coreUnavailable": "Core에 연결할 수 없습니다. 다시 시도하는 중...",
+      "networkUnavailable": "네트워크 연결 없음",
+      "restored": "Core에 연결됨",
       "pairingRequired": "페어링 필요",
       "encrypted": "암호화된 연결",
       "unencrypted": "암호화되지 않은 연결",

@@ -211,6 +211,10 @@ vi.mock("@capacitor/app", () => ({
 // hook disagreeing about whether the platform is native.
 vi.mock("@capacitor/network", () => ({
   Network: {
+    getStatus: vi.fn().mockResolvedValue({
+      connected: true,
+      connectionType: "wifi",
+    }),
     addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
   },
 }));
@@ -324,6 +328,24 @@ describe("ConnectionProvider", () => {
 
       expect(screen.getByTestId("isConnected")).toBeInTheDocument();
       expect(screen.getByTestId("hasData")).toBeInTheDocument();
+    });
+
+    it("should track browser network changes and reconnect when online", async () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      act(() => window.dispatchEvent(new Event("offline")));
+      expect(useStatusStore.getState().networkAvailable).toBe(false);
+
+      vi.mocked(connectionManager.immediateReconnectActive).mockClear();
+      act(() => window.dispatchEvent(new Event("online")));
+      expect(useStatusStore.getState().networkAvailable).toBe(true);
+      expect(connectionManager.immediateReconnectActive).toHaveBeenCalled();
     });
 
     it("should skip startup plugin calls when bridge plugins are unavailable", async () => {
@@ -2956,6 +2978,26 @@ describe("connection event handling", () => {
     },
   );
 
+  it("should time a connection issue until the session is verified", () => {
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    act(() => {
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, {
+        state: "reconnecting",
+        hasData: true,
+        hasConnectedBefore: true,
+      });
+    });
+    expect(useStatusStore.getState().connectionIssueStartedAt).not.toBeNull();
+
+    act(() => capturedEventHandlers.onPlaintextMode!());
+    expect(useStatusStore.getState().connectionIssueStartedAt).toBeNull();
+  });
+
   it("should cancel pending RPCs and image queries while reconnecting", () => {
     const cancelSpy = vi.spyOn(QueryClient.prototype, "cancelQueries");
 
@@ -2977,26 +3019,18 @@ describe("connection event handling", () => {
     cancelSpy.mockRestore();
   });
 
-  it("should clear stale client capabilities while reconnecting", () => {
-    useStatusStore.setState({
-      currentClient: {
-        paired: true,
-        role: "admin",
-        capabilities: [ClientCapability.SettingsWrite],
-      },
-    });
+  it("should retain same-device client capabilities while reconnecting", () => {
+    const cachedClient = {
+      paired: true,
+      role: "admin" as const,
+      capabilities: [ClientCapability.SettingsWrite],
+    };
     render(
       <ConnectionProvider>
         <ConnectionConsumer />
       </ConnectionProvider>,
     );
-    useStatusStore.setState({
-      currentClient: {
-        paired: true,
-        role: "admin",
-        capabilities: [ClientCapability.SettingsWrite],
-      },
-    });
+    useStatusStore.setState({ currentClient: cachedClient });
 
     capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "reconnecting",
@@ -3004,7 +3038,7 @@ describe("connection event handling", () => {
       hasConnectedBefore: true,
     });
 
-    expect(useStatusStore.getState().currentClient).toBeNull();
+    expect(useStatusStore.getState().currentClient).toEqual(cachedClient);
   });
 
   it("should invalidate library queries after reconnecting", async () => {
@@ -3039,7 +3073,15 @@ describe("connection event handling", () => {
     invalidateSpy.mockRestore();
   });
 
-  it("should fetch inbox messages when connected Core supports inbox", async () => {
+  it("should retain inbox state until a reconnect refresh replaces it", async () => {
+    const cachedMessages = [
+      {
+        id: 20,
+        title: "Cached message",
+        severity: InboxSeverity.Warning,
+        createdAt: "2026-05-19T09:00:00.000Z",
+      },
+    ];
     const messages = [
       {
         id: 21,
@@ -3048,11 +3090,21 @@ describe("connection event handling", () => {
         createdAt: "2026-05-19T10:00:00.000Z",
       },
     ];
+    let resolveInbox!: (value: { messages: typeof messages }) => void;
     vi.mocked(CoreAPI.version).mockResolvedValueOnce({
       version: "2.8.0",
       platform: "test",
     });
-    vi.mocked(CoreAPI.inbox).mockResolvedValueOnce({ messages });
+    vi.mocked(CoreAPI.inbox).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveInbox = resolve;
+      }),
+    );
+    useStatusStore.setState({
+      coreVersion: "2.8.0",
+      inboxMessages: cachedMessages,
+      inboxModalOpen: true,
+    });
 
     render(
       <ConnectionProvider>
@@ -3063,12 +3115,17 @@ describe("connection event handling", () => {
     expect(capturedEventHandlers.onConnectionChange).toBeDefined();
     capturedEventHandlers.onConnectionChange!(RECORD_ID, {
       state: "connected",
-      hasData: false,
-      hasConnectedBefore: false,
+      hasData: true,
+      hasConnectedBefore: true,
     });
 
+    await waitFor(() => expect(CoreAPI.inbox).toHaveBeenCalled());
+    expect(useStatusStore.getState().inboxMessages).toEqual(cachedMessages);
+    expect(useStatusStore.getState().inboxModalOpen).toBe(true);
+    expect(useStatusStore.getState().coreVersionPending).toBe(false);
+
+    resolveInbox({ messages });
     await waitFor(() => {
-      expect(CoreAPI.inbox).toHaveBeenCalled();
       expect(useStatusStore.getState().inboxMessages).toEqual(messages);
     });
   });
@@ -3365,6 +3422,41 @@ describe("connection event handling", () => {
       expect(useStatusStore.getState().coreVersion).toBeNull();
       expect(useStatusStore.getState().corePlatform).toBeNull();
       expect(useStatusStore.getState().coreVersionPending).toBe(false);
+    });
+  });
+
+  it("should retain cached Core metadata when reconnect refresh fails", async () => {
+    const cachedClient = {
+      paired: true,
+      role: "admin" as const,
+      capabilities: [ClientCapability.SettingsWrite],
+    };
+    vi.mocked(CoreAPI.version).mockRejectedValueOnce(
+      new Error("Network error"),
+    );
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+    useStatusStore.setState({
+      coreVersion: "2.16.0",
+      corePlatform: "cached-platform",
+      currentClient: cachedClient,
+    });
+
+    capturedEventHandlers.onConnectionChange!(RECORD_ID, {
+      state: "connected",
+      hasData: true,
+      hasConnectedBefore: true,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().coreVersionPending).toBe(false);
+      expect(useStatusStore.getState().coreVersion).toBe("2.16.0");
+      expect(useStatusStore.getState().corePlatform).toBe("cached-platform");
+      expect(useStatusStore.getState().currentClient).toEqual(cachedClient);
     });
   });
 
@@ -4047,6 +4139,28 @@ describe("network status handling (native platform)", () => {
     );
 
     await waitFor(() => {
+      expect(Network.getStatus).toHaveBeenCalled();
+      expect(Network.addListener).toHaveBeenCalledWith(
+        "networkStatusChange",
+        expect.any(Function),
+      );
+      expect(useStatusStore.getState().networkAvailable).toBe(true);
+    });
+  });
+
+  it("should still listen when initial network status is unavailable", async () => {
+    const { Network } = await import("@capacitor/network");
+    vi.mocked(Network.getStatus).mockRejectedValueOnce(
+      new Error("Network status unavailable"),
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    await waitFor(() => {
       expect(Network.addListener).toHaveBeenCalledWith(
         "networkStatusChange",
         expect.any(Function),
@@ -4148,6 +4262,7 @@ describe("network status handling (native platform)", () => {
     // Simulate network reconnection
     networkCallback!({ connected: true, connectionType: "wifi" });
 
+    expect(useStatusStore.getState().networkAvailable).toBe(true);
     expect(connectionManager.immediateReconnectActive).toHaveBeenCalled();
   });
 
@@ -4180,6 +4295,7 @@ describe("network status handling (native platform)", () => {
     // Simulate network disconnection
     networkCallback!({ connected: false, connectionType: "none" });
 
+    expect(useStatusStore.getState().networkAvailable).toBe(false);
     expect(connectionManager.immediateReconnectActive).not.toHaveBeenCalled();
   });
 });
