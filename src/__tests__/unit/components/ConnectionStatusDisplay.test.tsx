@@ -88,6 +88,7 @@ describe("ConnectionStatusDisplay encryption gate", () => {
 
     render(
       wrap(<ConnectionStatusDisplay />, {
+        isConnected: true,
         showReconnecting: true,
       }),
     );
@@ -97,12 +98,14 @@ describe("ConnectionStatusDisplay encryption gate", () => {
 
   it("should prioritize explicit network unavailability", () => {
     useStatusStore.setState({
+      encryptionState: "plaintext",
       networkAvailable: false,
-      connectionIssueStartedAt: Date.now(),
+      connectionIssueStartedAt: Date.now() - 10_000,
     });
 
     render(
       wrap(<ConnectionStatusDisplay />, {
+        isConnected: true,
         showReconnecting: true,
       }),
     );
@@ -110,6 +113,9 @@ describe("ConnectionStatusDisplay encryption gate", () => {
     expect(
       screen.getByText("connection.networkUnavailable"),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText("connection.coreUnavailable"),
+    ).not.toBeInTheDocument();
   });
 
   it("should show Pairing required when not connected and pairingRequired=true", () => {

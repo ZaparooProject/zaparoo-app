@@ -48,6 +48,7 @@ let capturedEventHandlers: {
   onError?: (deviceId: string, error: Error) => void;
   onEncryptedHandshakeOk?: () => void;
   onPlaintextMode?: () => void;
+  onUnsupportedVersion?: () => void;
   onCredentialsRevoked?: () => void;
 } = {};
 
@@ -2998,6 +2999,25 @@ describe("connection event handling", () => {
     expect(useStatusStore.getState().connectionIssueStartedAt).toBeNull();
   });
 
+  it("should not time a generic issue after an unsupported encryption version", () => {
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+
+    act(() => capturedEventHandlers.onUnsupportedVersion!());
+    act(() => {
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, {
+        state: "disconnected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+    });
+
+    expect(useStatusStore.getState().connectionIssueStartedAt).toBeNull();
+  });
+
   it("should cancel pending RPCs and image queries while reconnecting", () => {
     const cancelSpy = vi.spyOn(QueryClient.prototype, "cancelQueries");
 
@@ -3457,6 +3477,72 @@ describe("connection event handling", () => {
       expect(useStatusStore.getState().coreVersion).toBe("2.16.0");
       expect(useStatusStore.getState().corePlatform).toBe("cached-platform");
       expect(useStatusStore.getState().currentClient).toEqual(cachedClient);
+    });
+  });
+
+  it("should clear prior-device metadata when a device switch refresh fails", async () => {
+    const nextRecordId = "next-record";
+    await seedDeviceRegistry(
+      [
+        mockDeviceRecord({ recordId: RECORD_ID, address: DEVICE_ADDRESS }),
+        mockDeviceRecord({
+          recordId: nextRecordId,
+          address: "192.168.1.101:7497",
+        }),
+      ],
+      RECORD_ID,
+    );
+
+    render(
+      <ConnectionProvider>
+        <ConnectionConsumer />
+      </ConnectionProvider>,
+    );
+    await waitFor(() => {
+      expect(connectionManager.addDevice).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: RECORD_ID }),
+      );
+    });
+
+    useStatusStore.setState({
+      coreVersion: "2.16.0",
+      corePlatform: "previous-platform",
+      currentClient: {
+        paired: true,
+        role: "admin",
+        capabilities: [ClientCapability.SettingsWrite],
+      },
+    });
+    vi.mocked(CoreAPI.version).mockRejectedValueOnce(
+      new Error("Network error"),
+    );
+    vi.mocked(connectionManager.getActiveDeviceId).mockReturnValue(
+      nextRecordId,
+    );
+
+    await act(async () => {
+      await deviceRegistry.setActiveRecord(nextRecordId);
+    });
+    await waitFor(() => {
+      expect(connectionManager.addDevice).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: nextRecordId }),
+      );
+    });
+
+    expect(useStatusStore.getState().coreVersion).toBeNull();
+    expect(useStatusStore.getState().corePlatform).toBeNull();
+    expect(useStatusStore.getState().currentClient).toBeNull();
+
+    capturedEventHandlers.onConnectionChange!(nextRecordId, {
+      state: "connected",
+      hasData: false,
+      hasConnectedBefore: false,
+    });
+
+    await waitFor(() => {
+      expect(useStatusStore.getState().coreVersionPending).toBe(false);
+      expect(useStatusStore.getState().coreVersion).toBeNull();
+      expect(useStatusStore.getState().corePlatform).toBeNull();
     });
   });
 

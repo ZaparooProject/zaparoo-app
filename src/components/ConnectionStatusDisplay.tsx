@@ -90,6 +90,16 @@ export function ConnectionStatusDisplay({
     // and snatching it back.
     if (!registryHydrated) return "connecting";
     if (!savedAddress) return "disconnected";
+    // Pairing-required outranks reconnecting/error so the user sees the real
+    // blocker instead of a generic "Reconnecting..." spinner that won't resolve
+    // without their action.
+    if (pairingRequired) return "pairingRequired";
+    // Confirmed network and prolonged Core outages outrank optimistic transport
+    // state, including the open-but-unverified handshake window.
+    if (connectionPresentation.kind === "networkUnavailable") {
+      return "networkUnavailable";
+    }
+    if (connectionPresentation.kind === "unavailable") return "unavailable";
     // The transport flips to "connected" when the WebSocket opens, before the
     // server has confirmed the encryption mode. Hold the UI in connecting/
     // reconnecting until the consumer learns the mode (encryptionState is set
@@ -100,14 +110,6 @@ export function ConnectionStatusDisplay({
       return showReconnecting ? "reconnecting" : "connecting";
     }
     if (isConnected) return "connected";
-    // Pairing-required outranks reconnecting/error so the user sees the real
-    // blocker instead of a generic "Reconnecting..." spinner that won't resolve
-    // without their action.
-    if (pairingRequired) return "pairingRequired";
-    if (connectionPresentation.kind === "networkUnavailable") {
-      return "networkUnavailable";
-    }
-    if (connectionPresentation.kind === "unavailable") return "unavailable";
     // Show reconnecting state (previously connected, now retrying)
     if (showReconnecting) return "reconnecting";
     // Show error if we have one during initial connection attempts
@@ -196,7 +198,7 @@ export function ConnectionStatusDisplay({
     <div className={`flex items-center gap-3 ${className || ""}`}>
       {/* Icon */}
       <div
-        className={`flex-shrink-0 px-1.5 ${config.iconColorClass}`}
+        className={`shrink-0 px-1.5 ${config.iconColorClass}`}
         aria-hidden="true"
       >
         {config.icon}

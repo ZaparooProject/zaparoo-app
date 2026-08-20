@@ -8,6 +8,8 @@ import {
   useConnectionPresentation,
   type ConnectionPresentationKind,
 } from "@/hooks/useConnectionPresentation";
+import { useConnection } from "@/hooks/useConnection";
+import { ConnectionState, useStatusStore } from "@/lib/store";
 import { ResponsiveContainer } from "./ResponsiveContainer";
 
 function statusKey(kind: ConnectionPresentationKind): string {
@@ -29,16 +31,32 @@ function statusKey(kind: ConnectionPresentationKind): string {
 export function ConnectionStatusBar() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
+  const { isConnected } = useConnection();
   const presentation = useConnectionPresentation();
+  const safeInsets = useStatusStore((state) => state.safeInsets);
+  const connectionIssueStartedAt = useStatusStore(
+    (state) => state.connectionIssueStartedAt,
+  );
+  const connectionState = useStatusStore((state) => state.connectionState);
+  const connectionError = useStatusStore((state) => state.connectionError);
+  const encryptionState = useStatusStore((state) => state.encryptionState);
+  const pairingRequired = useStatusStore((state) => state.pairingRequired);
   const hadPresented = useRef(false);
   const [showRestored, setShowRestored] = useState(false);
+  const confirmedConnected =
+    isConnected &&
+    connectionState === ConnectionState.CONNECTED &&
+    connectionIssueStartedAt === null &&
+    connectionError === "" &&
+    encryptionState !== "unknown" &&
+    !pairingRequired;
 
   useEffect(() => {
     if (presentation.visible) {
       hadPresented.current = true;
       return;
     }
-    if (!hadPresented.current) return;
+    if (!hadPresented.current || !confirmedConnected) return;
 
     hadPresented.current = false;
     const revealTimer = setTimeout(() => {
@@ -52,15 +70,16 @@ export function ConnectionStatusBar() {
       clearTimeout(revealTimer);
       clearTimeout(hideTimer);
     };
-  }, [presentation.visible]);
+  }, [confirmedConnected, presentation.visible]);
 
   const hasContextualStatus =
     pathname === "/" || pathname === "/settings" || pathname === "/settings/";
+  const showConfirmedRestored = showRestored && confirmedConnected;
   const showVisual =
-    !hasContextualStatus && (presentation.visible || showRestored);
+    !hasContextualStatus && (presentation.visible || showConfirmedRestored);
   const message = presentation.visible
     ? t(statusKey(presentation.kind))
-    : showRestored
+    : showConfirmedRestored
       ? t("connection.restored")
       : "";
   const isUnavailable =
@@ -80,16 +99,23 @@ export function ConnectionStatusBar() {
       </div>
       {showVisual && (
         <div
-          className={classNames("flex-shrink-0 border-t border-white/10", {
+          className={classNames("shrink-0 border-t border-white/10", {
             "bg-muted/90 text-muted-foreground":
               presentation.visible && !isUnavailable,
             "bg-amber-950/95 text-amber-100": isUnavailable,
-            "text-success bg-[#111928]": showRestored && !presentation.visible,
+            "text-success bg-[#111928]":
+              showConfirmedRestored && !presentation.visible,
           })}
         >
           <ResponsiveContainer maxWidth="nav">
-            <div className="flex min-h-9 items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium">
-              {showRestored && !presentation.visible ? (
+            <div
+              className="flex min-h-9 items-center justify-center gap-2 py-1.5 text-sm font-medium"
+              style={{
+                paddingRight: `calc(0.75rem + ${safeInsets.right})`,
+                paddingLeft: `calc(0.75rem + ${safeInsets.left})`,
+              }}
+            >
+              {showConfirmedRestored && !presentation.visible ? (
                 <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
               ) : presentation.kind === "networkUnavailable" ? (
                 <WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -104,7 +130,9 @@ export function ConnectionStatusBar() {
                   aria-hidden="true"
                 />
               )}
-              <span className="min-w-0 text-center">{message}</span>
+              <span className="min-w-0 text-center" aria-hidden="true">
+                {message}
+              </span>
               {isUnavailable && (
                 <Link
                   to="/settings"

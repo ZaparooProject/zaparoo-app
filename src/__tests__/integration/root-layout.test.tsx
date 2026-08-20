@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen } from "../../test-utils";
+import { render, screen, within } from "../../test-utils";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 
@@ -74,14 +74,10 @@ vi.mock("@/lib/safeArea", () => ({
   SafeAreaHandler: () => <div data-testid="safe-area-handler" />,
 }));
 
-// Mock BottomNav and its adjacent global connection status
+// BottomNav behavior is covered separately; keep the adjacent global
+// connection status real so this integration test covers its public output.
 vi.mock("@/components/BottomNav", () => ({
   BottomNav: () => <nav data-testid="bottom-nav">Bottom Nav</nav>,
-}));
-vi.mock("@/components/ConnectionStatusBar", () => ({
-  ConnectionStatusBar: () => (
-    <div data-testid="connection-status-bar">Connection status</div>
-  ),
 }));
 
 // Mock TourInitializer
@@ -140,7 +136,9 @@ describe("Root Layout Integration", () => {
 
       expect(screen.getByTestId("skip-link")).toBeInTheDocument();
       expect(screen.getByTestId("safe-area-handler")).toBeInTheDocument();
-      expect(screen.getByTestId("connection-status-bar")).toBeInTheDocument();
+      expect(
+        within(screen.getByRole("contentinfo")).getByRole("status"),
+      ).toHaveTextContent("");
       expect(screen.getByTestId("bottom-nav")).toBeInTheDocument();
       expect(screen.getByRole("main")).toBeInTheDocument();
     });
@@ -156,7 +154,7 @@ describe("Root Layout Integration", () => {
 
       const footer = screen.getByRole("contentinfo");
       expect(footer).toBeInTheDocument();
-      expect(screen.getByTestId("connection-status-bar")).toBeInTheDocument();
+      expect(within(footer).getByRole("status")).toHaveTextContent("");
       expect(screen.getByTestId("bottom-nav")).toBeInTheDocument();
     });
 

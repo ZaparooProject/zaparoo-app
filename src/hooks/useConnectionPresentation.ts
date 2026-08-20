@@ -62,8 +62,9 @@ export function useConnectionPresentation(options?: {
 
   const reconnecting =
     showReconnecting ||
-    activeConnection?.hasConnectedBefore === true ||
-    activeConnection?.hasData === true;
+    (activeConnection?.state !== "connected" &&
+      (activeConnection?.hasConnectedBefore === true ||
+        activeConnection?.hasData === true));
   const kind = reconnecting ? "reconnecting" : "connecting";
 
   if (options?.immediate || elapsed >= CONNECTION_STATUS_REVEAL_MS) {

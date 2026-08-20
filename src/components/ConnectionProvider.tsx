@@ -228,7 +228,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
   const isInitialized = useRef(false);
   // Track current connection to prevent stale events from old connections
   const currentConnectionId = useRef<string | null>(null);
-  const previousConnectionRecordId = useRef<string | null>(null);
+  const previousConnectionRecordId = useRef<string | null | undefined>(
+    undefined,
+  );
+  const suppressConnectionIssueRef = useRef(false);
   const credentialWorkRef = useRef(
     new Map<symbol, { recordId: string; promise: Promise<void> }>(),
   );
@@ -1288,9 +1291,17 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       beginConnectionIssue();
     }
     invalidateCurrentClientRequest();
-    const deviceChanged = previousConnectionRecordId.current !== activeRecordId;
+    const deviceChanged =
+      previousConnectionRecordId.current !== undefined &&
+      previousConnectionRecordId.current !== activeRecordId;
     previousConnectionRecordId.current = activeRecordId;
-    if (deviceChanged) setCurrentClient(null);
+    if (deviceChanged) {
+      suppressConnectionIssueRef.current = false;
+      setCoreVersion(null);
+      setCorePlatform(null);
+      setCoreVersionPending(false);
+      setCurrentClient(null);
+    }
     setEncryptionState("unknown");
     setPairingRequired(false);
     setPairingOpen(false);
@@ -1343,7 +1354,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           setConnectionState(mapTransportState(connection.state));
           if (
             connection.state !== "connected" &&
-            !useStatusStore.getState().pairingRequired
+            !useStatusStore.getState().pairingRequired &&
+            !suppressConnectionIssueRef.current
           ) {
             beginConnectionIssue();
           }
@@ -1437,6 +1449,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       },
       onEncryptedHandshakeOk: () => {
         if (!isCurrentConnection()) return;
+        suppressConnectionIssueRef.current = false;
         clearConnectionIssue();
         setEncryptionState("encrypted");
         setPairingRequired(false);
@@ -1490,6 +1503,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       },
       onPlaintextMode: () => {
         if (!isCurrentConnection()) return;
+        suppressConnectionIssueRef.current = false;
         clearConnectionIssue();
         setEncryptionState("plaintext");
         setPairingRequired(false);
@@ -1511,6 +1525,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         setPairingOpen(true);
       },
       onUnsupportedVersion: () => {
+        suppressConnectionIssueRef.current = true;
         clearConnectionIssue();
         setEncryptionState("plaintext");
         setConnectionError(
@@ -1618,6 +1633,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     cancelMediaStopReconciliation,
     setConnectionState,
     setConnectionError,
+    setCorePlatform,
+    setCoreVersion,
+    setCoreVersionPending,
     setCurrentClient,
     setEncryptionState,
     setPairingRequired,

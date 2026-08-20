@@ -6,7 +6,7 @@ import {
   ConnectionContext,
   type ConnectionContextValue,
 } from "@/hooks/useConnection";
-import { useStatusStore } from "@/lib/store";
+import { ConnectionState, useStatusStore } from "@/lib/store";
 
 const mockUseLocation = vi.fn();
 
@@ -58,9 +58,13 @@ describe("ConnectionStatusBar", () => {
     vi.setSystemTime(new Date("2025-01-01T00:00:00Z"));
     mockUseLocation.mockReturnValue({ pathname: "/library" });
     useStatusStore.setState({
+      connectionError: "",
+      connectionState: ConnectionState.RECONNECTING,
+      encryptionState: "unknown",
       networkAvailable: true,
       pairingRequired: false,
       connectionIssueStartedAt: Date.now(),
+      safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
     });
   });
 
@@ -94,6 +98,9 @@ describe("ConnectionStatusBar", () => {
     act(() => vi.advanceTimersByTime(1_000));
 
     expect(screen.getAllByText("connection.connectingToCore")).toHaveLength(2);
+    expect(
+      screen.getByText("connection.connectingToCore", { selector: "span" }),
+    ).toHaveAttribute("aria-hidden", "true");
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
@@ -101,9 +108,17 @@ describe("ConnectionStatusBar", () => {
     render(
       <Wrapper
         value={connectionValue({
-          hasData: true,
+          activeConnection: {
+            deviceId: "cached-device",
+            address: "192.168.1.100:7497",
+            type: "websocket",
+            state: "reconnecting",
+            hasData: true,
+            lastDataTimestamp: Date.now(),
+            hasConnectedBefore: true,
+          },
           showConnecting: false,
-          showReconnecting: true,
+          showReconnecting: false,
         })}
       >
         <ConnectionStatusBar />
@@ -114,6 +129,56 @@ describe("ConnectionStatusBar", () => {
 
     expect(screen.getAllByText("connection.reconnectingToCore")).toHaveLength(
       2,
+    );
+  });
+
+  it("keeps an open initial handshake classified as connecting", () => {
+    render(
+      <Wrapper
+        value={connectionValue({
+          activeConnection: {
+            deviceId: "new-device",
+            address: "192.168.1.100:7497",
+            type: "websocket",
+            state: "connected",
+            hasData: false,
+            lastDataTimestamp: null,
+            hasConnectedBefore: true,
+          },
+          isConnected: true,
+          showConnecting: false,
+          showReconnecting: false,
+        })}
+      >
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+
+    act(() => vi.advanceTimersByTime(1_000));
+
+    expect(screen.getAllByText("connection.connectingToCore")).toHaveLength(2);
+  });
+
+  it("applies horizontal safe-area insets to the visual row", () => {
+    useStatusStore.setState({
+      safeInsets: { top: "0px", bottom: "0px", left: "12px", right: "8px" },
+    });
+
+    render(
+      <Wrapper value={connectionValue()}>
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+    act(() => vi.advanceTimersByTime(1_000));
+
+    const message = screen.getByText("connection.connectingToCore", {
+      selector: "span",
+    });
+    expect(message.parentElement?.style.paddingLeft).toBe(
+      "calc(0.75rem + 12px)",
+    );
+    expect(message.parentElement?.style.paddingRight).toBe(
+      "calc(0.75rem + 8px)",
     );
   });
 
@@ -174,7 +239,13 @@ describe("ConnectionStatusBar", () => {
       </Wrapper>,
     );
     act(() => vi.advanceTimersByTime(1_000));
-    act(() => useStatusStore.setState({ connectionIssueStartedAt: null }));
+    act(() =>
+      useStatusStore.setState({
+        connectionIssueStartedAt: null,
+        connectionState: ConnectionState.CONNECTED,
+        encryptionState: "plaintext",
+      }),
+    );
 
     rerender(
       <Wrapper
@@ -191,6 +262,40 @@ describe("ConnectionStatusBar", () => {
     expect(screen.getAllByText("connection.restored")).toHaveLength(2);
 
     act(() => vi.advanceTimersByTime(3_000));
+    expect(screen.queryByText("connection.restored")).not.toBeInTheDocument();
+  });
+
+  it("does not announce recovery when pairing becomes required", () => {
+    const { rerender } = render(
+      <Wrapper value={connectionValue()}>
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+    act(() => vi.advanceTimersByTime(1_000));
+
+    act(() =>
+      useStatusStore.setState({
+        connectionIssueStartedAt: null,
+        connectionState: ConnectionState.CONNECTED,
+        encryptionState: "plaintext",
+        pairingRequired: true,
+      }),
+    );
+    rerender(
+      <Wrapper
+        value={connectionValue({
+          isConnected: true,
+          showConnecting: false,
+        })}
+      >
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+    act(() => vi.advanceTimersByTime(3_000));
+
+    expect(
+      screen.getByTestId("connection-status-announcement"),
+    ).toHaveTextContent("");
     expect(screen.queryByText("connection.restored")).not.toBeInTheDocument();
   });
 
