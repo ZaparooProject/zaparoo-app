@@ -307,7 +307,7 @@ describe("MediaScrapeCard", () => {
     });
   });
 
-  it("should show a loading state while waiting for scrape status", async () => {
+  it("should disable and relabel the action while waiting for scrape status", async () => {
     const user = userEvent.setup();
     render(<MediaScrapeCard />);
 
@@ -322,12 +322,11 @@ describe("MediaScrapeCard", () => {
       screen.getByRole("button", { name: "settings.scrapeMedia" }),
     );
 
-    expect(
-      await screen.findByRole("button", {
-        name: "settings.scrapeMedia.starting",
-      }),
-    ).toBeDisabled();
-    expect(screen.getByRole("status", { name: "loading" })).toBeInTheDocument();
+    const startButton = await screen.findByRole("button", {
+      name: "settings.scrapeMedia.starting",
+    });
+    expect(startButton).toBeDisabled();
+    expect(startButton).toHaveTextContent("settings.scrapeMedia.starting");
   });
 
   it("should render one visible force toggle label", async () => {

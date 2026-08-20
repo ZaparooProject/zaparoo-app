@@ -373,6 +373,59 @@ describe("Settings Devices Route", () => {
     expect(screen.getByLabelText("connection.encrypted")).toBeInTheDocument();
   });
 
+  it("should keep shared legacy pairing visible on an unmerged record", async () => {
+    const user = userEvent.setup();
+    const sharedLegacyKey = "shared-device-key";
+    const [activeTarget, , sharedOwner] = await seedRecords(
+      [
+        { address: "steamdeck.local", name: "A target" },
+        {
+          address: "10.0.0.206",
+          name: "B source",
+          legacyCredentialKey: sharedLegacyKey,
+        },
+        {
+          address: "10.0.0.207",
+          name: "C shared owner",
+          legacyCredentialKey: sharedLegacyKey,
+        },
+      ],
+      0,
+    );
+    await credentialStore.set(sharedLegacyKey, credentials);
+    renderRoute();
+
+    expect(
+      await screen.findAllByLabelText("connection.encrypted"),
+    ).toHaveLength(2);
+    await user.click(
+      screen.getByRole("button", { name: "settings.deviceCombine.edit" }),
+    );
+    const selections = screen.getAllByRole("checkbox", {
+      name: "settings.deviceCombine.select",
+    });
+    await user.click(selections[0]!);
+    await user.click(selections[1]!);
+    await user.click(
+      screen.getByRole("button", { name: "settings.deviceCombine.action" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "settings.deviceCombine.confirm" }),
+    );
+
+    await waitFor(() => {
+      expect(Object.keys(deviceRegistry.getSnapshot().records)).toEqual([
+        activeTarget!.recordId,
+        sharedOwner!.recordId,
+      ]);
+    });
+    expect(await credentialStore.get(sharedLegacyKey)).toEqual(credentials);
+    expect(
+      await credentialStore.get(credentialKeyForRecord(activeTarget!.recordId)),
+    ).toEqual(credentials);
+    expect(screen.getAllByLabelText("connection.encrypted")).toHaveLength(2);
+  });
+
   it("should retain both selected records when combining fails", async () => {
     const user = userEvent.setup();
     const records = await seedRecords([

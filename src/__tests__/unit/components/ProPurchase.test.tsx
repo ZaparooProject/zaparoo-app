@@ -432,7 +432,9 @@ describe("useProPurchase", () => {
       within(dialog).queryByRole("button", { name: "nav.close" }),
     ).not.toBeInTheDocument();
     await user.keyboard("{Escape}");
-    expect(dialog).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "scan.purchaseProTitle" })).toBe(
+      dialog,
+    );
 
     act(() => {
       resolvePurchase?.({

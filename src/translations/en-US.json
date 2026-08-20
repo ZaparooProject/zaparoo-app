@@ -676,11 +676,12 @@
     },
     "requirements": {
       "title": "Complete Setup",
-      "tosLabel": "I agree to the",
+      "legalLabel": "I agree to the Terms of Service and Privacy Policy",
+      "legalPrefix": "I agree to the",
+      "legalAnd": "and",
       "tosLink": "Terms of Service",
-      "privacyLabel": "I agree to the",
       "privacyLink": "Privacy Policy",
-      "ageLabel": "I'm 13 years or older",
+      "ageLabel": "I am 13 years of age or older",
       "sendVerificationEmail": "Send Verification Email",
       "emailSent": "Verification email sent",
       "emailSentMessage": "Check your inbox and click the link, then tap below.",
@@ -693,6 +694,7 @@
       "emailVerified": "Email verified",
       "saved": "Saved",
       "save": "Save",
+      "continue": "Agree & continue",
       "logout": "Log Out"
     },
     "settings": {

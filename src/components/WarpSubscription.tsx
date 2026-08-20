@@ -69,7 +69,7 @@ function WarpPurchaseModal({
     <SlideModal
       isOpen={open}
       close={() => onOpenChange(false)}
-      dismissible={action === null}
+      dismissible={action !== "purchase"}
       title={t("online.warp.purchaseTitle")}
       footer={
         <Button
@@ -441,7 +441,10 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
       {!checkoutSuppressed && packages && (
         <Button
           label={t("online.warp.get")}
-          onClick={() => setPurchaseDialogOpen(true)}
+          onClick={() => {
+            if (action === null) setPurchaseDialogOpen(true);
+          }}
+          disabled={action !== null}
           intent="primary"
           className="w-full"
         />
@@ -513,7 +516,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
       <WarpPurchaseModal
         open={purchaseDialogOpen && Boolean(packages)}
         onOpenChange={(open) => {
-          if (action === null) setPurchaseDialogOpen(open);
+          if (action !== "purchase") setPurchaseDialogOpen(open);
         }}
         selectedPlan={selectedPlan}
         setSelectedPlan={setSelectedPlan}

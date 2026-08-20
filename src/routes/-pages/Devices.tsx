@@ -195,14 +195,25 @@ export function Devices() {
           predicate: (query) => query.queryKey.includes(recordId),
         });
       }
+      const referencedLegacyKeys = new Set(
+        Object.values(deviceRegistry.getSnapshot().records)
+          .map((record) => record.legacyCredentialKey)
+          .filter((key): key is string => key !== undefined),
+      );
       setPairedKeys((current) => {
         const next = new Set(current);
         next.delete(credentialKeyForRecord(combineTarget.recordId));
         next.delete(credentialKeyForRecord(combineSource.recordId));
-        if (combineTarget.legacyCredentialKey) {
+        if (
+          combineTarget.legacyCredentialKey &&
+          !referencedLegacyKeys.has(combineTarget.legacyCredentialKey)
+        ) {
           next.delete(combineTarget.legacyCredentialKey);
         }
-        if (combineSource.legacyCredentialKey) {
+        if (
+          combineSource.legacyCredentialKey &&
+          !referencedLegacyKeys.has(combineSource.legacyCredentialKey)
+        ) {
           next.delete(combineSource.legacyCredentialKey);
         }
         if (mergedPairing) {

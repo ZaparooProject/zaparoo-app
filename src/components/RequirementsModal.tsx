@@ -11,6 +11,7 @@ import { Button } from "@/components/wui/Button";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import { updateRequirements, getRequirements } from "@/lib/onlineApi";
+import type { UpdateRequirementsRequest } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 import { logger } from "@/lib/logger";
 import { isExpectedRevenueCatLogoutError } from "@/lib/errors";
@@ -24,8 +25,7 @@ export function RequirementsModal() {
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
 
   // Local checkbox state - NOT live updating
-  const [tosChecked, setTosChecked] = useState(false);
-  const [privacyChecked, setPrivacyChecked] = useState(false);
+  const [legalChecked, setLegalChecked] = useState(false);
   const [ageChecked, setAgeChecked] = useState(false);
 
   // Email verification state
@@ -55,8 +55,7 @@ export function RequirementsModal() {
   useEffect(() => {
     if (isOpen) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Start each modal session with a clean requirements form.
-      setTosChecked(false);
-      setPrivacyChecked(false);
+      setLegalChecked(false);
       setAgeChecked(false);
       setEmailSent(false);
       setEmailVerifying(false);
@@ -65,8 +64,7 @@ export function RequirementsModal() {
   }, [isOpen]);
 
   // Check if Save button should be enabled
-  const canSave =
-    (!needsTos || (tosChecked && privacyChecked)) && (!needsAge || ageChecked);
+  const canSave = (!needsTos || legalChecked) && (!needsAge || ageChecked);
 
   // Check if there are checkbox-based requirements (not just email)
   const hasCheckboxRequirements = needsTos || needsAge;
@@ -75,11 +73,15 @@ export function RequirementsModal() {
     setIsSaving(true);
     setStatusMessage(null);
     try {
-      await updateRequirements({
-        accept_tos: tosChecked,
-        accept_privacy: privacyChecked,
-        age_verified: ageChecked,
-      });
+      const requirements: UpdateRequirementsRequest = {};
+      if (needsTos) {
+        requirements.accept_tos = true;
+        requirements.accept_privacy = true;
+      }
+      if (needsAge) {
+        requirements.age_verified = true;
+      }
+      await updateRequirements(requirements);
 
       // If email verification is still needed, don't close yet
       if (needsEmailVerification) {
@@ -240,7 +242,7 @@ export function RequirementsModal() {
               }
               primaryAction={
                 <Button
-                  label={isSaving ? t("loading") : t("requirements.save")}
+                  label={isSaving ? t("loading") : t("requirements.continue")}
                   onClick={handleSave}
                   disabled={!canSave || isSaving}
                   intent="primary"
@@ -263,53 +265,36 @@ export function RequirementsModal() {
       <div className="flex flex-col gap-4 py-2">
         {/* Legal Agreements Section */}
         {needsTos && (
-          <div className="flex flex-col gap-3">
-            {/* Terms of Service */}
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id="tos"
-                checked={tosChecked}
-                onCheckedChange={(checked) => setTosChecked(checked === true)}
-              />
-              <div className="text-sm leading-tight text-white">
-                <Label htmlFor="tos" className="inline leading-tight">
-                  {t("requirements.tosLabel")}
-                </Label>{" "}
-                <a
-                  href={TOS_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-sm text-blue-400 underline hover:text-blue-300 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-                >
-                  {t("requirements.tosLink")}
-                  <ExternalLinkIcon className="h-3 w-3" />
-                </a>
-              </div>
-            </div>
-
-            {/* Privacy Policy */}
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id="privacy"
-                checked={privacyChecked}
-                onCheckedChange={(checked) =>
-                  setPrivacyChecked(checked === true)
-                }
-              />
-              <div className="text-sm leading-tight text-white">
-                <Label htmlFor="privacy" className="inline leading-tight">
-                  {t("requirements.privacyLabel")}
-                </Label>{" "}
-                <a
-                  href={PRIVACY_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-sm text-blue-400 underline hover:text-blue-300 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-                >
-                  {t("requirements.privacyLink")}
-                  <ExternalLinkIcon className="h-3 w-3" />
-                </a>
-              </div>
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="legal"
+              checked={legalChecked}
+              onCheckedChange={(checked) => setLegalChecked(checked === true)}
+              aria-label={t("requirements.legalLabel")}
+            />
+            <div className="text-sm leading-tight text-white">
+              <Label htmlFor="legal" className="inline leading-tight">
+                {t("requirements.legalPrefix")}
+              </Label>{" "}
+              <a
+                href={TOS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-sm text-blue-400 underline hover:text-blue-300 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+              >
+                {t("requirements.tosLink")}
+                <ExternalLinkIcon className="h-3 w-3" />
+              </a>{" "}
+              {t("requirements.legalAnd")}{" "}
+              <a
+                href={PRIVACY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-sm text-blue-400 underline hover:text-blue-300 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+              >
+                {t("requirements.privacyLink")}
+                <ExternalLinkIcon className="h-3 w-3" />
+              </a>
             </div>
           </div>
         )}

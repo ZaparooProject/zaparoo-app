@@ -137,7 +137,25 @@ describe("WarpSubscription", () => {
     ).toBeDisabled();
 
     await user.keyboard("{Escape}");
-    expect(dialog).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "online.warp.purchaseTitle" }),
+    ).toBe(dialog);
+  });
+
+  it("should prevent opening checkout during another subscription action", async () => {
+    const user = userEvent.setup();
+    mockUseWarpSubscription.mockReturnValue(hookState({ action: "restore" }));
+
+    render(<WarpSubscription appUserID="user-123" />);
+
+    const checkoutButton = screen.getByRole("button", {
+      name: "online.warp.get",
+    });
+    expect(checkoutButton).toBeDisabled();
+    await user.click(checkoutButton);
+    expect(
+      screen.queryByRole("dialog", { name: "online.warp.purchaseTitle" }),
+    ).not.toBeInTheDocument();
   });
 
   it("should allow selecting monthly plan", async () => {
