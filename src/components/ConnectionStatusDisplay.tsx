@@ -100,6 +100,9 @@ export function ConnectionStatusDisplay({
       return "networkUnavailable";
     }
     if (connectionPresentation.kind === "unavailable") return "unavailable";
+    // Initial transport failures remain actionable even if the socket briefly
+    // opened. Routine reconnect errors stay behind reconnecting presentation.
+    if (connectionError && !showReconnecting) return "error";
     // The transport flips to "connected" when the WebSocket opens, before the
     // server has confirmed the encryption mode. Hold the UI in connecting/
     // reconnecting until the consumer learns the mode (encryptionState is set
@@ -112,8 +115,6 @@ export function ConnectionStatusDisplay({
     if (isConnected) return "connected";
     // Show reconnecting state (previously connected, now retrying)
     if (showReconnecting) return "reconnecting";
-    // Show error if we have one during initial connection attempts
-    if (connectionError) return "error";
     if (showConnecting) return "connecting";
     return "disconnected";
   };

@@ -80,6 +80,40 @@ describe("MediaDetailsModal", () => {
     expect(screen.getByText("@SNES/Super Mario World")).toBeInTheDocument();
   });
 
+  it("should show labels for interactive media tags", () => {
+    renderModal({
+      media: {
+        ...mediaWithZapScript,
+        tags: [
+          ...mediaWithZapScript.tags,
+          { type: "edition", tag: "special", label: "Special Edition" },
+        ],
+      },
+    });
+
+    expect(
+      screen.getByRole("button", { name: "edition Special Edition" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Special Edition")).toBeInTheDocument();
+    expect(screen.queryByText("edition:special")).not.toBeInTheDocument();
+  });
+
+  it("should show labels for read-only media tags", () => {
+    renderModal({
+      media: {
+        ...mediaWithZapScript,
+        zapScript: "**launch:/games/snes/Super Mario World.sfc",
+        tags: [
+          ...mediaWithZapScript.tags,
+          { type: "edition", tag: "special", label: "Special Edition" },
+        ],
+      },
+    });
+
+    expect(screen.getByText("Special Edition")).toBeInTheDocument();
+    expect(screen.queryByText("edition:special")).not.toBeInTheDocument();
+  });
+
   it("should show labelled secondary actions before the primary action", () => {
     renderModal({ onCopy: vi.fn(), onPreview: vi.fn() });
 
@@ -263,6 +297,33 @@ describe("MediaDetailsModal", () => {
       }),
     ).not.toBeInTheDocument();
     expect(screen.queryByLabelText("genre platformer")).not.toBeInTheDocument();
+  });
+
+  it("should treat whitespace-only ZapScript as unavailable", async () => {
+    const user = userEvent.setup();
+    const onWrite = vi.fn();
+    renderModal({
+      media: {
+        ...mediaWithZapScript,
+        zapScript: "   ",
+        tags: [],
+      },
+      onWrite,
+    });
+
+    expect(
+      screen.getByRole("radio", { name: /create\.search\.pathLabel/i }),
+    ).toBeChecked();
+    expect(
+      screen.queryByRole("radio", {
+        name: /create\.search\.zapscriptLabel/i,
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /create\.search\.writeLabel/i }),
+    );
+    expect(onWrite).toHaveBeenCalledWith(mediaWithZapScript.path);
   });
 
   it("should pass selected path to every supplied action", async () => {

@@ -104,6 +104,25 @@ describe("ConnectionStatusBar", () => {
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
+  it("updates when an observed issue already passed its threshold", () => {
+    useStatusStore.setState({ connectionIssueStartedAt: null });
+    render(
+      <Wrapper value={connectionValue()}>
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+
+    vi.setSystemTime(new Date("2025-01-01T00:00:20Z"));
+    act(() =>
+      useStatusStore.setState({
+        connectionIssueStartedAt: Date.now() - 10_000,
+      }),
+    );
+    act(() => vi.advanceTimersByTime(0));
+
+    expect(screen.getAllByText("connection.coreUnavailable")).toHaveLength(2);
+  });
+
   it("shows reconnecting when cached device data exists", () => {
     render(
       <Wrapper
@@ -326,7 +345,11 @@ describe("ConnectionStatusBar", () => {
     expect(screen.queryByText("connection.restored")).not.toBeInTheDocument();
   });
 
-  it("does not announce recovery when pairing becomes required", () => {
+  it("clears presented recovery when pairing becomes required", () => {
+    const connectedValue = connectionValue({
+      isConnected: true,
+      showConnecting: false,
+    });
     const { rerender } = render(
       <Wrapper value={connectionValue()}>
         <ConnectionStatusBar />
@@ -343,6 +366,55 @@ describe("ConnectionStatusBar", () => {
       }),
     );
     rerender(
+      <Wrapper value={connectedValue}>
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+    act(() => vi.advanceTimersByTime(3_000));
+
+    act(() => useStatusStore.setState({ pairingRequired: false }));
+    rerender(
+      <Wrapper value={connectedValue}>
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+    act(() => vi.advanceTimersByTime(0));
+
+    expect(
+      screen.getByTestId("connection-status-announcement"),
+    ).toHaveTextContent("");
+    expect(screen.queryByText("connection.restored")).not.toBeInTheDocument();
+  });
+
+  it("clears presented recovery when connection ends in an error", () => {
+    const { rerender } = render(
+      <Wrapper value={connectionValue()}>
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+    act(() => vi.advanceTimersByTime(1_000));
+
+    act(() =>
+      useStatusStore.setState({
+        connectionIssueStartedAt: null,
+        connectionState: ConnectionState.ERROR,
+        connectionError: "Connection refused",
+        encryptionState: "plaintext",
+      }),
+    );
+    rerender(
+      <Wrapper value={connectionValue({ showConnecting: false })}>
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+
+    act(() =>
+      useStatusStore.setState({
+        connectionState: ConnectionState.CONNECTED,
+        connectionError: "",
+      }),
+    );
+    rerender(
       <Wrapper
         value={connectionValue({
           isConnected: true,
@@ -352,11 +424,8 @@ describe("ConnectionStatusBar", () => {
         <ConnectionStatusBar />
       </Wrapper>,
     );
-    act(() => vi.advanceTimersByTime(3_000));
+    act(() => vi.advanceTimersByTime(0));
 
-    expect(
-      screen.getByTestId("connection-status-announcement"),
-    ).toHaveTextContent("");
     expect(screen.queryByText("connection.restored")).not.toBeInTheDocument();
   });
 

@@ -36,12 +36,13 @@ export function MediaWriteTargetSelector(props: {
             {visibleTags.map((tag, index) => {
               const key = titleTagKey(tag);
               const selected = props.target.selectedTagKeys.has(key);
+              const displayTag = tag.label || tag.tag;
 
               return props.target.parsedZapScript ? (
                 <button
                   key={`${key}:${index}`}
                   type="button"
-                  aria-label={`${tag.type} ${tag.tag}`}
+                  aria-label={`${tag.type} ${displayTag}`}
                   aria-pressed={selected}
                   className={classNames(
                     "rounded-full transition-opacity focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
@@ -53,7 +54,11 @@ export function MediaWriteTargetSelector(props: {
                   }}
                 >
                   <span aria-hidden="true">
-                    <TagBadge type={tag.type} tag={tag.tag} />
+                    <TagBadge
+                      type={tag.type}
+                      tag={tag.tag}
+                      displayTag={displayTag}
+                    />
                   </span>
                 </button>
               ) : (
@@ -61,6 +66,7 @@ export function MediaWriteTargetSelector(props: {
                   key={`${key}:${index}`}
                   type={tag.type}
                   tag={tag.tag}
+                  displayTag={displayTag}
                 />
               );
             })}

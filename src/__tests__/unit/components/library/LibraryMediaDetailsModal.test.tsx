@@ -354,6 +354,38 @@ describe("LibraryMediaDetailsModal", () => {
     expect(props.close).toHaveBeenCalled();
   });
 
+  it("should restore details when write-target selection is dismissed", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    const user = userEvent.setup();
+    const { props } = renderModal({
+      entry: {
+        ...ENTRY,
+        zapScript: "@SNES/Super Game",
+        relativePath: "SNES/Super Game.sfc",
+      },
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "library.write" }),
+    );
+    const writeDialog = await screen.findByRole("dialog", {
+      name: "create.search.writeLabel",
+    });
+    expect(props.close).not.toHaveBeenCalled();
+
+    await user.click(
+      within(writeDialog).getAllByRole("button", { name: "nav.close" })[0]!,
+    );
+
+    expect(
+      screen.queryByRole("dialog", { name: "create.search.writeLabel" }),
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("dialog", { name: "Super Game" }),
+    ).toBeInTheDocument();
+    expect(props.close).not.toHaveBeenCalled();
+  });
+
   it("should write the selected relative path from Library details", async () => {
     usePreferencesStore.setState({ nfcAvailable: true });
     const user = userEvent.setup();

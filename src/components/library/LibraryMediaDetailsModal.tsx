@@ -440,7 +440,7 @@ export function LibraryMediaDetailsModal(props: {
 
   const detailsModal = (
     <SlideModal
-      isOpen={props.isOpen}
+      isOpen={props.isOpen && !writeOptionsOpen}
       close={closeModal}
       title={title}
       footer={footer}

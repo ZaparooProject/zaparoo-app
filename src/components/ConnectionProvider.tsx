@@ -1744,9 +1744,38 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     let networkListener: PluginListenerHandle | null = null;
 
     const setup = async () => {
+      let listenerHasReported = false;
+      try {
+        const handle = await Network.addListener(
+          "networkStatusChange",
+          (status) => {
+            if (disposed) return;
+            listenerHasReported = true;
+            logger.log(
+              `[ConnectionProvider] Network status changed: ${status.connected ? "connected" : "disconnected"} (${status.connectionType})`,
+            );
+            updateNetworkAvailability(status.connected);
+            if (status.connected) {
+              connectionManager.immediateReconnectActive();
+            }
+          },
+        );
+        if (disposed) {
+          void removeNativeListener(handle, "network status");
+          return;
+        }
+        networkListener = handle;
+      } catch (error) {
+        logger.warn(
+          "[ConnectionProvider] Failed to setup network listener:",
+          error,
+        );
+      }
+      if (disposed) return;
+
       try {
         const initialStatus = await Network.getStatus();
-        if (disposed) return;
+        if (disposed || listenerHasReported) return;
         updateNetworkAvailability(initialStatus.connected);
       } catch (error) {
         logger.warn(
@@ -1754,26 +1783,6 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           error,
         );
       }
-      if (disposed) return;
-
-      const handle = await Network.addListener(
-        "networkStatusChange",
-        (status) => {
-          if (disposed) return;
-          logger.log(
-            `[ConnectionProvider] Network status changed: ${status.connected ? "connected" : "disconnected"} (${status.connectionType})`,
-          );
-          updateNetworkAvailability(status.connected);
-          if (status.connected) {
-            connectionManager.immediateReconnectActive();
-          }
-        },
-      );
-      if (disposed) {
-        void removeNativeListener(handle, "network status");
-        return;
-      }
-      networkListener = handle;
     };
 
     setup().catch((e) => {

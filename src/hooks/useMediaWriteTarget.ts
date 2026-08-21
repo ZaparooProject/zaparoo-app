@@ -29,7 +29,8 @@ export function __resetMediaWriteModeForTests() {
 
 export function useMediaWriteTarget(media: MediaWriteSource | null) {
   const parsedZapScript = useMemo(
-    () => (media?.zapScript ? parseTitleZapScript(media.zapScript) : null),
+    () =>
+      media?.zapScript?.trim() ? parseTitleZapScript(media.zapScript) : null,
     [media],
   );
   const [writeMode, setWriteModeState] = useState<MediaWriteMode>(() =>
@@ -65,7 +66,9 @@ export function useMediaWriteTarget(media: MediaWriteSource | null) {
   }, [media, parsedZapScript, selectedTagKeys]);
   const customizedZapScript = parsedZapScript
     ? buildTitleZapScript(parsedZapScript, selectedZapScriptTags)
-    : media?.zapScript;
+    : media?.zapScript?.trim()
+      ? media.zapScript
+      : undefined;
   const path = media ? getMediaWritePath(media) : "";
   const selectedValue =
     writeMode === "zapScript" && customizedZapScript

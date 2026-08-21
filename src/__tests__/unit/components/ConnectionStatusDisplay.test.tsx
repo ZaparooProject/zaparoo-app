@@ -63,6 +63,23 @@ describe("ConnectionStatusDisplay encryption gate", () => {
     expect(screen.queryByText("scan.connectedHeading")).not.toBeInTheDocument();
   });
 
+  it("should show an initial transport error before handshake confirmation", () => {
+    useStatusStore.setState({ connectionIssueStartedAt: Date.now() });
+
+    render(
+      wrap(<ConnectionStatusDisplay connectionError="Connection refused" />, {
+        isConnected: true,
+        showConnecting: true,
+      }),
+    );
+
+    expect(screen.getByText("scan.connectionError")).toBeInTheDocument();
+    expect(screen.getByText("Connection refused")).toBeInTheDocument();
+    expect(
+      screen.queryByText("connection.connectingToCore"),
+    ).not.toBeInTheDocument();
+  });
+
   it("should show Connected when isConnected=true and encryptionState=plaintext", () => {
     useStatusStore.setState({ encryptionState: "plaintext" });
 

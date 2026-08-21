@@ -50,11 +50,22 @@ export function ConnectionStatusBar() {
     connectionError === "" &&
     encryptionState !== "unknown" &&
     !pairingRequired;
+  const awaitingConnectionConfirmation =
+    connectionState === ConnectionState.CONNECTED &&
+    connectionIssueStartedAt === null &&
+    connectionError === "" &&
+    !pairingRequired &&
+    (!isConnected || encryptionState === "unknown");
 
   useEffect(() => {
-    if (presentation.visible || !confirmedConnected) {
-      if (presentation.visible) hadPresented.current = true;
+    if (presentation.visible) {
+      hadPresented.current = true;
       // eslint-disable-next-line react-hooks/set-state-in-effect -- External connection state invalidates an active recovery notice immediately.
+      setShowRestored(false);
+      return;
+    }
+    if (!confirmedConnected) {
+      if (!awaitingConnectionConfirmation) hadPresented.current = false;
       setShowRestored(false);
       return;
     }
@@ -72,7 +83,11 @@ export function ConnectionStatusBar() {
       clearTimeout(revealTimer);
       clearTimeout(hideTimer);
     };
-  }, [confirmedConnected, presentation.visible]);
+  }, [
+    awaitingConnectionConfirmation,
+    confirmedConnected,
+    presentation.visible,
+  ]);
 
   const hasContextualStatus =
     pathname === "/" || pathname === "/settings" || pathname === "/settings/";

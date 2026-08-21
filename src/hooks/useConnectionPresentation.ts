@@ -35,10 +35,8 @@ export function useConnectionPresentation(options?: {
     const elapsed = Date.now() - connectionIssueStartedAt;
     const timers: ReturnType<typeof setTimeout>[] = [];
     const scheduleUpdate = (threshold: number) => {
-      const delay = threshold - elapsed;
-      if (delay > 0) {
-        timers.push(setTimeout(() => setNow(Date.now()), delay));
-      }
+      const delay = Math.max(0, threshold - elapsed);
+      timers.push(setTimeout(() => setNow(Date.now()), delay));
     };
 
     scheduleUpdate(CONNECTION_STATUS_REVEAL_MS);
