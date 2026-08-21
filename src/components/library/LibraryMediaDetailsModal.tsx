@@ -576,17 +576,19 @@ export function LibraryMediaDetailsModal(props: {
     </SlideModal>
   );
 
+  const writeOptionsModalOpen = props.isOpen && writeOptionsOpen;
+
   return (
     <>
       {detailsModal}
-      {writeOptionsOpen && (
+      {writeOptionsModalOpen && (
         <MediaWriteTargetModal
-          isOpen
+          isOpen={writeOptionsModalOpen}
           close={() => setWriteOptionsOpen(false)}
           media={writeSource}
           onWrite={(text) => {
             setWriteOptionsOpen(false);
-            props.close();
+            closeModal();
             setWriteQueue(text);
           }}
         />

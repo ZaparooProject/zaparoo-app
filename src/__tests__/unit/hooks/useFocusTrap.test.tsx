@@ -356,6 +356,18 @@ describe("useFocusTrap", () => {
         "inert",
       );
     });
+
+    it("should preserve a newer owner adding inert during deactivation", () => {
+      const view = render(
+        <FocusTrapWithControlledSibling trapActive siblingInert={false} />,
+      );
+
+      view.rerender(
+        <FocusTrapWithControlledSibling trapActive={false} siblingInert />,
+      );
+
+      expect(screen.getByTestId("controlled-sibling")).toHaveAttribute("inert");
+    });
   });
 
   describe("inactive state", () => {

@@ -14,13 +14,23 @@ export type MediaWriteMode = "path" | "zapScript";
 
 let sessionWriteMode: MediaWriteMode = "zapScript";
 
-function getAvailableWriteMode(media: MediaWriteSource | null): MediaWriteMode {
-  if (!media) return sessionWriteMode;
-  if (sessionWriteMode === "zapScript" && media.zapScript?.trim()) {
+function getAvailableWriteModeFromValues(
+  zapScript: string | undefined,
+  path: string,
+): MediaWriteMode {
+  if (sessionWriteMode === "zapScript" && zapScript?.trim()) {
     return "zapScript";
   }
-  if (sessionWriteMode === "path" && getMediaWritePath(media)) return "path";
-  return media.zapScript?.trim() ? "zapScript" : "path";
+  if (sessionWriteMode === "path" && path) return "path";
+  return zapScript?.trim() ? "zapScript" : "path";
+}
+
+function getAvailableWriteMode(media: MediaWriteSource | null): MediaWriteMode {
+  if (!media) return sessionWriteMode;
+  return getAvailableWriteModeFromValues(
+    media.zapScript,
+    getMediaWritePath(media),
+  );
 }
 
 export function __resetMediaWriteModeForTests() {
@@ -28,10 +38,12 @@ export function __resetMediaWriteModeForTests() {
 }
 
 export function useMediaWriteTarget(media: MediaWriteSource | null) {
+  const hasMedia = media !== null;
+  const zapScript = media?.zapScript;
+  const path = media ? getMediaWritePath(media) : "";
   const parsedZapScript = useMemo(
-    () =>
-      media?.zapScript?.trim() ? parseTitleZapScript(media.zapScript) : null,
-    [media],
+    () => (zapScript?.trim() ? parseTitleZapScript(zapScript) : null),
+    [zapScript],
   );
   const [writeMode, setWriteModeState] = useState<MediaWriteMode>(() =>
     getAvailableWriteMode(media),
@@ -41,11 +53,11 @@ export function useMediaWriteTarget(media: MediaWriteSource | null) {
   );
 
   useLayoutEffect(() => {
-    if (!media) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset before paint when external media selection changes.
-    setWriteModeState(getAvailableWriteMode(media));
+    if (!hasMedia) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset before paint when external media content changes.
+    setWriteModeState(getAvailableWriteModeFromValues(zapScript, path));
     setSelectedTagKeys(new Set(parsedZapScript?.tags.map(titleTagKey) ?? []));
-  }, [media, parsedZapScript]);
+  }, [hasMedia, parsedZapScript, path, zapScript]);
 
   const setWriteMode = useCallback((mode: MediaWriteMode) => {
     sessionWriteMode = mode;
@@ -69,7 +81,6 @@ export function useMediaWriteTarget(media: MediaWriteSource | null) {
     : media?.zapScript?.trim()
       ? media.zapScript
       : undefined;
-  const path = media ? getMediaWritePath(media) : "";
   const selectedValue =
     writeMode === "zapScript" && customizedZapScript
       ? customizedZapScript

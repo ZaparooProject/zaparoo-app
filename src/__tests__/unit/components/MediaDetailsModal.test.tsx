@@ -213,6 +213,46 @@ describe("MediaDetailsModal", () => {
     expect(screen.getByText("@SNES/Super Mario World")).toBeInTheDocument();
   });
 
+  it("should preserve tag choices for equivalent recreated media", async () => {
+    const user = userEvent.setup();
+    const media = {
+      ...mediaWithZapScript,
+      zapScript: "@SNES/Super Mario World (year:1990)",
+    };
+    const view = renderModal({ media });
+
+    await user.click(screen.getByRole("button", { name: "year 1990" }));
+    expect(screen.getByRole("button", { name: "year 1990" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    view.rerender(
+      <MediaDetailsModal
+        {...view.props}
+        media={{ ...media, tags: [...media.tags] }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "year 1990" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    view.rerender(
+      <MediaDetailsModal
+        {...view.props}
+        media={{
+          ...media,
+          zapScript: "@SNES/Super Mario World (year:1990) (genre:platformer)",
+        }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "year 1990" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
   it("should rebuild grouped ZapScript tags for every action", async () => {
     const user = userEvent.setup();
     const onWrite = vi.fn();

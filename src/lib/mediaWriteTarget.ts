@@ -9,7 +9,8 @@ export interface MediaWriteSource {
 }
 
 function nonEmptyWriteValue(value: string | undefined): string | null {
-  return value?.trim() ? value : null;
+  const trimmed = value?.trim() ?? "";
+  return trimmed === "" ? null : trimmed;
 }
 
 export function getMediaWritePath(media: MediaWriteSource): string {
