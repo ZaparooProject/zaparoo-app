@@ -23,26 +23,28 @@ describe("mediaWriteTarget", () => {
     expect(getDefaultMediaWriteValue(media)).toBe("@SNES/Super Game");
   });
 
-  it("should trim write values before returning or comparing them", () => {
+  it("should preserve path whitespace while trimming ZapScripts", () => {
+    const pathWithWhitespace = "  SNES/Super Game.sfc  ";
+
     expect(
       getMediaWritePath({
         ...media,
-        relativePath: "  SNES/Super Game.sfc  ",
+        relativePath: pathWithWhitespace,
       }),
-    ).toBe("SNES/Super Game.sfc");
+    ).toBe(pathWithWhitespace);
+    expect(
+      getDefaultMediaWriteValue({
+        ...media,
+        zapScript: undefined,
+        relativePath: pathWithWhitespace,
+      }),
+    ).toBe(pathWithWhitespace);
     expect(
       getDefaultMediaWriteValue({
         ...media,
         zapScript: "  @SNES/Super Game  ",
       }),
     ).toBe("@SNES/Super Game");
-    expect(
-      hasMultipleMediaWriteTargets({
-        ...media,
-        relativePath: "  SNES/Super Game.sfc  ",
-        zapScript: " SNES/Super Game.sfc ",
-      }),
-    ).toBe(false);
   });
 
   it("should fall back from ZapScript to relative then absolute path", () => {

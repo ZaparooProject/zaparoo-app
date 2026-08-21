@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor, within } from "@/test-utils";
+import { act, render, screen, waitFor, within } from "@/test-utils";
 import { CoreAPI } from "@/lib/coreApi";
 import type { MediaBrowseEntry, MediaMetaResponse } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -408,6 +408,63 @@ describe("LibraryMediaDetailsModal", () => {
 
     view.rerender(<LibraryMediaDetailsModal {...view.props} isOpen={false} />);
 
+    expect(
+      screen.queryByRole("dialog", { name: "create.search.writeLabel" }),
+    ).not.toBeInTheDocument();
+
+    view.rerender(<LibraryMediaDetailsModal {...view.props} isOpen />);
+
+    expect(
+      screen.queryByRole("dialog", { name: "create.search.writeLabel" }),
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("dialog", { name: "Super Game" }),
+    ).toBeInTheDocument();
+  });
+
+  it("should abort pending write preparation when details close", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    const directoryEntry: MediaBrowseEntry = {
+      ...ENTRY,
+      type: "directory",
+      path: "/roms/SNES/Super Game",
+      relativePath: undefined,
+      zapScript: "@SNES/Super Game (disc:1)",
+    };
+    let pendingSignal: AbortSignal | undefined;
+    let resolvePending!: (response: MediaMetaResponse) => void;
+    vi.mocked(CoreAPI.mediaMeta)
+      .mockResolvedValueOnce({
+        media: { ...META_RESPONSE.media, path: directoryEntry.path },
+      })
+      .mockImplementationOnce((_request, signal) => {
+        pendingSignal = signal;
+        return new Promise((resolve) => {
+          resolvePending = resolve;
+        });
+      });
+    const user = userEvent.setup();
+    const view = renderModal({ entry: directoryEntry });
+
+    await waitFor(() => expect(CoreAPI.mediaMeta).toHaveBeenCalledTimes(1));
+    await user.click(
+      await screen.findByRole("button", { name: "library.write" }),
+    );
+    await waitFor(() => expect(pendingSignal).toBeDefined());
+
+    view.rerender(<LibraryMediaDetailsModal {...view.props} isOpen={false} />);
+
+    expect(pendingSignal?.aborted).toBe(true);
+    await act(async () => {
+      resolvePending({
+        media: {
+          ...META_RESPONSE.media,
+          path: "/roms/SNES/Super Game/Game.m3u",
+        },
+      });
+      await Promise.resolve();
+    });
+    view.rerender(<LibraryMediaDetailsModal {...view.props} isOpen />);
     expect(
       screen.queryByRole("dialog", { name: "create.search.writeLabel" }),
     ).not.toBeInTheDocument();

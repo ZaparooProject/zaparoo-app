@@ -222,6 +222,16 @@ export function LibraryMediaDetailsModal(props: {
     writeControllerRef.current = null;
   }, [entry]);
 
+  useEffect(() => {
+    if (props.isOpen) return;
+
+    writeControllerRef.current?.abort();
+    writeControllerRef.current = null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- External parent closure resets transient write state.
+    setPreparingWrite(false);
+    setWriteOptionsOpen(false);
+  }, [props.isOpen]);
+
   useEffect(
     () => () => {
       launchControllerRef.current?.abort();
@@ -304,6 +314,7 @@ export function LibraryMediaDetailsModal(props: {
           systemId,
           controller.signal,
         );
+        if (controller.signal.aborted) return;
         if (resolvedPath && resolvedPath !== writeSource.zapScript) {
           setResolvedWritePath(resolvedPath);
         }
@@ -315,6 +326,7 @@ export function LibraryMediaDetailsModal(props: {
         entry.type === "media" && writeSource
           ? getDefaultMediaWriteValue(writeSource)
           : await resolveLibraryWriteText(entry, systemId, controller.signal);
+      if (controller.signal.aborted) return;
       if (!text) throw new Error("Write target could not be resolved");
       closeModal();
       setWriteQueue(text);
