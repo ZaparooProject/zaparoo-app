@@ -26,7 +26,7 @@
 - Reuse WUI primitives under `src/components/wui/`, shared primitives under `src/components/ui/`, `PageFrame`, `SlideModal`, and established row/form patterns. Do not invent decorative cards, badges, icons, helper copy, spacing systems, or loading treatments.
 - Preserve safe-area handling, page-heading focus, live announcements, screen-reader behavior, text zoom, swipe-back behavior, focus trapping, and accessible names.
 - Use `useHaptics()` or component intent props rather than direct haptic calls.
-- Add new user-facing strings to `src/translations/en-US.json`. Other locales fall back; do not mechanically edit every translation file.
+- Add new user-facing strings to `src/translations/en-US.json`. Update other locale files when translations are available, and keep translated keys synchronized across locales.
 - In tests, translation functions return keys. Assert keys rather than English display strings.
 
 ## State, API, and routing

@@ -13,6 +13,9 @@ const FOCUSABLE_SELECTORS = [
 interface InertState {
   count: number;
   originallyInert: boolean;
+  appliedInert: boolean;
+  ownsAppliedValue: boolean;
+  observer?: MutationObserver;
 }
 
 const inertStates = new WeakMap<HTMLElement, InertState>();
@@ -31,20 +34,36 @@ function setInert(element: HTMLElement): () => void {
   if (current) {
     current.count += 1;
   } else {
-    inertStates.set(element, {
+    const state: InertState = {
       count: 1,
       originallyInert: element.inert,
+      appliedInert: true,
+      ownsAppliedValue: true,
+    };
+    element.inert = state.appliedInert;
+    state.observer = new MutationObserver(() => {
+      state.ownsAppliedValue = false;
     });
-    element.inert = true;
+    state.observer.observe(element, {
+      attributes: true,
+      attributeFilter: ["inert"],
+    });
+    inertStates.set(element, state);
   }
 
   return () => {
     const state = inertStates.get(element);
     if (!state) return;
 
+    if ((state.observer?.takeRecords().length ?? 0) > 0) {
+      state.ownsAppliedValue = false;
+    }
     state.count -= 1;
     if (state.count === 0) {
-      element.inert = state.originallyInert;
+      state.observer?.disconnect();
+      if (state.ownsAppliedValue && element.inert === state.appliedInert) {
+        element.inert = state.originallyInert;
+      }
       inertStates.delete(element);
     }
   };

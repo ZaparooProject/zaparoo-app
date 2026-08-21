@@ -15,6 +15,7 @@ import {
   MAX_SINGLETON_FOLDER_RESOLUTIONS_PER_PAGE,
   organizeLibraryDetailTags,
   resolveLibraryLaunchText,
+  resolveLibraryWriteText,
   resolveSingletonFolderEntries,
   resolveSingletonFolderEntry,
   soleInitialRootPath,
@@ -483,6 +484,36 @@ describe("Library media helpers", () => {
     ).resolves.toBe("/roms/SNES/Super Game.sfc");
     expect(api.mediaMeta).not.toHaveBeenCalled();
     expect(api.mediaBrowse).not.toHaveBeenCalled();
+  });
+
+  it("should write ordinary media using ZapScript before filesystem paths", async () => {
+    const api = {
+      mediaMeta: vi.fn(),
+      mediaBrowse: vi.fn(),
+    };
+
+    await expect(
+      resolveLibraryWriteText(
+        browseEntry({
+          zapScript: "@SNES/Super Game",
+          relativePath: "SNES/Super Game.sfc",
+        }),
+        "SNES",
+        undefined,
+        api,
+      ),
+    ).resolves.toBe("@SNES/Super Game");
+    expect(api.mediaMeta).not.toHaveBeenCalled();
+    expect(api.mediaBrowse).not.toHaveBeenCalled();
+  });
+
+  it("should write the relative path when ZapScript is unavailable", async () => {
+    await expect(
+      resolveLibraryWriteText(
+        browseEntry({ relativePath: "SNES/Super Game.sfc" }),
+        "SNES",
+      ),
+    ).resolves.toBe("SNES/Super Game.sfc");
   });
 
   it("should resolve container media through metadata first", async () => {

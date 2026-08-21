@@ -567,6 +567,34 @@ describe("SlideModal", () => {
     expect(closeMock).toHaveBeenCalledTimes(1);
   });
 
+  it("should restore drag dismissal after being hidden and reopened", () => {
+    const closeMock = vi.fn();
+    const view = render(
+      <SlideModal {...mockProps} isOpen={true} close={closeMock} />,
+    );
+
+    view.rerender(
+      <SlideModal {...mockProps} isOpen={false} close={closeMock} />,
+    );
+    view.rerender(
+      <SlideModal {...mockProps} isOpen={true} close={closeMock} />,
+    );
+
+    const content = screen.getByText("Test Content");
+    mockDialogHeight(screen.getByRole("dialog"), 400);
+    fireEvent.touchStart(content, {
+      touches: [{ clientX: 100, clientY: 20 }],
+    });
+    fireEvent.touchMove(content, {
+      touches: [{ clientX: 100, clientY: 160 }],
+    });
+    fireEvent.touchEnd(content, {
+      changedTouches: [{ clientX: 100, clientY: 160 }],
+    });
+
+    expect(closeMock).toHaveBeenCalledTimes(1);
+  });
+
   it("should disable drag dismissal while a screen reader is active", async () => {
     const user = userEvent.setup();
     mockScreenReaderEnabled = true;

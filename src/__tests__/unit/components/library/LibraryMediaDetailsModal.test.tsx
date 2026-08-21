@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor, within } from "@/test-utils";
+import { act, render, screen, waitFor, within } from "@/test-utils";
 import { CoreAPI } from "@/lib/coreApi";
 import type { MediaBrowseEntry, MediaMetaResponse } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -314,19 +314,298 @@ describe("LibraryMediaDetailsModal", () => {
     ).toBeInTheDocument();
   });
 
-  it("should queue the resolved game target for NFC writing", async () => {
+  it("should offer ZapScript and relative path before NFC writing", async () => {
     usePreferencesStore.setState({ nfcAvailable: true });
     const user = userEvent.setup();
-    const { props } = renderModal();
+    const { props } = renderModal({
+      entry: {
+        ...ENTRY,
+        zapScript: "@SNES/Super Game",
+        relativePath: "SNES/Super Game.sfc",
+      },
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "library.write" }),
+    );
+
+    const writeDialog = await screen.findByRole("dialog", {
+      name: "create.search.writeLabel",
+    });
+    expect(useStatusStore.getState().writeQueue).toBe("");
+    expect(
+      within(writeDialog).getByRole("radio", {
+        name: /create\.search\.zapscriptLabel/i,
+      }),
+    ).toBeChecked();
+    expect(
+      within(writeDialog).getByRole("radio", {
+        name: /create\.search\.pathLabel: SNES\/Super Game\.sfc/i,
+      }),
+    ).not.toBeChecked();
+
+    await user.click(
+      within(writeDialog).getByRole("button", {
+        name: "create.search.writeLabel",
+      }),
+    );
+
+    expect(useStatusStore.getState().writeQueue).toBe("@SNES/Super Game");
+    expect(props.close).toHaveBeenCalled();
+  });
+
+  it("should restore details when write-target selection is dismissed", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    const user = userEvent.setup();
+    const { props } = renderModal({
+      entry: {
+        ...ENTRY,
+        zapScript: "@SNES/Super Game",
+        relativePath: "SNES/Super Game.sfc",
+      },
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "library.write" }),
+    );
+    const writeDialog = await screen.findByRole("dialog", {
+      name: "create.search.writeLabel",
+    });
+    expect(props.close).not.toHaveBeenCalled();
+
+    await user.click(
+      within(writeDialog).getAllByRole("button", { name: "nav.close" })[0]!,
+    );
+
+    expect(
+      screen.queryByRole("dialog", { name: "create.search.writeLabel" }),
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("dialog", { name: "Super Game" }),
+    ).toBeInTheDocument();
+    expect(props.close).not.toHaveBeenCalled();
+  });
+
+  it("should close write-target selection when details close", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    const user = userEvent.setup();
+    const view = renderModal({
+      entry: {
+        ...ENTRY,
+        zapScript: "@SNES/Super Game",
+        relativePath: "SNES/Super Game.sfc",
+      },
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "library.write" }),
+    );
+    expect(
+      await screen.findByRole("dialog", {
+        name: "create.search.writeLabel",
+      }),
+    ).toBeInTheDocument();
+
+    view.rerender(<LibraryMediaDetailsModal {...view.props} isOpen={false} />);
+
+    expect(
+      screen.queryByRole("dialog", { name: "create.search.writeLabel" }),
+    ).not.toBeInTheDocument();
+
+    view.rerender(<LibraryMediaDetailsModal {...view.props} isOpen />);
+
+    expect(
+      screen.queryByRole("dialog", { name: "create.search.writeLabel" }),
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("dialog", { name: "Super Game" }),
+    ).toBeInTheDocument();
+  });
+
+  it("should abort pending write preparation when details close", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    const directoryEntry: MediaBrowseEntry = {
+      ...ENTRY,
+      type: "directory",
+      path: "/roms/SNES/Super Game",
+      relativePath: undefined,
+      zapScript: "@SNES/Super Game (disc:1)",
+    };
+    let pendingSignal: AbortSignal | undefined;
+    let resolvePending!: (response: MediaMetaResponse) => void;
+    vi.mocked(CoreAPI.mediaMeta)
+      .mockResolvedValueOnce({
+        media: { ...META_RESPONSE.media, path: directoryEntry.path },
+      })
+      .mockImplementationOnce((_request, signal) => {
+        pendingSignal = signal;
+        return new Promise((resolve) => {
+          resolvePending = resolve;
+        });
+      });
+    const user = userEvent.setup();
+    const view = renderModal({ entry: directoryEntry });
+
+    await waitFor(() => expect(CoreAPI.mediaMeta).toHaveBeenCalledTimes(1));
+    await user.click(
+      await screen.findByRole("button", { name: "library.write" }),
+    );
+    await waitFor(() => expect(pendingSignal).toBeDefined());
+
+    view.rerender(<LibraryMediaDetailsModal {...view.props} isOpen={false} />);
+
+    expect(pendingSignal?.aborted).toBe(true);
+    await act(async () => {
+      resolvePending({
+        media: {
+          ...META_RESPONSE.media,
+          path: "/roms/SNES/Super Game/Game.m3u",
+        },
+      });
+      await Promise.resolve();
+    });
+    view.rerender(<LibraryMediaDetailsModal {...view.props} isOpen />);
+    expect(
+      screen.queryByRole("dialog", { name: "create.search.writeLabel" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should write the selected relative path from Library details", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    const user = userEvent.setup();
+    renderModal({
+      entry: {
+        ...ENTRY,
+        zapScript: "@SNES/Super Game",
+        relativePath: "SNES/Super Game.sfc",
+      },
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "library.write" }),
+    );
+    const writeDialog = await screen.findByRole("dialog", {
+      name: "create.search.writeLabel",
+    });
+    await user.click(
+      within(writeDialog).getByRole("radio", {
+        name: /create\.search\.pathLabel/i,
+      }),
+    );
+    await user.click(
+      within(writeDialog).getByRole("button", {
+        name: "create.search.writeLabel",
+      }),
+    );
+
+    expect(useStatusStore.getState().writeQueue).toBe("SNES/Super Game.sfc");
+  });
+
+  it("should resolve a path while customizing Library directory ZapScript", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    vi.mocked(CoreAPI.mediaMeta).mockResolvedValue({
+      media: {
+        ...META_RESPONSE.media,
+        path: "/roms/PSX/Multi Disc Game/Game.m3u",
+        parentDir: "/roms/PSX/Multi Disc Game",
+        title: {
+          ...META_RESPONSE.media.title,
+          system: { id: "PSX", name: "PlayStation" },
+        },
+      },
+    });
+    const user = userEvent.setup();
+    renderModal({
+      entry: {
+        ...ENTRY,
+        type: "directory",
+        path: "/roms/PSX/Multi Disc Game",
+        systemId: "PSX",
+        zapScript: "@PSX/Multi Disc Game (disc:1)",
+        relativePath: undefined,
+        tags: [{ type: "disc", tag: "1" }],
+      },
+      systemId: "PSX",
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "library.write" }),
+    );
+    const writeDialog = await screen.findByRole("dialog", {
+      name: "create.search.writeLabel",
+    });
+    expect(
+      within(writeDialog).getByRole("radio", {
+        name: /create\.search\.pathLabel: \/roms\/PSX\/Multi Disc Game\/Game\.m3u/i,
+      }),
+    ).not.toBeChecked();
+    expect(
+      within(writeDialog).getByRole("radio", {
+        name: /create\.search\.zapscriptLabel/i,
+      }),
+    ).toBeChecked();
+
+    await user.click(
+      within(writeDialog).getByRole("button", { name: "disc 1" }),
+    );
+    await user.click(
+      within(writeDialog).getByRole("button", {
+        name: "create.search.writeLabel",
+      }),
+    );
+
+    expect(useStatusStore.getState().writeQueue).toBe("@PSX/Multi Disc Game");
+  });
+
+  it("should write directly when Library has only one target", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    const user = userEvent.setup();
+    renderModal({
+      entry: {
+        ...ENTRY,
+        relativePath: "SNES/Super Game.sfc",
+      },
+    });
 
     await user.click(
       await screen.findByRole("button", { name: "library.write" }),
     );
 
     await waitFor(() => {
-      expect(useStatusStore.getState().writeQueue).toBe(ENTRY.path);
-      expect(props.close).toHaveBeenCalled();
+      expect(useStatusStore.getState().writeQueue).toBe("SNES/Super Game.sfc");
     });
+    expect(
+      screen.queryByRole("dialog", { name: "create.search.writeLabel" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should customize Library ZapScript tags before writing", async () => {
+    usePreferencesStore.setState({ nfcAvailable: true });
+    const user = userEvent.setup();
+    renderModal({
+      entry: {
+        ...ENTRY,
+        zapScript: "@SNES/Super Game (region:us)",
+        relativePath: "SNES/Super Game.sfc",
+      },
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "library.write" }),
+    );
+    const writeDialog = await screen.findByRole("dialog", {
+      name: "create.search.writeLabel",
+    });
+    await user.click(
+      within(writeDialog).getByRole("button", { name: "region us" }),
+    );
+    await user.click(
+      within(writeDialog).getByRole("button", {
+        name: "create.search.writeLabel",
+      }),
+    );
+
+    expect(useStatusStore.getState().writeQueue).toBe("@SNES/Super Game");
   });
 
   it("should keep writing disabled when no writer is available", async () => {

@@ -4234,6 +4234,45 @@ describe("network status handling (native platform)", () => {
     });
   });
 
+  it("should preserve a network change while initial status is pending", async () => {
+    const { Network } = await import("@capacitor/network");
+    let networkCallback: ((status: ConnectionStatus) => void) | null = null;
+    let resolveInitialStatus!: (status: ConnectionStatus) => void;
+    vi.mocked(Network.addListener).mockImplementation(
+      async (_eventName, callback) => {
+        networkCallback = callback;
+        return { remove: vi.fn() };
+      },
+    );
+    vi.mocked(Network.getStatus).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveInitialStatus = resolve;
+      }),
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(networkCallback).not.toBeNull();
+      expect(Network.getStatus).toHaveBeenCalled();
+    });
+
+    act(() => {
+      networkCallback!({ connected: false, connectionType: "none" });
+    });
+    expect(useStatusStore.getState().networkAvailable).toBe(false);
+
+    await act(async () => {
+      resolveInitialStatus({ connected: true, connectionType: "wifi" });
+      await Promise.resolve();
+    });
+    expect(useStatusStore.getState().networkAvailable).toBe(false);
+  });
+
   it("should still listen when initial network status is unavailable", async () => {
     const { Network } = await import("@capacitor/network");
     vi.mocked(Network.getStatus).mockRejectedValueOnce(

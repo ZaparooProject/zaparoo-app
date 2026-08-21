@@ -142,6 +142,29 @@ function NestedFocusTraps({
   );
 }
 
+function FocusTrapWithControlledSibling({
+  trapActive,
+  siblingInert,
+}: {
+  trapActive: boolean;
+  siblingInert: boolean;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  useFocusTrap({
+    isActive: trapActive,
+    containerRef,
+    autoFocus: false,
+    restoreFocus: false,
+  });
+
+  return (
+    <div>
+      <div data-testid="controlled-sibling" inert={siblingInert} />
+      <div ref={containerRef} data-testid="trap-container" />
+    </div>
+  );
+}
+
 function FocusTrapWithRemovedTrigger() {
   const [isOpen, setIsOpen] = useState(false);
   const [showTrigger, setShowTrigger] = useState(true);
@@ -315,6 +338,35 @@ describe("useFocusTrap", () => {
       expect(
         screen.getByRole("button", { name: "Outside" }),
       ).not.toHaveAttribute("inert");
+    });
+
+    it("should preserve owner updates made while isolation is removed", () => {
+      const view = render(
+        <FocusTrapWithControlledSibling trapActive siblingInert />,
+      );
+
+      view.rerender(
+        <FocusTrapWithControlledSibling
+          trapActive={false}
+          siblingInert={false}
+        />,
+      );
+
+      expect(screen.getByTestId("controlled-sibling")).not.toHaveAttribute(
+        "inert",
+      );
+    });
+
+    it("should preserve a newer owner adding inert during deactivation", () => {
+      const view = render(
+        <FocusTrapWithControlledSibling trapActive siblingInert={false} />,
+      );
+
+      view.rerender(
+        <FocusTrapWithControlledSibling trapActive={false} siblingInert />,
+      );
+
+      expect(screen.getByTestId("controlled-sibling")).toHaveAttribute("inert");
     });
   });
 

@@ -16,6 +16,7 @@ import {
   organizeLibraryDetailTags,
   type LibraryDetailFactType,
   resolveLibraryLaunchText,
+  resolveLibraryWriteText,
 } from "@/lib/libraryMedia";
 import type { MediaBrowseEntry, TagInfo } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -31,6 +32,12 @@ import { DelayedLoading } from "@/components/DelayedLoading";
 import { CreateIcon } from "@/lib/images";
 import { LibraryArtwork } from "@/components/library/LibraryArtwork";
 import { FavoriteButton } from "@/components/library/FavoriteButton";
+import { MediaWriteTargetModal } from "@/components/MediaWriteTargetModal";
+import {
+  getDefaultMediaWriteValue,
+  getMediaWritePath,
+  shouldSelectMediaWriteTarget,
+} from "@/lib/mediaWriteTarget";
 
 function DetailRow(props: { label: string; value: string; mono?: boolean }) {
   if (!props.value) return null;
@@ -110,6 +117,10 @@ export function LibraryMediaDetailsModal(props: {
   const [imageAvailable, setImageAvailable] = useState<boolean | null>(null);
   const [launching, setLaunching] = useState(false);
   const [preparingWrite, setPreparingWrite] = useState(false);
+  const [writeOptionsOpen, setWriteOptionsOpen] = useState(false);
+  const [resolvedWritePath, setResolvedWritePath] = useState<string | null>(
+    null,
+  );
   const launchControllerRef = useRef<AbortController | null>(null);
   const writeControllerRef = useRef<AbortController | null>(null);
   const previousImageButtonRef = useRef<HTMLButtonElement>(null);
@@ -155,6 +166,29 @@ export function LibraryMediaDetailsModal(props: {
   });
   const writeAvailable = nfcAvailable || writeCapabilityQuery.data === true;
   const metadata = metadataQuery.data?.media;
+  const metadataWritePath =
+    entry?.type !== "media" && metadata?.path !== entry?.path
+      ? metadata?.path
+      : undefined;
+  const writeSource = useMemo(
+    () =>
+      entry
+        ? {
+            path:
+              entry.type === "media"
+                ? entry.path
+                : (resolvedWritePath ?? metadataWritePath ?? ""),
+            relativePath:
+              entry.type === "media" ? entry.relativePath : undefined,
+            zapScript: entry.zapScript,
+            tags: mergeLibraryTags(
+              entry.disambiguatingTags ?? [],
+              entry.tags ?? [],
+            ),
+          }
+        : null,
+    [entry, metadataWritePath, resolvedWritePath],
+  );
   const metadataView = useMemo(
     () => (metadata ? collectLibraryMetadata(metadata) : null),
     [metadata],
@@ -180,11 +214,23 @@ export function LibraryMediaDetailsModal(props: {
     setImageAvailable(entry?.hasCover === false ? false : null);
     setLaunching(false);
     setPreparingWrite(false);
+    setWriteOptionsOpen(false);
+    setResolvedWritePath(null);
     launchControllerRef.current?.abort();
     launchControllerRef.current = null;
     writeControllerRef.current?.abort();
     writeControllerRef.current = null;
   }, [entry]);
+
+  useEffect(() => {
+    if (props.isOpen) return;
+
+    writeControllerRef.current?.abort();
+    writeControllerRef.current = null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- External parent closure resets transient write state.
+    setPreparingWrite(false);
+    setWriteOptionsOpen(false);
+  }, [props.isOpen]);
 
   useEffect(
     () => () => {
@@ -250,16 +296,37 @@ export function LibraryMediaDetailsModal(props: {
 
   const write = async () => {
     if (!entry || preparingWrite || launching || !writeAvailable) return;
+    const selectionAvailable =
+      writeSource && shouldSelectMediaWriteTarget(writeSource);
+    if (selectionAvailable && getMediaWritePath(writeSource)) {
+      setWriteOptionsOpen(true);
+      return;
+    }
+
     const controller = new AbortController();
     writeControllerRef.current?.abort();
     writeControllerRef.current = controller;
     setPreparingWrite(true);
     try {
-      const text = await resolveLibraryLaunchText(
-        entry,
-        systemId,
-        controller.signal,
-      );
+      if (selectionAvailable) {
+        const resolvedPath = await resolveLibraryLaunchText(
+          entry,
+          systemId,
+          controller.signal,
+        );
+        if (controller.signal.aborted) return;
+        if (resolvedPath && resolvedPath !== writeSource.zapScript) {
+          setResolvedWritePath(resolvedPath);
+        }
+        setWriteOptionsOpen(true);
+        return;
+      }
+
+      const text =
+        entry.type === "media" && writeSource
+          ? getDefaultMediaWriteValue(writeSource)
+          : await resolveLibraryWriteText(entry, systemId, controller.signal);
+      if (controller.signal.aborted) return;
       if (!text) throw new Error("Write target could not be resolved");
       closeModal();
       setWriteQueue(text);
@@ -383,9 +450,9 @@ export function LibraryMediaDetailsModal(props: {
     />
   ) : undefined;
 
-  return (
+  const detailsModal = (
     <SlideModal
-      isOpen={props.isOpen}
+      isOpen={props.isOpen && !writeOptionsOpen}
       close={closeModal}
       title={title}
       footer={footer}
@@ -519,5 +586,25 @@ export function LibraryMediaDetailsModal(props: {
         </div>
       )}
     </SlideModal>
+  );
+
+  const writeOptionsModalOpen = props.isOpen && writeOptionsOpen;
+
+  return (
+    <>
+      {detailsModal}
+      {writeOptionsModalOpen && (
+        <MediaWriteTargetModal
+          isOpen={writeOptionsModalOpen}
+          close={() => setWriteOptionsOpen(false)}
+          media={writeSource}
+          onWrite={(text) => {
+            setWriteOptionsOpen(false);
+            closeModal();
+            setWriteQueue(text);
+          }}
+        />
+      )}
+    </>
   );
 }

@@ -1,5 +1,6 @@
 import { CoreAPI, isRequestCancelledError } from "@/lib/coreApi";
 import { filenameFromPath } from "@/lib/path";
+import { getDefaultMediaWriteValue } from "@/lib/mediaWriteTarget";
 import type {
   MediaBrowseEntry,
   MediaBrowseResponse,
@@ -151,6 +152,10 @@ export function isFavoriteTag(tag: TagInfo): boolean {
   return (
     tag.type.toLowerCase() === "user" && tag.tag.toLowerCase() === "favorite"
   );
+}
+
+export function isScraperTag(tag: TagInfo): boolean {
+  return tag.type.trim().toLowerCase().startsWith("scraper.");
 }
 
 export function hasFavoriteTag(tags: readonly TagInfo[] | undefined): boolean {
@@ -437,10 +442,9 @@ export function organizeLibraryDetailTags(tags: readonly TagInfo[]): {
   facts: LibraryDetailFact[];
   tags: TagInfo[];
 } {
-  const visibleTags = mergeLibraryTags(tags).filter((tag) => {
-    const type = tag.type.trim().toLowerCase();
-    return !isFavoriteTag(tag) && !type.startsWith("scraper.");
-  });
+  const visibleTags = mergeLibraryTags(tags).filter(
+    (tag) => !isFavoriteTag(tag) && !isScraperTag(tag),
+  );
   const factTypeSet = new Set<string>(LIBRARY_DETAIL_FACT_TYPES);
   const facts = LIBRARY_DETAIL_FACT_TYPES.flatMap((type) => {
     const values = visibleTags
@@ -681,4 +685,24 @@ export async function resolveLibraryLaunchText(
   }
 
   return nonEmpty(entry.zapScript);
+}
+
+export async function resolveLibraryWriteText(
+  entry: MediaBrowseEntry,
+  fallbackSystemId: string,
+  signal?: AbortSignal,
+  api: LibraryMediaApi = CoreAPI,
+): Promise<string | null> {
+  const zapScript = nonEmpty(entry.zapScript);
+  if (zapScript) return zapScript;
+
+  if (entry.type === "media") {
+    return getDefaultMediaWriteValue({
+      path: entry.path,
+      relativePath: entry.relativePath,
+      tags: entry.tags ?? [],
+    });
+  }
+
+  return resolveLibraryLaunchText(entry, fallbackSystemId, signal, api);
 }
