@@ -63,8 +63,8 @@ describe("whatsNew", () => {
     vi.mocked(App.getInfo).mockResolvedValue({
       name: "Zaparoo",
       id: "dev.wizzo.tapto",
-      version: "1.12.0",
-      build: "28",
+      version: "1.13.0",
+      build: "29",
     });
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     vi.mocked(Capacitor.isPluginAvailable).mockReturnValue(true);
@@ -76,9 +76,9 @@ describe("whatsNew", () => {
     const announcement = getWhatsNewAnnouncement(identity.releaseKey);
 
     expect(identity.releaseKey).toBe(
-      "native:1.12.0+28:bundle:bundle-2026-08-11",
+      "native:1.13.0+29:bundle:bundle-2026-08-11",
     );
-    expect(announcement?.id).toBe("release-1.12.0");
+    expect(announcement?.id).toBe("release-1.13.0");
   });
 
   it("should prefer the injected release key", async () => {
@@ -95,10 +95,10 @@ describe("whatsNew", () => {
     expect(identity.liveBundleId).toBe("bundle-2026-06-04");
   });
 
-  it("should find the first 1.12.0 announcement", () => {
-    const announcement = getWhatsNewAnnouncement("native:1.12.0+28");
+  it("should find the 1.13.0 announcement", () => {
+    const announcement = getWhatsNewAnnouncement("native:1.13.0+29");
 
-    expect(announcement?.id).toBe("release-1.12.0");
+    expect(announcement?.id).toBe("release-1.13.0");
     expect(announcement?.items).toHaveLength(5);
   });
 });

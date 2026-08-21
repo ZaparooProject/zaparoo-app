@@ -20,15 +20,15 @@ export type WhatsNewAnnouncement = {
 
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
-    id: "release-1.12.0",
-    releaseKeys: ["native:1.12.0+28"],
-    title: "What's new in 1.12.0",
+    id: "release-1.13.0",
+    releaseKeys: ["native:1.13.0+29"],
+    title: "What's new in 1.13.0",
     items: [
       "Browse, search, favorite, launch, and write media from the new Library tab.",
-      "Subscribe to and manage Zaparoo Warp directly in the app.",
-      "Log in to Zaparoo Online accounts protected by two-factor authentication.",
-      "Replay past scans and customize ZapScript tags from search results.",
-      "Enjoy improved NFC writing, encrypted connections, accessibility, notifications, and log sharing.",
+      "Subscribe, restore, and manage Zaparoo Warp from the App.",
+      "Create and manage device profiles, roles, PINs, playtime limits, and profile cards.",
+      "Keep saved Core connections working through address changes and App restarts, with clearer connection status.",
+      "Get more reliable NFC scanning and writing, plus smoother modals, swipe-back feedback, haptics, and app icon badges.",
     ],
   },
 ];

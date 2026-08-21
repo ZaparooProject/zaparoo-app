@@ -7,8 +7,8 @@ android {
         applicationId "dev.wizzo.tapto"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 28
-        versionName "1.12.0"
+        versionCode 29
+        versionName "1.13.0"
         resValue "string", "capawesome_live_update_default_channel", "production-" + defaultConfig.versionCode
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
