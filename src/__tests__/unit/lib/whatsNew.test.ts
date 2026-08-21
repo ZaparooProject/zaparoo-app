@@ -101,4 +101,10 @@ describe("whatsNew", () => {
     expect(announcement?.id).toBe("release-1.13.0");
     expect(announcement?.items).toHaveLength(5);
   });
+
+  it("should find the 1.13.0 announcement for its first live update", () => {
+    const announcement = getWhatsNewAnnouncement("live:1.13.0-ota.1");
+
+    expect(announcement?.id).toBe("release-1.13.0");
+  });
 });

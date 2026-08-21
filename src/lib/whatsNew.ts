@@ -21,7 +21,7 @@ export type WhatsNewAnnouncement = {
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
     id: "release-1.13.0",
-    releaseKeys: ["native:1.13.0+29"],
+    releaseKeys: ["native:1.13.0+29", "live:1.13.0-ota.1"],
     title: "What's new in 1.13.0",
     items: [
       "Browse, search, favorite, launch, and write media from the new Library tab.",
