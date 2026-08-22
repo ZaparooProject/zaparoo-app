@@ -98,7 +98,7 @@ Required for:
    - `android/app/build.gradle` (`versionCode`, `versionName`)
    - `ios/App/App.xcodeproj/project.pbxproj` (`MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`)
 3. Increment both platform build numbers on every store release. Android `versionCode` and iOS `CURRENT_PROJECT_VERSION` must match so versioned live update channels line up.
-4. Confirm `src/lib/whatsNew.ts` has announcement `releaseKeys` for the native version/build, e.g. `native:1.11.2+27`.
+4. Confirm `src/lib/whatsNew.ts` has announcement `releaseKeys` for both the native version/build and first OTA release, e.g. `native:1.11.2+27` and `live:1.11.2-ota.1`.
 5. Confirm the release guard in `src/__tests__/validation/release-config.test.ts` covers the version/channel invariants.
 6. After Capacitor upgrades, confirm GitHub Actions and Capawesome Cloud use a Node.js version supported by `@capacitor/cli`. Capacitor 8 requires Node 22+.
 7. Check About page credits in `src/routes/settings.about.tsx`:

@@ -54,7 +54,7 @@ describe("release configuration", () => {
       new Set([packageJson.version]),
     );
     expect(new Set(iosBuildNumbers)).toEqual(new Set([androidVersionCode]));
-    expect(androidVersionCode).toBe(28);
+    expect(androidVersionCode).toBe(29);
   });
 
   it("should use versioned Capawesome live update channels", () => {
@@ -107,7 +107,7 @@ describe("release configuration", () => {
     expect(releaseWorkflow).not.toContain("VITE_PURCHASE_PREVIEW");
   });
 
-  it("should have a What's New release key for the native build", () => {
+  it("should have What's New release keys for native and live-update builds", () => {
     const packageJson = readPackageJson();
     const androidGradle = readProjectFile("android/app/build.gradle");
     const androidVersionCode = requireMatch(
@@ -115,12 +115,14 @@ describe("release configuration", () => {
       /versionCode\s+(\d+)/,
       "Android versionCode",
     );
+    const nativeReleaseKey = `native:${packageJson.version}+${androidVersionCode}`;
+    const liveReleaseKey = `live:${packageJson.version}-ota.1`;
 
     expect(
-      WHATS_NEW_ANNOUNCEMENTS.some((announcement) =>
-        announcement.releaseKeys.includes(
-          `native:${packageJson.version}+${androidVersionCode}`,
-        ),
+      WHATS_NEW_ANNOUNCEMENTS.some(
+        (announcement) =>
+          announcement.releaseKeys.includes(nativeReleaseKey) &&
+          announcement.releaseKeys.includes(liveReleaseKey),
       ),
     ).toBe(true);
   });
