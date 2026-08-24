@@ -67,17 +67,33 @@ export interface BillingDiagnostics {
   lastPurchaseError: PurchaseErrorDiagnostics;
 }
 
-// Promise executor runs synchronously, so _resolve is always assigned before use.
+// Promise executor runs synchronously, so both callbacks are assigned before use.
 let _resolve!: () => void;
+let _reject!: (reason: unknown) => void;
+let purchasesReadySettled = false;
 
-export const purchasesReady: Promise<void> = new Promise<void>((resolve) => {
-  _resolve = resolve;
-});
+export const purchasesReady: Promise<void> = new Promise<void>(
+  (resolve, reject) => {
+    _resolve = resolve;
+    _reject = reject;
+  },
+);
+// Native initialization can fail before purchase UI attaches a consumer.
+// This prevents an unhandled rejection without changing what later awaits receive.
+void purchasesReady.catch(() => undefined);
 
 let identityQueue: Promise<void> = Promise.resolve();
 
 export function resolvePurchasesReady(): void {
+  if (purchasesReadySettled) return;
+  purchasesReadySettled = true;
   _resolve();
+}
+
+export function rejectPurchasesReady(error: unknown): void {
+  if (purchasesReadySettled) return;
+  purchasesReadySettled = true;
+  _reject(error);
 }
 
 export async function withPurchasesTimeout<T>(
@@ -101,20 +117,25 @@ export async function withPurchasesTimeout<T>(
   }
 }
 
-export async function resolvePurchasesReadyAfterConfiguration(
+export async function settlePurchasesReadyAfterConfiguration(
   configuration: Promise<void>,
   onTimeout: (error: PurchasesTimeoutError) => void,
   timeoutMs = PURCHASES_TIMEOUT_MS,
 ): Promise<void> {
   try {
-    await withPurchasesTimeout(configuration, "configure", timeoutMs);
-  } catch (error) {
-    if (!(error instanceof PurchasesTimeoutError)) throw error;
-    onTimeout(error);
-    await configuration;
-  }
+    try {
+      await withPurchasesTimeout(configuration, "configure", timeoutMs);
+    } catch (error) {
+      if (!(error instanceof PurchasesTimeoutError)) throw error;
+      onTimeout(error);
+      await configuration;
+    }
 
-  resolvePurchasesReady();
+    resolvePurchasesReady();
+  } catch (error) {
+    rejectPurchasesReady(error);
+    throw error;
+  }
 }
 
 async function getDiagnosticsValue<T>(

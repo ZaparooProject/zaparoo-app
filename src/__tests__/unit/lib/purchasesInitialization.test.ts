@@ -11,7 +11,7 @@ describe("purchase initialization readiness", () => {
 
     const {
       purchasesReady,
-      resolvePurchasesReadyAfterConfiguration,
+      settlePurchasesReadyAfterConfiguration,
       PurchasesTimeoutError,
     } = await import("@/lib/purchasesSetup");
     let resolveConfiguration!: () => void;
@@ -24,7 +24,7 @@ describe("purchase initialization readiness", () => {
       readinessResolved = true;
     });
 
-    const initialization = resolvePurchasesReadyAfterConfiguration(
+    const initialization = settlePurchasesReadyAfterConfiguration(
       configuration,
       onTimeout,
       1_000,
@@ -40,5 +40,24 @@ describe("purchase initialization readiness", () => {
     await purchasesReady;
 
     expect(readinessResolved).toBe(true);
+  });
+
+  it("should reject purchasesReady when configuration fails", async () => {
+    vi.resetModules();
+
+    const { purchasesReady, settlePurchasesReadyAfterConfiguration } =
+      await import("@/lib/purchasesSetup");
+    const configurationError = new Error("configuration failed");
+    const onTimeout = vi.fn();
+
+    await expect(
+      settlePurchasesReadyAfterConfiguration(
+        Promise.reject(configurationError),
+        onTimeout,
+      ),
+    ).rejects.toBe(configurationError);
+
+    await expect(purchasesReady).rejects.toBe(configurationError);
+    expect(onTimeout).not.toHaveBeenCalled();
   });
 });

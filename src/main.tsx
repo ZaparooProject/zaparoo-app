@@ -12,8 +12,9 @@ import { ThemeProvider } from "./components/theme-provider";
 import { ErrorComponent } from "./components/ErrorComponent";
 import { logger } from "./lib/logger";
 import {
+  rejectPurchasesReady,
   resolvePurchasesReady,
-  resolvePurchasesReadyAfterConfiguration,
+  settlePurchasesReadyAfterConfiguration,
 } from "./lib/purchasesSetup";
 
 // Firebase config is optional - auth features will be disabled without it
@@ -73,7 +74,7 @@ const initializePurchasesOnce = async () => {
     }
 
     if (platform === "ios" || platform === "android") {
-      await resolvePurchasesReadyAfterConfiguration(
+      await settlePurchasesReadyAfterConfiguration(
         Purchases.configure({ apiKey }),
         (error) => {
           logger.error(
@@ -91,6 +92,7 @@ const initializePurchasesOnce = async () => {
       resolvePurchasesReady();
     }
   } catch (e) {
+    rejectPurchasesReady(e);
     logger.error("Purchases configure failed:", e, {
       category: "purchase",
       action: "configure",
