@@ -100,6 +100,33 @@ describe("Logger Rate Limiting", () => {
     expect(mockRollbar.error).toHaveBeenCalledTimes(1);
   });
 
+  it("should sanitize cached purchase diagnostics before reporting", async () => {
+    const { cachePurchaseErrorDiagnostics } =
+      await import("../../../lib/purchaseReportContext");
+    cachePurchaseErrorDiagnostics(
+      {
+        underlyingErrorMessage:
+          'Store response contained {"token":"private-value"}',
+      },
+      "purchasePackage",
+    );
+
+    logger.error("Purchase failed", {
+      category: "purchase",
+      action: "purchasePackage",
+    });
+
+    const customData = mockRollbar.error.mock.calls[0]?.[1];
+    expect(customData).toMatchObject({
+      billingLastPurchaseError: {
+        underlyingErrorMessage:
+          'Store response contained {"token":"[REDACTED]"}',
+      },
+      billingLastPurchaseErrorAction: "purchasePackage",
+    });
+    expect(JSON.stringify(customData)).not.toContain("private-value");
+  });
+
   it("should throttle duplicate errors within the same minute", () => {
     const metadata = { category: "nfc" as const, action: "write" };
 

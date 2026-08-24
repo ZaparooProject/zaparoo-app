@@ -299,7 +299,9 @@ export const useProPurchase = () => {
       .catch((e) => {
         const wrappedError = wrapPurchaseError(e);
         const purchaseError = getPurchaseErrorDiagnostics(e);
-        cachePurchaseErrorDiagnostics(purchaseError, "getOfferings");
+        if (Object.keys(purchaseError).length > 0) {
+          cachePurchaseErrorDiagnostics(purchaseError, "getOfferings");
+        }
         setLauncherPackage(null);
         setOfferingsStatus(
           wrappedError instanceof PurchaseNotAllowedError

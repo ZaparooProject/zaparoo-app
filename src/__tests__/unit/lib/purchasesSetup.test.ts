@@ -83,6 +83,7 @@ import {
   resolvePurchasesReady,
   restorePurchasesForUser,
   runPurchasesOperation,
+  withPurchasesTimeout,
 } from "@/lib/purchasesSetup";
 
 function customerInfo(active: Record<string, unknown> = {}): CustomerInfo {
@@ -128,6 +129,7 @@ describe("purchasesSetup", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllEnvs();
   });
 
@@ -325,6 +327,40 @@ describe("purchasesSetup", () => {
     expect(diagnostics.offeringStatus).toBe("error");
     expect(diagnostics.offeringDiagnostics).toBeNull();
     expect(diagnostics.revenueCatAppUserID).toBe("anonymous");
+  });
+
+  it("should return partial diagnostics when identity calls stall or fail", async () => {
+    vi.useFakeTimers();
+    mockGetAppUserID.mockReturnValue(new Promise(() => undefined));
+    mockGetCustomerInfo.mockRejectedValue(new Error("Customer unavailable"));
+    mockIsAnonymous.mockReturnValue(new Promise(() => undefined));
+
+    const diagnosticsPromise = getBillingDiagnostics(null);
+    await vi.advanceTimersByTimeAsync(5_000);
+    const diagnostics = await diagnosticsPromise;
+
+    expect(diagnostics).toMatchObject({
+      revenueCatAppUserID: "unavailable",
+      originalRevenueCatAppUserID: "unavailable",
+      isAnonymous: null,
+      activeEntitlements: [],
+      offeringStatus: "available",
+    });
+    expect(formatBillingDiagnostics(diagnostics)).toContain(
+      "Anonymous: unknown",
+    );
+  });
+
+  it("should reject stalled RevenueCat operations at the shared bound", async () => {
+    vi.useFakeTimers();
+    const result = withPurchasesTimeout(
+      new Promise(() => undefined),
+      "configure",
+    );
+
+    void result.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(5_000);
+    await expect(result).rejects.toThrow("RevenueCat configure timed out");
   });
 
   it("should reject purchase operations on web before using RevenueCat", async () => {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { CustomerInfo } from "@revenuecat/purchases-capacitor";
 import {
+  cachePurchaseErrorDiagnostics,
   cachePurchaseReportContext,
   clearCachedPurchaseErrorDiagnostics,
   getCachedPurchaseReportContext,
@@ -46,5 +47,34 @@ describe("purchaseReportContext", () => {
     expect(getCachedPurchaseReportContext()).toEqual({
       billingActiveEntitlements: [],
     });
+  });
+
+  it("should attach and clear cached purchase-error diagnostics", () => {
+    cachePurchaseErrorDiagnostics(
+      {
+        code: "3",
+        readableErrorCode: "PurchaseNotAllowedError",
+        underlyingErrorMessage: "FEATURE_NOT_SUPPORTED",
+      },
+      "purchasePackage",
+    );
+
+    expect(getCachedPurchaseReportContext()).toMatchObject({
+      billingLastPurchaseError: {
+        code: "3",
+        readableErrorCode: "PurchaseNotAllowedError",
+        underlyingErrorMessage: "FEATURE_NOT_SUPPORTED",
+      },
+      billingLastPurchaseErrorAction: "purchasePackage",
+    });
+
+    clearCachedPurchaseErrorDiagnostics();
+
+    expect(getCachedPurchaseReportContext()).not.toHaveProperty(
+      "billingLastPurchaseError",
+    );
+    expect(getCachedPurchaseReportContext()).not.toHaveProperty(
+      "billingLastPurchaseErrorAction",
+    );
   });
 });

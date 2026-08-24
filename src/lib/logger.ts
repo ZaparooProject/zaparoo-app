@@ -320,7 +320,13 @@ export const logger = {
     // Pseudonymous purchase identity and last purchase error are only
     // relevant, and only attached, to purchase-category reports.
     if (safeMetadata?.category === "purchase") {
-      Object.assign(customData, getCachedPurchaseReportContext());
+      Object.assign(
+        customData,
+        sanitizeLogValue(getCachedPurchaseReportContext()) as Record<
+          string,
+          unknown
+        >,
+      );
     }
     if (safeMetadata) {
       // Copy all metadata except severity (which is used for method selection)

@@ -15,7 +15,10 @@ import {
   getCachedPurchaseErrorDiagnostics,
   getPurchaseFirebaseUserSuffix,
 } from "@/lib/purchaseReportContext";
-import { resolveRuntimeReleaseIdentity } from "@/lib/whatsNew";
+import {
+  resolveRuntimeReleaseIdentity,
+  type RuntimeReleaseIdentity,
+} from "@/lib/whatsNew";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 
 export const PRO_ENTITLEMENT_ID = "tapto_launcher";
@@ -25,6 +28,8 @@ export const WARP_ENTITLEMENT_ID = "warp";
 export const WARP_OFFERING_ID = "warp";
 export const WARP_MONTHLY_PACKAGE_ID = "$rc_monthly";
 export const WARP_ANNUAL_PACKAGE_ID = "$rc_annual";
+
+const PURCHASES_TIMEOUT_MS = 5_000;
 
 export interface PurchaseAccess {
   lifetimePro: boolean;
@@ -45,7 +50,7 @@ export interface BillingDiagnostics {
   revenueCatAppUserID: string;
   originalRevenueCatAppUserID: string;
   firebaseUserSuffix: string;
-  isAnonymous: boolean;
+  isAnonymous: boolean | null;
   activeEntitlements: string[];
   storeVerifiedProAccess: boolean;
   offeringStatus: "available" | "missing" | "error";
@@ -65,6 +70,39 @@ let identityQueue: Promise<void> = Promise.resolve();
 
 export function resolvePurchasesReady(): void {
   _resolve();
+}
+
+export async function withPurchasesTimeout<T>(
+  promise: Promise<T>,
+  operation: string,
+  timeoutMs = PURCHASES_TIMEOUT_MS,
+): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(new Error(`RevenueCat ${operation} timed out`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
+async function getDiagnosticsValue<T>(
+  operation: string,
+  request: () => Promise<T>,
+  fallback: T,
+): Promise<T> {
+  try {
+    return await withPurchasesTimeout(request(), operation);
+  } catch {
+    return fallback;
+  }
 }
 
 export function getPurchaseAccess(customerInfo: CustomerInfo): PurchaseAccess {
@@ -259,25 +297,53 @@ function hasStoreApiKeyConfigured(platform: string): boolean {
 export async function getBillingDiagnostics(
   firebaseUserID: string | null,
 ): Promise<BillingDiagnostics> {
-  await purchasesReady;
+  await getDiagnosticsValue("initialization", () => purchasesReady, undefined);
 
-  const [current, customer, anonymous, releaseIdentity] = await Promise.all([
-    Purchases.getAppUserID(),
-    Purchases.getCustomerInfo(),
-    Purchases.isAnonymous(),
-    resolveRuntimeReleaseIdentity(),
-  ]);
+  const fallbackReleaseIdentity: RuntimeReleaseIdentity = {
+    nativeVersion: import.meta.env.VITE_VERSION || "unknown",
+    nativeBuild: "unknown",
+    liveBundleId: null,
+    releaseKey: import.meta.env.VITE_RELEASE_KEY?.trim() || "unknown",
+  };
+  const [revenueCatAppUserID, customerInfo, isAnonymous, releaseIdentity] =
+    await Promise.all([
+      getDiagnosticsValue(
+        "getAppUserID",
+        async () => (await Purchases.getAppUserID()).appUserID,
+        "unavailable",
+      ),
+      getDiagnosticsValue(
+        "getCustomerInfo",
+        async () => (await Purchases.getCustomerInfo()).customerInfo,
+        null as CustomerInfo | null,
+      ),
+      getDiagnosticsValue(
+        "isAnonymous",
+        async () => (await Purchases.isAnonymous()).isAnonymous,
+        null as boolean | null,
+      ),
+      getDiagnosticsValue(
+        "releaseIdentity",
+        resolveRuntimeReleaseIdentity,
+        fallbackReleaseIdentity,
+      ),
+    ]);
   const activeEntitlements = Object.keys(
-    customer.customerInfo.entitlements?.active ?? {},
+    customerInfo?.entitlements?.active ?? {},
   ).sort();
 
-  cachePurchaseReportContext(customer.customerInfo);
+  if (customerInfo) {
+    cachePurchaseReportContext(customerInfo);
+  }
 
   let offeringStatus: BillingDiagnostics["offeringStatus"] = "error";
   let offeringDiagnostics: BillingDiagnostics["offeringDiagnostics"] = null;
   let packagePriceString: string | null = null;
   try {
-    const offerings = await Purchases.getOfferings();
+    const offerings = await withPurchasesTimeout(
+      Purchases.getOfferings(),
+      "getOfferings",
+    );
     offeringDiagnostics = getOfferingDiagnostics(offerings, PRO_OFFERING_ID);
     const purchasePackage = getProPackage(offerings);
     packagePriceString = purchasePackage?.product?.priceString ?? null;
@@ -294,10 +360,11 @@ export async function getBillingDiagnostics(
     appBuild: releaseIdentity.nativeBuild,
     releaseKey: releaseIdentity.releaseKey,
     hasStoreApiKey: hasStoreApiKeyConfigured(platform),
-    revenueCatAppUserID: current.appUserID,
-    originalRevenueCatAppUserID: customer.customerInfo.originalAppUserId,
+    revenueCatAppUserID,
+    originalRevenueCatAppUserID:
+      customerInfo?.originalAppUserId || "unavailable",
     firebaseUserSuffix: getPurchaseFirebaseUserSuffix(firebaseUserID),
-    isAnonymous: anonymous.isAnonymous,
+    isAnonymous,
     activeEntitlements,
     storeVerifiedProAccess:
       usePreferencesStore.getState().storeVerifiedProAccess,
@@ -320,7 +387,7 @@ export function formatBillingDiagnostics(
     `RevenueCat ID: ${diagnostics.revenueCatAppUserID}`,
     `Original RevenueCat ID: ${diagnostics.originalRevenueCatAppUserID}`,
     `Firebase UID suffix: ${diagnostics.firebaseUserSuffix}`,
-    `Anonymous: ${diagnostics.isAnonymous ? "yes" : "no"}`,
+    `Anonymous: ${diagnostics.isAnonymous === null ? "unknown" : diagnostics.isAnonymous ? "yes" : "no"}`,
     `Active entitlements: ${diagnostics.activeEntitlements.join(", ") || "none"}`,
     `Store-verified local Pro fallback: ${diagnostics.storeVerifiedProAccess ? "yes" : "no"}`,
     `Offering status: ${diagnostics.offeringStatus}`,

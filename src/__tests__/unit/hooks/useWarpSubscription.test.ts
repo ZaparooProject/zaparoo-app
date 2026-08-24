@@ -229,6 +229,25 @@ describe("useWarpSubscription", () => {
     expect(purchaseResult).toBe("pending");
   });
 
+  it("should preserve prior diagnostics when the user cancels checkout", async () => {
+    cachePurchaseErrorDiagnostics({ code: "3" }, "getOfferings");
+    mockPurchasePackage.mockRejectedValue({
+      code: "1",
+      userInfo: { readableErrorCode: "PurchaseCancelledError" },
+      message: "Purchase cancelled",
+    });
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let purchaseResult: string | undefined;
+    await act(async () => {
+      purchaseResult = await result.current.purchase();
+    });
+
+    expect(purchaseResult).toBe("cancelled");
+    expect(getCachedPurchaseErrorDiagnostics()).toEqual({ code: "3" });
+  });
+
   it("should classify account identity failures", async () => {
     mockPurchasePackage.mockRejectedValue({
       code: "14",

@@ -566,6 +566,21 @@ describe("useProPurchase", () => {
     expect(getCachedPurchaseErrorDiagnostics()).toEqual({ code: "3" });
   });
 
+  it("should preserve checkout diagnostics when offerings fail without structured details", async () => {
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { cachePurchaseErrorDiagnostics, getCachedPurchaseErrorDiagnostics } =
+      await import("@/lib/purchaseReportContext");
+    vi.mocked(Purchases.getOfferings).mockRejectedValue(
+      new Error("Network unavailable"),
+    );
+    cachePurchaseErrorDiagnostics({ code: "3" }, "purchasePackage");
+
+    render(<ProPurchaseHarness />);
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+
+    expect(getCachedPurchaseErrorDiagnostics()).toEqual({ code: "3" });
+  });
+
   it("should ignore repeat activations and block dismissal while purchasing", async () => {
     const user = userEvent.setup();
     const { Purchases } = await import("@revenuecat/purchases-capacitor");

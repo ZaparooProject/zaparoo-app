@@ -420,12 +420,13 @@ export function useWarpSubscription(appUserID: string) {
       return "activation_pending";
     } catch (e) {
       if (controller.signal.aborted) return "cancelled";
+      const wrappedError = wrapPurchaseError(e);
+      if (wrappedError instanceof PurchaseCancelledError) return "cancelled";
+
       const purchaseError = getPurchaseErrorDiagnostics(e);
       if (Object.keys(purchaseError).length > 0) {
         cachePurchaseErrorDiagnostics(purchaseError, "purchasePackage");
       }
-      const wrappedError = wrapPurchaseError(e);
-      if (wrappedError instanceof PurchaseCancelledError) return "cancelled";
       if (wrappedError instanceof PurchasePendingError) return "pending";
       if (wrappedError instanceof PurchaseIdentityError) {
         return "identity_error";

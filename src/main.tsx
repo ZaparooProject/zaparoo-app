@@ -11,7 +11,10 @@ import App from "./App";
 import { ThemeProvider } from "./components/theme-provider";
 import { ErrorComponent } from "./components/ErrorComponent";
 import { logger } from "./lib/logger";
-import { resolvePurchasesReady } from "./lib/purchasesSetup";
+import {
+  resolvePurchasesReady,
+  withPurchasesTimeout,
+} from "./lib/purchasesSetup";
 
 // Firebase config is optional - auth features will be disabled without it
 const firebaseConfigs = import.meta.glob<Record<string, string>>(
@@ -70,7 +73,7 @@ const initializePurchasesOnce = async () => {
     }
 
     if (platform === "ios" || platform === "android") {
-      await Purchases.configure({ apiKey });
+      await withPurchasesTimeout(Purchases.configure({ apiKey }), "configure");
     }
   } catch (e) {
     logger.error("Purchases configure failed:", e, {
