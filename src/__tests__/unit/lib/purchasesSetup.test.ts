@@ -1,4 +1,12 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import type {
   CustomerInfo,
   PurchasesOfferings,
@@ -11,6 +19,12 @@ const {
   mockGetCustomerInfo,
   mockIsAnonymous,
   mockLogOut,
+  mockSyncPurchases,
+  mockRestorePurchases,
+  mockInvalidateCustomerInfoCache,
+  mockGetOfferings,
+  mockResolveRuntimeReleaseIdentity,
+  mockGetPreferencesState,
   mockIsNativePlatform,
 } = vi.hoisted(() => ({
   mockGetAppUserID: vi.fn(),
@@ -18,11 +32,18 @@ const {
   mockGetCustomerInfo: vi.fn(),
   mockIsAnonymous: vi.fn(),
   mockLogOut: vi.fn(),
+  mockSyncPurchases: vi.fn(),
+  mockRestorePurchases: vi.fn(),
+  mockInvalidateCustomerInfoCache: vi.fn(),
+  mockGetOfferings: vi.fn(),
+  mockResolveRuntimeReleaseIdentity: vi.fn(),
+  mockGetPreferencesState: vi.fn(() => ({ storeVerifiedProAccess: false })),
   mockIsNativePlatform: vi.fn(),
 }));
 
 vi.mock("@capacitor/core", () => ({
   Capacitor: {
+    getPlatform: vi.fn(() => "android"),
     isNativePlatform: mockIsNativePlatform,
   },
 }));
@@ -34,17 +55,33 @@ vi.mock("@revenuecat/purchases-capacitor", () => ({
     getCustomerInfo: mockGetCustomerInfo,
     isAnonymous: mockIsAnonymous,
     logOut: mockLogOut,
+    syncPurchases: mockSyncPurchases,
+    restorePurchases: mockRestorePurchases,
+    invalidateCustomerInfoCache: mockInvalidateCustomerInfoCache,
+    getOfferings: mockGetOfferings,
   },
+}));
+
+vi.mock("@/lib/whatsNew", () => ({
+  resolveRuntimeReleaseIdentity: mockResolveRuntimeReleaseIdentity,
+}));
+
+vi.mock("@/lib/preferencesStore", () => ({
+  usePreferencesStore: { getState: mockGetPreferencesState },
 }));
 
 import { PurchaseIdentityError } from "@/lib/errors";
 import {
   ensurePurchasesUser,
+  formatBillingDiagnostics,
+  getBillingDiagnostics,
   getProPackage,
   getPurchaseAccess,
   getWarpPackages,
+  reconcileStorePurchases,
   resetPurchasesUser,
   resolvePurchasesReady,
+  restorePurchasesForUser,
   runPurchasesOperation,
 } from "@/lib/purchasesSetup";
 
@@ -90,6 +127,10 @@ describe("purchasesSetup", () => {
     resolvePurchasesReady();
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsNativePlatform.mockReturnValue(true);
@@ -98,6 +139,20 @@ describe("purchasesSetup", () => {
     mockGetCustomerInfo.mockResolvedValue({ customerInfo: customerInfo() });
     mockIsAnonymous.mockResolvedValue({ isAnonymous: false });
     mockLogOut.mockResolvedValue(undefined);
+    mockSyncPurchases.mockResolvedValue(undefined);
+    mockRestorePurchases.mockResolvedValue({
+      customerInfo: customerInfo(),
+    });
+    mockInvalidateCustomerInfoCache.mockResolvedValue(undefined);
+    mockGetOfferings.mockResolvedValue(offerings());
+    mockResolveRuntimeReleaseIdentity.mockResolvedValue({
+      nativeVersion: "1.13.0",
+      nativeBuild: "29",
+      liveBundleId: null,
+      releaseKey: "native:1.13.0+29",
+    });
+    mockGetPreferencesState.mockReturnValue({ storeVerifiedProAccess: false });
+    vi.stubEnv("VITE_GOOGLE_STORE_API", "test-google-key");
   });
 
   it("should select Pro only from the explicit Pro offering", () => {
@@ -168,6 +223,108 @@ describe("purchasesSetup", () => {
     expect(mockLogIn.mock.invocationCallOrder[0]!).toBeLessThan(
       mockGetAppUserID.mock.invocationCallOrder[1]!,
     );
+  });
+
+  it("should reconcile store ownership and refresh CustomerInfo", async () => {
+    const reconciled = customerInfo({ tapto_launcher: {} });
+    mockGetAppUserID.mockResolvedValue({ appUserID: "user-123" });
+    mockGetCustomerInfo
+      .mockResolvedValueOnce({ customerInfo: customerInfo() })
+      .mockResolvedValueOnce({ customerInfo: reconciled });
+
+    const result = await reconcileStorePurchases("user-123");
+
+    expect(mockSyncPurchases).toHaveBeenCalledOnce();
+    expect(mockInvalidateCustomerInfoCache).toHaveBeenCalledOnce();
+    expect(getPurchaseAccess(result).lifetimePro).toBe(true);
+  });
+
+  it("should restore purchases under the current identity", async () => {
+    const restored = customerInfo({ tapto_launcher: {} });
+    mockGetAppUserID.mockResolvedValue({ appUserID: "user-123" });
+    mockRestorePurchases.mockResolvedValue({ customerInfo: restored });
+
+    await expect(restorePurchasesForUser("user-123")).resolves.toBe(restored);
+    expect(mockRestorePurchases).toHaveBeenCalledOnce();
+  });
+
+  it("should produce safe, support-ready billing diagnostics", async () => {
+    const info = {
+      ...customerInfo({ tapto_launcher: {} }),
+      originalAppUserId: "$RCAnonymousID:original",
+    } as CustomerInfo;
+    mockGetAppUserID.mockResolvedValue({
+      appUserID: "$RCAnonymousID:current",
+    });
+    mockGetCustomerInfo.mockResolvedValue({ customerInfo: info });
+    mockGetPreferencesState.mockReturnValue({ storeVerifiedProAccess: true });
+
+    const diagnostics = await getBillingDiagnostics("firebase-user-12345678");
+
+    expect(diagnostics).toMatchObject({
+      platform: "android",
+      appVersion: "1.13.0",
+      appBuild: "29",
+      releaseKey: "native:1.13.0+29",
+      hasStoreApiKey: true,
+      revenueCatAppUserID: "$RCAnonymousID:current",
+      originalRevenueCatAppUserID: "$RCAnonymousID:original",
+      firebaseUserSuffix: "12345678",
+      isAnonymous: false,
+      activeEntitlements: ["tapto_launcher"],
+      storeVerifiedProAccess: true,
+      offeringStatus: "available",
+      offeringDiagnostics: {
+        offeringIdentifier: "tapto_basic",
+        offeringFound: true,
+        packageIdentifiers: ["$rc_lifetime"],
+      },
+      lastPurchaseError: {},
+    });
+    const formatted = formatBillingDiagnostics(diagnostics);
+    expect(formatted).toContain("RevenueCat ID: $RCAnonymousID:current");
+    expect(formatted).toContain("Store API key present: yes");
+    expect(formatted).toContain("Store-verified local Pro fallback: yes");
+    expect(formatted).not.toContain("test-google-key");
+    expect(formatted).not.toContain("firebase-user-");
+    expect(
+      formatBillingDiagnostics({
+        ...diagnostics,
+        lastPurchaseError: {
+          code: "3",
+          readableErrorCode: "PurchaseNotAllowedError",
+          underlyingErrorMessage: "FEATURE_NOT_SUPPORTED",
+        },
+      }),
+    ).toContain("Last underlying store error: FEATURE_NOT_SUPPORTED");
+  });
+
+  it("should report unavailable offerings without a store API key", async () => {
+    mockGetOfferings.mockResolvedValue({ current: null, all: {} });
+    vi.stubEnv("VITE_GOOGLE_STORE_API", "");
+
+    const diagnostics = await getBillingDiagnostics(null);
+
+    expect(diagnostics.hasStoreApiKey).toBe(false);
+    expect(diagnostics.offeringStatus).toBe("missing");
+    expect(diagnostics.offeringDiagnostics).toMatchObject({
+      offeringFound: false,
+      packageIdentifiers: [],
+    });
+    expect(diagnostics.packagePriceString).toBeNull();
+    expect(formatBillingDiagnostics(diagnostics)).toContain(
+      "Store API key present: no",
+    );
+  });
+
+  it("should still report other diagnostics when offerings fail to load", async () => {
+    mockGetOfferings.mockRejectedValue(new Error("Network unavailable"));
+
+    const diagnostics = await getBillingDiagnostics(null);
+
+    expect(diagnostics.offeringStatus).toBe("error");
+    expect(diagnostics.offeringDiagnostics).toBeNull();
+    expect(diagnostics.revenueCatAppUserID).toBe("anonymous");
   });
 
   it("should reject purchase operations on web before using RevenueCat", async () => {

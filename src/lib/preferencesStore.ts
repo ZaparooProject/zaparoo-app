@@ -108,6 +108,7 @@ export interface PreferencesState {
   launchOnScan: boolean;
   launcherAccess: boolean;
   lifetimeProAccess: boolean | null;
+  storeVerifiedProAccess: boolean;
   onlinePremiumAccess: boolean | null;
   preferRemoteWriter: boolean;
 
@@ -187,6 +188,7 @@ export interface PreferencesActions {
   setRestartScan: (value: boolean) => void;
   setLaunchOnScan: (value: boolean) => void;
   setLifetimeProAccess: (value: boolean) => void;
+  setStoreVerifiedProAccess: (value: boolean) => void;
   beginOnlinePremiumAccessCheck: () => void;
   setOnlinePremiumAccess: (value: boolean) => void;
   clearOnlinePremiumAccess: () => void;
@@ -240,6 +242,7 @@ const DEFAULT_PREFERENCES: Omit<
   launchOnScan: true, // Default on - Pro check happens at launch time
   launcherAccess: false,
   lifetimeProAccess: null,
+  storeVerifiedProAccess: false,
   onlinePremiumAccess: null,
   preferRemoteWriter: false,
   shakeEnabled: false,
@@ -318,10 +321,24 @@ export const usePreferencesStore = create<PreferencesStore>()(
         sessionManager.setLaunchOnScan(value);
       },
       setLifetimeProAccess: (value) =>
+        set((state) => {
+          const effectiveLifetimeProAccess =
+            value || state.storeVerifiedProAccess;
+          return {
+            lifetimeProAccess: effectiveLifetimeProAccess,
+            launcherAccess:
+              effectiveLifetimeProAccess ||
+              state.onlinePremiumAccess === true ||
+              (state.onlinePremiumAccess === null && state.launcherAccess),
+          };
+        }),
+      setStoreVerifiedProAccess: (value) =>
         set((state) => ({
-          lifetimeProAccess: value,
+          storeVerifiedProAccess: value,
+          lifetimeProAccess: value || state.lifetimeProAccess === true,
           launcherAccess:
             value ||
+            state.lifetimeProAccess === true ||
             state.onlinePremiumAccess === true ||
             (state.onlinePremiumAccess === null && state.launcherAccess),
         })),
@@ -399,6 +416,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
         restartScan: state.restartScan,
         launchOnScan: state.launchOnScan,
         launcherAccess: state.launcherAccess,
+        storeVerifiedProAccess: state.storeVerifiedProAccess,
         preferRemoteWriter: state.preferRemoteWriter,
         shakeEnabled: state.shakeEnabled,
         shakeMode: state.shakeMode,
@@ -503,10 +521,19 @@ export const usePreferencesStore = create<PreferencesStore>()(
             ...currentState.appReviewCadence,
             ...persisted.appReviewCadence,
           },
-          // Never persist the hydration flags or runtime-checked values
+          // Never persist the hydration flags or runtime-checked values.
+          // A store ownership fallback is durable because Google or Apple has
+          // already confirmed the non-consumable is owned on this device.
           _hasHydrated: currentState._hasHydrated,
           _proAccessHydrated: currentState._proAccessHydrated,
-          lifetimeProAccess: currentState.lifetimeProAccess,
+          lifetimeProAccess:
+            persisted.storeVerifiedProAccess === true
+              ? true
+              : currentState.lifetimeProAccess,
+          launcherAccess:
+            persisted.storeVerifiedProAccess === true
+              ? true
+              : (persisted.launcherAccess ?? currentState.launcherAccess),
           onlinePremiumAccess: currentState.onlinePremiumAccess,
           nfcAvailable: currentState.nfcAvailable,
           _nfcAvailabilityHydrated: currentState._nfcAvailabilityHydrated,

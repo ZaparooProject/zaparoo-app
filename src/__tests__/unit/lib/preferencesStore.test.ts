@@ -60,6 +60,7 @@ describe("usePreferencesStore", () => {
       launchOnScan: true,
       launcherAccess: false,
       lifetimeProAccess: null,
+      storeVerifiedProAccess: false,
       onlinePremiumAccess: null,
       preferRemoteWriter: false,
       shakeEnabled: false,
@@ -457,6 +458,46 @@ describe("usePreferencesStore", () => {
   });
 
   describe("source-aware purchase access", () => {
+    it("should preserve store-verified Pro when RevenueCat has no entitlement", () => {
+      const { result } = renderHook(() => usePreferencesStore());
+
+      act(() => {
+        result.current.setStoreVerifiedProAccess(true);
+        result.current.setLifetimeProAccess(false);
+      });
+
+      expect(result.current.storeVerifiedProAccess).toBe(true);
+      expect(result.current.lifetimeProAccess).toBe(true);
+      expect(result.current.launcherAccess).toBe(true);
+    });
+
+    it("should drop Pro access when a clean restore clears the store-verified fallback", () => {
+      // Warp status already resolved to inactive (not the pending/unknown
+      // "null" state), so launcherAccess isn't held open by the separate
+      // pending-Warp-check preservation the launcherAccess reducer applies.
+      usePreferencesStore.setState({ onlinePremiumAccess: false });
+      const { result } = renderHook(() => usePreferencesStore());
+
+      act(() => {
+        // Simulate the earlier "already owned" fallback...
+        result.current.setStoreVerifiedProAccess(true);
+        result.current.setLifetimeProAccess(false);
+      });
+      expect(result.current.lifetimeProAccess).toBe(true);
+
+      act(() => {
+        // ...then a later restore that cleanly reports no Pro entitlement,
+        // in the order callers use: clear the fallback before recording the
+        // fresh result, so the interlock doesn't re-force it back to true.
+        result.current.setStoreVerifiedProAccess(false);
+        result.current.setLifetimeProAccess(false);
+      });
+
+      expect(result.current.storeVerifiedProAccess).toBe(false);
+      expect(result.current.lifetimeProAccess).toBe(false);
+      expect(result.current.launcherAccess).toBe(false);
+    });
+
     it("should retain lifetime Pro when online access expires", () => {
       const { result } = renderHook(() => usePreferencesStore());
 

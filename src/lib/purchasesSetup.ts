@@ -8,7 +8,15 @@ import {
 import {
   isExpectedRevenueCatLogoutError,
   PurchaseIdentityError,
+  type PurchaseErrorDiagnostics,
 } from "@/lib/errors";
+import {
+  cachePurchaseReportContext,
+  getCachedPurchaseErrorDiagnostics,
+  getPurchaseFirebaseUserSuffix,
+} from "@/lib/purchaseReportContext";
+import { resolveRuntimeReleaseIdentity } from "@/lib/whatsNew";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 
 export const PRO_ENTITLEMENT_ID = "tapto_launcher";
 export const PRO_OFFERING_ID = "tapto_basic";
@@ -26,6 +34,24 @@ export interface PurchaseAccess {
 export interface WarpPackages {
   monthly: PurchasesPackage;
   annual: PurchasesPackage;
+}
+
+export interface BillingDiagnostics {
+  platform: string;
+  appVersion: string;
+  appBuild: string;
+  releaseKey: string;
+  hasStoreApiKey: boolean;
+  revenueCatAppUserID: string;
+  originalRevenueCatAppUserID: string;
+  firebaseUserSuffix: string;
+  isAnonymous: boolean;
+  activeEntitlements: string[];
+  storeVerifiedProAccess: boolean;
+  offeringStatus: "available" | "missing" | "error";
+  offeringDiagnostics: ReturnType<typeof getOfferingDiagnostics> | null;
+  packagePriceString: string | null;
+  lastPurchaseError: PurchaseErrorDiagnostics;
 }
 
 // Promise executor runs synchronously, so _resolve is always assigned before use.
@@ -113,10 +139,12 @@ async function syncPurchasesUser(appUserID: string): Promise<CustomerInfo> {
   const current = await Purchases.getAppUserID();
   if (current.appUserID !== appUserID) {
     const result = await Purchases.logIn({ appUserID });
+    cachePurchaseReportContext(result.customerInfo);
     return result.customerInfo;
   }
 
   const result = await Purchases.getCustomerInfo();
+  cachePurchaseReportContext(result.customerInfo);
   return result.customerInfo;
 }
 
@@ -135,6 +163,7 @@ export function resetPurchasesUser(): Promise<CustomerInfo> {
     }
 
     const result = await Purchases.getCustomerInfo();
+    cachePurchaseReportContext(result.customerInfo);
     return result.customerInfo;
   });
 }
@@ -169,6 +198,7 @@ export function runPurchasesOperation<T>(
       : await (async () => {
           await purchasesReady;
           const result = await Purchases.getCustomerInfo();
+          cachePurchaseReportContext(result.customerInfo);
           return result.customerInfo;
         })();
     assertCurrentOperation(options);
@@ -184,4 +214,131 @@ export function runPurchasesOperation<T>(
 
     return result;
   });
+}
+
+export function restorePurchasesForUser(
+  appUserID: string | null,
+): Promise<CustomerInfo> {
+  return runPurchasesOperation(appUserID, async () => {
+    const result = await Purchases.restorePurchases();
+    cachePurchaseReportContext(result.customerInfo);
+    return result.customerInfo;
+  });
+}
+
+/**
+ * Silently reconciles the current store account after checkout has already
+ * confirmed ownership. This avoids another purchase attempt and does not show
+ * an OS sign-in prompt.
+ */
+export function reconcileStorePurchases(
+  appUserID: string | null,
+): Promise<CustomerInfo> {
+  return runPurchasesOperation(appUserID, async () => {
+    await Purchases.syncPurchases();
+    await Purchases.invalidateCustomerInfoCache();
+    const result = await Purchases.getCustomerInfo();
+    cachePurchaseReportContext(result.customerInfo);
+    return result.customerInfo;
+  });
+}
+
+function hasStoreApiKeyConfigured(platform: string): boolean {
+  if (platform === "ios") return Boolean(import.meta.env.VITE_APPLE_STORE_API);
+  if (platform === "android") {
+    return Boolean(import.meta.env.VITE_GOOGLE_STORE_API);
+  }
+  return false;
+}
+
+/**
+ * Gathers a snapshot of purchase state for support diagnostics. Fetches
+ * offerings itself rather than reusing checkout-time state, so it stays off
+ * the checkout path and always reflects the moment the user asked for it.
+ */
+export async function getBillingDiagnostics(
+  firebaseUserID: string | null,
+): Promise<BillingDiagnostics> {
+  await purchasesReady;
+
+  const [current, customer, anonymous, releaseIdentity] = await Promise.all([
+    Purchases.getAppUserID(),
+    Purchases.getCustomerInfo(),
+    Purchases.isAnonymous(),
+    resolveRuntimeReleaseIdentity(),
+  ]);
+  const activeEntitlements = Object.keys(
+    customer.customerInfo.entitlements?.active ?? {},
+  ).sort();
+
+  cachePurchaseReportContext(customer.customerInfo);
+
+  let offeringStatus: BillingDiagnostics["offeringStatus"] = "error";
+  let offeringDiagnostics: BillingDiagnostics["offeringDiagnostics"] = null;
+  let packagePriceString: string | null = null;
+  try {
+    const offerings = await Purchases.getOfferings();
+    offeringDiagnostics = getOfferingDiagnostics(offerings, PRO_OFFERING_ID);
+    const purchasePackage = getProPackage(offerings);
+    packagePriceString = purchasePackage?.product?.priceString ?? null;
+    offeringStatus = purchasePackage ? "available" : "missing";
+  } catch {
+    // Diagnostics still report everything else when offerings can't load.
+  }
+
+  const platform = Capacitor.getPlatform();
+
+  return {
+    platform,
+    appVersion: releaseIdentity.nativeVersion,
+    appBuild: releaseIdentity.nativeBuild,
+    releaseKey: releaseIdentity.releaseKey,
+    hasStoreApiKey: hasStoreApiKeyConfigured(platform),
+    revenueCatAppUserID: current.appUserID,
+    originalRevenueCatAppUserID: customer.customerInfo.originalAppUserId,
+    firebaseUserSuffix: getPurchaseFirebaseUserSuffix(firebaseUserID),
+    isAnonymous: anonymous.isAnonymous,
+    activeEntitlements,
+    storeVerifiedProAccess:
+      usePreferencesStore.getState().storeVerifiedProAccess,
+    offeringStatus,
+    offeringDiagnostics,
+    packagePriceString,
+    lastPurchaseError: getCachedPurchaseErrorDiagnostics(),
+  };
+}
+
+export function formatBillingDiagnostics(
+  diagnostics: BillingDiagnostics,
+): string {
+  return [
+    "Zaparoo billing diagnostics",
+    `App: ${diagnostics.appVersion} (${diagnostics.appBuild})`,
+    `Release: ${diagnostics.releaseKey}`,
+    `Platform: ${diagnostics.platform}`,
+    `Store API key present: ${diagnostics.hasStoreApiKey ? "yes" : "no"}`,
+    `RevenueCat ID: ${diagnostics.revenueCatAppUserID}`,
+    `Original RevenueCat ID: ${diagnostics.originalRevenueCatAppUserID}`,
+    `Firebase UID suffix: ${diagnostics.firebaseUserSuffix}`,
+    `Anonymous: ${diagnostics.isAnonymous ? "yes" : "no"}`,
+    `Active entitlements: ${diagnostics.activeEntitlements.join(", ") || "none"}`,
+    `Store-verified local Pro fallback: ${diagnostics.storeVerifiedProAccess ? "yes" : "no"}`,
+    `Offering status: ${diagnostics.offeringStatus}`,
+    ...(diagnostics.offeringDiagnostics
+      ? [
+          `Offering found: ${diagnostics.offeringDiagnostics.offeringFound ? "yes" : "no"}`,
+          `Offering packages: ${diagnostics.offeringDiagnostics.packageIdentifiers.join(", ") || "none"}`,
+        ]
+      : []),
+    ...(diagnostics.packagePriceString
+      ? [`Package price: ${diagnostics.packagePriceString}`]
+      : []),
+    ...(Object.keys(diagnostics.lastPurchaseError).length > 0
+      ? [
+          `Last purchase error code: ${diagnostics.lastPurchaseError.code || "unknown"}`,
+          `Last purchase error name: ${diagnostics.lastPurchaseError.readableErrorCode || "unknown"}`,
+          `Last underlying store error: ${diagnostics.lastPurchaseError.underlyingErrorMessage || "unavailable"}`,
+        ]
+      : []),
+  ].join("\n");
 }

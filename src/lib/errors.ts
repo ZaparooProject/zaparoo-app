@@ -1,3 +1,5 @@
+import { PURCHASES_ERROR_CODE } from "@revenuecat/purchases-capacitor";
+
 /**
  * Custom error classes for Zaparoo App.
  *
@@ -156,6 +158,143 @@ export class PurchasePendingError extends ZaparooError {
 }
 
 /**
+ * Returned when the store confirms that the user already owns the product.
+ * The caller can use this as a trusted store-ownership signal when RevenueCat
+ * has lost the corresponding entitlement association.
+ */
+export class PurchaseAlreadyOwnedError extends ZaparooError {
+  constructor(message = "Purchase is already owned") {
+    super(message);
+  }
+}
+
+/**
+ * Returned when the native store does not permit this account or device to
+ * make purchases. This happens before checkout and is distinct from a declined
+ * payment method.
+ */
+export class PurchaseNotAllowedError extends ZaparooError {
+  constructor(message = "Purchase is not allowed") {
+    super(message);
+  }
+}
+
+/**
+ * Returned when the store reports the product itself cannot be purchased,
+ * for example a country or account where the product is not offered. This is
+ * store-account/region state, not something a live update can fix.
+ */
+export class PurchaseProductUnavailableError extends ZaparooError {
+  constructor(message = "Product is not available for purchase") {
+    super(message);
+  }
+}
+
+/**
+ * Returned when RevenueCat itself is misconfigured for this build (missing or
+ * invalid API key, product not set up in the RevenueCat dashboard). Distinct
+ * from a per-user store restriction: this affects every purchase attempt.
+ */
+export class PurchaseConfigurationError extends ZaparooError {
+  constructor(message = "Purchases are misconfigured for this app build") {
+    super(message);
+  }
+}
+
+export interface PurchaseErrorDiagnostics {
+  code?: string;
+  readableErrorCode?: string;
+  underlyingErrorMessage?: string;
+  userCancelled?: boolean;
+}
+
+/**
+ * Preserve safe RevenueCat error fields that would otherwise be lost when a
+ * Capacitor bridge rejection is normalized to a JavaScript Error.
+ */
+export function getPurchaseErrorDiagnostics(
+  error: unknown,
+): PurchaseErrorDiagnostics {
+  const records: Record<string, unknown>[] = [];
+  const visited = new Set<unknown>();
+
+  const collect = (value: unknown, depth: number): void => {
+    if (
+      depth > 2 ||
+      value === null ||
+      typeof value !== "object" ||
+      visited.has(value)
+    ) {
+      return;
+    }
+
+    visited.add(value);
+    const record = value as Record<string, unknown>;
+    records.push(record);
+    for (const key of ["data", "userInfo", "error"]) {
+      collect(record[key], depth + 1);
+    }
+  };
+
+  collect(error, 0);
+
+  const firstString = (key: string): string | undefined => {
+    for (const record of records) {
+      const value = record[key];
+      if (typeof value === "string" && value.length > 0) return value;
+      if (typeof value === "number") return String(value);
+    }
+    return undefined;
+  };
+  const firstBoolean = (key: string): boolean | undefined => {
+    for (const record of records) {
+      const value = record[key];
+      if (typeof value === "boolean") return value;
+    }
+    return undefined;
+  };
+
+  const message = firstString("message")?.toLowerCase() ?? "";
+  const inferredReadableErrorCode = message.includes(
+    "device or user is not allowed to make the purchase",
+  )
+    ? "PurchaseNotAllowedError"
+    : message.includes("already active for the user") ||
+        message.includes("already own this") ||
+        message.includes("already purchased")
+      ? "ProductAlreadyPurchasedError"
+      : undefined;
+
+  const code = firstString("code");
+  const readableErrorCode =
+    firstString("readableErrorCode") ?? inferredReadableErrorCode;
+  const underlyingErrorMessage = firstString("underlyingErrorMessage");
+  const userCancelled = firstBoolean("userCancelled");
+
+  return {
+    ...(code !== undefined ? { code } : {}),
+    ...(readableErrorCode !== undefined ? { readableErrorCode } : {}),
+    ...(underlyingErrorMessage !== undefined ? { underlyingErrorMessage } : {}),
+    ...(userCancelled !== undefined ? { userCancelled } : {}),
+  };
+}
+
+function normalizePurchaseErrorName(value: string | undefined): string {
+  return (value ?? "").replace(/[^a-z0-9]/gi, "").toLowerCase();
+}
+
+function matchesPurchaseErrorCode(
+  diagnostics: PurchaseErrorDiagnostics,
+  codeName: keyof typeof PURCHASES_ERROR_CODE,
+): boolean {
+  return (
+    diagnostics.code === PURCHASES_ERROR_CODE[codeName] ||
+    normalizePurchaseErrorName(diagnostics.readableErrorCode) ===
+      normalizePurchaseErrorName(codeName)
+  );
+}
+
+/**
  * Returned when RevenueCat cannot safely associate the store operation with
  * the expected app account.
  */
@@ -260,7 +399,12 @@ export function isExpectedEmailAuthError(error: unknown): boolean {
  * These races are expected during sign-out and should not report to monitoring.
  */
 export function isExpectedRevenueCatLogoutError(error: unknown): boolean {
-  return includesAnyToken(error, EXPECTED_REVENUECAT_LOGOUT_TOKENS);
+  return (
+    matchesPurchaseErrorCode(
+      getPurchaseErrorDiagnostics(error),
+      "LOG_OUT_ANONYMOUS_USER_ERROR",
+    ) || includesAnyToken(error, EXPECTED_REVENUECAT_LOGOUT_TOKENS)
+  );
 }
 
 // =============================================================================
@@ -429,8 +573,8 @@ export function wrapBarcodeScannerError(error: unknown): Error {
 }
 
 /**
- * Wraps RevenueCat purchase errors into typed errors.
- * RevenueCat doesn't expose typed errors, only string messages.
+ * Wraps RevenueCat purchase errors into app-specific typed errors.
+ * Capacitor bridge failures may expose fields directly or under nested data.
  *
  * @param error - The error from RevenueCat
  * @returns A typed error if recognized, otherwise the original error
@@ -447,23 +591,11 @@ export function wrapPurchaseError(error: unknown): Error {
         ? record.message
         : String(error);
   const msg = message.toLowerCase();
-  const code = typeof record?.code === "string" ? record.code : null;
-  const userInfo =
-    typeof record?.userInfo === "object" && record.userInfo !== null
-      ? (record.userInfo as Record<string, unknown>)
-      : null;
-  const readableCode = (
-    typeof userInfo?.readableErrorCode === "string"
-      ? userInfo.readableErrorCode
-      : typeof record?.readableErrorCode === "string"
-        ? record.readableErrorCode
-        : ""
-  ).toLowerCase();
+  const diagnostics = getPurchaseErrorDiagnostics(error);
 
   if (
-    record?.userCancelled === true ||
-    code === "1" ||
-    readableCode.includes("purchase_cancelled") ||
+    diagnostics.userCancelled === true ||
+    matchesPurchaseErrorCode(diagnostics, "PURCHASE_CANCELLED_ERROR") ||
     msg.includes("purchase was cancelled") ||
     msg.includes("purchase was canceled") ||
     msg.includes("user cancelled") ||
@@ -473,8 +605,7 @@ export function wrapPurchaseError(error: unknown): Error {
   }
 
   if (
-    code === "20" ||
-    readableCode.includes("payment_pending") ||
+    matchesPurchaseErrorCode(diagnostics, "PAYMENT_PENDING_ERROR") ||
     msg.includes("payment pending") ||
     msg.includes("purchase is pending")
   ) {
@@ -482,10 +613,41 @@ export function wrapPurchaseError(error: unknown): Error {
   }
 
   if (
-    code === "14" ||
-    code === "22" ||
-    readableCode.includes("invalid_app_user_id") ||
-    readableCode.includes("log_out_anonymous_user")
+    matchesPurchaseErrorCode(diagnostics, "PRODUCT_ALREADY_PURCHASED_ERROR") ||
+    msg.includes("already active for the user") ||
+    msg.includes("already own this") ||
+    msg.includes("already owns this") ||
+    msg.includes("already purchased")
+  ) {
+    return new PurchaseAlreadyOwnedError(message);
+  }
+
+  if (
+    matchesPurchaseErrorCode(diagnostics, "PURCHASE_NOT_ALLOWED_ERROR") ||
+    msg.includes("device or user is not allowed to make the purchase")
+  ) {
+    return new PurchaseNotAllowedError(message);
+  }
+
+  if (
+    matchesPurchaseErrorCode(
+      diagnostics,
+      "PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR",
+    ) ||
+    msg.includes("not available for purchase") ||
+    msg.includes("item is not available in your country") ||
+    msg.includes("item_unavailable")
+  ) {
+    return new PurchaseProductUnavailableError(message);
+  }
+
+  if (matchesPurchaseErrorCode(diagnostics, "CONFIGURATION_ERROR")) {
+    return new PurchaseConfigurationError(message);
+  }
+
+  if (
+    matchesPurchaseErrorCode(diagnostics, "INVALID_APP_USER_ID_ERROR") ||
+    matchesPurchaseErrorCode(diagnostics, "LOG_OUT_ANONYMOUS_USER_ERROR")
   ) {
     return new PurchaseIdentityError(message);
   }

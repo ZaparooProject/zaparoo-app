@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { Capacitor } from "@capacitor/core";
+import { PurchaseSupportActions } from "@/components/ProPurchase";
 import { CoreAPI } from "@/lib/coreApi";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
@@ -226,6 +227,10 @@ export function AdvancedSettings() {
             <p>{t("settings.advanced.viewLogs")}</p>
             <NextIcon size="20" />
           </div>
+        )}
+
+        {Capacitor.isNativePlatform() && (
+          <PurchaseSupportActions variant="diagnosticsOnly" />
         )}
       </div>
 

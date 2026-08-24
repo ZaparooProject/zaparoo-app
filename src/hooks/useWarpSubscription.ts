@@ -17,12 +17,17 @@ import {
   type WarpPackages,
 } from "@/lib/purchasesSetup";
 import {
+  getPurchaseErrorDiagnostics,
   PurchaseCancelledError,
   PurchaseIdentityError,
   PurchasePendingError,
   wrapPurchaseError,
 } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import {
+  cachePurchaseErrorDiagnostics,
+  clearCachedPurchaseErrorDiagnostics,
+} from "@/lib/purchaseReportContext";
 
 export type WarpPlan = "monthly" | "annual";
 export type WarpAction = "purchase" | "restore" | "manage" | "refresh" | null;
@@ -188,12 +193,17 @@ export function useWarpSubscription(appUserID: string) {
         }
       } catch (e) {
         if (signal.aborted) return;
+        const purchaseError = getPurchaseErrorDiagnostics(e);
+        if (Object.keys(purchaseError).length > 0) {
+          cachePurchaseErrorDiagnostics(purchaseError, "loadSubscription");
+        }
         setPackages(null);
         setLoadFailed(true);
         logger.error("Failed to load Warp subscription", e, {
           category: "purchase",
           action: "loadSubscription",
           severity: "warning",
+          purchaseError,
         });
       } finally {
         if (!silent && !signal.aborted && mountedRef.current) {
@@ -384,6 +394,7 @@ export function useWarpSubscription(appUserID: string) {
       );
 
       assertCurrentAction(controller.signal);
+      clearCachedPurchaseErrorDiagnostics();
       const access = getPurchaseAccess(purchaseResult.customerInfo);
       setLifetimeProAccess(access.lifetimePro);
       setRevenueCatWarpActive(access.warp);
@@ -409,6 +420,10 @@ export function useWarpSubscription(appUserID: string) {
       return "activation_pending";
     } catch (e) {
       if (controller.signal.aborted) return "cancelled";
+      const purchaseError = getPurchaseErrorDiagnostics(e);
+      if (Object.keys(purchaseError).length > 0) {
+        cachePurchaseErrorDiagnostics(purchaseError, "purchasePackage");
+      }
       const wrappedError = wrapPurchaseError(e);
       if (wrappedError instanceof PurchaseCancelledError) return "cancelled";
       if (wrappedError instanceof PurchasePendingError) return "pending";
@@ -420,6 +435,7 @@ export function useWarpSubscription(appUserID: string) {
         category: "purchase",
         action: "purchasePackage",
         severity: "warning",
+        purchaseError,
       });
       return "failed";
     } finally {
@@ -459,6 +475,12 @@ export function useWarpSubscription(appUserID: string) {
       );
       assertCurrentAction(controller.signal);
       const access = getPurchaseAccess(result.customerInfo);
+      clearCachedPurchaseErrorDiagnostics();
+      if (!access.lifetimePro) {
+        // A clean restore that found no Pro entitlement means the store no
+        // longer backs the earlier "already owned" local fallback either.
+        usePreferencesStore.getState().setStoreVerifiedProAccess(false);
+      }
       setLifetimeProAccess(access.lifetimePro);
       setRevenueCatWarpActive(access.warp);
 
@@ -494,10 +516,15 @@ export function useWarpSubscription(appUserID: string) {
       return "not_found";
     } catch (e) {
       if (!controller.signal.aborted) {
+        const purchaseError = getPurchaseErrorDiagnostics(e);
+        if (Object.keys(purchaseError).length > 0) {
+          cachePurchaseErrorDiagnostics(purchaseError, "restorePurchases");
+        }
         logger.error("Purchase restore failed", e, {
           category: "purchase",
           action: "restorePurchases",
           severity: "warning",
+          purchaseError,
         });
       }
       return "failed";

@@ -1,7 +1,10 @@
 import { act, render, renderHook, screen, waitFor, within } from "@/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { useProPurchase } from "@/components/ProPurchase";
+import {
+  PurchaseSupportActions,
+  useProPurchase,
+} from "@/components/ProPurchase";
 import {
   PACKAGE_TYPE,
   PRODUCT_CATEGORY,
@@ -30,9 +33,30 @@ vi.mock("@capacitor/core", () => ({
   },
 }));
 
+const {
+  mockCopyDiagnostics,
+  mockGetBillingDiagnostics,
+  mockReconcileStorePurchases,
+  mockRestorePurchasesForUser,
+} = vi.hoisted(() => ({
+  mockCopyDiagnostics: vi.fn(),
+  mockGetBillingDiagnostics: vi.fn(),
+  mockReconcileStorePurchases: vi.fn(),
+  mockRestorePurchasesForUser: vi.fn(),
+}));
+
+vi.mock("@capacitor/clipboard", () => ({
+  Clipboard: {
+    write: mockCopyDiagnostics,
+  },
+}));
+
 vi.mock("@/lib/purchasesSetup", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/purchasesSetup")>()),
+  getBillingDiagnostics: mockGetBillingDiagnostics,
   purchasesReady: Promise.resolve(),
+  reconcileStorePurchases: mockReconcileStorePurchases,
+  restorePurchasesForUser: mockRestorePurchasesForUser,
   runPurchasesOperation: async (
     _appUserID: string | null,
     operation: (customerInfo: unknown) => Promise<unknown>,
@@ -198,12 +222,47 @@ describe("useProPurchase", () => {
     usePreferencesStore.setState({
       launcherAccess: false,
       lifetimeProAccess: false,
+      storeVerifiedProAccess: false,
       onlinePremiumAccess: false,
       launchOnScan: false,
       setLaunchOnScan: mockSetLaunchOnScan,
     });
     const { useStatusStore } = await import("@/lib/store");
-    useStatusStore.setState({ proPurchaseModalOpen: false });
+    useStatusStore.setState({
+      loggedInUser: null,
+      proPurchaseModalOpen: false,
+    });
+    mockCopyDiagnostics.mockResolvedValue(undefined);
+    mockGetBillingDiagnostics.mockResolvedValue({
+      platform: "android",
+      appVersion: "1.13.0",
+      appBuild: "29",
+      releaseKey: "native:1.13.0+29",
+      hasStoreApiKey: true,
+      revenueCatAppUserID: "$RCAnonymousID:current",
+      originalRevenueCatAppUserID: "$RCAnonymousID:original",
+      firebaseUserSuffix: "signed-out",
+      isAnonymous: true,
+      activeEntitlements: [],
+      storeVerifiedProAccess: false,
+      offeringStatus: "available",
+      offeringDiagnostics: {
+        offeringIdentifier: "tapto_basic",
+        offeringFound: true,
+        packageIdentifiers: ["$rc_lifetime"],
+      },
+      packagePriceString: "$6.99",
+      lastPurchaseError: {},
+    });
+    mockReconcileStorePurchases.mockResolvedValue({
+      entitlements: { active: {} },
+    });
+    mockRestorePurchasesForUser.mockResolvedValue({
+      entitlements: { active: {} },
+    });
+    const { clearCachedPurchaseErrorDiagnostics } =
+      await import("@/lib/purchaseReportContext");
+    clearCachedPurchaseErrorDiagnostics();
     const { Capacitor } = await import("@capacitor/core");
     vi.mocked(Capacitor.getPlatform).mockReturnValue("ios");
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
@@ -222,7 +281,9 @@ describe("useProPurchase", () => {
   it("should slide the mounted purchase modal open", async () => {
     const user = userEvent.setup();
     render(<ProPurchaseHarness />);
-    const dialog = screen.getByRole("dialog", { hidden: true });
+    const dialog = screen
+      .getByText("scan.purchaseProTitle")
+      .closest('[role="dialog"]')!;
 
     expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
 
@@ -344,6 +405,32 @@ describe("useProPurchase", () => {
     expect(
       screen.getByRole("button", { name: "scan.purchaseProUnavailableAction" }),
     ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "settings.app.copyBillingDiagnostics",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("should treat a store product-unavailable rejection like an unavailable offering", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.getOfferings).mockRejectedValue({
+      code: "5",
+      message: "This item is not available in your country.",
+    });
+
+    render(<ProPurchaseHarness />);
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+
+    expect(screen.getByText("scan.purchaseProUnavailable")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
+    ).toBeInTheDocument();
   });
 
   it("should show error state and report when offerings fail to load", async () => {
@@ -363,6 +450,12 @@ describe("useProPurchase", () => {
           category: "purchase",
           action: "getOfferings",
           severity: "warning",
+          purchaseError: {
+            code: undefined,
+            readableErrorCode: undefined,
+            underlyingErrorMessage: undefined,
+            userCancelled: undefined,
+          },
         },
       );
     });
@@ -374,9 +467,59 @@ describe("useProPurchase", () => {
     expect(
       screen.getByRole("button", { name: "scan.purchaseProUnavailableAction" }),
     ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
+    ).toBeInTheDocument();
   });
 
-  it("should show fetched package price and enable purchase action", async () => {
+  it("should distinguish a store eligibility failure and expose support actions", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { logger } = await import("@/lib/logger");
+    vi.mocked(Purchases.getOfferings).mockRejectedValue({
+      message: "The device or user is not allowed to make the purchase.",
+      code: "3",
+      data: {
+        code: 3,
+        readableErrorCode: "PurchaseNotAllowedError",
+        underlyingErrorMessage: "Billing response: not allowed",
+      },
+    });
+
+    render(<ProPurchaseHarness />);
+
+    await waitFor(() => {
+      expect(logger.error).toHaveBeenCalledWith(
+        "RevenueCat offerings unavailable",
+        expect.any(Error),
+        expect.objectContaining({
+          action: "getOfferings",
+          purchaseError: {
+            code: "3",
+            readableErrorCode: "PurchaseNotAllowedError",
+            underlyingErrorMessage: "Billing response: not allowed",
+            userCancelled: undefined,
+          },
+        }),
+      );
+    });
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+
+    expect(screen.getByText("scan.purchaseProNotAllowed")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "settings.app.copyBillingDiagnostics",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "scan.purchaseProUnavailableAction" }),
+    ).toBeDisabled();
+  });
+
+  it("should show fetched package price with purchase and restore actions", async () => {
     const user = userEvent.setup();
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     vi.mocked(Purchases.getOfferings).mockResolvedValue(
@@ -396,6 +539,31 @@ describe("useProPurchase", () => {
     expect(
       screen.getByRole("button", { name: "scan.purchaseProAction" }),
     ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "settings.app.copyBillingDiagnostics",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should preserve checkout diagnostics when offerings reload successfully", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { cachePurchaseErrorDiagnostics, getCachedPurchaseErrorDiagnostics } =
+      await import("@/lib/purchaseReportContext");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+    cachePurchaseErrorDiagnostics({ code: "3" }, "purchasePackage");
+
+    render(<ProPurchaseHarness />);
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+    await screen.findByRole("button", { name: "scan.purchaseProAction" });
+
+    expect(getCachedPurchaseErrorDiagnostics()).toEqual({ code: "3" });
   });
 
   it("should ignore repeat activations and block dismissal while purchasing", async () => {
@@ -473,7 +641,9 @@ describe("useProPurchase", () => {
     } as never);
 
     render(<ProPurchaseHarness />);
-    const dialog = screen.getByRole("dialog", { hidden: true });
+    const dialog = screen
+      .getByText("scan.purchaseProTitle")
+      .closest('[role="dialog"]')!;
     await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
     await user.click(
@@ -489,6 +659,38 @@ describe("useProPurchase", () => {
       expect(mockSetLaunchOnScan).toHaveBeenCalledWith(true);
       expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
     });
+    expect(
+      screen.queryByRole("dialog", { name: "scan.purchaseProTitle" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should reconcile store ownership before failing a charged purchase with no entitlement yet", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const toast = (await import("react-hot-toast")).default;
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+    vi.mocked(Purchases.purchasePackage).mockResolvedValue({
+      customerInfo: { entitlements: { active: {} } },
+    } as never);
+    mockReconcileStorePurchases.mockResolvedValue({
+      entitlements: { active: { tapto_launcher: {} } },
+    });
+
+    render(<ProPurchaseHarness />);
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+    await user.click(
+      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+    );
+
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
+    await waitFor(() => {
+      expect(mockReconcileStorePurchases).toHaveBeenCalledWith(null);
+      expect(usePreferencesStore.getState().lifetimeProAccess).toBe(true);
+    });
+    expect(toast.error).not.toHaveBeenCalledWith("scan.purchaseProFailed");
     expect(
       screen.queryByRole("dialog", { name: "scan.purchaseProTitle" }),
     ).not.toBeInTheDocument();
@@ -522,6 +724,188 @@ describe("useProPurchase", () => {
     expect(
       screen.getByRole("button", { name: "scan.purchaseProAction" }),
     ).toBeEnabled();
+  });
+
+  it("should not replace useful diagnostics when the user cancels", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { cachePurchaseErrorDiagnostics, getCachedPurchaseErrorDiagnostics } =
+      await import("@/lib/purchaseReportContext");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+    vi.mocked(Purchases.purchasePackage).mockRejectedValue({
+      code: "1",
+      message: "Purchase was cancelled.",
+      data: {
+        code: 1,
+        readableErrorCode: "PurchaseCancelledError",
+        userCancelled: true,
+      },
+    });
+
+    render(<ProPurchaseHarness />);
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+    cachePurchaseErrorDiagnostics({ code: "3" }, "getOfferings");
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+    await user.click(
+      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+    );
+
+    await waitFor(() => {
+      expect(Purchases.purchasePackage).toHaveBeenCalledTimes(1);
+      expect(
+        screen.getByRole("button", { name: "scan.purchaseProAction" }),
+      ).toBeEnabled();
+    });
+    expect(getCachedPurchaseErrorDiagnostics()).toEqual({ code: "3" });
+  });
+
+  it("should recover an already-owned Pro purchase without another charge", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { logger } = await import("@/lib/logger");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+    vi.mocked(Purchases.purchasePackage).mockRejectedValue({
+      code: "6",
+      message: "This product is already active for the user.",
+      userInfo: { readableErrorCode: "ProductAlreadyPurchasedError" },
+    });
+
+    render(<ProPurchaseHarness />);
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+    await user.click(
+      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+    );
+
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
+    await waitFor(() => {
+      expect(mockReconcileStorePurchases).toHaveBeenCalledWith(null);
+      expect(usePreferencesStore.getState().storeVerifiedProAccess).toBe(true);
+      expect(usePreferencesStore.getState().lifetimeProAccess).toBe(true);
+      expect(logger.error).toHaveBeenCalledWith(
+        "Pro access recovered from store ownership",
+        expect.any(Error),
+        expect.objectContaining({ action: "alreadyOwnedFallback" }),
+      );
+    });
+    expect(
+      screen.queryByRole("dialog", { name: "scan.purchaseProTitle" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should restore Pro from the general purchase support controls", async () => {
+    const user = userEvent.setup();
+    mockRestorePurchasesForUser.mockResolvedValue({
+      entitlements: { active: { tapto_launcher: {} } },
+    });
+
+    render(<PurchaseSupportActions />);
+    await user.click(
+      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
+    );
+
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
+    await waitFor(() => {
+      expect(mockRestorePurchasesForUser).toHaveBeenCalledWith(null);
+      expect(usePreferencesStore.getState().lifetimeProAccess).toBe(true);
+    });
+  });
+
+  it("should clear the store-verified Pro fallback after a clean restore finds no purchases", async () => {
+    const user = userEvent.setup();
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
+    usePreferencesStore.setState({
+      storeVerifiedProAccess: true,
+      lifetimeProAccess: true,
+    });
+    mockRestorePurchasesForUser.mockResolvedValue({
+      entitlements: { active: {} },
+    });
+
+    render(<PurchaseSupportActions />);
+    await user.click(
+      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
+    );
+
+    await waitFor(() => {
+      expect(usePreferencesStore.getState().storeVerifiedProAccess).toBe(false);
+      expect(usePreferencesStore.getState().lifetimeProAccess).toBe(false);
+    });
+  });
+
+  it("should activate restored Warp access for the signed-in account", async () => {
+    const user = userEvent.setup();
+    const { useStatusStore } = await import("@/lib/store");
+    useStatusStore.setState({
+      loggedInUser: { uid: "firebase-user-123" } as never,
+    });
+    mockRestorePurchasesForUser.mockResolvedValue({
+      entitlements: { active: { warp: {} } },
+    });
+
+    render(<PurchaseSupportActions />);
+    await user.click(
+      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
+    );
+
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
+    await waitFor(() => {
+      expect(mockRestorePurchasesForUser).toHaveBeenCalledWith(
+        "firebase-user-123",
+      );
+      expect(usePreferencesStore.getState().onlinePremiumAccess).toBe(true);
+      expect(usePreferencesStore.getState().launcherAccess).toBe(true);
+    });
+  });
+
+  it("should copy pseudonymous billing diagnostics", async () => {
+    const user = userEvent.setup();
+
+    render(<PurchaseSupportActions />);
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings.app.copyBillingDiagnostics",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(mockGetBillingDiagnostics).toHaveBeenCalledWith(null);
+      expect(mockCopyDiagnostics).toHaveBeenCalledWith({
+        string: expect.stringContaining(
+          "RevenueCat ID: $RCAnonymousID:current",
+        ),
+      });
+    });
+  });
+
+  it("should show only the restore action for the restoreOnly variant", () => {
+    render(<PurchaseSupportActions variant="restoreOnly" />);
+
+    expect(
+      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "settings.app.copyBillingDiagnostics",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should show only the diagnostics action for the diagnosticsOnly variant", () => {
+    render(<PurchaseSupportActions variant="diagnosticsOnly" />);
+
+    expect(
+      screen.getByRole("button", {
+        name: "settings.app.copyBillingDiagnostics",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "settings.app.restorePurchases" }),
+    ).not.toBeInTheDocument();
   });
 
   it("should show unsupported state on web platform", async () => {
