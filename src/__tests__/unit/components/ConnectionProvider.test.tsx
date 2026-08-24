@@ -1094,6 +1094,28 @@ describe("notification processing", () => {
     mockAnnounce.mockClear();
   });
 
+  it.each([Notification.MediaStarted, Notification.MediaStopped])(
+    "should reconcile %s notifications without params",
+    async (method) => {
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method,
+        params: undefined,
+      });
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(CoreAPI.media).toHaveBeenCalledTimes(1);
+      });
+      expect(mockToastError).not.toHaveBeenCalled();
+    },
+  );
+
   describe("media.started", () => {
     it("should update playing state and clear staged token when media starts", async () => {
       useStatusStore.setState({

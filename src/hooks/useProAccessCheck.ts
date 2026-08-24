@@ -6,6 +6,8 @@ import { logger } from "@/lib/logger";
 import { getPurchaseAccess, purchasesReady } from "@/lib/purchasesSetup";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 
+const PRO_ACCESS_HYDRATION_TIMEOUT_MS = 5_000;
+
 /**
  * Hydrates permanent Pro ownership from RevenueCat and keeps it current.
  * Account-owned online access is synchronized separately after Firebase auth.
@@ -32,6 +34,32 @@ export function useProAccessCheck() {
 
     let active = true;
     let listenerToRemove: string | null = null;
+    let hydrationStage: "purchasesReady" | "customerInfo" = "purchasesReady";
+    let hydrationTimeout: ReturnType<typeof setTimeout> | null = setTimeout(
+      () => {
+        hydrationTimeout = null;
+        if (!active) return;
+
+        logger.error("Pro access hydration timed out", {
+          category: "purchase",
+          action: "proAccessCheck",
+          severity: "warning",
+          timeoutMs: PRO_ACCESS_HYDRATION_TIMEOUT_MS,
+          stage: hydrationStage,
+        });
+        setProAccessHydrated(true);
+      },
+      PRO_ACCESS_HYDRATION_TIMEOUT_MS,
+    );
+
+    const finishHydration = () => {
+      if (!active) return;
+      if (hydrationTimeout) {
+        clearTimeout(hydrationTimeout);
+        hydrationTimeout = null;
+      }
+      setProAccessHydrated(true);
+    };
 
     const applyCustomerInfo = (customerInfo: CustomerInfo) => {
       if (!active) return;
@@ -40,9 +68,10 @@ export function useProAccessCheck() {
 
     purchasesReady
       .then(async () => {
+        hydrationStage = "customerInfo";
         const info = await Purchases.getCustomerInfo();
         applyCustomerInfo(info.customerInfo);
-        if (active) setProAccessHydrated(true);
+        finishHydration();
 
         listenerToRemove =
           await Purchases.addCustomerInfoUpdateListener(applyCustomerInfo);
@@ -58,11 +87,15 @@ export function useProAccessCheck() {
           action: "proAccessCheck",
           severity: "warning",
         });
-        if (active) setProAccessHydrated(true);
+        finishHydration();
       });
 
     return () => {
       active = false;
+      if (hydrationTimeout) {
+        clearTimeout(hydrationTimeout);
+        hydrationTimeout = null;
+      }
       if (listenerToRemove) {
         void Purchases.removeCustomerInfoUpdateListener({
           listenerToRemove,

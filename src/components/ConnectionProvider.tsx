@@ -41,7 +41,6 @@ import {
   type MediaResponse,
   type MediaSlot,
   Notification,
-  PlayingResponse,
   PlaytimeLimitReachedParams,
   PlaytimeLimitWarningParams,
   ScrapingStatusNotification,
@@ -192,6 +191,12 @@ function getMediaSlot(slot: unknown): MediaSlot | null {
     return "background";
   }
   return null;
+}
+
+function isNotificationParams(
+  value: unknown,
+): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function getPlaylistForSlot(response: MediaResponse, slot: MediaSlot) {
@@ -700,7 +705,13 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       try {
         switch (notification.method) {
           case Notification.MediaStarted: {
-            const params = notification.params as PlayingResponse;
+            const params = notification.params;
+            if (!isNotificationParams(params)) {
+              logger.warn("media.started notification missing params");
+              refreshMediaState();
+              break;
+            }
+
             const slot = getMediaSlot(params.slot);
             logger.log("media.started", params);
             if (slot) {
@@ -714,7 +725,13 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           }
 
           case Notification.MediaStopped: {
-            const params = notification.params as { slot?: unknown };
+            const params = notification.params;
+            if (!isNotificationParams(params)) {
+              logger.warn("media.stopped notification missing params");
+              refreshMediaState();
+              break;
+            }
+
             const slot = getMediaSlot(params.slot);
             logger.log("media.stopped", params);
             if (slot) {

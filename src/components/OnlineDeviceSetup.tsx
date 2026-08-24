@@ -11,6 +11,7 @@ import { useClientCapability } from "@/hooks/useClientCapability";
 import type { DeviceLinkState } from "@/hooks/useDeviceLinking";
 import { CoreAPI } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
+import { useStatusStore } from "@/lib/store";
 import {
   ClientCapability,
   type BackupStatusEntry,
@@ -40,9 +41,13 @@ export function OnlineDeviceSetup({
   warpActive,
 }: OnlineDeviceSetupProps) {
   const { t, i18n } = useTranslation();
-  const canWriteCoreSettings = useClientCapability(
+  const hasSettingsWriteCapability = useClientCapability(
     ClientCapability.SettingsWrite,
   );
+  const currentClient = useStatusStore((state) => state.currentClient);
+  const canWriteCoreSettings =
+    hasSettingsWriteCapability &&
+    (currentClient?.paired === false || currentClient?.role === "admin");
   const [linkState, setLinkState] = useState<DeviceLinkState>(
     connected ? "checking" : "unavailable",
   );
