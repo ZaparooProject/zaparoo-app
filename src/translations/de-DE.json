@@ -581,6 +581,8 @@
         "title": "Verbundenes Gerät",
         "description": "Durch die Verknüpfung wird dieses Gerät deinem Konto hinzugefügt und kann Online-Funktionen verwenden. Die Synchronisierung des Spielverlaufs ist kostenlos. Spielverlauf und Sicherungen werden erst hochgeladen, wenn du sie aktivierst.",
         "help": "Durch die Verknüpfung wird dieses Gerät deinem Konto hinzugefügt und kann Online-Funktionen verwenden. Die Verknüpfung allein lädt nichts hoch. Die Synchronisierung des Spielverlaufs und die Cloud-Sicherung müssen separat aktiviert werden.",
+        "disconnected": "Verbinde dich mit einem Core-Gerät, bevor du es mit Zaparoo Online verknüpfst.",
+        "backToSettings": "Zurück zu Einstellungen",
         "link": "Gerät verknüpfen",
         "signIn": "Anmelden, um dieses Gerät zu verknüpfen",
         "checking": "Geräteverknüpfung wird geprüft...",
@@ -700,7 +702,7 @@
       "emailVerified": "E-Mail-Adresse bestätigt",
       "saved": "Gespeichert",
       "save": "Speichern",
-      "continue": "Zustimmen und fortfahren",
+      "continue": "Weiter",
       "logout": "Abmelden"
     },
     "settings": {
@@ -1019,7 +1021,7 @@
         "preferRemoteWriter": "Verbundenes Lesegerät zum Schreiben bevorzugen",
         "restorePurchases": "Käufe wiederherstellen",
         "restoreSuccess": "Käufe wurden wiederhergestellt",
-        "restoreNotFound": "Keine Käufe zum Wiederherstellen gefunden",
+        "restoreNotFound": "Keine Käufe gefunden. Wenn dein Store meldet, dass du Pro bereits besitzt, tippe auf Pro freischalten, um den Besitz zu bestätigen.",
         "restoreFail": "Käufe konnten nicht wiederhergestellt werden",
         "restoreWarpSignIn": "Warp wurde gefunden. Melde dich bei Zaparoo Online an, um die Wiederherstellung abzuschließen.",
         "copyBillingDiagnostics": "Abrechnungsdiagnose kopieren",

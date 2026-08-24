@@ -581,6 +581,8 @@
         "title": "接続中のデバイス",
         "description": "リンクすると、このデバイスがアカウントに追加され、Online機能を使用できます。プレイ履歴の同期は無料です。有効にするまで、リンクによってプレイ履歴やバックアップがアップロードされることはありません。",
         "help": "リンクすると、このデバイスがアカウントに追加され、Online機能を使用できます。リンクだけでは何もアップロードされません。プレイ履歴の同期とクラウドバックアップは個別に有効にする必要があります。",
+        "disconnected": "Zaparoo Online にリンクする前に Core デバイスへ接続してください。",
+        "backToSettings": "設定に戻る",
         "link": "デバイスをリンク",
         "signIn": "サインインしてこのデバイスをリンク",
         "checking": "デバイスのリンクを確認中...",
@@ -700,7 +702,7 @@
       "emailVerified": "メールアドレスを確認しました",
       "saved": "保存しました",
       "save": "保存",
-      "continue": "同意して続ける",
+      "continue": "続ける",
       "logout": "サインアウト"
     },
     "settings": {
@@ -1019,7 +1021,7 @@
         "preferRemoteWriter": "書き込みに接続中のリーダーを優先",
         "restorePurchases": "購入を復元",
         "restoreSuccess": "購入を復元しました",
-        "restoreNotFound": "復元できる購入が見つかりません",
+        "restoreNotFound": "購入が見つかりません。ストアで Pro を購入済みと表示される場合は、「Pro を解除」をタップして所有権を確認してください。",
         "restoreFail": "購入の復元に失敗しました",
         "restoreWarpSignIn": "Warpが見つかりました。Zaparoo Onlineにサインインしてアクセスの復元を完了してください。",
         "copyBillingDiagnostics": "請求診断をコピー",

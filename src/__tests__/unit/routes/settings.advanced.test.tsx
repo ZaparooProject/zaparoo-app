@@ -83,8 +83,8 @@ vi.mock("@capacitor/core", () => ({
   },
 }));
 
-// Mock ProPurchase — this route only needs to know the diagnostics-only
-// variant is rendered natively; purchase logic itself is tested elsewhere.
+// Mock ProPurchase — this route only needs to know full emergency purchase
+// support is rendered natively; purchase logic itself is tested elsewhere.
 vi.mock("@/components/ProPurchase", () => ({
   PurchaseSupportActions: ({ variant }: { variant?: string }) => (
     <div data-testid="purchase-support-actions" data-variant={variant}>
@@ -219,16 +219,15 @@ describe("Settings Advanced Route", () => {
       });
     });
 
-    it("should show only the billing diagnostics action natively", () => {
+    it("should show emergency billing support actions natively", () => {
       mockIsNativePlatform.mockReturnValue(true);
       mockGetPlatform.mockReturnValue("android");
 
       renderComponent();
 
-      expect(screen.getByTestId("purchase-support-actions")).toHaveAttribute(
-        "data-variant",
-        "diagnosticsOnly",
-      );
+      expect(
+        screen.getByTestId("purchase-support-actions"),
+      ).not.toHaveAttribute("data-variant");
     });
 
     it("should hide purchase support actions on web", () => {

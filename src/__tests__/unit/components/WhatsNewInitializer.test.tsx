@@ -130,7 +130,7 @@ describe("WhatsNewInitializer", () => {
     });
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText("What's new in test")).toBeInTheDocument();
+    expect(screen.getByText("What's new in vtest")).toBeInTheDocument();
     expect(screen.getByText("First test item")).toBeInTheDocument();
     expect(screen.getByText("Second test item")).toBeInTheDocument();
   });

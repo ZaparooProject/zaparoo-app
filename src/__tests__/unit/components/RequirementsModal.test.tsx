@@ -84,6 +84,7 @@ describe("RequirementsModal", () => {
     useRequirementsStore.setState({
       isOpen: false,
       pendingRequirements: [],
+      completionRevision: 0,
     });
   });
 
@@ -349,6 +350,7 @@ describe("RequirementsModal", () => {
       accept_privacy: true,
       age_verified: true,
     });
+    expect(useRequirementsStore.getState().completionRevision).toBe(1);
   });
 
   it("should call signOut when logout is clicked", async () => {
@@ -377,6 +379,7 @@ describe("RequirementsModal", () => {
     await waitFor(() => {
       expect(FirebaseAuthentication.signOut).toHaveBeenCalled();
     });
+    expect(useRequirementsStore.getState().completionRevision).toBe(0);
   });
 
   it("should not call Purchases.logOut when RC user is already anonymous", async () => {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { DeviceLinkButton } from "@/components/DeviceLinkButton";
@@ -41,6 +42,7 @@ export function OnlineDeviceSetup({
   warpActive,
 }: OnlineDeviceSetupProps) {
   const { t, i18n } = useTranslation();
+  const router = useRouter();
   const hasSettingsWriteCapability = useClientCapability(
     ClientCapability.SettingsWrite,
   );
@@ -53,8 +55,9 @@ export function OnlineDeviceSetup({
   );
   const featuresHeadingRef = useRef<HTMLHeadingElement>(null);
   const previousLinkStateRef = useRef(linkState);
-  const linked = linkState === "linked";
-  const featuresPending = linkState === "checking" || linkState === "linking";
+  const linked = connected && linkState === "linked";
+  const featuresPending =
+    connected && (linkState === "checking" || linkState === "linking");
 
   useEffect(() => {
     const becameLinked =
@@ -70,12 +73,12 @@ export function OnlineDeviceSetup({
   const settingsQuery = useQuery({
     queryKey: ["settings", "online"],
     queryFn: () => CoreAPI.settings(),
-    enabled: linked && canWriteCoreSettings,
+    enabled: connected && linked && canWriteCoreSettings,
   });
   const backupStatusQuery = useQuery({
     queryKey: ["settings", "backup", "status"],
     queryFn: () => CoreAPI.settingsBackupStatus(),
-    enabled: linked,
+    enabled: connected && linked,
     refetchInterval: (query) => {
       if (warpActive === true) return false;
       const availability = query.state.data?.remote.availability;
@@ -155,6 +158,19 @@ export function OnlineDeviceSetup({
           />
         </div>
         <DeviceLinkButton enabled={connected} onStateChange={setLinkState} />
+        {!connected && (
+          <div className="flex flex-col gap-3">
+            <p className="text-muted-foreground text-sm">
+              {t("online.deviceLink.disconnected")}
+            </p>
+            <Button
+              label={t("online.deviceLink.backToSettings")}
+              variant="outline"
+              onClick={() => void router.navigate({ to: "/settings" })}
+              className="w-full"
+            />
+          </div>
+        )}
       </section>
 
       {(featuresPending || linked) && (

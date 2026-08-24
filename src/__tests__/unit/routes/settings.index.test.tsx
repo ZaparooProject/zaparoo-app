@@ -108,6 +108,7 @@ vi.mock("@/lib/preferencesStore", () => ({
 
 // Mock ProPurchase component
 const mockSetProPurchaseModalOpen = vi.fn();
+let mockProAccess = false;
 vi.mock("@/components/ProPurchase.tsx", () => ({
   PurchaseSupportActions: ({ variant }: { variant?: string }) => (
     <div data-testid="purchase-support-actions" data-variant={variant}>
@@ -117,7 +118,7 @@ vi.mock("@/components/ProPurchase.tsx", () => ({
   useProPurchase: () => ({
     purchaseModal: null,
     setProPurchaseModalOpen: mockSetProPurchaseModalOpen,
-    proAccess: false,
+    proAccess: mockProAccess,
   }),
 }));
 
@@ -226,6 +227,7 @@ describe("Settings Index Route", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockProAccess = false;
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -507,6 +509,32 @@ describe("Settings Index Route", () => {
         "data-variant",
         "restoreOnly",
       );
+    });
+
+    it("should hide restore action when lifetime Pro is active", async () => {
+      const { Capacitor } = await import("@capacitor/core");
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      mockProAccess = true;
+
+      renderComponent();
+
+      expect(
+        screen.queryByTestId("purchase-support-actions"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should hide restore action when Warp includes Pro", async () => {
+      const { Capacitor } = await import("@capacitor/core");
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      mockUsePreferencesStore.mockImplementation((selector) =>
+        selector({ onlinePremiumAccess: true }),
+      );
+
+      renderComponent();
+
+      expect(
+        screen.queryByTestId("purchase-support-actions"),
+      ).not.toBeInTheDocument();
     });
 
     it("should hide purchase support actions on web", async () => {

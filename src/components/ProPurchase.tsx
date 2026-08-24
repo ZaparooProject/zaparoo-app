@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Clipboard } from "@capacitor/clipboard";
 import toast from "react-hot-toast";
+import { Loader2 } from "lucide-react";
 import { SlideModal } from "@/components/SlideModal";
 import { logger } from "@/lib/logger";
 import {
@@ -193,16 +194,12 @@ const ProPurchaseModal = (props: {
     })();
   };
 
-  // RevenueCat can report an already-owned iOS product as cancellation. Keep
-  // cancellation non-authoritative, but leave explicit restoration available.
   const supportActionsVariant =
-    props.offeringsStatus === "available"
-      ? "restoreOnly"
-      : props.offeringsStatus === "not_allowed" ||
-          props.offeringsStatus === "missing" ||
-          props.offeringsStatus === "error"
-        ? "full"
-        : null;
+    props.offeringsStatus === "not_allowed" ||
+    props.offeringsStatus === "missing" ||
+    props.offeringsStatus === "error"
+      ? "diagnosticsOnly"
+      : null;
 
   return (
     <SlideModal
@@ -220,6 +217,11 @@ const ProPurchaseModal = (props: {
             isPurchasing
               ? t("loading")
               : getPurchaseActionLabel(props.offeringsStatus)
+          }
+          icon={
+            isPurchasing ? (
+              <Loader2 size={20} className="animate-spin" />
+            ) : undefined
           }
           disabled={!props.purchasePackage || isPurchasing}
           onClick={handlePurchase}
@@ -379,12 +381,9 @@ export function PurchaseSupportActions({
       );
       const access = getPurchaseAccess(customerInfo);
       clearCachedPurchaseErrorDiagnostics();
-      if (!access.lifetimePro) {
-        // A clean restore that found no Pro entitlement means the store no
-        // longer backs the earlier "already owned" local fallback either.
-        usePreferencesStore.getState().setStoreVerifiedProAccess(false);
-      }
-      setLifetimeProAccess(access.lifetimePro);
+      const storeVerifiedProAccess =
+        usePreferencesStore.getState().storeVerifiedProAccess;
+      setLifetimeProAccess(access.lifetimePro || storeVerifiedProAccess);
       if (access.warp && loggedInUser) {
         setOnlinePremiumAccess(true);
       }
@@ -393,7 +392,7 @@ export function PurchaseSupportActions({
         toast(t("settings.app.restoreWarpSignIn"));
         return;
       }
-      if (access.lifetimePro || access.warp) {
+      if (access.lifetimePro || access.warp || storeVerifiedProAccess) {
         toast.success(t("settings.app.restoreSuccess"));
         return;
       }
@@ -449,9 +448,19 @@ export function PurchaseSupportActions({
 
   const showRestore = variant !== "diagnosticsOnly";
   const showDiagnostics = variant !== "restoreOnly";
+  const useOutlineButtons = variant !== "restoreOnly";
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-2">
+      {showDiagnostics && (
+        <Button
+          label={t("settings.app.copyBillingDiagnostics")}
+          variant={useOutlineButtons ? "outline" : "text"}
+          onClick={() => void handleCopyDiagnostics()}
+          disabled={isRestoring || isCopyingDiagnostics}
+          className="w-full"
+        />
+      )}
       {showRestore && (
         <Button
           label={
@@ -459,21 +468,8 @@ export function PurchaseSupportActions({
               ? t("online.warp.restoring")
               : t("settings.app.restorePurchases")
           }
-          variant="text"
+          variant={useOutlineButtons ? "outline" : "text"}
           onClick={() => void handleRestore()}
-          disabled={isRestoring || isCopyingDiagnostics}
-          className="w-full"
-        />
-      )}
-      {showDiagnostics && (
-        <Button
-          label={
-            isCopyingDiagnostics
-              ? t("loading")
-              : t("settings.app.copyBillingDiagnostics")
-          }
-          variant="text"
-          onClick={() => void handleCopyDiagnostics()}
           disabled={isRestoring || isCopyingDiagnostics}
           className="w-full"
         />

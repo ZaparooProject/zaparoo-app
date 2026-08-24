@@ -191,9 +191,11 @@ export function Settings() {
             </div>
           )}
 
-          {Capacitor.isNativePlatform() && (
-            <PurchaseSupportActions variant="restoreOnly" />
-          )}
+          {Capacitor.isNativePlatform() &&
+            !displayedProAccess &&
+            displayedOnlinePremiumAccess !== true && (
+              <PurchaseSupportActions variant="restoreOnly" />
+            )}
 
           <div className="flex flex-col gap-1">
             <Link

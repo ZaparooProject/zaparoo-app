@@ -53,7 +53,7 @@ export const buildWhatsNewAnnouncement = (
   id: "release-1.0.1",
   version: "1.0.1",
   releaseKeys: ["native:1.0.1+2"],
-  title: "What's new in test",
+  title: "What's new in vtest",
   items: ["First test item", "Second test item"],
   ...overrides,
 });

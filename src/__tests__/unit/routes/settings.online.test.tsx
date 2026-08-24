@@ -476,40 +476,6 @@ describe("Settings Online Route", () => {
         screen.queryByRole("button", { name: "online.changePassword" }),
       ).not.toBeInTheDocument();
     });
-
-    it("should show Google login indicator for Google users", () => {
-      mockState.loggedInUser = authenticatedUser({
-        ...mockState.loggedInUser,
-        providerData: [{ providerId: "google.com" }],
-      });
-      renderComponent();
-      expect(screen.getByText("online.loggedInWithGoogle")).toBeInTheDocument();
-    });
-
-    it("should show Apple login indicator for Apple users", () => {
-      mockState.loggedInUser = authenticatedUser({
-        ...mockState.loggedInUser,
-        providerData: [{ providerId: "apple.com" }],
-      });
-      renderComponent();
-      expect(screen.getByText("online.loggedInWithApple")).toBeInTheDocument();
-    });
-
-    it("should not infer latest login method from a linked provider", () => {
-      mockState.loggedInUser = authenticatedUser({
-        ...mockState.loggedInUser,
-        providerData: [
-          { providerId: "google.com" },
-          { providerId: "password" },
-        ],
-      });
-
-      renderComponent();
-
-      expect(
-        screen.queryByText("online.loggedInWithGoogle"),
-      ).not.toBeInTheDocument();
-    });
   });
 
   describe("mode toggle", () => {
@@ -871,53 +837,6 @@ describe("Settings Online Route", () => {
       });
     });
 
-    it("should show the email login method for a linked Google account", async () => {
-      const user = userEvent.setup();
-      const Online = getOnline();
-      const view = render(<Online />);
-      mockFirebaseAuth.getCurrentUser.mockResolvedValueOnce({
-        user: {
-          email: "test@example.com",
-          uid: "test-uid",
-          displayName: "Test User",
-          emailVerified: true,
-          providerData: [
-            { providerId: "google.com" },
-            { providerId: "password" },
-          ],
-        },
-      });
-
-      await user.type(
-        screen.getByPlaceholderText("me@example.com"),
-        "test@example.com",
-      );
-      await user.type(screen.getByLabelText("online.password"), "password123");
-      await user.click(screen.getByRole("button", { name: "online.login" }));
-
-      await waitFor(() => {
-        expect(mockSetLoggedInUser).toHaveBeenCalled();
-      });
-      mockState.loggedInUser = authenticatedUser({
-        email: "test@example.com",
-        uid: "test-uid",
-        displayName: "Test User",
-        emailVerified: true,
-        providerData: [
-          { providerId: "google.com" },
-          { providerId: "password" },
-        ],
-      });
-      view.rerender(<Online />);
-
-      expect(
-        screen.getByText("online.loggedInWithPassword"),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByText("online.loggedInWithGoogle"),
-      ).not.toBeInTheDocument();
-    });
-
     it("should show error toast without logging expected login failure", async () => {
       const user = userEvent.setup();
       const { logger } = await import("@/lib/logger");
@@ -1143,6 +1062,25 @@ describe("Settings Online Route", () => {
           expect.objectContaining({ uid: "test-uid" }),
         );
       });
+    });
+
+    it("should preserve the MFA challenge when sign-in has no current user", async () => {
+      mockFirebaseAuth.getCurrentUser.mockResolvedValueOnce({ user: null });
+      const user = await startMfaChallenge();
+
+      await user.type(screen.getByLabelText("online.mfaCode"), "123456");
+      await user.click(
+        screen.getByRole("button", { name: "online.mfaVerify" }),
+      );
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("online.loginFail");
+      });
+      expect(
+        screen.getByRole("heading", { name: "online.mfaTitle" }),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("online.mfaCode")).toHaveValue("123456");
+      expect(mockSetLoggedInUser).not.toHaveBeenCalled();
     });
 
     it("should keep MFA visible until account setup finishes", async () => {

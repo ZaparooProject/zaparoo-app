@@ -5,6 +5,7 @@ import type {
   PurchasesPackage,
 } from "@revenuecat/purchases-capacitor";
 import type { SubscriptionResponse } from "@/lib/models";
+import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import {
   cachePurchaseErrorDiagnostics,
   clearCachedPurchaseErrorDiagnostics,
@@ -39,6 +40,7 @@ const {
 
 let appStateCallback: ((state: { isActive: boolean }) => void) | null = null;
 let loggedInUserID = "user-123";
+let storeVerifiedProAccess = false;
 
 const monthlyPackage = {
   identifier: "$rc_monthly",
@@ -134,7 +136,10 @@ vi.mock("@/lib/preferencesStore", () => {
   };
   const usePreferencesStore = (selector: (state: unknown) => unknown) =>
     selector(state);
-  usePreferencesStore.getState = () => state;
+  usePreferencesStore.getState = () => ({
+    ...state,
+    storeVerifiedProAccess,
+  });
   return { usePreferencesStore };
 });
 
@@ -162,6 +167,12 @@ describe("useWarpSubscription", () => {
     clearCachedPurchaseErrorDiagnostics();
     appStateCallback = null;
     loggedInUserID = "user-123";
+    storeVerifiedProAccess = false;
+    useRequirementsStore.setState({
+      isOpen: false,
+      pendingRequirements: [],
+      completionRevision: 0,
+    });
     mockIsNativePlatform.mockReturnValue(true);
     mockAddAppListener.mockImplementation(
       (_event: string, callback: (state: { isActive: boolean }) => void) => {
@@ -281,7 +292,25 @@ describe("useWarpSubscription", () => {
     expect(mockRestorePurchases).toHaveBeenCalledOnce();
     expect(result.current.subscription?.is_premium).toBe(false);
     expect(result.current.activationPending).toBe(false);
-    expect(mockSetStoreVerifiedProAccess).toHaveBeenCalledWith(false);
+    expect(mockSetStoreVerifiedProAccess).not.toHaveBeenCalled();
+  });
+
+  it("should preserve store-verified Pro when Warp restore finds no entitlement", async () => {
+    storeVerifiedProAccess = true;
+    mockGetSubscriptionStatus
+      .mockResolvedValueOnce(subscription(false))
+      .mockResolvedValueOnce(subscription(false));
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let restoreResult: string | undefined;
+    await act(async () => {
+      restoreResult = await result.current.restore();
+    });
+
+    expect(restoreResult).toBe("pro_restored");
+    expect(mockSetStoreVerifiedProAccess).not.toHaveBeenCalled();
+    expect(mockSetLifetimeProAccess).toHaveBeenLastCalledWith(true);
   });
 
   it("should clear stale activation state when checkout offerings return", async () => {
@@ -386,6 +415,58 @@ describe("useWarpSubscription", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("should reload account data after requirements are completed", async () => {
+    mockGetSubscriptionStatus
+      .mockRejectedValueOnce(new Error("requirements_not_met"))
+      .mockResolvedValueOnce(subscription(true));
+
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.loadFailed).toBe(true));
+
+    act(() => useRequirementsStore.getState().complete());
+
+    await waitFor(() => {
+      expect(result.current.loadFailed).toBe(false);
+      expect(result.current.subscription?.is_premium).toBe(true);
+    });
+    expect(mockGetSubscriptionStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it("should not abort a purchase when requirements are completed", async () => {
+    mockGetSubscriptionStatus
+      .mockResolvedValueOnce(subscription(false))
+      .mockResolvedValueOnce(subscription(false))
+      .mockResolvedValueOnce(subscription(true));
+
+    let resolvePurchase!: (value: { customerInfo: CustomerInfo }) => void;
+    mockPurchasePackage.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePurchase = resolve;
+        }),
+    );
+
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let purchasePromise!: Promise<string>;
+    act(() => {
+      purchasePromise = result.current.purchase();
+    });
+    await waitFor(() => expect(mockPurchasePackage).toHaveBeenCalledOnce());
+
+    act(() => useRequirementsStore.getState().complete());
+    resolvePurchase({ customerInfo: customerInfo({ warp: true }) });
+
+    let purchaseResult: string | undefined;
+    await act(async () => {
+      purchaseResult = await purchasePromise;
+    });
+
+    expect(purchaseResult).toBe("active");
+    expect(mockGetSubscriptionStatus).toHaveBeenCalledTimes(3);
   });
 
   it("should refresh on foreground without replacing content with loading", async () => {
