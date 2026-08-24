@@ -146,6 +146,31 @@ describe("OnlineDeviceSetup", () => {
     expect(mockBackupStatus).not.toHaveBeenCalled();
   });
 
+  it("should clear linked features when the Core disconnects", async () => {
+    mockUseDeviceLinking.mockReturnValue({
+      state: "linked",
+      linkDevice: vi.fn(),
+    });
+    const { rerender } = render(
+      <OnlineDeviceSetup connected warpActive={false} />,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "online.features.title" }),
+    ).toBeInTheDocument();
+    expect(mockSettings).toHaveBeenCalledOnce();
+    expect(mockBackupStatus).toHaveBeenCalledOnce();
+
+    rerender(<OnlineDeviceSetup connected={false} warpActive={false} />);
+
+    expect(
+      screen.getByText("online.deviceLink.disconnected"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "online.features.title" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("should offer linking without an inline description", () => {
     render(<OnlineDeviceSetup connected warpActive={false} />);
 

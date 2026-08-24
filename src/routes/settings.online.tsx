@@ -327,7 +327,8 @@ export function OnlinePage() {
     setMfaError(null);
     try {
       await MfaAuthentication.resolveTotpSignIn({ code: mfaCode });
-      await completeSignIn();
+      const signedIn = await completeSignIn();
+      if (!signedIn) return;
       setMfaPending(false);
       setMfaCode("");
     } catch (e) {

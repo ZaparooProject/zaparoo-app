@@ -55,8 +55,9 @@ export function OnlineDeviceSetup({
   );
   const featuresHeadingRef = useRef<HTMLHeadingElement>(null);
   const previousLinkStateRef = useRef(linkState);
-  const linked = linkState === "linked";
-  const featuresPending = linkState === "checking" || linkState === "linking";
+  const linked = connected && linkState === "linked";
+  const featuresPending =
+    connected && (linkState === "checking" || linkState === "linking");
 
   useEffect(() => {
     const becameLinked =
@@ -72,12 +73,12 @@ export function OnlineDeviceSetup({
   const settingsQuery = useQuery({
     queryKey: ["settings", "online"],
     queryFn: () => CoreAPI.settings(),
-    enabled: linked && canWriteCoreSettings,
+    enabled: connected && linked && canWriteCoreSettings,
   });
   const backupStatusQuery = useQuery({
     queryKey: ["settings", "backup", "status"],
     queryFn: () => CoreAPI.settingsBackupStatus(),
-    enabled: linked,
+    enabled: connected && linked,
     refetchInterval: (query) => {
       if (warpActive === true) return false;
       const availability = query.state.data?.remote.availability;
@@ -156,9 +157,8 @@ export function OnlineDeviceSetup({
             description={t("online.deviceLink.help")}
           />
         </div>
-        {connected ? (
-          <DeviceLinkButton enabled onStateChange={setLinkState} />
-        ) : (
+        <DeviceLinkButton enabled={connected} onStateChange={setLinkState} />
+        {!connected && (
           <div className="flex flex-col gap-3">
             <p className="text-muted-foreground text-sm">
               {t("online.deviceLink.disconnected")}

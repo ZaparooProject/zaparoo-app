@@ -1064,6 +1064,25 @@ describe("Settings Online Route", () => {
       });
     });
 
+    it("should preserve the MFA challenge when sign-in has no current user", async () => {
+      mockFirebaseAuth.getCurrentUser.mockResolvedValueOnce({ user: null });
+      const user = await startMfaChallenge();
+
+      await user.type(screen.getByLabelText("online.mfaCode"), "123456");
+      await user.click(
+        screen.getByRole("button", { name: "online.mfaVerify" }),
+      );
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("online.loginFail");
+      });
+      expect(
+        screen.getByRole("heading", { name: "online.mfaTitle" }),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("online.mfaCode")).toHaveValue("123456");
+      expect(mockSetLoggedInUser).not.toHaveBeenCalled();
+    });
+
     it("should keep MFA visible until account setup finishes", async () => {
       let resolveCurrentUser!: (value: {
         user: {
