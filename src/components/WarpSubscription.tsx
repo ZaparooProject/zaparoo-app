@@ -1,6 +1,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/wui/Button";
 import { Segmented } from "@/components/wui/Segmented";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,6 +78,11 @@ function WarpPurchaseModal({
             action === "purchase"
               ? t("online.warp.purchasing")
               : t("online.warp.subscribe")
+          }
+          icon={
+            action === "purchase" ? (
+              <Loader2 size={20} className="animate-spin" />
+            ) : undefined
           }
           onClick={onPurchase}
           disabled={action !== null || !purchaseEnabled}

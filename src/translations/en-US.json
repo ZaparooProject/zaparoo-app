@@ -581,6 +581,8 @@
         "title": "Connected device",
         "description": "Linking adds this device to your account so it can use Online features. Play history sync is free. Linking does not upload play history or backups until you turn them on.",
         "help": "Linking adds this device to your account so it can use Online features. Linking alone does not upload anything. Play history sync and cloud backup must be enabled separately.",
+        "disconnected": "Connect to a Core device before linking it to Zaparoo Online.",
+        "backToSettings": "Back to Settings",
         "link": "Link device",
         "signIn": "Sign in to link this device",
         "checking": "Checking device link...",
@@ -700,7 +702,7 @@
       "emailVerified": "Email verified",
       "saved": "Saved",
       "save": "Save",
-      "continue": "Agree & continue",
+      "continue": "Continue",
       "logout": "Log Out"
     },
     "settings": {
@@ -1022,7 +1024,7 @@
         "preferRemoteWriter": "Prefer connected reader for writing",
         "restorePurchases": "Restore purchases",
         "restoreSuccess": "Purchases have been restored",
-        "restoreNotFound": "No purchases found to restore",
+        "restoreNotFound": "No purchases found. If your store says you already own Pro, tap Unlock Pro to verify ownership.",
         "restoreFail": "Failed to restore purchases",
         "restoreWarpSignIn": "Warp was found. Sign in to Zaparoo Online to finish restoring access.",
         "copyBillingDiagnostics": "Copy billing diagnostics",

@@ -581,6 +581,8 @@
         "title": "연결된 기기",
         "description": "연결하면 이 기기가 계정에 추가되어 Online 기능을 사용할 수 있습니다. 플레이 기록 동기화는 무료입니다. 기능을 켜기 전에는 연결만으로 플레이 기록이나 백업이 업로드되지 않습니다.",
         "help": "연결하면 이 기기가 계정에 추가되어 Online 기능을 사용할 수 있습니다. 연결만으로는 아무것도 업로드되지 않습니다. 플레이 기록 동기화와 클라우드 백업은 별도로 활성화해야 합니다.",
+        "disconnected": "Zaparoo Online에 연결하기 전에 Core 기기에 연결하세요.",
+        "backToSettings": "설정으로 돌아가기",
         "link": "기기 연결",
         "signIn": "이 기기를 연결하려면 로그인",
         "checking": "기기 연결을 확인하는 중...",
@@ -700,7 +702,7 @@
       "emailVerified": "이메일 인증됨",
       "saved": "저장됨",
       "save": "저장",
-      "continue": "동의하고 계속",
+      "continue": "계속",
       "logout": "로그아웃"
     },
     "settings": {
@@ -1019,7 +1021,7 @@
         "preferRemoteWriter": "쓸 때 연결된 리더 우선 사용",
         "restorePurchases": "구매 복원",
         "restoreSuccess": "구매를 복원했습니다",
-        "restoreNotFound": "복원할 구매를 찾을 수 없습니다",
+        "restoreNotFound": "구매 항목을 찾을 수 없습니다. 스토어에 Pro를 이미 소유한 것으로 표시되면 Pro 잠금 해제를 눌러 소유권을 확인하세요.",
         "restoreFail": "구매를 복원하지 못했습니다",
         "restoreWarpSignIn": "Warp를 찾았습니다. Zaparoo Online에 로그인하여 액세스 복원을 완료하세요.",
         "copyBillingDiagnostics": "결제 진단 복사",

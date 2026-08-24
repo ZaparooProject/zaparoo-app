@@ -21,7 +21,8 @@ const PRIVACY_URL = "https://zaparoo.com/privacy";
 
 export function RequirementsModal() {
   const { t, i18n } = useTranslation();
-  const { isOpen, pendingRequirements, close } = useRequirementsStore();
+  const { isOpen, pendingRequirements, close, complete } =
+    useRequirementsStore();
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
 
   // Local checkbox state - NOT live updating
@@ -93,8 +94,8 @@ export function RequirementsModal() {
         // Requirements updated, but modal stays open for email verification
         setStatusMessage({ type: "success", text: t("requirements.saved") });
       } else {
-        // All requirements met, close modal
-        close();
+        // All requirements met, close modal and refresh blocked account data.
+        complete();
       }
     } catch (e) {
       logger.error("Failed to update requirements:", e, {
@@ -196,7 +197,7 @@ export function RequirementsModal() {
         });
 
         if (allPendingMet) {
-          close();
+          complete();
         } else {
           // Update local user state
           setLoggedInUser(result.user);
@@ -224,7 +225,7 @@ export function RequirementsModal() {
     } finally {
       setEmailVerifying(false);
     }
-  }, [close, pendingRequirements, setLoggedInUser, t]);
+  }, [complete, pendingRequirements, setLoggedInUser, t]);
 
   return (
     <SlideModal
@@ -277,7 +278,7 @@ export function RequirementsModal() {
               onCheckedChange={(checked) => setLegalChecked(checked === true)}
               aria-label={t("requirements.legalLabel")}
             />
-            <div className="text-sm leading-tight text-white">
+            <div className="pt-0.5 text-sm leading-tight text-white">
               <Label htmlFor="legal" className="inline leading-tight">
                 {t("requirements.legalPrefix")}
               </Label>
@@ -309,7 +310,7 @@ export function RequirementsModal() {
 
         {/* Age Verification */}
         {needsAge && (
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3">
             <Checkbox
               id="age"
               checked={ageChecked}

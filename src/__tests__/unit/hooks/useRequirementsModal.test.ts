@@ -8,6 +8,7 @@ describe("useRequirementsStore", () => {
     useRequirementsStore.setState({
       isOpen: false,
       pendingRequirements: [],
+      completionRevision: 0,
     });
   });
 
@@ -60,6 +61,39 @@ describe("useRequirementsStore", () => {
     const state = useRequirementsStore.getState();
     expect(state.isOpen).toBe(false);
     expect(state.pendingRequirements).toEqual([]);
+  });
+
+  it("should mark successful completion separately from closing", () => {
+    const { trigger, complete } = useRequirementsStore.getState();
+
+    trigger([
+      {
+        type: "terms_acceptance",
+        description: "Accept terms",
+        endpoint: "/account/requirements",
+      },
+    ]);
+    complete();
+
+    const state = useRequirementsStore.getState();
+    expect(state.isOpen).toBe(false);
+    expect(state.pendingRequirements).toEqual([]);
+    expect(state.completionRevision).toBe(1);
+  });
+
+  it("should not mark ordinary close as successful completion", () => {
+    const { trigger, close } = useRequirementsStore.getState();
+
+    trigger([
+      {
+        type: "terms_acceptance",
+        description: "Accept terms",
+        endpoint: "/account/requirements",
+      },
+    ]);
+    close();
+
+    expect(useRequirementsStore.getState().completionRevision).toBe(0);
   });
 
   it("should replace requirements when triggered multiple times", () => {

@@ -5,6 +5,7 @@ import { Browser } from "@capacitor/browser";
 import { Purchases } from "@revenuecat/purchases-capacitor";
 import type { SubscriptionResponse } from "@/lib/models";
 import { getSubscriptionStatus } from "@/lib/onlineApi";
+import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useStatusStore } from "@/lib/store";
 import {
@@ -109,6 +110,12 @@ export function useWarpSubscription(appUserID: string) {
   );
   const setOnlinePremiumAccess = usePreferencesStore(
     (state) => state.setOnlinePremiumAccess,
+  );
+  const requirementsCompletionRevision = useRequirementsStore(
+    (state) => state.completionRevision,
+  );
+  const previousRequirementsCompletionRevisionRef = useRef(
+    requirementsCompletionRevision,
   );
   const isCurrentIdentity = useCallback(
     () => useStatusStore.getState().loggedInUser?.uid === appUserID,
@@ -268,6 +275,35 @@ export function useWarpSubscription(appUserID: string) {
       if (appStateHandle) void appStateHandle.remove();
     };
   }, [loadAccount]);
+
+  useEffect(() => {
+    const previousRevision = previousRequirementsCompletionRevisionRef.current;
+    previousRequirementsCompletionRevisionRef.current =
+      requirementsCompletionRevision;
+
+    if (
+      requirementsCompletionRevision === previousRevision ||
+      actionRef.current
+    ) {
+      return;
+    }
+
+    accountLoadAbortRef.current?.abort();
+    const loadController = new AbortController();
+    accountLoadAbortRef.current = loadController;
+    void loadAccount(loadController.signal, true).finally(() => {
+      if (accountLoadAbortRef.current === loadController) {
+        accountLoadAbortRef.current = null;
+      }
+    });
+
+    return () => {
+      loadController.abort();
+      if (accountLoadAbortRef.current === loadController) {
+        accountLoadAbortRef.current = null;
+      }
+    };
+  }, [loadAccount, requirementsCompletionRevision]);
 
   const beginAction = useCallback((nextAction: Exclude<WarpAction, null>) => {
     if (actionRef.current) return null;
@@ -477,16 +513,14 @@ export function useWarpSubscription(appUserID: string) {
       assertCurrentAction(controller.signal);
       const access = getPurchaseAccess(result.customerInfo);
       clearCachedPurchaseErrorDiagnostics();
-      if (!access.lifetimePro) {
-        // A clean restore that found no Pro entitlement means the store no
-        // longer backs the earlier "already owned" local fallback either.
-        usePreferencesStore.getState().setStoreVerifiedProAccess(false);
-      }
-      setLifetimeProAccess(access.lifetimePro);
+      const storeVerifiedProAccess =
+        usePreferencesStore.getState().storeVerifiedProAccess;
+      setLifetimeProAccess(access.lifetimePro || storeVerifiedProAccess);
       setRevenueCatWarpActive(access.warp);
 
       logger.log("Purchase restore completed", {
         hasLifetimePro: access.lifetimePro,
+        hasStoreVerifiedPro: storeVerifiedProAccess,
         hasWarp: access.warp,
       });
 
@@ -513,7 +547,7 @@ export function useWarpSubscription(appUserID: string) {
       }
 
       setActivationPending(false);
-      if (access.lifetimePro) return "pro_restored";
+      if (access.lifetimePro || storeVerifiedProAccess) return "pro_restored";
       return "not_found";
     } catch (e) {
       if (!controller.signal.aborted) {

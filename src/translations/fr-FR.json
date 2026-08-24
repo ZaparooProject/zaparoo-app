@@ -581,6 +581,8 @@
         "title": "Appareil connecté",
         "description": "L’association ajoute cet appareil à votre compte pour lui permettre d’utiliser les fonctions Online. La synchronisation de l’historique de jeu est gratuite. L’association ne téléverse ni l’historique de jeu ni les sauvegardes tant que vous ne les activez pas.",
         "help": "L’association ajoute cet appareil à votre compte pour lui permettre d’utiliser les fonctions Online. L’association seule ne téléverse rien. La synchronisation de l’historique de jeu et la sauvegarde cloud doivent être activées séparément.",
+        "disconnected": "Connectez-vous à un appareil Core avant de l’associer à Zaparoo Online.",
+        "backToSettings": "Retour aux paramètres",
         "link": "Associer l’appareil",
         "signIn": "Se connecter pour associer cet appareil",
         "checking": "Vérification de l’association de l’appareil...",
@@ -700,7 +702,7 @@
       "emailVerified": "E-mail vérifié",
       "saved": "Enregistré",
       "save": "Enregistrer",
-      "continue": "Accepter et continuer",
+      "continue": "Continuer",
       "logout": "Se déconnecter"
     },
     "settings": {
@@ -1019,7 +1021,7 @@
         "preferRemoteWriter": "Préférer le lecteur connecté pour l’écriture",
         "restorePurchases": "Restaurer les achats",
         "restoreSuccess": "Achats restaurés",
-        "restoreNotFound": "Aucun achat à restaurer",
+        "restoreNotFound": "Aucun achat trouvé. Si votre boutique indique que vous possédez déjà Pro, touchez Débloquer Pro pour vérifier l’achat.",
         "restoreFail": "Échec de la restauration des achats",
         "restoreWarpSignIn": "Warp a été trouvé. Connectez-vous à Zaparoo Online pour terminer la restauration de l’accès.",
         "copyBillingDiagnostics": "Copier le diagnostic de facturation",

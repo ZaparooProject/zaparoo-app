@@ -116,17 +116,22 @@ describe("release configuration", () => {
       "Android versionCode",
     );
     const nativeReleaseKey = `native:${packageJson.version}+${androidVersionCode}`;
-    const liveReleaseKey = `live:${packageJson.version}-ota.1`;
+    const liveReleaseKeys = [
+      `live:${packageJson.version}-ota.1`,
+      `live:${packageJson.version}-ota.2`,
+    ];
 
     expect(
       WHATS_NEW_ANNOUNCEMENTS.some((announcement) =>
         announcement.releaseKeys.includes(nativeReleaseKey),
       ),
     ).toBe(true);
-    expect(
-      WHATS_NEW_ANNOUNCEMENTS.some((announcement) =>
-        announcement.releaseKeys.includes(liveReleaseKey),
-      ),
-    ).toBe(true);
+    for (const liveReleaseKey of liveReleaseKeys) {
+      expect(
+        WHATS_NEW_ANNOUNCEMENTS.some((announcement) =>
+          announcement.releaseKeys.includes(liveReleaseKey),
+        ),
+      ).toBe(true);
+    }
   });
 });

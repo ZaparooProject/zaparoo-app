@@ -229,9 +229,7 @@ export function AdvancedSettings() {
           </div>
         )}
 
-        {Capacitor.isNativePlatform() && (
-          <PurchaseSupportActions variant="diagnosticsOnly" />
-        )}
+        {Capacitor.isNativePlatform() && <PurchaseSupportActions />}
       </div>
 
       <SlideModal

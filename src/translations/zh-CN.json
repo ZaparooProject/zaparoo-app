@@ -581,6 +581,8 @@
         "title": "已连接的设备",
         "description": "关联后，此设备将添加到您的账户并可使用 Online 功能。游玩历史记录同步免费。在您开启相应功能前，关联操作不会上传游玩历史记录或备份。",
         "help": "关联后，此设备将添加到您的账户并可使用 Online 功能。仅关联设备不会上传任何内容。游玩历史记录同步和云备份必须分别启用。",
+        "disconnected": "请先连接 Core 设备，再将其关联到 Zaparoo Online。",
+        "backToSettings": "返回设置",
         "link": "关联设备",
         "signIn": "登录以关联此设备",
         "checking": "正在检查设备关联...",
@@ -700,7 +702,7 @@
       "emailVerified": "电子邮箱已验证",
       "saved": "已保存",
       "save": "保存",
-      "continue": "同意并继续",
+      "continue": "继续",
       "logout": "退出登录"
     },
     "settings": {
@@ -1019,7 +1021,7 @@
         "preferRemoteWriter": "写入时优先使用已连接的读卡器",
         "restorePurchases": "恢复购买",
         "restoreSuccess": "购买已恢复",
-        "restoreNotFound": "未找到可恢复的购买项目",
+        "restoreNotFound": "未找到购买项目。如果商店显示您已拥有 Pro，请点按“解锁 Pro”以验证所有权。",
         "restoreFail": "购买恢复失败",
         "restoreWarpSignIn": "已找到 Warp。请登录 Zaparoo Online 以完成访问权限恢复。",
         "copyBillingDiagnostics": "复制账单诊断",

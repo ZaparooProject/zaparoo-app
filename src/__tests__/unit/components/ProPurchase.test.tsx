@@ -406,8 +406,8 @@ describe("useProPurchase", () => {
       screen.getByRole("button", { name: "scan.purchaseProUnavailableAction" }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "settings.app.restorePurchases" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", {
         name: "settings.app.copyBillingDiagnostics",
@@ -429,8 +429,8 @@ describe("useProPurchase", () => {
 
     expect(screen.getByText("scan.purchaseProUnavailable")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "settings.app.restorePurchases" }),
+    ).not.toBeInTheDocument();
   });
 
   it("should show error state and report when offerings fail to load", async () => {
@@ -468,11 +468,11 @@ describe("useProPurchase", () => {
       screen.getByRole("button", { name: "scan.purchaseProUnavailableAction" }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "settings.app.restorePurchases" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("should distinguish a store eligibility failure and expose support actions", async () => {
+  it("should distinguish a store eligibility failure and expose diagnostics", async () => {
     const user = userEvent.setup();
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     const { logger } = await import("@/lib/logger");
@@ -507,8 +507,8 @@ describe("useProPurchase", () => {
 
     expect(screen.getByText("scan.purchaseProNotAllowed")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "settings.app.restorePurchases" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", {
         name: "settings.app.copyBillingDiagnostics",
@@ -519,7 +519,7 @@ describe("useProPurchase", () => {
     ).toBeDisabled();
   });
 
-  it("should show fetched package price with purchase and restore actions", async () => {
+  it("should show fetched package price without a duplicate restore action", async () => {
     const user = userEvent.setup();
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     vi.mocked(Purchases.getOfferings).mockResolvedValue(
@@ -540,8 +540,8 @@ describe("useProPurchase", () => {
       screen.getByRole("button", { name: "scan.purchaseProAction" }),
     ).toBeEnabled();
     expect(
-      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "settings.app.restorePurchases" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", {
         name: "settings.app.copyBillingDiagnostics",
@@ -830,7 +830,7 @@ describe("useProPurchase", () => {
     });
   });
 
-  it("should clear the store-verified Pro fallback after a clean restore finds no purchases", async () => {
+  it("should preserve store-verified Pro when RevenueCat restore finds no purchases", async () => {
     const user = userEvent.setup();
     const { usePreferencesStore } = await import("@/lib/preferencesStore");
     usePreferencesStore.setState({
@@ -847,8 +847,8 @@ describe("useProPurchase", () => {
     );
 
     await waitFor(() => {
-      expect(usePreferencesStore.getState().storeVerifiedProAccess).toBe(false);
-      expect(usePreferencesStore.getState().lifetimeProAccess).toBe(false);
+      expect(usePreferencesStore.getState().storeVerifiedProAccess).toBe(true);
+      expect(usePreferencesStore.getState().lifetimeProAccess).toBe(true);
     });
   });
 
@@ -895,6 +895,17 @@ describe("useProPurchase", () => {
         ),
       });
     });
+  });
+
+  it("should put emergency restore below billing diagnostics", () => {
+    render(<PurchaseSupportActions />);
+
+    expect(
+      screen.getAllByRole("button").map((button) => button.textContent),
+    ).toEqual([
+      "settings.app.copyBillingDiagnostics",
+      "settings.app.restorePurchases",
+    ]);
   });
 
   it("should show only the restore action for the restoreOnly variant", () => {

@@ -95,27 +95,6 @@ function getExpectedSignupEmailAuthErrorToken(error: unknown): string | null {
   );
 }
 
-/**
- * Get the primary auth provider from user data
- * Returns 'google', 'apple', 'password', or null
- */
-type AuthProvider = "google" | "apple" | "password";
-
-function getSoleLinkedAuthProvider(
-  providerData: { providerId: string }[] | undefined,
-): AuthProvider | null {
-  const providers = new Set<AuthProvider>();
-  for (const provider of providerData ?? []) {
-    if (provider.providerId === "google.com") providers.add("google");
-    if (provider.providerId === "apple.com") providers.add("apple");
-    if (provider.providerId === "password") providers.add("password");
-  }
-
-  return providers.size === 1
-    ? (providers.values().next().value ?? null)
-    : null;
-}
-
 function hasPasswordProvider(
   providerData: { providerId: string }[] | undefined,
 ): boolean {
@@ -138,10 +117,6 @@ export function OnlinePage() {
   const [onlinePassword, setOnlinePassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mfaPending, setMfaPending] = useState(false);
-  const [pendingAuthProvider, setPendingAuthProvider] =
-    useState<AuthProvider | null>(null);
-  const [sessionAuthProvider, setSessionAuthProvider] =
-    useState<AuthProvider | null>(null);
   const [mfaCode, setMfaCode] = useState("");
   const [mfaError, setMfaError] = useState<string | null>(null);
   const [isMfaVerifying, setIsMfaVerifying] = useState(false);
@@ -224,19 +199,15 @@ export function OnlinePage() {
     return true;
   };
 
-  const handleFirstFactorResult = async (
-    result: MfaSignInResult,
-    provider: AuthProvider,
-  ) => {
+  const handleFirstFactorResult = async (result: MfaSignInResult) => {
     if (result.mfaRequired) {
-      setPendingAuthProvider(provider);
       setMfaPending(true);
       setMfaCode("");
       setMfaError(null);
       return;
     }
 
-    if (await completeSignIn()) setSessionAuthProvider(provider);
+    await completeSignIn();
   };
 
   const handleEmailAuth = async () => {
@@ -279,7 +250,6 @@ export function OnlinePage() {
           }
 
           setLoggedInUser(result.user);
-          setSessionAuthProvider("password");
         } else {
           toast.error(t("online.signUpFail"));
         }
@@ -313,7 +283,7 @@ export function OnlinePage() {
         });
         setOnlinePassword("");
 
-        await handleFirstFactorResult(result, "password");
+        await handleFirstFactorResult(result);
       } catch (e) {
         const error = e as Error;
         if (!isExpectedEmailAuthError(e)) {
@@ -341,7 +311,6 @@ export function OnlinePage() {
       });
     }
     setMfaPending(false);
-    setPendingAuthProvider(null);
     setMfaCode("");
     setMfaError(null);
   };
@@ -358,12 +327,8 @@ export function OnlinePage() {
     setMfaError(null);
     try {
       await MfaAuthentication.resolveTotpSignIn({ code: mfaCode });
-      const signedIn = await completeSignIn();
-      if (signedIn && pendingAuthProvider) {
-        setSessionAuthProvider(pendingAuthProvider);
-      }
+      await completeSignIn();
       setMfaPending(false);
-      setPendingAuthProvider(null);
       setMfaCode("");
     } catch (e) {
       const searchStrings = collectErrorSearchStrings(e);
@@ -394,7 +359,7 @@ export function OnlinePage() {
     setIsLoading(true);
     try {
       const result = await MfaAuthentication.signInWithGoogle();
-      await handleFirstFactorResult(result, "google");
+      await handleFirstFactorResult(result);
     } catch (e) {
       const error = e as Error;
       // Check if user cancelled the login - don't show error toast
@@ -422,7 +387,7 @@ export function OnlinePage() {
     setIsLoading(true);
     try {
       const result = await MfaAuthentication.signInWithApple();
-      await handleFirstFactorResult(result, "apple");
+      await handleFirstFactorResult(result);
     } catch (e) {
       const error = e as Error;
       // Check if user cancelled the login - don't show error toast
@@ -491,7 +456,6 @@ export function OnlinePage() {
     FirebaseAuthentication.signOut()
       .then(() => {
         setLoggedInUser(null);
-        setSessionAuthProvider(null);
         setOnlineEmail("");
         setOnlinePassword("");
       })
@@ -610,37 +574,6 @@ export function OnlinePage() {
               <span className="text-muted-foreground text-sm">
                 {loggedInUser.email}
               </span>
-
-              {/* Auth provider indicator */}
-              {(() => {
-                const provider =
-                  sessionAuthProvider ??
-                  getSoleLinkedAuthProvider(loggedInUser.providerData);
-                if (provider === "google") {
-                  return (
-                    <span className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
-                      <GoogleIcon size="14" />
-                      {t("online.loggedInWithGoogle")}
-                    </span>
-                  );
-                }
-                if (provider === "apple") {
-                  return (
-                    <span className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
-                      <AppleIcon size="14" />
-                      {t("online.loggedInWithApple")}
-                    </span>
-                  );
-                }
-                if (provider === "password") {
-                  return (
-                    <span className="text-muted-foreground mt-1 text-xs">
-                      {t("online.loggedInWithPassword")}
-                    </span>
-                  );
-                }
-                return null;
-              })()}
             </div>
 
             <OnlineDeviceSetup
@@ -848,7 +781,7 @@ export function OnlinePage() {
 
             {/* Age confirmation - only in sign up mode */}
             {isSignUpMode && (
-              <div className="flex items-start gap-3">
+              <div className="flex items-center gap-3">
                 <Checkbox
                   id="age-confirm"
                   checked={ageConfirmed}

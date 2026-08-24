@@ -581,6 +581,8 @@
         "title": "Verbonden apparaat",
         "description": "Door dit apparaat te koppelen, voeg je het toe aan je account zodat het Online-functies kan gebruiken. Synchronisatie van speelgeschiedenis is gratis. Speelgeschiedenis en back-ups worden pas geüpload nadat je ze hebt ingeschakeld.",
         "help": "Door dit apparaat te koppelen, voeg je het toe aan je account zodat het Online-functies kan gebruiken. Alleen koppelen uploadt niets. Synchronisatie van speelgeschiedenis en cloudback-ups moeten afzonderlijk worden ingeschakeld.",
+        "disconnected": "Maak verbinding met een Core-apparaat voordat je het aan Zaparoo Online koppelt.",
+        "backToSettings": "Terug naar Instellingen",
         "link": "Apparaat koppelen",
         "signIn": "Log in om dit apparaat te koppelen",
         "checking": "Apparaatkoppeling controleren...",
@@ -700,7 +702,7 @@
       "emailVerified": "E-mailadres geverifieerd",
       "saved": "Opgeslagen",
       "save": "Opslaan",
-      "continue": "Akkoord en doorgaan",
+      "continue": "Doorgaan",
       "logout": "Uitloggen"
     },
     "settings": {
@@ -1019,7 +1021,7 @@
         "preferRemoteWriter": "Voorkeur voor verbonden lezer bij schrijven",
         "restorePurchases": "Aankopen herstellen",
         "restoreSuccess": "Aankopen zijn hersteld",
-        "restoreNotFound": "Geen aankopen gevonden om te herstellen",
+        "restoreNotFound": "Geen aankopen gevonden. Als je store aangeeft dat je Pro al bezit, tik je op Pro ontgrendelen om het bezit te verifiëren.",
         "restoreFail": "Aankopen herstellen mislukt",
         "restoreWarpSignIn": "Warp is gevonden. Meld je aan bij Zaparoo Online om het herstel van toegang te voltooien.",
         "copyBillingDiagnostics": "Factureringsdiagnose kopiëren",

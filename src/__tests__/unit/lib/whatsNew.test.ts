@@ -120,6 +120,17 @@ describe("whatsNew", () => {
     );
   });
 
+  it("should reuse the 1.13.1 announcement for the 1.13.2 sleeper OTA", () => {
+    const announcement = getWhatsNewAnnouncement("live:1.13.0-ota.2");
+
+    expect(announcement?.id).toBe("release-1.13.1");
+    expect(announcement?.title).toBe("What's new in v1.13.1");
+    expect(announcement?.version).toBe("1.13.2");
+    expect(getReleaseDisplayVersion("live:1.13.0-ota.2", "1.13.0")).toBe(
+      "1.13.2",
+    );
+  });
+
   it("should preserve the native version without a mapped release key", () => {
     expect(getReleaseDisplayVersion(undefined, "1.13.0")).toBe("1.13.0");
     expect(getReleaseDisplayVersion("live:unknown", "1.13.0")).toBe("1.13.0");

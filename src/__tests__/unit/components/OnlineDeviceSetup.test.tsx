@@ -11,12 +11,14 @@ const {
   mockSettings,
   mockSettingsUpdate,
   mockBackupStatus,
+  mockNavigate,
 } = vi.hoisted(() => ({
   mockUseDeviceLinking: vi.fn(),
   mockUseClientCapability: vi.fn(),
   mockSettings: vi.fn(),
   mockSettingsUpdate: vi.fn(),
   mockBackupStatus: vi.fn(),
+  mockNavigate: vi.fn(),
 }));
 
 const signedInUser: User = {
@@ -34,7 +36,7 @@ const signedInUser: User = {
 };
 
 vi.mock("@tanstack/react-router", () => ({
-  useRouter: () => ({ navigate: vi.fn() }),
+  useRouter: () => ({ navigate: mockNavigate }),
 }));
 
 vi.mock("@/hooks/useDeviceLinking", () => ({
@@ -122,6 +124,24 @@ describe("OnlineDeviceSetup", () => {
     );
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("online.deviceLink.help")).toBeInTheDocument();
+    expect(mockSettings).not.toHaveBeenCalled();
+    expect(mockBackupStatus).not.toHaveBeenCalled();
+  });
+
+  it("should explain disconnection and return to Settings", async () => {
+    const user = userEvent.setup();
+    render(<OnlineDeviceSetup connected={false} warpActive={false} />);
+
+    expect(
+      screen.getByText("online.deviceLink.disconnected"),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", {
+        name: "online.deviceLink.backToSettings",
+      }),
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings" });
     expect(mockSettings).not.toHaveBeenCalled();
     expect(mockBackupStatus).not.toHaveBeenCalled();
   });

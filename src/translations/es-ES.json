@@ -581,6 +581,8 @@
         "title": "Dispositivo conectado",
         "description": "Al vincular este dispositivo, se añade a tu cuenta para que pueda usar las funciones Online. La sincronización del historial de juego es gratuita. La vinculación no sube el historial de juego ni copias de seguridad hasta que actives esas funciones.",
         "help": "Al vincular este dispositivo, se añade a tu cuenta para que pueda usar las funciones Online. La vinculación por sí sola no sube nada. La sincronización del historial de juego y las copias de seguridad en la nube deben habilitarse por separado.",
+        "disconnected": "Conéctate a un dispositivo Core antes de vincularlo con Zaparoo Online.",
+        "backToSettings": "Volver a Ajustes",
         "link": "Vincular dispositivo",
         "signIn": "Inicia sesión para vincular este dispositivo",
         "checking": "Comprobando vinculación del dispositivo...",
@@ -700,7 +702,7 @@
       "emailVerified": "Correo electrónico verificado",
       "saved": "Guardado",
       "save": "Guardar",
-      "continue": "Aceptar y continuar",
+      "continue": "Continuar",
       "logout": "Cerrar sesión"
     },
     "settings": {
@@ -1019,7 +1021,7 @@
         "preferRemoteWriter": "Preferir un lector conectado para escribir",
         "restorePurchases": "Restaurar compras",
         "restoreSuccess": "Las compras se han restaurado",
-        "restoreNotFound": "No se encontraron compras para restaurar",
+        "restoreNotFound": "No se encontraron compras. Si tu tienda indica que ya tienes Pro, toca Desbloquear Pro para verificar la compra.",
         "restoreFail": "Fallo al restaurar las compras",
         "restoreWarpSignIn": "Se encontró Warp. Inicia sesión en Zaparoo Online para terminar de restaurar el acceso.",
         "copyBillingDiagnostics": "Copiar diagnóstico de facturación",
