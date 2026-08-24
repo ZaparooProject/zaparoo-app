@@ -44,6 +44,20 @@ Zaparoo App 1.11.2 and newer use Capawesome versioned channels. Each native buil
 
 The old shared `production` channel is only for older installed apps. Never deploy 1.11.2+ web bundles to shared `production`.
 
+### OTA Display Versions
+
+A live update can present a patch version newer than the installed native binary without changing the store release identity. For example, an OTA displayed as 1.13.1 can still target the 1.13.0 build 29 binary:
+
+- Keep `package.json`, `package-lock.json`, Android `versionName`/`versionCode`, and iOS `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` unchanged at 1.13.0 and 29.
+- Keep the versioned channel tied to the native build: `production-29`.
+- Use the technical release key tied to that native version and OTA sequence: `live:1.13.0-ota.1`.
+- Add a separate entry in `WHATS_NEW_ANNOUNCEMENTS` for the displayed OTA version, such as `version: "1.13.1"`, and map only the live release key to it.
+- Keep the native release key, such as `native:1.13.0+29`, mapped to the original native announcement.
+
+The About screen derives its visible OTA version from the announcement mapped to `VITE_RELEASE_KEY`. Without a mapped live release key, it continues to show the native package version.
+
+For later OTAs on the same native build, increment the OTA sequence (`ota.2`, `ota.3`, and so on), add the matching announcement mapping, and update the release validation guard. Do not reuse a release key for different bundle contents.
+
 ### Pushing a Live Update
 
 ```bash

@@ -51,6 +51,7 @@ export const buildWhatsNewAnnouncement = (
   overrides?: Partial<WhatsNewAnnouncement>,
 ): WhatsNewAnnouncement => ({
   id: "release-1.0.1",
+  version: "1.0.1",
   releaseKeys: ["native:1.0.1+2"],
   title: "What's new in test",
   items: ["First test item", "Second test item"],

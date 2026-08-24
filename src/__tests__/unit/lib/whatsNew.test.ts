@@ -3,6 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { LiveUpdate } from "@capawesome/capacitor-live-update";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  getReleaseDisplayVersion,
   getWhatsNewAnnouncement,
   resolveRuntimeReleaseIdentity,
 } from "@/lib/whatsNew";
@@ -95,16 +96,32 @@ describe("whatsNew", () => {
     expect(identity.liveBundleId).toBe("bundle-2026-06-04");
   });
 
-  it("should find the 1.13.0 announcement", () => {
+  it("should find the 1.13.0 native announcement", () => {
     const announcement = getWhatsNewAnnouncement("native:1.13.0+29");
 
     expect(announcement?.id).toBe("release-1.13.0");
+    expect(announcement?.version).toBe("1.13.0");
     expect(announcement?.items).toHaveLength(5);
   });
 
-  it("should find the 1.13.0 announcement for its first live update", () => {
+  it("should find the 1.13.1 announcement for the first live update", () => {
     const announcement = getWhatsNewAnnouncement("live:1.13.0-ota.1");
 
-    expect(announcement?.id).toBe("release-1.13.0");
+    expect(announcement?.id).toBe("release-1.13.1");
+    expect(announcement?.version).toBe("1.13.1");
+    expect(announcement?.items).toContain(
+      "Still having trouble with purchases or restoring purchases? Email support@zaparoo.com or ask for help in the Zaparoo Discord.",
+    );
+  });
+
+  it("should display the OTA version for an injected live release key", () => {
+    expect(getReleaseDisplayVersion("live:1.13.0-ota.1", "1.13.0")).toBe(
+      "1.13.1",
+    );
+  });
+
+  it("should preserve the native version without a mapped release key", () => {
+    expect(getReleaseDisplayVersion(undefined, "1.13.0")).toBe("1.13.0");
+    expect(getReleaseDisplayVersion("live:unknown", "1.13.0")).toBe("1.13.0");
   });
 });

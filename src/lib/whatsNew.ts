@@ -13,6 +13,7 @@ export type RuntimeReleaseIdentity = {
 
 export type WhatsNewAnnouncement = {
   id: string;
+  version: string;
   releaseKeys: string[];
   title: string;
   items: string[];
@@ -21,7 +22,8 @@ export type WhatsNewAnnouncement = {
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
     id: "release-1.13.0",
-    releaseKeys: ["native:1.13.0+29", "live:1.13.0-ota.1"],
+    version: "1.13.0",
+    releaseKeys: ["native:1.13.0+29"],
     title: "What's new in 1.13.0",
     items: [
       "Browse, search, favorite, launch, and write media from the new Library tab.",
@@ -29,6 +31,17 @@ export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
       "Create and manage device profiles, roles, PINs, playtime limits, and profile cards.",
       "Keep saved Core connections working through address changes and App restarts, with clearer connection status.",
       "Get more reliable NFC scanning and writing, plus smoother modals, swipe-back feedback, haptics, and app icon badges.",
+    ],
+  },
+  {
+    id: "release-1.13.1",
+    version: "1.13.1",
+    releaseKeys: ["live:1.13.0-ota.1"],
+    title: "What's new in 1.13.1",
+    items: [
+      "Improved purchase and restore reliability, with clearer billing diagnostics when store access fails.",
+      "Fixed startup, media notification, and Online settings issues reported through production monitoring.",
+      "Still having trouble with purchases or restoring purchases? Email support@zaparoo.com or ask for help in the Zaparoo Discord.",
     ],
   },
 ];
@@ -88,4 +101,12 @@ export function getWhatsNewAnnouncement(
   return WHATS_NEW_ANNOUNCEMENTS.find((announcement) =>
     announcement.releaseKeys.includes(announcementReleaseKey),
   );
+}
+
+export function getReleaseDisplayVersion(
+  releaseKey: string | undefined,
+  nativeVersion: string,
+): string {
+  if (!releaseKey) return nativeVersion;
+  return getWhatsNewAnnouncement(releaseKey)?.version ?? nativeVersion;
 }
