@@ -4,7 +4,10 @@ import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Check } from "lucide-react";
-import { useProPurchase } from "@/components/ProPurchase.tsx";
+import {
+  PurchaseSupportActions,
+  useProPurchase,
+} from "@/components/ProPurchase.tsx";
 import { NetworkScanModal } from "@/components/NetworkScanModal";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useSelectDevice } from "@/hooks/useSelectDevice";
@@ -186,6 +189,10 @@ export function Settings() {
                 />
               )}
             </div>
+          )}
+
+          {Capacitor.isNativePlatform() && (
+            <PurchaseSupportActions variant="restoreOnly" />
           )}
 
           <div className="flex flex-col gap-1">

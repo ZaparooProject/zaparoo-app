@@ -8,7 +8,19 @@ import {
 import {
   isExpectedRevenueCatLogoutError,
   PurchaseIdentityError,
+  type PurchaseErrorDiagnostics,
 } from "@/lib/errors";
+import {
+  cachePurchaseReportContext,
+  getCachedPurchaseErrorDiagnostics,
+  getPurchaseFirebaseUserSuffix,
+} from "@/lib/purchaseReportContext";
+import {
+  resolveRuntimeReleaseIdentity,
+  type RuntimeReleaseIdentity,
+} from "@/lib/whatsNew";
+import { usePreferencesStore } from "@/lib/preferencesStore";
+import { sanitizeLogValue } from "@/lib/logger";
 
 export const PRO_ENTITLEMENT_ID = "tapto_launcher";
 export const PRO_OFFERING_ID = "tapto_basic";
@@ -17,6 +29,15 @@ export const WARP_ENTITLEMENT_ID = "warp";
 export const WARP_OFFERING_ID = "warp";
 export const WARP_MONTHLY_PACKAGE_ID = "$rc_monthly";
 export const WARP_ANNUAL_PACKAGE_ID = "$rc_annual";
+
+const PURCHASES_TIMEOUT_MS = 5_000;
+
+export class PurchasesTimeoutError extends Error {
+  constructor(operation: string) {
+    super(`RevenueCat ${operation} timed out`);
+    this.name = "PurchasesTimeoutError";
+  }
+}
 
 export interface PurchaseAccess {
   lifetimePro: boolean;
@@ -28,17 +49,105 @@ export interface WarpPackages {
   annual: PurchasesPackage;
 }
 
-// Promise executor runs synchronously, so _resolve is always assigned before use.
-let _resolve!: () => void;
+export interface BillingDiagnostics {
+  platform: string;
+  appVersion: string;
+  appBuild: string;
+  releaseKey: string;
+  hasStoreApiKey: boolean;
+  revenueCatAppUserID: string;
+  originalRevenueCatAppUserID: string;
+  firebaseUserSuffix: string;
+  isAnonymous: boolean | null;
+  activeEntitlements: string[];
+  storeVerifiedProAccess: boolean;
+  offeringStatus: "available" | "missing" | "error";
+  offeringDiagnostics: ReturnType<typeof getOfferingDiagnostics> | null;
+  packagePriceString: string | null;
+  lastPurchaseError: PurchaseErrorDiagnostics;
+}
 
-export const purchasesReady: Promise<void> = new Promise<void>((resolve) => {
-  _resolve = resolve;
-});
+// Promise executor runs synchronously, so both callbacks are assigned before use.
+let _resolve!: () => void;
+let _reject!: (reason: unknown) => void;
+let purchasesReadySettled = false;
+
+export const purchasesReady: Promise<void> = new Promise<void>(
+  (resolve, reject) => {
+    _resolve = resolve;
+    _reject = reject;
+  },
+);
+// Native initialization can fail before purchase UI attaches a consumer.
+// This prevents an unhandled rejection without changing what later awaits receive.
+void purchasesReady.catch(() => undefined);
 
 let identityQueue: Promise<void> = Promise.resolve();
 
 export function resolvePurchasesReady(): void {
+  if (purchasesReadySettled) return;
+  purchasesReadySettled = true;
   _resolve();
+}
+
+export function rejectPurchasesReady(error: unknown): void {
+  if (purchasesReadySettled) return;
+  purchasesReadySettled = true;
+  _reject(error);
+}
+
+export async function withPurchasesTimeout<T>(
+  promise: Promise<T>,
+  operation: string,
+  timeoutMs = PURCHASES_TIMEOUT_MS,
+): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(new PurchasesTimeoutError(operation));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
+export async function settlePurchasesReadyAfterConfiguration(
+  configuration: Promise<void>,
+  onTimeout: (error: PurchasesTimeoutError) => void,
+  timeoutMs = PURCHASES_TIMEOUT_MS,
+): Promise<void> {
+  try {
+    try {
+      await withPurchasesTimeout(configuration, "configure", timeoutMs);
+    } catch (error) {
+      if (!(error instanceof PurchasesTimeoutError)) throw error;
+      onTimeout(error);
+      await configuration;
+    }
+
+    resolvePurchasesReady();
+  } catch (error) {
+    rejectPurchasesReady(error);
+    throw error;
+  }
+}
+
+async function getDiagnosticsValue<T>(
+  operation: string,
+  request: () => Promise<T>,
+  fallback: T,
+): Promise<T> {
+  try {
+    return await withPurchasesTimeout(request(), operation);
+  } catch {
+    return fallback;
+  }
 }
 
 export function getPurchaseAccess(customerInfo: CustomerInfo): PurchaseAccess {
@@ -113,10 +222,12 @@ async function syncPurchasesUser(appUserID: string): Promise<CustomerInfo> {
   const current = await Purchases.getAppUserID();
   if (current.appUserID !== appUserID) {
     const result = await Purchases.logIn({ appUserID });
+    cachePurchaseReportContext(result.customerInfo);
     return result.customerInfo;
   }
 
   const result = await Purchases.getCustomerInfo();
+  cachePurchaseReportContext(result.customerInfo);
   return result.customerInfo;
 }
 
@@ -135,6 +246,7 @@ export function resetPurchasesUser(): Promise<CustomerInfo> {
     }
 
     const result = await Purchases.getCustomerInfo();
+    cachePurchaseReportContext(result.customerInfo);
     return result.customerInfo;
   });
 }
@@ -169,6 +281,7 @@ export function runPurchasesOperation<T>(
       : await (async () => {
           await purchasesReady;
           const result = await Purchases.getCustomerInfo();
+          cachePurchaseReportContext(result.customerInfo);
           return result.customerInfo;
         })();
     assertCurrentOperation(options);
@@ -184,4 +297,184 @@ export function runPurchasesOperation<T>(
 
     return result;
   });
+}
+
+export function restorePurchasesForUser(
+  appUserID: string | null,
+): Promise<CustomerInfo> {
+  return runPurchasesOperation(appUserID, async () => {
+    const result = await Purchases.restorePurchases();
+    cachePurchaseReportContext(result.customerInfo);
+    return result.customerInfo;
+  });
+}
+
+/**
+ * Silently reconciles the current store account after checkout has already
+ * confirmed ownership. This avoids another purchase attempt and does not show
+ * an OS sign-in prompt.
+ */
+export function reconcileStorePurchases(
+  appUserID: string | null,
+): Promise<CustomerInfo> {
+  return runPurchasesOperation(appUserID, async () => {
+    await Purchases.syncPurchases();
+    await Purchases.invalidateCustomerInfoCache();
+    const result = await Purchases.getCustomerInfo();
+    cachePurchaseReportContext(result.customerInfo);
+    return result.customerInfo;
+  });
+}
+
+function hasStoreApiKeyConfigured(platform: string): boolean {
+  if (platform === "ios") return Boolean(import.meta.env.VITE_APPLE_STORE_API);
+  if (platform === "android") {
+    return Boolean(import.meta.env.VITE_GOOGLE_STORE_API);
+  }
+  return false;
+}
+
+/**
+ * Gathers a snapshot of purchase state for support diagnostics. Fetches
+ * offerings itself rather than reusing checkout-time state, so it stays off
+ * the checkout path and always reflects the moment the user asked for it.
+ */
+export async function getBillingDiagnostics(
+  firebaseUserID: string | null,
+): Promise<BillingDiagnostics> {
+  const purchasesInitialized = await getDiagnosticsValue(
+    "initialization",
+    async () => {
+      await purchasesReady;
+      return true;
+    },
+    false,
+  );
+
+  const fallbackReleaseIdentity: RuntimeReleaseIdentity = {
+    nativeVersion: import.meta.env.VITE_VERSION || "unknown",
+    nativeBuild: "unknown",
+    liveBundleId: null,
+    releaseKey: import.meta.env.VITE_RELEASE_KEY?.trim() || "unknown",
+  };
+  const [revenueCatAppUserID, customerInfo, isAnonymous, releaseIdentity] =
+    await Promise.all([
+      purchasesInitialized
+        ? getDiagnosticsValue(
+            "getAppUserID",
+            async () => (await Purchases.getAppUserID()).appUserID,
+            "unavailable",
+          )
+        : Promise.resolve("unavailable"),
+      purchasesInitialized
+        ? getDiagnosticsValue(
+            "getCustomerInfo",
+            async () => (await Purchases.getCustomerInfo()).customerInfo,
+            null as CustomerInfo | null,
+          )
+        : Promise.resolve(null),
+      purchasesInitialized
+        ? getDiagnosticsValue(
+            "isAnonymous",
+            async () => (await Purchases.isAnonymous()).isAnonymous,
+            null as boolean | null,
+          )
+        : Promise.resolve(null),
+      getDiagnosticsValue(
+        "releaseIdentity",
+        resolveRuntimeReleaseIdentity,
+        fallbackReleaseIdentity,
+      ),
+    ]);
+  const activeEntitlements = Object.keys(
+    customerInfo?.entitlements?.active ?? {},
+  ).sort();
+
+  if (customerInfo) {
+    cachePurchaseReportContext(customerInfo);
+  }
+
+  let offeringStatus: BillingDiagnostics["offeringStatus"] = "error";
+  let offeringDiagnostics: BillingDiagnostics["offeringDiagnostics"] = null;
+  let packagePriceString: string | null = null;
+  if (purchasesInitialized) {
+    try {
+      const offerings = await withPurchasesTimeout(
+        Purchases.getOfferings(),
+        "getOfferings",
+      );
+      offeringDiagnostics = getOfferingDiagnostics(offerings, PRO_OFFERING_ID);
+      const purchasePackage = getProPackage(offerings);
+      packagePriceString = purchasePackage?.product?.priceString ?? null;
+      offeringStatus = purchasePackage ? "available" : "missing";
+    } catch {
+      // Diagnostics still report everything else when offerings can't load.
+    }
+  }
+
+  const platform = Capacitor.getPlatform();
+
+  return {
+    platform,
+    appVersion: releaseIdentity.nativeVersion,
+    appBuild: releaseIdentity.nativeBuild,
+    releaseKey: releaseIdentity.releaseKey,
+    hasStoreApiKey: hasStoreApiKeyConfigured(platform),
+    revenueCatAppUserID,
+    originalRevenueCatAppUserID:
+      customerInfo?.originalAppUserId || "unavailable",
+    firebaseUserSuffix: getPurchaseFirebaseUserSuffix(firebaseUserID),
+    isAnonymous,
+    activeEntitlements,
+    storeVerifiedProAccess:
+      usePreferencesStore.getState().storeVerifiedProAccess,
+    offeringStatus,
+    offeringDiagnostics,
+    packagePriceString,
+    lastPurchaseError: getCachedPurchaseErrorDiagnostics(),
+  };
+}
+
+export function formatBillingDiagnostics(
+  diagnostics: BillingDiagnostics,
+): string {
+  const underlyingErrorMessage =
+    typeof diagnostics.lastPurchaseError.underlyingErrorMessage === "string"
+      ? String(
+          sanitizeLogValue(
+            diagnostics.lastPurchaseError.underlyingErrorMessage,
+          ),
+        )
+      : undefined;
+
+  return [
+    "Zaparoo billing diagnostics",
+    `App: ${diagnostics.appVersion} (${diagnostics.appBuild})`,
+    `Release: ${diagnostics.releaseKey}`,
+    `Platform: ${diagnostics.platform}`,
+    `Store API key present: ${diagnostics.hasStoreApiKey ? "yes" : "no"}`,
+    `RevenueCat ID: ${diagnostics.revenueCatAppUserID}`,
+    `Original RevenueCat ID: ${diagnostics.originalRevenueCatAppUserID}`,
+    `Firebase UID suffix: ${diagnostics.firebaseUserSuffix}`,
+    `Anonymous: ${diagnostics.isAnonymous === null ? "unknown" : diagnostics.isAnonymous ? "yes" : "no"}`,
+    `Active entitlements: ${diagnostics.activeEntitlements.join(", ") || "none"}`,
+    `Store-verified local Pro fallback: ${diagnostics.storeVerifiedProAccess ? "yes" : "no"}`,
+    `Offering status: ${diagnostics.offeringStatus}`,
+    ...(diagnostics.offeringDiagnostics
+      ? [
+          `Offering found: ${diagnostics.offeringDiagnostics.offeringFound ? "yes" : "no"}`,
+          `Offering packages: ${diagnostics.offeringDiagnostics.packageIdentifiers.join(", ") || "none"}`,
+        ]
+      : []),
+    ...(diagnostics.packagePriceString
+      ? [`Package price: ${diagnostics.packagePriceString}`]
+      : []),
+    ...(Object.keys(diagnostics.lastPurchaseError).length > 0
+      ? [
+          `Last purchase error code: ${diagnostics.lastPurchaseError.code || "unknown"}`,
+          `Last purchase error name: ${diagnostics.lastPurchaseError.readableErrorCode || "unknown"}`,
+          `Last underlying store error: ${underlyingErrorMessage || "unavailable"}`,
+        ]
+      : []),
+  ].join("\n");
 }

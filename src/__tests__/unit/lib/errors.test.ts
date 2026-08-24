@@ -15,8 +15,12 @@ import {
   BarcodePermissionDeniedError,
   BarcodeScanCancelledError,
   RequestCancelledError,
+  PurchaseAlreadyOwnedError,
   PurchaseCancelledError,
+  PurchaseConfigurationError,
+  PurchaseNotAllowedError,
   PurchasePendingError,
+  PurchaseProductUnavailableError,
   PurchaseIdentityError,
   isCancellationError,
   isExpectedEmailAuthError,
@@ -24,6 +28,7 @@ import {
   isNfcError,
   isExpectedNfcError,
   isTransientNfcError,
+  getPurchaseErrorDiagnostics,
   wrapNfcError,
   wrapBarcodeScannerError,
   wrapPurchaseError,
@@ -365,6 +370,11 @@ describe("errors", () => {
         { message: "No current user" },
         { code: "credentials_unavailable" },
         { userInfo: { readableErrorCode: "missing credentials" } },
+        { code: "22", message: "Store error" },
+        {
+          userInfo: { readableErrorCode: "LogOutAnonymousUserError" },
+          message: "Store error",
+        },
       ]) {
         expect(isExpectedRevenueCatLogoutError(error)).toBe(true);
       }
@@ -669,7 +679,7 @@ describe("errors", () => {
       [
         "cancellation readable code",
         {
-          userInfo: { readableErrorCode: "PURCHASE_CANCELLED_ERROR" },
+          userInfo: { readableErrorCode: "PurchaseCancelledError" },
           message: "Store error",
         },
         PurchaseCancelledError,
@@ -687,7 +697,7 @@ describe("errors", () => {
       [
         "pending readable code",
         {
-          userInfo: { readableErrorCode: "PAYMENT_PENDING_ERROR" },
+          userInfo: { readableErrorCode: "PaymentPendingError" },
           message: "Store error",
         },
         PurchasePendingError,
@@ -698,6 +708,93 @@ describe("errors", () => {
         PurchasePendingError,
       ],
       [
+        "already-owned code",
+        { code: "6", message: "Store error" },
+        PurchaseAlreadyOwnedError,
+      ],
+      [
+        "already-owned readable code",
+        {
+          userInfo: { readableErrorCode: "ProductAlreadyPurchasedError" },
+          message: "Store error",
+        },
+        PurchaseAlreadyOwnedError,
+      ],
+      [
+        "already-owned message",
+        { message: "This product is already active for the user." },
+        PurchaseAlreadyOwnedError,
+      ],
+      [
+        "not-allowed code",
+        { code: "3", message: "Store error" },
+        PurchaseNotAllowedError,
+      ],
+      [
+        "not-allowed readable code",
+        {
+          userInfo: { readableErrorCode: "PurchaseNotAllowedError" },
+          message: "Store error",
+        },
+        PurchaseNotAllowedError,
+      ],
+      [
+        "not-allowed message",
+        {
+          message: "The device or user is not allowed to make the purchase.",
+        },
+        PurchaseNotAllowedError,
+      ],
+      [
+        "nested not-allowed code",
+        {
+          message: "Store error",
+          data: { code: 3, readableErrorCode: "PurchaseNotAllowedError" },
+        },
+        PurchaseNotAllowedError,
+      ],
+      [
+        "product-unavailable code",
+        { code: "5", message: "Store error" },
+        PurchaseProductUnavailableError,
+      ],
+      [
+        "product-unavailable readable code",
+        {
+          userInfo: {
+            readableErrorCode: "ProductNotAvailableForPurchaseError",
+          },
+          message: "Store error",
+        },
+        PurchaseProductUnavailableError,
+      ],
+      [
+        "product-unavailable message",
+        { message: "This item is not available in your country." },
+        PurchaseProductUnavailableError,
+      ],
+      [
+        "nested product-unavailable code",
+        {
+          message: "Store error",
+          data: { code: "5" },
+        },
+        PurchaseProductUnavailableError,
+      ],
+      [
+        "configuration code",
+        { code: "23", message: "Store error" },
+        PurchaseConfigurationError,
+      ],
+      [
+        "configuration readable code",
+        {
+          userInfo: { readableErrorCode: "ConfigurationError" },
+          message: "Store error",
+        },
+        PurchaseConfigurationError,
+      ],
+      [
         "identity code",
         { code: "14", message: "Store error" },
         PurchaseIdentityError,
@@ -705,7 +802,7 @@ describe("errors", () => {
       [
         "identity readable code",
         {
-          userInfo: { readableErrorCode: "INVALID_APP_USER_ID_ERROR" },
+          userInfo: { readableErrorCode: "InvalidAppUserIdError" },
           message: "Store error",
         },
         PurchaseIdentityError,
@@ -716,6 +813,50 @@ describe("errors", () => {
         expect(wrapPurchaseError(error)).toBeInstanceOf(type);
       },
     );
+
+    it.each([
+      ["store-problem", "2"],
+      ["invalid-credentials", "11"],
+      ["unknown-backend", "16"],
+    ])(
+      "should fall through unrecognized %s code (%s) to a generic error while keeping the code in diagnostics",
+      (_label, code) => {
+        const error = { code, message: "Store error" };
+        const wrapped = wrapPurchaseError(error);
+
+        expect(wrapped).toBeInstanceOf(Error);
+        expect(wrapped).not.toBeInstanceOf(PurchaseNotAllowedError);
+        expect(wrapped).not.toBeInstanceOf(PurchaseProductUnavailableError);
+        expect(wrapped).not.toBeInstanceOf(PurchaseConfigurationError);
+        expect(wrapped).not.toBeInstanceOf(PurchaseIdentityError);
+        expect(getPurchaseErrorDiagnostics(error).code).toBe(code);
+      },
+    );
+
+    it("should return no diagnostics for a generic error", () => {
+      expect(
+        getPurchaseErrorDiagnostics(new Error("Network unavailable")),
+      ).toEqual({});
+    });
+
+    it("should preserve safe structured RevenueCat diagnostics", () => {
+      expect(
+        getPurchaseErrorDiagnostics({
+          message: "Store error",
+          code: "3",
+          data: {
+            underlyingErrorMessage: "Billing response: not allowed",
+            userInfo: { readableErrorCode: "PurchaseNotAllowedError" },
+          },
+          userCancelled: false,
+        }),
+      ).toEqual({
+        code: "3",
+        readableErrorCode: "PurchaseNotAllowedError",
+        underlyingErrorMessage: "Billing response: not allowed",
+        userCancelled: false,
+      });
+    });
 
     it("should preserve a plain object message in a generic Error", () => {
       const wrapped = wrapPurchaseError({ message: "Store unavailable" });

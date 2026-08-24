@@ -10,6 +10,7 @@
 import Rollbar from "rollbar";
 import { Capacitor } from "@capacitor/core";
 import { isCancellationError } from "./errors";
+import { resolveRuntimeReleaseIdentity } from "./whatsNew";
 
 // Extended list of fields to scrub for PII protection
 const scrubFields = [
@@ -145,13 +146,55 @@ export const rollbarConfig: Rollbar.Configuration = {
 
   // Transform payload before sending - extra safety check for PII
   transform: (payload: Record<string, unknown>) => {
-    // Remove any person data that might have leaked through
     const data = payload.data;
     if (data && typeof data === "object" && !Array.isArray(data)) {
       const dataObj = data as Record<string, unknown>;
-      if ("person" in dataObj) {
-        delete dataObj.person;
+      const custom =
+        dataObj.custom &&
+        typeof dataObj.custom === "object" &&
+        !Array.isArray(dataObj.custom)
+          ? (dataObj.custom as Record<string, unknown>)
+          : null;
+
+      // Remove arbitrary person data, then add only RevenueCat's generated
+      // anonymous alias for billing support correlation. Never forward custom
+      // app user IDs because they may map to an authenticated account.
+      delete dataObj.person;
+      if (
+        custom?.category === "purchase" &&
+        typeof custom.billingSupportProfileID === "string" &&
+        custom.billingSupportProfileID.startsWith("$RCAnonymousID:")
+      ) {
+        dataObj.person = { id: custom.billingSupportProfileID };
       }
+
+      // Native bridge stacks are nearly identical, so default Rollbar grouping
+      // can merge unrelated store errors. Split purchase items by operation and
+      // RevenueCat's stable structured error code.
+      if (
+        custom?.category === "purchase" &&
+        typeof custom.action === "string"
+      ) {
+        const purchaseError =
+          custom.purchaseError &&
+          typeof custom.purchaseError === "object" &&
+          !Array.isArray(custom.purchaseError)
+            ? (custom.purchaseError as Record<string, unknown>)
+            : null;
+        const readableErrorCode =
+          typeof purchaseError?.readableErrorCode === "string"
+            ? purchaseError.readableErrorCode
+            : null;
+        const errorCode =
+          readableErrorCode
+            ?.replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+            .replace(/[^a-zA-Z0-9]+/g, "_")
+            .toUpperCase() ||
+          (typeof purchaseError?.code === "string" && purchaseError.code) ||
+          "unclassified";
+        dataObj.fingerprint = `purchase:${custom.action}:${errorCode}`;
+      }
+
       // Redact request body if present
       const request = dataObj.request;
       if (request && typeof request === "object" && !Array.isArray(request)) {
@@ -219,4 +262,27 @@ export const rollbarConfig: Rollbar.Configuration = {
 
 // Create and export the Rollbar instance
 export const rollbar = new Rollbar(rollbarConfig);
+
+// code_version starts as the native app version (set synchronously above).
+// Once the live-update bundle identity resolves, upgrade it to the full
+// release key so a live-updated bundle can be told apart from the native
+// build it shipped in - otherwise every OTA reports under the same version.
+if (shouldEnable) {
+  void resolveRuntimeReleaseIdentity()
+    .then((identity) => {
+      rollbar.configure({
+        payload: {
+          client: {
+            javascript: {
+              code_version: identity.releaseKey,
+            },
+          },
+        },
+      });
+    })
+    .catch(() => {
+      // Keep the native-version fallback already set at construction.
+    });
+}
+
 export default rollbar;

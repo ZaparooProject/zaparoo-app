@@ -5,6 +5,11 @@ import type {
   PurchasesPackage,
 } from "@revenuecat/purchases-capacitor";
 import type { SubscriptionResponse } from "@/lib/models";
+import {
+  cachePurchaseErrorDiagnostics,
+  clearCachedPurchaseErrorDiagnostics,
+  getCachedPurchaseErrorDiagnostics,
+} from "@/lib/purchaseReportContext";
 
 const {
   mockEnsurePurchasesUser,
@@ -15,6 +20,7 @@ const {
   mockBrowserOpen,
   mockSetLifetimeProAccess,
   mockSetOnlinePremiumAccess,
+  mockSetStoreVerifiedProAccess,
   mockIsNativePlatform,
   mockAddAppListener,
 } = vi.hoisted(() => ({
@@ -26,6 +32,7 @@ const {
   mockBrowserOpen: vi.fn(),
   mockSetLifetimeProAccess: vi.fn(),
   mockSetOnlinePremiumAccess: vi.fn(),
+  mockSetStoreVerifiedProAccess: vi.fn(),
   mockIsNativePlatform: vi.fn(() => true),
   mockAddAppListener: vi.fn(),
 }));
@@ -119,13 +126,17 @@ vi.mock("@/lib/purchasesSetup", () => ({
   },
 }));
 
-vi.mock("@/lib/preferencesStore", () => ({
-  usePreferencesStore: (selector: (state: unknown) => unknown) =>
-    selector({
-      setLifetimeProAccess: mockSetLifetimeProAccess,
-      setOnlinePremiumAccess: mockSetOnlinePremiumAccess,
-    }),
-}));
+vi.mock("@/lib/preferencesStore", () => {
+  const state = {
+    setLifetimeProAccess: mockSetLifetimeProAccess,
+    setOnlinePremiumAccess: mockSetOnlinePremiumAccess,
+    setStoreVerifiedProAccess: mockSetStoreVerifiedProAccess,
+  };
+  const usePreferencesStore = (selector: (state: unknown) => unknown) =>
+    selector(state);
+  usePreferencesStore.getState = () => state;
+  return { usePreferencesStore };
+});
 
 vi.mock("@/lib/store", () => ({
   useStatusStore: {
@@ -148,6 +159,7 @@ import {
 describe("useWarpSubscription", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearCachedPurchaseErrorDiagnostics();
     appStateCallback = null;
     loggedInUserID = "user-123";
     mockIsNativePlatform.mockReturnValue(true);
@@ -167,6 +179,15 @@ describe("useWarpSubscription", () => {
       customerInfo: customerInfo(),
     });
     mockBrowserOpen.mockResolvedValue(undefined);
+  });
+
+  it("should preserve checkout diagnostics during a successful account load", async () => {
+    cachePurchaseErrorDiagnostics({ code: "3" }, "purchasePackage");
+
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(getCachedPurchaseErrorDiagnostics()).toEqual({ code: "3" });
   });
 
   it("should default to annual and purchase its explicit package", async () => {
@@ -208,10 +229,29 @@ describe("useWarpSubscription", () => {
     expect(purchaseResult).toBe("pending");
   });
 
+  it("should preserve prior diagnostics when the user cancels checkout", async () => {
+    cachePurchaseErrorDiagnostics({ code: "3" }, "getOfferings");
+    mockPurchasePackage.mockRejectedValue({
+      code: "1",
+      userInfo: { readableErrorCode: "PurchaseCancelledError" },
+      message: "Purchase cancelled",
+    });
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let purchaseResult: string | undefined;
+    await act(async () => {
+      purchaseResult = await result.current.purchase();
+    });
+
+    expect(purchaseResult).toBe("cancelled");
+    expect(getCachedPurchaseErrorDiagnostics()).toEqual({ code: "3" });
+  });
+
   it("should classify account identity failures", async () => {
     mockPurchasePackage.mockRejectedValue({
       code: "14",
-      userInfo: { readableErrorCode: "INVALID_APP_USER_ID_ERROR" },
+      userInfo: { readableErrorCode: "InvalidAppUserIdError" },
       message: "Invalid app user ID",
     });
     const { result } = renderHook(() => useWarpSubscription("user-123"));
@@ -241,6 +281,7 @@ describe("useWarpSubscription", () => {
     expect(mockRestorePurchases).toHaveBeenCalledOnce();
     expect(result.current.subscription?.is_premium).toBe(false);
     expect(result.current.activationPending).toBe(false);
+    expect(mockSetStoreVerifiedProAccess).toHaveBeenCalledWith(false);
   });
 
   it("should clear stale activation state when checkout offerings return", async () => {

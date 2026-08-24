@@ -7,6 +7,7 @@
 import { Capacitor } from "@capacitor/core";
 import { Device } from "@capacitor/device";
 import { isCancellationError } from "@/lib/errors";
+import { getCachedPurchaseReportContext } from "@/lib/purchaseReportContext";
 import { useStatusStore } from "./store";
 import { isPluginAvailable } from "./capacitorBridge";
 
@@ -316,6 +317,17 @@ export const logger = {
 
     // Prepare custom data for Rollbar (include base context, exclude severity)
     const customData: Record<string, unknown> = buildBaseContext();
+    // Pseudonymous purchase identity and last purchase error are only
+    // relevant, and only attached, to purchase-category reports.
+    if (safeMetadata?.category === "purchase") {
+      Object.assign(
+        customData,
+        sanitizeLogValue(getCachedPurchaseReportContext()) as Record<
+          string,
+          unknown
+        >,
+      );
+    }
     if (safeMetadata) {
       // Copy all metadata except severity (which is used for method selection)
       for (const [key, value] of Object.entries(safeMetadata)) {

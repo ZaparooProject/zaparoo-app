@@ -109,6 +109,11 @@ vi.mock("@/lib/preferencesStore", () => ({
 // Mock ProPurchase component
 const mockSetProPurchaseModalOpen = vi.fn();
 vi.mock("@/components/ProPurchase.tsx", () => ({
+  PurchaseSupportActions: ({ variant }: { variant?: string }) => (
+    <div data-testid="purchase-support-actions" data-variant={variant}>
+      Purchase support
+    </div>
+  ),
   useProPurchase: () => ({
     purchaseModal: null,
     setProPurchaseModalOpen: mockSetProPurchaseModalOpen,
@@ -489,6 +494,29 @@ describe("Settings Index Route", () => {
       expect(onlineLink).toHaveTextContent("online.settingsStatusSignedIn");
       expect(
         screen.queryByRole("button", { name: "scan.purchaseProAction" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should show only the restore action for native purchase support", async () => {
+      const { Capacitor } = await import("@capacitor/core");
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+
+      renderComponent();
+
+      expect(screen.getByTestId("purchase-support-actions")).toHaveAttribute(
+        "data-variant",
+        "restoreOnly",
+      );
+    });
+
+    it("should hide purchase support actions on web", async () => {
+      const { Capacitor } = await import("@capacitor/core");
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+
+      renderComponent();
+
+      expect(
+        screen.queryByTestId("purchase-support-actions"),
       ).not.toBeInTheDocument();
     });
 

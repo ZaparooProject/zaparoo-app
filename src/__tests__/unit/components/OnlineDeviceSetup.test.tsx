@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { User } from "@capacitor-firebase/authentication";
 import { render, screen, waitFor } from "@/test-utils";
+import { ClientCapability } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 
 const {
@@ -89,6 +90,11 @@ describe("OnlineDeviceSetup", () => {
     useStatusStore.setState({
       loggedInUser: signedInUser,
       coreVersion: "2.16.0",
+      currentClient: {
+        paired: true,
+        role: "admin",
+        capabilities: [ClientCapability.SettingsWrite],
+      },
     });
     mockUseDeviceLinking.mockReturnValue({
       state: "unlinked",
@@ -310,6 +316,28 @@ describe("OnlineDeviceSetup", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText("online.features.automaticBackupSummary"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(mockSettings).not.toHaveBeenCalled();
+  });
+
+  it("should reject stale settings capability for a paired member", async () => {
+    mockUseDeviceLinking.mockReturnValue({
+      state: "linked",
+      linkDevice: vi.fn(),
+    });
+    useStatusStore.setState({
+      currentClient: {
+        paired: true,
+        role: "member",
+        capabilities: [ClientCapability.SettingsWrite],
+      },
+    });
+
+    render(<OnlineDeviceSetup connected warpActive={false} />);
+
+    expect(
+      await screen.findByText("online.features.adminRequired"),
     ).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(mockSettings).not.toHaveBeenCalled();

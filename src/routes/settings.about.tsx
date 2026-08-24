@@ -7,6 +7,7 @@ import { Button } from "@/components/wui/Button.tsx";
 import { BackIcon, NextIcon } from "@/lib/images";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
+import { getReleaseDisplayVersion } from "@/lib/whatsNew";
 
 export const Route = createFileRoute("/settings/about")({
   component: About,
@@ -14,6 +15,10 @@ export const Route = createFileRoute("/settings/about")({
 
 export function About() {
   const { t } = useTranslation();
+  const displayVersion = getReleaseDisplayVersion(
+    import.meta.env.VITE_RELEASE_KEY,
+    import.meta.env.VITE_VERSION,
+  );
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(
     t("settings.about.title"),
   );
@@ -42,7 +47,7 @@ export function About() {
           <h2 className="text-2xl font-bold">Zaparoo App</h2>
           <p>
             {t("settings.about.version", {
-              version: import.meta.env.VITE_VERSION,
+              version: displayVersion,
             })}
           </p>
         </div>

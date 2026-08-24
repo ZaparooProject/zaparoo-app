@@ -119,10 +119,13 @@ describe("release configuration", () => {
     const liveReleaseKey = `live:${packageJson.version}-ota.1`;
 
     expect(
-      WHATS_NEW_ANNOUNCEMENTS.some(
-        (announcement) =>
-          announcement.releaseKeys.includes(nativeReleaseKey) &&
-          announcement.releaseKeys.includes(liveReleaseKey),
+      WHATS_NEW_ANNOUNCEMENTS.some((announcement) =>
+        announcement.releaseKeys.includes(nativeReleaseKey),
+      ),
+    ).toBe(true);
+    expect(
+      WHATS_NEW_ANNOUNCEMENTS.some((announcement) =>
+        announcement.releaseKeys.includes(liveReleaseKey),
       ),
     ).toBe(true);
   });

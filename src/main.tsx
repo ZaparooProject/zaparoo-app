@@ -11,7 +11,11 @@ import App from "./App";
 import { ThemeProvider } from "./components/theme-provider";
 import { ErrorComponent } from "./components/ErrorComponent";
 import { logger } from "./lib/logger";
-import { resolvePurchasesReady } from "./lib/purchasesSetup";
+import {
+  rejectPurchasesReady,
+  resolvePurchasesReady,
+  settlePurchasesReadyAfterConfiguration,
+} from "./lib/purchasesSetup";
 
 // Firebase config is optional - auth features will be disabled without it
 const firebaseConfigs = import.meta.glob<Record<string, string>>(
@@ -52,23 +56,48 @@ const initializePurchasesOnce = async () => {
       });
     }
 
-    if (Capacitor.getPlatform() === "ios") {
-      await Purchases.configure({
-        apiKey: import.meta.env.VITE_APPLE_STORE_API,
-      });
-    } else if (Capacitor.getPlatform() === "android") {
-      await Purchases.configure({
-        apiKey: import.meta.env.VITE_GOOGLE_STORE_API,
-      });
+    const platform = Capacitor.getPlatform();
+    const apiKey =
+      platform === "ios"
+        ? import.meta.env.VITE_APPLE_STORE_API
+        : platform === "android"
+          ? import.meta.env.VITE_GOOGLE_STORE_API
+          : undefined;
+
+    if (!apiKey) {
+      // A bundle built without the RevenueCat key (e.g. a local live-update
+      // build missing .env) would otherwise configure with an empty key and
+      // silently break every purchase on this build. Fail loudly instead.
+      throw new Error(
+        `RevenueCat API key is missing for platform "${platform}"`,
+      );
+    }
+
+    if (platform === "ios" || platform === "android") {
+      await settlePurchasesReadyAfterConfiguration(
+        Purchases.configure({ apiKey }),
+        (error) => {
+          logger.error(
+            "Purchases configure timed out; waiting for completion:",
+            error,
+            {
+              category: "purchase",
+              action: "configure",
+              severity: "warning",
+            },
+          );
+        },
+      );
+    } else {
+      resolvePurchasesReady();
     }
   } catch (e) {
+    rejectPurchasesReady(e);
     logger.error("Purchases configure failed:", e, {
       category: "purchase",
       action: "configure",
       severity: "error",
     });
-  } finally {
-    resolvePurchasesReady();
   }
 };
 

@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, waitFor } from "@/test-utils";
+import { act, renderHook, waitFor } from "@/test-utils";
 import { useProAccessCheck } from "@/hooks/useProAccessCheck";
 
 // Create hoisted mocks
@@ -106,6 +106,7 @@ describe("useProAccessCheck", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.resetAllMocks();
   });
 
@@ -247,6 +248,30 @@ describe("useProAccessCheck", () => {
 
       // Should NOT update lifetime Pro access (preserves cached value)
       expect(mockSetLifetimeProAccess).not.toHaveBeenCalled();
+    });
+
+    it("should preserve cached access and finish hydration when RevenueCat hangs", async () => {
+      vi.useFakeTimers();
+      mockGetCustomerInfo.mockReturnValue(new Promise(() => undefined));
+
+      renderHook(() => useProAccessCheck());
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_000);
+      });
+
+      expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
+      expect(mockSetLifetimeProAccess).not.toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        "Pro access hydration timed out",
+        {
+          category: "purchase",
+          action: "proAccessCheck",
+          severity: "warning",
+          timeoutMs: 5_000,
+          stage: "customerInfo",
+        },
+      );
     });
   });
 
