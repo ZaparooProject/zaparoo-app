@@ -301,6 +301,26 @@ describe("purchasesSetup", () => {
     ).toContain("Last underlying store error: FEATURE_NOT_SUPPORTED");
   });
 
+  it("should redact sensitive values from copied underlying store errors", async () => {
+    const diagnostics = await getBillingDiagnostics(null);
+    const formatted = formatBillingDiagnostics({
+      ...diagnostics,
+      lastPurchaseError: {
+        code: "3",
+        readableErrorCode: "PurchaseNotAllowedError",
+        underlyingErrorMessage:
+          "Store request failed at https://example.com?access_token=private-value",
+      },
+    });
+
+    expect(formatted).toContain("Last purchase error code: 3");
+    expect(formatted).toContain(
+      "Last purchase error name: PurchaseNotAllowedError",
+    );
+    expect(formatted).toContain("access_token=[REDACTED]");
+    expect(formatted).not.toContain("private-value");
+  });
+
   it("should report unavailable offerings without a store API key", async () => {
     mockGetOfferings.mockResolvedValue({ current: null, all: {} });
     vi.stubEnv("VITE_GOOGLE_STORE_API", "");

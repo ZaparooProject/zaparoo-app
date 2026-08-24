@@ -13,7 +13,7 @@ import { ErrorComponent } from "./components/ErrorComponent";
 import { logger } from "./lib/logger";
 import {
   resolvePurchasesReady,
-  withPurchasesTimeout,
+  resolvePurchasesReadyAfterConfiguration,
 } from "./lib/purchasesSetup";
 
 // Firebase config is optional - auth features will be disabled without it
@@ -73,7 +73,22 @@ const initializePurchasesOnce = async () => {
     }
 
     if (platform === "ios" || platform === "android") {
-      await withPurchasesTimeout(Purchases.configure({ apiKey }), "configure");
+      await resolvePurchasesReadyAfterConfiguration(
+        Purchases.configure({ apiKey }),
+        (error) => {
+          logger.error(
+            "Purchases configure timed out; waiting for completion:",
+            error,
+            {
+              category: "purchase",
+              action: "configure",
+              severity: "warning",
+            },
+          );
+        },
+      );
+    } else {
+      resolvePurchasesReady();
     }
   } catch (e) {
     logger.error("Purchases configure failed:", e, {
@@ -81,8 +96,6 @@ const initializePurchasesOnce = async () => {
       action: "configure",
       severity: "error",
     });
-  } finally {
-    resolvePurchasesReady();
   }
 };
 

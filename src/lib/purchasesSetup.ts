@@ -20,6 +20,7 @@ import {
   type RuntimeReleaseIdentity,
 } from "@/lib/whatsNew";
 import { usePreferencesStore } from "@/lib/preferencesStore";
+import { sanitizeLogValue } from "@/lib/logger";
 
 export const PRO_ENTITLEMENT_ID = "tapto_launcher";
 export const PRO_OFFERING_ID = "tapto_basic";
@@ -30,6 +31,13 @@ export const WARP_MONTHLY_PACKAGE_ID = "$rc_monthly";
 export const WARP_ANNUAL_PACKAGE_ID = "$rc_annual";
 
 const PURCHASES_TIMEOUT_MS = 5_000;
+
+export class PurchasesTimeoutError extends Error {
+  constructor(operation: string) {
+    super(`RevenueCat ${operation} timed out`);
+    this.name = "PurchasesTimeoutError";
+  }
+}
 
 export interface PurchaseAccess {
   lifetimePro: boolean;
@@ -84,13 +92,29 @@ export async function withPurchasesTimeout<T>(
       promise,
       new Promise<never>((_, reject) => {
         timeout = setTimeout(() => {
-          reject(new Error(`RevenueCat ${operation} timed out`));
+          reject(new PurchasesTimeoutError(operation));
         }, timeoutMs);
       }),
     ]);
   } finally {
     if (timeout) clearTimeout(timeout);
   }
+}
+
+export async function resolvePurchasesReadyAfterConfiguration(
+  configuration: Promise<void>,
+  onTimeout: (error: PurchasesTimeoutError) => void,
+  timeoutMs = PURCHASES_TIMEOUT_MS,
+): Promise<void> {
+  try {
+    await withPurchasesTimeout(configuration, "configure", timeoutMs);
+  } catch (error) {
+    if (!(error instanceof PurchasesTimeoutError)) throw error;
+    onTimeout(error);
+    await configuration;
+  }
+
+  resolvePurchasesReady();
 }
 
 async function getDiagnosticsValue<T>(
@@ -297,7 +321,14 @@ function hasStoreApiKeyConfigured(platform: string): boolean {
 export async function getBillingDiagnostics(
   firebaseUserID: string | null,
 ): Promise<BillingDiagnostics> {
-  await getDiagnosticsValue("initialization", () => purchasesReady, undefined);
+  const purchasesInitialized = await getDiagnosticsValue(
+    "initialization",
+    async () => {
+      await purchasesReady;
+      return true;
+    },
+    false,
+  );
 
   const fallbackReleaseIdentity: RuntimeReleaseIdentity = {
     nativeVersion: import.meta.env.VITE_VERSION || "unknown",
@@ -307,21 +338,27 @@ export async function getBillingDiagnostics(
   };
   const [revenueCatAppUserID, customerInfo, isAnonymous, releaseIdentity] =
     await Promise.all([
-      getDiagnosticsValue(
-        "getAppUserID",
-        async () => (await Purchases.getAppUserID()).appUserID,
-        "unavailable",
-      ),
-      getDiagnosticsValue(
-        "getCustomerInfo",
-        async () => (await Purchases.getCustomerInfo()).customerInfo,
-        null as CustomerInfo | null,
-      ),
-      getDiagnosticsValue(
-        "isAnonymous",
-        async () => (await Purchases.isAnonymous()).isAnonymous,
-        null as boolean | null,
-      ),
+      purchasesInitialized
+        ? getDiagnosticsValue(
+            "getAppUserID",
+            async () => (await Purchases.getAppUserID()).appUserID,
+            "unavailable",
+          )
+        : Promise.resolve("unavailable"),
+      purchasesInitialized
+        ? getDiagnosticsValue(
+            "getCustomerInfo",
+            async () => (await Purchases.getCustomerInfo()).customerInfo,
+            null as CustomerInfo | null,
+          )
+        : Promise.resolve(null),
+      purchasesInitialized
+        ? getDiagnosticsValue(
+            "isAnonymous",
+            async () => (await Purchases.isAnonymous()).isAnonymous,
+            null as boolean | null,
+          )
+        : Promise.resolve(null),
       getDiagnosticsValue(
         "releaseIdentity",
         resolveRuntimeReleaseIdentity,
@@ -339,17 +376,19 @@ export async function getBillingDiagnostics(
   let offeringStatus: BillingDiagnostics["offeringStatus"] = "error";
   let offeringDiagnostics: BillingDiagnostics["offeringDiagnostics"] = null;
   let packagePriceString: string | null = null;
-  try {
-    const offerings = await withPurchasesTimeout(
-      Purchases.getOfferings(),
-      "getOfferings",
-    );
-    offeringDiagnostics = getOfferingDiagnostics(offerings, PRO_OFFERING_ID);
-    const purchasePackage = getProPackage(offerings);
-    packagePriceString = purchasePackage?.product?.priceString ?? null;
-    offeringStatus = purchasePackage ? "available" : "missing";
-  } catch {
-    // Diagnostics still report everything else when offerings can't load.
+  if (purchasesInitialized) {
+    try {
+      const offerings = await withPurchasesTimeout(
+        Purchases.getOfferings(),
+        "getOfferings",
+      );
+      offeringDiagnostics = getOfferingDiagnostics(offerings, PRO_OFFERING_ID);
+      const purchasePackage = getProPackage(offerings);
+      packagePriceString = purchasePackage?.product?.priceString ?? null;
+      offeringStatus = purchasePackage ? "available" : "missing";
+    } catch {
+      // Diagnostics still report everything else when offerings can't load.
+    }
   }
 
   const platform = Capacitor.getPlatform();
@@ -378,6 +417,15 @@ export async function getBillingDiagnostics(
 export function formatBillingDiagnostics(
   diagnostics: BillingDiagnostics,
 ): string {
+  const underlyingErrorMessage =
+    typeof diagnostics.lastPurchaseError.underlyingErrorMessage === "string"
+      ? String(
+          sanitizeLogValue(
+            diagnostics.lastPurchaseError.underlyingErrorMessage,
+          ),
+        )
+      : undefined;
+
   return [
     "Zaparoo billing diagnostics",
     `App: ${diagnostics.appVersion} (${diagnostics.appBuild})`,
@@ -404,7 +452,7 @@ export function formatBillingDiagnostics(
       ? [
           `Last purchase error code: ${diagnostics.lastPurchaseError.code || "unknown"}`,
           `Last purchase error name: ${diagnostics.lastPurchaseError.readableErrorCode || "unknown"}`,
-          `Last underlying store error: ${diagnostics.lastPurchaseError.underlyingErrorMessage || "unavailable"}`,
+          `Last underlying store error: ${underlyingErrorMessage || "unavailable"}`,
         ]
       : []),
   ].join("\n");
