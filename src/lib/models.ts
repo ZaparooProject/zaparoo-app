@@ -723,10 +723,23 @@ export interface SubscriptionResponse {
   revenuecat?: RevenueCatSubscriptionInfo | null;
 }
 
+/**
+ * Where a sign-up came from. The API records it once, within an hour of the
+ * account being created, and bounds every value to a short tag; the App
+ * sends its own name and platform, nothing about the person or device.
+ */
+export interface SignupAttribution {
+  source?: string;
+  medium?: string;
+  campaign?: string;
+  content?: string;
+}
+
 export interface UpdateRequirementsRequest {
   accept_tos?: boolean;
   accept_privacy?: boolean;
   age_verified?: boolean;
+  signup_attribution?: SignupAttribution;
 }
 
 export interface DeleteAccountResponse {

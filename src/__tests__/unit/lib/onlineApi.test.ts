@@ -298,6 +298,38 @@ describe("onlineApi", () => {
       });
     });
 
+    it("passes signup attribution through unchanged", async () => {
+      mockPost.mockResolvedValue({
+        data: {
+          requirements: {
+            email_verified: false,
+            tos_accepted: true,
+            privacy_accepted: true,
+            age_verified: true,
+          },
+        },
+      });
+
+      const { updateRequirements } = await import("../../../lib/onlineApi");
+      await updateRequirements({
+        accept_tos: true,
+        signup_attribution: {
+          source: "zaparoo-app",
+          medium: "app",
+          content: "ios",
+        },
+      });
+
+      expect(mockPost).toHaveBeenCalledWith("/account/requirements", {
+        accept_tos: true,
+        signup_attribution: {
+          source: "zaparoo-app",
+          medium: "app",
+          content: "ios",
+        },
+      });
+    });
+
     it("should throw error when API call fails", async () => {
       const apiError = new Error("Update failed");
       mockPost.mockRejectedValue(apiError);
