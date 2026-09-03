@@ -37,6 +37,7 @@ import {
   cancelAccountDeletion,
   NotSignedInError,
 } from "@/lib/onlineApi";
+import { signupAttribution } from "@/lib/signupAttribution";
 import {
   MfaAuthentication,
   type MfaSignInResult,
@@ -183,9 +184,13 @@ export function OnlinePage() {
     }
 
     try {
+      // Attribution is recorded by the API only for a brand-new account, so
+      // sending it here covers a Google or Apple sign-up, which arrives on
+      // this same path, and is ignored for an existing account.
       await updateRequirements({
         accept_tos: true,
         accept_privacy: true,
+        signup_attribution: signupAttribution(),
       });
     } catch (e) {
       logger.error("Failed to record terms acceptance:", e, {
@@ -234,11 +239,13 @@ export function OnlinePage() {
 
         if (result.user) {
           // Auto-agree to requirements on signup (includes age verification)
+          // and record that the account was created from the App
           try {
             await updateRequirements({
               accept_tos: true,
               accept_privacy: true,
               age_verified: true,
+              signup_attribution: signupAttribution(),
             });
           } catch (e) {
             logger.error("Failed to record terms acceptance:", e, {

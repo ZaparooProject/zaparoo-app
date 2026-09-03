@@ -906,6 +906,11 @@ describe("Settings Online Route", () => {
           accept_tos: true,
           accept_privacy: true,
           age_verified: true,
+          signup_attribution: {
+            source: "zaparoo-app",
+            medium: "app",
+            content: mockState.platform,
+          },
         });
       });
     });
@@ -1057,6 +1062,11 @@ describe("Settings Online Route", () => {
         expect(mockUpdateRequirements).toHaveBeenCalledWith({
           accept_tos: true,
           accept_privacy: true,
+          signup_attribution: {
+            source: "zaparoo-app",
+            medium: "app",
+            content: mockState.platform,
+          },
         });
         expect(mockSetLoggedInUser).toHaveBeenCalledWith(
           expect.objectContaining({ uid: "test-uid" }),
@@ -1259,6 +1269,11 @@ describe("Settings Online Route", () => {
         expect(mockUpdateRequirements).toHaveBeenCalledWith({
           accept_tos: true,
           accept_privacy: true,
+          signup_attribution: {
+            source: "zaparoo-app",
+            medium: "app",
+            content: mockState.platform,
+          },
         });
       });
     });
@@ -1279,6 +1294,11 @@ describe("Settings Online Route", () => {
         expect(mockUpdateRequirements).toHaveBeenCalledWith({
           accept_tos: true,
           accept_privacy: true,
+          signup_attribution: {
+            source: "zaparoo-app",
+            medium: "app",
+            content: mockState.platform,
+          },
         });
       });
     });
