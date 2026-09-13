@@ -57,6 +57,7 @@ import {
   isCancelled,
   isExpectedMediaDatabaseError,
   isIndexResponse,
+  isMalformedCoreResponseError,
   type NotificationRequest,
 } from "@/lib/coreApi";
 import {
@@ -1444,6 +1445,19 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             }
           })
           .catch((e) => {
+            if (isMalformedCoreResponseError(e)) {
+              // A frame Core truncated or corrupted. A request it answered still
+              // fails through its own caller, so there is nothing to show here,
+              // and the parser message can quote payload contents.
+              logger.error("Malformed Core message", undefined, {
+                category: "api",
+                action: "processReceived",
+                severity: "warning",
+                requestId: e.requestId,
+                dataLength: e.dataLength,
+              });
+              return;
+            }
             logger.error("Error processing message:", e);
             showRateLimitedErrorToast(
               tRef.current("error", { msg: e?.message || "Unknown error" }),
