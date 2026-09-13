@@ -92,12 +92,19 @@ interface ApiRequest {
 }
 
 export class CoreApiError extends Error {
+  /** Stable failure category from `error.data.category` (Core 2.17+). */
+  public readonly category?: string;
+
   constructor(
     message: string,
     public readonly code: number,
+    public readonly data?: unknown,
   ) {
     super(message);
     this.name = "CoreApiError";
+    if (isRecord(data) && typeof data.category === "string") {
+      this.category = data.category;
+    }
   }
 }
 
@@ -499,6 +506,7 @@ function logMediaApiFailure(
 interface ApiError {
   code: number;
   message: string;
+  data?: unknown;
 }
 
 /**
@@ -537,6 +545,95 @@ export function isRequestCancelledError(error: unknown): boolean {
   return /request cancelled|request canceled|connection reset|aborted/i.test(
     message,
   );
+}
+
+/**
+ * Categories Core 2.17+ sends in `error.data.category` when `run` fails.
+ */
+export type RunErrorCategory =
+  | "busy"
+  | "media_not_found"
+  | "disabled"
+  | "invalid_script"
+  | "blocked"
+  | "playtime_limit"
+  | "cancelled"
+  | "timeout"
+  | "unavailable"
+  | "execution_failed";
+
+// Core sends a fixed message per category. Used only when a response carries
+// no data.category.
+const RUN_ERROR_MESSAGE_CATEGORIES: readonly [string, RunErrorCategory][] = [
+  ["a script is already running", "busy"],
+  ["another launch is in progress", "busy"],
+  ["media not found", "media_not_found"],
+  ["zapscript execution is disabled", "disabled"],
+  ["zapscript is invalid", "invalid_script"],
+  ["zapscript exceeds maximum length", "invalid_script"],
+  ["zapscript execution was blocked", "blocked"],
+  ["playtime limit reached", "playtime_limit"],
+  ["request cancelled; anything already started continues", "cancelled"],
+  ["timed out waiting for zapscript to complete", "timeout"],
+  ["service is shutting down", "unavailable"],
+  ["zapscript execution failed", "execution_failed"],
+];
+
+// Outcomes caused by the script, device settings, or device state rather than
+// an App or Core defect. timeout and execution_failed stay reportable.
+const EXPECTED_RUN_ERROR_CATEGORIES: ReadonlySet<string> = new Set([
+  "busy",
+  "media_not_found",
+  "disabled",
+  "invalid_script",
+  "blocked",
+  "playtime_limit",
+  "cancelled",
+  "unavailable",
+] satisfies RunErrorCategory[]);
+
+export function getRunErrorCategory(error: unknown): string | null {
+  if (!(error instanceof CoreApiError)) return null;
+  if (error.category) return error.category;
+  const message = error.message.trim().toLowerCase();
+  const match = RUN_ERROR_MESSAGE_CATEGORIES.find(([prefix]) =>
+    message.startsWith(prefix),
+  );
+  return match?.[1] ?? null;
+}
+
+export function isExpectedRunError(error: unknown): boolean {
+  const category = getRunErrorCategory(error);
+  return category !== null && EXPECTED_RUN_ERROR_CATEGORIES.has(category);
+}
+
+/**
+ * Log a failed `CoreAPI.run` call. Expected script, settings, and device
+ * state outcomes stay out of error reporting; anything else is reported as a
+ * warning with the Core category attached.
+ */
+export function logRunFailure(
+  label: string,
+  error: unknown,
+  metadata: { action: string } & Record<string, unknown>,
+): void {
+  if (isRequestCancelledError(error)) {
+    logger.debug(label, error);
+    return;
+  }
+
+  const runErrorCategory = getRunErrorCategory(error) ?? undefined;
+  const context = {
+    ...metadata,
+    category: "api" as const,
+    severity: "warning" as const,
+    runErrorCategory,
+  };
+  if (isExpectedRunError(error)) {
+    logger.warn(label, error, context);
+    return;
+  }
+  logger.error(label, error, context);
 }
 
 interface ApiResponse {
@@ -1102,7 +1199,9 @@ class CoreApi {
         }
 
         if (res.error) {
-          promise.reject(new CoreApiError(res.error.message, res.error.code));
+          promise.reject(
+            new CoreApiError(res.error.message, res.error.code, res.error.data),
+          );
           delete this.responsePool[res.id];
 
           // Clear pendingWriteId if this error response is for the pending write
@@ -1180,11 +1279,9 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          if (isRequestCancelledError(error)) {
-            logger.debug("Run API call cancelled:", error);
-          } else {
-            logger.error("Run API call failed:", error);
-          }
+          // Every caller reports run failures with its own context, so
+          // reporting here would duplicate each failure.
+          logger.debug("Run API call failed:", error);
           reject(error);
         });
     });

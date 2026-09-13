@@ -1,9 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, within } from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { useStatusStore } from "@/lib/store";
+import { CoreAPI, CoreApiError } from "@/lib/coreApi";
+import { logger } from "@/lib/logger";
 import { act } from "@testing-library/react";
+import toast from "react-hot-toast";
 
 // Mock Browser plugin
 vi.mock("@capacitor/browser", () => ({
@@ -248,6 +251,94 @@ describe("ZapScriptInput", () => {
         name: "create.custom.runZapScript",
       });
       expect(runButton).toBeDisabled();
+    });
+
+    describe("Core run failures", () => {
+      const send = vi.fn();
+
+      beforeEach(() => {
+        CoreAPI.setWsInstance({ isConnected: true, send });
+        send.mockClear();
+      });
+
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      const runAndFail = async (error: { message: string; data?: unknown }) => {
+        const user = userEvent.setup();
+        render(
+          <ZapScriptInput
+            value="**launch.search:snes/mario"
+            setValue={vi.fn()}
+            showPalette={true}
+          />,
+        );
+        await user.click(
+          screen.getByRole("button", { name: "create.custom.runZapScript" }),
+        );
+        const request = send.mock.calls
+          .map(([payload]) => JSON.parse(payload as string))
+          .find((sent) => sent.method === "run");
+        await act(async () => {
+          await CoreAPI.processReceived({
+            data: JSON.stringify({
+              jsonrpc: "2.0",
+              id: request.id,
+              error: { code: 1, ...error },
+            }),
+          } as MessageEvent);
+        });
+      };
+
+      it("should show the failure toast without reporting expected script outcomes", async () => {
+        const toastError = vi.spyOn(toast, "error");
+        const loggerError = vi.spyOn(logger, "error");
+        const loggerWarn = vi.spyOn(logger, "warn");
+
+        await runAndFail({
+          message: "ZapScript is invalid",
+          data: { category: "invalid_script" },
+        });
+
+        await waitFor(() => {
+          expect(toastError).toHaveBeenCalledWith("create.custom.failMsg");
+        });
+        expect(loggerWarn).toHaveBeenCalledWith(
+          "ZapScript run failed:",
+          expect.any(CoreApiError),
+          expect.objectContaining({
+            action: "runZapScript",
+            runErrorCategory: "invalid_script",
+          }),
+        );
+        expect(loggerError).not.toHaveBeenCalled();
+      });
+
+      it("should report unexpected execution failures once as a warning", async () => {
+        const toastError = vi.spyOn(toast, "error");
+        const loggerError = vi.spyOn(logger, "error");
+
+        await runAndFail({
+          message: "ZapScript execution failed",
+          data: { category: "execution_failed" },
+        });
+
+        await waitFor(() => {
+          expect(toastError).toHaveBeenCalledWith("create.custom.failMsg");
+        });
+        expect(loggerError).toHaveBeenCalledTimes(1);
+        expect(loggerError).toHaveBeenCalledWith(
+          "ZapScript run failed:",
+          expect.any(CoreApiError),
+          expect.objectContaining({
+            category: "api",
+            action: "runZapScript",
+            severity: "warning",
+            runErrorCategory: "execution_failed",
+          }),
+        );
+      });
     });
   });
 

@@ -1,6 +1,6 @@
 import toast from "react-hot-toast";
 import i18n from "@/i18n";
-import { CoreAPI, isRequestCancelledError } from "./coreApi";
+import { CoreAPI, isRequestCancelledError, logRunFailure } from "./coreApi";
 import { TokenResponse } from "./models";
 import { sessionManager } from "./nfc";
 import { logger } from "./logger";
@@ -97,10 +97,8 @@ export const runToken = async (
           });
         } else {
           toast.error(e.message);
-          logger.error("launch error", e, {
-            category: "api",
+          logRunFailure("launch error", e, {
             action: "runToken",
-            severity: "error",
             hasUid: !!uid,
             textPrefix: text.slice(0, 20),
           });
