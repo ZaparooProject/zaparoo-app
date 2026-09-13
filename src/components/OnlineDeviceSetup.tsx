@@ -10,12 +10,18 @@ import { SettingHelp } from "@/components/wui/SettingHelp";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { useClientCapability } from "@/hooks/useClientCapability";
 import type { DeviceLinkState } from "@/hooks/useDeviceLinking";
-import { CoreAPI } from "@/lib/coreApi";
+import { CoreAPI, CoreApiError } from "@/lib/coreApi";
+import {
+  parsedEndpointForRecord,
+  useDeviceRegistry,
+  type DeviceRegistrySnapshot,
+} from "@/lib/devices/deviceRegistry";
 import { logger } from "@/lib/logger";
 import { useStatusStore } from "@/lib/store";
 import {
   ClientCapability,
   type BackupStatusEntry,
+  type ClientsCurrentResponse,
   type UpdateSettingsRequest,
 } from "@/lib/models";
 
@@ -25,6 +31,53 @@ interface OnlineDeviceSetupProps {
 }
 
 const FAST_AVAILABILITY_POLL_COUNT = 3;
+
+// Core's rejections for a client that is neither localhost nor an admin.
+const ONLINE_SETTINGS_PERMISSION_MESSAGES = [
+  "online settings require a local or admin client",
+  "client role does not permit this method",
+] as const;
+
+/**
+ * Whether the active device is dialled over loopback, which Core treats as a
+ * local client.
+ */
+function selectConnectsOverLoopback(snapshot: DeviceRegistrySnapshot): boolean {
+  const record = snapshot.activeRecordId
+    ? snapshot.records[snapshot.activeRecordId]
+    : null;
+  const host = parsedEndpointForRecord(record)?.host ?? "";
+  return (
+    host === "localhost" || host === "::1" || /^127(\.\d{1,3}){3}$/.test(host)
+  );
+}
+
+/**
+ * Core only accepts Online settings writes from localhost or an admin client,
+ * which is narrower than `settings.write`: an unpaired remote client holds that
+ * capability on Core 2.16, as does a legacy client on some Core 2.17 platforms.
+ * Core 2.17+ reports the authority as `access`. Core 2.16 does not, and there
+ * only a paired admin or a loopback connection passes.
+ */
+function canWriteOnlineSettings(
+  client: ClientsCurrentResponse | null,
+  connectsOverLoopback: boolean,
+): boolean {
+  if (!client) return false;
+  if (client.access !== undefined) {
+    return client.access === "localhost" || client.access === "admin";
+  }
+  return client.role === "admin" || connectsOverLoopback;
+}
+
+function isOnlineSettingsPermissionError(error: unknown): boolean {
+  return (
+    error instanceof CoreApiError &&
+    ONLINE_SETTINGS_PERMISSION_MESSAGES.some((message) =>
+      error.message.includes(message),
+    )
+  );
+}
 
 function formatBackupDate(
   value: string | undefined,
@@ -47,9 +100,10 @@ export function OnlineDeviceSetup({
     ClientCapability.SettingsWrite,
   );
   const currentClient = useStatusStore((state) => state.currentClient);
+  const connectsOverLoopback = useDeviceRegistry(selectConnectsOverLoopback);
   const canWriteCoreSettings =
     hasSettingsWriteCapability &&
-    (currentClient?.paired === false || currentClient?.role === "admin");
+    canWriteOnlineSettings(currentClient, connectsOverLoopback);
   const [linkState, setLinkState] = useState<DeviceLinkState>(
     connected ? "checking" : "unavailable",
   );
@@ -99,6 +153,11 @@ export function OnlineDeviceSetup({
       void backupStatusQuery.refetch();
     },
     onError: (error) => {
+      if (isOnlineSettingsPermissionError(error)) {
+        logger.warn("Core rejected Online settings for this client", error);
+        toast.error(t("online.features.adminRequired"));
+        return;
+      }
       logger.error("Failed to update Online device settings", error, {
         category: "api",
         action: "onlineSettings.update",

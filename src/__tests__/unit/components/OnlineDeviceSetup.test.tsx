@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { User } from "@capacitor-firebase/authentication";
+import toast from "react-hot-toast";
 import { render, screen, waitFor } from "@/test-utils";
-import { ClientCapability } from "@/lib/models";
+import { seedActiveDevice } from "@/test-utils/deviceRegistry";
+import { CoreApiError } from "@/lib/coreApi";
+import { logger } from "@/lib/logger";
+import { ClientCapability, type ClientsCurrentResponse } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 
 const {
@@ -47,7 +51,8 @@ vi.mock("@/hooks/useClientCapability", () => ({
   useClientCapability: () => mockUseClientCapability(),
 }));
 
-vi.mock("@/lib/coreApi", () => ({
+vi.mock("@/lib/coreApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/coreApi")>()),
   CoreAPI: {
     settings: () => mockSettings(),
     settingsUpdate: (params: unknown) => mockSettingsUpdate(params),
@@ -56,7 +61,7 @@ vi.mock("@/lib/coreApi", () => ({
 }));
 
 vi.mock("@/lib/logger", () => ({
-  logger: { error: vi.fn() },
+  logger: { error: vi.fn(), warn: vi.fn() },
 }));
 
 vi.mock("react-hot-toast", () => ({
@@ -386,6 +391,203 @@ describe("OnlineDeviceSetup", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(mockSettings).not.toHaveBeenCalled();
+  });
+
+  describe("Online settings authority", () => {
+    const writableClients: [string, ClientsCurrentResponse][] = [
+      [
+        "a localhost client on Core 2.17",
+        {
+          paired: false,
+          role: null,
+          capabilities: [ClientCapability.SettingsWrite],
+          access: "localhost",
+        },
+      ],
+      [
+        "a paired member connected locally on Core 2.17",
+        {
+          paired: true,
+          role: "member",
+          capabilities: [ClientCapability.SettingsWrite],
+          access: "localhost",
+        },
+      ],
+      [
+        "an API-key admin on Core 2.17",
+        {
+          paired: false,
+          role: null,
+          capabilities: [ClientCapability.SettingsWrite],
+          access: "admin",
+        },
+      ],
+      [
+        "a paired admin on Core 2.16",
+        {
+          paired: true,
+          role: "admin",
+          capabilities: [ClientCapability.SettingsWrite],
+        },
+      ],
+    ];
+
+    it.each(writableClients)(
+      "should offer Online settings controls to %s",
+      async (_, client) => {
+        mockUseDeviceLinking.mockReturnValue({
+          state: "linked",
+          linkDevice: vi.fn(),
+        });
+        useStatusStore.setState({ currentClient: client });
+
+        render(<OnlineDeviceSetup connected warpActive={false} />);
+
+        expect(
+          await screen.findByRole("checkbox", {
+            name: "online.features.playHistory",
+          }),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByText("online.features.adminRequired"),
+        ).not.toBeInTheDocument();
+        expect(mockSettings).toHaveBeenCalledOnce();
+      },
+    );
+
+    const readOnlyClients: [string, ClientsCurrentResponse][] = [
+      [
+        "a legacy client holding settings.write on Core 2.17",
+        {
+          paired: false,
+          role: null,
+          capabilities: [ClientCapability.SettingsWrite],
+          access: "legacy",
+        },
+      ],
+      [
+        "a paired admin downgraded to member access on Core 2.17",
+        {
+          paired: true,
+          role: "admin",
+          capabilities: [ClientCapability.SettingsWrite],
+          access: "member",
+        },
+      ],
+      [
+        "an unpaired remote client holding settings.write on Core 2.16",
+        {
+          paired: false,
+          role: null,
+          capabilities: [ClientCapability.SettingsWrite],
+        },
+      ],
+    ];
+
+    it.each(readOnlyClients)(
+      "should show the read-only summary to %s",
+      async (_, client) => {
+        await seedActiveDevice({ address: "192.168.1.100" });
+        mockUseDeviceLinking.mockReturnValue({
+          state: "linked",
+          linkDevice: vi.fn(),
+        });
+        useStatusStore.setState({ currentClient: client });
+
+        render(<OnlineDeviceSetup connected warpActive={false} />);
+
+        expect(
+          await screen.findByText("online.features.adminRequired"),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText("online.features.playHistorySummary"),
+        ).toBeInTheDocument();
+        expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+        expect(mockSettings).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(["localhost", "127.0.0.1", "[::1]"])(
+      "should offer Online settings controls to an unpaired Core 2.16 client dialled at %s",
+      async (address) => {
+        await seedActiveDevice({ address });
+        mockUseDeviceLinking.mockReturnValue({
+          state: "linked",
+          linkDevice: vi.fn(),
+        });
+        useStatusStore.setState({
+          currentClient: {
+            paired: false,
+            role: null,
+            capabilities: [ClientCapability.SettingsWrite],
+          },
+        });
+
+        render(<OnlineDeviceSetup connected warpActive={false} />);
+
+        expect(
+          await screen.findByRole("checkbox", {
+            name: "online.features.playHistory",
+          }),
+        ).toBeInTheDocument();
+      },
+    );
+
+    it("should explain without reporting when Core still rejects the client", async () => {
+      mockUseDeviceLinking.mockReturnValue({
+        state: "linked",
+        linkDevice: vi.fn(),
+      });
+      mockSettingsUpdate.mockRejectedValue(
+        new CoreApiError("online settings require a local or admin client", 1),
+      );
+      const user = userEvent.setup();
+      render(<OnlineDeviceSetup connected warpActive={false} />);
+
+      await user.click(
+        await screen.findByRole("checkbox", {
+          name: "online.features.playHistory",
+        }),
+      );
+
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith(
+          "online.features.adminRequired",
+        ),
+      );
+      expect(logger.error).not.toHaveBeenCalled();
+      expect(toast.error).not.toHaveBeenCalledWith(
+        "online.features.updateFailed",
+      );
+    });
+
+    it("should report an unexpected settings update failure", async () => {
+      mockUseDeviceLinking.mockReturnValue({
+        state: "linked",
+        linkDevice: vi.fn(),
+      });
+      const failure = new CoreApiError("error saving settings", 1);
+      mockSettingsUpdate.mockRejectedValue(failure);
+      const user = userEvent.setup();
+      render(<OnlineDeviceSetup connected warpActive={false} />);
+
+      await user.click(
+        await screen.findByRole("checkbox", {
+          name: "online.features.playHistory",
+        }),
+      );
+
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith(
+          "online.features.updateFailed",
+        ),
+      );
+      expect(logger.error).toHaveBeenCalledWith(
+        "Failed to update Online device settings",
+        failure,
+        expect.objectContaining({ severity: "error" }),
+      );
+    });
   });
 
   it("should show the last successful cloud backup date", async () => {
