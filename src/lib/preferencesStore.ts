@@ -33,29 +33,135 @@ import {
 // useNfcAvailabilityCheck) trigger a persist write with default values,
 // clobbering the stored state (e.g. tourCompleted: true → false).
 let _storageWritesEnabled = false;
+const PREFERENCES_STORAGE_KEY = "app-preferences";
 const PREFERENCE_HYDRATION_MAX_ATTEMPTS = 3;
 const PREFERENCE_HYDRATION_RETRY_DELAY_MS = 250;
 const PREFERENCE_READ_TIMEOUT_MS = 1_500;
+// A read still unanswered this long after it started is presumed lost when the
+// app resumes, so the resume retry starts a fresh one.
+const PREFERENCE_STALE_READ_MS = 10_000;
 let _preferenceHydrationAttempts = 0;
+let _preferenceHydrationStartedAt: number | null = null;
 let _preferenceHydrationRetryTimer: ReturnType<typeof setTimeout> | null = null;
+// True after startup gave up on storage and continued with in-memory defaults,
+// until a later read succeeds.
+let _preferencesDegraded = false;
+// Persisted keys changed while degraded. They are newer than anything a late
+// read returns, so they keep their in-memory values when it is merged.
+const _preferenceKeysChangedWhileDegraded = new Set<string>();
+let _preferenceKeysKeptOnRecovery = 0;
+let _latePreferenceReadWatch: Promise<unknown> | null = null;
+
+class PreferenceReadTimeoutError extends Error {
+  constructor() {
+    super("Preferences read timed out");
+    this.name = "PreferenceReadTimeoutError";
+  }
+}
+
+interface PendingPreferenceRead {
+  promise: Promise<{ value: string | null }>;
+  startedAt: number;
+}
+
+// One native read per key. A read that outlives its timeout stays pending so
+// retries and degraded-session recovery reuse its result instead of starting
+// new reads (and discarding the first) while the native bridge is stalled.
+const pendingPreferenceReads = new Map<string, PendingPreferenceRead>();
+
+function forgetPendingPreferenceRead(
+  name: string,
+  read: PendingPreferenceRead["promise"],
+): void {
+  if (pendingPreferenceReads.get(name)?.promise === read) {
+    pendingPreferenceReads.delete(name);
+  }
+}
+
+function readPreference(name: string): PendingPreferenceRead["promise"] {
+  const pending = pendingPreferenceReads.get(name);
+  if (pending) return pending.promise;
+
+  const promise = Preferences.get({ key: name });
+  pendingPreferenceReads.set(name, { promise, startedAt: Date.now() });
+  // A failed read must not be reused; the next attempt starts a fresh one.
+  promise.catch(() => forgetPendingPreferenceRead(name, promise));
+  return promise;
+}
 
 async function getPreferenceWithTimeout(
   name: string,
 ): Promise<{ value: string | null }> {
+  const read = readPreference(name);
   let timeout: ReturnType<typeof setTimeout> | null = null;
 
   try {
-    return await Promise.race([
-      Preferences.get({ key: name }),
+    const result = await Promise.race([
+      read,
       new Promise<never>((_, reject) => {
         timeout = setTimeout(() => {
-          reject(new Error("Preferences read timed out"));
+          reject(new PreferenceReadTimeoutError());
         }, PREFERENCE_READ_TIMEOUT_MS);
       }),
     ]);
+    forgetPendingPreferenceRead(name, read);
+    return result;
   } finally {
     if (timeout) clearTimeout(timeout);
   }
+}
+
+// Merge the timed-out read once it lands instead of waiting for the next
+// launch. Only the degraded session needs this; a normal retry consumes it.
+function recoverWhenPendingPreferenceReadLands(): void {
+  const pending = pendingPreferenceReads.get(PREFERENCES_STORAGE_KEY);
+  if (!pending || _latePreferenceReadWatch === pending.promise) return;
+
+  const watched = pending.promise;
+  _latePreferenceReadWatch = watched;
+  watched.then(
+    () => {
+      if (_latePreferenceReadWatch !== watched) return;
+      _latePreferenceReadWatch = null;
+      if (_preferencesDegraded) void usePreferencesStore.persist.rehydrate();
+    },
+    (error: unknown) => {
+      if (_latePreferenceReadWatch !== watched) return;
+      _latePreferenceReadWatch = null;
+      logger.warn("Late preference read failed", error);
+    },
+  );
+}
+
+/**
+ * Retries storage after startup fell back to in-memory defaults, e.g. when the
+ * app resumes. A recent read that is still in flight is left to finish.
+ */
+export function retryDegradedPreferenceHydration(): void {
+  if (!_preferencesDegraded) return;
+
+  const pending = pendingPreferenceReads.get(PREFERENCES_STORAGE_KEY);
+  if (pending) {
+    if (Date.now() - pending.startedAt < PREFERENCE_STALE_READ_MS) return;
+    pendingPreferenceReads.delete(PREFERENCES_STORAGE_KEY);
+    _latePreferenceReadWatch = null;
+  }
+
+  void usePreferencesStore.persist.rehydrate();
+}
+
+export function __resetPreferenceHydrationForTests(): void {
+  pendingPreferenceReads.clear();
+  if (_preferenceHydrationRetryTimer) {
+    clearTimeout(_preferenceHydrationRetryTimer);
+    _preferenceHydrationRetryTimer = null;
+  }
+  _preferenceHydrationAttempts = 0;
+  _preferenceHydrationStartedAt = null;
+  _preferencesDegraded = false;
+  _preferenceKeysChangedWhileDegraded.clear();
+  _preferenceKeysKeptOnRecovery = 0;
+  _latePreferenceReadWatch = null;
 }
 
 // Custom storage adapter for Capacitor Preferences
@@ -268,6 +374,32 @@ const DEFAULT_PREFERENCES: Omit<
   accessibleLists: false,
 };
 
+function persistedPreferences(state: PreferencesStore) {
+  return {
+    restartScan: state.restartScan,
+    launchOnScan: state.launchOnScan,
+    launcherAccess: state.launcherAccess,
+    storeVerifiedProAccess: state.storeVerifiedProAccess,
+    preferRemoteWriter: state.preferRemoteWriter,
+    shakeEnabled: state.shakeEnabled,
+    shakeMode: state.shakeMode,
+    shakeZapscript: state.shakeZapscript,
+    customText: state.customText,
+    tourCompleted: state.tourCompleted,
+    appReviewCadence: state.appReviewCadence,
+    whatsNewInitialized: state.whatsNewInitialized,
+    lastWhatsNewRuntimeKey: state.lastWhatsNewRuntimeKey,
+    seenWhatsNewAnnouncementIds: state.seenWhatsNewAnnouncementIds,
+    logLevelFilters: state.logLevelFilters,
+    showFilenames: state.showFilenames,
+    systemNameRegion: state.systemNameRegion,
+    appBadgeEnabled: state.appBadgeEnabled,
+    hapticsEnabled: state.hapticsEnabled,
+    textZoomLevel: state.textZoomLevel,
+    accessibleLists: state.accessibleLists,
+  };
+}
+
 export const usePreferencesStore = create<PreferencesStore>()(
   persist(
     (set) => ({
@@ -408,132 +540,173 @@ export const usePreferencesStore = create<PreferencesStore>()(
       setAccessibleLists: (value) => set({ accessibleLists: value }),
     }),
     {
-      name: "app-preferences",
+      name: PREFERENCES_STORAGE_KEY,
       storage: createJSONStorage(() => capacitorPreferencesStorage),
 
       // Only persist preference data, not internal state
-      partialize: (state) => ({
-        restartScan: state.restartScan,
-        launchOnScan: state.launchOnScan,
-        launcherAccess: state.launcherAccess,
-        storeVerifiedProAccess: state.storeVerifiedProAccess,
-        preferRemoteWriter: state.preferRemoteWriter,
-        shakeEnabled: state.shakeEnabled,
-        shakeMode: state.shakeMode,
-        shakeZapscript: state.shakeZapscript,
-        customText: state.customText,
-        tourCompleted: state.tourCompleted,
-        appReviewCadence: state.appReviewCadence,
-        whatsNewInitialized: state.whatsNewInitialized,
-        lastWhatsNewRuntimeKey: state.lastWhatsNewRuntimeKey,
-        seenWhatsNewAnnouncementIds: state.seenWhatsNewAnnouncementIds,
-        logLevelFilters: state.logLevelFilters,
-        showFilenames: state.showFilenames,
-        systemNameRegion: state.systemNameRegion,
-        appBadgeEnabled: state.appBadgeEnabled,
-        hapticsEnabled: state.hapticsEnabled,
-        textZoomLevel: state.textZoomLevel,
-        accessibleLists: state.accessibleLists,
-      }),
+      partialize: persistedPreferences,
 
       // Callback when hydration completes
-      onRehydrateStorage: () => (state, error) => {
-        if (error || !state) {
-          _storageWritesEnabled = false;
-          usePreferencesStore.setState({
-            _preferencesHydrationSucceeded: false,
-          });
-          _preferenceHydrationAttempts += 1;
-          logger.error("Failed to hydrate app preferences", error, {
-            category: "storage",
-            action: "hydratePreferences",
-            severity: "error",
-            attempt: _preferenceHydrationAttempts,
-          });
+      onRehydrateStorage: () => {
+        _preferenceHydrationStartedAt ??= Date.now();
 
-          if (
-            _preferenceHydrationAttempts < PREFERENCE_HYDRATION_MAX_ATTEMPTS
-          ) {
-            if (_preferenceHydrationRetryTimer) {
-              clearTimeout(_preferenceHydrationRetryTimer);
+        return (state, error) => {
+          const elapsedMs = Date.now() - (_preferenceHydrationStartedAt ?? 0);
+
+          if (error || !state) {
+            const timedOut = error instanceof PreferenceReadTimeoutError;
+            _storageWritesEnabled = false;
+
+            if (_preferencesDegraded) {
+              // Already running on defaults and reported; wait for the late
+              // read or the next resume.
+              logger.warn("Degraded preference hydration retry failed", error);
+              if (timedOut) recoverWhenPendingPreferenceReadLands();
+              return;
             }
-            _preferenceHydrationRetryTimer = setTimeout(() => {
-              _preferenceHydrationRetryTimer = null;
-              void usePreferencesStore.persist.rehydrate();
-            }, PREFERENCE_HYDRATION_RETRY_DELAY_MS);
+
+            usePreferencesStore.setState({
+              _preferencesHydrationSucceeded: false,
+            });
+            _preferenceHydrationAttempts += 1;
+
+            if (
+              _preferenceHydrationAttempts < PREFERENCE_HYDRATION_MAX_ATTEMPTS
+            ) {
+              logger.warn(
+                `Preference hydration attempt ${_preferenceHydrationAttempts} failed; retrying`,
+                error,
+              );
+              if (_preferenceHydrationRetryTimer) {
+                clearTimeout(_preferenceHydrationRetryTimer);
+              }
+              _preferenceHydrationRetryTimer = setTimeout(() => {
+                _preferenceHydrationRetryTimer = null;
+                void usePreferencesStore.persist.rehydrate();
+              }, PREFERENCE_HYDRATION_RETRY_DELAY_MS);
+              return;
+            }
+
+            // Device info in the report's base context is absent when the
+            // native bridge had not answered Device.getInfo either.
+            logger.error(
+              "Preference persistence disabled after hydration retries",
+              error,
+              {
+                category: "storage",
+                action: "disablePreferencePersistence",
+                severity: "error",
+                attempts: _preferenceHydrationAttempts,
+                elapsedMs,
+                timedOut,
+              },
+            );
+            // Keep persistence disabled so unread saved data cannot be
+            // replaced by defaults, but let the app start with in-memory
+            // defaults. A timed-out read is merged if it lands later, and a
+            // resume retries storage.
+            _preferencesDegraded = true;
+            _preferenceKeysChangedWhileDegraded.clear();
+            usePreferencesStore.setState({
+              _hasHydrated: true,
+              _preferencesHydrationSucceeded: false,
+            });
+            if (timedOut) recoverWhenPendingPreferenceReadLands();
             return;
           }
 
-          logger.error(
-            "Preference persistence disabled after hydration retries",
-            error,
-            {
-              category: "storage",
-              action: "disablePreferencePersistence",
-              severity: "error",
-              attempts: _preferenceHydrationAttempts,
-            },
-          );
-          // Keep persistence disabled so unread saved data cannot be replaced
-          // by defaults, but let the app start with in-memory defaults. A new
-          // app launch will retry storage from a clean process.
+          const recoveredAfterFallback = _preferencesDegraded;
+          const keysKeptFromDegradedSession = _preferenceKeysKeptOnRecovery;
+          _preferencesDegraded = false;
+          _preferenceKeysChangedWhileDegraded.clear();
+          _preferenceKeysKeptOnRecovery = 0;
+          _preferenceHydrationAttempts = 0;
+          _preferenceHydrationStartedAt = null;
+          if (_preferenceHydrationRetryTimer) {
+            clearTimeout(_preferenceHydrationRetryTimer);
+            _preferenceHydrationRetryTimer = null;
+          }
+          _storageWritesEnabled = true;
+
+          // Initialize sessionManager with hydrated values
+          sessionManager.setShouldRestart(state.restartScan);
+          sessionManager.setLaunchOnScan(state.launchOnScan);
+
+          // Apply text zoom on native platforms
+          if (
+            isNativePluginAvailable("TextZoom") &&
+            state.textZoomLevel !== 1.0
+          ) {
+            TextZoom.set({ value: state.textZoomLevel }).catch(() => {
+              // Silently ignore - text zoom may not be available
+            });
+          }
+
+          // Also writes the merged state, saving changes made while degraded.
           usePreferencesStore.setState({
             _hasHydrated: true,
-            _preferencesHydrationSucceeded: false,
+            _preferencesHydrationSucceeded: true,
           });
-          return;
-        }
 
-        _preferenceHydrationAttempts = 0;
-        if (_preferenceHydrationRetryTimer) {
-          clearTimeout(_preferenceHydrationRetryTimer);
-          _preferenceHydrationRetryTimer = null;
-        }
-        _storageWritesEnabled = true;
-
-        // Initialize sessionManager with hydrated values
-        sessionManager.setShouldRestart(state.restartScan);
-        sessionManager.setLaunchOnScan(state.launchOnScan);
-
-        // Apply text zoom on native platforms
-        if (
-          isNativePluginAvailable("TextZoom") &&
-          state.textZoomLevel !== 1.0
-        ) {
-          TextZoom.set({ value: state.textZoomLevel }).catch(() => {
-            // Silently ignore - text zoom may not be available
-          });
-        }
-
-        usePreferencesStore.setState({
-          _hasHydrated: true,
-          _preferencesHydrationSucceeded: true,
-        });
+          if (recoveredAfterFallback) {
+            logger.error("Recovered app preferences after hydration fallback", {
+              category: "storage",
+              action: "recoverPreferencePersistence",
+              severity: "info",
+              elapsedMs,
+              keysKeptFromDegradedSession,
+            });
+          }
+        };
       },
 
       // Custom merge to prevent race conditions where empty store overwrites saved data
       merge: (persistedState, currentState) => {
         const persisted = (persistedState as Partial<PreferencesState>) || {};
-        return {
+        const merged: PreferencesStore = {
           ...currentState,
           ...persisted,
           appReviewCadence: {
             ...currentState.appReviewCadence,
             ...persisted.appReviewCadence,
           },
+        };
+
+        // Stored values win over defaults, except for settings changed while
+        // the session ran on defaults: those are newer than the late read.
+        _preferenceKeysKeptOnRecovery =
+          _preferenceKeysChangedWhileDegraded.size;
+        for (const key of _preferenceKeysChangedWhileDegraded) {
+          Object.assign(merged, {
+            [key]: currentState[key as keyof PreferencesStore],
+          });
+        }
+
+        // Runtime access checks may already have answered (e.g. when storage
+        // lands after a fallback). The cached launcher access only fills in
+        // while a check is still pending, matching the access setters.
+        const storeVerifiedProAccess = merged.storeVerifiedProAccess === true;
+        const cachedLauncherAccess =
+          persisted.launcherAccess ?? currentState.launcherAccess;
+        const accessCheckPending =
+          currentState.lifetimeProAccess === null ||
+          currentState.onlinePremiumAccess === null;
+
+        return {
+          ...merged,
           // Never persist the hydration flags or runtime-checked values.
           // A store ownership fallback is durable because Google or Apple has
           // already confirmed the non-consumable is owned on this device.
           _hasHydrated: currentState._hasHydrated,
           _proAccessHydrated: currentState._proAccessHydrated,
-          lifetimeProAccess:
-            persisted.storeVerifiedProAccess === true
-              ? true
-              : currentState.lifetimeProAccess,
+          lifetimeProAccess: storeVerifiedProAccess
+            ? true
+            : currentState.lifetimeProAccess,
           launcherAccess:
-            persisted.storeVerifiedProAccess === true
-              ? true
-              : (persisted.launcherAccess ?? currentState.launcherAccess),
+            storeVerifiedProAccess ||
+            currentState.lifetimeProAccess === true ||
+            currentState.onlinePremiumAccess === true ||
+            (accessCheckPending && cachedLauncherAccess),
           onlinePremiumAccess: currentState.onlinePremiumAccess,
           nfcAvailable: currentState.nfcAvailable,
           _nfcAvailabilityHydrated: currentState._nfcAvailabilityHydrated,
@@ -547,6 +720,19 @@ export const usePreferencesStore = create<PreferencesStore>()(
     },
   ),
 );
+
+// Launcher access is derived from runtime checks and merged separately.
+usePreferencesStore.subscribe((state, previousState) => {
+  if (!_preferencesDegraded) return;
+
+  const next = persistedPreferences(state);
+  const previous = persistedPreferences(previousState);
+  for (const key of Object.keys(next) as (keyof typeof next)[]) {
+    if (key !== "launcherAccess" && next[key] !== previous[key]) {
+      _preferenceKeysChangedWhileDegraded.add(key);
+    }
+  }
+});
 
 // Selectors for common use cases
 export const selectAppSettings = (state: PreferencesStore) => ({

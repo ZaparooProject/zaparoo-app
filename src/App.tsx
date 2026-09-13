@@ -39,6 +39,7 @@ import { useProAccessCheck } from "./hooks/useProAccessCheck";
 import { useNfcAvailabilityCheck } from "./hooks/useNfcAvailabilityCheck";
 import { useCameraAvailabilityCheck } from "./hooks/useCameraAvailabilityCheck";
 import { useAccelerometerAvailabilityCheck } from "./hooks/useAccelerometerAvailabilityCheck";
+import { usePreferenceHydrationRecovery } from "./hooks/usePreferenceHydrationRecovery";
 import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
 import { WriteModal } from "./components/WriteModal";
@@ -280,6 +281,7 @@ export default function App() {
   useCameraAvailabilityCheck();
   useAccelerometerAvailabilityCheck();
   useAppReviewPrompt();
+  usePreferenceHydrationRecovery();
 
   const capabilityHydrationReady =
     proAccessHydrated &&
