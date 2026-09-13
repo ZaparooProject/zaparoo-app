@@ -29,6 +29,8 @@ import { ClientCapability, UpdateSettingsRequest } from "@/lib/models.ts";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { handleRadioGroupKeyDown } from "@/lib/radioGroup";
 import { useClientCapability } from "@/hooks/useClientCapability";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { GatedFeature } from "@/components/GatedFeature";
 
 export const Route = createFileRoute("/settings/readers")({
   component: ReadersSettings,
@@ -45,6 +47,7 @@ export function ReadersSettings() {
     ClientCapability.SettingsWrite,
   );
   const [systemPickerOpen, setSystemPickerOpen] = useState(false);
+  const { available: readersAvailable } = useCoreFeature("readers");
 
   // Determine if we're in a loading state (connecting or reconnecting)
   const isConnecting =
@@ -69,7 +72,7 @@ export function ReadersSettings() {
   const { data: readersData, isPending: isReadersPending } = useQuery({
     queryKey: ["readers"],
     queryFn: () => CoreAPI.readers(),
-    enabled: connected,
+    enabled: connected && readersAvailable,
     refetchInterval: 5000,
   });
 
@@ -141,46 +144,48 @@ export function ReadersSettings() {
     >
       <div className="flex flex-col gap-3">
         {/* Readers List */}
-        <div className="py-2">
-          <span className="text-foreground">
-            {t("settings.readers.connectedReaders")}
-          </span>
-          <div className="mt-2 flex flex-col gap-2">
-            {isReadersLoading ? (
-              <span className="text-muted-foreground">{t("loading")}</span>
-            ) : !connected ? (
-              <EmptyState
-                size="compact"
-                title={t("settings.readers.noReadersDetected")}
-              />
-            ) : readersData?.readers && readersData.readers.length > 0 ? (
-              readersData.readers.map((reader) => (
-                <div key={reader.id} className="flex items-center gap-2">
-                  <span
-                    className={classNames(
-                      "h-2 w-2 shrink-0 rounded-full",
-                      reader.connected ? "bg-green-500" : "bg-red-500",
-                    )}
-                    aria-hidden="true"
-                  />
-                  <span className="text-foreground">
-                    {reader.info || reader.id}
-                  </span>
-                  <span className="text-muted-foreground text-sm">
-                    {reader.connected
-                      ? t("scan.connectedHeading")
-                      : t("settings.notConnected")}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <EmptyState
-                size="compact"
-                title={t("settings.readers.noReadersDetected")}
-              />
-            )}
+        <GatedFeature featureId="readers">
+          <div className="py-2">
+            <span className="text-foreground">
+              {t("settings.readers.connectedReaders")}
+            </span>
+            <div className="mt-2 flex flex-col gap-2">
+              {isReadersLoading ? (
+                <span className="text-muted-foreground">{t("loading")}</span>
+              ) : !connected ? (
+                <EmptyState
+                  size="compact"
+                  title={t("settings.readers.noReadersDetected")}
+                />
+              ) : readersData?.readers && readersData.readers.length > 0 ? (
+                readersData.readers.map((reader) => (
+                  <div key={reader.id} className="flex items-center gap-2">
+                    <span
+                      className={classNames(
+                        "h-2 w-2 shrink-0 rounded-full",
+                        reader.connected ? "bg-green-500" : "bg-red-500",
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span className="text-foreground">
+                      {reader.info || reader.id}
+                    </span>
+                    <span className="text-muted-foreground text-sm">
+                      {reader.connected
+                        ? t("scan.connectedHeading")
+                        : t("settings.notConnected")}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <EmptyState
+                  size="compact"
+                  title={t("settings.readers.noReadersDetected")}
+                />
+              )}
+            </div>
           </div>
-        </div>
+        </GatedFeature>
 
         {/* Scan Mode - from Core */}
         <div className="py-2">

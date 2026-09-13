@@ -1186,6 +1186,8 @@
     "features": {
       "requiresCoreVersion": "Erfordert Zaparoo Core v{{version}} oder neuer",
       "inbox": "Benachrichtigungen",
+      "playtimeLimits": "Spielzeitbegrenzungen",
+      "readers": "Angeschlossene Lesegeräte",
       "mediaScrapers": "Scraper",
       "mediaGenerate": "Mediendatenbank-Aktualisierungen",
       "mediaCleanOrphans": "Fehlende Medien bereinigen",

@@ -334,6 +334,26 @@ describe("Settings Play Controls Route", () => {
       });
     });
 
+    it("should hide playtime limits without polling on Core before 2.7.0", async () => {
+      mockCoreState.version = "2.6.0";
+      renderComponent();
+
+      await waitFor(() => {
+        expect(mockSettings).toHaveBeenCalled();
+      });
+      expect(mockPlaytimeLimits).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("heading", {
+          name: "settings.core.playtime.title",
+        }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", {
+          name: "settings.core.launchGuard.title",
+        }),
+      ).toBeInTheDocument();
+    });
+
     it("should call playtime limits API", async () => {
       renderComponent();
 

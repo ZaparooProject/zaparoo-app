@@ -1186,6 +1186,8 @@
     "features": {
       "requiresCoreVersion": "Requires Zaparoo Core v{{version}} or later",
       "inbox": "Notifications",
+      "playtimeLimits": "Playtime limits",
+      "readers": "Device readers",
       "mediaScrapers": "Scraper",
       "mediaGenerate": "Media database updates",
       "mediaCleanOrphans": "Clean missing media",

@@ -1186,6 +1186,8 @@
     "features": {
       "requiresCoreVersion": "Zaparoo Core v{{version}}以降が必要です",
       "inbox": "通知",
+      "playtimeLimits": "プレイ時間制限",
+      "readers": "デバイスのリーダー",
       "mediaScrapers": "スクレイパー",
       "mediaGenerate": "メディアデータベースの更新",
       "mediaCleanOrphans": "存在しないメディアの整理",

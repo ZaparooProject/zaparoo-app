@@ -1186,6 +1186,8 @@
     "features": {
       "requiresCoreVersion": "Vereist Zaparoo Core v{{version}} of nieuwer",
       "inbox": "Meldingen",
+      "playtimeLimits": "Speeltijdlimieten",
+      "readers": "Apparaatlezers",
       "mediaScrapers": "Scraper",
       "mediaGenerate": "Mediadatabase-updates",
       "mediaCleanOrphans": "Ontbrekende media opschonen",
