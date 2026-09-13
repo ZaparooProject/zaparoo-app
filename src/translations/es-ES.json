@@ -70,6 +70,7 @@
       "removeFavorite": "Eliminar de favoritos",
       "updatingFavorite": "Actualizando favorito...",
       "favoriteError": "No se pudo actualizar el favorito",
+      "favoriteNotIndexed": "Solo se pueden marcar como favoritos los elementos de la base de datos multimedia",
       "disconnected": "Conecta un dispositivo para explorar su biblioteca",
       "updateCore": "Actualiza Zaparoo Core para usar la biblioteca",
       "databaseRequired": "Crea una base de datos multimedia para explorar la biblioteca",
@@ -197,7 +198,8 @@
       "formatErrorRetry": "No se pudo formatear esta etiqueta. Inténtalo de nuevo o utiliza otra etiqueta.",
       "verifying": "Verificando etiqueta...",
       "verifyFailed": "La etiqueta no se guardó correctamente",
-      "verifyFailedRetry": "La etiqueta no se guardó correctamente. Acércala al teléfono e inténtalo de nuevo."
+      "verifyFailedRetry": "La etiqueta no se guardó correctamente. Acércala al teléfono e inténtalo de nuevo.",
+      "retapTag": "Etiqueta formateada. Aléjala y vuelve a acercarla al teléfono."
     },
     "toast": {
       "updateDbHeading": "Actualizando base de datos multimedia",
@@ -1184,6 +1186,8 @@
     "features": {
       "requiresCoreVersion": "Requiere Zaparoo Core v{{version}} o posterior",
       "inbox": "Notificaciones",
+      "playtimeLimits": "Límites de tiempo de juego",
+      "readers": "Lectores del dispositivo",
       "mediaScrapers": "Proveedor de metadatos",
       "mediaGenerate": "Actualizaciones de la base de datos multimedia",
       "mediaCleanOrphans": "Limpiar contenido multimedia ausente",
@@ -1267,6 +1271,7 @@
       "connectionError": {
         "encryptionRequired": "Este dispositivo requiere emparejamiento.",
         "credentialsRevoked": "Se perdió el emparejamiento. Vuelve a emparejar el dispositivo.",
+        "handshakeRejected": "Este dispositivo ya no reconoce esta aplicación. Vuelve a emparejar el dispositivo.",
         "unsupportedVersion": "Este dispositivo utiliza una versión de cifrado no compatible."
       },
       "error": {
@@ -1275,6 +1280,8 @@
         "limit_reached": "Demasiados intentos; reinicia el emparejamiento en tu dispositivo",
         "rate_limited": "Demasiadas solicitudes; inténtalo de nuevo en un momento",
         "session_unknown": "No se encontró la sesión de emparejamiento; reinicia el emparejamiento en tu dispositivo",
+        "no_pairing": "No hay ningún PIN activo; inicia el emparejamiento en tu dispositivo para obtener uno nuevo",
+        "too_many_clients": "Hay demasiadas aplicaciones emparejadas; elimina una en tu dispositivo e inténtalo de nuevo",
         "server_hmac_bad": "Fallo en la comprobación de seguridad",
         "malformed": "Fallo en el emparejamiento; inténtalo de nuevo",
         "network": "Error de red; comprueba tu conexión e inténtalo de nuevo",

@@ -10,6 +10,7 @@ import {
   __createMockNfcTag,
 } from "../../../../__mocks__/@capawesome-team/capacitor-nfc";
 import { CoreAPI } from "@/lib/coreApi";
+import { logger } from "@/lib/logger";
 import toast from "react-hot-toast";
 
 // Note: Internal modules (useStatusStore, usePreferencesStore, useNfcWriter)
@@ -367,6 +368,7 @@ describe("useWriteQueueProcessor", () => {
 
     it("should NOT call remote writer API when not connected", async () => {
       // Arrange - NFC not available AND not connected
+      const errorSpy = vi.spyOn(logger, "error");
       usePreferencesStore.setState({ nfcAvailable: false });
       useStatusStore.setState({
         connected: false,
@@ -381,15 +383,85 @@ describe("useWriteQueueProcessor", () => {
       });
 
       // The write is kept alive through the retry ladder (connection may
-      // still be establishing) - run the finite retry ladder to exhaustion
+      // still come up, e.g. on resume) - run the finite ladder to exhaustion
       await act(async () => {
         await vi.runAllTimersAsync();
       });
 
-      // Assert - Should never call the API while disconnected (prevents
-      // timeout on cold start), and surface an error once retries exhaust
+      // Assert - never call the API while disconnected (prevents timeout on
+      // cold start), surface one toast, and don't report the expected outcome
       expect(CoreAPI.hasWriteCapableReader).not.toHaveBeenCalled();
-      expect(toast.error).toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledTimes(1);
+      expect(toast.error).toHaveBeenCalledWith("write.noWriteMethodAvailable");
+      expect(useStatusStore.getState().writeOpen).toBe(false);
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
+    it("should keep retrying while Core is still connecting and write once it connects", async () => {
+      // Arrange - cold start: no local NFC, connection still establishing
+      usePreferencesStore.setState({ nfcAvailable: false });
+      useStatusStore.setState({
+        connected: false,
+        connectionState: ConnectionState.CONNECTING,
+      });
+      vi.mocked(Nfc.isAvailable).mockResolvedValue({ nfc: false, hce: false });
+      vi.mocked(CoreAPI.hasWriteCapableReader).mockResolvedValue(true);
+
+      renderHook(() => useWriteQueueProcessor());
+
+      act(() => {
+        useStatusStore.getState().setWriteQueue("cold-start-content");
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1100);
+      });
+      expect(CoreAPI.hasWriteCapableReader).not.toHaveBeenCalled();
+      expect(toast.error).not.toHaveBeenCalled();
+
+      // Act - the connection comes up before the retries run out
+      act(() => {
+        useStatusStore.setState({
+          connected: true,
+          connectionState: ConnectionState.CONNECTED,
+        });
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+
+      // Assert
+      expect(CoreAPI.hasWriteCapableReader).toHaveBeenCalled();
+      expect(CoreAPI.write).toHaveBeenCalledWith(
+        { text: "cold-start-content" },
+        expect.anything(),
+      );
+      expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    it("should show the no-write-method toast without reporting when Core never connects", async () => {
+      // Arrange
+      const errorSpy = vi.spyOn(logger, "error");
+      usePreferencesStore.setState({ nfcAvailable: false });
+      useStatusStore.setState({
+        connected: false,
+        connectionState: ConnectionState.CONNECTING,
+      });
+
+      renderHook(() => useWriteQueueProcessor());
+
+      // Act - run the finite retry ladder to exhaustion
+      act(() => {
+        useStatusStore.getState().setWriteQueue("unreachable-content");
+      });
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      // Assert
+      expect(CoreAPI.hasWriteCapableReader).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledTimes(1);
+      expect(toast.error).toHaveBeenCalledWith("write.noWriteMethodAvailable");
+      expect(errorSpy).not.toHaveBeenCalled();
     });
   });
 

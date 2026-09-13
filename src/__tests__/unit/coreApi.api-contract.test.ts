@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI, MalformedCoreResponseError } from "../../lib/coreApi";
+import {
+  CoreAPI,
+  CoreApiError,
+  MalformedCoreResponseError,
+} from "../../lib/coreApi";
 import { logger } from "../../lib/logger";
 import {
   HistoryResponseEntry,
@@ -79,6 +83,56 @@ describe("CoreAPI API Contract", () => {
 
       const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
       expect(sentData.params).toEqual({ text: "**launch.system:snes" });
+    });
+
+    it("run should reject with the Core error category and leave reporting to callers", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const promise = CoreAPI.run({ text: "**launch.system:snes" });
+      const request = JSON.parse(mockSend.mock.calls[0]![0]);
+
+      await CoreAPI.processReceived({
+        data: JSON.stringify({
+          jsonrpc: "2.0",
+          id: request.id,
+          error: {
+            code: 1,
+            message: "media not found",
+            data: { category: "media_not_found" },
+          },
+        }),
+      } as MessageEvent);
+
+      const error = await promise.catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(CoreApiError);
+      expect(error).toMatchObject({
+        message: "media not found",
+        code: 1,
+        category: "media_not_found",
+      });
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
+    it("write should reject Core write failures without reporting them", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const promise = CoreAPI.write({ text: "**launch.system:snes" });
+      simulateError(mockSend, "error writing to reader", 0, 1);
+
+      await expect(promise).rejects.toBeInstanceOf(CoreApiError);
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
+    it("screenshot should reject Core failures without reporting them", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const promise = CoreAPI.screenshot();
+      simulateError(
+        mockSend,
+        "screenshot failed: operation not supported on this platform",
+        0,
+        1,
+      );
+
+      await expect(promise).rejects.toBeInstanceOf(CoreApiError);
+      expect(errorSpy).not.toHaveBeenCalled();
     });
 
     it("mediaBrowse should send scoped cursor parameters", async () => {
@@ -199,6 +253,26 @@ describe("CoreAPI API Contract", () => {
         expect.any(Error),
       );
     });
+
+    it.each(["media not found: SNES/Games/Mario.sfc", "system not found: PC"])(
+      "mediaImage should not report unindexed media: %s",
+      async (message) => {
+        const errorSpy = vi.spyOn(logger, "error");
+        const warnSpy = vi.spyOn(logger, "warn");
+        const promise = CoreAPI.mediaImage({
+          system: "SNES",
+          path: "Games/Mario.sfc",
+        });
+        simulateError(mockSend, message, 0, 1);
+
+        await expect(promise).rejects.toThrow(message);
+        expect(errorSpy).not.toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalledWith(
+          "Media image unavailable:",
+          expect.any(Error),
+        );
+      },
+    );
 
     it("mediaTagsUpdate should mutate favorite by media ID", async () => {
       const promise = CoreAPI.mediaTagsUpdate({
@@ -356,6 +430,20 @@ describe("CoreAPI API Contract", () => {
           severity: "warning",
         },
       );
+    });
+
+    it("mediaGenerate should not report insufficient disk space", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const promise = CoreAPI.mediaGenerate();
+      simulateError(
+        mockSend,
+        "insufficient disk space for indexing: 42 MB free, need at least 500 MB",
+        0,
+        1,
+      );
+
+      await expect(promise).rejects.toThrow("insufficient disk space");
+      expect(errorSpy).not.toHaveBeenCalled();
     });
 
     it("mediaGenerate should report unexpected API errors with context", async () => {

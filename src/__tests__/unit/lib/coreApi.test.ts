@@ -3,13 +3,17 @@ import {
   CoreAPI,
   CoreApiError,
   MalformedCoreResponseError,
+  getRunErrorCategory,
   isExpectedMediaDatabaseError,
+  isExpectedRunError,
   isIndexResponse,
   isMediaOperationConflictError,
   isMissingMediaDatabaseSetupError,
   isUnsupportedCoreApiError,
+  isUnindexedMediaError,
   isUnsupportedMediaApiError,
 } from "@/lib/coreApi";
+import { logger } from "@/lib/logger";
 import { Method, Notification } from "@/lib/models.ts";
 
 // Mock Capacitor
@@ -95,6 +99,31 @@ describe("media API error classification", () => {
     expect(isExpectedMediaDatabaseError(error)).toBe(true);
   });
 
+  it("should classify insufficient disk space for indexing as expected", () => {
+    expect(
+      isExpectedMediaDatabaseError(
+        new CoreApiError(
+          "insufficient disk space for indexing: 42 MB free, need at least 500 MB",
+          1,
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it.each([
+    "media not found: SNES/Games/Mario.sfc",
+    "media not found: mediaId 42",
+    "system not found: PC",
+  ])("should classify %j as unindexed media", (message) => {
+    expect(isUnindexedMediaError(new CoreApiError(message, 1))).toBe(true);
+  });
+
+  it("should not classify other media failures as unindexed media", () => {
+    expect(
+      isUnindexedMediaError(new CoreApiError("failed to resolve system", 1)),
+    ).toBe(false);
+  });
+
   it("should accept current Core index status fields", () => {
     expect(
       isIndexResponse({
@@ -106,6 +135,66 @@ describe("media API error classification", () => {
         missingMedia: 3,
       }),
     ).toBe(true);
+  });
+});
+
+describe("run error classification", () => {
+  it.each([
+    "busy",
+    "media_not_found",
+    "disabled",
+    "invalid_script",
+    "blocked",
+    "playtime_limit",
+    "cancelled",
+    "unavailable",
+  ])("should treat the %s run category as expected", (category) => {
+    const error = new CoreApiError("any message", 1, { category });
+
+    expect(getRunErrorCategory(error)).toBe(category);
+    expect(isExpectedRunError(error)).toBe(true);
+  });
+
+  it.each(["execution_failed", "timeout", "some_future_category"])(
+    "should keep the %s run category reportable",
+    (category) => {
+      const error = new CoreApiError("any message", 1, { category });
+
+      expect(getRunErrorCategory(error)).toBe(category);
+      expect(isExpectedRunError(error)).toBe(false);
+    },
+  );
+
+  it.each([
+    ["ZapScript is invalid", "invalid_script"],
+    ["ZapScript execution is disabled", "disabled"],
+    ["ZapScript execution was blocked", "blocked"],
+    ["media not found", "media_not_found"],
+    ["a script is already running", "busy"],
+    ["another launch is in progress", "busy"],
+    ["playtime limit reached", "playtime_limit"],
+    [
+      "zapscript exceeds maximum length: 9000 bytes (max 8192)",
+      "invalid_script",
+    ],
+    ["ZapScript execution failed", "execution_failed"],
+  ])(
+    "should classify uncategorized Core message %j as %s",
+    (message, category) => {
+      expect(getRunErrorCategory(new CoreApiError(message, 1))).toBe(category);
+    },
+  );
+
+  it("should not classify errors that did not come from Core", () => {
+    expect(getRunErrorCategory(new Error("media not found"))).toBeNull();
+    expect(isExpectedRunError(new Error("ZapScript is invalid"))).toBe(false);
+  });
+
+  it("should not classify unknown uncategorized Core errors", () => {
+    const error = new CoreApiError("database is locked", 1);
+
+    expect(getRunErrorCategory(error)).toBeNull();
+    expect(isExpectedRunError(error)).toBe(false);
   });
 });
 
@@ -127,6 +216,7 @@ describe("CoreAPI", () => {
     vi.useRealTimers();
     // Clear any pending promises/timeouts
     vi.clearAllTimers();
+    vi.restoreAllMocks();
   });
 
   it("should initialize with default send function", () => {
@@ -278,6 +368,130 @@ describe("CoreAPI", () => {
     } as MessageEvent);
 
     await expect(controlPromise).resolves.toBeUndefined();
+  });
+
+  it.each([
+    ["inbox", () => CoreAPI.inbox()],
+    ["readers", () => CoreAPI.readers()],
+    ["playtime", () => CoreAPI.playtime()],
+    ["settings.playtime.limits", () => CoreAPI.playtimeLimits()],
+  ] as const)(
+    "should not report unsupported %s responses as errors",
+    async (method, apiCall) => {
+      const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+      const promise = apiCall();
+      const request = JSON.parse(mockSend.mock.calls[0][0]);
+      expect(request.method).toBe(method);
+
+      await CoreAPI.processReceived({
+        data: JSON.stringify({
+          jsonrpc: "2.0",
+          id: request.id,
+          error: { code: -32601, message: "Method not found" },
+        }),
+      } as MessageEvent);
+
+      await expect(promise).rejects.toThrow("Method not found");
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalled();
+    },
+  );
+
+  it("should report unexpected inbox failures as errors", async () => {
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    const promise = CoreAPI.inbox();
+    const request = JSON.parse(mockSend.mock.calls[0][0]);
+
+    await CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        error: { code: -32000, message: "database is locked" },
+      }),
+    } as MessageEvent);
+
+    await expect(promise).rejects.toThrow("database is locked");
+    expect(errorSpy).toHaveBeenCalledWith(
+      "Inbox API call failed:",
+      expect.any(Error),
+      expect.objectContaining({ action: "inbox.fetch", severity: "error" }),
+    );
+  });
+
+  it("should treat unsupported readers as no remote writer without reporting", async () => {
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    vi.spyOn(logger, "warn").mockImplementation(() => {});
+    const promise = CoreAPI.hasWriteCapableReader();
+    const request = JSON.parse(mockSend.mock.calls[0][0]);
+
+    await CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        error: { code: -32601, message: "Method not found" },
+      }),
+    } as MessageEvent);
+
+    await expect(promise).resolves.toBe(false);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it("should default missing media search result tags from older Cores", async () => {
+    const searchPromise = CoreAPI.mediaSearch({ query: "mario", systems: [] });
+    const request = JSON.parse(mockSend.mock.calls[0][0]);
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: {
+          results: [
+            {
+              system: { id: "SNES", name: "Super Nintendo" },
+              name: "Super Mario World",
+              path: "/games/snes/Super Mario World.sfc",
+            },
+            {
+              system: { id: "NES", name: "Nintendo" },
+              name: "Super Mario Bros.",
+              path: "/games/nes/Super Mario Bros.nes",
+              tags: null,
+            },
+            {
+              system: { id: "SNES", name: "Super Nintendo" },
+              name: "Super Mario Kart",
+              path: "/games/snes/Super Mario Kart.sfc",
+              tags: [{ type: "genre", tag: "racing" }],
+            },
+          ],
+          total: 3,
+        },
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    const response = await searchPromise;
+    expect(response.results.map((result) => result.tags)).toEqual([
+      [],
+      [],
+      [{ type: "genre", tag: "racing" }],
+    ]);
+    expect(response.total).toBe(3);
+  });
+
+  it("should default a null media search result list to empty", async () => {
+    const searchPromise = CoreAPI.mediaSearch({ query: "none", systems: [] });
+    const request = JSON.parse(mockSend.mock.calls[0][0]);
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: { results: null, total: 0 },
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    await expect(searchPromise).resolves.toEqual({ results: [], total: 0 });
   });
 
   it("should reject cancelled media.control responses", async () => {

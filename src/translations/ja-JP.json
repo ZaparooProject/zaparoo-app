@@ -70,6 +70,7 @@
       "removeFavorite": "お気に入りから削除",
       "updatingFavorite": "お気に入りを更新中...",
       "favoriteError": "お気に入りを更新できませんでした",
+      "favoriteNotIndexed": "お気に入りに追加できるのはメディアデータベース内のメディアのみです",
       "disconnected": "デバイスに接続してライブラリを閲覧してください",
       "updateCore": "ライブラリを使用するにはZaparoo Coreを更新してください",
       "databaseRequired": "ライブラリを閲覧するにはメディアデータベースを作成してください",
@@ -197,7 +198,8 @@
       "formatErrorRetry": "このタグをフォーマットできません。再試行するか、別のタグを使用してください。",
       "verifying": "タグを検証中...",
       "verifyFailed": "タグが正しく保存されませんでした",
-      "verifyFailedRetry": "タグが正しく保存されませんでした。スマートフォンにかざして再試行してください。"
+      "verifyFailedRetry": "タグが正しく保存されませんでした。スマートフォンにかざして再試行してください。",
+      "retapTag": "タグをフォーマットしました。いったん離してから、もう一度スマートフォンにかざしてください。"
     },
     "toast": {
       "updateDbHeading": "メディアデータベースを更新中",
@@ -1184,6 +1186,8 @@
     "features": {
       "requiresCoreVersion": "Zaparoo Core v{{version}}以降が必要です",
       "inbox": "通知",
+      "playtimeLimits": "プレイ時間制限",
+      "readers": "デバイスのリーダー",
       "mediaScrapers": "スクレイパー",
       "mediaGenerate": "メディアデータベースの更新",
       "mediaCleanOrphans": "存在しないメディアの整理",
@@ -1267,6 +1271,7 @@
       "connectionError": {
         "encryptionRequired": "このデバイスはペアリングが必要です。",
         "credentialsRevoked": "ペアリングが解除されました。もう一度ペアリングしてください。",
+        "handshakeRejected": "このデバイスはこのアプリを認識しなくなりました。もう一度ペアリングしてください。",
         "unsupportedVersion": "このデバイスはサポートされていない暗号化バージョンを使用しています。"
       },
       "error": {
@@ -1275,6 +1280,8 @@
         "limit_reached": "試行回数が多すぎます。デバイスでペアリングをやり直してください",
         "rate_limited": "リクエストが多すぎます。しばらくしてから再試行してください",
         "session_unknown": "ペアリングセッションが見つかりません。デバイスでペアリングをやり直してください",
+        "no_pairing": "有効なPINがありません。デバイスでペアリングを開始して新しいPINを取得してください",
+        "too_many_clients": "ペアリング済みのアプリが多すぎます。デバイスでいずれかを削除してから再試行してください",
         "server_hmac_bad": "セキュリティチェックに失敗しました",
         "malformed": "ペアリングに失敗しました。再試行してください",
         "network": "ネットワークエラーです。接続を確認して再試行してください",

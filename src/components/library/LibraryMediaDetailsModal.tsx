@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ChevronLeftIcon, ChevronRightIcon, PlayIcon } from "lucide-react";
-import { CoreAPI } from "@/lib/coreApi";
+import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
 import {
   collectLibraryMetadata,
@@ -280,10 +280,8 @@ export function LibraryMediaDetailsModal(props: {
       await CoreAPI.run({ text });
     } catch (error) {
       if (controller.signal.aborted) return;
-      logger.error("Failed to launch media from Library", error, {
-        category: "api",
+      logRunFailure("Failed to launch media from Library", error, {
         action: "launchLibraryMedia",
-        severity: "error",
       });
       showRateLimitedErrorToast(t("library.launchError"));
     } finally {

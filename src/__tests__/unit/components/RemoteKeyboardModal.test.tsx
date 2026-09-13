@@ -3,7 +3,8 @@ import { findA11yViolations, render, screen, waitFor } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useStatusStore } from "@/lib/store";
 import { RemoteKeyboardModal } from "@/components/RemoteKeyboardModal";
-import { CoreAPI } from "@/lib/coreApi";
+import { CoreAPI, CoreApiError } from "@/lib/coreApi";
+import { logger } from "@/lib/logger";
 import { Capacitor } from "@capacitor/core";
 import { Directory, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
@@ -60,7 +61,8 @@ vi.mock("react-hot-toast", () => ({
   },
 }));
 
-vi.mock("@/lib/coreApi", () => ({
+vi.mock("@/lib/coreApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/coreApi")>()),
   CoreAPI: {
     reset: vi.fn(),
     inputKeyboard: vi.fn().mockResolvedValue(undefined),
@@ -405,6 +407,77 @@ describe("RemoteKeyboardModal", () => {
     ).toBeInTheDocument();
     expect(toast.error).toHaveBeenCalledWith("remoteKeyboard.screenshotError");
   });
+
+  it.each([
+    "screenshot failed: operation not supported on this platform",
+    "client role does not permit this method",
+  ])(
+    "should show an error without reporting unavailable screenshots: %s",
+    async (coreMessage) => {
+      const user = userEvent.setup();
+      const loggerError = vi.spyOn(logger, "error");
+      vi.mocked(CoreAPI.screenshot).mockRejectedValueOnce(
+        new CoreApiError(coreMessage, 1),
+      );
+
+      render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+
+      await user.click(
+        screen.getByRole("button", {
+          name: "remoteKeyboard.screenshotAction",
+        }),
+      );
+
+      expect(
+        await screen.findByText("remoteKeyboard.screenshotError"),
+      ).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith(
+        "remoteKeyboard.screenshotError",
+      );
+      expect(loggerError).not.toHaveBeenCalled();
+      loggerError.mockRestore();
+    },
+  );
+
+  it.each([
+    [
+      "screenshot failed: screenshot timed out after 10s",
+      new CoreApiError("screenshot failed: screenshot timed out after 10s", 1),
+      "warning",
+    ],
+    ["unexpected capture errors", new Error("failed"), "error"],
+  ])(
+    "should report %s with context",
+    async (_description, captureError, severity) => {
+      const user = userEvent.setup();
+      const loggerError = vi
+        .spyOn(logger, "error")
+        .mockImplementation(() => {});
+      vi.mocked(CoreAPI.screenshot).mockRejectedValueOnce(captureError);
+
+      render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+
+      await user.click(
+        screen.getByRole("button", {
+          name: "remoteKeyboard.screenshotAction",
+        }),
+      );
+
+      expect(
+        await screen.findByText("remoteKeyboard.screenshotError"),
+      ).toBeInTheDocument();
+      expect(loggerError).toHaveBeenCalledWith(
+        "remoteKeyboard.screenshotError",
+        captureError,
+        {
+          category: "api",
+          action: "remoteKeyboard.screenshot",
+          severity,
+        },
+      );
+      loggerError.mockRestore();
+    },
+  );
 
   it("should trigger light haptics for screenshot capture and clear controls", async () => {
     const user = userEvent.setup();

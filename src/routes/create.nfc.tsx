@@ -170,6 +170,7 @@ export function NfcUtils() {
         close={closeWriteModal}
         verifyError={nfcWriter.verifyError !== null}
         retry={() => void nfcWriter.retry()}
+        retapRequired={nfcWriter.retapRequired}
       />
     </>
   );

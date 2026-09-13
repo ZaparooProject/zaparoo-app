@@ -70,6 +70,7 @@
       "removeFavorite": "从收藏中移除",
       "updatingFavorite": "正在更新收藏...",
       "favoriteError": "无法更新收藏",
+      "favoriteNotIndexed": "只有媒体数据库中的媒体才能添加到收藏",
       "disconnected": "连接设备以浏览其媒体库",
       "updateCore": "更新 Zaparoo Core 以使用媒体库",
       "databaseRequired": "创建媒体数据库以浏览媒体库",
@@ -197,7 +198,8 @@
       "formatErrorRetry": "无法格式化此标签。请重试或使用其他标签。",
       "verifying": "正在验证标签...",
       "verifyFailed": "标签未正确保存",
-      "verifyFailedRetry": "标签未正确保存。请将其贴近手机后重试。"
+      "verifyFailedRetry": "标签未正确保存。请将其贴近手机后重试。",
+      "retapTag": "标签已格式化。请先将标签移开，然后再次贴近手机。"
     },
     "toast": {
       "updateDbHeading": "正在更新媒体数据库",
@@ -1184,6 +1186,8 @@
     "features": {
       "requiresCoreVersion": "需要 Zaparoo Core v{{version}} 或更高版本",
       "inbox": "通知",
+      "playtimeLimits": "游玩时间限制",
+      "readers": "设备读卡器",
       "mediaScrapers": "抓取器",
       "mediaGenerate": "媒体数据库更新",
       "mediaCleanOrphans": "清理缺失媒体",
@@ -1267,6 +1271,7 @@
       "connectionError": {
         "encryptionRequired": "此设备需要配对。",
         "credentialsRevoked": "配对已失效。请重新配对。",
+        "handshakeRejected": "此设备已无法识别此应用。请重新配对。",
         "unsupportedVersion": "此设备使用不受支持的加密版本。"
       },
       "error": {
@@ -1275,6 +1280,8 @@
         "limit_reached": "尝试次数过多，请在设备上重新开始配对",
         "rate_limited": "请求次数过多，请稍后重试",
         "session_unknown": "未找到配对会话，请在设备上重新开始配对",
+        "no_pairing": "没有有效的 PIN，请在设备上开始配对以获取新的 PIN",
+        "too_many_clients": "已配对的应用过多，请在设备上移除一个后重试",
         "server_hmac_bad": "安全检查失败",
         "malformed": "配对失败，请重试",
         "network": "网络错误，请检查连接后重试",

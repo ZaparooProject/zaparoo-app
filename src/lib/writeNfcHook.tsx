@@ -15,7 +15,7 @@ import {
   Status,
   isFormatRelatedError,
 } from "./nfc";
-import { CoreAPI } from "./coreApi.ts";
+import { CoreAPI, isExpectedReaderWriteError } from "./coreApi.ts";
 import { logger } from "./logger";
 import {
   NfcCancelledError,
@@ -34,6 +34,8 @@ export interface WriteNfcHook {
   status: null | Status;
   /** Set when the post-write read-back showed the write did not stick. */
   verifyError: NfcVerificationError | null;
+  /** Set while a freshly formatted tag must be presented again (Android). */
+  retapRequired: boolean;
   /**
    * Ref-backed read of verifyError for callers that need the value right
    * after awaiting write(), before React re-renders.
@@ -176,6 +178,7 @@ export function useNfcWriter(
     null,
   );
   const verifyErrorRef = useRef<NfcVerificationError | null>(null);
+  const [retapRequired, setRetapRequired] = useState(false);
   const lastWriteArgsRef = useRef<{
     action: WriteAction;
     text?: string;
@@ -223,6 +226,7 @@ export function useNfcWriter(
       setResult(null);
       setWriting(false);
       setVerifyError(null);
+      setRetapRequired(false);
       verifyErrorRef.current = null;
       deferredErrorToastRef.current = null;
       lastWriteArgsRef.current = { action, text };
@@ -274,6 +278,11 @@ export function useNfcWriter(
           if (selectedWriteMethod === WriteMethod.LocalNFC) {
             actionFunc = () =>
               writeTag(text, {
+                onRetapRequired: () => {
+                  if (writeOpIdRef.current === writeOpId) {
+                    setRetapRequired(true);
+                  }
+                },
                 ios: {
                   verifyingMessage: t("spinner.verifying"),
                   verifyFailedMessage: t("spinner.verifyFailed"),
@@ -370,7 +379,7 @@ export function useNfcWriter(
             setStatus(Status.Cancelled);
             return;
           }
-          if (isExpectedNfcError(e)) {
+          if (isExpectedNfcError(e) || isExpectedReaderWriteError(e)) {
             logger.debug("Expected NFC write operation failure", e);
           } else {
             logger.error("NFC write operation failed", e, {
@@ -427,6 +436,9 @@ export function useNfcWriter(
           // settling late must not clear the flag for a newer local session
           if (usesLocalSession && writeOpIdRef.current === writeOpId) {
             ownsLocalSessionRef.current = false;
+          }
+          if (writeOpIdRef.current === writeOpId) {
+            setRetapRequired(false);
           }
         });
     },
@@ -487,6 +499,7 @@ export function useNfcWriter(
     ownsLocalSessionRef.current = false;
     setStatus(null);
     setWriting(false);
+    setRetapRequired(false);
 
     // The scan UI is gone now, so a stashed verification-failure toast can
     // fire without being obscured.
@@ -528,7 +541,18 @@ export function useNfcWriter(
       status,
       verifyError,
       getVerifyError,
+      retapRequired,
     }),
-    [write, retry, end, writing, result, status, verifyError, getVerifyError],
+    [
+      write,
+      retry,
+      end,
+      writing,
+      result,
+      status,
+      verifyError,
+      getVerifyError,
+      retapRequired,
+    ],
   );
 }

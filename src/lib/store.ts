@@ -10,6 +10,7 @@ import {
   ScrapingStatusNotification,
   TokenResponse,
 } from "./models";
+import { isIndexResponse } from "./indexResponse";
 import { SafeAreaInsets } from "./safeArea";
 
 const defaultSafeAreaInsets: SafeAreaInsets = {
@@ -202,7 +203,12 @@ export const useStatusStore = create<StatusState>()((set) => ({
     currentStepDisplay: "",
     totalFiles: 0,
   },
-  setGamesIndex: (index) => set({ gamesIndex: index }),
+  // Ignore cancelled or malformed responses so consumers never read an
+  // undefined index.
+  setGamesIndex: (index) => {
+    if (!isIndexResponse(index)) return;
+    set({ gamesIndex: index });
+  },
 
   scrapingStatus: null,
   setScrapingStatus: (status) => set({ scrapingStatus: status }),

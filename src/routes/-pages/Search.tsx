@@ -8,7 +8,12 @@ import { BackToTop } from "@/components/BackToTop.tsx";
 import { MediaDetailsModal } from "@/components/MediaDetailsModal";
 import { logger } from "@/lib/logger";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
-import { CoreAPI, isExpectedMediaDatabaseError } from "@/lib/coreApi";
+import {
+  CoreAPI,
+  isCancelled,
+  isExpectedMediaDatabaseError,
+  logRunFailure,
+} from "@/lib/coreApi";
 import { BackIcon, SearchIcon, HistoryIcon } from "@/lib/images";
 import { useNfcWriter, WriteAction, WriteMethod } from "@/lib/writeNfcHook";
 import { SearchResultGame, SystemsResponse } from "@/lib/models";
@@ -189,7 +194,7 @@ export function Search() {
     void (async () => {
       try {
         const s = await CoreAPI.media();
-        if (cancelled) return;
+        if (cancelled || isCancelled(s)) return;
         setGamesIndex(s.database);
       } catch (e) {
         if (cancelled) return;
@@ -487,11 +492,7 @@ export function Search() {
               text: textToRun,
             });
           } catch (e) {
-            logger.error("CoreAPI.run failed", e, {
-              category: "api",
-              action: "run",
-              severity: "error",
-            });
+            logRunFailure("CoreAPI.run failed", e, { action: "run" });
             showRateLimitedErrorToast(
               t("error", {
                 msg: e instanceof Error ? e.message : String(e),
@@ -511,6 +512,7 @@ export function Search() {
         close={closeWriteModal}
         verifyError={nfcWriter.verifyError !== null}
         retry={() => void nfcWriter.retry()}
+        retapRequired={nfcWriter.retapRequired}
       />
       <SystemSelector
         isOpen={systemSelectorOpen}

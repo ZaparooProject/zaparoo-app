@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useStatusStore, ConnectionState } from "../../../lib/store";
+import type { IndexResponse } from "../../../lib/models";
 import { mockInboxMessage } from "../../../test-utils/factories";
 
 describe("StatusStore", () => {
@@ -141,6 +142,29 @@ describe("StatusStore", () => {
       expect(useStatusStore.getState().backgroundPlaying).toEqual(background);
       expect(useStatusStore.getState().playlists.background).toEqual(playlist);
       expect(useStatusStore.getState().playlists.primary).toBeNull();
+    });
+  });
+
+  describe("games index", () => {
+    it("should ignore cancelled and malformed index updates", () => {
+      const { setGamesIndex } = useStatusStore.getState();
+      setGamesIndex({ exists: true, indexing: true, totalFiles: 10 });
+
+      for (const invalidIndex of [
+        undefined,
+        null,
+        { cancelled: true },
+        { exists: true },
+        { exists: true, indexing: false, totalFiles: "10" },
+      ]) {
+        setGamesIndex(invalidIndex as unknown as IndexResponse);
+      }
+
+      expect(useStatusStore.getState().gamesIndex).toEqual({
+        exists: true,
+        indexing: true,
+        totalFiles: 10,
+      });
     });
   });
 

@@ -339,6 +339,32 @@ describe("MediaDetailsModal", () => {
     expect(screen.queryByLabelText("genre platformer")).not.toBeInTheDocument();
   });
 
+  it("should write media from older Cores that omit tags", async () => {
+    const user = userEvent.setup();
+    const onWrite = vi.fn();
+    renderModal({
+      media: {
+        system: mediaWithZapScript.system,
+        name: mediaWithZapScript.name,
+        path: mediaWithZapScript.path,
+        zapScript: mediaWithZapScript.zapScript,
+      } as SearchResultGame,
+      onWrite,
+    });
+
+    expect(
+      screen.getByRole("dialog", { name: "Super Mario World" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("create.search.tagsLabel"),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /create\.search\.writeLabel/i }),
+    );
+    expect(onWrite).toHaveBeenCalledWith("@SNES/Super Mario World");
+  });
+
   it("should treat whitespace-only ZapScript as unavailable", async () => {
     const user = userEvent.setup();
     const onWrite = vi.fn();

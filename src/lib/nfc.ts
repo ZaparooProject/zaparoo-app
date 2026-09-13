@@ -130,6 +130,13 @@ interface NfcSessionContext {
    * null on timeout or session teardown. Events are not buffered.
    */
   waitForNextTag(timeoutMs: number): Promise<NfcTagScannedEvent | null>;
+  /**
+   * Start capturing nfcTagScanned events now and return a waiter resolving
+   * with the first one received since this call, even if it arrived before
+   * the waiter was invoked, or null on timeout or session teardown. Use when
+   * the next tag event can race a native call that is still in flight.
+   */
+  captureNextTag(): (timeoutMs: number) => Promise<NfcTagScannedEvent | null>;
 }
 
 interface WithNfcSessionOptions {
@@ -167,6 +174,7 @@ async function withNfcSession<T>(
       resolve: (event: NfcTagScannedEvent | null) => void;
       timer: ReturnType<typeof setTimeout>;
     } | null = null;
+    let tagCapture: { event: NfcTagScannedEvent | null } | null = null;
 
     const resolvePendingWaiter = (event: NfcTagScannedEvent | null) => {
       if (!pendingWaiter) return;
@@ -260,6 +268,21 @@ async function withNfcSession<T>(
           }, timeoutMs);
           pendingWaiter = { resolve: resolveWait, timer };
         }),
+      captureNextTag: () => {
+        const capture: { event: NfcTagScannedEvent | null } = { event: null };
+        tagCapture = capture;
+        return async (timeoutMs) => {
+          try {
+            if (settled) return null;
+            if (capture.event) return capture.event;
+            return await sessionContext.waitForNextTag(timeoutMs);
+          } finally {
+            if (tagCapture === capture) {
+              tagCapture = null;
+            }
+          }
+        };
+      },
     };
 
     const setupAndStartScan = async () => {
@@ -276,6 +299,9 @@ async function withNfcSession<T>(
             // field; re-running the handler would repeat its side effects
             // (e.g. double-write), so later events only feed waiters.
             if (handlerStarted) {
+              if (tagCapture && !tagCapture.event) {
+                tagCapture.event = event;
+              }
               resolvePendingWaiter(event);
               return;
             }
@@ -458,6 +484,11 @@ export const WRITE_VERIFY_TIMEOUT_MS = 5000;
 
 export interface WriteTagOptions {
   verifyTimeoutMs?: number;
+  /**
+   * Android: called once a blank tag has been NDEF formatted and must be
+   * presented again before the write can run.
+   */
+  onRetapRequired?: () => void;
   ios?: {
     /** Shown in the iOS scan sheet while the post-write read-back runs. */
     verifyingMessage?: string;
@@ -624,13 +655,70 @@ async function verifyWrittenTagIos(
   }
 }
 
+/**
+ * Convert a failed pre-write format into the typed error the write UI shows,
+ * reporting it once unless the tag simply left the field.
+ */
+function formatBeforeWriteError(
+  formatError: unknown,
+  event: NfcTagScannedEvent,
+): NfcFormatError {
+  const wrappedError = wrapNfcError(formatError);
+  if (wrappedError instanceof NfcTransientError) {
+    logger.debug("Tag lost while formatting before write:", wrappedError);
+  } else {
+    logger.error("NFC format before write failed", wrappedError, {
+      category: "nfc",
+      action: "formatBeforeWrite",
+      severity: "warning",
+      techTypes: event.nfcTag?.techTypes,
+    });
+  }
+  return wrappedError instanceof NfcFormatError
+    ? wrappedError
+    : new NfcFormatError(wrappedError.message, wrappedError);
+}
+
+/**
+ * Android: NDEF format a blank tag, then wait for it to be presented again.
+ *
+ * The write cannot follow on the same tap. The plugin resolves Ndef against the
+ * tech list captured at discovery, so writing to the same tag handle still
+ * reports it as unformatted, and a failed format leaves NdefFormatable
+ * connected, so every further call on that handle fails with "Only one
+ * TagTechnology can be connected at a time". Format once and let the caller
+ * write to the fresh handle from the next scan.
+ */
+async function formatAndWaitForRetap(
+  event: NfcTagScannedEvent,
+  session: NfcSessionContext,
+  onRetapRequired?: () => void,
+): Promise<NfcTagScannedEvent> {
+  logger.log("Tag not NDEF formatted, formatting before write...");
+  // Capture before formatting: the next scan can be dispatched as soon as the
+  // native format releases the tag, before the format call resolves in JS.
+  const waitForRetap = session.captureNextTag();
+  try {
+    await Nfc.format();
+  } catch (formatError) {
+    throw formatBeforeWriteError(formatError, event);
+  }
+  logger.log("Tag formatted, waiting for it to be presented again");
+  onRetapRequired?.();
+  // The Android session timeout bounds this wait; cancelling or timing out
+  // the session resolves it with null.
+  const retapEvent = await waitForRetap(ANDROID_SESSION_TIMEOUT_MS);
+  if (!retapEvent) {
+    throw new NfcCancelledError();
+  }
+  return retapEvent;
+}
+
 export async function writeTag(
   text: string,
   options?: WriteTagOptions,
 ): Promise<Result> {
   const record = createNdefTextRecord(text);
-  const maxFormatRetries = 3;
-  const formatRetryDelayMs = 500;
   const verifyTimeoutMs = options?.verifyTimeoutMs ?? WRITE_VERIFY_TIMEOUT_MS;
 
   // Runs after a successful native write: read the tag back, compare against
@@ -685,68 +773,48 @@ export async function writeTag(
         } catch (writeError) {
           const wrappedError = wrapNfcError(writeError);
           if (
-            wrappedError instanceof NfcUnformattedTagError &&
-            Capacitor.getPlatform() === "android"
+            !(wrappedError instanceof NfcUnformattedTagError) ||
+            Capacitor.getPlatform() !== "android"
           ) {
-            logger.log("Tag not NDEF formatted, auto-formatting...");
-            let lastFormatError: unknown = null;
-
-            for (let attempt = 1; attempt <= maxFormatRetries; attempt++) {
-              try {
-                // Before retrying, try to close any stale TagTechnology connection.
-                // This may help in some cases, though it's not guaranteed due to
-                // a bug in the capacitor-nfc plugin where format() doesn't properly
-                // clean up its internal NdefFormatable connection on failure.
-                if (attempt > 1) {
-                  try {
-                    await Nfc.close();
-                  } catch {
-                    // Ignore close errors - connection may already be closed
-                  }
-                  await new Promise((resolve) =>
-                    setTimeout(resolve, formatRetryDelayMs),
-                  );
-                }
-
-                await Nfc.format();
-                await Nfc.write({ message: { records: [record] } });
-                logger.log("Write after auto-format successful");
-                return await finishWrite(event, session);
-              } catch (formatError) {
-                if (formatError instanceof NfcVerificationError) {
-                  // The write itself succeeded; a failed read-back is not a
-                  // formatting problem to retry.
-                  throw formatError;
-                }
-                const wrappedFormatError = wrapNfcError(formatError);
-                lastFormatError = wrappedFormatError;
-                logger.log(
-                  `Format attempt ${attempt} failed: ${wrappedFormatError.message}`,
-                );
-              }
-            }
-
-            // All retries exhausted - log technical error for debugging
-            const wrappedFormatError = wrapNfcError(lastFormatError);
-            if (wrappedFormatError instanceof NfcTransientError) {
-              logger.debug(
-                "Expected NFC format/write failure:",
-                wrappedFormatError,
-              );
-            } else {
-              logger.error(
-                "NFC format/write failed after retries",
-                wrappedFormatError,
-                {
-                  category: "nfc",
-                  action: "writeTag",
-                  stack: wrappedFormatError.stack,
-                },
-              );
-            }
-            throw wrappedFormatError;
+            throw wrappedError;
           }
-          throw wrapNfcError(writeError);
+
+          const retapEvent = await formatAndWaitForRetap(
+            event,
+            session,
+            options?.onRetapRequired,
+          );
+          try {
+            await Nfc.write({ message: { records: [record] } });
+            logger.log("Write after format successful");
+          } catch (retapWriteError) {
+            const wrappedRetapError = wrapNfcError(retapWriteError);
+            if (!(wrappedRetapError instanceof NfcUnformattedTagError)) {
+              throw wrappedRetapError;
+            }
+            const formattedUid = int2hex(event.nfcTag?.id ?? []);
+            if (int2hex(retapEvent.nfcTag?.id ?? []) !== formattedUid) {
+              // A different blank tag was presented; it was never formatted.
+              throw wrappedRetapError;
+            }
+            // Same tag, rediscovered with a fresh tech list, but the format
+            // did not take.
+            logger.error(
+              "NFC tag still unformatted after format",
+              wrappedRetapError,
+              {
+                category: "nfc",
+                action: "formatBeforeWrite",
+                severity: "warning",
+                techTypes: retapEvent.nfcTag?.techTypes,
+              },
+            );
+            throw new NfcFormatError(
+              wrappedRetapError.message,
+              wrappedRetapError,
+            );
+          }
+          return finishWrite(retapEvent, session);
         }
         return finishWrite(event, session);
       },

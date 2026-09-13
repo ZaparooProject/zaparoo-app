@@ -333,6 +333,50 @@ describe("WriteModal", () => {
     });
   });
 
+  describe("re-tap prompt", () => {
+    it("asks for the tag again once it becomes required, keeping focus on cancel", () => {
+      const { rerender } = render(<WriteModal isOpen={true} close={vi.fn()} />);
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+      const cancelButton = screen.getByRole("button", { name: "nav.cancel" });
+      expect(screen.queryByText("spinner.retapTag")).not.toBeInTheDocument();
+
+      rerender(<WriteModal isOpen={true} close={vi.fn()} retapRequired />);
+
+      expect(
+        screen.getByRole("dialog", { name: "spinner.retapTag" }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("spinner.retapTag")).toBeInTheDocument();
+      expect(mockAnnounce).toHaveBeenCalledWith(
+        "spinner.retapTag",
+        "assertive",
+      );
+      expect(cancelButton).toHaveFocus();
+    });
+
+    it("shows the verification failure instead of the re-tap prompt", () => {
+      render(
+        <WriteModal
+          isOpen={true}
+          close={vi.fn()}
+          verifyError={true}
+          retry={vi.fn()}
+          retapRequired
+        />,
+      );
+
+      expect(
+        screen.getByRole("dialog", { name: "spinner.verifyFailedRetry" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("spinner.retapTag")).not.toBeInTheDocument();
+      expect(mockAnnounce).not.toHaveBeenCalledWith(
+        "spinner.retapTag",
+        "assertive",
+      );
+    });
+  });
+
   describe("transition from closed to open", () => {
     it("handles transition from closed to open", () => {
       const mockClose = vi.fn();

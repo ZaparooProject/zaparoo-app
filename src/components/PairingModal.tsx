@@ -8,7 +8,13 @@ import { Button } from "@/components/wui/Button";
 import { TextInput } from "@/components/wui/TextInput";
 import { PinInput } from "@/components/wui/PinInput";
 import { parseDeviceAddress } from "@/lib/coreApi";
-import { performPairing, PairingError } from "@/lib/crypto/pairing";
+import {
+  isExpectedPairingError,
+  PAIRING_CLIENT_NAME_MAX_BYTES,
+  performPairing,
+  PairingError,
+  truncateClientName,
+} from "@/lib/crypto/pairing";
 import {
   credentialKeyForRecord,
   credentialStore,
@@ -69,7 +75,7 @@ export function PairingModal({
         .then((info) => {
           if (cancelled) return;
           const name = info.name || info.model || "Unknown";
-          const suggested = name.slice(0, 120);
+          const suggested = truncateClientName(name);
           setClientName((current) => (current ? current : suggested));
         })
         .catch(() => {
@@ -89,7 +95,9 @@ export function PairingModal({
   }, [isOpen]);
 
   const resolveClientName = useCallback(() => {
-    return clientName.trim() || `Zaparoo App ${safePlatform()}`.slice(0, 120);
+    return truncateClientName(
+      clientName.trim() || `Zaparoo App ${safePlatform()}`,
+    );
   }, [clientName]);
 
   const handlePair = async (pinOverride?: string) => {
@@ -121,12 +129,16 @@ export function PairingModal({
       close();
     } catch (e) {
       if (e instanceof PairingError) {
-        logger.error("Pairing failed", e, {
-          category: "connection",
-          action: "pair",
-          severity: "error",
-          kind: e.kind,
-        });
+        if (isExpectedPairingError(e)) {
+          logger.warn("Pairing failed", e, { kind: e.kind });
+        } else {
+          logger.error("Pairing failed", e, {
+            category: "connection",
+            action: "pair",
+            severity: "error",
+            kind: e.kind,
+          });
+        }
         setError(t(`pairing.error.${e.kind}`));
       } else {
         logger.error("Pairing failed with unknown error", e, {
@@ -176,8 +188,8 @@ export function PairingModal({
         <TextInput
           label={t("pairing.clientNameLabel")}
           value={clientName}
-          setValue={(v) => setClientName(v.slice(0, 120))}
-          maxLength={120}
+          setValue={(v) => setClientName(truncateClientName(v))}
+          maxLength={PAIRING_CLIENT_NAME_MAX_BYTES}
           disabled={isPairing}
         />
 

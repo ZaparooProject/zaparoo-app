@@ -5,8 +5,7 @@ import { EraserIcon, HelpCircleIcon, PlusIcon } from "lucide-react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import toast from "react-hot-toast";
 import { useStatusStore } from "@/lib/store.ts";
-import { CoreAPI } from "@/lib/coreApi";
-import { logger } from "@/lib/logger";
+import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import { Button } from "@/components/wui/Button.tsx";
 import { MediaSearchModal } from "@/components/MediaSearchModal.tsx";
 import { CommandsModal } from "@/components/CommandsModal.tsx";
@@ -128,10 +127,8 @@ export function ZapScriptInput(props: {
                       text: props.value,
                     }).catch((e) => {
                       toast.error(t("create.custom.failMsg"));
-                      logger.error("ZapScript run failed:", e, {
-                        category: "api",
+                      logRunFailure("ZapScript run failed:", e, {
                         action: "runZapScript",
-                        severity: "error",
                       });
                     });
                   }}

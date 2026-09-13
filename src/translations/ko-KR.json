@@ -70,6 +70,7 @@
       "removeFavorite": "즐겨찾기에서 제거",
       "updatingFavorite": "즐겨찾기를 업데이트하는 중...",
       "favoriteError": "즐겨찾기를 업데이트하지 못했습니다",
+      "favoriteNotIndexed": "미디어 데이터베이스에 있는 미디어만 즐겨찾기에 추가할 수 있습니다",
       "disconnected": "라이브러리를 탐색하려면 기기에 연결하세요",
       "updateCore": "라이브러리를 사용하려면 Zaparoo Core를 업데이트하세요",
       "databaseRequired": "라이브러리를 탐색하려면 미디어 데이터베이스를 만드세요",
@@ -197,7 +198,8 @@
       "formatErrorRetry": "이 태그를 포맷할 수 없습니다. 다시 시도하거나 다른 태그를 사용하세요.",
       "verifying": "태그를 확인하는 중...",
       "verifyFailed": "태그가 올바르게 저장되지 않았습니다",
-      "verifyFailedRetry": "태그가 올바르게 저장되지 않았습니다. 휴대전화에 태그를 대고 다시 시도하세요."
+      "verifyFailedRetry": "태그가 올바르게 저장되지 않았습니다. 휴대전화에 태그를 대고 다시 시도하세요.",
+      "retapTag": "태그를 포맷했습니다. 태그를 뗀 다음 휴대전화에 다시 대세요."
     },
     "toast": {
       "updateDbHeading": "미디어 데이터베이스 업데이트 중",
@@ -1184,6 +1186,8 @@
     "features": {
       "requiresCoreVersion": "Zaparoo Core v{{version}} 이상 필요",
       "inbox": "알림",
+      "playtimeLimits": "플레이 시간 제한",
+      "readers": "기기의 리더",
       "mediaScrapers": "스크레이퍼",
       "mediaGenerate": "미디어 데이터베이스 업데이트",
       "mediaCleanOrphans": "누락된 미디어 정리",
@@ -1267,6 +1271,7 @@
       "connectionError": {
         "encryptionRequired": "이 기기는 페어링이 필요합니다.",
         "credentialsRevoked": "페어링이 해제되었습니다. 다시 페어링하세요.",
+        "handshakeRejected": "이 기기가 더 이상 이 앱을 인식하지 않습니다. 다시 페어링하세요.",
         "unsupportedVersion": "이 기기는 지원하지 않는 암호화 버전을 사용합니다."
       },
       "error": {
@@ -1275,6 +1280,8 @@
         "limit_reached": "시도 횟수가 너무 많습니다. 기기에서 페어링을 다시 시작하세요",
         "rate_limited": "요청이 너무 많습니다. 잠시 후 다시 시도하세요",
         "session_unknown": "페어링 세션을 찾을 수 없습니다. 기기에서 페어링을 다시 시작하세요",
+        "no_pairing": "활성화된 PIN이 없습니다. 기기에서 페어링을 시작해 새 PIN을 받으세요",
+        "too_many_clients": "페어링된 앱이 너무 많습니다. 기기에서 하나를 제거한 후 다시 시도하세요",
         "server_hmac_bad": "보안 확인에 실패했습니다",
         "malformed": "페어링에 실패했습니다. 다시 시도하세요",
         "network": "네트워크 오류입니다. 연결을 확인하고 다시 시도하세요",
