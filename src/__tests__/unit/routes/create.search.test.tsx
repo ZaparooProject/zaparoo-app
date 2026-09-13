@@ -42,7 +42,7 @@ vi.mock("@capacitor/preferences", () => ({
 }));
 
 // Mock CoreAPI
-vi.mock("@/lib/coreApi", () => ({
+vi.mock("@/lib/coreApi", async (importOriginal) => ({
   CoreAPI: {
     media: vi.fn().mockResolvedValue({
       database: { exists: true, indexing: false },
@@ -60,6 +60,8 @@ vi.mock("@/lib/coreApi", () => ({
       msg.includes("method not found")
     );
   },
+  isCancelled: (await importOriginal<typeof import("@/lib/coreApi")>())
+    .isCancelled,
 }));
 
 // Mock useSmartSwipe
@@ -577,6 +579,29 @@ describe("Search Component", () => {
       await vi.waitFor(() => {
         expect(useStatusStore.getState().gamesIndex.exists).toBe(false);
       });
+    });
+
+    it("should keep search usable when the media request is cancelled", async () => {
+      vi.mocked(CoreAPI.media).mockResolvedValueOnce(
+        // Stale queued requests resolve with a cancellation marker after reconnect.
+        { cancelled: true } as unknown as Awaited<
+          ReturnType<typeof CoreAPI.media>
+        >,
+      );
+
+      render(<Search />);
+
+      await act(async () => {
+        await vi.mocked(CoreAPI.media).mock.results[0]?.value;
+      });
+
+      expect(useStatusStore.getState().gamesIndex).toEqual({
+        exists: true,
+        indexing: false,
+      });
+      expect(
+        screen.getByRole("button", { name: "create.search.searchButton" }),
+      ).toBeEnabled();
     });
 
     it("should perform search when search button is clicked", async () => {

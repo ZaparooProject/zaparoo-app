@@ -10,6 +10,7 @@ import { logger } from "@/lib/logger";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import {
   CoreAPI,
+  isCancelled,
   isExpectedMediaDatabaseError,
   logRunFailure,
 } from "@/lib/coreApi";
@@ -193,7 +194,7 @@ export function Search() {
     void (async () => {
       try {
         const s = await CoreAPI.media();
-        if (cancelled) return;
+        if (cancelled || isCancelled(s)) return;
         setGamesIndex(s.database);
       } catch (e) {
         if (cancelled) return;
