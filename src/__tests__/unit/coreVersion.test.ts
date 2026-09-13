@@ -11,21 +11,26 @@ describe("isDevelopmentVersion", () => {
     ["", true],
     ["DEVELOPMENT", true],
     ["2.5.0-dev", true],
-    ["2.5.0-rc1", true],
-    ["2.5.0-beta", true],
-    ["2.5.0-alpha.1", true],
+    ["abc1234-dev", true],
     ["notasemver", true],
     ["v2.5.0", true],
   ])("should return true for dev-like version %s", (raw, expected) => {
     expect(isDevelopmentVersion(raw)).toBe(expected);
   });
 
-  it.each([["2.5.0"], ["1.0.0"], ["10.20.30"], ["2.5.1"]])(
-    "should return false for release version %s",
-    (raw) => {
-      expect(isDevelopmentVersion(raw)).toBe(false);
-    },
-  );
+  it.each([
+    ["2.5.0"],
+    ["1.0.0"],
+    ["10.20.30"],
+    ["2.5.1"],
+    ["2.5.0-rc1"],
+    ["2.16.0-beta1"],
+    ["2.17.0-beta.2"],
+    ["2.5.0-alpha.1"],
+    ["2.10.0-nightly.20260228"],
+  ])("should return false for release or pre-release version %s", (raw) => {
+    expect(isDevelopmentVersion(raw)).toBe(false);
+  });
 });
 
 describe("parseVersion", () => {
@@ -76,6 +81,13 @@ describe("satisfies", () => {
     expect(satisfies("DEVELOPMENT", "2.5.0")).toBe(true);
     expect(satisfies("", "2.5.0")).toBe(true);
     expect(satisfies("2.5.0-dev", "99.0.0")).toBe(true);
+  });
+
+  it("should gate pre-release versions on their base version", () => {
+    expect(satisfies("2.16.0-beta1", "2.16.0")).toBe(true);
+    expect(satisfies("2.17.0-beta.2", "2.16.0")).toBe(true);
+    expect(satisfies("2.6.0-rc1", "2.7.0")).toBe(false);
+    expect(satisfies("2.16.0-beta1", "2.17.0")).toBe(false);
   });
 
   it("should return true when current meets minimum exactly", () => {
