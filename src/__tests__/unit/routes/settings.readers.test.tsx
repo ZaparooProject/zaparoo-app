@@ -7,7 +7,10 @@ import { mockReaderInfo } from "../../../test-utils/factories";
 const { componentRef, mockNavigate, mockCoreState } = vi.hoisted(() => ({
   componentRef: { current: null as ComponentType | null },
   mockNavigate: vi.fn(),
-  mockCoreState: { version: "2.15.0" },
+  mockCoreState: {
+    version: "2.15.0" as string | null,
+    versionPending: false,
+  },
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -45,7 +48,7 @@ vi.mock("@/lib/store", async (importOriginal) => {
         connected: true,
         connectionState: "CONNECTED",
         coreVersion: mockCoreState.version,
-        coreVersionPending: false,
+        coreVersionPending: mockCoreState.versionPending,
         currentClient: {
           paired: true,
           role: "admin",
@@ -135,6 +138,7 @@ describe("Settings Readers Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCoreState.version = "2.15.0";
+    mockCoreState.versionPending = false;
 
     mockSettings.mockResolvedValue({
       readersScanMode: "tap",
@@ -203,6 +207,19 @@ describe("Settings Readers Route", () => {
       expect(
         screen.queryByText("settings.readers.connectedReaders"),
       ).not.toBeInTheDocument();
+    });
+
+    it("should not poll readers while the Core version is unknown", async () => {
+      mockCoreState.version = null;
+      mockCoreState.versionPending = true;
+      renderComponent();
+
+      expect(
+        await screen.findByRole("radiogroup", {
+          name: "settings.readers.scanMode",
+        }),
+      ).toBeInTheDocument();
+      expect(mockReaders).not.toHaveBeenCalled();
     });
 
     it("should show 'no readers detected' when no readers are connected", async () => {

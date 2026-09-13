@@ -47,7 +47,9 @@ export function ReadersSettings() {
     ClientCapability.SettingsWrite,
   );
   const [systemPickerOpen, setSystemPickerOpen] = useState(false);
-  const { available: readersAvailable } = useCoreFeature("readers");
+  const { available: readersAvailable } = useCoreFeature("readers", {
+    requireKnownSupport: true,
+  });
 
   // Determine if we're in a loading state (connecting or reconnecting)
   const isConnecting =

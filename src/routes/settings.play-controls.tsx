@@ -46,8 +46,10 @@ export function PlayControlsSettings() {
   const { available: profilesAvailable } = useCoreFeature("profiles", {
     requireKnownSupport: true,
   });
-  const { available: playtimeLimitsAvailable } =
-    useCoreFeature("playtimeLimits");
+  const { available: playtimeLimitsAvailable } = useCoreFeature(
+    "playtimeLimits",
+    { requireKnownSupport: true },
+  );
 
   const isConnecting =
     connectionState === ConnectionState.CONNECTING ||
