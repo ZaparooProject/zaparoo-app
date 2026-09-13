@@ -279,6 +279,18 @@ describe("Logger Rate Limiting", () => {
     );
   });
 
+  it("should not add an undefined error placeholder to the report message", () => {
+    logger.error("WebSocket closed", undefined, {
+      category: "websocket",
+      action: "close",
+    });
+
+    expect(mockRollbar.error).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "WebSocket closed" }),
+      expect.objectContaining({ errorMessage: "WebSocket closed" }),
+    );
+  });
+
   it("should preserve cancellation error prototypes after sanitizing", async () => {
     const { RequestCancelledError } = await import("../../../lib/errors");
 
