@@ -9,6 +9,7 @@ import { TextInput } from "@/components/wui/TextInput";
 import { PinInput } from "@/components/wui/PinInput";
 import { parseDeviceAddress } from "@/lib/coreApi";
 import {
+  isExpectedPairingError,
   PAIRING_CLIENT_NAME_MAX_BYTES,
   performPairing,
   PairingError,
@@ -128,12 +129,16 @@ export function PairingModal({
       close();
     } catch (e) {
       if (e instanceof PairingError) {
-        logger.error("Pairing failed", e, {
-          category: "connection",
-          action: "pair",
-          severity: "error",
-          kind: e.kind,
-        });
+        if (isExpectedPairingError(e)) {
+          logger.warn("Pairing failed", e, { kind: e.kind });
+        } else {
+          logger.error("Pairing failed", e, {
+            category: "connection",
+            action: "pair",
+            severity: "error",
+            kind: e.kind,
+          });
+        }
         setError(t(`pairing.error.${e.kind}`));
       } else {
         logger.error("Pairing failed with unknown error", e, {

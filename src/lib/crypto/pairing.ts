@@ -39,6 +39,24 @@ export class PairingError extends Error {
   }
 }
 
+// Outcomes of the user's input, Core's own limits, or the local network, not
+// defects: a mistyped or stale PIN, too many attempts, or no route to Core.
+const EXPECTED_PAIRING_ERROR_KINDS: ReadonlySet<PairingErrorKind> = new Set([
+  "wrong_pin",
+  "limit_reached",
+  "session_unknown",
+  "pin_expired",
+  "rate_limited",
+  "no_pairing",
+  "too_many_clients",
+  "network",
+]);
+
+/** Whether a pairing failure is an expected outcome rather than a defect. */
+export function isExpectedPairingError(error: PairingError): boolean {
+  return EXPECTED_PAIRING_ERROR_KINDS.has(error.kind);
+}
+
 const HTTP_ERROR_KINDS: Record<number, PairingErrorKind> = {
   400: "malformed",
   401: "wrong_pin",
