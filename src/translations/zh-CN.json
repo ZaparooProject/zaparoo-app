@@ -198,7 +198,8 @@
       "formatErrorRetry": "无法格式化此标签。请重试或使用其他标签。",
       "verifying": "正在验证标签...",
       "verifyFailed": "标签未正确保存",
-      "verifyFailedRetry": "标签未正确保存。请将其贴近手机后重试。"
+      "verifyFailedRetry": "标签未正确保存。请将其贴近手机后重试。",
+      "retapTag": "标签已格式化。请先将标签移开，然后再次贴近手机。"
     },
     "toast": {
       "updateDbHeading": "正在更新媒体数据库",

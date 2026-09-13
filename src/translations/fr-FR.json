@@ -198,7 +198,8 @@
       "formatErrorRetry": "Impossible de formater ce tag. Réessayez ou utilisez un autre tag.",
       "verifying": "Vérification du tag...",
       "verifyFailed": "Le tag n’a pas été enregistré correctement",
-      "verifyFailedRetry": "Le tag n’a pas été enregistré correctement. Maintenez-le contre votre téléphone et réessayez."
+      "verifyFailedRetry": "Le tag n’a pas été enregistré correctement. Maintenez-le contre votre téléphone et réessayez.",
+      "retapTag": "Tag formaté. Éloignez-le, puis maintenez-le à nouveau contre votre téléphone."
     },
     "toast": {
       "updateDbHeading": "Mise à jour de la base de données de médias",

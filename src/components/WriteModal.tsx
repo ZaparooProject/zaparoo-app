@@ -13,6 +13,8 @@ export function WriteModal(props: {
   close: () => void;
   verifyError?: boolean;
   retry?: () => void;
+  /** A freshly formatted tag must be lifted and presented again. */
+  retapRequired?: boolean;
 }) {
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
@@ -20,6 +22,7 @@ export function WriteModal(props: {
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const retryButtonRef = useRef<HTMLButtonElement>(null);
   const verifyError = props.verifyError ?? false;
+  const retapRequired = !verifyError && (props.retapRequired ?? false);
 
   const { ref: swipeRef = () => undefined, ...swipeHandlers } = useSmartSwipe({
     onSwipeRight: () => props.close(),
@@ -61,6 +64,13 @@ export function WriteModal(props: {
     }
   }, [props.isOpen, verifyError, announce, t]);
 
+  // Announce the prompt to present a freshly formatted tag again
+  useEffect(() => {
+    if (props.isOpen && retapRequired) {
+      announce(t("spinner.retapTag"), "assertive");
+    }
+  }, [props.isOpen, retapRequired, announce, t]);
+
   // Announce and focus the retry action when verification fails
   useEffect(() => {
     if (props.isOpen && verifyError) {
@@ -87,7 +97,11 @@ export function WriteModal(props: {
       role="dialog"
       aria-modal="true"
       aria-label={
-        verifyError ? t("spinner.verifyFailedRetry") : t("spinner.holdTag")
+        verifyError
+          ? t("spinner.verifyFailedRetry")
+          : retapRequired
+            ? t("spinner.retapTag")
+            : t("spinner.holdTag")
       }
       tabIndex={-1}
       {...swipeHandlers}
@@ -122,12 +136,17 @@ export function WriteModal(props: {
             </div>
           </>
         ) : (
-          <Button
-            ref={cancelButtonRef}
-            variant="outline"
-            onClick={() => props.close()}
-            label={t("nav.cancel")}
-          />
+          <>
+            {retapRequired && (
+              <p className="px-8 text-center">{t("spinner.retapTag")}</p>
+            )}
+            <Button
+              ref={cancelButtonRef}
+              variant="outline"
+              onClick={() => props.close()}
+              label={t("nav.cancel")}
+            />
+          </>
         )}
       </div>
     </div>

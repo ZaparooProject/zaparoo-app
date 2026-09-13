@@ -511,6 +511,7 @@ export function Search() {
         close={closeWriteModal}
         verifyError={nfcWriter.verifyError !== null}
         retry={() => void nfcWriter.retry()}
+        retapRequired={nfcWriter.retapRequired}
       />
       <SystemSelector
         isOpen={systemSelectorOpen}

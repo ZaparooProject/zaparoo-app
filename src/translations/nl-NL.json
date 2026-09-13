@@ -198,7 +198,8 @@
       "formatErrorRetry": "Deze tag kan niet worden geformatteerd. Probeer het opnieuw of gebruik een andere tag.",
       "verifying": "Tag controleren...",
       "verifyFailed": "Tag is niet goed opgeslagen",
-      "verifyFailedRetry": "De tag is niet goed opgeslagen. Houd hem bij je telefoon en probeer het opnieuw."
+      "verifyFailedRetry": "De tag is niet goed opgeslagen. Houd hem bij je telefoon en probeer het opnieuw.",
+      "retapTag": "Tag geformatteerd. Haal hem weg en houd hem daarna opnieuw bij je telefoon."
     },
     "toast": {
       "updateDbHeading": "Mediadatabase bijwerken",

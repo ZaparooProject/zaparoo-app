@@ -357,6 +357,7 @@ export function Index() {
         close={closeWriteModal}
         verifyError={nfcWriter.verifyError !== null}
         retry={() => void nfcWriter.retry()}
+        retapRequired={nfcWriter.retapRequired}
       />
       <RemoteKeyboardModal
         isOpen={remoteKeyboardOpen}

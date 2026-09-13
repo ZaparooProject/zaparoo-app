@@ -198,7 +198,8 @@
       "formatErrorRetry": "Dieser Tag kann nicht formatiert werden. Versuche es erneut oder verwende einen anderen Tag.",
       "verifying": "Tag wird überprüft...",
       "verifyFailed": "Tag wurde nicht korrekt gespeichert",
-      "verifyFailedRetry": "Der Tag wurde nicht korrekt gespeichert. Halte ihn an dein Telefon und versuche es erneut."
+      "verifyFailedRetry": "Der Tag wurde nicht korrekt gespeichert. Halte ihn an dein Telefon und versuche es erneut.",
+      "retapTag": "Tag formatiert. Nimm ihn weg und halte ihn dann erneut an dein Telefon."
     },
     "toast": {
       "updateDbHeading": "Mediendatenbank wird aktualisiert",
