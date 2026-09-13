@@ -55,6 +55,7 @@ void preloadZapLogo();
 
 const SUBSCRIPTION_STATUS_RETRY_DELAY_MS = 500;
 const STARTUP_CAPABILITY_TIMEOUT_MS = 6_000;
+const LIVE_UPDATE_SHELL_WAIT_MS = 3_000;
 
 function waitForSubscriptionRetry(signal: AbortSignal): Promise<void> {
   if (signal.aborted) return Promise.reject(signal.reason);
@@ -246,6 +247,9 @@ export default function App() {
   const preferencesHydrationSucceeded = usePreferencesStore(
     (state) => state._preferencesHydrationSucceeded,
   );
+  const preferencesHydrationTimedOut = usePreferencesStore(
+    (state) => state._preferencesHydrationTimedOut,
+  );
   const proAccessHydrated = usePreferencesStore(
     (state) => state._proAccessHydrated,
   );
@@ -324,11 +328,34 @@ export default function App() {
     return () => window.clearTimeout(timeout);
   }, [capabilityHydrationReady]);
 
+  // Capability probes hold the splash for layout stability, not bundle health.
+  // Live update rollback protection waits for the rendered shell, but only
+  // briefly on slow probes so ready() lands well inside the plugin's
+  // readyTimeout.
+  const [liveUpdateShellWaitElapsed, setLiveUpdateShellWaitElapsed] =
+    useState(false);
+
+  useEffect(() => {
+    if (capabilityHydrationReady) return;
+
+    const timeout = window.setTimeout(() => {
+      setLiveUpdateShellWaitElapsed(true);
+    }, LIVE_UPDATE_SHELL_WAIT_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [capabilityHydrationReady]);
+
   const startupReady =
     hasHydrated && (capabilityHydrationReady || capabilityHydrationTimedOut);
-  // A degraded preference fallback may render the shell, but must not accept
-  // an OTA bundle that failed its durable-storage compatibility check.
-  useLiveUpdate(startupReady && preferencesHydrationSucceeded);
+  // A storage timeout is a stalled native bridge, not a broken bundle. Other
+  // preference failures (e.g. the plugin missing from this binary) still
+  // withhold ready() so an incompatible OTA bundle is rolled back.
+  const preferencesSettled =
+    hasHydrated &&
+    (preferencesHydrationSucceeded || preferencesHydrationTimedOut);
+  useLiveUpdate(
+    preferencesSettled && (startupReady || liveUpdateShellWaitElapsed),
+  );
 
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
   const setLifetimeProAccess = usePreferencesStore(
