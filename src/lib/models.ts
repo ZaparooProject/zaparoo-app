@@ -85,6 +85,13 @@ export interface VersionResponse {
 
 export type ClientRole = "admin" | "member";
 
+/**
+ * A connection's effective authority, reported by Core 2.17+. `localhost` and
+ * `admin` may change device-management settings such as Online settings;
+ * `legacy` is an unpaired compatibility client that never can.
+ */
+export type ClientAccess = "localhost" | "admin" | "member" | "legacy";
+
 export enum ClientCapability {
   ProfilesManage = "profiles.manage",
   SettingsWrite = "settings.write",
@@ -94,6 +101,8 @@ export interface ClientsCurrentResponse {
   paired: boolean;
   role: ClientRole | null;
   capabilities: string[];
+  /** Absent before Core 2.17. */
+  access?: ClientAccess;
 }
 
 export interface LaunchRequest {
