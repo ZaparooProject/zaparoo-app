@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
-import { Purchases } from "@revenuecat/purchases-capacitor";
+import {
+  Purchases,
+  type PurchasesOfferings,
+} from "@revenuecat/purchases-capacitor";
 import type { SubscriptionResponse } from "@/lib/models";
 import { getSubscriptionStatus } from "@/lib/onlineApi";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
@@ -13,6 +16,7 @@ import {
   getOfferingDiagnostics,
   getPurchaseAccess,
   getWarpPackages,
+  loadOfferings,
   runPurchasesOperation,
   WARP_OFFERING_ID,
   type WarpPackages,
@@ -48,6 +52,16 @@ export type WarpRestoreResult =
   | "not_found"
   | "failed";
 export type WarpManageResult = "opened" | "unavailable" | "failed";
+
+// A shared offerings request reaches every account load while it is reused;
+// report it and cache its diagnostics only once.
+const handledOfferingsRequests = new WeakSet<Promise<PurchasesOfferings>>();
+
+function claimOfferingsRequest(request: Promise<PurchasesOfferings>): boolean {
+  if (handledOfferingsRequests.has(request)) return false;
+  handledOfferingsRequests.add(request);
+  return true;
+}
 
 const ACTIVATION_POLL_INTERVAL_MS = 2000;
 export const ACTIVATION_POLL_DEADLINE_MS = 30_000;
@@ -141,11 +155,12 @@ export function useWarpSubscription(appUserID: string) {
   );
 
   const loadAccount = useCallback(
-    async (signal: AbortSignal, silent = false) => {
+    async (signal: AbortSignal, silent = false, refreshOfferings = false) => {
       if (!mountedRef.current) return;
       if (!silent) setIsLoading(true);
       setLoadFailed(false);
       setPackagesUnavailable(false);
+      let offeringsRequest: Promise<PurchasesOfferings> | null = null;
 
       try {
         if (!Capacitor.isNativePlatform()) {
@@ -182,13 +197,14 @@ export function useWarpSubscription(appUserID: string) {
         }
 
         setActivationPending(false);
-        const offerings = await Purchases.getOfferings();
+        offeringsRequest = loadOfferings({ refresh: refreshOfferings });
+        const offerings = await offeringsRequest;
         if (signal.aborted) return;
 
         const warpPackages = getWarpPackages(offerings);
         setPackages(warpPackages);
         setPackagesUnavailable(!warpPackages);
-        if (!warpPackages) {
+        if (!warpPackages && claimOfferingsRequest(offeringsRequest)) {
           logger.error(
             "RevenueCat Warp offering is unavailable",
             getOfferingDiagnostics(offerings, WARP_OFFERING_ID),
@@ -201,12 +217,16 @@ export function useWarpSubscription(appUserID: string) {
         }
       } catch (e) {
         if (signal.aborted) return;
+        setPackages(null);
+        setLoadFailed(true);
+        // A shared offerings failure is reported by the first load to see it.
+        if (offeringsRequest && !claimOfferingsRequest(offeringsRequest)) {
+          return;
+        }
         const purchaseError = getPurchaseErrorDiagnostics(e);
         if (Object.keys(purchaseError).length > 0) {
           cachePurchaseErrorDiagnostics(purchaseError, "loadSubscription");
         }
-        setPackages(null);
-        setLoadFailed(true);
         // Store billing that is unavailable on this device is an environment
         // state, not an app defect; diagnostics stay cached for support.
         if (wrapPurchaseError(e) instanceof PurchaseNotAllowedError) return;
@@ -230,15 +250,17 @@ export function useWarpSubscription(appUserID: string) {
     const lifecycleController = new AbortController();
     let appStateHandle: { remove: () => Promise<void> } | null = null;
 
-    const startAccountLoad = (silent = false) => {
+    const startAccountLoad = (silent = false, refreshOfferings = false) => {
       accountLoadAbortRef.current?.abort();
       const loadController = new AbortController();
       accountLoadAbortRef.current = loadController;
-      void loadAccount(loadController.signal, silent).finally(() => {
-        if (accountLoadAbortRef.current === loadController) {
-          accountLoadAbortRef.current = null;
-        }
-      });
+      void loadAccount(loadController.signal, silent, refreshOfferings).finally(
+        () => {
+          if (accountLoadAbortRef.current === loadController) {
+            accountLoadAbortRef.current = null;
+          }
+        },
+      );
     };
 
     void Promise.resolve().then(() => {
@@ -252,7 +274,8 @@ export function useWarpSubscription(appUserID: string) {
       ) {
         return;
       }
-      startAccountLoad(true);
+      // The user may have changed store accounts while away.
+      startAccountLoad(true, true);
     })
       .then((handle) => {
         if (lifecycleController.signal.aborted) {
@@ -361,7 +384,7 @@ export function useWarpSubscription(appUserID: string) {
     if (!controller) return;
 
     try {
-      await loadAccount(controller.signal);
+      await loadAccount(controller.signal, false, true);
     } finally {
       finishAction();
     }
