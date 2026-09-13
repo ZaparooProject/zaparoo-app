@@ -1,9 +1,33 @@
 import { act, render, screen, fireEvent, waitFor } from "@/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
+import type { User } from "@capacitor-firebase/authentication";
 import { RequirementsModal } from "@/components/RequirementsModal";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
+import { logger } from "@/lib/logger";
 import type { PendingRequirement } from "@/lib/models";
+import { NotSignedInError, updateRequirements } from "@/lib/onlineApi";
+import { useStatusStore } from "@/lib/store";
+
+const signedInUser: User = {
+  displayName: null,
+  email: "user@example.com",
+  emailVerified: true,
+  isAnonymous: false,
+  metadata: {},
+  phoneNumber: null,
+  photoUrl: null,
+  providerData: [],
+  providerId: "password",
+  tenantId: null,
+  uid: "user-123",
+};
+
+const termsRequirement: PendingRequirement = {
+  type: "terms_acceptance",
+  description: "Accept terms",
+  endpoint: "/account/requirements",
+};
 
 // Mock external dependencies only
 vi.mock("@capacitor-firebase/authentication", () => ({
@@ -31,7 +55,8 @@ vi.mock("@capacitor/core", () => ({
   },
 }));
 
-vi.mock("@/lib/onlineApi", () => ({
+vi.mock("@/lib/onlineApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/onlineApi")>()),
   updateRequirements: vi.fn().mockResolvedValue({
     requirements: {
       email_verified: true,
@@ -47,15 +72,6 @@ vi.mock("@/lib/onlineApi", () => ({
       privacy_accepted: true,
       age_verified: true,
     },
-  }),
-}));
-
-vi.mock("@/lib/store", () => ({
-  useStatusStore: vi.fn((selector) => {
-    const state = {
-      setLoggedInUser: vi.fn(),
-    };
-    return selector(state);
   }),
 }));
 
@@ -85,6 +101,98 @@ describe("RequirementsModal", () => {
       isOpen: false,
       pendingRequirements: [],
       completionRevision: 0,
+    });
+    useStatusStore.setState({ loggedInUser: null });
+  });
+
+  describe("sign-out", () => {
+    it("should close when the account signs out elsewhere", () => {
+      useStatusStore.setState({ loggedInUser: signedInUser });
+      useRequirementsStore.setState({
+        isOpen: true,
+        pendingRequirements: [termsRequirement],
+      });
+      render(<RequirementsModal />);
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+      act(() => {
+        useStatusStore.getState().setLoggedInUser(null);
+      });
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(useRequirementsStore.getState()).toMatchObject({
+        isOpen: false,
+        pendingRequirements: [],
+        completionRevision: 0,
+      });
+    });
+
+    it("should stay open when sign-in stores the user after requirements arrive", () => {
+      useRequirementsStore.setState({
+        isOpen: true,
+        pendingRequirements: [termsRequirement],
+      });
+      render(<RequirementsModal />);
+
+      act(() => {
+        useStatusStore.getState().setLoggedInUser(signedInUser);
+      });
+
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(useRequirementsStore.getState().isOpen).toBe(true);
+    });
+
+    it("should close without reporting when saving after sign-out", async () => {
+      const user = userEvent.setup();
+      vi.mocked(updateRequirements).mockRejectedValueOnce(
+        new NotSignedInError(),
+      );
+      useRequirementsStore.setState({
+        isOpen: true,
+        pendingRequirements: [termsRequirement],
+      });
+      render(<RequirementsModal />);
+
+      await user.click(
+        screen.getByRole("checkbox", { name: "requirements.legalLabel" }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "requirements.continue" }),
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      });
+      expect(useRequirementsStore.getState().completionRevision).toBe(0);
+      expect(logger.error).not.toHaveBeenCalled();
+      expect(screen.queryByText("error")).not.toBeInTheDocument();
+    });
+
+    it("should report an unexpected save failure", async () => {
+      const user = userEvent.setup();
+      const failure = new Error("Network Error");
+      vi.mocked(updateRequirements).mockRejectedValueOnce(failure);
+      useStatusStore.setState({ loggedInUser: signedInUser });
+      useRequirementsStore.setState({
+        isOpen: true,
+        pendingRequirements: [termsRequirement],
+      });
+      render(<RequirementsModal />);
+
+      await user.click(
+        screen.getByRole("checkbox", { name: "requirements.legalLabel" }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "requirements.continue" }),
+      );
+
+      expect(await screen.findByText("error")).toBeInTheDocument();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(logger.error).toHaveBeenCalledWith(
+        "Failed to update requirements:",
+        failure,
+        expect.objectContaining({ severity: "error" }),
+      );
     });
   });
 
