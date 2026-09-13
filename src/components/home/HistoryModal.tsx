@@ -3,9 +3,8 @@ import classNames from "classnames";
 import { memo } from "react";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Button } from "@/components/wui/Button";
-import { CoreAPI } from "@/lib/coreApi";
+import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import { RepeatIcon } from "@/lib/images";
-import { logger } from "@/lib/logger";
 import type { HistoryResponse, HistoryResponseEntry } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
@@ -34,11 +33,7 @@ export const HistoryModal = memo(function HistoryModal({
       text: item.text,
       data: item.data,
     }).catch((error) => {
-      logger.error("Failed to replay scan", error, {
-        category: "api",
-        action: "replayScan",
-        severity: "error",
-      });
+      logRunFailure("Failed to replay scan", error, { action: "replayScan" });
       showRateLimitedErrorToast(t("scan.historyReplayError"));
     });
   };

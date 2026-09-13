@@ -3,7 +3,9 @@ import {
   CoreAPI,
   CoreApiError,
   MalformedCoreResponseError,
+  getRunErrorCategory,
   isExpectedMediaDatabaseError,
+  isExpectedRunError,
   isIndexResponse,
   isMediaOperationConflictError,
   isMissingMediaDatabaseSetupError,
@@ -106,6 +108,66 @@ describe("media API error classification", () => {
         missingMedia: 3,
       }),
     ).toBe(true);
+  });
+});
+
+describe("run error classification", () => {
+  it.each([
+    "busy",
+    "media_not_found",
+    "disabled",
+    "invalid_script",
+    "blocked",
+    "playtime_limit",
+    "cancelled",
+    "unavailable",
+  ])("should treat the %s run category as expected", (category) => {
+    const error = new CoreApiError("any message", 1, { category });
+
+    expect(getRunErrorCategory(error)).toBe(category);
+    expect(isExpectedRunError(error)).toBe(true);
+  });
+
+  it.each(["execution_failed", "timeout", "some_future_category"])(
+    "should keep the %s run category reportable",
+    (category) => {
+      const error = new CoreApiError("any message", 1, { category });
+
+      expect(getRunErrorCategory(error)).toBe(category);
+      expect(isExpectedRunError(error)).toBe(false);
+    },
+  );
+
+  it.each([
+    ["ZapScript is invalid", "invalid_script"],
+    ["ZapScript execution is disabled", "disabled"],
+    ["ZapScript execution was blocked", "blocked"],
+    ["media not found", "media_not_found"],
+    ["a script is already running", "busy"],
+    ["another launch is in progress", "busy"],
+    ["playtime limit reached", "playtime_limit"],
+    [
+      "zapscript exceeds maximum length: 9000 bytes (max 8192)",
+      "invalid_script",
+    ],
+    ["ZapScript execution failed", "execution_failed"],
+  ])(
+    "should classify uncategorized Core message %j as %s",
+    (message, category) => {
+      expect(getRunErrorCategory(new CoreApiError(message, 1))).toBe(category);
+    },
+  );
+
+  it("should not classify errors that did not come from Core", () => {
+    expect(getRunErrorCategory(new Error("media not found"))).toBeNull();
+    expect(isExpectedRunError(new Error("ZapScript is invalid"))).toBe(false);
+  });
+
+  it("should not classify unknown uncategorized Core errors", () => {
+    const error = new CoreApiError("database is locked", 1);
+
+    expect(getRunErrorCategory(error)).toBeNull();
+    expect(isExpectedRunError(error)).toBe(false);
   });
 });
 

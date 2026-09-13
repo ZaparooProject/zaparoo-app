@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoreAPI, MalformedCoreResponseError } from "../../lib/coreApi";
+import {
+  CoreAPI,
+  CoreApiError,
+  MalformedCoreResponseError,
+} from "../../lib/coreApi";
 import { logger } from "../../lib/logger";
 import {
   HistoryResponseEntry,
@@ -79,6 +83,33 @@ describe("CoreAPI API Contract", () => {
 
       const sentData = JSON.parse(mockSend.mock.calls[0]![0]);
       expect(sentData.params).toEqual({ text: "**launch.system:snes" });
+    });
+
+    it("run should reject with the Core error category and leave reporting to callers", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const promise = CoreAPI.run({ text: "**launch.system:snes" });
+      const request = JSON.parse(mockSend.mock.calls[0]![0]);
+
+      await CoreAPI.processReceived({
+        data: JSON.stringify({
+          jsonrpc: "2.0",
+          id: request.id,
+          error: {
+            code: 1,
+            message: "media not found",
+            data: { category: "media_not_found" },
+          },
+        }),
+      } as MessageEvent);
+
+      const error = await promise.catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(CoreApiError);
+      expect(error).toMatchObject({
+        message: "media not found",
+        code: 1,
+        category: "media_not_found",
+      });
+      expect(errorSpy).not.toHaveBeenCalled();
     });
 
     it("mediaBrowse should send scoped cursor parameters", async () => {
