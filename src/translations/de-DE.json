@@ -1267,6 +1267,7 @@
       "connectionError": {
         "encryptionRequired": "Dieses Gerät muss gekoppelt werden.",
         "credentialsRevoked": "Kopplung wurde aufgehoben. Kopple das Gerät erneut.",
+        "handshakeRejected": "Dieses Gerät erkennt diese App nicht mehr. Kopple das Gerät erneut.",
         "unsupportedVersion": "Dieses Gerät verwendet eine nicht unterstützte Verschlüsselungsversion."
       },
       "error": {

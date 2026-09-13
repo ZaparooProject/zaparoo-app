@@ -1267,6 +1267,7 @@
       "connectionError": {
         "encryptionRequired": "Dit apparaat moet worden gekoppeld.",
         "credentialsRevoked": "Koppeling is ingetrokken. Koppel opnieuw.",
+        "handshakeRejected": "Dit apparaat herkent deze app niet meer. Koppel opnieuw.",
         "unsupportedVersion": "Dit apparaat gebruikt een niet-ondersteunde versleutelingsversie."
       },
       "error": {

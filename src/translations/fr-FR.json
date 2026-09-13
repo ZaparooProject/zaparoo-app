@@ -1267,6 +1267,7 @@
       "connectionError": {
         "encryptionRequired": "Cet appareil nécessite une association.",
         "credentialsRevoked": "L’association a été perdue. Associez à nouveau l’appareil.",
+        "handshakeRejected": "Cet appareil ne reconnaît plus cette application. Associez à nouveau l’appareil.",
         "unsupportedVersion": "Cet appareil utilise une version de chiffrement non prise en charge."
       },
       "error": {

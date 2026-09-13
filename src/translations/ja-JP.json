@@ -1267,6 +1267,7 @@
       "connectionError": {
         "encryptionRequired": "このデバイスはペアリングが必要です。",
         "credentialsRevoked": "ペアリングが解除されました。もう一度ペアリングしてください。",
+        "handshakeRejected": "このデバイスはこのアプリを認識しなくなりました。もう一度ペアリングしてください。",
         "unsupportedVersion": "このデバイスはサポートされていない暗号化バージョンを使用しています。"
       },
       "error": {

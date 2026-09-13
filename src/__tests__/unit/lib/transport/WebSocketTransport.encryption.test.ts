@@ -410,25 +410,114 @@ describe("WebSocketTransport encryption", () => {
   });
 
   describe("encryption-blocked failures", () => {
-    it("should fail without auto-reconnect when server closes during encrypted handshake", async () => {
-      const onError = vi.fn();
-      const transport = makeTransport();
-      transport.setEventHandlers({ onError });
-      transport.connect();
+    it("should retry silent handshake closes before reporting the handshake rejected", async () => {
+      vi.useFakeTimers();
+      try {
+        const onError = vi.fn();
+        const onEncryptedHandshakeRejected = vi.fn();
+        const onCredentialsRevoked = vi.fn();
+        const transport = makeTransport();
+        transport.setEventHandlers({
+          onError,
+          onEncryptedHandshakeRejected,
+          onCredentialsRevoked,
+        });
+        transport.connect();
 
-      MockWebSocket.getLatest()!.simulateOpen();
-      await flushPromises();
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          expect(MockWebSocket.instances).toHaveLength(attempt);
+          MockWebSocket.getLatest()!.simulateOpen();
+          await vi.advanceTimersByTimeAsync(0);
+          // Core hangs up without an error frame before any reply decrypts.
+          MockWebSocket.getLatest()!.simulateClose(1006);
+          if (attempt < 3) {
+            expect(onEncryptedHandshakeRejected).not.toHaveBeenCalled();
+            expect(transport.state).toBe("reconnecting");
+            await vi.advanceTimersByTimeAsync(2000);
+          }
+        }
 
-      // Server closes while we're still in trying-encrypted (no decrypted frame yet)
-      MockWebSocket.getLatest()!.simulateClose();
+        expect(onEncryptedHandshakeRejected).toHaveBeenCalledTimes(1);
+        expect(onCredentialsRevoked).not.toHaveBeenCalled();
+        expect(onError).not.toHaveBeenCalled();
+        expect(transport.state).toBe("disconnected");
 
-      // No new socket should be created — the binary model surfaces this as an
-      // encryption failure instead of falling back to plaintext.
-      expect(MockWebSocket.instances).toHaveLength(1);
-      expect(onError).toHaveBeenCalledTimes(1);
-      expect(transport.state).toBe("disconnected");
+        // Blocked until the consumer pairs again.
+        await vi.advanceTimersByTimeAsync(10000);
+        expect(MockWebSocket.instances).toHaveLength(3);
 
-      transport.destroy();
+        transport.destroy();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("should not count a failed socket open between silent handshake closes", async () => {
+      vi.useFakeTimers();
+      try {
+        const onEncryptedHandshakeRejected = vi.fn();
+        const transport = makeTransport();
+        transport.setEventHandlers({ onEncryptedHandshakeRejected });
+        transport.connect();
+
+        const closeDuringHandshake = async () => {
+          MockWebSocket.getLatest()!.simulateOpen();
+          await vi.advanceTimersByTimeAsync(0);
+          MockWebSocket.getLatest()!.simulateClose(1006);
+          await vi.advanceTimersByTimeAsync(2000);
+        };
+
+        await closeDuringHandshake();
+        await closeDuringHandshake();
+        // Core is restarting: the next socket never opens.
+        MockWebSocket.getLatest()!.simulateClose(1006);
+        await vi.advanceTimersByTimeAsync(2000);
+
+        expect(onEncryptedHandshakeRejected).not.toHaveBeenCalled();
+        expect(MockWebSocket.instances).toHaveLength(4);
+
+        transport.destroy();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("should restart the silent close budget after a verified handshake", async () => {
+      vi.useFakeTimers();
+      try {
+        const onEncryptedHandshakeRejected = vi.fn();
+        const transport = makeTransport();
+        transport.setEventHandlers({ onEncryptedHandshakeRejected });
+        transport.connect();
+
+        const closeDuringHandshake = async () => {
+          MockWebSocket.getLatest()!.simulateOpen();
+          await vi.advanceTimersByTimeAsync(0);
+          MockWebSocket.getLatest()!.simulateClose(1006);
+          await vi.advanceTimersByTimeAsync(2000);
+        };
+
+        await closeDuringHandshake();
+        await closeDuringHandshake();
+
+        const verified = MockWebSocket.getLatest()!;
+        verified.simulateOpen();
+        await vi.advanceTimersByTimeAsync(0);
+        verified.simulateMessage(JSON.stringify({ e: btoa("pong") }));
+        await vi.advanceTimersByTimeAsync(0);
+        verified.simulateClose(1006);
+        await vi.advanceTimersByTimeAsync(2000);
+
+        await closeDuringHandshake();
+        await closeDuringHandshake();
+
+        expect(onEncryptedHandshakeRejected).not.toHaveBeenCalled();
+        expect(transport.state).toBe("reconnecting");
+
+        transport.destroy();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("should fire onEncryptionRequired and disconnect when no creds and server returns -32002", async () => {

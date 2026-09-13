@@ -34,6 +34,8 @@ export interface ConnectionManagerEventHandlers {
   onUnsupportedVersion?: (deviceId: string) => void;
   /** Called when the server doesn't recognise our credentials. */
   onCredentialsRevoked?: (deviceId: string) => void;
+  /** Called when the server keeps silently closing the encrypted handshake. */
+  onEncryptedHandshakeRejected?: (deviceId: string) => void;
 }
 
 export class ConnectionManager {
@@ -138,6 +140,8 @@ export class ConnectionManager {
         this.handlers.onUnsupportedVersion?.(config.deviceId),
       onCredentialsRevoked: () =>
         this.handlers.onCredentialsRevoked?.(config.deviceId),
+      onEncryptedHandshakeRejected: () =>
+        this.handlers.onEncryptedHandshakeRejected?.(config.deviceId),
     };
 
     transport.setEventHandlers(transportHandlers);

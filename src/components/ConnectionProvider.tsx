@@ -1570,6 +1570,19 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         );
         setPairingOpen(true);
       },
+      onEncryptedHandshakeRejected: () => {
+        if (!isCurrentConnection()) return;
+        clearConnectionIssue();
+        // Core hangs up without an error frame when it no longer knows this
+        // app, so there is no proof the credentials are gone. Keep them until a
+        // new pairing overwrites them.
+        setEncryptionState("plaintext");
+        setPairingRequired(true);
+        setConnectionError(
+          tRef.current("pairing.connectionError.handshakeRejected"),
+        );
+        setPairingOpen(true);
+      },
     });
 
     // Add device and set as active
