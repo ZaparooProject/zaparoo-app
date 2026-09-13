@@ -156,6 +156,7 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
+import { logger } from "@/lib/logger";
 import {
   ACTIVATION_POLL_DEADLINE_MS,
   useWarpSubscription,
@@ -199,6 +200,44 @@ describe("useWarpSubscription", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(getCachedPurchaseErrorDiagnostics()).toEqual({ code: "3" });
+  });
+
+  it("should keep store billing restrictions out of error reports", async () => {
+    mockGetOfferings.mockRejectedValue({
+      code: "3",
+      message: "The device or user is not allowed to make the purchase.",
+      userInfo: {
+        readableErrorCode: "PurchaseNotAllowedError",
+        underlyingErrorMessage: "BILLING_UNAVAILABLE",
+      },
+    });
+
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(getCachedPurchaseErrorDiagnostics()).toEqual({
+      code: "3",
+      readableErrorCode: "PurchaseNotAllowedError",
+      underlyingErrorMessage: "BILLING_UNAVAILABLE",
+    });
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it("should report unexpected offerings failures", async () => {
+    const error = new Error("RevenueCat backend unavailable");
+    mockGetOfferings.mockRejectedValue(error);
+
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.loadFailed).toBe(true));
+
+    expect(logger.error).toHaveBeenCalledWith(
+      "Failed to load Warp subscription",
+      error,
+      expect.objectContaining({
+        category: "purchase",
+        action: "loadSubscription",
+      }),
+    );
   });
 
   it("should default to annual and purchase its explicit package", async () => {

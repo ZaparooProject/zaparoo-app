@@ -21,6 +21,7 @@ import {
   getPurchaseErrorDiagnostics,
   PurchaseCancelledError,
   PurchaseIdentityError,
+  PurchaseNotAllowedError,
   PurchasePendingError,
   wrapPurchaseError,
 } from "@/lib/errors";
@@ -206,6 +207,9 @@ export function useWarpSubscription(appUserID: string) {
         }
         setPackages(null);
         setLoadFailed(true);
+        // Store billing that is unavailable on this device is an environment
+        // state, not an app defect; diagnostics stay cached for support.
+        if (wrapPurchaseError(e) instanceof PurchaseNotAllowedError) return;
         logger.error("Failed to load Warp subscription", e, {
           category: "purchase",
           action: "loadSubscription",

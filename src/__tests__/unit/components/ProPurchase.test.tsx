@@ -472,10 +472,12 @@ describe("useProPurchase", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("should distinguish a store eligibility failure and expose diagnostics", async () => {
+  it("should show a store eligibility failure with diagnostics without reporting it", async () => {
     const user = userEvent.setup();
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     const { logger } = await import("@/lib/logger");
+    const { getCachedPurchaseErrorDiagnostics } =
+      await import("@/lib/purchaseReportContext");
     vi.mocked(Purchases.getOfferings).mockRejectedValue({
       message: "The device or user is not allowed to make the purchase.",
       code: "3",
@@ -489,23 +491,22 @@ describe("useProPurchase", () => {
     render(<ProPurchaseHarness />);
 
     await waitFor(() => {
-      expect(logger.error).toHaveBeenCalledWith(
-        "RevenueCat offerings unavailable",
-        expect.any(Error),
-        expect.objectContaining({
-          action: "getOfferings",
-          purchaseError: {
-            code: "3",
-            readableErrorCode: "PurchaseNotAllowedError",
-            underlyingErrorMessage: "Billing response: not allowed",
-            userCancelled: undefined,
-          },
-        }),
-      );
+      expect(getCachedPurchaseErrorDiagnostics()).toEqual({
+        code: "3",
+        readableErrorCode: "PurchaseNotAllowedError",
+        underlyingErrorMessage: "Billing response: not allowed",
+      });
     });
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
 
-    expect(screen.getByText("scan.purchaseProNotAllowed")).toBeInTheDocument();
+    expect(
+      await screen.findByText("scan.purchaseProNotAllowed"),
+    ).toBeInTheDocument();
+    expect(logger.error).not.toHaveBeenCalledWith(
+      "RevenueCat offerings unavailable",
+      expect.anything(),
+      expect.anything(),
+    );
     expect(
       screen.queryByRole("button", { name: "settings.app.restorePurchases" }),
     ).not.toBeInTheDocument();
