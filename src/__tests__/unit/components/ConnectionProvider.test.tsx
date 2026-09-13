@@ -124,6 +124,12 @@ vi.mock("../../../lib/coreApi", async (importOriginal) => ({
       super(message);
     }
   },
+  MalformedCoreResponseError: (
+    await importOriginal<typeof import("../../../lib/coreApi")>()
+  ).MalformedCoreResponseError,
+  isMalformedCoreResponseError: (
+    await importOriginal<typeof import("../../../lib/coreApi")>()
+  ).isMalformedCoreResponseError,
   CoreAPI: {
     setWsInstance: vi.fn(),
     flushQueue: vi.fn(),
@@ -1298,6 +1304,50 @@ describe("notification processing", () => {
       await waitFor(() => {
         expect(mockToastError).toHaveBeenCalledWith("error");
       });
+    });
+
+    it("should report a malformed Core message as a warning without its contents", async () => {
+      const { resetToastRateLimiter } = await import("@/lib/toastUtils");
+      resetToastRateLimiter();
+      const loggerSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+      const { MalformedCoreResponseError } =
+        await vi.importActual<typeof import("@/lib/coreApi")>("@/lib/coreApi");
+      const payload = '{"result":{"name":"Private Media Title';
+      vi.mocked(CoreAPI.processReceived).mockRejectedValueOnce(
+        new MalformedCoreResponseError(
+          `Unterminated string in JSON at position ${payload.length}`,
+          null,
+          payload.length,
+          payload,
+        ),
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(loggerSpy).toHaveBeenCalledWith(
+          "Malformed Core message",
+          undefined,
+          {
+            category: "api",
+            action: "processReceived",
+            severity: "warning",
+            requestId: null,
+            dataLength: payload.length,
+          },
+        );
+      });
+      expect(JSON.stringify(loggerSpy.mock.calls)).not.toContain(
+        "Private Media Title",
+      );
+      expect(mockToastError).not.toHaveBeenCalled();
+      loggerSpy.mockRestore();
     });
   });
 
