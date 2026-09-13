@@ -669,6 +669,7 @@
         "paymentPending": "Payment is pending approval",
         "activationPending": "Purchase received. Account access is still activating.",
         "unavailable": "Warp purchase options are unavailable. Check your connection and try again.",
+        "purchasesNotAllowed": "Your app store is not allowing purchases for this account or device. Check that you are signed in to the store and that purchases are enabled.",
         "retry": "Retry",
         "refresh": "Refresh subscription",
         "refreshing": "Refreshing subscription...",

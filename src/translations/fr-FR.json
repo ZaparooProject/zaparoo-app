@@ -669,6 +669,7 @@
         "paymentPending": "Le paiement est en attente d’approbation",
         "activationPending": "Achat reçu. L’accès au compte est toujours en cours d’activation.",
         "unavailable": "Les options d’achat de Warp sont indisponibles. Vérifiez votre connexion et réessayez.",
+        "purchasesNotAllowed": "Votre boutique d’applications n’autorise pas les achats pour ce compte ou cet appareil. Vérifiez que vous êtes connecté à la boutique et que les achats sont activés.",
         "retry": "Réessayer",
         "refresh": "Actualiser l’abonnement",
         "refreshing": "Actualisation de l’abonnement...",

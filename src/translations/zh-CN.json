@@ -669,6 +669,7 @@
         "paymentPending": "付款正在等待批准",
         "activationPending": "购买已收到。账户访问权限仍在激活中。",
         "unavailable": "Warp 购买选项不可用。请检查网络连接后重试。",
+        "purchasesNotAllowed": "应用商店不允许此账户或设备进行购买。请确认已登录应用商店并已启用购买。",
         "retry": "重试",
         "refresh": "刷新订阅",
         "refreshing": "正在刷新订阅...",
