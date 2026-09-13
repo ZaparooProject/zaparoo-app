@@ -913,6 +913,29 @@ describe("useProPurchase", () => {
     });
   });
 
+  it("should tell the user when restore finds no purchases without reporting an error", async () => {
+    const user = userEvent.setup();
+    const toast = (await import("react-hot-toast")).default;
+    const { logger } = await import("@/lib/logger");
+    mockRestorePurchasesForUser.mockResolvedValue({
+      entitlements: { active: {} },
+    });
+
+    render(<PurchaseSupportActions />);
+    await user.click(
+      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
+    );
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("settings.app.restoreNotFound");
+    });
+    expect(logger.error).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ category: "purchase" }),
+    );
+  });
+
   it("should preserve store-verified Pro when RevenueCat restore finds no purchases", async () => {
     const user = userEvent.setup();
     const { usePreferencesStore } = await import("@/lib/preferencesStore");
