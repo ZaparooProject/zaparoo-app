@@ -3,7 +3,7 @@ import {
   DEFAULT_DEVICE_PORT,
   parseDeviceEndpoint,
 } from "@/lib/devices/endpoint.ts";
-import { logger } from "./logger.ts";
+import { logger, type ErrorMetadata } from "./logger.ts";
 import { RequestCancelledError } from "./errors";
 import { isIndexResponse } from "./indexResponse";
 import {
@@ -393,6 +393,24 @@ export function isUnsupportedCoreApiError(error: unknown): boolean {
     (error instanceof CoreApiError && error.code === -32601) ||
     /^(?:json-rpc(?: error)?:\s*)?method not found\b/.test(message)
   );
+}
+
+// Older Cores answer newer methods with "Method not found". That is an expected
+// compatibility outcome, so keep it out of error reporting.
+function logCoreApiFailure(
+  label: string,
+  error: unknown,
+  metadata?: ErrorMetadata,
+): void {
+  if (isUnsupportedCoreApiError(error)) {
+    logger.warn(`${label}:`, error);
+    return;
+  }
+  if (metadata) {
+    logger.error(`${label}:`, error, metadata);
+    return;
+  }
+  logger.error(`${label}:`, error);
 }
 
 export function isUnsupportedMediaApiError(error: unknown): boolean {
@@ -2355,7 +2373,7 @@ class CoreApi {
           resolve(result as ReadersResponse);
         })
         .catch((error) => {
-          logger.error("Readers API call failed:", error);
+          logCoreApiFailure("Readers API call failed", error);
           reject(error);
         });
     });
@@ -2384,7 +2402,7 @@ class CoreApi {
           ),
       );
     } catch (error) {
-      logger.error("Failed to check write capable readers:", error);
+      logCoreApiFailure("Failed to check write capable readers", error);
       return false;
     }
   }
@@ -2440,7 +2458,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Playtime API call failed:", error);
+          logCoreApiFailure("Playtime API call failed", error);
           reject(error);
         });
     });
@@ -2464,7 +2482,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Playtime limits API call failed:", error);
+          logCoreApiFailure("Playtime limits API call failed", error);
           reject(error);
         });
     });
@@ -2506,7 +2524,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Inbox API call failed:", error, {
+          logCoreApiFailure("Inbox API call failed", error, {
             category: "api",
             action: "inbox.fetch",
             severity: "error",

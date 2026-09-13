@@ -196,6 +196,9 @@ vi.mock("../../../lib/coreApi", async (importOriginal) => ({
   isIndexResponse: (
     await importOriginal<typeof import("../../../lib/coreApi")>()
   ).isIndexResponse,
+  isUnsupportedCoreApiError: (
+    await importOriginal<typeof import("../../../lib/coreApi")>()
+  ).isUnsupportedCoreApiError,
 }));
 
 vi.mock("@capacitor/preferences", () => ({
@@ -3364,6 +3367,55 @@ describe("connection event handling", () => {
       expect(CoreAPI.mediaScrapeStatus).toHaveBeenCalled();
       expect(useStatusStore.getState().scrapingStatus).toBeNull();
     });
+  });
+
+  it("should not report unsupported inbox or scraper status methods", async () => {
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "2.12.0",
+      platform: "test",
+    });
+    vi.mocked(CoreAPI.inbox).mockRejectedValueOnce(
+      new Error("Method not found"),
+    );
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockRejectedValueOnce(
+      new Error("Method not found"),
+    );
+
+    try {
+      render(
+        <ConnectionProvider>
+          <ConnectionConsumer />
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+
+      await waitFor(() => {
+        expect(warnSpy).toHaveBeenCalledWith(
+          "Inbox is unavailable on this Core",
+        );
+      });
+      await waitFor(() => {
+        expect(warnSpy).toHaveBeenCalledWith(
+          "Media scrape status is unavailable on this Core",
+        );
+      });
+      const reportedMessages = errorSpy.mock.calls.map(([message]) => message);
+      expect(reportedMessages).not.toContain("Failed to fetch inbox:");
+      expect(reportedMessages).not.toContain(
+        "Failed to fetch media scrape status:",
+      );
+    } finally {
+      errorSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
   });
 
   it("should store the platform and version the peer reports on its record", async () => {

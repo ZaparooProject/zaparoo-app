@@ -13,6 +13,7 @@ import {
   isUnindexedMediaError,
   isUnsupportedMediaApiError,
 } from "@/lib/coreApi";
+import { logger } from "@/lib/logger";
 import { Method, Notification } from "@/lib/models.ts";
 
 // Mock Capacitor
@@ -215,6 +216,7 @@ describe("CoreAPI", () => {
     vi.useRealTimers();
     // Clear any pending promises/timeouts
     vi.clearAllTimers();
+    vi.restoreAllMocks();
   });
 
   it("should initialize with default send function", () => {
@@ -366,6 +368,73 @@ describe("CoreAPI", () => {
     } as MessageEvent);
 
     await expect(controlPromise).resolves.toBeUndefined();
+  });
+
+  it.each([
+    ["inbox", () => CoreAPI.inbox()],
+    ["readers", () => CoreAPI.readers()],
+    ["playtime", () => CoreAPI.playtime()],
+    ["settings.playtime.limits", () => CoreAPI.playtimeLimits()],
+  ] as const)(
+    "should not report unsupported %s responses as errors",
+    async (method, apiCall) => {
+      const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+      const promise = apiCall();
+      const request = JSON.parse(mockSend.mock.calls[0][0]);
+      expect(request.method).toBe(method);
+
+      await CoreAPI.processReceived({
+        data: JSON.stringify({
+          jsonrpc: "2.0",
+          id: request.id,
+          error: { code: -32601, message: "Method not found" },
+        }),
+      } as MessageEvent);
+
+      await expect(promise).rejects.toThrow("Method not found");
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalled();
+    },
+  );
+
+  it("should report unexpected inbox failures as errors", async () => {
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    const promise = CoreAPI.inbox();
+    const request = JSON.parse(mockSend.mock.calls[0][0]);
+
+    await CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        error: { code: -32000, message: "database is locked" },
+      }),
+    } as MessageEvent);
+
+    await expect(promise).rejects.toThrow("database is locked");
+    expect(errorSpy).toHaveBeenCalledWith(
+      "Inbox API call failed:",
+      expect.any(Error),
+      expect.objectContaining({ action: "inbox.fetch", severity: "error" }),
+    );
+  });
+
+  it("should treat unsupported readers as no remote writer without reporting", async () => {
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    vi.spyOn(logger, "warn").mockImplementation(() => {});
+    const promise = CoreAPI.hasWriteCapableReader();
+    const request = JSON.parse(mockSend.mock.calls[0][0]);
+
+    await CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        error: { code: -32601, message: "Method not found" },
+      }),
+    } as MessageEvent);
+
+    await expect(promise).resolves.toBe(false);
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("should default missing media search result tags from older Cores", async () => {
