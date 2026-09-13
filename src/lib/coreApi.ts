@@ -55,6 +55,7 @@ import {
   ScrapersResponse,
   ScrapingStatusNotification,
   SearchParams,
+  SearchResultGame,
   SearchResultsResponse,
   ScreenshotResponse,
   SettingsAuthClaimRequest,
@@ -387,6 +388,24 @@ function requireMediaResponse(result: unknown): MediaResponse {
     ...(validatedResult as unknown as MediaResponse),
     active,
     ...(playlists === undefined ? {} : { playlists }),
+  };
+}
+
+// Core 2.6.0 and older omit result tags, and Core encodes empty lists as null.
+function normalizeSearchResultsResponse(
+  result: unknown,
+): SearchResultsResponse {
+  if (!isRecord(result)) {
+    throw new Error("Invalid media search response: expected an object");
+  }
+  const results: SearchResultGame[] = Array.isArray(result.results)
+    ? (result.results as SearchResultGame[])
+    : [];
+  return {
+    ...(result as unknown as SearchResultsResponse),
+    results: results.map((entry) =>
+      Array.isArray(entry.tags) ? entry : { ...entry, tags: [] },
+    ),
   };
 }
 
@@ -1479,8 +1498,12 @@ class CoreApi {
     return new Promise<SearchResultsResponse>((resolve, reject) => {
       this.call(Method.MediaSearch, params, signal)
         .then((result) => {
+          if (isCancelled(result)) {
+            resolve(result as unknown as SearchResultsResponse);
+            return;
+          }
           try {
-            const response = result as SearchResultsResponse;
+            const response = normalizeSearchResultsResponse(result);
             logger.debug(response);
             resolve(response);
           } catch (e) {
