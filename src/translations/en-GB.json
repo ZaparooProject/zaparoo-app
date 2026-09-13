@@ -70,6 +70,7 @@
       "removeFavorite": "Remove from Favourites",
       "updatingFavorite": "Updating favourite...",
       "favoriteError": "Could not update favourite",
+      "favoriteNotIndexed": "Only media in the media database can be favourited",
       "disconnected": "Connect to a device to browse its library",
       "updateCore": "Update Zaparoo Core to use Library",
       "databaseRequired": "Create a media database to browse Library",

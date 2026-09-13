@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Heart } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { CoreAPI } from "@/lib/coreApi";
+import { CoreAPI, isUnindexedMediaError } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
 import {
   favoriteUpdateParams,
@@ -85,6 +85,12 @@ export function FavoriteButton(props: {
     },
     onError: (error, _nextFavorite, context) => {
       setFavorite(context?.previousFavorite ?? favoriteFromProps);
+      if (isUnindexedMediaError(error)) {
+        // Media playing from outside the media database, such as a system
+        // Core has not indexed, cannot hold a favorite.
+        showRateLimitedErrorToast(t("library.favoriteNotIndexed"));
+        return;
+      }
       logger.error("Failed to update media favorite", error, {
         category: "api",
         action: "updateMediaFavorite",

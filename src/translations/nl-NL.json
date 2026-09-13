@@ -70,6 +70,7 @@
       "removeFavorite": "Verwijderen uit favorieten",
       "updatingFavorite": "Favoriet bijwerken...",
       "favoriteError": "Favoriet kon niet worden bijgewerkt",
+      "favoriteNotIndexed": "Alleen media uit de mediadatabase kunnen als favoriet worden gemarkeerd",
       "disconnected": "Maak verbinding met een apparaat om de bibliotheek te bekijken",
       "updateCore": "Werk Zaparoo Core bij om de bibliotheek te gebruiken",
       "databaseRequired": "Maak een mediadatabase om de bibliotheek te bekijken",

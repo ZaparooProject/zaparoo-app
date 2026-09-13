@@ -1580,11 +1580,15 @@ class CoreApi {
       return result as MediaTagsUpdateResponse;
     } catch (error) {
       if (isRequestCancelledError(error)) throw error;
-      logMediaApiFailure(
-        "Media tags update API call failed",
-        "mediaTagsUpdate",
-        error,
-      );
+      if (isUnindexedMediaError(error)) {
+        logger.warn("Media tags update target is not indexed:", error);
+      } else {
+        logMediaApiFailure(
+          "Media tags update API call failed",
+          "mediaTagsUpdate",
+          error,
+        );
+      }
       throw error;
     }
   }
