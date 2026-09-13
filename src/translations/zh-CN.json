@@ -1267,6 +1267,7 @@
       "connectionError": {
         "encryptionRequired": "此设备需要配对。",
         "credentialsRevoked": "配对已失效。请重新配对。",
+        "handshakeRejected": "此设备已无法识别此应用。请重新配对。",
         "unsupportedVersion": "此设备使用不受支持的加密版本。"
       },
       "error": {

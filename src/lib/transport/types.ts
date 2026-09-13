@@ -67,6 +67,11 @@ export interface TransportEventHandlers {
   onUnsupportedVersion?: () => void;
   /** Called when the server rejects our stored credentials (-32002 in encrypted mode). */
   onCredentialsRevoked?: () => void;
+  /**
+   * Called when the server keeps closing the socket during the encrypted
+   * handshake without an error frame, which Core does for an unknown auth token.
+   */
+  onEncryptedHandshakeRejected?: () => void;
 }
 
 /**

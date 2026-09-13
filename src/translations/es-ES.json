@@ -1267,6 +1267,7 @@
       "connectionError": {
         "encryptionRequired": "Este dispositivo requiere emparejamiento.",
         "credentialsRevoked": "Se perdió el emparejamiento. Vuelve a emparejar el dispositivo.",
+        "handshakeRejected": "Este dispositivo ya no reconoce esta aplicación. Vuelve a emparejar el dispositivo.",
         "unsupportedVersion": "Este dispositivo utiliza una versión de cifrado no compatible."
       },
       "error": {

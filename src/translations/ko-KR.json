@@ -1267,6 +1267,7 @@
       "connectionError": {
         "encryptionRequired": "이 기기는 페어링이 필요합니다.",
         "credentialsRevoked": "페어링이 해제되었습니다. 다시 페어링하세요.",
+        "handshakeRejected": "이 기기가 더 이상 이 앱을 인식하지 않습니다. 다시 페어링하세요.",
         "unsupportedVersion": "이 기기는 지원하지 않는 암호화 버전을 사용합니다."
       },
       "error": {

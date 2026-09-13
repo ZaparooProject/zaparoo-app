@@ -1267,6 +1267,7 @@
       "connectionError": {
         "encryptionRequired": "This device requires pairing.",
         "credentialsRevoked": "Pairing was lost. Please pair again.",
+        "handshakeRejected": "This device no longer recognises this app. Please pair again.",
         "unsupportedVersion": "This device uses an unsupported encryption version."
       },
       "error": {
