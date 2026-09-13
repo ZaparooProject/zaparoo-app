@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { Purchases } from "@revenuecat/purchases-capacitor";
@@ -10,7 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/wui/Button";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
-import { updateRequirements, getRequirements } from "@/lib/onlineApi";
+import {
+  updateRequirements,
+  getRequirements,
+  NotSignedInError,
+} from "@/lib/onlineApi";
 import type { UpdateRequirementsRequest } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 import { logger } from "@/lib/logger";
@@ -24,6 +28,10 @@ export function RequirementsModal() {
   const { isOpen, pendingRequirements, close, complete } =
     useRequirementsStore();
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
+  const loggedInUid = useStatusStore(
+    (state) => state.loggedInUser?.uid ?? null,
+  );
+  const previousLoggedInUidRef = useRef(loggedInUid);
 
   // Local checkbox state - NOT live updating
   const [legalChecked, setLegalChecked] = useState(false);
@@ -64,6 +72,17 @@ export function RequirementsModal() {
     }
   }, [isOpen]);
 
+  // Requirements belong to the account that hit them. Sign-in can open the
+  // modal before the user is stored, so only a stored account signing out or
+  // being replaced closes it.
+  useEffect(() => {
+    const previousUid = previousLoggedInUidRef.current;
+    previousLoggedInUidRef.current = loggedInUid;
+    if (previousUid !== null && previousUid !== loggedInUid) {
+      close();
+    }
+  }, [close, loggedInUid]);
+
   // Check if Save button should be enabled
   const canSave = (!needsTos || legalChecked) && (!needsAge || ageChecked);
   const legalSeparator = /^(ja|zh)(-|$)/i.test(
@@ -98,6 +117,10 @@ export function RequirementsModal() {
         complete();
       }
     } catch (e) {
+      if (e instanceof NotSignedInError) {
+        close();
+        return;
+      }
       logger.error("Failed to update requirements:", e, {
         category: "api",
         action: "updateRequirements",
