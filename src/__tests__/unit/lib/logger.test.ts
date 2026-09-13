@@ -28,6 +28,8 @@ vi.mock("../../../lib/store", () => ({
     getState: () => ({
       connectionState: "connected",
       connected: true,
+      coreVersion: "2.17.0",
+      corePlatform: "mister",
     }),
   },
 }));
@@ -239,6 +241,8 @@ describe("Logger Rate Limiting", () => {
         platform: "ios",
         category: "nfc",
         action: "test",
+        coreVersion: "2.17.0",
+        corePlatform: "mister",
       }),
     );
   });
