@@ -34,6 +34,13 @@ describe("Rollbar error filtering", () => {
     expect(shouldIgnore(new Error(message))).toBe(true);
   });
 
+  it.each([
+    "ResizeObserver loop limit exceeded",
+    "ResizeObserver loop completed with undelivered notifications.",
+  ])("should ignore benign ResizeObserver notices: %s", (message) => {
+    expect(shouldIgnore(new Error(message))).toBe(true);
+  });
+
   it("should keep unexpected request failures", () => {
     expect(shouldIgnore(new Error("Core returned invalid media data"))).toBe(
       false,
