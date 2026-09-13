@@ -5,7 +5,7 @@ export interface MediaWriteSource {
   path: string;
   relativePath?: string;
   zapScript?: string;
-  tags: readonly TagInfo[];
+  tags?: readonly TagInfo[];
 }
 
 function nonEmptyPath(value: string | undefined): string | null {

@@ -368,6 +368,63 @@ describe("CoreAPI", () => {
     await expect(controlPromise).resolves.toBeUndefined();
   });
 
+  it("should default missing media search result tags from older Cores", async () => {
+    const searchPromise = CoreAPI.mediaSearch({ query: "mario", systems: [] });
+    const request = JSON.parse(mockSend.mock.calls[0][0]);
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: {
+          results: [
+            {
+              system: { id: "SNES", name: "Super Nintendo" },
+              name: "Super Mario World",
+              path: "/games/snes/Super Mario World.sfc",
+            },
+            {
+              system: { id: "NES", name: "Nintendo" },
+              name: "Super Mario Bros.",
+              path: "/games/nes/Super Mario Bros.nes",
+              tags: null,
+            },
+            {
+              system: { id: "SNES", name: "Super Nintendo" },
+              name: "Super Mario Kart",
+              path: "/games/snes/Super Mario Kart.sfc",
+              tags: [{ type: "genre", tag: "racing" }],
+            },
+          ],
+          total: 3,
+        },
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    const response = await searchPromise;
+    expect(response.results.map((result) => result.tags)).toEqual([
+      [],
+      [],
+      [{ type: "genre", tag: "racing" }],
+    ]);
+    expect(response.total).toBe(3);
+  });
+
+  it("should default a null media search result list to empty", async () => {
+    const searchPromise = CoreAPI.mediaSearch({ query: "none", systems: [] });
+    const request = JSON.parse(mockSend.mock.calls[0][0]);
+
+    CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: { results: null, total: 0 },
+      }),
+    } as MessageEvent).catch(() => undefined);
+
+    await expect(searchPromise).resolves.toEqual({ results: [], total: 0 });
+  });
+
   it("should reject cancelled media.control responses", async () => {
     const controlPromise = CoreAPI.mediaControl({
       action: "stop",
