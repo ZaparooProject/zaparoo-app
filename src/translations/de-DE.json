@@ -280,7 +280,7 @@
       "purchaseProLoading": "Verfügbarkeit von Zaparoo Pro wird geprüft...",
       "purchaseProUnavailable": "Zaparoo Pro kann derzeit nicht gekauft werden. Aktualisiere die App und versuche es erneut. Wenn du Pro bereits gekauft hast, verwende „Käufe wiederherstellen“ in den App-Einstellungen.",
       "purchaseProOfferingsError": "Die Kaufoptionen für Zaparoo Pro konnten nicht geladen werden. Prüfe deine Verbindung und versuche es erneut. Wenn du Pro bereits gekauft hast, verwende „Käufe wiederherstellen“ in den App-Einstellungen.",
-      "purchaseProNotAllowed": "Dein App-Store erlaubt für dieses Konto oder Gerät keine Käufe. Prüfe, ob du im Store angemeldet bist und Käufe aktiviert sind. Du kannst unten einen vorhandenen Kauf wiederherstellen oder die Abrechnungsdiagnose kopieren.",
+      "purchaseProNotAllowed": "Dein App-Store erlaubt für dieses Konto oder Gerät keine Käufe. Prüfe, ob du im Store angemeldet bist und Käufe aktiviert sind. Du kannst unten die Abrechnungsdiagnose kopieren.",
       "purchaseProFailed": "Kauf von Zaparoo Pro fehlgeschlagen",
       "purchaseProRestored": "Zaparoo Pro wurde wiederhergestellt",
       "purchaseProUnavailableAction": "Kauf nicht verfügbar",

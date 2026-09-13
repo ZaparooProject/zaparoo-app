@@ -280,7 +280,7 @@
       "purchaseProLoading": "Comprobando disponibilidad de Zaparoo Pro...",
       "purchaseProUnavailable": "Zaparoo Pro no se puede comprar en este momento. Actualiza la App e inténtalo de nuevo, o usa Restaurar compras en los ajustes de la App si ya compraste Pro.",
       "purchaseProOfferingsError": "No se pudieron cargar las opciones de compra de Zaparoo Pro. Comprueba tu conexión e inténtalo de nuevo, o usa Restaurar compras en los ajustes de la App si ya compraste Pro.",
-      "purchaseProNotAllowed": "La tienda de aplicaciones no permite compras para esta cuenta o dispositivo. Comprueba que has iniciado sesión en la tienda y que las compras están habilitadas. Puedes restaurar una compra existente o copiar el diagnóstico de facturación a continuación.",
+      "purchaseProNotAllowed": "La tienda de aplicaciones no permite compras para esta cuenta o dispositivo. Comprueba que has iniciado sesión en la tienda y que las compras están habilitadas. Puedes copiar el diagnóstico de facturación a continuación.",
       "purchaseProFailed": "La compra de Zaparoo Pro ha fallado",
       "purchaseProRestored": "Zaparoo Pro restaurado",
       "purchaseProUnavailableAction": "Compra no disponible",
