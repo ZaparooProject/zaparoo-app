@@ -58,6 +58,7 @@ import {
   isExpectedMediaDatabaseError,
   isIndexResponse,
   isMalformedCoreResponseError,
+  isUnsupportedCoreApiError,
   type NotificationRequest,
 } from "@/lib/coreApi";
 import {
@@ -1088,6 +1089,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             })
             .catch((err) => {
               setScrapingStatus(null);
+              if (isUnsupportedCoreApiError(err)) {
+                logger.warn("Media scrape status is unavailable on this Core");
+                return;
+              }
               logger.error("Failed to fetch media scrape status:", err, {
                 category: "api",
                 action: "mediaScrapeStatus",
@@ -1107,6 +1112,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               setInboxMessages(inboxRes.messages);
             })
             .catch((err) => {
+              if (isUnsupportedCoreApiError(err)) {
+                logger.warn("Inbox is unavailable on this Core");
+                return;
+              }
               logger.error("Failed to fetch inbox:", err, {
                 category: "api",
                 action: "inbox",
