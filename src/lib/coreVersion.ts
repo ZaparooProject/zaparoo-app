@@ -1,17 +1,11 @@
 const SEMVER_RE = /^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/;
 
-// Mirrors Core's config.IsDevelopmentVersion logic.
-// Treats empty, "DEVELOPMENT", pre-release suffixes, and unrecognised formats as
-// dev builds, which automatically satisfy all feature gates.
+// Mirrors Core's config.IsDevelopmentVersion logic, where only "DEVELOPMENT"
+// and "<hash>-dev" builds are development builds. Empty and unrecognised
+// formats are also treated as dev builds, which satisfy all feature gates.
+// Pre-releases such as "2.16.0-beta1" gate on their base version.
 export function isDevelopmentVersion(raw: string): boolean {
-  if (!raw || raw === "DEVELOPMENT") return true;
-  if (
-    raw.includes("-dev") ||
-    raw.includes("-rc") ||
-    raw.includes("-beta") ||
-    raw.includes("-alpha")
-  )
-    return true;
+  if (!raw || raw === "DEVELOPMENT" || raw.includes("-dev")) return true;
   return !SEMVER_RE.test(raw);
 }
 
