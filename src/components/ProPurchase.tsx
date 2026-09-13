@@ -443,15 +443,9 @@ export function PurchaseSupportActions({
         return;
       }
 
-      logger.error(
-        "Purchase restore found no active entitlements",
-        new Error("No active purchases found after store restore"),
-        {
-          category: "purchase",
-          action: "restorePurchasesNotFound",
-          severity: "warning",
-        },
-      );
+      // Restoring an account with nothing to restore is a normal outcome that
+      // the toast already explains, not an error to report.
+      logger.log("Purchase restore found no active entitlements");
       toast.error(t("settings.app.restoreNotFound"));
     } catch (error) {
       const purchaseError = getPurchaseErrorDiagnostics(error);
