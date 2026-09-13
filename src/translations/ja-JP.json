@@ -278,7 +278,7 @@
       "purchaseProLoading": "Zaparoo Proの提供状況を確認中...",
       "purchaseProUnavailable": "現在Zaparoo Proを購入できません。アプリを更新して再試行してください。すでにProを購入済みの場合は、アプリ設定の「購入を復元」を使用してください。",
       "purchaseProOfferingsError": "Zaparoo Proの購入オプションを読み込めませんでした。接続を確認して再試行してください。すでにProを購入済みの場合は、アプリ設定の「購入を復元」を使用してください。",
-      "purchaseProNotAllowed": "このアカウントまたは端末では、アプリストアからの購入が許可されていません。ストアにサインインしていることと、購入が有効になっていることを確認してください。下で既存の購入を復元するか、請求診断をコピーできます。",
+      "purchaseProNotAllowed": "このアカウントまたは端末では、アプリストアからの購入が許可されていません。ストアにサインインしていることと、購入が有効になっていることを確認してください。下で請求診断をコピーできます。",
       "purchaseProFailed": "Zaparoo Proの購入に失敗しました",
       "purchaseProRestored": "Zaparoo Proを復元しました",
       "purchaseProUnavailableAction": "購入できません",
