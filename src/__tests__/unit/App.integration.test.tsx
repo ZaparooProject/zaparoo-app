@@ -39,6 +39,7 @@ const {
   mockPreferencesState: {
     _hasHydrated: true,
     _preferencesHydrationSucceeded: true,
+    _preferencesHydrationTimedOut: false,
     _proAccessHydrated: true,
     _nfcAvailabilityHydrated: true,
     _cameraAvailabilityHydrated: true,
@@ -278,6 +279,7 @@ describe("App Integration", () => {
     Object.assign(mockPreferencesState, {
       _hasHydrated: true,
       _preferencesHydrationSucceeded: true,
+      _preferencesHydrationTimedOut: false,
       _proAccessHydrated: true,
       _nfcAvailabilityHydrated: true,
       _cameraAvailabilityHydrated: true,
@@ -372,6 +374,25 @@ describe("App Integration", () => {
     expect(LiveUpdate.sync).not.toHaveBeenCalled();
   });
 
+  it("should accept the live update when preference reads only timed out", async () => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(LiveUpdate.ready).mockResolvedValue({
+      previousBundleId: null,
+      currentBundleId: null,
+      rollback: false,
+    });
+    vi.mocked(LiveUpdate.sync).mockResolvedValue({ nextBundleId: null });
+    mockPreferencesState._preferencesHydrationSucceeded = false;
+    mockPreferencesState._preferencesHydrationTimedOut = true;
+
+    render(<App />);
+
+    expect(screen.getByTestId("router")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(LiveUpdate.ready).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("should continue startup when a capability probe never settles", async () => {
     vi.useFakeTimers();
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
@@ -388,8 +409,19 @@ describe("App Integration", () => {
     expect(screen.queryByTestId("router")).not.toBeInTheDocument();
     expect(LiveUpdate.ready).not.toHaveBeenCalled();
 
+    // A slow probe must not push ready() toward the plugin's readyTimeout.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(6_000);
+      await vi.advanceTimersByTimeAsync(2_999);
+    });
+    expect(LiveUpdate.ready).not.toHaveBeenCalled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(LiveUpdate.ready).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("router")).not.toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000);
     });
 
     expect(screen.getByTestId("router")).toBeInTheDocument();

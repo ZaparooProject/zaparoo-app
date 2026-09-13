@@ -119,6 +119,9 @@ describe("usePreferencesStore", () => {
       expect(
         usePreferencesStore.getState()._preferencesHydrationSucceeded,
       ).toBe(false);
+      expect(usePreferencesStore.getState()._preferencesHydrationTimedOut).toBe(
+        false,
+      );
     });
 
     it("should skip persistence writes when Preferences is unavailable", async () => {
@@ -199,6 +202,9 @@ describe("usePreferencesStore", () => {
       expect(
         usePreferencesStore.getState()._preferencesHydrationSucceeded,
       ).toBe(false);
+      expect(usePreferencesStore.getState()._preferencesHydrationTimedOut).toBe(
+        true,
+      );
       expect(Preferences.set).not.toHaveBeenCalled();
       expect(logger.error).toHaveBeenCalledTimes(1);
       expect(logger.error).toHaveBeenCalledWith(
@@ -252,6 +258,7 @@ describe("usePreferencesStore", () => {
       expect(Preferences.get).toHaveBeenCalledTimes(1);
       expect(usePreferencesStore.getState()).toMatchObject({
         _hasHydrated: true,
+        _preferencesHydrationTimedOut: false,
         showFilenames: true,
         tourCompleted: true,
       });

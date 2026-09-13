@@ -258,6 +258,8 @@ export interface PreferencesState {
   // Hydration tracking (internal, not persisted)
   _hasHydrated: boolean;
   _preferencesHydrationSucceeded: boolean;
+  // The storage fallback was caused by reads timing out, not by a failure.
+  _preferencesHydrationTimedOut: boolean;
   setHasHydrated: (state: boolean) => void;
 
   // Pro access hydration tracking (internal, not persisted)
@@ -328,6 +330,7 @@ const DEFAULT_PREFERENCES: Omit<
   PreferencesState,
   | "_hasHydrated"
   | "_preferencesHydrationSucceeded"
+  | "_preferencesHydrationTimedOut"
   | "setHasHydrated"
   | "_proAccessHydrated"
   | "setProAccessHydrated"
@@ -409,6 +412,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
       // Hydration tracking
       _hasHydrated: false,
       _preferencesHydrationSucceeded: false,
+      _preferencesHydrationTimedOut: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
 
       // Pro access hydration tracking
@@ -610,6 +614,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
             usePreferencesStore.setState({
               _hasHydrated: true,
               _preferencesHydrationSucceeded: false,
+              _preferencesHydrationTimedOut: timedOut,
             });
             if (timedOut) recoverWhenPendingPreferenceReadLands();
             return;
@@ -646,6 +651,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
           usePreferencesStore.setState({
             _hasHydrated: true,
             _preferencesHydrationSucceeded: true,
+            _preferencesHydrationTimedOut: false,
           });
 
           if (recoveredAfterFallback) {
