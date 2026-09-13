@@ -206,7 +206,7 @@ describe("useWarpSubscription", () => {
     expect(getCachedPurchaseErrorDiagnostics()).toEqual({ code: "3" });
   });
 
-  it("should keep store billing restrictions out of error reports", async () => {
+  it("should show store billing restrictions without reporting a failed load", async () => {
     mockGetOfferings.mockRejectedValue({
       code: "3",
       message: "The device or user is not allowed to make the purchase.",
@@ -219,6 +219,9 @@ describe("useWarpSubscription", () => {
     const { result } = renderHook(() => useWarpSubscription("user-123"));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
+    expect(result.current.purchasesNotAllowed).toBe(true);
+    expect(result.current.loadFailed).toBe(false);
+    expect(result.current.subscription?.is_premium).toBe(false);
     expect(getCachedPurchaseErrorDiagnostics()).toEqual({
       code: "3",
       readableErrorCode: "PurchaseNotAllowedError",

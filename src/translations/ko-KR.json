@@ -667,6 +667,7 @@
         "paymentPending": "결제 승인 대기 중",
         "activationPending": "구매가 접수되었습니다. 계정 접근 권한을 활성화하는 중입니다.",
         "unavailable": "Warp 구매 옵션을 사용할 수 없습니다. 연결을 확인하고 다시 시도하세요.",
+        "purchasesNotAllowed": "이 계정 또는 기기에서는 앱 스토어 구매가 허용되지 않습니다. 스토어에 로그인되어 있고 구매가 활성화되어 있는지 확인하세요.",
         "retry": "다시 시도",
         "refresh": "구독 새로 고침",
         "refreshing": "구독을 새로 고치는 중...",

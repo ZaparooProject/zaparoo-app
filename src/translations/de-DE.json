@@ -667,6 +667,7 @@
         "paymentPending": "Zahlung wartet auf Freigabe",
         "activationPending": "Kauf erhalten. Der Kontozugriff wird noch aktiviert.",
         "unavailable": "Warp-Kaufoptionen sind nicht verfügbar. Prüfe deine Verbindung und versuche es erneut.",
+        "purchasesNotAllowed": "Dein App-Store erlaubt für dieses Konto oder Gerät keine Käufe. Prüfe, ob du im Store angemeldet bist und Käufe aktiviert sind.",
         "retry": "Erneut versuchen",
         "refresh": "Abonnement aktualisieren",
         "refreshing": "Abonnement wird aktualisiert...",

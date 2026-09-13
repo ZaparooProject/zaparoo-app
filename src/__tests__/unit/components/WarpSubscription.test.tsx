@@ -62,6 +62,7 @@ function hookState(overrides: Record<string, unknown> = {}) {
     isLoading: false,
     loadFailed: false,
     packagesUnavailable: false,
+    purchasesNotAllowed: false,
     revenueCatWarpActive: false,
     action: null,
     activationPending: false,
@@ -331,6 +332,31 @@ describe("WarpSubscription", () => {
     expect(
       screen.getByRole("button", { name: "online.warp.retry" }),
     ).toBeInTheDocument();
+  });
+
+  it("should explain store purchase restrictions without a retry that cannot succeed", () => {
+    mockUseWarpSubscription.mockReturnValue(
+      hookState({ packages: null, purchasesNotAllowed: true }),
+    );
+
+    render(<WarpSubscription appUserID="user-123" />);
+
+    expect(
+      screen.getByText("online.warp.purchasesNotAllowed"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("online.warp.description")).toBeInTheDocument();
+    expect(
+      screen.queryByText("online.warp.statusUnavailable"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "online.warp.get" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "online.warp.retry" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "online.warp.restore" }),
+    ).toBeEnabled();
   });
 
   it.each([

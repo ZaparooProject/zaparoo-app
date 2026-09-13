@@ -667,6 +667,7 @@
         "paymentPending": "Betaling wacht op goedkeuring",
         "activationPending": "Aankoop ontvangen. Accounttoegang wordt nog geactiveerd.",
         "unavailable": "Aankoopopties voor Warp zijn niet beschikbaar. Controleer je verbinding en probeer het opnieuw.",
+        "purchasesNotAllowed": "Je appwinkel staat geen aankopen toe voor dit account of apparaat. Controleer of je bent aangemeld bij de winkel en of aankopen zijn ingeschakeld.",
         "retry": "Opnieuw proberen",
         "refresh": "Abonnementsstatus vernieuwen",
         "refreshing": "Abonnementsstatus vernieuwen...",

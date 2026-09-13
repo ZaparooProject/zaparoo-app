@@ -113,6 +113,7 @@ export function useWarpSubscription(appUserID: string) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [packagesUnavailable, setPackagesUnavailable] = useState(false);
+  const [purchasesNotAllowed, setPurchasesNotAllowed] = useState(false);
   const [revenueCatWarpActive, setRevenueCatWarpActive] = useState(false);
   const [action, setAction] = useState<WarpAction>(null);
   const [activationPending, setActivationPending] = useState(false);
@@ -160,6 +161,7 @@ export function useWarpSubscription(appUserID: string) {
       if (!silent) setIsLoading(true);
       setLoadFailed(false);
       setPackagesUnavailable(false);
+      setPurchasesNotAllowed(false);
       let offeringsRequest: Promise<PurchasesOfferings> | null = null;
 
       try {
@@ -218,7 +220,15 @@ export function useWarpSubscription(appUserID: string) {
       } catch (e) {
         if (signal.aborted) return;
         setPackages(null);
-        setLoadFailed(true);
+        const purchaseNotAllowed =
+          wrapPurchaseError(e) instanceof PurchaseNotAllowedError;
+        if (offeringsRequest && purchaseNotAllowed) {
+          // Subscription status loaded, but this device's store cannot sell.
+          // A retry cannot succeed, so this is not a failed status load.
+          setPurchasesNotAllowed(true);
+        } else {
+          setLoadFailed(true);
+        }
         // A shared offerings failure is reported by the first load to see it.
         if (offeringsRequest && !claimOfferingsRequest(offeringsRequest)) {
           return;
@@ -229,7 +239,7 @@ export function useWarpSubscription(appUserID: string) {
         }
         // Store billing that is unavailable on this device is an environment
         // state, not an app defect; diagnostics stay cached for support.
-        if (wrapPurchaseError(e) instanceof PurchaseNotAllowedError) return;
+        if (purchaseNotAllowed) return;
         logger.error("Failed to load Warp subscription", e, {
           category: "purchase",
           action: "loadSubscription",
@@ -645,6 +655,7 @@ export function useWarpSubscription(appUserID: string) {
     isLoading,
     loadFailed,
     packagesUnavailable,
+    purchasesNotAllowed,
     revenueCatWarpActive,
     action,
     activationPending,
