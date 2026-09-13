@@ -233,6 +233,43 @@ describe("PairingModal", () => {
 
       expect(pinInput.value).toBe("123456");
     });
+
+    it("should send a multi-byte device name within Core's byte limit", async () => {
+      const user = userEvent.setup();
+      mockedPerformPairing.mockRejectedValue(
+        new PairingError("wrong_pin", "wrong pin"),
+      );
+      render(
+        <PairingModal
+          isOpen={true}
+          close={vi.fn()}
+          address="192.168.1.10:7497"
+          recordId={RECORD_ID}
+        />,
+      );
+
+      const clientNameInput = screen.getByLabelText(
+        "pairing.clientNameLabel",
+      ) as HTMLInputElement;
+      await waitFor(() => {
+        expect(clientNameInput.value).toBe("Pixel 8");
+      });
+      await user.clear(clientNameInput);
+      await user.click(clientNameInput);
+      await user.paste("é".repeat(100));
+      await user.type(screen.getByLabelText("pairing.pinLabel"), "123456");
+
+      await waitFor(() => {
+        expect(mockedPerformPairing).toHaveBeenCalledTimes(1);
+      });
+      expect(clientNameInput.value).toBe("é".repeat(64));
+      expect(mockedPerformPairing).toHaveBeenCalledWith(
+        "192.168.1.10",
+        7497,
+        "123456",
+        "é".repeat(64),
+      );
+    });
   });
 
   describe("successful pairing", () => {

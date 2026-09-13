@@ -1276,6 +1276,8 @@
         "limit_reached": "Te veel pogingen, start het koppelen opnieuw op je apparaat",
         "rate_limited": "Te veel verzoeken, probeer het zo opnieuw",
         "session_unknown": "Koppelingssessie niet gevonden, start het koppelen opnieuw op je apparaat",
+        "no_pairing": "Geen actieve pincode, start het koppelen op je apparaat om een nieuwe te krijgen",
+        "too_many_clients": "Te veel gekoppelde apps, verwijder er een op je apparaat en probeer het opnieuw",
         "server_hmac_bad": "Beveiligingscontrole mislukt",
         "malformed": "Koppelen mislukt, probeer het opnieuw",
         "network": "Netwerkfout, controleer je verbinding en probeer het opnieuw",

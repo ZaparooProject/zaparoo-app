@@ -1276,6 +1276,8 @@
         "limit_reached": "Too many attempts, restart pairing on your device",
         "rate_limited": "Too many requests, try again in a moment",
         "session_unknown": "Pairing session not found, restart pairing on your device",
+        "no_pairing": "No active PIN, start pairing on your device to get a new one",
+        "too_many_clients": "Too many apps paired, remove one on your device and try again",
         "server_hmac_bad": "Security check failed",
         "malformed": "Pairing failed, try again",
         "network": "Network error, check your connection and try again",

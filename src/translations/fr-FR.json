@@ -1276,6 +1276,8 @@
         "limit_reached": "Trop de tentatives, redémarrez l’association sur votre appareil",
         "rate_limited": "Trop de requêtes, réessayez dans un instant",
         "session_unknown": "Session d’association introuvable, redémarrez l’association sur votre appareil",
+        "no_pairing": "Aucun code PIN actif, lancez l’association sur votre appareil pour en obtenir un nouveau",
+        "too_many_clients": "Trop d’applications associées, supprimez-en une sur votre appareil et réessayez",
         "server_hmac_bad": "Échec du contrôle de sécurité",
         "malformed": "Échec de l’association, réessayez",
         "network": "Erreur réseau, vérifiez votre connexion et réessayez",

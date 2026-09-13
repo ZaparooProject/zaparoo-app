@@ -20,6 +20,8 @@ export type PairingErrorKind =
   | "session_unknown"
   | "pin_expired"
   | "rate_limited"
+  | "no_pairing"
+  | "too_many_clients"
   | "malformed"
   | "server_hmac_bad"
   | "network"
@@ -45,6 +47,74 @@ const HTTP_ERROR_KINDS: Record<number, PairingErrorKind> = {
   410: "pin_expired",
   429: "rate_limited",
 };
+
+// Core's JSON `error` messages (pkg/api/pairing.go). A status code alone is
+// ambiguous: 400 also means no PIN is active, and 403 also means the client
+// limit was reached.
+const CORE_ERROR_KINDS: Record<string, PairingErrorKind> = {
+  "no pairing in progress": "no_pairing",
+  "pairing expired": "pin_expired",
+  "too many failed attempts": "limit_reached",
+  "unknown pairing session": "session_unknown",
+  "maximum paired clients reached": "too_many_clients",
+  "wrong PIN": "wrong_pin",
+};
+
+/** Core rejects client names longer than this many UTF-8 bytes. */
+export const PAIRING_CLIENT_NAME_MAX_BYTES = 128;
+
+function utf8Length(codePoint: number): number {
+  if (codePoint <= 0x7f) return 1;
+  if (codePoint <= 0x7ff) return 2;
+  // Lone surrogates are sent as U+FFFD, which is also three bytes.
+  if (codePoint <= 0xffff) return 3;
+  return 4;
+}
+
+/** Truncate a client name to Core's byte limit without splitting a code point. */
+export function truncateClientName(name: string): string {
+  let bytes = 0;
+  let end = 0;
+  for (const char of name) {
+    bytes += utf8Length(char.codePointAt(0)!);
+    if (bytes > PAIRING_CLIENT_NAME_MAX_BYTES) break;
+    end += char.length;
+  }
+  return name.slice(0, end);
+}
+
+async function readCoreError(resp: Response): Promise<string | undefined> {
+  try {
+    const body: unknown = await resp.json();
+    if (
+      typeof body === "object" &&
+      body !== null &&
+      typeof (body as { error?: unknown }).error === "string"
+    ) {
+      return (body as { error: string }).error;
+    }
+  } catch {
+    // Not Core's JSON error body; the status code is all there is to go on.
+  }
+  return undefined;
+}
+
+async function pairingHttpError(
+  step: "start" | "finish",
+  resp: Response,
+): Promise<PairingError> {
+  const coreError = await readCoreError(resp);
+  const kind =
+    (coreError === undefined ? undefined : CORE_ERROR_KINDS[coreError]) ??
+    HTTP_ERROR_KINDS[resp.status] ??
+    "unknown";
+  const detail = coreError === undefined ? "" : `: ${coreError}`;
+  return new PairingError(
+    kind,
+    `Pairing ${step} failed (${resp.status}${detail})`,
+    resp.status,
+  );
+}
 
 // Bracket IPv6 hosts in URLs (mirrors coreApi.ts:getWsUrl).
 function formatHost(h: string): string {
@@ -149,12 +219,7 @@ export async function performPairing(
   }
 
   if (!startResp.ok) {
-    const kind = HTTP_ERROR_KINDS[startResp.status] ?? "unknown";
-    throw new PairingError(
-      kind,
-      `Pairing start failed (${startResp.status})`,
-      startResp.status,
-    );
+    throw await pairingHttpError("start", startResp);
   }
 
   let startResult: { session: string; pake: string };
@@ -212,12 +277,7 @@ export async function performPairing(
   }
 
   if (!finishResp.ok) {
-    const kind = HTTP_ERROR_KINDS[finishResp.status] ?? "unknown";
-    throw new PairingError(
-      kind,
-      `Pairing finish failed (${finishResp.status})`,
-      finishResp.status,
-    );
+    throw await pairingHttpError("finish", finishResp);
   }
 
   let finishResult: { authToken: string; clientId: string; confirm: string };

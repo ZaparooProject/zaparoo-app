@@ -5,7 +5,11 @@ import { expand, extract } from "@noble/hashes/hkdf.js";
 import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { server } from "@/test-setup";
-import { performPairing } from "@/lib/crypto/pairing";
+import {
+  PAIRING_CLIENT_NAME_MAX_BYTES,
+  performPairing,
+  truncateClientName,
+} from "@/lib/crypto/pairing";
 import { base64Encode } from "@/lib/crypto/base64";
 import { buildHmacTranscript } from "@/lib/crypto/hmacTranscript";
 
@@ -184,6 +188,46 @@ describe("performPairing", () => {
     );
   });
 
+  describe("Core error messages", () => {
+    // Core pairs each status with a JSON `error` message; the message is what
+    // tells the user whether retrying the same PIN can work.
+    it.each([
+      ["start", 400, "no pairing in progress", "no_pairing"],
+      ["start", 410, "pairing expired", "pin_expired"],
+      ["start", 403, "too many failed attempts", "limit_reached"],
+      ["start", 400, "client name too long", "malformed"],
+      ["finish", 403, "maximum paired clients reached", "too_many_clients"],
+      ["finish", 403, "too many failed attempts", "limit_reached"],
+      ["finish", 404, "unknown pairing session", "session_unknown"],
+      ["finish", 401, "wrong PIN", "wrong_pin"],
+      ["finish", 500, "internal error", "unknown"],
+    ] as const)(
+      "should map %s %d %j to PairingError('%s')",
+      async (step, status, message, kind) => {
+        const errorResponse = () =>
+          HttpResponse.json({ error: message }, { status });
+        server.use(
+          step === "start"
+            ? http.post(START_URL, errorResponse)
+            : http.post(START_URL, () =>
+                HttpResponse.json({
+                  session: SESSION_ID,
+                  pake: base64Encode(MOCK_MSG_B),
+                }),
+              ),
+          http.post(FINISH_URL, errorResponse),
+        );
+
+        await expect(
+          performPairing(HOST, PORT, PIN, CLIENT_NAME),
+        ).rejects.toMatchObject({
+          kind,
+          httpStatus: status,
+        });
+      },
+    );
+  });
+
   describe("malformed response shape", () => {
     it("should throw PairingError('malformed') when /pair/start session is not a string", async () => {
       server.use(
@@ -304,5 +348,28 @@ describe("performPairing", () => {
         vi.useRealTimers();
       }
     });
+  });
+});
+
+describe("truncateClientName", () => {
+  const byteLength = (value: string) => new TextEncoder().encode(value).length;
+
+  it("should keep names within Core's byte limit unchanged", () => {
+    const name = "a".repeat(PAIRING_CLIENT_NAME_MAX_BYTES);
+
+    expect(truncateClientName(name)).toBe(name);
+  });
+
+  it("should cap multi-byte names by UTF-8 bytes", () => {
+    const truncated = truncateClientName("é".repeat(100));
+
+    expect(truncated).toBe("é".repeat(64));
+    expect(byteLength(truncated)).toBe(PAIRING_CLIENT_NAME_MAX_BYTES);
+  });
+
+  it("should drop a code point that would cross the limit instead of splitting it", () => {
+    const prefix = "a".repeat(PAIRING_CLIENT_NAME_MAX_BYTES - 2);
+
+    expect(truncateClientName(`${prefix}😀b`)).toBe(prefix);
   });
 });
