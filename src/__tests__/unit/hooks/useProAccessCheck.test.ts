@@ -262,16 +262,55 @@ describe("useProAccessCheck", () => {
 
       expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
       expect(mockSetLifetimeProAccess).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(25_000);
+      });
+
+      expect(mockLogger.error).toHaveBeenCalledTimes(1);
       expect(mockLogger.error).toHaveBeenCalledWith(
-        "Pro access hydration timed out",
+        "Pro access check did not complete",
         {
           category: "purchase",
           action: "proAccessCheck",
           severity: "warning",
-          timeoutMs: 5_000,
+          elapsedMs: 30_000,
           stage: "customerInfo",
         },
       );
+    });
+
+    it("should not report customer info that arrives after the splash timeout", async () => {
+      vi.useFakeTimers();
+      let resolveCustomerInfo!: (value: unknown) => void;
+      mockGetCustomerInfo.mockReturnValue(
+        new Promise((resolve) => {
+          resolveCustomerInfo = resolve;
+        }),
+      );
+
+      renderHook(() => useProAccessCheck());
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(8_000);
+      });
+      expect(mockSetProAccessHydrated).toHaveBeenCalledWith(true);
+
+      await act(async () => {
+        resolveCustomerInfo({
+          customerInfo: {
+            entitlements: { active: { tapto_launcher: { isActive: true } } },
+          },
+        });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(mockSetLifetimeProAccess).toHaveBeenCalledWith(true);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(mockLogger.error).not.toHaveBeenCalled();
     });
   });
 
