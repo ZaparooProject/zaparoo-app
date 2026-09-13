@@ -1276,6 +1276,8 @@
         "limit_reached": "Demasiados intentos; reinicia el emparejamiento en tu dispositivo",
         "rate_limited": "Demasiadas solicitudes; inténtalo de nuevo en un momento",
         "session_unknown": "No se encontró la sesión de emparejamiento; reinicia el emparejamiento en tu dispositivo",
+        "no_pairing": "No hay ningún PIN activo; inicia el emparejamiento en tu dispositivo para obtener uno nuevo",
+        "too_many_clients": "Hay demasiadas aplicaciones emparejadas; elimina una en tu dispositivo e inténtalo de nuevo",
         "server_hmac_bad": "Fallo en la comprobación de seguridad",
         "malformed": "Fallo en el emparejamiento; inténtalo de nuevo",
         "network": "Error de red; comprueba tu conexión e inténtalo de nuevo",

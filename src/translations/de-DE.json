@@ -1276,6 +1276,8 @@
         "limit_reached": "Zu viele Versuche, starte die Kopplung auf deinem Gerät neu",
         "rate_limited": "Zu viele Anfragen, versuche es gleich noch einmal",
         "session_unknown": "Kopplungssitzung nicht gefunden, starte die Kopplung auf deinem Gerät neu",
+        "no_pairing": "Keine aktive PIN, starte die Kopplung auf deinem Gerät, um eine neue zu erhalten",
+        "too_many_clients": "Zu viele Apps gekoppelt, entferne eine auf deinem Gerät und versuche es erneut",
         "server_hmac_bad": "Sicherheitsprüfung fehlgeschlagen",
         "malformed": "Kopplung fehlgeschlagen, versuche es erneut",
         "network": "Netzwerkfehler, prüfe deine Verbindung und versuche es erneut",
