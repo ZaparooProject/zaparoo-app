@@ -312,6 +312,11 @@ export const useProPurchase = () => {
               ? "missing"
               : "error",
         );
+        // Devices without usable store billing (no Play services, outdated
+        // store, restricted accounts) reject every offerings fetch. That is
+        // an environment state shown in the modal, not an app defect; the
+        // cached diagnostics still reach support through the copy action.
+        if (wrappedError instanceof PurchaseNotAllowedError) return;
         logger.error("RevenueCat offerings unavailable", wrappedError, {
           category: "purchase",
           action: "getOfferings",
