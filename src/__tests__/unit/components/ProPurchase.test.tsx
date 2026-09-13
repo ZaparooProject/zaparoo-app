@@ -1,10 +1,14 @@
 import { act, render, renderHook, screen, waitFor, within } from "@/test-utils";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import {
   PurchaseSupportActions,
   useProPurchase,
 } from "@/components/ProPurchase";
+import {
+  __resetOfferingsForTests,
+  resolvePurchasesReady,
+} from "@/lib/purchasesSetup";
 import {
   PACKAGE_TYPE,
   PRODUCT_CATEGORY,
@@ -54,7 +58,6 @@ vi.mock("@capacitor/clipboard", () => ({
 vi.mock("@/lib/purchasesSetup", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/purchasesSetup")>()),
   getBillingDiagnostics: mockGetBillingDiagnostics,
-  purchasesReady: Promise.resolve(),
   reconcileStorePurchases: mockReconcileStorePurchases,
   restorePurchasesForUser: mockRestorePurchasesForUser,
   runPurchasesOperation: async (
@@ -215,8 +218,13 @@ function ProPurchaseHarness() {
 }
 
 describe("useProPurchase", () => {
+  beforeAll(() => {
+    resolvePurchasesReady();
+  });
+
   beforeEach(async () => {
     vi.clearAllMocks();
+    __resetOfferingsForTests();
     // Reset store state
     const { usePreferencesStore } = await import("@/lib/preferencesStore");
     usePreferencesStore.setState({
@@ -548,6 +556,80 @@ describe("useProPurchase", () => {
         name: "settings.app.copyBillingDiagnostics",
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it("should reuse loaded offerings when another purchase screen mounts", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+
+    const { unmount } = render(<ProPurchaseHarness />);
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+    unmount();
+
+    render(<ProPurchaseHarness />);
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+
+    expect(
+      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+    ).toBeEnabled();
+    expect(Purchases.getOfferings).toHaveBeenCalledTimes(1);
+  });
+
+  it("should report a shared offerings failure once across purchase screens", async () => {
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { logger } = await import("@/lib/logger");
+    vi.mocked(Purchases.getOfferings).mockRejectedValue(
+      new Error("Network unavailable"),
+    );
+
+    const { unmount } = render(<ProPurchaseHarness />);
+    await waitFor(() => {
+      expect(logger.error).toHaveBeenCalledWith(
+        "RevenueCat offerings unavailable",
+        expect.any(Error),
+        expect.objectContaining({ action: "getOfferings" }),
+      );
+    });
+    unmount();
+
+    render(<ProPurchaseHarness />);
+
+    expect(
+      await screen.findByText("scan.purchaseProOfferingsError"),
+    ).toBeInTheDocument();
+    expect(
+      vi
+        .mocked(logger.error)
+        .mock.calls.filter(
+          ([message]) => message === "RevenueCat offerings unavailable",
+        ),
+    ).toHaveLength(1);
+    expect(Purchases.getOfferings).toHaveBeenCalledTimes(1);
+  });
+
+  it("should retry unavailable offerings when checkout opens", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.getOfferings)
+      .mockRejectedValueOnce(new Error("Network unavailable"))
+      .mockResolvedValueOnce(
+        createOfferings(createOffering([createPackage()])),
+      );
+
+    render(<ProPurchaseHarness />);
+    await screen.findByText("scan.purchaseProOfferingsError");
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+
+    expect(
+      await screen.findByText("scan.purchaseProP1 $6.99"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "scan.purchaseProAction" }),
+    ).toBeEnabled();
+    expect(Purchases.getOfferings).toHaveBeenCalledTimes(2);
   });
 
   it("should preserve checkout diagnostics when offerings reload successfully", async () => {

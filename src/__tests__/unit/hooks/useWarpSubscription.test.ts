@@ -15,6 +15,7 @@ import {
 const {
   mockEnsurePurchasesUser,
   mockGetOfferings,
+  mockLoadOfferings,
   mockPurchasePackage,
   mockRestorePurchases,
   mockGetSubscriptionStatus,
@@ -27,6 +28,7 @@ const {
 } = vi.hoisted(() => ({
   mockEnsurePurchasesUser: vi.fn(),
   mockGetOfferings: vi.fn(),
+  mockLoadOfferings: vi.fn(),
   mockPurchasePackage: vi.fn(),
   mockRestorePurchases: vi.fn(),
   mockGetSubscriptionStatus: vi.fn(),
@@ -115,6 +117,7 @@ vi.mock("@/lib/purchasesSetup", () => ({
     annual: annualPackage,
   })),
   getOfferingDiagnostics: vi.fn(() => ({})),
+  loadOfferings: mockLoadOfferings,
   getPurchaseAccess: (info: CustomerInfo) => ({
     lifetimePro: Boolean(info.entitlements?.active?.tapto_launcher),
     warp: Boolean(info.entitlements?.active?.warp),
@@ -183,6 +186,7 @@ describe("useWarpSubscription", () => {
     );
     mockEnsurePurchasesUser.mockResolvedValue(customerInfo());
     mockGetOfferings.mockResolvedValue({});
+    mockLoadOfferings.mockImplementation(() => mockGetOfferings());
     mockGetSubscriptionStatus.mockResolvedValue(subscription(false));
     mockPurchasePackage.mockResolvedValue({
       customerInfo: customerInfo({ warp: true }),
@@ -238,6 +242,36 @@ describe("useWarpSubscription", () => {
         action: "loadSubscription",
       }),
     );
+  });
+
+  it("should report a shared offerings failure once across account loads", async () => {
+    const error = new Error("RevenueCat backend unavailable");
+    const sharedFailure = Promise.reject(error);
+    sharedFailure.catch(() => undefined);
+    mockLoadOfferings.mockReturnValue(sharedFailure);
+
+    const { result: firstResult, unmount } = renderHook(() =>
+      useWarpSubscription("user-123"),
+    );
+    await waitFor(() => expect(firstResult.current.loadFailed).toBe(true));
+    unmount();
+
+    const { result: secondResult } = renderHook(() =>
+      useWarpSubscription("user-123"),
+    );
+    await waitFor(() => expect(secondResult.current.loadFailed).toBe(true));
+
+    expect(logger.error).toHaveBeenCalledTimes(1);
+  });
+
+  it("should refresh shared offerings when the user retries", async () => {
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(mockLoadOfferings).toHaveBeenLastCalledWith({ refresh: false });
+
+    await act(async () => result.current.retry());
+
+    expect(mockLoadOfferings).toHaveBeenLastCalledWith({ refresh: true });
   });
 
   it("should default to annual and purchase its explicit package", async () => {
