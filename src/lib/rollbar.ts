@@ -106,6 +106,52 @@ const shouldEnable =
 
 export const isRollbarEnabled = shouldEnable;
 
+const MAX_FINGERPRINT_DETAIL_LENGTH = 120;
+const MAX_TITLE_LENGTH = 255;
+
+/**
+ * Reduce an error message to its stable shape so variable values such as
+ * paths, IDs, and embedded data don't split one failure into many items.
+ * Short numbers are kept because status codes distinguish real failures.
+ */
+export function normalizeFingerprintDetail(detail: string): string {
+  return detail
+    .toLowerCase()
+    .replace(/\{[\s\S]*\}|\[[\s\S]*\]/g, "<data>")
+    .replace(/"[^"]*"|'[^']*'|`[^`]*`/g, "<str>")
+    .replace(/\S*[\\/]\S*/g, "<path>")
+    .replace(/\b\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?\b/g, "<ip>")
+    .replace(/\b(?=[a-z0-9_-]*\d)[a-z0-9_-]{16,}\b/g, "<id>")
+    .replace(/\d{4,}/g, "<n>")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_FINGERPRINT_DETAIL_LENGTH);
+}
+
+function buildReportTitle(
+  custom: Record<string, unknown> | null,
+): string | null {
+  if (!custom || typeof custom.errorMessage !== "string") return null;
+
+  const errorName =
+    typeof custom.errorName === "string" && custom.errorName !== "Error"
+      ? custom.errorName
+      : null;
+  const errorText = errorName
+    ? `${errorName}: ${custom.errorMessage}`
+    : custom.errorMessage;
+  const message =
+    typeof custom.message === "string"
+      ? custom.message.replace(/[\s:]+$/, "")
+      : "";
+  const title =
+    message && message !== custom.errorMessage
+      ? `${message}: ${errorText}`
+      : errorText;
+
+  return title.slice(0, MAX_TITLE_LENGTH);
+}
+
 export const rollbarConfig: Rollbar.Configuration = {
   accessToken: import.meta.env.VITE_ROLLBAR_ACCESS_TOKEN || "",
   environment: isProduction ? "production" : "development",
@@ -191,8 +237,24 @@ export const rollbarConfig: Rollbar.Configuration = {
             .replace(/[^a-zA-Z0-9]+/g, "_")
             .toUpperCase() ||
           (typeof purchaseError?.code === "string" && purchaseError.code) ||
-          "unclassified";
+          (typeof custom.errorMessage === "string"
+            ? `unclassified:${normalizeFingerprintDetail(custom.errorMessage)}`
+            : "unclassified");
         dataObj.fingerprint = `purchase:${custom.action}:${errorCode}`;
+      } else if (
+        typeof custom?.category === "string" &&
+        typeof custom.action === "string" &&
+        typeof custom.errorMessage === "string"
+      ) {
+        // Core API and native plugin errors share the same few stack frames,
+        // so stack-based grouping merges unrelated failures. Reports that name
+        // an action are grouped by that action and the error text instead.
+        dataObj.fingerprint = `${custom.category}:${custom.action}:${normalizeFingerprintDetail(custom.errorMessage)}`;
+      }
+
+      const title = buildReportTitle(custom);
+      if (title) {
+        dataObj.title = title;
       }
 
       // Redact request body if present
