@@ -1186,6 +1186,8 @@
     "features": {
       "requiresCoreVersion": "Zaparoo Core v{{version}} 이상 필요",
       "inbox": "알림",
+      "playtimeLimits": "플레이 시간 제한",
+      "readers": "기기의 리더",
       "mediaScrapers": "스크레이퍼",
       "mediaGenerate": "미디어 데이터베이스 업데이트",
       "mediaCleanOrphans": "누락된 미디어 정리",

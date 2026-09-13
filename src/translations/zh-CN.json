@@ -1186,6 +1186,8 @@
     "features": {
       "requiresCoreVersion": "需要 Zaparoo Core v{{version}} 或更高版本",
       "inbox": "通知",
+      "playtimeLimits": "游玩时间限制",
+      "readers": "设备读卡器",
       "mediaScrapers": "抓取器",
       "mediaGenerate": "媒体数据库更新",
       "mediaCleanOrphans": "清理缺失媒体",

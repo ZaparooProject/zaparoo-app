@@ -16,6 +16,16 @@ type FeatureGate = { since: string; marquee: boolean; labelKey: string };
 //   screenshot: { since: "2.0.0", marquee: true, labelKey: "features.screenshot" },
 export const FEATURE_GATES: Record<string, FeatureGate> = {
   inbox: { since: "2.8.0", marquee: false, labelKey: "features.inbox" },
+  playtimeLimits: {
+    since: "2.7.0",
+    marquee: false,
+    labelKey: "features.playtimeLimits",
+  },
+  readers: {
+    since: "2.6.0",
+    marquee: false,
+    labelKey: "features.readers",
+  },
   mediaScrapers: {
     since: "2.12.0",
     marquee: false,
