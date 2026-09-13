@@ -6,6 +6,8 @@ import type {
 } from "@revenuecat/purchases-capacitor";
 import type { SubscriptionResponse } from "@/lib/models";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
+import { RequirementsNotMetError } from "@/lib/errors";
+import { buildOnlineApiError } from "@/test-utils/factories";
 import {
   cachePurchaseErrorDiagnostics,
   clearCachedPurchaseErrorDiagnostics,
@@ -227,6 +229,89 @@ describe("useWarpSubscription", () => {
       readableErrorCode: "PurchaseNotAllowedError",
       underlyingErrorMessage: "BILLING_UNAVAILABLE",
     });
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it("should leave unmet account requirements to the requirements modal", async () => {
+    cachePurchaseErrorDiagnostics({ code: "3" }, "purchasePackage");
+    mockGetSubscriptionStatus.mockRejectedValue(
+      new RequirementsNotMetError(
+        [],
+        buildOnlineApiError({ status: 403, code: "requirements_not_met" }),
+      ),
+    );
+
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.loadFailed).toBe(true));
+
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(getCachedPurchaseErrorDiagnostics()).toEqual({ code: "3" });
+  });
+
+  it("should report Online API failures as API errors without billing diagnostics", async () => {
+    const error = buildOnlineApiError({ status: 500 });
+    mockGetSubscriptionStatus.mockRejectedValue(error);
+
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.loadFailed).toBe(true));
+
+    expect(logger.error).toHaveBeenCalledWith(
+      "Failed to load Warp subscription",
+      error,
+      {
+        category: "api",
+        action: "loadSubscription",
+        severity: "warning",
+        httpStatus: 500,
+        requestMethod: "GET",
+        requestPath: "/account/subscription",
+      },
+    );
+    expect(getCachedPurchaseErrorDiagnostics()).toEqual({});
+  });
+
+  it("should keep billing diagnostics when checkout stops on an Online API failure", async () => {
+    const error = buildOnlineApiError({ status: 500 });
+    mockGetSubscriptionStatus
+      .mockResolvedValueOnce(subscription(false))
+      .mockRejectedValueOnce(error);
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    cachePurchaseErrorDiagnostics({ code: "3" }, "getOfferings");
+
+    let purchaseResult: string | undefined;
+    await act(async () => {
+      purchaseResult = await result.current.purchase();
+    });
+
+    expect(purchaseResult).toBe("failed");
+    expect(mockPurchasePackage).not.toHaveBeenCalled();
+    expect(getCachedPurchaseErrorDiagnostics()).toEqual({ code: "3" });
+    expect(logger.error).toHaveBeenCalledWith(
+      "Warp purchase failed",
+      error,
+      expect.objectContaining({ httpStatus: 500 }),
+    );
+  });
+
+  it("should not report unmet account requirements after a restore", async () => {
+    mockGetSubscriptionStatus
+      .mockResolvedValueOnce(subscription(false))
+      .mockRejectedValueOnce(
+        new RequirementsNotMetError(
+          [],
+          buildOnlineApiError({ status: 403, code: "requirements_not_met" }),
+        ),
+      );
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let restoreResult: string | undefined;
+    await act(async () => {
+      restoreResult = await result.current.restore();
+    });
+
+    expect(restoreResult).toBe("failed");
     expect(logger.error).not.toHaveBeenCalled();
   });
 

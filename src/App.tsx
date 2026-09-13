@@ -16,6 +16,10 @@ import {
   isPluginAvailable,
 } from "@/lib/capacitorBridge";
 import { useDeepLinks } from "@/lib/deepLinks";
+import {
+  getOnlineApiErrorContext,
+  RequirementsNotMetError,
+} from "@/lib/errors";
 import { DatabaseIcon, PlayIcon } from "@/lib/images";
 import {
   ensurePurchasesUser,
@@ -76,10 +80,18 @@ async function getSubscriptionStatusWithRetry(
   try {
     return await getSubscriptionStatus(signal);
   } catch (error) {
-    if (signal.aborted) throw error;
+    if (signal.aborted || !isRetryableSubscriptionError(error)) throw error;
     await waitForSubscriptionRetry(signal);
     return getSubscriptionStatus(signal);
   }
+}
+
+// Client errors such as unmet account requirements fail the same way again;
+// only server and network failures are worth a second attempt.
+function isRetryableSubscriptionError(error: unknown): boolean {
+  if (error instanceof RequirementsNotMetError) return false;
+  const { httpStatus } = getOnlineApiErrorContext(error);
+  return httpStatus === undefined || httpStatus >= 500;
 }
 
 // Component to initialize queue processors and passive listeners after preferences hydrate
@@ -424,10 +436,13 @@ export default function App() {
             return;
           }
           setOnlinePremiumAccess(false);
+          // The requirements modal is already asking the user to finish setup.
+          if (e instanceof RequirementsNotMetError) return;
           logger.error("Failed to check subscription status:", e, {
             category: "api",
             action: "getSubscription",
             severity: "warning",
+            ...getOnlineApiErrorContext(e),
           });
         } finally {
           if (subscriptionController === controller) {
