@@ -313,12 +313,14 @@ export default function App() {
   useEffect(() => {
     if (capabilityHydrationReady) return;
 
+    const startedAt = Date.now();
     const timeout = window.setTimeout(() => {
+      // Startup continues with cached values and late results still apply.
       logger.error("Startup capability hydration timed out", {
         category: "lifecycle",
         action: "hydrateStartupCapabilities",
-        severity: "warning",
-        timeoutMs: STARTUP_CAPABILITY_TIMEOUT_MS,
+        severity: "info",
+        elapsedMs: Date.now() - startedAt,
         unresolvedGates: unresolvedCapabilityGatesRef.current,
       });
       setCapabilityHydrationTimedOut(true);

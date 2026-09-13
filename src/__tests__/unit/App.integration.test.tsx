@@ -431,8 +431,8 @@ describe("App Integration", () => {
       {
         category: "lifecycle",
         action: "hydrateStartupCapabilities",
-        severity: "warning",
-        timeoutMs: 6_000,
+        severity: "info",
+        elapsedMs: 6_000,
         unresolvedGates: ["nfc"],
       },
     );
