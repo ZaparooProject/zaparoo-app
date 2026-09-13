@@ -240,6 +240,26 @@ describe("CoreAPI API Contract", () => {
       );
     });
 
+    it.each(["media not found: SNES/Games/Mario.sfc", "system not found: PC"])(
+      "mediaImage should not report unindexed media: %s",
+      async (message) => {
+        const errorSpy = vi.spyOn(logger, "error");
+        const warnSpy = vi.spyOn(logger, "warn");
+        const promise = CoreAPI.mediaImage({
+          system: "SNES",
+          path: "Games/Mario.sfc",
+        });
+        simulateError(mockSend, message, 0, 1);
+
+        await expect(promise).rejects.toThrow(message);
+        expect(errorSpy).not.toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalledWith(
+          "Media image unavailable:",
+          expect.any(Error),
+        );
+      },
+    );
+
     it("mediaTagsUpdate should mutate favorite by media ID", async () => {
       const promise = CoreAPI.mediaTagsUpdate({
         mediaId: 42,
@@ -396,6 +416,20 @@ describe("CoreAPI API Contract", () => {
           severity: "warning",
         },
       );
+    });
+
+    it("mediaGenerate should not report insufficient disk space", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const promise = CoreAPI.mediaGenerate();
+      simulateError(
+        mockSend,
+        "insufficient disk space for indexing: 42 MB free, need at least 500 MB",
+        0,
+        1,
+      );
+
+      await expect(promise).rejects.toThrow("insufficient disk space");
+      expect(errorSpy).not.toHaveBeenCalled();
     });
 
     it("mediaGenerate should report unexpected API errors with context", async () => {
