@@ -789,6 +789,8 @@ export class WebSocketTransport implements Transport {
           `[Transport:${this.deviceId}] Encryption rejected by candidate; trying fallback: ${reason}`,
           { category: "crypto", action: "encryption-fallback" },
         );
+        // Each candidate gets its own silent close budget.
+        this.silentHandshakeCloses = 0;
         this.cleanup();
         this.currentAttemptConnected = false;
         this.handleConnectionError();

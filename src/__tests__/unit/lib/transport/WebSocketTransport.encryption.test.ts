@@ -520,6 +520,44 @@ describe("WebSocketTransport encryption", () => {
       }
     });
 
+    it("should give a fallback its own silent close budget", async () => {
+      vi.useFakeTimers();
+      try {
+        const onEncryptedHandshakeRejected = vi.fn();
+        const transport = makeTransportWithFallback();
+        transport.setEventHandlers({ onEncryptedHandshakeRejected });
+        transport.connect();
+
+        const closeDuringHandshake = async () => {
+          const socket = MockWebSocket.getLatest()!;
+          socket.simulateOpen();
+          await vi.advanceTimersByTimeAsync(0);
+          socket.simulateClose(1006);
+          await vi.advanceTimersByTimeAsync(10);
+          return socket.url;
+        };
+
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          expect(await closeDuringHandshake()).toBe("ws://10.0.0.218:7497");
+        }
+        expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.107:7497");
+
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          expect(await closeDuringHandshake()).toBe("ws://10.0.0.107:7497");
+          expect(onEncryptedHandshakeRejected).not.toHaveBeenCalled();
+          expect(transport.state).toBe("reconnecting");
+        }
+
+        await closeDuringHandshake();
+        expect(onEncryptedHandshakeRejected).toHaveBeenCalledTimes(1);
+        expect(transport.state).toBe("disconnected");
+
+        transport.destroy();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("should fire onEncryptionRequired and disconnect when no creds and server returns -32002", async () => {
       const onEncryptionRequired = vi.fn();
       const transport = makeTransport(false); // no creds → plaintext attempt
