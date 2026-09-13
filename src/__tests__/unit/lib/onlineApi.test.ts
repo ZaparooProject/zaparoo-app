@@ -18,6 +18,7 @@ import {
   type User,
 } from "@capacitor-firebase/authentication";
 import { useStatusStore } from "../../../lib/store";
+import { RequirementsNotMetError } from "@/lib/errors";
 
 type PartialStoreState = Pick<
   ReturnType<typeof useStatusStore.getState>,
@@ -469,9 +470,12 @@ describe("onlineApi", () => {
 
       // Call the interceptor error handler
       expect(responseInterceptorError).not.toBeNull();
-      await expect(responseInterceptorError!(mockError)).rejects.toBe(
-        mockError,
-      );
+      const rejection = responseInterceptorError!(mockError);
+      await expect(rejection).rejects.toBeInstanceOf(RequirementsNotMetError);
+      await expect(rejection).rejects.toMatchObject({
+        requirements: mockRequirements,
+        originalError: mockError,
+      });
 
       expect(mockTrigger).toHaveBeenCalledWith(mockRequirements);
     });
@@ -496,7 +500,7 @@ describe("onlineApi", () => {
       expect(mockTrigger).not.toHaveBeenCalled();
     });
 
-    it("should not trigger requirements modal when requirements array is empty", async () => {
+    it("should reject unmet requirements as a typed error without opening an empty modal", async () => {
       const mockError = {
         response: {
           data: {
@@ -509,38 +513,11 @@ describe("onlineApi", () => {
       };
 
       expect(responseInterceptorError).not.toBeNull();
-      await expect(responseInterceptorError!(mockError)).rejects.toBe(
-        mockError,
+      await expect(responseInterceptorError!(mockError)).rejects.toBeInstanceOf(
+        RequirementsNotMetError,
       );
 
       expect(mockTrigger).not.toHaveBeenCalled();
-    });
-
-    it("should still reject the promise after triggering requirements", async () => {
-      const mockRequirements = [
-        { type: "email_verification", message: "Please verify email" },
-      ];
-
-      const mockError = {
-        response: {
-          data: {
-            error: {
-              code: "requirements_not_met",
-              requirements: mockRequirements,
-            },
-          },
-        },
-      };
-
-      expect(responseInterceptorError).not.toBeNull();
-
-      // The interceptor should both trigger the modal AND reject the promise
-      await expect(responseInterceptorError!(mockError)).rejects.toBe(
-        mockError,
-      );
-
-      // Verify the trigger was called
-      expect(mockTrigger).toHaveBeenCalledTimes(1);
     });
 
     it("should pass through successful responses unchanged", () => {

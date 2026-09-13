@@ -1,4 +1,5 @@
 import { PURCHASES_ERROR_CODE } from "@revenuecat/purchases-capacitor";
+import type { PendingRequirement } from "@/lib/models";
 
 /**
  * Custom error classes for Zaparoo App.
@@ -119,6 +120,84 @@ export class RequestCancelledError extends ZaparooError {
   constructor(message = "Request was cancelled") {
     super(message);
   }
+}
+
+/**
+ * Returned when Zaparoo Online refuses a request until the account completes
+ * pending requirements, such as accepting updated terms. The requirements
+ * modal handles recovery, so this is not a production monitoring event.
+ */
+export class RequirementsNotMetError extends ZaparooError {
+  constructor(
+    public readonly requirements: readonly PendingRequirement[] = [],
+    public readonly originalError?: unknown,
+    message = "Account requirements are not met",
+  ) {
+    super(message);
+  }
+}
+
+export interface OnlineApiErrorContext {
+  httpStatus?: number;
+  apiErrorCode?: string;
+  requestMethod?: string;
+  requestPath?: string;
+}
+
+function isAxiosLikeError(error: unknown): error is {
+  response?: { status?: unknown; data?: unknown };
+  config?: { method?: unknown; url?: unknown };
+} {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    Reflect.get(error, "isAxiosError") === true
+  );
+}
+
+/**
+ * Check if a failure came from a Zaparoo Online request rather than the
+ * native store, so it is never recorded as a billing diagnostic.
+ */
+export function isOnlineApiError(error: unknown): boolean {
+  return error instanceof RequirementsNotMetError || isAxiosLikeError(error);
+}
+
+/**
+ * Extracts safe request details from a failed Zaparoo Online request so
+ * reports that share a message, such as two different 403s, stay
+ * distinguishable. The request path never includes its query string.
+ */
+export function getOnlineApiErrorContext(
+  error: unknown,
+): OnlineApiErrorContext {
+  const source =
+    error instanceof RequirementsNotMetError ? error.originalError : error;
+  if (!isAxiosLikeError(source)) return {};
+
+  const status = source.response?.status;
+  const data = source.response?.data;
+  const apiError =
+    typeof data === "object" && data !== null
+      ? Reflect.get(data, "error")
+      : undefined;
+  const apiErrorCode =
+    typeof apiError === "object" && apiError !== null
+      ? Reflect.get(apiError, "code")
+      : undefined;
+  const method = source.config?.method;
+  const url = source.config?.url;
+
+  return {
+    ...(typeof status === "number" ? { httpStatus: status } : {}),
+    ...(typeof apiErrorCode === "string" ? { apiErrorCode } : {}),
+    ...(typeof method === "string"
+      ? { requestMethod: method.toUpperCase() }
+      : {}),
+    ...(typeof url === "string"
+      ? { requestPath: url.split(/[?#]/, 1)[0] }
+      : {}),
+  };
 }
 
 // =============================================================================

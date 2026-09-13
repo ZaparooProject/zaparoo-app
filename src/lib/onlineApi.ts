@@ -3,6 +3,7 @@ import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import { useStatusStore } from "@/lib/store";
 import { logger } from "@/lib/logger";
+import { RequirementsNotMetError } from "@/lib/errors";
 import type {
   RequirementsResponse,
   UpdateRequirementsRequest,
@@ -45,15 +46,23 @@ client.interceptors.request.use(authRequestInterceptor);
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    const errorCode = error.response?.data?.error?.code;
-    const requirements = error.response?.data?.error
-      ?.requirements as PendingRequirement[];
+    const apiError = error.response?.data?.error;
+    if (apiError?.code !== "requirements_not_met") {
+      return Promise.reject(error);
+    }
 
-    if (errorCode === "requirements_not_met" && requirements?.length > 0) {
+    const requirements: PendingRequirement[] = Array.isArray(
+      apiError.requirements,
+    )
+      ? apiError.requirements
+      : [];
+    if (requirements.length > 0) {
       useRequirementsStore.getState().trigger(requirements);
     }
 
-    return Promise.reject(error);
+    // A typed rejection lets callers treat this expected account state as
+    // handled by the requirements modal instead of reporting a raw 403.
+    return Promise.reject(new RequirementsNotMetError(requirements, error));
   },
 );
 

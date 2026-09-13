@@ -22,11 +22,14 @@ import {
   type WarpPackages,
 } from "@/lib/purchasesSetup";
 import {
+  getOnlineApiErrorContext,
   getPurchaseErrorDiagnostics,
+  isOnlineApiError,
   PurchaseCancelledError,
   PurchaseIdentityError,
   PurchaseNotAllowedError,
   PurchasePendingError,
+  RequirementsNotMetError,
   wrapPurchaseError,
 } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -231,6 +234,17 @@ export function useWarpSubscription(appUserID: string) {
         }
         // A shared offerings failure is reported by the first load to see it.
         if (offeringsRequest && !claimOfferingsRequest(offeringsRequest)) {
+          return;
+        }
+        // The requirements modal is already open, and completing it reloads.
+        if (e instanceof RequirementsNotMetError) return;
+        if (isOnlineApiError(e)) {
+          logger.error("Failed to load Warp subscription", e, {
+            category: "api",
+            action: "loadSubscription",
+            severity: "warning",
+            ...getOnlineApiErrorContext(e),
+          });
           return;
         }
         const purchaseError = getPurchaseErrorDiagnostics(e);
@@ -495,8 +509,13 @@ export function useWarpSubscription(appUserID: string) {
       if (controller.signal.aborted) return "cancelled";
       const wrappedError = wrapPurchaseError(e);
       if (wrappedError instanceof PurchaseCancelledError) return "cancelled";
+      if (e instanceof RequirementsNotMetError) return "failed";
 
-      const purchaseError = getPurchaseErrorDiagnostics(e);
+      // Online API failures are not store errors and must not replace the
+      // cached billing diagnostics.
+      const purchaseError = isOnlineApiError(e)
+        ? {}
+        : getPurchaseErrorDiagnostics(e);
       if (Object.keys(purchaseError).length > 0) {
         cachePurchaseErrorDiagnostics(purchaseError, "purchasePackage");
       }
@@ -510,6 +529,7 @@ export function useWarpSubscription(appUserID: string) {
         action: "purchasePackage",
         severity: "warning",
         purchaseError,
+        ...getOnlineApiErrorContext(e),
       });
       return "failed";
     } finally {
@@ -587,8 +607,13 @@ export function useWarpSubscription(appUserID: string) {
       if (access.lifetimePro || storeVerifiedProAccess) return "pro_restored";
       return "not_found";
     } catch (e) {
-      if (!controller.signal.aborted) {
-        const purchaseError = getPurchaseErrorDiagnostics(e);
+      if (
+        !controller.signal.aborted &&
+        !(e instanceof RequirementsNotMetError)
+      ) {
+        const purchaseError = isOnlineApiError(e)
+          ? {}
+          : getPurchaseErrorDiagnostics(e);
         if (Object.keys(purchaseError).length > 0) {
           cachePurchaseErrorDiagnostics(purchaseError, "restorePurchases");
         }
@@ -597,6 +622,7 @@ export function useWarpSubscription(appUserID: string) {
           action: "restorePurchases",
           severity: "warning",
           purchaseError,
+          ...getOnlineApiErrorContext(e),
         });
       }
       return "failed";

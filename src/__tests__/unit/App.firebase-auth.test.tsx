@@ -1,6 +1,8 @@
 import { act, render, waitFor } from "@/test-utils";
 import { vi, beforeEach, describe, it, expect } from "vitest";
 import React from "react";
+import { RequirementsNotMetError } from "@/lib/errors";
+import { buildOnlineApiError } from "@/test-utils/factories";
 
 const { mockIsPluginAvailable } = vi.hoisted(() => ({
   mockIsPluginAvailable: vi.fn<(pluginName: string) => boolean>(() => true),
@@ -1027,6 +1029,84 @@ describe("Firebase Auth Integration", () => {
           category: "api",
           action: "getSubscription",
         }),
+      );
+    });
+
+    async function signInWithSubscriptionFailure(error: unknown) {
+      mockPlatform = "ios";
+      mockGetSubscriptionStatus.mockRejectedValue(error);
+
+      let authCallback: ((change: { user: unknown }) => Promise<void>) | null =
+        null;
+      mockAddListener.mockImplementation(
+        (
+          _event: string,
+          callback: (change: { user: unknown }) => Promise<void>,
+        ) => {
+          authCallback = callback;
+          return Promise.resolve({ remove: mockRemove });
+        },
+      );
+
+      render(<App />);
+      await waitFor(() => expect(authCallback).not.toBeNull());
+      await act(async () => {
+        await authCallback!({
+          user: { uid: "user-123", email: "test@example.com" },
+        });
+      });
+    }
+
+    it("should leave unmet account requirements to the requirements modal", async () => {
+      await signInWithSubscriptionFailure(
+        new RequirementsNotMetError(
+          [],
+          buildOnlineApiError({ status: 403, code: "requirements_not_met" }),
+        ),
+      );
+
+      expect(mockGetSubscriptionStatus).toHaveBeenCalledTimes(1);
+      expect(mockSetOnlinePremiumAccess).toHaveBeenCalledWith(false);
+      expect(mockLoggerError).not.toHaveBeenCalledWith(
+        "Failed to check subscription status:",
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it("should report a rejected subscription request once with request context", async () => {
+      const error = buildOnlineApiError({
+        status: 401,
+        code: "unauthorized",
+        url: "/account/subscription?refresh=1",
+      });
+
+      await signInWithSubscriptionFailure(error);
+
+      expect(mockGetSubscriptionStatus).toHaveBeenCalledTimes(1);
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        "Failed to check subscription status:",
+        error,
+        {
+          category: "api",
+          action: "getSubscription",
+          severity: "warning",
+          httpStatus: 401,
+          apiErrorCode: "unauthorized",
+          requestMethod: "GET",
+          requestPath: "/account/subscription",
+        },
+      );
+    });
+
+    it("should retry a server error before reporting it", async () => {
+      await signInWithSubscriptionFailure(buildOnlineApiError({ status: 503 }));
+
+      expect(mockGetSubscriptionStatus).toHaveBeenCalledTimes(2);
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        "Failed to check subscription status:",
+        expect.any(Error),
+        expect.objectContaining({ httpStatus: 503 }),
       );
     });
   });

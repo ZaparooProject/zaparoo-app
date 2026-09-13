@@ -22,6 +22,9 @@ import {
   PurchasePendingError,
   PurchaseProductUnavailableError,
   PurchaseIdentityError,
+  RequirementsNotMetError,
+  getOnlineApiErrorContext,
+  isOnlineApiError,
   isCancellationError,
   isExpectedEmailAuthError,
   isExpectedRevenueCatLogoutError,
@@ -33,6 +36,7 @@ import {
   wrapBarcodeScannerError,
   wrapPurchaseError,
 } from "../../../lib/errors";
+import { buildOnlineApiError } from "@/test-utils/factories";
 
 describe("errors", () => {
   describe("ZaparooError", () => {
@@ -893,6 +897,48 @@ describe("errors", () => {
 
       expect(result).toBeInstanceOf(Error);
       expect(result.message).toBe("undefined");
+    });
+  });
+
+  describe("Online API errors", () => {
+    it("should describe a failed request without its query string", () => {
+      const error = buildOnlineApiError({
+        status: 403,
+        code: "forbidden",
+        method: "get",
+        url: "/account/subscription?email=user@example.com#section",
+      });
+
+      expect(isOnlineApiError(error)).toBe(true);
+      expect(getOnlineApiErrorContext(error)).toEqual({
+        httpStatus: 403,
+        apiErrorCode: "forbidden",
+        requestMethod: "GET",
+        requestPath: "/account/subscription",
+      });
+    });
+
+    it("should describe the request behind unmet account requirements", () => {
+      const error = new RequirementsNotMetError(
+        [],
+        buildOnlineApiError({ status: 403, code: "requirements_not_met" }),
+      );
+
+      expect(isOnlineApiError(error)).toBe(true);
+      expect(getOnlineApiErrorContext(error)).toEqual({
+        httpStatus: 403,
+        apiErrorCode: "requirements_not_met",
+        requestMethod: "GET",
+        requestPath: "/account/subscription",
+      });
+    });
+
+    it("should not treat store or plain errors as Online API errors", () => {
+      const storeError = { code: "3", message: "Purchase not allowed" };
+
+      expect(isOnlineApiError(storeError)).toBe(false);
+      expect(getOnlineApiErrorContext(storeError)).toEqual({});
+      expect(getOnlineApiErrorContext(new Error("Network error"))).toEqual({});
     });
   });
 });
