@@ -194,7 +194,7 @@ export async function initDeviceInfo(): Promise<void> {
 
 /**
  * Build base context from current app state.
- * Includes platform, version, device info, and connection status.
+ * Includes platform, version, device info, connection status, and Core info.
  */
 function buildBaseContext(): Record<string, unknown> {
   const state = useStatusStore.getState();
@@ -213,6 +213,10 @@ function buildBaseContext(): Record<string, unknown> {
     // Connection state
     connectionState: state.connectionState,
     isConnected: state.connected,
+
+    // Core info - API errors depend on which Core version answered
+    coreVersion: state.coreVersion ?? undefined,
+    corePlatform: state.corePlatform ?? undefined,
   };
 }
 
