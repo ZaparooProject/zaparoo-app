@@ -10,6 +10,7 @@ import {
   isMediaOperationConflictError,
   isMissingMediaDatabaseSetupError,
   isUnsupportedCoreApiError,
+  isUnindexedMediaError,
   isUnsupportedMediaApiError,
 } from "@/lib/coreApi";
 import { Method, Notification } from "@/lib/models.ts";
@@ -95,6 +96,31 @@ describe("media API error classification", () => {
 
     expect(isMediaOperationConflictError(error)).toBe(true);
     expect(isExpectedMediaDatabaseError(error)).toBe(true);
+  });
+
+  it("should classify insufficient disk space for indexing as expected", () => {
+    expect(
+      isExpectedMediaDatabaseError(
+        new CoreApiError(
+          "insufficient disk space for indexing: 42 MB free, need at least 500 MB",
+          1,
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it.each([
+    "media not found: SNES/Games/Mario.sfc",
+    "media not found: mediaId 42",
+    "system not found: PC",
+  ])("should classify %j as unindexed media", (message) => {
+    expect(isUnindexedMediaError(new CoreApiError(message, 1))).toBe(true);
+  });
+
+  it("should not classify other media failures as unindexed media", () => {
+    expect(
+      isUnindexedMediaError(new CoreApiError("failed to resolve system", 1)),
+    ).toBe(false);
   });
 
   it("should accept current Core index status fields", () => {

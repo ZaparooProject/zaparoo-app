@@ -425,6 +425,17 @@ export function isMediaIdLookupError(error: unknown): boolean {
   );
 }
 
+/**
+ * Core could not resolve a media reference because the media or its system is
+ * not in the media database, for example media that was never indexed.
+ */
+export function isUnindexedMediaError(error: unknown): boolean {
+  return (
+    isMediaIdLookupError(error) ||
+    getErrorMessage(error).toLowerCase().startsWith("system not found")
+  );
+}
+
 export function isTransientApiConnectionError(error: unknown): boolean {
   const message = getErrorMessage(error).toLowerCase();
   return [
@@ -465,7 +476,8 @@ export function isExpectedMediaDatabaseError(error: unknown): boolean {
   return (
     isUnsupportedMediaApiError(error) ||
     isMissingMediaDatabaseSetupError(error) ||
-    isMediaOperationConflictError(error)
+    isMediaOperationConflictError(error) ||
+    getErrorMessage(error).toLowerCase().includes("insufficient disk space")
   );
 }
 
@@ -1541,7 +1553,7 @@ class CoreApi {
       return result as MediaImageResponse;
     } catch (error) {
       if (isRequestCancelledError(error)) throw error;
-      if (isMissingMediaImageError(error)) {
+      if (isMissingMediaImageError(error) || isUnindexedMediaError(error)) {
         logger.warn("Media image unavailable:", error);
       } else {
         logMediaApiFailure(
