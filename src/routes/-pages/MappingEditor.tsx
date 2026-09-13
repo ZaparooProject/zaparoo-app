@@ -414,6 +414,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
         close={closeWriteModal}
         verifyError={nfcWriter.verifyError !== null}
         retry={() => void nfcWriter.retry()}
+        retapRequired={nfcWriter.retapRequired}
       />
 
       <SlideModal

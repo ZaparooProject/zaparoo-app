@@ -86,6 +86,7 @@ describe("useNfcWriter - Enhanced Functionality", () => {
       });
 
       expect(writeTag).toHaveBeenCalledWith("test-content", {
+        onRetapRequired: expect.any(Function),
         ios: {
           verifyingMessage: "spinner.verifying",
           verifyFailedMessage: "spinner.verifyFailed",
@@ -125,6 +126,7 @@ describe("useNfcWriter - Enhanced Functionality", () => {
       });
 
       expect(writeTag).toHaveBeenCalledWith("test-content", {
+        onRetapRequired: expect.any(Function),
         ios: {
           verifyingMessage: "spinner.verifying",
           verifyFailedMessage: "spinner.verifyFailed",

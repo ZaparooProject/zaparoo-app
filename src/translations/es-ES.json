@@ -198,7 +198,8 @@
       "formatErrorRetry": "No se pudo formatear esta etiqueta. Inténtalo de nuevo o utiliza otra etiqueta.",
       "verifying": "Verificando etiqueta...",
       "verifyFailed": "La etiqueta no se guardó correctamente",
-      "verifyFailedRetry": "La etiqueta no se guardó correctamente. Acércala al teléfono e inténtalo de nuevo."
+      "verifyFailedRetry": "La etiqueta no se guardó correctamente. Acércala al teléfono e inténtalo de nuevo.",
+      "retapTag": "Etiqueta formateada. Aléjala y vuelve a acercarla al teléfono."
     },
     "toast": {
       "updateDbHeading": "Actualizando base de datos multimedia",

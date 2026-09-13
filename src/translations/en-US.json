@@ -198,7 +198,8 @@
       "formatErrorRetry": "Unable to format this tag. Please try again or use a different tag.",
       "verifying": "Verifying tag...",
       "verifyFailed": "Tag did not save correctly",
-      "verifyFailedRetry": "The tag did not save correctly. Hold it to your phone and try again."
+      "verifyFailedRetry": "The tag did not save correctly. Hold it to your phone and try again.",
+      "retapTag": "Tag formatted. Lift it away, then hold it to your phone again."
     },
     "toast": {
       "updateDbHeading": "Updating media database",
