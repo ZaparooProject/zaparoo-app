@@ -42,6 +42,7 @@ describe("TourInitializer", () => {
 
     // Reset stores
     usePreferencesStore.setState({
+      _preferencesHydrationSucceeded: true,
       tourCompleted: false,
       setTourCompleted: mockSetTourCompleted,
     });
@@ -65,6 +66,30 @@ describe("TourInitializer", () => {
 
     // Fast-forward timers
     vi.advanceTimersByTime(1000);
+
+    expect(createAppTour).not.toHaveBeenCalled();
+  });
+
+  it("should not start the tour on fallback defaults after a storage failure", async () => {
+    usePreferencesStore.setState({
+      _preferencesHydrationSucceeded: false,
+      tourCompleted: false,
+    });
+
+    const { createAppTour } = await import("../../../lib/tourService");
+
+    const { rerender } = renderHook(() => TourInitializer());
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(createAppTour).not.toHaveBeenCalled();
+
+    // The late read shows this user already finished the tour.
+    usePreferencesStore.setState({
+      _preferencesHydrationSucceeded: true,
+      tourCompleted: true,
+    });
+    rerender();
+    await vi.advanceTimersByTimeAsync(1000);
 
     expect(createAppTour).not.toHaveBeenCalled();
   });
