@@ -70,6 +70,7 @@
       "removeFavorite": "Eliminar de favoritos",
       "updatingFavorite": "Actualizando favorito...",
       "favoriteError": "No se pudo actualizar el favorito",
+      "favoriteNotIndexed": "Solo se pueden marcar como favoritos los elementos de la base de datos multimedia",
       "disconnected": "Conecta un dispositivo para explorar su biblioteca",
       "updateCore": "Actualiza Zaparoo Core para usar la biblioteca",
       "databaseRequired": "Crea una base de datos multimedia para explorar la biblioteca",

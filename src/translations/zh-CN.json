@@ -70,6 +70,7 @@
       "removeFavorite": "从收藏中移除",
       "updatingFavorite": "正在更新收藏...",
       "favoriteError": "无法更新收藏",
+      "favoriteNotIndexed": "只有媒体数据库中的媒体才能添加到收藏",
       "disconnected": "连接设备以浏览其媒体库",
       "updateCore": "更新 Zaparoo Core 以使用媒体库",
       "databaseRequired": "创建媒体数据库以浏览媒体库",

@@ -70,6 +70,7 @@
       "removeFavorite": "Aus Favoriten entfernen",
       "updatingFavorite": "Favorit wird aktualisiert...",
       "favoriteError": "Favorit konnte nicht aktualisiert werden",
+      "favoriteNotIndexed": "Nur Medien aus der Mediendatenbank können als Favorit markiert werden",
       "disconnected": "Verbinde dich mit einem Gerät, um seine Bibliothek zu durchsuchen",
       "updateCore": "Aktualisiere Zaparoo Core, um die Bibliothek zu verwenden",
       "databaseRequired": "Erstelle eine Mediendatenbank, um die Bibliothek zu durchsuchen",
