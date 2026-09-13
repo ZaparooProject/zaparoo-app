@@ -41,6 +41,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CapawesomeLiveUpdateDefaultChannel</key>
 	<string>production-$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<true/>
+	<key>ITSEncryptionExportComplianceCode</key>
+	<string>99e0360d-20ff-43a3-8fa2-7fef03e5caa1</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NFCReaderUsageDescription</key>
