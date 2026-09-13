@@ -112,6 +112,15 @@ describe("CoreAPI API Contract", () => {
       expect(errorSpy).not.toHaveBeenCalled();
     });
 
+    it("write should reject Core write failures without reporting them", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const promise = CoreAPI.write({ text: "**launch.system:snes" });
+      simulateError(mockSend, "error writing to reader", 0, 1);
+
+      await expect(promise).rejects.toBeInstanceOf(CoreApiError);
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
     it("mediaBrowse should send scoped cursor parameters", async () => {
       const promise = CoreAPI.mediaBrowse({
         path: "/roms/SNES",

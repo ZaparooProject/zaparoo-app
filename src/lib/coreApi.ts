@@ -636,6 +636,20 @@ export function logRunFailure(
   logger.error(label, error, context);
 }
 
+/**
+ * Core answers `readers.write` with these client errors when no writable
+ * reader is available or no usable tag was presented. Core logs hardware
+ * failures behind the same message itself.
+ */
+export function isExpectedReaderWriteError(error: unknown): boolean {
+  if (!(error instanceof CoreApiError)) return false;
+  const message = error.message.trim().toLowerCase();
+  return (
+    message === "error writing to reader" ||
+    message.startsWith("failed to select writer")
+  );
+}
+
 interface ApiResponse {
   jsonrpc: string;
   id: string;
@@ -1396,7 +1410,8 @@ class CoreApi {
           if (this.pendingWriteId === writeResult.id) {
             this.pendingWriteId = null;
           }
-          logger.error("Write API call failed:", error);
+          // The NFC writer reports unexpected write failures with context.
+          logger.debug("Write API call failed:", error);
           reject(error);
         });
     });
