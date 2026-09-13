@@ -243,6 +243,38 @@ describe("Logger Rate Limiting", () => {
     );
   });
 
+  it("should keep the full error text for report titles and grouping", () => {
+    logger.error(
+      "Failed to send write cancel command:",
+      Object.assign(new Error("invalid params: missing params"), {
+        name: "CoreApiError",
+      }),
+      { category: "api", action: "readersWriteCancel" },
+    );
+    logger.error("Preferences read timed out", {
+      category: "storage",
+      action: "hydratePreferences",
+    });
+
+    expect(mockRollbar.error).toHaveBeenNthCalledWith(
+      1,
+      expect.any(Error),
+      expect.objectContaining({
+        message: "Failed to send write cancel command:",
+        errorName: "CoreApiError",
+        errorMessage: "invalid params: missing params",
+      }),
+    );
+    expect(mockRollbar.error).toHaveBeenNthCalledWith(
+      2,
+      expect.any(Error),
+      expect.objectContaining({
+        errorName: "Error",
+        errorMessage: "Preferences read timed out",
+      }),
+    );
+  });
+
   it("should preserve cancellation error prototypes after sanitizing", async () => {
     const { RequestCancelledError } = await import("../../../lib/errors");
 

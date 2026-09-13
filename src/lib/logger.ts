@@ -342,6 +342,10 @@ export const logger = {
 
     // Use sanitized error if available, otherwise create one from sanitized message
     const errorToReport = safeError || new Error(message || "Unknown error");
+    // Rollbar's parser strips a leading "phrase: " from exception messages,
+    // so keep the full message for item titles and grouping.
+    customData.errorName = errorToReport.name;
+    customData.errorMessage = errorToReport.message;
 
     // Report with appropriate severity (always include customData with base context)
     const severity = safeMetadata?.severity || "error";
