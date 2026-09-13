@@ -1357,6 +1357,29 @@ describe("Settings Online Route", () => {
       expect(toast.error).not.toHaveBeenCalled();
     });
 
+    it("should stay silent when the Android Google account picker is cancelled", async () => {
+      const { logger } = await import("@/lib/logger");
+      const user = userEvent.setup();
+      mockState.platform = "android";
+      mockMfaAuthentication.signInWithGoogle.mockRejectedValueOnce(
+        new Error("12501: "),
+      );
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", { name: "online.loginGoogle" }),
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: "online.loginGoogle" }),
+        ).toBeEnabled();
+      });
+      expect(mockMfaAuthentication.signInWithGoogle).toHaveBeenCalledOnce();
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
     it("should show error toast on OAuth failure", async () => {
       const user = userEvent.setup();
       mockState.platform = "ios";
