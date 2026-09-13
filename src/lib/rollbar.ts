@@ -311,6 +311,8 @@ export const rollbarConfig: Rollbar.Configuration = {
       "socket is not open",
       "socket is already closed",
       "readystate",
+      // Benign browser layout notice, not an app failure
+      "resizeobserver loop",
     ];
 
     const combinedMsg = `${msg} ${errorMsg}`;
