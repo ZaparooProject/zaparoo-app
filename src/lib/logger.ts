@@ -303,8 +303,9 @@ export const logger = {
     const safeError = error ? sanitizeError(error) : undefined;
 
     // Build message from sanitized non-error args
+    // Callers pass `undefined` as a placeholder when there is no error object.
     const messageArgs = logArgs
-      .filter((a) => !(a instanceof Error))
+      .filter((a) => a !== undefined && !(a instanceof Error))
       .map((a) => sanitizeLogValue(a));
     const message =
       messageArgs.length > 0
