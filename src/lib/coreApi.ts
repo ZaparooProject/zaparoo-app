@@ -662,6 +662,28 @@ export function isExpectedReaderWriteError(error: unknown): boolean {
   );
 }
 
+/**
+ * Classify a Core screenshot failure. "unavailable" means the platform cannot
+ * capture its display or the client's role does not allow screenshots;
+ * "timeout" means the platform did not produce a screenshot in time.
+ */
+export function getScreenshotFailureKind(
+  error: unknown,
+): "unavailable" | "timeout" | null {
+  if (!(error instanceof CoreApiError)) return null;
+  const message = error.message.toLowerCase();
+  if (
+    message.includes("not supported on this platform") ||
+    message.includes("client role does not permit")
+  ) {
+    return "unavailable";
+  }
+  if (/screenshot (?:timed out|file incomplete) after/.test(message)) {
+    return "timeout";
+  }
+  return null;
+}
+
 interface ApiResponse {
   jsonrpc: string;
   id: string;
@@ -1381,11 +1403,8 @@ class CoreApi {
           reject(new Error("Invalid screenshot response"));
         })
         .catch((error) => {
-          logger.error("Screenshot API call failed:", error, {
-            category: "api",
-            action: "screenshot",
-            severity: "error",
-          });
+          // The remote controls report unexpected failures with context.
+          logger.debug("Screenshot API call failed:", error);
           reject(error);
         });
     });

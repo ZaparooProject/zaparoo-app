@@ -121,6 +121,20 @@ describe("CoreAPI API Contract", () => {
       expect(errorSpy).not.toHaveBeenCalled();
     });
 
+    it("screenshot should reject Core failures without reporting them", async () => {
+      const errorSpy = vi.spyOn(logger, "error");
+      const promise = CoreAPI.screenshot();
+      simulateError(
+        mockSend,
+        "screenshot failed: operation not supported on this platform",
+        0,
+        1,
+      );
+
+      await expect(promise).rejects.toBeInstanceOf(CoreApiError);
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
     it("mediaBrowse should send scoped cursor parameters", async () => {
       const promise = CoreAPI.mediaBrowse({
         path: "/roms/SNES",
