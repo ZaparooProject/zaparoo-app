@@ -2391,7 +2391,8 @@ class CoreApi {
 
   readersWriteCancel(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      this.call(Method.ReadersWriteCancel)
+      // Core 2.9.0+ rejects a missing params object; older Cores ignore it.
+      this.call(Method.ReadersWriteCancel, {})
         .then(() => {
           resolve();
         })

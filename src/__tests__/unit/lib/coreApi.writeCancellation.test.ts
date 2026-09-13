@@ -130,6 +130,8 @@ describe("CoreAPI Write Cancellation", () => {
       const cancelRequest = JSON.parse(cancelPayload);
 
       expect(cancelRequest.method).toBe("readers.write.cancel");
+      // Core rejects readers.write.cancel when params are missing.
+      expect(cancelRequest.params).toEqual({});
     });
   });
 
