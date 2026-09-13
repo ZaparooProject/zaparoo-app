@@ -1380,6 +1380,55 @@ describe("Settings Online Route", () => {
       expect(logger.error).not.toHaveBeenCalled();
     });
 
+    it("should stay silent when Sign in with Apple is cancelled on iOS", async () => {
+      const { logger } = await import("@/lib/logger");
+      const user = userEvent.setup();
+      mockState.platform = "ios";
+      mockMfaAuthentication.signInWithApple.mockRejectedValueOnce(
+        new Error(
+          "The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1001.)",
+        ),
+      );
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", { name: "online.loginApple" }),
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: "online.loginApple" }),
+        ).toBeEnabled();
+      });
+      expect(mockMfaAuthentication.signInWithApple).toHaveBeenCalledOnce();
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it("should explain an unknown Sign in with Apple failure without reporting it as an error", async () => {
+      const { logger } = await import("@/lib/logger");
+      const user = userEvent.setup();
+      mockState.platform = "ios";
+      const failure = new Error(
+        "The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)",
+      );
+      mockMfaAuthentication.signInWithApple.mockRejectedValueOnce(failure);
+      renderComponent();
+
+      await user.click(
+        screen.getByRole("button", { name: "online.loginApple" }),
+      );
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("online.loginFail");
+      });
+      expect(logger.error).toHaveBeenCalledWith(
+        "Firebase Apple login failed:",
+        failure,
+        expect.objectContaining({ severity: "warning" }),
+      );
+    });
+
     it("should show error toast on OAuth failure", async () => {
       const user = userEvent.setup();
       mockState.platform = "ios";

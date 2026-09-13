@@ -407,10 +407,15 @@ export function OnlinePage() {
         msg.includes("cancel") ||
         msg.includes("popup_closed") ||
         msg.includes("user_denied") ||
-        msg.includes("dismissed")
+        msg.includes("dismissed") ||
+        // ASAuthorizationError.canceled, which iOS rejects with only the
+        // localized error description.
+        msg.includes("authorizationerror error 1001")
       ) {
         return;
       }
+      // Anything else, including ASAuthorizationError.unknown (1000) from a
+      // device without an Apple Account, stays a warning.
       logger.error("Firebase Apple login failed:", error, {
         category: "api",
         action: "signInWithApple",
