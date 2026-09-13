@@ -1,6 +1,7 @@
 import { act, render, waitFor } from "@/test-utils";
 import { vi, beforeEach, describe, it, expect } from "vitest";
 import React from "react";
+import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import { RequirementsNotMetError } from "@/lib/errors";
 import { buildOnlineApiError } from "@/test-utils/factories";
 
@@ -1072,6 +1073,39 @@ describe("Firebase Auth Integration", () => {
         expect.anything(),
         expect.anything(),
       );
+    });
+
+    it("should recheck the subscription once account requirements are completed", async () => {
+      await signInWithSubscriptionFailure(
+        new RequirementsNotMetError(
+          [],
+          buildOnlineApiError({ status: 403, code: "requirements_not_met" }),
+        ),
+      );
+      expect(mockSetOnlinePremiumAccess).toHaveBeenLastCalledWith(false);
+
+      mockGetSubscriptionStatus.mockResolvedValue({ is_premium: true });
+      act(() => {
+        useRequirementsStore.getState().complete();
+      });
+
+      await waitFor(() => {
+        expect(mockSetOnlinePremiumAccess).toHaveBeenLastCalledWith(true);
+      });
+      expect(mockGetSubscriptionStatus).toHaveBeenCalledTimes(2);
+    });
+
+    it("should not check the subscription when requirements complete while signed out", async () => {
+      mockPlatform = "ios";
+      render(<App />);
+      await waitFor(() => expect(mockAddListener).toHaveBeenCalled());
+
+      act(() => {
+        useRequirementsStore.getState().complete();
+      });
+
+      expect(mockGetSubscriptionStatus).not.toHaveBeenCalled();
+      expect(mockSetOnlinePremiumAccess).not.toHaveBeenCalled();
     });
 
     it("should report a rejected subscription request once with request context", async () => {

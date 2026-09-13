@@ -11,6 +11,7 @@ import { InboxModal } from "@/components/InboxModal";
 import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 import { StagedTokenModal } from "@/components/home/StagedTokenModal";
 import { useAppReviewPrompt } from "@/hooks/useAppReviewPrompt";
+import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import {
   isNativePluginAvailable,
   isPluginAvailable,
@@ -382,6 +383,58 @@ export default function App() {
       return undefined;
     }
 
+    const checkOnlinePremiumAccess = async (
+      appUserID: string,
+      generation: number,
+    ) => {
+      subscriptionController?.abort();
+      const controller = new AbortController();
+      subscriptionController = controller;
+      const isCurrentCheck = () =>
+        active &&
+        !controller.signal.aborted &&
+        generation === authChangeGeneration &&
+        useStatusStore.getState().loggedInUser?.uid === appUserID;
+
+      try {
+        const { is_premium } = await getSubscriptionStatusWithRetry(
+          controller.signal,
+        );
+        if (!isCurrentCheck()) return;
+        setOnlinePremiumAccess(is_premium);
+      } catch (e) {
+        if (!isCurrentCheck()) return;
+        setOnlinePremiumAccess(false);
+        // The requirements modal is already asking the user to finish setup,
+        // and completing it checks again.
+        if (e instanceof RequirementsNotMetError) return;
+        logger.error("Failed to check subscription status:", e, {
+          category: "api",
+          action: "getSubscription",
+          severity: "warning",
+          ...getOnlineApiErrorContext(e),
+        });
+      } finally {
+        if (subscriptionController === controller) {
+          subscriptionController = null;
+        }
+      }
+    };
+
+    // The Online API withholds subscription status until account requirements
+    // are met, so recheck once the user completes them instead of leaving a
+    // subscriber without Pro until the next sign-in or launch.
+    const unsubscribeRequirements = useRequirementsStore.subscribe(
+      (state, previousState) => {
+        if (state.completionRevision === previousState.completionRevision) {
+          return;
+        }
+        const appUserID = useStatusStore.getState().loggedInUser?.uid;
+        if (!active || !appUserID) return;
+        void checkOnlinePremiumAccess(appUserID, authChangeGeneration);
+      },
+    );
+
     FirebaseAuthentication.addListener("authStateChange", async (change) => {
       if (!active) return;
       const generation = ++authChangeGeneration;
@@ -442,44 +495,7 @@ export default function App() {
       }
 
       if (change.user) {
-        const appUserID = change.user.uid;
-        const controller = new AbortController();
-        subscriptionController = controller;
-        try {
-          const { is_premium } = await getSubscriptionStatusWithRetry(
-            controller.signal,
-          );
-          if (
-            !active ||
-            generation !== authChangeGeneration ||
-            useStatusStore.getState().loggedInUser?.uid !== appUserID
-          ) {
-            return;
-          }
-          setOnlinePremiumAccess(is_premium);
-        } catch (e) {
-          if (controller.signal.aborted) return;
-          if (
-            !active ||
-            generation !== authChangeGeneration ||
-            useStatusStore.getState().loggedInUser?.uid !== appUserID
-          ) {
-            return;
-          }
-          setOnlinePremiumAccess(false);
-          // The requirements modal is already asking the user to finish setup.
-          if (e instanceof RequirementsNotMetError) return;
-          logger.error("Failed to check subscription status:", e, {
-            category: "api",
-            action: "getSubscription",
-            severity: "warning",
-            ...getOnlineApiErrorContext(e),
-          });
-        } finally {
-          if (subscriptionController === controller) {
-            subscriptionController = null;
-          }
-        }
+        await checkOnlinePremiumAccess(change.user.uid, generation);
       }
     })
       .then((handle) => {
@@ -499,6 +515,7 @@ export default function App() {
       active = false;
       authChangeGeneration += 1;
       subscriptionController?.abort();
+      unsubscribeRequirements();
       cleanup?.();
     };
   }, [
