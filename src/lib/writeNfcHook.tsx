@@ -15,7 +15,7 @@ import {
   Status,
   isFormatRelatedError,
 } from "./nfc";
-import { CoreAPI } from "./coreApi.ts";
+import { CoreAPI, isExpectedReaderWriteError } from "./coreApi.ts";
 import { logger } from "./logger";
 import {
   NfcCancelledError,
@@ -370,7 +370,7 @@ export function useNfcWriter(
             setStatus(Status.Cancelled);
             return;
           }
-          if (isExpectedNfcError(e)) {
+          if (isExpectedNfcError(e) || isExpectedReaderWriteError(e)) {
             logger.debug("Expected NFC write operation failure", e);
           } else {
             logger.error("NFC write operation failed", e, {

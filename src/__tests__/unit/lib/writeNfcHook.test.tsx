@@ -14,6 +14,7 @@ import {
 } from "../../../lib/writeNfcHook";
 import { Status } from "../../../lib/nfc";
 import { NfcVerificationError } from "../../../lib/errors";
+import { CoreApiError } from "../../../lib/coreApi.ts";
 
 // Create hoisted mocks
 const {
@@ -93,8 +94,9 @@ vi.mock("../../../lib/nfc", () => ({
   },
 }));
 
-// Mock CoreAPI
-vi.mock("../../../lib/coreApi.ts", () => ({
+// Mock CoreAPI (error classes and classifiers stay real)
+vi.mock("../../../lib/coreApi.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/coreApi.ts")>()),
   CoreAPI: {
     hasWriteCapableReader: mockHasWriteCapableReader,
     isConnected: mockIsConnected,
@@ -425,6 +427,63 @@ describe("useNfcWriter", () => {
         expect.any(Error),
       );
       expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      "error writing to reader",
+      "failed to select writer: no readers with write capability connected",
+    ])(
+      "should not report the Core reader write outcome %j as an error",
+      async (message) => {
+        mockWrite.mockRejectedValue(new CoreApiError(message, 1));
+
+        const { result } = renderHook(() =>
+          useNfcWriter(WriteMethod.RemoteReader),
+        );
+
+        await act(async () => {
+          await result.current.write(WriteAction.Write, "content");
+        });
+
+        await waitFor(() => {
+          expect(result.current.status).toBe(Status.Error);
+        });
+
+        expect(mockToast.error).toHaveBeenCalled();
+        expect(mockLogger.debug).toHaveBeenCalledWith(
+          "Expected NFC write operation failure",
+          expect.any(CoreApiError),
+        );
+        expect(mockLogger.error).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should report unexpected Core reader write failures", async () => {
+      mockWrite.mockRejectedValue(
+        new CoreApiError("invalid params: text is required", 1),
+      );
+
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.RemoteReader),
+      );
+
+      await act(async () => {
+        await result.current.write(WriteAction.Write, "content");
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe(Status.Error);
+      });
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        "NFC write operation failed",
+        expect.any(CoreApiError),
+        expect.objectContaining({
+          category: "nfc",
+          action: WriteAction.Write,
+          writeMethod: WriteMethod.RemoteReader,
+        }),
+      );
     });
 
     it("should log unexpected write failures as errors", async () => {
