@@ -3372,6 +3372,17 @@ describe("connection event handling", () => {
   it("should not report unsupported inbox or scraper status methods", async () => {
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    useStatusStore.setState({
+      inboxMessages: [
+        {
+          id: 23,
+          title: "Message from the previous Core",
+          severity: InboxSeverity.Warning,
+          createdAt: "2026-05-19T10:00:00.000Z",
+        },
+      ],
+      inboxModalOpen: true,
+    });
     vi.mocked(CoreAPI.version).mockResolvedValueOnce({
       version: "2.12.0",
       platform: "test",
@@ -3402,6 +3413,8 @@ describe("connection event handling", () => {
           "Inbox is unavailable on this Core",
         );
       });
+      expect(useStatusStore.getState().inboxMessages).toEqual([]);
+      expect(useStatusStore.getState().inboxModalOpen).toBe(false);
       await waitFor(() => {
         expect(warnSpy).toHaveBeenCalledWith(
           "Media scrape status is unavailable on this Core",

@@ -1114,6 +1114,8 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             .catch((err) => {
               if (isUnsupportedCoreApiError(err)) {
                 logger.warn("Inbox is unavailable on this Core");
+                setInboxMessages([]);
+                setInboxModalOpen(false);
                 return;
               }
               logger.error("Failed to fetch inbox:", err, {
