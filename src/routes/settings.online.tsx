@@ -376,7 +376,10 @@ export function OnlinePage() {
         msg.includes("cancel") ||
         msg.includes("popup_closed") ||
         msg.includes("user_denied") ||
-        msg.includes("dismissed")
+        msg.includes("dismissed") ||
+        // SIGN_IN_CANCELLED from Android's legacy Google account picker,
+        // which rejects with only its status code.
+        msg.startsWith("12501:")
       ) {
         return;
       }
