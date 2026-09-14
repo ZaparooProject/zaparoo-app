@@ -58,6 +58,33 @@ describe("useScreenReaderEnabled", () => {
     expect(result.current).toBe(false);
   });
 
+  it("should ignore a detection that resolves after unmount", async () => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    let resolveStale: (state: { value: boolean }) => void = () => {};
+    vi.mocked(ScreenReader.isEnabled).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveStale = resolve;
+      }),
+    );
+    const { unmount: unmountStale } = renderHook(() =>
+      useScreenReaderEnabled(),
+    );
+    unmountStale();
+
+    vi.mocked(ScreenReader.isEnabled).mockResolvedValue({ value: false });
+    const { result: current, unmount } = renderHook(() =>
+      useScreenReaderEnabled(),
+    );
+    await waitFor(() => expect(current.current).toBe(false));
+    await act(async () => resolveStale({ value: true }));
+    unmount();
+
+    vi.mocked(ScreenReader.isEnabled).mockReturnValue(new Promise(() => {}));
+    const { result } = renderHook(() => useScreenReaderEnabled());
+
+    expect(result.current).toBe(false);
+  });
+
   it("should subscribe to state changes on native platform", async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     vi.mocked(ScreenReader.isEnabled).mockResolvedValue({ value: false });

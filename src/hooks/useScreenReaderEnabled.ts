@@ -29,7 +29,11 @@ export function useScreenReaderEnabled(): boolean {
       return;
     }
 
+    // A detection that resolves after unmount could overwrite a newer mount's
+    // result, so only an active effect records it.
+    let active = true;
     const update = (value: boolean) => {
+      if (!active) return;
       lastDetected = value;
       setIsEnabled(value);
     };
@@ -45,6 +49,7 @@ export function useScreenReaderEnabled(): boolean {
     });
 
     return () => {
+      active = false;
       listener.then((l) => l.remove());
     };
   }, []);
