@@ -33,6 +33,8 @@ Called in `App.tsx` after successful render:
 - Enables automatic rollback protection
 - Syncs with update server in background
 
+Local device test builds share the store build number, so they listen on the same versioned production channel. Build their web assets with `VITE_DISABLE_LIVE_UPDATE_SYNC=true` so a test install does not download the production bundle and switch to it on the next cold start. `ready()` still runs. Never set this for store or CI builds.
+
 If a bad update crashes the app before `ready()` is called, the plugin automatically rolls back to the previous working version.
 
 ### Versioned Channels

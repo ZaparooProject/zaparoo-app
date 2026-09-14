@@ -375,6 +375,7 @@ export class ConnectionManager {
           pingInterval: 15000,
           pongTimeout: 10000,
           reconnectInterval: 2000,
+          maxReconnectInterval: 30000,
           maxReconnectAttempts: Infinity,
           pingMessage: "ping",
           connectionTimeout: 5000,

@@ -9,6 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_VERSION: string;
   readonly VITE_RELEASE_KEY?: string;
   readonly VITE_PURCHASE_PREVIEW?: string;
+  readonly VITE_DISABLE_LIVE_UPDATE_SYNC?: string;
   readonly VITE_GOOGLE_STORE_API: string;
   readonly VITE_APPLE_STORE_API: string;
   readonly VITE_ROLLBAR_ACCESS_TOKEN: string;

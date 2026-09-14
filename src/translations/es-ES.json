@@ -876,6 +876,8 @@
         "scanModeHelp": "**Toque:** Modo predeterminado. El contenido multimedia se iniciará al escanear y no se hará un seguimiento de las retiradas de tokens.\n\n**Mantener:** El contenido multimedia se iniciará al escanear y se cerrará cuando se retire el token del lector. Solo funciona con lectores externos, no con el escaneo desde la aplicación.",
         "continuousScan": "Escaneo continuo",
         "continuousScanHelp": "Cuando está habilitado, el lector integrado en la página Escanear seguirá buscando tokens incluso después de leer uno.",
+        "keepScreenAwake": "Mantener la pantalla encendida",
+        "keepScreenAwakeHelp": "Cuando está habilitado, la pantalla permanece encendida mientras la página Escanear está abierta y hay un dispositivo conectado, para que el lector integrado esté siempre listo para escanear. Desactívalo para que tu teléfono entre en reposo con normalidad.",
         "launchOnScan": "Iniciar al escanear",
         "launchOnScanHelp": "Cuando se escanea un token con el lector integrado, se reenvía al dispositivo conectado, lo que permite que la aplicación funcione como un lector inalámbrico. Esta es una función Pro.",
         "preferExternalReader": "Preferir lector externo",

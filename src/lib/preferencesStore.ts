@@ -111,6 +111,7 @@ export interface PreferencesState {
   storeVerifiedProAccess: boolean;
   onlinePremiumAccess: boolean | null;
   preferRemoteWriter: boolean;
+  keepScreenAwake: boolean;
 
   // Shake to launch settings
   shakeEnabled: boolean;
@@ -193,6 +194,7 @@ export interface PreferencesActions {
   setOnlinePremiumAccess: (value: boolean) => void;
   clearOnlinePremiumAccess: () => void;
   setPreferRemoteWriter: (value: boolean) => void;
+  setKeepScreenAwake: (value: boolean) => void;
   setShakeEnabled: (value: boolean) => void;
   setShakeMode: (value: "random" | "custom") => void;
   setShakeZapscript: (value: string) => void;
@@ -245,6 +247,7 @@ const DEFAULT_PREFERENCES: Omit<
   storeVerifiedProAccess: false,
   onlinePremiumAccess: null,
   preferRemoteWriter: false,
+  keepScreenAwake: true,
   shakeEnabled: false,
   shakeMode: "random",
   shakeZapscript: "",
@@ -365,6 +368,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
             (state.lifetimeProAccess === null && state.launcherAccess),
         })),
       setPreferRemoteWriter: (value) => set({ preferRemoteWriter: value }),
+      setKeepScreenAwake: (value) => set({ keepScreenAwake: value }),
       setShakeEnabled: (value) => set({ shakeEnabled: value }),
       setShakeMode: (value) => {
         // Clear zapscript when mode changes
@@ -418,6 +422,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
         launcherAccess: state.launcherAccess,
         storeVerifiedProAccess: state.storeVerifiedProAccess,
         preferRemoteWriter: state.preferRemoteWriter,
+        keepScreenAwake: state.keepScreenAwake,
         shakeEnabled: state.shakeEnabled,
         shakeMode: state.shakeMode,
         shakeZapscript: state.shakeZapscript,
@@ -554,9 +559,11 @@ export const selectAppSettings = (state: PreferencesStore) => ({
   launchOnScan: state.launchOnScan,
   launcherAccess: state.launcherAccess,
   preferRemoteWriter: state.preferRemoteWriter,
+  keepScreenAwake: state.keepScreenAwake,
   setRestartScan: state.setRestartScan,
   setLaunchOnScan: state.setLaunchOnScan,
   setPreferRemoteWriter: state.setPreferRemoteWriter,
+  setKeepScreenAwake: state.setKeepScreenAwake,
 });
 
 export const selectShakeSettings = (state: PreferencesStore) => ({

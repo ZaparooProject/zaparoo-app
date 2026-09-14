@@ -4519,13 +4519,71 @@ describe("network status handling (native platform)", () => {
 
     await waitFor(() => {
       expect(networkCallback).not.toBeNull();
+      expect(useStatusStore.getState().networkAvailable).toBe(true);
     });
 
-    // Simulate network reconnection
+    // Simulate the network dropping and coming back
+    networkCallback!({ connected: false, connectionType: "none" });
     networkCallback!({ connected: true, connectionType: "wifi" });
 
     expect(useStatusStore.getState().networkAvailable).toBe(true);
-    expect(connectionManager.immediateReconnectActive).toHaveBeenCalled();
+    expect(connectionManager.immediateReconnectActive).toHaveBeenCalledTimes(1);
+  });
+
+  it("should not reset reconnect backoff for repeated connected updates", async () => {
+    const { Network } = await import("@capacitor/network");
+    let networkCallback: ((status: ConnectionStatus) => void) | null = null;
+    vi.mocked(Network.addListener).mockImplementation(
+      async (_eventName, callback) => {
+        networkCallback = callback;
+        return { remove: vi.fn() };
+      },
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(networkCallback).not.toBeNull();
+      expect(useStatusStore.getState().networkAvailable).toBe(true);
+    });
+    vi.mocked(connectionManager.immediateReconnectActive).mockClear();
+
+    // Android re-reports the same Wi-Fi network when its signal changes
+    networkCallback!({ connected: true, connectionType: "wifi" });
+    networkCallback!({ connected: true, connectionType: "wifi" });
+
+    expect(connectionManager.immediateReconnectActive).not.toHaveBeenCalled();
+  });
+
+  it("should trigger immediate reconnect when the connection type changes", async () => {
+    const { Network } = await import("@capacitor/network");
+    let networkCallback: ((status: ConnectionStatus) => void) | null = null;
+    vi.mocked(Network.addListener).mockImplementation(
+      async (_eventName, callback) => {
+        networkCallback = callback;
+        return { remove: vi.fn() };
+      },
+    );
+
+    render(
+      <ConnectionProvider>
+        <div>Test</div>
+      </ConnectionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(networkCallback).not.toBeNull();
+      expect(useStatusStore.getState().networkAvailable).toBe(true);
+    });
+    vi.mocked(connectionManager.immediateReconnectActive).mockClear();
+
+    networkCallback!({ connected: true, connectionType: "cellular" });
+
+    expect(connectionManager.immediateReconnectActive).toHaveBeenCalledTimes(1);
   });
 
   it("should not trigger reconnect when network disconnects", async () => {

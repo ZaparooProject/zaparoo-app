@@ -36,6 +36,7 @@
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "test:ui": "vitest --ui",
+    "postinstall": "patch-package",
     "prepare": "husky"
   },
   "dependencies": {
@@ -62,7 +63,6 @@
     "@capawesome/capacitor-app-review": "^8.0.1",
     "@capawesome/capacitor-badge": "^8.0.2",
     "@capawesome/capacitor-live-update": "^8.3.0",
-    "@capgo/capacitor-shake": "^8.0.27",
     "@noble/curves": "^2.2.0",
     "@noble/hashes": "^2.2.0",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -148,6 +148,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "msw": "^2.13.1",
+    "patch-package": "^8.0.1",
     "postcss": "^8.5.15",
     "prettier": "^3.7.3",
     "prettier-plugin-tailwindcss": "^0.7.1",

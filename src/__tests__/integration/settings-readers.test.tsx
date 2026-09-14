@@ -276,6 +276,40 @@ describe("Settings Readers Integration", () => {
       });
     });
 
+    describe("Keep Screen On", () => {
+      it("should show keep screen on toggle on native platforms", () => {
+        renderComponent();
+
+        expect(
+          screen.getByRole("checkbox", {
+            name: /settings.readers.keepScreenAwake/i,
+          }),
+        ).toBeChecked();
+      });
+
+      it("should not show keep screen on toggle on web platform", () => {
+        mockCapacitorState.isNative = false;
+        renderComponent();
+
+        expect(
+          screen.queryByText(/settings.readers.keepScreenAwake/i),
+        ).not.toBeInTheDocument();
+      });
+
+      it("should let the screen sleep when toggled off", async () => {
+        const user = userEvent.setup();
+        renderComponent();
+
+        await user.click(
+          screen.getByRole("checkbox", {
+            name: /settings.readers.keepScreenAwake/i,
+          }),
+        );
+
+        expect(usePreferencesStore.getState().keepScreenAwake).toBe(false);
+      });
+    });
+
     describe("Prefer External Reader", () => {
       it("should show prefer external reader when NFC is available", () => {
         usePreferencesStore.setState({ nfcAvailable: true });

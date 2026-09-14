@@ -49,9 +49,24 @@ const platform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
 | `@capawesome/capacitor-app-review`   | Native app store review prompts      |
 | `@capawesome/capacitor-badge`        | App icon notification count          |
 | `@capawesome/capacitor-live-update`  | OTA live updates                     |
-| `@capgo/capacitor-shake`             | Shake gesture detection              |
 | `capacitor-plugin-safe-area`         | Safe area insets for notched devices |
 | `capacitor-zeroconf`                 | Zeroconf/Bonjour network discovery   |
+
+`capacitor-zeroconf` is patched with `patch-package` (`patches/capacitor-zeroconf+4.0.0.patch`, applied by the `postinstall` script). Upstream acquires the Android Wi-Fi multicast lock on the first watch and only releases it in `close()`, which the app never calls because `useNetworkScan` uses `unwatch()` to keep JmDNS warm. A held multicast lock disables the Wi-Fi chip's multicast filter, so the CPU wakes for every mDNS and broadcast frame for the rest of the process lifetime. The patch takes the lock per watch, releases it when the last watch is removed, and re-registers the listener on every `watch()` call so later scans receive events again. It changes native code, so it ships only with a store build. npm 12 blocks the tarball URL patch-package fetches, so regenerate the patch with:
+
+```bash
+npm_config_allow_remote=root npx patch-package capacitor-zeroconf --include 'android/src/main/java'
+```
+
+### Shake detection bridge
+
+Shake-to-launch uses the app-local `ShakeDetector` plugin instead of a third-party package, because the previous plugin registered the Android accelerometer at game rate in `load()` and never released it.
+
+- TypeScript adapter: `src/lib/shakeDetector.ts` (test mock in `src/lib/__mocks__/shakeDetector.ts`)
+- Android bridge: `android/app/src/main/java/dev/wizzo/tapto/ShakeDetectorPlugin.java` (Square Seismic at about 15 Hz)
+- iOS bridge: `ios/App/App/ShakeDetectorPlugin.swift` (CoreMotion accelerometer at about 15 Hz with a port of Seismic's detection window, so continuous shaking behaves the same as Android; while detection is on it also consumes the system shake gesture so iOS does not show its shake-to-undo alert)
+
+`useShakeDetection` calls `start()` after subscribing and `stop()` on cleanup, so detection only runs while shake-to-launch is enabled and a Core is connected. Both platforms also stop sampling when the app leaves the foreground and restart it on return if JS still wants it. `isAvailable()` checks for an accelerometer without starting it. Changes to this bridge require native Android and iOS builds.
 
 ### Online authentication MFA bridge
 
@@ -355,17 +370,19 @@ Network.addListener("networkStatusChange", (status) => {
 
 ## Keep Awake
 
-Prevent screen from sleeping during long operations:
+Prevent the screen from sleeping only while it is needed. The display is the largest power draw on a phone, so pass a condition rather than holding the screen on for as long as a page is mounted:
 
 ```typescript
 import { useKeepAwake } from "@/hooks/useKeepAwake";
 
-function LongOperationScreen() {
-  useKeepAwake(); // Screen stays on while component is mounted
+function LongOperationScreen({ busy }: { busy: boolean }) {
+  useKeepAwake(busy); // Screen stays on while busy is true and mounted
 
   return <div>Processing...</div>;
 }
 ```
+
+The Zap page uses `useKeepAwake(connected && keepScreenAwake)`: it acts as an always-ready reader while a Core is connected, and the "Keep screen on" reader setting lets users turn that off.
 
 Or manually:
 

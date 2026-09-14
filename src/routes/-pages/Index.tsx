@@ -53,6 +53,7 @@ export function Index() {
   const preferRemoteWriter = usePreferencesStore(
     (state) => state.preferRemoteWriter,
   );
+  const keepScreenAwake = usePreferencesStore((state) => state.keepScreenAwake);
 
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   // Local modal state: queue-driven writes render their own modal at the app
@@ -125,7 +126,9 @@ export function Index() {
     enabled: historyOpen,
   });
 
-  useKeepAwake();
+  // The Zap page doubles as an always-ready reader, but only while a Core is
+  // connected to receive scans; otherwise let the phone sleep normally.
+  useKeepAwake(connected && keepScreenAwake);
 
   const confirmStop = () => {
     const target = stopTarget;

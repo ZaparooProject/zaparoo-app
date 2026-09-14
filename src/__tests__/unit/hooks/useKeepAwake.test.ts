@@ -39,7 +39,7 @@ describe("useKeepAwake", () => {
     vi.mocked(KeepAwake.keepAwake).mockResolvedValue();
     vi.mocked(KeepAwake.allowSleep).mockResolvedValue();
 
-    const { unmount } = renderHook(() => useKeepAwake());
+    const { unmount } = renderHook(() => useKeepAwake(true));
 
     expect(Capacitor.isNativePlatform).toHaveBeenCalled();
 
@@ -59,7 +59,7 @@ describe("useKeepAwake", () => {
   it("should not call keepAwake on web platform", () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
 
-    const { unmount } = renderHook(() => useKeepAwake());
+    const { unmount } = renderHook(() => useKeepAwake(true));
 
     expect(Capacitor.isNativePlatform).toHaveBeenCalled();
     expect(KeepAwake.keepAwake).not.toHaveBeenCalled();
@@ -69,13 +69,56 @@ describe("useKeepAwake", () => {
     expect(KeepAwake.allowSleep).not.toHaveBeenCalled();
   });
 
+  it("should not call keepAwake while disabled", async () => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+
+    const { unmount } = renderHook(() => useKeepAwake(false));
+    await import("@capacitor-community/keep-awake");
+
+    expect(KeepAwake.keepAwake).not.toHaveBeenCalled();
+
+    unmount();
+    await import("@capacitor-community/keep-awake");
+
+    expect(KeepAwake.allowSleep).not.toHaveBeenCalled();
+  });
+
+  it("should allow sleep when enabled turns false and keep awake again when it turns true", async () => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(KeepAwake.keepAwake).mockResolvedValue();
+    vi.mocked(KeepAwake.allowSleep).mockResolvedValue();
+
+    const { rerender, unmount } = renderHook(
+      ({ enabled }) => useKeepAwake(enabled),
+      { initialProps: { enabled: true } },
+    );
+
+    await vi.waitFor(() => {
+      expect(KeepAwake.keepAwake).toHaveBeenCalledTimes(1);
+    });
+
+    rerender({ enabled: false });
+
+    await vi.waitFor(() => {
+      expect(KeepAwake.allowSleep).toHaveBeenCalledTimes(1);
+    });
+
+    rerender({ enabled: true });
+
+    await vi.waitFor(() => {
+      expect(KeepAwake.keepAwake).toHaveBeenCalledTimes(2);
+    });
+
+    unmount();
+  });
+
   it("should log error when keepAwake fails", async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     const keepAwakeError = new Error("KeepAwake not supported");
     vi.mocked(KeepAwake.keepAwake).mockRejectedValue(keepAwakeError);
     vi.mocked(KeepAwake.allowSleep).mockResolvedValue();
 
-    renderHook(() => useKeepAwake());
+    renderHook(() => useKeepAwake(true));
 
     // Wait for the rejected promise to be handled
     await vi.waitFor(() => {
@@ -97,7 +140,7 @@ describe("useKeepAwake", () => {
     const allowSleepError = new Error("AllowSleep not supported");
     vi.mocked(KeepAwake.allowSleep).mockRejectedValue(allowSleepError);
 
-    const { unmount } = renderHook(() => useKeepAwake());
+    const { unmount } = renderHook(() => useKeepAwake(true));
 
     // Wait for the dynamic import and keepAwake to resolve
     await vi.waitFor(() => {

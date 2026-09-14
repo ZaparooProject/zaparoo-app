@@ -876,6 +876,8 @@
         "scanModeHelp": "**Tap:** Default mode. Media will launch on scan and token removals are not tracked.\n\n**Hold:** Media will launch on scan and exit when the token is removed from the reader. Only works with external readers, not in-app scanning.",
         "continuousScan": "Continuous scanning",
         "continuousScanHelp": "When enabled, the in-app reader on the Zap page will keep scanning for tokens even after reading one.",
+        "keepScreenAwake": "Keep screen on",
+        "keepScreenAwakeHelp": "When enabled, the screen stays on while the Zap page is open and a device is connected, so the in-app reader is always ready to scan. Turn this off to let your phone sleep normally.",
         "launchOnScan": "Launch on scan",
         "launchOnScanHelp": "When a token is scanned using the in-app reader, it will be forwarded to the connected device, making the app work as a wireless reader. This is a Pro feature.",
         "preferExternalReader": "Prefer external reader",

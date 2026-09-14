@@ -1,5 +1,5 @@
 {
-  "noticesFile": "thirdPartyLicenseNotices.157241ab098e.json",
+  "noticesFile": "thirdPartyLicenseNotices.68a6a93f0b00.json",
   "packages": [
     {
       "name": "@alloc/quick-lru",
@@ -189,13 +189,6 @@
       "license": "MIT",
       "repository": "https://github.com/capawesome-team/capacitor-plugins",
       "noticeId": "4921fd37a2312556"
-    },
-    {
-      "name": "@capgo/capacitor-shake",
-      "version": "8.0.27",
-      "license": "MPL-2.0",
-      "repository": "https://github.com/Cap-go/capacitor-shake",
-      "noticeId": "86cf9656479f1edb"
     },
     {
       "name": "@firebase/ai",

@@ -26,6 +26,7 @@ import {
   ConnectionContextValue,
 } from "@/hooks/useConnection";
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
+import { KeepAwake } from "@capacitor-community/keep-awake";
 
 function expectVisibleEmptyValues(regionName: string, count: number) {
   const region = screen.getByRole("region", { name: regionName });
@@ -163,11 +164,6 @@ vi.mock("@/components/A11yAnnouncer", async (importOriginal) => {
     })),
   };
 });
-
-// Mock useKeepAwake
-vi.mock("@/hooks/useKeepAwake", () => ({
-  useKeepAwake: vi.fn(),
-}));
 
 // Mock useSmartSwipe (used by WriteModal)
 vi.mock("@/hooks/useSmartSwipe", () => ({
@@ -1465,6 +1461,75 @@ describe("Index Route Integration", () => {
       );
 
       expect(screen.getByText("settings.notConnected")).toBeInTheDocument();
+    });
+  });
+
+  describe("Keep screen awake", () => {
+    it("should keep the screen awake while connected", async () => {
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        expect(KeepAwake.keepAwake).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("should let the screen sleep when the connection drops", async () => {
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+      await waitFor(() => {
+        expect(KeepAwake.keepAwake).toHaveBeenCalledTimes(1);
+      });
+
+      act(() => {
+        useStatusStore.setState({
+          connected: false,
+          connectionState: ConnectionState.DISCONNECTED,
+        });
+      });
+
+      await waitFor(() => {
+        expect(KeepAwake.allowSleep).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("should not keep the screen awake while disconnected", async () => {
+      useStatusStore.setState({
+        connected: false,
+        connectionState: ConnectionState.DISCONNECTED,
+      });
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+      await act(async () => {
+        await import("@capacitor-community/keep-awake");
+      });
+
+      expect(KeepAwake.keepAwake).not.toHaveBeenCalled();
+    });
+
+    it("should not keep the screen awake when the preference is off", async () => {
+      usePreferencesStore.setState({ keepScreenAwake: false });
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+      await act(async () => {
+        await import("@capacitor-community/keep-awake");
+      });
+
+      expect(KeepAwake.keepAwake).not.toHaveBeenCalled();
     });
   });
 

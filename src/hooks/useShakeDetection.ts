@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { PluginListenerHandle } from "@capacitor/core";
 import { Capacitor } from "@capacitor/core";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
-import { CapacitorShake } from "@capgo/capacitor-shake";
+import { ShakeDetector } from "@/lib/shakeDetector";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useStatusStore } from "@/lib/store";
 import { logger } from "@/lib/logger";
@@ -30,6 +30,12 @@ export function useShakeDetection({
   const shakeTimestampsRef = useRef<number[]>([]);
   // Track when last trigger occurred for cooldown
   const lastTriggerTimeRef = useRef(0);
+  // Read at shake time so navigating does not restart the native detector
+  const pathnameRef = useRef(pathname);
+
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     // Only enable shake detection on native platforms
@@ -48,13 +54,13 @@ export function useShakeDetection({
 
     const setupListener = async () => {
       try {
-        const newListener = await CapacitorShake.addListener(
+        const newListener = await ShakeDetector.addListener(
           "shake",
           async () => {
             const now = Date.now();
 
             // Only trigger on home page
-            if (pathname !== "/") {
+            if (pathnameRef.current !== "/") {
               logger.log("Shake detected but not on home page, ignoring");
               return;
             }
@@ -120,13 +126,15 @@ export function useShakeDetection({
           },
         );
 
-        // Only assign listener if still mounted
-        if (isMounted) {
-          listener = newListener;
-        } else {
+        if (!isMounted) {
           // Component unmounted during async setup, clean up immediately
-          newListener.remove();
+          void newListener.remove();
+          return;
         }
+        listener = newListener;
+
+        // The accelerometer only runs while this effect is active
+        await ShakeDetector.start();
       } catch (error) {
         logger.error("Failed to setup shake listener:", error, {
           category: "accelerometer",
@@ -141,8 +149,15 @@ export function useShakeDetection({
     return () => {
       isMounted = false;
       if (listener) {
-        listener.remove();
+        void listener.remove();
       }
+      ShakeDetector.stop().catch((error) => {
+        logger.debug("Failed to stop shake detector:", error, {
+          category: "accelerometer",
+          action: "stopShakeDetector",
+          severity: "info",
+        });
+      });
     };
-  }, [shakeEnabled, connected, pathname, setRunQueue]);
+  }, [shakeEnabled, connected, setRunQueue]);
 }
