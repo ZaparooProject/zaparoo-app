@@ -186,6 +186,8 @@ describe("useDeviceLinking", () => {
 
     expect(mockSettingsAuthClaim).not.toHaveBeenCalled();
     expect(mockLoggerError).not.toHaveBeenCalled();
+    expect(mockToastError).not.toHaveBeenCalled();
+    expect(result.current.state).toBe("unlinked");
   });
 
   it("should distinguish Core redemption failures", async () => {

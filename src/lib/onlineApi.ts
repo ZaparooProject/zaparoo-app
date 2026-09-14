@@ -42,23 +42,33 @@ export async function authRequestInterceptor(
 
 client.interceptors.request.use(authRequestInterceptor);
 
+// The requirements modal reads each record's type while rendering.
+function isPendingRequirement(value: unknown): value is PendingRequirement {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof Reflect.get(value, "type") === "string"
+  );
+}
+
 // Response interceptor to catch requirements_not_met errors
 client.interceptors.response.use(
   (response) => response,
   (error) => {
     const apiError = error.response?.data?.error;
-    if (apiError?.code !== "requirements_not_met") {
+    const requirements: unknown = apiError?.requirements;
+    // Without usable requirements the modal cannot open, so the original
+    // error is left for callers to report as a failure.
+    if (
+      apiError?.code !== "requirements_not_met" ||
+      !Array.isArray(requirements) ||
+      requirements.length === 0 ||
+      !requirements.every(isPendingRequirement)
+    ) {
       return Promise.reject(error);
     }
 
-    const requirements: PendingRequirement[] = Array.isArray(
-      apiError.requirements,
-    )
-      ? apiError.requirements
-      : [];
-    if (requirements.length > 0) {
-      useRequirementsStore.getState().trigger(requirements);
-    }
+    useRequirementsStore.getState().trigger(requirements);
 
     // A typed rejection lets callers treat this expected account state as
     // handled by the requirements modal instead of reporting a raw 403.

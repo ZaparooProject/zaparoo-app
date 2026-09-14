@@ -500,25 +500,37 @@ describe("onlineApi", () => {
       expect(mockTrigger).not.toHaveBeenCalled();
     });
 
-    it("should reject unmet requirements as a typed error without opening an empty modal", async () => {
-      const mockError = {
-        response: {
-          data: {
-            error: {
-              code: "requirements_not_met",
-              requirements: [],
+    it.each([
+      ["missing", undefined],
+      ["empty", []],
+      ["null", [null]],
+      ["untyped", [{ description: "Accept the terms" }]],
+      [
+        "partly malformed",
+        [{ type: "terms_acceptance", description: "Accept the terms" }, null],
+      ],
+    ])(
+      "should keep the original error without opening the modal for %s requirements",
+      async (_label, requirements) => {
+        const mockError = {
+          response: {
+            data: {
+              error: {
+                code: "requirements_not_met",
+                requirements,
+              },
             },
           },
-        },
-      };
+        };
 
-      expect(responseInterceptorError).not.toBeNull();
-      await expect(responseInterceptorError!(mockError)).rejects.toBeInstanceOf(
-        RequirementsNotMetError,
-      );
+        expect(responseInterceptorError).not.toBeNull();
+        await expect(responseInterceptorError!(mockError)).rejects.toBe(
+          mockError,
+        );
 
-      expect(mockTrigger).not.toHaveBeenCalled();
-    });
+        expect(mockTrigger).not.toHaveBeenCalled();
+      },
+    );
 
     it("should pass through successful responses unchanged", () => {
       const mockResponse = { data: { success: true } };

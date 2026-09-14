@@ -47,12 +47,14 @@ export type WarpPurchaseResult =
   | "identity_error"
   | "cancelled"
   | "busy"
+  | "requirements"
   | "failed";
 export type WarpRestoreResult =
   | "active"
   | "pro_restored"
   | "activation_pending"
   | "not_found"
+  | "requirements"
   | "failed";
 export type WarpManageResult = "opened" | "unavailable" | "failed";
 
@@ -509,7 +511,8 @@ export function useWarpSubscription(appUserID: string) {
       if (controller.signal.aborted) return "cancelled";
       const wrappedError = wrapPurchaseError(e);
       if (wrappedError instanceof PurchaseCancelledError) return "cancelled";
-      if (e instanceof RequirementsNotMetError) return "failed";
+      // The requirements modal is already open, so this is not a failure.
+      if (e instanceof RequirementsNotMetError) return "requirements";
 
       // Online API failures are not store errors and must not replace the
       // cached billing diagnostics.
@@ -607,24 +610,23 @@ export function useWarpSubscription(appUserID: string) {
       if (access.lifetimePro || storeVerifiedProAccess) return "pro_restored";
       return "not_found";
     } catch (e) {
-      if (
-        !controller.signal.aborted &&
-        !(e instanceof RequirementsNotMetError)
-      ) {
-        const purchaseError = isOnlineApiError(e)
-          ? {}
-          : getPurchaseErrorDiagnostics(e);
-        if (Object.keys(purchaseError).length > 0) {
-          cachePurchaseErrorDiagnostics(purchaseError, "restorePurchases");
-        }
-        logger.error("Purchase restore failed", e, {
-          category: "purchase",
-          action: "restorePurchases",
-          severity: "warning",
-          purchaseError,
-          ...getOnlineApiErrorContext(e),
-        });
+      if (controller.signal.aborted) return "failed";
+      // The requirements modal is already open, so this is not a failure.
+      if (e instanceof RequirementsNotMetError) return "requirements";
+
+      const purchaseError = isOnlineApiError(e)
+        ? {}
+        : getPurchaseErrorDiagnostics(e);
+      if (Object.keys(purchaseError).length > 0) {
+        cachePurchaseErrorDiagnostics(purchaseError, "restorePurchases");
       }
+      logger.error("Purchase restore failed", e, {
+        category: "purchase",
+        action: "restorePurchases",
+        severity: "warning",
+        purchaseError,
+        ...getOnlineApiErrorContext(e),
+      });
       return "failed";
     } finally {
       finishAction();

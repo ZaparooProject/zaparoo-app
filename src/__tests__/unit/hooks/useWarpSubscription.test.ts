@@ -294,6 +294,28 @@ describe("useWarpSubscription", () => {
     );
   });
 
+  it("should leave unmet account requirements at checkout to the requirements modal", async () => {
+    mockGetSubscriptionStatus
+      .mockResolvedValueOnce(subscription(false))
+      .mockRejectedValueOnce(
+        new RequirementsNotMetError(
+          [],
+          buildOnlineApiError({ status: 403, code: "requirements_not_met" }),
+        ),
+      );
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let purchaseResult: string | undefined;
+    await act(async () => {
+      purchaseResult = await result.current.purchase();
+    });
+
+    expect(purchaseResult).toBe("requirements");
+    expect(mockPurchasePackage).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
   it("should not report unmet account requirements after a restore", async () => {
     mockGetSubscriptionStatus
       .mockResolvedValueOnce(subscription(false))
@@ -311,7 +333,7 @@ describe("useWarpSubscription", () => {
       restoreResult = await result.current.restore();
     });
 
-    expect(restoreResult).toBe("failed");
+    expect(restoreResult).toBe("requirements");
     expect(logger.error).not.toHaveBeenCalled();
   });
 

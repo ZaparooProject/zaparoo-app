@@ -383,7 +383,7 @@ describe("WarpSubscription", () => {
     },
   );
 
-  it.each(["cancelled", "busy"] as const)(
+  it.each(["cancelled", "busy", "requirements"] as const)(
     "should not show an error for the %s purchase result",
     async (result) => {
       mockPurchase.mockResolvedValue(result);
@@ -424,6 +424,21 @@ describe("WarpSubscription", () => {
       expect(toastMethod).toHaveBeenCalledWith(message);
     },
   );
+
+  it("should not show an error when a restore stops for account requirements", async () => {
+    mockRestore.mockResolvedValue("requirements");
+    const user = userEvent.setup();
+    render(<WarpSubscription appUserID="user-123" />);
+
+    await user.click(
+      screen.getByRole("button", { name: "online.warp.restore" }),
+    );
+
+    await waitFor(() => expect(mockRestore).toHaveBeenCalledOnce());
+    expect(toast).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
 
   it.each([
     ["unavailable", "online.warp.manageUnavailable"],
