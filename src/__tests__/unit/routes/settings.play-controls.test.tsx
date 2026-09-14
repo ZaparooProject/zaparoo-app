@@ -11,7 +11,7 @@ const { componentRef, mockNavigate, mockCoreState } = vi.hoisted(() => ({
   componentRef: { current: null as RouteComponent | null },
   mockNavigate: vi.fn(),
   mockCoreState: {
-    version: "2.15.0",
+    version: "2.15.0" as string | null,
     versionPending: false,
   },
 }));
@@ -332,6 +332,37 @@ describe("Settings Play Controls Route", () => {
           profilesRequireForLaunch: true,
         });
       });
+    });
+
+    it("should hide playtime limits without polling on Core before 2.7.0", async () => {
+      mockCoreState.version = "2.6.0";
+      renderComponent();
+
+      await waitFor(() => {
+        expect(mockSettings).toHaveBeenCalled();
+      });
+      expect(mockPlaytimeLimits).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("heading", {
+          name: "settings.core.playtime.title",
+        }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", {
+          name: "settings.core.launchGuard.title",
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it("should not poll playtime limits while the Core version is unknown", async () => {
+      mockCoreState.version = null;
+      mockCoreState.versionPending = true;
+      renderComponent();
+
+      await waitFor(() => {
+        expect(mockSettings).toHaveBeenCalled();
+      });
+      expect(mockPlaytimeLimits).not.toHaveBeenCalled();
     });
 
     it("should call playtime limits API", async () => {

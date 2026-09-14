@@ -194,7 +194,7 @@ export async function initDeviceInfo(): Promise<void> {
 
 /**
  * Build base context from current app state.
- * Includes platform, version, device info, and connection status.
+ * Includes platform, version, device info, connection status, and Core info.
  */
 function buildBaseContext(): Record<string, unknown> {
   const state = useStatusStore.getState();
@@ -213,6 +213,10 @@ function buildBaseContext(): Record<string, unknown> {
     // Connection state
     connectionState: state.connectionState,
     isConnected: state.connected,
+
+    // Core info - API errors depend on which Core version answered
+    coreVersion: state.coreVersion ?? undefined,
+    corePlatform: state.corePlatform ?? undefined,
   };
 }
 
@@ -299,8 +303,9 @@ export const logger = {
     const safeError = error ? sanitizeError(error) : undefined;
 
     // Build message from sanitized non-error args
+    // Callers pass `undefined` as a placeholder when there is no error object.
     const messageArgs = logArgs
-      .filter((a) => !(a instanceof Error))
+      .filter((a) => a !== undefined && !(a instanceof Error))
       .map((a) => sanitizeLogValue(a));
     const message =
       messageArgs.length > 0
@@ -342,6 +347,10 @@ export const logger = {
 
     // Use sanitized error if available, otherwise create one from sanitized message
     const errorToReport = safeError || new Error(message || "Unknown error");
+    // Rollbar's parser strips a leading "phrase: " from exception messages,
+    // so keep the full message for item titles and grouping.
+    customData.errorName = errorToReport.name;
+    customData.errorMessage = errorToReport.message;
 
     // Report with appropriate severity (always include customData with base context)
     const severity = safeMetadata?.severity || "error";

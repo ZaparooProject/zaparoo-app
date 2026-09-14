@@ -42,6 +42,12 @@ export interface WebSocketTransportConfig {
 const ENCRYPTION_REQUIRED_CODE = -32002;
 const UNSUPPORTED_VERSION_CODE = -32001;
 
+// Core closes the socket without an error frame when it cannot establish an
+// encrypted session, most often because it no longer knows the auth token. A
+// Core restart mid-handshake looks the same, so only this many consecutive
+// silent closes, with no verified handshake between them, count as a rejection.
+const MAX_SILENT_HANDSHAKE_CLOSES = 3;
+
 type EncMode = "idle" | "trying-encrypted" | "encrypted-verified" | "plaintext";
 
 const DEFAULT_CONFIG: Omit<
@@ -95,6 +101,9 @@ export class WebSocketTransport implements Transport {
   // closes the connection. Suppresses the auto-reconnect loop until the consumer
   // resolves the issue (e.g. pairs) and triggers an explicit immediateReconnect().
   private encryptionBlocked = false;
+  // Consecutive silent closes during the encrypted handshake. Reset once a
+  // handshake verifies or the consumer clears an encryption block.
+  private silentHandshakeCloses = 0;
 
   readonly deviceId: string;
 
@@ -289,6 +298,7 @@ export class WebSocketTransport implements Transport {
     }
     this.encryptionBlocked = false;
     this.encryptionRejectedCandidates.clear();
+    this.silentHandshakeCloses = 0;
   }
 
   // Private methods
@@ -380,13 +390,37 @@ export class WebSocketTransport implements Transport {
       });
       this.clearConnectionTimeout();
       this.heartReset();
-      // Silent close while attempting encrypted handshake — server likely
-      // doesn't speak our encryption protocol. Surface as an error and stop.
+      // Silent close while attempting the encrypted handshake. Retry through
+      // the normal reconnect path in case Core was restarting; if it keeps
+      // happening, Core is rejecting the stored credentials.
       if (this.encMode === "trying-encrypted") {
+        this.silentHandshakeCloses++;
+        if (this.silentHandshakeCloses < MAX_SILENT_HANDSHAKE_CLOSES) {
+          logger.warn(
+            `[Transport:${this.deviceId}] Silent close during encrypted handshake; retrying (${this.silentHandshakeCloses}/${MAX_SILENT_HANDSHAKE_CLOSES})`,
+            { category: "crypto", action: "handshake-silent-close" },
+          );
+          this.session = null;
+          this.encMode = "idle";
+          this.handlers.onClose?.();
+          this.handleDisconnection();
+          return;
+        }
         this.failConnectionForEncryption(
           "silent close during encrypted handshake",
-          () =>
-            this.handlers.onError?.(new Error("Encrypted handshake failed")),
+          () => {
+            logger.error(
+              `[Transport:${this.deviceId}] Encrypted handshake rejected; pairing required`,
+              undefined,
+              {
+                category: "websocket",
+                action: "handshake-rejected",
+                severity: "warning",
+                silentCloses: this.silentHandshakeCloses,
+              },
+            );
+            this.handlers.onEncryptedHandshakeRejected?.();
+          },
         );
         return;
       }
@@ -681,6 +715,7 @@ export class WebSocketTransport implements Transport {
       if (this.encMode === "trying-encrypted") {
         this.encMode = "encrypted-verified";
         this.encryptionRejectedCandidates.clear();
+        this.silentHandshakeCloses = 0;
         logger.debug(`[Transport:${this.deviceId}] Encrypted handshake OK`, {
           category: "crypto",
           action: "handshake-ok",
@@ -754,6 +789,8 @@ export class WebSocketTransport implements Transport {
           `[Transport:${this.deviceId}] Encryption rejected by candidate; trying fallback: ${reason}`,
           { category: "crypto", action: "encryption-fallback" },
         );
+        // Each candidate gets its own silent close budget.
+        this.silentHandshakeCloses = 0;
         this.cleanup();
         this.currentAttemptConnected = false;
         this.handleConnectionError();

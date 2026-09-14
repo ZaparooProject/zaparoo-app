@@ -5,7 +5,15 @@
  * which controls whether commands are queued when disconnected.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  type MockInstance,
+} from "vitest";
 import { runToken } from "../../../lib/tokenOperations";
 
 // Mock dependencies
@@ -15,7 +23,8 @@ vi.mock("react-hot-toast", () => ({
   },
 }));
 
-vi.mock("../../../lib/coreApi", () => ({
+vi.mock("../../../lib/coreApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/coreApi")>()),
   CoreAPI: {
     run: vi.fn().mockResolvedValue({}),
   },
@@ -30,11 +39,14 @@ vi.mock("../../../lib/nfc", () => ({
 vi.mock("../../../lib/logger", () => ({
   logger: {
     log: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
     error: vi.fn(),
   },
 }));
 
-import { CoreAPI } from "../../../lib/coreApi";
+import toast from "react-hot-toast";
+import { CoreAPI, CoreApiError } from "../../../lib/coreApi";
 import { sessionManager } from "../../../lib/nfc";
 import { logger } from "../../../lib/logger";
 
@@ -104,6 +116,82 @@ describe("runToken", () => {
 
       expect(result).toBe(true);
       expect(CoreAPI.run).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("launch failures", () => {
+    // CoreAPI helpers come from the real module, which reports through the
+    // real logger rather than this file's logger mock.
+    let reportError: MockInstance<typeof logger.error>;
+
+    beforeEach(async () => {
+      const actual = await vi.importActual<
+        typeof import("../../../lib/logger")
+      >("../../../lib/logger");
+      reportError = vi
+        .spyOn(actual.logger, "error")
+        .mockImplementation(() => {});
+      vi.spyOn(actual.logger, "warn").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it.each([
+      ["ZapScript execution is disabled", "disabled"],
+      ["media not found", "media_not_found"],
+      ["playtime limit reached", "playtime_limit"],
+    ])(
+      "should show %j without reporting the expected %s outcome",
+      async (message, category) => {
+        vi.mocked(CoreAPI.run).mockRejectedValueOnce(
+          new CoreApiError(message, 1, { category }),
+        );
+
+        const result = await runToken(
+          "uid123",
+          "**launch.search:snes/mario",
+          true,
+          true,
+          mockSetLastToken,
+          mockSetProPurchaseModalOpen,
+        );
+
+        expect(result).toBe(false);
+        expect(toast.error).toHaveBeenCalledWith(message);
+        expect(reportError).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should report unexpected execution failures as warnings", async () => {
+      vi.mocked(CoreAPI.run).mockRejectedValueOnce(
+        new CoreApiError("ZapScript execution failed", 1, {
+          category: "execution_failed",
+        }),
+      );
+
+      const result = await runToken(
+        "uid123",
+        "**launch.search:snes/mario",
+        true,
+        true,
+        mockSetLastToken,
+        mockSetProPurchaseModalOpen,
+      );
+
+      expect(result).toBe(false);
+      expect(toast.error).toHaveBeenCalledWith("ZapScript execution failed");
+      expect(reportError).toHaveBeenCalledWith(
+        "launch error",
+        expect.any(CoreApiError),
+        expect.objectContaining({
+          category: "api",
+          action: "runToken",
+          severity: "warning",
+          runErrorCategory: "execution_failed",
+        }),
+      );
     });
   });
 

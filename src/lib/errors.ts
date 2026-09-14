@@ -96,6 +96,17 @@ export class NfcSessionBusyError extends ZaparooError {
   }
 }
 
+/**
+ * Thrown when a write has neither local NFC nor a write-capable Core reader to
+ * use. An environment state the user resolves, not a production monitoring
+ * event.
+ */
+export class NoWriteMethodAvailableError extends ZaparooError {
+  constructor(message = "No NFC write method is available") {
+    super(message);
+  }
+}
+
 // =============================================================================
 // API Errors
 // =============================================================================

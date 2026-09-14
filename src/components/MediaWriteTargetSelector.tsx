@@ -93,7 +93,7 @@ export function MediaWriteTargetSelector(props: {
   const radioGroupName = useId();
   const pathInputId = `${radioGroupName}-path`;
   const zapScriptInputId = `${radioGroupName}-zapscript`;
-  const visibleTags = props.media.tags.filter(
+  const visibleTags = (props.media.tags ?? []).filter(
     (tag) => !isFavoriteTag(tag) && !isScraperTag(tag),
   );
 

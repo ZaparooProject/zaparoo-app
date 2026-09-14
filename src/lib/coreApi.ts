@@ -3,8 +3,9 @@ import {
   DEFAULT_DEVICE_PORT,
   parseDeviceEndpoint,
 } from "@/lib/devices/endpoint.ts";
-import { logger } from "./logger.ts";
+import { logger, type ErrorMetadata } from "./logger.ts";
 import { RequestCancelledError } from "./errors";
+import { isIndexResponse } from "./indexResponse";
 import {
   AddMappingRequest,
   AllMappingsParams,
@@ -14,7 +15,6 @@ import {
   DeleteInboxRequest,
   HistoryResponse,
   InboxResponse,
-  IndexResponse,
   InputGamepadRequest,
   InputKeyboardRequest,
   LaunchRequest,
@@ -55,6 +55,7 @@ import {
   ScrapersResponse,
   ScrapingStatusNotification,
   SearchParams,
+  SearchResultGame,
   SearchResultsResponse,
   ScreenshotResponse,
   SettingsAuthClaimRequest,
@@ -70,6 +71,8 @@ import {
   VersionResponse,
   WriteRequest,
 } from "./models";
+
+export { isIndexResponse };
 
 /**
  * Interface for transport compatibility.
@@ -92,12 +95,19 @@ interface ApiRequest {
 }
 
 export class CoreApiError extends Error {
+  /** Stable failure category from `error.data.category` (Core 2.17+). */
+  public readonly category?: string;
+
   constructor(
     message: string,
     public readonly code: number,
+    public readonly data?: unknown,
   ) {
     super(message);
     this.name = "CoreApiError";
+    if (isRecord(data) && typeof data.category === "string") {
+      this.category = data.category;
+    }
   }
 }
 
@@ -249,30 +259,6 @@ function isMapping(value: unknown): boolean {
   );
 }
 
-export function isIndexResponse(value: unknown): value is IndexResponse {
-  if (
-    !isRecord(value) ||
-    typeof value.exists !== "boolean" ||
-    typeof value.indexing !== "boolean"
-  ) {
-    return false;
-  }
-
-  return (
-    hasOptionalType(value, "optimizing", "boolean") &&
-    hasOptionalType(value, "paused", "boolean") &&
-    hasOptionalType(value, "throttled", "boolean") &&
-    hasOptionalType(value, "totalSteps", "number") &&
-    hasOptionalType(value, "currentStep", "number") &&
-    hasOptionalType(value, "currentStepDisplay", "string") &&
-    hasOptionalType(value, "totalFiles", "number") &&
-    hasOptionalType(value, "totalMedia", "number") &&
-    hasOptionalType(value, "missingMedia", "number") &&
-    hasOptionalType(value, "systemsCompleted", "number") &&
-    hasOptionalType(value, "systemsTotal", "number")
-  );
-}
-
 function normalizeMappingType(type: string): MappingType {
   if (type === "id") return "uid";
   if (type === "value") return "text";
@@ -383,12 +369,48 @@ function requireMediaResponse(result: unknown): MediaResponse {
   };
 }
 
+// Core 2.6.0 and older omit result tags, and Core encodes empty lists as null.
+function normalizeSearchResultsResponse(
+  result: unknown,
+): SearchResultsResponse {
+  if (!isRecord(result)) {
+    throw new Error("Invalid media search response: expected an object");
+  }
+  const results: SearchResultGame[] = Array.isArray(result.results)
+    ? (result.results as SearchResultGame[])
+    : [];
+  return {
+    ...(result as unknown as SearchResultsResponse),
+    results: results.map((entry) =>
+      Array.isArray(entry.tags) ? entry : { ...entry, tags: [] },
+    ),
+  };
+}
+
 export function isUnsupportedCoreApiError(error: unknown): boolean {
   const message = getErrorMessage(error).toLowerCase();
   return (
     (error instanceof CoreApiError && error.code === -32601) ||
     /^(?:json-rpc(?: error)?:\s*)?method not found\b/.test(message)
   );
+}
+
+// Older Cores answer newer methods with "Method not found". That is an expected
+// compatibility outcome, so keep it out of error reporting.
+function logCoreApiFailure(
+  label: string,
+  error: unknown,
+  metadata?: ErrorMetadata,
+): void {
+  if (isUnsupportedCoreApiError(error)) {
+    logger.warn(`${label}:`, error);
+    return;
+  }
+  if (metadata) {
+    logger.error(`${label}:`, error, metadata);
+    return;
+  }
+  logger.error(`${label}:`, error);
 }
 
 export function isUnsupportedMediaApiError(error: unknown): boolean {
@@ -415,6 +437,17 @@ export function isMediaIdLookupError(error: unknown): boolean {
     message.includes("media id not found") ||
     message.includes("media not found") ||
     message.includes("no media found")
+  );
+}
+
+/**
+ * Core could not resolve a media reference because the media or its system is
+ * not in the media database, for example media that was never indexed.
+ */
+export function isUnindexedMediaError(error: unknown): boolean {
+  return (
+    isMediaIdLookupError(error) ||
+    getErrorMessage(error).toLowerCase().startsWith("system not found")
   );
 }
 
@@ -458,7 +491,8 @@ export function isExpectedMediaDatabaseError(error: unknown): boolean {
   return (
     isUnsupportedMediaApiError(error) ||
     isMissingMediaDatabaseSetupError(error) ||
-    isMediaOperationConflictError(error)
+    isMediaOperationConflictError(error) ||
+    getErrorMessage(error).toLowerCase().includes("insufficient disk space")
   );
 }
 
@@ -499,6 +533,7 @@ function logMediaApiFailure(
 interface ApiError {
   code: number;
   message: string;
+  data?: unknown;
 }
 
 /**
@@ -537,6 +572,131 @@ export function isRequestCancelledError(error: unknown): boolean {
   return /request cancelled|request canceled|connection reset|aborted/i.test(
     message,
   );
+}
+
+/**
+ * Categories Core 2.17+ sends in `error.data.category` when `run` fails.
+ */
+export type RunErrorCategory =
+  | "busy"
+  | "media_not_found"
+  | "disabled"
+  | "invalid_script"
+  | "blocked"
+  | "playtime_limit"
+  | "cancelled"
+  | "timeout"
+  | "unavailable"
+  | "execution_failed";
+
+// Core sends a fixed message per category. Used only when a response carries
+// no data.category.
+const RUN_ERROR_MESSAGE_CATEGORIES: readonly [string, RunErrorCategory][] = [
+  ["a script is already running", "busy"],
+  ["another launch is in progress", "busy"],
+  ["media not found", "media_not_found"],
+  ["zapscript execution is disabled", "disabled"],
+  ["zapscript is invalid", "invalid_script"],
+  ["zapscript exceeds maximum length", "invalid_script"],
+  ["zapscript execution was blocked", "blocked"],
+  ["playtime limit reached", "playtime_limit"],
+  ["request cancelled; anything already started continues", "cancelled"],
+  ["timed out waiting for zapscript to complete", "timeout"],
+  ["service is shutting down", "unavailable"],
+  ["zapscript execution failed", "execution_failed"],
+];
+
+// Outcomes caused by the script, device settings, or device state rather than
+// an App or Core defect. timeout and execution_failed stay reportable.
+const EXPECTED_RUN_ERROR_CATEGORIES: ReadonlySet<string> = new Set([
+  "busy",
+  "media_not_found",
+  "disabled",
+  "invalid_script",
+  "blocked",
+  "playtime_limit",
+  "cancelled",
+  "unavailable",
+] satisfies RunErrorCategory[]);
+
+export function getRunErrorCategory(error: unknown): string | null {
+  if (!(error instanceof CoreApiError)) return null;
+  if (error.category) return error.category;
+  const message = error.message.trim().toLowerCase();
+  const match = RUN_ERROR_MESSAGE_CATEGORIES.find(([prefix]) =>
+    message.startsWith(prefix),
+  );
+  return match?.[1] ?? null;
+}
+
+export function isExpectedRunError(error: unknown): boolean {
+  const category = getRunErrorCategory(error);
+  return category !== null && EXPECTED_RUN_ERROR_CATEGORIES.has(category);
+}
+
+/**
+ * Log a failed `CoreAPI.run` call. Expected script, settings, and device
+ * state outcomes stay out of error reporting; anything else is reported as a
+ * warning with the Core category attached.
+ */
+export function logRunFailure(
+  label: string,
+  error: unknown,
+  metadata: { action: string } & Record<string, unknown>,
+): void {
+  if (isRequestCancelledError(error)) {
+    logger.debug(label, error);
+    return;
+  }
+
+  const runErrorCategory = getRunErrorCategory(error) ?? undefined;
+  const context = {
+    ...metadata,
+    category: "api" as const,
+    severity: "warning" as const,
+    runErrorCategory,
+  };
+  if (isExpectedRunError(error)) {
+    logger.warn(label, error, context);
+    return;
+  }
+  logger.error(label, error, context);
+}
+
+/**
+ * Core answers `readers.write` with these client errors when no writable
+ * reader is available or no usable tag was presented. Core logs hardware
+ * failures behind the same message itself.
+ */
+export function isExpectedReaderWriteError(error: unknown): boolean {
+  if (!(error instanceof CoreApiError)) return false;
+  const message = error.message.trim().toLowerCase();
+  return (
+    message === "error writing to reader" ||
+    message.startsWith("failed to select writer")
+  );
+}
+
+/**
+ * Classify a Core screenshot failure. "unavailable" means the platform cannot
+ * capture its display or the client's role does not allow screenshots;
+ * "timeout" means the platform did not produce a screenshot in time.
+ */
+export function getScreenshotFailureKind(
+  error: unknown,
+): "unavailable" | "timeout" | null {
+  if (!(error instanceof CoreApiError)) return null;
+  const message = error.message.toLowerCase();
+  if (
+    message.includes("not supported on this platform") ||
+    message.includes("client role does not permit")
+  ) {
+    return "unavailable";
+  }
+  if (/screenshot (?:timed out|file incomplete) after/.test(message)) {
+    return "timeout";
+  }
+  return null;
 }
 
 interface ApiResponse {
@@ -1102,7 +1262,9 @@ class CoreApi {
         }
 
         if (res.error) {
-          promise.reject(new CoreApiError(res.error.message, res.error.code));
+          promise.reject(
+            new CoreApiError(res.error.message, res.error.code, res.error.data),
+          );
           delete this.responsePool[res.id];
 
           // Clear pendingWriteId if this error response is for the pending write
@@ -1180,11 +1342,9 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          if (isRequestCancelledError(error)) {
-            logger.debug("Run API call cancelled:", error);
-          } else {
-            logger.error("Run API call failed:", error);
-          }
+          // Every caller reports run failures with its own context, so
+          // reporting here would duplicate each failure.
+          logger.debug("Run API call failed:", error);
           reject(error);
         });
     });
@@ -1258,11 +1418,8 @@ class CoreApi {
           reject(new Error("Invalid screenshot response"));
         })
         .catch((error) => {
-          logger.error("Screenshot API call failed:", error, {
-            category: "api",
-            action: "screenshot",
-            severity: "error",
-          });
+          // The remote controls report unexpected failures with context.
+          logger.debug("Screenshot API call failed:", error);
           reject(error);
         });
     });
@@ -1299,7 +1456,8 @@ class CoreApi {
           if (this.pendingWriteId === writeResult.id) {
             this.pendingWriteId = null;
           }
-          logger.error("Write API call failed:", error);
+          // The NFC writer reports unexpected write failures with context.
+          logger.debug("Write API call failed:", error);
           reject(error);
         });
     });
@@ -1336,8 +1494,12 @@ class CoreApi {
     return new Promise<SearchResultsResponse>((resolve, reject) => {
       this.call(Method.MediaSearch, params, signal)
         .then((result) => {
+          if (isCancelled(result)) {
+            resolve(result as unknown as SearchResultsResponse);
+            return;
+          }
           try {
-            const response = result as SearchResultsResponse;
+            const response = normalizeSearchResultsResponse(result);
             logger.debug(response);
             resolve(response);
           } catch (e) {
@@ -1429,7 +1591,7 @@ class CoreApi {
       return result as MediaImageResponse;
     } catch (error) {
       if (isRequestCancelledError(error)) throw error;
-      if (isMissingMediaImageError(error)) {
+      if (isMissingMediaImageError(error) || isUnindexedMediaError(error)) {
         logger.warn("Media image unavailable:", error);
       } else {
         logMediaApiFailure(
@@ -1456,11 +1618,15 @@ class CoreApi {
       return result as MediaTagsUpdateResponse;
     } catch (error) {
       if (isRequestCancelledError(error)) throw error;
-      logMediaApiFailure(
-        "Media tags update API call failed",
-        "mediaTagsUpdate",
-        error,
-      );
+      if (isUnindexedMediaError(error)) {
+        logger.warn("Media tags update target is not indexed:", error);
+      } else {
+        logMediaApiFailure(
+          "Media tags update API call failed",
+          "mediaTagsUpdate",
+          error,
+        );
+      }
       throw error;
     }
   }
@@ -2207,7 +2373,7 @@ class CoreApi {
           resolve(result as ReadersResponse);
         })
         .catch((error) => {
-          logger.error("Readers API call failed:", error);
+          logCoreApiFailure("Readers API call failed", error);
           reject(error);
         });
     });
@@ -2236,14 +2402,15 @@ class CoreApi {
           ),
       );
     } catch (error) {
-      logger.error("Failed to check write capable readers:", error);
+      logCoreApiFailure("Failed to check write capable readers", error);
       return false;
     }
   }
 
   readersWriteCancel(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      this.call(Method.ReadersWriteCancel)
+      // Core 2.9.0+ rejects a missing params object; older Cores ignore it.
+      this.call(Method.ReadersWriteCancel, {})
         .then(() => {
           resolve();
         })
@@ -2291,7 +2458,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Playtime API call failed:", error);
+          logCoreApiFailure("Playtime API call failed", error);
           reject(error);
         });
     });
@@ -2315,7 +2482,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Playtime limits API call failed:", error);
+          logCoreApiFailure("Playtime limits API call failed", error);
           reject(error);
         });
     });
@@ -2357,7 +2524,7 @@ class CoreApi {
           }
         })
         .catch((error) => {
-          logger.error("Inbox API call failed:", error, {
+          logCoreApiFailure("Inbox API call failed", error, {
             category: "api",
             action: "inbox.fetch",
             severity: "error",

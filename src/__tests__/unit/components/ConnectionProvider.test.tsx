@@ -124,6 +124,12 @@ vi.mock("../../../lib/coreApi", async (importOriginal) => ({
       super(message);
     }
   },
+  MalformedCoreResponseError: (
+    await importOriginal<typeof import("../../../lib/coreApi")>()
+  ).MalformedCoreResponseError,
+  isMalformedCoreResponseError: (
+    await importOriginal<typeof import("../../../lib/coreApi")>()
+  ).isMalformedCoreResponseError,
   CoreAPI: {
     setWsInstance: vi.fn(),
     flushQueue: vi.fn(),
@@ -190,6 +196,9 @@ vi.mock("../../../lib/coreApi", async (importOriginal) => ({
   isIndexResponse: (
     await importOriginal<typeof import("../../../lib/coreApi")>()
   ).isIndexResponse,
+  isUnsupportedCoreApiError: (
+    await importOriginal<typeof import("../../../lib/coreApi")>()
+  ).isUnsupportedCoreApiError,
 }));
 
 vi.mock("@capacitor/preferences", () => ({
@@ -1298,6 +1307,50 @@ describe("notification processing", () => {
       await waitFor(() => {
         expect(mockToastError).toHaveBeenCalledWith("error");
       });
+    });
+
+    it("should report a malformed Core message as a warning without its contents", async () => {
+      const { resetToastRateLimiter } = await import("@/lib/toastUtils");
+      resetToastRateLimiter();
+      const loggerSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+      const { MalformedCoreResponseError } =
+        await vi.importActual<typeof import("@/lib/coreApi")>("@/lib/coreApi");
+      const payload = '{"result":{"name":"Private Media Title';
+      vi.mocked(CoreAPI.processReceived).mockRejectedValueOnce(
+        new MalformedCoreResponseError(
+          `Unterminated string in JSON at position ${payload.length}`,
+          null,
+          payload.length,
+          payload,
+        ),
+      );
+
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+
+      await capturedEventHandlers.onMessage!("test-device", {});
+
+      await waitFor(() => {
+        expect(loggerSpy).toHaveBeenCalledWith(
+          "Malformed Core message",
+          undefined,
+          {
+            category: "api",
+            action: "processReceived",
+            severity: "warning",
+            requestId: null,
+            dataLength: payload.length,
+          },
+        );
+      });
+      expect(JSON.stringify(loggerSpy.mock.calls)).not.toContain(
+        "Private Media Title",
+      );
+      expect(mockToastError).not.toHaveBeenCalled();
+      loggerSpy.mockRestore();
     });
   });
 
@@ -3314,6 +3367,68 @@ describe("connection event handling", () => {
       expect(CoreAPI.mediaScrapeStatus).toHaveBeenCalled();
       expect(useStatusStore.getState().scrapingStatus).toBeNull();
     });
+  });
+
+  it("should not report unsupported inbox or scraper status methods", async () => {
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    useStatusStore.setState({
+      inboxMessages: [
+        {
+          id: 23,
+          title: "Message from the previous Core",
+          severity: InboxSeverity.Warning,
+          createdAt: "2026-05-19T10:00:00.000Z",
+        },
+      ],
+      inboxModalOpen: true,
+    });
+    vi.mocked(CoreAPI.version).mockResolvedValueOnce({
+      version: "2.12.0",
+      platform: "test",
+    });
+    vi.mocked(CoreAPI.inbox).mockRejectedValueOnce(
+      new Error("Method not found"),
+    );
+    vi.mocked(CoreAPI.mediaScrapeStatus).mockRejectedValueOnce(
+      new Error("Method not found"),
+    );
+
+    try {
+      render(
+        <ConnectionProvider>
+          <ConnectionConsumer />
+        </ConnectionProvider>,
+      );
+
+      expect(capturedEventHandlers.onConnectionChange).toBeDefined();
+      capturedEventHandlers.onConnectionChange!(RECORD_ID, {
+        state: "connected",
+        hasData: false,
+        hasConnectedBefore: false,
+      });
+
+      await waitFor(() => {
+        expect(warnSpy).toHaveBeenCalledWith(
+          "Inbox is unavailable on this Core",
+        );
+      });
+      expect(useStatusStore.getState().inboxMessages).toEqual([]);
+      expect(useStatusStore.getState().inboxModalOpen).toBe(false);
+      await waitFor(() => {
+        expect(warnSpy).toHaveBeenCalledWith(
+          "Media scrape status is unavailable on this Core",
+        );
+      });
+      const reportedMessages = errorSpy.mock.calls.map(([message]) => message);
+      expect(reportedMessages).not.toContain("Failed to fetch inbox:");
+      expect(reportedMessages).not.toContain(
+        "Failed to fetch media scrape status:",
+      );
+    } finally {
+      errorSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
   });
 
   it("should store the platform and version the peer reports on its record", async () => {

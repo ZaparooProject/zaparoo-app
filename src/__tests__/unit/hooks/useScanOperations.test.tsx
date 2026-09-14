@@ -61,6 +61,7 @@ describe("useScanOperations", () => {
     status: null,
     verifyError: null,
     getVerifyError: vi.fn(() => null),
+    retapRequired: false,
   };
 
   const defaultProps = {

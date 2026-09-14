@@ -57,6 +57,8 @@ import {
   isCancelled,
   isExpectedMediaDatabaseError,
   isIndexResponse,
+  isMalformedCoreResponseError,
+  isUnsupportedCoreApiError,
   type NotificationRequest,
 } from "@/lib/coreApi";
 import {
@@ -1087,6 +1089,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             })
             .catch((err) => {
               setScrapingStatus(null);
+              if (isUnsupportedCoreApiError(err)) {
+                logger.warn("Media scrape status is unavailable on this Core");
+                return;
+              }
               logger.error("Failed to fetch media scrape status:", err, {
                 category: "api",
                 action: "mediaScrapeStatus",
@@ -1106,6 +1112,12 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               setInboxMessages(inboxRes.messages);
             })
             .catch((err) => {
+              if (isUnsupportedCoreApiError(err)) {
+                logger.warn("Inbox is unavailable on this Core");
+                setInboxMessages([]);
+                setInboxModalOpen(false);
+                return;
+              }
               logger.error("Failed to fetch inbox:", err, {
                 category: "api",
                 action: "inbox",
@@ -1444,6 +1456,19 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             }
           })
           .catch((e) => {
+            if (isMalformedCoreResponseError(e)) {
+              // A frame Core truncated or corrupted. A request it answered still
+              // fails through its own caller, so there is nothing to show here,
+              // and the parser message can quote payload contents.
+              logger.error("Malformed Core message", undefined, {
+                category: "api",
+                action: "processReceived",
+                severity: "warning",
+                requestId: e.requestId,
+                dataLength: e.dataLength,
+              });
+              return;
+            }
             logger.error("Error processing message:", e);
             showRateLimitedErrorToast(
               tRef.current("error", { msg: e?.message || "Unknown error" }),
@@ -1567,6 +1592,19 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         setPairingRequired(true);
         setConnectionError(
           tRef.current("pairing.connectionError.credentialsRevoked"),
+        );
+        setPairingOpen(true);
+      },
+      onEncryptedHandshakeRejected: () => {
+        if (!isCurrentConnection()) return;
+        clearConnectionIssue();
+        // Core hangs up without an error frame when it no longer knows this
+        // app, so there is no proof the credentials are gone. Keep them until a
+        // new pairing overwrites them.
+        setEncryptionState("plaintext");
+        setPairingRequired(true);
+        setConnectionError(
+          tRef.current("pairing.connectionError.handshakeRejected"),
         );
         setPairingOpen(true);
       },

@@ -70,6 +70,7 @@
       "removeFavorite": "Aus Favoriten entfernen",
       "updatingFavorite": "Favorit wird aktualisiert...",
       "favoriteError": "Favorit konnte nicht aktualisiert werden",
+      "favoriteNotIndexed": "Nur Medien aus der Mediendatenbank können als Favorit markiert werden",
       "disconnected": "Verbinde dich mit einem Gerät, um seine Bibliothek zu durchsuchen",
       "updateCore": "Aktualisiere Zaparoo Core, um die Bibliothek zu verwenden",
       "databaseRequired": "Erstelle eine Mediendatenbank, um die Bibliothek zu durchsuchen",
@@ -197,7 +198,8 @@
       "formatErrorRetry": "Dieser Tag kann nicht formatiert werden. Versuche es erneut oder verwende einen anderen Tag.",
       "verifying": "Tag wird überprüft...",
       "verifyFailed": "Tag wurde nicht korrekt gespeichert",
-      "verifyFailedRetry": "Der Tag wurde nicht korrekt gespeichert. Halte ihn an dein Telefon und versuche es erneut."
+      "verifyFailedRetry": "Der Tag wurde nicht korrekt gespeichert. Halte ihn an dein Telefon und versuche es erneut.",
+      "retapTag": "Tag formatiert. Nimm ihn weg und halte ihn dann erneut an dein Telefon."
     },
     "toast": {
       "updateDbHeading": "Mediendatenbank wird aktualisiert",
@@ -1185,6 +1187,8 @@
     "features": {
       "requiresCoreVersion": "Erfordert Zaparoo Core v{{version}} oder neuer",
       "inbox": "Benachrichtigungen",
+      "playtimeLimits": "Spielzeitbegrenzungen",
+      "readers": "Angeschlossene Lesegeräte",
       "mediaScrapers": "Scraper",
       "mediaGenerate": "Mediendatenbank-Aktualisierungen",
       "mediaCleanOrphans": "Fehlende Medien bereinigen",
@@ -1268,6 +1272,7 @@
       "connectionError": {
         "encryptionRequired": "Dieses Gerät muss gekoppelt werden.",
         "credentialsRevoked": "Kopplung wurde aufgehoben. Kopple das Gerät erneut.",
+        "handshakeRejected": "Dieses Gerät erkennt diese App nicht mehr. Kopple das Gerät erneut.",
         "unsupportedVersion": "Dieses Gerät verwendet eine nicht unterstützte Verschlüsselungsversion."
       },
       "error": {
@@ -1276,6 +1281,8 @@
         "limit_reached": "Zu viele Versuche, starte die Kopplung auf deinem Gerät neu",
         "rate_limited": "Zu viele Anfragen, versuche es gleich noch einmal",
         "session_unknown": "Kopplungssitzung nicht gefunden, starte die Kopplung auf deinem Gerät neu",
+        "no_pairing": "Keine aktive PIN, starte die Kopplung auf deinem Gerät, um eine neue zu erhalten",
+        "too_many_clients": "Zu viele Apps gekoppelt, entferne eine auf deinem Gerät und versuche es erneut",
         "server_hmac_bad": "Sicherheitsprüfung fehlgeschlagen",
         "malformed": "Kopplung fehlgeschlagen, versuche es erneut",
         "network": "Netzwerkfehler, prüfe deine Verbindung und versuche es erneut",

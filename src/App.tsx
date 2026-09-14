@@ -144,6 +144,7 @@ function QueueProcessors() {
         close={closeWriteModal}
         verifyError={nfcWriter.verifyError !== null}
         retry={() => void nfcWriter.retry()}
+        retapRequired={nfcWriter.retapRequired}
       />
       <DeepLinkConfirmModal
         item={pendingConfirm}

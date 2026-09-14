@@ -9,6 +9,7 @@ import {
 } from "@/lib/crypto/credentials";
 import { Capacitor } from "@capacitor/core";
 import { Device } from "@capacitor/device";
+import { logger } from "@/lib/logger";
 
 vi.mock("@/lib/crypto/pairing", async () => {
   const actual = await vi.importActual<typeof import("@/lib/crypto/pairing")>(
@@ -233,6 +234,43 @@ describe("PairingModal", () => {
 
       expect(pinInput.value).toBe("123456");
     });
+
+    it("should send a multi-byte device name within Core's byte limit", async () => {
+      const user = userEvent.setup();
+      mockedPerformPairing.mockRejectedValue(
+        new PairingError("wrong_pin", "wrong pin"),
+      );
+      render(
+        <PairingModal
+          isOpen={true}
+          close={vi.fn()}
+          address="192.168.1.10:7497"
+          recordId={RECORD_ID}
+        />,
+      );
+
+      const clientNameInput = screen.getByLabelText(
+        "pairing.clientNameLabel",
+      ) as HTMLInputElement;
+      await waitFor(() => {
+        expect(clientNameInput.value).toBe("Pixel 8");
+      });
+      await user.clear(clientNameInput);
+      await user.click(clientNameInput);
+      await user.paste("é".repeat(100));
+      await user.type(screen.getByLabelText("pairing.pinLabel"), "123456");
+
+      await waitFor(() => {
+        expect(mockedPerformPairing).toHaveBeenCalledTimes(1);
+      });
+      expect(clientNameInput.value).toBe("é".repeat(64));
+      expect(mockedPerformPairing).toHaveBeenCalledWith(
+        "192.168.1.10",
+        7497,
+        "123456",
+        "é".repeat(64),
+      );
+    });
   });
 
   describe("successful pairing", () => {
@@ -362,6 +400,82 @@ describe("PairingModal", () => {
       expect(mockedPerformPairing).toHaveBeenCalledTimes(1);
       expect(close).not.toHaveBeenCalled();
       expect(onSuccess).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("error reporting", () => {
+    async function failPairingWith(error: Error, messageKey: string) {
+      const user = userEvent.setup();
+      mockedPerformPairing.mockRejectedValue(error);
+      render(
+        <PairingModal
+          isOpen={true}
+          close={vi.fn()}
+          address="192.168.1.10:7497"
+          recordId={RECORD_ID}
+        />,
+      );
+      await user.type(screen.getByLabelText("pairing.pinLabel"), "123456");
+      expect(await screen.findByText(messageKey)).toBeInTheDocument();
+    }
+
+    function pairReports(loggerError: { mock: { calls: unknown[][] } }) {
+      return loggerError.mock.calls.filter(
+        (call) =>
+          (call.at(-1) as { action?: string } | undefined)?.action === "pair",
+      );
+    }
+
+    it.each([
+      "wrong_pin",
+      "pin_expired",
+      "limit_reached",
+      "session_unknown",
+      "rate_limited",
+      "no_pairing",
+      "too_many_clients",
+      "network",
+    ] as const)("should not report an expected %s failure", async (kind) => {
+      const loggerError = vi.spyOn(logger, "error");
+
+      await failPairingWith(
+        new PairingError(kind, "expected failure"),
+        `pairing.error.${kind}`,
+      );
+
+      expect(pairReports(loggerError)).toHaveLength(0);
+      loggerError.mockRestore();
+    });
+
+    it.each(["server_hmac_bad", "malformed", "unknown"] as const)(
+      "should report an unexpected %s failure",
+      async (kind) => {
+        const loggerError = vi.spyOn(logger, "error");
+        const error = new PairingError(kind, "unexpected failure");
+
+        await failPairingWith(error, `pairing.error.${kind}`);
+
+        expect(pairReports(loggerError)).toEqual([
+          [
+            "Pairing failed",
+            error,
+            expect.objectContaining({ severity: "error", kind }),
+          ],
+        ]);
+        loggerError.mockRestore();
+      },
+    );
+
+    it("should report a failure that is not a pairing error", async () => {
+      const loggerError = vi.spyOn(logger, "error");
+
+      await failPairingWith(
+        new Error("storage unavailable"),
+        "pairing.error.unknown",
+      );
+
+      expect(pairReports(loggerError)).toHaveLength(1);
+      loggerError.mockRestore();
     });
   });
 });

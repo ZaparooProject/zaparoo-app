@@ -12,8 +12,9 @@ import {
   WriteMethod,
   WriteAction,
 } from "../../../lib/writeNfcHook";
-import { Status } from "../../../lib/nfc";
+import { Status, type WriteTagOptions } from "../../../lib/nfc";
 import { NfcVerificationError } from "../../../lib/errors";
+import { CoreApiError } from "../../../lib/coreApi.ts";
 
 // Create hoisted mocks
 const {
@@ -93,8 +94,9 @@ vi.mock("../../../lib/nfc", () => ({
   },
 }));
 
-// Mock CoreAPI
-vi.mock("../../../lib/coreApi.ts", () => ({
+// Mock CoreAPI (error classes and classifiers stay real)
+vi.mock("../../../lib/coreApi.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/coreApi.ts")>()),
   CoreAPI: {
     hasWriteCapableReader: mockHasWriteCapableReader,
     isConnected: mockIsConnected,
@@ -192,6 +194,7 @@ describe("useNfcWriter", () => {
 
       // Should use writeTag (local NFC)
       expect(mockWriteTag).toHaveBeenCalledWith("test content", {
+        onRetapRequired: expect.any(Function),
         ios: {
           verifyingMessage: "spinner.verifying",
           verifyFailedMessage: "spinner.verifyFailed",
@@ -253,6 +256,7 @@ describe("useNfcWriter", () => {
       });
 
       expect(mockWriteTag).toHaveBeenCalledWith("test content", {
+        onRetapRequired: expect.any(Function),
         ios: {
           verifyingMessage: "spinner.verifying",
           verifyFailedMessage: "spinner.verifyFailed",
@@ -427,6 +431,63 @@ describe("useNfcWriter", () => {
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
+    it.each([
+      "error writing to reader",
+      "failed to select writer: no readers with write capability connected",
+    ])(
+      "should not report the Core reader write outcome %j as an error",
+      async (message) => {
+        mockWrite.mockRejectedValue(new CoreApiError(message, 1));
+
+        const { result } = renderHook(() =>
+          useNfcWriter(WriteMethod.RemoteReader),
+        );
+
+        await act(async () => {
+          await result.current.write(WriteAction.Write, "content");
+        });
+
+        await waitFor(() => {
+          expect(result.current.status).toBe(Status.Error);
+        });
+
+        expect(mockToast.error).toHaveBeenCalled();
+        expect(mockLogger.debug).toHaveBeenCalledWith(
+          "Expected NFC write operation failure",
+          expect.any(CoreApiError),
+        );
+        expect(mockLogger.error).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should report unexpected Core reader write failures", async () => {
+      mockWrite.mockRejectedValue(
+        new CoreApiError("invalid params: text is required", 1),
+      );
+
+      const { result } = renderHook(() =>
+        useNfcWriter(WriteMethod.RemoteReader),
+      );
+
+      await act(async () => {
+        await result.current.write(WriteAction.Write, "content");
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe(Status.Error);
+      });
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        "NFC write operation failed",
+        expect.any(CoreApiError),
+        expect.objectContaining({
+          category: "nfc",
+          action: WriteAction.Write,
+          writeMethod: WriteMethod.RemoteReader,
+        }),
+      );
+    });
+
     it("should log unexpected write failures as errors", async () => {
       mockWriteTag.mockRejectedValue(new Error("Write failed"));
 
@@ -570,6 +631,105 @@ describe("useNfcWriter", () => {
     });
   });
 
+  describe("re-tap prompt", () => {
+    const successResult = {
+      status: Status.Success,
+      info: { rawTag: null, tag: { uid: "test", text: "content" } },
+    };
+
+    /** Make writeTag hang, exposing its options and a way to settle it. */
+    function deferWriteTag() {
+      const calls: {
+        options: WriteTagOptions;
+        settle: (result: typeof successResult) => void;
+      }[] = [];
+      mockCancelSession.mockResolvedValue(undefined);
+      mockWriteTag.mockImplementation(
+        (_text: string, options: WriteTagOptions) =>
+          new Promise((resolve) => {
+            calls.push({ options, settle: resolve });
+          }),
+      );
+      return calls;
+    }
+
+    it("should flag a required re-tap until the write settles", async () => {
+      const calls = deferWriteTag();
+      const { result } = renderHook(() => useNfcWriter());
+
+      let writePromise: Promise<void> = Promise.resolve();
+      act(() => {
+        writePromise = result.current.write(WriteAction.Write, "content");
+      });
+      await waitFor(() => {
+        expect(calls).toHaveLength(1);
+      });
+
+      act(() => {
+        calls[0]!.options.onRetapRequired?.();
+      });
+      expect(result.current.retapRequired).toBe(true);
+
+      await act(async () => {
+        calls[0]!.settle(successResult);
+        await writePromise;
+      });
+      expect(result.current.retapRequired).toBe(false);
+      expect(result.current.status).toBe(Status.Success);
+    });
+
+    it("should clear the re-tap prompt on end()", async () => {
+      const calls = deferWriteTag();
+      const { result } = renderHook(() => useNfcWriter());
+
+      act(() => {
+        void result.current.write(WriteAction.Write, "content");
+      });
+      await waitFor(() => {
+        expect(calls).toHaveLength(1);
+      });
+      act(() => {
+        calls[0]!.options.onRetapRequired?.();
+      });
+      expect(result.current.retapRequired).toBe(true);
+
+      await act(async () => {
+        await result.current.end();
+      });
+
+      expect(result.current.retapRequired).toBe(false);
+      expect(mockCancelSession).toHaveBeenCalled();
+    });
+
+    it("should ignore a re-tap request from a superseded write", async () => {
+      const calls = deferWriteTag();
+      const { result } = renderHook(() => useNfcWriter());
+
+      act(() => {
+        void result.current.write(WriteAction.Write, "first");
+      });
+      await waitFor(() => {
+        expect(calls).toHaveLength(1);
+      });
+      act(() => {
+        void result.current.write(WriteAction.Write, "second");
+      });
+      await waitFor(() => {
+        expect(calls).toHaveLength(2);
+      });
+
+      act(() => {
+        calls[0]!.options.onRetapRequired?.();
+      });
+
+      expect(result.current.retapRequired).toBe(false);
+
+      await act(async () => {
+        await result.current.end();
+      });
+    });
+  });
+
   describe("writing state", () => {
     it("should set writing=false after operation completes", async () => {
       const { result } = renderHook(() => useNfcWriter());
@@ -651,6 +811,7 @@ describe("useNfcWriter", () => {
 
       // Should use local NFC write without calling hasWriteCapableReader
       expect(mockWriteTag).toHaveBeenCalledWith("test content", {
+        onRetapRequired: expect.any(Function),
         ios: {
           verifyingMessage: "spinner.verifying",
           verifyFailedMessage: "spinner.verifyFailed",

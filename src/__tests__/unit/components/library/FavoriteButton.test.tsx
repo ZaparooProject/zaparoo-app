@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test-utils";
 import { FavoriteButton } from "@/components/library/FavoriteButton";
 import { CoreAPI } from "@/lib/coreApi";
+import { logger } from "@/lib/logger";
 import type { MediaBrowseEntry } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 
@@ -121,6 +122,50 @@ describe("FavoriteButton", () => {
       ).toHaveAttribute("aria-pressed", "false"),
     );
     expect(mockErrorToast).toHaveBeenCalledWith("library.favoriteError");
+  });
+
+  it("should explain without reporting when Core has not indexed the media", async () => {
+    const send = vi.fn();
+    CoreAPI.setWsInstance({ isConnected: true, send });
+    const loggerError = vi.spyOn(logger, "error");
+    const user = userEvent.setup();
+
+    render(
+      <FavoriteButton
+        entry={mediaEntry({
+          mediaId: undefined,
+          systemId: "PC",
+          path: "steam://rungameid/620",
+        })}
+        fallbackSystemId="PC"
+        deviceKey="device-a"
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "library.addFavorite" }),
+    );
+    await waitFor(() => expect(send).toHaveBeenCalled());
+    const request = JSON.parse(send.mock.calls[0]![0] as string);
+    expect(request).toMatchObject({
+      method: "media.tags.update",
+      params: { system: "PC", path: "steam://rungameid/620" },
+    });
+    await CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        error: { code: 1, message: "system not found: PC" },
+      }),
+    } as MessageEvent);
+
+    await waitFor(() =>
+      expect(mockErrorToast).toHaveBeenCalledWith("library.favoriteNotIndexed"),
+    );
+    expect(
+      screen.getByRole("button", { name: "library.addFavorite" }),
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(mockErrorToast).not.toHaveBeenCalledWith("library.favoriteError");
+    expect(loggerError).not.toHaveBeenCalled();
   });
 
   it("should render a compact accessible toggle when requested", () => {

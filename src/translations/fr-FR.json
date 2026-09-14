@@ -70,6 +70,7 @@
       "removeFavorite": "Retirer des favoris",
       "updatingFavorite": "Mise à jour du favori...",
       "favoriteError": "Impossible de mettre à jour le favori",
+      "favoriteNotIndexed": "Seuls les médias de la base de données de médias peuvent être ajoutés aux favoris",
       "disconnected": "Connectez-vous à un appareil pour parcourir sa bibliothèque",
       "updateCore": "Mettez à jour Zaparoo Core pour utiliser la bibliothèque",
       "databaseRequired": "Créez une base de données de médias pour parcourir la bibliothèque",
@@ -197,7 +198,8 @@
       "formatErrorRetry": "Impossible de formater ce tag. Réessayez ou utilisez un autre tag.",
       "verifying": "Vérification du tag...",
       "verifyFailed": "Le tag n’a pas été enregistré correctement",
-      "verifyFailedRetry": "Le tag n’a pas été enregistré correctement. Maintenez-le contre votre téléphone et réessayez."
+      "verifyFailedRetry": "Le tag n’a pas été enregistré correctement. Maintenez-le contre votre téléphone et réessayez.",
+      "retapTag": "Tag formaté. Éloignez-le, puis maintenez-le à nouveau contre votre téléphone."
     },
     "toast": {
       "updateDbHeading": "Mise à jour de la base de données de médias",
@@ -1185,6 +1187,8 @@
     "features": {
       "requiresCoreVersion": "Nécessite Zaparoo Core v{{version}} ou une version ultérieure",
       "inbox": "Notifications",
+      "playtimeLimits": "Limites de temps de jeu",
+      "readers": "Lecteurs de l’appareil",
       "mediaScrapers": "Récupération de métadonnées",
       "mediaGenerate": "Mises à jour de la base de données de médias",
       "mediaCleanOrphans": "Nettoyage des médias manquants",
@@ -1268,6 +1272,7 @@
       "connectionError": {
         "encryptionRequired": "Cet appareil nécessite une association.",
         "credentialsRevoked": "L’association a été perdue. Associez à nouveau l’appareil.",
+        "handshakeRejected": "Cet appareil ne reconnaît plus cette application. Associez à nouveau l’appareil.",
         "unsupportedVersion": "Cet appareil utilise une version de chiffrement non prise en charge."
       },
       "error": {
@@ -1276,6 +1281,8 @@
         "limit_reached": "Trop de tentatives, redémarrez l’association sur votre appareil",
         "rate_limited": "Trop de requêtes, réessayez dans un instant",
         "session_unknown": "Session d’association introuvable, redémarrez l’association sur votre appareil",
+        "no_pairing": "Aucun code PIN actif, lancez l’association sur votre appareil pour en obtenir un nouveau",
+        "too_many_clients": "Trop d’applications associées, supprimez-en une sur votre appareil et réessayez",
         "server_hmac_bad": "Échec du contrôle de sécurité",
         "malformed": "Échec de l’association, réessayez",
         "network": "Erreur réseau, vérifiez votre connexion et réessayez",

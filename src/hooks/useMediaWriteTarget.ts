@@ -67,7 +67,7 @@ export function useMediaWriteTarget(media: MediaWriteSource | null) {
   const selectedZapScriptTags = useMemo(() => {
     if (!media || !parsedZapScript) return [];
 
-    const orderedTags = [...parsedZapScript.tags, ...media.tags];
+    const orderedTags = [...parsedZapScript.tags, ...(media.tags ?? [])];
     const seenTags = new Set<string>();
     return orderedTags.filter((tag) => {
       const key = titleTagKey(tag);

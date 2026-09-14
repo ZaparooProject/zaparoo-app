@@ -28,6 +28,8 @@ vi.mock("../../../lib/store", () => ({
     getState: () => ({
       connectionState: "connected",
       connected: true,
+      coreVersion: "2.17.0",
+      corePlatform: "mister",
     }),
   },
 }));
@@ -239,7 +241,53 @@ describe("Logger Rate Limiting", () => {
         platform: "ios",
         category: "nfc",
         action: "test",
+        coreVersion: "2.17.0",
+        corePlatform: "mister",
       }),
+    );
+  });
+
+  it("should keep the full error text for report titles and grouping", () => {
+    logger.error(
+      "Failed to send write cancel command:",
+      Object.assign(new Error("invalid params: missing params"), {
+        name: "CoreApiError",
+      }),
+      { category: "api", action: "readersWriteCancel" },
+    );
+    logger.error("Preferences read timed out", {
+      category: "storage",
+      action: "hydratePreferences",
+    });
+
+    expect(mockRollbar.error).toHaveBeenNthCalledWith(
+      1,
+      expect.any(Error),
+      expect.objectContaining({
+        message: "Failed to send write cancel command:",
+        errorName: "CoreApiError",
+        errorMessage: "invalid params: missing params",
+      }),
+    );
+    expect(mockRollbar.error).toHaveBeenNthCalledWith(
+      2,
+      expect.any(Error),
+      expect.objectContaining({
+        errorName: "Error",
+        errorMessage: "Preferences read timed out",
+      }),
+    );
+  });
+
+  it("should not add an undefined error placeholder to the report message", () => {
+    logger.error("WebSocket closed", undefined, {
+      category: "websocket",
+      action: "close",
+    });
+
+    expect(mockRollbar.error).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "WebSocket closed" }),
+      expect.objectContaining({ errorMessage: "WebSocket closed" }),
     );
   });
 

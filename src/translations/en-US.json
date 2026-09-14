@@ -70,6 +70,7 @@
       "removeFavorite": "Remove from Favorites",
       "updatingFavorite": "Updating favorite...",
       "favoriteError": "Could not update favorite",
+      "favoriteNotIndexed": "Only media in the media database can be favorited",
       "disconnected": "Connect to a device to browse its library",
       "updateCore": "Update Zaparoo Core to use Library",
       "databaseRequired": "Create a media database to browse Library",
@@ -197,7 +198,8 @@
       "formatErrorRetry": "Unable to format this tag. Please try again or use a different tag.",
       "verifying": "Verifying tag...",
       "verifyFailed": "Tag did not save correctly",
-      "verifyFailedRetry": "The tag did not save correctly. Hold it to your phone and try again."
+      "verifyFailedRetry": "The tag did not save correctly. Hold it to your phone and try again.",
+      "retapTag": "Tag formatted. Lift it away, then hold it to your phone again."
     },
     "toast": {
       "updateDbHeading": "Updating media database",
@@ -1188,6 +1190,8 @@
     "features": {
       "requiresCoreVersion": "Requires Zaparoo Core v{{version}} or later",
       "inbox": "Notifications",
+      "playtimeLimits": "Playtime limits",
+      "readers": "Device readers",
       "mediaScrapers": "Scraper",
       "mediaGenerate": "Media database updates",
       "mediaCleanOrphans": "Clean missing media",
@@ -1271,6 +1275,7 @@
       "connectionError": {
         "encryptionRequired": "This device requires pairing.",
         "credentialsRevoked": "Pairing was lost. Please pair again.",
+        "handshakeRejected": "This device no longer recognizes this app. Please pair again.",
         "unsupportedVersion": "This device uses an unsupported encryption version."
       },
       "error": {
@@ -1279,6 +1284,8 @@
         "limit_reached": "Too many attempts, restart pairing on your device",
         "rate_limited": "Too many requests, try again in a moment",
         "session_unknown": "Pairing session not found, restart pairing on your device",
+        "no_pairing": "No active PIN, start pairing on your device to get a new one",
+        "too_many_clients": "Too many apps paired, remove one on your device and try again",
         "server_hmac_bad": "Security check failed",
         "malformed": "Pairing failed, try again",
         "network": "Network error, check your connection and try again",

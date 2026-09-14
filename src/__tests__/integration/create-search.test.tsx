@@ -49,7 +49,7 @@ const mockState = {
 };
 
 // Mock CoreAPI
-vi.mock("@/lib/coreApi", () => ({
+vi.mock("@/lib/coreApi", async (importOriginal) => ({
   CoreAPI: {
     mediaSearch: vi.fn(),
     media: vi.fn(() => Promise.resolve(mockState.mediaResponse)),
@@ -57,6 +57,8 @@ vi.mock("@/lib/coreApi", () => ({
     mediaTags: vi.fn(),
     run: vi.fn(),
   },
+  isCancelled: (await importOriginal<typeof import("@/lib/coreApi")>())
+    .isCancelled,
 }));
 
 // Mock useQuery
