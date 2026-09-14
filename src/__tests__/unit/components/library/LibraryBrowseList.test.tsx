@@ -206,6 +206,34 @@ describe("LibraryBrowseList", () => {
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
     expect(mockScrollToIndex).not.toHaveBeenCalled();
   });
+  it("should wait for a letter jump to land before loading more rows", () => {
+    const onFetchMore = vi.fn();
+    const view = renderList({
+      hasNextPage: true,
+      interactionDisabled: true,
+      onFetchMore,
+    });
+
+    expect(onFetchMore).not.toHaveBeenCalled();
+
+    view.rerender(
+      <LibraryBrowseList
+        entries={entries}
+        systemId="snes"
+        deviceKey="device-a"
+        scrollRef={{ current: document.createElement("div") }}
+        hasNextPage
+        isFetchingNextPage={false}
+        imagesPaused={false}
+        interactionDisabled={false}
+        onFetchMore={onFetchMore}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(onFetchMore).toHaveBeenCalledTimes(1);
+  });
+
   it("should request the first visible unloaded row once scrolling settles", () => {
     vi.useFakeTimers();
     mockVirtualRows([0, 1, 2]);

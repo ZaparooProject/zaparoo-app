@@ -346,8 +346,11 @@ export const LibraryBrowseList = forwardRef<
 
   useEffect(() => {
     const lastItem = virtualItems.at(-1);
+    // A jump to an earlier bucket can shorten the list before it scrolls to
+    // the target, leaving the old position at the new end for a frame.
     if (
       !accessibleLists &&
+      !props.interactionDisabled &&
       lastItem &&
       lastItem.index >= props.entries.length - 5 &&
       props.hasNextPage &&
@@ -360,6 +363,7 @@ export const LibraryBrowseList = forwardRef<
     fetchMore,
     props.entries.length,
     props.hasNextPage,
+    props.interactionDisabled,
     props.isFetchingNextPage,
     virtualItems,
   ]);
