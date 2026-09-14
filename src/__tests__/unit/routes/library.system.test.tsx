@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { act, fireEvent, render, screen, waitFor, within } from "@/test-utils";
 import { CoreAPI } from "@/lib/coreApi";
-import type { MediaBrowseEntry, MediaBrowseParams } from "@/lib/models";
+import type {
+  MediaBrowseEntry,
+  MediaBrowseIndexResponse,
+  MediaBrowseParams,
+  MediaBrowseResponse,
+} from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import {
@@ -13,13 +18,19 @@ import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { LibrarySystem } from "@/routes/library.$system";
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 
-const { mockNavigate, mockOutOfRangeScroll, mockScrollToIndex } = vi.hoisted(
-  () => ({
-    mockNavigate: vi.fn(),
-    mockOutOfRangeScroll: vi.fn(),
-    mockScrollToIndex: vi.fn(),
-  }),
-);
+const {
+  mockErrorToast,
+  mockNavigate,
+  mockOutOfRangeScroll,
+  mockScrollToIndex,
+  mockVirtualScroll,
+} = vi.hoisted(() => ({
+  mockErrorToast: vi.fn(),
+  mockNavigate: vi.fn(),
+  mockOutOfRangeScroll: vi.fn(),
+  mockScrollToIndex: vi.fn(),
+  mockVirtualScroll: { startIndex: 0 },
+}));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual =
@@ -33,22 +44,37 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 });
 
 vi.mock("@tanstack/react-virtual", () => ({
-  useVirtualizer: ({ count }: { count: number }) => ({
-    getVirtualItems: () =>
-      Array.from({ length: Math.min(count, 5) }, (_, index) => ({
-        key: index,
-        index,
-        size: 88,
-        start: index * 88,
-      })),
-    getTotalSize: () => count * 88,
-    measureElement: vi.fn(),
-    measure: vi.fn(),
-    scrollToIndex: (index: number, options: { align: string }) => {
-      if (index >= count) mockOutOfRangeScroll(index, count);
-      mockScrollToIndex(index, options);
-    },
-  }),
+  useVirtualizer: ({ count }: { count: number }) => {
+    const startIndex = Math.max(
+      0,
+      Math.min(mockVirtualScroll.startIndex, count - 1),
+    );
+    const length = Math.max(0, Math.min(count - startIndex, 5));
+    return {
+      getVirtualItems: () =>
+        Array.from({ length }, (_, offset) => ({
+          key: startIndex + offset,
+          index: startIndex + offset,
+          size: 88,
+          start: (startIndex + offset) * 88,
+        })),
+      getTotalSize: () => count * 88,
+      measureElement: vi.fn(),
+      measure: vi.fn(),
+      isScrolling: false,
+      range:
+        length > 0 ? { startIndex, endIndex: startIndex + length - 1 } : null,
+      scrollToIndex: (index: number, options: { align: string }) => {
+        if (index >= count) mockOutOfRangeScroll(index, count);
+        mockVirtualScroll.startIndex = index;
+        mockScrollToIndex(index, options);
+      },
+    };
+  },
+}));
+
+vi.mock("@/lib/toastUtils", () => ({
+  showRateLimitedErrorToast: mockErrorToast,
 }));
 
 vi.mock("@/hooks/usePageHeadingFocus", () => ({
@@ -97,6 +123,107 @@ function browseResult(path: string, entries: MediaBrowseEntry[]) {
   };
 }
 
+const ARCADE_ROOT = mediaEntry({
+  mediaId: undefined,
+  name: "Arcade",
+  path: "/media/fat/_Arcade",
+  type: "root",
+});
+
+const LETTER_INDEX: MediaBrowseIndexResponse = {
+  scheme: "latin",
+  totalFiles: 600,
+  groups: [
+    { key: "A", label: "A", count: 400, cursor: "", offset: 0 },
+    { key: "S", label: "S", count: 100, cursor: "letter-s", offset: 400 },
+    { key: "T", label: "T", count: 100, cursor: "letter-t", offset: 500 },
+  ],
+};
+
+function arcadeFiles(first: number, count: number): MediaBrowseEntry[] {
+  return Array.from({ length: count }, (_, offset) =>
+    mediaEntry({
+      mediaId: first + offset,
+      name: `Game ${first + offset}`,
+      path: `/media/fat/_Arcade/game-${first + offset}.mra`,
+    }),
+  );
+}
+
+// Two directories followed by 600 files, bucketed as in LETTER_INDEX.
+async function browseArcade(
+  params: MediaBrowseParams,
+): Promise<MediaBrowseResponse> {
+  if (!params.path) return browseResult("", [ARCADE_ROOT]);
+  const listing = (entries: MediaBrowseEntry[], nextCursor: string | null) => ({
+    path: params.path ?? "",
+    entries,
+    totalFiles: 600,
+    totalDirs: params.cursor ? 0 : 2,
+    pagination: {
+      hasNextPage: nextCursor !== null,
+      pageSize: params.maxResults ?? 100,
+      nextCursor,
+    },
+  });
+  const maxResults = params.maxResults ?? 100;
+  switch (params.cursor) {
+    case undefined:
+      return listing(
+        [
+          mediaEntry({
+            mediaId: undefined,
+            name: "Bootlegs",
+            path: "/media/fat/_Arcade/Bootlegs",
+            type: "directory",
+            fileCount: 3,
+          }),
+          mediaEntry({
+            mediaId: undefined,
+            name: "Hacks",
+            path: "/media/fat/_Arcade/Hacks",
+            type: "directory",
+            fileCount: 3,
+          }),
+          ...arcadeFiles(1, maxResults - 2),
+        ],
+        "next-page",
+      );
+    case "letter-s":
+      return listing(arcadeFiles(401, maxResults), "letter-t");
+    case "letter-t":
+      return listing(arcadeFiles(501, maxResults), null);
+    default:
+      return listing(arcadeFiles(99, maxResults), "next-page");
+  }
+}
+
+function arcadeBrowseCursors() {
+  return vi
+    .mocked(CoreAPI.mediaBrowse)
+    .mock.calls.filter(([params]) => params.path === ARCADE_ROOT.path)
+    .map(([params]) => params.cursor);
+}
+
+async function chooseLetter(
+  user: ReturnType<typeof userEvent.setup>,
+  label: string,
+) {
+  await user.click(
+    await screen.findByRole("button", { name: "library.optionsTitle" }),
+  );
+  await user.click(
+    within(
+      screen.getByRole("dialog", { name: "library.optionsTitle" }),
+    ).getByRole("button", { name: "library.goToTitle" }),
+  );
+  await user.click(
+    within(
+      await screen.findByRole("dialog", { name: "library.goToTitle" }),
+    ).getByRole("button", { name: `${label} library.itemCount` }),
+  );
+}
+
 function metadataResult(name: string, path: string) {
   return {
     media: {
@@ -125,6 +252,8 @@ describe("Library system browser", () => {
     mockNavigate.mockReset();
     mockOutOfRangeScroll.mockReset();
     mockScrollToIndex.mockReset();
+    mockErrorToast.mockReset();
+    mockVirtualScroll.startIndex = 0;
     useLibrarySessionStore.getState().reset();
     useTabSessionStore.getState().reset();
     usePreferencesStore.setState({
@@ -606,89 +735,111 @@ describe("Library system browser", () => {
     );
   });
 
-  it("should wait for distant letter rows before scrolling", async () => {
-    const folder = mediaEntry({
-      mediaId: undefined,
-      name: "Arcade",
-      path: "/media/fat/_Arcade",
-      type: "root",
-    });
-    const firstPage = Array.from({ length: 100 }, (_, index) =>
-      mediaEntry({ mediaId: index + 1, name: `Game ${index + 1}` }),
-    );
-    const jumpPage = Array.from({ length: 500 }, (_, index) =>
-      mediaEntry({ mediaId: index + 101, name: `Game ${index + 101}` }),
-    );
-    const browseSpy = vi
-      .spyOn(CoreAPI, "mediaBrowse")
-      .mockImplementation(async (params: MediaBrowseParams) => {
-        if (!params.path) return browseResult("", [folder]);
-        if (!params.cursor) {
-          return {
-            ...browseResult(params.path, firstPage),
-            totalFiles: 600,
-            totalDirs: 0,
-            pagination: {
-              hasNextPage: true,
-              pageSize: 100,
-              nextCursor: "next-page",
-            },
-          };
-        }
-        return {
-          ...browseResult(params.path, jumpPage),
-          totalFiles: 600,
-          totalDirs: 0,
-          pagination: {
-            hasNextPage: false,
-            pageSize: 500,
-            nextCursor: null,
-          },
-        };
-      });
-    vi.spyOn(CoreAPI, "mediaBrowseIndex").mockResolvedValue({
-      scheme: "latin",
-      totalFiles: 600,
-      groups: [
-        {
-          key: "T",
-          label: "T",
-          count: 100,
-          cursor: "letter-t",
-          offset: 500,
-        },
-      ],
-    });
-    const user = userEvent.setup();
+  it("should jump to a distant letter with its index cursor", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.spyOn(CoreAPI, "mediaBrowse").mockImplementation(browseArcade);
+    vi.spyOn(CoreAPI, "mediaBrowseIndex").mockResolvedValue(LETTER_INDEX);
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
     render(<LibrarySystem />);
-    await user.click(
-      await screen.findByRole("button", { name: "library.optionsTitle" }),
-    );
-    await user.click(
-      within(
-        screen.getByRole("dialog", { name: "library.optionsTitle" }),
-      ).getByRole("button", { name: "library.goToTitle" }),
-    );
-    await user.click(
-      within(
-        await screen.findByRole("dialog", { name: "library.goToTitle" }),
-      ).getByRole("button", { name: "T library.itemCount" }),
-    );
+    await chooseLetter(user, "T");
 
     await waitFor(() =>
-      expect(mockScrollToIndex).toHaveBeenCalledWith(500, {
+      expect(mockScrollToIndex).toHaveBeenCalledWith(502, {
         align: "start",
       }),
     );
     expect(mockOutOfRangeScroll).not.toHaveBeenCalled();
-    expect(browseSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        cursor: "next-page",
-        maxResults: 100,
-      }),
+    expect(
+      screen.getByRole("button", { name: "Game 501" }),
+    ).toBeInTheDocument();
+
+    // Rows around the target are loaded, so settling does not fetch a bucket.
+    await act(() => vi.advanceTimersByTimeAsync(500));
+    expect(arcadeBrowseCursors()).toEqual([undefined, "letter-t"]);
+    expect(CoreAPI.mediaBrowse).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: "letter-t", maxResults: 100 }),
       expect.any(AbortSignal),
     );
+  });
+
+  it("should load an earlier letter when a restored jump shows its rows", async () => {
+    const session = useLibrarySessionStore.getState();
+    session.activateDevice("device-a");
+    session.setFolderLevels("SNES", [
+      { name: "Arcade", path: ARCADE_ROOT.path },
+    ]);
+    session.updateBrowseWindow(
+      libraryBrowseScrollKey("SNES", "name-asc", ARCADE_ROOT.path),
+      () => ({
+        anchorKey: "T",
+        anchorStart: 502,
+        totalDirs: 2,
+        loadedKeys: [],
+      }),
+    );
+    mockVirtualScroll.startIndex = 499;
+    vi.spyOn(CoreAPI, "mediaBrowse").mockImplementation(browseArcade);
+    vi.spyOn(CoreAPI, "mediaBrowseIndex").mockResolvedValue(LETTER_INDEX);
+
+    render(<LibrarySystem />);
+
+    expect(
+      await screen.findByRole("button", { name: "Game 500" }),
+    ).toBeInTheDocument();
+    expect(arcadeBrowseCursors()).toEqual(["letter-t", "letter-s"]);
+    expect(CoreAPI.mediaBrowse).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursor: "letter-s", maxResults: 100 }),
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("should not keep a jump that finishes after leaving the folder", async () => {
+    let finishJump: (response: MediaBrowseResponse) => void = () => {};
+    vi.spyOn(CoreAPI, "mediaBrowse").mockImplementation(async (params) =>
+      params.cursor === "letter-t"
+        ? new Promise<MediaBrowseResponse>((resolve) => {
+            finishJump = resolve;
+          })
+        : browseArcade(params),
+    );
+    vi.spyOn(CoreAPI, "mediaBrowseIndex").mockResolvedValue(LETTER_INDEX);
+    const user = userEvent.setup();
+
+    render(<LibrarySystem />);
+    await chooseLetter(user, "T");
+    await waitFor(() => expect(arcadeBrowseCursors()).toContain("letter-t"));
+    await user.click(screen.getByRole("button", { name: "nav.back" }));
+
+    await act(async () => {
+      finishJump(
+        await browseArcade({ path: ARCADE_ROOT.path, cursor: "letter-t" }),
+      );
+    });
+
+    expect(useLibrarySessionStore.getState().browseWindows).toEqual({});
+    expect(mockScrollToIndex).not.toHaveBeenCalled();
+  });
+
+  it("should report a letter jump whose cursor page fails", async () => {
+    vi.spyOn(CoreAPI, "mediaBrowse").mockImplementation(async (params) => {
+      if (params.cursor === "letter-t") throw new Error("browse failed");
+      return browseArcade(params);
+    });
+    vi.spyOn(CoreAPI, "mediaBrowseIndex").mockResolvedValue(LETTER_INDEX);
+    const user = userEvent.setup();
+
+    render(<LibrarySystem />);
+    await chooseLetter(user, "T");
+
+    await waitFor(() =>
+      expect(mockErrorToast).toHaveBeenCalledWith("library.jumpError"),
+    );
+    expect(useLibrarySessionStore.getState().browseWindows).toEqual({});
+    expect(mockScrollToIndex).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "library.optionsTitle" }),
+    ).toBeEnabled();
   });
 
   it("should use browse index groups to jump within loaded rows", async () => {

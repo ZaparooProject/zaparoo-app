@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@/test-utils";
 import { FavoriteButton } from "@/components/library/FavoriteButton";
 import { CoreAPI } from "@/lib/coreApi";
+import { LIBRARY_QUERY_KEYS } from "@/lib/libraryMedia";
 import { logger } from "@/lib/logger";
 import type { MediaBrowseEntry } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
@@ -66,6 +68,41 @@ describe("FavoriteButton", () => {
     expect(
       await screen.findByRole("button", { name: "library.removeFavorite" }),
     ).toBeInTheDocument();
+  });
+
+  it("should refresh letter cursors before browse lists after a change", async () => {
+    vi.spyOn(CoreAPI, "mediaTagsUpdate").mockResolvedValue({
+      tags: [{ type: "user", tag: "favorite" }],
+    });
+    const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+    const user = userEvent.setup();
+
+    render(
+      <FavoriteButton
+        entry={mediaEntry()}
+        fallbackSystemId="SNES"
+        deviceKey="device-a"
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "library.addFavorite" }),
+    );
+
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalled());
+    const invalidated = invalidateSpy.mock.calls.map(
+      ([filters]) => filters?.queryKey,
+    );
+    const indexAt = invalidated.findIndex(
+      (key) => key?.[0] === LIBRARY_QUERY_KEYS.browseIndex,
+    );
+    const browseAt = invalidated.findIndex(
+      (key) => key?.[0] === LIBRARY_QUERY_KEYS.browse,
+    );
+    expect(invalidated[indexAt]).toEqual([
+      LIBRARY_QUERY_KEYS.browseIndex,
+      "device-a",
+    ]);
+    expect(indexAt).toBeLessThan(browseAt);
   });
 
   it("should remove a favorite using system and path fallback", async () => {

@@ -87,6 +87,7 @@
       "itemCount_other": "{{count}}件",
       "loadingMore": "さらに読み込み中...",
       "loadMore": "さらに読み込む",
+      "loadEarlier": "前の項目を読み込む",
       "loadedMore_one": "さらに{{count}}件読み込みました",
       "loadedMore_other": "さらに{{count}}件読み込みました",
       "folder": "フォルダー",
