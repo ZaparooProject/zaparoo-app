@@ -18,11 +18,21 @@ export const defaultSafeAreaInsets: SafeAreaInsets = {
   right: "0px",
 };
 
-const envInsets = {
+const webInsets = {
   top: "env(safe-area-inset-top, 0px)",
   bottom: "env(safe-area-inset-bottom, 0px)",
   left: "env(safe-area-inset-left, 0px)",
   right: "env(safe-area-inset-right, 0px)",
+};
+
+// SystemBars injects --safe-area-inset-* because WebView before 140 reports
+// wrong env() values. The variables are unset below Android 15, so env() is
+// the fallback.
+const androidInsets = {
+  top: "var(--safe-area-inset-top, env(safe-area-inset-top, 0px))",
+  bottom: "var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))",
+  left: "var(--safe-area-inset-left, env(safe-area-inset-left, 0px))",
+  right: "var(--safe-area-inset-right, env(safe-area-inset-right, 0px))",
 };
 
 async function removeSafeAreaListener(
@@ -44,11 +54,16 @@ export const initSafeAreaInsets = async (
   listen = true,
   isActive: () => boolean = () => true,
 ): Promise<PluginListenerHandle | null> => {
-  // On Android, Capacitor's SystemBars plugin keeps env() in sync with the
+  if (!Capacitor.isNativePlatform()) {
+    if (isActive()) setInsets(webInsets);
+    return null;
+  }
+
+  // On Android, Capacitor's SystemBars plugin keeps the insets in sync with the
   // WebView's real overlap, including the keyboard and rotation. The SafeArea
   // plugin reports raw window insets, which ignore the keyboard.
-  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() === "android") {
-    if (isActive()) setInsets(envInsets);
+  if (Capacitor.getPlatform() === "android") {
+    if (isActive()) setInsets(androidInsets);
     return null;
   }
 
