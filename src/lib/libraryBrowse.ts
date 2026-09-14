@@ -125,6 +125,31 @@ export function libraryBrowsePageTotalDirs(
   );
 }
 
+/**
+ * Directory count of a folder, read from a response that starts at the top.
+ * Bucket cursor responses do not report it. Only library and visibility
+ * changes move the count, and those invalidate it.
+ */
+export function libraryBrowseTotalDirsQueryOptions(scope: LibraryBrowseScope) {
+  return queryOptions({
+    queryKey: [...libraryBrowseQueryKey(scope), "totalDirs"],
+    queryFn: async ({ signal }) =>
+      libraryBrowsePageTotalDirs(
+        await CoreAPI.mediaBrowse(
+          {
+            path: scope.path,
+            systems: [scope.systemId],
+            maxResults: 1,
+            sort: scope.sort,
+          },
+          signal,
+        ),
+      ),
+    staleTime: Infinity,
+    retry: 2,
+  });
+}
+
 async function fetchLibraryBrowsePage(
   scope: LibraryBrowseScope,
   params: { cursor?: string; maxResults: number },
@@ -176,6 +201,11 @@ async function fetchFromLibraryBrowseGroup<T>(
     if (!isBrowseCursorExpiredError(error)) throw error;
   }
 
+  // A visibility change can also hide or reveal directories.
+  void queryClient.invalidateQueries({
+    queryKey: libraryBrowseTotalDirsQueryOptions(scope).queryKey,
+    exact: true,
+  });
   const index = await CoreAPI.mediaBrowseIndex(
     { path: scope.path, systems: [scope.systemId], sort: scope.sort },
     signal,
@@ -289,7 +319,8 @@ export function libraryBrowseGroupQueryOptions(
   totalDirs: number,
 ) {
   return queryOptions({
-    queryKey: [...libraryBrowseQueryKey(scope), "group", groupKey],
+    // Rows are placed using the directory count, so a new count refetches them.
+    queryKey: [...libraryBrowseQueryKey(scope), "group", groupKey, totalDirs],
     queryFn: ({ signal }) =>
       fetchFromLibraryBrowseGroup(
         queryClient,

@@ -14,9 +14,9 @@ import {
   libraryBrowseGroupStart,
   libraryBrowseIndexQueryOptions,
   libraryBrowsePageTotalDirs,
-  libraryBrowseQueryKey,
   type LibraryBrowseRange,
   libraryBrowseStreamQueryOptions,
+  libraryBrowseTotalDirsQueryOptions,
 } from "@/lib/libraryBrowse";
 import {
   collapseRedundantSystemRoots,
@@ -100,6 +100,12 @@ export function useLibraryBrowse(options: {
     enabled: options.enabled && browseWindow !== null,
   });
   const groups = indexQuery.data?.groups;
+  // Seeded from the window so a jump or restore does not re-read the count.
+  const totalDirsQuery = useQuery({
+    ...libraryBrowseTotalDirsQueryOptions(scope),
+    enabled: options.enabled && browseWindow !== null,
+    initialData: browseWindow?.totalDirs,
+  });
   const groupResults = useQueries({
     queries: loadedKeys.map((key) => ({
       ...libraryBrowseGroupQueryOptions(
@@ -161,22 +167,38 @@ export function useLibraryBrowse(options: {
     });
   }, [browseWindow, groupResults.failed, groups, loadedKeys]);
 
-  // A refreshed index can move or drop the anchor bucket, for example after
-  // media is hidden or the library is rebuilt.
+  // A refreshed index or directory count can move or drop the anchor bucket,
+  // for example after media is hidden or the library is rebuilt. Wait for both
+  // so the window never mixes an old count with new bucket offsets.
+  const currentTotalDirs = totalDirsQuery.data;
+  const refreshing = indexQuery.isFetching || totalDirsQuery.isFetching;
   useEffect(() => {
-    if (!browseWindow || !groups || !updateBrowseWindow) return;
+    if (
+      !browseWindow ||
+      !groups ||
+      currentTotalDirs === undefined ||
+      refreshing ||
+      !updateBrowseWindow
+    ) {
+      return;
+    }
     const anchor = groups.find((group) => group.key === browseWindow.anchorKey);
     const anchorStart =
-      anchor && anchor.cursor !== ""
-        ? browseWindow.totalDirs + anchor.offset
-        : null;
-    if (anchorStart === browseWindow.anchorStart) return;
+      anchor && anchor.cursor !== "" ? currentTotalDirs + anchor.offset : null;
+    if (
+      anchorStart === browseWindow.anchorStart &&
+      currentTotalDirs === browseWindow.totalDirs
+    ) {
+      return;
+    }
 
     updateBrowseWindow((current) => {
       if (current?.anchorKey !== browseWindow.anchorKey) return current;
-      return anchorStart === null ? null : { ...current, anchorStart };
+      return anchorStart === null
+        ? null
+        : { ...current, anchorStart, totalDirs: currentTotalDirs };
     });
-  }, [browseWindow, groups, updateBrowseWindow]);
+  }, [browseWindow, currentTotalDirs, groups, refreshing, updateBrowseWindow]);
 
   const fetchMore = useCallback(async () => {
     await browseQuery.fetchNextPage({ cancelRefetch: false });
@@ -223,7 +245,12 @@ export function useLibraryBrowse(options: {
       if (loadedAt !== -1) {
         if (loadOptions?.retry && groupResults.failed[loadedAt]) {
           void queryClient.refetchQueries({
-            queryKey: [...libraryBrowseQueryKey(scope), "group", group.key],
+            queryKey: libraryBrowseGroupQueryOptions(
+              queryClient,
+              scope,
+              group.key,
+              browseWindow.totalDirs,
+            ).queryKey,
             exact: true,
           });
         }

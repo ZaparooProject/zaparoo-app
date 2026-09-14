@@ -9,6 +9,7 @@ import {
 } from "@/test-utils";
 import { CoreAPI, CoreApiError } from "@/lib/coreApi";
 import { libraryBrowseIndexQueryOptions } from "@/lib/libraryBrowse";
+import { LIBRARY_QUERY_KEYS } from "@/lib/libraryMedia";
 import type { LibraryBrowseWindow } from "@/lib/librarySessionStore";
 import type {
   MediaBrowseEntry,
@@ -348,6 +349,7 @@ describe("useLibraryBrowse", () => {
           -32602,
         );
       }
+      if (params.cursor === undefined) return browseLibrary(params);
       return page(entries(1501, 100), null);
     });
     vi.spyOn(CoreAPI, "mediaBrowseIndex").mockImplementation(async () => {
@@ -364,7 +366,71 @@ describe("useLibraryBrowse", () => {
     await waitFor(() =>
       expect(result.current.browse.entries[1502]).toBeDefined(),
     );
-    expect(calls).toEqual(["browse:letter-t", "index", "browse:letter-t-2"]);
+    // The visibility change also re-reads the directory count from the top.
+    expect(calls).toEqual([
+      "browse:letter-t",
+      "browse:undefined",
+      "index",
+      "browse:letter-t-2",
+    ]);
+    await waitFor(() =>
+      expect(result.current.browse.isLoadingIndex).toBe(false),
+    );
+    expect(result.current.browseWindow).toEqual(T_WINDOW);
+  });
+
+  it("should move a jumped list when a library refresh changes the directory count", async () => {
+    let directoryCount = 2;
+    vi.spyOn(CoreAPI, "mediaBrowse").mockImplementation(async (params) => {
+      if (params.cursor !== undefined) return browseLibrary(params);
+      const maxResults = params.maxResults ?? 100;
+      return page(
+        [
+          ...directories(directoryCount),
+          ...entries(1, Math.max(maxResults - directoryCount, 0)),
+        ],
+        "after-top",
+        directoryCount,
+      );
+    });
+    vi.spyOn(CoreAPI, "mediaBrowseIndex").mockResolvedValue(INDEX);
+    const { result, queryClient } = renderWindowedBrowse(T_WINDOW);
+    await waitFor(() =>
+      expect(result.current.browse.entries[1502]).toBeDefined(),
+    );
+    act(() => result.current.browse.loadIndex(1000));
+    await waitFor(() =>
+      expect(result.current.browse.entries[402]?.name).toBe("Game 401"),
+    );
+
+    directoryCount = 5;
+    await act(async () => {
+      await queryClient.invalidateQueries({
+        queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: [LIBRARY_QUERY_KEYS.browse],
+      });
+    });
+
+    await waitFor(() =>
+      expect(result.current.browseWindow).toEqual({
+        ...T_WINDOW,
+        anchorStart: 1505,
+        totalDirs: 5,
+        loadedKeys: ["S"],
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.browse.entries[405]?.name).toBe("Game 401"),
+    );
+    expect(result.current.browse.entries[1505]?.name).toBe("Game 1501");
+    expect(result.current.browse.entries[1504]?.name).toBe("Game 1500");
+    expect(result.current.browse.totalDirs).toBe(5);
+    expect(CoreAPI.mediaBrowse).toHaveBeenCalledWith(
+      expect.objectContaining({ path: SCOPE.path, maxResults: 1 }),
+      expect.any(AbortSignal),
+    );
   });
 
   it("should refetch a jumped list from its bucket rather than the top", async () => {
