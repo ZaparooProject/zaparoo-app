@@ -200,6 +200,10 @@ vi.mock("@/lib/toastUtils", () => ({
 // Mock NFC cancel session
 vi.mock("@/lib/nfc", () => ({
   cancelSession: vi.fn(),
+  sessionManager: {
+    setShouldRestart: vi.fn(),
+    setLaunchOnScan: vi.fn(),
+  },
 }));
 
 // Use vi.hoisted for Capacitor mock
