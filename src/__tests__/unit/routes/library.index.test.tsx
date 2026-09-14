@@ -325,6 +325,30 @@ describe("Library index route", () => {
     expect(useStatusStore.getState().writeQueue).toBe("");
   });
 
+  it("should disable writing a virtual system to a Core reader while reconnecting", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({ systems: [WINAMP] });
+    vi.spyOn(CoreAPI, "hasWriteCapableReader").mockResolvedValue(true);
+
+    render(<Library />);
+    await user.click(await screen.findByRole("button", { name: "Winamp" }));
+    const dialog = await screen.findByRole("dialog", { name: "Winamp" });
+    const write = within(dialog).getByRole("button", {
+      name: "library.write",
+    });
+    await waitFor(() => expect(write).toBeEnabled());
+
+    act(() => {
+      useStatusStore
+        .getState()
+        .setConnectionState(ConnectionState.RECONNECTING);
+    });
+    expect(write).toBeDisabled();
+    await user.click(write);
+
+    expect(useStatusStore.getState().writeQueue).toBe("");
+  });
+
   it("should use the preferred regional system names", async () => {
     usePreferencesStore.setState({ systemNameRegion: "eu" });
     vi.spyOn(CoreAPI, "systems").mockResolvedValue({

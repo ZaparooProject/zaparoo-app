@@ -160,6 +160,28 @@ describe("CoreAPI Internals", () => {
     });
 
     it.each([
+      { name: "by default", options: undefined },
+      {
+        name: "when the caller opts in",
+        options: { includeLaunchables: true },
+      },
+    ])(
+      "should drop virtual systems with a blank ZapScript $name",
+      async ({ options }) => {
+        vi.spyOn(CoreAPI, "call").mockResolvedValue({
+          systems: [
+            { id: "snes", name: "Super Nintendo", mediaCount: 12 },
+            { id: "virtual:blank", name: "Blank", zapScript: "   " },
+          ],
+        });
+
+        await expect(CoreAPI.systems(undefined, options)).resolves.toEqual({
+          systems: [{ id: "snes", name: "Super Nintendo", mediaCount: 12 }],
+        });
+      },
+    );
+
+    it.each([
       {
         name: "systems",
         property: "systems",

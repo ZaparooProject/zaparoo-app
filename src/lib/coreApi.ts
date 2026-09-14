@@ -1914,12 +1914,14 @@ class CoreApi {
               isSystem,
             );
             // Virtual launchables execute ZapScript directly and never own media
-            // rows, so only callers that can launch or write them opt in.
-            const systems = options?.includeLaunchables
-              ? response.systems
-              : response.systems.filter(
-                  (system) => !systemIsLaunchable(system),
-                );
+            // rows, so only callers that can launch or write them opt in. A
+            // virtual system with a blank ZapScript is never listed.
+            const systems = response.systems.filter(
+              (system) =>
+                !system.zapScript ||
+                (options?.includeLaunchables === true &&
+                  systemIsLaunchable(system)),
+            );
             const filteredResponse = { ...response, systems };
             logger.debug(filteredResponse);
             resolve(filteredResponse);
