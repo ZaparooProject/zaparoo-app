@@ -5,6 +5,7 @@ import {
   PurchaseSupportActions,
   useProPurchase,
 } from "@/components/ProPurchase";
+import { useWarpSubscription } from "@/hooks/useWarpSubscription";
 import {
   __resetOfferingsForTests,
   resolvePurchasesReady,
@@ -40,11 +41,13 @@ vi.mock("@capacitor/core", () => ({
 const {
   mockCopyDiagnostics,
   mockGetBillingDiagnostics,
+  mockGetSubscriptionStatus,
   mockReconcileStorePurchases,
   mockRestorePurchasesForUser,
 } = vi.hoisted(() => ({
   mockCopyDiagnostics: vi.fn(),
   mockGetBillingDiagnostics: vi.fn(),
+  mockGetSubscriptionStatus: vi.fn(),
   mockReconcileStorePurchases: vi.fn(),
   mockRestorePurchasesForUser: vi.fn(),
 }));
@@ -66,6 +69,11 @@ vi.mock("@/lib/purchasesSetup", async (importOriginal) => ({
   ) => operation({}),
 }));
 
+vi.mock("@/lib/onlineApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/onlineApi")>()),
+  getSubscriptionStatus: mockGetSubscriptionStatus,
+}));
+
 vi.mock("@revenuecat/purchases-capacitor", () => ({
   PACKAGE_TYPE: {
     LIFETIME: "LIFETIME",
@@ -78,6 +86,7 @@ vi.mock("@revenuecat/purchases-capacitor", () => ({
   },
   Purchases: {
     restorePurchases: vi.fn(),
+    getAppUserID: vi.fn(),
     getCustomerInfo: vi.fn(),
     getOfferings: vi.fn(),
     purchasePackage: vi.fn(),
@@ -608,6 +617,41 @@ describe("useProPurchase", () => {
         ),
     ).toHaveLength(1);
     expect(Purchases.getOfferings).toHaveBeenCalledTimes(1);
+  });
+
+  it("should report a shared offerings failure once across Pro and Warp", async () => {
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { App } = await import("@capacitor/app");
+    const { logger } = await import("@/lib/logger");
+    vi.mocked(Purchases.getOfferings).mockRejectedValue(
+      new Error("Network unavailable"),
+    );
+    vi.mocked(Purchases.getAppUserID).mockResolvedValue({
+      appUserID: "user-123",
+    });
+    vi.mocked(App.addListener).mockResolvedValue({ remove: vi.fn() });
+    mockGetSubscriptionStatus.mockResolvedValue({
+      is_premium: false,
+      sources: [],
+      patreon: null,
+      revenuecat: null,
+    });
+
+    render(<ProPurchaseHarness />);
+    expect(
+      await screen.findByText("scan.purchaseProOfferingsError"),
+    ).toBeInTheDocument();
+
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.loadFailed).toBe(true));
+
+    expect(Purchases.getOfferings).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(
+      "RevenueCat offerings unavailable",
+      expect.any(Error),
+      expect.objectContaining({ action: "getOfferings" }),
+    );
   });
 
   it("should retry unavailable offerings when checkout opens", async () => {

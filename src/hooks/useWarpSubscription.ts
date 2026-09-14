@@ -12,6 +12,7 @@ import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useStatusStore } from "@/lib/store";
 import {
+  claimOfferingsReport,
   ensurePurchasesUser,
   getOfferingDiagnostics,
   getPurchaseAccess,
@@ -57,16 +58,6 @@ export type WarpRestoreResult =
   | "requirements"
   | "failed";
 export type WarpManageResult = "opened" | "unavailable" | "failed";
-
-// A shared offerings request reaches every account load while it is reused;
-// report it and cache its diagnostics only once.
-const handledOfferingsRequests = new WeakSet<Promise<PurchasesOfferings>>();
-
-function claimOfferingsRequest(request: Promise<PurchasesOfferings>): boolean {
-  if (handledOfferingsRequests.has(request)) return false;
-  handledOfferingsRequests.add(request);
-  return true;
-}
 
 const ACTIVATION_POLL_INTERVAL_MS = 2000;
 export const ACTIVATION_POLL_DEADLINE_MS = 30_000;
@@ -211,7 +202,10 @@ export function useWarpSubscription(appUserID: string) {
         const warpPackages = getWarpPackages(offerings);
         setPackages(warpPackages);
         setPackagesUnavailable(!warpPackages);
-        if (!warpPackages && claimOfferingsRequest(offeringsRequest)) {
+        if (
+          !warpPackages &&
+          claimOfferingsReport(offeringsRequest, "warpUnavailable")
+        ) {
           logger.error(
             "RevenueCat Warp offering is unavailable",
             getOfferingDiagnostics(offerings, WARP_OFFERING_ID),
@@ -234,8 +228,11 @@ export function useWarpSubscription(appUserID: string) {
         } else {
           setLoadFailed(true);
         }
-        // A shared offerings failure is reported by the first load to see it.
-        if (offeringsRequest && !claimOfferingsRequest(offeringsRequest)) {
+        // A shared offerings failure is reported by the first screen to see it.
+        if (
+          offeringsRequest &&
+          !claimOfferingsReport(offeringsRequest, "failed")
+        ) {
           return;
         }
         // The requirements modal is already open, and completing it reloads.

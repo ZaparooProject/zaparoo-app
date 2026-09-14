@@ -1,7 +1,6 @@
 import { t } from "i18next";
 import {
   Purchases,
-  type PurchasesOfferings,
   type PurchasesPackage,
 } from "@revenuecat/purchases-capacitor";
 import { useEffect, useRef, useState } from "react";
@@ -26,6 +25,7 @@ import {
   wrapPurchaseError,
 } from "@/lib/errors";
 import {
+  claimOfferingsReport,
   formatBillingDiagnostics,
   getBillingDiagnostics,
   getOfferingDiagnostics,
@@ -70,16 +70,6 @@ function getPurchaseBody(
   }
 
   return t("scan.purchaseProUnavailable");
-}
-
-// A shared offerings request reaches every screen that mounts while it is
-// reused; report it and cache its diagnostics only once.
-const handledOfferingsRequests = new WeakSet<Promise<PurchasesOfferings>>();
-
-function claimOfferingsRequest(request: Promise<PurchasesOfferings>): boolean {
-  if (handledOfferingsRequests.has(request)) return false;
-  handledOfferingsRequests.add(request);
-  return true;
 }
 
 function getPurchaseActionLabel(status: OfferingsStatus) {
@@ -304,12 +294,14 @@ export const useProPurchase = () => {
     // separately, on demand, so this checkout-critical fetch never waits on
     // extra bridge calls.
     const request = loadOfferings({ refresh: offeringsReloads > 0 });
-    const firstHandler = claimOfferingsRequest(request);
     request
       .then((offerings) => {
         const purchasePackage = getProPackage(offerings);
 
-        if (!purchasePackage && firstHandler) {
+        if (
+          !purchasePackage &&
+          claimOfferingsReport(request, "proUnavailable")
+        ) {
           logger.error(
             "RevenueCat offerings returned no packages",
             {
@@ -329,7 +321,7 @@ export const useProPurchase = () => {
       })
       .catch((e) => {
         const wrappedError = wrapPurchaseError(e);
-        if (firstHandler) {
+        if (claimOfferingsReport(request, "failed")) {
           const purchaseError = getPurchaseErrorDiagnostics(e);
           if (Object.keys(purchaseError).length > 0) {
             cachePurchaseErrorDiagnostics(purchaseError, "getOfferings");

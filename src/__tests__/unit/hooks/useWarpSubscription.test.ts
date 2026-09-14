@@ -111,7 +111,10 @@ vi.mock("@/lib/onlineApi", () => ({
   getSubscriptionStatus: mockGetSubscriptionStatus,
 }));
 
-vi.mock("@/lib/purchasesSetup", () => ({
+vi.mock("@/lib/purchasesSetup", async (importOriginal) => ({
+  claimOfferingsReport: (
+    await importOriginal<typeof import("@/lib/purchasesSetup")>()
+  ).claimOfferingsReport,
   WARP_OFFERING_ID: "warp",
   ensurePurchasesUser: mockEnsurePurchasesUser,
   getWarpPackages: vi.fn(() => ({

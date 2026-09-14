@@ -74,6 +74,7 @@ import { PurchaseIdentityError } from "@/lib/errors";
 import {
   __resetOfferingsForTests,
   ensurePurchasesUser,
+  claimOfferingsReport,
   formatBillingDiagnostics,
   getBillingDiagnostics,
   getProPackage,
@@ -372,6 +373,23 @@ describe("purchasesSetup", () => {
       await expect(initial).resolves.toBe(loaded);
       await expect(refresh).resolves.toBe(loaded);
       expect(mockGetOfferings).toHaveBeenCalledTimes(1);
+    });
+
+    it("should let each report about a shared request be claimed once", async () => {
+      mockGetOfferings.mockResolvedValue(offerings());
+      const shared = loadOfferings();
+      await shared;
+
+      expect(claimOfferingsReport(shared, "proUnavailable")).toBe(true);
+      expect(claimOfferingsReport(loadOfferings(), "proUnavailable")).toBe(
+        false,
+      );
+      expect(claimOfferingsReport(shared, "warpUnavailable")).toBe(true);
+      expect(claimOfferingsReport(shared, "warpUnavailable")).toBe(false);
+
+      const refreshed = loadOfferings({ refresh: true });
+      await refreshed;
+      expect(claimOfferingsReport(refreshed, "proUnavailable")).toBe(true);
     });
   });
 

@@ -234,6 +234,33 @@ export function loadOfferings(
   return request;
 }
 
+export type OfferingsReport = "failed" | "proUnavailable" | "warpUnavailable";
+
+const claimedOfferingsReports = new WeakMap<
+  Promise<PurchasesOfferings>,
+  Set<OfferingsReport>
+>();
+
+/**
+ * Claims one report about a shared offerings request. The Pro and Warp
+ * screens both see a request while it is reused, so only the first to claim
+ * a report logs it and caches its diagnostics. A missing Pro offering and a
+ * missing Warp offering are separate reports about the same request.
+ */
+export function claimOfferingsReport(
+  request: Promise<PurchasesOfferings>,
+  report: OfferingsReport,
+): boolean {
+  let claimed = claimedOfferingsReports.get(request);
+  if (!claimed) {
+    claimed = new Set();
+    claimedOfferingsReports.set(request, claimed);
+  }
+  if (claimed.has(report)) return false;
+  claimed.add(report);
+  return true;
+}
+
 export function __resetOfferingsForTests(): void {
   offeringsRequest = null;
   offeringsRequestSettled = false;
