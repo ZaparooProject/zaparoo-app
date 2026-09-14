@@ -31,7 +31,6 @@ def capacitor_pods
   pod 'CapawesomeCapacitorAppReview', :path => '../../node_modules/@capawesome/capacitor-app-review'
   pod 'CapawesomeCapacitorBadge', :path => '../../node_modules/@capawesome/capacitor-badge'
   pod 'CapawesomeCapacitorLiveUpdate', :path => '../../node_modules/@capawesome/capacitor-live-update'
-  pod 'CapgoCapacitorShake', :path => '../../node_modules/@capgo/capacitor-shake'
   pod 'RevenuecatPurchasesCapacitor', :path => '../../node_modules/@revenuecat/purchases-capacitor'
   pod 'CapacitorPluginSafeArea', :path => '../../node_modules/capacitor-plugin-safe-area'
   pod 'CapacitorZeroconf', :path => '../../node_modules/capacitor-zeroconf'

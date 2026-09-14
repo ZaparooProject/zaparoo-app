@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { BarcodeScanner } from "@capacitor-mlkit/barcode-scanning";
-import { CapacitorShake } from "@capgo/capacitor-shake";
+import { ShakeDetector } from "@/lib/shakeDetector";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useNfcAvailabilityCheck } from "@/hooks/useNfcAvailabilityCheck";
 import { useCameraAvailabilityCheck } from "@/hooks/useCameraAvailabilityCheck";
@@ -232,12 +232,11 @@ describe("Availability Check Hooks", () => {
       });
     });
 
-    it("should set available=true when listener can be added on native", async () => {
+    it("should set available=true when native reports an accelerometer", async () => {
       // Arrange
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-      const mockRemove = vi.fn();
-      vi.mocked(CapacitorShake.addListener).mockResolvedValue({
-        remove: mockRemove,
+      vi.mocked(ShakeDetector.isAvailable).mockResolvedValue({
+        available: true,
       });
 
       // Act
@@ -252,17 +251,33 @@ describe("Availability Check Hooks", () => {
           usePreferencesStore.getState()._accelerometerAvailabilityHydrated,
         ).toBe(true);
       });
-      expect(CapacitorShake.addListener).toHaveBeenCalledWith(
-        "shake",
-        expect.any(Function),
-      );
-      expect(mockRemove).toHaveBeenCalled();
+      // Checking availability must not start the accelerometer
+      expect(ShakeDetector.start).not.toHaveBeenCalled();
+    });
+
+    it("should set available=false when native reports no accelerometer", async () => {
+      // Arrange
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(ShakeDetector.isAvailable).mockResolvedValue({
+        available: false,
+      });
+
+      // Act
+      renderHook(() => useAccelerometerAvailabilityCheck());
+
+      // Assert
+      await waitFor(() => {
+        expect(
+          usePreferencesStore.getState()._accelerometerAvailabilityHydrated,
+        ).toBe(true);
+      });
+      expect(usePreferencesStore.getState().accelerometerAvailable).toBe(false);
     });
 
     it("should set available=false on plugin error", async () => {
       // Arrange
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-      vi.mocked(CapacitorShake.addListener).mockRejectedValue(
+      vi.mocked(ShakeDetector.isAvailable).mockRejectedValue(
         new Error("Plugin error"),
       );
 

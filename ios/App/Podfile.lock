@@ -1,156 +1,212 @@
 PODS:
-  - Capacitor (7.4.4):
+  - Alamofire (5.12.0)
+  - AparajitaCapacitorSecureStorage (8.0.0):
+    - Capacitor
+    - KeychainSwift (~> 21.0)
+  - AppAuth (2.1.0):
+    - AppAuth/Core (= 2.1.0)
+    - AppAuth/ExternalUserAgent (= 2.1.0)
+  - AppAuth/Core (2.1.0)
+  - AppAuth/ExternalUserAgent (2.1.0):
+    - AppAuth/Core
+  - AppCheckCore (11.3.1):
+    - GoogleUtilities/Environment (~> 8.0)
+    - GoogleUtilities/UserDefaults (~> 8.0)
+    - PromisesObjC (~> 2.4)
+    - PromisesSwift (~> 2.4)
+    - RecaptchaInterop (~> 101.0)
+  - Capacitor (8.3.0):
     - CapacitorCordova
-  - CapacitorApp (7.1.0):
+  - CapacitorApp (8.1.0):
     - Capacitor
-  - CapacitorBrowser (7.0.2):
+  - CapacitorBrowser (8.0.3):
     - Capacitor
-  - CapacitorClipboard (7.0.2):
+  - CapacitorClipboard (8.0.1):
     - Capacitor
-  - CapacitorCommunityKeepAwake (7.1.0):
+  - CapacitorCommunityKeepAwake (8.0.1):
     - Capacitor
-  - CapacitorCordova (7.4.4)
-  - CapacitorDevice (7.0.2):
+  - CapacitorCordova (8.3.0)
+  - CapacitorDevice (8.0.2):
     - Capacitor
-  - CapacitorFirebaseAuthentication (7.4.0):
+  - CapacitorFilesystem (8.1.2):
     - Capacitor
-    - CapacitorFirebaseAuthentication/Lite (= 7.4.0)
-    - FirebaseAuth (~> 11.7.0)
-  - CapacitorFirebaseAuthentication/Lite (7.4.0):
+    - IONFilesystemLib (~> 1.1.1)
+  - CapacitorFirebaseAuthentication (8.2.0):
     - Capacitor
-    - FirebaseAuth (~> 11.7.0)
-  - CapacitorHaptics (7.0.2):
+    - CapacitorFirebaseAuthentication/Lite (= 8.2.0)
+    - FirebaseAuth (~> 12.7.0)
+  - CapacitorFirebaseAuthentication/Google (8.2.0):
     - Capacitor
-  - CapacitorMlkitBarcodeScanning (7.4.0):
+    - FirebaseAuth (~> 12.7.0)
+    - GoogleSignIn (= 9.0.0)
+  - CapacitorFirebaseAuthentication/Lite (8.2.0):
     - Capacitor
-    - GoogleMLKit/BarcodeScanning (= 7.0.0)
-  - CapacitorPluginSafeArea (4.0.3):
+    - FirebaseAuth (~> 12.7.0)
+  - CapacitorHaptics (8.0.2):
     - Capacitor
-  - CapacitorPreferences (7.0.2):
+  - CapacitorMlkitBarcodeScanning (8.0.1):
     - Capacitor
-  - CapacitorScreenReader (7.0.2):
+    - GoogleMLKit/BarcodeScanning (~> 8.0.0)
+  - CapacitorNetwork (8.0.1):
     - Capacitor
-  - CapacitorShare (7.0.2):
+  - CapacitorPluginSafeArea (5.0.0):
     - Capacitor
-  - CapacitorStatusBar (7.0.3):
+  - CapacitorPreferences (8.0.1):
     - Capacitor
-  - CapacitorTextZoom (7.0.2):
+  - CapacitorScreenReader (8.0.1):
     - Capacitor
-  - CapawesomeTeamCapacitorNfc (7.3.0):
+  - CapacitorShare (8.0.1):
     - Capacitor
-  - CapgoCapacitorShake (7.2.19):
+  - CapacitorStatusBar (8.0.2):
     - Capacitor
-  - FirebaseAppCheckInterop (11.15.0)
-  - FirebaseAuth (11.7.0):
-    - FirebaseAppCheckInterop (~> 11.0)
-    - FirebaseAuthInterop (~> 11.0)
-    - FirebaseCore (~> 11.7.0)
-    - FirebaseCoreExtension (~> 11.7.0)
-    - GoogleUtilities/AppDelegateSwizzler (~> 8.0)
-    - GoogleUtilities/Environment (~> 8.0)
-    - GTMSessionFetcher/Core (< 5.0, >= 3.4)
-    - RecaptchaInterop (~> 100.0)
-  - FirebaseAuthInterop (11.15.0)
-  - FirebaseCore (11.7.0):
-    - FirebaseCoreInternal (~> 11.7.0)
-    - GoogleUtilities/Environment (~> 8.0)
-    - GoogleUtilities/Logger (~> 8.0)
-  - FirebaseCoreExtension (11.7.0):
-    - FirebaseCore (~> 11.7.0)
-  - FirebaseCoreInternal (11.7.0):
-    - "GoogleUtilities/NSData+zlib (~> 8.0)"
-  - GoogleDataTransport (10.1.0):
+  - CapacitorTextZoom (8.0.1):
+    - Capacitor
+  - CapacitorZeroconf (4.0.0):
+    - Capacitor
+  - CapawesomeCapacitorAppReview (8.0.1):
+    - Capacitor
+  - CapawesomeCapacitorBadge (8.0.2):
+    - Capacitor
+  - CapawesomeCapacitorLiveUpdate (8.3.0):
+    - Alamofire (< 6.0.0, >= 5.10.2)
+    - Capacitor
+    - ZIPFoundation (~> 0.9.0)
+  - CapawesomeTeamCapacitorNfc (8.1.0):
+    - Capacitor
+  - FirebaseAppCheckInterop (12.7.0)
+  - FirebaseAuth (12.7.0):
+    - FirebaseAppCheckInterop (~> 12.7.0)
+    - FirebaseAuthInterop (~> 12.7.0)
+    - FirebaseCore (~> 12.7.0)
+    - FirebaseCoreExtension (~> 12.7.0)
+    - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
+    - GoogleUtilities/Environment (~> 8.1)
+    - GTMSessionFetcher/Core (< 6.0, >= 3.4)
+    - RecaptchaInterop (~> 101.0)
+  - FirebaseAuthInterop (12.7.0)
+  - FirebaseCore (12.7.0):
+    - FirebaseCoreInternal (~> 12.7.0)
+    - GoogleUtilities/Environment (~> 8.1)
+    - GoogleUtilities/Logger (~> 8.1)
+  - FirebaseCoreExtension (12.7.0):
+    - FirebaseCore (~> 12.7.0)
+  - FirebaseCoreInternal (12.7.0):
+    - "GoogleUtilities/NSData+zlib (~> 8.1)"
+  - GoogleDataTransport (10.1.1):
     - nanopb (~> 3.30910.0)
     - PromisesObjC (~> 2.4)
-  - GoogleMLKit/BarcodeScanning (7.0.0):
+  - GoogleMLKit/BarcodeScanning (8.0.0):
     - GoogleMLKit/MLKitCore
-    - MLKitBarcodeScanning (~> 6.0.0)
-  - GoogleMLKit/MLKitCore (7.0.0):
-    - MLKitCommon (~> 12.0.0)
+    - MLKitBarcodeScanning (~> 7.0.0)
+  - GoogleMLKit/MLKitCore (8.0.0):
+    - MLKitCommon (~> 13.0.0)
+  - GoogleSignIn (9.0.0):
+    - AppAuth (~> 2.0)
+    - AppCheckCore (~> 11.0)
+    - GTMAppAuth (~> 5.0)
+    - GTMSessionFetcher/Core (~> 3.3)
   - GoogleToolboxForMac/Defines (4.2.1)
   - GoogleToolboxForMac/Logger (4.2.1):
     - GoogleToolboxForMac/Defines (= 4.2.1)
   - "GoogleToolboxForMac/NSData+zlib (4.2.1)":
     - GoogleToolboxForMac/Defines (= 4.2.1)
-  - GoogleUtilities/AppDelegateSwizzler (8.1.0):
+  - GoogleUtilities/AppDelegateSwizzler (8.1.2):
     - GoogleUtilities/Environment
     - GoogleUtilities/Logger
     - GoogleUtilities/Network
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Environment (8.1.0):
+  - GoogleUtilities/Environment (8.1.2):
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Logger (8.1.0):
+  - GoogleUtilities/Logger (8.1.2):
     - GoogleUtilities/Environment
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Network (8.1.0):
+  - GoogleUtilities/Network (8.1.2):
     - GoogleUtilities/Logger
     - "GoogleUtilities/NSData+zlib"
     - GoogleUtilities/Privacy
     - GoogleUtilities/Reachability
-  - "GoogleUtilities/NSData+zlib (8.1.0)":
+  - "GoogleUtilities/NSData+zlib (8.1.2)":
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Privacy (8.1.0)
-  - GoogleUtilities/Reachability (8.1.0):
+  - GoogleUtilities/Privacy (8.1.2)
+  - GoogleUtilities/Reachability (8.1.2):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
-  - GoogleUtilities/UserDefaults (8.1.0):
+  - GoogleUtilities/UserDefaults (8.1.2):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
+  - GTMAppAuth (5.0.0):
+    - AppAuth/Core (~> 2.0)
+    - GTMSessionFetcher/Core (< 4.0, >= 3.3)
   - GTMSessionFetcher/Core (3.5.0)
-  - MLImage (1.0.0-beta6)
-  - MLKitBarcodeScanning (6.0.0):
-    - MLKitCommon (~> 12.0)
-    - MLKitVision (~> 8.0)
-  - MLKitCommon (12.0.0):
+  - IONFilesystemLib (1.1.2)
+  - KeychainSwift (21.0.0)
+  - MLImage (1.0.0-beta7)
+  - MLKitBarcodeScanning (7.0.0):
+    - MLKitCommon (~> 13.0)
+    - MLKitVision (~> 9.0)
+  - MLKitCommon (13.0.0):
     - GoogleDataTransport (~> 10.0)
     - GoogleToolboxForMac/Logger (< 5.0, >= 4.2.1)
     - "GoogleToolboxForMac/NSData+zlib (< 5.0, >= 4.2.1)"
     - GoogleUtilities/Logger (~> 8.0)
     - GoogleUtilities/UserDefaults (~> 8.0)
     - GTMSessionFetcher/Core (< 4.0, >= 3.3.2)
-  - MLKitVision (8.0.0):
+  - MLKitVision (9.0.0):
     - GoogleToolboxForMac/Logger (< 5.0, >= 4.2.1)
     - "GoogleToolboxForMac/NSData+zlib (< 5.0, >= 4.2.1)"
     - GTMSessionFetcher/Core (< 4.0, >= 3.3.2)
-    - MLImage (= 1.0.0-beta6)
-    - MLKitCommon (~> 12.0)
+    - MLImage (= 1.0.0-beta7)
+    - MLKitCommon (~> 13.0)
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
     - nanopb/encode (= 3.30910.0)
   - nanopb/decode (3.30910.0)
   - nanopb/encode (3.30910.0)
-  - PromisesObjC (2.4.0)
-  - PurchasesHybridCommon (17.21.0):
-    - RevenueCat (= 5.49.0)
-  - RecaptchaInterop (100.0.0)
-  - RevenueCat (5.49.0)
-  - RevenuecatPurchasesCapacitor (11.2.16):
+  - PromisesObjC (2.4.1)
+  - PromisesSwift (2.4.1):
+    - PromisesObjC (= 2.4.1)
+  - PurchasesHybridCommon (17.55.1):
+    - RevenueCat (= 5.67.1)
+  - RecaptchaInterop (101.0.0)
+  - RevenueCat (5.67.1)
+  - RevenuecatPurchasesCapacitor (12.3.2):
     - Capacitor
-    - PurchasesHybridCommon (= 17.21.0)
+    - PurchasesHybridCommon (= 17.55.1)
+  - ZIPFoundation (0.9.20)
 
 DEPENDENCIES:
-  - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@7.4.4_@capacitor+core@7.4.4/node_modules/@capacitor/ios`)"
-  - "CapacitorApp (from `../../node_modules/.pnpm/@capacitor+app@7.1.0_@capacitor+core@7.4.4/node_modules/@capacitor/app`)"
-  - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/browser`)"
-  - "CapacitorClipboard (from `../../node_modules/.pnpm/@capacitor+clipboard@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/clipboard`)"
-  - "CapacitorCommunityKeepAwake (from `../../node_modules/.pnpm/@capacitor-community+keep-awake@7.1.0_@capacitor+core@7.4.4/node_modules/@capacitor-community/keep-awake`)"
-  - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@7.4.4_@capacitor+core@7.4.4/node_modules/@capacitor/ios`)"
-  - "CapacitorDevice (from `../../node_modules/.pnpm/@capacitor+device@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/device`)"
-  - "CapacitorFirebaseAuthentication (from `../../node_modules/.pnpm/@capacitor-firebase+authentication@7.4.0_@capacitor+core@7.4.4_firebase@11.10.0/node_modules/@capacitor-firebase/authentication`)"
-  - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/haptics`)"
-  - "CapacitorMlkitBarcodeScanning (from `../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@7.4.0_@capacitor+core@7.4.4/node_modules/@capacitor-mlkit/barcode-scanning`)"
-  - "CapacitorPluginSafeArea (from `../../node_modules/.pnpm/capacitor-plugin-safe-area@4.0.3_@capacitor+core@7.4.4/node_modules/capacitor-plugin-safe-area`)"
-  - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/preferences`)"
-  - "CapacitorScreenReader (from `../../node_modules/.pnpm/@capacitor+screen-reader@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/screen-reader`)"
-  - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/share`)"
-  - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@7.0.3_@capacitor+core@7.4.4/node_modules/@capacitor/status-bar`)"
-  - "CapacitorTextZoom (from `../../node_modules/.pnpm/@capacitor+text-zoom@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/text-zoom`)"
-  - "CapawesomeTeamCapacitorNfc (from `../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.3.0_@capacitor+core@7.4.4/node_modules/@capawesome-team/capacitor-nfc`)"
-  - "CapgoCapacitorShake (from `../../node_modules/.pnpm/@capgo+capacitor-shake@7.2.19_@capacitor+core@7.4.4/node_modules/@capgo/capacitor-shake`)"
-  - "RevenuecatPurchasesCapacitor (from `../../node_modules/.pnpm/@revenuecat+purchases-capacitor@11.2.16_@capacitor+core@7.4.4/node_modules/@revenuecat/purchases-capacitor`)"
+  - "AparajitaCapacitorSecureStorage (from `../../node_modules/@aparajita/capacitor-secure-storage`)"
+  - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
+  - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
+  - "CapacitorClipboard (from `../../node_modules/@capacitor/clipboard`)"
+  - "CapacitorCommunityKeepAwake (from `../../node_modules/@capacitor-community/keep-awake`)"
+  - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorDevice (from `../../node_modules/@capacitor/device`)"
+  - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
+  - "CapacitorFirebaseAuthentication (from `../../node_modules/@capacitor-firebase/authentication`)"
+  - "CapacitorFirebaseAuthentication/Google (from `../../node_modules/@capacitor-firebase/authentication`)"
+  - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
+  - "CapacitorMlkitBarcodeScanning (from `../../node_modules/@capacitor-mlkit/barcode-scanning`)"
+  - "CapacitorNetwork (from `../../node_modules/@capacitor/network`)"
+  - CapacitorPluginSafeArea (from `../../node_modules/capacitor-plugin-safe-area`)
+  - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
+  - "CapacitorScreenReader (from `../../node_modules/@capacitor/screen-reader`)"
+  - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
+  - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
+  - "CapacitorTextZoom (from `../../node_modules/@capacitor/text-zoom`)"
+  - CapacitorZeroconf (from `../../node_modules/capacitor-zeroconf`)
+  - "CapawesomeCapacitorAppReview (from `../../node_modules/@capawesome/capacitor-app-review`)"
+  - "CapawesomeCapacitorBadge (from `../../node_modules/@capawesome/capacitor-badge`)"
+  - "CapawesomeCapacitorLiveUpdate (from `../../node_modules/@capawesome/capacitor-live-update`)"
+  - "CapawesomeTeamCapacitorNfc (from `../../node_modules/@capawesome-team/capacitor-nfc`)"
+  - "RevenuecatPurchasesCapacitor (from `../../node_modules/@revenuecat/purchases-capacitor`)"
 
 SPEC REPOS:
   trunk:
+    - Alamofire
+    - AppAuth
+    - AppCheckCore
     - FirebaseAppCheckInterop
     - FirebaseAuth
     - FirebaseAuthInterop
@@ -159,100 +215,133 @@ SPEC REPOS:
     - FirebaseCoreInternal
     - GoogleDataTransport
     - GoogleMLKit
+    - GoogleSignIn
     - GoogleToolboxForMac
     - GoogleUtilities
+    - GTMAppAuth
     - GTMSessionFetcher
+    - IONFilesystemLib
+    - KeychainSwift
     - MLImage
     - MLKitBarcodeScanning
     - MLKitCommon
     - MLKitVision
     - nanopb
     - PromisesObjC
+    - PromisesSwift
     - PurchasesHybridCommon
     - RecaptchaInterop
     - RevenueCat
+    - ZIPFoundation
 
 EXTERNAL SOURCES:
+  AparajitaCapacitorSecureStorage:
+    :path: "../../node_modules/@aparajita/capacitor-secure-storage"
   Capacitor:
-    :path: "../../node_modules/.pnpm/@capacitor+ios@7.4.4_@capacitor+core@7.4.4/node_modules/@capacitor/ios"
+    :path: "../../node_modules/@capacitor/ios"
   CapacitorApp:
-    :path: "../../node_modules/.pnpm/@capacitor+app@7.1.0_@capacitor+core@7.4.4/node_modules/@capacitor/app"
+    :path: "../../node_modules/@capacitor/app"
   CapacitorBrowser:
-    :path: "../../node_modules/.pnpm/@capacitor+browser@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/browser"
+    :path: "../../node_modules/@capacitor/browser"
   CapacitorClipboard:
-    :path: "../../node_modules/.pnpm/@capacitor+clipboard@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/clipboard"
+    :path: "../../node_modules/@capacitor/clipboard"
   CapacitorCommunityKeepAwake:
-    :path: "../../node_modules/.pnpm/@capacitor-community+keep-awake@7.1.0_@capacitor+core@7.4.4/node_modules/@capacitor-community/keep-awake"
+    :path: "../../node_modules/@capacitor-community/keep-awake"
   CapacitorCordova:
-    :path: "../../node_modules/.pnpm/@capacitor+ios@7.4.4_@capacitor+core@7.4.4/node_modules/@capacitor/ios"
+    :path: "../../node_modules/@capacitor/ios"
   CapacitorDevice:
-    :path: "../../node_modules/.pnpm/@capacitor+device@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/device"
+    :path: "../../node_modules/@capacitor/device"
+  CapacitorFilesystem:
+    :path: "../../node_modules/@capacitor/filesystem"
   CapacitorFirebaseAuthentication:
-    :path: "../../node_modules/.pnpm/@capacitor-firebase+authentication@7.4.0_@capacitor+core@7.4.4_firebase@11.10.0/node_modules/@capacitor-firebase/authentication"
+    :path: "../../node_modules/@capacitor-firebase/authentication"
   CapacitorHaptics:
-    :path: "../../node_modules/.pnpm/@capacitor+haptics@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/haptics"
+    :path: "../../node_modules/@capacitor/haptics"
   CapacitorMlkitBarcodeScanning:
-    :path: "../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@7.4.0_@capacitor+core@7.4.4/node_modules/@capacitor-mlkit/barcode-scanning"
+    :path: "../../node_modules/@capacitor-mlkit/barcode-scanning"
+  CapacitorNetwork:
+    :path: "../../node_modules/@capacitor/network"
   CapacitorPluginSafeArea:
-    :path: "../../node_modules/.pnpm/capacitor-plugin-safe-area@4.0.3_@capacitor+core@7.4.4/node_modules/capacitor-plugin-safe-area"
+    :path: "../../node_modules/capacitor-plugin-safe-area"
   CapacitorPreferences:
-    :path: "../../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/preferences"
+    :path: "../../node_modules/@capacitor/preferences"
   CapacitorScreenReader:
-    :path: "../../node_modules/.pnpm/@capacitor+screen-reader@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/screen-reader"
+    :path: "../../node_modules/@capacitor/screen-reader"
   CapacitorShare:
-    :path: "../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/share"
+    :path: "../../node_modules/@capacitor/share"
   CapacitorStatusBar:
-    :path: "../../node_modules/.pnpm/@capacitor+status-bar@7.0.3_@capacitor+core@7.4.4/node_modules/@capacitor/status-bar"
+    :path: "../../node_modules/@capacitor/status-bar"
   CapacitorTextZoom:
-    :path: "../../node_modules/.pnpm/@capacitor+text-zoom@7.0.2_@capacitor+core@7.4.4/node_modules/@capacitor/text-zoom"
+    :path: "../../node_modules/@capacitor/text-zoom"
+  CapacitorZeroconf:
+    :path: "../../node_modules/capacitor-zeroconf"
+  CapawesomeCapacitorAppReview:
+    :path: "../../node_modules/@capawesome/capacitor-app-review"
+  CapawesomeCapacitorBadge:
+    :path: "../../node_modules/@capawesome/capacitor-badge"
+  CapawesomeCapacitorLiveUpdate:
+    :path: "../../node_modules/@capawesome/capacitor-live-update"
   CapawesomeTeamCapacitorNfc:
-    :path: "../../node_modules/.pnpm/@capawesome-team+capacitor-nfc@7.3.0_@capacitor+core@7.4.4/node_modules/@capawesome-team/capacitor-nfc"
-  CapgoCapacitorShake:
-    :path: "../../node_modules/.pnpm/@capgo+capacitor-shake@7.2.19_@capacitor+core@7.4.4/node_modules/@capgo/capacitor-shake"
+    :path: "../../node_modules/@capawesome-team/capacitor-nfc"
   RevenuecatPurchasesCapacitor:
-    :path: "../../node_modules/.pnpm/@revenuecat+purchases-capacitor@11.2.16_@capacitor+core@7.4.4/node_modules/@revenuecat/purchases-capacitor"
+    :path: "../../node_modules/@revenuecat/purchases-capacitor"
 
 SPEC CHECKSUMS:
-  Capacitor: 09d9ff8e9618e8c4b3cab2bbee34a17215dd2fef
-  CapacitorApp: 846d4b4a1dbb19dd1e9029c08ba6f028aa7be862
-  CapacitorBrowser: 45c681e7abc3b4384e54eb52bafeef1347d98fa8
-  CapacitorClipboard: e8b3578b2fce3c4795a5bdf2990b3b7dcef83f65
-  CapacitorCommunityKeepAwake: 36e0cfbc6ae293d93f828724e6d5388a5f02ed5a
-  CapacitorCordova: bf648a636f3c153f652d312ae145fb508b6ffced
-  CapacitorDevice: a50a45f0d075e55e2392c7a4be5404d4f69515de
-  CapacitorFirebaseAuthentication: 3d0a776b7dbf39351799c144b30253468ece6495
-  CapacitorHaptics: 09d96bcb5a2b74ede8fd039b4cdf58fc43dcacf1
-  CapacitorMlkitBarcodeScanning: 3da6ad386abfd58dce3736ee506184aab1275aa3
-  CapacitorPluginSafeArea: 0b05430642c0da92b5f174e900ccecf39a71e2c3
-  CapacitorPreferences: b583b5deb74e564c35968189d25d32c0fd41200d
-  CapacitorScreenReader: 5d2b8326d8a13666ac08ddddaf35af086384ed80
-  CapacitorShare: 051c3ceee0ddf3bb54574851a622bbb317eed5bd
-  CapacitorStatusBar: 7d8fcbd6768db014bd721d75e246590b014928e8
-  CapacitorTextZoom: b333ea3d12bc982efc521086ac0e4ae5dca8eb03
-  CapawesomeTeamCapacitorNfc: 8f4364d9c77c8ab2858e312ba7baabf53492da88
-  CapgoCapacitorShake: f2f2fdf8d10e450f602a6d31202125864ff72dd1
-  FirebaseAppCheckInterop: 06fe5a3799278ae4667e6c432edd86b1030fa3df
-  FirebaseAuth: 77e25aa24f3e1c626c5babd3338551fc1669ee0e
-  FirebaseAuthInterop: 7087d7a4ee4bc4de019b2d0c240974ed5d89e2fd
-  FirebaseCore: 3227e35f4197a924206fbcdc0349325baf4f5de4
-  FirebaseCoreExtension: 206c1b399f0d103055207c16f299b28e3dbd1949
-  FirebaseCoreInternal: d6c17dafc8dc33614733a8b52df78fcb4394c881
-  GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
-  GoogleMLKit: eff9e23ec1d90ea4157a1ee2e32a4f610c5b3318
+  Alamofire: ddb8d5201667b256dbc225f3fc6e835a0753186f
+  AparajitaCapacitorSecureStorage: 8128d05cafcb13b00448e20fb388a0edccd44b12
+  AppAuth: ef4da5a3fc2e10b90c09a0a94a9baeaedc0341d5
+  AppCheckCore: e215d35177a9cf469927863e69c13e220df32a8b
+  Capacitor: 22e541237135648c9aa736232bb4d2eec35fddcb
+  CapacitorApp: 449ffe26375e96f8aaaee625ac6e01e5c57c8650
+  CapacitorBrowser: c987c73d09d8bd3b5ec13f06338b1e14d5d2be69
+  CapacitorClipboard: c75fdaa6e622111119f35e7914ecfc67b05efecb
+  CapacitorCommunityKeepAwake: d41922812644562e94a79acaf7f41e6d9413af8c
+  CapacitorCordova: 2e1e2bb93b2f365309dc4ff18b72b9a69a7814a9
+  CapacitorDevice: 14cba6f88d1c3074cbf825fea977c8c526453ff8
+  CapacitorFilesystem: 2db285a1ac6e475cc27cae2e1bea999000f9e2be
+  CapacitorFirebaseAuthentication: 86cbfa7b8d839acb36c774cc88b4b9f62df4db9e
+  CapacitorHaptics: 296f771ecd89c7a1bd92a7b6826a7d268e2e70f5
+  CapacitorMlkitBarcodeScanning: d97b2398adb4a8686fce9b1c0c6f09623f1baae8
+  CapacitorNetwork: 8812ce60d11fb63d8f2e4ba51a49b2e59892ebe2
+  CapacitorPluginSafeArea: 9d0682951c011bf0b36e513a89103c5fbff7ac49
+  CapacitorPreferences: cca2021f386efb75947c850334447d9ff22b14f1
+  CapacitorScreenReader: 48e053fe6ecb0ecf5596d7e5b7e41951ab5e30b3
+  CapacitorShare: 0c58305114538568059bfc07111f22dcb9cb2a82
+  CapacitorStatusBar: 01d5763b4ed720de5ce2edbc938de6a98f4c8f32
+  CapacitorTextZoom: b3c80b09abef831245bc3434b1c03aa898ad4762
+  CapacitorZeroconf: 32e19c259908ca1b97af27aeff25c26b8e948021
+  CapawesomeCapacitorAppReview: 73b307a15e5052ecbaa3126ddae25e8bfa82fad1
+  CapawesomeCapacitorBadge: 0d9dca1ab1e770a4524c5a6c35d3c1ee91b296f8
+  CapawesomeCapacitorLiveUpdate: 58589d27d0f898bb3bc701bbac8aab8ab7dd39ab
+  CapawesomeTeamCapacitorNfc: af8af01cb4d780ae4aa7b1ec64651a2a456bc324
+  FirebaseAppCheckInterop: d58366471f1dadf2ed998b15f85c658458a10142
+  FirebaseAuth: 88beaef7c688a2950541552b6dd195d22137c41a
+  FirebaseAuthInterop: deb2638881b5d98c88c4371dd0de65b6110f217b
+  FirebaseCore: c7b57863ce0859281a66d16ca36d665c45d332b5
+  FirebaseCoreExtension: 731a5744970bcd73ad95ab2a2b8a1f46353e86dd
+  FirebaseCoreInternal: 571a2dd8c975410966199623351db3a3265c874d
+  GoogleDataTransport: a24e58982ab3ba2f64d79613e027fe7f57e88539
+  GoogleMLKit: ddd51d7dff36ff28defa69afedd9cdce684fd857
+  GoogleSignIn: c7f09cfbc85a1abf69187be091997c317cc33b77
   GoogleToolboxForMac: d1a2cbf009c453f4d6ded37c105e2f67a32206d8
-  GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
+  GoogleUtilities: 766ace00c6b10d8148408f329d10c4f051931850
+  GTMAppAuth: 217a876b249c3c585a54fd6f73e6b58c4f5c4238
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
-  MLImage: 0ad1c5f50edd027672d8b26b0fee78a8b4a0fc56
-  MLKitBarcodeScanning: 0a3064da0a7f49ac24ceb3cb46a5bc67496facd2
-  MLKitCommon: 07c2c33ae5640e5380beaaa6e4b9c249a205542d
-  MLKitVision: 45e79d68845a2de77e2dd4d7f07947f0ed157b0e
+  IONFilesystemLib: 21a63377696b2d8fab5632ecfb7d2ac67bddb68a
+  KeychainSwift: 4a71a45c802fd9e73906457c2dcbdbdc06c9419d
+  MLImage: 2ab9c968e75f57911c16f4c9d9e8a8e9604a86a1
+  MLKitBarcodeScanning: 72c6437f13a900833b400136be53a8a5d86f42fa
+  MLKitCommon: 26b779f072a182c1603d4c88a101c350cac837b1
+  MLKitVision: fa8dea9012ac59497c79ddbe9ebf32051047ac4c
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
-  PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
-  PurchasesHybridCommon: 988d080cd69d7aa0895e52f993dae53b45a0e929
-  RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
-  RevenueCat: fa9ad7e1c8817deddb737646946b6b3d8b25f54b
-  RevenuecatPurchasesCapacitor: b6b2edc502f419a22facde96874a9ff0000bf15e
+  PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
+  PromisesSwift: 217dea0fd5d2ad65222a109c48698add13cc1c5b
+  PurchasesHybridCommon: ecd9d7c586287625f1225b8de5e24c1021502270
+  RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
+  RevenueCat: 9357239a9f0978285e68983637b8a602e65c94f0
+  RevenuecatPurchasesCapacitor: c299be01b1a5c1d5eb118c30eadc84160944ecf2
+  ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
 
-PODFILE CHECKSUM: 2dc0c3777af0d8a962df553d165325c1f211f08a
+PODFILE CHECKSUM: 9dd7bdad96add55d704d17266da5472f4f585ba7
 
 COCOAPODS: 1.16.2

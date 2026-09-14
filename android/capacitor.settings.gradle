@@ -62,9 +62,6 @@ project(':capawesome-capacitor-badge').projectDir = new File('../node_modules/@c
 include ':capawesome-capacitor-live-update'
 project(':capawesome-capacitor-live-update').projectDir = new File('../node_modules/@capawesome/capacitor-live-update/android')
 
-include ':capgo-capacitor-shake'
-project(':capgo-capacitor-shake').projectDir = new File('../node_modules/@capgo/capacitor-shake/android')
-
 include ':revenuecat-purchases-capacitor'
 project(':revenuecat-purchases-capacitor').projectDir = new File('../node_modules/@revenuecat/purchases-capacitor/android')
 

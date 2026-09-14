@@ -660,16 +660,102 @@ describe("WebSocketTransport lifecycle", () => {
 
       transport.connect();
 
-      // Fail connection attempts
+      // Fail connection attempts, waiting past the longest backoff each time
       for (let i = 0; i < 3; i++) {
         MockWebSocket.getLatest()!.simulateError();
         MockWebSocket.getLatest()!.simulateClose();
-        vi.advanceTimersByTime(100);
+        vi.advanceTimersByTime(1000);
       }
 
       // Should have stopped after maxReconnectAttempts
       expect(MockWebSocket.instances.length).toBe(3); // initial + 2 retries
       expect(stateChanges).toContain("disconnected");
+
+      transport.destroy();
+    });
+
+    it("should double the reconnect delay after each failed attempt up to the cap", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+        reconnectInterval: 100,
+        maxReconnectInterval: 350,
+      });
+
+      const failLatestAndExpectRetryAfter = (delay: number) => {
+        const before = MockWebSocket.instances.length;
+        MockWebSocket.getLatest()!.simulateError();
+        MockWebSocket.getLatest()!.simulateClose();
+        vi.advanceTimersByTime(delay - 1);
+        expect(MockWebSocket.instances.length).toBe(before);
+        vi.advanceTimersByTime(1);
+        expect(MockWebSocket.instances.length).toBe(before + 1);
+      };
+
+      transport.connect();
+      failLatestAndExpectRetryAfter(100);
+      failLatestAndExpectRetryAfter(200);
+      failLatestAndExpectRetryAfter(350);
+      failLatestAndExpectRetryAfter(350);
+
+      transport.destroy();
+    });
+
+    it("should try every candidate address at the base delay before backing off", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://10.0.0.218:7497",
+        fallbackUrls: ["ws://10.0.0.107:7497"],
+        reconnectInterval: 100,
+      });
+
+      transport.connect();
+
+      MockWebSocket.getLatest()!.simulateError();
+      MockWebSocket.getLatest()!.simulateClose();
+      vi.advanceTimersByTime(100);
+      expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.107:7497");
+
+      MockWebSocket.getLatest()!.simulateError();
+      MockWebSocket.getLatest()!.simulateClose();
+      vi.advanceTimersByTime(100);
+      expect(MockWebSocket.getLatest()!.url).toBe("ws://10.0.0.218:7497");
+
+      // Both addresses have now failed once, so the next wait doubles
+      const before = MockWebSocket.instances.length;
+      MockWebSocket.getLatest()!.simulateError();
+      MockWebSocket.getLatest()!.simulateClose();
+      vi.advanceTimersByTime(199);
+      expect(MockWebSocket.instances.length).toBe(before);
+      vi.advanceTimersByTime(1);
+      expect(MockWebSocket.instances.length).toBe(before + 1);
+
+      transport.destroy();
+    });
+
+    it("should restart backoff from the base delay after immediateReconnect", () => {
+      const transport = new WebSocketTransport({
+        deviceId: "test-device",
+        url: "ws://localhost:7497",
+        reconnectInterval: 100,
+      });
+
+      transport.connect();
+      for (const delay of [100, 200, 400]) {
+        MockWebSocket.getLatest()!.simulateError();
+        MockWebSocket.getLatest()!.simulateClose();
+        vi.advanceTimersByTime(delay);
+      }
+
+      // App resume or a network change triggers an immediate reconnect
+      transport.immediateReconnect();
+      vi.advanceTimersByTime(500);
+      const before = MockWebSocket.instances.length;
+
+      MockWebSocket.getLatest()!.simulateError();
+      MockWebSocket.getLatest()!.simulateClose();
+      vi.advanceTimersByTime(100);
+      expect(MockWebSocket.instances.length).toBe(before + 1);
 
       transport.destroy();
     });
@@ -986,6 +1072,8 @@ describe("WebSocketTransport lifecycle", () => {
         deviceId: "test-device",
         url: "ws://localhost:7497",
         reconnectInterval: 100,
+        // Hold the delay fixed so each loop iteration waits for exactly one retry
+        maxReconnectInterval: 100,
       });
 
       transport.connect();

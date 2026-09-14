@@ -22,7 +22,7 @@ vi.mock("@capacitor-firebase/authentication");
 vi.mock("@capacitor-community/keep-awake");
 vi.mock("@capacitor-mlkit/barcode-scanning");
 vi.mock("@capawesome-team/capacitor-nfc");
-vi.mock("@capgo/capacitor-shake");
+vi.mock("@/lib/shakeDetector");
 vi.mock("@revenuecat/purchases-capacitor");
 vi.mock("capacitor-plugin-safe-area");
 vi.mock("capacitor-zeroconf");

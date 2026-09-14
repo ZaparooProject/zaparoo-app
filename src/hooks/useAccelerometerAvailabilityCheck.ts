@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
-import { CapacitorShake } from "@capgo/capacitor-shake";
+import { ShakeDetector } from "@/lib/shakeDetector";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { logger } from "@/lib/logger";
 import {
@@ -25,26 +25,19 @@ export function useAccelerometerAvailabilityCheck() {
     // Skip on web platform or when the native plugin bridge is unavailable
     if (
       !Capacitor.isNativePlatform() ||
-      !isNativePluginAvailable("CapacitorShake")
+      !isNativePluginAvailable("ShakeDetector")
     ) {
       setAccelerometerAvailable(false);
       setAccelerometerAvailabilityHydrated(true);
       return;
     }
 
-    // Try to add a test listener to see if shake/accelerometer is available
+    // Ask native whether shake detection is possible; this does not start it
     const checkAvailability = async () => {
       try {
-        const listener = await CapacitorShake.addListener("shake", () => {
-          // Test listener - do nothing
-        });
-
-        // If we got here, accelerometer is available
-        setAccelerometerAvailable(true);
+        const { available } = await ShakeDetector.isAvailable();
+        setAccelerometerAvailable(available);
         setAccelerometerAvailabilityHydrated(true);
-
-        // Clean up test listener
-        await listener.remove();
       } catch (e) {
         if (!isCapacitorPluginUnavailableError(e)) {
           logger.error("Failed to check accelerometer availability:", e, {

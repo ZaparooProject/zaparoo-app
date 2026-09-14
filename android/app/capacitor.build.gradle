@@ -29,7 +29,6 @@ dependencies {
     implementation project(':capawesome-capacitor-app-review')
     implementation project(':capawesome-capacitor-badge')
     implementation project(':capawesome-capacitor-live-update')
-    implementation project(':capgo-capacitor-shake')
     implementation project(':revenuecat-purchases-capacitor')
     implementation project(':capacitor-plugin-safe-area')
     implementation project(':capacitor-zeroconf')

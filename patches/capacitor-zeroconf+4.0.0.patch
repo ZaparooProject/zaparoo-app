@@ -1,0 +1,59 @@
+diff --git a/node_modules/capacitor-zeroconf/android/src/main/java/io/trik/capacitor/zeroconf/ZeroConf.java b/node_modules/capacitor-zeroconf/android/src/main/java/io/trik/capacitor/zeroconf/ZeroConf.java
+index 00ada2a..b0a6b14 100644
+--- a/node_modules/capacitor-zeroconf/android/src/main/java/io/trik/capacitor/zeroconf/ZeroConf.java
++++ b/node_modules/capacitor-zeroconf/android/src/main/java/io/trik/capacitor/zeroconf/ZeroConf.java
+@@ -140,8 +140,11 @@ public class ZeroConf {
+                 selectedAddresses = ipv4Addresses;
+             }
+             browserManager = new BrowserManager(selectedAddresses, hostname);
+-            browserManager.watch(type, domain, callback);
+         }
++        // Register on every watch, not only the first: after an unwatch the
++        // manager is kept for a fast restart, and a later watch must re-add its
++        // listener (JmDNS replays cached services to it) and re-take the lock.
++        browserManager.watch(type, domain, callback);
+     }
+ 
+     public void unwatchService(String type, String domain) {
+@@ -222,8 +225,6 @@ public class ZeroConf {
+         private final Map<String, ZeroConfServiceWatchCallback> calls = new HashMap<>();
+ 
+         public BrowserManager(List<InetAddress> addresses, String hostname) throws IOException {
+-            lock.acquire();
+-
+             if (addresses == null || addresses.size() == 0) {
+                 browsers.add(JmDNS.create(null, hostname));
+             } else {
+@@ -234,6 +235,12 @@ public class ZeroConf {
+         }
+ 
+         private void watch(String type, String domain, ZeroConfServiceWatchCallback callback) {
++            // Hold the multicast lock only while something is being watched.
++            // Holding it disables the Wi-Fi multicast filter, so every mDNS and
++            // broadcast frame on the network wakes the CPU.
++            if (!lock.isHeld()) {
++                lock.acquire();
++            }
+             calls.put(type + domain, callback);
+ 
+             for (JmDNS browser : browsers) {
+@@ -247,10 +254,18 @@ public class ZeroConf {
+             for (JmDNS browser : browsers) {
+                 browser.removeServiceListener(type + domain, this);
+             }
++
++            // JmDNS stays open so the next watch starts quickly, but with no
++            // listeners left there is no reason to keep receiving multicast.
++            if (calls.isEmpty() && lock.isHeld()) {
++                lock.release();
++            }
+         }
+ 
+         private void close() throws IOException {
+-            lock.release();
++            if (lock.isHeld()) {
++                lock.release();
++            }
+ 
+             calls.clear();
+ 

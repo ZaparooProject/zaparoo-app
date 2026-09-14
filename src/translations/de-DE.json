@@ -877,6 +877,8 @@
         "scanModeHelp": "**Tippen:** Standardmodus. Medien werden beim Scannen gestartet und das Entfernen von Tokens wird nicht erfasst.\n\n**Halten:** Medien werden beim Scannen gestartet und beendet, wenn der Token vom Lesegerät entfernt wird. Funktioniert nur mit externen Lesegeräten, nicht beim Scannen in der App.",
         "continuousScan": "Kontinuierliches Scannen",
         "continuousScanHelp": "Wenn aktiviert, sucht das App-Lesegerät auf der Zap-Seite auch nach dem Lesen eines Tokens weiter nach Tokens.",
+        "keepScreenAwake": "Bildschirm eingeschaltet lassen",
+        "keepScreenAwakeHelp": "Wenn aktiviert, bleibt der Bildschirm eingeschaltet, solange die Zap-Seite geöffnet und ein Gerät verbunden ist, damit das App-Lesegerät jederzeit scanbereit ist. Deaktiviere diese Option, damit dein Handy normal in den Ruhemodus wechselt.",
         "launchOnScan": "Beim Scannen starten",
         "launchOnScanHelp": "Wenn ein Token mit dem App-Lesegerät gescannt wird, wird er an das verbundene Gerät weitergeleitet. So funktioniert die App als drahtloses Lesegerät. Dies ist eine Pro-Funktion.",
         "preferExternalReader": "Externes Lesegerät bevorzugen",

@@ -12,6 +12,7 @@ import { Button } from "./wui/Button";
 export const successColor = "#00FF29";
 export const errorColor = "#FF7E92";
 export const primaryColor = "#3faeec";
+const IDLE_PULSE_DURATION_MS = 15000;
 
 export function ScanSpinner(props: {
   status: ScanResult;
@@ -21,6 +22,15 @@ export function ScanSpinner(props: {
 }) {
   const nfcSupported = usePreferencesStore((state) => state.nfcAvailable);
   const [nfcEnabled, setNfcEnabled] = useState(true);
+  // The idle "press to scan" pulse runs briefly after landing or after a scan
+  // ends, then holds still: a looping animation keeps the GPU drawing frames
+  // for as long as the page is open, which on the always-on Zap page is hours.
+  const [idlePulseActive, setIdlePulseActive] = useState(true);
+  const [wasSpinning, setWasSpinning] = useState(props.spinning);
+  if (props.spinning !== wasSpinning) {
+    setWasSpinning(props.spinning);
+    if (!props.spinning) setIdlePulseActive(true);
+  }
 
   const { t } = useTranslation();
 
@@ -32,6 +42,15 @@ export function ScanSpinner(props: {
       });
     }
   }, []);
+
+  useEffect(() => {
+    if (props.spinning || !idlePulseActive) return;
+    const timer = setTimeout(
+      () => setIdlePulseActive(false),
+      IDLE_PULSE_DURATION_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [props.spinning, idlePulseActive]);
 
   // NFC not supported - return null to let parent handle graceful degradation
   if (!nfcSupported && Capacitor.isNativePlatform()) {
@@ -62,6 +81,24 @@ export function ScanSpinner(props: {
     );
   }
 
+  const borderColor =
+    props.status === ScanResult.Success
+      ? successColor
+      : props.status === ScanResult.Error
+        ? errorColor
+        : primaryColor;
+  const rotation = (period: string) =>
+    props.spinning ? `spinner ${period} infinite linear` : "none";
+  const showIdlePulse = !props.spinning && idlePulseActive;
+  // Every layer sits in one grid cell with its own glow, so no filter has an
+  // animating descendant. With one glow wrapping the nested layers, the whole
+  // filtered group had to be redrawn every frame and the scan animation ran
+  // well below the display refresh rate. The layers used to be nested, so
+  // their rotations added up: 1/20 + 1/30 = 1/12 turn/s and
+  // 1/20 + 1/30 + 1/40 = 13/120 turn/s.
+  const square =
+    "rounded-[16px] border-[3px] border-solid border-primary drop-shadow-[0_0_20px_var(--color-primary)] [grid-area:1/1]";
+
   const spinner = (
     <div>
       <p className="text-3xl">
@@ -77,104 +114,47 @@ export function ScanSpinner(props: {
         {!props.spinning && <DownIcon size="24" />}
       </div>
       <div className="flex justify-center pt-1">
-        <div
-          style={{
-            borderColor:
-              props.status === ScanResult.Success
-                ? successColor
-                : props.status === ScanResult.Error
-                  ? errorColor
-                  : primaryColor,
-            animation: props.spinning ? "spinner 20s infinite linear" : "none",
-          }}
-          className={classNames(
-            "flex",
-            `h-[95px]`,
-            `w-[95px]`,
-            "items-center",
-            "justify-center",
-            "rounded-[16px]",
-            "border-[3px]",
-            "border-solid",
-            "border-primary",
-            "drop-shadow-[0_0_20px_var(--color-primary)]",
-          )}
-        >
+        <div className="grid h-[95px] w-[95px] place-items-center">
           <div
+            style={{ borderColor, animation: rotation("20s") }}
+            className={classNames("h-[95px] w-[95px]", square)}
+          />
+          <div
+            style={{ borderColor, animation: rotation("12s") }}
+            className={classNames("h-[69px] w-[69px]", square)}
+          />
+          <div
+            style={{ borderColor, animation: rotation(`${120 / 13}s`) }}
+            className={classNames("h-[51px] w-[51px]", square)}
+          />
+          <div
+            className="h-7 w-7 rounded-full [grid-area:1/1]"
             style={{
-              borderColor:
-                props.status === ScanResult.Success
-                  ? successColor
-                  : props.status === ScanResult.Error
-                    ? errorColor
-                    : primaryColor,
-              animation: props.spinning
-                ? "spinner 30s infinite linear"
+              display: props.spinning ? "none" : "block",
+              backgroundColor: "var(--color-border-outline)",
+              opacity: 0,
+              filter: "blur(2px)",
+              animation: showIdlePulse
+                ? "attention 5s infinite linear"
                 : "none",
+              transformOrigin: "center",
+              willChange: showIdlePulse ? "opacity, transform" : undefined,
             }}
-            className={classNames(
-              "flex",
-              `h-[69px]`,
-              `w-[69px]`,
-              "items-center",
-              "justify-center",
-              "rounded-[16px]",
-              "border-[3px]",
-              "border-solid",
-              "border-primary",
-            )}
-          >
-            <div
-              style={{
-                borderColor:
-                  props.status === ScanResult.Success
-                    ? successColor
-                    : props.status === ScanResult.Error
-                      ? errorColor
-                      : primaryColor,
-                animation: props.spinning
-                  ? "spinner 40s infinite linear"
-                  : "none",
-              }}
-              className={classNames(
-                "flex",
-                `h-[51px]`,
-                `w-[51px]`,
-                "items-center",
-                "justify-center",
-                "rounded-[16px]",
-                "border-[3px]",
-                "border-solid",
-                "border-primary",
-              )}
-            >
-              <div
-                className="h-7 w-7 rounded-full"
-                style={{
-                  display: props.spinning ? "none" : "block",
-                  backgroundColor: "var(--color-border-outline)",
-                  opacity: 0,
-                  filter: "blur(2px)",
-                  animation: !props.spinning
-                    ? "attention 5s infinite linear"
-                    : "none",
-                  transformOrigin: "center",
-                  willChange: "opacity, transform",
-                }}
-              ></div>
-            </div>
-          </div>
+          ></div>
         </div>
       </div>
     </div>
   );
 
+  // The idle state wraps the spinner in an inline-block button. Top alignment
+  // keeps it off the text baseline so it is the same height as the scanning
+  // state and switching between them does not shift the page.
   return props.onScan && !props.spinning ? (
     <button
       type="button"
       onClick={props.onScan}
       aria-label={t("spinner.pressToScan")}
-      className="focus-visible:ring-offset-background inline-block cursor-pointer rounded-full focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-4 focus-visible:outline-none"
+      className="focus-visible:ring-offset-background inline-block cursor-pointer rounded-full align-top focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-4 focus-visible:outline-none"
     >
       {spinner}
     </button>

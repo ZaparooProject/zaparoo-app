@@ -25,6 +25,26 @@ describe("useLiveUpdate", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  it("should mark the app ready but not sync when sync is disabled for the build", async () => {
+    vi.stubEnv("VITE_DISABLE_LIVE_UPDATE_SYNC", "true");
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(LiveUpdate.ready).mockResolvedValue({
+      previousBundleId: null,
+      currentBundleId: null,
+      rollback: false,
+    });
+    vi.mocked(LiveUpdate.sync).mockResolvedValue({ nextBundleId: null });
+
+    renderHook(() => useLiveUpdate(true));
+
+    await waitFor(() => {
+      expect(LiveUpdate.ready).toHaveBeenCalledTimes(1);
+    });
+    await Promise.resolve();
+    expect(LiveUpdate.sync).not.toHaveBeenCalled();
   });
 
   it("should wait until the app is ready", async () => {

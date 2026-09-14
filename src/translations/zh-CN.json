@@ -877,6 +877,8 @@
         "scanModeHelp": "**轻触：**默认模式。扫描后会启动媒体，但不会检测令牌是否被移开。\n\n**保持：**扫描后会启动媒体，从读卡器移除令牌时会退出。仅适用于外部读卡器，不适用于应用内扫描。",
         "continuousScan": "连续扫描",
         "continuousScanHelp": "启用后，Zap 页面中的应用内读卡器即使读取一个令牌后也会继续扫描。",
+        "keepScreenAwake": "保持屏幕常亮",
+        "keepScreenAwakeHelp": "启用后，当 Zap 页面处于打开状态且已连接设备时，屏幕将保持常亮，使应用内读卡器随时可以扫描。关闭后，手机将正常进入休眠。",
         "launchOnScan": "扫描时启动",
         "launchOnScanHelp": "使用应用内读卡器扫描令牌时，令牌会转发到已连接的设备，让应用充当无线读卡器。这是一项 Pro 功能。",
         "preferExternalReader": "优先使用外部读卡器",

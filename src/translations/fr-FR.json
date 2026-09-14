@@ -877,6 +877,8 @@
         "scanModeHelp": "**Appuyer :** Mode par défaut. Le média est lancé lors du scan et le retrait des tokens n’est pas détecté.\n\n**Maintenir :** Le média est lancé lors du scan et s’arrête lorsque le token est retiré du lecteur. Fonctionne uniquement avec les lecteurs externes, pas avec le scan dans l’application.",
         "continuousScan": "Scan continu",
         "continuousScanHelp": "Lorsque cette option est activée, le lecteur intégré à la page Zap continue à rechercher des tokens après en avoir lu un.",
+        "keepScreenAwake": "Garder l'écran allumé",
+        "keepScreenAwakeHelp": "Lorsque cette option est activée, l'écran reste allumé tant que la page Zap est ouverte et qu'un appareil est connecté, pour que le lecteur intégré soit toujours prêt à scanner. Désactivez-la pour laisser votre téléphone se mettre en veille normalement.",
         "launchOnScan": "Lancer après le scan",
         "launchOnScanHelp": "Lorsqu’un token est scanné avec le lecteur intégré, il est transmis à l’appareil connecté et l’application fonctionne comme un lecteur sans fil. Cette fonction nécessite Pro.",
         "preferExternalReader": "Préférer le lecteur externe",

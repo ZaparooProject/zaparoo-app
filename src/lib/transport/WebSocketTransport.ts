@@ -26,8 +26,10 @@ export interface WebSocketTransportConfig {
   pingInterval?: number;
   /** Timeout waiting for pong response (ms) */
   pongTimeout?: number;
-  /** Reconnect delay (ms) */
+  /** Base reconnect delay (ms), doubled after each full pass through the URLs */
   reconnectInterval?: number;
+  /** Upper bound for the reconnect delay (ms) */
+  maxReconnectInterval?: number;
   /** Maximum number of reconnect attempts */
   maxReconnectAttempts?: number;
   /** Ping message content */
@@ -57,6 +59,7 @@ const DEFAULT_CONFIG: Omit<
   pingInterval: 15000,
   pongTimeout: 10000,
   reconnectInterval: 2000,
+  maxReconnectInterval: 30000,
   maxReconnectAttempts: Infinity,
   pingMessage: "ping",
   connectionTimeout: 5000,
@@ -809,6 +812,24 @@ export class WebSocketTransport implements Transport {
     this.handlers.onClose?.();
   }
 
+  /**
+   * Back off exponentially while the device stays unreachable, so a powered-off
+   * Core does not keep the radio busy with a new socket every few seconds. The
+   * exponent counts full passes through the candidate URLs, so every address of
+   * a multi-homed device is still tried at the base rate before the delay grows.
+   * The attempt counter resets on open and on immediateReconnect(), which app
+   * resume and network changes trigger, so a returning device is found promptly.
+   */
+  private nextReconnectDelay(): number {
+    const passes = Math.floor(
+      this.reconnectAttempts / Math.max(1, this.candidateUrls.length),
+    );
+    return Math.min(
+      this.config.reconnectInterval * 2 ** passes,
+      this.config.maxReconnectInterval,
+    );
+  }
+
   private nextCandidateIndex(): number {
     for (let offset = 1; offset <= this.candidateUrls.length; offset++) {
       const index = (this.candidateIndex + offset) % this.candidateUrls.length;
@@ -940,8 +961,7 @@ export class WebSocketTransport implements Transport {
       this.candidateIndex = this.nextCandidateIndex();
     }
 
-    // Use fixed interval for local network devices - no backoff needed
-    const delay = this.config.reconnectInterval;
+    const delay = this.nextReconnectDelay();
 
     logger.debug(
       `[Transport:${this.deviceId}] Reconnect attempt ${this.reconnectAttempts + 1} in ${delay}ms`,

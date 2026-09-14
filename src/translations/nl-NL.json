@@ -877,6 +877,8 @@
         "scanModeHelp": "**Tikken:** Standaardmodus. Media worden bij het scannen gestart en het verwijderen van tokens wordt niet gevolgd.\n\n**Vasthouden:** Media worden bij het scannen gestart en gestopt wanneer het token van de lezer wordt verwijderd. Werkt alleen met externe lezers, niet bij scannen in de app.",
         "continuousScan": "Continu scannen",
         "continuousScanHelp": "Als dit is ingeschakeld, blijft de lezer in de app op de Zap-pagina naar tokens scannen, ook nadat er één is gelezen.",
+        "keepScreenAwake": "Scherm aan houden",
+        "keepScreenAwakeHelp": "Als dit is ingeschakeld, blijft het scherm aan zolang de Zap-pagina open is en er een apparaat is verbonden, zodat de lezer in de app altijd klaar is om te scannen. Schakel dit uit om je telefoon normaal in slaapstand te laten gaan.",
         "launchOnScan": "Starten bij scannen",
         "launchOnScanHelp": "Wanneer een token met de lezer in de app wordt gescand, wordt het doorgestuurd naar het verbonden apparaat, zodat de app als draadloze lezer werkt. Dit is een Pro-functie.",
         "preferExternalReader": "Voorkeur voor externe lezer",

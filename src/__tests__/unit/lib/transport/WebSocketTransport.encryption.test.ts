@@ -469,9 +469,10 @@ describe("WebSocketTransport encryption", () => {
 
         await closeDuringHandshake();
         await closeDuringHandshake();
-        // Core is restarting: the next socket never opens.
+        // Core is restarting: the next socket never opens, so the retry after
+        // it backs off to twice the base delay.
         MockWebSocket.getLatest()!.simulateClose(1006);
-        await vi.advanceTimersByTimeAsync(2000);
+        await vi.advanceTimersByTimeAsync(4000);
 
         expect(onEncryptedHandshakeRejected).not.toHaveBeenCalled();
         expect(MockWebSocket.instances).toHaveLength(4);

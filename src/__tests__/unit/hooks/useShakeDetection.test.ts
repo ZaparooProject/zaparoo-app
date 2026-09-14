@@ -8,6 +8,7 @@
  * - Cooldown period after trigger
  * - Haptic feedback for intermediate and confirmed shakes
  * - Zapscript queueing on successful trigger
+ * - Native detector start/stop tied to the listener lifetime
  * - Listener cleanup on unmount
  */
 
@@ -24,16 +25,18 @@ vi.mock("@capacitor/core", () => ({
   },
 }));
 
-// Mock CapacitorShake with controllable listener
+// Mock the native shake bridge with a controllable listener
 let mockShakeCallback: (() => void) | null = null;
 const mockRemove = vi.fn();
 
-vi.mock("@capgo/capacitor-shake", () => ({
-  CapacitorShake: {
+vi.mock("@/lib/shakeDetector", () => ({
+  ShakeDetector: {
     addListener: vi.fn((_event: string, callback: () => void) => {
       mockShakeCallback = callback;
       return Promise.resolve({ remove: mockRemove });
     }),
+    start: vi.fn(() => Promise.resolve()),
+    stop: vi.fn(() => Promise.resolve()),
   },
 }));
 
@@ -51,7 +54,7 @@ vi.mock("@capacitor/haptics", () => ({
 // Import after mocks are set up
 import { Capacitor } from "@capacitor/core";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
-import { CapacitorShake } from "@capgo/capacitor-shake";
+import { ShakeDetector } from "@/lib/shakeDetector";
 
 // Helper to trigger a shake event and flush microtasks
 async function triggerShake() {
@@ -112,7 +115,7 @@ describe("useShakeDetection", () => {
       );
 
       // Assert
-      expect(CapacitorShake.addListener).not.toHaveBeenCalled();
+      expect(ShakeDetector.addListener).not.toHaveBeenCalled();
     });
 
     it("should setup listener on native platform when enabled and connected", async () => {
@@ -130,10 +133,103 @@ describe("useShakeDetection", () => {
       await flushAsyncSetup();
 
       // Assert
-      expect(CapacitorShake.addListener).toHaveBeenCalledWith(
+      expect(ShakeDetector.addListener).toHaveBeenCalledWith(
         "shake",
         expect.any(Function),
       );
+    });
+  });
+
+  describe("native detector lifetime", () => {
+    it("should start the detector after subscribing", async () => {
+      renderHook(() =>
+        useShakeDetection({
+          shakeEnabled: true,
+          connected: true,
+          pathname: "/",
+        }),
+      );
+      await flushAsyncSetup();
+
+      expect(ShakeDetector.start).toHaveBeenCalledTimes(1);
+      expect(
+        vi.mocked(ShakeDetector.addListener).mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        vi.mocked(ShakeDetector.start).mock.invocationCallOrder[0]!,
+      );
+    });
+
+    it("should not start the detector while shake is disabled", async () => {
+      renderHook(() =>
+        useShakeDetection({
+          shakeEnabled: false,
+          connected: true,
+          pathname: "/",
+        }),
+      );
+      await flushAsyncSetup();
+
+      expect(ShakeDetector.start).not.toHaveBeenCalled();
+    });
+
+    it("should stop the detector when the connection drops", async () => {
+      const { rerender } = renderHook(
+        ({ connected }) =>
+          useShakeDetection({
+            shakeEnabled: true,
+            connected,
+            pathname: "/",
+          }),
+        { initialProps: { connected: true } },
+      );
+      await flushAsyncSetup();
+
+      rerender({ connected: false });
+
+      expect(ShakeDetector.stop).toHaveBeenCalledTimes(1);
+    });
+
+    it("should stop the detector on unmount", async () => {
+      const { unmount } = renderHook(() =>
+        useShakeDetection({
+          shakeEnabled: true,
+          connected: true,
+          pathname: "/",
+        }),
+      );
+      await flushAsyncSetup();
+
+      unmount();
+
+      expect(ShakeDetector.stop).toHaveBeenCalledTimes(1);
+    });
+
+    it("should keep the detector running across navigation", async () => {
+      const setRunQueue = vi.fn();
+      useStatusStore.setState({ setRunQueue });
+
+      const { rerender } = renderHook(
+        ({ pathname }) =>
+          useShakeDetection({
+            shakeEnabled: true,
+            connected: true,
+            pathname,
+          }),
+        { initialProps: { pathname: "/settings" } },
+      );
+      await flushAsyncSetup();
+
+      rerender({ pathname: "/" });
+      await flushAsyncSetup();
+
+      expect(ShakeDetector.start).toHaveBeenCalledTimes(1);
+      expect(ShakeDetector.stop).not.toHaveBeenCalled();
+
+      // The listener still sees the current page after navigating home
+      await triggerShake();
+      vi.advanceTimersByTime(100);
+      await triggerShake();
+      expect(setRunQueue).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -149,7 +245,7 @@ describe("useShakeDetection", () => {
       );
 
       // Assert
-      expect(CapacitorShake.addListener).not.toHaveBeenCalled();
+      expect(ShakeDetector.addListener).not.toHaveBeenCalled();
     });
 
     it("should not setup listener when disconnected", () => {
@@ -163,7 +259,7 @@ describe("useShakeDetection", () => {
       );
 
       // Assert
-      expect(CapacitorShake.addListener).not.toHaveBeenCalled();
+      expect(ShakeDetector.addListener).not.toHaveBeenCalled();
     });
   });
 

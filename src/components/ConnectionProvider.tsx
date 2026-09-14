@@ -16,7 +16,7 @@ import {
 import { useShallow } from "zustand/react/shallow";
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { App } from "@capacitor/app";
-import { Network } from "@capacitor/network";
+import { Network, type ConnectionStatus } from "@capacitor/network";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1797,6 +1797,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
 
     let disposed = false;
     let networkListener: PluginListenerHandle | null = null;
+    // Android reports a status event for every Wi-Fi capability change,
+    // signal strength included. Only a network that just came up or changed
+    // type should reset the transport's reconnect backoff.
+    let lastStatus: ConnectionStatus | null = null;
 
     const setup = async () => {
       let listenerHasReported = false;
@@ -1806,11 +1810,16 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           (status) => {
             if (disposed) return;
             listenerHasReported = true;
+            const networkChanged =
+              status.connected &&
+              (!lastStatus?.connected ||
+                lastStatus.connectionType !== status.connectionType);
+            lastStatus = status;
             logger.log(
               `[ConnectionProvider] Network status changed: ${status.connected ? "connected" : "disconnected"} (${status.connectionType})`,
             );
             updateNetworkAvailability(status.connected);
-            if (status.connected) {
+            if (networkChanged) {
               connectionManager.immediateReconnectActive();
             }
           },
@@ -1831,6 +1840,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       try {
         const initialStatus = await Network.getStatus();
         if (disposed || listenerHasReported) return;
+        lastStatus = initialStatus;
         updateNetworkAvailability(initialStatus.connected);
       } catch (error) {
         logger.warn(

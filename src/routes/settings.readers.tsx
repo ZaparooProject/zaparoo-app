@@ -90,9 +90,11 @@ export function ReadersSettings() {
     launchOnScan,
     launcherAccess,
     preferRemoteWriter,
+    keepScreenAwake,
     setRestartScan,
     setLaunchOnScan,
     setPreferRemoteWriter,
+    setKeepScreenAwake,
   } = usePreferencesStore(useShallow(selectAppSettings));
 
   // Get shake settings from store
@@ -324,6 +326,23 @@ export function ReadersSettings() {
           value={restartScan}
           setValue={setRestartScan}
         />
+
+        {/* Keep Screen On - from App (native only) */}
+        {Capacitor.isNativePlatform() && (
+          <ToggleSwitch
+            label={
+              <span className="flex items-center">
+                {t("settings.readers.keepScreenAwake")}
+                <SettingHelp
+                  title={t("settings.readers.keepScreenAwake")}
+                  description={t("settings.readers.keepScreenAwakeHelp")}
+                />
+              </span>
+            }
+            value={keepScreenAwake}
+            setValue={setKeepScreenAwake}
+          />
+        )}
 
         {/* Launch On Scan - from App (native only, Pro feature) */}
         {Capacitor.isNativePlatform() && connected && (
