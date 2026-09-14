@@ -220,14 +220,14 @@ async function fetchLibraryBrowseGroupRows(
   const entries: MediaBrowseEntry[] = [];
   const rows = rawEntries.slice(0, rowCount);
   for (let offset = 0; offset < rows.length; offset += BROWSE_PAGE_SIZE) {
-    entries.push(
-      ...(await resolveSingletonFolderEntries(
-        rows.slice(offset, offset + BROWSE_PAGE_SIZE),
-        scope.systemId,
-        signal,
-        CoreAPI,
-      )),
+    // Awaiting inside the spread breaks the legacy build's async transform.
+    const resolved = await resolveSingletonFolderEntries(
+      rows.slice(offset, offset + BROWSE_PAGE_SIZE),
+      scope.systemId,
+      signal,
+      CoreAPI,
     );
+    entries.push(...resolved);
   }
   return { start, entries };
 }
