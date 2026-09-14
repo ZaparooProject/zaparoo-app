@@ -204,6 +204,68 @@ export function getOfferingDiagnostics(
   };
 }
 
+let offeringsRequest: Promise<PurchasesOfferings> | null = null;
+let offeringsRequestSettled = false;
+
+/**
+ * Loads RevenueCat offerings once and shares the outcome, success or failure,
+ * with every screen for the rest of the session, so screens that mount
+ * repeatedly do not call the store again. Pass `refresh` from explicit user
+ * actions such as opening checkout or tapping retry; a refresh joins a
+ * request that is still in flight instead of starting another.
+ *
+ * Checkout itself resolves packages by identifier inside the native SDK, so a
+ * shared result cannot purchase the wrong product.
+ */
+export function loadOfferings(
+  options: { refresh?: boolean } = {},
+): Promise<PurchasesOfferings> {
+  if (offeringsRequest && !(options.refresh && offeringsRequestSettled)) {
+    return offeringsRequest;
+  }
+
+  const request = purchasesReady.then(() => Purchases.getOfferings());
+  offeringsRequest = request;
+  offeringsRequestSettled = false;
+  const markSettled = () => {
+    if (offeringsRequest === request) offeringsRequestSettled = true;
+  };
+  request.then(markSettled, markSettled);
+  return request;
+}
+
+export type OfferingsReport = "failed" | "proUnavailable" | "warpUnavailable";
+
+const claimedOfferingsReports = new WeakMap<
+  Promise<PurchasesOfferings>,
+  Set<OfferingsReport>
+>();
+
+/**
+ * Claims one report about a shared offerings request. The Pro and Warp
+ * screens both see a request while it is reused, so only the first to claim
+ * a report logs it and caches its diagnostics. A missing Pro offering and a
+ * missing Warp offering are separate reports about the same request.
+ */
+export function claimOfferingsReport(
+  request: Promise<PurchasesOfferings>,
+  report: OfferingsReport,
+): boolean {
+  let claimed = claimedOfferingsReports.get(request);
+  if (!claimed) {
+    claimed = new Set();
+    claimedOfferingsReports.set(request, claimed);
+  }
+  if (claimed.has(report)) return false;
+  claimed.add(report);
+  return true;
+}
+
+export function __resetOfferingsForTests(): void {
+  offeringsRequest = null;
+  offeringsRequestSettled = false;
+}
+
 function enqueueIdentityOperation<T>(operation: () => Promise<T>): Promise<T> {
   const result = identityQueue.then(operation);
 

@@ -7,6 +7,11 @@ import { useStatusStore } from "@/lib/store";
 export function TourInitializer() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  // Defaults after a failed storage read say the tour never ran; wait for the
+  // saved value so existing users are not shown it again.
+  const preferencesLoaded = usePreferencesStore(
+    (state) => state._preferencesHydrationSucceeded,
+  );
   const tourCompleted = usePreferencesStore((state) => state.tourCompleted);
   const setTourCompleted = usePreferencesStore(
     (state) => state.setTourCompleted,
@@ -14,7 +19,7 @@ export function TourInitializer() {
 
   useEffect(() => {
     // Only start tour if not completed and after a delay for DOM readiness
-    if (!tourCompleted) {
+    if (preferencesLoaded && !tourCompleted) {
       const timer = setTimeout(async () => {
         // Lazy-load shepherd.js only when tour is needed
         const { createAppTour } = await import("@/lib/tourService");
@@ -37,7 +42,7 @@ export function TourInitializer() {
 
       return () => clearTimeout(timer);
     }
-  }, [tourCompleted, navigate, setTourCompleted, t]);
+  }, [preferencesLoaded, tourCompleted, navigate, setTourCompleted, t]);
 
   return null;
 }

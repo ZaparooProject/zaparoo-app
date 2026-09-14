@@ -284,6 +284,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
     isLoading,
     loadFailed,
     packagesUnavailable,
+    purchasesNotAllowed,
     revenueCatWarpActive,
     action,
     activationPending,
@@ -334,6 +335,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
     isLoading ||
     loadFailed ||
     packagesUnavailable ||
+    purchasesNotAllowed ||
     isPremium ||
     revenueCatWarpActive ||
     activationPending;
@@ -475,6 +477,12 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
             className="w-full"
           />
         </div>
+      )}
+
+      {purchasesNotAllowed && !isPremium && (
+        <p className="text-muted-foreground text-sm" role="status">
+          {t("online.warp.purchasesNotAllowed")}
+        </p>
       )}
 
       {(activationPending || (!isPremium && revenueCatWarpActive)) && (

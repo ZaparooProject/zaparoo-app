@@ -113,6 +113,59 @@ describe("MfaAuthentication service", () => {
     });
   });
 
+  it("should retry Android Google login with the account picker when Credential Manager has no credentials", async () => {
+    mockPlatform.value = "android";
+    mockFirebaseAuthentication.signInWithGoogle.mockRejectedValueOnce(
+      new Error("No credentials available"),
+    );
+
+    await expect(MfaAuthentication.signInWithGoogle()).resolves.toEqual({
+      mfaRequired: false,
+    });
+
+    expect(mockFirebaseAuthentication.signInWithGoogle).toHaveBeenCalledTimes(
+      2,
+    );
+    expect(
+      mockFirebaseAuthentication.signInWithGoogle,
+    ).toHaveBeenLastCalledWith({
+      skipNativeAuth: true,
+      useCredentialManager: false,
+    });
+    expect(mockBridge.signInWithOAuthCredential).toHaveBeenCalledWith({
+      providerId: "google.com",
+      idToken: "google-id-token",
+      accessToken: "google-access-token",
+    });
+  });
+
+  it("should not retry Android Google login for other Credential Manager failures", async () => {
+    mockPlatform.value = "android";
+    const cancelled = new Error("activity is cancelled by the user.");
+    mockFirebaseAuthentication.signInWithGoogle.mockRejectedValueOnce(
+      cancelled,
+    );
+
+    await expect(MfaAuthentication.signInWithGoogle()).rejects.toBe(cancelled);
+
+    expect(mockFirebaseAuthentication.signInWithGoogle).toHaveBeenCalledOnce();
+    expect(mockBridge.signInWithOAuthCredential).not.toHaveBeenCalled();
+  });
+
+  it("should surface the account picker failure when the Android retry fails", async () => {
+    mockPlatform.value = "android";
+    const pickerFailure = new Error("12501: ");
+    mockFirebaseAuthentication.signInWithGoogle
+      .mockRejectedValueOnce(new Error("No credentials available"))
+      .mockRejectedValueOnce(pickerFailure);
+
+    await expect(MfaAuthentication.signInWithGoogle()).rejects.toBe(
+      pickerFailure,
+    );
+
+    expect(mockBridge.signInWithOAuthCredential).not.toHaveBeenCalled();
+  });
+
   it("should pass native iOS Apple credential to MFA bridge", async () => {
     mockPlatform.value = "ios";
 

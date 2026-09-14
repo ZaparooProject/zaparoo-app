@@ -10,7 +10,10 @@ import {
 const MODAL_TRANSITION_MS = 200;
 
 export function WhatsNewInitializer() {
-  const hasHydrated = usePreferencesStore((state) => state._hasHydrated);
+  // Seen announcements are unknown while running on fallback defaults.
+  const preferencesLoaded = usePreferencesStore(
+    (state) => state._preferencesHydrationSucceeded,
+  );
   const tourCompleted = usePreferencesStore((state) => state.tourCompleted);
   const whatsNewInitialized = usePreferencesStore(
     (state) => state.whatsNewInitialized,
@@ -39,7 +42,7 @@ export function WhatsNewInitializer() {
   const dismissingRef = useRef(false);
 
   useEffect(() => {
-    if (!hasHydrated) return;
+    if (!preferencesLoaded) return;
 
     let cancelled = false;
 
@@ -86,7 +89,7 @@ export function WhatsNewInitializer() {
       cancelled = true;
     };
   }, [
-    hasHydrated,
+    preferencesLoaded,
     initializeWhatsNew,
     seenAnnouncementIds,
     setLastWhatsNewRuntimeKey,

@@ -30,13 +30,16 @@ function isReviewPromptBlocked(): boolean {
 }
 
 export function useAppReviewPrompt(): void {
-  const hasHydrated = usePreferencesStore((state) => state._hasHydrated);
+  // Launch counts recorded on fallback defaults would reset the saved cadence.
+  const preferencesLoaded = usePreferencesStore(
+    (state) => state._preferencesHydrationSucceeded,
+  );
   const playing = useStatusStore((state) => state.playing);
   const previousMediaIdentityRef = useRef<string | null>(null);
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!hasHydrated) return;
+    if (!preferencesLoaded) return;
 
     const mediaIdentity = getPrimaryMediaIdentity(playing);
     if (mediaIdentity === previousMediaIdentityRef.current) return;
@@ -88,7 +91,7 @@ export function useAppReviewPrompt(): void {
         });
       });
     }, APP_REVIEW_SETTLE_DELAY_MS);
-  }, [hasHydrated, playing]);
+  }, [preferencesLoaded, playing]);
 
   useEffect(
     () => () => {

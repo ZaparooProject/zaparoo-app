@@ -56,6 +56,38 @@ function requireCredentialValue(
   );
 }
 
+/**
+ * Android Credential Manager rejects with this when the device has no Google
+ * account, or while its sign-in sheet is cooling down after being dismissed.
+ * The legacy Google account picker is not subject to either, and it lets the
+ * user add an account.
+ */
+function isNoGoogleCredentialError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.toLowerCase().includes("no credentials available")
+  );
+}
+
+async function authorizeNativeGoogle() {
+  try {
+    return await FirebaseAuthentication.signInWithGoogle({
+      skipNativeAuth: true,
+    });
+  } catch (error) {
+    if (
+      Capacitor.getPlatform() !== "android" ||
+      !isNoGoogleCredentialError(error)
+    ) {
+      throw error;
+    }
+    return FirebaseAuthentication.signInWithGoogle({
+      skipNativeAuth: true,
+      useCredentialManager: false,
+    });
+  }
+}
+
 export const MfaAuthentication = {
   signInWithEmailAndPassword: (options: MfaEmailSignInOptions) =>
     bridge.signInWithEmailAndPassword(options),
@@ -65,9 +97,7 @@ export const MfaAuthentication = {
       return bridge.signInWithGoogle();
     }
 
-    const { credential } = await FirebaseAuthentication.signInWithGoogle({
-      skipNativeAuth: true,
-    });
+    const { credential } = await authorizeNativeGoogle();
     return bridge.signInWithOAuthCredential({
       providerId: "google.com",
       idToken: requireCredentialValue(

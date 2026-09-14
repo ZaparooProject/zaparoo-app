@@ -48,6 +48,7 @@ function setPreferencesState(
   usePreferencesStore.setState({
     ...usePreferencesStore.getState(),
     _hasHydrated: true,
+    _preferencesHydrationSucceeded: true,
     tourCompleted: true,
     whatsNewInitialized: true,
     lastWhatsNewRuntimeKey: "native:1.0.0+1",
@@ -118,6 +119,36 @@ describe("WhatsNewInitializer", () => {
     expect(
       usePreferencesStore.getState().seenWhatsNewAnnouncementIds,
     ).toContain(announcement.id);
+  });
+
+  it("should wait for saved preferences after a storage fallback", async () => {
+    setPreferencesState({
+      _preferencesHydrationSucceeded: false,
+      whatsNewInitialized: false,
+      tourCompleted: false,
+      lastWhatsNewRuntimeKey: null,
+    });
+    whatsNewMock.resolveRuntimeReleaseIdentity.mockClear();
+
+    render(<WhatsNewInitializer />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(whatsNewMock.resolveRuntimeReleaseIdentity).not.toHaveBeenCalled();
+    expect(usePreferencesStore.getState().whatsNewInitialized).toBe(false);
+
+    act(() => {
+      usePreferencesStore.setState({
+        _preferencesHydrationSucceeded: true,
+        whatsNewInitialized: true,
+        tourCompleted: true,
+        lastWhatsNewRuntimeKey: "native:1.0.0+1",
+        seenWhatsNewAnnouncementIds: [],
+      });
+    });
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
   });
 
   it("should show an unseen announcement for existing users", async () => {
