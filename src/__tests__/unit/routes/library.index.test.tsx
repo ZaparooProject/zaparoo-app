@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen } from "@/test-utils";
+import { act, render, screen, waitFor, within } from "@/test-utils";
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 import { deviceRegistry } from "@/lib/devices/deviceRegistry";
 import { CoreAPI } from "@/lib/coreApi";
-import { useStatusStore } from "@/lib/store";
+import { ConnectionState, useStatusStore } from "@/lib/store";
 import {
   libraryBrowseScrollKey,
   useLibrarySessionStore,
@@ -13,7 +13,8 @@ import { useTabSessionStore } from "@/lib/tabSessionStore";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Library } from "@/routes/library.index";
 
-const { mockNavigate } = vi.hoisted(() => ({
+const { mockErrorToast, mockNavigate } = vi.hoisted(() => ({
+  mockErrorToast: vi.fn(),
   mockNavigate: vi.fn(),
 }));
 
@@ -56,17 +57,35 @@ vi.mock("@/hooks/useHaptics", () => ({
   useHaptics: () => ({ impact: vi.fn() }),
 }));
 
+vi.mock("@/lib/toastUtils", () => ({
+  showRateLimitedErrorToast: mockErrorToast,
+}));
+
+const WINAMP = {
+  id: "ab3cdefghijklmnopqrstuvwxy",
+  name: "Winamp",
+  category: "Other",
+  mediaCount: 0,
+  zapScript: "zaparoo://ab3cdefghijklmnopqrstuvwxy/Winamp",
+};
+
 describe("Library index route", () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
     CoreAPI.reset();
     mockNavigate.mockClear();
-    usePreferencesStore.setState({ systemNameRegion: "auto" });
+    mockErrorToast.mockClear();
+    usePreferencesStore.setState({
+      systemNameRegion: "auto",
+      nfcAvailable: false,
+    });
+    useStatusStore.getState().setWriteQueue("");
     useLibrarySessionStore.getState().reset();
     useTabSessionStore.getState().reset();
     await seedActiveDevice({ recordId: "device-a" });
     useStatusStore.setState({
       connected: true,
+      connectionState: ConnectionState.CONNECTED,
       coreVersion: "2.15.0",
       coreVersionPending: false,
       gamesIndex: {
@@ -172,6 +191,162 @@ describe("Library index route", () => {
     expect(
       screen.queryByText("systemSelector.noResults"),
     ).not.toBeInTheDocument();
+  });
+
+  it("should list virtual systems as actions without listing empty systems", async () => {
+    const systemsSpy = vi.spyOn(CoreAPI, "systems").mockResolvedValue({
+      systems: [
+        { id: "SNES", name: "Super Nintendo", mediaCount: 150 },
+        { id: "3DO", name: "3DO", mediaCount: 0 },
+        WINAMP,
+      ],
+    });
+
+    render(<Library />);
+
+    expect(
+      await screen.findByRole("button", { name: "Winamp" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "SNES" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Winamp" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("3DO")).not.toBeInTheDocument();
+    expect(systemsSpy).toHaveBeenCalledWith(undefined, {
+      includeLaunchables: true,
+    });
+  });
+
+  it("should not show the empty state when only virtual systems exist", async () => {
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({
+      systems: [{ id: "3DO", name: "3DO", mediaCount: 0 }, WINAMP],
+    });
+
+    render(<Library />);
+
+    expect(
+      await screen.findByRole("button", { name: "Winamp" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("library.noSystems")).not.toBeInTheDocument();
+  });
+
+  it("should launch a virtual system from its actions", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({ systems: [WINAMP] });
+    vi.spyOn(CoreAPI, "hasWriteCapableReader").mockResolvedValue(false);
+    const runSpy = vi.spyOn(CoreAPI, "run").mockResolvedValue();
+
+    render(<Library />);
+    await user.click(await screen.findByRole("button", { name: "Winamp" }));
+    const dialog = await screen.findByRole("dialog", { name: "Winamp" });
+    await user.click(
+      within(dialog).getByRole("button", { name: "library.launch" }),
+    );
+
+    expect(runSpy).toHaveBeenCalledWith({ text: WINAMP.zapScript });
+    expect(mockErrorToast).not.toHaveBeenCalled();
+  });
+
+  it("should not launch a virtual system while Core is reconnecting", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({ systems: [WINAMP] });
+    vi.spyOn(CoreAPI, "hasWriteCapableReader").mockResolvedValue(false);
+    const runSpy = vi.spyOn(CoreAPI, "run").mockResolvedValue();
+
+    render(<Library />);
+    await user.click(await screen.findByRole("button", { name: "Winamp" }));
+    const dialog = await screen.findByRole("dialog", { name: "Winamp" });
+    act(() => {
+      useStatusStore
+        .getState()
+        .setConnectionState(ConnectionState.RECONNECTING);
+    });
+    const launch = within(dialog).getByRole("button", {
+      name: "library.launch",
+    });
+    expect(launch).toBeDisabled();
+    await user.click(launch);
+
+    expect(runSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Winamp" })).toBeInTheDocument();
+  });
+
+  it("should report a failed virtual system launch", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({ systems: [WINAMP] });
+    vi.spyOn(CoreAPI, "hasWriteCapableReader").mockResolvedValue(false);
+    vi.spyOn(CoreAPI, "run").mockRejectedValue(new Error("launch failed"));
+
+    render(<Library />);
+    await user.click(await screen.findByRole("button", { name: "Winamp" }));
+    const dialog = await screen.findByRole("dialog", { name: "Winamp" });
+    await user.click(
+      within(dialog).getByRole("button", { name: "library.launch" }),
+    );
+
+    await waitFor(() =>
+      expect(mockErrorToast).toHaveBeenCalledWith("library.launchSystemError"),
+    );
+    expect(
+      within(dialog).getByRole("button", { name: "library.launch" }),
+    ).toBeEnabled();
+  });
+
+  it("should write a virtual system's ZapScript to a token", async () => {
+    const user = userEvent.setup();
+    usePreferencesStore.setState({ nfcAvailable: true });
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({ systems: [WINAMP] });
+
+    render(<Library />);
+    await user.click(await screen.findByRole("button", { name: "Winamp" }));
+    const dialog = await screen.findByRole("dialog", { name: "Winamp" });
+    await user.click(
+      within(dialog).getByRole("button", { name: "library.write" }),
+    );
+
+    expect(useStatusStore.getState().writeQueue).toBe(WINAMP.zapScript);
+  });
+
+  it("should disable writing a virtual system without a writer", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({ systems: [WINAMP] });
+    const writerSpy = vi
+      .spyOn(CoreAPI, "hasWriteCapableReader")
+      .mockResolvedValue(false);
+
+    render(<Library />);
+    await user.click(await screen.findByRole("button", { name: "Winamp" }));
+    const dialog = await screen.findByRole("dialog", { name: "Winamp" });
+
+    await waitFor(() => expect(writerSpy).toHaveBeenCalled());
+    expect(
+      within(dialog).getByRole("button", { name: "library.write" }),
+    ).toBeDisabled();
+    expect(useStatusStore.getState().writeQueue).toBe("");
+  });
+
+  it("should disable writing a virtual system to a Core reader while reconnecting", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({ systems: [WINAMP] });
+    vi.spyOn(CoreAPI, "hasWriteCapableReader").mockResolvedValue(true);
+
+    render(<Library />);
+    await user.click(await screen.findByRole("button", { name: "Winamp" }));
+    const dialog = await screen.findByRole("dialog", { name: "Winamp" });
+    const write = within(dialog).getByRole("button", {
+      name: "library.write",
+    });
+    await waitFor(() => expect(write).toBeEnabled());
+
+    act(() => {
+      useStatusStore
+        .getState()
+        .setConnectionState(ConnectionState.RECONNECTING);
+    });
+    expect(write).toBeDisabled();
+    await user.click(write);
+
+    expect(useStatusStore.getState().writeQueue).toBe("");
   });
 
   it("should use the preferred regional system names", async () => {

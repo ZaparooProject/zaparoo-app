@@ -11,9 +11,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { CoreAPI } from "@/lib/coreApi";
+import type { System } from "@/lib/models";
 import {
   filterSystemCatalog,
   systemHasIndexedMedia,
+  systemIsLaunchable,
   systemManufacturers,
   systemSubtitle,
   type SystemReleasePeriod,
@@ -34,6 +36,7 @@ import { SystemFilterControls } from "@/components/SystemFilterControls";
 import { LibraryHeaderActions } from "@/components/library/LibraryHeader";
 import { LibrarySystemFiltersModal } from "@/components/library/LibrarySystemFiltersModal";
 import { LibrarySystemRefinementBar } from "@/components/library/LibrarySystemRefinementBar";
+import { LibraryLaunchableModal } from "@/components/library/LibraryLaunchableModal";
 import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Button } from "@/components/wui/Button";
@@ -81,6 +84,8 @@ export function Library() {
   const [draftReleasePeriod, setDraftReleasePeriod] =
     useState<SystemReleasePeriod>("any");
   const [draftSort, setDraftSort] = useState<SystemSort>("name-asc");
+  const [launchableSystem, setLaunchableSystem] = useState<System | null>(null);
+  const [launchableOpen, setLaunchableOpen] = useState(false);
   const connected = useStatusStore((state) => state.connected);
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const deviceKey = useActiveDeviceKey();
@@ -90,8 +95,8 @@ export function Library() {
   const libraryFeature = useCoreFeature("mediaLibrary");
   const favoritesFeature = useCoreFeature("mediaFavorites");
   const systemsQuery = useQuery({
-    queryKey: ["systems", deviceKey, { all: false }],
-    queryFn: () => CoreAPI.systems(),
+    queryKey: ["systems", deviceKey, { all: false, launchables: true }],
+    queryFn: () => CoreAPI.systems(undefined, { includeLaunchables: true }),
     enabled: connected && gamesIndex.exists && libraryFeature.available,
     staleTime: 60 * 1000,
   });
@@ -104,6 +109,7 @@ export function Library() {
     () =>
       filterSystemCatalog(allSystems, {
         category: selectedCategory,
+        includeLaunchables: true,
         manufacturer: manufacturerFilter,
         query: "",
         releasePeriod,
@@ -119,13 +125,16 @@ export function Library() {
     () =>
       filterSystemCatalog(allSystems, {
         category: selectedCategory,
+        includeLaunchables: true,
         manufacturer: draftManufacturer,
         query: "",
         releasePeriod: draftReleasePeriod,
       }).systems.length,
     [allSystems, selectedCategory, draftManufacturer, draftReleasePeriod],
   );
-  const availableSystemCount = allSystems.filter(systemHasIndexedMedia).length;
+  const availableSystemCount = allSystems.filter(
+    (system) => systemHasIndexedMedia(system) || systemIsLaunchable(system),
+  ).length;
   const systemTabIdPrefix = "library-system-category-tab";
   const selectedCategoryTabId = getTabBarTabId(
     selectedCategory,
@@ -299,21 +308,16 @@ export function Library() {
             <nav aria-label={t("library.systemsLabel")}>
               {systems.map((system, index) => {
                 const subtitle = systemSubtitle(system);
-                return (
-                  <Link
-                    key={system.id}
-                    to="/library/$system"
-                    params={{ system: system.id }}
-                    onClick={() => beginSystemNavigation(system.id)}
-                    onPointerUp={handleHapticPress}
-                    className="flex min-h-[56px] items-center justify-between gap-3 px-1 py-3 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-                    style={{
-                      borderBottom:
-                        index === systems.length - 1
-                          ? undefined
-                          : "1px solid rgba(255,255,255,0.35)",
-                    }}
-                  >
+                const rowClassName =
+                  "flex min-h-[56px] items-center justify-between gap-3 px-1 py-3 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none";
+                const rowStyle = {
+                  borderBottom:
+                    index === systems.length - 1
+                      ? undefined
+                      : "1px solid rgba(255,255,255,0.35)",
+                };
+                const rowContent = (
+                  <>
                     <span className="flex min-w-0 flex-col">
                       <span className="font-medium">{system.name}</span>
                       {subtitle && (
@@ -325,6 +329,38 @@ export function Library() {
                     <span aria-hidden="true">
                       <NextIcon size="20" />
                     </span>
+                  </>
+                );
+                // Virtual systems own no browsable media; Core rejects their
+                // IDs in media.browse, so they open launch/write actions instead.
+                if (systemIsLaunchable(system)) {
+                  return (
+                    <button
+                      key={system.id}
+                      type="button"
+                      onClick={() => {
+                        setLaunchableSystem(system);
+                        setLaunchableOpen(true);
+                      }}
+                      onPointerUp={handleHapticPress}
+                      className={`${rowClassName} w-full text-left`}
+                      style={rowStyle}
+                    >
+                      {rowContent}
+                    </button>
+                  );
+                }
+                return (
+                  <Link
+                    key={system.id}
+                    to="/library/$system"
+                    params={{ system: system.id }}
+                    onClick={() => beginSystemNavigation(system.id)}
+                    onPointerUp={handleHapticPress}
+                    className={rowClassName}
+                    style={rowStyle}
+                  >
+                    {rowContent}
                   </Link>
                 );
               })}
@@ -371,6 +407,12 @@ export function Library() {
           bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
         />
       </PageFrame>
+      <LibraryLaunchableModal
+        isOpen={launchableOpen}
+        close={() => setLaunchableOpen(false)}
+        system={launchableSystem}
+        deviceKey={deviceKey}
+      />
       <LibrarySystemFiltersModal
         isOpen={optionsOpen}
         close={() => setOptionsOpen(false)}

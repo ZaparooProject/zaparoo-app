@@ -164,8 +164,8 @@ export function LibrarySystem() {
     [browseScrollKey, updateBrowseWindows],
   );
   const systemsQuery = useQuery({
-    queryKey: ["systems", deviceKey, { all: false }],
-    queryFn: () => CoreAPI.systems(),
+    queryKey: ["systems", deviceKey, { all: false, launchables: true }],
+    queryFn: () => CoreAPI.systems(undefined, { includeLaunchables: true }),
     enabled: connected,
     staleTime: 60 * 1000,
   });

@@ -26,6 +26,10 @@ export function systemHasIndexedMedia(
   return system.mediaCount === undefined || system.mediaCount > 0;
 }
 
+export function systemIsLaunchable(system: Pick<System, "zapScript">): boolean {
+  return Boolean(system.zapScript?.trim());
+}
+
 export function systemReleaseYear(system: Pick<System, "releaseDate">) {
   const year = system.releaseDate?.match(/\b\d{4}\b/)?.[0];
   return year ? Number.parseInt(year, 10) : null;
@@ -95,6 +99,7 @@ export function filterSystemCatalog(
   options: {
     allowedSystemIds?: string[];
     includeEmptySystems?: boolean;
+    includeLaunchables?: boolean;
     category: string;
     manufacturer?: string;
     query: string;
@@ -105,12 +110,16 @@ export function filterSystemCatalog(
   const allowedSystemIds = options.allowedSystemIds
     ? new Set(options.allowedSystemIds)
     : null;
-  const systemsWithMedia = options.includeEmptySystems
+  const listedSystems = options.includeEmptySystems
     ? systems
-    : systems.filter(systemHasIndexedMedia);
+    : systems.filter(
+        (system) =>
+          systemHasIndexedMedia(system) ||
+          (options.includeLaunchables === true && systemIsLaunchable(system)),
+      );
   const availableSystems = allowedSystemIds
-    ? systemsWithMedia.filter((system) => allowedSystemIds.has(system.id))
-    : systemsWithMedia;
+    ? listedSystems.filter((system) => allowedSystemIds.has(system.id))
+    : listedSystems;
   const categories = Array.from(
     new Set(
       availableSystems.map((system) => system.category || FALLBACK_CATEGORY),

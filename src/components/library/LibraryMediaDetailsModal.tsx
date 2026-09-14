@@ -20,8 +20,9 @@ import {
 } from "@/lib/libraryMedia";
 import type { MediaBrowseEntry, TagInfo } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { useStatusStore } from "@/lib/store";
+import { ConnectionState, useStatusStore } from "@/lib/store";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
+import { useNfcWriteAvailable } from "@/hooks/useNfcWriteAvailable";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { SlideModal } from "@/components/SlideModal";
 import { TagBadge } from "@/components/TagBadge";
@@ -39,7 +40,11 @@ import {
   shouldSelectMediaWriteTarget,
 } from "@/lib/mediaWriteTarget";
 
-function DetailRow(props: { label: string; value: string; mono?: boolean }) {
+export function DetailRow(props: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
   if (!props.value) return null;
   return (
     <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
@@ -106,9 +111,12 @@ export function LibraryMediaDetailsModal(props: {
 }) {
   const { t } = useTranslation();
   const showFilenames = usePreferencesStore((state) => state.showFilenames);
-  const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
   const resolveSystemName = useSystemNameResolver();
-  const connected = useStatusStore((state) => state.connected);
+  // `connected` stays true while reconnecting so cached data remains usable.
+  // Launching needs a live socket, or it would sit out the request timeout.
+  const liveConnected = useStatusStore(
+    (state) => state.connectionState === ConnectionState.CONNECTED,
+  );
   const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
   const [imageIndex, setImageIndex] = useState(0);
   const [resolvedDefaultType, setResolvedDefaultType] = useState<string | null>(
@@ -157,14 +165,7 @@ export function LibraryMediaDetailsModal(props: {
     gcTime: 10 * 60 * 1000,
     retry: false,
   });
-  const writeCapabilityQuery = useQuery({
-    queryKey: ["nfcWriteCapability", props.deviceKey],
-    queryFn: () => CoreAPI.hasWriteCapableReader(),
-    enabled: props.isOpen && connected && !nfcAvailable,
-    staleTime: 60 * 1000,
-    retry: false,
-  });
-  const writeAvailable = nfcAvailable || writeCapabilityQuery.data === true;
+  const writeAvailable = useNfcWriteAvailable(props.deviceKey, props.isOpen);
   const metadata = metadataQuery.data?.media;
   const metadataWritePath =
     entry?.type !== "media" && metadata?.path !== entry?.path
@@ -265,7 +266,7 @@ export function LibraryMediaDetailsModal(props: {
   };
 
   const launch = async () => {
-    if (!entry || launching || preparingWrite || !connected) return;
+    if (!entry || launching || preparingWrite || !liveConnected) return;
     const controller = new AbortController();
     launchControllerRef.current?.abort();
     launchControllerRef.current = controller;
@@ -441,7 +442,7 @@ export function LibraryMediaDetailsModal(props: {
             )
           }
           intent="primary"
-          disabled={!connected || launching || preparingWrite}
+          disabled={!liveConnected || launching || preparingWrite}
           onClick={() => void launch()}
         />
       }
