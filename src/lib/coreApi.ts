@@ -71,6 +71,7 @@ import {
   VersionResponse,
   WriteRequest,
 } from "./models";
+import { systemIsLaunchable } from "./systemFilters";
 
 export { isIndexResponse };
 
@@ -1894,7 +1895,10 @@ class CoreApi {
     });
   }
 
-  systems(params?: SystemsParams): Promise<SystemsResponse> {
+  systems(
+    params?: SystemsParams,
+    options?: { includeLaunchables?: boolean },
+  ): Promise<SystemsResponse> {
     return new Promise<SystemsResponse>((resolve, reject) => {
       this.call(Method.Systems, params)
         .then((result) => {
@@ -1910,11 +1914,13 @@ class CoreApi {
               isSystem,
             );
             // Virtual launchables execute ZapScript directly and never own media
-            // rows, so they are not valid choices in app game-system filters.
-            const gameSystems = response.systems.filter(
-              (system) => !system.zapScript,
-            );
-            const filteredResponse = { ...response, systems: gameSystems };
+            // rows, so only callers that can launch or write them opt in.
+            const systems = options?.includeLaunchables
+              ? response.systems
+              : response.systems.filter(
+                  (system) => !systemIsLaunchable(system),
+                );
+            const filteredResponse = { ...response, systems };
             logger.debug(filteredResponse);
             resolve(filteredResponse);
           } catch (e) {

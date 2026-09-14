@@ -149,8 +149,8 @@ export function LibrarySystem() {
   const sessionScrollKey = searchOpen ? searchScrollKey : browseScrollKey;
   const forgetScroll = useTabSessionStore((state) => state.forgetScroll);
   const systemsQuery = useQuery({
-    queryKey: ["systems", deviceKey, { all: false }],
-    queryFn: () => CoreAPI.systems(),
+    queryKey: ["systems", deviceKey, { all: false, launchables: true }],
+    queryFn: () => CoreAPI.systems(undefined, { includeLaunchables: true }),
     enabled: connected,
     staleTime: 60 * 1000,
   });

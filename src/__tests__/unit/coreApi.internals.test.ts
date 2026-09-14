@@ -134,6 +134,31 @@ describe("CoreAPI Internals", () => {
       expect(callSpy).toHaveBeenCalledWith(Method.Systems, { all: true });
     });
 
+    it("should keep virtual launchables when the caller opts in", async () => {
+      const steam = {
+        id: "virtual:steam",
+        name: "Steam",
+        mediaCount: 0,
+        zapScript: "**launch.system:steam",
+      };
+      const callSpy = vi.spyOn(CoreAPI, "call").mockResolvedValue({
+        systems: [
+          { id: "snes", name: "Super Nintendo", mediaCount: 12 },
+          steam,
+        ],
+      });
+
+      await expect(
+        CoreAPI.systems(undefined, { includeLaunchables: true }),
+      ).resolves.toEqual({
+        systems: [
+          { id: "snes", name: "Super Nintendo", mediaCount: 12 },
+          steam,
+        ],
+      });
+      expect(callSpy).toHaveBeenCalledWith(Method.Systems, undefined);
+    });
+
     it.each([
       {
         name: "systems",

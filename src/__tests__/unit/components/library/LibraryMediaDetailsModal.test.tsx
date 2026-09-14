@@ -4,7 +4,7 @@ import { act, render, screen, waitFor, within } from "@/test-utils";
 import { CoreAPI } from "@/lib/coreApi";
 import type { MediaBrowseEntry, MediaMetaResponse } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { useStatusStore } from "@/lib/store";
+import { ConnectionState, useStatusStore } from "@/lib/store";
 import { LibraryMediaDetailsModal } from "@/components/library/LibraryMediaDetailsModal";
 
 const mockRequestLibraryImage = vi.fn();
@@ -102,6 +102,7 @@ describe("LibraryMediaDetailsModal", () => {
     vi.spyOn(CoreAPI, "hasWriteCapableReader").mockResolvedValue(false);
     useStatusStore.setState({
       connected: true,
+      connectionState: ConnectionState.CONNECTED,
       coreVersion: "2.15.0",
       coreVersionPending: false,
     });
@@ -312,6 +313,21 @@ describe("LibraryMediaDetailsModal", () => {
     expect(
       screen.getByRole("dialog", { name: "Super Game" }),
     ).toBeInTheDocument();
+  });
+
+  it("should not launch while Core is reconnecting", async () => {
+    const user = userEvent.setup();
+    const runSpy = vi.spyOn(CoreAPI, "run").mockResolvedValue();
+    useStatusStore.getState().setConnectionState(ConnectionState.RECONNECTING);
+    renderModal();
+
+    const launch = await screen.findByRole("button", {
+      name: "library.launch",
+    });
+    expect(launch).toBeDisabled();
+    await user.click(launch);
+
+    expect(runSpy).not.toHaveBeenCalled();
   });
 
   it("should offer ZapScript and relative path before NFC writing", async () => {
@@ -644,7 +660,7 @@ describe("LibraryMediaDetailsModal", () => {
   });
 
   it("should disable launch while disconnected", async () => {
-    useStatusStore.setState({ connected: false });
+    useStatusStore.getState().setConnectionState(ConnectionState.DISCONNECTED);
     renderModal();
 
     expect(

@@ -3,6 +3,7 @@ import type { System } from "@/lib/models";
 import {
   filterSystemCatalog,
   systemHasIndexedMedia,
+  systemIsLaunchable,
   systemManufacturers,
   systemReleaseYear,
   systemSubtitle,
@@ -60,6 +61,40 @@ describe("system filters", () => {
     expect(systemHasIndexedMedia({ mediaCount: 1 })).toBe(true);
     expect(systemHasIndexedMedia({ mediaCount: 0 })).toBe(false);
     expect(systemHasIndexedMedia({})).toBe(true);
+  });
+
+  it("should keep virtual systems only when launchables are included", () => {
+    const countedSystems: System[] = [
+      { id: "SNES", name: "Super Nintendo", mediaCount: 25 },
+      { id: "3DO", name: "3DO", mediaCount: 0 },
+      {
+        id: "winamp",
+        name: "Winamp",
+        mediaCount: 0,
+        zapScript: "zaparoo://winamp/Winamp",
+      },
+    ];
+
+    const indexed = filterSystemCatalog(countedSystems, {
+      category: "all",
+      query: "",
+    });
+    const withLaunchables = filterSystemCatalog(countedSystems, {
+      category: "all",
+      query: "",
+      includeLaunchables: true,
+    });
+
+    expect(indexed.systems.map((system) => system.id)).toEqual(["SNES"]);
+    expect(withLaunchables.systems.map((system) => system.id)).toEqual([
+      "SNES",
+      "winamp",
+    ]);
+    expect(systemIsLaunchable({ zapScript: "zaparoo://winamp/Winamp" })).toBe(
+      true,
+    );
+    expect(systemIsLaunchable({ zapScript: "  " })).toBe(false);
+    expect(systemIsLaunchable({})).toBe(false);
   });
 
   it("should combine manufacturer and release-period filters", () => {
