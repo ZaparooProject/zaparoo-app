@@ -295,7 +295,9 @@ const safeInsets = useStatusStore((state) => state.safeInsets);
 </div>
 ```
 
-Safe area insets are automatically populated by `capacitor-plugin-safe-area` on app initialization.
+Safe area insets are populated on app initialization: from `capacitor-plugin-safe-area` on iOS, and from CSS `env(safe-area-inset-*)` on Android and web. On Android, Capacitor's `SystemBars` plugin keeps `env()` accurate when the keyboard opens or the device rotates. The plugin's raw window insets ignore the keyboard, which left a gap above it.
+
+System bar icons stay light on the dark app background. Both `StatusBar` and Capacitor's core `SystemBars` plugin are set to `DARK` in `capacitor.config.ts` and again in `App.tsx`. `SystemBars` re-applies its own style on every Android configuration change (rotation, fold, theme), so setting only `StatusBar` is not enough. On Android the theme in `styles.xml` disables the system bar contrast scrim and sets a `#111928` window background, so the bottom nav background shows behind the navigation buttons.
 
 ---
 

@@ -52,6 +52,25 @@ describe("safeArea", () => {
       expect(SafeArea.getSafeAreaInsets).not.toHaveBeenCalled();
     });
 
+    it("should use env() values on Android so keyboard insets apply", async () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
+
+      const { initSafeAreaInsets } = await import("@/lib/safeArea");
+      const setInsets = vi.fn();
+
+      await expect(initSafeAreaInsets(setInsets)).resolves.toBeNull();
+
+      expect(setInsets).toHaveBeenCalledWith({
+        top: "env(safe-area-inset-top, 0px)",
+        bottom: "env(safe-area-inset-bottom, 0px)",
+        left: "env(safe-area-inset-left, 0px)",
+        right: "env(safe-area-inset-right, 0px)",
+      });
+      expect(SafeArea.getSafeAreaInsets).not.toHaveBeenCalled();
+      expect(SafeArea.addListener).not.toHaveBeenCalled();
+    });
+
     it("should use SafeArea plugin values on native platform", async () => {
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
       vi.mocked(Capacitor.getPlatform).mockReturnValue("ios");

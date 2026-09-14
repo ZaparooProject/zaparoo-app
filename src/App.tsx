@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import toast, { Toaster } from "react-hot-toast";
+import { SystemBars, SystemBarsStyle } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
@@ -276,6 +277,14 @@ export default function App() {
         StatusBar.setStyle({ style: Style.Dark }),
       ]).catch((e) => {
         logger.warn("StatusBar setup failed:", e);
+      });
+    }
+
+    // SystemBars re-applies its own style on every configuration change
+    // (rotation, fold, theme), which overrides StatusBar unless it is set too.
+    if (isNativePluginAvailable("SystemBars")) {
+      SystemBars.setStyle({ style: SystemBarsStyle.Dark }).catch((e) => {
+        logger.warn("SystemBars setup failed:", e);
       });
     }
   }, []);

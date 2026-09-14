@@ -44,6 +44,10 @@ const config: CapacitorConfig = {
     },
     StatusBar: {
       overlaysWebView: true,
+      style: "DARK",
+    },
+    SystemBars: {
+      style: "DARK",
     },
     LiveUpdate: {
       appId: "e96c260c-3271-4895-bff0-de9f8ca4d05a",

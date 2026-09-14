@@ -103,6 +103,12 @@ vi.mock("@capacitor/core", () => ({
     isPluginAvailable: vi.fn(() => true),
   },
   registerPlugin: vi.fn(),
+  SystemBars: {
+    setStyle: vi.fn(() => Promise.resolve()),
+  },
+  SystemBarsStyle: {
+    Dark: "DARK",
+  },
 }));
 
 vi.mock("@uidotdev/usehooks", () => ({
@@ -453,6 +459,29 @@ describe("App Integration", () => {
     expect(StatusBar.setStyle).not.toHaveBeenCalled();
   });
 
+  it("should keep system bar icons light when SystemBars is available", async () => {
+    const { Capacitor, SystemBars } = await import("@capacitor/core");
+
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+
+    render(<App />);
+
+    expect(SystemBars.setStyle).toHaveBeenCalledWith({ style: "DARK" });
+  });
+
+  it("should skip SystemBars setup when native plugin is unavailable", async () => {
+    const { Capacitor, SystemBars } = await import("@capacitor/core");
+
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(isNativePluginAvailable).mockImplementation(
+      (pluginName: string) => pluginName !== "SystemBars",
+    );
+
+    render(<App />);
+
+    expect(SystemBars.setStyle).not.toHaveBeenCalled();
+  });
+
   it("should log non-critical StatusBar setup failures", async () => {
     const { Capacitor } = await import("@capacitor/core");
     const { StatusBar } = await import("@capacitor/status-bar");
@@ -466,6 +495,23 @@ describe("App Integration", () => {
     await waitFor(() => {
       expect(logger.warn).toHaveBeenCalledWith(
         "StatusBar setup failed:",
+        error,
+      );
+    });
+  });
+
+  it("should log non-critical SystemBars setup failures", async () => {
+    const { Capacitor, SystemBars } = await import("@capacitor/core");
+    const error = new Error("SystemBars unavailable");
+
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(SystemBars.setStyle).mockRejectedValueOnce(error);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(logger.warn).toHaveBeenCalledWith(
+        "SystemBars setup failed:",
         error,
       );
     });
