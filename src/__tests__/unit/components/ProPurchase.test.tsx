@@ -1,10 +1,15 @@
 import { act, render, renderHook, screen, waitFor, within } from "@/test-utils";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import {
   PurchaseSupportActions,
   useProPurchase,
 } from "@/components/ProPurchase";
+import { useWarpSubscription } from "@/hooks/useWarpSubscription";
+import {
+  __resetOfferingsForTests,
+  resolvePurchasesReady,
+} from "@/lib/purchasesSetup";
 import {
   PACKAGE_TYPE,
   PRODUCT_CATEGORY,
@@ -36,11 +41,13 @@ vi.mock("@capacitor/core", () => ({
 const {
   mockCopyDiagnostics,
   mockGetBillingDiagnostics,
+  mockGetSubscriptionStatus,
   mockReconcileStorePurchases,
   mockRestorePurchasesForUser,
 } = vi.hoisted(() => ({
   mockCopyDiagnostics: vi.fn(),
   mockGetBillingDiagnostics: vi.fn(),
+  mockGetSubscriptionStatus: vi.fn(),
   mockReconcileStorePurchases: vi.fn(),
   mockRestorePurchasesForUser: vi.fn(),
 }));
@@ -54,13 +61,17 @@ vi.mock("@capacitor/clipboard", () => ({
 vi.mock("@/lib/purchasesSetup", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/purchasesSetup")>()),
   getBillingDiagnostics: mockGetBillingDiagnostics,
-  purchasesReady: Promise.resolve(),
   reconcileStorePurchases: mockReconcileStorePurchases,
   restorePurchasesForUser: mockRestorePurchasesForUser,
   runPurchasesOperation: async (
     _appUserID: string | null,
     operation: (customerInfo: unknown) => Promise<unknown>,
   ) => operation({}),
+}));
+
+vi.mock("@/lib/onlineApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/onlineApi")>()),
+  getSubscriptionStatus: mockGetSubscriptionStatus,
 }));
 
 vi.mock("@revenuecat/purchases-capacitor", () => ({
@@ -75,6 +86,7 @@ vi.mock("@revenuecat/purchases-capacitor", () => ({
   },
   Purchases: {
     restorePurchases: vi.fn(),
+    getAppUserID: vi.fn(),
     getCustomerInfo: vi.fn(),
     getOfferings: vi.fn(),
     purchasePackage: vi.fn(),
@@ -215,8 +227,13 @@ function ProPurchaseHarness() {
 }
 
 describe("useProPurchase", () => {
+  beforeAll(() => {
+    resolvePurchasesReady();
+  });
+
   beforeEach(async () => {
     vi.clearAllMocks();
+    __resetOfferingsForTests();
     // Reset store state
     const { usePreferencesStore } = await import("@/lib/preferencesStore");
     usePreferencesStore.setState({
@@ -472,10 +489,12 @@ describe("useProPurchase", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("should distinguish a store eligibility failure and expose diagnostics", async () => {
+  it("should show a store eligibility failure with diagnostics without reporting it", async () => {
     const user = userEvent.setup();
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
     const { logger } = await import("@/lib/logger");
+    const { getCachedPurchaseErrorDiagnostics } =
+      await import("@/lib/purchaseReportContext");
     vi.mocked(Purchases.getOfferings).mockRejectedValue({
       message: "The device or user is not allowed to make the purchase.",
       code: "3",
@@ -489,23 +508,22 @@ describe("useProPurchase", () => {
     render(<ProPurchaseHarness />);
 
     await waitFor(() => {
-      expect(logger.error).toHaveBeenCalledWith(
-        "RevenueCat offerings unavailable",
-        expect.any(Error),
-        expect.objectContaining({
-          action: "getOfferings",
-          purchaseError: {
-            code: "3",
-            readableErrorCode: "PurchaseNotAllowedError",
-            underlyingErrorMessage: "Billing response: not allowed",
-            userCancelled: undefined,
-          },
-        }),
-      );
+      expect(getCachedPurchaseErrorDiagnostics()).toEqual({
+        code: "3",
+        readableErrorCode: "PurchaseNotAllowedError",
+        underlyingErrorMessage: "Billing response: not allowed",
+      });
     });
     await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
 
-    expect(screen.getByText("scan.purchaseProNotAllowed")).toBeInTheDocument();
+    expect(
+      await screen.findByText("scan.purchaseProNotAllowed"),
+    ).toBeInTheDocument();
+    expect(logger.error).not.toHaveBeenCalledWith(
+      "RevenueCat offerings unavailable",
+      expect.anything(),
+      expect.anything(),
+    );
     expect(
       screen.queryByRole("button", { name: "settings.app.restorePurchases" }),
     ).not.toBeInTheDocument();
@@ -547,6 +565,115 @@ describe("useProPurchase", () => {
         name: "settings.app.copyBillingDiagnostics",
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it("should reuse loaded offerings when another purchase screen mounts", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+
+    const { unmount } = render(<ProPurchaseHarness />);
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+    unmount();
+
+    render(<ProPurchaseHarness />);
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+
+    expect(
+      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+    ).toBeEnabled();
+    expect(Purchases.getOfferings).toHaveBeenCalledTimes(1);
+  });
+
+  it("should report a shared offerings failure once across purchase screens", async () => {
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { logger } = await import("@/lib/logger");
+    vi.mocked(Purchases.getOfferings).mockRejectedValue(
+      new Error("Network unavailable"),
+    );
+
+    const { unmount } = render(<ProPurchaseHarness />);
+    await waitFor(() => {
+      expect(logger.error).toHaveBeenCalledWith(
+        "RevenueCat offerings unavailable",
+        expect.any(Error),
+        expect.objectContaining({ action: "getOfferings" }),
+      );
+    });
+    unmount();
+
+    render(<ProPurchaseHarness />);
+
+    expect(
+      await screen.findByText("scan.purchaseProOfferingsError"),
+    ).toBeInTheDocument();
+    expect(
+      vi
+        .mocked(logger.error)
+        .mock.calls.filter(
+          ([message]) => message === "RevenueCat offerings unavailable",
+        ),
+    ).toHaveLength(1);
+    expect(Purchases.getOfferings).toHaveBeenCalledTimes(1);
+  });
+
+  it("should report a shared offerings failure once across Pro and Warp", async () => {
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { App } = await import("@capacitor/app");
+    const { logger } = await import("@/lib/logger");
+    vi.mocked(Purchases.getOfferings).mockRejectedValue(
+      new Error("Network unavailable"),
+    );
+    vi.mocked(Purchases.getAppUserID).mockResolvedValue({
+      appUserID: "user-123",
+    });
+    vi.mocked(App.addListener).mockResolvedValue({ remove: vi.fn() });
+    mockGetSubscriptionStatus.mockResolvedValue({
+      is_premium: false,
+      sources: [],
+      patreon: null,
+      revenuecat: null,
+    });
+
+    render(<ProPurchaseHarness />);
+    expect(
+      await screen.findByText("scan.purchaseProOfferingsError"),
+    ).toBeInTheDocument();
+
+    const { result } = renderHook(() => useWarpSubscription("user-123"));
+    await waitFor(() => expect(result.current.loadFailed).toBe(true));
+
+    expect(Purchases.getOfferings).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(
+      "RevenueCat offerings unavailable",
+      expect.any(Error),
+      expect.objectContaining({ action: "getOfferings" }),
+    );
+  });
+
+  it("should retry unavailable offerings when checkout opens", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.getOfferings)
+      .mockRejectedValueOnce(new Error("Network unavailable"))
+      .mockResolvedValueOnce(
+        createOfferings(createOffering([createPackage()])),
+      );
+
+    render(<ProPurchaseHarness />);
+    await screen.findByText("scan.purchaseProOfferingsError");
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+
+    expect(
+      await screen.findByText("scan.purchaseProP1 $6.99"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "scan.purchaseProAction" }),
+    ).toBeEnabled();
+    expect(Purchases.getOfferings).toHaveBeenCalledTimes(2);
   });
 
   it("should preserve checkout diagnostics when offerings reload successfully", async () => {
@@ -828,6 +955,29 @@ describe("useProPurchase", () => {
       expect(mockRestorePurchasesForUser).toHaveBeenCalledWith(null);
       expect(usePreferencesStore.getState().lifetimeProAccess).toBe(true);
     });
+  });
+
+  it("should tell the user when restore finds no purchases without reporting an error", async () => {
+    const user = userEvent.setup();
+    const toast = (await import("react-hot-toast")).default;
+    const { logger } = await import("@/lib/logger");
+    mockRestorePurchasesForUser.mockResolvedValue({
+      entitlements: { active: {} },
+    });
+
+    render(<PurchaseSupportActions />);
+    await user.click(
+      screen.getByRole("button", { name: "settings.app.restorePurchases" }),
+    );
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("settings.app.restoreNotFound");
+    });
+    expect(logger.error).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ category: "purchase" }),
+    );
   });
 
   it("should preserve store-verified Pro when RevenueCat restore finds no purchases", async () => {

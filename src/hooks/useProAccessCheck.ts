@@ -7,6 +7,9 @@ import { getPurchaseAccess, purchasesReady } from "@/lib/purchasesSetup";
 import { isNativePluginAvailable } from "@/lib/capacitorBridge";
 
 const PRO_ACCESS_HYDRATION_TIMEOUT_MS = 5_000;
+// Customer info that arrives after the splash timeout is still applied, so a
+// slow answer is only worth reporting when it never arrives.
+const PRO_ACCESS_REPORT_TIMEOUT_MS = 30_000;
 
 /**
  * Hydrates permanent Pro ownership from RevenueCat and keeps it current.
@@ -35,29 +38,48 @@ export function useProAccessCheck() {
     let active = true;
     let listenerToRemove: string | null = null;
     let hydrationStage: "purchasesReady" | "customerInfo" = "purchasesReady";
+    const startedAt = Date.now();
     let hydrationTimeout: ReturnType<typeof setTimeout> | null = setTimeout(
       () => {
         hydrationTimeout = null;
         if (!active) return;
 
-        logger.error("Pro access hydration timed out", {
-          category: "purchase",
-          action: "proAccessCheck",
-          severity: "warning",
-          timeoutMs: PRO_ACCESS_HYDRATION_TIMEOUT_MS,
-          stage: hydrationStage,
-        });
+        // Stop holding the splash; cached access applies until RevenueCat
+        // answers.
+        logger.log(
+          `Pro access still loading at ${hydrationStage} after ${PRO_ACCESS_HYDRATION_TIMEOUT_MS}ms`,
+        );
         setProAccessHydrated(true);
       },
       PRO_ACCESS_HYDRATION_TIMEOUT_MS,
     );
-
-    const finishHydration = () => {
+    let reportTimeout: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      reportTimeout = null;
       if (!active) return;
+
+      logger.error("Pro access check did not complete", {
+        category: "purchase",
+        action: "proAccessCheck",
+        severity: "warning",
+        elapsedMs: Date.now() - startedAt,
+        stage: hydrationStage,
+      });
+    }, PRO_ACCESS_REPORT_TIMEOUT_MS);
+
+    const clearTimers = () => {
       if (hydrationTimeout) {
         clearTimeout(hydrationTimeout);
         hydrationTimeout = null;
       }
+      if (reportTimeout) {
+        clearTimeout(reportTimeout);
+        reportTimeout = null;
+      }
+    };
+
+    const finishHydration = () => {
+      if (!active) return;
+      clearTimers();
       setProAccessHydrated(true);
     };
 
@@ -92,10 +114,7 @@ export function useProAccessCheck() {
 
     return () => {
       active = false;
-      if (hydrationTimeout) {
-        clearTimeout(hydrationTimeout);
-        hydrationTimeout = null;
-      }
+      clearTimers();
       if (listenerToRemove) {
         void Purchases.removeCustomerInfoUpdateListener({
           listenerToRemove,

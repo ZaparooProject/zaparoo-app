@@ -2,26 +2,35 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
-import { Purchases } from "@revenuecat/purchases-capacitor";
+import {
+  Purchases,
+  type PurchasesOfferings,
+} from "@revenuecat/purchases-capacitor";
 import type { SubscriptionResponse } from "@/lib/models";
 import { getSubscriptionStatus } from "@/lib/onlineApi";
 import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { useStatusStore } from "@/lib/store";
 import {
+  claimOfferingsReport,
   ensurePurchasesUser,
   getOfferingDiagnostics,
   getPurchaseAccess,
   getWarpPackages,
+  loadOfferings,
   runPurchasesOperation,
   WARP_OFFERING_ID,
   type WarpPackages,
 } from "@/lib/purchasesSetup";
 import {
+  getOnlineApiErrorContext,
   getPurchaseErrorDiagnostics,
+  isOnlineApiError,
   PurchaseCancelledError,
   PurchaseIdentityError,
+  PurchaseNotAllowedError,
   PurchasePendingError,
+  RequirementsNotMetError,
   wrapPurchaseError,
 } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -39,12 +48,14 @@ export type WarpPurchaseResult =
   | "identity_error"
   | "cancelled"
   | "busy"
+  | "requirements"
   | "failed";
 export type WarpRestoreResult =
   | "active"
   | "pro_restored"
   | "activation_pending"
   | "not_found"
+  | "requirements"
   | "failed";
 export type WarpManageResult = "opened" | "unavailable" | "failed";
 
@@ -98,6 +109,7 @@ export function useWarpSubscription(appUserID: string) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [packagesUnavailable, setPackagesUnavailable] = useState(false);
+  const [purchasesNotAllowed, setPurchasesNotAllowed] = useState(false);
   const [revenueCatWarpActive, setRevenueCatWarpActive] = useState(false);
   const [action, setAction] = useState<WarpAction>(null);
   const [activationPending, setActivationPending] = useState(false);
@@ -140,11 +152,13 @@ export function useWarpSubscription(appUserID: string) {
   );
 
   const loadAccount = useCallback(
-    async (signal: AbortSignal, silent = false) => {
+    async (signal: AbortSignal, silent = false, refreshOfferings = false) => {
       if (!mountedRef.current) return;
       if (!silent) setIsLoading(true);
       setLoadFailed(false);
       setPackagesUnavailable(false);
+      setPurchasesNotAllowed(false);
+      let offeringsRequest: Promise<PurchasesOfferings> | null = null;
 
       try {
         if (!Capacitor.isNativePlatform()) {
@@ -181,13 +195,17 @@ export function useWarpSubscription(appUserID: string) {
         }
 
         setActivationPending(false);
-        const offerings = await Purchases.getOfferings();
+        offeringsRequest = loadOfferings({ refresh: refreshOfferings });
+        const offerings = await offeringsRequest;
         if (signal.aborted) return;
 
         const warpPackages = getWarpPackages(offerings);
         setPackages(warpPackages);
         setPackagesUnavailable(!warpPackages);
-        if (!warpPackages) {
+        if (
+          !warpPackages &&
+          claimOfferingsReport(offeringsRequest, "warpUnavailable")
+        ) {
           logger.error(
             "RevenueCat Warp offering is unavailable",
             getOfferingDiagnostics(offerings, WARP_OFFERING_ID),
@@ -200,12 +218,41 @@ export function useWarpSubscription(appUserID: string) {
         }
       } catch (e) {
         if (signal.aborted) return;
+        setPackages(null);
+        const purchaseNotAllowed =
+          wrapPurchaseError(e) instanceof PurchaseNotAllowedError;
+        if (offeringsRequest && purchaseNotAllowed) {
+          // Subscription status loaded, but this device's store cannot sell.
+          // A retry cannot succeed, so this is not a failed status load.
+          setPurchasesNotAllowed(true);
+        } else {
+          setLoadFailed(true);
+        }
+        // A shared offerings failure is reported by the first screen to see it.
+        if (
+          offeringsRequest &&
+          !claimOfferingsReport(offeringsRequest, "failed")
+        ) {
+          return;
+        }
+        // The requirements modal is already open, and completing it reloads.
+        if (e instanceof RequirementsNotMetError) return;
+        if (isOnlineApiError(e)) {
+          logger.error("Failed to load Warp subscription", e, {
+            category: "api",
+            action: "loadSubscription",
+            severity: "warning",
+            ...getOnlineApiErrorContext(e),
+          });
+          return;
+        }
         const purchaseError = getPurchaseErrorDiagnostics(e);
         if (Object.keys(purchaseError).length > 0) {
           cachePurchaseErrorDiagnostics(purchaseError, "loadSubscription");
         }
-        setPackages(null);
-        setLoadFailed(true);
+        // Store billing that is unavailable on this device is an environment
+        // state, not an app defect; diagnostics stay cached for support.
+        if (purchaseNotAllowed) return;
         logger.error("Failed to load Warp subscription", e, {
           category: "purchase",
           action: "loadSubscription",
@@ -226,15 +273,17 @@ export function useWarpSubscription(appUserID: string) {
     const lifecycleController = new AbortController();
     let appStateHandle: { remove: () => Promise<void> } | null = null;
 
-    const startAccountLoad = (silent = false) => {
+    const startAccountLoad = (silent = false, refreshOfferings = false) => {
       accountLoadAbortRef.current?.abort();
       const loadController = new AbortController();
       accountLoadAbortRef.current = loadController;
-      void loadAccount(loadController.signal, silent).finally(() => {
-        if (accountLoadAbortRef.current === loadController) {
-          accountLoadAbortRef.current = null;
-        }
-      });
+      void loadAccount(loadController.signal, silent, refreshOfferings).finally(
+        () => {
+          if (accountLoadAbortRef.current === loadController) {
+            accountLoadAbortRef.current = null;
+          }
+        },
+      );
     };
 
     void Promise.resolve().then(() => {
@@ -248,7 +297,8 @@ export function useWarpSubscription(appUserID: string) {
       ) {
         return;
       }
-      startAccountLoad(true);
+      // The user may have changed store accounts while away.
+      startAccountLoad(true, true);
     })
       .then((handle) => {
         if (lifecycleController.signal.aborted) {
@@ -357,7 +407,7 @@ export function useWarpSubscription(appUserID: string) {
     if (!controller) return;
 
     try {
-      await loadAccount(controller.signal);
+      await loadAccount(controller.signal, false, true);
     } finally {
       finishAction();
     }
@@ -458,8 +508,14 @@ export function useWarpSubscription(appUserID: string) {
       if (controller.signal.aborted) return "cancelled";
       const wrappedError = wrapPurchaseError(e);
       if (wrappedError instanceof PurchaseCancelledError) return "cancelled";
+      // The requirements modal is already open, so this is not a failure.
+      if (e instanceof RequirementsNotMetError) return "requirements";
 
-      const purchaseError = getPurchaseErrorDiagnostics(e);
+      // Online API failures are not store errors and must not replace the
+      // cached billing diagnostics.
+      const purchaseError = isOnlineApiError(e)
+        ? {}
+        : getPurchaseErrorDiagnostics(e);
       if (Object.keys(purchaseError).length > 0) {
         cachePurchaseErrorDiagnostics(purchaseError, "purchasePackage");
       }
@@ -473,6 +529,7 @@ export function useWarpSubscription(appUserID: string) {
         action: "purchasePackage",
         severity: "warning",
         purchaseError,
+        ...getOnlineApiErrorContext(e),
       });
       return "failed";
     } finally {
@@ -550,18 +607,23 @@ export function useWarpSubscription(appUserID: string) {
       if (access.lifetimePro || storeVerifiedProAccess) return "pro_restored";
       return "not_found";
     } catch (e) {
-      if (!controller.signal.aborted) {
-        const purchaseError = getPurchaseErrorDiagnostics(e);
-        if (Object.keys(purchaseError).length > 0) {
-          cachePurchaseErrorDiagnostics(purchaseError, "restorePurchases");
-        }
-        logger.error("Purchase restore failed", e, {
-          category: "purchase",
-          action: "restorePurchases",
-          severity: "warning",
-          purchaseError,
-        });
+      if (controller.signal.aborted) return "failed";
+      // The requirements modal is already open, so this is not a failure.
+      if (e instanceof RequirementsNotMetError) return "requirements";
+
+      const purchaseError = isOnlineApiError(e)
+        ? {}
+        : getPurchaseErrorDiagnostics(e);
+      if (Object.keys(purchaseError).length > 0) {
+        cachePurchaseErrorDiagnostics(purchaseError, "restorePurchases");
       }
+      logger.error("Purchase restore failed", e, {
+        category: "purchase",
+        action: "restorePurchases",
+        severity: "warning",
+        purchaseError,
+        ...getOnlineApiErrorContext(e),
+      });
       return "failed";
     } finally {
       finishAction();
@@ -618,6 +680,7 @@ export function useWarpSubscription(appUserID: string) {
     isLoading,
     loadFailed,
     packagesUnavailable,
+    purchasesNotAllowed,
     revenueCatWarpActive,
     action,
     activationPending,

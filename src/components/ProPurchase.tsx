@@ -25,13 +25,14 @@ import {
   wrapPurchaseError,
 } from "@/lib/errors";
 import {
+  claimOfferingsReport,
   formatBillingDiagnostics,
   getBillingDiagnostics,
   getOfferingDiagnostics,
   getProPackage,
   getPurchaseAccess,
+  loadOfferings,
   PRO_OFFERING_ID,
-  purchasesReady,
   reconcileStorePurchases,
   restorePurchasesForUser,
   runPurchasesOperation,
@@ -261,6 +262,25 @@ export const useProPurchase = () => {
   const [offeringsStatus, setOfferingsStatus] = useState<OfferingsStatus>(() =>
     Capacitor.isNativePlatform() ? "loading" : "unsupported",
   );
+  const [offeringsReloads, setOfferingsReloads] = useState(0);
+  const [previousModalOpen, setPreviousModalOpen] =
+    useState(proPurchaseModalOpen);
+
+  // Offerings are shared for the session, so opening checkout is where a
+  // failed or incomplete result gets retried.
+  if (proPurchaseModalOpen !== previousModalOpen) {
+    setPreviousModalOpen(proPurchaseModalOpen);
+    if (
+      proPurchaseModalOpen &&
+      (offeringsStatus === "missing" ||
+        offeringsStatus === "not_allowed" ||
+        offeringsStatus === "error")
+    ) {
+      setLauncherPackage(null);
+      setOfferingsStatus("loading");
+      setOfferingsReloads((count) => count + 1);
+    }
+  }
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
@@ -268,42 +288,58 @@ export const useProPurchase = () => {
       return;
     }
 
+    let active = true;
     // Fetch explicit Pro offering so adding another offering cannot change
     // what the permanent Pro action purchases. Diagnostics are gathered
     // separately, on demand, so this checkout-critical fetch never waits on
     // extra bridge calls.
-    purchasesReady
-      .then(() => Purchases.getOfferings())
+    const request = loadOfferings({ refresh: offeringsReloads > 0 });
+    request
       .then((offerings) => {
         const purchasePackage = getProPackage(offerings);
 
-        if (purchasePackage) {
-          setLauncherPackage(purchasePackage);
-          setOfferingsStatus("available");
-          return;
+        if (
+          !purchasePackage &&
+          claimOfferingsReport(request, "proUnavailable")
+        ) {
+          logger.error(
+            "RevenueCat offerings returned no packages",
+            {
+              platform: Capacitor.getPlatform(),
+              ...getOfferingDiagnostics(offerings, PRO_OFFERING_ID),
+            },
+            {
+              category: "purchase",
+              action: "getOfferings",
+              severity: "warning",
+            },
+          );
         }
-
-        setLauncherPackage(null);
-        setOfferingsStatus("missing");
-        logger.error(
-          "RevenueCat offerings returned no packages",
-          {
-            platform: Capacitor.getPlatform(),
-            ...getOfferingDiagnostics(offerings, PRO_OFFERING_ID),
-          },
-          {
-            category: "purchase",
-            action: "getOfferings",
-            severity: "warning",
-          },
-        );
+        if (!active) return;
+        setLauncherPackage(purchasePackage);
+        setOfferingsStatus(purchasePackage ? "available" : "missing");
       })
       .catch((e) => {
         const wrappedError = wrapPurchaseError(e);
-        const purchaseError = getPurchaseErrorDiagnostics(e);
-        if (Object.keys(purchaseError).length > 0) {
-          cachePurchaseErrorDiagnostics(purchaseError, "getOfferings");
+        if (claimOfferingsReport(request, "failed")) {
+          const purchaseError = getPurchaseErrorDiagnostics(e);
+          if (Object.keys(purchaseError).length > 0) {
+            cachePurchaseErrorDiagnostics(purchaseError, "getOfferings");
+          }
+          // Devices without usable store billing (no Play services, outdated
+          // store, restricted accounts) reject every offerings fetch. That is
+          // an environment state shown in the modal, not an app defect; the
+          // cached diagnostics still reach support through the copy action.
+          if (!(wrappedError instanceof PurchaseNotAllowedError)) {
+            logger.error("RevenueCat offerings unavailable", wrappedError, {
+              category: "purchase",
+              action: "getOfferings",
+              severity: "warning",
+              purchaseError,
+            });
+          }
         }
+        if (!active) return;
         setLauncherPackage(null);
         setOfferingsStatus(
           wrappedError instanceof PurchaseNotAllowedError
@@ -312,13 +348,15 @@ export const useProPurchase = () => {
               ? "missing"
               : "error",
         );
-        logger.error("RevenueCat offerings unavailable", wrappedError, {
-          category: "purchase",
-          action: "getOfferings",
-          severity: "warning",
-          purchaseError,
-        });
       });
+
+    return () => {
+      active = false;
+    };
+  }, [offeringsReloads]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
 
     // Skip customer info check if already hydrated (initial state already set)
     const proAccessHydrated = usePreferencesStore.getState()._proAccessHydrated;
@@ -397,15 +435,9 @@ export function PurchaseSupportActions({
         return;
       }
 
-      logger.error(
-        "Purchase restore found no active entitlements",
-        new Error("No active purchases found after store restore"),
-        {
-          category: "purchase",
-          action: "restorePurchasesNotFound",
-          severity: "warning",
-        },
-      );
+      // Restoring an account with nothing to restore is a normal outcome that
+      // the toast already explains, not an error to report.
+      logger.log("Purchase restore found no active entitlements");
       toast.error(t("settings.app.restoreNotFound"));
     } catch (error) {
       const purchaseError = getPurchaseErrorDiagnostics(error);

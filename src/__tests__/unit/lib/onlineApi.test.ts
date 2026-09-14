@@ -18,6 +18,7 @@ import {
   type User,
 } from "@capacitor-firebase/authentication";
 import { useStatusStore } from "../../../lib/store";
+import { RequirementsNotMetError } from "@/lib/errors";
 
 type PartialStoreState = Pick<
   ReturnType<typeof useStatusStore.getState>,
@@ -469,9 +470,12 @@ describe("onlineApi", () => {
 
       // Call the interceptor error handler
       expect(responseInterceptorError).not.toBeNull();
-      await expect(responseInterceptorError!(mockError)).rejects.toBe(
-        mockError,
-      );
+      const rejection = responseInterceptorError!(mockError);
+      await expect(rejection).rejects.toBeInstanceOf(RequirementsNotMetError);
+      await expect(rejection).rejects.toMatchObject({
+        requirements: mockRequirements,
+        originalError: mockError,
+      });
 
       expect(mockTrigger).toHaveBeenCalledWith(mockRequirements);
     });
@@ -496,52 +500,37 @@ describe("onlineApi", () => {
       expect(mockTrigger).not.toHaveBeenCalled();
     });
 
-    it("should not trigger requirements modal when requirements array is empty", async () => {
-      const mockError = {
-        response: {
-          data: {
-            error: {
-              code: "requirements_not_met",
-              requirements: [],
+    it.each([
+      ["missing", undefined],
+      ["empty", []],
+      ["null", [null]],
+      ["untyped", [{ description: "Accept the terms" }]],
+      [
+        "partly malformed",
+        [{ type: "terms_acceptance", description: "Accept the terms" }, null],
+      ],
+    ])(
+      "should keep the original error without opening the modal for %s requirements",
+      async (_label, requirements) => {
+        const mockError = {
+          response: {
+            data: {
+              error: {
+                code: "requirements_not_met",
+                requirements,
+              },
             },
           },
-        },
-      };
+        };
 
-      expect(responseInterceptorError).not.toBeNull();
-      await expect(responseInterceptorError!(mockError)).rejects.toBe(
-        mockError,
-      );
+        expect(responseInterceptorError).not.toBeNull();
+        await expect(responseInterceptorError!(mockError)).rejects.toBe(
+          mockError,
+        );
 
-      expect(mockTrigger).not.toHaveBeenCalled();
-    });
-
-    it("should still reject the promise after triggering requirements", async () => {
-      const mockRequirements = [
-        { type: "email_verification", message: "Please verify email" },
-      ];
-
-      const mockError = {
-        response: {
-          data: {
-            error: {
-              code: "requirements_not_met",
-              requirements: mockRequirements,
-            },
-          },
-        },
-      };
-
-      expect(responseInterceptorError).not.toBeNull();
-
-      // The interceptor should both trigger the modal AND reject the promise
-      await expect(responseInterceptorError!(mockError)).rejects.toBe(
-        mockError,
-      );
-
-      // Verify the trigger was called
-      expect(mockTrigger).toHaveBeenCalledTimes(1);
-    });
+        expect(mockTrigger).not.toHaveBeenCalled();
+      },
+    );
 
     it("should pass through successful responses unchanged", () => {
       const mockResponse = { data: { success: true } };

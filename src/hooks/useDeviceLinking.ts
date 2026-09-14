@@ -10,6 +10,10 @@ import {
 } from "@/lib/coreApi";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { createDeviceClaim, NotSignedInError } from "@/lib/onlineApi";
+import {
+  getOnlineApiErrorContext,
+  RequirementsNotMetError,
+} from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const ZAPAROO_API_URL = "https://api.zaparoo.com";
@@ -109,11 +113,16 @@ export function useDeviceLinking(enabled: boolean) {
       if (!mountedRef.current) return;
 
       void queryClient.invalidateQueries({ queryKey: statusQueryKey });
+      // The requirements modal is already open for unmet account
+      // requirements, so this is neither a failure to report nor to show.
+      if (error instanceof RequirementsNotMetError) return;
+
       logger.error("Device linking failed", error, {
         category: "api",
         action:
           stage === "claim" ? "deviceLink.createClaim" : "deviceLink.redeem",
         severity: "error",
+        ...getOnlineApiErrorContext(error),
       });
 
       if (timedOut || isRequestCancelledError(error)) {

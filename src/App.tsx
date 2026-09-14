@@ -11,11 +11,16 @@ import { InboxModal } from "@/components/InboxModal";
 import { PAGE_SCROLL_RESTORATION_SELECTOR } from "@/components/PageFrame";
 import { StagedTokenModal } from "@/components/home/StagedTokenModal";
 import { useAppReviewPrompt } from "@/hooks/useAppReviewPrompt";
+import { useRequirementsStore } from "@/hooks/useRequirementsModal";
 import {
   isNativePluginAvailable,
   isPluginAvailable,
 } from "@/lib/capacitorBridge";
 import { useDeepLinks } from "@/lib/deepLinks";
+import {
+  getOnlineApiErrorContext,
+  RequirementsNotMetError,
+} from "@/lib/errors";
 import { DatabaseIcon, PlayIcon } from "@/lib/images";
 import {
   ensurePurchasesUser,
@@ -35,6 +40,7 @@ import { useProAccessCheck } from "./hooks/useProAccessCheck";
 import { useNfcAvailabilityCheck } from "./hooks/useNfcAvailabilityCheck";
 import { useCameraAvailabilityCheck } from "./hooks/useCameraAvailabilityCheck";
 import { useAccelerometerAvailabilityCheck } from "./hooks/useAccelerometerAvailabilityCheck";
+import { usePreferenceHydrationRecovery } from "./hooks/usePreferenceHydrationRecovery";
 import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
 import { WriteModal } from "./components/WriteModal";
@@ -50,6 +56,7 @@ void preloadZapLogo();
 
 const SUBSCRIPTION_STATUS_RETRY_DELAY_MS = 500;
 const STARTUP_CAPABILITY_TIMEOUT_MS = 6_000;
+const LIVE_UPDATE_SHELL_WAIT_MS = 3_000;
 
 function waitForSubscriptionRetry(signal: AbortSignal): Promise<void> {
   if (signal.aborted) return Promise.reject(signal.reason);
@@ -76,10 +83,18 @@ async function getSubscriptionStatusWithRetry(
   try {
     return await getSubscriptionStatus(signal);
   } catch (error) {
-    if (signal.aborted) throw error;
+    if (signal.aborted || !isRetryableSubscriptionError(error)) throw error;
     await waitForSubscriptionRetry(signal);
     return getSubscriptionStatus(signal);
   }
+}
+
+// Client errors such as unmet account requirements fail the same way again;
+// only server and network failures are worth a second attempt.
+function isRetryableSubscriptionError(error: unknown): boolean {
+  if (error instanceof RequirementsNotMetError) return false;
+  const { httpStatus } = getOnlineApiErrorContext(error);
+  return httpStatus === undefined || httpStatus >= 500;
 }
 
 // Component to initialize queue processors and passive listeners after preferences hydrate
@@ -233,6 +248,9 @@ export default function App() {
   const preferencesHydrationSucceeded = usePreferencesStore(
     (state) => state._preferencesHydrationSucceeded,
   );
+  const preferencesHydrationTimedOut = usePreferencesStore(
+    (state) => state._preferencesHydrationTimedOut,
+  );
   const proAccessHydrated = usePreferencesStore(
     (state) => state._proAccessHydrated,
   );
@@ -269,6 +287,7 @@ export default function App() {
   useCameraAvailabilityCheck();
   useAccelerometerAvailabilityCheck();
   useAppReviewPrompt();
+  usePreferenceHydrationRecovery();
 
   const capabilityHydrationReady =
     proAccessHydrated &&
@@ -296,12 +315,14 @@ export default function App() {
   useEffect(() => {
     if (capabilityHydrationReady) return;
 
+    const startedAt = Date.now();
     const timeout = window.setTimeout(() => {
+      // Startup continues with cached values and late results still apply.
       logger.error("Startup capability hydration timed out", {
         category: "lifecycle",
         action: "hydrateStartupCapabilities",
-        severity: "warning",
-        timeoutMs: STARTUP_CAPABILITY_TIMEOUT_MS,
+        severity: "info",
+        elapsedMs: Date.now() - startedAt,
         unresolvedGates: unresolvedCapabilityGatesRef.current,
       });
       setCapabilityHydrationTimedOut(true);
@@ -310,11 +331,34 @@ export default function App() {
     return () => window.clearTimeout(timeout);
   }, [capabilityHydrationReady]);
 
+  // Capability probes hold the splash for layout stability, not bundle health.
+  // Live update rollback protection waits for the rendered shell, but only
+  // briefly on slow probes so ready() lands well inside the plugin's
+  // readyTimeout.
+  const [liveUpdateShellWaitElapsed, setLiveUpdateShellWaitElapsed] =
+    useState(false);
+
+  useEffect(() => {
+    if (capabilityHydrationReady) return;
+
+    const timeout = window.setTimeout(() => {
+      setLiveUpdateShellWaitElapsed(true);
+    }, LIVE_UPDATE_SHELL_WAIT_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [capabilityHydrationReady]);
+
   const startupReady =
     hasHydrated && (capabilityHydrationReady || capabilityHydrationTimedOut);
-  // A degraded preference fallback may render the shell, but must not accept
-  // an OTA bundle that failed its durable-storage compatibility check.
-  useLiveUpdate(startupReady && preferencesHydrationSucceeded);
+  // A storage timeout is a stalled native bridge, not a broken bundle. Other
+  // preference failures (e.g. the plugin missing from this binary) still
+  // withhold ready() so an incompatible OTA bundle is rolled back.
+  const preferencesSettled =
+    hasHydrated &&
+    (preferencesHydrationSucceeded || preferencesHydrationTimedOut);
+  useLiveUpdate(
+    preferencesSettled && (startupReady || liveUpdateShellWaitElapsed),
+  );
 
   const setLoggedInUser = useStatusStore((state) => state.setLoggedInUser);
   const setLifetimeProAccess = usePreferencesStore(
@@ -339,6 +383,58 @@ export default function App() {
     if (!isPluginAvailable("FirebaseAuthentication")) {
       return undefined;
     }
+
+    const checkOnlinePremiumAccess = async (
+      appUserID: string,
+      generation: number,
+    ) => {
+      subscriptionController?.abort();
+      const controller = new AbortController();
+      subscriptionController = controller;
+      const isCurrentCheck = () =>
+        active &&
+        !controller.signal.aborted &&
+        generation === authChangeGeneration &&
+        useStatusStore.getState().loggedInUser?.uid === appUserID;
+
+      try {
+        const { is_premium } = await getSubscriptionStatusWithRetry(
+          controller.signal,
+        );
+        if (!isCurrentCheck()) return;
+        setOnlinePremiumAccess(is_premium);
+      } catch (e) {
+        if (!isCurrentCheck()) return;
+        setOnlinePremiumAccess(false);
+        // The requirements modal is already asking the user to finish setup,
+        // and completing it checks again.
+        if (e instanceof RequirementsNotMetError) return;
+        logger.error("Failed to check subscription status:", e, {
+          category: "api",
+          action: "getSubscription",
+          severity: "warning",
+          ...getOnlineApiErrorContext(e),
+        });
+      } finally {
+        if (subscriptionController === controller) {
+          subscriptionController = null;
+        }
+      }
+    };
+
+    // The Online API withholds subscription status until account requirements
+    // are met, so recheck once the user completes them instead of leaving a
+    // subscriber without Pro until the next sign-in or launch.
+    const unsubscribeRequirements = useRequirementsStore.subscribe(
+      (state, previousState) => {
+        if (state.completionRevision === previousState.completionRevision) {
+          return;
+        }
+        const appUserID = useStatusStore.getState().loggedInUser?.uid;
+        if (!active || !appUserID) return;
+        void checkOnlinePremiumAccess(appUserID, authChangeGeneration);
+      },
+    );
 
     FirebaseAuthentication.addListener("authStateChange", async (change) => {
       if (!active) return;
@@ -400,41 +496,7 @@ export default function App() {
       }
 
       if (change.user) {
-        const appUserID = change.user.uid;
-        const controller = new AbortController();
-        subscriptionController = controller;
-        try {
-          const { is_premium } = await getSubscriptionStatusWithRetry(
-            controller.signal,
-          );
-          if (
-            !active ||
-            generation !== authChangeGeneration ||
-            useStatusStore.getState().loggedInUser?.uid !== appUserID
-          ) {
-            return;
-          }
-          setOnlinePremiumAccess(is_premium);
-        } catch (e) {
-          if (controller.signal.aborted) return;
-          if (
-            !active ||
-            generation !== authChangeGeneration ||
-            useStatusStore.getState().loggedInUser?.uid !== appUserID
-          ) {
-            return;
-          }
-          setOnlinePremiumAccess(false);
-          logger.error("Failed to check subscription status:", e, {
-            category: "api",
-            action: "getSubscription",
-            severity: "warning",
-          });
-        } finally {
-          if (subscriptionController === controller) {
-            subscriptionController = null;
-          }
-        }
+        await checkOnlinePremiumAccess(change.user.uid, generation);
       }
     })
       .then((handle) => {
@@ -454,6 +516,7 @@ export default function App() {
       active = false;
       authChangeGeneration += 1;
       subscriptionController?.abort();
+      unsubscribeRequirements();
       cleanup?.();
     };
   }, [

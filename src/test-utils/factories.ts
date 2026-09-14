@@ -1,4 +1,9 @@
 import { faker } from "@faker-js/faker";
+import {
+  AxiosError,
+  AxiosHeaders,
+  type InternalAxiosRequestConfig,
+} from "axios";
 import { InboxMessage, InboxSeverity, ReaderInfo } from "../lib/models";
 import type {
   RuntimeReleaseIdentity,
@@ -57,3 +62,35 @@ export const buildWhatsNewAnnouncement = (
   items: ["First test item", "Second test item"],
   ...overrides,
 });
+
+export const buildOnlineApiError = ({
+  status = 500,
+  code,
+  method = "get",
+  url = "/account/subscription",
+}: {
+  status?: number;
+  code?: string;
+  method?: string;
+  url?: string;
+} = {}): AxiosError => {
+  const config = {
+    method,
+    url,
+    headers: new AxiosHeaders(),
+  } as InternalAxiosRequestConfig;
+
+  return new AxiosError(
+    `Request failed with status code ${status}`,
+    status >= 500 ? AxiosError.ERR_BAD_RESPONSE : AxiosError.ERR_BAD_REQUEST,
+    config,
+    undefined,
+    {
+      status,
+      statusText: "",
+      headers: {},
+      config,
+      data: code ? { error: { code } } : {},
+    },
+  );
+};

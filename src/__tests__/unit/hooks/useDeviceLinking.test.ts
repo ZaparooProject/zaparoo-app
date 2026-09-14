@@ -4,6 +4,7 @@ import {
   DEVICE_LINK_TIMEOUT_MS,
   useDeviceLinking,
 } from "@/hooks/useDeviceLinking";
+import { RequirementsNotMetError } from "@/lib/errors";
 import { NotSignedInError } from "@/lib/onlineApi";
 
 const {
@@ -151,7 +152,8 @@ describe("useDeviceLinking", () => {
   it("should surface claim rate limits", async () => {
     mockCreateDeviceClaim.mockRejectedValue({
       isAxiosError: true,
-      response: { status: 429 },
+      response: { status: 429, data: { error: { code: "rate_limited" } } },
+      config: { method: "post", url: "/device-claims" },
     });
     const { result } = renderHook(() => useDeviceLinking(true));
     await waitFor(() => expect(result.current.state).toBe("unlinked"));
@@ -162,6 +164,30 @@ describe("useDeviceLinking", () => {
       "online.deviceLink.rateLimited",
     );
     expect(mockSettingsAuthClaim).not.toHaveBeenCalled();
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      "Device linking failed",
+      expect.anything(),
+      expect.objectContaining({
+        action: "deviceLink.createClaim",
+        httpStatus: 429,
+        apiErrorCode: "rate_limited",
+        requestMethod: "POST",
+        requestPath: "/device-claims",
+      }),
+    );
+  });
+
+  it("should leave unmet account requirements to the requirements modal", async () => {
+    mockCreateDeviceClaim.mockRejectedValue(new RequirementsNotMetError());
+    const { result } = renderHook(() => useDeviceLinking(true));
+    await waitFor(() => expect(result.current.state).toBe("unlinked"));
+
+    await act(async () => result.current.linkDevice());
+
+    expect(mockSettingsAuthClaim).not.toHaveBeenCalled();
+    expect(mockLoggerError).not.toHaveBeenCalled();
+    expect(mockToastError).not.toHaveBeenCalled();
+    expect(result.current.state).toBe("unlinked");
   });
 
   it("should distinguish Core redemption failures", async () => {

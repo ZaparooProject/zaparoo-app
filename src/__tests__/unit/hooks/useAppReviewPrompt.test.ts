@@ -72,6 +72,7 @@ describe("useAppReviewPrompt", () => {
 
     usePreferencesStore.setState({
       _hasHydrated: true,
+      _preferencesHydrationSucceeded: true,
       appReviewCadence: { ...DEFAULT_APP_REVIEW_CADENCE },
     });
     useStatusStore.setState({
@@ -83,6 +84,32 @@ describe("useAppReviewPrompt", () => {
       inboxModalOpen: false,
       stagedToken: null,
     });
+  });
+
+  it("should not track launches until saved preferences load", async () => {
+    usePreferencesStore.setState({ _preferencesHydrationSucceeded: false });
+    makeNextLaunchEligible();
+    const { rerender } = renderHook(() => useAppReviewPrompt());
+
+    act(() => {
+      useStatusStore.setState({ playing: playing("Chrono Trigger") });
+    });
+    rerender();
+    await advanceToPrompt();
+
+    expect(
+      usePreferencesStore.getState().appReviewCadence.successfulLaunchCount,
+    ).toBe(4);
+    expect(AppReview.requestReview).not.toHaveBeenCalled();
+
+    act(() => {
+      usePreferencesStore.setState({ _preferencesHydrationSucceeded: true });
+    });
+    rerender();
+
+    expect(
+      usePreferencesStore.getState().appReviewCadence.successfulLaunchCount,
+    ).toBe(5);
   });
 
   it("should count only new non-empty primary media", () => {

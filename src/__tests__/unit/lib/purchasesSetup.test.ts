@@ -72,12 +72,15 @@ vi.mock("@/lib/preferencesStore", () => ({
 
 import { PurchaseIdentityError } from "@/lib/errors";
 import {
+  __resetOfferingsForTests,
   ensurePurchasesUser,
+  claimOfferingsReport,
   formatBillingDiagnostics,
   getBillingDiagnostics,
   getProPackage,
   getPurchaseAccess,
   getWarpPackages,
+  loadOfferings,
   reconcileStorePurchases,
   resetPurchasesUser,
   resolvePurchasesReady,
@@ -135,6 +138,7 @@ describe("purchasesSetup", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    __resetOfferingsForTests();
     mockIsNativePlatform.mockReturnValue(true);
     mockGetAppUserID.mockResolvedValue({ appUserID: "anonymous" });
     mockLogIn.mockResolvedValue({ customerInfo: customerInfo() });
@@ -319,6 +323,74 @@ describe("purchasesSetup", () => {
     );
     expect(formatted).toContain("access_token=[REDACTED]");
     expect(formatted).not.toContain("private-value");
+  });
+
+  describe("shared offerings", () => {
+    it("should reuse loaded offerings until a refresh is requested", async () => {
+      const first = offerings();
+      const refreshed = offerings();
+      mockGetOfferings
+        .mockResolvedValueOnce(first)
+        .mockResolvedValueOnce(refreshed);
+
+      await expect(loadOfferings()).resolves.toBe(first);
+      await expect(loadOfferings()).resolves.toBe(first);
+      expect(mockGetOfferings).toHaveBeenCalledTimes(1);
+
+      await expect(loadOfferings({ refresh: true })).resolves.toBe(refreshed);
+      await expect(loadOfferings()).resolves.toBe(refreshed);
+      expect(mockGetOfferings).toHaveBeenCalledTimes(2);
+    });
+
+    it("should keep a failed load until a refresh retries it", async () => {
+      const loaded = offerings();
+      mockGetOfferings
+        .mockRejectedValueOnce(new Error("Network unavailable"))
+        .mockResolvedValueOnce(loaded);
+
+      await expect(loadOfferings()).rejects.toThrow("Network unavailable");
+      await expect(loadOfferings()).rejects.toThrow("Network unavailable");
+      expect(mockGetOfferings).toHaveBeenCalledTimes(1);
+
+      await expect(loadOfferings({ refresh: true })).resolves.toBe(loaded);
+      expect(mockGetOfferings).toHaveBeenCalledTimes(2);
+    });
+
+    it("should join an in-flight load when a refresh is requested", async () => {
+      const loaded = offerings();
+      let resolveOfferings!: (value: PurchasesOfferings) => void;
+      mockGetOfferings.mockReturnValueOnce(
+        new Promise<PurchasesOfferings>((resolve) => {
+          resolveOfferings = resolve;
+        }),
+      );
+
+      const initial = loadOfferings();
+      const refresh = loadOfferings({ refresh: true });
+      await vi.waitFor(() => expect(mockGetOfferings).toHaveBeenCalled());
+      resolveOfferings(loaded);
+
+      await expect(initial).resolves.toBe(loaded);
+      await expect(refresh).resolves.toBe(loaded);
+      expect(mockGetOfferings).toHaveBeenCalledTimes(1);
+    });
+
+    it("should let each report about a shared request be claimed once", async () => {
+      mockGetOfferings.mockResolvedValue(offerings());
+      const shared = loadOfferings();
+      await shared;
+
+      expect(claimOfferingsReport(shared, "proUnavailable")).toBe(true);
+      expect(claimOfferingsReport(loadOfferings(), "proUnavailable")).toBe(
+        false,
+      );
+      expect(claimOfferingsReport(shared, "warpUnavailable")).toBe(true);
+      expect(claimOfferingsReport(shared, "warpUnavailable")).toBe(false);
+
+      const refreshed = loadOfferings({ refresh: true });
+      await refreshed;
+      expect(claimOfferingsReport(refreshed, "proUnavailable")).toBe(true);
+    });
   });
 
   it("should report unavailable offerings without a store API key", async () => {
