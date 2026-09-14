@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import { ScreenReader } from "@capacitor/screen-reader";
 import { Capacitor } from "@capacitor/core";
 
+// Last state any mounted hook detected. A remounted list starts in its settled
+// layout, so its page restores scroll against the height it was saved from.
+let lastDetected: boolean | undefined;
+
+export function __resetScreenReaderDetectionForTests(): void {
+  lastDetected = undefined;
+}
+
 /**
  * Hook that detects if a screen reader (VoiceOver/TalkBack) is currently enabled.
  *
@@ -11,7 +19,9 @@ import { Capacitor } from "@capacitor/core";
 export function useScreenReaderEnabled(): boolean {
   // Start native sessions in accessible mode until plugin detection resolves,
   // avoiding a brief inaccessible virtualized tree for screen-reader users.
-  const [isEnabled, setIsEnabled] = useState(Capacitor.isNativePlatform());
+  const [isEnabled, setIsEnabled] = useState(
+    () => Capacitor.isNativePlatform() && (lastDetected ?? true),
+  );
 
   useEffect(() => {
     // Screen reader detection only works on native platforms
@@ -19,16 +29,19 @@ export function useScreenReaderEnabled(): boolean {
       return;
     }
 
+    const update = (value: boolean) => {
+      lastDetected = value;
+      setIsEnabled(value);
+    };
+
     // Check initial state
     ScreenReader.isEnabled()
-      .then(({ value }) => {
-        setIsEnabled(value);
-      })
-      .catch(() => setIsEnabled(false));
+      .then(({ value }) => update(value))
+      .catch(() => update(false));
 
     // Listen for changes
     const listener = ScreenReader.addListener("stateChange", ({ value }) => {
-      setIsEnabled(value);
+      update(value);
     });
 
     return () => {

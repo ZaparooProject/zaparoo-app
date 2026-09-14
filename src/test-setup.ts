@@ -108,6 +108,14 @@ afterEach(async () => {
   } catch {
     // lib/nfc is mocked without the test-reset export in this file
   }
+  // Forget the detected screen reader state so native hooks start accessible.
+  // Many files mock this hook without the reset export, so ignore those.
+  try {
+    const screenReaderModule = await import("@/hooks/useScreenReaderEnabled");
+    screenReaderModule.__resetScreenReaderDetectionForTests();
+  } catch {
+    // useScreenReaderEnabled is mocked without the test-reset export
+  }
   // Reset LiveUpdate mock state between tests
   __resetLiveUpdateMock();
   // Reset SecureStorage mock state between tests

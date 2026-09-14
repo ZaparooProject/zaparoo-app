@@ -43,6 +43,21 @@ describe("useScreenReaderEnabled", () => {
     });
   });
 
+  it("should start a remount in the last detected state", async () => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(ScreenReader.isEnabled).mockResolvedValue({ value: false });
+    const view = renderHook(() => useScreenReaderEnabled());
+    await waitFor(() => expect(view.result.current).toBe(false));
+    view.unmount();
+
+    // A remounted list must not flash the accessible layout, which has a
+    // different height than the virtualized one its scroll was saved from.
+    vi.mocked(ScreenReader.isEnabled).mockReturnValue(new Promise(() => {}));
+    const { result } = renderHook(() => useScreenReaderEnabled());
+
+    expect(result.current).toBe(false);
+  });
+
   it("should subscribe to state changes on native platform", async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     vi.mocked(ScreenReader.isEnabled).mockResolvedValue({ value: false });
