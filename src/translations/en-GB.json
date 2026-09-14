@@ -87,6 +87,7 @@
       "itemCount_other": "{{count}} items",
       "loadingMore": "Loading more...",
       "loadMore": "Load more",
+      "loadEarlier": "Load earlier",
       "loadedMore_one": "{{count}} more item loaded",
       "loadedMore_other": "{{count}} more items loaded",
       "folder": "Folder",

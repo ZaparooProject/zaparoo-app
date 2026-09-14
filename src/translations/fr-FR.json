@@ -87,6 +87,7 @@
       "itemCount_other": "{{count}} éléments",
       "loadingMore": "Chargement supplémentaire...",
       "loadMore": "Charger plus",
+      "loadEarlier": "Charger les précédents",
       "loadedMore_one": "{{count}} élément supplémentaire chargé",
       "loadedMore_other": "{{count}} éléments supplémentaires chargés",
       "folder": "Dossier",

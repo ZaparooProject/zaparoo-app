@@ -23,7 +23,7 @@ import {
 } from "@/lib/systemFilters";
 import { useStatusStore } from "@/lib/store";
 import {
-  libraryBrowseScrollKey,
+  forgetLibraryBrowse,
   useLibrarySessionStore,
 } from "@/lib/librarySessionStore";
 import { useTabSessionStore } from "@/lib/tabSessionStore";
@@ -157,7 +157,7 @@ export function Library() {
     manufacturerFilter !== "" || releasePeriod !== "any" || sort !== "name-asc";
   const beginSystemNavigation = (systemId: string) => {
     const path = folderLevels[systemId]?.at(-1)?.path ?? "";
-    forgetScroll(libraryBrowseScrollKey(systemId, mediaSort, path));
+    forgetLibraryBrowse(systemId, mediaSort, path);
   };
 
   const withLibrarySections = (systemsContent: ReactNode) => (

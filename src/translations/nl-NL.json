@@ -87,6 +87,7 @@
       "itemCount_other": "{{count}} items",
       "loadingMore": "Meer laden...",
       "loadMore": "Meer laden",
+      "loadEarlier": "Eerdere laden",
       "loadedMore_one": "Nog {{count}} item geladen",
       "loadedMore_other": "Nog {{count}} items geladen",
       "folder": "Map",

@@ -87,6 +87,7 @@
       "itemCount_other": "{{count}} 个项目",
       "loadingMore": "正在加载更多...",
       "loadMore": "加载更多",
+      "loadEarlier": "加载前面的内容",
       "loadedMore_one": "已加载另外 {{count}} 个项目",
       "loadedMore_other": "已加载另外 {{count}} 个项目",
       "folder": "文件夹",

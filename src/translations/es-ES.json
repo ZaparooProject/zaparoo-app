@@ -87,6 +87,7 @@
       "itemCount_other": "{{count}} elementos",
       "loadingMore": "Cargando más...",
       "loadMore": "Cargar más",
+      "loadEarlier": "Cargar anteriores",
       "loadedMore_one": "{{count}} elemento más cargado",
       "loadedMore_other": "{{count}} elementos más cargados",
       "folder": "Carpeta",

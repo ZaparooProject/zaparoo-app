@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { CoreAPI } from "@/lib/coreApi";
-import { LIBRARY_QUERY_KEYS } from "@/lib/libraryMedia";
+import { libraryBrowseIndexQueryOptions } from "@/lib/libraryBrowse";
 import type { MediaBrowseIndexGroup, MediaBrowseSort } from "@/lib/models";
 import { SlideModal } from "@/components/SlideModal";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -22,24 +21,13 @@ export function LibraryLetterJumpModal(props: {
   const { t } = useTranslation();
   const handleHapticPress = useHapticPress();
   const indexQuery = useQuery({
-    queryKey: [
-      LIBRARY_QUERY_KEYS.browseIndex,
-      props.deviceKey,
-      props.systemId,
-      props.path,
-      props.sort,
-    ],
-    queryFn: ({ signal }) =>
-      CoreAPI.mediaBrowseIndex(
-        {
-          path: props.path,
-          systems: [props.systemId],
-          sort: props.sort,
-        },
-        signal,
-      ),
+    ...libraryBrowseIndexQueryOptions({
+      deviceKey: props.deviceKey,
+      systemId: props.systemId,
+      path: props.path,
+      sort: props.sort,
+    }),
     enabled: props.isOpen && props.path !== "",
-    staleTime: 5 * 60 * 1000,
   });
 
   return (

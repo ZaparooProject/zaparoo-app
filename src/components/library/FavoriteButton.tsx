@@ -73,6 +73,11 @@ export function FavoriteButton(props: {
         queryClient.invalidateQueries({
           queryKey: [LIBRARY_QUERY_KEYS.favorites, props.deviceKey],
         }),
+        // Preference edits expire bucket cursors; invalidate the index first so
+        // browse refetches that start from a bucket read a fresh one.
+        queryClient.invalidateQueries({
+          queryKey: [LIBRARY_QUERY_KEYS.browseIndex, props.deviceKey],
+        }),
         queryClient.invalidateQueries({
           queryKey: [LIBRARY_QUERY_KEYS.browse, props.deviceKey],
         }),

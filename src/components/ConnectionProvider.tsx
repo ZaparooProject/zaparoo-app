@@ -617,10 +617,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           queryKey: [LIBRARY_QUERY_KEYS.favorites],
         });
         queryClient.invalidateQueries({
-          queryKey: [LIBRARY_QUERY_KEYS.browse],
+          queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
         });
         queryClient.invalidateQueries({
-          queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
+          queryKey: [LIBRARY_QUERY_KEYS.browse],
         });
         queryClient.invalidateQueries({
           queryKey: [LIBRARY_QUERY_KEYS.meta],
@@ -787,10 +787,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
                 queryKey: [LIBRARY_QUERY_KEYS.favorites],
               });
               queryClient.invalidateQueries({
-                queryKey: [LIBRARY_QUERY_KEYS.browse],
+                queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
               });
               queryClient.invalidateQueries({
-                queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
+                queryKey: [LIBRARY_QUERY_KEYS.browse],
               });
               queryClient.invalidateQueries({
                 queryKey: [LIBRARY_QUERY_KEYS.meta],
@@ -1156,10 +1156,10 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
       queryKey: [LIBRARY_QUERY_KEYS.favorites],
     });
     queryClient.invalidateQueries({
-      queryKey: [LIBRARY_QUERY_KEYS.browse],
+      queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
     });
     queryClient.invalidateQueries({
-      queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
+      queryKey: [LIBRARY_QUERY_KEYS.browse],
     });
     queryClient.invalidateQueries({
       queryKey: [LIBRARY_QUERY_KEYS.meta],
