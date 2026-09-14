@@ -35,8 +35,10 @@ import type {
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { useStatusStore } from "@/lib/store";
 import {
+  forgetLibraryBrowse,
   libraryBrowseScrollKey,
   librarySearchScrollKey,
+  type LibraryBrowseWindowUpdater,
   type LibraryFolderLevel,
   useLibrarySessionStore,
 } from "@/lib/librarySessionStore";
@@ -148,6 +150,19 @@ export function LibrarySystem() {
   const searchScrollKey = librarySearchScrollKey(systemId);
   const sessionScrollKey = searchOpen ? searchScrollKey : browseScrollKey;
   const forgetScroll = useTabSessionStore((state) => state.forgetScroll);
+  const browseWindow = useLibrarySessionStore((state) =>
+    state.deviceAddress === deviceKey
+      ? (state.browseWindows[browseScrollKey] ?? null)
+      : null,
+  );
+  const updateBrowseWindows = useLibrarySessionStore(
+    (state) => state.updateBrowseWindow,
+  );
+  const updateBrowseWindow = useCallback(
+    (updater: LibraryBrowseWindowUpdater) =>
+      updateBrowseWindows(browseScrollKey, updater),
+    [browseScrollKey, updateBrowseWindows],
+  );
   const systemsQuery = useQuery({
     queryKey: ["systems", deviceKey, { all: false }],
     queryFn: () => CoreAPI.systems(),
@@ -167,13 +182,15 @@ export function LibrarySystem() {
     path: currentPath,
     sort: mediaSort,
     enabled: connected && gamesIndex.exists && libraryFeature.available,
+    browseWindow,
+    updateBrowseWindow,
   });
   const initialRootPath =
     levels.length === 0 && browse.data?.pages[0]
       ? soleInitialRootPath(browse.data.pages[0])
       : null;
   const initialRoot = initialRootPath
-    ? browse.entries.find((entry) => entry.path === initialRootPath)
+    ? browse.entries.find((entry) => entry?.path === initialRootPath)
     : undefined;
   const autoEnteringInitialRoot = Boolean(initialRootPath && initialRoot);
 
@@ -195,7 +212,7 @@ export function LibrarySystem() {
     if (!initialRootPath || !initialRoot) return;
 
     setAutoEnteredRoot(systemId, true);
-    forgetScroll(libraryBrowseScrollKey(systemId, mediaSort, initialRootPath));
+    forgetLibraryBrowse(systemId, mediaSort, initialRootPath);
     setFolderLevels(systemId, [
       {
         name:
@@ -208,7 +225,6 @@ export function LibrarySystem() {
     initialRoot,
     initialRootPath,
     corePlatform,
-    forgetScroll,
     mediaSort,
     setAutoEnteredRoot,
     setFolderLevels,
@@ -237,6 +253,13 @@ export function LibrarySystem() {
     });
     return () => cancelAnimationFrame(frame);
   }, [browse.entries.length, pendingJump]);
+
+  const failedGroupCount = browse.failedRanges.length;
+  useEffect(() => {
+    if (failedGroupCount > 0) {
+      showRateLimitedErrorToast(t("library.browseError"));
+    }
+  }, [failedGroupCount, t]);
 
   const closeSearch = useCallback(() => {
     setEmbeddedSearchOpen(systemId, false);
@@ -277,14 +300,14 @@ export function LibrarySystem() {
   });
 
   const changeMediaSort = (nextSort: MediaBrowseSort) => {
-    forgetScroll(libraryBrowseScrollKey(systemId, nextSort, currentPath));
+    forgetLibraryBrowse(systemId, nextSort, currentPath);
     setMediaSort(nextSort);
   };
 
   const selectEntry = (entry: MediaBrowseEntry) => {
     if (isPlainFolderEntry(entry)) {
       setSelectedEntry(null);
-      forgetScroll(libraryBrowseScrollKey(systemId, mediaSort, entry.path));
+      forgetLibraryBrowse(systemId, mediaSort, entry.path);
       setFolderLevels(systemId, [
         ...levels,
         {
@@ -309,15 +332,12 @@ export function LibrarySystem() {
       queryKey: [LIBRARY_QUERY_KEYS.image, deviceKey],
     });
     if (jumpGenerationRef.current !== generation) return;
-    const targetIndex = browse.totalDirs + group.offset;
 
     try {
-      const loaded =
-        browse.entries.length > targetIndex ||
-        (await browse.loadThroughIndex(targetIndex));
+      const jump = await browse.jumpToGroup(group);
       if (jumpGenerationRef.current !== generation) return;
-      if (!loaded) throw new Error("Letter target is outside browse results");
-      setPendingJump({ generation, targetIndex });
+      browse.commitJump(jump);
+      setPendingJump({ generation, targetIndex: jump.targetIndex });
     } catch (error) {
       if (jumpGenerationRef.current !== generation) return;
       logger.error("Failed to jump within media library", error, {
@@ -385,6 +405,9 @@ export function LibrarySystem() {
         interactionDisabled={jumpingLabel !== null}
         onFetchMore={() => void browse.fetchMore()}
         onSelect={selectEntry}
+        onLoadIndex={browse.loadIndex}
+        isLoadingIndex={browse.isLoadingIndex}
+        failedRanges={browse.failedRanges}
       />
     );
   }

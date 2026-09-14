@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import type { MediaBrowseSort } from "@/lib/models";
-import type { SessionSearchParams } from "@/lib/tabSessionStore";
+import {
+  type SessionSearchParams,
+  useTabSessionStore,
+} from "@/lib/tabSessionStore";
 import type { SystemReleasePeriod, SystemSort } from "@/lib/systemFilters";
 
 export interface LibraryFolderLevel {
@@ -20,6 +23,21 @@ export function librarySearchScrollKey(scope: string): string {
   return `library:${scope}:search`;
 }
 
+/**
+ * A folder list opened at an index bucket instead of the top. Rows before
+ * `anchorStart` load one bucket at a time as they scroll into view.
+ */
+export interface LibraryBrowseWindow {
+  anchorKey: string;
+  anchorStart: number;
+  totalDirs: number;
+  loadedKeys: string[];
+}
+
+export type LibraryBrowseWindowUpdater = (
+  current: LibraryBrowseWindow | null,
+) => LibraryBrowseWindow | null;
+
 interface LibrarySessionState {
   deviceAddress: string | null;
   category: string;
@@ -31,6 +49,7 @@ interface LibrarySessionState {
   autoEnteredRoots: Record<string, boolean>;
   embeddedSearchOpen: Record<string, boolean>;
   searches: Record<string, SessionSearchParams>;
+  browseWindows: Record<string, LibraryBrowseWindow>;
   setCategory: (category: string) => void;
   setManufacturer: (manufacturer: string) => void;
   setReleasePeriod: (releasePeriod: SystemReleasePeriod) => void;
@@ -40,6 +59,10 @@ interface LibrarySessionState {
   setAutoEnteredRoot: (systemId: string, autoEntered: boolean) => void;
   setEmbeddedSearchOpen: (systemId: string, open: boolean) => void;
   setSearch: (scope: string, search: SessionSearchParams) => void;
+  updateBrowseWindow: (
+    scrollKey: string,
+    updater: LibraryBrowseWindowUpdater,
+  ) => void;
   resetNavigation: () => void;
   activateDevice: (deviceAddress: string) => void;
   reset: () => void;
@@ -56,6 +79,7 @@ const initialLibrarySessionState = {
   autoEnteredRoots: {},
   embeddedSearchOpen: {},
   searches: {},
+  browseWindows: {},
 };
 
 export const useLibrarySessionStore = create<LibrarySessionState>()((set) => ({
@@ -87,12 +111,23 @@ export const useLibrarySessionStore = create<LibrarySessionState>()((set) => ({
     set((state) => ({
       searches: { ...state.searches, [scope]: search },
     })),
+  updateBrowseWindow: (scrollKey, updater) =>
+    set((state) => {
+      const current = state.browseWindows[scrollKey] ?? null;
+      const next = updater(current);
+      if (next === current) return state;
+      const browseWindows = { ...state.browseWindows };
+      if (next) browseWindows[scrollKey] = next;
+      else delete browseWindows[scrollKey];
+      return { browseWindows };
+    }),
   resetNavigation: () =>
     set({
       folderLevels: {},
       autoEnteredRoots: {},
       embeddedSearchOpen: {},
       searches: {},
+      browseWindows: {},
     }),
   activateDevice: (deviceAddress) =>
     set((state) =>
@@ -102,3 +137,14 @@ export const useLibrarySessionStore = create<LibrarySessionState>()((set) => ({
     ),
   reset: () => set(initialLibrarySessionState),
 }));
+
+/** Starts a folder list from the top: no saved scroll and no bucket window. */
+export function forgetLibraryBrowse(
+  systemId: string,
+  sort: MediaBrowseSort,
+  path: string,
+): void {
+  const scrollKey = libraryBrowseScrollKey(systemId, sort, path);
+  useTabSessionStore.getState().forgetScroll(scrollKey);
+  useLibrarySessionStore.getState().updateBrowseWindow(scrollKey, () => null);
+}

@@ -451,6 +451,16 @@ export function isUnindexedMediaError(error: unknown): boolean {
   );
 }
 
+/**
+ * Core rejects browse cursors minted before a media preference edit or a
+ * visibility change; the client restarts from a fresh cursor.
+ */
+export function isBrowseCursorExpiredError(error: unknown): boolean {
+  return getErrorMessage(error)
+    .toLowerCase()
+    .startsWith("library visibility changed");
+}
+
 export function isTransientApiConnectionError(error: unknown): boolean {
   const message = getErrorMessage(error).toLowerCase();
   return [
@@ -514,7 +524,10 @@ function logMediaApiFailure(
     return;
   }
 
-  if (isExpectedMediaDatabaseError(error)) {
+  if (
+    isExpectedMediaDatabaseError(error) ||
+    isBrowseCursorExpiredError(error)
+  ) {
     logger.warn(`${label}:`, error, {
       category: "api",
       action,

@@ -27,7 +27,7 @@ vi.mock("@capacitor/app", () => ({
 
 vi.mock("@capacitor/preferences", () => ({
   Preferences: {
-    get: vi.fn().mockResolvedValue({ value: "all" }),
+    get: vi.fn().mockResolvedValue({ value: null }),
     set: vi.fn(),
   },
 }));

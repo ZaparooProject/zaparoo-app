@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { FolderIcon, Heart } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -22,10 +22,12 @@ import {
   libraryEntryDisplayName,
   libraryEntryTags,
 } from "@/lib/libraryMedia";
+import type { LibraryBrowseRange } from "@/lib/libraryBrowse";
 import type { MediaBrowseEntry } from "@/lib/models";
 import { NextIcon } from "@/lib/images";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/wui/Button";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
 import { useHapticPress } from "@/hooks/useHapticPress";
@@ -35,6 +37,38 @@ import { TagList } from "@/components/TagList";
 import { LibraryArtwork } from "@/components/library/LibraryArtwork";
 
 const ROW_HEIGHT = 88;
+// Matches the virtualizer's scroll-end delay so jumps and flings settle before
+// unloaded rows are requested.
+const LOAD_INDEX_DELAY_MS = 150;
+
+function inRanges(
+  ranges: readonly LibraryBrowseRange[] | undefined,
+  index: number,
+): boolean {
+  return (
+    ranges?.some((range) => index >= range.start && index < range.end) ?? false
+  );
+}
+
+function LibraryBrowsePlaceholderRow(props: {
+  textZoomed: boolean;
+  minHeight: number;
+  hasDivider: boolean;
+}) {
+  return (
+    <div
+      aria-hidden="true"
+      className={classNames("flex w-full items-center gap-3 px-1 py-3", {
+        "h-full": !props.textZoomed,
+        "border-b border-white/25": props.hasDivider,
+      })}
+      style={{ minHeight: `${props.minHeight}px` }}
+    >
+      <Skeleton className="h-16 w-16 shrink-0" />
+      <Skeleton className="h-5 w-2/3" />
+    </div>
+  );
+}
 
 function AdaptiveLibraryTitle({
   title,
@@ -225,7 +259,8 @@ export interface LibraryBrowseListHandle {
 export const LibraryBrowseList = forwardRef<
   LibraryBrowseListHandle,
   {
-    entries: MediaBrowseEntry[];
+    /** Absolute rows; `undefined` marks a row that has not loaded yet. */
+    entries: readonly (MediaBrowseEntry | undefined)[];
     systemId: string;
     deviceKey: string;
     scrollRef: RefObject<HTMLDivElement | null>;
@@ -235,6 +270,9 @@ export const LibraryBrowseList = forwardRef<
     interactionDisabled: boolean;
     onFetchMore: () => void;
     onSelect: (entry: MediaBrowseEntry) => void;
+    onLoadIndex?: (index: number, options?: { retry?: boolean }) => void;
+    isLoadingIndex?: boolean;
+    failedRanges?: readonly LibraryBrowseRange[];
     showSystemName?: boolean;
     ariaLabel?: string;
   }
@@ -251,6 +289,7 @@ export const LibraryBrowseList = forwardRef<
   const rowHeight = Math.ceil(baseRowHeight * Math.max(1, textZoomLevel));
   const rowRefs = useRef(new Map<number, HTMLDivElement>());
   const loadMoreStartRef = useRef<number | null>(null);
+  const loadEarlierRangeRef = useRef<LibraryBrowseRange | null>(null);
   const initialScrollOffset = useInitialPageScrollOffset();
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual exposes imperative functions that React Compiler cannot memoize safely.
   const virtualizer = useVirtualizer({
@@ -261,7 +300,9 @@ export const LibraryBrowseList = forwardRef<
     initialOffset: initialScrollOffset,
   });
   const virtualItems = virtualizer.getVirtualItems();
+  const isScrolling = virtualizer.isScrolling;
   const fetchMore = props.onFetchMore;
+  const loadIndex = props.onLoadIndex;
 
   useLayoutEffect(() => {
     // Cached route data and text zoom can change measured row dimensions after
@@ -305,8 +346,11 @@ export const LibraryBrowseList = forwardRef<
 
   useEffect(() => {
     const lastItem = virtualItems.at(-1);
+    // A jump to an earlier bucket can shorten the list before it scrolls to
+    // the target, leaving the old position at the new end for a frame.
     if (
       !accessibleLists &&
+      !props.interactionDisabled &&
       lastItem &&
       lastItem.index >= props.entries.length - 5 &&
       props.hasNextPage &&
@@ -319,8 +363,79 @@ export const LibraryBrowseList = forwardRef<
     fetchMore,
     props.entries.length,
     props.hasNextPage,
+    props.interactionDisabled,
     props.isFetchingNextPage,
     virtualItems,
+  ]);
+
+  useEffect(() => {
+    const range = loadEarlierRangeRef.current;
+    if (!range) return;
+
+    let firstLoaded: number | null = null;
+    let loadedCount = 0;
+    for (let index = range.start; index < range.end; index++) {
+      if (props.entries[index] === undefined) continue;
+      firstLoaded ??= index;
+      loadedCount++;
+    }
+    if (firstLoaded === null) return;
+
+    announce(t("library.loadedMore", { count: loadedCount }));
+    const focusIndex = firstLoaded;
+    requestAnimationFrame(() => {
+      rowRefs.current
+        .get(focusIndex)
+        ?.querySelector<HTMLButtonElement>("button")
+        ?.focus();
+    });
+    loadEarlierRangeRef.current = null;
+  }, [announce, props.entries, t]);
+
+  useEffect(() => {
+    if (
+      !loadIndex ||
+      accessibleLists ||
+      isScrolling ||
+      props.interactionDisabled ||
+      props.isLoadingIndex
+    ) {
+      return;
+    }
+
+    // Wait for scrolling to settle and read the visible range without overscan,
+    // so rows passed during a fling or next to a jump target are not fetched.
+    const timer = setTimeout(() => {
+      if (virtualizer.isScrolling || !virtualizer.range) return;
+      const lastVisible = Math.min(
+        virtualizer.range.endIndex,
+        props.entries.length - 1,
+      );
+      for (
+        let index = virtualizer.range.startIndex;
+        index <= lastVisible;
+        index++
+      ) {
+        if (
+          props.entries[index] === undefined &&
+          !inRanges(props.failedRanges, index)
+        ) {
+          loadIndex(index);
+          return;
+        }
+      }
+    }, LOAD_INDEX_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [
+    accessibleLists,
+    isScrolling,
+    loadIndex,
+    props.entries,
+    props.failedRanges,
+    props.interactionDisabled,
+    props.isLoadingIndex,
+    virtualItems,
+    virtualizer,
   ]);
 
   const renderEntry = (
@@ -346,28 +461,71 @@ export const LibraryBrowseList = forwardRef<
   );
   const setSize = props.hasNextPage ? -1 : props.entries.length;
 
+  const renderLoadEarlier = (range: LibraryBrowseRange) => (
+    <Button
+      label={
+        props.isLoadingIndex
+          ? t("library.loadingMore")
+          : t("library.loadEarlier")
+      }
+      variant="outline"
+      disabled={props.isLoadingIndex}
+      onClick={() => {
+        loadEarlierRangeRef.current = range;
+        props.onLoadIndex?.(range.end - 1, { retry: true });
+      }}
+    />
+  );
+
   if (accessibleLists) {
+    const rows: ReactNode[] = [];
+    for (let index = 0; index < props.entries.length; index++) {
+      const entry = props.entries[index];
+      if (entry) {
+        const rowIndex = index;
+        rows.push(
+          <div
+            key={`${entry.mediaId ?? entry.path}:${index}`}
+            ref={(element) => {
+              if (element) rowRefs.current.set(rowIndex, element);
+              else rowRefs.current.delete(rowIndex);
+            }}
+            role="listitem"
+            aria-posinset={index + 1}
+            aria-setsize={setSize}
+            style={{ minHeight: `${rowHeight}px` }}
+          >
+            {renderEntry(entry, index, true)}
+          </div>,
+        );
+        continue;
+      }
+
+      const start = index;
+      while (
+        index + 1 < props.entries.length &&
+        props.entries[index + 1] === undefined
+      ) {
+        index++;
+      }
+      rows.push(
+        <div
+          key={`unloaded:${start}`}
+          role="listitem"
+          className="flex justify-center py-3"
+        >
+          {renderLoadEarlier({ start, end: index + 1 })}
+        </div>,
+      );
+    }
+
     return (
       <>
         <div
           role="list"
           aria-label={props.ariaLabel ?? t("library.entriesLabel")}
         >
-          {props.entries.map((entry, index) => (
-            <div
-              key={`${entry.mediaId ?? entry.path}:${index}`}
-              ref={(element) => {
-                if (element) rowRefs.current.set(index, element);
-                else rowRefs.current.delete(index);
-              }}
-              role="listitem"
-              aria-posinset={index + 1}
-              aria-setsize={setSize}
-              style={{ minHeight: `${rowHeight}px` }}
-            >
-              {renderEntry(entry, index, true)}
-            </div>
-          ))}
+          {rows}
         </div>
         {props.hasNextPage && (
           <div className="flex justify-center py-3">
@@ -423,16 +581,20 @@ export const LibraryBrowseList = forwardRef<
             </div>
           ) : null;
         }
-        if (!entry) return null;
+        const failedRange = entry
+          ? undefined
+          : props.failedRanges?.find(
+              (range) => virtualItem.index === range.end - 1,
+            );
 
         return (
           <div
             key={virtualItem.key}
             ref={virtualizer.measureElement}
             data-index={virtualItem.index}
-            role="listitem"
-            aria-posinset={virtualItem.index + 1}
-            aria-setsize={setSize}
+            role={entry || failedRange ? "listitem" : undefined}
+            aria-posinset={entry ? virtualItem.index + 1 : undefined}
+            aria-setsize={entry ? setSize : undefined}
             style={{
               position: "absolute",
               top: 0,
@@ -444,7 +606,22 @@ export const LibraryBrowseList = forwardRef<
               transform: `translateY(${virtualItem.start}px)`,
             }}
           >
-            {renderEntry(entry, virtualItem.index, false)}
+            {entry ? (
+              renderEntry(entry, virtualItem.index, false)
+            ) : failedRange ? (
+              <div className="flex h-full items-center justify-center">
+                {renderLoadEarlier(failedRange)}
+              </div>
+            ) : (
+              <LibraryBrowsePlaceholderRow
+                textZoomed={textZoomed}
+                minHeight={rowHeight}
+                hasDivider={
+                  props.hasNextPage ||
+                  virtualItem.index < props.entries.length - 1
+                }
+              />
+            )}
           </div>
         );
       })}
