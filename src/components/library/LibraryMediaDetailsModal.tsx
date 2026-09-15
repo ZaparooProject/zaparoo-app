@@ -121,13 +121,13 @@ export function LibraryMediaDetailsModal(props: {
   const [imageIndex, setImageIndex] = useState(0);
   // The artwork reports its cover from an effect, which runs before this
   // component's effects. A cached cover is reported on the first render for a
-  // new entry, so a reset effect would discard it. Tie each report to its entry.
+  // new entry, so a reset effect would discard it. Tie each report to its media.
   const [defaultImageReport, setDefaultImageReport] = useState<{
-    entry: MediaBrowseEntry;
+    mediaKey: string;
     type: string | null;
   } | null>(null);
   const [availabilityReport, setAvailabilityReport] = useState<{
-    entry: MediaBrowseEntry;
+    mediaKey: string;
     available: boolean;
   } | null>(null);
   const [launching, setLaunching] = useState(false);
@@ -150,10 +150,11 @@ export function LibraryMediaDetailsModal(props: {
   const systemId = props.entry
     ? props.systemId
     : (retainedSelection?.systemId ?? props.systemId);
+  const mediaKey = entry ? JSON.stringify(mediaRefKey(entry, systemId)) : null;
   const resolvedDefaultType =
-    defaultImageReport?.entry === entry ? defaultImageReport.type : null;
+    defaultImageReport?.mediaKey === mediaKey ? defaultImageReport.type : null;
   const imageAvailable =
-    availabilityReport?.entry === entry
+    availabilityReport?.mediaKey === mediaKey
       ? availabilityReport.available
       : entry?.hasCover === false
         ? false
@@ -263,26 +264,26 @@ export function LibraryMediaDetailsModal(props: {
 
   const rememberResolvedType = useCallback(
     (typeTag: string) => {
-      if (!entry) return;
+      if (mediaKey === null) return;
       const type = imageTypeFromTypeTag(typeTag);
       setDefaultImageReport((current) =>
-        current?.entry === entry && current.type === type
+        current?.mediaKey === mediaKey && current.type === type
           ? current
-          : { entry, type },
+          : { mediaKey, type },
       );
     },
-    [entry],
+    [mediaKey],
   );
   const rememberImageAvailability = useCallback(
     (available: boolean) => {
-      if (!entry) return;
+      if (mediaKey === null) return;
       setAvailabilityReport((current) =>
-        current?.entry === entry && current.available === available
+        current?.mediaKey === mediaKey && current.available === available
           ? current
-          : { entry, available },
+          : { mediaKey, available },
       );
     },
-    [entry],
+    [mediaKey],
   );
 
   const closeModal = () => {
