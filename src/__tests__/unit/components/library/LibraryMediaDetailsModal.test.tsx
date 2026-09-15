@@ -267,6 +267,49 @@ describe("LibraryMediaDetailsModal", () => {
     });
   });
 
+  it("should not apply another device's missing cover to the same media", async () => {
+    mockRequestLibraryImage.mockImplementation(
+      (
+        _entry: MediaBrowseEntry,
+        _systemId: string,
+        options: { deviceKey: string },
+      ) =>
+        Promise.resolve(
+          options.deviceKey === "device-b"
+            ? {
+                url: "data:image/webp;base64,BBBB",
+                typeTag: "property:image-boxart",
+              }
+            : null,
+        ),
+    );
+    const wrapper = createProvidersWithQueryClient(createTestQueryClient());
+    const props: React.ComponentProps<typeof LibraryMediaDetailsModal> = {
+      isOpen: true,
+      close: vi.fn(),
+      entry: ENTRY,
+      systemId: "SNES",
+      deviceKey: "device-a",
+    };
+    const { rerender } = renderWithWrapper(
+      <LibraryMediaDetailsModal {...props} />,
+      { wrapper },
+    );
+    await screen.findByText("A platform adventure.");
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", { name: "library.nextImage" }),
+      ).not.toBeInTheDocument();
+    });
+
+    // Search keeps the sheet open when the active device changes.
+    rerender(<LibraryMediaDetailsModal {...props} deviceKey="device-b" />);
+
+    expect(
+      await screen.findByRole("img", { name: "library.imageAlt" }),
+    ).toHaveAttribute("src", "data:image/webp;base64,BBBB");
+  });
+
   it("should not repeat a cached cover when details reopen from another list", async () => {
     const user = userEvent.setup();
     const wrapper = createProvidersWithQueryClient(createTestQueryClient());

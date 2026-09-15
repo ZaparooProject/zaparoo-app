@@ -150,7 +150,9 @@ export function LibraryMediaDetailsModal(props: {
   const systemId = props.entry
     ? props.systemId
     : (retainedSelection?.systemId ?? props.systemId);
-  const mediaKey = entry ? JSON.stringify(mediaRefKey(entry, systemId)) : null;
+  const mediaKey = entry
+    ? JSON.stringify([props.deviceKey, ...mediaRefKey(entry, systemId)])
+    : null;
   const resolvedDefaultType =
     defaultImageReport?.mediaKey === mediaKey ? defaultImageReport.type : null;
   const imageAvailable =
