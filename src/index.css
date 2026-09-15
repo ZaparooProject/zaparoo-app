@@ -675,9 +675,21 @@
 }
 
 .remote-keyboard-pad-button:active,
-.remote-keyboard-pad-action:active {
+.remote-keyboard-pad-action:active,
+.remote-keyboard-pad-button[data-held="true"],
+.remote-keyboard-pad-action[data-held="true"] {
   transform: scale(0.96);
   opacity: 0.8;
+}
+
+/* Held input follows pointer down and up, so a press must not turn into a
+   scroll, zoom, text selection or long-press menu. */
+.remote-keyboard-pad[data-hold-input] .remote-keyboard-pad-button,
+.remote-keyboard-pad[data-hold-input] .remote-keyboard-pad-action {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .remote-keyboard-pad-button:focus-visible,

@@ -30,6 +30,7 @@ export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
       "Launch custom launchers and MiSTer built-in systems from the Library tab, and jump to letters faster in large folders.",
       "Link a Pro purchase to a free Zaparoo Online account to back it up and use it on both Android and iOS.",
       "Use less battery on the Zap page and while idle, with a new Keep screen on setting.",
+      "Hold Controls remote buttons to keep them pressed, including several at once, on supported devices with Zaparoo Core 2.17 or later.",
       "Reconnect more reliably after Core restarts, with clearer messages when pairing fails or needs to be redone.",
       "Fixed purchase and restore, setup, and Online sign-in issues, plus Android status bar and navigation bar display.",
       "Browse, search, favorite, launch, and write media from the new Library tab.",

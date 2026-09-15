@@ -1209,6 +1209,7 @@
       "backgroundMediaSlot": "Contenido multimedia en segundo plano",
       "readOnlyMappings": "Asignaciones de archivos",
       "remoteInput": "Entrada remota",
+      "heldInput": "Botones del mando mantenidos",
       "deviceLinking": "Vinculación de dispositivos con Zaparoo Online",
       "profiles": "Perfiles"
     },
