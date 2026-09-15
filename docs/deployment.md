@@ -136,7 +136,7 @@ git tag v1.11.2
 git push origin v1.11.2
 ```
 
-13. Confirm GitHub release artifacts and Capawesome Cloud iOS/Android builds complete.
+13. Confirm the tag's GitHub release artifacts complete, then start the iOS and Android builds for the tag in Capawesome Cloud and confirm they complete. Tags do not start Capawesome Cloud builds.
 14. Submit/release from App Store Connect and Google Play Console.
 
 ### Failed Release Tags
@@ -170,19 +170,14 @@ The app uses Capawesome Cloud for building iOS and Android binaries.
 
 ### Build Process
 
-1. Push a git tag (e.g., `v1.9.2`)
-2. Capawesome Cloud detects the tag
-3. Runs build commands from `capawesome.config.json`
-4. Builds iOS (IPA) and Android (AAB)
-5. Artifacts available for download or auto-submission to stores
+1. Start an iOS or Android build for the release tag in Capawesome Cloud
+2. Capawesome Cloud runs the build commands from `capawesome.config.json`
+3. Builds iOS (IPA) and Android (AAB)
+4. Artifacts available for download or auto-submission to stores
 
 ### Triggering a Build
 
-```bash
-# Create and push a version tag
-git tag v1.11.2
-git push origin v1.11.2
-```
+Pushing a `v*.*.*` tag does not start Capawesome Cloud builds. It only runs the GitHub "Build and release web app" workflow, which builds the web and Core bundles and attaches them to a GitHub release. Start the iOS and Android builds manually in Capawesome Cloud and select the release tag.
 
 ### Build Runtime
 
