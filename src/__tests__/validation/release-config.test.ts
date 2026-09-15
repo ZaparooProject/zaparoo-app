@@ -54,7 +54,7 @@ describe("release configuration", () => {
       new Set([packageJson.version]),
     );
     expect(new Set(iosBuildNumbers)).toEqual(new Set([androidVersionCode]));
-    expect(androidVersionCode).toBe(29);
+    expect(androidVersionCode).toBe(30);
   });
 
   it("should use versioned Capawesome live update channels", () => {
@@ -116,22 +116,17 @@ describe("release configuration", () => {
       "Android versionCode",
     );
     const nativeReleaseKey = `native:${packageJson.version}+${androidVersionCode}`;
-    const liveReleaseKeys = [
-      `live:${packageJson.version}-ota.1`,
-      `live:${packageJson.version}-ota.2`,
-    ];
+    const liveReleaseKey = `live:${packageJson.version}-ota.1`;
 
     expect(
       WHATS_NEW_ANNOUNCEMENTS.some((announcement) =>
         announcement.releaseKeys.includes(nativeReleaseKey),
       ),
     ).toBe(true);
-    for (const liveReleaseKey of liveReleaseKeys) {
-      expect(
-        WHATS_NEW_ANNOUNCEMENTS.some((announcement) =>
-          announcement.releaseKeys.includes(liveReleaseKey),
-        ),
-      ).toBe(true);
-    }
+    expect(
+      WHATS_NEW_ANNOUNCEMENTS.some((announcement) =>
+        announcement.releaseKeys.includes(liveReleaseKey),
+      ),
+    ).toBe(true);
   });
 });

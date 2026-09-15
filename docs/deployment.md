@@ -141,7 +141,9 @@ git push origin v1.11.2
 
 ### Failed Release Tags
 
-`v1.11.0` and `v1.11.1` are abandoned failed tags. Do not submit or promote builds from those tags.
+`v1.11.0`, `v1.11.1`, and `v1.12.0` are abandoned failed tags. Do not submit or promote builds from those tags.
+
+`v1.13.0` shipped only on Android outside France. iOS and French Android users went from 1.11.2 straight to 1.14.0, so the 1.14.0 What's New announcement repeats the 1.13.0 items.
 
 ---
 

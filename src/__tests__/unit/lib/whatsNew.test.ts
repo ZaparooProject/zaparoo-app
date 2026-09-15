@@ -64,8 +64,8 @@ describe("whatsNew", () => {
     vi.mocked(App.getInfo).mockResolvedValue({
       name: "Zaparoo",
       id: "dev.wizzo.tapto",
-      version: "1.13.0",
-      build: "29",
+      version: "1.14.0",
+      build: "30",
     });
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     vi.mocked(Capacitor.isPluginAvailable).mockReturnValue(true);
@@ -77,9 +77,9 @@ describe("whatsNew", () => {
     const announcement = getWhatsNewAnnouncement(identity.releaseKey);
 
     expect(identity.releaseKey).toBe(
-      "native:1.13.0+29:bundle:bundle-2026-08-11",
+      "native:1.14.0+30:bundle:bundle-2026-08-11",
     );
-    expect(announcement?.id).toBe("release-1.13.0");
+    expect(announcement?.id).toBe("release-1.14.0");
   });
 
   it("should prefer the injected release key", async () => {
@@ -96,43 +96,27 @@ describe("whatsNew", () => {
     expect(identity.liveBundleId).toBe("bundle-2026-06-04");
   });
 
-  it("should find the 1.13.0 native announcement", () => {
-    const announcement = getWhatsNewAnnouncement("native:1.13.0+29");
+  it("should find the 1.14.0 native announcement with the skipped 1.13.0 items", () => {
+    const announcement = getWhatsNewAnnouncement("native:1.14.0+30");
 
-    expect(announcement?.id).toBe("release-1.13.0");
-    expect(announcement?.version).toBe("1.13.0");
-    expect(announcement?.items).toHaveLength(5);
-  });
-
-  it("should find the 1.13.1 announcement for the first live update", () => {
-    const announcement = getWhatsNewAnnouncement("live:1.13.0-ota.1");
-
-    expect(announcement?.id).toBe("release-1.13.1");
-    expect(announcement?.version).toBe("1.13.1");
+    expect(announcement?.id).toBe("release-1.14.0");
+    expect(announcement?.version).toBe("1.14.0");
     expect(announcement?.items).toContain(
-      "Still having trouble with purchases or restoring purchases? Email support@zaparoo.com or ask for help in the Zaparoo Discord.",
+      "Browse, search, favorite, launch, and write media from the new Library tab.",
     );
   });
 
-  it("should display the OTA version for an injected live release key", () => {
-    expect(getReleaseDisplayVersion("live:1.13.0-ota.1", "1.13.0")).toBe(
-      "1.13.1",
-    );
-  });
+  it("should map the first 1.14.0 live update to the 1.14.0 announcement", () => {
+    const announcement = getWhatsNewAnnouncement("live:1.14.0-ota.1");
 
-  it("should reuse the 1.13.1 announcement for the 1.13.2 sleeper OTA", () => {
-    const announcement = getWhatsNewAnnouncement("live:1.13.0-ota.2");
-
-    expect(announcement?.id).toBe("release-1.13.1");
-    expect(announcement?.title).toBe("What's new in v1.13.1");
-    expect(announcement?.version).toBe("1.13.2");
-    expect(getReleaseDisplayVersion("live:1.13.0-ota.2", "1.13.0")).toBe(
-      "1.13.2",
+    expect(announcement?.id).toBe("release-1.14.0");
+    expect(getReleaseDisplayVersion("live:1.14.0-ota.1", "unknown")).toBe(
+      "1.14.0",
     );
   });
 
   it("should preserve the native version without a mapped release key", () => {
-    expect(getReleaseDisplayVersion(undefined, "1.13.0")).toBe("1.13.0");
-    expect(getReleaseDisplayVersion("live:unknown", "1.13.0")).toBe("1.13.0");
+    expect(getReleaseDisplayVersion(undefined, "1.14.0")).toBe("1.14.0");
+    expect(getReleaseDisplayVersion("live:unknown", "1.14.0")).toBe("1.14.0");
   });
 });

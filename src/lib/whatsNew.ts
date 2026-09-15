@@ -21,38 +21,22 @@ export type WhatsNewAnnouncement = {
 
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
-    id: "release-1.13.0",
-    version: "1.13.0",
-    releaseKeys: ["native:1.13.0+29"],
-    title: "What's new in v1.13.0",
+    // iOS and French Android users skipped 1.13.0, so its items are repeated.
+    id: "release-1.14.0",
+    version: "1.14.0",
+    releaseKeys: ["native:1.14.0+30", "live:1.14.0-ota.1"],
+    title: "What's new in v1.14.0",
     items: [
+      "Launch custom launchers and MiSTer built-in systems from the Library tab, and jump to letters faster in large folders.",
+      "Link a Pro purchase to a free Zaparoo Online account to back it up and use it on both Android and iOS.",
+      "Use less battery on the Zap page and while idle, with a new Keep screen on setting.",
+      "Reconnect more reliably after Core restarts, with clearer messages when pairing fails or needs to be redone.",
+      "Fixed purchase and restore, setup, and Online sign-in issues, plus Android status bar and navigation bar display.",
       "Browse, search, favorite, launch, and write media from the new Library tab.",
       "Subscribe, restore, and manage Zaparoo Warp from the App.",
       "Create and manage device profiles, roles, PINs, playtime limits, and profile cards.",
       "Keep saved Core connections working through address changes and App restarts, with clearer connection status.",
       "Get more reliable NFC scanning and writing, plus smoother modals, swipe-back feedback, haptics, and app icon badges.",
-    ],
-  },
-  {
-    id: "release-1.13.1",
-    version: "1.13.1",
-    releaseKeys: ["live:1.13.0-ota.1"],
-    title: "What's new in v1.13.1",
-    items: [
-      "Improved purchase and restore reliability, with clearer billing diagnostics when store access fails.",
-      "Fixed startup, media notification, and Online settings issues reported through production monitoring.",
-      "Still having trouble with purchases or restoring purchases? Email support@zaparoo.com or ask for help in the Zaparoo Discord.",
-    ],
-  },
-  {
-    id: "release-1.13.1",
-    version: "1.13.2",
-    releaseKeys: ["live:1.13.0-ota.2"],
-    title: "What's new in v1.13.1",
-    items: [
-      "Improved purchase and restore reliability, with clearer billing diagnostics when store access fails.",
-      "Fixed startup, media notification, and Online settings issues reported through production monitoring.",
-      "Still having trouble with purchases or restoring purchases? Email support@zaparoo.com or ask for help in the Zaparoo Discord.",
     ],
   },
 ];
