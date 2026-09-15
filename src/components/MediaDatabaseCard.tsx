@@ -46,6 +46,7 @@ export function MediaDatabaseCard({
   );
   const cleanOrphansFeature = useCoreFeature("mediaCleanOrphans");
   const isLiveConnected = connectionState === ConnectionState.CONNECTED;
+  const [cancelRequested, setCancelRequested] = useState(false);
   const [resumeRequested, setResumeRequested] = useState(false);
   const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
   const [systemSelectorOpen, setSystemSelectorOpen] = useState(false);
@@ -75,10 +76,19 @@ export function MediaDatabaseCard({
   const mediaGenerateUnsupported =
     coreVersion !== null && !coreVersionPending && !mediaGenerateAvailable;
 
+  // Derive isCancelling: true only if we requested cancel AND indexing is still happening
+  const isCancelling = cancelRequested && gamesIndex.indexing;
   // Derive isResuming: true only if we requested resume AND indexing is still paused
   const isResuming = resumeRequested && isPaused;
 
-  // Reset resume request when state changes (syncing with external Zustand store state)
+  // Reset cancel/resume request when state changes (syncing with external Zustand store state)
+  useEffect(() => {
+    if (!gamesIndex.indexing && cancelRequested) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing local UI state with external store
+      setCancelRequested(false);
+    }
+  }, [gamesIndex.indexing, cancelRequested]);
+
   useEffect(() => {
     if ((!isPaused || !gamesIndex.indexing) && resumeRequested) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing local UI state with external store
@@ -148,6 +158,40 @@ export function MediaDatabaseCard({
           : t("settings.updateDb.startError");
       setGenerateError(message);
       showRateLimitedErrorToast(t("error", { msg: message }));
+    }
+  };
+
+  const handleCancelUpdate = async () => {
+    setGenerateError(null);
+    setCancelRequested(true);
+    try {
+      await CoreAPI.mediaGenerateCancel();
+      // cancelRequested stays set until the indexing notification reports the
+      // run has stopped, so the button doesn't flash back to Cancel.
+      queryClient.invalidateQueries({ queryKey: ["media"] });
+    } catch (error) {
+      if (isExpectedMediaDatabaseError(error)) {
+        setGenerateError(
+          error instanceof Error
+            ? error.message
+            : t("settings.updateDb.startError"),
+        );
+        setCancelRequested(false);
+        return;
+      }
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : t("settings.updateDb.startError");
+      setGenerateError(message);
+      showRateLimitedErrorToast(t("error", { msg: message }));
+      logger.error("Failed to cancel media generation:", error, {
+        category: "api",
+        action: "mediaGenerateCancel",
+        severity: "warning",
+      });
+      setCancelRequested(false);
     }
   };
 
@@ -596,6 +640,21 @@ export function MediaDatabaseCard({
                 : t("settings.updateDb.cleanOrphansNone")}
             </p>
           ) : null}
+        </div>
+      ) : null}
+
+      {/* Cancelling leaves a partial database, so keep it last and off the settings card. */}
+      {showMaintenanceActions && isIndexing ? (
+        <div className="pt-1">
+          <Button
+            label={
+              isCancelling ? t("cancelling") : t("settings.updateDb.cancel")
+            }
+            variant="outline"
+            className="w-full"
+            disabled={!connected || !mediaGenerateAvailable || isCancelling}
+            onClick={handleCancelUpdate}
+          />
         </div>
       ) : null}
     </div>

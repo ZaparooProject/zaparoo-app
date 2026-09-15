@@ -11,6 +11,7 @@ import type { ScrapingStatusNotification } from "@/lib/models";
 vi.mock("../../../lib/coreApi", () => ({
   CoreAPI: {
     mediaGenerate: vi.fn(),
+    mediaGenerateCancel: vi.fn(),
     mediaGenerateResume: vi.fn(),
     mediaCleanOrphans: vi.fn(),
     media: vi.fn(),
@@ -908,7 +909,7 @@ describe("MediaDatabaseCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("should hide the cancel button while indexing", () => {
+  it("should hide the cancel button on the settings card while indexing", () => {
     mockStore.gamesIndex.indexing = true;
 
     render(<MediaDatabaseCard />);
@@ -916,5 +917,106 @@ describe("MediaDatabaseCard", () => {
     expect(
       screen.queryByRole("button", { name: /settings\.updateDb\.cancel/i }),
     ).not.toBeInTheDocument();
+  });
+
+  describe("cancel on the manage media page", () => {
+    beforeEach(() => {
+      mockStore.gamesIndex = {
+        indexing: true,
+        exists: false,
+        totalFiles: 0,
+        currentStep: 2,
+        totalSteps: 11,
+        currentStepDisplay: "Atari 2600",
+      };
+    });
+
+    it("should not show cancel when not indexing", () => {
+      mockStore.gamesIndex.indexing = false;
+
+      render(<MediaDatabaseCard showMaintenanceActions />);
+
+      expect(
+        screen.queryByRole("button", { name: /settings\.updateDb\.cancel/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should cancel indexing and stay cancelling until indexing stops", async () => {
+      const user = userEvent.setup();
+      vi.mocked(CoreAPI.mediaGenerateCancel).mockResolvedValue(undefined);
+
+      const { rerender } = render(<MediaDatabaseCard showMaintenanceActions />);
+
+      const cancelButton = screen.getByRole("button", {
+        name: "settings.updateDb.cancel",
+      });
+      expect(cancelButton).toBeEnabled();
+      await user.click(cancelButton);
+
+      expect(CoreAPI.mediaGenerateCancel).toHaveBeenCalledOnce();
+      // Core is still stopping the run, so the button must not flip back to
+      // Cancel until the indexing notification reports it has finished.
+      expect(
+        await screen.findByRole("button", { name: "cancelling" }),
+      ).toBeDisabled();
+
+      mockStore.gamesIndex = { ...mockStore.gamesIndex, indexing: false };
+      rerender(<MediaDatabaseCard showMaintenanceActions />);
+
+      expect(
+        screen.queryByRole("button", { name: "cancelling" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should offer both resume and cancel while paused", () => {
+      mockStore.gamesIndex.paused = true;
+
+      render(<MediaDatabaseCard showMaintenanceActions />);
+
+      expect(
+        screen.getByRole("button", { name: "settings.updateDb.resume" }),
+      ).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "settings.updateDb.cancel" }),
+      ).toBeEnabled();
+    });
+
+    it("should show expected cancel failures inline and allow retry", async () => {
+      const user = userEvent.setup();
+      vi.mocked(CoreAPI.mediaGenerateCancel).mockRejectedValue(
+        new Error("Method not found"),
+      );
+
+      render(<MediaDatabaseCard showMaintenanceActions />);
+
+      await user.click(
+        screen.getByRole("button", { name: "settings.updateDb.cancel" }),
+      );
+
+      expect(await screen.findByText("error")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "settings.updateDb.cancel" }),
+      ).toBeEnabled();
+      expect(showRateLimitedErrorToast).not.toHaveBeenCalled();
+    });
+
+    it("should show unexpected cancel failures and allow retry", async () => {
+      const user = userEvent.setup();
+      vi.mocked(CoreAPI.mediaGenerateCancel).mockRejectedValue(
+        new Error("Network error"),
+      );
+
+      render(<MediaDatabaseCard showMaintenanceActions />);
+
+      await user.click(
+        screen.getByRole("button", { name: "settings.updateDb.cancel" }),
+      );
+
+      expect(await screen.findByText("error")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "settings.updateDb.cancel" }),
+      ).toBeEnabled();
+      expect(showRateLimitedErrorToast).toHaveBeenCalledWith("error");
+    });
   });
 });
