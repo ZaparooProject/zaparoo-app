@@ -52,11 +52,14 @@ const platform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
 | `capacitor-plugin-safe-area`         | Safe area insets for notched devices |
 | `capacitor-zeroconf`                 | Zeroconf/Bonjour network discovery   |
 
-`capacitor-zeroconf` is patched with `patch-package` (`patches/capacitor-zeroconf+4.0.0.patch`, applied by the `postinstall` script). Upstream acquires the Android Wi-Fi multicast lock on the first watch and only releases it in `close()`, which the app never calls because `useNetworkScan` uses `unwatch()` to keep JmDNS warm. A held multicast lock disables the Wi-Fi chip's multicast filter, so the CPU wakes for every mDNS and broadcast frame for the rest of the process lifetime. The patch takes the lock per watch, releases it when the last watch is removed, and re-registers the listener on every `watch()` call so later scans receive events again. It changes native code, so it ships only with a store build. npm 12 blocks the tarball URL patch-package fetches, so regenerate the patch with:
+`capacitor-zeroconf` is patched with `patch-package` (`patches/capacitor-zeroconf+4.0.0.patch`, applied by the `postinstall` script). Upstream acquires the Android Wi-Fi multicast lock on the first watch and only releases it in `close()`, which the app never calls because `useNetworkScan` uses `unwatch()` to keep JmDNS warm. A held multicast lock disables the Wi-Fi chip's multicast filter, so the CPU wakes for every mDNS and broadcast frame for the rest of the process lifetime. The patch takes the lock per watch, releases it when the last watch is removed, and re-registers the listener on every `watch()` call so later scans receive events again. The patch also makes the web fallback in `dist/esm/web.js` reject per call. Upstream creates one rejected promise when the module loads, and Vite bundles the fallback into the vendor chunk, so every platform logged an unhandled rejection at startup. The native part ships only with a store build. npm 12 blocks the tarball URL patch-package fetches, so regenerate the patch with:
 
 ```bash
-npm_config_allow_remote=root npx patch-package capacitor-zeroconf --include 'android/src/main/java'
+npm_config_allow_remote=root npx patch-package capacitor-zeroconf --include '^(android/src/main/java|dist/esm/web\.js)'
+sed -i 's/\r$//' patches/capacitor-zeroconf+4.0.0.patch
 ```
+
+The upstream `web.js` uses CRLF line endings, which Git would rewrite in the patch. patch-package ignores trailing whitespace when it applies the patch, so the LF patch still applies.
 
 ### Shake detection bridge
 
@@ -295,7 +298,9 @@ const safeInsets = useStatusStore((state) => state.safeInsets);
 </div>
 ```
 
-Safe area insets are automatically populated by `capacitor-plugin-safe-area` on app initialization.
+Safe area insets are populated on app initialization: from `capacitor-plugin-safe-area` on iOS, from CSS `env(safe-area-inset-*)` on web, and from `var(--safe-area-inset-*, env(safe-area-inset-*, 0px))` on Android. Capacitor's `SystemBars` plugin keeps these values accurate when the keyboard opens or the device rotates. The `capacitor-plugin-safe-area` raw window insets ignore the keyboard, which left a gap above it. Android WebView before 140 reports wrong `env()` values, so `SystemBars` injects the `--safe-area-inset-*` variables on Android 15 and newer. When a variable is unset, the `env()` value applies.
+
+System bar icons stay light on the dark app background. Both `StatusBar` and Capacitor's core `SystemBars` plugin are set to `DARK` in `capacitor.config.ts` and again in `App.tsx`. `SystemBars` re-applies its own style on every Android configuration change (rotation, fold, theme), so setting only `StatusBar` is not enough. On Android the theme in `styles.xml` disables the system bar contrast scrim and sets a `#111928` window background, so the bottom nav background shows behind the navigation buttons.
 
 ---
 

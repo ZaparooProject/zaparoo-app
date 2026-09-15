@@ -52,6 +52,26 @@ describe("safeArea", () => {
       expect(SafeArea.getSafeAreaInsets).not.toHaveBeenCalled();
     });
 
+    it("should use SystemBars CSS insets on Android so keyboard insets apply", async () => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
+
+      const { initSafeAreaInsets } = await import("@/lib/safeArea");
+      const setInsets = vi.fn();
+
+      await expect(initSafeAreaInsets(setInsets)).resolves.toBeNull();
+
+      expect(setInsets).toHaveBeenCalledWith({
+        top: "var(--safe-area-inset-top, env(safe-area-inset-top, 0px))",
+        bottom:
+          "var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))",
+        left: "var(--safe-area-inset-left, env(safe-area-inset-left, 0px))",
+        right: "var(--safe-area-inset-right, env(safe-area-inset-right, 0px))",
+      });
+      expect(SafeArea.getSafeAreaInsets).not.toHaveBeenCalled();
+      expect(SafeArea.addListener).not.toHaveBeenCalled();
+    });
+
     it("should use SafeArea plugin values on native platform", async () => {
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
       vi.mocked(Capacitor.getPlatform).mockReturnValue("ios");

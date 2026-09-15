@@ -57,3 +57,53 @@ index 00ada2a..b0a6b14 100644
  
              calls.clear();
  
+diff --git a/node_modules/capacitor-zeroconf/dist/esm/web.js b/node_modules/capacitor-zeroconf/dist/esm/web.js
+index 534f5e0..af07e9b 100644
+--- a/node_modules/capacitor-zeroconf/dist/esm/web.js
++++ b/node_modules/capacitor-zeroconf/dist/esm/web.js
+@@ -1,34 +1,36 @@
+ import { WebPlugin } from '@capacitor/core';
+ const errorString = 'The plugin is not available on this platform';
+-const errorFn = Promise.reject(errorString);
++// Reject per call. A module-level rejected promise is unhandled as soon as a
++// bundler evaluates this file, even on native platforms that never use it.
++const errorFn = () => Promise.reject(errorString);
+ export class ZeroConfWeb extends WebPlugin {
+     getHostname() {
+-        return errorFn;
++        return errorFn();
+     }
+     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     register(_request) {
+-        return errorFn;
++        return errorFn();
+     }
+     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     unregister(_request) {
+-        return errorFn;
++        return errorFn();
+     }
+     stop() {
+-        return errorFn;
++        return errorFn();
+     }
+     watch(
+     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     _request, 
+     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     _callback) {
+-        return errorFn;
++        return errorFn();
+     }
+     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     unwatch(_request) {
+-        return errorFn;
++        return errorFn();
+     }
+     close() {
+-        return errorFn;
++        return errorFn();
+     }
+ }
+ //# sourceMappingURL=web.js.map
+\ No newline at end of file

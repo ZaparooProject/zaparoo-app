@@ -69,6 +69,12 @@ vi.mock("@capacitor/core", () => ({
     isPluginAvailable: mockIsPluginAvailable,
   },
   registerPlugin: vi.fn(),
+  SystemBars: {
+    setStyle: vi.fn(() => Promise.resolve()),
+  },
+  SystemBarsStyle: {
+    Dark: "DARK",
+  },
 }));
 
 vi.mock("@uidotdev/usehooks", () => ({
