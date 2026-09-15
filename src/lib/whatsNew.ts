@@ -22,10 +22,10 @@ export type WhatsNewAnnouncement = {
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
     // iOS and French Android users skipped 1.13.0, so its items are repeated.
-    id: "release-1.14.0",
-    version: "1.14.0",
-    releaseKeys: ["native:1.14.0+30", "live:1.14.0-ota.1"],
-    title: "What's new in v1.14.0",
+    id: "release-1.14.1",
+    version: "1.14.1",
+    releaseKeys: ["native:1.14.1+30", "live:1.14.1-ota.1"],
+    title: "What's new in v1.14.1",
     items: [
       "Launch custom launchers and MiSTer built-in systems from the Library tab, and jump to letters faster in large folders.",
       "Link a Pro purchase to a free Zaparoo Online account to back it up and use it on both Android and iOS.",

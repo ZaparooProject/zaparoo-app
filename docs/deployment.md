@@ -143,7 +143,9 @@ git push origin v1.11.2
 
 `v1.11.0`, `v1.11.1`, and `v1.12.0` are abandoned failed tags. Do not submit or promote builds from those tags.
 
-`v1.13.0` shipped only on Android outside France. iOS and French Android users went from 1.11.2 straight to 1.14.0, so the 1.14.0 What's New announcement repeats the 1.13.0 items.
+`v1.14.0` can never be used again. Pushing it published an immutable GitHub release, and that release was later deleted, so GitHub permanently reserves the tag name. The release shipped as 1.14.1 instead. Once a version tag's release workflow has run, fix problems in a new patch version rather than deleting and recreating the tag.
+
+`v1.13.0` shipped only on Android outside France. iOS and French Android users went from 1.11.2 straight to 1.14.1, so the 1.14.1 What's New announcement repeats the 1.13.0 items.
 
 ---
 
