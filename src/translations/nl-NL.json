@@ -907,9 +907,9 @@
       "advanced": {
         "title": "Geavanceerd",
         "errorReporting": "Foutrapportage",
-        "errorReportingHelp": "Schakel anonieme foutrapportage in om bugs sneller te vinden en op te lossen. Rapporten worden geanonimiseerd en via Sentry verzonden. Er worden geen persoonsgegevens verzameld.",
+        "errorReportingHelp": "Schakel anonieme foutrapportage in om bugs sneller te vinden en op te lossen. Rapporten worden geanonimiseerd en via Rollbar verzonden. Er worden geen persoonsgegevens verzameld.",
         "errorReportingConfirmTitle": "Foutrapportage inschakelen?",
-        "errorReportingConfirmText": "Foutrapporten helpen ons bugs sneller op te lossen. Rapporten worden geanonimiseerd en via Sentry verzonden. Er worden geen persoonsgegevens verzameld.",
+        "errorReportingConfirmText": "Foutrapporten helpen ons bugs sneller op te lossen. Rapporten worden geanonimiseerd en via Rollbar verzonden. Er worden geen persoonsgegevens verzameld.",
         "debugLogging": "Debuglogging",
         "debugLoggingHelp": "Schakelt uitgebreidere logbestanden in op het verbonden apparaat. Dit kan nuttig zijn bij het oplossen van problemen.",
         "showFilenames": "Bestandsnamen voor media tonen",

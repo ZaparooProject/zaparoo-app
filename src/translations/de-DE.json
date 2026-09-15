@@ -907,9 +907,9 @@
       "advanced": {
         "title": "Erweitert",
         "errorReporting": "Fehlerberichte",
-        "errorReportingHelp": "Aktiviere anonyme Fehlerberichte, um Fehler schneller zu erkennen und zu beheben. Berichte werden anonymisiert und über Sentry gesendet. Es werden keine personenbezogenen Daten erfasst.",
+        "errorReportingHelp": "Aktiviere anonyme Fehlerberichte, um Fehler schneller zu erkennen und zu beheben. Berichte werden anonymisiert und über Rollbar gesendet. Es werden keine personenbezogenen Daten erfasst.",
         "errorReportingConfirmTitle": "Fehlerberichte aktivieren?",
-        "errorReportingConfirmText": "Fehlerberichte helfen uns, Fehler schneller zu beheben. Berichte werden anonymisiert und über Sentry gesendet. Es werden keine personenbezogenen Daten erfasst.",
+        "errorReportingConfirmText": "Fehlerberichte helfen uns, Fehler schneller zu beheben. Berichte werden anonymisiert und über Rollbar gesendet. Es werden keine personenbezogenen Daten erfasst.",
         "debugLogging": "Debug-Protokollierung",
         "debugLoggingHelp": "Aktiviert ausführlichere Protokolldateien auf dem verbundenen Gerät. Dies kann bei der Fehlerbehebung hilfreich sein.",
         "showFilenames": "Dateinamen für Medien anzeigen",

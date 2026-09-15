@@ -210,7 +210,10 @@ function publishDevices(devices: DiscoveredDevice[]): void {
   deviceListeners.forEach((listener) => listener(devices));
 }
 
-function handleDiscoveryResult(result: ZeroConfWatchResult): void {
+function handleDiscoveryResult(result: ZeroConfWatchResult | undefined): void {
+  // Android resolves the watch call once with no data when the watch starts.
+  if (!result) return;
+
   if (result.action === "resolved") {
     const device = serviceToDevice(result.service);
     if (!device) return;

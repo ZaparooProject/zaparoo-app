@@ -9,7 +9,7 @@ import { renderHook, act, waitFor } from "../../../test-utils";
 
 // Track watch callbacks for manual triggering
 let watchCallback:
-  | ((result: {
+  | ((result?: {
       action: "added" | "removed" | "resolved";
       service: {
         name: string;
@@ -262,6 +262,37 @@ describe("useNetworkScan", () => {
   });
 
   describe("device discovery", () => {
+    it("should ignore the empty callback Android sends when a watch starts", async () => {
+      const { useNetworkScan: hook } =
+        await import("../../../hooks/useNetworkScan");
+      const { result } = renderHook(() => hook());
+
+      await act(async () => {
+        await result.current.startScan();
+      });
+
+      expect(() => {
+        act(() => {
+          watchCallback?.();
+        });
+      }).not.toThrow();
+
+      act(() => {
+        watchCallback?.({
+          action: "resolved",
+          service: {
+            name: "test-device",
+            port: 7497,
+            ipv4Addresses: ["192.168.1.100"],
+            ipv6Addresses: [],
+          },
+        });
+      });
+
+      expect(result.current.devices).toHaveLength(1);
+      expect(result.current.devices[0]?.address).toBe("192.168.1.100");
+    });
+
     it("should add device when resolved event received", async () => {
       const { useNetworkScan: hook } =
         await import("../../../hooks/useNetworkScan");

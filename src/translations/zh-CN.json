@@ -907,9 +907,9 @@
       "advanced": {
         "title": "高级",
         "errorReporting": "错误报告",
-        "errorReportingHelp": "启用匿名错误报告，帮助更快地发现和修复错误。报告会经过匿名化处理并通过 Sentry 发送。不会收集个人数据。",
+        "errorReportingHelp": "启用匿名错误报告，帮助更快地发现和修复错误。报告会经过匿名化处理并通过 Rollbar 发送。不会收集个人数据。",
         "errorReportingConfirmTitle": "启用错误报告？",
-        "errorReportingConfirmText": "错误报告有助于我们更快修复错误。报告会经过匿名化处理并通过 Sentry 发送。不会收集个人数据。",
+        "errorReportingConfirmText": "错误报告有助于我们更快修复错误。报告会经过匿名化处理并通过 Rollbar 发送。不会收集个人数据。",
         "debugLogging": "调试日志",
         "debugLoggingHelp": "在已连接的设备上启用更详细的日志文件，有助于排查问题。",
         "showFilenames": "显示媒体文件名",

@@ -119,10 +119,17 @@ export function LibraryMediaDetailsModal(props: {
   );
   const setWriteQueue = useStatusStore((state) => state.setWriteQueue);
   const [imageIndex, setImageIndex] = useState(0);
-  const [resolvedDefaultType, setResolvedDefaultType] = useState<string | null>(
-    null,
-  );
-  const [imageAvailable, setImageAvailable] = useState<boolean | null>(null);
+  // The artwork reports its cover from an effect, which runs before this
+  // component's effects. A cached cover is reported on the first render for a
+  // new entry, so a reset effect would discard it. Tie each report to its entry.
+  const [defaultImageReport, setDefaultImageReport] = useState<{
+    entry: MediaBrowseEntry;
+    type: string | null;
+  } | null>(null);
+  const [availabilityReport, setAvailabilityReport] = useState<{
+    entry: MediaBrowseEntry;
+    available: boolean;
+  } | null>(null);
   const [launching, setLaunching] = useState(false);
   const [preparingWrite, setPreparingWrite] = useState(false);
   const [writeOptionsOpen, setWriteOptionsOpen] = useState(false);
@@ -143,6 +150,14 @@ export function LibraryMediaDetailsModal(props: {
   const systemId = props.entry
     ? props.systemId
     : (retainedSelection?.systemId ?? props.systemId);
+  const resolvedDefaultType =
+    defaultImageReport?.entry === entry ? defaultImageReport.type : null;
+  const imageAvailable =
+    availabilityReport?.entry === entry
+      ? availabilityReport.available
+      : entry?.hasCover === false
+        ? false
+        : null;
 
   useEffect(() => {
     if (!props.entry) return;
@@ -211,8 +226,6 @@ export function LibraryMediaDetailsModal(props: {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- A new external media selection starts a fresh carousel/action state.
     setImageIndex(0);
-    setResolvedDefaultType(null);
-    setImageAvailable(entry?.hasCover === false ? false : null);
     setLaunching(false);
     setPreparingWrite(false);
     setWriteOptionsOpen(false);
@@ -248,12 +261,29 @@ export function LibraryMediaDetailsModal(props: {
     }
   }, [imageIndex, imageOptions.length]);
 
-  const rememberResolvedType = useCallback((typeTag: string) => {
-    setResolvedDefaultType(imageTypeFromTypeTag(typeTag));
-  }, []);
-  const rememberImageAvailability = useCallback((available: boolean) => {
-    setImageAvailable(available);
-  }, []);
+  const rememberResolvedType = useCallback(
+    (typeTag: string) => {
+      if (!entry) return;
+      const type = imageTypeFromTypeTag(typeTag);
+      setDefaultImageReport((current) =>
+        current?.entry === entry && current.type === type
+          ? current
+          : { entry, type },
+      );
+    },
+    [entry],
+  );
+  const rememberImageAvailability = useCallback(
+    (available: boolean) => {
+      if (!entry) return;
+      setAvailabilityReport((current) =>
+        current?.entry === entry && current.available === available
+          ? current
+          : { entry, available },
+      );
+    },
+    [entry],
+  );
 
   const closeModal = () => {
     launchControllerRef.current?.abort();

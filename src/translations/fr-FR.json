@@ -907,9 +907,9 @@
       "advanced": {
         "title": "Avancé",
         "errorReporting": "Rapports d’erreurs",
-        "errorReportingHelp": "Activez les rapports d’erreurs anonymes pour accélérer l’identification et la correction des bugs. Les rapports sont anonymisés et envoyés via Sentry. Aucune donnée personnelle n’est collectée.",
+        "errorReportingHelp": "Activez les rapports d’erreurs anonymes pour accélérer l’identification et la correction des bugs. Les rapports sont anonymisés et envoyés via Rollbar. Aucune donnée personnelle n’est collectée.",
         "errorReportingConfirmTitle": "Activer les rapports d’erreurs ?",
-        "errorReportingConfirmText": "Les rapports d’erreurs nous aident à corriger les bugs plus rapidement. Ils sont anonymisés et envoyés via Sentry. Aucune donnée personnelle n’est collectée.",
+        "errorReportingConfirmText": "Les rapports d’erreurs nous aident à corriger les bugs plus rapidement. Ils sont anonymisés et envoyés via Rollbar. Aucune donnée personnelle n’est collectée.",
         "debugLogging": "Journalisation de débogage",
         "debugLoggingHelp": "Active des fichiers journaux plus détaillés sur l’appareil connecté. Peut faciliter le diagnostic des problèmes.",
         "showFilenames": "Afficher les noms de fichiers des médias",
