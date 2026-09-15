@@ -1209,6 +1209,7 @@
       "backgroundMediaSlot": "백그라운드 미디어",
       "readOnlyMappings": "파일 매핑",
       "remoteInput": "원격 입력",
+      "heldInput": "리모컨 버튼 길게 누르기",
       "deviceLinking": "Zaparoo Online 기기 연결",
       "profiles": "프로필"
     },

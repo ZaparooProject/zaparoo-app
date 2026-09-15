@@ -1209,6 +1209,7 @@
       "backgroundMediaSlot": "后台媒体",
       "readOnlyMappings": "文件映射",
       "remoteInput": "远程输入",
+      "heldInput": "遥控按钮长按",
       "deviceLinking": "Zaparoo Online 设备关联",
       "profiles": "个人资料"
     },

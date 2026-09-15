@@ -1,4 +1,12 @@
-import { useRef, useState, type ReactElement } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
@@ -22,7 +30,9 @@ import "react-simple-keyboard/build/css/index.css";
 import { SlideModal } from "@/components/SlideModal";
 import { Segmented } from "@/components/wui/Segmented";
 import { CoreAPI, getScreenshotFailureKind } from "@/lib/coreApi";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useHeldRemoteInput } from "@/hooks/useHeldRemoteInput";
 import { logger } from "@/lib/logger";
 import { useStatusStore } from "@/lib/store";
 
@@ -209,6 +219,75 @@ function getRemoteActions(platform: string | null): RemoteAction[] {
   ];
 }
 
+function RemotePadButton(props: {
+  keys: string;
+  className: string;
+  ariaLabel?: string;
+  holdInput: boolean;
+  held: boolean;
+  onTap: (keys: string) => void;
+  onPress: (keys: string, pointerId: number) => void;
+  onRelease: (pointerId: number) => void;
+  children: ReactNode;
+}) {
+  // A pointer press already sent its input, so its click is ignored. Clicks
+  // without one, from a keyboard or screen reader, still send a tap.
+  const pointerPressedRef = useRef(false);
+
+  if (!props.holdInput) {
+    return (
+      <button
+        type="button"
+        className={props.className}
+        aria-label={props.ariaLabel}
+        onClick={() => props.onTap(props.keys)}
+      >
+        {props.children}
+      </button>
+    );
+  }
+
+  const releasePointer = (event: PointerEvent<HTMLButtonElement>) => {
+    props.onRelease(event.pointerId);
+  };
+
+  return (
+    <button
+      type="button"
+      className={props.className}
+      aria-label={props.ariaLabel}
+      data-held={props.held ? "true" : undefined}
+      onPointerDown={(event) => {
+        if (event.pointerType === "mouse" && event.button !== 0) return;
+        pointerPressedRef.current = true;
+        try {
+          // Keep the release on this button if the finger slides off it.
+          event.currentTarget.setPointerCapture(event.pointerId);
+        } catch {
+          // The pointer is already gone; its pointerup still releases the key.
+        }
+        props.onPress(props.keys, event.pointerId);
+      }}
+      onPointerUp={releasePointer}
+      onPointerCancel={(event) => {
+        pointerPressedRef.current = false;
+        releasePointer(event);
+      }}
+      onLostPointerCapture={releasePointer}
+      onContextMenu={(event) => event.preventDefault()}
+      onClick={() => {
+        if (pointerPressedRef.current) {
+          pointerPressedRef.current = false;
+          return;
+        }
+        props.onTap(props.keys);
+      }}
+    >
+      {props.children}
+    </button>
+  );
+}
+
 export function RemoteKeyboardModal(props: {
   isOpen: boolean;
   close: () => void;
@@ -222,7 +301,7 @@ export function RemoteKeyboardModal(props: {
   const [error, setError] = useState<string | null>(null);
   const [screenshot, setScreenshot] = useState<ScreenshotResult | null>(null);
   const [capturingScreenshot, setCapturingScreenshot] = useState(false);
-  const sendQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const heldInput = useCoreFeature("heldInput", { requireKnownSupport: true });
 
   const isNative = Capacitor.isNativePlatform();
   const remoteActions = getRemoteActions(corePlatform);
@@ -235,30 +314,53 @@ export function RemoteKeyboardModal(props: {
     impact("light");
   };
 
+  const handleDisconnected = useCallback(() => {
+    setError(null);
+    toast.error(t("remoteKeyboard.disconnected"));
+  }, [t]);
+
+  const handleSendError = useCallback(
+    (error: unknown) => {
+      const message = t("remoteKeyboard.sendError");
+      logger.error(message, error, {
+        category: "api",
+        action: "remoteKeyboard.send",
+        severity: "error",
+      });
+      setError(message);
+      toast.error(message);
+    },
+    [t],
+  );
+
+  const remoteInput = useHeldRemoteInput({
+    heldInputAvailable: heldInput.available,
+    onDisconnected: handleDisconnected,
+    onError: handleSendError,
+  });
+  const { releaseAll } = remoteInput;
+
+  useEffect(() => {
+    if (!props.isOpen) releaseAll();
+  }, [props.isOpen, releaseAll]);
+
   const sendMacro = (keys: string) => {
     triggerControlHaptic();
-
-    if (!connected) {
-      const message = t("remoteKeyboard.disconnected");
-      setError(null);
-      toast.error(message);
-      return;
-    }
-
     setError(null);
-    sendQueueRef.current = sendQueueRef.current
-      .catch(() => undefined)
-      .then(() => CoreAPI.inputKeyboard({ keys }))
-      .catch((error) => {
-        const message = t("remoteKeyboard.sendError");
-        logger.error(message, error, {
-          category: "api",
-          action: "remoteKeyboard.send",
-          severity: "error",
-        });
-        setError(message);
-        toast.error(message);
-      });
+    remoteInput.sendTap(keys);
+  };
+
+  const pressRemoteKey = (keys: string, pointerId: number) => {
+    triggerControlHaptic();
+    setError(null);
+    remoteInput.press(keys, pointerId);
+  };
+
+  const remotePadButtonProps = {
+    holdInput: heldInput.available,
+    onTap: sendMacro,
+    onPress: pressRemoteKey,
+    onRelease: remoteInput.release,
   };
 
   const handleKeyPress = (button: string) => {
@@ -371,63 +473,74 @@ export function RemoteKeyboardModal(props: {
           value={mode}
           onChange={(next) => {
             triggerControlHaptic();
+            // Leaving the pad unmounts its buttons before they see a pointerup.
+            if (next !== "remote") releaseAll();
             setMode(next);
           }}
         />
         {mode === "remote" ? (
-          <div className="remote-keyboard-pad">
+          <div
+            className="remote-keyboard-pad"
+            data-hold-input={heldInput.available ? "true" : undefined}
+          >
             <div className="remote-keyboard-dpad">
-              <button
-                type="button"
+              <RemotePadButton
+                {...remotePadButtonProps}
+                keys="{up}"
+                held={remoteInput.heldKeys.has("{up}")}
                 className="remote-keyboard-pad-button remote-keyboard-pad-up"
-                aria-label={t("remoteKeyboard.up")}
-                onClick={() => sendMacro("{up}")}
+                ariaLabel={t("remoteKeyboard.up")}
               >
                 <ChevronUp size={28} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
+              </RemotePadButton>
+              <RemotePadButton
+                {...remotePadButtonProps}
+                keys="{left}"
+                held={remoteInput.heldKeys.has("{left}")}
                 className="remote-keyboard-pad-button remote-keyboard-pad-left"
-                aria-label={t("remoteKeyboard.left")}
-                onClick={() => sendMacro("{left}")}
+                ariaLabel={t("remoteKeyboard.left")}
               >
                 <ChevronLeft size={28} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
+              </RemotePadButton>
+              <RemotePadButton
+                {...remotePadButtonProps}
+                keys="{enter}"
+                held={remoteInput.heldKeys.has("{enter}")}
                 className="remote-keyboard-pad-button remote-keyboard-pad-ok"
-                onClick={() => sendMacro("{enter}")}
               >
                 {t("remoteKeyboard.ok")}
-              </button>
-              <button
-                type="button"
+              </RemotePadButton>
+              <RemotePadButton
+                {...remotePadButtonProps}
+                keys="{right}"
+                held={remoteInput.heldKeys.has("{right}")}
                 className="remote-keyboard-pad-button remote-keyboard-pad-right"
-                aria-label={t("remoteKeyboard.right")}
-                onClick={() => sendMacro("{right}")}
+                ariaLabel={t("remoteKeyboard.right")}
               >
                 <ChevronRight size={28} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
+              </RemotePadButton>
+              <RemotePadButton
+                {...remotePadButtonProps}
+                keys="{down}"
+                held={remoteInput.heldKeys.has("{down}")}
                 className="remote-keyboard-pad-button remote-keyboard-pad-down"
-                aria-label={t("remoteKeyboard.down")}
-                onClick={() => sendMacro("{down}")}
+                ariaLabel={t("remoteKeyboard.down")}
               >
                 <ChevronDown size={28} aria-hidden="true" />
-              </button>
+              </RemotePadButton>
             </div>
             <div className="remote-keyboard-pad-actions">
               {remoteActions.map((action) => (
-                <button
+                <RemotePadButton
+                  {...remotePadButtonProps}
                   key={`${action.labelKey}-${action.keys}`}
-                  type="button"
+                  keys={action.keys}
+                  held={remoteInput.heldKeys.has(action.keys)}
                   className="remote-keyboard-pad-action"
-                  aria-label={t(action.ariaLabelKey ?? action.labelKey)}
-                  onClick={() => sendMacro(action.keys)}
+                  ariaLabel={t(action.ariaLabelKey ?? action.labelKey)}
                 >
                   {action.icon ?? t(action.labelKey)}
-                </button>
+                </RemotePadButton>
               ))}
               <button
                 type="button"

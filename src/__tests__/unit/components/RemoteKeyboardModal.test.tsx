@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { findA11yViolations, render, screen, waitFor } from "@/test-utils";
+import {
+  fireEvent,
+  findA11yViolations,
+  render,
+  screen,
+  waitFor,
+} from "@/test-utils";
 import userEvent from "@testing-library/user-event";
-import { useStatusStore } from "@/lib/store";
+import { ConnectionState, useStatusStore } from "@/lib/store";
 import { RemoteKeyboardModal } from "@/components/RemoteKeyboardModal";
 import { CoreAPI, CoreApiError } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
@@ -599,5 +605,204 @@ describe("RemoteKeyboardModal", () => {
 
     expect(CoreAPI.inputKeyboard).not.toHaveBeenCalled();
     expect(screen.getByText("remoteKeyboard.disconnected")).toBeInTheDocument();
+  });
+
+  describe("held remote input", () => {
+    const sentKeys = () =>
+      vi
+        .mocked(CoreAPI.inputKeyboard)
+        .mock.calls.map(([params]) => params.keys);
+
+    beforeEach(() => {
+      useStatusStore.setState({
+        connected: true,
+        connectionState: ConnectionState.CONNECTED,
+        coreVersion: "2.17.0",
+        coreVersionPending: false,
+      });
+    });
+
+    it("should hold a remote button until it is released", async () => {
+      const user = userEvent.setup();
+      render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+      const up = screen.getByRole("button", { name: "remoteKeyboard.up" });
+
+      await user.pointer({ keys: "[TouchA>]", target: up });
+      await waitFor(() => expect(sentKeys()).toEqual(["{press:up}"]));
+
+      await user.pointer({ keys: "[/TouchA]", target: up });
+      await waitFor(() =>
+        expect(sentKeys()).toEqual(["{press:up}", "{release:up}"]),
+      );
+    });
+
+    // user-event only lifts touches once every finger is up, so these tests
+    // dispatch pointer events with explicit ids to lift one finger at a time.
+    it("should hold several remote buttons at once", async () => {
+      render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+      const up = screen.getByRole("button", { name: "remoteKeyboard.up" });
+      const right = screen.getByRole("button", {
+        name: "remoteKeyboard.right",
+      });
+      const touch = (pointerId: number) => ({
+        pointerId,
+        pointerType: "touch",
+      });
+
+      fireEvent.pointerDown(up, touch(1));
+      fireEvent.pointerDown(right, touch(2));
+      fireEvent.pointerUp(up, touch(1));
+      await waitFor(() =>
+        expect(sentKeys()).toEqual([
+          "{press:up}",
+          "{press:right}",
+          "{release:up}",
+        ]),
+      );
+
+      fireEvent.pointerUp(right, touch(2));
+      await waitFor(() =>
+        expect(sentKeys()).toEqual([
+          "{press:up}",
+          "{press:right}",
+          "{release:up}",
+          "{release:right}",
+        ]),
+      );
+    });
+
+    it("should keep a button held until its last pointer lifts", async () => {
+      render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+      const ok = screen.getByRole("button", { name: "remoteKeyboard.ok" });
+      const touch = (pointerId: number) => ({
+        pointerId,
+        pointerType: "touch",
+      });
+
+      fireEvent.pointerDown(ok, touch(1));
+      fireEvent.pointerDown(ok, touch(2));
+      fireEvent.pointerUp(ok, touch(1));
+      await waitFor(() => expect(sentKeys()).toEqual(["{press:enter}"]));
+
+      fireEvent.pointerUp(ok, touch(2));
+      await waitFor(() =>
+        expect(sentKeys()).toEqual(["{press:enter}", "{release:enter}"]),
+      );
+    });
+
+    it("should not release a button before Core has pressed it", async () => {
+      const user = userEvent.setup();
+      let finishPress = () => {};
+      vi.mocked(CoreAPI.inputKeyboard).mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finishPress = resolve;
+          }),
+      );
+      render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+      const down = screen.getByRole("button", { name: "remoteKeyboard.down" });
+
+      await user.pointer({ keys: "[TouchA>]", target: down });
+      await user.pointer({ keys: "[/TouchA]", target: down });
+      expect(sentKeys()).toEqual(["{press:down}"]);
+
+      finishPress();
+      await waitFor(() =>
+        expect(sentKeys()).toEqual(["{press:down}", "{release:down}"]),
+      );
+    });
+
+    it("should fall back to taps when the platform cannot hold input", async () => {
+      const user = userEvent.setup();
+      vi.mocked(CoreAPI.inputKeyboard).mockRejectedValueOnce(
+        new CoreApiError(
+          "persistent keyboard input requires a supported WebSocket session",
+          1,
+        ),
+      );
+      render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+      const up = screen.getByRole("button", { name: "remoteKeyboard.up" });
+
+      await user.pointer({ keys: "[TouchA>]", target: up });
+      await waitFor(() => expect(sentKeys()).toEqual(["{press:up}", "{up}"]));
+      await user.pointer({ keys: "[/TouchA]", target: up });
+
+      await user.pointer({ keys: "[TouchA>][/TouchA]", target: up });
+      await waitFor(() =>
+        expect(sentKeys()).toEqual(["{press:up}", "{up}", "{up}"]),
+      );
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(
+        screen.queryByText("remoteKeyboard.sendError"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should forget held buttons when Core rejects a press", async () => {
+      const user = userEvent.setup();
+      vi.mocked(CoreAPI.inputKeyboard).mockRejectedValueOnce(
+        new Error("keyboard press failed"),
+      );
+      render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+      const up = screen.getByRole("button", { name: "remoteKeyboard.up" });
+
+      await user.pointer({ keys: "[TouchA>]", target: up });
+      expect(
+        await screen.findByText("remoteKeyboard.sendError"),
+      ).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith("remoteKeyboard.sendError");
+
+      await user.pointer({ keys: "[/TouchA]", target: up });
+      expect(sentKeys()).toEqual(["{press:up}"]);
+    });
+
+    it("should release held buttons when the modal closes", async () => {
+      const user = userEvent.setup();
+      const close = vi.fn();
+      const { rerender } = render(<RemoteKeyboardModal isOpen close={close} />);
+      const up = screen.getByRole("button", { name: "remoteKeyboard.up" });
+
+      await user.pointer({ keys: "[TouchA>]", target: up });
+      rerender(<RemoteKeyboardModal isOpen={false} close={close} />);
+
+      await waitFor(() =>
+        expect(sentKeys()).toEqual(["{press:up}", "{release:up}"]),
+      );
+    });
+
+    it("should release a held button when its pointer capture is lost", async () => {
+      const user = userEvent.setup();
+      render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+      const left = screen.getByRole("button", { name: "remoteKeyboard.left" });
+
+      await user.pointer({ keys: "[MouseLeft>]", target: left });
+      await waitFor(() => expect(sentKeys()).toEqual(["{press:left}"]));
+      fireEvent.lostPointerCapture(left, { pointerId: 1 });
+
+      await waitFor(() =>
+        expect(sentKeys()).toEqual(["{press:left}", "{release:left}"]),
+      );
+    });
+
+    it("should tap when a remote button is activated without a pointer", async () => {
+      const user = userEvent.setup();
+      render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+
+      screen.getByRole("button", { name: "remoteKeyboard.back" }).focus();
+      await user.keyboard("{Enter}");
+
+      await waitFor(() => expect(sentKeys()).toEqual(["{esc}"]));
+    });
+
+    it("should keep tapping remote buttons on Cores before 2.17.0", async () => {
+      const user = userEvent.setup();
+      useStatusStore.setState({ coreVersion: "2.16.0" });
+      render(<RemoteKeyboardModal isOpen close={vi.fn()} />);
+
+      await user.click(
+        screen.getByRole("button", { name: "remoteKeyboard.up" }),
+      );
+
+      await waitFor(() => expect(sentKeys()).toEqual(["{up}"]));
+    });
   });
 });
