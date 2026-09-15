@@ -52,11 +52,14 @@ const platform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
 | `capacitor-plugin-safe-area`         | Safe area insets for notched devices |
 | `capacitor-zeroconf`                 | Zeroconf/Bonjour network discovery   |
 
-`capacitor-zeroconf` is patched with `patch-package` (`patches/capacitor-zeroconf+4.0.0.patch`, applied by the `postinstall` script). Upstream acquires the Android Wi-Fi multicast lock on the first watch and only releases it in `close()`, which the app never calls because `useNetworkScan` uses `unwatch()` to keep JmDNS warm. A held multicast lock disables the Wi-Fi chip's multicast filter, so the CPU wakes for every mDNS and broadcast frame for the rest of the process lifetime. The patch takes the lock per watch, releases it when the last watch is removed, and re-registers the listener on every `watch()` call so later scans receive events again. It changes native code, so it ships only with a store build. npm 12 blocks the tarball URL patch-package fetches, so regenerate the patch with:
+`capacitor-zeroconf` is patched with `patch-package` (`patches/capacitor-zeroconf+4.0.0.patch`, applied by the `postinstall` script). Upstream acquires the Android Wi-Fi multicast lock on the first watch and only releases it in `close()`, which the app never calls because `useNetworkScan` uses `unwatch()` to keep JmDNS warm. A held multicast lock disables the Wi-Fi chip's multicast filter, so the CPU wakes for every mDNS and broadcast frame for the rest of the process lifetime. The patch takes the lock per watch, releases it when the last watch is removed, and re-registers the listener on every `watch()` call so later scans receive events again. The patch also makes the web fallback in `dist/esm/web.js` reject per call. Upstream creates one rejected promise when the module loads, and Vite bundles the fallback into the vendor chunk, so every platform logged an unhandled rejection at startup. The native part ships only with a store build. npm 12 blocks the tarball URL patch-package fetches, so regenerate the patch with:
 
 ```bash
-npm_config_allow_remote=root npx patch-package capacitor-zeroconf --include 'android/src/main/java'
+npm_config_allow_remote=root npx patch-package capacitor-zeroconf --include '^(android/src/main/java|dist/esm/web\.js)'
+sed -i 's/\r$//' patches/capacitor-zeroconf+4.0.0.patch
 ```
+
+The upstream `web.js` uses CRLF line endings, which Git would rewrite in the patch. patch-package ignores trailing whitespace when it applies the patch, so the LF patch still applies.
 
 ### Shake detection bridge
 
