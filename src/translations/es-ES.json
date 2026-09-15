@@ -907,9 +907,9 @@
       "advanced": {
         "title": "Avanzado",
         "errorReporting": "Notificación de errores",
-        "errorReportingHelp": "Habilita la notificación anónima de errores para identificar y corregir fallos con mayor rapidez. Los informes se anonimizan y se envían mediante Sentry. No se recopilan datos personales.",
+        "errorReportingHelp": "Habilita la notificación anónima de errores para identificar y corregir fallos con mayor rapidez. Los informes se anonimizan y se envían mediante Rollbar. No se recopilan datos personales.",
         "errorReportingConfirmTitle": "¿Habilitar la notificación de errores?",
-        "errorReportingConfirmText": "Los informes de errores nos ayudan a corregir fallos con mayor rapidez. Los informes se anonimizan y se envían mediante Sentry. No se recopilan datos personales.",
+        "errorReportingConfirmText": "Los informes de errores nos ayudan a corregir fallos con mayor rapidez. Los informes se anonimizan y se envían mediante Rollbar. No se recopilan datos personales.",
         "debugLogging": "Registro de depuración",
         "debugLoggingHelp": "Genera archivos de registro más detallados en el dispositivo conectado. Puede resultar útil para solucionar problemas.",
         "showFilenames": "Mostrar nombres de archivo del contenido multimedia",

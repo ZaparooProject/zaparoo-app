@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { act, render, screen, waitFor, within } from "@/test-utils";
+import { render as renderWithWrapper } from "@testing-library/react";
+import {
+  act,
+  createProvidersWithQueryClient,
+  createTestQueryClient,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@/test-utils";
 import { CoreAPI } from "@/lib/coreApi";
 import type { MediaBrowseEntry, MediaMetaResponse } from "@/lib/models";
 import { usePreferencesStore } from "@/lib/preferencesStore";
@@ -256,6 +265,92 @@ describe("LibraryMediaDetailsModal", () => {
         }),
       );
     });
+  });
+
+  it("should not apply another device's missing cover to the same media", async () => {
+    mockRequestLibraryImage.mockImplementation(
+      (
+        _entry: MediaBrowseEntry,
+        _systemId: string,
+        options: { deviceKey: string },
+      ) =>
+        Promise.resolve(
+          options.deviceKey === "device-b"
+            ? {
+                url: "data:image/webp;base64,BBBB",
+                typeTag: "property:image-boxart",
+              }
+            : null,
+        ),
+    );
+    const wrapper = createProvidersWithQueryClient(createTestQueryClient());
+    const props: React.ComponentProps<typeof LibraryMediaDetailsModal> = {
+      isOpen: true,
+      close: vi.fn(),
+      entry: ENTRY,
+      systemId: "SNES",
+      deviceKey: "device-a",
+    };
+    const { rerender } = renderWithWrapper(
+      <LibraryMediaDetailsModal {...props} />,
+      { wrapper },
+    );
+    await screen.findByText("A platform adventure.");
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", { name: "library.nextImage" }),
+      ).not.toBeInTheDocument();
+    });
+
+    // Search keeps the sheet open when the active device changes.
+    rerender(<LibraryMediaDetailsModal {...props} deviceKey="device-b" />);
+
+    expect(
+      await screen.findByRole("img", { name: "library.imageAlt" }),
+    ).toHaveAttribute("src", "data:image/webp;base64,BBBB");
+  });
+
+  it("should not repeat a cached cover when details reopen from another list", async () => {
+    const user = userEvent.setup();
+    const wrapper = createProvidersWithQueryClient(createTestQueryClient());
+    const props: React.ComponentProps<typeof LibraryMediaDetailsModal> = {
+      isOpen: true,
+      close: vi.fn(),
+      entry: ENTRY,
+      systemId: "SNES",
+      deviceKey: "device-a",
+    };
+    const { unmount } = renderWithWrapper(
+      <LibraryMediaDetailsModal {...props} />,
+      { wrapper },
+    );
+    await screen.findByRole("img", { name: "library.imageAlt" });
+    unmount();
+
+    // Favorites builds its own entry object, and the cover is still cached.
+    renderWithWrapper(
+      <LibraryMediaDetailsModal {...props} entry={{ ...ENTRY }} />,
+      { wrapper },
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "library.nextImage" }),
+    );
+
+    await waitFor(() => {
+      expect(mockRequestLibraryImage).toHaveBeenCalledWith(
+        expect.objectContaining({ mediaId: ENTRY.mediaId }),
+        "SNES",
+        expect.objectContaining({ imageTypes: ["screenshot"] }),
+      );
+    });
+    expect(
+      screen.getByRole("button", { name: "library.nextImage" }),
+    ).toBeDisabled();
+    expect(mockRequestLibraryImage).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ imageTypes: ["boxart"] }),
+    );
   });
 
   it("should move focus when carousel navigation reaches a bound", async () => {

@@ -93,7 +93,10 @@ describe("BottomNav", () => {
     for (const link of screen.getAllByRole("link")) {
       expect(link).toHaveClass("w-full", "min-w-0");
     }
-    expect(screen.getByText("nav.settings")).toHaveClass("break-all");
+    expect(screen.getByText("nav.settings")).toHaveClass(
+      "wrap-anywhere",
+      "hyphens-auto",
+    );
   });
 
   it("renders all navigation buttons", () => {

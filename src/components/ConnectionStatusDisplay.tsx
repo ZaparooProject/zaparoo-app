@@ -207,7 +207,10 @@ export function ConnectionStatusDisplay({
 
       {/* Text content */}
       <div className="min-w-0 flex-1">
-        <h2 id={headingId} className="flex items-center gap-1.5 font-medium">
+        <h2
+          id={headingId}
+          className="flex flex-wrap items-center gap-x-1.5 font-medium"
+        >
           {config.title}
           {showLock && (
             <Lock

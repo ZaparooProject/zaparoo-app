@@ -907,9 +907,9 @@
       "advanced": {
         "title": "詳細設定",
         "errorReporting": "エラーレポート",
-        "errorReportingHelp": "匿名のエラーレポートを有効にして、バグの迅速な特定と修正にご協力ください。レポートは匿名化され、Sentry経由で送信されます。個人データは収集されません。",
+        "errorReportingHelp": "匿名のエラーレポートを有効にして、バグの迅速な特定と修正にご協力ください。レポートは匿名化され、Rollbar経由で送信されます。個人データは収集されません。",
         "errorReportingConfirmTitle": "エラーレポートを有効にしますか？",
-        "errorReportingConfirmText": "エラーレポートはバグの迅速な修正に役立ちます。レポートは匿名化され、Sentry経由で送信されます。個人データは収集されません。",
+        "errorReportingConfirmText": "エラーレポートはバグの迅速な修正に役立ちます。レポートは匿名化され、Rollbar経由で送信されます。個人データは収集されません。",
         "debugLogging": "デバッグログ",
         "debugLoggingHelp": "接続中のデバイスで、より詳細なログファイルを有効にします。問題のトラブルシューティングに役立つ場合があります。",
         "showFilenames": "メディアのファイル名を表示",
