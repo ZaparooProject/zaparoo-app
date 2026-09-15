@@ -52,6 +52,7 @@ interface WarpPurchaseModalProps {
   action: WarpAction;
   onPurchase: () => void;
   purchaseEnabled: boolean;
+  lifetimeProOwned: boolean;
 }
 
 function WarpPurchaseModal({
@@ -63,6 +64,7 @@ function WarpPurchaseModal({
   action,
   onPurchase,
   purchaseEnabled,
+  lifetimeProOwned,
 }: WarpPurchaseModalProps) {
   const { t } = useTranslation();
 
@@ -98,7 +100,11 @@ function WarpPurchaseModal({
 
         <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
           <li>{t("online.warp.benefitBackup")}</li>
-          <li>{t("online.warp.benefitPro")}</li>
+          <li>
+            {lifetimeProOwned
+              ? t("online.warp.proOwned")
+              : t("online.warp.benefitPro")}
+          </li>
           <li>{t("online.warp.benefitDevelopment")}</li>
         </ul>
 
@@ -265,6 +271,7 @@ function WarpSubscriptionPreview({
         action={null}
         onPurchase={previewAction}
         purchaseEnabled
+        lifetimeProOwned={false}
       />
     </section>
   );
@@ -538,6 +545,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
         action={action}
         onPurchase={handlePurchase}
         purchaseEnabled={Boolean(selectedPackage)}
+        lifetimeProOwned={lifetimeProAccess === true}
       />
     </section>
   );

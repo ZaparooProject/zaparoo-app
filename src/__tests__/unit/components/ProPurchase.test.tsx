@@ -42,14 +42,21 @@ const {
   mockCopyDiagnostics,
   mockGetBillingDiagnostics,
   mockGetSubscriptionStatus,
+  mockNavigate,
   mockReconcileStorePurchases,
   mockRestorePurchasesForUser,
 } = vi.hoisted(() => ({
   mockCopyDiagnostics: vi.fn(),
   mockGetBillingDiagnostics: vi.fn(),
   mockGetSubscriptionStatus: vi.fn(),
+  mockNavigate: vi.fn(),
   mockReconcileStorePurchases: vi.fn(),
   mockRestorePurchasesForUser: vi.fn(),
+}));
+
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  useRouter: () => ({ navigate: mockNavigate }),
 }));
 
 vi.mock("@capacitor/clipboard", () => ({
@@ -420,6 +427,9 @@ describe("useProPurchase", () => {
 
     expect(screen.getByText("scan.purchaseProUnavailable")).toBeInTheDocument();
     expect(
+      screen.queryByText("scan.purchaseProWarpNote"),
+    ).not.toBeInTheDocument();
+    expect(
       screen.getByRole("button", { name: "scan.purchaseProUnavailableAction" }),
     ).toBeDisabled();
     expect(
@@ -711,6 +721,10 @@ describe("useProPurchase", () => {
   it("should ignore repeat activations and block dismissal while purchasing", async () => {
     const user = userEvent.setup();
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { useStatusStore } = await import("@/lib/store");
+    useStatusStore.setState({
+      loggedInUser: { uid: "firebase-user-123" } as never,
+    });
     let resolvePurchase:
       | ((value: Awaited<ReturnType<typeof Purchases.purchasePackage>>) => void)
       | undefined;
@@ -739,6 +753,9 @@ describe("useProPurchase", () => {
       within(dialog).getByRole("button", { name: "loading" }),
     ).toBeDisabled();
     expect(
+      within(dialog).getByRole("button", { name: "scan.purchaseProWarpLink" }),
+    ).toBeDisabled();
+    expect(
       within(dialog).queryByRole("button", { name: "nav.close" }),
     ).not.toBeInTheDocument();
     await user.keyboard("{Escape}");
@@ -761,6 +778,10 @@ describe("useProPurchase", () => {
   it("should never buy the current Warp package as Pro", async () => {
     const user = userEvent.setup();
     const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const { useStatusStore } = await import("@/lib/store");
+    useStatusStore.setState({
+      loggedInUser: { uid: "firebase-user-123" } as never,
+    });
     const proPackage = createPackage();
     const warpPackage = {
       ...createPackage(),
@@ -834,8 +855,8 @@ describe("useProPurchase", () => {
     });
     expect(toast.error).not.toHaveBeenCalledWith("scan.purchaseProFailed");
     expect(
-      screen.queryByRole("dialog", { name: "scan.purchaseProTitle" }),
-    ).not.toBeInTheDocument();
+      await screen.findByRole("dialog", { name: "scan.purchaseAccountTitle" }),
+    ).toBeInTheDocument();
   });
 
   it("should show a purchase error without enabling launch on scan", async () => {
@@ -937,6 +958,151 @@ describe("useProPurchase", () => {
     expect(
       screen.queryByRole("dialog", { name: "scan.purchaseProTitle" }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "scan.purchaseAccountTitle" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should offer Zaparoo Online after recovering an already-owned purchase", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const toast = (await import("react-hot-toast")).default;
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+    vi.mocked(Purchases.purchasePackage).mockRejectedValue({
+      code: "6",
+      message: "This product is already active for the user.",
+      userInfo: { readableErrorCode: "ProductAlreadyPurchasedError" },
+    });
+    mockReconcileStorePurchases.mockResolvedValue({
+      entitlements: { active: { tapto_launcher: {} } },
+    });
+
+    render(<ProPurchaseHarness />);
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+    await user.click(
+      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+    );
+
+    expect(
+      await screen.findByRole("dialog", { name: "scan.purchaseAccountTitle" }),
+    ).toBeInTheDocument();
+    expect(toast.success).toHaveBeenCalledWith("scan.purchaseProRestored");
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
+    expect(usePreferencesStore.getState().storeVerifiedProAccess).toBe(false);
+  });
+
+  it("should offer Zaparoo Online after a signed-out purchase", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+    vi.mocked(Purchases.purchasePackage).mockResolvedValue({
+      customerInfo: {
+        entitlements: { active: { tapto_launcher: {} } },
+      },
+    } as never);
+
+    render(<ProPurchaseHarness />);
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+    await user.click(
+      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "scan.purchaseAccountTitle",
+    });
+    const { usePreferencesStore } = await import("@/lib/preferencesStore");
+    expect(usePreferencesStore.getState().lifetimeProAccess).toBe(true);
+    expect(mockSetLaunchOnScan).toHaveBeenCalledWith(true);
+    expect(
+      within(dialog).getByText("scan.purchaseAccountThanks"),
+    ).toHaveFocus();
+    expect(
+      within(dialog).getByText("scan.purchaseAccountDescription"),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: "scan.purchaseAccountAction",
+      }),
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings/online" });
+    await waitFor(() => {
+      expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
+    });
+  });
+
+  it("should return to checkout after skipping Zaparoo Online", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+    vi.mocked(Purchases.purchasePackage).mockResolvedValue({
+      customerInfo: {
+        entitlements: { active: { tapto_launcher: {} } },
+      },
+    } as never);
+
+    render(<ProPurchaseHarness />);
+    await waitFor(() => expect(Purchases.getOfferings).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+    await user.click(
+      await screen.findByRole("button", { name: "scan.purchaseProAction" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "scan.purchaseAccountTitle",
+    });
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "scan.purchaseAccountLater" }),
+    );
+
+    await waitFor(() => {
+      expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+
+    expect(screen.getByRole("dialog", { name: "scan.purchaseProTitle" })).toBe(
+      dialog,
+    );
+  });
+
+  it("should link to Warp as a subscription that also includes Pro", async () => {
+    const user = userEvent.setup();
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    vi.mocked(Purchases.getOfferings).mockResolvedValue(
+      createOfferings(createOffering([createPackage()])),
+    );
+
+    render(<ProPurchaseHarness />);
+    await user.click(screen.getByRole("button", { name: "Open Pro purchase" }));
+    await screen.findByRole("button", { name: "scan.purchaseProAction" });
+    const dialog = screen.getByRole("dialog", {
+      name: "scan.purchaseProTitle",
+    });
+
+    expect(
+      within(dialog).getByText("scan.purchaseProWarpNote"),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "scan.purchaseProWarpLink" }),
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings/online" });
+    expect(Purchases.purchasePackage).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(dialog).toHaveStyle({ transform: "translate3d(0, 100%, 0)" });
+    });
   });
 
   it("should restore Pro from the general purchase support controls", async () => {
@@ -1100,6 +1266,9 @@ describe("useProPurchase", () => {
 
     expect(screen.getByText("scan.purchaseProUnavailable")).toBeInTheDocument();
     expect(screen.queryByText(/\$6\.99/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("scan.purchaseProWarpNote"),
+    ).not.toBeInTheDocument();
   });
 
   it("should keep purchase modal hidden until opened", () => {

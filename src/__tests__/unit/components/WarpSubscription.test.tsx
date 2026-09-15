@@ -212,6 +212,24 @@ describe("WarpSubscription", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("should not sell Pro access to lifetime Pro owners at checkout", async () => {
+    const user = userEvent.setup();
+    usePreferencesStore.setState({ lifetimeProAccess: true });
+    render(<WarpSubscription appUserID="user-123" />);
+
+    await user.click(screen.getByRole("button", { name: "online.warp.get" }));
+
+    const dialog = screen.getByRole("dialog", {
+      name: "online.warp.purchaseTitle",
+    });
+    expect(
+      within(dialog).getByText("online.warp.proOwned"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByText("online.warp.benefitPro"),
+    ).not.toBeInTheDocument();
+  });
+
   it("should preserve separately owned lifetime Pro in active Warp copy", () => {
     usePreferencesStore.setState({ lifetimeProAccess: true });
     mockUseWarpSubscription.mockReturnValue(
@@ -226,10 +244,14 @@ describe("WarpSubscription", () => {
     );
 
     render(<WarpSubscription appUserID="user-123" />);
+    // The closed checkout stays mounted and repeats this copy in its list.
+    const status = within(
+      screen.getByRole("heading", { name: "online.warp.title" }).parentElement!,
+    );
 
-    expect(screen.getByText("online.warp.proOwned")).toBeInTheDocument();
+    expect(status.getByText("online.warp.proOwned")).toBeInTheDocument();
     expect(
-      screen.queryByText("online.warp.proIncluded"),
+      status.queryByText("online.warp.proIncluded"),
     ).not.toBeInTheDocument();
   });
 
