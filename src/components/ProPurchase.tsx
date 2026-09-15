@@ -8,6 +8,7 @@ import { Capacitor } from "@capacitor/core";
 import { Clipboard } from "@capacitor/clipboard";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "@tanstack/react-router";
 import { SlideModal } from "@/components/SlideModal";
 import { logger } from "@/lib/logger";
 import {
@@ -91,12 +92,43 @@ const ProPurchaseModal = (props: {
   offeringsStatus: OfferingsStatus;
   setLifetimeProAccess: (access: boolean) => void;
 }) => {
+  const router = useRouter();
   const [isPurchasing, setIsPurchasing] = useState(false);
+  const [step, setStep] = useState<"purchase" | "account">("purchase");
+  const [previousModalOpen, setPreviousModalOpen] = useState(
+    props.proPurchaseModalOpen,
+  );
   const purchasePendingRef = useRef(false);
+  const accountIntroRef = useRef<HTMLParagraphElement>(null);
 
-  const activatePro = () => {
+  // Reset on open rather than close so the account step doesn't flash back to
+  // checkout while the modal slides away.
+  if (props.proPurchaseModalOpen !== previousModalOpen) {
+    setPreviousModalOpen(props.proPurchaseModalOpen);
+    if (props.proPurchaseModalOpen) setStep("purchase");
+  }
+
+  // The checkout footer that held focus unmounts when the step changes.
+  useEffect(() => {
+    if (step === "account") {
+      accountIntroRef.current?.focus({ preventScroll: true });
+    }
+  }, [step]);
+
+  const openOnlineSettings = () => {
+    props.setProPurchaseModalOpen(false);
+    void router.navigate({ to: "/settings/online" });
+  };
+
+  const activatePro = ({ offerAccount }: { offerAccount: boolean }) => {
     props.setLifetimeProAccess(true);
     usePreferencesStore.getState().setLaunchOnScan(true);
+    // Signing in links RevenueCat's record of the purchase to the account, so
+    // only suggest it when RevenueCat actually has that record.
+    if (offerAccount && !useStatusStore.getState().loggedInUser) {
+      setStep("account");
+      return;
+    }
     props.setProPurchaseModalOpen(false);
   };
 
@@ -108,7 +140,7 @@ const ProPurchaseModal = (props: {
       const customerInfo = await reconcileStorePurchases(appUserID);
       if (getPurchaseAccess(customerInfo).lifetimePro) {
         clearCachedPurchaseErrorDiagnostics();
-        activatePro();
+        activatePro({ offerAccount: true });
         toast.success(t("scan.purchaseProRestored"));
         return;
       }
@@ -124,7 +156,7 @@ const ProPurchaseModal = (props: {
     // non-consumable. Preserve access locally so a missing RevenueCat alias
     // cannot leave the customer permanently unable to buy or restore Pro.
     usePreferencesStore.getState().setStoreVerifiedProAccess(true);
-    activatePro();
+    activatePro({ offerAccount: false });
     logger.error("Pro access recovered from store ownership", wrappedError, {
       category: "purchase",
       action: "alreadyOwnedFallback",
@@ -163,7 +195,7 @@ const ProPurchaseModal = (props: {
         }
 
         clearCachedPurchaseErrorDiagnostics();
-        activatePro();
+        activatePro({ offerAccount: true });
         logger.log("Pro purchase completed", {
           platform: Capacitor.getPlatform(),
           packageIdentifier: purchasePackage.identifier,
@@ -201,6 +233,9 @@ const ProPurchaseModal = (props: {
     props.offeringsStatus === "error"
       ? "diagnosticsOnly"
       : null;
+  const showWarpNote =
+    props.offeringsStatus === "loading" ||
+    props.offeringsStatus === "available";
 
   return (
     <SlideModal
@@ -211,33 +246,79 @@ const ProPurchaseModal = (props: {
         }
       }}
       dismissible={!isPurchasing}
-      title={t("scan.purchaseProTitle")}
+      title={
+        step === "account"
+          ? t("scan.purchaseAccountTitle")
+          : t("scan.purchaseProTitle")
+      }
       footer={
-        <Button
-          label={
-            isPurchasing
-              ? t("loading")
-              : getPurchaseActionLabel(props.offeringsStatus)
-          }
-          icon={
-            isPurchasing ? (
-              <Loader2 size={20} className="animate-spin" />
-            ) : undefined
-          }
-          disabled={!props.purchasePackage || isPurchasing}
-          onClick={handlePurchase}
-          intent="primary"
-          className="w-full"
-        />
+        step === "account" ? (
+          <div className="flex flex-col gap-2">
+            <Button
+              label={t("scan.purchaseAccountAction")}
+              onClick={openOnlineSettings}
+              intent="primary"
+              className="w-full"
+            />
+            <Button
+              label={t("scan.purchaseAccountLater")}
+              variant="outline"
+              onClick={() => props.setProPurchaseModalOpen(false)}
+              className="w-full"
+            />
+          </div>
+        ) : (
+          <Button
+            label={
+              isPurchasing
+                ? t("loading")
+                : getPurchaseActionLabel(props.offeringsStatus)
+            }
+            icon={
+              isPurchasing ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : undefined
+            }
+            disabled={!props.purchasePackage || isPurchasing}
+            onClick={handlePurchase}
+            intent="primary"
+            className="w-full"
+          />
+        )
       }
     >
-      <div className="text-muted-foreground flex flex-col gap-3 py-2">
-        <p>{getPurchaseBody(props.offeringsStatus, props.purchasePackage)}</p>
-        <p>{t("scan.purchaseProP2")}</p>
-        {supportActionsVariant && (
-          <PurchaseSupportActions variant={supportActionsVariant} />
-        )}
-      </div>
+      {step === "account" ? (
+        <div className="text-muted-foreground flex flex-col gap-3 py-2">
+          <p
+            ref={accountIntroRef}
+            tabIndex={-1}
+            className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          >
+            {t("scan.purchaseAccountThanks")}
+          </p>
+          <p>{t("scan.purchaseAccountDescription")}</p>
+        </div>
+      ) : (
+        <div className="text-muted-foreground flex flex-col gap-3 py-2">
+          <p>{getPurchaseBody(props.offeringsStatus, props.purchasePackage)}</p>
+          <p>{t("scan.purchaseProP2")}</p>
+          {showWarpNote && (
+            <>
+              <p>{t("scan.purchaseProWarpNote")}</p>
+              <Button
+                label={t("scan.purchaseProWarpLink")}
+                variant="text"
+                onClick={openOnlineSettings}
+                disabled={isPurchasing}
+                className="w-full"
+              />
+            </>
+          )}
+          {supportActionsVariant && (
+            <PurchaseSupportActions variant={supportActionsVariant} />
+          )}
+        </div>
+      )}
     </SlideModal>
   );
 };
