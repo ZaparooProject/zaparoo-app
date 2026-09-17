@@ -64,7 +64,7 @@ export function SearchResults(props: {
               focus: "database",
             }}
             aria-label={t("create.search.gamesDbSettings")}
-            className="focus-visible:ring-offset-background flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="focus-visible:ring-offset-background text-foreground focus-visible:ring-ring flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             <SettingsIcon size="24" aria-hidden="true" />
           </Link>
@@ -186,12 +186,12 @@ export function SearchResults(props: {
               <button
                 key={i}
                 type="button"
-                className="flex w-full cursor-pointer flex-row items-center justify-between gap-1 p-1 py-3 text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                className="focus-visible:ring-ring flex w-full cursor-pointer flex-row items-center justify-between gap-1 p-1 py-3 text-left focus-visible:ring-2 focus-visible:outline-none"
                 style={{
                   borderBottom:
                     i === (props.resp ? props.resp.results.length : 0) - 1
                       ? ""
-                      : "1px solid rgba(255,255,255,0.6)",
+                      : "1px solid var(--edge-default)",
                 }}
                 onPointerUp={handleHapticPress}
                 onClick={(e) => {

@@ -16,7 +16,7 @@ export function ConfirmClearModal(props: {
       footer={
         <div className="flex gap-2">
           <Button
-            variant="outline"
+            variant="secondary"
             label={t("nav.cancel")}
             onClick={props.close}
             className="flex-1"

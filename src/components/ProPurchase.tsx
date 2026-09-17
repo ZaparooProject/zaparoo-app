@@ -292,7 +292,7 @@ const ProPurchaseModal = (props: {
           <p
             ref={accountIntroRef}
             tabIndex={-1}
-            className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="focus-visible:ring-ring rounded-sm outline-none focus-visible:ring-2"
           >
             {t("scan.purchaseAccountThanks")}
           </p>

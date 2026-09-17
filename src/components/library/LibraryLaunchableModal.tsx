@@ -102,8 +102,8 @@ export function LibraryLaunchableModal(props: {
               {props.system.category}
             </p>
           )}
-          <details className="group border-t border-white/15 pt-2">
-            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between rounded-md px-1 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+          <details className="group border-foreground/15 border-t pt-2">
+            <summary className="focus-visible:ring-ring flex min-h-12 cursor-pointer list-none items-center justify-between rounded-md px-1 focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
               <span className="font-medium">
                 {t("library.technicalDetails")}
               </span>

@@ -10,7 +10,7 @@ export function NotificationBadge(props: {
     <span
       aria-hidden="true"
       className={classNames(
-        "absolute flex h-4 min-w-4 items-center justify-center rounded-full bg-red-700 px-1 text-[10px] leading-none font-bold text-white ring-2 ring-[#111928]",
+        "ring-background absolute flex h-4 min-w-4 items-center justify-center rounded-full bg-red-700 px-1 text-[10px] leading-none font-bold text-white ring-2",
         props.className,
       )}
     >

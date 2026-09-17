@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { Card } from "@/components/wui/Card";
 import { HeaderButton } from "@/components/wui/HeaderButton";
 import { PageFrame } from "@/components/PageFrame";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -82,14 +83,17 @@ export function LanguageRegionSettings() {
         </h1>
       }
     >
-      <div className="flex flex-col gap-5">
+      <Card className="flex flex-col gap-5">
         <div>
-          <label htmlFor="settings-language" className="mb-1 block">
+          <label
+            htmlFor="settings-language"
+            className="mb-2 block text-sm font-medium"
+          >
             {t("settings.languageRegion.appLanguage")}
           </label>
           <select
             id="settings-language"
-            className="border-bd-input bg-background text-foreground w-full rounded-md border border-solid p-3"
+            className="wui-input border-bd-input bg-surface-inset text-foreground min-h-12 w-full rounded-md border border-solid p-3"
             value={selectedLanguage}
             onChange={(event) => i18n.changeLanguage(event.target.value)}
           >
@@ -102,12 +106,15 @@ export function LanguageRegionSettings() {
         </div>
 
         <div>
-          <label htmlFor="settings-system-names" className="mb-1 block">
+          <label
+            htmlFor="settings-system-names"
+            className="mb-2 block text-sm font-medium"
+          >
             {t("settings.systemNames.label")}
           </label>
           <select
             id="settings-system-names"
-            className="border-bd-input bg-background text-foreground w-full rounded-md border border-solid p-3"
+            className="wui-input border-bd-input bg-surface-inset text-foreground min-h-12 w-full rounded-md border border-solid p-3"
             value={systemNameRegion}
             onChange={(event) =>
               setSystemNameRegion(
@@ -122,7 +129,7 @@ export function LanguageRegionSettings() {
             ))}
           </select>
         </div>
-      </div>
+      </Card>
     </PageFrame>
   );
 }

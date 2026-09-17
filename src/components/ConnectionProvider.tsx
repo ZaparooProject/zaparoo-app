@@ -900,7 +900,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               (to) => (
                 <button
                   type="button"
-                  className="flex grow flex-col text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                  className="focus-visible:ring-ring flex grow flex-col text-left focus-visible:ring-2 focus-visible:outline-none"
                   onClick={() => toast.dismiss(to.id)}
                 >
                   <span aria-hidden="true">
@@ -914,7 +914,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               {
                 ariaProps: { role: "alert", "aria-live": "assertive" },
                 icon: (
-                  <span className="pr-1 pl-1 text-amber-500" aria-hidden="true">
+                  <span className="text-warning pr-1 pl-1" aria-hidden="true">
                     <Clock size={20} />
                   </span>
                 ),
@@ -938,7 +938,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
                     <OctagonAlert size={20} />
                   </span>
                 ) : (
-                  <span className="pr-1 pl-1 text-amber-400" aria-hidden="true">
+                  <span className="text-warning pr-1 pl-1" aria-hidden="true">
                     <TriangleAlert size={20} />
                   </span>
                 );
@@ -946,7 +946,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
                 (to) => (
                   <button
                     type="button"
-                    className="flex grow flex-col text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                    className="focus-visible:ring-ring flex grow flex-col text-left focus-visible:ring-2 focus-visible:outline-none"
                     onClick={() => {
                       toast.dismiss(to.id);
                       setInboxModalOpen(true);
@@ -979,7 +979,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               (to) => (
                 <button
                   type="button"
-                  className="flex grow flex-col text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                  className="focus-visible:ring-ring flex grow flex-col text-left focus-visible:ring-2 focus-visible:outline-none"
                   onClick={() => toast.dismiss(to.id)}
                 >
                   {reachedMessage}

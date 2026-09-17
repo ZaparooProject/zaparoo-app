@@ -94,7 +94,7 @@ export function NetworkScanModal({
         {/* Error message */}
         {error && (
           <div className="py-4 text-center">
-            <p className="text-red-400">{error}</p>
+            <p className="text-error">{error}</p>
           </div>
         )}
 

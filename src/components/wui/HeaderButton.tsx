@@ -20,7 +20,10 @@ export const HeaderButton = memo(function HeaderButton(
 
   return (
     <button
+      data-pressed={isPressed}
+      aria-pressed={props.active}
       className={classNames(
+        "wui-header-button",
         "flex",
         "items-center",
         "justify-center",
@@ -30,18 +33,18 @@ export const HeaderButton = memo(function HeaderButton(
         "cursor-pointer",
         "transition-all",
         "duration-100",
-        "active:scale-95",
         "touch-manipulation",
         "rounded-full",
         {
           // Active state (when modal is open, etc.)
-          "text-[#00E0FF]": props.active && !props.disabled,
+          "text-primary": props.active && !props.disabled,
           // Normal state - using explicit colors instead of opacity for better contrast
-          "text-gray-300 hover:text-white": !props.active && !props.disabled,
+          "text-muted-foreground hover:text-foreground":
+            !props.active && !props.disabled,
           // Disabled state - using explicit gray that meets WCAG contrast
-          "cursor-not-allowed text-gray-500": props.disabled,
+          "text-muted-foreground cursor-not-allowed": props.disabled,
           // Pressed state
-          "text-gray-400": isPressed && !props.disabled,
+          "text-muted-foreground": isPressed && !props.disabled,
         },
         props.className,
       )}

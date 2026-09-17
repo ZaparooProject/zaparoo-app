@@ -13,6 +13,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import type { AxiosError } from "axios";
+import { Card } from "@/components/wui/Card";
 import { TextInput } from "@/components/wui/TextInput.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 import { WarpSubscription } from "@/components/WarpSubscription";
@@ -599,7 +600,7 @@ export function OnlinePage() {
           <div className="flex flex-col gap-6 py-4">
             <div className="flex flex-col items-center gap-1">
               {loggedInUser.displayName && (
-                <span className="text-lg font-medium text-white">
+                <span className="text-foreground text-lg font-medium">
                   {loggedInUser.displayName}
                 </span>
               )}
@@ -624,7 +625,7 @@ export function OnlinePage() {
             >
               <h2
                 id="online-account-actions-title"
-                className="text-lg font-medium text-white"
+                className="text-foreground text-lg font-medium"
               >
                 {t("online.account")}
               </h2>
@@ -1000,7 +1001,7 @@ export function OnlinePage() {
         footer={
           <div className="flex gap-2">
             <Button
-              variant="outline"
+              variant="secondary"
               label={t("nav.cancel")}
               onClick={closeDeleteModal}
               className="flex-1"
@@ -1029,7 +1030,7 @@ export function OnlinePage() {
           <div>
             <label
               htmlFor="delete-account-confirmation"
-              className="text-sm text-white"
+              className="text-foreground text-sm"
             >
               {t("online.deleteConfirmLabel")}
             </label>
@@ -1039,7 +1040,7 @@ export function OnlinePage() {
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
               placeholder="DELETE MY ACCOUNT"
-              className="border-bd-input bg-background text-foreground mt-1 w-full rounded-md border p-3"
+              className="wui-input border-bd-input bg-surface-inset text-foreground mt-1 min-h-12 w-full rounded-md border p-3"
             />
           </div>
         </div>

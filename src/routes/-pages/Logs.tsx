@@ -411,7 +411,7 @@ export function Logs() {
                       borderBottom:
                         index === filteredEntries.length - 1
                           ? ""
-                          : "1px solid rgba(255,255,255,0.6)",
+                          : "1px solid var(--edge-default)",
                     }}
                   >
                     <div className="mb-2 flex flex-row items-center gap-2 font-sans">

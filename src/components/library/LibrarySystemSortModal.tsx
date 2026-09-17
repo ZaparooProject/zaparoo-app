@@ -45,10 +45,11 @@ export function LibrarySystemSortModal(props: {
               aria-checked={selected}
               tabIndex={selected ? 0 : -1}
               className={classNames(
-                "flex min-h-12 items-center justify-between gap-3 px-2 py-3 text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
+                "focus-visible:ring-ring flex min-h-12 items-center justify-between gap-3 px-2 py-3 text-left focus-visible:ring-2 focus-visible:outline-none",
                 {
-                  "border-b border-white/25": index < SORT_OPTIONS.length - 1,
-                  "bg-white/10": selected,
+                  "border-foreground/25 border-b":
+                    index < SORT_OPTIONS.length - 1,
+                  "bg-foreground/10": selected,
                 },
               )}
               onPointerUp={handleHapticPress}

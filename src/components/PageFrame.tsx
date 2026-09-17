@@ -46,7 +46,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ left, title, actions }: PageHeaderProps) {
   return (
-    <div className="grid min-h-8 grid-cols-[auto_minmax(0,1fr)_auto] items-center">
+    <div className="grid min-h-12 grid-cols-[auto_minmax(0,1fr)_auto] items-center">
       <div
         className={classNames("flex shrink-0 -translate-x-1", {
           "mr-1": left,
@@ -54,7 +54,7 @@ export function PageHeader({ left, title, actions }: PageHeaderProps) {
       >
         {left}
       </div>
-      <div className="min-w-0 overflow-hidden text-left [&>h1]:truncate">
+      <div className="min-w-0 text-left [&>h1]:text-2xl [&>h1]:leading-tight [&>h1]:font-semibold [&>h1]:tracking-tight [&>h1]:break-words [&>h1]:outline-none">
         {title}
       </div>
       <div
@@ -217,7 +217,7 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
           "bg-background sticky top-0 z-10 transition-colors duration-150",
           {
             "border-b": hasHeaderContent,
-            "border-b-[#ffffff21]": hasHeaderContent && headerScrolled,
+            "border-b-border": hasHeaderContent && headerScrolled,
             "border-transparent": !hasHeaderContent || !headerScrolled,
           },
         )}

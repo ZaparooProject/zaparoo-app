@@ -347,7 +347,7 @@ export function SlideModal(props: {
       <div
         data-testid="modal-overlay"
         data-focus-trap-exempt
-        className="fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 ease-in-out"
+        className="fixed inset-0 z-40 bg-black/60 transition-opacity duration-200 ease-in-out"
         style={{
           opacity: props.isOpen ? 1 : 0,
           pointerEvents: props.isOpen ? "auto" : "none",
@@ -376,15 +376,15 @@ export function SlideModal(props: {
           "sm:max-w-2xl", // Desktop: responsive width (672px)
           "flex",
           "flex-col",
-          "rounded-tl-md",
-          "rounded-tr-md",
+          "rounded-t-lg",
+          "shadow-[0_-8px_32px_var(--material-shadow),inset_0_1px_0_var(--material-highlight)]",
           "border",
           "border-b-0",
           "border-solid",
-          "border-[rgba(255,255,255,0.13)]",
-          "bg-[rgb(17,25,40)]",
-          "px-3",
-          "pt-3",
+          "border-border",
+          "bg-surface-raised",
+          "px-4",
+          "pt-4",
           "mix-blend-normal",
           props.className,
         )}
@@ -394,7 +394,7 @@ export function SlideModal(props: {
           transition: DRAG_TRANSITION,
           willChange: props.isOpen ? "transform" : "auto",
           pointerEvents: props.isOpen ? "auto" : "none",
-          paddingBottom: `calc(${safeInsets.bottom} + 0.75rem)`,
+          paddingBottom: `calc(${safeInsets.bottom} + 1rem)`,
           maxHeight: `min(80vh, calc(100vh - ${safeInsets.top} - 75px))`,
           ...(props.fixedHeight ? { height: props.fixedHeight } : {}),
         }}
@@ -403,28 +403,28 @@ export function SlideModal(props: {
         <div style={{ touchAction: "pan-x pinch-zoom" }}>
           {/* Mobile drag handle */}
           {dismissible && (
-            <div className="-mt-3 sm:hidden">
+            <div className="-mt-4 sm:hidden">
               <button
                 type="button"
                 onClick={props.close}
                 aria-label={t("nav.close")}
                 data-slide-modal-drag-handle
-                className="flex h-[29px] w-full items-center justify-center bg-transparent focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                className="focus-visible:ring-ring flex h-[29px] w-full items-center justify-center bg-transparent focus-visible:ring-2 focus-visible:outline-none"
               >
                 <span
                   aria-hidden="true"
-                  className="h-[5px] w-[80px] rounded-full bg-[#00E0FF]"
+                  className="bg-muted-foreground h-1 w-12 rounded-full"
                 />
               </button>
             </div>
           )}
           {/* Shared visible title and desktop close action */}
-          <div className="relative pb-2">
+          <div className="border-border relative mb-3 border-b pb-3">
             <h2
               ref={titleRef}
               id={`${modalId}-title`}
               tabIndex={-1}
-              className="text-center text-lg outline-none"
+              className="pr-10 text-left text-lg leading-snug font-semibold tracking-tight outline-none"
             >
               {props.title}
             </h2>
@@ -432,7 +432,7 @@ export function SlideModal(props: {
               <button
                 type="button"
                 onClick={props.close}
-                className="absolute top-[-5px] right-0 hidden h-8 w-8 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-white/10 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none sm:flex"
+                className="hover:bg-foreground/10 focus-visible:ring-ring absolute top-[-5px] right-0 hidden h-11 w-11 items-center justify-center rounded-full opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:flex"
                 aria-label={t("nav.close")}
               >
                 <X className="h-5 w-5" aria-hidden="true" />
@@ -444,14 +444,14 @@ export function SlideModal(props: {
           <SkipLink targetId={footerId} label={props.footerSkipLabel} />
         )}
         {/* eslint-disable react-hooks/refs -- False positives: scrollRef is passed as ref prop, children/footer are ReactNode props */}
-        <div ref={props.scrollRef} className="flex-1 overflow-y-auto">
+        <div ref={props.scrollRef} className="min-h-0 flex-1 overflow-y-auto">
           {props.children}
         </div>
         {props.footer && (
           <div
             id={footerId}
             tabIndex={props.footerSkipLabel ? -1 : undefined}
-            className="max-h-[33dvh] flex-shrink-0 overflow-y-auto overscroll-contain border-t border-solid border-[rgba(255,255,255,0.13)] pt-3"
+            className="border-border max-h-[33dvh] flex-shrink-0 overflow-y-auto overscroll-contain border-t border-solid pt-4"
           >
             {props.footer}
           </div>

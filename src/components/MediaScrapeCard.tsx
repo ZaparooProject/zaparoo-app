@@ -591,7 +591,7 @@ export function MediaScrapeCard() {
         ) : (
           <>
             <div className="flex flex-col gap-2">
-              <label htmlFor="scraper-select" className="text-white">
+              <label htmlFor="scraper-select" className="text-foreground">
                 {t("settings.scrapeMedia.scraperPlaceholder")}
               </label>
               <select
@@ -606,7 +606,7 @@ export function MediaScrapeCard() {
                 }}
                 disabled={controlsDisabled || scrapersLoading}
                 className={classNames(
-                  "border-bd-input bg-background text-foreground rounded-md border border-solid p-3",
+                  "wui-input border-bd-input bg-surface-inset text-foreground min-h-12 rounded-md border border-solid p-3",
                   {
                     "cursor-not-allowed opacity-50":
                       controlsDisabled || scrapersLoading,

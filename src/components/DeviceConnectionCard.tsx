@@ -119,7 +119,7 @@ export function DeviceConnectionCard({
                 <Link
                   to="/settings/devices"
                   aria-label={t("settings.deviceHistory")}
-                  className="focus-visible:ring-background flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 text-white transition-all duration-100 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
+                  className="focus-visible:ring-background text-foreground focus-visible:ring-ring flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 transition-all duration-100 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
                 >
                   <ArrowLeftRightIcon size="24" />
                 </Link>

@@ -151,7 +151,10 @@ export function LibraryGameSearch({
 
         <div className="flex flex-col gap-3 md:flex-row">
           <div className="flex flex-col md:flex-1">
-            <span id="library-search-system-label" className="mb-1 text-white">
+            <span
+              id="library-search-system-label"
+              className="text-foreground mb-1"
+            >
               {t("create.search.systemInput")}
             </span>
             <SystemSelectorTrigger
@@ -167,7 +170,10 @@ export function LibraryGameSearch({
 
           {mediaTagsFeature.available && (
             <div className="flex flex-col md:flex-1">
-              <span id="library-search-tags-label" className="mb-1 text-white">
+              <span
+                id="library-search-tags-label"
+                className="text-foreground mb-1"
+              >
                 {t("create.search.tagsInput")}
               </span>
               <TagSelectorTrigger

@@ -115,8 +115,8 @@ export function MediaDetailsModal({
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
               <div className="flex items-center gap-2 sm:min-w-[100px]">
-                <DeviceIcon size="16" className="text-white/60" />
-                <span className="text-sm text-white/60">
+                <DeviceIcon size="16" className="text-muted-foreground" />
+                <span className="text-muted-foreground text-sm">
                   {t("create.search.systemLabel")}
                 </span>
               </div>

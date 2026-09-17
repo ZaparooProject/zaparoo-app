@@ -62,12 +62,12 @@ export function TextInput(props: {
   return (
     <div className={props.className}>
       {props.label && (
-        <label htmlFor={inputId} className="mb-1 block">
+        <label htmlFor={inputId} className="mb-2 block text-sm font-medium">
           {props.label}
         </label>
       )}
-      <div className="flex flex-row">
-        <div className="relative flex-grow">
+      <div className="flex items-start gap-2">
+        <div className="relative min-w-0 flex-1">
           <input
             id={inputId}
             ref={props.ref}
@@ -81,7 +81,7 @@ export function TextInput(props: {
             aria-invalid={!!props.error}
             aria-describedby={props.error ? errorId : undefined}
             className={classNames(
-              "bg-background",
+              "wui-input",
               "h-12",
               "w-full",
               "border",
@@ -92,7 +92,7 @@ export function TextInput(props: {
               "[&::-webkit-search-cancel-button]:appearance-none",
               {
                 "border-bd-input": !props.disabled && !props.error,
-                "border-red-500": props.error,
+                "border-error": props.error,
                 "border-foreground-disabled": props.disabled,
                 "text-foreground-disabled": props.disabled,
                 "pr-10":
@@ -101,11 +101,10 @@ export function TextInput(props: {
                   value.length > 0 &&
                   !props.disabled &&
                   !props.readOnly,
-                "rounded-md": !hasSaveAction,
-                "rounded-s-md": hasSaveAction,
+                "rounded-md": true,
               },
             )}
-            style={{ backgroundColor: "var(--color-background)" }}
+            style={{ backgroundColor: "var(--surface-inset)" }}
             disabled={props.disabled}
             readOnly={props.readOnly}
             aria-label={props["aria-label"]}
@@ -129,7 +128,7 @@ export function TextInput(props: {
             !props.readOnly && (
               <button
                 type="button"
-                className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-gray-400 transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 onClick={() => {
                   if (props.readOnly) return;
 
@@ -151,7 +150,8 @@ export function TextInput(props: {
             disabled={!modified || props.disabled || props.saveDisabled}
             icon={<SaveIcon size="20" />}
             aria-label={t("save")}
-            className="h-12 w-12 rounded-s-lg pr-3"
+            shape="square"
+            className="size-12"
             onClick={() => {
               if (
                 props.disabled ||
@@ -170,7 +170,7 @@ export function TextInput(props: {
         )}
       </div>
       {props.error && (
-        <p id={errorId} className="mt-1 text-sm text-red-500" role="alert">
+        <p id={errorId} className="text-error mt-1 text-sm" role="alert">
           {props.error}
         </p>
       )}

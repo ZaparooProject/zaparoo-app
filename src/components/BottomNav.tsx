@@ -56,9 +56,9 @@ function NavButton(props: {
         }}
         aria-current={props.isActive ? "page" : undefined}
         aria-label={props.ariaLabel}
-        className="text-bd-outline flex min-h-[48px] w-full min-w-0 items-center justify-center rounded-lg py-2 transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none [&.active]:text-[#3faeec]"
+        className="text-muted-foreground focus-visible:ring-ring aria-[current=page]:text-foreground aria-[current=page]:bg-surface-inset aria-[current=page]:border-border flex min-h-12 w-full min-w-0 items-center justify-center rounded-md border border-transparent px-1 py-2 transition-colors duration-100 focus-visible:ring-2 focus-visible:outline-none aria-[current=page]:shadow-inner"
       >
-        <div className="drop-shadow-[0_0_5px_transparent] transition-[filter] duration-300 [.active_&]:drop-shadow-[0_0_5px_#3faeec]">
+        <div className="flex min-w-0 flex-col gap-1">
           <div className="relative mx-auto flex w-fit justify-center">
             {props.icon}
             <NotificationBadge
@@ -68,7 +68,7 @@ function NavButton(props: {
           </div>
           {/* Hyphenate labels too long for the tab, and only break inside a
               word when hyphenation cannot, such as capitalized English. */}
-          <div className="text-center leading-4 wrap-anywhere hyphens-auto">
+          <div className="text-center text-xs leading-4 font-semibold tracking-wide wrap-anywhere hyphens-auto uppercase">
             {props.text}
           </div>
         </div>
@@ -139,7 +139,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label={t("nav.mainNavigation")}
-      className="[height:calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset))] border-t border-t-[#ffffff21] bg-[#111928bf] backdrop-blur"
+      className="border-t-border bg-surface-raised [height:calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset))] border-t"
       style={
         {
           "--bottom-nav-safe-inset": safeInsets.bottom,

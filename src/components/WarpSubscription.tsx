@@ -121,7 +121,9 @@ function WarpPurchaseModal({
 
         {priceString && (
           <div className="flex flex-col gap-1 text-center">
-            <p className="text-xl font-semibold text-white">{priceString}</p>
+            <p className="text-foreground text-xl font-semibold">
+              {priceString}
+            </p>
             <p className="text-muted-foreground text-sm">
               {selectedPlan === "annual"
                 ? t("online.warp.billedAnnually")
@@ -139,7 +141,7 @@ function WarpPurchaseModal({
             href="https://zaparoo.com/terms"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-sm underline focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            className="focus-visible:ring-ring rounded-sm underline focus-visible:ring-2 focus-visible:outline-none"
           >
             {t("online.termsOfService")}
           </a>{" "}
@@ -148,7 +150,7 @@ function WarpPurchaseModal({
             href="https://zaparoo.com/privacy"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-sm underline focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            className="focus-visible:ring-ring rounded-sm underline focus-visible:ring-2 focus-visible:outline-none"
           >
             {t("online.privacyPolicy")}
           </a>
@@ -176,7 +178,7 @@ function WarpSubscriptionPreview({
       aria-labelledby="warp-title"
     >
       <div className="flex flex-col gap-1">
-        <h2 id="warp-title" className="text-lg font-medium text-white">
+        <h2 id="warp-title" className="text-foreground text-lg font-medium">
           {t("online.warp.title")}
         </h2>
         {state === "loading" ? (
@@ -190,7 +192,7 @@ function WarpSubscriptionPreview({
           </div>
         ) : state === "warp" ? (
           <div className="flex flex-col gap-1">
-            <p className="font-medium text-white">
+            <p className="text-foreground font-medium">
               {t("online.warp.planSummary", {
                 plan: t("online.warp.annual"),
               })}
@@ -398,7 +400,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
       aria-labelledby="warp-title"
     >
       <div className="flex flex-col gap-1">
-        <h2 id="warp-title" className="text-lg font-medium text-white">
+        <h2 id="warp-title" className="text-foreground text-lg font-medium">
           {t("online.warp.title")}
         </h2>
         {isLoading ? (
@@ -412,7 +414,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
           </div>
         ) : isPremium ? (
           <div className="flex flex-col gap-1">
-            <p className="font-medium text-white">
+            <p className="text-foreground font-medium">
               {planLabel
                 ? t("online.warp.planSummary", { plan: planLabel })
                 : t("online.warp.active")}

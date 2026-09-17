@@ -44,9 +44,9 @@ export const CopyButton = (props: {
       className={classNames(
         "relative inline-flex -translate-y-0.5 align-middle",
         "rounded p-0.5",
-        "text-white/60 hover:text-white",
+        "text-muted-foreground hover:text-foreground",
         "transition-colors duration-150",
-        "focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
+        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
         props.className,
       )}
       onClick={handleCopy}
@@ -63,7 +63,7 @@ export const CopyButton = (props: {
       <Check
         size={size}
         className={classNames(
-          "absolute inset-0 m-auto text-green-400 transition-all duration-200",
+          "text-success absolute inset-0 m-auto transition-all duration-200",
           copied ? "scale-100 opacity-100" : "scale-75 opacity-0",
         )}
       />

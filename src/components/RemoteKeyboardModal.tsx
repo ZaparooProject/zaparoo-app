@@ -355,12 +355,12 @@ export function RemoteKeyboardModal(props: {
     >
       <div className="flex flex-col gap-3 pb-2">
         {!connected && (
-          <p role="status" className="text-sm text-red-300">
+          <p role="status" className="text-error text-sm">
             {t("remoteKeyboard.disconnected")}
           </p>
         )}
         {error && (
-          <p role="alert" className="text-sm text-red-300">
+          <p role="alert" className="text-error text-sm">
             {error}
           </p>
         )}

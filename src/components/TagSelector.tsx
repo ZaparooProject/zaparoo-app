@@ -55,11 +55,11 @@ function TagSearchOption(props: {
     <button
       className={classNames(
         "flex min-h-16 w-full items-center justify-between px-4 py-3 text-left transition-colors",
-        "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-        "hover:bg-white/10 focus:bg-white/10",
+        "focus-visible:ring-ring rounded-lg focus:outline-none focus-visible:ring-2",
+        "hover:bg-foreground/10 focus:bg-foreground/10",
         {
           "h-full": props.fillHeight,
-          "bg-white/10": props.selected,
+          "bg-foreground/10": props.selected,
         },
       )}
       onPointerUp={handleHapticPress}
@@ -304,12 +304,12 @@ export function TagSelector({
               placeholder={t("tagSelector.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="border-input bg-background text-foreground w-full rounded-md border px-10 py-2 focus:ring-2 focus:ring-white/20 focus:outline-none"
+              className="border-input bg-surface-inset text-foreground focus:ring-ring w-full rounded-md border px-10 py-2 focus-visible:ring-2 focus-visible:outline-none"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
                 type="button"
                 aria-label={t("tagSelector.clearSearch")}
               >
@@ -458,9 +458,9 @@ export function TagSelector({
                     <AccordionItem
                       key={type}
                       value={type}
-                      className="overflow-hidden rounded-lg border border-white/20"
+                      className="border-foreground/20 overflow-hidden rounded-lg border"
                     >
-                      <AccordionTrigger className="bg-wui-card px-4 py-3 hover:bg-white/5 hover:no-underline">
+                      <AccordionTrigger className="bg-wui-card hover:bg-foreground/5 px-4 py-3 hover:no-underline">
                         <div className="flex w-full items-center justify-between">
                           <span>
                             {t(`tagSelector.type.${type}`, {
@@ -487,9 +487,9 @@ export function TagSelector({
                                 key={tag.tag}
                                 className={classNames(
                                   "flex w-full items-center justify-between px-3 py-3 text-left transition-colors",
-                                  "rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                                  "hover:bg-white/5 focus:bg-white/5",
-                                  { "bg-white/10": isSelected },
+                                  "focus-visible:ring-ring rounded-md focus:outline-none focus-visible:ring-2",
+                                  "hover:bg-foreground/5 focus:bg-foreground/5",
+                                  { "bg-foreground/10": isSelected },
                                 )}
                                 onPointerUp={handleHapticPress}
                                 onClick={() => handleTagSelect(tag)}
@@ -587,14 +587,14 @@ export function TagSelectorTrigger({
     <button
       onClick={handleClick}
       className={classNames(
-        "border-input text-foreground flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
+        "wui-input border-input text-foreground focus-visible:ring-ring flex min-h-12 w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none",
         {
-          "hover:bg-white/10": !disabled,
+          "hover:border-foreground-hint": !disabled,
           "cursor-not-allowed opacity-50": disabled,
         },
         className,
       )}
-      style={{ backgroundColor: "var(--color-background)" }}
+      style={{ backgroundColor: "var(--surface-inset)" }}
       disabled={disabled}
       type="button"
       aria-label={ariaLabel}
@@ -607,7 +607,7 @@ export function TagSelectorTrigger({
       >
         {displayText}
       </span>
-      <div className="ml-2 h-4 w-4">
+      <div aria-hidden="true" className="ml-2 size-4 shrink-0">
         <svg
           className="h-4 w-4"
           fill="none"

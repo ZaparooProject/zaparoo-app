@@ -99,11 +99,11 @@ export function LibrarySystemFiltersModal(props: {
                   aria-checked={selected}
                   tabIndex={selected ? 0 : -1}
                   className={classNames(
-                    "flex min-h-12 w-full items-center justify-between gap-3 px-2 py-3 text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
+                    "focus-visible:ring-ring flex min-h-12 w-full items-center justify-between gap-3 px-2 py-3 text-left focus-visible:ring-2 focus-visible:outline-none",
                     {
-                      "border-b border-white/25":
+                      "border-foreground/25 border-b":
                         index < SORT_OPTIONS.length - 1,
-                      "bg-white/10": selected,
+                      "bg-foreground/10": selected,
                     },
                   )}
                   onPointerUp={handleHapticPress}
@@ -128,7 +128,7 @@ export function LibrarySystemFiltersModal(props: {
               props.onSelectedManufacturerChange(event.target.value)
             }
             disabled={props.manufacturers.length === 0}
-            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            className="wui-input border-input bg-surface-inset text-foreground focus-visible:ring-ring min-h-12 w-full rounded-md border px-3 py-2 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="">{t("library.anyManufacturer")}</option>
             {props.manufacturers.map((manufacturer) => (
@@ -151,7 +151,7 @@ export function LibrarySystemFiltersModal(props: {
                 event.target.value as SystemReleasePeriod,
               )
             }
-            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            className="wui-input border-input bg-surface-inset text-foreground focus-visible:ring-ring min-h-12 w-full rounded-md border px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
           >
             {RELEASE_PERIODS.map((option) => (
               <option key={option.value} value={option.value}>

@@ -56,7 +56,7 @@ export const HistoryModal = memo(function HistoryModal({
                   borderBottom:
                     i === historyData.entries.length - 1
                       ? ""
-                      : "1px solid rgba(255,255,255,0.6)",
+                      : "1px solid var(--edge-default)",
                   padding: "0.5rem",
                 }}
               >

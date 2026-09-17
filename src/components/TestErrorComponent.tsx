@@ -18,7 +18,7 @@ const TestErrorComponent: React.FC = () => {
   }
 
   return (
-    <div className="p-4 text-white">
+    <div className="text-foreground p-4">
       <h2>Testing Error Boundary</h2>
       <p>This component will throw an error in 2 seconds...</p>
     </div>

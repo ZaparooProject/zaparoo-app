@@ -16,6 +16,7 @@ import { PageFrame } from "@/components/PageFrame";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Button } from "@/components/wui/Button";
+import { Card } from "@/components/wui/Card";
 import { ExternalIcon, NextIcon } from "@/lib/images";
 import {
   activeAddressOf,
@@ -163,6 +164,7 @@ export function Settings() {
             <div>
               <Button
                 label={t("settings.getApp")}
+                variant="secondary"
                 className="w-full"
                 icon={<ExternalIcon size="20" />}
                 onClick={() => Browser.open({ url: "https://zaparoo.app" })}
@@ -197,129 +199,134 @@ export function Settings() {
               <PurchaseSupportActions variant="restoreOnly" />
             )}
 
-          <div className="flex flex-col gap-1">
-            <Link
-              to="/settings/online"
-              onPointerUp={handleHapticPress}
-              className="flex min-h-[48px] flex-row items-center justify-between"
-            >
-              <span>{t("online.title")}</span>
-              <span className="flex items-center gap-2">
-                <span className="text-muted-foreground text-sm">
-                  {loggedInUser === null && !purchasePreviewEnabled
-                    ? t("online.settingsStatusSignedOut")
-                    : displayedOnlinePremiumAccess === true
-                      ? t("online.settingsStatusWarpActive")
-                      : displayedOnlinePremiumAccess === false
-                        ? t("online.settingsStatusFree")
-                        : t("online.settingsStatusSignedIn")}
+          <div className="flex flex-col gap-5">
+            <Card className="p-2">
+              <Link
+                to="/settings/online"
+                onPointerUp={handleHapticPress}
+                className="settings-nav-row"
+              >
+                <span>{t("online.title")}</span>
+                <span className="ml-auto flex items-center gap-2">
+                  <span className="text-muted-foreground text-sm">
+                    {loggedInUser === null && !purchasePreviewEnabled
+                      ? t("online.settingsStatusSignedOut")
+                      : displayedOnlinePremiumAccess === true
+                        ? t("online.settingsStatusWarpActive")
+                        : displayedOnlinePremiumAccess === false
+                          ? t("online.settingsStatusFree")
+                          : t("online.settingsStatusSignedIn")}
+                  </span>
+                  <span aria-hidden="true">
+                    <NextIcon size="20" />
+                  </span>
                 </span>
+              </Link>
+
+              <Link
+                to="/settings/language-region"
+                onPointerUp={handleHapticPress}
+                className="settings-nav-row"
+              >
+                <span>{t("settings.languageRegion.title")}</span>
                 <span aria-hidden="true">
                   <NextIcon size="20" />
                 </span>
-              </span>
-            </Link>
-
-            <Link
-              to="/settings/language-region"
-              onPointerUp={handleHapticPress}
-              className="flex min-h-[48px] flex-row items-center justify-between"
-            >
-              <span>{t("settings.languageRegion.title")}</span>
-              <span aria-hidden="true">
-                <NextIcon size="20" />
-              </span>
-            </Link>
-
-            <nav
-              aria-labelledby="more-settings-heading"
-              className="flex flex-col gap-1"
-            >
-              <h2 id="more-settings-heading" className="sr-only">
+              </Link>
+            </Card>
+            <section className="flex flex-col gap-3">
+              <h2
+                id="more-settings-heading"
+                className="text-lg font-semibold tracking-tight"
+              >
                 {t("settings.moreSettings")}
               </h2>
-
-              {showMediaScraper && (
-                <Link
-                  to="/settings/media"
-                  onPointerUp={handleHapticPress}
-                  className="flex min-h-[48px] flex-row items-center justify-between"
+              <Card className="p-2">
+                <nav
+                  aria-labelledby="more-settings-heading"
+                  className="flex flex-col gap-0.5"
                 >
-                  <span>{t("settings.media.title")}</span>
-                  <span aria-hidden="true">
-                    <NextIcon size="20" />
-                  </span>
-                </Link>
-              )}
+                  {showMediaScraper && (
+                    <Link
+                      to="/settings/media"
+                      onPointerUp={handleHapticPress}
+                      className="settings-nav-row"
+                    >
+                      <span>{t("settings.media.title")}</span>
+                      <span aria-hidden="true">
+                        <NextIcon size="20" />
+                      </span>
+                    </Link>
+                  )}
 
-              <Link
-                to="/settings/play-controls"
-                onPointerUp={handleHapticPress}
-                className="flex min-h-[48px] flex-row items-center justify-between"
-              >
-                <p>{t("settings.playControls.title")}</p>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Link>
+                  <Link
+                    to="/settings/play-controls"
+                    onPointerUp={handleHapticPress}
+                    className="settings-nav-row"
+                  >
+                    <p>{t("settings.playControls.title")}</p>
+                    <span aria-hidden="true">
+                      <NextIcon size="20" />
+                    </span>
+                  </Link>
 
-              <Link
-                to="/settings/readers"
-                onPointerUp={handleHapticPress}
-                className="flex min-h-[48px] flex-row items-center justify-between"
-              >
-                <p>{t("settings.readers.title")}</p>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Link>
+                  <Link
+                    to="/settings/readers"
+                    onPointerUp={handleHapticPress}
+                    className="settings-nav-row"
+                  >
+                    <p>{t("settings.readers.title")}</p>
+                    <span aria-hidden="true">
+                      <NextIcon size="20" />
+                    </span>
+                  </Link>
 
-              {Capacitor.isNativePlatform() && (
-                <Link
-                  to="/settings/accessibility"
-                  onPointerUp={handleHapticPress}
-                  className="flex min-h-[48px] flex-row items-center justify-between"
-                >
-                  <p>{t("settings.accessibility.title")}</p>
-                  <span aria-hidden="true">
-                    <NextIcon size="20" />
-                  </span>
-                </Link>
-              )}
+                  <Link
+                    to="/settings/accessibility"
+                    onPointerUp={handleHapticPress}
+                    className="settings-nav-row"
+                  >
+                    <p>{t("settings.accessibility.title")}</p>
+                    <span aria-hidden="true">
+                      <NextIcon size="20" />
+                    </span>
+                  </Link>
 
-              <Link
-                to="/settings/advanced"
-                onPointerUp={handleHapticPress}
-                className="flex min-h-[48px] flex-row items-center justify-between"
-              >
-                <p>{t("settings.advanced.title")}</p>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Link>
+                  <Link
+                    to="/settings/advanced"
+                    onPointerUp={handleHapticPress}
+                    className="settings-nav-row"
+                  >
+                    <p>{t("settings.advanced.title")}</p>
+                    <span aria-hidden="true">
+                      <NextIcon size="20" />
+                    </span>
+                  </Link>
 
-              <Link
-                to="/settings/help"
-                onPointerUp={handleHapticPress}
-                className="flex min-h-[48px] flex-row items-center justify-between"
-              >
-                <p>{t("settings.help.title")}</p>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Link>
+                  <Link
+                    to="/settings/help"
+                    onPointerUp={handleHapticPress}
+                    className="settings-nav-row"
+                  >
+                    <p>{t("settings.help.title")}</p>
+                    <span aria-hidden="true">
+                      <NextIcon size="20" />
+                    </span>
+                  </Link>
 
-              <Link
-                to="/settings/about"
-                onPointerUp={handleHapticPress}
-                className="flex min-h-[48px] flex-row items-center justify-between"
-              >
-                <p>{t("settings.about.title")}</p>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Link>
-            </nav>
+                  <Link
+                    to="/settings/about"
+                    onPointerUp={handleHapticPress}
+                    className="settings-nav-row"
+                  >
+                    <p>{t("settings.about.title")}</p>
+                    <span aria-hidden="true">
+                      <NextIcon size="20" />
+                    </span>
+                  </Link>
+                </nav>
+              </Card>
+            </section>
           </div>
         </div>
       </PageFrame>

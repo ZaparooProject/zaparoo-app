@@ -112,7 +112,7 @@ if (!Capacitor.isNativePlatform() || !isPluginAvailable("Purchases")) {
 
 // App content wrapped in theme and query providers
 const AppContent = (
-  <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+  <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <App />
     </QueryClientProvider>

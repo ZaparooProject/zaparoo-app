@@ -92,7 +92,7 @@ export function WriteModal(props: {
         modalRef.current = node;
         swipeRef(node);
       }}
-      className="z-30 flex h-screen w-screen items-center justify-center bg-[#111928] pb-[90px]"
+      className="bg-background z-30 flex h-screen w-screen items-center justify-center pb-[90px]"
       style={{ position: "fixed", left: 0, top: 0 }}
       role="dialog"
       aria-modal="true"

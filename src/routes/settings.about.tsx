@@ -109,13 +109,12 @@ export function About() {
             <span>Lu&apos;s Retro Source</span>, <span>Tony Shadwick</span>,{" "}
             <span>Clinton Cronin</span>, <span>Tuxosaurus</span>,{" "}
             <span>Retrosoft Studios</span>, <span>Casey McGinty</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Biddle</span>,{" "}
-            <span>Shijuro</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>TheJesusFish</span>,{" "}
+            <span className="text-warning">Biddle</span>, <span>Shijuro</span>,{" "}
+            <span className="text-warning">TheJesusFish</span>,{" "}
             <span>disctoad</span>, <span>Mark Dodsworth</span>,{" "}
             <span>ayoub</span>, <span>Michael Quinn</span>,{" "}
             <span>Lina Blue</span>,{" "}
-            <span style={{ color: "#F1C40D" }}>Filip Kindt</span>,{" "}
+            <span className="text-warning">Filip Kindt</span>,{" "}
             <span>Not Work</span>, <span>angel rooney</span>,{" "}
             <span>Danny Garfield</span>, <span>pxa</span>,{" "}
             <span>Antony Boudreau</span>
