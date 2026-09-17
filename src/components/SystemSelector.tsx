@@ -254,10 +254,10 @@ export function SystemSelector({
                     <button
                       className={classNames(
                         "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                        "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                        "hover:bg-white/10 focus:bg-white/10",
+                        "focus-visible:ring-ring rounded-lg focus:outline-none focus-visible:ring-2",
+                        "hover:bg-foreground/10 focus:bg-foreground/10",
                         {
-                          "bg-white/10": allOptionSelected,
+                          "bg-foreground/10": allOptionSelected,
                         },
                       )}
                       onPointerUp={handleHapticPress}
@@ -301,9 +301,9 @@ export function SystemSelector({
                         key={system.id}
                         className={classNames(
                           "flex min-h-14 w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                          "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                          "hover:bg-white/10 focus:bg-white/10",
-                          { "bg-white/10": isSelected },
+                          "focus-visible:ring-ring rounded-lg focus:outline-none focus-visible:ring-2",
+                          "hover:bg-foreground/10 focus:bg-foreground/10",
+                          { "bg-foreground/10": isSelected },
                         )}
                         onPointerUp={handleHapticPress}
                         onClick={() => handleSystemSelect(system.id)}
@@ -463,14 +463,14 @@ export function SystemSelectorTrigger({
     <button
       onClick={handleClick}
       className={classNames(
-        "border-input text-foreground flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus:ring-2 focus:ring-white/20 focus:outline-none",
+        "wui-input border-input text-foreground focus-visible:ring-ring flex min-h-12 w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none",
         {
-          "hover:bg-white/10": !isDisabled,
+          "hover:border-foreground-hint": !isDisabled,
           "cursor-not-allowed opacity-50": isDisabled,
         },
         className,
       )}
-      style={{ backgroundColor: "var(--color-background)" }}
+      style={{ backgroundColor: "var(--surface-inset)" }}
       disabled={isDisabled}
       type="button"
       aria-label={ariaLabel}
@@ -483,7 +483,7 @@ export function SystemSelectorTrigger({
       >
         {displayText}
       </span>
-      <div className="ml-2 h-4 w-4">
+      <div aria-hidden="true" className="ml-2 size-4 shrink-0">
         <svg
           className="h-4 w-4"
           fill="none"

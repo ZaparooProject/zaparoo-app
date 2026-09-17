@@ -60,7 +60,7 @@ function LibraryBrowsePlaceholderRow(props: {
       aria-hidden="true"
       className={classNames("flex w-full items-center gap-3 px-1 py-3", {
         "h-full": !props.textZoomed,
-        "border-b border-white/25": props.hasDivider,
+        "border-foreground/25 border-b": props.hasDivider,
       })}
       style={{ minHeight: `${props.minHeight}px` }}
     >
@@ -168,10 +168,10 @@ function LibraryBrowseRow(props: {
       ref={rowRef}
       type="button"
       className={classNames(
-        "flex w-full items-center gap-3 px-1 py-3 text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none disabled:cursor-not-allowed",
+        "focus-visible:ring-ring flex w-full items-center gap-3 px-1 py-3 text-left focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed",
         {
           "h-full": !props.textZoomed,
-          "border-b border-white/25": props.hasDivider,
+          "border-foreground/25 border-b": props.hasDivider,
         },
       )}
       style={{ minHeight: `${props.minHeight}px` }}
@@ -181,7 +181,7 @@ function LibraryBrowseRow(props: {
     >
       {isFolder ? (
         <span
-          className="text-foreground-hint flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-white/5"
+          className="text-foreground-hint bg-foreground/5 flex h-16 w-16 shrink-0 items-center justify-center rounded-md"
           aria-hidden="true"
         >
           <FolderIcon size={28} />

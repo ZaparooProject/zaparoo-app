@@ -28,15 +28,11 @@ function severityIcon(severity: InboxSeverity) {
       );
     case InboxSeverity.Warning:
       return (
-        <TriangleAlert
-          className="text-amber-400"
-          size={20}
-          aria-hidden="true"
-        />
+        <TriangleAlert className="text-warning" size={20} aria-hidden="true" />
       );
     case InboxSeverity.Info:
     default:
-      return <Info className="text-[#3faeec]" size={20} aria-hidden="true" />;
+      return <Info className="text-primary" size={20} aria-hidden="true" />;
   }
 }
 
@@ -115,7 +111,7 @@ function InboxRow(props: { message: InboxMessage; onDelete: () => void }) {
           onClick={() => setExpanded((prev) => !prev)}
           aria-expanded={expanded}
           aria-controls={bodyId}
-          className="focus-visible:ring-offset-background flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded-md text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="focus-visible:ring-offset-background focus-visible:ring-ring flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded-md text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           {messageContent}
         </button>

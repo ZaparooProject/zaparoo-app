@@ -11,6 +11,11 @@ import {
 } from "@/lib/appReview";
 import type { SystemNameRegionPreference } from "@/lib/systemNames";
 import { logger } from "./logger";
+import {
+  isAppearance,
+  readLegacyAppearance,
+  type Appearance,
+} from "./appearance";
 import { sessionManager } from "./nfc";
 import {
   isCapacitorPluginUnavailableError,
@@ -246,6 +251,9 @@ export interface PreferencesState {
     error: boolean;
   };
 
+  // Null means appearance has not been migrated/hydrated yet.
+  appearance: Appearance | null;
+
   // Display settings
   showFilenames: boolean;
   systemNameRegion: SystemNameRegionPreference;
@@ -317,6 +325,7 @@ export interface PreferencesActions {
   setLastWhatsNewRuntimeKey: (runtimeKey: string) => void;
   markWhatsNewSeen: (announcementId: string, runtimeKey: string) => void;
   setLogLevelFilters: (filters: PreferencesState["logLevelFilters"]) => void;
+  setAppearance: (value: Appearance) => void;
   setShowFilenames: (value: boolean) => void;
   setSystemNameRegion: (value: SystemNameRegionPreference) => void;
   setAppBadgeEnabled: (value: boolean) => void;
@@ -372,6 +381,7 @@ const DEFAULT_PREFERENCES: Omit<
     warn: true,
     error: true,
   },
+  appearance: null,
   showFilenames: false,
   systemNameRegion: "auto",
   appBadgeEnabled: true,
@@ -398,6 +408,7 @@ function persistedPreferences(state: PreferencesStore) {
     lastWhatsNewRuntimeKey: state.lastWhatsNewRuntimeKey,
     seenWhatsNewAnnouncementIds: state.seenWhatsNewAnnouncementIds,
     logLevelFilters: state.logLevelFilters,
+    appearance: state.appearance,
     showFilenames: state.showFilenames,
     systemNameRegion: state.systemNameRegion,
     appBadgeEnabled: state.appBadgeEnabled,
@@ -541,6 +552,13 @@ export const usePreferencesStore = create<PreferencesStore>()(
               : [...state.seenWhatsNewAnnouncementIds, announcementId],
         })),
       setLogLevelFilters: (filters) => set({ logLevelFilters: filters }),
+      setAppearance: (value) => {
+        // Keep this session usable if a write fails; never leave a rejected
+        // persistence promise attached to an input event.
+        void Promise.resolve(set({ appearance: value })).catch((error) => {
+          logger.warn("Failed to persist appearance preference", error);
+        });
+      },
       setShowFilenames: (value) => set({ showFilenames: value }),
       setSystemNameRegion: (value) => set({ systemNameRegion: value }),
       setAppBadgeEnabled: (value) => set({ appBadgeEnabled: value }),
@@ -705,6 +723,9 @@ export const usePreferencesStore = create<PreferencesStore>()(
 
         return {
           ...merged,
+          appearance: isAppearance(merged.appearance)
+            ? merged.appearance
+            : (readLegacyAppearance() ?? "system"),
           // Never persist the hydration flags or runtime-checked values.
           // A store ownership fallback is durable because Google or Apple has
           // already confirmed the non-consumable is owned on this device.

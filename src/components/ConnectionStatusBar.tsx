@@ -116,17 +116,19 @@ export function ConnectionStatusBar() {
       </div>
       {showVisual && (
         <div
-          className={classNames("shrink-0 border-t border-white/10", {
-            "bg-muted/90 text-muted-foreground":
-              presentation.visible && !isUnavailable,
-            "bg-amber-950/95 text-amber-100": isUnavailable,
-            "text-success bg-[#111928]":
-              showConfirmedRestored && !presentation.visible,
-          })}
+          className={classNames(
+            "border-border bg-surface-raised text-muted-foreground shrink-0 border-t",
+            {
+              "text-muted-foreground": presentation.visible && !isUnavailable,
+              "border-warning/40 [&_svg]:text-warning": isUnavailable,
+              "[&_svg]:text-success":
+                showConfirmedRestored && !presentation.visible,
+            },
+          )}
         >
           <ResponsiveContainer maxWidth="nav">
             <div
-              className="flex min-h-9 items-center justify-center gap-2 py-1.5 text-sm font-medium"
+              className="flex min-h-9 flex-wrap items-center justify-center gap-x-2 gap-y-1 py-1.5 text-sm font-medium"
               style={{
                 paddingRight: `calc(0.75rem + ${safeInsets.right})`,
                 paddingLeft: `calc(0.75rem + ${safeInsets.left})`,
@@ -147,13 +149,16 @@ export function ConnectionStatusBar() {
                   aria-hidden="true"
                 />
               )}
-              <span className="min-w-0 text-center" aria-hidden="true">
+              <span
+                className="min-w-[12ch] flex-1 text-center"
+                aria-hidden="true"
+              >
                 {message}
               </span>
               {isUnavailable && (
                 <Link
                   to="/settings"
-                  className="shrink-0 rounded px-1.5 py-1 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                  className="focus-visible:ring-ring shrink-0 rounded px-1.5 py-1 underline underline-offset-2 focus-visible:ring-2 focus-visible:outline-none"
                 >
                   {t("nav.settings")}
                 </Link>

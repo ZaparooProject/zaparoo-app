@@ -55,7 +55,10 @@ export function NowPlayingInfo({
   return (
     <section className="p-3" aria-labelledby={headingId}>
       <div className="flex flex-row items-center justify-between">
-        <h2 id={headingId} className="font-bold text-gray-400 capitalize">
+        <h2
+          id={headingId}
+          className="text-muted-foreground font-bold capitalize"
+        >
           {headingLabel ?? t("scan.nowPlayingHeading")}
         </h2>
         {hasPlaylistControls ? (

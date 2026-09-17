@@ -971,7 +971,10 @@
           "lastUsed": "上次使用：{{date}}",
           "neverUsed": "从未使用",
           "roleLabel": "角色",
-          "role": { "admin": "管理员", "member": "成员" },
+          "role": {
+            "admin": "管理员",
+            "member": "成员"
+          },
           "name": "名称",
           "nameRequiredLabel": "名称 *",
           "nameRequired": "请输入个人资料名称",
@@ -1079,7 +1082,11 @@
         "textSizeSmall": "小",
         "textSizeDefault": "中",
         "textSizeLarge": "大",
-        "textSizeExtraLarge": "特大"
+        "textSizeExtraLarge": "特大",
+        "appearance": "外观",
+        "appearanceSystem": "系统",
+        "appearanceLight": "浅色",
+        "appearanceDark": "深色"
       },
       "help": {
         "title": "帮助",

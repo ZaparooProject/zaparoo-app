@@ -32,7 +32,7 @@ export const ConnectionStatus = memo(function ConnectionStatus() {
               to="/settings"
               search={{ focus: "address" }}
               aria-label={t("nav.settings")}
-              className="focus-visible:ring-offset-background flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="focus-visible:ring-offset-background text-foreground focus-visible:ring-ring flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               <SettingsIcon size="24" aria-hidden="true" />
             </Link>

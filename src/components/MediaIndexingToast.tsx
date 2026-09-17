@@ -16,7 +16,7 @@ export const MediaIndexingToast = (props: {
         <button
           type="button"
           onClick={() => toast.dismiss(props.id)}
-          className="rounded text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+          className="focus-visible:ring-ring rounded text-left focus-visible:ring-2 focus-visible:outline-none"
         >
           <span className="block font-semibold">
             {t("toast.updateDbHeading")}

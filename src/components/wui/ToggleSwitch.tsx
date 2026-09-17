@@ -36,23 +36,29 @@ export function ToggleSwitch(props: {
 
   return (
     <div
-      className="text-foreground flex cursor-pointer items-center justify-between select-none"
+      className="text-foreground flex min-h-12 items-center justify-between gap-4 select-none"
       onClick={handleContainerClick}
       onKeyDown={handleContainerKeyDown}
       role={hasDisabledClickHandler ? "button" : undefined}
       tabIndex={hasDisabledClickHandler ? 0 : undefined}
     >
-      <span className="flex items-center">
-        <label htmlFor={inputId} className="cursor-pointer">
+      <span className="flex min-w-0 flex-1 items-center gap-1">
+        <label
+          htmlFor={inputId}
+          className="cursor-pointer text-sm leading-6 font-medium"
+        >
           {props.label}
         </label>
         {props.suffix}
       </span>
       {props.loading ? (
-        <Skeleton className="h-8 w-[51px] rounded-full" />
+        <Skeleton className="h-6 w-11 shrink-0 rounded-full" />
       ) : (
         /* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Label wraps and is associated with input via htmlFor */
-        <label htmlFor={inputId} className="relative cursor-pointer">
+        <label
+          htmlFor={inputId}
+          className="relative flex size-12 shrink-0 cursor-pointer items-center justify-center"
+        >
           <input
             id={inputId}
             type="checkbox"
@@ -70,49 +76,24 @@ export function ToggleSwitch(props: {
           />
           <div
             className={classNames(
+              "wui-toggle-track",
               "block",
-              "h-8",
-              "w-[51px]",
+              "h-6",
+              "w-11",
               "rounded-full",
               "border",
               "border-solid",
               "peer-focus-visible:ring-2",
-              "peer-focus-visible:ring-white/50",
+              "peer-focus-visible:ring-ring",
               "peer-focus-visible:ring-offset-2",
               "peer-focus-visible:ring-offset-background",
               {
-                "bg-button-pattern": props.value && !props.disabled,
-                "bg-background": !props.value && !props.disabled,
                 "border-bd-outline": !props.disabled,
                 "border-foreground-disabled": props.disabled,
               },
             )}
           ></div>
-          <div
-            className={classNames(
-              "dot",
-              "bg-bd-outline",
-              "absolute",
-              "left-1.5",
-              "top-2",
-              "h-4",
-              "w-4",
-              "rounded-full",
-              "transition",
-              "peer-checked:left-0",
-              "peer-checked:top-1",
-              "peer-checked:h-6",
-              "peer-checked:w-6",
-              "peer-checked:translate-x-full",
-              {
-                "peer-checked:bg-primary-foreground": !props.disabled,
-                "peer-checked:bg-foreground-disabled": props.disabled,
-                "pointer-events-none": props.disabled,
-                "bg-white": !props.disabled,
-                "bg-foreground-disabled": props.disabled,
-              },
-            )}
-          ></div>
+          <div className="wui-toggle-thumb pointer-events-none"></div>
         </label>
       )}
     </div>

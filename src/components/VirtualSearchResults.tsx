@@ -199,7 +199,7 @@ export function VirtualSearchResults({
               focus: "database",
             }}
             aria-label={t("create.search.gamesDbSettings")}
-            className="focus-visible:ring-offset-background flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="focus-visible:ring-offset-background text-foreground focus-visible:ring-ring flex h-10 w-10 min-w-10 items-center justify-center rounded-full px-1.5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             <SettingsIcon size="24" aria-hidden="true" />
           </Link>
@@ -237,7 +237,7 @@ export function VirtualSearchResults({
   if (isError) {
     return (
       <div className="mt-6 flex flex-col items-center">
-        <p className="mb-3 text-white" role="alert">
+        <p className="text-foreground mb-3" role="alert">
           {t("create.search.searchError")}
         </p>
         <Button
@@ -462,9 +462,9 @@ const SearchResultItem = React.memo(function SearchResultItem({
   return (
     <button
       type="button"
-      className="flex w-full cursor-pointer flex-row items-center justify-between gap-1 px-1 pt-3 pb-5 text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+      className="focus-visible:ring-ring flex w-full cursor-pointer flex-row items-center justify-between gap-1 px-1 pt-3 pb-5 text-left focus-visible:ring-2 focus-visible:outline-none"
       style={{
-        borderBottom: isLast ? "" : "1px solid rgba(255,255,255,0.6)",
+        borderBottom: isLast ? "" : "1px solid var(--edge-default)",
       }}
       data-testid={`result-${index}`}
       onPointerUp={handleHapticPress}

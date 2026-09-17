@@ -26,17 +26,20 @@ export function Card(props: {
 
   return (
     <div
+      data-pressable={isPressable || undefined}
+      data-disabled={props.disabled || undefined}
       className={classNames(
-        "drop-shadow",
-        "rounded-xl",
+        "wui-card",
+        "rounded-lg",
         "border",
         "border-solid",
-        "p-3",
-        "border-[rgba(255,255,255,0.13)]",
+        "p-4",
+        "border-border",
+        "bg-card-pattern",
         {
           "text-foreground-disabled": props.disabled,
-          "bg-card-pattern": !props.disabled,
-          "focus-visible:ring-offset-background cursor-pointer focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none":
+
+          "focus-visible:ring-offset-background focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none":
             isClickable,
         },
         props.className,

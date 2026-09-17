@@ -1,0 +1,133 @@
+/* Online materials, adapted to native touch targets and cool-neutral light mode. */
+@font-face {
+  font-family: "Outfit";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(/fonts/Outfit-VariableFont_wght.ttf) format("truetype");
+}
+
+:root {
+  color-scheme: light;
+  --surface-base: #f2f3f5;
+  --surface-raised: #ffffff;
+  --surface-elevated: #fafbfc;
+  --surface-inset: #e5e8ed;
+  --surface-highlight: #dce1e8;
+  --text-primary: #101418;
+  --text-secondary: #424b59;
+  --text-muted: #505a69;
+  --interaction: #095cb9;
+  --status-red: #a92332;
+  --status-green: #126641;
+  --status-yellow: #755100;
+  --edge-default: #7b8491;
+  --edge-subtle: #c9ced7;
+  --edge-strong: var(--edge-default);
+  --material-edge: #b7bfca;
+  --material-highlight: rgb(255 255 255 / 85%);
+  --material-shadow: rgb(25 35 50 / 15%);
+  --secondary-cap: var(--surface-elevated);
+  --secondary-edge: var(--material-edge);
+  --status-red-wash: #fbe5e8;
+  --status-green-wash: #dcefe5;
+  --status-yellow-wash: #fff0c5;
+  --interaction-wash: #deebfc;
+  --radius: 0.5rem;
+  --bottom-nav-base-height: max(80px, 5rem);
+
+  /* One palette; legacy WUI and shadcn names are aliases, not separate themes. */
+  --background: var(--surface-base);
+  --foreground: var(--text-primary);
+  --card: var(--surface-raised);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--interaction);
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-highlight);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--surface-inset);
+  --muted-foreground: var(--text-secondary);
+  --foreground-hint: var(--text-muted);
+  --accent: var(--interaction-wash);
+  --accent-foreground: var(--text-primary);
+  --destructive: var(--status-red);
+  --border: var(--edge-subtle);
+  --input: var(--edge-default);
+  --ring: var(--interaction);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-foreground-disabled: var(--text-muted);
+  --color-primary: var(--primary);
+  --color-success: var(--status-green);
+  --color-error: var(--status-red);
+  --color-warning: var(--status-yellow);
+  --color-border-filled: var(--edge-default);
+  --color-border-outline: var(--edge-default);
+  --color-border-input: var(--edge-default);
+  --color-button-start: #3cb0ff;
+  --color-button-end: #0070cc;
+  --chart-1: var(--interaction);
+  --chart-2: var(--status-green);
+  --chart-3: var(--status-red);
+  --chart-4: var(--text-muted);
+  --chart-5: var(--status-yellow);
+  --sidebar: var(--surface-raised);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--interaction);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--surface-highlight);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--edge-subtle);
+  --sidebar-ring: var(--interaction);
+}
+
+.dark {
+  color-scheme: dark;
+  --surface-base: #0a0f18;
+  --surface-raised: #1a1a25;
+  --surface-elevated: #1f1f2e;
+  --surface-inset: #12121a;
+  --surface-highlight: #252533;
+  --text-primary: #f0f0f5;
+  --text-secondary: #a0a0b8;
+  --text-muted: #8d8da1;
+  --interaction: #46b1ff;
+  --status-red: #f16262;
+  --status-green: #34d399;
+  --status-yellow: #facc15;
+  --edge-default: #454554;
+  --edge-subtle: #30303e;
+  --material-edge: #3e3e51;
+  --material-highlight: rgb(255 255 255 / 8%);
+  --material-shadow: rgb(0 0 0 / 35%);
+  --secondary-cap: var(--surface-highlight);
+  --secondary-edge: var(--surface-raised);
+  --status-red-wash: #351d28;
+  --status-green-wash: #12332b;
+  --status-yellow-wash: #332b18;
+  --interaction-wash: #142a43;
+}
+
+@theme inline {
+  --font-sans: "Outfit", system-ui, sans-serif;
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-inset: var(--surface-inset);
+  --color-surface-highlight: var(--surface-highlight);
+  --color-bd-outline: var(--text-secondary);
+  --color-success: var(--status-green);
+  --color-error: var(--status-red);
+  --color-warning: var(--status-yellow);
+  --color-success-wash: var(--status-green-wash);
+  --color-error-wash: var(--status-red-wash);
+  --color-warning-wash: var(--status-yellow-wash);
+  --color-primary-wash: var(--interaction-wash);
+}
+
+/* Until Preferences hydrates there is no content, only an OS-matching canvas. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light):not(.dark) body {
+    background: #0a0f18;
+  }
+}

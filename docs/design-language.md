@@ -19,21 +19,23 @@ Use these before creating or changing UI:
 - Create/search flows: `src/routes/create.index.tsx`, `create.custom.tsx`, `create.nfc.tsx`, `create.mappings.tsx`, `src/routes/-pages/Search.tsx`, `MappingEditor.tsx`, `ZapScriptInput.tsx`
 - Home: `src/routes/-pages/Index.tsx`, `src/components/home/*`
 - Lists/selectors: `MappingRow.tsx`, `VirtualSearchResults.tsx`, `SystemSelector.tsx`, `TagSelector.tsx`, `SimpleSystemSelect.tsx`, `DeviceRow.tsx`, `NetworkScanModal.tsx`, `InboxModal.tsx`
-- Foundations: `src/index.css`
+- Foundations: `src/styles/theme.css` (semantic palette), `src/styles/components.css` (materials), `src/index.css` (Tailwind aliases, tours, keyboard)
 
 ## Visual foundations
 
 ### Theme
 
-Zaparoo App is dark, high-contrast, mobile-first UI.
+Zaparoo App is mobile-first UI using Online's tactile materials in dark and cool-neutral light themes. System is the default; Settings → Accessibility → Appearance offers System, Light, and Dark. Appearance applies app-wide, follows OS changes live in System mode, and persists through Capacitor Preferences. A valid legacy `vite-ui-theme` is migrated without replacing explicit choices.
 
-Use existing tokens/classes from `src/index.css`:
+Online, not the constrained Rust frontend, owns the visual direction: chunky arcade buttons, Outfit typography, recessed inputs, small-radius surfaces, and restrained status/interaction colors. Existing Zap composition and workflows remain unchanged; the customizable Hub is a separate delivery.
+
+Use semantic roles from `src/styles/theme.css` through existing Tailwind aliases:
 
 - background: `var(--color-background)` / `bg-background`
-- foreground: `text-foreground`, usually white
+- foreground: `text-foreground`; secondary copy: `text-muted-foreground`
 - muted text: `text-muted-foreground`
 - disabled text: `text-foreground-disabled`
-- primary/accent: cyan/blue via `text-primary`, `bg-button-pattern`
+- interaction: `text-primary`; filled button material: `bg-button-pattern`
 - status colors: `text-success`, `text-error`, `text-warning`
 - borders: `border-bd-filled`, `border-bd-outline`, `border-bd-input`
 - cards/buttons: `bg-card-pattern`, `bg-button-pattern`
@@ -42,22 +44,22 @@ Do not hardcode new colors unless matching a nearby existing hardcoded pattern. 
 
 ### Typography
 
-Font is Open Sans from `src/index.css`. Use existing Tailwind classes; do not introduce custom font families.
+Font is locally bundled variable Outfit (100–900), with platform system-font fallbacks for unsupported glyphs. Font and OFL notice live under `public/fonts/`; web, native, and Core builds do not request Google Fonts. Use existing Tailwind classes; do not introduce custom font families.
 
 Common hierarchy:
 
-- Page/nav titles use Title Case: `Manage Media`, `Play Controls`, `Create a New Tag`.
+- Existing translated page titles retain their source casing during this visual migration; new copy follows Online sentence case. Examples: `Manage Media`, `Play Controls`, `Create a New Tag`.
 - Section headings and field labels use sentence case: `Media database`, `Metadata scraper`, `Playtime limits`, `Session reset timeout`.
-- Page title in header: `text-foreground text-xl`.
+- Page titles are left-aligned Outfit, 24px/600, tight tracking and natural wrapping. `PageHeader` owns the typography; programmatic heading focus remains, without a decorative outline.
   - Seen across settings, create, search, logs, devices.
-- Slide modal title: centered `text-lg` inside `SlideModal`.
+- Slide modal title: left-aligned `text-lg font-semibold` above the body divider.
 - Home section labels: `font-bold text-gray-400 capitalize`.
   - Used by `LastScannedInfo` and `NowPlayingInfo`.
 - Card/list primary text: usually `font-semibold` or `font-medium` depending sibling row.
   - Create landing card titles use `font-semibold`.
   - Connection status title uses `font-medium`.
   - Mapping row primary label uses `font-medium`.
-- Settings field labels: match sibling label treatment exactly, commonly `text-sm font-medium`, `mb-1 block`, or `text-white` depending screen.
+- Settings field labels: match sibling label treatment exactly, commonly `text-sm font-medium`, `mb-1 block`, or `text-foreground` depending screen.
 - Help page section labels use centered `text-lg font-semibold`.
 - About page has its own credits layout: centered `text-2xl font-bold` app title and centered `text-lg font-bold` credit headings.
 - NFC read/tools panels use `text-lg font-semibold` headings inside rounded panels.
@@ -107,21 +109,21 @@ Use the nearest screen’s spacing. Do not mix gap systems inside one section un
 Subpages use:
 
 - `HeaderButton` with `BackIcon size="24"` on left
-- centered `<h1 className="text-foreground text-xl">...` title
+- left-aligned `<h1>` title, styled consistently by `PageHeader`
 - optional right `HeaderButton` or small `flex gap-2` group of `HeaderButton`s for page actions
 - `useSmartSwipe({ onSwipeRight: goBack })` when nearby routes use swipe-back
 
-Root tab pages can omit back button and use centered title or branded content.
+Root tab pages can omit the back button and use a left-aligned title or existing branded content.
 
 ### Bottom navigation and floating app chrome
 
 Bottom nav is its own pattern in `BottomNav`:
 
 - fixed-height nav area: `calc(80px + safeInsets.bottom)`
-- translucent dark background `bg-[#111928bf]` with backdrop blur
-- top border `border-t-[#ffffff21]`
-- three equal nav buttons with 48px minimum hit height
-- active state cyan `#3faeec` with matching drop-shadow glow
+- opaque raised surface `bg-surface-raised`
+- semantic top border `border-t-border`
+- four equal nav buttons with 48px minimum hit height
+- uppercase 12px/600 labels with neutral icons; active destination uses primary text on a recessed surface with a visible border, not a blue icon accent; no glow
 - attention state uses `attention-throb` amber halo
 
 Global connection status uses `ConnectionStatusBar`, an in-layout strip above bottom nav:
@@ -143,7 +145,8 @@ Use `src/components/wui/Button.tsx`.
 Variants:
 
 - `fill` default: primary gradient button, border, white text
-- `outline`: border-only action
+- `secondary`: neutral raised cap for Cancel and supporting actions
+- `outline`: quieter inset face with a two-pixel edge for utility/alternative actions
 - `text`: icon/text action without filled treatment
 
 Sizes:
@@ -154,9 +157,14 @@ Sizes:
 
 Shape is owned by Button:
 
-- icon-only buttons are round
-- labeled buttons use rounded pill-like corners
-- haptics derive from `intent`: default light, primary medium, destructive heavy
+- standalone icon-only buttons are round; `shape="square"` aligns Save and editor utility controls with rectangular fields
+- labeled buttons use 4px corners, bold uppercase Outfit labels, and 0.05em tracking
+- primary and secondary buttons have 4px opaque front edges and three-stop caps; outline has a 2px edge and half-distance travel
+- pointer hover lowers caps by 2px; press lowers them by 4px, without scaling/fading
+- touch targets remain at least 48px; compact labels do not shrink the hit target
+- reduced-motion settings disable transitions, and disabled controls do not travel
+- haptics derive from `intent`: default light, primary medium, destructive heavy; destructive intent also supplies visible red treatment
+- geometry is owned by the component, materials live in the CSS components layer; call-site utilities must not have to fight unlayered overrides
 
 Use `className="w-full"` for full-width primary page actions and complex-modal primary actions. Use `className="flex-1"` only for equal-width confirmation actions sharing one footer row.
 
@@ -170,11 +178,11 @@ Use `HeaderButton` only for header actions: back, history, reload, close-like he
 
 Pattern:
 
-- 32px square (`h-8 w-8`)
+- at least 44px square hit target
 - round hit target
 - icon-only
 - accessible name should come from `aria-label`; some existing log actions use `title`, but new icon-only header actions should include `aria-label`
-- active state cyan, disabled gray
+- active state interaction blue with accessible pressed state; disabled muted text
 
 Do not use `HeaderButton` inside page body.
 
@@ -184,11 +192,11 @@ Use `src/components/wui/Card.tsx` when existing flow uses card containers.
 
 Card style:
 
-- `rounded-xl`
-- `p-3`
-- border `rgba(255,255,255,0.13)`
-- `bg-card-pattern`
-- `drop-shadow`
+- 8px corners
+- `p-4` (navigation-group shells use `p-2` around padded rows)
+- semantic subtle border
+- `bg-card-pattern`: elevated-to-raised surface gradient
+- inset material highlight and restrained shadow
 
 Real use:
 
@@ -200,7 +208,7 @@ Real use:
 - Device rows/history entries via `DeviceRow`
 - Core outdated notice with warning border/background overrides
 
-Do not wrap new settings subsections in cards unless sibling sections on that page are cards. Most settings toggles are plain stacked rows, not cards.
+Group related settings on a shared raised Card; controls recess into that surface. Do not wrap each toggle in its own card. Accessibility and Language & Region are single form panels; Readers separates reader status from controls; Play Controls preserves its existing named groups.
 
 ### ToggleSwitch
 
@@ -209,7 +217,8 @@ Use `ToggleSwitch` for boolean settings.
 Pattern:
 
 - row: label left, switch right
-- no card wrapper
+- grouped rows live on a raised settings panel; no individual card wrapper
+- 48px hit region around a 44×24 track and a proportionate physical thumb; geometry scales with text zoom
 - label can include `SettingHelp`
 - `loading` shows skeleton switch
 - disabled state belongs on switch, not custom opacity wrapper
@@ -224,13 +233,14 @@ Use `TextInput` for standard text/number/search input.
 
 Built-in style:
 
-- label above input, `mb-1 block`
+- label above input, `mb-2 block text-sm font-medium`
 - input height `h-12`
-- `bg-background`
+- recessed `--surface-inset` with inner shadow
 - `border-bd-input`
-- rounded corners
+- 4px corners
 - disabled border/text state
-- optional save button and clear button
+- optional square Save action separated from the field by a gap; its position stays reserved while disabled
+- clear action remains inside the input; no attached round Save cap
 
 Use native `type`, `inputMode`, `clearable`, `saveValue`, `error` props before creating custom input UI.
 
@@ -271,9 +281,11 @@ Use existing segmented/radio patterns when choosing one option among a small set
 
 Real patterns:
 
-- Accessibility text size segmented row: pill group, selected item has check icon and `bg-button-pattern`
-- Readers scan mode and shake mode: two full-width pill halves, selected item uses `bg-button-pattern`
-- `wui/Segmented.tsx`: generic radiogroup with bordered rounded container and active gradient item
+- Appearance, text size, reader scan mode, shake mode, and editor choices use `TabBar` (through `Segmented` where a label is needed).
+- Inset tray, 48px options, semibold labels (uppercase only for navigation tabs); selected option rises from the tray with neutral text, edge and highlight. Not a row of blue CTA buttons.
+- Grid choices reflow as text grows instead of squeezing labels; scrolling layouts retain single-line options.
+- Arrow/Home/End selection and roving focus remain; an unselected group still has a keyboard entry point.
+- Radix Tabs use the same materials but retain their own tab semantics and keyboard handling.
 
 Do not invent a new segmented style. If a generic pattern fits, prefer `Segmented`.
 
@@ -303,7 +315,7 @@ Do not replace an existing help-icon pattern with visible helper paragraphs.
 
 ## Settings pages
 
-Settings are plain and utilitarian. Avoid decorative UI.
+Settings are restrained control panels: raised grouped surfaces, inset fields and choices, and neutral navigation rows. Avoid decorative icons, invented helper copy, and a separate card for every setting.
 
 ### Structure
 
@@ -311,7 +323,7 @@ Subpage pattern:
 
 1. `PageFrame`
 2. back `HeaderButton`
-3. centered page title `text-foreground text-xl`
+3. left-aligned page title using shared `PageHeader` typography
 4. content stack
 5. settings rows/inputs/toggles
 
@@ -325,11 +337,11 @@ Examples:
 
 Settings index nav rows use:
 
-- `flex min-h-[48px] flex-row items-center justify-between`
+- `settings-nav-row`: 48px minimum, 12px padding, neutral text and a trailing chevron
 - text on left
 - `NextIcon size="20"` right
-- no cards
-- no descriptions
+- related rows share a raised Card shell; rows remain flat, not individual action cards
+- no invented descriptions
 
 Device history is a different settings subflow:
 
@@ -376,11 +388,11 @@ If one sibling section has no visible description, new sibling sections must not
 
 ### Native selects
 
-Native select patterns vary by context, so copy the nearby one:
+Native selects share the `wui-input` recess and 48px minimum height. Keep native picker behavior:
 
-- Settings language and scraper select: `border-bd-input bg-background text-foreground rounded-md border border-solid p-3`
-- `SimpleSystemSelect`: `border-input text-foreground w-full rounded-md border px-3 py-2` with inline `backgroundColor: var(--color-background)`
-- labels above are often `text-white` or `mb-1 text-white`
+- Settings language and scraper select: `border-bd-input bg-surface-inset text-foreground rounded-md border border-solid p-3`
+- `SimpleSystemSelect`: `border-input text-foreground w-full rounded-md border px-3 py-2` with inline `backgroundColor: var(--surface-inset)`
+- labels above are often `text-foreground` or `mb-1 text-foreground`
 - disabled: opacity/cursor where nearby component does so
 
 Real use: language select, scraper select, media search modal simple system select.
@@ -391,7 +403,7 @@ Search route pattern:
 
 - role `search`
 - `TextInput` for query with `type="search"` and `clearable`
-- filter labels `mb-1 text-white`
+- filter labels `mb-1 text-foreground`
 - selector triggers for system/tag
 - full-width Search button
 
@@ -418,15 +430,15 @@ Use `SlideModal` as the default modal for app flows: bottom sheets, selectors, a
 
 Visual behavior:
 
-- black overlay `bg-black/50`
+- black overlay `bg-black/60`, no blur
 - bottom sheet on mobile, centered max width on desktop
 - content-sized by default and capped at 80% of viewport height
 - fixed-height selector/search requests are still capped at 80%
-- `bg-[rgba(17,25,40,0.7)]`
-- border `rgba(255,255,255,0.13)`
-- backdrop blur
-- mobile drag handle cyan
-- title centered `text-lg`
+- opaque raised surface with semantic border and a material highlight
+- 8px upper corners; 16px shell padding
+- header, scrollable body, and persistent footer form distinct zones
+- mobile drag handle uses muted foreground
+- left-aligned `text-lg font-semibold` title; compact drag handle and desktop close action
 - safe-area bottom padding
 - focus trap and Android back handling
 
@@ -504,8 +516,8 @@ Do not copy Home heading style into Settings; it is home/status-specific.
 Create index uses stacked `Card` rows:
 
 - `flex flex-row items-center gap-3`
-- decorative icon `Button`
-- text stack with `font-semibold` title and `text-sm` subtitle
+- neutral inset square icon tile (decorative, not a fake blue button)
+- text stack with `font-semibold` title and muted `text-sm` supporting copy
 - `NextIcon size="20"` on navigable rows
 
 Use this pattern only for menu-like action cards.
@@ -535,8 +547,8 @@ Mapping editor uses a plain `flex flex-col gap-4` form stack:
 
 `ZapScriptInput` is its own compound editor:
 
-- textarea with `border-bd-input bg-background rounded-b-none border border-solid p-3`
-- footer area with matching border/background and `rounded-b-md`
+- recessed monospace textarea with the shared input focus/error vocabulary
+- raised attached toolbar with matching boundary and 4px lower corners; utility rows wrap at narrow/zoomed widths
 - character count muted small text
 - command palette uses existing `Button variant="outline"` grid/flex rows
 - clear action uses `ConfirmClearModal`
@@ -598,11 +610,10 @@ Do not copy About credits styling into normal settings pages.
 
 Online settings has auth/account-specific layout:
 
-- logged-in state centers avatar/user info with `items-center gap-4 py-4`
-- avatar is either rounded image with border or gradient circle initial
+- logged-in state preserves the existing name/email and linked-device/account sections
 - account actions are full-width outline buttons in `gap-3`
 - delete/scheduled-deletion states use error border/text/background treatments
-- logged-out auth form is a `gap-4` stack with `TextInput`s and full-width buttons
+- logged-out auth form is one raised Card containing recessed `TextInput`s, primary sign-in action, and quieter alternatives
 
 Do not use Online account avatar/card/error panel patterns for unrelated settings.
 
@@ -722,7 +733,7 @@ Keep existing accessibility behavior:
 - use `SlideModal` focus trap for bottom-sheet modals
 - use `useSmartSwipe` for subpage back gesture where sibling pages use it
 - use `useHaptics()` or WUI component `intent` instead of ad-hoc haptic calls
-- focus rings should match existing `focus-visible:ring-2 focus-visible:ring-white/50`
+- focus rings use the semantic interaction token; no hardcoded white ring on light surfaces
 
 Disabled controls should use component disabled props and existing disabled colors, not custom hidden interactivity.
 

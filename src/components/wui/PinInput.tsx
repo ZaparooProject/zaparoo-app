@@ -23,10 +23,11 @@ export const PinInput = memo(
     return (
       <div ref={ref}>
         {label && (
-          <label htmlFor={inputId} className="mb-1 block">
+          <label htmlFor={inputId} className="mb-2 block text-sm font-medium">
             {label}
           </label>
         )}
+        {/* Badge-pushing would expand the invisible input beyond sheet scroll bounds. */}
         <OTPInput
           id={inputId}
           value={value}
@@ -37,9 +38,10 @@ export const PinInput = memo(
           pattern={REGEXP_ONLY_DIGITS}
           inputMode="numeric"
           autoComplete="one-time-code"
+          pushPasswordManagerStrategy="none"
           aria-label={!label ? ariaLabel : undefined}
           containerClassName={classNames(
-            "flex items-center gap-2",
+            "flex w-fit max-w-full items-center gap-2",
             "has-[:disabled]:opacity-50",
           )}
           render={({ slots }) => (
@@ -63,11 +65,11 @@ function Slot({
   return (
     <div
       data-active={isActive ? "true" : undefined}
-      style={{ backgroundColor: "var(--color-background)" }}
+      style={{ backgroundColor: "var(--surface-inset)" }}
       className={classNames(
-        "relative flex h-12 w-10 items-center justify-center",
+        "wui-input relative flex h-12 w-12 min-w-0 items-center justify-center",
         "border border-solid",
-        "rounded-md text-2xl font-medium",
+        "rounded-md text-2xl font-semibold",
         "transition-[border-color,box-shadow] duration-150",
         {
           "border-foreground-disabled text-foreground-disabled": disabled,

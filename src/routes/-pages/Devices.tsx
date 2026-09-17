@@ -327,7 +327,7 @@ export function Devices() {
                     to="/settings/devices/$recordId"
                     params={{ recordId: record.recordId }}
                     aria-label={t("settings.deviceDetails")}
-                    className="bg-background border-bd-outline focus-visible:ring-offset-background flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-solid px-1.5 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    className="bg-background border-bd-outline focus-visible:ring-offset-background focus-visible:ring-ring flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-solid px-1.5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                   >
                     <Pencil size={18} />
                   </Link>

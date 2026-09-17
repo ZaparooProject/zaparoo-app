@@ -207,7 +207,7 @@ export function OnlineDeviceSetup({
         <div className="flex items-center">
           <h2
             id="online-device-title"
-            className="text-lg font-medium text-white"
+            className="text-foreground text-lg font-medium"
           >
             {t("online.deviceLink.title")}
           </h2>
@@ -241,7 +241,7 @@ export function OnlineDeviceSetup({
             ref={featuresHeadingRef}
             id="online-features-title"
             tabIndex={-1}
-            className="rounded-sm text-lg font-medium text-white outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="text-foreground focus-visible:ring-ring rounded-sm text-lg font-medium outline-none focus-visible:ring-2"
           >
             {t("online.features.title")}
           </h2>
@@ -341,7 +341,7 @@ export function OnlineDeviceSetup({
                       </label>
                       <select
                         id="online-backup-schedule"
-                        className="border-bd-input bg-background text-foreground w-full rounded-md border border-solid p-3 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                        className="wui-input border-bd-input bg-surface-inset text-foreground focus-visible:ring-ring min-h-12 w-full rounded-md border border-solid p-3 focus-visible:ring-2 focus-visible:outline-none"
                         value={
                           settingsQuery.data?.backupRemoteSchedule ?? "daily"
                         }
@@ -379,7 +379,7 @@ export function OnlineDeviceSetup({
           ) : (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
-                <p className="font-medium text-white">
+                <p className="text-foreground font-medium">
                   {t("online.features.playHistory")}
                 </p>
                 <p className="text-muted-foreground text-sm">
@@ -387,7 +387,7 @@ export function OnlineDeviceSetup({
                 </p>
               </div>
               <div className="flex flex-col gap-1">
-                <p className="font-medium text-white">
+                <p className="text-foreground font-medium">
                   {t("online.features.automaticBackup")}
                 </p>
                 <p className="text-muted-foreground text-sm">

@@ -48,12 +48,12 @@ export function SystemFilterControls(props: {
               placeholder={t("systemSelector.searchPlaceholder")}
               value={query}
               onChange={(event) => props.onQueryChange?.(event.target.value)}
-              className="border-input bg-background text-foreground w-full rounded-md border px-10 py-2 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+              className="border-input bg-surface-inset text-foreground focus-visible:ring-ring w-full rounded-md border px-10 py-2 focus-visible:ring-2 focus-visible:outline-none"
             />
             {query && (
               <button
                 onClick={() => props.onQueryChange?.("")}
-                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
                 type="button"
                 aria-label={t("systemSelector.clearSearch")}
               >
@@ -73,7 +73,7 @@ export function SystemFilterControls(props: {
           {hasOverflow && (
             <div
               aria-hidden="true"
-              className={`pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-8 bg-gradient-to-r from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
+              className={`from-background pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-8 bg-gradient-to-r to-transparent transition-opacity duration-200 ${
                 showLeftGradient ? "opacity-100" : "opacity-0"
               }`}
             />
@@ -103,7 +103,7 @@ export function SystemFilterControls(props: {
           {hasOverflow && (
             <div
               aria-hidden="true"
-              className={`pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-gradient-to-l from-[rgba(17,25,40,0.9)] to-transparent transition-opacity duration-200 ${
+              className={`from-background pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-gradient-to-l to-transparent transition-opacity duration-200 ${
                 showRightGradient ? "opacity-100" : "opacity-0"
               }`}
             />

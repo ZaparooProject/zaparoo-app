@@ -22,7 +22,11 @@ export function Segmented<T extends string>({
 }: SegmentedProps<T>) {
   return (
     <div className="flex flex-col">
-      <span className={classNames("mb-1 block", { "sr-only": labelHidden })}>
+      <span
+        className={classNames("mb-2 block text-sm font-medium", {
+          "sr-only": labelHidden,
+        })}
+      >
         {label}
       </span>
       <TabBar

@@ -7,10 +7,12 @@ export type ButtonLayout = "inline" | "stacked" | "responsive";
 interface ButtonProps {
   onClick?: () => void;
   label?: string;
-  variant?: "fill" | "outline" | "text";
+  variant?: "fill" | "secondary" | "outline" | "text";
+  /** Square icon controls align with fields; standalone controls stay round. */
+  shape?: "round" | "square";
   size?: "default" | "sm" | "lg";
   layout?: ButtonLayout;
-  /** Semantic intent for haptic feedback: default (light), primary (medium), destructive (heavy) */
+  /** Semantic intent controls haptics and visible destructive treatment. */
   intent?: "default" | "primary" | "destructive";
   icon?: ReactElement;
   disabled?: boolean;
@@ -49,6 +51,12 @@ export const Button = memo(
     return (
       <button
         ref={ref}
+        data-variant={variant}
+        data-intent={props.intent ?? "default"}
+        data-size={size}
+        data-icon-only={!props.label && !!props.icon}
+        data-shape={props.shape ?? "round"}
+        data-pressed={isPressed && !props.disabled}
         aria-label={
           props.decorative ? undefined : props["aria-label"] || props.label
         }
@@ -58,72 +66,21 @@ export const Button = memo(
         aria-controls={props["aria-controls"]}
         tabIndex={props.decorative ? -1 : undefined}
         className={classNames(
-          "flex",
-          "items-center",
-          "justify-center",
-          "font-medium",
-          "tracking-[0.1px]",
+          "wui-button flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center border border-solid border-transparent text-sm font-bold tracking-wider uppercase",
+          "disabled:cursor-not-allowed",
           {
             "flex-row gap-2": layout === "inline",
             "flex-col gap-1": layout === "stacked",
             "flex-col gap-1 sm:flex-row sm:gap-2": layout === "responsive",
-          },
-          "cursor-pointer",
-          "transition-all",
-          "duration-100",
-          "active:scale-95",
-          "touch-manipulation",
-          "focus-visible:outline-none",
-          "focus-visible:ring-2",
-          "focus-visible:ring-white/50",
-          "focus-visible:ring-offset-2",
-          "focus-visible:ring-offset-background",
-          // Size variants
-          {
-            // Small size
-            "py-1": size === "sm",
-            "text-sm": size === "sm",
-            // Default size
-            "py-1.5": size === "default",
-            // Large size
-            "py-2": size === "lg",
-            "text-lg": size === "lg",
-          },
-          // Icon-only button sizes
-          {
-            "h-8 w-8 min-w-8 px-1.5":
-              !props.label && props.icon && size === "sm",
-            "h-10 w-10 min-w-10 px-1.5":
-              !props.label && props.icon && size === "default",
-            "h-12 w-12 min-w-12 px-2":
-              !props.label && props.icon && size === "lg",
-          },
-          // Label padding
-          {
-            "px-4": props.label && size === "sm" && layout === "inline",
-            "px-6": props.label && size === "default" && layout === "inline",
-            "px-8": props.label && size === "lg" && layout === "inline",
-            "px-2": props.label && layout !== "inline",
-          },
-          // Rounded corners
-          {
-            "rounded-full": !props.label && props.icon,
-            "rounded-[16px]": props.label && size === "sm",
-            "rounded-[20px]": props.label && size === "default",
-            "rounded-[24px]": props.label && size === "lg",
-          },
-          // Variants and states
-          {
-            "bg-button-pattern": variant === "fill" && !props.disabled,
-            border: variant === "fill" || variant === "outline",
-            "border-solid": variant === "fill" || variant === "outline",
-            "border-bd-filled": variant === "fill" && !props.disabled,
-            "border-bd-outline": variant === "outline" && !props.disabled,
-            "border-foreground-disabled": props.disabled,
-            "text-foreground-disabled": props.disabled,
-            "text-primary-foreground": variant === "fill" && !props.disabled,
-            "text-white": variant !== "fill" && !props.disabled,
-            "opacity-80": isPressed && !props.disabled,
+            "cursor-pointer": !props.disabled && !props.decorative,
+            "px-4 py-2": props.label && size === "sm" && layout === "inline",
+            "px-5 py-3":
+              props.label && size === "default" && layout === "inline",
+            "px-7 py-3.5 text-base":
+              props.label && size === "lg" && layout === "inline",
+            "px-2 py-2": props.label && layout !== "inline",
+            "size-12 p-2": !props.label && size !== "lg",
+            "size-14 p-3": !props.label && size === "lg",
           },
           props.className,
         )}

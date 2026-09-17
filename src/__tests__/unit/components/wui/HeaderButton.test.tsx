@@ -138,17 +138,16 @@ describe("HeaderButton", () => {
   });
 
   describe("active state", () => {
-    it("should apply active styling when active prop is true", () => {
+    it("should expose active state when active prop is true", () => {
       render(
         <HeaderButton icon={<span>★</span>} aria-label="Test button" active />,
       );
 
       const button = screen.getByRole("button", { name: "Test button" });
-      // Active state applies text-[#00E0FF] class
-      expect(button).toHaveClass("text-[#00E0FF]");
+      expect(button).toHaveAttribute("aria-pressed", "true");
     });
 
-    it("should not apply active styling when active is false", () => {
+    it("should expose inactive state when active is false", () => {
       render(
         <HeaderButton
           icon={<span>★</span>}
@@ -158,10 +157,10 @@ describe("HeaderButton", () => {
       );
 
       const button = screen.getByRole("button", { name: "Test button" });
-      expect(button).not.toHaveClass("text-[#00E0FF]");
+      expect(button).toHaveAttribute("aria-pressed", "false");
     });
 
-    it("should not apply active styling when disabled even if active", () => {
+    it("should remain disabled even if active", () => {
       render(
         <HeaderButton
           icon={<span>★</span>}
@@ -173,7 +172,7 @@ describe("HeaderButton", () => {
 
       const button = screen.getByRole("button", { name: "Test button" });
       // When disabled, the active styling shouldn't apply
-      expect(button).toHaveClass("cursor-not-allowed");
+      expect(button).toBeDisabled();
     });
   });
 
@@ -187,8 +186,8 @@ describe("HeaderButton", () => {
         touches: [{ clientX: 100, clientY: 100 }],
       });
 
-      // Pressed state adds text-gray-400 class
-      expect(button).toHaveClass("text-gray-400");
+      // Press feedback is independent of the chosen material.
+      expect(button).toHaveAttribute("data-pressed", "true");
     });
 
     it("should detect scroll when moved more than 10px horizontally", () => {
@@ -213,7 +212,7 @@ describe("HeaderButton", () => {
       });
 
       // Pressed state should be removed after detecting scroll
-      expect(button).not.toHaveClass("text-gray-400");
+      expect(button).toHaveAttribute("data-pressed", "false");
 
       fireEvent.touchEnd(button);
       fireEvent.click(button);
@@ -285,12 +284,12 @@ describe("HeaderButton", () => {
         touches: [{ clientX: 100, clientY: 100 }],
       });
 
-      expect(button).toHaveClass("text-gray-400");
+      expect(button).toHaveAttribute("data-pressed", "true");
 
       fireEvent.touchEnd(button);
 
       // Pressed state should be removed
-      expect(button).not.toHaveClass("text-gray-400");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
 
     it("should reset state on touch cancel", () => {
@@ -302,12 +301,12 @@ describe("HeaderButton", () => {
         touches: [{ clientX: 100, clientY: 100 }],
       });
 
-      expect(button).toHaveClass("text-gray-400");
+      expect(button).toHaveAttribute("data-pressed", "true");
 
       fireEvent.touchCancel(button);
 
       // Pressed state should be removed
-      expect(button).not.toHaveClass("text-gray-400");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
 
     it("should ignore touch events when disabled", () => {
@@ -326,7 +325,7 @@ describe("HeaderButton", () => {
       });
 
       // Pressed state should not be applied when disabled
-      expect(button).not.toHaveClass("text-gray-400");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
   });
 
@@ -338,7 +337,7 @@ describe("HeaderButton", () => {
 
       fireEvent.mouseDown(button);
 
-      expect(button).toHaveClass("text-gray-400");
+      expect(button).toHaveAttribute("data-pressed", "true");
     });
 
     it("should reset pressed state on mouse up", () => {
@@ -347,10 +346,10 @@ describe("HeaderButton", () => {
       const button = screen.getByRole("button", { name: "Test button" });
 
       fireEvent.mouseDown(button);
-      expect(button).toHaveClass("text-gray-400");
+      expect(button).toHaveAttribute("data-pressed", "true");
 
       fireEvent.mouseUp(button);
-      expect(button).not.toHaveClass("text-gray-400");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
 
     it("should reset pressed state on mouse leave", () => {
@@ -359,10 +358,10 @@ describe("HeaderButton", () => {
       const button = screen.getByRole("button", { name: "Test button" });
 
       fireEvent.mouseDown(button);
-      expect(button).toHaveClass("text-gray-400");
+      expect(button).toHaveAttribute("data-pressed", "true");
 
       fireEvent.mouseLeave(button);
-      expect(button).not.toHaveClass("text-gray-400");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
 
     it("should not show pressed state on mouse down when disabled", () => {
@@ -379,7 +378,7 @@ describe("HeaderButton", () => {
       fireEvent.mouseDown(button);
 
       // Pressed state should not be applied when disabled
-      expect(button).not.toHaveClass("text-gray-400");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
   });
 
@@ -407,8 +406,8 @@ describe("HeaderButton", () => {
       );
 
       const button = screen.getByRole("button", { name: "Test button" });
-      expect(button).toHaveClass("cursor-not-allowed");
-      expect(button).toHaveClass("text-gray-500");
+      expect(button).toBeDisabled();
+      expect(button).toHaveAccessibleName("Test button");
     });
   });
 });

@@ -971,7 +971,10 @@
           "lastUsed": "마지막 사용: {{date}}",
           "neverUsed": "사용 안 함",
           "roleLabel": "역할",
-          "role": { "admin": "관리자", "member": "멤버" },
+          "role": {
+            "admin": "관리자",
+            "member": "멤버"
+          },
           "name": "이름",
           "nameRequiredLabel": "이름 *",
           "nameRequired": "프로필 이름을 입력하세요",
@@ -1079,7 +1082,11 @@
         "textSizeSmall": "S",
         "textSizeDefault": "M",
         "textSizeLarge": "L",
-        "textSizeExtraLarge": "XL"
+        "textSizeExtraLarge": "XL",
+        "appearance": "테마",
+        "appearanceSystem": "시스템",
+        "appearanceLight": "라이트",
+        "appearanceDark": "다크"
       },
       "help": {
         "title": "도움말",

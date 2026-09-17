@@ -1082,7 +1082,11 @@
         "textSizeSmall": "S",
         "textSizeDefault": "M",
         "textSizeLarge": "L",
-        "textSizeExtraLarge": "XL"
+        "textSizeExtraLarge": "XL",
+        "appearance": "Appearance",
+        "appearanceSystem": "System",
+        "appearanceLight": "Light",
+        "appearanceDark": "Dark"
       },
       "help": {
         "title": "Help",

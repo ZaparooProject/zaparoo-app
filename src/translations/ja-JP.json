@@ -971,7 +971,10 @@
           "lastUsed": "最終使用：{{date}}",
           "neverUsed": "未使用",
           "roleLabel": "役割",
-          "role": { "admin": "管理者", "member": "メンバー" },
+          "role": {
+            "admin": "管理者",
+            "member": "メンバー"
+          },
           "name": "名前",
           "nameRequiredLabel": "名前 *",
           "nameRequired": "プロフィール名を入力してください",
@@ -1079,7 +1082,11 @@
         "textSizeSmall": "S",
         "textSizeDefault": "M",
         "textSizeLarge": "L",
-        "textSizeExtraLarge": "XL"
+        "textSizeExtraLarge": "XL",
+        "appearance": "外観",
+        "appearanceSystem": "システム",
+        "appearanceLight": "ライト",
+        "appearanceDark": "ダーク"
       },
       "help": {
         "title": "ヘルプ",

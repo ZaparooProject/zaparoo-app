@@ -84,14 +84,14 @@ export function SimpleSystemSelect({
       aria-label={ariaLabel}
       aria-labelledby={ariaLabelledBy}
       className={classNames(
-        "border-input text-foreground w-full rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
+        "wui-input border-input text-foreground focus-visible:ring-ring min-h-12 w-full rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:outline-none",
         {
-          "hover:bg-white/10": !disabled && !isLoading,
+          "hover:bg-foreground/10": !disabled && !isLoading,
           "cursor-not-allowed opacity-50": disabled || isLoading,
         },
         className,
       )}
-      style={{ backgroundColor: "var(--color-background)" }}
+      style={{ backgroundColor: "var(--surface-inset)" }}
     >
       {placeholder && <option value="">{placeholder}</option>}
 

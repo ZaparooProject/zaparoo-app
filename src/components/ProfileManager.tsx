@@ -115,7 +115,7 @@ function ProfileRow(props: {
       type="button"
       onPointerUp={handleHapticPress}
       onClick={props.onOpen}
-      className="border-bd-outline flex w-full flex-row items-center justify-between gap-3 border-b border-solid px-1 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+      className="border-bd-outline focus-visible:ring-ring flex w-full flex-row items-center justify-between gap-3 border-b border-solid px-1 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none"
       aria-label={t("settings.core.profiles.openProfile", {
         name: profile.name,
       })}
@@ -821,8 +821,8 @@ export function ProfileManager(props: {
               onClick={() => selectSwitchProfile("shared")}
               aria-pressed={switchProfile === "shared"}
               className={classNames(
-                "border-bd-outline flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
-                { "bg-white/10": switchProfile === "shared" },
+                "border-bd-outline focus-visible:ring-ring flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none",
+                { "bg-foreground/10": switchProfile === "shared" },
               )}
             >
               <span>{t("settings.core.profiles.shared")}</span>
@@ -839,9 +839,9 @@ export function ProfileManager(props: {
                 onClick={() => selectSwitchProfile(profile)}
                 aria-pressed={selectedProfileId === profile.profileId}
                 className={classNames(
-                  "border-bd-outline flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
+                  "border-bd-outline focus-visible:ring-ring flex min-h-12 items-center justify-between border-b border-solid px-1 text-left last:border-b-0 focus-visible:ring-2 focus-visible:outline-none",
                   {
-                    "bg-white/10": selectedProfileId === profile.profileId,
+                    "bg-foreground/10": selectedProfileId === profile.profileId,
                   },
                 )}
               >

@@ -51,10 +51,10 @@ export function ZapScriptInput(props: {
 
   return (
     <div>
-      <div className="flex flex-col">
+      <div className="wui-editor flex flex-col">
         <textarea
           ref={textareaRef}
-          className="border-bd-input bg-background rounded-b-none border border-solid p-3"
+          className="wui-input border-bd-input rounded-b-none border border-solid p-3 font-mono text-base leading-relaxed"
           aria-label={props["aria-label"] ?? t("create.custom.textareaLabel")}
           aria-labelledby={props["aria-labelledby"]}
           aria-describedby="zapscript-char-count"
@@ -74,11 +74,11 @@ export function ZapScriptInput(props: {
           rows={props.rows ?? 4}
         />
 
-        <div className="border-bd-input bg-background rounded-b-md border border-t-0 border-solid p-2 pt-2">
-          <div className="flex items-center justify-between">
+        <div className="border-bd-input bg-surface-raised rounded-b-md border border-t-0 border-solid p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div
               id="zapscript-char-count"
-              className="text-muted-foreground pl-3 text-sm"
+              className="text-muted-foreground text-xs"
               style={{ flex: 1 }}
               aria-live="polite"
               aria-atomic="true"
@@ -104,7 +104,7 @@ export function ZapScriptInput(props: {
 
           {showControls && (
             <div id="zapscript-controls" className="flex flex-wrap gap-2 pt-2">
-              <div className="flex w-full gap-2">
+              <div className="flex w-full flex-wrap items-end gap-2">
                 <Button
                   label="**"
                   aria-label={t("create.custom.insertCommandStart")}
@@ -141,7 +141,9 @@ export function ZapScriptInput(props: {
                 <Button
                   icon={<EraserIcon size="20" />}
                   aria-label={t("create.custom.clear")}
-                  variant="outline"
+                  label={t("create.custom.clear")}
+                  variant="text"
+                  intent="destructive"
                   disabled={props.value === ""}
                   onClick={() => setShowClearConfirm(true)}
                   className="grow"

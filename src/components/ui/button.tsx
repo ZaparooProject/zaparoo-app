@@ -4,31 +4,26 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-all duration-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-95 touch-manipulation",
+  "inline-flex items-center justify-center gap-2 min-h-12 min-w-12 border border-transparent text-sm font-bold tracking-wider uppercase transition-all duration-100 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 touch-manipulation",
   {
     variants: {
       variant: {
-        default:
-          "bg-primary text-primary-foreground shadow hover:bg-primary/90",
-        wui: "bg-wui-button border border-solid border-[rgba(255,255,255,0.4)] text-white shadow hover:opacity-80",
-        destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
-        outline:
-          "border border-input bg-background shadow-sm hover:bg-white/10 hover:text-white",
-        "wui-outline":
-          "border border-solid border-[hsl(var(--border))] text-white hover:bg-white/10 hover:text-white",
-        secondary:
-          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
-        ghost: "hover:bg-white/10 hover:text-white",
+        default: "site-button site-button-primary",
+        wui: "site-button site-button-primary",
+        destructive: "site-button site-button-destructive",
+        outline: "site-button site-button-outline",
+        "wui-outline": "site-button site-button-secondary",
+        secondary: "site-button site-button-secondary",
+        ghost: "hover:bg-foreground/10 hover:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-10 px-6 py-1.5 rounded-[20px]",
-        sm: "h-8 px-4 py-1 text-sm rounded-[16px]",
-        lg: "h-12 px-8 py-2 text-lg rounded-[24px]",
-        icon: "h-10 w-10 min-w-10 px-1.5 rounded-full",
-        "icon-sm": "h-8 w-8 min-w-8 px-1.5 rounded-full",
-        "icon-lg": "h-12 w-12 min-w-12 px-2 rounded-full",
+        default: "min-h-12 px-5 py-3 rounded-md",
+        sm: "min-h-12 px-4 py-2 rounded-md",
+        lg: "min-h-14 px-7 py-3.5 text-base rounded-md",
+        icon: "size-12 p-2 rounded-full",
+        "icon-sm": "size-12 p-2 rounded-full",
+        "icon-lg": "size-14 p-3 rounded-full",
       },
     },
     defaultVariants: {
@@ -105,9 +100,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <Comp
         className={cn(
           buttonVariants({ variant, size }),
-          isPressed && !props.disabled && "opacity-80",
+
           className,
         )}
+        data-pressed={isPressed && !props.disabled}
+        data-icon-only={size?.startsWith("icon")}
         ref={ref}
         onClick={handleClick}
         onTouchStart={handleTouchStart}

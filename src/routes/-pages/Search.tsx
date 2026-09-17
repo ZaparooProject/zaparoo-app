@@ -377,7 +377,7 @@ export function Search() {
 
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="flex flex-col md:flex-1">
-              <span id="search-system-label" className="mb-1 text-white">
+              <span id="search-system-label" className="text-foreground mb-1">
                 {t("create.search.systemInput")}
               </span>
               <SystemSelectorTrigger
@@ -393,7 +393,7 @@ export function Search() {
 
             {mediaTagsAvailable && (
               <div className="flex flex-col md:flex-1">
-                <span id="search-tags-label" className="mb-1 text-white">
+                <span id="search-tags-label" className="text-foreground mb-1">
                   {t("create.search.tagsInput")}
                 </span>
                 <TagSelectorTrigger

@@ -301,7 +301,7 @@ export function RequirementsModal() {
               onCheckedChange={(checked) => setLegalChecked(checked === true)}
               aria-label={t("requirements.legalLabel")}
             />
-            <div className="pt-0.5 text-sm leading-tight text-white">
+            <div className="text-foreground pt-0.5 text-sm leading-tight">
               <Label htmlFor="legal" className="inline leading-tight">
                 {t("requirements.legalPrefix")}
               </Label>
@@ -310,7 +310,7 @@ export function RequirementsModal() {
                 href={TOS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-sm text-blue-400 underline hover:text-blue-300 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                className="text-primary hover:text-primary focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm underline focus-visible:ring-2 focus-visible:outline-none"
               >
                 {t("requirements.tosLink")}
                 <ExternalLinkIcon className="h-3 w-3" />
@@ -322,7 +322,7 @@ export function RequirementsModal() {
                 href={PRIVACY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-sm text-blue-400 underline hover:text-blue-300 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                className="text-primary hover:text-primary focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm underline focus-visible:ring-2 focus-visible:outline-none"
               >
                 {t("requirements.privacyLink")}
                 <ExternalLinkIcon className="h-3 w-3" />
@@ -339,7 +339,10 @@ export function RequirementsModal() {
               checked={ageChecked}
               onCheckedChange={(checked) => setAgeChecked(checked === true)}
             />
-            <Label htmlFor="age" className="text-sm leading-tight text-white">
+            <Label
+              htmlFor="age"
+              className="text-foreground text-sm leading-tight"
+            >
               {t("requirements.ageLabel")}
             </Label>
           </div>
@@ -375,7 +378,7 @@ export function RequirementsModal() {
                 <button
                   type="button"
                   onClick={handleSendVerificationEmail}
-                  className="text-muted-foreground rounded-sm text-center text-sm underline hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                  className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded-sm text-center text-sm underline focus-visible:ring-2 focus-visible:outline-none"
                 >
                   {t("requirements.resendEmail")}
                 </button>
@@ -389,8 +392,8 @@ export function RequirementsModal() {
           <p
             className={
               statusMessage.type === "error"
-                ? "text-sm text-red-400"
-                : "text-sm text-green-400"
+                ? "text-error text-sm"
+                : "text-success text-sm"
             }
           >
             {statusMessage.text}

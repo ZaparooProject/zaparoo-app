@@ -20,7 +20,7 @@ export function LastScannedInfo({
       <div className="flex flex-row items-center justify-between">
         <h2
           id="last-scanned-heading"
-          className="font-bold text-gray-400 capitalize"
+          className="text-muted-foreground font-bold capitalize"
         >
           {t("scan.lastScannedHeading")}
         </h2>

@@ -179,8 +179,8 @@ describe("Button (ui)", () => {
         touches: [{ clientX: 100, clientY: 100 }],
       });
 
-      // Pressed state adds opacity-80 class
-      expect(button).toHaveClass("opacity-80");
+      // Press feedback is independent of the chosen material.
+      expect(button).toHaveAttribute("data-pressed", "true");
     });
 
     it("should detect scroll when moved more than 10px horizontally", () => {
@@ -193,7 +193,7 @@ describe("Button (ui)", () => {
         touches: [{ clientX: 100, clientY: 100 }],
       });
 
-      expect(button).toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "true");
 
       // Move more than 10px horizontally
       fireEvent.touchMove(button, {
@@ -201,7 +201,7 @@ describe("Button (ui)", () => {
       });
 
       // Pressed state should be removed after detecting scroll
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
 
       fireEvent.touchEnd(button);
       fireEvent.click(button);
@@ -261,11 +261,11 @@ describe("Button (ui)", () => {
         touches: [{ clientX: 100, clientY: 100 }],
       });
 
-      expect(button).toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "true");
 
       fireEvent.touchEnd(button);
 
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
 
     it("should reset on touch cancel", () => {
@@ -277,11 +277,11 @@ describe("Button (ui)", () => {
         touches: [{ clientX: 100, clientY: 100 }],
       });
 
-      expect(button).toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "true");
 
       fireEvent.touchCancel(button);
 
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
   });
 
@@ -293,7 +293,7 @@ describe("Button (ui)", () => {
 
       fireEvent.mouseDown(button);
 
-      expect(button).toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "true");
     });
 
     it("should reset pressed state on mouse up", () => {
@@ -302,10 +302,10 @@ describe("Button (ui)", () => {
       const button = screen.getByRole("button", { name: "Click me" });
 
       fireEvent.mouseDown(button);
-      expect(button).toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "true");
 
       fireEvent.mouseUp(button);
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
 
     it("should reset pressed state on mouse leave", () => {
@@ -314,10 +314,10 @@ describe("Button (ui)", () => {
       const button = screen.getByRole("button", { name: "Click me" });
 
       fireEvent.mouseDown(button);
-      expect(button).toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "true");
 
       fireEvent.mouseLeave(button);
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
   });
 
@@ -346,7 +346,7 @@ describe("Button (ui)", () => {
       fireEvent.mouseDown(button);
       // opacity-80 only applied when isPressed && !props.disabled
       // Since button is disabled, the conditional isPressed && !props.disabled is false
-      expect(button).not.toHaveClass("opacity-80");
+      expect(button).toHaveAttribute("data-pressed", "false");
     });
   });
 

@@ -9,9 +9,9 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 
-export const successColor = "#00FF29";
-export const errorColor = "#FF7E92";
-export const primaryColor = "#3faeec";
+export const successColor = "var(--status-green)";
+export const errorColor = "var(--status-red)";
+export const primaryColor = "var(--interaction)";
 const IDLE_PULSE_DURATION_MS = 15000;
 
 export function ScanSpinner(props: {
@@ -154,7 +154,7 @@ export function ScanSpinner(props: {
       type="button"
       onClick={props.onScan}
       aria-label={t("spinner.pressToScan")}
-      className="focus-visible:ring-offset-background inline-block cursor-pointer rounded-full align-top focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-4 focus-visible:outline-none"
+      className="focus-visible:ring-offset-background focus-visible:ring-ring inline-block cursor-pointer rounded-full align-top focus-visible:ring-2 focus-visible:ring-offset-4 focus-visible:outline-none"
     >
       {spinner}
     </button>

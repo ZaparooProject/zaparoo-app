@@ -71,7 +71,7 @@ export function LibraryArtwork(props: {
   if (enabled && imageQuery.isLoading) {
     return (
       <span
-        className={`${props.className ?? ""} flex items-center justify-center overflow-hidden bg-white/5`}
+        className={`${props.className ?? ""} bg-foreground/5 flex items-center justify-center overflow-hidden`}
         aria-hidden="true"
       >
         <DelayedLoading>
@@ -101,7 +101,7 @@ export function LibraryArtwork(props: {
 
   return (
     <span
-      className={`${props.className ?? ""} text-foreground-hint flex items-center justify-center bg-white/5`}
+      className={`${props.className ?? ""} text-foreground-hint bg-foreground/5 flex items-center justify-center`}
       aria-hidden="true"
     >
       <FileIcon size={24} />

@@ -64,7 +64,7 @@ export function LibraryLetterJumpModal(props: {
             <button
               key={group.key}
               type="button"
-              className="flex min-h-[48px] items-center justify-between rounded-lg px-4 py-3 text-left hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+              className="hover:bg-foreground/10 focus-visible:ring-ring flex min-h-[48px] items-center justify-between rounded-lg px-4 py-3 text-left focus-visible:ring-2 focus-visible:outline-none"
               onPointerUp={handleHapticPress}
               onClick={() => props.onSelect(group)}
             >

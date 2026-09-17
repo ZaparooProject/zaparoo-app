@@ -971,7 +971,10 @@
           "lastUsed": "Último uso: {{date}}",
           "neverUsed": "Nunca",
           "roleLabel": "Rol",
-          "role": { "admin": "Administrador", "member": "Miembro" },
+          "role": {
+            "admin": "Administrador",
+            "member": "Miembro"
+          },
           "name": "Nombre",
           "nameRequiredLabel": "Nombre *",
           "nameRequired": "Introduce un nombre de perfil",
@@ -1079,7 +1082,11 @@
         "textSizeSmall": "S",
         "textSizeDefault": "M",
         "textSizeLarge": "L",
-        "textSizeExtraLarge": "XL"
+        "textSizeExtraLarge": "XL",
+        "appearance": "Apariencia",
+        "appearanceSystem": "Sistema",
+        "appearanceLight": "Claro",
+        "appearanceDark": "Oscuro"
       },
       "help": {
         "title": "Ayuda",

@@ -33,11 +33,10 @@ function CreateActionIcon(props: { icon: ReactNode; disabled?: boolean }) {
     <span
       aria-hidden="true"
       className={classNames(
-        "flex h-10 w-10 min-w-10 items-center justify-center rounded-full border border-solid px-1.5",
+        "border-border bg-surface-inset flex size-11 shrink-0 items-center justify-center rounded-lg border shadow-inner",
         {
-          "bg-button-pattern border-bd-filled text-primary-foreground":
-            !props.disabled,
-          "border-foreground-disabled text-foreground-disabled": props.disabled,
+          "text-muted-foreground": !props.disabled,
+          "text-foreground-disabled": props.disabled,
         },
       )}
     >
@@ -143,11 +142,13 @@ export function Create() {
                   disabled={!connected}
                   icon={<SearchIcon size="20" />}
                 />
-                <div className="flex grow flex-col">
+                <div className="flex min-w-0 grow flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.searchGameHeading")}
                   </span>
-                  <span className="text-sm">{t("create.searchGameSub")}</span>
+                  <span className="text-muted-foreground text-sm leading-relaxed">
+                    {t("create.searchGameSub")}
+                  </span>
                 </div>
                 <span aria-hidden="true">
                   <NextIcon size="20" />
@@ -166,11 +167,11 @@ export function Create() {
                 icon={<PlayIcon size="26" />}
                 disabled={playing.mediaPath === "" && playing.mediaName === ""}
               />
-              <div className="flex grow flex-col">
+              <div className="flex min-w-0 grow flex-col gap-1">
                 <span className="font-semibold">
                   {t("create.currentGameHeading")}
                 </span>
-                <span className="text-sm">
+                <span className="text-muted-foreground text-sm leading-relaxed">
                   {playing.mediaName
                     ? t("create.currentGameSub", { game: playing.mediaName })
                     : t("create.currentGameSubFallback")}
@@ -190,11 +191,13 @@ export function Create() {
                   icon={<ListPlusIcon size="20" />}
                   disabled={!connected}
                 />
-                <div className="flex grow flex-col">
+                <div className="flex min-w-0 grow flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.mappingsHeading")}
                   </span>
-                  <span className="text-sm">{t("create.mappingsSub")}</span>
+                  <span className="text-muted-foreground text-sm leading-relaxed">
+                    {t("create.mappingsSub")}
+                  </span>
                 </div>
                 <span aria-hidden="true">
                   <NextIcon size="20" />
@@ -207,11 +210,13 @@ export function Create() {
             <Card pressable>
               <div className="flex flex-row items-center gap-3">
                 <CreateActionIcon icon={<TextIcon size="20" />} />
-                <div className="flex grow flex-col">
+                <div className="flex min-w-0 grow flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.customHeading")}
                   </span>
-                  <span className="text-sm">{t("create.customSub")}</span>
+                  <span className="text-muted-foreground text-sm leading-relaxed">
+                    {t("create.customSub")}
+                  </span>
                 </div>
                 <span aria-hidden="true">
                   <NextIcon size="20" />
@@ -234,11 +239,13 @@ export function Create() {
                   icon={<NfcIcon size="24" />}
                   disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
                 />
-                <div className="flex grow flex-col">
+                <div className="flex min-w-0 grow flex-col gap-1">
                   <span className="font-semibold">
                     {t("create.nfcHeading")}
                   </span>
-                  <span className="text-sm">{t("create.nfcSub")}</span>
+                  <span className="text-muted-foreground text-sm leading-relaxed">
+                    {t("create.nfcSub")}
+                  </span>
                 </div>
                 <span aria-hidden="true">
                   <NextIcon size="20" />

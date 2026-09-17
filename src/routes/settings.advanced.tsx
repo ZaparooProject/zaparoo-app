@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import { Capacitor } from "@capacitor/core";
+import { Card } from "@/components/wui/Card";
 import { PurchaseSupportActions } from "@/components/ProPurchase";
 import { CoreAPI } from "@/lib/coreApi";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
@@ -106,7 +107,7 @@ export function AdvancedSettings() {
         </h1>
       }
     >
-      <div className="flex flex-col gap-5">
+      <Card className="flex flex-col gap-4">
         <ToggleSwitch
           label={
             <span className="flex items-center">
@@ -172,12 +173,12 @@ export function AdvancedSettings() {
 
         {isPurchasePreviewEnabled() && (
           <div className="flex flex-col">
-            <label className="text-white" htmlFor="purchase-preview-state">
+            <label className="text-foreground" htmlFor="purchase-preview-state">
               {t("settings.advanced.purchasePreview")}
             </label>
             <select
               id="purchase-preview-state"
-              className="border-bd-input bg-background text-foreground rounded-md border border-solid p-3"
+              className="wui-input border-bd-input bg-surface-inset text-foreground min-h-12 rounded-md border border-solid p-3"
               value={purchasePreviewState}
               onChange={(event) =>
                 setPurchasePreviewState(
@@ -230,7 +231,7 @@ export function AdvancedSettings() {
         )}
 
         {Capacitor.isNativePlatform() && <PurchaseSupportActions />}
-      </div>
+      </Card>
 
       <SlideModal
         isOpen={showErrorReportingModal}
@@ -240,7 +241,7 @@ export function AdvancedSettings() {
           <div className="flex flex-row justify-center gap-4">
             <Button
               label={t("nav.cancel")}
-              variant="outline"
+              variant="secondary"
               onClick={() => setShowErrorReportingModal(false)}
             />
             <Button

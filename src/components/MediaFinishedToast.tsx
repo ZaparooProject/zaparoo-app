@@ -10,7 +10,7 @@ export const MediaFinishedToast = (props: { id: string }) => {
   return (
     <button
       type="button"
-      className="flex grow cursor-pointer flex-col text-left focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+      className="focus-visible:ring-ring flex grow cursor-pointer flex-col text-left focus-visible:ring-2 focus-visible:outline-none"
       onClick={() => {
         notification("success");
         toast.dismiss(props.id);

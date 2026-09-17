@@ -63,7 +63,7 @@ export function MappingRow({ mapping, onTap, isLast }: MappingRowProps) {
       className={classNames(
         "flex flex-row items-center justify-between gap-3 px-1 py-3",
         {
-          "cursor-pointer focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none":
+          "focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:outline-none":
             isInteractive,
           "border-bd-outline border-b border-solid": !isLast,
         },

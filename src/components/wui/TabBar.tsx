@@ -40,6 +40,7 @@ export function TabBar<T extends string>({
   containerProps,
 }: TabBarProps<T>) {
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const selectedIndex = options.findIndex((option) => option.value === value);
 
   const focusAndSelect = (index: number) => {
     const target = options[index];
@@ -85,13 +86,16 @@ export function TabBar<T extends string>({
       role={role === "tab" ? "tablist" : "radiogroup"}
       aria-label={label}
       className={classNames(
-        "gap-1 rounded-md border border-solid border-white/15 p-1",
+        "border-border bg-surface-inset gap-1 rounded-lg border border-solid p-1.5 shadow-inner",
         layout === "grid" ? "grid" : "flex",
         className,
       )}
       style={{
         ...(layout === "grid"
-          ? { gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }
+          ? {
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(min(100%, 4rem), 1fr))",
+            }
           : {}),
         ...containerStyle,
       }}
@@ -114,16 +118,22 @@ export function TabBar<T extends string>({
             aria-checked={role === "radio" ? active : undefined}
             aria-selected={role === "tab" ? active : undefined}
             aria-controls={role === "tab" ? panelId : undefined}
-            tabIndex={active ? 0 : -1}
+            tabIndex={
+              !disabled && (active || (selectedIndex === -1 && index === 0))
+                ? 0
+                : -1
+            }
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => onKeyDown(event, index)}
             className={classNames(
-              "cursor-pointer rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
-              "focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none",
-              layout === "scroll" && "shrink-0",
+              "min-h-12 min-w-0 cursor-pointer rounded-md border border-transparent px-2 py-2 text-center text-sm leading-snug font-semibold break-words transition-colors",
+              "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
+              layout === "scroll" && "shrink-0 whitespace-nowrap",
+              role === "tab" && "uppercase",
               {
-                "bg-button-pattern text-primary-foreground": active,
-                "text-muted-foreground": !active,
+                "border-border bg-surface-raised text-foreground shadow-[0_2px_0_var(--surface-base),inset_0_1px_0_var(--material-highlight)]":
+                  active,
+                "text-muted-foreground hover:bg-foreground/5": !active,
                 "cursor-not-allowed opacity-60": disabled,
               },
             )}

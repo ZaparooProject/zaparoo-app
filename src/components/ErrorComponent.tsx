@@ -28,7 +28,7 @@ Timestamp: ${new Date().toISOString()}
 
   return (
     <div
-      className="flex min-h-screen flex-col items-center justify-center bg-black p-4 text-white"
+      className="bg-background text-foreground flex min-h-screen flex-col items-center justify-center p-4"
       style={{
         position: "fixed",
         top: 0,
@@ -38,25 +38,25 @@ Timestamp: ${new Date().toISOString()}
         zIndex: 9999,
       }}
     >
-      <div className="w-full max-w-md rounded-lg bg-red-900/30 p-6 shadow-lg">
+      <div className="bg-error-wash w-full max-w-md rounded-lg p-6 shadow-lg">
         <h1 className="mb-4 text-2xl font-bold">{t("errorBoundary.title")}</h1>
         <p className="mb-6">{t("errorBoundary.description")}</p>
 
-        <div className="mb-4 rounded bg-black/40 p-3">
+        <div className="bg-surface-inset mb-4 rounded p-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">
               {t("errorBoundary.diagnosticDetails")}
             </h2>
             <CopyButton text={errorDetails} />
           </div>
-          <pre className="mt-2 max-h-64 overflow-auto text-xs whitespace-pre-wrap text-red-200">
+          <pre className="text-error mt-2 max-h-64 overflow-auto text-xs whitespace-pre-wrap">
             {errorDetails}
           </pre>
         </div>
 
         <button
           onClick={() => window.location.reload()}
-          className="w-full rounded-md bg-white px-4 py-2 text-center font-medium text-red-900 hover:bg-red-100"
+          className="site-button site-button-secondary w-full px-4 py-2 text-center"
         >
           {t("errorBoundary.reload")}
         </button>

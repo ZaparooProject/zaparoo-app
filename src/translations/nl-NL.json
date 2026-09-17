@@ -971,7 +971,10 @@
           "lastUsed": "Laatst gebruikt: {{date}}",
           "neverUsed": "Nooit",
           "roleLabel": "Rol",
-          "role": { "admin": "Beheerder", "member": "Lid" },
+          "role": {
+            "admin": "Beheerder",
+            "member": "Lid"
+          },
           "name": "Naam",
           "nameRequiredLabel": "Naam *",
           "nameRequired": "Voer een profielnaam in",
@@ -1079,7 +1082,11 @@
         "textSizeSmall": "S",
         "textSizeDefault": "M",
         "textSizeLarge": "L",
-        "textSizeExtraLarge": "XL"
+        "textSizeExtraLarge": "XL",
+        "appearance": "Weergave",
+        "appearanceSystem": "Systeem",
+        "appearanceLight": "Licht",
+        "appearanceDark": "Donker"
       },
       "help": {
         "title": "Help",

@@ -37,10 +37,10 @@ export const createAppTour = (
     return `
       <span class="sr-only">${srStepText}</span>
       <div aria-hidden="true" style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-        <div style="flex: 1; height: 2px; background: rgba(255, 255, 255, 0.2); border-radius: 1px; overflow: hidden;">
-          <div style="height: 100%; width: ${progress}%; background: hsl(0 0% 100%); transition: width 0.3s ease;"></div>
+        <div style="flex: 1; height: 2px; background: var(--edge-subtle); border-radius: 1px; overflow: hidden;">
+          <div style="height: 100%; width: ${progress}%; background: var(--text-primary); transition: width 0.3s ease;"></div>
         </div>
-        <span style="font-size: 0.75rem; font-weight: 600; color: hsl(0 0% 100%); flex-shrink: 0;">${indicator}</span>
+        <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-primary); flex-shrink: 0;">${indicator}</span>
       </div>
       <p>${text}</p>
     `;

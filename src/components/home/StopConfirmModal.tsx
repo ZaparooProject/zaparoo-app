@@ -24,7 +24,11 @@ export function StopConfirmModal({
       title={t("create.nfc.confirm")}
       footer={
         <div className="flex flex-row justify-center gap-4">
-          <Button label={t("nav.cancel")} variant="outline" onClick={onClose} />
+          <Button
+            label={t("nav.cancel")}
+            variant="secondary"
+            onClick={onClose}
+          />
           <Button label={t("yes")} intent="primary" onClick={onConfirm} />
         </div>
       }

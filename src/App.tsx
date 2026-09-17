@@ -6,6 +6,7 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
+import { useTheme } from "@/components/theme-provider";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { AppBadgeManager } from "@/components/AppBadgeManager";
 import { InboxModal } from "@/components/InboxModal";
@@ -266,15 +267,21 @@ export default function App() {
   );
   const safeInsets = useStatusStore((state) => state.safeInsets);
 
-  // Initialize device info and status bar
+  const { resolvedTheme } = useTheme();
   useEffect(() => {
     initDeviceInfo();
+  }, []);
 
+  useEffect(() => {
+    // Capacitor's Dark style means light icons on a dark app surface.
+    // Keep both APIs in sync; SystemBars reapplies its setting on rotation.
     // Show status bar and configure style
     if (isNativePluginAvailable("StatusBar")) {
       Promise.all([
         StatusBar.show(),
-        StatusBar.setStyle({ style: Style.Dark }),
+        StatusBar.setStyle({
+          style: resolvedTheme === "dark" ? Style.Dark : Style.Light,
+        }),
       ]).catch((e) => {
         logger.warn("StatusBar setup failed:", e);
       });
@@ -283,11 +290,16 @@ export default function App() {
     // SystemBars re-applies its own style on every configuration change
     // (rotation, fold, theme), which overrides StatusBar unless it is set too.
     if (isNativePluginAvailable("SystemBars")) {
-      SystemBars.setStyle({ style: SystemBarsStyle.Dark }).catch((e) => {
+      SystemBars.setStyle({
+        style:
+          resolvedTheme === "dark"
+            ? SystemBarsStyle.Dark
+            : SystemBarsStyle.Light,
+      }).catch((e) => {
         logger.warn("SystemBars setup failed:", e);
       });
     }
-  }, []);
+  }, [resolvedTheme]);
 
   // Check Pro access status once at app startup
   useProAccessCheck();
@@ -546,14 +558,12 @@ export default function App() {
       <Toaster
         position="top-center"
         toastOptions={{
-          className: "backdrop-blur",
           style: {
-            background: "rgba(17, 25, 40, 0.7)",
+            background: "var(--surface-raised)",
             mixBlendMode: "normal",
-            border: "1px solid rgba(255, 255, 255, 0.13)",
+            border: "1px solid var(--edge-subtle)",
             boxShadow: "0px 4px 9px rgba(0, 0, 0, 0.25)",
-            backdropFilter: "blur(8px)",
-            borderRadius: "12px",
+            borderRadius: "8px",
             width: "calc(100% - 2rem)",
             color: "var(--color-foreground)",
           },

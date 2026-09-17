@@ -177,7 +177,7 @@ export function Library() {
             <Link
               to="/library/favorites"
               onClick={() => forgetScroll("library:favorites:list")}
-              className="block rounded-xl focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none sm:w-[calc(50%_-_0.375rem)]"
+              className="focus-visible:ring-ring block rounded-xl focus-visible:ring-2 focus-visible:outline-none sm:w-[calc(50%_-_0.375rem)]"
             >
               <Card
                 className="flex min-h-16 items-center justify-between gap-3"
@@ -230,7 +230,7 @@ export function Library() {
           <Link
             to="/settings"
             search={{ focus: "database" }}
-            className="border-bd-outline focus-visible:ring-offset-background flex items-center justify-center rounded-[20px] border border-solid px-6 py-1.5 font-medium text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="site-button site-button-secondary flex items-center justify-center px-6"
           >
             {t("library.openMediaSettings")}
           </Link>
@@ -246,7 +246,7 @@ export function Library() {
             <div
               key={titleWidth}
               data-testid="library-system-skeleton"
-              className="flex min-h-[56px] items-center justify-between gap-3 border-b border-white/25 px-1 py-3 last:border-b-0"
+              className="border-foreground/25 flex min-h-[56px] items-center justify-between gap-3 border-b px-1 py-3 last:border-b-0"
             >
               <div className="flex flex-1 flex-col gap-2">
                 <Skeleton className={`h-5 ${titleWidth}`} />
@@ -309,12 +309,12 @@ export function Library() {
               {systems.map((system, index) => {
                 const subtitle = systemSubtitle(system);
                 const rowClassName =
-                  "flex min-h-[56px] items-center justify-between gap-3 px-1 py-3 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none";
+                  "flex min-h-[56px] items-center justify-between gap-3 px-1 py-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
                 const rowStyle = {
                   borderBottom:
                     index === systems.length - 1
                       ? undefined
-                      : "1px solid rgba(255,255,255,0.35)",
+                      : "1px solid var(--edge-default)",
                 };
                 const rowContent = (
                   <>

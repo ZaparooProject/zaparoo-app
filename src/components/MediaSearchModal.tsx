@@ -105,7 +105,10 @@ export function MediaSearchModal(props: {
             />
 
             <div className="flex flex-col">
-              <span id="media-search-system-label" className="mb-1 text-white">
+              <span
+                id="media-search-system-label"
+                className="text-foreground mb-1"
+              >
                 {t("create.search.systemInput")}
               </span>
               <SimpleSystemSelect

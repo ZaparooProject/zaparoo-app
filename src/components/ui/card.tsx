@@ -31,7 +31,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
             variant,
             clickable: isClickable ? true : false,
           }),
-          disabled && "text-[hsl(var(--muted-foreground))] opacity-50",
+          disabled && "text-muted-foreground opacity-50",
           className,
         )}
         onClick={!disabled ? onClick : undefined}

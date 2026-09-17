@@ -60,7 +60,7 @@ export function SettingHelp({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-foreground-hint hover:text-muted-foreground focus-visible:text-muted-foreground -my-2 ml-1 rounded-full p-2 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+        className="text-foreground-hint hover:text-muted-foreground focus-visible:text-muted-foreground focus-visible:ring-ring -my-2 ml-1 rounded-full p-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
         aria-label={ariaLabel ?? `Help for ${title}`}
       >
         <HelpCircleIcon size={18} />

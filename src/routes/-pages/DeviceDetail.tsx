@@ -165,7 +165,7 @@ export function DeviceDetail() {
         <section aria-labelledby="device-info-heading">
           <h2
             id="device-info-heading"
-            className="font-bold text-gray-400 capitalize"
+            className="text-muted-foreground font-bold capitalize"
           >
             {t("settings.deviceDetail.infoHeading")}
           </h2>
