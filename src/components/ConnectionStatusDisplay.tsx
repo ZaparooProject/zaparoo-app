@@ -9,27 +9,10 @@ import {
   Lock,
   LockOpen,
 } from "lucide-react";
-import { useConnection } from "@/hooks/useConnection";
-import { useConnectionPresentation } from "@/hooks/useConnectionPresentation";
-import { useStatusStore } from "@/lib/store";
 import {
-  activeAddressOf,
-  useDeviceRegistry,
-  type DeviceRegistrySnapshot,
-} from "@/lib/devices/deviceRegistry";
-
-const selectRegistryHydrated = (snapshot: DeviceRegistrySnapshot) =>
-  snapshot.hydrated;
-
-type ConnectionUIState =
-  | "connecting"
-  | "reconnecting"
-  | "connected"
-  | "unavailable"
-  | "networkUnavailable"
-  | "error"
-  | "disconnected"
-  | "pairingRequired";
+  useConnectionUiState,
+  type ConnectionUIState,
+} from "@/hooks/useDevicePresentation";
 
 interface ConnectionStatusConfig {
   icon: ReactNode;
@@ -73,53 +56,8 @@ export function ConnectionStatusDisplay({
   className,
 }: ConnectionStatusDisplayProps) {
   const { t } = useTranslation();
-  const { isConnected, showConnecting, showReconnecting } = useConnection();
-  const connectionPresentation = useConnectionPresentation({
-    immediate: true,
-  });
-  const encryptionState = useStatusStore((s) => s.encryptionState);
-  const pairingRequired = useStatusStore((s) => s.pairingRequired);
-  const savedAddress = useDeviceRegistry(activeAddressOf);
-  const registryHydrated = useDeviceRegistry(selectRegistryHydrated);
-
-  // Derive UI state from connection context
-  const deriveUIState = (): ConnectionUIState => {
-    // Devices are read from storage asynchronously, so on a cold start there is
-    // a moment where a user who has a saved device looks like one who has none.
-    // Hold the spinner rather than flashing the "enter an address" placeholder
-    // and snatching it back.
-    if (!registryHydrated) return "connecting";
-    if (!savedAddress) return "disconnected";
-    // Pairing-required outranks reconnecting/error so the user sees the real
-    // blocker instead of a generic "Reconnecting..." spinner that won't resolve
-    // without their action.
-    if (pairingRequired) return "pairingRequired";
-    // Confirmed network and prolonged Core outages outrank optimistic transport
-    // state, including the open-but-unverified handshake window.
-    if (connectionPresentation.kind === "networkUnavailable") {
-      return "networkUnavailable";
-    }
-    if (connectionPresentation.kind === "unavailable") return "unavailable";
-    // Initial transport failures remain actionable even if the socket briefly
-    // opened. Routine reconnect errors stay behind reconnecting presentation.
-    if (connectionError && !showReconnecting) return "error";
-    // The transport flips to "connected" when the WebSocket opens, before the
-    // server has confirmed the encryption mode. Hold the UI in connecting/
-    // reconnecting until the consumer learns the mode (encryptionState is set
-    // by onPlaintextMode after the first non-error reply, or by
-    // onEncryptedHandshakeOk after first decrypt). Prevents a green flash
-    // before -32002 surfaces on encryption-required cores.
-    if (isConnected && encryptionState === "unknown") {
-      return showReconnecting ? "reconnecting" : "connecting";
-    }
-    if (isConnected) return "connected";
-    // Show reconnecting state (previously connected, now retrying)
-    if (showReconnecting) return "reconnecting";
-    if (showConnecting) return "connecting";
-    return "disconnected";
-  };
-
-  const uiState = deriveUIState();
+  const { uiState, savedAddress, encryptionState } =
+    useConnectionUiState(connectionError);
   const addressOrPlaceholder = savedAddress || t("settings.enterDeviceAddress");
 
   // State configuration - maps UI states to display values

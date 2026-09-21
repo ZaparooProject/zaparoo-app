@@ -132,6 +132,14 @@ const mockResponses: Record<string, unknown> = {
     active: [],
   },
 
+  "media.history": {
+    entries: [],
+  },
+
+  "media.lookup": {
+    match: null,
+  },
+
   "media.active.update": {
     success: true,
   },

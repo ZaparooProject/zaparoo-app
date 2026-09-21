@@ -33,6 +33,7 @@
       "back": "返回",
       "cancel": "取消",
       "close": "关闭",
+      "moreActions": "更多操作",
       "create": "创建",
       "assign": "分配",
       "index": "Zap",
@@ -179,8 +180,6 @@
     },
     "spinner": {
       "deleting": "正在删除...",
-      "notSupportedLabel": "设备不支持 NFC",
-      "notSupportedSub": "您将无法使用此应用中的任何 NFC 读取或写入功能",
       "nfcDisabledLabel": "NFC 访问权限已禁用",
       "nfcDisabledSub": "请在设备设置中启用 NFC 访问权限，以使用 NFC 读取和写入功能",
       "openNfcSettings": "打开 NFC 设置",
@@ -240,7 +239,6 @@
     },
     "scan": {
       "cameraMode": "相机",
-      "cameraAvailable": "使用相机扫描",
       "nfcMode": "NFC",
       "scanError": "扫描标签时出错",
       "scanSuccess": "标签扫描成功",
@@ -249,10 +247,7 @@
       "reconnecting": "正在重新连接...",
       "connectionError": "连接错误",
       "retry": "重试",
-      "continuous": "连续扫描",
-      "launchOnScan": "扫描时启动",
       "connectedHeading": "已连接",
-      "connectedSub": "地址：{{ip}}",
       "nowPlayingHeading": "正在播放",
       "nowPlayingName": "名称：{{game}}",
       "nowPlayingSystem": "系统：{{system}}",
@@ -268,12 +263,12 @@
       "playlistPlay": "播放该播放列表",
       "playlistNext": "下一项",
       "playlistControlError": "无法控制播放列表",
-      "lastScannedHeading": "上次扫描",
       "lastScannedTime": "时间：{{time}}",
       "lastScannedUid": "ID：{{uid}}",
       "lastScannedText": "值：{{text}}",
-      "historyTitle": "扫描历史记录",
+      "historyTitle": "历史记录",
       "historyReplay": "重新执行扫描",
+      "historyUnknown": "未知扫描",
       "historyReplayError": "无法重新执行扫描",
       "historyFailed": "失败",
       "purchaseProTitle": "Zaparoo Pro",
@@ -715,6 +710,11 @@
       "logout": "退出登录"
     },
     "settings": {
+      "groups": {
+        "device": "设备",
+        "app": "应用",
+        "support": "支持"
+      },
       "title": "设置",
       "moreSettings": "更多设置",
       "device": "设备地址",
@@ -738,7 +738,7 @@
       "updateDb.status.setupMissing": "媒体数据库尚未就绪。请更新数据库以重新构建。",
       "updateDb.startError": "媒体数据库更新启动失败",
       "updateDb.blockedByScrape": "正在抓取数据。完成前无法更新数据库。",
-      "updateDb.selectSystemsTitle": "选择要更新的系统",
+      "updateDb.selectSystemsTitle": "要更新的系统",
       "updateDb.allSystems": "所有系统",
       "updateDb.progressLabel": "数据库更新进度",
       "updateDb.cleanOrphans": "清理缺失媒体",
@@ -1105,6 +1105,10 @@
       }
     },
     "systemSelector": {
+      "allCategoriesLabel": "所有类别",
+      "selectionCount": "已选择 {{count}} 项",
+      "clear": "清除",
+      "done": "完成",
       "title": "选择系统",
       "searchPlaceholder": "搜索系统...",
       "searchSystems": "搜索系统",

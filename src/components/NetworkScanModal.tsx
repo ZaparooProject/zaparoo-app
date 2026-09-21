@@ -7,7 +7,10 @@ import {
   type DiscoveredDevice,
 } from "@/hooks/useNetworkScan";
 import { EmptyState } from "@/components/wui/EmptyState";
-import { formatDeviceEndpoint, isValidHost } from "@/lib/devices/endpoint";
+import {
+  discoveredDeviceToRegistration,
+  displayDiscoveredDeviceAddress,
+} from "@/lib/devices/discoveredDevice";
 import type { DiscoveredDeviceRegistration } from "@/lib/devices/deviceRegistry";
 import { SlideModal } from "./SlideModal";
 import { DeviceRow } from "./DeviceRow";
@@ -18,32 +21,6 @@ interface NetworkScanModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectDevice: (device: SelectedScanDevice) => void;
-}
-
-function toRegistration(
-  device: DiscoveredDevice,
-): DiscoveredDeviceRegistration {
-  return {
-    discoveryId: device.deviceId,
-    hostname: device.hostname,
-    addresses: device.addresses,
-    port: device.port,
-    name: device.name,
-    platform: device.platform,
-    version: device.version,
-  };
-}
-
-/**
- * The address shown for a scan result.
- *
- * Prefer the DNS-SD hostname so the row reads the same as the record the
- * registry will create for it; services without a hostname still show an IP.
- */
-function displayAddress(device: DiscoveredDevice): string {
-  const host = device.hostname?.replace(/\.+$/, "") || device.address;
-  if (!isValidHost(host)) return device.address;
-  return formatDeviceEndpoint(host, device.port).address;
 }
 
 export function NetworkScanModal({
@@ -65,7 +42,7 @@ export function NetworkScanModal({
 
   const handleSelectDevice = (device: DiscoveredDevice) => {
     stopScan();
-    onSelectDevice(toRegistration(device));
+    onSelectDevice(discoveredDeviceToRegistration(device));
     onClose();
   };
 
@@ -105,7 +82,7 @@ export function NetworkScanModal({
               <DeviceRow
                 key={getDiscoveredDeviceIdentity(device)}
                 entry={{
-                  address: displayAddress(device),
+                  address: displayDiscoveredDeviceAddress(device),
                   name: device.name,
                   platform: device.platform,
                   version: device.version,

@@ -164,6 +164,7 @@ export function PairingModal({
         <Button
           label={isPairing ? t("pairing.pairing") : t("pairing.startPairing")}
           disabled={isPairing || pin.length !== 6 || !address || !recordId}
+          disabledAppearance={isPairing ? "busy" : "unavailable"}
           onClick={() => void handlePair()}
           intent="primary"
           className="w-full"

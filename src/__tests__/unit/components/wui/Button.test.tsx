@@ -55,6 +55,35 @@ describe("Button", () => {
         screen.getByRole("button", { name: "Icon button" }),
       ).toBeInTheDocument();
     });
+
+    it("should use unavailable as the default disabled appearance", () => {
+      render(<Button label="Unavailable" disabled />);
+
+      expect(screen.getByRole("button")).toHaveAttribute(
+        "data-disabled-appearance",
+        "unavailable",
+      );
+    });
+
+    it("should expose a busy disabled appearance", () => {
+      render(<Button label="Launching" disabled disabledAppearance="busy" />);
+
+      expect(screen.getByRole("button")).toHaveAttribute(
+        "data-disabled-appearance",
+        "busy",
+      );
+    });
+
+    it("should expose the chrome-free ghost variant", () => {
+      render(
+        <Button variant="ghost" icon={<span>↻</span>} aria-label="Refresh" />,
+      );
+
+      expect(screen.getByRole("button")).toHaveAttribute(
+        "data-variant",
+        "ghost",
+      );
+    });
   });
 
   describe("click handling", () => {

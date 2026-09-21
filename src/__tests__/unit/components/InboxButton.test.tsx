@@ -62,7 +62,10 @@ describe("InboxButton", () => {
 
     await user.click(screen.getByRole("button", { name: /inbox\.openLabel/i }));
 
+    const button = screen.getByRole("button", { name: /inbox\.openLabel/i });
     expect(mockImpact).toHaveBeenCalledWith("light");
     expect(useStatusStore.getState().inboxModalOpen).toBe(true);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(button).toHaveAttribute("aria-pressed", "true");
   });
 });

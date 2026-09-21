@@ -365,6 +365,7 @@ export function Devices() {
                 label={t("settings.deviceCombine.cancel")}
                 onClick={() => setCombineOpen(false)}
                 disabled={isCombining}
+                disabledAppearance="busy"
               />
             }
             primaryAction={
@@ -373,6 +374,7 @@ export function Devices() {
                 label={t("settings.deviceCombine.confirm")}
                 onClick={() => void handleConfirmCombine()}
                 disabled={isCombining}
+                disabledAppearance="busy"
               />
             }
           />

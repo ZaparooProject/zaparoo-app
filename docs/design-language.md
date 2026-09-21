@@ -53,8 +53,8 @@ Common hierarchy:
 - Page titles are left-aligned Outfit, 24px/600, tight tracking and natural wrapping. `PageHeader` owns the typography; programmatic heading focus remains, without a decorative outline.
   - Seen across settings, create, search, logs, devices.
 - Slide modal title: left-aligned `text-lg font-semibold` above the body divider.
-- Home section labels: `font-bold text-gray-400 capitalize`.
-  - Used by `LastScannedInfo` and `NowPlayingInfo`.
+- Home section labels: `text-muted-foreground font-bold capitalize`.
+  - Used by `NowPlayingCard`, `ReaderStrip` and the home cover rows.
 - Card/list primary text: usually `font-semibold` or `font-medium` depending sibling row.
   - Create landing card titles use `font-semibold`.
   - Connection status title uses `font-medium`.
@@ -110,10 +110,11 @@ Subpages use:
 
 - `HeaderButton` with `BackIcon size="24"` on left
 - left-aligned `<h1>` title, styled consistently by `PageHeader`
-- optional right `HeaderButton` or small `flex gap-2` group of `HeaderButton`s for page actions
+- optional right `HeaderButton` or small group of `HeaderButton`s for page actions
+- header controls move face and content together when pressed; modal triggers expose `aria-expanded` and retain the active inset face while their modal is open
 - `useSmartSwipe({ onSwipeRight: goBack })` when nearby routes use swipe-back
 
-Root tab pages can omit the back button and use a left-aligned title or existing branded content.
+Root tab pages can omit the back button and use a left-aligned title or existing branded content. Visible header controls use the same 8px mobile chrome inset as bottom navigation rather than the 16px page-content gutter. On Home, keep the compact logo left and group the content-sized device status control directly beside History on the right. Both controls use the same header-button face; the status control must not grow to consume remaining header space.
 
 ### Bottom navigation and floating app chrome
 
@@ -131,7 +132,7 @@ Global connection status uses `ConnectionStatusBar`, an in-layout strip above bo
 - sub-second connecting/reconnecting stays hidden
 - routine connecting/reconnecting uses muted neutral styling and an inline spinner
 - prolonged Core/network unavailability uses warning styling and a Settings action
-- Home and Settings landing rely on their contextual connection cards instead of duplicating the visible strip
+- Settings landing relies on its contextual connection card instead of duplicating the visible strip; Home does not, because its device pill carries identity rather than connection state
 - restored status appears briefly only after a connection issue was presented
 
 Do not use these styles for ordinary page content.
@@ -147,7 +148,10 @@ Variants:
 - `fill` default: primary gradient button, border, white text
 - `secondary`: neutral raised cap for Cancel and supporting actions
 - `outline`: quieter inset face with a two-pixel edge for utility/alternative actions
-- `text`: icon/text action without filled treatment
+- `ghost`: chrome-free icon utility with only a subtle hover/pressed wash; use for small inline refresh and similar affordances
+- `text`: unframed textual action without filled treatment
+
+Intents: `default`, `primary`, `destructive`, and `pro`. `destructive` supplies the red cap and red text/border; `pro` supplies the gold cap with a dark label, and gold text/border on non-filled variants. Use `pro` for paid-tier and support actions, such as Join the Patreon.
 
 Sizes:
 
@@ -163,14 +167,22 @@ Shape is owned by Button:
 - pointer hover lowers caps by 2px; press lowers them by 4px, without scaling/fading
 - touch targets remain at least 48px; compact labels do not shrink the hit target
 - reduced-motion settings disable transitions, and disabled controls do not travel
-- haptics derive from `intent`: default light, primary medium, destructive heavy; destructive intent also supplies visible red treatment
+- disabled appearance communicates why the control is unavailable:
+  - `disabledAppearance="unavailable"` is the default recessed/sunken state. Use it when a prerequisite, capability, selection, connection, or current media state is absent. “Unavailable” can still change during the page lifetime; it means no automatic completion is currently restoring this control.
+  - `disabledAppearance="busy"` retains the normal raised material at 50% opacity. Use it while an in-flight action temporarily locks the control and it will automatically become available when that action settles, such as launching, saving, pairing, searching, or deleting.
+  - when both reasons are possible, select `busy` only while the in-flight flag is active; otherwise use `unavailable`. A loading label or spinner should continue to explain the active work.
+- haptics derive from `intent`: default light, primary and pro medium, destructive heavy; destructive and pro intents also supply visible colour treatment
 - geometry is owned by the component, materials live in the CSS components layer; call-site utilities must not have to fight unlayered overrides
 
-Use `className="w-full"` for full-width primary page actions and complex-modal primary actions. Use `className="flex-1"` only for equal-width confirmation actions sharing one footer row.
+Use `className="w-full"` for full-width primary page actions and complex-modal primary actions. Say it explicitly rather than relying on flex-column stretch: from the `md` breakpoint up, full-width buttons cap at 20rem and center, so a page action does not stretch across the desktop column. `ModalActionBar` and `ModalActionRail` opt their children out of that cap. Use `className="flex-1"` only for equal-width confirmation actions sharing one footer row.
 
 Button layout is inline by default. `layout="responsive"` is reserved for compact action-rail items: icon above caption on narrow screens, then icon beside caption from the `sm` breakpoint. Keep rail captions on one line.
 
 Do not build custom buttons with raw `<button>` unless implementing a specialized primitive already present in the codebase, such as selector rows or segmented radio buttons.
+
+### CircleButton
+
+Use `src/components/wui/CircleButton.tsx` for raised circular icon actions. It mirrors Zaparoo Online's dedicated CircleButton material rather than approximating it with a rounded generic Button. Default controls retain a 48px touch target; use `variant="secondary"` for neutral contextual actions such as Pair in the device sheet.
 
 ### HeaderButton
 
@@ -497,15 +509,48 @@ Keep it concise. Do not add extra cards/icons/status badges.
 
 ## Home screen
 
-Home is more branded and status-oriented than Settings.
+Home is the phone-as-reader screen: scanning is the primary action and the one
+Pro is sold on, and everything below it is the connected device's live state.
+
+Order: header (logo, device pill, history) → scan slabs → Now Playing →
+background slot → favourites → recently played → reader strip.
 
 Patterns:
 
-- Page uses logo, history `ToggleChip`, large scan control, then status sections
-- Connection status uses `Card` + `ConnectionStatusDisplay`
-- Last scanned and now playing sections use `p-3`
-- Home section headings use `font-bold text-gray-400 capitalize`
-- Stop action is icon-only `Button variant="text"`
+- Scanning uses `ActionSlab`: a tall slab for the leading mode and a short slab
+  beneath for the other. NFC leads unless the camera is the mode last used, and
+  a phone with one capability gets a single tall slab. There is no mode toggle.
+- The tap slab stays pressable while scanning: its title and accessible name
+  switch to the scanning/stop state and it carries `aria-pressed`.
+- Device identity is a `StatusPill` in the Home header actions, opening a
+  `SlideModal` device sheet. The sheet keeps Pair as a circular secondary icon
+  action on the connected-device status row. It runs one bounded discovery pass on open,
+  offers an icon refresh action, and merges discovered devices into the saved
+  switch list by stable ID, hostname, then endpoint. Omit the currently
+  connected device; inactive rows do not reserve an empty status-indicator
+  gutter. Selecting an unsaved result saves and connects it. Connection
+  _problems_ belong to the global
+  `ConnectionStatusBar`, not to Home.
+- Now Playing is a `Card` with cover art from `LibraryArtwork`, the title and
+  system, and transports derived from the media's `launcherControls`. Keep the
+  previous/stop/play/next deck mounted while idle so the card does not shift.
+  Idle Play replays the most recent media when available; the other controls
+  remain unavailable. Never repurpose the Stop position as Play.
+- Recently played and favourites are horizontal cover rows that scroll, each
+  hidden when empty. Tapping a cover opens the shared media-details sheet so
+  launch, favourite, and write actions stay consistent with Library and search.
+- The reader strip uses the shared `ReaderStatusRow`, the same row as reader
+  settings.
+- The History sheet uses the neutral title “History” with semantic Scans and
+  Played tabs. Both tabs use `HistoryListRow`: primary value or media title,
+  muted timestamp metadata, optional low-priority details, and a right-aligned
+  ghost Play action. Scan failures use a compact text status rather than
+  colouring the entire row. Keep the sheet at a stable 70vh while either API
+  loads, prefetch Played history when the sheet opens, and request distinct
+  media with a local compatibility dedupe for older Core versions.
+- Home section headings use `text-muted-foreground font-bold capitalize`.
+- Stop and transport actions are icon-only outline `Button` controls inside a
+  shared recessed transport deck.
 
 Do not copy Home heading style into Settings; it is home/status-specific.
 

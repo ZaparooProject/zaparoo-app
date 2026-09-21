@@ -15,6 +15,8 @@ import {
   Status,
   isFormatRelatedError,
 } from "./nfc";
+import { isAppPreviewEnabled } from "./appPreviewStore";
+import { simulateNfcOperation } from "./nfcPreview";
 import { CoreAPI, isExpectedReaderWriteError } from "./coreApi.ts";
 import { logger } from "./logger";
 import {
@@ -220,6 +222,7 @@ export function useNfcWriter(
   const write = useCallback(
     async (action: WriteAction, text?: string) => {
       const writeOpId = ++writeOpIdRef.current;
+      const preview = isAppPreviewEnabled();
 
       // Clear any previous state before starting a new write operation
       setStatus(null);
@@ -261,10 +264,9 @@ export function useNfcWriter(
 
           let selectedWriteMethod: WriteMethod;
           try {
-            selectedWriteMethod = await determineWriteMethod(
-              writeMethod,
-              preferRemoteWriter,
-            );
+            selectedWriteMethod = preview
+              ? WriteMethod.LocalNFC
+              : await determineWriteMethod(writeMethod, preferRemoteWriter);
           } catch (error) {
             logger.error("Failed to determine write method:", error, {
               category: "nfc",
@@ -305,7 +307,7 @@ export function useNfcWriter(
           toastFailed = t("spinner.readFailed");
           break;
         case WriteAction.Format:
-          if (Capacitor.getPlatform() !== "android") {
+          if (!preview && Capacitor.getPlatform() !== "android") {
             logger.error("Format is only supported on Android", {
               category: "nfc",
               action: "formatPlatformCheck",
@@ -332,6 +334,22 @@ export function useNfcWriter(
           toastSuccess = t("spinner.makeReadOnlySuccess");
           toastFailed = t("spinner.makeReadOnlyFailed");
           break;
+      }
+
+      if (preview) {
+        // Preview stands in for the tag: no plugin session, no Core request.
+        currentWriteMethodRef.current = WriteMethod.LocalNFC;
+        usesLocalSession = false;
+        actionFunc = () =>
+          simulateNfcOperation({
+            read: action === WriteAction.Read,
+            signal: controller.signal,
+            onRetapRequired: () => {
+              if (writeOpIdRef.current === writeOpId) {
+                setRetapRequired(true);
+              }
+            },
+          });
       }
 
       setWriting(true);

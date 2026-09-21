@@ -89,6 +89,7 @@ export function ToolsTab({ onToolAction, isProcessing }: ToolsTabProps) {
               <Button
                 onClick={() => handleToolClick(tool.action)}
                 disabled={isProcessing}
+                disabledAppearance="busy"
                 label={isProcessing ? t("loading") : tool.label}
                 icon={tool.icon}
                 variant="outline"

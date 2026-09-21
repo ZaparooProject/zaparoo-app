@@ -26,6 +26,11 @@ import {
   MediaBrowseIndexResponse,
   MediaBrowseParams,
   MediaBrowseResponse,
+  MediaHistoryEntry,
+  MediaHistoryParams,
+  MediaHistoryResponse,
+  MediaLookupParams,
+  MediaLookupResponse,
   MediaCleanOrphansResponse,
   MediaImageParams,
   MediaImageResponse,
@@ -279,6 +284,14 @@ function isPlayingResponse(value: unknown): boolean {
     hasOptionalType(value, "launcherId", "string") &&
     (value.launcherControls === undefined ||
       isStringArray(value.launcherControls)) &&
+    hasOptionalType(value, "mediaId", "number") &&
+    hasOptionalType(value, "relativePath", "string") &&
+    hasOptionalType(value, "positionMs", "number") &&
+    hasOptionalType(value, "durationMs", "number") &&
+    // Validated as a plain string, never against the union: a rejected entry is
+    // dropped from the array, so an unknown future state would make Now Playing
+    // vanish rather than degrade.
+    hasOptionalType(value, "playbackState", "string") &&
     (value.slot === undefined ||
       value.slot === null ||
       value.slot === "" ||
@@ -316,6 +329,90 @@ function isPlaylistState(value: unknown): boolean {
   );
 }
 
+/**
+ * Drops playback fields Core sent in a shape this build does not understand,
+ * so an unfamiliar value degrades the progress display instead of the card.
+ */
+function normalizeActiveMedia(entry: PlayingResponse): PlayingResponse {
+  const normalized: PlayingResponse = { ...entry };
+
+  if (
+    normalized.playbackState !== undefined &&
+    normalized.playbackState !== "playing" &&
+    normalized.playbackState !== "paused" &&
+    normalized.playbackState !== "stopped"
+  ) {
+    delete normalized.playbackState;
+  }
+  for (const key of ["positionMs", "durationMs"] as const) {
+    const value = normalized[key];
+    if (value !== undefined && (!Number.isFinite(value) || value < 0)) {
+      delete normalized[key];
+    }
+  }
+
+  return normalized;
+}
+
+function isMediaHistoryEntry(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.systemId === "string" &&
+    typeof value.systemName === "string" &&
+    typeof value.mediaName === "string" &&
+    typeof value.mediaPath === "string" &&
+    hasOptionalType(value, "mediaId", "number") &&
+    hasOptionalType(value, "relativePath", "string") &&
+    hasOptionalType(value, "hasCover", "boolean") &&
+    hasOptionalType(value, "launcherId", "string") &&
+    typeof value.startedAt === "string" &&
+    hasOptionalType(value, "endedAt", "string") &&
+    typeof value.playTime === "number"
+  );
+}
+
+function normalizeMediaHistoryResponse(result: unknown): MediaHistoryResponse {
+  if (!isRecord(result)) {
+    throw new Error("Invalid media history response: expected an object");
+  }
+  // Core omits the array rather than sending an empty one.
+  const withEntries =
+    result.entries === null || result.entries === undefined
+      ? { ...result, entries: [] }
+      : result;
+  const validated = requireArrayPropertyResponse<Record<string, unknown>>(
+    withEntries,
+    "entries",
+    "media history",
+    isMediaHistoryEntry,
+  );
+  const entries = (validated.entries as MediaHistoryEntry[]).map((entry) => ({
+    ...entry,
+    // Core treats unknown cover state as "ask for the image anyway", so older
+    // Cores that never send the flag still get artwork.
+    hasCover: entry.hasCover ?? true,
+  }));
+  return { ...(validated as unknown as MediaHistoryResponse), entries };
+}
+
+/**
+ * Core learned stable reader ids in 2.10; before that the transport id is the
+ * only identity there is, so it stands in and callers need no version check.
+ */
+function normalizeReadersResponse(result: unknown): ReadersResponse {
+  const response = result as ReadersResponse;
+  if (!isRecord(result) || !Array.isArray(response.readers)) {
+    return response;
+  }
+  return {
+    ...response,
+    readers: response.readers.map((reader) => ({
+      ...reader,
+      readerId: reader.readerId ?? reader.id,
+    })),
+  };
+}
+
 function requireMediaResponse(result: unknown): MediaResponse {
   if (!isRecord(result) || !isIndexResponse(result.database)) {
     throw new Error(
@@ -346,9 +443,11 @@ function requireMediaResponse(result: unknown): MediaResponse {
     (validatedResult.active as LegacyPlayingResponse[] | undefined) ?? []
   ).map(
     (entry): PlayingResponse =>
-      entry.slot === null || entry.slot === ""
-        ? { ...entry, slot: "primary" }
-        : (entry as PlayingResponse),
+      normalizeActiveMedia(
+        entry.slot === null || entry.slot === ""
+          ? { ...entry, slot: "primary" }
+          : (entry as PlayingResponse),
+      ),
   );
   type LegacyPlaylistState = Omit<PlaylistState, "slot"> & {
     slot?: PlaylistState["slot"] | null | "";
@@ -1553,6 +1652,44 @@ class CoreApi {
     }
   }
 
+  async mediaHistory(
+    params: MediaHistoryParams = {},
+    signal?: AbortSignal,
+  ): Promise<MediaHistoryResponse> {
+    try {
+      const result = await this.call(Method.MediaHistory, params, signal);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Media history request was cancelled");
+      }
+      return normalizeMediaHistoryResponse(result);
+    } catch (error) {
+      if (isRequestCancelledError(error)) throw error;
+      logMediaApiFailure(
+        "Media history API call failed",
+        "mediaHistory",
+        error,
+      );
+      throw error;
+    }
+  }
+
+  async mediaLookup(
+    params: MediaLookupParams,
+    signal?: AbortSignal,
+  ): Promise<MediaLookupResponse> {
+    try {
+      const result = await this.call(Method.MediaLookup, params, signal);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Media lookup request was cancelled");
+      }
+      return result as MediaLookupResponse;
+    } catch (error) {
+      if (isRequestCancelledError(error)) throw error;
+      logMediaApiFailure("Media lookup API call failed", "mediaLookup", error);
+      throw error;
+    }
+  }
+
   async mediaBrowseIndex(
     params: MediaBrowseIndexParams,
     signal?: AbortSignal,
@@ -2391,7 +2528,7 @@ class CoreApi {
     return new Promise<ReadersResponse>((resolve, reject) => {
       this.call(Method.Readers)
         .then((result) => {
-          resolve(result as ReadersResponse);
+          resolve(normalizeReadersResponse(result));
         })
         .catch((error) => {
           logCoreApiFailure("Readers API call failed", error);

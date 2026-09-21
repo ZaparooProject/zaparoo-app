@@ -33,6 +33,7 @@
       "back": "Terug",
       "cancel": "Annuleren",
       "close": "Sluiten",
+      "moreActions": "Meer acties",
       "create": "Maken",
       "assign": "Toewijzen",
       "index": "Zap",
@@ -179,8 +180,6 @@
     },
     "spinner": {
       "deleting": "Verwijderen...",
-      "notSupportedLabel": "Apparaat ondersteunt geen NFC",
-      "notSupportedSub": "Je kunt de NFC-lees- en schrijffuncties in deze app niet gebruiken",
       "nfcDisabledLabel": "NFC-toegang uitgeschakeld",
       "nfcDisabledSub": "Schakel NFC-toegang in de apparaatinstellingen in om NFC te lezen en te schrijven",
       "openNfcSettings": "NFC-instellingen openen",
@@ -240,7 +239,6 @@
     },
     "scan": {
       "cameraMode": "Camera",
-      "cameraAvailable": "Camera gebruiken om te scannen",
       "nfcMode": "NFC",
       "scanError": "Fout bij scannen van tag",
       "scanSuccess": "Tag gescand",
@@ -249,10 +247,7 @@
       "reconnecting": "Opnieuw verbinden...",
       "connectionError": "Verbindingsfout",
       "retry": "Opnieuw proberen",
-      "continuous": "Continu scannen",
-      "launchOnScan": "Starten bij scannen",
       "connectedHeading": "Verbonden",
-      "connectedSub": "Adres: {{ip}}",
       "nowPlayingHeading": "Nu aan het spelen",
       "nowPlayingName": "Naam: {{game}}",
       "nowPlayingSystem": "Systeem: {{system}}",
@@ -268,12 +263,12 @@
       "playlistPlay": "Afspeellijst afspelen",
       "playlistNext": "Volgend item",
       "playlistControlError": "Afspeellijst kon niet worden bediend",
-      "lastScannedHeading": "Laatst gescand",
       "lastScannedTime": "Tijd: {{time}}",
       "lastScannedUid": "ID: {{uid}}",
       "lastScannedText": "Waarde: {{text}}",
-      "historyTitle": "Scangeschiedenis",
+      "historyTitle": "Geschiedenis",
       "historyReplay": "Scan herhalen",
+      "historyUnknown": "Onbekende scan",
       "historyReplayError": "Scan kon niet worden herhaald",
       "historyFailed": "Mislukt",
       "purchaseProTitle": "Zaparoo Pro",
@@ -715,6 +710,11 @@
       "logout": "Uitloggen"
     },
     "settings": {
+      "groups": {
+        "device": "Apparaat",
+        "app": "App",
+        "support": "Ondersteuning"
+      },
       "title": "Instellingen",
       "moreSettings": "Meer instellingen",
       "device": "Apparaatadres",
@@ -738,7 +738,7 @@
       "updateDb.status.setupMissing": "De mediadatabase is niet gereed. Werk de database bij om deze opnieuw op te bouwen.",
       "updateDb.startError": "Bijwerken van mediadatabase starten mislukt",
       "updateDb.blockedByScrape": "Er worden metadata opgehaald. De database kan pas worden bijgewerkt als dit klaar is.",
-      "updateDb.selectSystemsTitle": "Systemen selecteren om bij te werken",
+      "updateDb.selectSystemsTitle": "Bij te werken systemen",
       "updateDb.allSystems": "Alle systemen",
       "updateDb.progressLabel": "Voortgang database-update",
       "updateDb.cleanOrphans": "Ontbrekende media opschonen",
@@ -1105,6 +1105,10 @@
       }
     },
     "systemSelector": {
+      "allCategoriesLabel": "Alle categorieën",
+      "selectionCount": "{{count}} geselecteerd",
+      "clear": "Wissen",
+      "done": "Gereed",
       "title": "Systemen selecteren",
       "searchPlaceholder": "Systemen zoeken...",
       "searchSystems": "Systemen zoeken",

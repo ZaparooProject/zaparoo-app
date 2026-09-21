@@ -2,8 +2,18 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
-import { Capacitor } from "@capacitor/core";
-import { Check } from "lucide-react";
+import {
+  PersonStanding,
+  Check,
+  Cloud,
+  Database,
+  HelpCircle,
+  Info,
+  Languages,
+  Radio,
+  SlidersHorizontal,
+  Wrench,
+} from "lucide-react";
 import {
   PurchaseSupportActions,
   useProPurchase,
@@ -13,11 +23,11 @@ import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useSelectDevice } from "@/hooks/useSelectDevice";
 import type { ScanDeviceSelection } from "@/hooks/useSelectDevice";
 import { PageFrame } from "@/components/PageFrame";
+import { useAppUi } from "@/hooks/useAppUi";
 import { useStatusStore } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Button } from "@/components/wui/Button";
-import { Card } from "@/components/wui/Card";
-import { ExternalIcon, NextIcon } from "@/lib/images";
+import { ExternalIcon } from "@/lib/images";
 import {
   activeAddressOf,
   useDeviceRegistry,
@@ -71,8 +81,8 @@ export function Settings() {
   const displayedProAccess = purchasePreviewEnabled
     ? purchasePreview === "pro"
     : proAccess;
-  const showNativePurchaseUI =
-    Capacitor.isNativePlatform() || purchasePreviewEnabled;
+  const appUi = useAppUi();
+  const showNativePurchaseUI = appUi.enabled || purchasePreviewEnabled;
   const coreVersion = useStatusStore((state) => state.coreVersion);
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
@@ -119,6 +129,80 @@ export function Settings() {
     void selectScanDevice(device);
   };
 
+  const navigationGroups = [
+    {
+      id: "app",
+      label: t("settings.groups.app"),
+      destinations: [
+        {
+          to: "/settings/language-region",
+          label: t("settings.languageRegion.title"),
+          icon: Languages,
+        },
+        {
+          to: "/settings/accessibility",
+          label: t("settings.accessibility.title"),
+          icon: PersonStanding,
+        },
+        {
+          to: "/settings/online",
+          label: t("online.title"),
+          icon: Cloud,
+          status:
+            loggedInUser === null && !purchasePreviewEnabled
+              ? t("online.settingsStatusSignedOut")
+              : displayedOnlinePremiumAccess === true
+                ? t("online.settingsStatusWarpActive")
+                : displayedOnlinePremiumAccess === false
+                  ? t("online.settingsStatusFree")
+                  : t("online.settingsStatusSignedIn"),
+        },
+      ],
+    },
+    {
+      id: "device",
+      label: t("settings.groups.device"),
+      destinations: [
+        ...(showMediaScraper
+          ? [
+              {
+                to: "/settings/media" as const,
+                label: t("settings.media.title"),
+                icon: Database,
+              },
+            ]
+          : []),
+        {
+          to: "/settings/readers",
+          label: t("settings.readers.title"),
+          icon: Radio,
+        },
+        {
+          to: "/settings/play-controls",
+          label: t("settings.playControls.title"),
+          icon: SlidersHorizontal,
+        },
+        {
+          to: "/settings/advanced",
+          label: t("settings.advanced.title"),
+          icon: Wrench,
+        },
+      ],
+    },
+    {
+      id: "support",
+      label: t("settings.groups.support"),
+      destinations: [
+        {
+          to: "/settings/help",
+          label: t("settings.help.title"),
+          icon: HelpCircle,
+        },
+        { to: "/settings/about", label: t("settings.about.title"), icon: Info },
+      ],
+    },
+  ] as const;
+
   return (
     <>
       <PageFrame
@@ -160,7 +244,7 @@ export function Settings() {
             }
           />
 
-          {!Capacitor.isNativePlatform() && (
+          {!appUi.enabled && (
             <div>
               <Button
                 label={t("settings.getApp")}
@@ -193,140 +277,49 @@ export function Settings() {
             </div>
           )}
 
-          {Capacitor.isNativePlatform() &&
+          {appUi.enabled &&
             !displayedProAccess &&
             displayedOnlinePremiumAccess !== true && (
               <PurchaseSupportActions variant="restoreOnly" />
             )}
 
           <div className="flex flex-col gap-5">
-            <Card className="p-2">
-              <Link
-                to="/settings/online"
-                onPointerUp={handleHapticPress}
-                className="settings-nav-row"
+            {navigationGroups.map((group) => (
+              <nav
+                key={group.id}
+                aria-labelledby={`settings-${group.id}-heading`}
+                className="flex flex-col gap-2"
               >
-                <span>{t("online.title")}</span>
-                <span className="ml-auto flex items-center gap-2">
-                  <span className="text-muted-foreground text-sm">
-                    {loggedInUser === null && !purchasePreviewEnabled
-                      ? t("online.settingsStatusSignedOut")
-                      : displayedOnlinePremiumAccess === true
-                        ? t("online.settingsStatusWarpActive")
-                        : displayedOnlinePremiumAccess === false
-                          ? t("online.settingsStatusFree")
-                          : t("online.settingsStatusSignedIn")}
-                  </span>
-                  <span aria-hidden="true">
-                    <NextIcon size="20" />
-                  </span>
-                </span>
-              </Link>
-
-              <Link
-                to="/settings/language-region"
-                onPointerUp={handleHapticPress}
-                className="settings-nav-row"
-              >
-                <span>{t("settings.languageRegion.title")}</span>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Link>
-            </Card>
-            <section className="flex flex-col gap-3">
-              <h2
-                id="more-settings-heading"
-                className="text-lg font-semibold tracking-tight"
-              >
-                {t("settings.moreSettings")}
-              </h2>
-              <Card className="p-2">
-                <nav
-                  aria-labelledby="more-settings-heading"
-                  className="flex flex-col gap-0.5"
+                <h2
+                  id={`settings-${group.id}-heading`}
+                  className="text-lg font-semibold tracking-tight"
                 >
-                  {showMediaScraper && (
+                  {group.label}
+                </h2>
+                <div className="settings-navigation-grid">
+                  {group.destinations.map((destination) => (
                     <Link
-                      to="/settings/media"
+                      key={destination.to}
+                      to={destination.to}
                       onPointerUp={handleHapticPress}
-                      className="settings-nav-row"
+                      className={`site-button site-button-outline flex min-h-14 min-w-0 touch-manipulation items-center gap-2 px-3 py-2 text-left text-sm tracking-normal ${"status" in destination ? "col-span-full flex-wrap" : ""}`}
                     >
-                      <span>{t("settings.media.title")}</span>
-                      <span aria-hidden="true">
-                        <NextIcon size="20" />
-                      </span>
+                      <destination.icon
+                        size={20}
+                        className="text-muted-foreground shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 grow">{destination.label}</span>
+                      {"status" in destination && (
+                        <span className="text-muted-foreground ml-auto min-w-0 text-right text-sm font-normal normal-case">
+                          {destination.status}
+                        </span>
+                      )}
                     </Link>
-                  )}
-
-                  <Link
-                    to="/settings/play-controls"
-                    onPointerUp={handleHapticPress}
-                    className="settings-nav-row"
-                  >
-                    <p>{t("settings.playControls.title")}</p>
-                    <span aria-hidden="true">
-                      <NextIcon size="20" />
-                    </span>
-                  </Link>
-
-                  <Link
-                    to="/settings/readers"
-                    onPointerUp={handleHapticPress}
-                    className="settings-nav-row"
-                  >
-                    <p>{t("settings.readers.title")}</p>
-                    <span aria-hidden="true">
-                      <NextIcon size="20" />
-                    </span>
-                  </Link>
-
-                  <Link
-                    to="/settings/accessibility"
-                    onPointerUp={handleHapticPress}
-                    className="settings-nav-row"
-                  >
-                    <p>{t("settings.accessibility.title")}</p>
-                    <span aria-hidden="true">
-                      <NextIcon size="20" />
-                    </span>
-                  </Link>
-
-                  <Link
-                    to="/settings/advanced"
-                    onPointerUp={handleHapticPress}
-                    className="settings-nav-row"
-                  >
-                    <p>{t("settings.advanced.title")}</p>
-                    <span aria-hidden="true">
-                      <NextIcon size="20" />
-                    </span>
-                  </Link>
-
-                  <Link
-                    to="/settings/help"
-                    onPointerUp={handleHapticPress}
-                    className="settings-nav-row"
-                  >
-                    <p>{t("settings.help.title")}</p>
-                    <span aria-hidden="true">
-                      <NextIcon size="20" />
-                    </span>
-                  </Link>
-
-                  <Link
-                    to="/settings/about"
-                    onPointerUp={handleHapticPress}
-                    className="settings-nav-row"
-                  >
-                    <p>{t("settings.about.title")}</p>
-                    <span aria-hidden="true">
-                      <NextIcon size="20" />
-                    </span>
-                  </Link>
-                </nav>
-              </Card>
-            </section>
+                  ))}
+                </div>
+              </nav>
+            ))}
           </div>
         </div>
       </PageFrame>

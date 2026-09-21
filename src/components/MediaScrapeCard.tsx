@@ -559,6 +559,9 @@ export function MediaScrapeCard() {
             variant="outline"
             className="w-full"
             disabled={!connected || (isPaused ? isResuming : isCancelling)}
+            disabledAppearance={
+              isResuming || isCancelling ? "busy" : "unavailable"
+            }
             onClick={isPaused ? handleResume : handleCancel}
           />
         </div>
@@ -666,6 +669,7 @@ export function MediaScrapeCard() {
               disabled={
                 !connected || !selectedScraper || isDatabaseBusy || isStarting
               }
+              disabledAppearance={isStarting ? "busy" : "unavailable"}
               onClick={handleScrape}
             />
 

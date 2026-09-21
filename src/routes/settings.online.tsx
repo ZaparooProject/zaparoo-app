@@ -681,6 +681,7 @@ export function OnlinePage() {
                     variant="outline"
                     onClick={handleCancelDeletion}
                     disabled={isCancelling}
+                    disabledAppearance="busy"
                     className="mt-3 w-full"
                   />
                 </div>
@@ -737,6 +738,7 @@ export function OnlinePage() {
               }
               onClick={handleMfaVerify}
               disabled={!isMfaCodeComplete || isMfaVerifying}
+              disabledAppearance={isMfaVerifying ? "busy" : "unavailable"}
               className="w-full"
               intent="primary"
             />
@@ -830,6 +832,7 @@ export function OnlinePage() {
                 isLoading ||
                 (isSignUpMode && !ageConfirmed)
               }
+              disabledAppearance={isLoading ? "busy" : "unavailable"}
               className="w-full"
               intent="primary"
             />
@@ -872,6 +875,7 @@ export function OnlinePage() {
                       icon={<AppleIcon size="20" />}
                       onClick={handleAppleSignIn}
                       disabled={isLoading}
+                      disabledAppearance="busy"
                       className="w-full"
                     />
                     <Button
@@ -880,6 +884,7 @@ export function OnlinePage() {
                       icon={<GoogleIcon size="20" />}
                       onClick={handleGoogleSignIn}
                       disabled={isLoading}
+                      disabledAppearance="busy"
                       className="w-full"
                     />
                   </>
@@ -891,6 +896,7 @@ export function OnlinePage() {
                       icon={<GoogleIcon size="20" />}
                       onClick={handleGoogleSignIn}
                       disabled={isLoading}
+                      disabledAppearance="busy"
                       className="w-full"
                     />
                     <Button
@@ -899,6 +905,7 @@ export function OnlinePage() {
                       icon={<AppleIcon size="20" />}
                       onClick={handleAppleSignIn}
                       disabled={isLoading}
+                      disabledAppearance="busy"
                       className="w-full"
                     />
                   </>
@@ -948,6 +955,7 @@ export function OnlinePage() {
               onClick={closeDeleteModal}
               className="flex-1"
               disabled={isDeleting}
+              disabledAppearance="busy"
             />
             <Button
               variant="outline"
@@ -958,6 +966,7 @@ export function OnlinePage() {
               onClick={handleDeleteAccount}
               className="border-error text-error flex-1"
               disabled={isDeleting || confirmText !== "DELETE MY ACCOUNT"}
+              disabledAppearance={isDeleting ? "busy" : "unavailable"}
             />
           </div>
         }

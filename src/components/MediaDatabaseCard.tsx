@@ -402,6 +402,7 @@ export function MediaDatabaseCard({
               variant="outline"
               className="w-full"
               disabled={!connected || !mediaGenerateAvailable || isResuming}
+              disabledAppearance={isResuming ? "busy" : "unavailable"}
               onClick={handleResumeUpdate}
             />
           ) : null}
@@ -619,6 +620,7 @@ export function MediaDatabaseCard({
             intent="destructive"
             className="w-full"
             disabled={cleanDisabled}
+            disabledAppearance={isCleaning ? "busy" : "unavailable"}
             onClick={() => setCleanConfirmOpen(true)}
           />
           {isCleaning ? (
@@ -653,6 +655,7 @@ export function MediaDatabaseCard({
             variant="outline"
             className="w-full"
             disabled={!connected || !mediaGenerateAvailable || isCancelling}
+            disabledAppearance={isCancelling ? "busy" : "unavailable"}
             onClick={handleCancelUpdate}
           />
         </div>
@@ -685,6 +688,7 @@ export function MediaDatabaseCard({
                 variant="outline"
                 className="flex-1"
                 disabled={isCleaning}
+                disabledAppearance="busy"
                 onClick={() => setCleanConfirmOpen(false)}
               />
               <Button
@@ -693,6 +697,7 @@ export function MediaDatabaseCard({
                 intent="destructive"
                 className="border-error text-error flex-1"
                 disabled={isCleaning}
+                disabledAppearance="busy"
                 onClick={handleCleanConfirm}
               />
             </div>

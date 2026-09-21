@@ -410,6 +410,30 @@ describe("LibraryMediaDetailsModal", () => {
     ).toBeInTheDocument();
   });
 
+  it("should show transient disabled styling while launch is in flight", async () => {
+    const user = userEvent.setup();
+    let resolveRun: (() => void) | undefined;
+    vi.spyOn(CoreAPI, "run").mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRun = resolve;
+        }),
+    );
+    renderModal();
+
+    await user.click(
+      await screen.findByRole("button", { name: "library.launch" }),
+    );
+
+    const launching = await screen.findByRole("button", {
+      name: "library.launching",
+    });
+    expect(launching).toBeDisabled();
+    expect(launching).toHaveAttribute("data-disabled-appearance", "busy");
+
+    await act(async () => resolveRun?.());
+  });
+
   it("should not launch while Core is reconnecting", async () => {
     const user = userEvent.setup();
     const runSpy = vi.spyOn(CoreAPI, "run").mockResolvedValue();
@@ -420,6 +444,7 @@ describe("LibraryMediaDetailsModal", () => {
       name: "library.launch",
     });
     expect(launch).toBeDisabled();
+    expect(launch).toHaveAttribute("data-disabled-appearance", "unavailable");
     await user.click(launch);
 
     expect(runSpy).not.toHaveBeenCalled();

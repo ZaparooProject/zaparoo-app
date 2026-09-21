@@ -200,6 +200,7 @@ describe("SlideModal", () => {
     expect(dialog).toHaveStyle({
       transform: "translate3d(0, 100%, 0)",
       transition: "transform 0.2s ease-in-out",
+      boxShadow: "none",
     });
 
     rerender(<SlideModal {...mockProps} isOpen />);
@@ -209,6 +210,7 @@ describe("SlideModal", () => {
       transform: "translate3d(0, 0, 0)",
       transition: "transform 0.2s ease-in-out",
     });
+    expect(dialog.style.boxShadow).toBe("");
   });
 
   it("caps content-sized and requested-height modals at 80 percent", () => {

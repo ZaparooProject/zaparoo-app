@@ -33,6 +33,7 @@
       "back": "Atrás",
       "cancel": "Cancelar",
       "close": "Cerrar",
+      "moreActions": "Más acciones",
       "create": "Crear",
       "assign": "Asignar",
       "index": "Escanear",
@@ -179,8 +180,6 @@
     },
     "spinner": {
       "deleting": "Eliminando...",
-      "notSupportedLabel": "El dispositivo no admite NFC",
-      "notSupportedSub": "No podrás usar ninguna función de lectura o escritura NFC en esta aplicación",
       "nfcDisabledLabel": "Acceso NFC deshabilitado",
       "nfcDisabledSub": "Habilita el acceso NFC en los ajustes de tu dispositivo para usar las funciones de lectura y escritura NFC",
       "openNfcSettings": "Abrir ajustes de NFC",
@@ -240,7 +239,6 @@
     },
     "scan": {
       "cameraMode": "Cámara",
-      "cameraAvailable": "Usar la cámara para escanear",
       "nfcMode": "NFC",
       "scanError": "Error al escanear la etiqueta",
       "scanSuccess": "Etiqueta escaneada correctamente",
@@ -249,10 +247,7 @@
       "reconnecting": "Reconectando...",
       "connectionError": "Error de conexión",
       "retry": "Reintentar",
-      "continuous": "Escaneo continuo",
-      "launchOnScan": "Iniciar al escanear",
       "connectedHeading": "Conectado",
-      "connectedSub": "Dirección: {{ip}}",
       "nowPlayingHeading": "Reproduciendo ahora",
       "nowPlayingName": "Nombre: {{game}}",
       "nowPlayingSystem": "Sistema: {{system}}",
@@ -268,12 +263,12 @@
       "playlistPlay": "Reproducir lista de reproducción",
       "playlistNext": "Elemento siguiente",
       "playlistControlError": "No se pudo controlar la lista de reproducción",
-      "lastScannedHeading": "Último escaneo",
       "lastScannedTime": "Hora: {{time}}",
       "lastScannedUid": "ID: {{uid}}",
       "lastScannedText": "Valor: {{text}}",
-      "historyTitle": "Historial de escaneo",
+      "historyTitle": "Historial",
       "historyReplay": "Repetir escaneo",
+      "historyUnknown": "Escaneo desconocido",
       "historyReplayError": "No se pudo repetir el escaneo",
       "historyFailed": "Fallido",
       "purchaseProTitle": "Zaparoo Pro",
@@ -715,6 +710,11 @@
       "logout": "Cerrar sesión"
     },
     "settings": {
+      "groups": {
+        "device": "Dispositivo",
+        "app": "Aplicación",
+        "support": "Ayuda"
+      },
       "title": "Ajustes",
       "moreSettings": "Más ajustes",
       "device": "Dirección del dispositivo",
@@ -738,7 +738,7 @@
       "updateDb.status.setupMissing": "La base de datos multimedia no está lista. Actualízala para reconstruirla.",
       "updateDb.startError": "Fallo al iniciar la actualización de la base de datos multimedia",
       "updateDb.blockedByScrape": "Se están obteniendo metadatos. Las actualizaciones de la base de datos no estarán disponibles hasta que termine.",
-      "updateDb.selectSystemsTitle": "Seleccionar sistemas para actualizar",
+      "updateDb.selectSystemsTitle": "Sistemas para actualizar",
       "updateDb.allSystems": "Todos los sistemas",
       "updateDb.progressLabel": "Progreso de actualización de la base de datos",
       "updateDb.cleanOrphans": "Limpiar contenido multimedia ausente",
@@ -1105,6 +1105,10 @@
       }
     },
     "systemSelector": {
+      "allCategoriesLabel": "Todas las categorías",
+      "selectionCount": "{{count}} seleccionados",
+      "clear": "Borrar",
+      "done": "Listo",
       "title": "Seleccionar sistemas",
       "searchPlaceholder": "Buscar sistemas...",
       "searchSystems": "Buscar sistemas",

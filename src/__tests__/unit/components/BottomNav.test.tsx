@@ -84,19 +84,31 @@ describe("BottomNav", () => {
     expect(await findA11yViolations(baseElement)).toEqual([]);
   });
 
-  it("allows navigation labels and height to reflow with text zoom", () => {
-    render(<BottomNav />);
+  it("keeps an edge-to-edge mobile shell with a separately containable surface", () => {
+    const { container } = render(<BottomNav />);
 
     expect(screen.getByRole("navigation")).toHaveClass(
+      "bottom-nav-shell",
       "[height:calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset))]",
     );
+    expect(container.querySelector(".bottom-nav-surface")).toBeInTheDocument();
     for (const link of screen.getAllByRole("link")) {
-      expect(link).toHaveClass("w-full", "min-w-0");
+      expect(link).toHaveClass("w-full", "min-w-0", "min-h-12", "py-[4px]");
     }
     expect(screen.getByText("nav.settings")).toHaveClass(
       "wrap-anywhere",
       "hyphens-auto",
     );
+  });
+
+  it("uses shared nav-tab styling and aria-current for active state", () => {
+    render(<BottomNav />);
+
+    const homeLink = screen.getByTestId("link-/");
+    expect(homeLink).toHaveClass("bottom-nav-tab");
+    expect(homeLink).toHaveAttribute("aria-current", "page");
+    expect(homeLink.querySelector(".bottom-nav-icon")).toBeInTheDocument();
+    expect(homeLink).not.toHaveClass("border");
   });
 
   it("renders all navigation buttons", () => {

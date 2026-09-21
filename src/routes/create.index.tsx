@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Capacitor } from "@capacitor/core";
 import classNames from "classnames";
 import { ListPlusIcon, NfcIcon } from "lucide-react";
+import { useAppUi } from "@/hooks/useAppUi";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
@@ -70,7 +70,7 @@ export function Create() {
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
-  const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
+  const nfcAvailable = useAppUi().nfc;
   const preferRemoteWriter = usePreferencesStore(
     (state) => state.preferRemoteWriter,
   );
@@ -227,17 +227,14 @@ export function Create() {
 
           <Link
             to="/create/nfc"
-            disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
-            aria-disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
+            disabled={!nfcAvailable}
+            aria-disabled={!nfcAvailable}
           >
-            <Card
-              disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
-              pressable
-            >
+            <Card disabled={!nfcAvailable} pressable>
               <div className="flex flex-row items-center gap-3">
                 <CreateActionIcon
                   icon={<NfcIcon size="24" />}
-                  disabled={!Capacitor.isNativePlatform() || !nfcAvailable}
+                  disabled={!nfcAvailable}
                 />
                 <div className="flex min-w-0 grow flex-col gap-1">
                   <span className="font-semibold">

@@ -1,10 +1,8 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Capacitor } from "@capacitor/core";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import classNames from "classnames";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { SettingHelp } from "@/components/wui/SettingHelp";
 import { useStatusStore, ConnectionState } from "@/lib/store";
@@ -18,6 +16,7 @@ import { BackIcon } from "@/lib/images";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HeaderButton } from "@/components/wui/HeaderButton";
+import { ReaderStatusRow } from "@/components/ReaderStatusRow";
 import { SystemSelector } from "@/components/SystemSelector";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -26,6 +25,7 @@ import { ProBadge } from "@/components/ProBadge";
 import { ZapScriptInput } from "@/components/ZapScriptInput";
 import { CoreAPI } from "@/lib/coreApi";
 import { ClientCapability, UpdateSettingsRequest } from "@/lib/models.ts";
+import { useAppUi } from "@/hooks/useAppUi";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { TabBar } from "@/components/wui/TabBar";
 import { Card } from "@/components/wui/Card";
@@ -56,10 +56,7 @@ export function ReadersSettings() {
   const isConnecting =
     connectionState === ConnectionState.CONNECTING ||
     connectionState === ConnectionState.RECONNECTING;
-  const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
-  const accelerometerAvailable = usePreferencesStore(
-    (state) => state.accelerometerAvailable,
-  );
+  const appUi = useAppUi();
 
   // Core settings query
   const {
@@ -164,23 +161,11 @@ export function ReadersSettings() {
                 />
               ) : readersData?.readers && readersData.readers.length > 0 ? (
                 readersData.readers.map((reader) => (
-                  <div key={reader.id} className="flex items-center gap-2">
-                    <span
-                      className={classNames(
-                        "h-2 w-2 shrink-0 rounded-full",
-                        reader.connected ? "bg-green-500" : "bg-red-500",
-                      )}
-                      aria-hidden="true"
-                    />
-                    <span className="text-foreground">
-                      {reader.info || reader.id}
-                    </span>
-                    <span className="text-muted-foreground text-sm">
-                      {reader.connected
-                        ? t("scan.connectedHeading")
-                        : t("settings.notConnected")}
-                    </span>
-                  </div>
+                  <ReaderStatusRow
+                    key={reader.id}
+                    name={reader.info || reader.id}
+                    connected={reader.connected}
+                  />
                 ))
               ) : (
                 <EmptyState
@@ -240,7 +225,7 @@ export function ReadersSettings() {
           />
 
           {/* Keep Screen On - from App (native only) */}
-          {Capacitor.isNativePlatform() && (
+          {appUi.enabled && (
             <ToggleSwitch
               label={
                 <span className="flex items-center">
@@ -257,7 +242,7 @@ export function ReadersSettings() {
           )}
 
           {/* Launch On Scan - from App (native only, Pro feature) */}
-          {Capacitor.isNativePlatform() && connected && (
+          {appUi.enabled && connected && (
             <ToggleSwitch
               label={
                 <span className="flex items-center">
@@ -280,7 +265,7 @@ export function ReadersSettings() {
           )}
 
           {/* Prefer External Reader - from App (native + NFC) */}
-          {Capacitor.isNativePlatform() && nfcAvailable && (
+          {appUi.nfc && (
             <ToggleSwitch
               label={
                 <span className="flex items-center">
@@ -297,7 +282,7 @@ export function ReadersSettings() {
           )}
 
           {/* Shake to Launch - from App (native + accelerometer, Pro feature) */}
-          {Capacitor.isNativePlatform() && accelerometerAvailable && (
+          {appUi.accelerometer && (
             <ToggleSwitch
               label={
                 <span className="flex items-center">
@@ -321,62 +306,60 @@ export function ReadersSettings() {
             />
           )}
 
-          {Capacitor.isNativePlatform() &&
-            accelerometerAvailable &&
-            shakeEnabled && (
-              <>
-                <TabBar
-                  label={t("settings.app.shakeModeLabel")}
-                  value={connected ? shakeMode : ""}
-                  options={[
-                    {
-                      value: "random",
-                      label: t("settings.app.shakeRandomMedia"),
-                    },
-                    { value: "custom", label: t("settings.app.shakeCustom") },
-                  ]}
-                  disabled={!connected}
-                  onChange={(value) => {
-                    if (value === "random" || value === "custom")
-                      setShakeMode(value);
-                  }}
-                />
+          {appUi.accelerometer && shakeEnabled && (
+            <>
+              <TabBar
+                label={t("settings.app.shakeModeLabel")}
+                value={connected ? shakeMode : ""}
+                options={[
+                  {
+                    value: "random",
+                    label: t("settings.app.shakeRandomMedia"),
+                  },
+                  { value: "custom", label: t("settings.app.shakeCustom") },
+                ]}
+                disabled={!connected}
+                onChange={(value) => {
+                  if (value === "random" || value === "custom")
+                    setShakeMode(value);
+                }}
+              />
 
-                {shakeMode === "random" && (
-                  <div>
-                    <div className="flex items-center justify-between gap-2">
-                      {shakeSystem ? (
-                        <span className="text-foreground">
-                          {shakeSystem === "all"
-                            ? t("systemSelector.allSystems")
-                            : shakeSystem}
-                        </span>
-                      ) : (
-                        <span className="text-foreground">-</span>
-                      )}
-                      <Button
-                        label={t("settings.app.shakeSelectSystem")}
-                        onClick={() => setSystemPickerOpen(true)}
-                        variant="outline"
-                        size="sm"
-                        disabled={!connected}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {shakeMode === "custom" && (
-                  <div>
-                    <ZapScriptInput
-                      value={shakeZapscript}
-                      setValue={setShakeZapscript}
-                      showPalette={false}
-                      rows={2}
+              {shakeMode === "random" && (
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    {shakeSystem ? (
+                      <span className="text-foreground">
+                        {shakeSystem === "all"
+                          ? t("systemSelector.allSystems")
+                          : shakeSystem}
+                      </span>
+                    ) : (
+                      <span className="text-foreground">-</span>
+                    )}
+                    <Button
+                      label={t("settings.app.shakeSelectSystem")}
+                      onClick={() => setSystemPickerOpen(true)}
+                      variant="outline"
+                      size="sm"
+                      disabled={!connected}
                     />
                   </div>
-                )}
-              </>
-            )}
+                </div>
+              )}
+
+              {shakeMode === "custom" && (
+                <div>
+                  <ZapScriptInput
+                    value={shakeZapscript}
+                    setValue={setShakeZapscript}
+                    showPalette={false}
+                    rows={2}
+                  />
+                </div>
+              )}
+            </>
+          )}
 
           {/* Audio Feedback - from Core */}
           <ToggleSwitch

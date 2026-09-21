@@ -33,6 +33,7 @@
       "back": "Back",
       "cancel": "Cancel",
       "close": "Close",
+      "moreActions": "More actions",
       "create": "Create",
       "assign": "Assign",
       "index": "Zap",
@@ -179,8 +180,6 @@
     },
     "spinner": {
       "deleting": "Deleting...",
-      "notSupportedLabel": "Device does not support NFC",
-      "notSupportedSub": "You will not be able to use any NFC reading or writing features in this app",
       "nfcDisabledLabel": "NFC access disabled",
       "nfcDisabledSub": "Please enable NFC access in your device settings for NFC reading and writing features",
       "openNfcSettings": "Open NFC settings",
@@ -240,7 +239,6 @@
     },
     "scan": {
       "cameraMode": "Camera",
-      "cameraAvailable": "Use camera to scan",
       "nfcMode": "NFC",
       "scanError": "Error scanning tag",
       "scanSuccess": "Tag scanned successfully",
@@ -249,10 +247,7 @@
       "reconnecting": "Reconnecting...",
       "connectionError": "Connection Error",
       "retry": "Retry",
-      "continuous": "Continuous scanning",
-      "launchOnScan": "Launch on scan",
       "connectedHeading": "Connected",
-      "connectedSub": "Address: {{ip}}",
       "nowPlayingHeading": "Now playing",
       "nowPlayingName": "Name: {{game}}",
       "nowPlayingSystem": "System: {{system}}",
@@ -268,12 +263,12 @@
       "playlistPlay": "Play playlist",
       "playlistNext": "Next item",
       "playlistControlError": "Could not control playlist",
-      "lastScannedHeading": "Last scanned",
       "lastScannedTime": "Time: {{time}}",
       "lastScannedUid": "ID: {{uid}}",
       "lastScannedText": "Value: {{text}}",
-      "historyTitle": "Scan History",
+      "historyTitle": "History",
       "historyReplay": "Replay scan",
+      "historyUnknown": "Unknown scan",
       "historyReplayError": "Could not replay scan",
       "historyFailed": "Failed",
       "purchaseProTitle": "Zaparoo Pro",
@@ -715,6 +710,11 @@
       "logout": "Log Out"
     },
     "settings": {
+      "groups": {
+        "device": "Device",
+        "app": "App",
+        "support": "Support"
+      },
       "title": "Settings",
       "moreSettings": "More settings",
       "device": "Device address",
@@ -738,7 +738,7 @@
       "updateDb.status.setupMissing": "Media database is not ready. Update the database to rebuild it.",
       "updateDb.startError": "Failed to start media database update",
       "updateDb.blockedByScrape": "Scraping is running. Database updates are unavailable until it finishes.",
-      "updateDb.selectSystemsTitle": "Select Systems to Update",
+      "updateDb.selectSystemsTitle": "Systems to update",
       "updateDb.allSystems": "All systems",
       "updateDb.progressLabel": "Database update progress",
       "updateDb.cleanOrphans": "Clean missing media",
@@ -1105,6 +1105,10 @@
       }
     },
     "systemSelector": {
+      "allCategoriesLabel": "All categories",
+      "selectionCount": "{{count}} selected",
+      "clear": "Clear",
+      "done": "Done",
       "title": "Select Systems",
       "searchPlaceholder": "Search systems...",
       "searchSystems": "Search systems",

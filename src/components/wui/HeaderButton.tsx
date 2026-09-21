@@ -8,6 +8,7 @@ interface HeaderButtonProps {
   active?: boolean;
   title?: string;
   "aria-label"?: string;
+  "aria-expanded"?: boolean;
   className?: string;
 }
 
@@ -20,37 +21,24 @@ export const HeaderButton = memo(function HeaderButton(
 
   return (
     <button
+      type="button"
       data-pressed={isPressed}
       aria-pressed={props.active}
+      aria-expanded={props["aria-expanded"]}
       className={classNames(
-        "wui-header-button",
-        "flex",
-        "items-center",
-        "justify-center",
-        "h-8",
-        "w-8",
-        "min-w-8",
-        "cursor-pointer",
-        "transition-all",
-        "duration-100",
-        "touch-manipulation",
-        "rounded-full",
+        "wui-header-button flex cursor-pointer touch-manipulation items-center justify-center transition-colors duration-100",
         {
-          // Active state (when modal is open, etc.)
           "text-primary": props.active && !props.disabled,
-          // Normal state - using explicit colors instead of opacity for better contrast
           "text-muted-foreground hover:text-foreground":
             !props.active && !props.disabled,
-          // Disabled state - using explicit gray that meets WCAG contrast
           "text-muted-foreground cursor-not-allowed": props.disabled,
-          // Pressed state
           "text-muted-foreground": isPressed && !props.disabled,
         },
         props.className,
       )}
       disabled={props.disabled}
       title={props.title}
-      aria-label={props["aria-label"]}
+      aria-label={props["aria-label"] ?? props.title}
       onClick={() => {
         // Only trigger click if this wasn't a scroll gesture
         if (!hasMoved.current && !props.disabled && props.onClick) {
@@ -97,7 +85,12 @@ export const HeaderButton = memo(function HeaderButton(
       onMouseUp={() => setIsPressed(false)}
       onMouseLeave={() => setIsPressed(false)}
     >
-      {props.icon}
+      <span
+        className="wui-header-button-content flex items-center justify-center"
+        aria-hidden="true"
+      >
+        {props.icon}
+      </span>
     </button>
   );
 });

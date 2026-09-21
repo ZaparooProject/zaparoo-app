@@ -154,6 +154,22 @@ describe("Root Layout Integration", () => {
 
       const footer = screen.getByRole("contentinfo");
       expect(footer).toBeInTheDocument();
+      expect(footer).toHaveClass(
+        "fixed",
+        "inset-x-0",
+        "bottom-0",
+        "pointer-events-none",
+      );
+      expect(
+        footer.parentElement?.style.getPropertyValue(
+          "--app-footer-overlay-height",
+        ),
+      ).toBe("64px");
+      expect(
+        footer.parentElement?.style.getPropertyValue(
+          "--app-footer-overlay-clearance",
+        ),
+      ).toBe("92px");
       expect(within(footer).getByRole("status")).toHaveTextContent("");
       expect(screen.getByTestId("bottom-nav")).toBeInTheDocument();
     });

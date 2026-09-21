@@ -1,28 +1,59 @@
 /**
  * Integration Test: Home Page Scan Flows
  *
- * Tests the scan operation flows including:
- * - NFC scan button interactions
- * - Camera scan button interactions
- * - Scan status updates (success/error)
- * - Pro purchase modal flow for launch on scan
+ * Covers the adaptive scan actions:
+ * - which action leads, and how capability changes the layout
+ * - starting and stopping a scan from the same control
+ * - the Android "NFC is off" affordance
+ * - screen reader status announcements
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen } from "../../test-utils";
+import { render, screen, renderHook, act } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { Capacitor } from "@capacitor/core";
 import { useStatusStore, ConnectionState } from "@/lib/store";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { ScanControls } from "@/components/home/ScanControls";
-import { LastScannedInfo } from "@/components/home/LastScannedInfo";
+import { ScanActions } from "@/components/home/ScanActions";
+import {
+  resolveScanLayout,
+  useHomeScanLayout,
+} from "@/hooks/useHomeScanLayout";
 import { ScanResult } from "@/lib/models";
+
+function renderActions(
+  overrides: Partial<Parameters<typeof ScanActions>[0]> = {},
+) {
+  const onTapScan = vi.fn();
+  const onCameraScan = vi.fn();
+  const onOpenNfcSettings = vi.fn();
+  const layout = overrides.layout ?? {
+    leading: "nfc" as const,
+    alternate: "camera" as const,
+    canScan: true,
+    showEmptyState: false,
+  };
+
+  render(
+    <ScanActions
+      layout={layout}
+      scanSession={false}
+      scanStatus={ScanResult.Default}
+      nfcEnabled
+      onTapScan={onTapScan}
+      onCameraScan={onCameraScan}
+      onOpenNfcSettings={onOpenNfcSettings}
+      {...overrides}
+    />,
+  );
+
+  return { onTapScan, onCameraScan, onOpenNfcSettings };
+}
 
 describe("Home Page Scan Flows", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Reset stores to initial state
     useStatusStore.setState({
       ...useStatusStore.getInitialState(),
       connected: true,
@@ -35,7 +66,6 @@ describe("Home Page Scan Flows", () => {
       cameraAvailable: true,
     });
 
-    // Default to native platform
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
   });
 
@@ -43,286 +73,173 @@ describe("Home Page Scan Flows", () => {
     vi.restoreAllMocks();
   });
 
-  describe("NFC Scan Button", () => {
-    it("should render scan button when NFC is available on native", () => {
-      const onScanButton = vi.fn();
-      const onCameraScan = vi.fn();
+  describe("Action layout", () => {
+    it.each([
+      {
+        name: "leads with NFC when both are available",
+        nfc: true,
+        camera: true,
+        last: null,
+        leading: "nfc",
+        alternate: "camera",
+      },
+      {
+        name: "leads with the camera once it is the mode in use",
+        nfc: true,
+        camera: true,
+        last: "camera" as const,
+        leading: "camera",
+        alternate: "nfc",
+      },
+      {
+        name: "shows one action when only NFC is available",
+        nfc: true,
+        camera: false,
+        last: null,
+        leading: "nfc",
+        alternate: null,
+      },
+      {
+        name: "shows one action when only the camera is available",
+        nfc: false,
+        camera: true,
+        last: "camera" as const,
+        leading: "camera",
+        alternate: null,
+      },
+    ])("$name", ({ nfc, camera, last, leading, alternate }) => {
+      const layout = resolveScanLayout(nfc, camera, last, true);
 
-      render(
-        <ScanControls
-          scanSession={false}
-          scanStatus={ScanResult.Default}
-          onScanButton={onScanButton}
-          onCameraScan={onCameraScan}
-        />,
-      );
+      expect(layout.leading).toBe(leading);
+      expect(layout.alternate).toBe(alternate);
+      expect(layout.canScan).toBe(true);
+    });
 
-      const scanButton = screen.getByRole("button", {
-        name: /spinner.pressToScan/i,
+    it("offers no scan control when the phone has neither reader", () => {
+      const layout = resolveScanLayout(false, false, null, true);
+
+      expect(layout.canScan).toBe(false);
+      expect(layout.showEmptyState).toBe(true);
+    });
+
+    it("does not re-order while the page is open", () => {
+      const { result } = renderHook(() => useHomeScanLayout());
+      expect(result.current.leading).toBe("nfc");
+
+      act(() => {
+        usePreferencesStore.setState({ lastScanMode: "camera" });
       });
-      expect(scanButton).toBeInTheDocument();
+
+      // The action the user just used must not grow under their finger; the new
+      // order lands on the next visit.
+      expect(result.current.leading).toBe("nfc");
     });
 
-    it("should not render scan button when NFC is not available", () => {
-      usePreferencesStore.setState({ nfcAvailable: false });
+    it("re-orders when the phone's capabilities change", () => {
+      const { result } = renderHook(() => useHomeScanLayout());
+      expect(result.current.leading).toBe("nfc");
 
-      const onScanButton = vi.fn();
-      const onCameraScan = vi.fn();
-
-      render(
-        <ScanControls
-          scanSession={false}
-          scanStatus={ScanResult.Default}
-          onScanButton={onScanButton}
-          onCameraScan={onCameraScan}
-        />,
-      );
-
-      expect(
-        screen.queryByRole("button", { name: /spinner.pressToScan/i }),
-      ).not.toBeInTheDocument();
-    });
-
-    it("should call onScanButton when scan button is clicked", async () => {
-      const user = userEvent.setup();
-      const onScanButton = vi.fn();
-      const onCameraScan = vi.fn();
-
-      render(
-        <ScanControls
-          scanSession={false}
-          scanStatus={ScanResult.Default}
-          onScanButton={onScanButton}
-          onCameraScan={onCameraScan}
-        />,
-      );
-
-      const scanButton = screen.getByRole("button", {
-        name: /spinner.pressToScan/i,
+      act(() => {
+        usePreferencesStore.setState({
+          nfcAvailable: false,
+          lastScanMode: "camera",
+        });
       });
-      await user.click(scanButton);
 
-      expect(onScanButton).toHaveBeenCalledTimes(1);
-    });
-
-    it("should call onScanButton on keyboard Enter", async () => {
-      const user = userEvent.setup();
-      const onScanButton = vi.fn();
-      const onCameraScan = vi.fn();
-
-      render(
-        <ScanControls
-          scanSession={false}
-          scanStatus={ScanResult.Default}
-          onScanButton={onScanButton}
-          onCameraScan={onCameraScan}
-        />,
-      );
-
-      const scanButton = screen.getByRole("button", {
-        name: /spinner.pressToScan/i,
-      });
-      scanButton.focus();
-      await user.keyboard("{Enter}");
-
-      expect(onScanButton).toHaveBeenCalledTimes(1);
-    });
-
-    it("should announce scanning status to screen readers", () => {
-      render(
-        <ScanControls
-          scanSession={true}
-          scanStatus={ScanResult.Default}
-          onScanButton={vi.fn()}
-          onCameraScan={vi.fn()}
-        />,
-      );
-
-      // The aria-live region should contain the scanning announcement
-      const liveRegion = screen.getByText("scan.statusScanning");
-      expect(liveRegion).toBeInTheDocument();
+      expect(result.current.leading).toBe("camera");
+      expect(result.current.alternate).toBeNull();
     });
   });
 
-  describe("Camera Scan Button", () => {
-    it("should render camera button when camera is available on native", () => {
-      render(
-        <ScanControls
-          scanSession={false}
-          scanStatus={ScanResult.Default}
-          onScanButton={vi.fn()}
-          onCameraScan={vi.fn()}
-        />,
-      );
+  describe("Scanning", () => {
+    it("starts a scan from the tap action", async () => {
+      const user = userEvent.setup();
+      const { onTapScan } = renderActions();
 
-      const cameraButton = screen.getByRole("button", {
-        name: /scan.cameraMode/i,
-      });
-      expect(cameraButton).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "scan.tapTag" }));
+
+      expect(onTapScan).toHaveBeenCalledTimes(1);
     });
 
-    it("should not render camera button when camera is not available", () => {
-      usePreferencesStore.setState({ cameraAvailable: false });
+    it("stops the scan from the same action", async () => {
+      const user = userEvent.setup();
+      const { onTapScan } = renderActions({ scanSession: true });
 
-      render(
-        <ScanControls
-          scanSession={false}
-          scanStatus={ScanResult.Default}
-          onScanButton={vi.fn()}
-          onCameraScan={vi.fn()}
-        />,
-      );
+      const action = screen.getByRole("button", { name: "scan.tapTagStop" });
+      expect(action).toHaveAttribute("aria-pressed", "true");
+
+      await user.click(action);
+
+      expect(onTapScan).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the camera out of the way during a scan", () => {
+      renderActions({ scanSession: true });
 
       expect(
-        screen.queryByRole("button", { name: /scan.cameraMode/i }),
-      ).not.toBeInTheDocument();
+        screen.getByRole("button", { name: "scan.scanCode" }),
+      ).toBeDisabled();
     });
 
-    it("should call onCameraScan when camera button is clicked", async () => {
+    it("opens the camera scanner", async () => {
       const user = userEvent.setup();
-      const onCameraScan = vi.fn();
+      const { onCameraScan } = renderActions();
 
-      render(
-        <ScanControls
-          scanSession={false}
-          scanStatus={ScanResult.Default}
-          onScanButton={vi.fn()}
-          onCameraScan={onCameraScan}
-        />,
-      );
-
-      const cameraButton = screen.getByRole("button", {
-        name: /scan.cameraMode/i,
-      });
-      await user.click(cameraButton);
+      await user.click(screen.getByRole("button", { name: "scan.scanCode" }));
 
       expect(onCameraScan).toHaveBeenCalledTimes(1);
     });
 
-    it("should not render camera button on web platform", () => {
-      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+    it("sends the user to system settings when NFC is switched off", async () => {
+      const user = userEvent.setup();
+      const { onOpenNfcSettings } = renderActions({ nfcEnabled: false });
 
-      render(
-        <ScanControls
-          scanSession={false}
-          scanStatus={ScanResult.Default}
-          onScanButton={vi.fn()}
-          onCameraScan={vi.fn()}
-        />,
+      await user.click(
+        screen.getByRole("button", { name: "spinner.openNfcSettings" }),
       );
 
-      expect(
-        screen.queryByRole("button", { name: /scan.cameraMode/i }),
-      ).not.toBeInTheDocument();
+      expect(onOpenNfcSettings).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe("Scan Status Display", () => {
-    it("should show success status announcement after successful scan", () => {
-      render(
-        <ScanControls
-          scanSession={false}
-          scanStatus={ScanResult.Success}
-          onScanButton={vi.fn()}
-          onCameraScan={vi.fn()}
-        />,
-      );
+  describe("Status announcements", () => {
+    it("announces a scan in progress", () => {
+      renderActions({ scanSession: true });
+
+      expect(screen.getByText("scan.statusScanning")).toBeInTheDocument();
+    });
+
+    it("announces a successful scan", () => {
+      renderActions({ scanStatus: ScanResult.Success });
 
       expect(screen.getByText("scan.statusSuccess")).toBeInTheDocument();
     });
 
-    it("should show error status announcement after failed scan", () => {
-      render(
-        <ScanControls
-          scanSession={false}
-          scanStatus={ScanResult.Error}
-          onScanButton={vi.fn()}
-          onCameraScan={vi.fn()}
-        />,
-      );
+    it("announces a failed scan", () => {
+      renderActions({ scanStatus: ScanResult.Error });
 
       expect(screen.getByText("scan.statusError")).toBeInTheDocument();
     });
-
-    it("should clear status announcement when status is default", () => {
-      render(
-        <ScanControls
-          scanSession={false}
-          scanStatus={ScanResult.Default}
-          onScanButton={vi.fn()}
-          onCameraScan={vi.fn()}
-        />,
-      );
-
-      // The aria-live region should be empty for default status
-      expect(screen.queryByText("scan.statusScanning")).not.toBeInTheDocument();
-      expect(screen.queryByText("scan.statusSuccess")).not.toBeInTheDocument();
-      expect(screen.queryByText("scan.statusError")).not.toBeInTheDocument();
-    });
   });
 
-  describe("LastScannedInfo with scan status", () => {
-    it("should show success state styling when scan was successful", () => {
-      const lastToken = {
-        type: "ntag215",
-        uid: "abc123def456ab",
-        text: "Super Mario Bros",
-        data: "",
-        scanTime: new Date().toISOString(),
-      };
-
-      render(
-        <LastScannedInfo
-          lastToken={lastToken}
-          scanStatus={ScanResult.Success}
-        />,
-      );
-
-      // Token info should be displayed
-      expect(screen.getByText(/Super Mario Bros/)).toBeInTheDocument();
-      expect(screen.getByText(/abc123def456ab/)).toBeInTheDocument();
-    });
-
-    it("should show error state styling when scan failed", () => {
-      const emptyToken = {
-        type: "",
-        uid: "",
-        text: "",
-        data: "",
-        scanTime: "",
-      };
-
-      render(
-        <LastScannedInfo
-          lastToken={emptyToken}
-          scanStatus={ScanResult.Error}
-        />,
-      );
-
-      // Heading should still be visible
-      expect(screen.getByText("scan.lastScannedHeading")).toBeInTheDocument();
-    });
-  });
-
-  describe("Web Platform", () => {
-    it("should not render scan controls on web platform", () => {
+  describe("Web platform", () => {
+    it("offers no actions where the phone hardware does not exist", () => {
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
 
-      render(
-        <ScanControls
-          scanSession={false}
-          scanStatus={ScanResult.Default}
-          onScanButton={vi.fn()}
-          onCameraScan={vi.fn()}
-        />,
-      );
+      renderActions({
+        layout: {
+          leading: null,
+          alternate: null,
+          canScan: false,
+          showEmptyState: false,
+        },
+      });
 
-      // Neither scan button nor camera button should render on web
       expect(
-        screen.queryByRole("button", { name: /spinner.pressToScan/i }),
+        screen.queryByRole("button", { name: "scan.tapTag" }),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: /scan.cameraMode/i }),
+        screen.queryByRole("button", { name: "scan.scanCode" }),
       ).not.toBeInTheDocument();
     });
   });

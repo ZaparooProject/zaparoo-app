@@ -127,7 +127,7 @@ describe("useNetworkScan", () => {
       );
     });
 
-    it("should set error when not on native platform", async () => {
+    it("should quietly skip scanning when not on native platform", async () => {
       mockIsNativePlatform.mockReturnValue(false);
       const { useNetworkScan: hook } =
         await import("../../../hooks/useNetworkScan");
@@ -137,9 +137,7 @@ describe("useNetworkScan", () => {
         await result.current.startScan();
       });
 
-      expect(result.current.error).toBe(
-        "Network scanning is only available on mobile devices",
-      );
+      expect(result.current.error).toBeNull();
       expect(result.current.isScanning).toBe(false);
       expect(mockWatch).not.toHaveBeenCalled();
     });
@@ -167,21 +165,17 @@ describe("useNetworkScan", () => {
     });
 
     it("should clear error when starting new scan", async () => {
-      mockIsNativePlatform.mockReturnValue(false);
+      mockWatch.mockRejectedValueOnce(new Error("Watch failed"));
       const { useNetworkScan: hook } =
         await import("../../../hooks/useNetworkScan");
       const { result } = renderHook(() => hook());
 
-      // First scan fails (not on native)
       await act(async () => {
         await result.current.startScan();
       });
       expect(result.current.error).not.toBeNull();
 
-      // Now simulate native platform
-      mockIsNativePlatform.mockReturnValue(true);
-
-      // Second scan should clear error
+      // A retry should clear the prior native scan failure.
       await act(async () => {
         await result.current.startScan();
       });

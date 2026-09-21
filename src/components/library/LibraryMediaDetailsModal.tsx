@@ -460,6 +460,9 @@ export function LibraryMediaDetailsModal(props: {
             variant="text"
             className="whitespace-nowrap"
             disabled={!writeAvailable || preparingWrite || launching}
+            disabledAppearance={
+              preparingWrite || launching ? "busy" : "unavailable"
+            }
             onClick={() => void write()}
           />
         </>
@@ -476,6 +479,9 @@ export function LibraryMediaDetailsModal(props: {
           }
           intent="primary"
           disabled={!liveConnected || launching || preparingWrite}
+          disabledAppearance={
+            launching || preparingWrite ? "busy" : "unavailable"
+          }
           onClick={() => void launch()}
         />
       }

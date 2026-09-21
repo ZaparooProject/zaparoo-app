@@ -1,6 +1,15 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileIcon } from "lucide-react";
+import {
+  AppWindowIcon,
+  BookOpenIcon,
+  FilmIcon,
+  Gamepad2Icon,
+  ImageIcon,
+  Music2Icon,
+  PodcastIcon,
+  TvIcon,
+} from "lucide-react";
 import { isTransientApiConnectionError } from "@/lib/coreApi";
 import { requestLibraryImage } from "@/lib/libraryImages";
 import { LIBRARY_QUERY_KEYS, mediaRefKey } from "@/lib/libraryMedia";
@@ -8,6 +17,38 @@ import type { MediaBrowseEntry } from "@/lib/models";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
+
+function MediaPlaceholderIcon({ systemId }: { systemId: string }) {
+  switch (systemId) {
+    case "Movie":
+    case "Video":
+    case "MusicVideo":
+    case "BluRayPlayer":
+    case "DVDPlayer":
+      return <FilmIcon size={24} />;
+    case "TVEpisode":
+    case "TVSeason":
+    case "TVShow":
+      return <TvIcon size={24} />;
+    case "Audio":
+    case "MusicTrack":
+    case "MusicArtist":
+    case "MusicAlbum":
+      return <Music2Icon size={24} />;
+    case "PodcastSeries":
+    case "PodcastEpisode":
+      return <PodcastIcon size={24} />;
+    case "Audiobook":
+      return <BookOpenIcon size={24} />;
+    case "Image":
+      return <ImageIcon size={24} />;
+    case "Application":
+    case "WebBrowser":
+      return <AppWindowIcon size={24} />;
+    default:
+      return <Gamepad2Icon size={24} />;
+  }
+}
 
 export function LibraryArtwork(props: {
   entry: MediaBrowseEntry;
@@ -104,7 +145,7 @@ export function LibraryArtwork(props: {
       className={`${props.className ?? ""} text-foreground-hint bg-foreground/5 flex items-center justify-center`}
       aria-hidden="true"
     >
-      <FileIcon size={24} />
+      <MediaPlaceholderIcon systemId={props.systemId} />
     </span>
   );
 }

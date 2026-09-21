@@ -129,6 +129,7 @@ export function FavoriteButton(props: {
       disabled={
         !feature.available || !connected || !canUpdate || mutation.isPending
       }
+      disabledAppearance={mutation.isPending ? "busy" : "unavailable"}
       onClick={() => mutation.mutate(!favorite)}
       className={props.className ?? (props.iconOnly ? undefined : "w-full")}
     />

@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { GamepadDirectional } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
+import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { logger } from "@/lib/logger";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import {
@@ -14,20 +16,34 @@ import { WriteModal } from "@/components/WriteModal.tsx";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
 import { cancelSession } from "@/lib/nfc";
 import { CoreAPI } from "@/lib/coreApi";
+import { entrySystemId, resolveLibraryLaunchText } from "@/lib/libraryMedia";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
-import type { MediaSlot, PlayingResponse } from "@/lib/models";
+import type {
+  MediaBrowseEntry,
+  MediaSlot,
+  PlayingResponse,
+} from "@/lib/models";
 import { HistoryIcon, ZapLogo } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
-import { ToggleChip } from "@/components/wui/ToggleChip";
+import { Button } from "@/components/wui/Button";
+import { HeaderButton } from "@/components/wui/HeaderButton";
+import { GatedFeature } from "@/components/GatedFeature";
 import { PageFrame } from "@/components/PageFrame";
-import { ConnectionStatus } from "@/components/home/ConnectionStatus";
-import { ScanControls } from "@/components/home/ScanControls";
-import { LastScannedInfo } from "@/components/home/LastScannedInfo";
-import { NowPlayingInfo } from "@/components/home/NowPlayingInfo";
+import { DeviceSheet } from "@/components/home/DeviceSheet";
+import { HomeDevicePill } from "@/components/home/HomeDevicePill";
+import { ScanActions } from "@/components/home/ScanActions";
+import { MediaCoverRow } from "@/components/home/MediaCoverRow";
+import { NowPlayingCard } from "@/components/home/NowPlayingCard";
+import { ReaderStrip } from "@/components/home/ReaderStrip";
 import { HistoryModal } from "@/components/home/HistoryModal";
+import { LibraryMediaDetailsModal } from "@/components/library/LibraryMediaDetailsModal";
 import { StopConfirmModal } from "@/components/home/StopConfirmModal";
 import { RemoteKeyboardModal } from "@/components/RemoteKeyboardModal";
 import { useScanOperations } from "@/hooks/useScanOperations";
+import { useHomeScanLayout } from "@/hooks/useHomeScanLayout";
+import { useNfcEnabled } from "@/hooks/useNfcEnabled";
+import { useFavourites, useRecentlyPlayed } from "@/hooks/useHomeCoverRows";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useConnection } from "@/hooks/useConnection";
@@ -48,8 +64,6 @@ export function Index() {
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t("nav.index"));
   const { announce } = useAnnouncer();
   const launcherAccess = usePreferencesStore((state) => state.launcherAccess);
-  const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
-  const cameraAvailable = usePreferencesStore((state) => state.cameraAvailable);
   const preferRemoteWriter = usePreferencesStore(
     (state) => state.preferRemoteWriter,
   );
@@ -79,6 +93,7 @@ export function Index() {
     useProPurchase();
 
   const connected = useStatusStore((state) => state.connected);
+  const deviceKey = useActiveDeviceKey();
   const playing = useStatusStore((state) => state.playing);
   const backgroundPlaying = useStatusStore((state) => state.backgroundPlaying);
   const primaryPlaylist = useStatusStore((state) => state.playlists.primary);
@@ -86,13 +101,17 @@ export function Index() {
     (state) => state.playlists.background,
   );
   const setPlaylist = useStatusStore((state) => state.setPlaylist);
-  const lastToken = useStatusStore((state) => state.lastToken);
   const setLastToken = useStatusStore((state) => state.setLastToken);
   const { hasData } = useConnection();
 
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [deviceSheetOpen, setDeviceSheetOpen] = useState(false);
+  const [selectedCoverEntry, setSelectedCoverEntry] =
+    useState<MediaBrowseEntry | null>(null);
   const [stopTarget, setStopTarget] = useState<MediaSlot | null>(null);
   const [remoteKeyboardOpen, setRemoteKeyboardOpen] = useState(false);
+  const [replayingLast, setReplayingLast] = useState(false);
+  const replayControllerRef = useRef<AbortController | null>(null);
   const { available: backgroundMediaAvailable } = useCoreFeature(
     "backgroundMediaSlot",
     { requireKnownSupport: true },
@@ -119,6 +138,11 @@ export function Index() {
     setWriteOpen: setWriteIntent,
     nfcWriter,
   });
+  const scanLayout = useHomeScanLayout();
+  const recentlyPlayed = useRecentlyPlayed();
+  const lastPlayed = recentlyPlayed[0] ?? null;
+  const favourites = useFavourites();
+  const nfcEnabled = useNfcEnabled();
 
   const history = useQuery({
     queryKey: ["history"],
@@ -164,6 +188,36 @@ export function Index() {
         showRateLimitedErrorToast(t("scan.stopBackgroundMediaError"));
       },
     );
+  };
+
+  const replayLastPlayed = async () => {
+    if (!connected || !lastPlayed || replayControllerRef.current) return;
+
+    const controller = new AbortController();
+    replayControllerRef.current = controller;
+    setReplayingLast(true);
+    try {
+      const text = await resolveLibraryLaunchText(
+        lastPlayed,
+        entrySystemId(lastPlayed),
+        controller.signal,
+      );
+      if (!text) throw new Error("Launch target could not be resolved");
+      await CoreAPI.run({ text });
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      logger.error("Failed to replay most recent media", error, {
+        category: "api",
+        action: "replayLastPlayed",
+        severity: "error",
+      });
+      showRateLimitedErrorToast(t("scan.playLastPlayedError"));
+    } finally {
+      if (replayControllerRef.current === controller) {
+        replayControllerRef.current = null;
+        setReplayingLast(false);
+      }
+    }
   };
 
   const runPlaylistCommand = (slot: MediaSlot, command: PlaylistCommand) => {
@@ -224,8 +278,14 @@ export function Index() {
         clearTimeout(historyToggleTimerRef.current);
         historyToggleTimerRef.current = null;
       }
+      replayControllerRef.current?.abort();
+      replayControllerRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (!connected) replayControllerRef.current?.abort();
+  }, [connected]);
 
   // Announce page context for screen reader users on page load (once only)
   const hasAnnouncedRef = useRef(false);
@@ -233,16 +293,13 @@ export function Index() {
     if (!Capacitor.isNativePlatform()) return;
     if (hasAnnouncedRef.current) return;
 
-    // Determine what to announce based on available features
+    // Name the reader action shown first on the page.
     let message: string;
-    if (nfcAvailable) {
-      // NFC available - announce scan instruction
-      message = t("spinner.pressToScan");
-    } else if (cameraAvailable) {
-      // No NFC but camera available - announce camera option
-      message = t("scan.cameraAvailable");
+    if (scanLayout.leading === "nfc") {
+      message = t("scan.tapTag");
+    } else if (scanLayout.leading === "camera") {
+      message = t("scan.scanCode");
     } else {
-      // Neither available - announce page name
       message = t("nav.index");
     }
 
@@ -254,64 +311,87 @@ export function Index() {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [announce, t, nfcAvailable, cameraAvailable]);
+  }, [announce, t, scanLayout.leading]);
 
   return (
     <>
-      <PageFrame>
-        <h1 ref={headingRef} className="sr-only">
-          Zaparoo
-        </h1>
-        <div className="flex flex-row justify-between">
-          <div>
-            <ZapLogo />
-          </div>
-          <ToggleChip
-            icon={<HistoryIcon size="32" />}
-            state={historyOpen}
-            setState={(s) => {
-              if (historyToggleTimerRef.current !== null) {
-                clearTimeout(historyToggleTimerRef.current);
-                historyToggleTimerRef.current = null;
-              }
-              if (!historyOpen && proPurchaseModalOpen) {
-                setProPurchaseModalOpen(false);
-                historyToggleTimerRef.current = setTimeout(() => {
+      <PageFrame
+        headerCenter={
+          <>
+            <h1 ref={headingRef} className="sr-only">
+              Zaparoo
+            </h1>
+            <div className="pl-1 md:pl-0">
+              <ZapLogo width={144} />
+            </div>
+          </>
+        }
+        headerRight={
+          <div className="flex items-center">
+            <HomeDevicePill
+              className="max-w-[6.5rem] min-[23rem]:max-w-40"
+              sheetOpen={deviceSheetOpen}
+              onOpen={() => setDeviceSheetOpen(true)}
+            />
+            <HeaderButton
+              icon={<HistoryIcon size="24" />}
+              active={historyOpen}
+              onClick={() => {
+                const nextOpen = !historyOpen;
+                if (historyToggleTimerRef.current !== null) {
+                  clearTimeout(historyToggleTimerRef.current);
                   historyToggleTimerRef.current = null;
-                  setHistoryOpen(s);
-                }, 150);
-              } else {
-                setHistoryOpen(s);
-              }
-            }}
-            disabled={!connected}
-            aria-label={t("scan.historyTitle")}
+                }
+                if (nextOpen && proPurchaseModalOpen) {
+                  setProPurchaseModalOpen(false);
+                  historyToggleTimerRef.current = setTimeout(() => {
+                    historyToggleTimerRef.current = null;
+                    setHistoryOpen(nextOpen);
+                  }, 150);
+                } else {
+                  setHistoryOpen(nextOpen);
+                }
+              }}
+              disabled={!connected}
+              title={t("scan.historyTitle")}
+              aria-label={t("scan.historyTitle")}
+            />
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-2">
+          <ScanActions
+            layout={scanLayout}
+            scanSession={scanSession}
+            scanStatus={scanStatus}
+            onTapScan={handleScanButton}
+            onCameraScan={handleCameraScan}
+            nfcEnabled={nfcEnabled}
+            onOpenNfcSettings={() => void Nfc.openSettings()}
           />
+
+          <GatedFeature featureId="remoteInput">
+            <Button
+              variant="secondary"
+              className="w-full"
+              icon={<GamepadDirectional size={20} />}
+              label={t("scan.remoteKeyboard")}
+              disabled={!connected}
+              onClick={() => setRemoteKeyboardOpen(true)}
+            />
+          </GatedFeature>
         </div>
 
-        <ScanControls
-          scanSession={scanSession}
-          scanStatus={scanStatus}
-          onScanButton={handleScanButton}
-          onCameraScan={handleCameraScan}
-          connected={connected}
-          onRemoteKeyboard={() => setRemoteKeyboardOpen(true)}
-        />
-
-        <div>
-          <ConnectionStatus />
-
-          <LastScannedInfo lastToken={lastToken} scanStatus={scanStatus} />
-
-          <NowPlayingInfo
-            mediaName={playing.mediaName}
-            mediaPath={playing.mediaPath}
-            systemName={playing.systemName}
-            systemId={playing.systemId}
-            onStop={() => setStopTarget("primary")}
-            connected={connected}
+        <div className="mt-5 flex flex-col gap-5">
+          <NowPlayingCard
+            media={playing}
             playlist={primaryPlaylist}
+            connected={connected}
             canPausePlaylist={canPausePlaylist(playing)}
+            lastPlayed={lastPlayed}
+            replayingLast={replayingLast}
+            onReplayLast={() => void replayLastPlayed()}
+            onStop={() => setStopTarget("primary")}
             onPlaylistPrevious={() => runPlaylistCommand("primary", "previous")}
             onPlaylistToggle={() =>
               runPlaylistCommand(
@@ -324,17 +404,14 @@ export function Index() {
 
           {backgroundMediaAvailable &&
             (backgroundPlaying.mediaName !== "" || backgroundPlaylist) && (
-              <NowPlayingInfo
-                mediaName={backgroundPlaying.mediaName}
-                mediaPath={backgroundPlaying.mediaPath}
-                systemName={backgroundPlaying.systemName}
-                systemId={backgroundPlaying.systemId}
-                onStop={() => setStopTarget("background")}
+              <NowPlayingCard
+                media={backgroundPlaying}
+                playlist={backgroundPlaylist}
                 connected={connected}
                 headingLabel={t("scan.backgroundMediaHeading")}
                 stopButtonLabel={t("scan.stopBackgroundMediaButton")}
-                playlist={backgroundPlaylist}
                 canPausePlaylist={canPausePlaylist(backgroundPlaying)}
+                onStop={() => setStopTarget("background")}
                 onPlaylistPrevious={() =>
                   runPlaylistCommand("background", "previous")
                 }
@@ -347,8 +424,35 @@ export function Index() {
                 onPlaylistNext={() => runPlaylistCommand("background", "next")}
               />
             )}
+
+          <MediaCoverRow
+            headingLabel={t("scan.favouritesHeading")}
+            entries={favourites}
+            onSelect={setSelectedCoverEntry}
+          />
+
+          <MediaCoverRow
+            headingLabel={t("scan.recentsHeading")}
+            entries={recentlyPlayed}
+            onSelect={setSelectedCoverEntry}
+          />
+
+          <ReaderStrip connected={connected} />
         </div>
       </PageFrame>
+
+      <LibraryMediaDetailsModal
+        isOpen={selectedCoverEntry !== null}
+        close={() => setSelectedCoverEntry(null)}
+        entry={selectedCoverEntry}
+        systemId={selectedCoverEntry ? entrySystemId(selectedCoverEntry) : ""}
+        deviceKey={deviceKey}
+      />
+
+      <DeviceSheet
+        isOpen={deviceSheetOpen}
+        close={() => setDeviceSheetOpen(false)}
+      />
 
       <HistoryModal
         isOpen={historyOpen}

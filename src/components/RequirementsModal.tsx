@@ -267,6 +267,7 @@ export function RequirementsModal() {
                   variant="outline"
                   onClick={handleLogout}
                   disabled={isLoggingOut}
+                  disabledAppearance="busy"
                 />
               }
               primaryAction={
@@ -274,6 +275,7 @@ export function RequirementsModal() {
                   label={isSaving ? t("loading") : t("requirements.continue")}
                   onClick={handleSave}
                   disabled={!canSave || isSaving}
+                  disabledAppearance={isSaving ? "busy" : "unavailable"}
                   intent="primary"
                 />
               }
@@ -285,6 +287,7 @@ export function RequirementsModal() {
               variant="outline"
               onClick={handleLogout}
               disabled={isLoggingOut}
+              disabledAppearance="busy"
               className="w-full"
             />
           )}
@@ -373,6 +376,7 @@ export function RequirementsModal() {
                   variant="outline"
                   onClick={handleCheckEmailVerified}
                   disabled={emailVerifying}
+                  disabledAppearance="busy"
                   className="w-full"
                 />
                 <button

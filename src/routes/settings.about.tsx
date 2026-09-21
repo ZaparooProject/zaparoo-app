@@ -122,7 +122,8 @@ export function About() {
 
           <Button
             label={t("settings.about.joinPatreon")}
-            variant="outline"
+            className="w-full"
+            intent="pro"
             onClick={() =>
               Browser.open({
                 url: "https://patreon.com/wizzo",

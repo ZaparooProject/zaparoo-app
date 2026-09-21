@@ -1,26 +1,18 @@
 import { useTranslation } from "react-i18next";
-import { Capacitor } from "@capacitor/core";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeftRightIcon, KeyRoundIcon, SearchIcon } from "lucide-react";
+import { useAppUi } from "@/hooks/useAppUi";
+import { useActiveDeviceSummary } from "@/hooks/useDevicePresentation";
 import { useConnection } from "@/hooks/useConnection";
-import { satisfies as versionSatisfies } from "@/lib/coreVersion";
 import {
   activeAddressOf,
   useDeviceRegistry,
-  type DeviceRegistrySnapshot,
 } from "@/lib/devices/deviceRegistry";
 import { useStatusStore } from "@/lib/store";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 import { TextInput } from "./wui/TextInput";
 import { ConnectionStatusDisplay } from "./ConnectionStatusDisplay";
-
-function activeRecordName(state: DeviceRegistrySnapshot): string | undefined {
-  const record = state.activeRecordId
-    ? state.records[state.activeRecordId]
-    : undefined;
-  return record?.name;
-}
 
 interface DeviceConnectionCardProps {
   address: string;
@@ -41,35 +33,17 @@ export function DeviceConnectionCard({
 }: DeviceConnectionCardProps) {
   const { t } = useTranslation();
   const { isConnected, openPairingModal } = useConnection();
+  const appUi = useAppUi();
 
   const savedAddress = useDeviceRegistry(activeAddressOf);
-  const activeName = useDeviceRegistry(activeRecordName);
-  const coreVersion = useStatusStore((state) => state.coreVersion);
-  const corePlatform = useStatusStore((state) => state.corePlatform);
   const coreVersionPending = useStatusStore(
     (state) => state.coreVersionPending,
   );
-  const currentClient = useStatusStore((state) => state.currentClient);
-
-  const versionLabel =
-    coreVersion !== null
-      ? `${/^\d+\.\d+\.\d+/.test(coreVersion) ? "v" : ""}${coreVersion}`
-      : undefined;
-  const deviceDetails = versionLabel
-    ? corePlatform
-      ? `${corePlatform} (${versionLabel})`
-      : versionLabel
-    : undefined;
-  const clientRole =
-    coreVersion !== null && versionSatisfies(coreVersion, "2.16.0")
-      ? currentClient?.role
-      : null;
-  const clientRoleLabel =
-    clientRole === "admin"
-      ? t("connection.clientRoleAdmin")
-      : clientRole === "member"
-        ? t("connection.clientRoleMember")
-        : undefined;
+  const {
+    name: activeName,
+    deviceDetails,
+    clientRoleLabel,
+  } = useActiveDeviceSummary();
   return (
     <section aria-labelledby="device-connection-heading">
       <Card>
@@ -97,7 +71,7 @@ export function DeviceConnectionCard({
             connectionError={connectionError}
             connectedSubtitle={deviceDetails}
             connectedSubtitleLoading={isConnected && coreVersionPending}
-            connectedName={activeName}
+            connectedName={activeName ?? undefined}
             connectedTitleSuffix={clientRoleLabel}
             action={
               <div className="flex items-center gap-1">
@@ -108,7 +82,7 @@ export function DeviceConnectionCard({
                   aria-label={t("pairing.openPairing")}
                 />
                 {/* Network scan button - only on native platforms */}
-                {Capacitor.isNativePlatform() && onScanClick && (
+                {appUi.enabled && onScanClick && (
                   <Button
                     icon={<SearchIcon size="24" />}
                     variant="text"

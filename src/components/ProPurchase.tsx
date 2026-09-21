@@ -280,6 +280,7 @@ const ProPurchaseModal = (props: {
               ) : undefined
             }
             disabled={!props.purchasePackage || isPurchasing}
+            disabledAppearance={isPurchasing ? "busy" : "unavailable"}
             onClick={handlePurchase}
             intent="primary"
             className="w-full"
@@ -310,6 +311,7 @@ const ProPurchaseModal = (props: {
                 variant="text"
                 onClick={openOnlineSettings}
                 disabled={isPurchasing}
+                disabledAppearance="busy"
                 className="w-full"
               />
             </>
@@ -571,6 +573,7 @@ export function PurchaseSupportActions({
           variant={useOutlineButtons ? "outline" : "text"}
           onClick={() => void handleCopyDiagnostics()}
           disabled={isRestoring || isCopyingDiagnostics}
+          disabledAppearance="busy"
           className="w-full"
         />
       )}
@@ -584,6 +587,7 @@ export function PurchaseSupportActions({
           variant={useOutlineButtons ? "outline" : "text"}
           onClick={() => void handleRestore()}
           disabled={isRestoring || isCopyingDiagnostics}
+          disabledAppearance="busy"
           className="w-full"
         />
       )}

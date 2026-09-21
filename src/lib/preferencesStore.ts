@@ -10,6 +10,7 @@ import {
   type AppReviewCadenceState,
 } from "@/lib/appReview";
 import type { SystemNameRegionPreference } from "@/lib/systemNames";
+import type { ScanMode } from "@/lib/scanMode";
 import { logger } from "./logger";
 import {
   isAppearance,
@@ -254,6 +255,12 @@ export interface PreferencesState {
   // Null means appearance has not been migrated/hydrated yet.
   appearance: Appearance | null;
 
+  /**
+   * Which scan mode last produced a token, so the home page can lead with it.
+   * A memory of behaviour, not a setting - it never appears in Settings.
+   */
+  lastScanMode: ScanMode | null;
+
   // Display settings
   showFilenames: boolean;
   systemNameRegion: SystemNameRegionPreference;
@@ -326,6 +333,7 @@ export interface PreferencesActions {
   markWhatsNewSeen: (announcementId: string, runtimeKey: string) => void;
   setLogLevelFilters: (filters: PreferencesState["logLevelFilters"]) => void;
   setAppearance: (value: Appearance) => void;
+  setLastScanMode: (value: ScanMode) => void;
   setShowFilenames: (value: boolean) => void;
   setSystemNameRegion: (value: SystemNameRegionPreference) => void;
   setAppBadgeEnabled: (value: boolean) => void;
@@ -382,6 +390,7 @@ const DEFAULT_PREFERENCES: Omit<
     error: true,
   },
   appearance: null,
+  lastScanMode: null,
   showFilenames: false,
   systemNameRegion: "auto",
   appBadgeEnabled: true,
@@ -409,6 +418,7 @@ function persistedPreferences(state: PreferencesStore) {
     seenWhatsNewAnnouncementIds: state.seenWhatsNewAnnouncementIds,
     logLevelFilters: state.logLevelFilters,
     appearance: state.appearance,
+    lastScanMode: state.lastScanMode,
     showFilenames: state.showFilenames,
     systemNameRegion: state.systemNameRegion,
     appBadgeEnabled: state.appBadgeEnabled,
@@ -559,6 +569,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
           logger.warn("Failed to persist appearance preference", error);
         });
       },
+      setLastScanMode: (value) => set({ lastScanMode: value }),
       setShowFilenames: (value) => set({ showFilenames: value }),
       setSystemNameRegion: (value) => set({ systemNameRegion: value }),
       setAppBadgeEnabled: (value) => set({ appBadgeEnabled: value }),

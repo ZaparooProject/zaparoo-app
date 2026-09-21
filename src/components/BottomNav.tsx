@@ -56,11 +56,11 @@ function NavButton(props: {
         }}
         aria-current={props.isActive ? "page" : undefined}
         aria-label={props.ariaLabel}
-        className="text-muted-foreground focus-visible:ring-ring aria-[current=page]:text-foreground aria-[current=page]:bg-surface-inset aria-[current=page]:border-border flex min-h-12 w-full min-w-0 items-center justify-center rounded-md border border-transparent px-1 py-2 transition-colors duration-100 focus-visible:ring-2 focus-visible:outline-none aria-[current=page]:shadow-inner"
+        className="bottom-nav-tab flex min-h-12 w-full min-w-0 items-center justify-center rounded-md px-[4px] py-[4px] md:px-2 md:py-2"
       >
-        <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-[2px] md:flex-row md:items-center md:gap-2">
           <div className="relative mx-auto flex w-fit justify-center">
-            {props.icon}
+            <span className="bottom-nav-icon">{props.icon}</span>
             <NotificationBadge
               count={props.notificationCount ?? 0}
               className="-top-2 -right-2"
@@ -68,7 +68,7 @@ function NavButton(props: {
           </div>
           {/* Hyphenate labels too long for the tab, and only break inside a
               word when hyphenation cannot, such as capitalized English. */}
-          <div className="text-center text-xs leading-4 font-semibold tracking-wide wrap-anywhere hyphens-auto uppercase">
+          <div className="text-center text-xs leading-[0.875rem] font-semibold tracking-[0.5px] wrap-anywhere hyphens-auto uppercase md:text-sm md:leading-4">
             {props.text}
           </div>
         </div>
@@ -139,68 +139,69 @@ export function BottomNav() {
   return (
     <nav
       aria-label={t("nav.mainNavigation")}
-      className="border-t-border bg-surface-raised [height:calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset))] border-t"
+      className="bottom-nav-shell [height:calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset))]"
       style={
         {
           "--bottom-nav-safe-inset": safeInsets.bottom,
-          paddingBottom: safeInsets.bottom,
         } as CSSProperties
       }
     >
-      <ResponsiveContainer maxWidth="nav" className="h-full">
-        <div
-          className="mx-auto grid h-full max-w-lg grid-cols-4 items-center gap-1 px-2"
-          style={{
-            paddingRight: `calc(0.5rem + ${safeInsets.right})`,
-            paddingLeft: `calc(0.5rem + ${safeInsets.left})`,
-          }}
-        >
-          <NavButton
-            text={t("nav.index")}
-            icon={<ZapIcon size="24" />}
-            path={lastHref.zap}
-            rootPath="/"
-            isActive={isHome}
-            isAtRoot={isAtRoot("/")}
-            onPopToRoot={() => popNavigationToRoot("zap")}
-            onScrollToTop={scrollActivePageToTop}
-          />
-          <NavButton
-            text={t("nav.library")}
-            icon={<LibraryBigIcon size="24" />}
-            path={lastHref.library}
-            rootPath="/library"
-            isActive={isLibrary}
-            isAtRoot={isAtRoot("/library")}
-            onPopToRoot={() => popNavigationToRoot("library")}
-            onScrollToTop={scrollActivePageToTop}
-          />
-          <NavButton
-            text={t("nav.create")}
-            icon={<SquarePenIcon size="24" />}
-            path={lastHref.create}
-            rootPath="/create"
-            isActive={isCreate}
-            isAtRoot={isAtRoot("/create")}
-            onPopToRoot={() => popNavigationToRoot("create")}
-            onScrollToTop={scrollActivePageToTop}
-            data-tour="nav-create"
-          />
-          <NavButton
-            text={t("nav.settings")}
-            icon={<SettingsIcon size="24" />}
-            path={lastHref.settings}
-            rootPath="/settings"
-            isActive={isSettings}
-            isAtRoot={isAtRoot("/settings")}
-            onPopToRoot={() => popNavigationToRoot("settings")}
-            onScrollToTop={scrollActivePageToTop}
-            notificationCount={settingsNotificationCount}
-            ariaLabel={settingsLabel}
-            data-tour="nav-settings"
-          />
-        </div>
-      </ResponsiveContainer>
+      <div className="bottom-nav-surface">
+        <ResponsiveContainer maxWidth="nav" className="h-full">
+          <div
+            className="mx-auto grid h-full max-w-lg grid-cols-4 items-center gap-[4px] px-[8px]"
+            style={{
+              paddingRight: `calc(8px + ${safeInsets.right})`,
+              paddingLeft: `calc(8px + ${safeInsets.left})`,
+            }}
+          >
+            <NavButton
+              text={t("nav.index")}
+              icon={<ZapIcon size="24" />}
+              path={lastHref.zap}
+              rootPath="/"
+              isActive={isHome}
+              isAtRoot={isAtRoot("/")}
+              onPopToRoot={() => popNavigationToRoot("zap")}
+              onScrollToTop={scrollActivePageToTop}
+            />
+            <NavButton
+              text={t("nav.library")}
+              icon={<LibraryBigIcon size="24" />}
+              path={lastHref.library}
+              rootPath="/library"
+              isActive={isLibrary}
+              isAtRoot={isAtRoot("/library")}
+              onPopToRoot={() => popNavigationToRoot("library")}
+              onScrollToTop={scrollActivePageToTop}
+            />
+            <NavButton
+              text={t("nav.create")}
+              icon={<SquarePenIcon size="24" />}
+              path={lastHref.create}
+              rootPath="/create"
+              isActive={isCreate}
+              isAtRoot={isAtRoot("/create")}
+              onPopToRoot={() => popNavigationToRoot("create")}
+              onScrollToTop={scrollActivePageToTop}
+              data-tour="nav-create"
+            />
+            <NavButton
+              text={t("nav.settings")}
+              icon={<SettingsIcon size="24" />}
+              path={lastHref.settings}
+              rootPath="/settings"
+              isActive={isSettings}
+              isAtRoot={isAtRoot("/settings")}
+              onPopToRoot={() => popNavigationToRoot("settings")}
+              onScrollToTop={scrollActivePageToTop}
+              notificationCount={settingsNotificationCount}
+              ariaLabel={settingsLabel}
+              data-tour="nav-settings"
+            />
+          </div>
+        </ResponsiveContainer>
+      </div>
     </nav>
   );
 }

@@ -192,6 +192,7 @@ export function LibraryGameSearch({
           icon={<SearchIcon size="20" />}
           onClick={search}
           disabled={!canSubmitSearch || isSearching}
+          disabledAppearance={isSearching ? "busy" : "unavailable"}
           className="w-full"
         />
       </div>

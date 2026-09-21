@@ -98,6 +98,35 @@ describe("LibraryArtwork", () => {
     expect(requestLibraryImage).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    ["SNES", "lucide-gamepad-2"],
+    ["Movie", "lucide-film"],
+    ["TVEpisode", "lucide-tv"],
+    ["MusicTrack", "lucide-music-2"],
+  ])(
+    "should show a media-specific placeholder for %s",
+    (systemId, iconClass) => {
+      const { container } = render(
+        <LibraryArtwork
+          entry={{
+            name: "Missing artwork",
+            path: "/media/missing",
+            type: "media",
+            systemId,
+            hasCover: false,
+          }}
+          systemId={systemId}
+          deviceKey="device-a"
+          maxSize={320}
+          priority="thumbnail"
+        />,
+      );
+
+      expect(container.querySelector(`.${iconClass}`)).toBeInTheDocument();
+      expect(requestLibraryImage).not.toHaveBeenCalled();
+    },
+  );
+
   it("should retry one transient connection failure", async () => {
     vi.mocked(requestLibraryImage)
       .mockRejectedValueOnce(new Error("Request timeout"))

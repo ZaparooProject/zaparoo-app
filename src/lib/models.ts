@@ -17,6 +17,8 @@ export enum Method {
   MediaActive = "media.active",
   MediaActiveUpdate = "media.active.update",
   MediaControl = "media.control",
+  MediaHistory = "media.history",
+  MediaLookup = "media.lookup",
   MediaTags = "media.tags",
   MediaTagsUpdate = "media.tags.update",
   Systems = "systems",
@@ -561,6 +563,9 @@ export interface IndexResponse {
 
 export type MediaSlot = "primary" | "background";
 
+/** Core reports position only for launchers that can observe it. */
+export type MediaPlaybackState = "playing" | "paused" | "stopped";
+
 export interface PlayingResponse {
   systemId: string;
   systemName: string;
@@ -571,6 +576,12 @@ export interface PlayingResponse {
   launcherId?: string;
   launcherControls?: string[];
   slot?: MediaSlot;
+  /** Library row for this media, when Core could resolve one (Core 2.12.0). */
+  mediaId?: number;
+  relativePath?: string;
+  positionMs?: number;
+  durationMs?: number;
+  playbackState?: MediaPlaybackState;
 }
 
 export enum ScanResult {
@@ -617,10 +628,70 @@ export interface ReaderInfo {
   info: string;
   capabilities: string[];
   connected: boolean;
+  /** Stable identity across reconnects (Core 2.10.0); falls back to `id`. */
+  readerId?: string;
+  driver?: string;
+  /** Untyped in Core, so kept as a string and narrowed at the call site. */
+  scanMode?: string;
 }
 
 export interface ReadersResponse {
   readers: ReaderInfo[];
+  /** Which reader is holding the running media (Core 2.17.0). */
+  holdOwnerReaderId?: string;
+  holdScanMode?: string;
+}
+
+/** Play history, distinct from `tokens.history`, which is scan events. */
+export interface MediaHistoryParams {
+  limit?: number;
+  cursor?: string;
+  systems?: string[];
+  fuzzySystem?: boolean;
+  /** One row per media rather than per session (Core 2.17.0). */
+  distinctMedia?: boolean;
+}
+
+export interface MediaHistoryEntry {
+  mediaId?: number;
+  systemId: string;
+  systemName: string;
+  mediaName: string;
+  mediaPath: string;
+  relativePath?: string;
+  /** Absent before Core 2.17.0, where unknown means "try the image anyway". */
+  hasCover?: boolean;
+  launcherId?: string;
+  startedAt: string;
+  endedAt?: string;
+  playTime: number;
+  tags?: TagInfo[];
+}
+
+export interface MediaHistoryResponse {
+  entries: MediaHistoryEntry[];
+  pagination?: Pagination;
+}
+
+export interface MediaLookupParams {
+  system: string;
+  name: string;
+  fuzzySystem?: boolean;
+}
+
+export interface MediaLookupMatch {
+  mediaId?: number;
+  system: string;
+  name: string;
+  path: string;
+  relativePath?: string;
+  zapScript?: string;
+  tags?: TagInfo[];
+  confidence: number;
+}
+
+export interface MediaLookupResponse {
+  match: MediaLookupMatch | null;
 }
 
 export interface MediaActiveUpdateRequest {
@@ -629,8 +700,39 @@ export interface MediaActiveUpdateRequest {
   mediaName: string;
 }
 
+/**
+ * The control actions Core defines (pkg/platforms/platforms.go). Which ones a
+ * given media accepts comes from its `launcherControls`, not from this list.
+ */
+export const MEDIA_CONTROL_ACTIONS = [
+  "save_state",
+  "load_state",
+  "save_ram",
+  "toggle_menu",
+  "save",
+  "load",
+  "reset",
+  "toggle_pause",
+  "pause",
+  "resume",
+  "stop",
+  "fast_forward",
+  "rewind",
+  "next",
+  "previous",
+  "toggle_tray",
+] as const;
+
+export type MediaControlAction = (typeof MEDIA_CONTROL_ACTIONS)[number];
+
+export function asMediaControlAction(value: string): MediaControlAction | null {
+  return (MEDIA_CONTROL_ACTIONS as readonly string[]).includes(value)
+    ? (value as MediaControlAction)
+    : null;
+}
+
 export interface MediaControlRequest {
-  action: "stop";
+  action: MediaControlAction;
   slot?: MediaSlot;
   args?: Record<string, string>;
 }

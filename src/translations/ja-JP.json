@@ -33,6 +33,7 @@
       "back": "戻る",
       "cancel": "キャンセル",
       "close": "閉じる",
+      "moreActions": "その他の操作",
       "create": "作成",
       "assign": "割り当てる",
       "index": "Zap",
@@ -179,8 +180,6 @@
     },
     "spinner": {
       "deleting": "削除中...",
-      "notSupportedLabel": "このデバイスはNFCに対応していません",
-      "notSupportedSub": "このアプリでは、NFCの読み取りや書き込み機能を使用できません",
       "nfcDisabledLabel": "NFCアクセスが無効になっています",
       "nfcDisabledSub": "NFCの読み取りおよび書き込み機能を使用するには、デバイスの設定でNFCアクセスを有効にしてください",
       "openNfcSettings": "NFC設定を開く",
@@ -240,7 +239,6 @@
     },
     "scan": {
       "cameraMode": "カメラ",
-      "cameraAvailable": "カメラでスキャン",
       "nfcMode": "NFC",
       "scanError": "タグのスキャンエラー",
       "scanSuccess": "タグのスキャンに成功しました",
@@ -249,10 +247,7 @@
       "reconnecting": "再接続中...",
       "connectionError": "接続エラー",
       "retry": "再試行",
-      "continuous": "連続スキャン",
-      "launchOnScan": "スキャン時に起動",
       "connectedHeading": "接続済み",
-      "connectedSub": "アドレス: {{ip}}",
       "nowPlayingHeading": "再生中",
       "nowPlayingName": "名前: {{game}}",
       "nowPlayingSystem": "システム: {{system}}",
@@ -268,12 +263,12 @@
       "playlistPlay": "プレイリストを再生",
       "playlistNext": "次のアイテム",
       "playlistControlError": "プレイリストを操作できませんでした",
-      "lastScannedHeading": "最後にスキャン",
       "lastScannedTime": "時刻: {{time}}",
       "lastScannedUid": "ID: {{uid}}",
       "lastScannedText": "値: {{text}}",
-      "historyTitle": "スキャン履歴",
+      "historyTitle": "履歴",
       "historyReplay": "スキャンを再実行",
+      "historyUnknown": "不明なスキャン",
       "historyReplayError": "スキャンを再実行できませんでした",
       "historyFailed": "失敗",
       "purchaseProTitle": "Zaparoo Pro",
@@ -715,6 +710,11 @@
       "logout": "サインアウト"
     },
     "settings": {
+      "groups": {
+        "device": "デバイス",
+        "app": "アプリ",
+        "support": "サポート"
+      },
       "title": "設定",
       "moreSettings": "その他の設定",
       "device": "デバイスアドレス",
@@ -738,7 +738,7 @@
       "updateDb.status.setupMissing": "メディアデータベースの準備ができていません。データベースを更新して再構築してください。",
       "updateDb.startError": "メディアデータベースの更新を開始できませんでした",
       "updateDb.blockedByScrape": "スクレイピングを実行中です。完了するまでデータベースを更新できません。",
-      "updateDb.selectSystemsTitle": "更新するシステムを選択",
+      "updateDb.selectSystemsTitle": "更新するシステム",
       "updateDb.allSystems": "すべてのシステム",
       "updateDb.progressLabel": "データベースの更新状況",
       "updateDb.cleanOrphans": "存在しないメディアを整理",
@@ -1105,6 +1105,10 @@
       }
     },
     "systemSelector": {
+      "allCategoriesLabel": "すべてのカテゴリ",
+      "selectionCount": "{{count}}件選択中",
+      "clear": "クリア",
+      "done": "完了",
       "title": "システムを選択",
       "searchPlaceholder": "システムを検索...",
       "searchSystems": "システムを検索",

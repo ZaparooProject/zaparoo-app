@@ -215,6 +215,7 @@ export function DeviceDetail() {
               label={t("settings.deviceDetail.forgetCancel")}
               onClick={() => setConfirmOpen(false)}
               disabled={forgetting}
+              disabledAppearance="busy"
               className="flex-1"
             />
             <Button
@@ -223,6 +224,7 @@ export function DeviceDetail() {
               label={t("settings.deviceDetail.forgetConfirm")}
               onClick={() => void handleConfirmForget()}
               disabled={forgetting}
+              disabledAppearance="busy"
               className={
                 forgetting ? "flex-1" : "border-error text-error flex-1"
               }

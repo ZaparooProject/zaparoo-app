@@ -40,6 +40,7 @@ export function Help() {
       <div className="flex flex-col gap-4">
         <Button
           label={t("settings.help.main")}
+          className="w-full"
           variant="outline"
           onClick={() =>
             Browser.open({
@@ -53,6 +54,7 @@ export function Help() {
           </h2>
           <Button
             label={t("settings.help.taptoWiki")}
+            className="w-full"
             variant="outline"
             onClick={() =>
               Browser.open({
@@ -62,6 +64,7 @@ export function Help() {
           />
           <Button
             label={t("settings.help.gettingStarted")}
+            className="w-full"
             variant="outline"
             onClick={() =>
               Browser.open({
@@ -71,6 +74,7 @@ export function Help() {
           />
           <Button
             label={t("settings.help.commandReference")}
+            className="w-full"
             variant="outline"
             onClick={() =>
               Browser.open({
@@ -86,6 +90,7 @@ export function Help() {
           </h2>
           <Button
             label={t("settings.help.discord")}
+            className="w-full"
             variant="outline"
             onClick={() =>
               Browser.open({
@@ -95,6 +100,7 @@ export function Help() {
           />
           <Button
             label={t("settings.help.reddit")}
+            className="w-full"
             variant="outline"
             onClick={() =>
               Browser.open({
@@ -110,6 +116,7 @@ export function Help() {
           </h2>
           <Button
             label={t("settings.help.reportIssue")}
+            className="w-full"
             variant="outline"
             onClick={() =>
               Browser.open({

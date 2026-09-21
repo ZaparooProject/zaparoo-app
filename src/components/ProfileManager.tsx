@@ -486,6 +486,7 @@ export function ProfileManager(props: {
                     disabled={
                       saveMutation.isPending || deleteMutation.isPending
                     }
+                    disabledAppearance="busy"
                   />
                 ) : undefined
               }
@@ -495,6 +496,9 @@ export function ProfileManager(props: {
                   intent="primary"
                   onClick={() => editor && saveMutation.mutate(editor)}
                   disabled={validationError !== null || saveMutation.isPending}
+                  disabledAppearance={
+                    saveMutation.isPending ? "busy" : "unavailable"
+                  }
                 />
               }
             />
@@ -752,6 +756,7 @@ export function ProfileManager(props: {
                 deleteTarget && deleteMutation.mutate(deleteTarget.profileId)
               }
               disabled={deleteMutation.isPending}
+              disabledAppearance="busy"
             />
           </div>
         }
@@ -787,6 +792,7 @@ export function ProfileManager(props: {
                 resetCardMutation.mutate(resetCardTarget.profileId)
               }
               disabled={resetCardMutation.isPending}
+              disabledAppearance="busy"
             />
           </div>
         }
@@ -811,6 +817,9 @@ export function ProfileManager(props: {
             className="w-full"
             onClick={() => switchMutation.mutate()}
             disabled={!canSubmitSwitch || switchMutation.isPending}
+            disabledAppearance={
+              switchMutation.isPending ? "busy" : "unavailable"
+            }
           />
         }
       >

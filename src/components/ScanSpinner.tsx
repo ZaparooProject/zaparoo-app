@@ -3,9 +3,9 @@ import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
+import { useAppUi } from "@/hooks/useAppUi";
 import { ScanResult } from "@/lib/models";
 import { DownIcon, SettingsIcon, WarningIcon } from "@/lib/images";
-import { usePreferencesStore } from "@/lib/preferencesStore";
 import { Card } from "./wui/Card";
 import { Button } from "./wui/Button";
 
@@ -18,9 +18,8 @@ export function ScanSpinner(props: {
   status: ScanResult;
   spinning?: boolean;
   write?: boolean;
-  onScan?: () => void;
 }) {
-  const nfcSupported = usePreferencesStore((state) => state.nfcAvailable);
+  const appUi = useAppUi();
   const [nfcEnabled, setNfcEnabled] = useState(true);
   // The idle "press to scan" pulse runs briefly after landing or after a scan
   // ends, then holds still: a looping animation keeps the GPU drawing frames
@@ -53,7 +52,7 @@ export function ScanSpinner(props: {
   }, [props.spinning, idlePulseActive]);
 
   // NFC not supported - return null to let parent handle graceful degradation
-  if (!nfcSupported && Capacitor.isNativePlatform()) {
+  if (!appUi.nfc && appUi.enabled) {
     return null;
   }
 
@@ -103,7 +102,7 @@ export function ScanSpinner(props: {
     <div>
       <p className="text-3xl">
         {props.write
-          ? Capacitor.isNativePlatform()
+          ? appUi.enabled
             ? t("spinner.holdTag")
             : t("spinner.holdTagReader")
           : props.spinning
@@ -146,19 +145,5 @@ export function ScanSpinner(props: {
     </div>
   );
 
-  // The idle state wraps the spinner in an inline-block button. Top alignment
-  // keeps it off the text baseline so it is the same height as the scanning
-  // state and switching between them does not shift the page.
-  return props.onScan && !props.spinning ? (
-    <button
-      type="button"
-      onClick={props.onScan}
-      aria-label={t("spinner.pressToScan")}
-      className="focus-visible:ring-offset-background focus-visible:ring-ring inline-block cursor-pointer rounded-full align-top focus-visible:ring-2 focus-visible:ring-offset-4 focus-visible:outline-none"
-    >
-      {spinner}
-    </button>
-  ) : (
-    spinner
-  );
+  return spinner;
 }
