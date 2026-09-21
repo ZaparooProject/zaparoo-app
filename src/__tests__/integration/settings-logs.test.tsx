@@ -298,7 +298,8 @@ describe("Settings Logs Integration", () => {
       expect(screen.getByText(/3 entries/)).toBeInTheDocument();
     });
 
-    it("should show copy button when data is available", () => {
+    it("should show copy action in the header overflow when data is available", async () => {
+      const user = userEvent.setup();
       mockState.queryData = {
         filename: "test.log",
         content: createMockLogContent([
@@ -308,13 +309,17 @@ describe("Settings Logs Integration", () => {
       };
 
       render(<Logs />);
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
 
       expect(
         screen.getByRole("button", { name: /settings.logs.copy/i }),
       ).toBeInTheDocument();
     });
 
-    it("should show download button on web platform", () => {
+    it("should show download action in the header overflow on web", async () => {
+      const user = userEvent.setup();
       mockState.queryData = {
         filename: "test.log",
         content: createMockLogContent([
@@ -324,6 +329,9 @@ describe("Settings Logs Integration", () => {
       };
 
       render(<Logs />);
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
 
       expect(
         screen.getByRole("button", { name: /settings.logs.download/i }),
@@ -524,7 +532,8 @@ describe("Settings Logs Integration", () => {
   });
 
   describe("Copy Functionality", () => {
-    it("should render copy button when data is available", () => {
+    it("should render copy action when data is available", async () => {
+      const user = userEvent.setup();
       const logContent = [
         {
           level: "info",
@@ -539,8 +548,10 @@ describe("Settings Logs Integration", () => {
       };
 
       render(<Logs />);
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
 
-      // Verify copy button is present and clickable
       const copyButton = screen.getByRole("button", {
         name: /settings.logs.copy/i,
       });
@@ -747,7 +758,8 @@ describe("Settings Logs Integration", () => {
       ).toBeInTheDocument();
     });
 
-    it("should use upload instead of native sharing", () => {
+    it("should use upload instead of native sharing", async () => {
+      const user = userEvent.setup();
       mockCapacitorState.isNative = true;
       mockState.queryData = {
         filename: "test.log",
@@ -762,6 +774,9 @@ describe("Settings Logs Integration", () => {
       expect(
         screen.getByRole("button", { name: /settings.logs.upload/i }),
       ).toBeInTheDocument();
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
       expect(
         screen.queryByRole("button", { name: /settings.logs.download/i }),
       ).not.toBeInTheDocument();
@@ -784,7 +799,9 @@ describe("Settings Logs Integration", () => {
       };
 
       render(<Logs />);
-
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
       await user.click(
         screen.getByRole("button", { name: /settings.logs.download/i }),
       );
@@ -826,6 +843,9 @@ describe("Settings Logs Integration", () => {
       );
 
       render(<Logs />);
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
 
       const downloadButton = screen.getByRole("button", {
         name: /settings.logs.download/i,
@@ -858,6 +878,9 @@ describe("Settings Logs Integration", () => {
       };
 
       render(<Logs />);
+      await user.click(
+        screen.getByRole("button", { name: /nav.moreActions/i }),
+      );
 
       const copyButton = screen.getByRole("button", {
         name: /settings.logs.copy/i,

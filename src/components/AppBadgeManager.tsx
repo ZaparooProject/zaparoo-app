@@ -29,6 +29,7 @@ export function AppBadgeManager() {
               className="flex-1"
               onClick={declinePermissionRationale}
               disabled={isRequestingPermission}
+              disabledAppearance="busy"
             />
             <Button
               label={
@@ -40,6 +41,7 @@ export function AppBadgeManager() {
               className="flex-1"
               onClick={() => void requestPermission()}
               disabled={isRequestingPermission}
+              disabledAppearance="busy"
             />
           </div>
         }

@@ -199,6 +199,9 @@ export function PairingModal({
             !address ||
             !recordId
           }
+          disabledAppearance={
+            isPairing || retryAt !== null ? "busy" : "unavailable"
+          }
           onClick={() => void handlePair()}
           intent="primary"
           className="w-full"

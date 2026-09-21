@@ -39,7 +39,12 @@ describe("HistoryModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(CoreAPI, "run").mockResolvedValue(undefined);
-    useStatusStore.setState({ connected: true });
+    vi.spyOn(CoreAPI, "mediaHistory").mockResolvedValue({ entries: [] });
+    useStatusStore.setState({
+      connected: true,
+      coreVersion: "2.17.0",
+      coreVersionPending: false,
+    });
   });
 
   describe("rendering", () => {
@@ -75,6 +80,66 @@ describe("HistoryModal", () => {
       // Assert
       expect(onClose).toHaveBeenCalled();
     });
+
+    it("should expose semantic tabs with matching panels", async () => {
+      const user = userEvent.setup();
+      render(<HistoryModal {...defaultProps} historyData={{ entries: [] }} />);
+
+      const scansTab = screen.getByRole("tab", {
+        name: "scan.historyTabScans",
+      });
+      const playedTab = screen.getByRole("tab", {
+        name: "scan.historyTabPlayed",
+      });
+      expect(scansTab).toHaveAttribute("aria-selected", "true");
+
+      await user.click(playedTab);
+
+      expect(playedTab).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByRole("tabpanel")).toHaveAttribute(
+        "aria-labelledby",
+        "history-played",
+      );
+    });
+
+    it("should use the same ghost Play action for played media", async () => {
+      const user = userEvent.setup();
+      vi.mocked(CoreAPI.mediaHistory).mockResolvedValue({
+        entries: [
+          {
+            systemId: "SNES",
+            systemName: "Super Nintendo",
+            mediaName: "Super Mario World",
+            mediaPath: "/games/mario.sfc",
+            startedAt: "2026-09-21T10:30:00.000Z",
+            playTime: 120,
+          },
+          {
+            systemId: "SNES",
+            systemName: "Super Nintendo",
+            mediaName: "Super Mario World",
+            mediaPath: "/games/mario.sfc",
+            startedAt: "2026-09-20T08:00:00.000Z",
+            playTime: 90,
+          },
+        ],
+      });
+      render(<HistoryModal {...defaultProps} historyData={{ entries: [] }} />);
+
+      await user.click(
+        screen.getByRole("tab", { name: "scan.historyTabPlayed" }),
+      );
+
+      const playButton = await screen.findByRole("button", {
+        name: "scan.coverRowLaunch",
+      });
+      expect(playButton).toHaveAttribute("data-variant", "ghost");
+      expect(screen.getAllByText("Super Mario World")).toHaveLength(1);
+      expect(CoreAPI.mediaHistory).toHaveBeenCalledWith(
+        { limit: 50, distinctMedia: true },
+        expect.any(AbortSignal),
+      );
+    });
   });
 
   describe("empty state", () => {
@@ -106,43 +171,36 @@ describe("HistoryModal", () => {
 
   describe("history entries", () => {
     it("should display history entry with time", () => {
-      // Arrange
       const time = new Date("2024-01-15T10:30:00").toISOString();
       const historyData = {
         entries: [createHistoryEntry({ time })],
       };
 
-      // Act
       render(<HistoryModal {...defaultProps} historyData={historyData} />);
 
-      // Assert - Time label should be present
-      expect(screen.getByText(/scan\.lastScannedTime/)).toBeInTheDocument();
+      expect(
+        screen.getByText(new Date(time).toLocaleString()),
+      ).toBeInTheDocument();
     });
 
-    it("should display history entry with UID", () => {
-      // Arrange
+    it("should use UID as the primary value when text is absent", () => {
       const historyData = {
-        entries: [createHistoryEntry({ uid: "04abc123def456" })],
+        entries: [createHistoryEntry({ uid: "04abc123def456", text: "" })],
       };
 
-      // Act
       render(<HistoryModal {...defaultProps} historyData={historyData} />);
 
-      // Assert
-      expect(screen.getByText(/scan\.lastScannedUid/)).toBeInTheDocument();
+      expect(screen.getByText("04abc123def456")).toBeInTheDocument();
     });
 
-    it("should display history entry with text", () => {
-      // Arrange
+    it("should use scan text as the primary value", () => {
       const historyData = {
         entries: [createHistoryEntry({ text: "game:mario" })],
       };
 
-      // Act
       render(<HistoryModal {...defaultProps} historyData={historyData} />);
 
-      // Assert
-      expect(screen.getByText(/scan\.lastScannedText/)).toBeInTheDocument();
+      expect(screen.getByText("game:mario")).toBeInTheDocument();
     });
 
     it("should identify failed entries without relying on color", () => {
@@ -169,9 +227,9 @@ describe("HistoryModal", () => {
       // Act
       render(<HistoryModal {...defaultProps} historyData={historyData} />);
 
-      // Assert - Should have 3 time labels (one per entry)
-      const timeLabels = screen.getAllByText(/scan\.lastScannedTime/);
-      expect(timeLabels).toHaveLength(3);
+      expect(screen.getByText("text1")).toBeInTheDocument();
+      expect(screen.getByText("text2")).toBeInTheDocument();
+      expect(screen.getByText("text3")).toBeInTheDocument();
     });
   });
 
@@ -192,9 +250,11 @@ describe("HistoryModal", () => {
       render(<HistoryModal {...defaultProps} historyData={historyData} />);
 
       // Act
-      await user.click(
-        screen.getByRole("button", { name: "scan.historyReplay" }),
-      );
+      const replayButton = screen.getByRole("button", {
+        name: "scan.historyReplay",
+      });
+      expect(replayButton).toHaveAttribute("data-variant", "ghost");
+      await user.click(replayButton);
 
       // Assert
       expect(CoreAPI.run).toHaveBeenCalledWith({
@@ -236,32 +296,25 @@ describe("HistoryModal", () => {
   });
 
   describe("empty values handling", () => {
-    it("should show dash for time when uid and text are empty", () => {
-      // Arrange
+    it("should show an explicit fallback when scan data is empty", () => {
       const historyData = {
-        entries: [createHistoryEntry({ uid: "", text: "" })],
+        entries: [createHistoryEntry({ uid: "", text: "", data: "" })],
       };
 
-      // Act
       render(<HistoryModal {...defaultProps} historyData={historyData} />);
 
-      // Assert - The time shows "-" when uid and text are empty
-      const timeElement = screen.getByText(/scan\.lastScannedTime/);
-      // Translation mock returns key with interpolation, time should be "-"
-      expect(timeElement).toBeInTheDocument();
+      expect(screen.getByText("scan.historyUnknown")).toBeInTheDocument();
     });
 
-    it("should show dash for UID when UID is empty", () => {
-      // Arrange
+    it("should omit ID metadata when UID is empty", () => {
       const historyData = {
         entries: [createHistoryEntry({ uid: "", text: "some-text" })],
       };
 
-      // Act
       render(<HistoryModal {...defaultProps} historyData={historyData} />);
 
-      // Assert - UID label should be present but value is "-"
-      expect(screen.getByText(/scan\.lastScannedUid/)).toBeInTheDocument();
+      expect(screen.getByText("some-text")).toBeInTheDocument();
+      expect(screen.queryByText("scan.lastScannedUid")).not.toBeInTheDocument();
     });
 
     it("should show dash for UID when UID is __api__", () => {
@@ -277,17 +330,14 @@ describe("HistoryModal", () => {
       expect(screen.queryByText("__api__")).not.toBeInTheDocument();
     });
 
-    it("should show dash for text when text is empty", () => {
-      // Arrange
+    it("should fall back to UID when text is empty", () => {
       const historyData = {
         entries: [createHistoryEntry({ uid: "some-uid", text: "" })],
       };
 
-      // Act
       render(<HistoryModal {...defaultProps} historyData={historyData} />);
 
-      // Assert - Text label should be present but value is "-"
-      expect(screen.getByText(/scan\.lastScannedText/)).toBeInTheDocument();
+      expect(screen.getByText("some-uid")).toBeInTheDocument();
     });
   });
 

@@ -16,6 +16,7 @@ import { TextInput } from "@/components/wui/TextInput";
 import { Button } from "@/components/wui/Button";
 import { BackIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
+import { HeaderOverflowMenu } from "@/components/HeaderOverflowMenu";
 import { ToggleChip } from "@/components/wui/ToggleChip";
 import { Badge, type BadgeVariant } from "@/components/wui/Badge";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -259,23 +260,7 @@ export function Logs() {
           </h1>
         }
         headerRight={
-          <div className="flex gap-2">
-            {logsQuery.data && (
-              <>
-                <HeaderButton
-                  onClick={copyToClipboard}
-                  icon={<Copy size="20" />}
-                  title={t("settings.logs.copy")}
-                />
-                {!isNative && (
-                  <HeaderButton
-                    onClick={downloadFile}
-                    icon={<Download size="20" />}
-                    title={t("settings.logs.download")}
-                  />
-                )}
-              </>
-            )}
+          <div className="flex gap-[4px]">
             <HeaderButton
               onClick={() => logsQuery.refetch()}
               disabled={!connected || logsQuery.isLoading}
@@ -284,6 +269,28 @@ export function Logs() {
                 logsQuery.isLoading ? t("loading") : t("settings.logs.refresh")
               }
             />
+            {logsQuery.data && (
+              <HeaderOverflowMenu
+                actions={[
+                  {
+                    id: "copy",
+                    label: t("settings.logs.copy"),
+                    icon: <Copy size={20} />,
+                    onClick: copyToClipboard,
+                  },
+                  ...(!isNative
+                    ? [
+                        {
+                          id: "download",
+                          label: t("settings.logs.download"),
+                          icon: <Download size={20} />,
+                          onClick: downloadFile,
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            )}
           </div>
         }
         scrollRef={scrollContainerRef}
@@ -309,6 +316,7 @@ export function Logs() {
                     )
                   }
                   disabled={uploadMutation.isPending}
+                  disabledAppearance="busy"
                   onClick={() => uploadMutation.mutate()}
                 />
 

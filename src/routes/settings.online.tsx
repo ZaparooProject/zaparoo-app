@@ -697,6 +697,7 @@ export function OnlinePage() {
                     variant="outline"
                     onClick={handleCancelDeletion}
                     disabled={isCancelling}
+                    disabledAppearance="busy"
                     className="mt-3 w-full"
                   />
                 </div>
@@ -796,6 +797,7 @@ export function OnlinePage() {
                   }
                   onClick={handleMfaVerify}
                   disabled={!isMfaCodeComplete || isMfaVerifying}
+                  disabledAppearance={isMfaVerifying ? "busy" : "unavailable"}
                   className="w-full"
                   intent="primary"
                 />
@@ -863,7 +865,7 @@ export function OnlinePage() {
                     />
                     <Label
                       htmlFor="age-confirm"
-                      className="text-sm leading-tight text-white"
+                      className="text-foreground text-sm leading-tight"
                     >
                       {t("online.ageConfirmLabel")}
                     </Label>
@@ -872,7 +874,7 @@ export function OnlinePage() {
 
                 {/* Inline form error */}
                 {formError && (
-                  <p className="text-sm text-red-400">{formError}</p>
+                  <p className="text-error text-sm">{formError}</p>
                 )}
 
                 {/* Log in / Sign up Button */}
@@ -886,6 +888,7 @@ export function OnlinePage() {
                     isLoading ||
                     (isSignUpMode && !ageConfirmed)
                   }
+                  disabledAppearance={isLoading ? "busy" : "unavailable"}
                   className="w-full"
                   intent="primary"
                 />
@@ -902,7 +905,7 @@ export function OnlinePage() {
                       setAgeConfirmed(false);
                       setFormError(null);
                     }}
-                    className="text-white underline transition-colors hover:text-white/80"
+                    className="text-foreground hover:text-foreground/80 underline transition-colors"
                   >
                     {isSignUpMode
                       ? t("online.switchToLogInLink")
@@ -928,6 +931,7 @@ export function OnlinePage() {
                           icon={<AppleIcon size="20" />}
                           onClick={handleAppleSignIn}
                           disabled={isLoading}
+                          disabledAppearance="busy"
                           className="w-full"
                         />
                         <Button
@@ -936,6 +940,7 @@ export function OnlinePage() {
                           icon={<GoogleIcon size="20" />}
                           onClick={handleGoogleSignIn}
                           disabled={isLoading}
+                          disabledAppearance="busy"
                           className="w-full"
                         />
                       </>
@@ -947,6 +952,7 @@ export function OnlinePage() {
                           icon={<GoogleIcon size="20" />}
                           onClick={handleGoogleSignIn}
                           disabled={isLoading}
+                          disabledAppearance="busy"
                           className="w-full"
                         />
                         <Button
@@ -955,6 +961,7 @@ export function OnlinePage() {
                           icon={<AppleIcon size="20" />}
                           onClick={handleAppleSignIn}
                           disabled={isLoading}
+                          disabledAppearance="busy"
                           className="w-full"
                         />
                       </>
@@ -1006,6 +1013,7 @@ export function OnlinePage() {
               onClick={closeDeleteModal}
               className="flex-1"
               disabled={isDeleting}
+              disabledAppearance="busy"
             />
             <Button
               variant="outline"
@@ -1016,6 +1024,7 @@ export function OnlinePage() {
               onClick={handleDeleteAccount}
               className="border-error text-error flex-1"
               disabled={isDeleting || confirmText !== "DELETE MY ACCOUNT"}
+              disabledAppearance={isDeleting ? "busy" : "unavailable"}
             />
           </div>
         }

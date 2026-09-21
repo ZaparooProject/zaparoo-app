@@ -86,7 +86,7 @@ export function ModalActionRail({
           <div
             ref={contentRef}
             className={classNames(
-              "grid min-w-full grid-flow-col gap-1 sm:min-w-0 [&>*]:min-h-14 [&>*]:w-full [&>*]:min-w-0 sm:[&>*]:min-h-12",
+              "grid min-w-full grid-flow-col gap-1 sm:min-w-0 [&>*]:min-h-14 [&>*]:w-full [&>*]:max-w-none [&>*]:min-w-0 sm:[&>*]:min-h-12",
               itemWidth === "content"
                 ? "auto-cols-[minmax(max-content,1fr)]"
                 : "auto-cols-[minmax(5.5rem,1fr)]",
@@ -113,7 +113,7 @@ export function ModalActionRail({
         )}
       </div>
       {primaryAction && (
-        <div className="min-w-0 [&>*]:min-h-12 [&>*]:w-full">
+        <div className="min-w-0 [&>*]:min-h-12 [&>*]:w-full [&>*]:max-w-none">
           {primaryAction}
         </div>
       )}

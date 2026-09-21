@@ -34,13 +34,13 @@ export function DeviceRow({
         onClick={onSelect}
         className="flex flex-1 flex-row items-center gap-3"
       >
-        <span
-          aria-label={isActive ? t("settings.activeDevice") : undefined}
-          style={
-            isActive ? { backgroundColor: "var(--color-success)" } : undefined
-          }
-          className="h-2 w-2 shrink-0 rounded-full"
-        />
+        {isActive && (
+          <span
+            aria-label={t("settings.activeDevice")}
+            style={{ backgroundColor: "var(--color-success)" }}
+            className="h-2 w-2 shrink-0 rounded-full"
+          />
+        )}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center justify-between gap-2">
             <span className="text-foreground truncate font-medium">

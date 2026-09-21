@@ -358,7 +358,8 @@ export function useNetworkScan(): UseNetworkScanResult {
   const startScan = useCallback(async () => {
     // Only works on native platforms
     if (!Capacitor.isNativePlatform()) {
-      setError("Network scanning is only available on mobile devices");
+      setError(null);
+      setIsScanning(false);
       return;
     }
 

@@ -9,6 +9,7 @@ import { WriteAction, WriteNfcHook } from "@/lib/writeNfcHook";
 import { runToken } from "@/lib/tokenOperations.tsx";
 import { logger } from "@/lib/logger";
 import { useHaptics } from "@/hooks/useHaptics";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 import {
   BarcodePermissionDeniedError,
   BarcodeScanCancelledError,
@@ -37,6 +38,7 @@ export function useScanOperations({
 }: UseScanOperationsProps) {
   const { t } = useTranslation();
   const { impact, notification } = useHaptics();
+  const setLastScanMode = usePreferencesStore((state) => state.setLastScanMode);
   const [scanSession, setScanSession] = useState(false);
   const [scanStatus, setScanStatus] = useState<ScanResult>(ScanResult.Default);
 
@@ -95,6 +97,9 @@ export function useScanOperations({
 
         setScanStatus(ScanResult.Success);
         scheduleStatusReset();
+        // A mode counts as used when it produced a token, so a mistaken tap or
+        // a session that timed out never re-orders the home page.
+        setLastScanMode("nfc");
 
         if (result.info.tag) {
           // Only queue commands if we were previously connected (reconnecting scenario)
@@ -163,6 +168,7 @@ export function useScanOperations({
     hasData,
     launcherAccess,
     setLastToken,
+    setLastScanMode,
     setProPurchaseModalOpen,
     scheduleStatusReset,
     t,
@@ -198,6 +204,7 @@ export function useScanOperations({
 
         // Heavy haptic feedback to confirm barcode was scanned
         impact("heavy");
+        setLastScanMode("camera");
 
         if (barcode.rawValue.startsWith("**write:")) {
           const writeValue = barcode.rawValue.slice(8);
@@ -255,6 +262,7 @@ export function useScanOperations({
     hasData,
     launcherAccess,
     setLastToken,
+    setLastScanMode,
     setProPurchaseModalOpen,
     setWriteOpen,
     nfcWriter,

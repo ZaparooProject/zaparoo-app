@@ -84,15 +84,14 @@ describe("Safe Area Regression Tests", () => {
         </PageFrame>,
       );
 
-      // Find the sticky header div
-      const stickyDiv = container.querySelector(".sticky.top-0");
-      expect(stickyDiv).toBeInTheDocument();
+      const headerDiv = container.querySelector(".page-header-shell");
+      expect(headerDiv).toBeInTheDocument();
 
-      // Verify inline styles use the store values (not env())
-      const style = (stickyDiv as HTMLElement).style;
-      expect(style.paddingTop).toBe("calc(1rem + 47px)");
-      expect(style.paddingRight).toBe("calc(1rem + 10px)");
-      expect(style.paddingLeft).toBe("calc(1rem + 10px)");
+      // Verify inline custom properties expose store values to responsive CSS.
+      const style = (headerDiv as HTMLElement).style;
+      expect(style.getPropertyValue("--page-header-safe-top")).toBe("47px");
+      expect(style.getPropertyValue("--page-header-safe-right")).toBe("10px");
+      expect(style.getPropertyValue("--page-header-safe-left")).toBe("10px");
     });
 
     it("should apply safe insets to scroll container via inline styles", async () => {
@@ -112,6 +111,12 @@ describe("Safe Area Regression Tests", () => {
       const style = (scrollContainer as HTMLElement).style;
       expect(style.paddingRight).toBe("calc(1rem + 10px)");
       expect(style.paddingLeft).toBe("calc(1rem + 10px)");
+      expect(style.getPropertyValue("--page-header-overlay-height")).toBe(
+        "calc(47px + max(56px, 3.5rem) + 1px)",
+      );
+      expect(style.getPropertyValue("--page-header-overlay-clearance")).toBe(
+        "calc(47px + 1.5rem + max(68px, 3.5rem))",
+      );
     });
 
     it("should always render top padding area even without header content", async () => {
@@ -133,7 +138,7 @@ describe("Safe Area Regression Tests", () => {
   });
 
   describe("BottomNav", () => {
-    it("should include safe insets in height and padding", async () => {
+    it("should expose safe insets to the full-width dock shell", async () => {
       // Mocks are declared at top level for proper hoisting
       const { BottomNav } = await import("@/components/BottomNav");
 
@@ -147,8 +152,14 @@ describe("Safe Area Regression Tests", () => {
         "[height:calc(var(--bottom-nav-base-height)+var(--bottom-nav-safe-inset))]",
       );
       expect(style.getPropertyValue("--bottom-nav-safe-inset")).toBe("34px");
-      // Padding bottom should be the safe inset
-      expect(style.paddingBottom).toBe("34px");
+      expect(nav).toHaveClass("bottom-nav-shell");
+      expect(
+        container.querySelector(".bottom-nav-surface"),
+      ).toBeInTheDocument();
+
+      const tabGrid = container.querySelector(".grid-cols-4") as HTMLElement;
+      expect(tabGrid.style.paddingRight).toBe("calc(8px + 10px)");
+      expect(tabGrid.style.paddingLeft).toBe("calc(8px + 10px)");
     });
   });
 });

@@ -34,7 +34,7 @@ import { useHapticPress } from "@/hooks/useHapticPress";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { useInitialPageScrollOffset } from "@/lib/pageScrollContext";
 import { TagList } from "@/components/TagList";
-import { LibraryArtwork } from "@/components/library/LibraryArtwork";
+import { LibraryArtworkFrame } from "@/components/library/LibraryArtworkFrame";
 
 const ROW_HEIGHT = 88;
 // Matches the virtualizer's scroll-end delay so jumps and flings settle before
@@ -187,14 +187,15 @@ function LibraryBrowseRow(props: {
           <FolderIcon size={28} />
         </span>
       ) : (
-        <LibraryArtwork
+        <LibraryArtworkFrame
           entry={entry}
           systemId={rowSystemId}
           deviceKey={props.deviceKey}
           maxSize={128}
           priority="thumbnail"
           enabled={!props.imagesPaused && (!props.deferImages || imageVisible)}
-          className="h-16 w-16 shrink-0 object-contain"
+          compact
+          className="size-16"
         />
       )}
       <span
@@ -470,6 +471,7 @@ export const LibraryBrowseList = forwardRef<
       }
       variant="outline"
       disabled={props.isLoadingIndex}
+      disabledAppearance="busy"
       onClick={() => {
         loadEarlierRangeRef.current = range;
         props.onLoadIndex?.(range.end - 1, { retry: true });
@@ -537,6 +539,7 @@ export const LibraryBrowseList = forwardRef<
               }
               variant="outline"
               disabled={props.isFetchingNextPage}
+              disabledAppearance="busy"
               onClick={() => {
                 loadMoreStartRef.current = props.entries.length;
                 props.onFetchMore();

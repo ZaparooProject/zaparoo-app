@@ -538,12 +538,10 @@ describe("NetworkScanModal", () => {
     });
   });
 
-  describe("error state", () => {
-    it("should display error message on non-native platform", async () => {
-      // Arrange - Set platform to non-native
+  describe("unsupported platform", () => {
+    it("should quietly show the empty state on web", async () => {
       vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
 
-      // Act
       render(
         <NetworkScanModal
           isOpen={true}
@@ -552,14 +550,14 @@ describe("NetworkScanModal", () => {
         />,
       );
 
-      // Assert - Should show error about mobile-only feature
       await waitFor(() => {
         expect(
-          screen.getByText(
-            "Network scanning is only available on mobile devices",
-          ),
+          screen.getByText("settings.networkScan.noDevices"),
         ).toBeInTheDocument();
       });
+      expect(
+        screen.queryByText(/only available on mobile devices/i),
+      ).not.toBeInTheDocument();
     });
   });
 

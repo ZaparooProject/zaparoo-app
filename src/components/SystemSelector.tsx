@@ -1,7 +1,7 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Trash2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import classNames from "classnames";
 import { CoreAPI } from "@/lib/coreApi";
@@ -15,9 +15,8 @@ import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import { useSystemsWithDisplayNames } from "@/hooks/useSystemName";
 import { useHapticPress } from "@/hooks/useHapticPress";
 import { EmptyState } from "@/components/wui/EmptyState";
-import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
-import { SystemFilterControls } from "@/components/SystemFilterControls";
 import { ModalActionBar } from "@/components/wui/ModalActionBar";
+import { SystemFilterControls } from "@/components/SystemFilterControls";
 import { useAnnouncer } from "./A11yAnnouncer";
 import { SlideModal } from "./SlideModal";
 import { Button } from "./wui/Button";
@@ -56,6 +55,26 @@ export function SystemSelector({
   const { t } = useTranslation();
   const { announce } = useAnnouncer();
   const slideModalScrollRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const footer = footerRef.current?.parentElement;
+    const dialog = footer?.closest<HTMLElement>('[role="dialog"]');
+    if (!footer || !dialog) return;
+
+    // Wrapped actions must not end up underneath the floating scroll control.
+    const measure = () =>
+      dialog.style.setProperty(
+        "--system-selector-footer-height",
+        `${footer.getBoundingClientRect().height}px`,
+      );
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(footer);
+    return () => observer.disconnect();
+  }, [isOpen, mode]);
+
   const handleHapticPress = useHapticPress();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -139,17 +158,7 @@ export function SystemSelector({
     onSelect([]);
   }, [onSelect]);
 
-  // Handle apply (for multi-select)
-  const handleApply = useCallback(() => {
-    onClose();
-  }, [onClose]);
-
   const systemTabIdPrefix = "system-category-tab";
-  const selectedCategoryTabId = getTabBarTabId(
-    selectedCategory,
-    systemTabIdPrefix,
-  );
-  const selectedCategoryPanelId = getTabBarPanelId(selectedCategoryTabId);
   const allOptionVisible =
     (mode === "single" || mode === "insert") &&
     includeAllOption &&
@@ -163,31 +172,69 @@ export function SystemSelector({
     selectedSystems.includes(system.id),
   );
 
-  // Footer for multi-select mode
+  const renderOption = (
+    id: string,
+    name: string,
+    isSelected: boolean,
+    tabIndex: number,
+  ) => (
+    <button
+      key={id}
+      className={classNames(
+        "system-selector-option focus-visible:ring-ring flex min-h-12 w-full items-center justify-between gap-3 rounded px-2 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
+        "hover:bg-foreground/10 focus-visible:bg-foreground/10",
+        { "bg-foreground/10": isSelected },
+      )}
+      onPointerUp={handleHapticPress}
+      onClick={() => handleSystemSelect(id)}
+      type="button"
+      role={mode === "multi" ? "checkbox" : "radio"}
+      aria-checked={isSelected}
+      aria-label={name}
+      tabIndex={tabIndex}
+    >
+      <span className="text-foreground min-w-0 font-medium" aria-hidden="true">
+        {name}
+      </span>
+      {mode !== "insert" && (
+        <span
+          aria-hidden="true"
+          className={classNames(
+            "border-input flex size-5 shrink-0 items-center justify-center border-2",
+            mode === "multi" ? "rounded" : "rounded-full",
+            { "bg-primary border-primary": isSelected },
+          )}
+        >
+          {isSelected &&
+            (mode === "multi" ? (
+              <Check className="text-primary-foreground size-3" />
+            ) : (
+              <span className="bg-background size-2 rounded-full" />
+            ))}
+        </span>
+      )}
+    </button>
+  );
+
   const footer =
     mode === "multi" ? (
-      <div className="flex flex-col gap-3 px-2 pb-2">
-        <div className="text-center">
-          <span className="text-muted-foreground text-sm">
-            {t("systemSelector.selectedCount", {
-              count: selectedSystems.length,
-            })}
-          </span>
-        </div>
+      <div ref={footerRef}>
         <ModalActionBar
           secondaryAction={
             <Button
-              label={t("systemSelector.clearAll")}
-              icon={<Trash2 size={20} />}
-              variant="outline"
+              label={t("systemSelector.clear")}
+              aria-label={t("systemSelector.clearAll")}
+              variant="text"
+              size="sm"
               onClick={handleClearAll}
               disabled={selectedSystems.length === 0}
             />
           }
           primaryAction={
             <Button
-              label={t("systemSelector.apply")}
-              onClick={handleApply}
+              label={t("systemSelector.done")}
+              size="sm"
+              onClick={onClose}
               disabled={selectedSystems.length === 0 && !includeAllOption}
             />
           }
@@ -203,175 +250,76 @@ export function SystemSelector({
       footer={footer}
       scrollRef={slideModalScrollRef}
       fixedHeight="90vh"
+      scrollClassName="system-selector-scroll"
     >
-      <div className="flex min-h-0 flex-col">
+      <div className="system-selector-controls bg-surface-raised z-10 pb-2">
         <SystemFilterControls
           categories={categories}
           category={selectedCategory}
-          onCategoryChange={setSelectedCategory}
+          onCategoryChange={(category) => {
+            setSelectedCategory(category);
+            slideModalScrollRef.current?.scrollTo({ top: 0 });
+          }}
           query={searchQuery}
-          onQueryChange={setSearchQuery}
+          onQueryChange={(query) => {
+            setSearchQuery(query);
+            slideModalScrollRef.current?.scrollTo({ top: 0 });
+          }}
           tabIdPrefix={systemTabIdPrefix}
-        />
-
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div
-            id={selectedCategoryPanelId}
-            role="tabpanel"
-            aria-labelledby={selectedCategoryTabId}
-            className="min-h-0 flex-1 overflow-hidden"
-            tabIndex={-1}
-          >
-            {isLoading ? (
-              <div className="flex h-32 items-center justify-center">
-                <span className="text-muted-foreground">{t("loading")}</span>
-              </div>
-            ) : filteredSystems.length === 0 ? (
-              debouncedSearchQuery ? (
-                <EmptyState
-                  className="h-32"
-                  title={t("systemSelector.noResults")}
-                  description={t("systemSelector.noResultsHint")}
-                />
-              ) : (
-                <EmptyState
-                  className="h-32"
-                  title={t("systemSelector.noSystems")}
-                />
-              )
-            ) : (
-              <div
-                className="flex min-h-0 flex-1 flex-col"
-                role={mode === "multi" ? "group" : "radiogroup"}
-                aria-label={t("systemSelector.title")}
-                onKeyDown={
-                  mode === "multi" ? undefined : handleRadioGroupKeyDown
-                }
-              >
-                {/* Add "All Systems" option for single/insert mode */}
-                {allOptionVisible && (
-                  <div className="px-2 pb-2">
-                    <button
-                      className={classNames(
-                        "flex w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                        "focus-visible:ring-ring rounded-lg focus:outline-none focus-visible:ring-2",
-                        "hover:bg-foreground/10 focus:bg-foreground/10",
-                        {
-                          "bg-foreground/10": allOptionSelected,
-                        },
-                      )}
-                      onPointerUp={handleHapticPress}
-                      onClick={() => handleSystemSelect("all")}
-                      type="button"
-                      role="radio"
-                      aria-checked={allOptionSelected}
-                      tabIndex={allOptionSelected ? 0 : -1}
-                      aria-label={t("systemSelector.allSystems")}
-                    >
-                      <div
-                        className="flex items-center space-x-3"
-                        aria-hidden="true"
-                      >
-                        {mode !== "insert" && (
-                          <div
-                            className={classNames(
-                              "border-input h-5 w-5 rounded-full border-2",
-                              {
-                                "bg-primary border-primary": allOptionSelected,
-                              },
-                            )}
-                          >
-                            {allOptionSelected && (
-                              <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
-                            )}
-                          </div>
-                        )}
-                        <span className="text-foreground font-medium">
-                          {t("systemSelector.allSystems")}
-                        </span>
-                      </div>
-                    </button>
-                  </div>
-                )}
-                <div className="flex-1 overflow-auto px-2" tabIndex={-1}>
-                  {filteredSystems.map((system, index) => {
-                    const isSelected = selectedSystems.includes(system.id);
-                    return (
-                      <button
-                        key={system.id}
-                        className={classNames(
-                          "flex min-h-14 w-full items-center justify-between px-4 py-3 text-left transition-colors",
-                          "focus-visible:ring-ring rounded-lg focus:outline-none focus-visible:ring-2",
-                          "hover:bg-foreground/10 focus:bg-foreground/10",
-                          { "bg-foreground/10": isSelected },
-                        )}
-                        onPointerUp={handleHapticPress}
-                        onClick={() => handleSystemSelect(system.id)}
-                        type="button"
-                        role={mode === "multi" ? "checkbox" : "radio"}
-                        aria-checked={isSelected}
-                        aria-label={system.name}
-                        tabIndex={
-                          mode === "multi" ||
-                          isSelected ||
-                          (!allOptionSelected &&
-                            !hasRenderedSelection &&
-                            index === 0)
-                            ? 0
-                            : -1
-                        }
-                      >
-                        <div
-                          className="flex items-center space-x-3"
-                          aria-hidden="true"
-                        >
-                          {mode === "insert" ? null : mode === "multi" ? (
-                            <div
-                              className={classNames(
-                                "border-input flex h-5 w-5 items-center justify-center rounded border-2",
-                                { "bg-primary border-primary": isSelected },
-                              )}
-                            >
-                              {isSelected && (
-                                <Check className="text-primary-foreground h-3 w-3" />
-                              )}
-                            </div>
-                          ) : (
-                            <div
-                              className={classNames(
-                                "border-input h-5 w-5 rounded-full border-2",
-                                { "bg-primary border-primary": isSelected },
-                              )}
-                            >
-                              {isSelected && (
-                                <div className="bg-background m-0.5 h-2 w-2 rounded-full" />
-                              )}
-                            </div>
-                          )}
-                          <span className="text-foreground font-medium">
-                            {system.name}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Scroll to top button */}
-        <BackToTop
-          scrollContainerRef={slideModalScrollRef}
-          threshold={200}
-          bottomOffset={
-            mode === "single" || mode === "insert"
-              ? "1rem"
-              : "calc(1rem + 100px)"
-          }
+          variant="picker"
         />
       </div>
+      {isLoading ? (
+        <div className="flex h-32 items-center justify-center">
+          <span className="text-muted-foreground">{t("loading")}</span>
+        </div>
+      ) : filteredSystems.length === 0 ? (
+        debouncedSearchQuery ? (
+          <EmptyState
+            className="h-32"
+            title={t("systemSelector.noResults")}
+            description={t("systemSelector.noResultsHint")}
+          />
+        ) : (
+          <EmptyState className="h-32" title={t("systemSelector.noSystems")} />
+        )
+      ) : (
+        <div
+          role={mode === "multi" ? "group" : "radiogroup"}
+          aria-label={t("systemSelector.title")}
+          onKeyDown={mode === "multi" ? undefined : handleRadioGroupKeyDown}
+        >
+          {allOptionVisible &&
+            renderOption(
+              "all",
+              t("systemSelector.allSystems"),
+              allOptionSelected,
+              allOptionSelected ? 0 : -1,
+            )}
+          {filteredSystems.map((system, index) => {
+            const isSelected = selectedSystems.includes(system.id);
+            return renderOption(
+              system.id,
+              system.name,
+              isSelected,
+              mode === "multi" ||
+                isSelected ||
+                (!allOptionSelected && !hasRenderedSelection && index === 0)
+                ? 0
+                : -1,
+            );
+          })}
+        </div>
+      )}
+      <BackToTop
+        scrollContainerRef={slideModalScrollRef}
+        threshold={200}
+        bottomOffset={
+          mode === "multi"
+            ? "calc(2rem + var(--system-selector-footer-height, 100px))"
+            : "2rem"
+        }
+      />
     </SlideModal>
   );
 }

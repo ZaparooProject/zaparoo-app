@@ -91,15 +91,14 @@ describe("PageFrame", () => {
     expect(screen.getByText("Center")).toBeInTheDocument();
     expect(screen.getByText("Right")).toBeInTheDocument();
     expect(screen.getByTestId("header-left").parentElement).toHaveClass(
-      "-translate-x-1",
-      "mr-1",
+      "mr-[12px]",
+      "md:mr-[16px]",
     );
     expect(screen.getByTestId("header-center").parentElement).not.toHaveClass(
-      "-translate-x-1",
+      "pl-[12px]",
     );
     expect(screen.getByTestId("header-right").parentElement).toHaveClass(
-      "translate-x-1",
-      "ml-2",
+      "ml-[4px]",
     );
   });
 
@@ -112,7 +111,9 @@ describe("PageFrame", () => {
       </PageFrame>,
     );
 
-    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toBeInTheDocument();
+    expect(heading.parentElement).not.toHaveClass("pl-[12px]");
     expect(screen.getByText("Test Title")).toBeInTheDocument();
   });
 
@@ -524,7 +525,7 @@ describe("PageFrame", () => {
     expect(screen.getByTestId("only-right")).toBeInTheDocument();
   });
 
-  it("should apply correct styles when header is present", () => {
+  it("should keep compact header material stable while content scrolls", () => {
     const { container } = render(
       <PageFrame
         headerCenter={<h1 className="text-foreground text-xl">Test Title</h1>}
@@ -533,9 +534,26 @@ describe("PageFrame", () => {
       </PageFrame>,
     );
 
+    const header = container.querySelector(".page-header-shell");
     const scrollContainer = container.querySelector(".flex-1.overflow-y-auto");
+    expect(header).not.toHaveAttribute("data-scrolled");
+    expect(header).toHaveClass("absolute", "inset-x-0");
+    const surface = header?.firstElementChild;
+    const content = surface?.firstElementChild;
+    expect(surface).toHaveClass("page-header-surface");
+    expect(content).toHaveClass("page-header-content");
+    expect(content?.firstElementChild).toHaveClass("min-h-14");
     expect(scrollContainer).toBeInTheDocument();
-    expect(scrollContainer).toHaveClass("pb-4");
+    expect(scrollContainer).toHaveClass(
+      "page-frame-scroll",
+      "page-frame-scroll-with-header",
+    );
+
+    fireEvent.scroll(scrollContainer as HTMLElement, {
+      target: { scrollTop: 20 },
+    });
+
+    expect(header).not.toHaveAttribute("data-scrolled");
   });
 
   it("should apply correct styles when header is not present", () => {
@@ -547,7 +565,8 @@ describe("PageFrame", () => {
 
     const scrollContainer = container.querySelector(".flex-1.overflow-y-auto");
     expect(scrollContainer).toBeInTheDocument();
-    expect(scrollContainer).toHaveClass("pb-4");
+    expect(scrollContainer).toHaveClass("page-frame-scroll");
+    expect(scrollContainer).not.toHaveClass("page-frame-scroll-with-header");
   });
 
   it("should handle empty header components gracefully", () => {

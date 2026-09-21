@@ -67,6 +67,7 @@ export function LibraryLaunchableModal(props: {
           variant="text"
           className="whitespace-nowrap"
           disabled={!zapScript || !writeAvailable || launching}
+          disabledAppearance={launching ? "busy" : "unavailable"}
           onClick={write}
         />
       }
@@ -82,6 +83,7 @@ export function LibraryLaunchableModal(props: {
           }
           intent="primary"
           disabled={!zapScript || !liveConnected || launching}
+          disabledAppearance={launching ? "busy" : "unavailable"}
           onClick={() => void launch()}
         />
       }

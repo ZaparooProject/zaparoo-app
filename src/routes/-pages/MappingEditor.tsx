@@ -390,6 +390,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
               icon={<SaveIcon size="20" />}
               label={t("create.mappings.editor.save")}
               disabled={!canSave}
+              disabledAppearance={saving ? "busy" : "unavailable"}
               intent="primary"
               onClick={onSave}
             />
@@ -401,6 +402,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
                 icon={<Trash2Icon size="20" />}
                 label={t("create.mappings.editor.delete")}
                 disabled={!connected || saving || deleting}
+                disabledAppearance={saving || deleting ? "busy" : "unavailable"}
                 onClick={() => setConfirmOpen(true)}
                 className="border-error text-error"
               />
@@ -428,6 +430,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
               label={t("create.mappings.editor.deleteCancel")}
               onClick={() => setConfirmOpen(false)}
               disabled={deleting}
+              disabledAppearance="busy"
               className="flex-1"
             />
             <Button
@@ -436,6 +439,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
               label={t("create.mappings.editor.deleteConfirmAction")}
               onClick={onDelete}
               disabled={deleting}
+              disabledAppearance="busy"
               className="border-error text-error flex-1"
             />
           </div>

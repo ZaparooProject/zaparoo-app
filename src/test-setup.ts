@@ -47,6 +47,7 @@ import { __resetDeviceCache } from "@/hooks/useNetworkScan";
 import { __resetMediaWriteModeForTests } from "@/hooks/useMediaWriteTarget";
 import { __resetDeviceRegistryForTests } from "@/lib/devices/deviceRegistry";
 import { resetPurchasePreviewState } from "@/lib/purchasePreviewStore";
+import { resetAppPreviewState } from "@/lib/appPreviewStore";
 
 // Define global constants that Vite normally injects
 (globalThis as any).__APP_BASE_PATH__ = "/";
@@ -124,8 +125,9 @@ afterEach(async () => {
   __resetDeviceCache();
   // Drop hydrated device records so the next test starts with no devices
   __resetDeviceRegistryForTests();
-  // Reset development-only purchase previews between tests
+  // Reset development-only previews between tests
   resetPurchasePreviewState();
+  resetAppPreviewState();
 });
 
 // Close server after all tests

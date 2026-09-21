@@ -28,6 +28,16 @@ import {
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 import { KeepAwake } from "@capacitor-community/keep-awake";
 
+<<<<<<< HEAD
+=======
+function expectIdleNowPlaying() {
+  const region = screen.getByRole("region", {
+    name: "scan.nowPlayingHeading",
+  });
+  expect(within(region).getByText("scan.nowPlayingIdle")).toBeVisible();
+}
+
+>>>>>>> 06d00d0 (WIP: refine app design language and Zap page)
 // Mock state that can be modified per-test
 const mockScanOperationsState = {
   scanSession: false,
@@ -56,6 +66,24 @@ const mockNfcWriterState = {
 };
 
 const mockShowRateLimitedErrorToast = vi.hoisted(() => vi.fn());
+const mockCoverRowsState = vi.hoisted(() => ({
+  recents: [] as Array<{
+    name: string;
+    path: string;
+    type: "media";
+    systemId: string;
+    systemName: string;
+    hasCover?: boolean;
+  }>,
+  favourites: [] as Array<{
+    name: string;
+    path: string;
+    type: "media";
+    systemId: string;
+    systemName: string;
+    hasCover?: boolean;
+  }>,
+}));
 
 const mockHistoryQueryState = {
   data: undefined as
@@ -99,6 +127,11 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     },
   };
 });
+
+vi.mock("@/hooks/useHomeCoverRows", () => ({
+  useRecentlyPlayed: () => mockCoverRowsState.recents,
+  useFavourites: () => mockCoverRowsState.favourites,
+}));
 
 // Mock useScanOperations
 vi.mock("@/hooks/useScanOperations", () => ({
@@ -322,8 +355,10 @@ function seedPrimaryPlaylist({
 describe("Index Route Integration", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    // Drop the setWriteOpen callback captured from a prior Index render
+    // Drop state captured from a prior Index render.
     mockScanOperationsProps.current = null;
+    mockCoverRowsState.recents = [];
+    mockCoverRowsState.favourites = [];
 
     // Reset stores to connected state
     useStatusStore.setState({
@@ -438,10 +473,8 @@ describe("Index Route Integration", () => {
         screen.getByRole("button", { name: /scan.historyTitle/i }),
       ).toBeInTheDocument();
     });
-  });
 
-  describe("Scan Controls", () => {
-    it("should render scan button when NFC is available", () => {
+    it("places general controls outside the Now Playing card", () => {
       render(
         <TestWrapper>
           <Index />
@@ -449,11 +482,30 @@ describe("Index Route Integration", () => {
       );
 
       expect(
-        screen.getByRole("button", { name: /spinner.pressToScan/i }),
+        screen.getByRole("button", { name: "scan.remoteKeyboard" }),
+      ).toBeInTheDocument();
+      expect(
+        within(
+          screen.getByRole("region", { name: "scan.nowPlayingHeading" }),
+        ).queryByRole("button", { name: "scan.remoteKeyboard" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Scan actions", () => {
+    it("leads with the tap action when the phone has NFC", () => {
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "scan.tapTag" }),
       ).toBeInTheDocument();
     });
 
-    it("should not render scan button when NFC is not available", () => {
+    it("omits the tap action when the phone has no NFC", () => {
       usePreferencesStore.setState({ nfcAvailable: false });
 
       render(
@@ -463,11 +515,11 @@ describe("Index Route Integration", () => {
       );
 
       expect(
-        screen.queryByRole("button", { name: /spinner.pressToScan/i }),
+        screen.queryByRole("button", { name: "scan.tapTag" }),
       ).not.toBeInTheDocument();
     });
 
-    it("should render camera button when camera is available", () => {
+    it("offers the camera action when the phone has a camera", () => {
       render(
         <TestWrapper>
           <Index />
@@ -475,11 +527,11 @@ describe("Index Route Integration", () => {
       );
 
       expect(
-        screen.getByRole("button", { name: /scan.cameraMode/i }),
+        screen.getByRole("button", { name: "scan.scanCode" }),
       ).toBeInTheDocument();
     });
 
-    it("should not render camera button when camera is not available", () => {
+    it("omits the camera action when the phone has no camera", () => {
       usePreferencesStore.setState({ cameraAvailable: false });
 
       render(
@@ -489,11 +541,11 @@ describe("Index Route Integration", () => {
       );
 
       expect(
-        screen.queryByRole("button", { name: /scan.cameraMode/i }),
+        screen.queryByRole("button", { name: "scan.scanCode" }),
       ).not.toBeInTheDocument();
     });
 
-    it("should call handleScanButton when scan button is clicked", async () => {
+    it("starts a scan from the tap action", async () => {
       const user = userEvent.setup();
       render(
         <TestWrapper>
@@ -501,15 +553,30 @@ describe("Index Route Integration", () => {
         </TestWrapper>,
       );
 
-      const scanButton = screen.getByRole("button", {
-        name: /spinner.pressToScan/i,
-      });
-      await user.click(scanButton);
+      await user.click(screen.getByRole("button", { name: "scan.tapTag" }));
 
       expect(mockScanOperationsState.handleScanButton).toHaveBeenCalledTimes(1);
     });
 
-    it("should call handleCameraScan when camera button is clicked", async () => {
+    it("stops a running scan from the same action", async () => {
+      const user = userEvent.setup();
+      mockScanOperationsState.scanSession = true;
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      const action = screen.getByRole("button", { name: "scan.tapTagStop" });
+      expect(action).toHaveAttribute("aria-pressed", "true");
+
+      await user.click(action);
+
+      expect(mockScanOperationsState.handleScanButton).toHaveBeenCalledTimes(1);
+    });
+
+    it("opens the camera from the camera action", async () => {
       const user = userEvent.setup();
       render(
         <TestWrapper>
@@ -517,15 +584,40 @@ describe("Index Route Integration", () => {
         </TestWrapper>,
       );
 
-      const cameraButton = screen.getByRole("button", {
-        name: /scan.cameraMode/i,
-      });
-      await user.click(cameraButton);
+      await user.click(screen.getByRole("button", { name: "scan.scanCode" }));
 
       expect(mockScanOperationsState.handleCameraScan).toHaveBeenCalledTimes(1);
     });
 
-    it("should open controls modal when remote controls button is clicked", async () => {
+    it("does not offer the camera while a scan is running", () => {
+      mockScanOperationsState.scanSession = true;
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "scan.scanCode" }),
+      ).toBeDisabled();
+    });
+  });
+
+  describe("Device pill", () => {
+    it("names the device and its connection state", () => {
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      expect(
+        screen.getByRole("button", { name: /scan.devicePill/ }),
+      ).toHaveAttribute("aria-haspopup", "dialog");
+    });
+
+    it("opens the device sheet", async () => {
       const user = userEvent.setup();
       render(
         <TestWrapper>
@@ -533,13 +625,13 @@ describe("Index Route Integration", () => {
         </TestWrapper>,
       );
 
-      await user.click(
-        screen.getByRole("button", { name: /scan.remoteKeyboard/i }),
-      );
+      const trigger = screen.getByRole("button", { name: /scan.devicePill/ });
+      await user.click(trigger);
 
       expect(
-        screen.getByRole("dialog", { name: "remoteKeyboard.title" }),
+        await screen.findByRole("dialog", { name: "scan.deviceSheetTitle" }),
       ).toBeInTheDocument();
+<<<<<<< HEAD
     });
   });
 
@@ -615,6 +707,10 @@ describe("Index Route Integration", () => {
     expect(
       screen.getByRole("button", { name: "scan.historyTitle" }),
     ).toBeInTheDocument();
+=======
+      expect(trigger).toHaveAttribute("aria-expanded", "true");
+    });
+>>>>>>> 06d00d0 (WIP: refine app design language and Zap page)
   });
 
   describe("Now Playing Info", () => {
@@ -740,28 +836,28 @@ describe("Index Route Integration", () => {
       expect(
         screen.getByRole("heading", { name: "scan.backgroundMediaHeading" }),
       ).toBeInTheDocument();
+
+      // Both slots carry transports now, so scope to the background card. Its
+      // group label interpolates the section name in a real locale.
+      const background = within(
+        screen.getByRole("region", { name: "scan.backgroundMediaHeading" }),
+      );
       expect(
-        screen.getByRole("button", {
+        background.getByRole("button", {
           name: "scan.stopBackgroundMediaButton",
         }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("group", {
-          name: "scan.playlistControls",
-        }),
+        background.getByRole("group", { name: "scan.playlistControls" }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", {
-          name: "scan.playlistPrevious",
-        }),
+        background.getByRole("button", { name: "scan.playlistPrevious" }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", {
-          name: "scan.playlistPause",
-        }),
+        background.getByRole("button", { name: "scan.playlistPause" }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "scan.playlistNext" }),
+        background.getByRole("button", { name: "scan.playlistNext" }),
       ).toBeInTheDocument();
     });
 
@@ -873,6 +969,105 @@ describe("Index Route Integration", () => {
     });
   });
 
+  describe("Home media rows", () => {
+    it("replays the most recently played media from the idle transport", async () => {
+      const user = userEvent.setup();
+      mockCoverRowsState.recents = [
+        {
+          name: "Super Mario World",
+          path: "/games/smw.sfc",
+          type: "media",
+          systemId: "SNES",
+          systemName: "Super Nintendo",
+          hasCover: false,
+        },
+      ];
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "scan.playLastPlayed" }),
+      );
+
+      await waitFor(() => {
+        expect(CoreAPI.run).toHaveBeenCalledWith({ text: "/games/smw.sfc" });
+      });
+    });
+
+    it("opens the shared media details modal from Recently played", async () => {
+      const user = userEvent.setup();
+      mockCoverRowsState.recents = [
+        {
+          name: "Super Mario World",
+          path: "/games/smw.sfc",
+          type: "media",
+          systemId: "SNES",
+          systemName: "Super Nintendo",
+          hasCover: false,
+        },
+      ];
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "scan.coverRowDetails" }),
+      );
+
+      expect(
+        await screen.findByRole("dialog", { name: "Super Mario World" }),
+      ).toBeInTheDocument();
+    });
+
+    it("renders Favorites above Recently played", () => {
+      mockCoverRowsState.recents = [
+        {
+          name: "Recent game",
+          path: "/games/recent.sfc",
+          type: "media",
+          systemId: "SNES",
+          systemName: "Super Nintendo",
+          hasCover: false,
+        },
+      ];
+      mockCoverRowsState.favourites = [
+        {
+          name: "Favorite game",
+          path: "/games/favorite.sfc",
+          type: "media",
+          systemId: "SNES",
+          systemName: "Super Nintendo",
+          hasCover: false,
+        },
+      ];
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      const recents = screen.getByRole("region", {
+        name: "scan.recentsHeading",
+      });
+      const favourites = screen.getByRole("region", {
+        name: "scan.favouritesHeading",
+      });
+      expect(
+        favourites.compareDocumentPosition(recents) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(within(favourites).getByText("Favorite game")).toBeVisible();
+    });
+  });
+
   describe("Playlist Controls", () => {
     it("should send previous and next commands to the background slot", async () => {
       const user = userEvent.setup();
@@ -884,11 +1079,16 @@ describe("Index Route Integration", () => {
         </TestWrapper>,
       );
 
+      const background = screen.getByRole("region", {
+        name: "scan.backgroundMediaHeading",
+      });
       await user.click(
-        screen.getByRole("button", { name: "scan.playlistPrevious" }),
+        within(background).getByRole("button", {
+          name: "scan.playlistPrevious",
+        }),
       );
       await user.click(
-        screen.getByRole("button", { name: "scan.playlistNext" }),
+        within(background).getByRole("button", { name: "scan.playlistNext" }),
       );
 
       expect(CoreAPI.run).toHaveBeenNthCalledWith(1, {
@@ -986,7 +1186,7 @@ describe("Index Route Integration", () => {
       });
     });
 
-    it("should hide Pause for a playing non-Audio playlist", () => {
+    it("should disable Pause for a playing non-Audio playlist", () => {
       seedPrimaryPlaylist();
 
       render(
@@ -996,11 +1196,11 @@ describe("Index Route Integration", () => {
       );
 
       expect(
-        screen.queryByRole("button", { name: "scan.playlistPause" }),
-      ).not.toBeInTheDocument();
+        screen.getByRole("button", { name: "scan.playlistPause" }),
+      ).toBeDisabled();
       expect(
         screen.getByRole("button", { name: "scan.playlistPrevious" }),
-      ).toBeInTheDocument();
+      ).toBeEnabled();
       expect(
         screen.getByRole("button", { name: "scan.playlistNext" }),
       ).toBeInTheDocument();
@@ -1034,8 +1234,11 @@ describe("Index Route Integration", () => {
           <Index />
         </TestWrapper>,
       );
+      const background = screen.getByRole("region", {
+        name: "scan.backgroundMediaHeading",
+      });
       await user.click(
-        screen.getByRole("button", { name: "scan.playlistNext" }),
+        within(background).getByRole("button", { name: "scan.playlistNext" }),
       );
 
       await waitFor(() => {
@@ -1059,8 +1262,8 @@ describe("Index Route Integration", () => {
       const historyButton = screen.getByRole("button", {
         name: /scan.historyTitle/i,
       });
-      // ToggleChip uses CSS classes for disabled state, not the disabled attribute
-      expect(historyButton).toHaveClass("text-foreground-disabled");
+      expect(historyButton).toBeDisabled();
+      expect(historyButton).toHaveClass("cursor-not-allowed");
     });
 
     it("should open history modal when history button is clicked", async () => {
@@ -1453,7 +1656,11 @@ describe("Index Route Integration", () => {
       );
 
       // Initially no media playing
+<<<<<<< HEAD
       expect(screen.getByText("scan.nothingPlaying")).toBeVisible();
+=======
+      expectIdleNowPlaying();
+>>>>>>> 06d00d0 (WIP: refine app design language and Zap page)
 
       // Update store
       act(() => {
@@ -1483,7 +1690,9 @@ describe("Index Route Integration", () => {
       );
 
       // Initially connected
-      expect(screen.getByText("scan.connectedHeading")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /scan.devicePill/ }),
+      ).toBeInTheDocument();
 
       // Update store to disconnected
       act(() => {
@@ -1508,7 +1717,12 @@ describe("Index Route Integration", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByText("settings.notConnected")).toBeInTheDocument();
+      // Losing the device empties the reader strip, which is the page's
+      // visible consequence now that the status card is gone.
+      const readers = within(
+        screen.getByRole("region", { name: "scan.readersHeading" }),
+      );
+      expect(readers.getByText("settings.notConnected")).toBeInTheDocument();
     });
   });
 
@@ -1634,7 +1848,7 @@ describe("Index Route Integration", () => {
       expect(mockAnnounce).not.toHaveBeenCalled();
     });
 
-    it("should announce NFC scan instruction when NFC is available", async () => {
+    it("should announce the tap action when NFC is available", async () => {
       usePreferencesStore.setState({
         nfcAvailable: true,
         cameraAvailable: true,
@@ -1651,8 +1865,8 @@ describe("Index Route Integration", () => {
         vi.advanceTimersByTime(600);
       });
 
-      // Should announce NFC instruction
-      expect(mockAnnounce).toHaveBeenCalledWith("spinner.pressToScan");
+      // Names the action the page leads with
+      expect(mockAnnounce).toHaveBeenCalledWith("scan.tapTag");
     });
 
     it("should announce camera option when NFC is not available but camera is", async () => {
@@ -1673,7 +1887,7 @@ describe("Index Route Integration", () => {
       });
 
       // Should announce camera option
-      expect(mockAnnounce).toHaveBeenCalledWith("scan.cameraAvailable");
+      expect(mockAnnounce).toHaveBeenCalledWith("scan.scanCode");
     });
 
     it("should announce page name when neither NFC nor camera is available", async () => {

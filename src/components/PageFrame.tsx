@@ -1,10 +1,4 @@
-import React, {
-  RefObject,
-  ReactNode,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { RefObject, ReactNode, useLayoutEffect, useRef } from "react";
 import classNames from "classnames";
 import {
   useElementScrollRestoration,
@@ -46,20 +40,20 @@ interface PageHeaderProps {
 
 export function PageHeader({ left, title, actions }: PageHeaderProps) {
   return (
-    <div className="grid min-h-12 grid-cols-[auto_minmax(0,1fr)_auto] items-center">
+    <div className="grid min-h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-center">
       <div
-        className={classNames("flex shrink-0 -translate-x-1", {
-          "mr-1": left,
+        className={classNames("flex shrink-0", {
+          "mr-[12px] md:mr-[16px]": left,
         })}
       >
         {left}
       </div>
-      <div className="min-w-0 text-left [&>h1]:text-2xl [&>h1]:leading-tight [&>h1]:font-semibold [&>h1]:tracking-tight [&>h1]:break-words [&>h1]:outline-none">
+      <div className="min-w-0 text-left [&>h1]:text-xl [&>h1]:leading-tight [&>h1]:font-semibold [&>h1]:tracking-tight [&>h1]:break-words [&>h1]:outline-none">
         {title}
       </div>
       <div
-        className={classNames("flex shrink-0 translate-x-1 justify-end", {
-          "ml-2": actions,
+        className={classNames("flex shrink-0 justify-end", {
+          "ml-[4px]": actions,
         })}
       >
         {actions}
@@ -112,8 +106,8 @@ function RoutedPageFrame(props: PageFrameProps) {
 function PageFrameLayout(props: PageFrameLayoutProps) {
   const safeInsets = useStatusStore((state) => state.safeInsets);
   const internalScrollRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   const hasRestoredScroll = useRef(false);
-  const [headerScrolled, setHeaderScrolled] = useState(false);
   const restoredEntryKey = useRef<string | undefined>(undefined);
   const appliedRouterRestoration = useRef<string | null>(null);
 
@@ -149,7 +143,9 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
         : undefined,
   };
   const activeScrollRef = scrollRef ?? internalScrollRef;
-  const hasHeaderContent = header || headerLeft || headerCenter || headerRight;
+  const hasHeaderContent = Boolean(
+    header || headerLeft || headerCenter || headerRight,
+  );
   const initialScrollOffset = sessionScrollKey
     ? (useTabSessionStore.getState().scrollPositions[sessionScrollKey]
         ?.scrollY ?? 0)
@@ -169,7 +165,6 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
     const restoreScroll = (scrollX: number, scrollY: number) => {
       scrollContainer.scrollLeft = scrollX;
       scrollContainer.scrollTop = scrollY;
-      setHeaderScrolled(scrollY > 0);
     };
 
     const sessionPosition = sessionScrollKey
@@ -198,9 +193,44 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
     restoreScroll(0, 0);
   }, [activeScrollRef, restorationEntry, restorationKey, sessionScrollKey]);
 
+  useLayoutEffect(() => {
+    const headerElement = headerRef.current;
+    const scrollContainer = activeScrollRef.current;
+    if (!hasHeaderContent || !headerElement || !scrollContainer) return;
+
+    const updateHeaderClearance = () => {
+      const headerHeight = Math.ceil(
+        headerElement.getBoundingClientRect().height,
+      );
+      const surface = headerElement.querySelector<HTMLElement>(
+        ".page-header-surface",
+      );
+      const outerGutter = surface
+        ? Number.parseFloat(getComputedStyle(surface).marginTop) || 0
+        : 0;
+      if (headerHeight > 0) {
+        scrollContainer.style.setProperty(
+          "--page-header-overlay-height",
+          `${headerHeight}px`,
+        );
+        scrollContainer.style.setProperty(
+          "--page-header-overlay-clearance",
+          `${Math.ceil(headerHeight + outerGutter)}px`,
+        );
+      }
+    };
+
+    updateHeaderClearance();
+    if (typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(updateHeaderClearance);
+    observer.observe(headerElement);
+    return () => observer.disconnect();
+  }, [activeScrollRef, hasHeaderContent, safeInsets.top]);
+
   return (
     <div
-      className={`flex h-full w-full flex-col ${className || ""}`}
+      className={`relative flex h-full w-full flex-col ${className || ""}`}
       {...restProps}
       {...rootSwipeHandlers}
       onTouchCancel={
@@ -213,42 +243,53 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
       }
     >
       <div
-        className={classNames(
-          "bg-background sticky top-0 z-10 transition-colors duration-150",
-          {
-            "border-b": hasHeaderContent,
-            "border-b-border": hasHeaderContent && headerScrolled,
-            "border-transparent": !hasHeaderContent || !headerScrolled,
-          },
-        )}
-        style={{
-          paddingTop: `calc(1rem + ${safeInsets.top})`,
-          paddingRight: `calc(1rem + ${safeInsets.right})`,
-          paddingLeft: `calc(1rem + ${safeInsets.left})`,
-          paddingBottom: hasHeaderContent ? "1rem" : 0,
-        }}
+        ref={headerRef}
+        className={classNames("top-0 z-10", {
+          sticky: !hasHeaderContent,
+          "page-header-shell absolute inset-x-0 md:pointer-events-none":
+            hasHeaderContent,
+        })}
+        style={
+          hasHeaderContent
+            ? ({
+                "--page-header-safe-top": safeInsets.top,
+                "--page-header-safe-right": safeInsets.right,
+                "--page-header-safe-left": safeInsets.left,
+              } as React.CSSProperties)
+            : {
+                paddingTop: `calc(1rem + ${safeInsets.top})`,
+                paddingRight: `calc(1rem + ${safeInsets.right})`,
+                paddingLeft: `calc(1rem + ${safeInsets.left})`,
+              }
+        }
       >
         {hasHeaderContent && (
-          <ResponsiveContainer>
-            {header ? (
-              header
-            ) : (
-              <PageHeader
-                left={headerLeft}
-                title={headerCenter}
-                actions={headerRight}
-              />
-            )}
-          </ResponsiveContainer>
+          <div className="page-header-surface">
+            <ResponsiveContainer
+              maxWidth="full"
+              className="page-header-content"
+            >
+              {header ? (
+                header
+              ) : (
+                <PageHeader
+                  left={headerLeft}
+                  title={headerCenter}
+                  actions={headerRight}
+                />
+              )}
+            </ResponsiveContainer>
+          </div>
         )}
       </div>
       <div
         ref={activeScrollRef}
         data-scroll-restoration-id={PAGE_SCROLL_RESTORATION_ID}
-        className="flex-1 overflow-y-auto pb-4"
+        className={classNames("page-frame-scroll flex-1 overflow-y-auto", {
+          "page-frame-scroll-with-header": hasHeaderContent,
+        })}
         onScroll={(event) => {
           const scrollContainer = event.currentTarget;
-          setHeaderScrolled(scrollContainer.scrollTop > 0);
           if (sessionScrollKey) {
             useTabSessionStore
               .getState()
@@ -259,10 +300,14 @@ function PageFrameLayout(props: PageFrameLayoutProps) {
               );
           }
         }}
-        style={{
-          paddingRight: `calc(1rem + ${safeInsets.right})`,
-          paddingLeft: `calc(1rem + ${safeInsets.left})`,
-        }}
+        style={
+          {
+            "--page-header-overlay-height": `calc(${safeInsets.top} + max(56px, 3.5rem) + 1px)`,
+            "--page-header-overlay-clearance": `calc(${safeInsets.top} + 1.5rem + max(68px, 3.5rem))`,
+            paddingRight: `calc(1rem + ${safeInsets.right})`,
+            paddingLeft: `calc(1rem + ${safeInsets.left})`,
+          } as React.CSSProperties
+        }
       >
         <ResponsiveContainer>
           <InitialPageScrollOffsetContext.Provider value={initialScrollOffset}>

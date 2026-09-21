@@ -46,4 +46,5 @@ CLAUDE.md
 coverage/
 
 .tanstack/
-docs/plans/
+docs/plans/*
+!docs/plans/theme-migration.md

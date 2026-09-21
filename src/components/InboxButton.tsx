@@ -9,6 +9,7 @@ export function InboxButton() {
   const { t } = useTranslation();
   const { impact } = useHaptics();
   const setInboxModalOpen = useStatusStore((state) => state.setInboxModalOpen);
+  const inboxModalOpen = useStatusStore((state) => state.inboxModalOpen);
   const inboxCount = useStatusStore((state) => state.inboxMessages.length);
 
   const hasNotifications = inboxCount > 0;
@@ -30,6 +31,8 @@ export function InboxButton() {
       }
       title={label}
       aria-label={label}
+      aria-expanded={inboxModalOpen}
+      active={inboxModalOpen}
     />
   );
 }

@@ -8,10 +8,15 @@ import {
   ZAP_LOGO_WIDTH,
 } from "@/lib/zapLogo";
 
-export function ZapLogo() {
+interface ZapLogoProps {
+  width?: number;
+}
+
+export function ZapLogo({ width = ZAP_LOGO_WIDTH }: ZapLogoProps = {}) {
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { resolvedTheme } = useTheme();
+  const height = (width / ZAP_LOGO_WIDTH) * ZAP_LOGO_HEIGHT;
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -39,7 +44,7 @@ export function ZapLogo() {
         width={ZAP_LOGO_WIDTH}
         height={ZAP_LOGO_HEIGHT}
         className="object-contain"
-        style={{ width: ZAP_LOGO_WIDTH, height: ZAP_LOGO_HEIGHT }}
+        style={{ width, height }}
       />
     );
   }
@@ -51,7 +56,7 @@ export function ZapLogo() {
       aria-label={t("accessibility.logo")}
       width={ZAP_LOGO_WIDTH}
       height={ZAP_LOGO_HEIGHT}
-      style={{ width: ZAP_LOGO_WIDTH, height: ZAP_LOGO_HEIGHT }}
+      style={{ width, height }}
     />
   );
 }

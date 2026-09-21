@@ -33,8 +33,9 @@
   --status-green-wash: #dcefe5;
   --status-yellow-wash: #fff0c5;
   --interaction-wash: #deebfc;
+  --interaction-glow: rgb(9 92 185 / 28%);
   --radius: 0.5rem;
-  --bottom-nav-base-height: max(80px, 5rem);
+  --bottom-nav-base-height: max(64px, 3.25rem);
 
   /* One palette; legacy WUI and shadcn names are aliases, not separate themes. */
   --background: var(--surface-base);
@@ -108,6 +109,7 @@
   --status-green-wash: #12332b;
   --status-yellow-wash: #332b18;
   --interaction-wash: #142a43;
+  --interaction-glow: rgb(70 177 255 / 55%);
 }
 
 @theme inline {

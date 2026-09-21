@@ -16,6 +16,29 @@ if (Capacitor.isNativePlatform()) {
 const platform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
 ```
 
+### App preview (development only)
+
+`useAppUi()` gates UI that only exists in the native apps, so those screens can
+be reviewed in a desktop browser. Settings → Advanced → App preview turns it on
+in dev builds (and web builds started with `VITE_APP_PREVIEW=true`); the toggle
+does not exist in a normal production build.
+
+```typescript
+const appUi = useAppUi(); // { enabled, preview, nfc, camera, accelerometer }
+
+{appUi.nfc && <ScanSpinner ... />}
+```
+
+Preview reports every capability as present and simulates NFC operations
+(`src/lib/nfcPreview.ts`, outcome chosen next to the toggle), which is enough to
+walk through the write modal's waiting, re-tap, verification-failure and error
+states. Local read sessions are simulated inside `readTag`/`readRaw`, so the
+home scan button holds, cancels through `cancelSession()` and times out like a
+reader-mode session. Nothing behind the UI works: plugin calls still need
+`Capacitor.isNativePlatform()`, and preview must never gate one.
+
+The preview state persists through Capacitor Preferences, so it survives the reloads that dev work causes; turn it off from the same toggle.
+
 ---
 
 ## Capacitor Plugins

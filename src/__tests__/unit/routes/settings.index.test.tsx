@@ -311,6 +311,70 @@ describe("Settings Index Route", () => {
       ).toHaveAttribute("href", "/settings/about");
     });
 
+    it("groups destinations by Device, App, and Support without a More section", () => {
+      renderComponent();
+
+      const device = within(
+        screen.getByRole("navigation", {
+          name: "settings.groups.device",
+        }),
+      );
+      const app = within(
+        screen.getByRole("navigation", {
+          name: "settings.groups.app",
+        }),
+      );
+      const support = within(
+        screen.getByRole("navigation", {
+          name: "settings.groups.support",
+        }),
+      );
+
+      expect(
+        device.getAllByRole("link").map((link) => link.getAttribute("href")),
+      ).toEqual([
+        "/settings/readers",
+        "/settings/play-controls",
+        "/settings/advanced",
+      ]);
+      expect(
+        app.getAllByRole("link").map((link) => link.getAttribute("href")),
+      ).toEqual([
+        "/settings/language-region",
+        "/settings/accessibility",
+        "/settings/online",
+      ]);
+      expect(
+        support.getAllByRole("link").map((link) => link.getAttribute("href")),
+      ).toEqual(["/settings/help", "/settings/about"]);
+      expect(
+        app.getByRole("link", { name: /online\.title/ }),
+      ).toHaveTextContent("online.settingsStatusSignedOut");
+      expect(
+        screen.queryByText("settings.moreSettings"),
+      ).not.toBeInTheDocument();
+    });
+
+    it.each([
+      { coreVersion: null, coreVersionPending: false },
+      { coreVersion: "2.0.0", coreVersionPending: false },
+      { coreVersion: "2.12.0", coreVersionPending: true },
+    ])("preserves Media gating for %j", (versionState) => {
+      mockUseStatusStore.mockImplementation((selector) =>
+        selector({ ...defaultStoreState, ...versionState }),
+      );
+      renderComponent();
+      const device = within(
+        screen.getByRole("navigation", { name: "settings.groups.device" }),
+      );
+      expect(
+        device.queryByRole("link", { name: "settings.media.title" }),
+      ).not.toBeInTheDocument();
+      expect(
+        device.getByRole("link", { name: "settings.readers.title" }),
+      ).toBeInTheDocument();
+    });
+
     it("should show manage media row for supported Core versions", () => {
       mockUseStatusStore.mockImplementation((selector) =>
         selector({

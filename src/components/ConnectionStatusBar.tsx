@@ -89,8 +89,11 @@ export function ConnectionStatusBar() {
     presentation.visible,
   ]);
 
+  // Settings shows the device card, which carries the connection state inline.
+  // Home no longer does - its device pill carries identity, not the sentence -
+  // so the bar has to report problems there.
   const hasContextualStatus =
-    pathname === "/" || pathname === "/settings" || pathname === "/settings/";
+    pathname === "/settings" || pathname === "/settings/";
   const showConfirmedRestored = showRestored && confirmedConnected;
   const showVisual =
     !hasContextualStatus && (presentation.visible || showConfirmedRestored);

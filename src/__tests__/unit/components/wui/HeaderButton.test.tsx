@@ -70,6 +70,15 @@ describe("HeaderButton", () => {
 
       const button = screen.getByRole("button", { name: "Settings" });
       expect(button).toHaveAttribute("title", "Open settings");
+      expect(button).toHaveAttribute("type", "button");
+    });
+
+    it("should use title as its accessible-name fallback", () => {
+      render(<HeaderButton icon={<span>★</span>} title="Refresh" />);
+
+      expect(
+        screen.getByRole("button", { name: "Refresh" }),
+      ).toBeInTheDocument();
     });
   });
 

@@ -126,6 +126,7 @@ export function StagedTokenModal() {
             label={t("tokenStaging.confirm")}
             onClick={confirmStagedToken}
             disabled={!stagedToken || confirming}
+            disabledAppearance={confirming ? "busy" : "unavailable"}
             intent="primary"
             className="flex-1"
           />

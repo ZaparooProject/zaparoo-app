@@ -88,6 +88,7 @@ function WarpPurchaseModal({
           }
           onClick={onPurchase}
           disabled={action !== null || !purchaseEnabled}
+          disabledAppearance={action !== null ? "busy" : "unavailable"}
           intent="primary"
           className="w-full"
         />
@@ -223,6 +224,7 @@ function WarpSubscriptionPreview({
             label={t("online.warp.restore")}
             variant="text"
             disabled
+            disabledAppearance="busy"
             className="w-full"
           />
         </>
@@ -450,6 +452,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
             label={t("online.warp.restore")}
             variant="text"
             disabled
+            disabledAppearance="busy"
             className="w-full"
           />
         </>
@@ -462,6 +465,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
             if (action === null) setPurchaseDialogOpen(true);
           }}
           disabled={action !== null}
+          disabledAppearance="busy"
           intent="primary"
           className="w-full"
         />
@@ -483,6 +487,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
             variant="outline"
             onClick={retry}
             disabled={action !== null}
+            disabledAppearance="busy"
             className="w-full"
           />
         </div>
@@ -504,6 +509,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
           variant="outline"
           onClick={retry}
           disabled={action !== null}
+          disabledAppearance="busy"
           className="w-full"
         />
       )}
@@ -518,6 +524,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
           variant="outline"
           onClick={handleManage}
           disabled={action !== null}
+          disabledAppearance="busy"
           className="w-full"
         />
       )}
@@ -532,6 +539,7 @@ function LiveWarpSubscription({ appUserID }: WarpSubscriptionProps) {
           variant="text"
           onClick={handleRestore}
           disabled={action !== null}
+          disabledAppearance="busy"
           className="w-full"
         />
       )}

@@ -1,21 +1,27 @@
 import classNames from "classnames";
-import { ReactElement, useState, memo, useRef, forwardRef } from "react";
-import { useHapticPress } from "@/hooks/useHapticPress";
+import { ReactElement, memo, forwardRef } from "react";
+import { useTactilePress } from "@/hooks/useTactilePress";
 
 export type ButtonLayout = "inline" | "stacked" | "responsive";
+export type ButtonDisabledAppearance = "unavailable" | "busy";
 
 interface ButtonProps {
   onClick?: () => void;
   label?: string;
-  variant?: "fill" | "secondary" | "outline" | "text";
+  variant?: "fill" | "secondary" | "outline" | "ghost" | "text";
   /** Square icon controls align with fields; standalone controls stay round. */
   shape?: "round" | "square";
   size?: "default" | "sm" | "lg";
   layout?: ButtonLayout;
-  /** Semantic intent controls haptics and visible destructive treatment. */
-  intent?: "default" | "primary" | "destructive";
+  /** Semantic intent controls haptics and visible destructive/pro treatment. */
+  intent?: "default" | "primary" | "destructive" | "pro";
   icon?: ReactElement;
   disabled?: boolean;
+  /**
+   * unavailable: recessed control whose prerequisite is absent.
+   * busy: temporarily locked control that retains its normal material, faded.
+   */
+  disabledAppearance?: ButtonDisabledAppearance;
   className?: string;
   /** Accessible label for screen readers (required for icon-only buttons) */
   "aria-label"?: string;
@@ -34,19 +40,12 @@ export const Button = memo(
     const variant = props.variant || "fill";
     const size = props.size || "default";
     const layout = props.layout || "inline";
-    const [isPressed, setIsPressed] = useState(false);
-    const touchStartPos = useRef<{ x: number; y: number } | null>(null);
-    const hasMoved = useRef(false);
-    const hapticStyle =
-      props.intent === "destructive"
-        ? "heavy"
-        : props.intent === "primary"
-          ? "medium"
-          : "light";
-    const handleHapticPress = useHapticPress(
-      hapticStyle,
-      !props.disabled && !props.decorative && props.onClick !== undefined,
-    );
+    const { pressed, shouldFireClick, handlers } = useTactilePress({
+      intent: props.intent,
+      disabled: props.disabled,
+      decorative: props.decorative,
+      hasOnClick: props.onClick !== undefined,
+    });
 
     return (
       <button
@@ -56,7 +55,8 @@ export const Button = memo(
         data-size={size}
         data-icon-only={!props.label && !!props.icon}
         data-shape={props.shape ?? "round"}
-        data-pressed={isPressed && !props.disabled}
+        data-disabled-appearance={props.disabledAppearance ?? "unavailable"}
+        data-pressed={pressed}
         aria-label={
           props.decorative ? undefined : props["aria-label"] || props.label
         }
@@ -86,53 +86,11 @@ export const Button = memo(
         )}
         disabled={props.disabled}
         onClick={() => {
-          // Only trigger click if this wasn't a scroll gesture
-          if (!hasMoved.current && !props.disabled && props.onClick) {
+          if (shouldFireClick() && props.onClick) {
             props.onClick();
           }
         }}
-        onPointerUp={(event) => {
-          if (!hasMoved.current) {
-            handleHapticPress(event);
-          }
-        }}
-        onTouchStart={(e) => {
-          const touch = e.touches[0];
-          if (!touch) return;
-          touchStartPos.current = { x: touch.clientX, y: touch.clientY };
-          hasMoved.current = false;
-          setIsPressed(true);
-        }}
-        onTouchMove={(e) => {
-          if (touchStartPos.current) {
-            const touch = e.touches[0];
-            if (!touch) return;
-            const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
-            const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
-
-            // If moved more than 10px, consider it a scroll gesture
-            if (deltaX > 10 || deltaY > 10) {
-              hasMoved.current = true;
-              setIsPressed(false);
-            }
-          }
-        }}
-        onTouchEnd={() => {
-          setIsPressed(false);
-          // Reset after a short delay to allow click to process
-          setTimeout(() => {
-            hasMoved.current = false;
-            touchStartPos.current = null;
-          }, 100);
-        }}
-        onTouchCancel={() => {
-          setIsPressed(false);
-          hasMoved.current = false;
-          touchStartPos.current = null;
-        }}
-        onMouseDown={() => setIsPressed(true)}
-        onMouseUp={() => setIsPressed(false)}
-        onMouseLeave={() => setIsPressed(false)}
+        {...handlers}
       >
         {props.icon && (
           <span className="flex shrink-0 items-center" aria-hidden="true">

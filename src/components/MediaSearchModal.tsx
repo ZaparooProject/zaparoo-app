@@ -192,6 +192,7 @@ export function MediaSearchModal(props: MediaSearchModalProps) {
               icon={<SearchIcon size="20" />}
               onClick={performSearch}
               disabled={!canSearch || isSearching}
+              disabledAppearance={isSearching ? "busy" : "unavailable"}
               className="w-full"
             />
           </div>

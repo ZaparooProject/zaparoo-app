@@ -554,6 +554,9 @@ export function LibraryMediaDetailsModal(props: {
                 "disabled:!text-white",
             )}
             disabled={!writeAvailable || preparingWrite || launching}
+            disabledAppearance={
+              preparingWrite || launching ? "busy" : "unavailable"
+            }
             onClick={() => void write()}
           />
         </>
@@ -573,12 +576,10 @@ export function LibraryMediaDetailsModal(props: {
               )
             }
             intent="primary"
-            className={
-              launching || (preparingWrite && liveConnected)
-                ? "bg-button-pattern disabled:!border-[var(--color-border-filled)] disabled:!text-white"
-                : undefined
-            }
             disabled={!liveConnected || launching || preparingWrite}
+            disabledAppearance={
+              launching || preparingWrite ? "busy" : "unavailable"
+            }
             onClick={() => void launch()}
           />
         ) : undefined

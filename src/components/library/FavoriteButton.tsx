@@ -39,6 +39,7 @@ export function FavoriteButton(props: {
       layout={props.layout}
       aria-pressed={flags.favorite}
       disabled={!feature.available || !connected || !canUpdate || busy}
+      disabledAppearance={busy ? "busy" : "unavailable"}
       onClick={() => toggle("favorite")}
       className={props.className ?? (props.iconOnly ? undefined : "w-full")}
     />

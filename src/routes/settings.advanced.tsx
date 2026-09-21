@@ -27,6 +27,12 @@ import {
   usePurchasePreviewStore,
   type PurchasePreviewState,
 } from "@/lib/purchasePreviewStore";
+import {
+  isAppPreviewAvailable,
+  useAppPreviewStore,
+  type AppPreviewNfcResult,
+} from "@/lib/appPreviewStore";
+import { useAppUi } from "@/hooks/useAppUi";
 
 export const Route = createFileRoute("/settings/advanced")({
   component: AdvancedSettings,
@@ -50,6 +56,13 @@ export function AdvancedSettings() {
   const setPurchasePreviewState = usePurchasePreviewStore(
     (state) => state.setPreviewState,
   );
+  const appPreviewEnabled = useAppPreviewStore((state) => state.enabled);
+  const setAppPreviewEnabled = useAppPreviewStore((state) => state.setEnabled);
+  const appPreviewNfcResult = useAppPreviewStore((state) => state.nfcResult);
+  const setAppPreviewNfcResult = useAppPreviewStore(
+    (state) => state.setNfcResult,
+  );
+  const appUi = useAppUi();
 
   const [showErrorReportingModal, setShowErrorReportingModal] = useState(false);
 
@@ -171,6 +184,61 @@ export function AdvancedSettings() {
             />
           )}
 
+        {isAppPreviewAvailable() && (
+          <>
+            <ToggleSwitch
+              label={
+                <span className="flex items-center">
+                  {t("settings.advanced.appPreview")}
+                  <SettingHelp
+                    title={t("settings.advanced.appPreview")}
+                    description={t("settings.advanced.appPreviewHelp")}
+                  />
+                </span>
+              }
+              value={appPreviewEnabled}
+              setValue={setAppPreviewEnabled}
+            />
+
+            {appPreviewEnabled && (
+              <div className="flex flex-col">
+                <label
+                  className="text-foreground"
+                  htmlFor="app-preview-nfc-result"
+                >
+                  {t("settings.advanced.appPreviewNfcResult")}
+                </label>
+                <select
+                  id="app-preview-nfc-result"
+                  className="wui-input border-bd-input bg-surface-inset text-foreground min-h-12 rounded-md border border-solid p-3"
+                  value={appPreviewNfcResult}
+                  onChange={(event) =>
+                    setAppPreviewNfcResult(
+                      event.target.value as AppPreviewNfcResult,
+                    )
+                  }
+                >
+                  <option value="hold">
+                    {t("settings.advanced.appPreviewNfcHold")}
+                  </option>
+                  <option value="success">
+                    {t("settings.advanced.appPreviewNfcSuccess")}
+                  </option>
+                  <option value="verifyFailed">
+                    {t("settings.advanced.appPreviewNfcVerifyFailed")}
+                  </option>
+                  <option value="retap">
+                    {t("settings.advanced.appPreviewNfcRetap")}
+                  </option>
+                  <option value="error">
+                    {t("settings.advanced.appPreviewNfcError")}
+                  </option>
+                </select>
+              </div>
+            )}
+          </>
+        )}
+
         {isPurchasePreviewEnabled() && (
           <div className="flex flex-col">
             <label className="text-foreground" htmlFor="purchase-preview-state">
@@ -230,7 +298,7 @@ export function AdvancedSettings() {
           </div>
         )}
 
-        {Capacitor.isNativePlatform() && <PurchaseSupportActions />}
+        {appUi.enabled && <PurchaseSupportActions />}
       </Card>
 
       <SlideModal

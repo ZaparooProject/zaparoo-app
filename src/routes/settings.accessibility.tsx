@@ -1,11 +1,11 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { Capacitor } from "@capacitor/core";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 import { PageFrame } from "@/components/PageFrame";
 import { BackIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
+import { useAppUi } from "@/hooks/useAppUi";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useTextZoom } from "@/hooks/useTextZoom";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -40,6 +40,7 @@ export function AccessibilitySettings() {
   const setAccessibleLists = usePreferencesStore((s) => s.setAccessibleLists);
 
   const { set: applyZoomLevel, isAvailable: textZoomAvailable } = useTextZoom();
+  const appUi = useAppUi();
   const { impact } = useHaptics();
 
   // Find the closest preset to the current zoom level
@@ -91,7 +92,7 @@ export function AccessibilitySettings() {
           }}
         />
         {/* Text Size - native only */}
-        {Capacitor.isNativePlatform() && textZoomAvailable && (
+        {appUi.enabled && (textZoomAvailable || appUi.preview) && (
           <Segmented
             label={t("settings.accessibility.textSize")}
             value={currentPreset.key}
@@ -115,7 +116,7 @@ export function AccessibilitySettings() {
         />
 
         {/* Haptic Feedback - native only */}
-        {Capacitor.isNativePlatform() && (
+        {appUi.enabled && (
           <ToggleSwitch
             label={t("settings.accessibility.haptics")}
             value={hapticsEnabled}

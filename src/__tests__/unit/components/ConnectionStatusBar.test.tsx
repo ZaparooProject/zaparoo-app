@@ -466,4 +466,20 @@ describe("ConnectionStatusBar", () => {
 
     expect(screen.getAllByText("connection.connectingToCore")).toHaveLength(1);
   });
+
+  it("reports connection problems on home, which has no status card", () => {
+    mockUseLocation.mockReturnValue({ pathname: "/" });
+
+    render(
+      <Wrapper value={connectionValue()}>
+        <ConnectionStatusBar />
+      </Wrapper>,
+    );
+    act(() => vi.advanceTimersByTime(1_000));
+
+    // One visible bar plus the live region announcement.
+    expect(
+      screen.getAllByText("connection.connectingToCore").length,
+    ).toBeGreaterThan(1);
+  });
 });

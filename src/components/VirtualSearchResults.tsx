@@ -337,6 +337,7 @@ export function VirtualSearchResults({
                 }
                 variant="outline"
                 disabled={isFetchingNextPage}
+                disabledAppearance="busy"
                 onClick={() => {
                   loadMoreStartRef.current = allItems.length;
                   void fetchNextPage();

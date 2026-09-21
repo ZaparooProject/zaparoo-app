@@ -98,6 +98,7 @@ export function SlideModal(props: {
   /** Whether overlay, Escape, back, close buttons, and drag may dismiss the modal. */
   dismissible?: boolean;
   fixedHeight?: string;
+  scrollClassName?: string;
 }) {
   const { t } = useTranslation();
   const modalId = useId();
@@ -394,6 +395,7 @@ export function SlideModal(props: {
           transition: DRAG_TRANSITION,
           willChange: props.isOpen ? "transform" : "auto",
           pointerEvents: props.isOpen ? "auto" : "none",
+          boxShadow: props.isOpen ? undefined : "none",
           paddingBottom: `calc(${safeInsets.bottom} + 1rem)`,
           maxHeight: `min(80vh, calc(100vh - ${safeInsets.top} - 75px))`,
           ...(props.fixedHeight ? { height: props.fixedHeight } : {}),
@@ -419,12 +421,12 @@ export function SlideModal(props: {
             </div>
           )}
           {/* Shared visible title and desktop close action */}
-          <div className="border-border relative mb-3 border-b pb-3">
+          <div className="relative pb-3 sm:min-h-11">
             <h2
               ref={titleRef}
               id={`${modalId}-title`}
               tabIndex={-1}
-              className="pr-10 text-left text-lg leading-snug font-semibold tracking-tight outline-none"
+              className="text-center text-lg leading-snug font-semibold tracking-tight outline-none sm:pr-10 sm:text-left"
             >
               {props.title}
             </h2>
@@ -444,7 +446,13 @@ export function SlideModal(props: {
           <SkipLink targetId={footerId} label={props.footerSkipLabel} />
         )}
         {/* eslint-disable react-hooks/refs -- False positives: scrollRef is passed as ref prop, children/footer are ReactNode props */}
-        <div ref={props.scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+        <div
+          ref={props.scrollRef}
+          className={classNames(
+            "min-h-0 flex-1 overflow-y-auto",
+            props.scrollClassName,
+          )}
+        >
           {props.children}
         </div>
         {props.footer && (
