@@ -7,7 +7,8 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { server } from "@/test-setup";
 import {
   PAIRING_CLIENT_NAME_MAX_BYTES,
-  performPairing,
+  PAIRING_REQUEST_INTERVAL_MS,
+  performPairing as performPairingRequest,
   truncateClientName,
 } from "@/lib/crypto/pairing";
 import { base64Encode } from "@/lib/crypto/base64";
@@ -60,6 +61,17 @@ function computeServerConfirm(
   );
   const transcript = buildHmacTranscript("server", clientName, msgA, msgB);
   return hmac(sha256, confirmKeyB, transcript);
+}
+
+function performPairing(
+  host: string,
+  port: number,
+  pin: string,
+  clientName: string,
+) {
+  return performPairingRequest(host, port, pin, clientName, {
+    requestIntervalMs: 0,
+  });
 }
 
 function successHandlers() {
@@ -320,34 +332,84 @@ describe("performPairing", () => {
   });
 
   describe("rate limiting", () => {
-    it("should retry up to 3 times on 429 then throw PairingError('rate_limited')", async () => {
+    it("should pace start and finish requests before sending them", async () => {
       vi.useFakeTimers();
       try {
-        let callCount = 0;
+        const requestTimes: number[] = [];
         server.use(
           http.post(START_URL, () => {
-            callCount++;
-            return new HttpResponse(null, { status: 429 });
+            requestTimes.push(Date.now());
+            return HttpResponse.json({
+              session: SESSION_ID,
+              pake: base64Encode(MOCK_MSG_B),
+            });
+          }),
+          http.post(FINISH_URL, () => {
+            requestTimes.push(Date.now());
+            return HttpResponse.json({
+              authToken: AUTH_TOKEN,
+              clientId: CLIENT_ID,
+              confirm: base64Encode(
+                computeServerConfirm(
+                  MOCK_MSG_A,
+                  MOCK_MSG_B,
+                  MOCK_SESSION_KEY,
+                  CLIENT_NAME,
+                ),
+              ),
+            });
           }),
         );
 
-        const promise = performPairing(HOST, PORT, PIN, CLIENT_NAME);
-        // Attach a no-op catch immediately so the rejection isn't observed as
-        // unhandled while we drive the fake-timer backoff loop below.
-        const settled = promise.catch((e) => e);
-        // Drain all backoff timers + interleaved microtasks instantly.
+        const promise = performPairingRequest(HOST, PORT, PIN, CLIENT_NAME);
         await vi.runAllTimersAsync();
-        const error = await settled;
-        expect(error).toMatchObject({
-          kind: "rate_limited",
-          httpStatus: 429,
-        });
-        // fetchWithRetry: 4 total attempts (initial + 3 retries on 429).
-        expect(callCount).toBe(4);
+        await promise;
+
+        expect(requestTimes).toHaveLength(2);
+        expect(requestTimes[1]! - requestTimes[0]!).toBeGreaterThanOrEqual(
+          PAIRING_REQUEST_INTERVAL_MS,
+        );
       } finally {
         vi.useRealTimers();
       }
     });
+
+    it.each([
+      [
+        "Core response without a header",
+        undefined,
+        PAIRING_REQUEST_INTERVAL_MS,
+      ],
+      ["Retry-After header", "3", 3000],
+    ])(
+      "should stop after one 429 and expose retry timing from %s",
+      async (_scenario, retryAfter, expectedDelay) => {
+        let callCount = 0;
+        server.use(
+          http.post(START_URL, () => {
+            callCount++;
+            return new HttpResponse(null, {
+              status: 429,
+              headers:
+                retryAfter === undefined
+                  ? undefined
+                  : { "Retry-After": retryAfter },
+            });
+          }),
+        );
+
+        const error = await performPairing(HOST, PORT, PIN, CLIENT_NAME).catch(
+          (caught: unknown) => caught,
+        );
+
+        expect(error).toMatchObject({
+          kind: "rate_limited",
+          httpStatus: 429,
+          retryAfterMs: expectedDelay,
+        });
+        expect(callCount).toBe(1);
+      },
+    );
   });
 });
 

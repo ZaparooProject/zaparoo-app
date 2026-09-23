@@ -136,12 +136,10 @@ describe("PairingModal", () => {
       });
       expect(pairButton).toBeDisabled();
 
-      const pinInput = screen.getByLabelText("pairing.pinLabel");
-      await user.type(pinInput, "12345");
-      expect(pairButton).toBeDisabled();
+      await user.type(screen.getByLabelText("pairing.pinLabel"), "12345");
 
-      await user.type(pinInput, "6");
-      expect(pairButton).toBeEnabled();
+      expect(pairButton).toBeDisabled();
+      expect(mockedPerformPairing).not.toHaveBeenCalled();
     });
 
     it("should prefill clientName with device name from Device.getInfo", async () => {
@@ -350,6 +348,45 @@ describe("PairingModal", () => {
         await screen.findByText("pairing.error.wrong_pin"),
       ).toBeInTheDocument();
       expect(mockedPerformPairing).toHaveBeenCalledTimes(1);
+    });
+
+    it("should block repeat attempts until the rate-limit cooldown expires", async () => {
+      const user = userEvent.setup();
+      mockedPerformPairing.mockRejectedValue(
+        new PairingError("rate_limited", "too many requests", 429, 100),
+      );
+
+      render(
+        <PairingModal
+          isOpen={true}
+          close={vi.fn()}
+          address="192.168.1.10:7497"
+          recordId={RECORD_ID}
+        />,
+      );
+
+      await user.type(screen.getByLabelText("pairing.pinLabel"), "123456");
+
+      expect(
+        await screen.findByText("pairing.error.rate_limited"),
+      ).toHaveAttribute("role", "status");
+      const pairButton = screen.getByRole("button", {
+        name: "pairing.startPairing",
+      });
+      expect(pairButton).toBeDisabled();
+
+      await user.click(pairButton);
+      expect(mockedPerformPairing).toHaveBeenCalledTimes(1);
+
+      await waitFor(() => expect(pairButton).toBeEnabled());
+      expect(
+        screen.queryByText("pairing.error.rate_limited"),
+      ).not.toBeInTheDocument();
+
+      await user.click(pairButton);
+      await waitFor(() => {
+        expect(mockedPerformPairing).toHaveBeenCalledTimes(2);
+      });
     });
 
     it("should display unknown error key for non-PairingError exceptions", async () => {
