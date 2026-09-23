@@ -65,38 +65,23 @@ vi.mock("@/lib/logger", () => ({
   logger: { log: vi.fn(), error: vi.fn() },
 }));
 
-// Mock WriteModal to simplify testing
-vi.mock("@/components/WriteModal", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/components/WriteModal")>();
-  return {
-    ...actual,
-    WriteModal: ({
-      isOpen,
-      verifyError,
-      retry,
-    }: {
-      isOpen: boolean;
-      verifyError: boolean;
-      retry: () => void;
-    }) =>
-      isOpen ? (
-        <div data-testid="write-modal">
-          Write Modal
-          <span data-testid="verify-error">{String(verifyError)}</span>
-          <button onClick={retry}>Retry write</button>
-        </div>
-      ) : null,
-  };
-});
-
 // Mock ReadTab with functional scan button
 vi.mock("@/components/nfc/ReadTab", () => ({
-  ReadTab: ({ result, onScan }: { result: any; onScan: () => void }) => (
+  ReadTab: ({
+    result,
+    onScan,
+    scanControl,
+  }: {
+    result: any;
+    onScan: () => void;
+    scanControl?: any;
+  }) => (
     <div data-testid="read-tab">
-      <button data-testid="scan-button" onClick={onScan}>
-        Scan NFC
-      </button>
+      {scanControl ?? (
+        <button data-testid="scan-button" onClick={onScan}>
+          Scan NFC
+        </button>
+      )}
       {result && (
         <div data-testid="scan-result">Result: {result.info?.tag}</div>
       )}
@@ -188,7 +173,9 @@ describe("Create NFC Route", () => {
     it("should show Read tab content by default", () => {
       renderComponent();
       // Read tab content includes the scan button
-      expect(screen.getByTestId("scan-button")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "create.nfc.readTab.scanTag" }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -197,33 +184,36 @@ describe("Create NFC Route", () => {
       const user = userEvent.setup();
       renderComponent();
 
-      await user.click(screen.getByTestId("scan-button"));
+      await user.click(
+        screen.getByRole("button", { name: "create.nfc.readTab.scanTag" }),
+      );
 
       expect(mockNfcWriter.write).toHaveBeenCalledWith("read");
     });
 
-    it("should show write modal when scan is initiated", async () => {
+    it("should latch reader control when scan is initiated", async () => {
       const user = userEvent.setup();
       mockNfcWriter.status = null;
       renderComponent();
 
-      await user.click(screen.getByTestId("scan-button"));
+      await user.click(
+        screen.getByRole("button", { name: "create.nfc.readTab.scanTag" }),
+      );
 
-      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "reader.cancelAction" }),
+      ).toHaveAttribute("data-reader-state", "waiting");
     });
 
-    it("should keep the modal open and retry after verification fails", async () => {
+    it("should keep reader activity available and retry after verification fails", async () => {
       const user = userEvent.setup();
       mockNfcWriter.status = "error";
       mockNfcWriter.verifyError = new Error("verification failed");
       renderComponent();
 
-      await user.click(screen.getByTestId("scan-button"));
+      expect(screen.getByText("spinner.verifyFailed")).toBeVisible();
 
-      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
-      expect(screen.getByTestId("verify-error")).toHaveTextContent("true");
-
-      await user.click(screen.getByRole("button", { name: "Retry write" }));
+      await user.click(screen.getByRole("button", { name: "scan.retry" }));
 
       expect(mockNfcWriter.retry).toHaveBeenCalledOnce();
     });
@@ -326,7 +316,7 @@ describe("Create NFC Route", () => {
       expect(mockNfcWriter.write).toHaveBeenCalledWith("erase");
     });
 
-    it("should show write modal when tool action is triggered", async () => {
+    it("should show reader activity when tool action is triggered", async () => {
       const user = userEvent.setup();
       mockNfcWriter.status = null;
       renderComponent();
@@ -342,7 +332,9 @@ describe("Create NFC Route", () => {
       // Click format button
       await user.click(screen.getByTestId("format-button"));
 
-      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "reader.cancelAction" }),
+      ).toHaveAttribute("data-reader-state", "waiting");
     });
 
     it("should disable tool buttons while processing", async () => {

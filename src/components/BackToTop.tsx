@@ -1,8 +1,9 @@
-import { useEffect, useState, RefObject } from "react";
+import { useEffect, useState, type MouseEvent, type RefObject } from "react";
 import { ChevronUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedCallback } from "use-debounce";
 import { useStatusStore } from "@/lib/store";
+import { CircleButton } from "@/components/wui/CircleButton";
 
 interface BackToTopProps {
   scrollContainerRef: RefObject<HTMLElement | null>;
@@ -45,18 +46,33 @@ export function BackToTop({
     };
   }, [scrollContainerRef, threshold, toggleVisibility]);
 
-  const scrollToTop = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
+  const scrollToTop = (event: MouseEvent<HTMLButtonElement>) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const reduceMotion = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    container.scrollTo({
+      top: 0,
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+
+    // Pointer users retain their current focus. Keyboard activation moves focus
+    // with the viewport so assistive technology lands at the returned context.
+    if (event.detail === 0) {
+      const scope =
+        container.closest('[role="dialog"]') ?? container.parentElement;
+      const focusTarget = scope?.querySelector<HTMLElement>(
+        "[data-back-to-top-target], h1, h2",
+      );
+      focusTarget?.focus({ preventScroll: true });
     }
   };
 
   return (
     <div
-      className={`fixed right-4 transition-opacity duration-300 sm:right-8 ${
+      className={`fixed right-4 transition-opacity duration-300 motion-reduce:transition-none sm:right-8 ${
         isVisible
           ? "pointer-events-auto opacity-100"
           : "pointer-events-none opacity-0"
@@ -70,14 +86,12 @@ export function BackToTop({
         bottom: `calc(${bottomOffset} + ${safeInsets.bottom})`,
       }}
     >
-      <button
-        type="button"
+      <CircleButton
+        icon={<ChevronUp size={24} />}
+        variant="secondary"
         onClick={scrollToTop}
-        className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring rounded-full p-3 shadow-lg transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
         aria-label={t("backToTop")}
-      >
-        <ChevronUp size={24} aria-hidden="true" />
-      </button>
+      />
     </div>
   );
 }

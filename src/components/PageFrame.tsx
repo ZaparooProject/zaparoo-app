@@ -48,7 +48,12 @@ export function PageHeader({ left, title, actions }: PageHeaderProps) {
       >
         {left}
       </div>
-      <div className="min-w-0 text-left [&>h1]:text-xl [&>h1]:leading-tight [&>h1]:font-semibold [&>h1]:tracking-tight [&>h1]:break-words [&>h1]:outline-none">
+      <div
+        className={classNames(
+          "min-w-0 text-left [&>h1]:text-xl [&>h1]:leading-tight [&>h1]:font-semibold [&>h1]:tracking-tight [&>h1]:break-words [&>h1]:outline-none",
+          { "pl-[4px]": !left },
+        )}
+      >
         {title}
       </div>
       <div

@@ -13,6 +13,7 @@ import type {
   PlaylistState,
 } from "@/lib/models";
 import { NowPlayingTransport } from "./NowPlayingTransport";
+import { PlaylistQueue } from "./PlaylistQueue";
 
 interface NowPlayingCardProps {
   media: PlayingResponse;
@@ -27,6 +28,7 @@ interface NowPlayingCardProps {
   onPlaylistPrevious: () => void;
   onPlaylistToggle: () => void;
   onPlaylistNext: () => void;
+  onPlaylistSelect?: (index: number) => void;
   onReplayLast?: () => void;
 }
 
@@ -43,6 +45,7 @@ export function NowPlayingCard({
   onPlaylistPrevious,
   onPlaylistToggle,
   onPlaylistNext,
+  onPlaylistSelect,
   onReplayLast,
 }: NowPlayingCardProps) {
   const { t } = useTranslation();
@@ -52,20 +55,14 @@ export function NowPlayingCard({
   const displaySystemName = useSystemName(media.systemId, media.systemName);
   const artwork = useNowPlayingArtwork(media);
 
-  const activePlaylistItem = playlist?.items[playlist.index];
-  const playlistItemName =
-    activePlaylistItem?.name || activePlaylistItem?.zapScript || "";
   const displayName =
-    (showFilenames && media.mediaPath
+    showFilenames && media.mediaPath
       ? filenameFromPath(media.mediaPath) || media.mediaName
-      : media.mediaName) || playlistItemName;
+      : media.mediaName;
   const isIdle = displayName === "";
   const sectionLabel = headingLabel ?? t("scan.nowPlayingHeading");
   const isPlaying =
     !isIdle && (playlist ? playlist.playing : media.playbackState !== "paused");
-  const playlistPosition =
-    playlist && playlist.total > 0 ? playlist.index + 1 : 0;
-
   return (
     <section aria-labelledby={headingId}>
       <h2
@@ -75,7 +72,7 @@ export function NowPlayingCard({
         {sectionLabel}
       </h2>
       <Card>
-        {isIdle && !playlist ? (
+        {isIdle ? (
           <div className="min-w-0">
             <p
               className="text-muted-foreground text-sm font-medium"
@@ -83,7 +80,7 @@ export function NowPlayingCard({
             >
               {t("scan.nowPlayingIdle")}
             </p>
-            {lastPlayed && (
+            {lastPlayed && !playlist && (
               <p className="text-foreground mt-1 truncate text-sm font-medium">
                 {t("scan.lastPlayed", { media: lastPlayed.name })}
               </p>
@@ -106,45 +103,6 @@ export function NowPlayingCard({
                 <p className="text-muted-foreground truncate text-sm">
                   {displaySystemName}
                 </p>
-              )}
-              {playlist && (
-                <>
-                  <p className="text-muted-foreground truncate text-sm">
-                    {t("scan.playlistName", {
-                      playlist: playlist.name || playlist.id,
-                    })}
-                    {" · "}
-                    {t("scan.playlistPosition", {
-                      current: playlistPosition,
-                      total: playlist.total,
-                    })}
-                  </p>
-                  {/* Playlist position is the only total Core reports for
-                      every launcher, so it is the only honest determinate
-                      bar here. */}
-                  <div
-                    role="progressbar"
-                    aria-valuenow={playlistPosition}
-                    aria-valuemin={0}
-                    aria-valuemax={playlist.total}
-                    aria-label={t("scan.playlistProgressLabel")}
-                    className="border-bd-filled bg-background mt-1 h-[10px] w-full rounded-full border border-solid"
-                  >
-                    <div
-                      className="border-background bg-button-pattern h-[8px] rounded-full border border-solid"
-                      style={{
-                        width: `${
-                          playlist.total > 0
-                            ? (
-                                (playlistPosition / playlist.total) *
-                                100
-                              ).toFixed(2)
-                            : 0
-                        }%`,
-                      }}
-                    />
-                  </div>
-                </>
               )}
             </div>
           </div>
@@ -173,6 +131,14 @@ export function NowPlayingCard({
             onReplayLast={onReplayLast}
           />
         </div>
+
+        {playlist && playlist.items.length > 0 && onPlaylistSelect && (
+          <PlaylistQueue
+            playlist={playlist}
+            connected={connected}
+            onSelect={onPlaylistSelect}
+          />
+        )}
       </Card>
     </section>
   );

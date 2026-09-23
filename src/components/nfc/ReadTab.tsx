@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { EyeIcon, EyeOffIcon, ShareIcon, NfcIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Share } from "@capacitor/share";
@@ -13,9 +13,10 @@ import { logger } from "@/lib/logger";
 interface ReadTabProps {
   result: Result | null;
   onScan: () => void;
+  scanControl?: ReactNode;
 }
 
-export function ReadTab({ result, onScan }: ReadTabProps) {
+export function ReadTab({ result, onScan, scanControl }: ReadTabProps) {
   const { t } = useTranslation();
   const [showRawData, setShowRawData] = useState(false);
 
@@ -48,12 +49,14 @@ export function ReadTab({ result, onScan }: ReadTabProps) {
   return (
     <div className="space-y-4 px-2 pt-6">
       {/* Scan Button */}
-      <Button
-        onClick={onScan}
-        icon={<NfcIcon size={16} />}
-        label={t("create.nfc.readTab.scanTag")}
-        className="w-full"
-      />
+      {scanControl ?? (
+        <Button
+          onClick={onScan}
+          icon={<NfcIcon size={16} />}
+          label={t("create.nfc.readTab.scanTag")}
+          className="w-full"
+        />
+      )}
 
       {/* Basic Information Card */}
       <div className="bg-background-secondary/50 space-y-4 rounded-2xl p-4">

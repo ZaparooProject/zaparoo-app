@@ -720,7 +720,7 @@ describe("useScanOperations", () => {
         await result.current.handleCameraScan();
       });
 
-      // Assert - Should not open write modal for empty content
+      // Assert - Should not open reader activity for empty content
       expect(setWriteOpen).not.toHaveBeenCalled();
       expect(setLastToken).not.toHaveBeenCalled();
     });
@@ -761,7 +761,7 @@ describe("useScanOperations", () => {
         await result.current.handleCameraScan();
       });
 
-      // Assert - Should handle gracefully without launching or opening write modal
+      // Assert - Should handle gracefully without launching or opening reader activity
       expect(setLastToken).not.toHaveBeenCalled();
       expect(setWriteOpen).not.toHaveBeenCalled();
     });

@@ -114,5 +114,8 @@ describe("Card", () => {
 
     expect(mockOnClick).not.toHaveBeenCalled();
     expect(mockHapticPress).not.toHaveBeenCalled();
+    expect(card).toHaveAttribute("data-interactive", "true");
+    expect(card).toHaveAttribute("data-disabled", "true");
+    expect(card).not.toHaveAttribute("data-pressable");
   });
 });

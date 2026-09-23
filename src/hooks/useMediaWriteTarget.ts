@@ -9,35 +9,37 @@ import {
   parseTitleZapScript,
   titleTagKey,
 } from "@/lib/titleZapScript";
+import { usePreferencesStore } from "@/lib/preferencesStore";
 
 export type MediaWriteMode = "path" | "zapScript";
-
-let sessionWriteMode: MediaWriteMode = "zapScript";
 
 function getAvailableWriteModeFromValues(
   zapScript: string | undefined,
   path: string,
+  preferredMode: MediaWriteMode,
 ): MediaWriteMode {
-  if (sessionWriteMode === "zapScript" && zapScript?.trim()) {
+  if (preferredMode === "zapScript" && zapScript?.trim()) {
     return "zapScript";
   }
-  if (sessionWriteMode === "path" && path) return "path";
+  if (preferredMode === "path" && path) return "path";
   return zapScript?.trim() ? "zapScript" : "path";
 }
 
-function getAvailableWriteMode(media: MediaWriteSource | null): MediaWriteMode {
-  if (!media) return sessionWriteMode;
+function getAvailableWriteMode(
+  media: MediaWriteSource | null,
+  preferredMode: MediaWriteMode,
+): MediaWriteMode {
+  if (!media) return preferredMode;
   return getAvailableWriteModeFromValues(
     media.zapScript,
     getMediaWritePath(media),
+    preferredMode,
   );
 }
 
-export function __resetMediaWriteModeForTests() {
-  sessionWriteMode = "zapScript";
-}
-
 export function useMediaWriteTarget(media: MediaWriteSource | null) {
+  const showFilenames = usePreferencesStore((state) => state.showFilenames);
+  const preferredMode: MediaWriteMode = showFilenames ? "path" : "zapScript";
   const hasMedia = media !== null;
   const zapScript = media?.zapScript;
   const path = media ? getMediaWritePath(media) : "";
@@ -46,7 +48,7 @@ export function useMediaWriteTarget(media: MediaWriteSource | null) {
     [zapScript],
   );
   const [writeMode, setWriteModeState] = useState<MediaWriteMode>(() =>
-    getAvailableWriteMode(media),
+    getAvailableWriteMode(media, preferredMode),
   );
   const [selectedTagKeys, setSelectedTagKeys] = useState<Set<string>>(
     () => new Set(parsedZapScript?.tags.map(titleTagKey) ?? []),
@@ -55,12 +57,13 @@ export function useMediaWriteTarget(media: MediaWriteSource | null) {
   useLayoutEffect(() => {
     if (!hasMedia) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset before paint when external media content changes.
-    setWriteModeState(getAvailableWriteModeFromValues(zapScript, path));
+    setWriteModeState(
+      getAvailableWriteModeFromValues(zapScript, path, preferredMode),
+    );
     setSelectedTagKeys(new Set(parsedZapScript?.tags.map(titleTagKey) ?? []));
-  }, [hasMedia, parsedZapScript, path, zapScript]);
+  }, [hasMedia, parsedZapScript, path, preferredMode, zapScript]);
 
   const setWriteMode = useCallback((mode: MediaWriteMode) => {
-    sessionWriteMode = mode;
     setWriteModeState(mode);
   }, []);
 
@@ -104,6 +107,7 @@ export function useMediaWriteTarget(media: MediaWriteSource | null) {
     customizedZapScript,
     parsedZapScript,
     path,
+    preferredMode,
     selectedTagKeys,
     selectedValue,
     setWriteMode,

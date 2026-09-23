@@ -6,6 +6,7 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 import { usePrevious } from "@uidotdev/usehooks";
 import { useTranslation } from "react-i18next";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
+import { NfcIcon } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { ErrorComponent } from "@/components/ErrorComponent.tsx";
 import { AppBadgeManager } from "@/components/AppBadgeManager";
@@ -45,7 +46,7 @@ import { useAccelerometerAvailabilityCheck } from "./hooks/useAccelerometerAvail
 import { usePreferenceHydrationRecovery } from "./hooks/usePreferenceHydrationRecovery";
 import { useRunQueueProcessor } from "./hooks/useRunQueueProcessor";
 import { useWriteQueueProcessor } from "./hooks/useWriteQueueProcessor";
-import { WriteModal } from "./components/WriteModal";
+import { ReaderActivityControl } from "./components/ReaderActivityControl";
 import { DeepLinkConfirmModal } from "./components/DeepLinkConfirmModal";
 import { usePassiveNfcListener } from "./hooks/usePassiveNfcListener";
 import { useLiveUpdate } from "./hooks/useLiveUpdate";
@@ -101,10 +102,10 @@ function isRetryableSubscriptionError(error: unknown): boolean {
 
 // Component to initialize queue processors and passive listeners after preferences hydrate
 // This ensures sessionManager.launchOnScan is set correctly before processing.
-// It also renders the UI for queue-driven flows: the write modal (bound to the
-// same writer instance that performs queued writes, on every route) and the
-// deep-link launch confirmation.
+// It also renders UI for queue-driven flows: compact reader activity (bound to
+// the writer instance that performs queued writes) and deep-link confirmation.
 function QueueProcessors() {
+  const { t } = useTranslation();
   const { pendingConfirm, confirmRun, cancelConfirm } = useRunQueueProcessor();
   const { nfcWriter } = useWriteQueueProcessor();
   // Listen for NFC intents on Android even when not in explicit scan mode
@@ -125,13 +126,13 @@ function QueueProcessors() {
     }
   }, [writeOpen, nfcWriter.status, nfcWriter.verifyError, setWriteOpen]);
 
-  const closeWriteModal = async () => {
+  const cancelReaderActivity = async () => {
     try {
       await nfcWriter.end();
     } catch (err) {
       logger.error("Failed to end NFC writer session", err, {
         category: "nfc",
-        action: "closeWriteModal",
+        action: "cancelReaderActivity",
         severity: "error",
       });
     } finally {
@@ -141,13 +142,37 @@ function QueueProcessors() {
 
   return (
     <>
-      <WriteModal
-        isOpen={writeOpen}
-        close={closeWriteModal}
-        verifyError={nfcWriter.verifyError !== null}
-        retry={() => void nfcWriter.retry()}
-        retapRequired={nfcWriter.retapRequired}
-      />
+      {writeOpen && (
+        <div className="bg-surface-raised border-edge-subtle fixed inset-x-0 [bottom:calc(var(--bottom-nav-base-height)+env(safe-area-inset-bottom))] z-40 border-t px-4 py-3 shadow-lg">
+          <div className="mx-auto max-w-md">
+            <ReaderActivityControl
+              state={
+                nfcWriter.verifyError
+                  ? "error"
+                  : nfcWriter.retapRequired
+                    ? "attention"
+                    : "waiting"
+              }
+              idleLabel={t("create.search.writeLabel")}
+              activeLabel={
+                nfcWriter.retapRequired
+                  ? t("spinner.retapTag")
+                  : t("spinner.holdTagReader")
+              }
+              errorMessage={
+                nfcWriter.verifyError
+                  ? t("spinner.verifyFailedRetry")
+                  : undefined
+              }
+              icon={<NfcIcon size={20} />}
+              buttonClassName="w-full"
+              onStart={() => undefined}
+              onCancel={() => void cancelReaderActivity()}
+              onRetry={() => void nfcWriter.retry()}
+            />
+          </div>
+        </div>
+      )}
       <DeepLinkConfirmModal
         item={pendingConfirm}
         onConfirm={confirmRun}
@@ -593,8 +618,7 @@ export default function App() {
             <StagedTokenModal />
             <AppBadgeManager />
             {/* Must live inside A11yAnnouncerProvider and SlideModalProvider:
-                its WriteModal uses useAnnouncer and its confirm modal renders
-                a SlideModal */}
+                reader activity uses announcements and confirmation uses a SlideModal. */}
             <QueueProcessors />
             <WhatsNewInitializer />
           </ConnectionProvider>

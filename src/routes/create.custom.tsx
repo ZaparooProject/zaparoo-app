@@ -5,10 +5,9 @@ import { useShallow } from "zustand/react/shallow";
 import { ZapScriptInput } from "@/components/ZapScriptInput.tsx";
 import { BackIcon, CreateIcon } from "@/lib/images";
 import { HeaderButton } from "@/components/wui/HeaderButton";
-import { Button } from "@/components/wui/Button";
-import { WriteModal } from "@/components/WriteModal";
+import { ReaderActivityControl } from "@/components/ReaderActivityControl";
 import {
-  isWriteModalOpen,
+  isReaderActivityOpen,
   useNfcWriter,
   WriteAction,
   WriteMethod,
@@ -37,8 +36,8 @@ export function CustomText() {
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
-  const closeWriteModal = async () => {
+  const writeOpen = isReaderActivityOpen(writeIntent, nfcWriter);
+  const cancelReaderActivity = async () => {
     setWriteIntent(false);
     await nfcWriter.end();
   };
@@ -64,7 +63,7 @@ export function CustomText() {
           </h1>
         }
       >
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <ZapScriptInput
             value={customText}
             setValue={setCustomText}
@@ -72,32 +71,44 @@ export function CustomText() {
             rows={5}
           />
 
-          <Button
+          <ReaderActivityControl
+            state={
+              nfcWriter.verifyError
+                ? "error"
+                : nfcWriter.retapRequired
+                  ? "attention"
+                  : writeOpen
+                    ? "waiting"
+                    : "idle"
+            }
+            idleLabel={t("create.custom.write")}
+            activeLabel={
+              nfcWriter.retapRequired
+                ? t("spinner.retapTag")
+                : t("spinner.holdTagReader")
+            }
+            errorMessage={
+              nfcWriter.verifyError ? t("spinner.verifyFailedRetry") : undefined
+            }
             icon={<CreateIcon size="20" />}
-            label={t("create.custom.write")}
-            disabled={customText === ""}
-            onClick={() => {
-              if (customText !== "") {
-                nfcWriter.write(WriteAction.Write, customText).catch((e) => {
-                  logger.error("NFC write failed:", e, {
-                    category: "nfc",
-                    action: "writeCustomText",
-                    severity: "error",
-                  });
+            className="w-full"
+            buttonClassName="w-full"
+            onStart={() => {
+              setWriteIntent(true);
+              void nfcWriter.write(WriteAction.Write, customText).catch((e) => {
+                logger.error("NFC write failed:", e, {
+                  category: "nfc",
+                  action: "writeCustomText",
+                  severity: "error",
                 });
-                setWriteIntent(true);
-              }
+              });
             }}
+            onCancel={() => void cancelReaderActivity()}
+            onRetry={() => void nfcWriter.retry()}
+            disabled={customText === ""}
           />
         </div>
       </PageFrame>
-      <WriteModal
-        isOpen={writeOpen}
-        close={closeWriteModal}
-        verifyError={nfcWriter.verifyError !== null}
-        retry={() => void nfcWriter.retry()}
-        retapRequired={nfcWriter.retapRequired}
-      />
     </>
   );
 }

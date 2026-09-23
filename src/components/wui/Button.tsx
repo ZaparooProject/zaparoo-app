@@ -4,8 +4,9 @@ import { useTactilePress } from "@/hooks/useTactilePress";
 
 export type ButtonLayout = "inline" | "stacked" | "responsive";
 export type ButtonDisabledAppearance = "unavailable" | "busy";
+export type ButtonReaderState = "waiting" | "attention" | "error";
 
-interface ButtonProps {
+export interface ButtonProps {
   onClick?: () => void;
   label?: string;
   variant?: "fill" | "secondary" | "outline" | "ghost" | "text";
@@ -22,6 +23,8 @@ interface ButtonProps {
    * busy: temporarily locked control that retains its normal material, faded.
    */
   disabledAppearance?: ButtonDisabledAppearance;
+  /** Illuminated latched state for an active physical reader interaction. */
+  readerState?: ButtonReaderState;
   className?: string;
   /** Accessible label for screen readers (required for icon-only buttons) */
   "aria-label"?: string;
@@ -31,6 +34,8 @@ interface ButtonProps {
   "aria-pressed"?: boolean;
   /** Indicates whether the controlled element is expanded */
   "aria-expanded"?: boolean;
+  /** Indicates that the action is waiting on an asynchronous interaction. */
+  "aria-busy"?: boolean;
   /** ID of the element controlled by this button */
   "aria-controls"?: string;
 }
@@ -56,6 +61,7 @@ export const Button = memo(
         data-icon-only={!props.label && !!props.icon}
         data-shape={props.shape ?? "round"}
         data-disabled-appearance={props.disabledAppearance ?? "unavailable"}
+        data-reader-state={props.readerState}
         data-pressed={pressed}
         aria-label={
           props.decorative ? undefined : props["aria-label"] || props.label
@@ -63,6 +69,7 @@ export const Button = memo(
         aria-hidden={props.decorative || undefined}
         aria-pressed={props["aria-pressed"]}
         aria-expanded={props["aria-expanded"]}
+        aria-busy={props["aria-busy"]}
         aria-controls={props["aria-controls"]}
         tabIndex={props.decorative ? -1 : undefined}
         className={classNames(
@@ -93,7 +100,10 @@ export const Button = memo(
         {...handlers}
       >
         {props.icon && (
-          <span className="flex shrink-0 items-center" aria-hidden="true">
+          <span
+            className="wui-button-icon flex shrink-0 items-center"
+            aria-hidden="true"
+          >
             {props.icon}
           </span>
         )}

@@ -167,6 +167,11 @@ describe("Home Page Scan Flows", () => {
 
       const action = screen.getByRole("button", { name: "scan.tapTagStop" });
       expect(action).toHaveAttribute("aria-pressed", "true");
+      expect(action.parentElement).toHaveAttribute(
+        "data-reader-state",
+        "waiting",
+      );
+      expect(screen.getByText("reader.pressAgainToCancel")).toBeVisible();
 
       await user.click(action);
 

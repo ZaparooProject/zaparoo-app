@@ -26,13 +26,13 @@ does not exist in a normal production build.
 ```typescript
 const appUi = useAppUi(); // { enabled, preview, nfc, camera, accelerometer }
 
-{appUi.nfc && <ScanSpinner ... />}
+{appUi.nfc && <ReaderActivityControl ... />}
 ```
 
 Preview reports every capability as present and simulates NFC operations
 (`src/lib/nfcPreview.ts`, outcome chosen next to the toggle), which is enough to
-walk through the write modal's waiting, re-tap, verification-failure and error
-states. Local read sessions are simulated inside `readTag`/`readRaw`, so the
+walk through contextual reader controls' waiting, re-tap,
+verification-failure and error states. Local read sessions are simulated inside `readTag`/`readRaw`, so the
 home scan button holds, cancels through `cancelSession()` and times out like a
 reader-mode session. Nothing behind the UI works: plugin calls still need
 `Capacitor.isNativePlatform()`, and preview must never gate one.

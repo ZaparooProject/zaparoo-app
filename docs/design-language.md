@@ -14,7 +14,7 @@ Use these before creating or changing UI:
 
 - App shell: `src/components/PageFrame.tsx`, `src/components/ResponsiveContainer.tsx`, `src/components/BottomNav.tsx`, `BackToTop.tsx`, `ConnectionStatusBar.tsx`
 - WUI primitives: `src/components/wui/Button.tsx`, `ModalActionBar.tsx`, `ModalActionRail.tsx`, `HeaderButton.tsx`, `Card.tsx`, `ToggleSwitch.tsx`, `TextInput.tsx`, `Badge.tsx`, `EmptyState.tsx`, `Segmented.tsx`, `ToggleChip.tsx`, `SettingHelp.tsx`
-- Modals: `src/components/SlideModal.tsx`, `ConfirmClearModal.tsx`, `PairingModal.tsx`, `WriteModal.tsx`, `RequirementsModal.tsx`, `ProPurchase.tsx`, `home/StopConfirmModal.tsx`, `home/StagedTokenModal.tsx`
+- Modals: `src/components/SlideModal.tsx`, `ConfirmClearModal.tsx`, `PairingModal.tsx`, `RequirementsModal.tsx`, `ProPurchase.tsx`, `home/StopConfirmModal.tsx`, `home/StagedTokenModal.tsx`
 - Settings screens: `src/routes/settings.index.tsx`, `settings.readers.tsx`, `settings.advanced.tsx`, `settings.accessibility.tsx`, `settings.media.tsx`, `settings.play-controls.tsx`, `settings.about.tsx`, `settings.help.tsx`, `settings.online.tsx`, `src/routes/-pages/Devices.tsx`, `DeviceDetail.tsx`, `Logs.tsx`
 - Create/search flows: `src/routes/create.index.tsx`, `create.custom.tsx`, `create.nfc.tsx`, `create.mappings.tsx`, `src/routes/-pages/Search.tsx`, `MappingEditor.tsx`, `ZapScriptInput.tsx`
 - Home: `src/routes/-pages/Index.tsx`, `src/components/home/*`
@@ -100,7 +100,7 @@ Common page content stacks:
 - About page: `flex flex-col gap-8` with smaller inner `gap-2` / `gap-3` groups.
 - Search form groups: `space-y-3`, with nested `flex flex-col gap-3 md:flex-row` where filters become columns on desktop.
 - NFC tabs: tab content uses `space-y-4 px-2 pt-4/pt-6`; inner NFC panels use rounded background blocks, not WUI Card.
-- Modal content: selector/search headers use `p-2 pt-3`; confirmation modals vary between `py-4` and `p-4` based on the existing modal being matched.
+- Modal content: `SlideModal` owns the horizontal gutter and compact title-to-body gap; selector/search body wrappers do not add another shell-level padding. Confirmation modals vary between `py-4` and `p-4` based on the existing modal being matched.
 
 Use the nearest screen’s spacing. Do not mix gap systems inside one section unless sibling code does.
 
@@ -135,6 +135,14 @@ Global connection status uses `ConnectionStatusBar`, an in-layout strip above bo
 - Settings landing relies on its contextual connection card instead of duplicating the visible strip; Home does not, because its device pill carries identity rather than connection state
 - restored status appears briefly only after a connection issue was presented
 
+`BackToTop` is the only floating circular page utility. Use it only on long,
+scrollable result or reference surfaces where returning to controls or the list
+start would otherwise require substantial reverse scrolling. It uses the
+neutral secondary `CircleButton`, clears bottom navigation and safe areas,
+respects reduced motion, and returns keyboard focus with the viewport. Do not
+introduce additional floating actions or use primary action colour for this
+navigation utility.
+
 Do not use these styles for ordinary page content.
 
 ## Components
@@ -151,7 +159,7 @@ Variants:
 - `ghost`: chrome-free icon utility with only a subtle hover/pressed wash; use for small inline refresh and similar affordances
 - `text`: unframed textual action without filled treatment
 
-Intents: `default`, `primary`, `destructive`, and `pro`. `destructive` supplies the red cap and red text/border; `pro` supplies the gold cap with a dark label, and gold text/border on non-filled variants. Use `pro` for paid-tier and support actions, such as Join the Patreon.
+Intents: `default`, `primary`, `destructive`, and `pro`. `destructive` supplies the red cap and red text/border; `pro` supplies the gold cap with a dark label, and gold text/border on non-filled variants. Reserve gold action styling for premium upgrade and paid-support calls to action, such as Unlock Zaparoo Pro and Join the Patreon. Use `intent="pro"` for these actions; gold means “upgrade to premium,” not general emphasis or ordinary settings navigation.
 
 Sizes:
 
@@ -209,6 +217,9 @@ Card style:
 - semantic subtle border
 - `bg-card-pattern`: elevated-to-raised surface gradient
 - inset material highlight and restrained shadow
+- disabled interactive cards use a permanently recessed `surface-inset` face
+  with an inner shadow and clearly faded content; they do not retain the raised
+  card shadow, hover response, press travel, or haptic feedback
 
 Real use:
 
@@ -216,7 +227,6 @@ Real use:
 - Home connection status
 - Create landing action cards
 - Search database warning card
-- Recent-search rows
 - Device rows/history entries via `DeviceRow`
 - Core outdated notice with warning border/background overrides
 
@@ -294,7 +304,7 @@ Use existing segmented/radio patterns when choosing one option among a small set
 Real patterns:
 
 - Appearance, text size, reader scan mode, shake mode, and editor choices use `TabBar` (through `Segmented` where a label is needed).
-- Inset tray, 48px options, semibold labels (uppercase only for navigation tabs); selected option rises from the tray with neutral text, edge and highlight. Not a row of blue CTA buttons.
+- Compact inset tray with 48px interactive targets and a 40px visible option face; semibold labels (uppercase only for navigation tabs). Selected option rises from the tray with neutral text, edge and highlight. Not a row of blue CTA buttons.
 - Grid choices reflow as text grows instead of squeezing labels; scrolling layouts retain single-line options.
 - Arrow/Home/End selection and roving focus remain; an unselected group still has a keyboard entry point.
 - Radix Tabs use the same materials but retain their own tab semantics and keyboard handling.
@@ -428,9 +438,15 @@ Selector modal pattern:
 - `SlideModal fixedHeight="90vh"`; shared modal maximum clamps rendered height to 80% of viewport
 - search bar at top with icon inside input
 - category tabs/accordion where relevant
+- search and category controls participate in normal modal scrolling rather
+  than sticking over list content
 - virtualized list rows
 - footer for multi-select apply/clear count
 - `BackToTop` for long lists
+
+Tag selector keeps selected count inside the Apply label so its footer remains a
+single action row. Category labels map every canonical Core tag type; internal
+`scraper.*` and `scraper-run.*` bookkeeping tags are not user-facing filters.
 
 Do not create a new picker UI for systems/tags.
 
@@ -447,16 +463,19 @@ Visual behavior:
 - content-sized by default and capped at 80% of viewport height
 - fixed-height selector/search requests are still capped at 80%
 - opaque raised surface with semantic border and a material highlight
-- 8px upper corners; 16px shell padding
+- 8px upper corners; 16px shell gutter matching page content. Modal body
+  wrappers do not add a second horizontal gutter; padding inside rows, cards,
+  and fields remains component-owned
 - header, scrollable body, and persistent footer form distinct zones
 - mobile drag handle uses muted foreground
-- left-aligned `text-lg font-semibold` title; compact drag handle and desktop close action
+- centered mobile and left-aligned desktop `text-lg font-semibold` title;
+  compact 8px title-to-body spacing, drag handle, and desktop close action
 - safe-area bottom padding
 - focus trap and Android back handling
 
 Persistent footer behavior:
 
-- footer stays in normal flex flow below scrollable body; never float actions over content
+- footer stays in normal flex flow below scrollable body with an 8px gap after its divider; never float actions over content
 - body shrinks and scrolls before footer; footer gets its own constrained overflow only as short-viewport/text-zoom fallback
 - simple confirmations keep two labelled, equal-width actions on one row
 - form and selector footers with one secondary action plus one primary action use `ModalActionBar`, preserving the same labelled, equal-width pair; examples include Reset/Apply, Clear/Apply, Delete/Save, and Logout/Save
@@ -476,13 +495,21 @@ Use `dismissible={false}` only for mandatory blocking flows. This keeps the visi
 
 Do not implement one-off bottom-sheet shells.
 
-### Full-screen write state
+### Reader activity
 
-Shadcn `Dialog` is no longer used for app modal flows; keep its primitive only while shared compatibility/tests require it.
+Physical NFC waits stay in context instead of opening an app-owned modal. `ReaderActivityControl` is the shared control for every NFC scan, read, and write action, including Zap’s Tap a tag action; do not reproduce its latched state, pulse, or reserved status slot with a raw `Button`:
 
-`WriteModal` is a special full-screen fixed overlay with scan spinner and cancel button, not a bottom sheet.
+- waiting latches the physical button down and adds a broad, slow blue halo outside its edge; do not draw an illuminated line inside the button face
+- a required re-tap uses an external amber double pulse
+- verification failure releases into an explicit Retry/Cancel state with a static red halo
+- the component always reserves one compact status line below its action, including while idle, so state text never shifts surrounding layout
+- pressing the latched waiting control again cancels the session; visible status copy says “Press again to cancel” so it cannot be mistaken for another NFC-card tap
+- labels describe the physical action; do not imply finite progress
+- state changes receive one live announcement without moving focus
+- animate the pre-rendered halo with opacity and transform rather than animating blur or box-shadow
+- reduced motion keeps a static illuminated state
 
-Copy existing `SlideModal` patterns for the same job. Help and purchase flows use `SlideModal`; `WriteModal` remains the deliberate full-screen exception.
+Queue or deep-link writes without a visible source control use the compact reader activity strip above bottom navigation. Native iOS NFC system UI may still appear because it is OS-owned. Do not add spinner, orbit, fake percentage, or app-owned full-screen reader overlays.
 
 ### Confirm modals
 
@@ -535,7 +562,14 @@ Patterns:
   system, and transports derived from the media's `launcherControls`. Keep the
   previous/stop/play/next deck mounted while idle so the card does not shift.
   Idle Play replays the most recent media when available; the other controls
-  remain unavailable. Never repurpose the Stop position as Play.
+  remain unavailable. Never repurpose the Stop position as Play. When a
+  playlist is active, keep the artwork/title/system area exclusively about the
+  active media; do not replace it with playlist metadata or position. Show the
+  text queue in a second recessed, vertically scrollable well below the
+  transport. Its compact header carries playlist name and plain item position.
+  Each 48px row selects that item with `playlist.goto` then `playlist.play`;
+  highlight and auto-center the current item, using its name with ZapScript as
+  the fallback. Do not render playlist position as a progress bar.
 - Recently played and favourites are horizontal cover rows that scroll, each
   hidden when empty. Tapping a cover opens the shared media-details sheet so
   launch, favourite, and write actions stay consistent with Library and search.
@@ -580,6 +614,32 @@ Search result rows are list rows, not cards:
 
 Do not wrap search results in new cards.
 
+### Recent searches
+
+The Recent Searches sheet follows the Home History sheet rather than card-menu
+styling:
+
+- content-height sheet that grows until `SlideModal`'s maximum height, then
+  scrolls
+- shared `HistoryListRow` geometry with search text as the primary value and a
+  muted timestamp below
+- right-aligned ghost Search action
+- Clear History is a centered destructive text action below the list with a
+  full-width touch target but no visible button face; it is not a prominent
+  modal footer action
+- clearing keeps the sheet open so the empty-state result is apparent
+
+### Write-focused media details
+
+Search/Create media details prioritize the value being written:
+
+- with Show filenames off, ZapScript is first and selected by default
+- with Show filenames on, Path is first and selected by default
+- tags only modify parsed ZapScript; Path selection disables them using the
+  shared recessed unavailable treatment
+- Favorite, Copy, and Preview remain secondary to Write in the modal action
+  rail, with no extra body padding above the footer
+
 ### Mapping editor and ZapScript input
 
 Mapping editor uses a plain `flex flex-col gap-4` form stack:
@@ -595,7 +655,7 @@ Mapping editor uses a plain `flex flex-col gap-4` form stack:
 - recessed monospace textarea with the shared input focus/error vocabulary
 - raised attached toolbar with matching boundary and 4px lower corners; utility rows wrap at narrow/zoomed widths
 - character count muted small text
-- command palette uses existing `Button variant="outline"` grid/flex rows
+- command palette uses existing `Button variant="outline"` grid/flex rows, localized category headings, and `BackToTop` for its long command list
 - clear action uses `ConfirmClearModal`
 
 Do not replace ZapScript editing with a plain `TextInput`.
@@ -625,7 +685,7 @@ Mapping rows use:
 - mono override preview `font-mono text-sm`
 - `NextIcon` right
 
-Use this style for mapping-like data rows.
+Use this style for mapping-like data rows. Mapping lists and editors show delayed inline loading, an explicit retryable load error, and `BackToTop` on long mapping lists. NFC and Camera capture buttons in the editor are supporting outline actions; Save remains the primary action.
 
 ## Settings support pages
 
@@ -717,7 +777,7 @@ Use loading treatment that matches known dimensions:
 - `LoadingSpinner` for inline async work
 - `Loader2` icon for network scan, reconnecting indicator, and some header upload/refresh states
 - text-only muted pending states where existing component does that
-- full-screen write/scan waiting uses `WriteModal` with `ScanSpinner`, not a generic spinner overlay
+- physical read/write waits use the latched `ReaderActivityControl`, not a loading spinner or blocking overlay
 
 Do not invent new loading cards or shimmer styles.
 
@@ -757,8 +817,8 @@ Common sizes:
 - 20px: row chevrons, button icons, small actions, log header actions
 - 24px: header buttons, status icons, settings/action icons, bottom nav icons
 - 18px: small edit/delete/help-adjacent actions where existing component uses it
-- 16px: inline metadata icons, spinner/status details
-- larger sizes only when owned by a component, e.g. scan spinner
+- 16px: inline metadata and compact status icons
+- larger sizes only when owned by a component, e.g. the primary reader control
 
 Rules:
 
@@ -803,6 +863,6 @@ Before finishing UI work, compare changed UI against nearest siblings and verify
 - same presence or absence of descriptions/helper text
 - no new card/badge/icon/progress/loading treatment introduced
 - row style matches context: settings nav vs device row vs mapping row vs search result vs log row vs inbox row
-- modal type matches job: `SlideModal`, shadcn `Dialog`, or full-screen `WriteModal`
+- modal type matches job: `SlideModal` or the remaining compatibility `Dialog`; reader waits stay in context
 - focus rings and accessible labels intact
 - mobile safe-area and desktop max-width handled by existing shell

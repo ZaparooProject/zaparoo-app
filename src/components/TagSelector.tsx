@@ -39,6 +39,10 @@ interface GroupedTags {
 
 const ITEM_HEIGHT = 64; // Height of each tag item in pixels (increased for spacing)
 
+function isInternalScraperTag(type: string): boolean {
+  return type.startsWith("scraper.") || type.startsWith("scraper-run.");
+}
+
 function TagSearchOption(props: {
   tag: TagInfo;
   selected: boolean;
@@ -129,7 +133,7 @@ export function TagSelector({
       return { groupedTags: {}, types: [], allTags: [] };
     }
 
-    const tags = tagsData.tags;
+    const tags = tagsData.tags.filter((tag) => !isInternalScraperTag(tag.type));
 
     // Group tags by type
     const grouped: GroupedTags = {};
@@ -255,14 +259,7 @@ export function TagSelector({
 
   // Footer for multi-select mode
   const footer = (
-    <div className="flex flex-col gap-3 px-2 pb-2">
-      <div className="text-center">
-        <span className="text-muted-foreground text-sm">
-          {t("tagSelector.selectedCount", {
-            count: selectedTags.length,
-          })}
-        </span>
-      </div>
+    <div className="pb-2">
       <ModalActionBar
         secondaryAction={
           <Button
@@ -274,7 +271,16 @@ export function TagSelector({
           />
         }
         primaryAction={
-          <Button label={t("tagSelector.apply")} onClick={handleApply} />
+          <Button
+            label={
+              selectedTags.length > 0
+                ? t("tagSelector.applyCount", {
+                    count: selectedTags.length,
+                  })
+                : t("tagSelector.apply")
+            }
+            onClick={handleApply}
+          />
         }
       />
     </div>
@@ -291,7 +297,7 @@ export function TagSelector({
     >
       <div className="flex min-h-0 flex-col">
         {/* Header with search */}
-        <div className="p-2 pt-3">
+        <div className="pb-2">
           {/* Search bar */}
           <div className="relative mb-3">
             <Search
@@ -372,7 +378,7 @@ export function TagSelector({
           ) : debouncedSearchQuery ? (
             <div
               ref={scrollContainerRef}
-              className="h-full overflow-auto px-2 pb-4"
+              className="h-full overflow-auto pb-4"
               tabIndex={-1}
             >
               {accessibleLists ? (
@@ -423,7 +429,7 @@ export function TagSelector({
                           width: "100%",
                           height: `${virtualItem.size}px`,
                           transform: `translateY(${virtualItem.start}px)`,
-                          padding: "2px 8px",
+                          padding: "2px 0",
                         }}
                       >
                         <TagSearchOption
@@ -440,7 +446,7 @@ export function TagSelector({
             </div>
           ) : (
             // Accordion view for organized categories
-            <div className="h-full overflow-auto px-2 pb-4">
+            <div className="h-full overflow-auto pb-4">
               <Accordion
                 type="multiple"
                 value={expandedSections}

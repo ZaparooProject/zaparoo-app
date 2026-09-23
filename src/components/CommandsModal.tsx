@@ -1,5 +1,7 @@
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { SlideModal } from "@/components/SlideModal.tsx";
+import { BackToTop } from "@/components/BackToTop.tsx";
 import { Button } from "@/components/wui/Button.tsx";
 
 export function CommandsModal(props: {
@@ -35,34 +37,59 @@ export function CommandsModal(props: {
     { label: "delay", command: "**delay:" },
   ];
 
-  const categories = {
-    Launch: ["launch.system", "launch.random", "launch.search"],
-    Input: ["input.keyboard", "input.gamepad", "input.coinp1", "input.coinp2"],
-    Playlist: [
-      "playlist.load",
-      "playlist.play",
-      "playlist.stop",
-      "playlist.next",
-      "playlist.previous",
-      "playlist.pause",
-      "playlist.goto",
-      "playlist.open",
-    ],
-    MiSTer: ["mister.ini", "mister.core", "mister.script"],
-    HTTP: ["http.get", "http.post"],
-    Other: ["stop", "execute", "delay"],
-  };
+  const categories = [
+    {
+      label: t("create.custom.commandCategories.launch"),
+      commandLabels: ["launch.system", "launch.random", "launch.search"],
+    },
+    {
+      label: t("create.custom.commandCategories.input"),
+      commandLabels: [
+        "input.keyboard",
+        "input.gamepad",
+        "input.coinp1",
+        "input.coinp2",
+      ],
+    },
+    {
+      label: t("create.custom.commandCategories.playlist"),
+      commandLabels: [
+        "playlist.load",
+        "playlist.play",
+        "playlist.stop",
+        "playlist.next",
+        "playlist.previous",
+        "playlist.pause",
+        "playlist.goto",
+        "playlist.open",
+      ],
+    },
+    {
+      label: t("create.custom.commandCategories.mister"),
+      commandLabels: ["mister.ini", "mister.core", "mister.script"],
+    },
+    {
+      label: t("create.custom.commandCategories.http"),
+      commandLabels: ["http.get", "http.post"],
+    },
+    {
+      label: t("create.custom.commandCategories.other"),
+      commandLabels: ["stop", "execute", "delay"],
+    },
+  ];
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   return (
     <SlideModal
       isOpen={props.isOpen}
       close={props.close}
-      title={t("create.custom.commands")}
+      title={t("create.custom.commandsTitle")}
+      scrollRef={scrollContainerRef}
     >
-      <div className="flex flex-col gap-4">
-        {Object.entries(categories).map(([category, commandLabels]) => (
-          <div key={category} className="flex flex-col gap-2">
-            <h3 className="text-lg font-semibold capitalize">{category}</h3>
+      <div className="flex flex-col gap-4 pb-16">
+        {categories.map(({ label, commandLabels }) => (
+          <div key={label} className="flex flex-col gap-2">
+            <h3 className="text-lg font-semibold">{label}</h3>
             <div className="flex flex-col gap-2">
               {commands
                 .filter((cmd) => commandLabels.includes(cmd.label))
@@ -83,6 +110,11 @@ export function CommandsModal(props: {
           </div>
         ))}
       </div>
+      <BackToTop
+        scrollContainerRef={scrollContainerRef}
+        threshold={200}
+        bottomOffset="1rem"
+      />
     </SlideModal>
   );
 }

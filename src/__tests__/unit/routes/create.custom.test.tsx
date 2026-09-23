@@ -59,7 +59,7 @@ vi.mock("@/lib/preferencesStore", () => ({
   }),
 }));
 
-// Mock NFC writer, keeping the real enums and isWriteModalOpen
+// Mock NFC writer, keeping the real enums and isReaderActivityOpen
 vi.mock("@/lib/writeNfcHook", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/writeNfcHook")>()),
   useNfcWriter: () => mockNfcWriter,
@@ -90,12 +90,6 @@ vi.mock("@/components/ZapScriptInput.tsx", () => ({
       aria-label="ZapScript input"
     />
   ),
-}));
-
-// Mock WriteModal to simplify testing
-vi.mock("@/components/WriteModal", () => ({
-  WriteModal: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="write-modal">Write Modal</div> : null,
 }));
 
 // Import the route module to trigger createFileRoute which captures the component
@@ -210,7 +204,7 @@ describe("Create Custom Route", () => {
       expect(button).toBeDisabled();
     });
 
-    it("should show write modal after write is initiated", () => {
+    it("should latch the write control after write is initiated", () => {
       mockState.customText = "test text";
       mockNfcWriter.status = null;
       renderComponent();
@@ -219,7 +213,9 @@ describe("Create Custom Route", () => {
         screen.getByRole("button", { name: "create.custom.write" }),
       );
 
-      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "reader.cancelAction" }),
+      ).toHaveAttribute("data-reader-state", "waiting");
     });
   });
 

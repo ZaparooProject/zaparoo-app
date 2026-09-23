@@ -86,7 +86,7 @@ export function TabBar<T extends string>({
       role={role === "tab" ? "tablist" : "radiogroup"}
       aria-label={label}
       className={classNames(
-        "border-border bg-surface-inset gap-1 rounded-lg border border-solid p-1.5 shadow-inner",
+        "border-border bg-surface-inset gap-1 rounded-lg border border-solid p-0.5 shadow-inner",
         layout === "grid" ? "grid" : "flex",
         className,
       )}
@@ -126,19 +126,27 @@ export function TabBar<T extends string>({
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => onKeyDown(event, index)}
             className={classNames(
-              "min-h-12 min-w-0 cursor-pointer rounded-md border border-transparent px-2 py-2 text-center text-sm leading-snug font-semibold break-words transition-colors",
+              "group min-h-12 min-w-0 cursor-pointer rounded-md px-0.5 py-1 text-center text-sm leading-snug font-semibold break-words",
               "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
               layout === "scroll" && "shrink-0 whitespace-nowrap",
               role === "tab" && "uppercase",
               {
-                "border-border bg-surface-raised text-foreground shadow-[0_2px_0_var(--surface-base),inset_0_1px_0_var(--material-highlight)]":
-                  active,
-                "text-muted-foreground hover:bg-foreground/5": !active,
                 "cursor-not-allowed opacity-60": disabled,
               },
             )}
           >
-            {option.label}
+            <span
+              className={classNames(
+                "flex min-h-10 w-full items-center justify-center rounded-md border border-transparent px-2 py-1 transition-colors",
+                {
+                  "border-border bg-surface-raised text-foreground shadow-[0_2px_0_var(--surface-base),inset_0_1px_0_var(--material-highlight)]":
+                    active,
+                  "text-muted-foreground group-hover:bg-foreground/5": !active,
+                },
+              )}
+            >
+              {option.label}
+            </span>
           </button>
         );
       })}

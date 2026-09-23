@@ -30,12 +30,6 @@
 }
 
 @layer components {
-  @keyframes spinner {
-    0% {
-      transform: rotate(1turn);
-    }
-  }
-
   @keyframes attention {
     0%,
     40%,

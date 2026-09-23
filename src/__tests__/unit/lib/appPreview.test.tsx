@@ -8,7 +8,7 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { cancelSession, readTag, Status } from "@/lib/nfc";
 import { ScanResult } from "@/lib/models";
 import {
-  isWriteModalOpen,
+  isReaderActivityOpen,
   useNfcWriter,
   WriteAction,
 } from "@/lib/writeNfcHook";
@@ -171,7 +171,7 @@ describe("app preview", () => {
       expect(CoreAPI.write).not.toHaveBeenCalled();
     });
 
-    it("surfaces the verification failure state for the write modal", async () => {
+    it("surfaces the verification failure state for the reader activity", async () => {
       enablePreview();
       act(() => {
         useAppPreviewStore.setState({ nfcResult: "verifyFailed" });
@@ -215,14 +215,14 @@ describe("app preview", () => {
       await act(() => vi.advanceTimersByTimeAsync(5000));
 
       expect(result.current.writing).toBe(true);
-      expect(isWriteModalOpen(true, result.current)).toBe(true);
+      expect(isReaderActivityOpen(true, result.current)).toBe(true);
 
       await act(async () => {
         await result.current.end();
       });
 
       expect(result.current.writing).toBe(false);
-      expect(isWriteModalOpen(true, result.current)).toBe(false);
+      expect(isReaderActivityOpen(true, result.current)).toBe(false);
     });
   });
 });

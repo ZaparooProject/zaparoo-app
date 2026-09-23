@@ -1,6 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { NfcIcon } from "lucide-react";
 import { logger } from "@/lib/logger";
 // import {
 //   ScanTextIcon,
@@ -9,9 +10,9 @@ import { logger } from "@/lib/logger";
 //   ClockIcon
 // } from "lucide-react";
 import { useHaptics } from "@/hooks/useHaptics";
-import { WriteModal } from "@/components/WriteModal";
+import { ReaderActivityControl } from "@/components/ReaderActivityControl";
 import {
-  isWriteModalOpen,
+  isReaderActivityOpen,
   useNfcWriter,
   WriteAction,
   WriteMethod,
@@ -24,6 +25,7 @@ import { TabBar } from "@/components/wui/TabBar";
 import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { ReadTab } from "@/components/nfc/ReadTab";
 import { ToolsTab } from "@/components/nfc/ToolsTab";
+import { BackToTop } from "@/components/BackToTop";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
@@ -45,12 +47,13 @@ export function NfcUtils() {
   const { impact } = useHaptics();
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
+  const writeOpen = isReaderActivityOpen(writeIntent, nfcWriter);
   const [activeTab, setActiveTab] = useState("read");
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   // Track previous status to detect completion
   const prevStatusRef = useRef(nfcWriter.status);
 
-  const closeWriteModal = async () => {
+  const cancelReaderActivity = async () => {
     setWriteIntent(false);
     await nfcWriter.end();
   };
@@ -104,74 +107,107 @@ export function NfcUtils() {
     setWriteIntent(true);
   };
 
+  const readerState = nfcWriter.verifyError
+    ? "error"
+    : nfcWriter.retapRequired
+      ? "attention"
+      : writeOpen
+        ? "waiting"
+        : "idle";
+  const readerControl = (onStart: () => void, idleLabel: string) => (
+    <ReaderActivityControl
+      state={readerState}
+      idleLabel={idleLabel}
+      activeLabel={
+        nfcWriter.retapRequired
+          ? t("spinner.retapTag")
+          : t("spinner.holdTagReader")
+      }
+      errorMessage={
+        nfcWriter.verifyError ? t("spinner.verifyFailedRetry") : undefined
+      }
+      icon={<NfcIcon size={18} />}
+      buttonClassName="w-full"
+      onStart={onStart}
+      onCancel={() => void cancelReaderActivity()}
+      onRetry={() => void nfcWriter.retry()}
+    />
+  );
+
   const activeTabId = getTabBarTabId(activeTab, "nfc-tab");
   const activePanelId = getTabBarPanelId(activeTabId);
 
   return (
     <>
-      <div className="flex h-full w-full flex-col">
-        <PageFrame
-          onSwipeBack={goBack}
-          headerLeft={
-            <HeaderButton
-              onClick={goBack}
-              icon={<BackIcon size="24" />}
-              aria-label={t("nav.back")}
-            />
-          }
-          headerCenter={
-            <h1 ref={headingRef} className="text-foreground text-xl">
-              {t("create.nfc.title")}
-            </h1>
-          }
-        >
-          <div className="flex h-full flex-col">
-            <TabBar
-              label={t("create.nfc.title")}
-              role="tab"
-              options={[
-                {
-                  value: "read",
-                  label: t("create.nfc.tabs.read"),
-                  id: getTabBarTabId("read", "nfc-tab"),
-                },
-                {
-                  value: "tools",
-                  label: t("create.nfc.tabs.tools"),
-                  id: getTabBarTabId("tools", "nfc-tab"),
-                },
-              ]}
-              value={activeTab}
-              onChange={(value) => {
-                impact("light");
-                setActiveTab(value);
-              }}
-            />
-            <div
-              id={activePanelId}
-              role="tabpanel"
-              aria-labelledby={activeTabId}
-              className="flex-1 overflow-y-auto"
-            >
-              {activeTab === "read" ? (
-                <ReadTab result={nfcWriter.result} onScan={handleScan} />
-              ) : (
-                <ToolsTab
-                  onToolAction={handleToolAction}
-                  isProcessing={nfcWriter.writing}
-                />
-              )}
-            </div>
+      <PageFrame
+        onSwipeBack={goBack}
+        scrollRef={scrollContainerRef}
+        headerLeft={
+          <HeaderButton
+            onClick={goBack}
+            icon={<BackIcon size="24" />}
+            aria-label={t("nav.back")}
+          />
+        }
+        headerCenter={
+          <h1 ref={headingRef} className="text-foreground text-xl">
+            {t("create.nfc.title")}
+          </h1>
+        }
+      >
+        <div className="flex flex-col">
+          <TabBar
+            label={t("create.nfc.title")}
+            role="tab"
+            options={[
+              {
+                value: "read",
+                label: t("create.nfc.tabs.read"),
+                id: getTabBarTabId("read", "nfc-tab"),
+              },
+              {
+                value: "tools",
+                label: t("create.nfc.tabs.tools"),
+                id: getTabBarTabId("tools", "nfc-tab"),
+              },
+            ]}
+            value={activeTab}
+            onChange={(value) => {
+              impact("light");
+              setActiveTab(value);
+            }}
+          />
+          <div id={activePanelId} role="tabpanel" aria-labelledby={activeTabId}>
+            {activeTab === "read" ? (
+              <ReadTab
+                result={nfcWriter.result}
+                onScan={handleScan}
+                scanControl={readerControl(
+                  handleScan,
+                  t("create.nfc.readTab.scanTag"),
+                )}
+              />
+            ) : writeOpen ? (
+              <div className="px-2 pt-6">
+                {readerControl(
+                  () => undefined,
+                  t("create.nfc.toolsTab.formatTag"),
+                )}
+              </div>
+            ) : (
+              <ToolsTab
+                onToolAction={handleToolAction}
+                isProcessing={nfcWriter.writing}
+              />
+            )}
           </div>
-        </PageFrame>
-      </div>
-      <WriteModal
-        isOpen={writeOpen}
-        close={closeWriteModal}
-        verifyError={nfcWriter.verifyError !== null}
-        retry={() => void nfcWriter.retry()}
-        retapRequired={nfcWriter.retapRequired}
-      />
+        </div>
+        <BackToTop
+          scrollContainerRef={scrollContainerRef}
+          threshold={200}
+          bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
+        />
+      </PageFrame>
     </>
   );
 }

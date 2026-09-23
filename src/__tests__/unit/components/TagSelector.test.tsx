@@ -7,7 +7,7 @@
  * - Search filtering (debounced)
  * - Tag selection/deselection with screen reader announcements
  * - Selection remains available during indexing
- * - Footer with selected count, clear all, and apply buttons
+ * - Compact footer with selected count in Apply, plus Clear all
  * - Accordion expand/collapse all
  */
 
@@ -239,6 +239,29 @@ describe("TagSelector", () => {
           }),
         ).toBeInTheDocument();
       });
+    });
+
+    it("should hide internal scraper bookkeeping tags", async () => {
+      vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
+        tags: [
+          { tag: "Action", type: "genre" },
+          { tag: "scraped", type: "scraper.gamelist.xml" },
+          { tag: "run-1", type: "scraper-run.gamelist.xml" },
+        ],
+      });
+
+      render(<TagSelector {...defaultProps} />);
+
+      expect(
+        await screen.findByRole("button", {
+          name: /tagSelector\.type\.genre/i,
+        }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("scraped")).not.toBeInTheDocument();
+      expect(screen.queryByText("run-1")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /scraper/i }),
+      ).not.toBeInTheDocument();
     });
 
     it("should sort multiple non-priority types alphabetically after priority ones", async () => {
@@ -548,7 +571,7 @@ describe("TagSelector", () => {
   });
 
   describe("footer", () => {
-    it("should show selected count in footer", async () => {
+    it("should show selected count in the Apply action", async () => {
       // Arrange
       vi.mocked(CoreAPI.mediaTags).mockResolvedValue({
         tags: createMockTags(),
@@ -564,7 +587,7 @@ describe("TagSelector", () => {
       // Assert
       await waitFor(() => {
         expect(
-          screen.getByText(/tagSelector\.selectedCount/i),
+          screen.getByRole("button", { name: /tagSelector\.applyCount/i }),
         ).toBeInTheDocument();
       });
     });

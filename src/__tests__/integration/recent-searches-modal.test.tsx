@@ -160,8 +160,8 @@ describe("RecentSearchesModal", () => {
         />,
       );
 
-      // Act - Click on the search card
-      await user.click(screen.getByText("Search: sonic"));
+      // Act
+      await user.click(screen.getByRole("button", { name: "Search: sonic" }));
 
       // Assert
       expect(onSearchSelect).toHaveBeenCalledWith(recentSearches[0]);
@@ -180,7 +180,7 @@ describe("RecentSearchesModal", () => {
       );
 
       // Act
-      await user.click(screen.getByText("Search: sonic"));
+      await user.click(screen.getByRole("button", { name: "Search: sonic" }));
 
       // Assert
       expect(onClose).toHaveBeenCalled();
@@ -213,7 +213,7 @@ describe("RecentSearchesModal", () => {
       expect(onClearHistory).toHaveBeenCalled();
     });
 
-    it("should close modal after clearing history", async () => {
+    it("should keep the modal open after clearing history", async () => {
       // Arrange
       const user = userEvent.setup();
       const onClose = vi.fn();
@@ -231,7 +231,7 @@ describe("RecentSearchesModal", () => {
       );
 
       // Assert
-      expect(onClose).toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 
