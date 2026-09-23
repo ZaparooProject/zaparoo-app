@@ -95,7 +95,7 @@ describe("PageFrame", () => {
       "md:mr-[16px]",
     );
     expect(screen.getByTestId("header-center").parentElement).not.toHaveClass(
-      "pl-[12px]",
+      "pl-[4px]",
     );
     expect(screen.getByTestId("header-right").parentElement).toHaveClass(
       "ml-[4px]",
@@ -113,7 +113,7 @@ describe("PageFrame", () => {
 
     const heading = screen.getByRole("heading", { level: 1 });
     expect(heading).toBeInTheDocument();
-    expect(heading.parentElement).not.toHaveClass("pl-[12px]");
+    expect(heading.parentElement).toHaveClass("pl-[4px]");
     expect(screen.getByText("Test Title")).toBeInTheDocument();
   });
 

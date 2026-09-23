@@ -385,7 +385,7 @@ export function SlideModal(props: {
           "border-border",
           "bg-surface-raised",
           "px-4",
-          "pt-4",
+          "pt-3",
           "mix-blend-normal",
           props.className,
         )}
@@ -405,7 +405,7 @@ export function SlideModal(props: {
         <div style={{ touchAction: "pan-x pinch-zoom" }}>
           {/* Mobile drag handle */}
           {dismissible && (
-            <div className="-mt-4 sm:hidden">
+            <div className="-mt-3 sm:hidden">
               <button
                 type="button"
                 onClick={props.close}
@@ -421,7 +421,7 @@ export function SlideModal(props: {
             </div>
           )}
           {/* Shared visible title and desktop close action */}
-          <div className="relative pb-3 sm:min-h-11">
+          <div className="relative pb-2 sm:min-h-11">
             <h2
               ref={titleRef}
               id={`${modalId}-title`}
@@ -459,7 +459,7 @@ export function SlideModal(props: {
           <div
             id={footerId}
             tabIndex={props.footerSkipLabel ? -1 : undefined}
-            className="border-border max-h-[33dvh] flex-shrink-0 overflow-y-auto overscroll-contain border-t border-solid pt-4"
+            className="border-border max-h-[33dvh] flex-shrink-0 overflow-y-auto overscroll-contain border-t border-solid pt-2"
           >
             {props.footer}
           </div>

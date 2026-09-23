@@ -114,7 +114,7 @@ vi.mock("@/lib/toastUtils", () => ({
   showRateLimitedErrorToast: mockShowRateLimitedErrorToast,
 }));
 
-// Mock NFC writer, keeping the real enums and isWriteModalOpen
+// Mock NFC writer, keeping the real enums and isReaderActivityOpen
 vi.mock("@/lib/writeNfcHook", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/writeNfcHook")>()),
   useNfcWriter: () => mockNfcWriter,
@@ -131,17 +131,6 @@ vi.mock("@capacitor/core", () => ({
 // Mock hooks
 vi.mock("@/hooks/usePageHeadingFocus", () => ({
   usePageHeadingFocus: vi.fn(),
-}));
-
-// Mock WriteModal to simplify testing
-vi.mock("@/components/WriteModal", () => ({
-  WriteModal: ({ isOpen, close }: { isOpen: boolean; close: () => void }) =>
-    isOpen ? (
-      <div data-testid="write-modal">
-        Write Modal
-        <button onClick={close}>Close write modal</button>
-      </div>
-    ) : null,
 }));
 
 // Import the route module to trigger createFileRoute which captures the component
@@ -411,7 +400,9 @@ describe("Create Index Route", () => {
         "write",
         "@SNES/Super Mario World",
       );
-      expect(screen.getByTestId("write-modal")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "reader.cancelAction" }),
+      ).toHaveAttribute("data-reader-state", "waiting");
     });
 
     it("should write path when path is selected", async () => {
@@ -578,7 +569,7 @@ describe("Create Index Route", () => {
     });
   });
 
-  describe("write modal", () => {
+  describe("reader activity", () => {
     it("should end writer when dismissed", async () => {
       setActiveMedia();
       const user = userEvent.setup();
@@ -595,11 +586,13 @@ describe("Create Index Route", () => {
         }),
       );
       await user.click(
-        screen.getByRole("button", { name: "Close write modal" }),
+        screen.getByRole("button", { name: "reader.cancelAction" }),
       );
 
       await waitFor(() => expect(mockNfcWriter.end).toHaveBeenCalledOnce());
-      expect(screen.queryByTestId("write-modal")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "reader.cancelAction" }),
+      ).not.toBeInTheDocument();
       expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
   });

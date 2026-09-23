@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "../../../test-utils";
 import { useRef } from "react";
-import { vi, describe, it, expect } from "vitest";
+import { afterEach, vi, describe, it, expect } from "vitest";
 import { BackToTop } from "@/components/BackToTop";
 
 // Mock lodash debounce
@@ -42,6 +42,7 @@ function TestWrapper({
 
   return (
     <div>
+      <h1 tabIndex={-1}>Page title</h1>
       <div
         ref={scrollContainerRef}
         style={{ height: "400px", overflow: "auto" }}
@@ -58,6 +59,10 @@ function TestWrapper({
 }
 
 describe("BackToTop", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("should render the back to top button", () => {
     render(<TestWrapper />);
 
@@ -157,6 +162,38 @@ describe("BackToTop", () => {
       top: 0,
       behavior: "smooth",
     });
+  });
+
+  it("should avoid smooth scrolling when reduced motion is requested", () => {
+    vi.spyOn(window, "matchMedia").mockReturnValue({
+      matches: true,
+    } as MediaQueryList);
+    render(<TestWrapper />);
+
+    const container = screen.getByTestId("scroll-container");
+    const scrollToSpy = vi.fn();
+    container.scrollTo = scrollToSpy;
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "backToTop", hidden: true }),
+    );
+
+    expect(scrollToSpy).toHaveBeenCalledWith({
+      top: 0,
+      behavior: "auto",
+    });
+  });
+
+  it("should return keyboard focus to the page heading", () => {
+    render(<TestWrapper />);
+
+    const button = screen.getByRole("button", {
+      name: "backToTop",
+      hidden: true,
+    });
+    fireEvent.click(button, { detail: 0 });
+
+    expect(screen.getByRole("heading", { name: "Page title" })).toHaveFocus();
   });
 
   it("should hide when scrolled back to top", async () => {

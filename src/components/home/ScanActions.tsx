@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Camera, NfcIcon } from "lucide-react";
 import { Button } from "@/components/wui/Button";
 import { Card } from "@/components/wui/Card";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { ReaderActivityControl } from "@/components/ReaderActivityControl";
 import { useAppUi } from "@/hooks/useAppUi";
 import type { ScanLayout } from "@/hooks/useHomeScanLayout";
 import { ScanResult } from "@/lib/models";
@@ -40,6 +41,7 @@ interface ScanActionsProps {
   onCameraScan: () => void;
   nfcEnabled: boolean;
   onOpenNfcSettings: () => void;
+  writeActivity?: ReactNode;
 }
 
 export function ScanActions({
@@ -50,6 +52,7 @@ export function ScanActions({
   onCameraScan,
   nfcEnabled,
   onOpenNfcSettings,
+  writeActivity,
 }: ScanActionsProps) {
   const { t } = useTranslation();
   const appUi = useAppUi();
@@ -112,18 +115,21 @@ export function ScanActions({
     }
 
     return (
-      <Button
+      <ReaderActivityControl
         key="nfc"
-        variant="fill"
-        intent="primary"
+        state={scanSession ? "waiting" : "idle"}
+        idleLabel={t("scan.tapTag")}
+        activeLabel={t("scan.tapTagScanning")}
+        activeAriaLabel={t("scan.tapTagStop")}
+        icon={<NfcIcon size={28} />}
+        onStart={onTapScan}
+        onCancel={onTapScan}
         size="lg"
         layout="stacked"
-        className="min-h-[8.5rem] w-full"
-        icon={<NfcIcon size={28} />}
-        label={scanSession ? t("scan.tapTagScanning") : t("scan.tapTag")}
-        aria-label={scanSession ? t("scan.tapTagStop") : t("scan.tapTag")}
-        aria-pressed={scanSession}
-        onClick={onTapScan}
+        className="w-full"
+        buttonClassName="min-h-[8.5rem] w-full"
+        readerIconSize={28}
+        announceStateChanges={false}
       />
     );
   };
@@ -142,12 +148,15 @@ export function ScanActions({
           />
         </Card>
       ) : (
-        appUi.enabled && (
+        appUi.enabled &&
+        (writeActivity ? (
+          writeActivity
+        ) : (
           <div className="flex flex-col gap-2">
             {layout.leading && renderAction(layout.leading)}
             {layout.alternate && renderAction(layout.alternate)}
           </div>
-        )
+        ))
       )}
     </>
   );

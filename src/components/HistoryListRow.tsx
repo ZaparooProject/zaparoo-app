@@ -8,7 +8,7 @@ interface HistoryListRowProps {
   action: ReactNode;
 }
 
-/** Shared history-row geometry for scan events and played media. */
+/** Shared row geometry for scan, played-media, and search history. */
 export function HistoryListRow({
   leading,
   title,

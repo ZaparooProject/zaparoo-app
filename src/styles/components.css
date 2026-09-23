@@ -160,6 +160,77 @@
       0 2px 4px var(--material-shadow),
       inset 0 1px 0 rgb(255 255 255 / 10%);
   }
+  /* Reader controls behave like illuminated, latched physical switches. */
+  .wui-reader-button-shell {
+    position: relative;
+    width: 100%;
+    max-width: 20rem;
+    margin-inline: auto;
+    isolation: isolate;
+  }
+  .wui-reader-button-shell::before {
+    position: absolute;
+    z-index: -1;
+    inset: 5px 1px 1px;
+    border-radius: 3px;
+    box-shadow: none;
+    content: "";
+    pointer-events: none;
+    opacity: 0;
+  }
+  .wui-reader-button-shell[data-reader-state="waiting"]::before {
+    box-shadow: 0 0 0 3px rgb(60 176 255 / 72%);
+    opacity: 1;
+    animation: reader-button-pulse 1.8s ease-out infinite;
+  }
+  .wui-reader-button-shell[data-reader-state="attention"]::before {
+    box-shadow:
+      0 0 8px 3px rgb(255 217 128 / 90%),
+      0 0 19px 7px rgb(245 180 24 / 55%);
+    animation: reader-button-attention 1.65s ease-out infinite;
+  }
+  .wui-reader-button-shell[data-reader-state="error"]::before {
+    box-shadow:
+      0 0 7px 3px rgb(218 56 56 / 75%),
+      0 0 16px 6px rgb(198 40 40 / 38%);
+    opacity: 0.82;
+  }
+  .wui-reader-button-shell > .wui-button {
+    position: relative;
+    z-index: 1;
+  }
+  .wui-button[data-reader-state]:not(
+      :where([data-variant="text"], [data-variant="ghost"])
+    ) {
+    transform: translateY(var(--button-depth));
+    box-shadow:
+      0 0 0 var(--button-edge),
+      0 2px 4px var(--material-shadow),
+      inset 0 1px 0 rgb(255 255 255 / 10%);
+  }
+  @keyframes reader-button-pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgb(60 176 255 / 78%);
+    }
+    100% {
+      box-shadow: 0 0 0 14px rgb(60 176 255 / 0%);
+    }
+  }
+  @keyframes reader-button-attention {
+    0%,
+    50%,
+    100% {
+      opacity: 0.22;
+    }
+    12%,
+    36% {
+      opacity: 1;
+    }
+    23%,
+    47% {
+      opacity: 0.35;
+    }
+  }
   /* Canonical circular icon action, shared with Zaparoo Online. */
   .wui-circle-button {
     --circle-edge: #005599;
@@ -313,6 +384,37 @@
       width: max-content;
     }
   }
+  .wui-playlist-item {
+    color: var(--text-primary);
+    background: transparent;
+    transition: background-color 100ms ease-in-out;
+  }
+  .wui-playlist-item:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 2px solid var(--interaction);
+    outline-offset: -2px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .wui-playlist-item:not(:disabled):hover {
+      background: var(--surface-highlight);
+    }
+  }
+  .wui-playlist-item:not(:disabled):is(:active, [data-pressed="true"]) {
+    background: var(--surface-inset);
+    box-shadow: inset 0 2px 4px var(--material-shadow);
+  }
+  .wui-playlist-item[aria-current="true"] {
+    color: var(--interaction);
+    background: var(--interaction-wash);
+    box-shadow:
+      inset 0 1px 3px var(--material-shadow),
+      inset 3px 0 0 var(--interaction);
+    font-weight: 600;
+  }
+  .wui-playlist-item[aria-current="true"] > :first-child {
+    color: currentColor;
+  }
   /* Compact header affordance; the 48px floor keeps the hit target honest. */
   .wui-button.wui-status-pill {
     position: relative;
@@ -357,8 +459,22 @@
     border-color: var(--edge-strong);
     box-shadow: inset 0 2px 5px var(--material-shadow);
   }
-  .wui-card[data-disabled="true"] {
-    opacity: 0.6;
+  :is(
+    .wui-card[data-disabled="true"][data-interactive="true"],
+    .wui-disabled-inset
+  ) {
+    border-color: var(--edge-subtle);
+    background: var(--surface-inset);
+    box-shadow: inset 0 2px 5px var(--material-shadow);
+    transform: translateY(1px);
+    opacity: 1;
+  }
+  :is(
+      .wui-card[data-disabled="true"][data-interactive="true"],
+      .wui-disabled-inset
+    )
+    > * {
+    opacity: 0.45;
   }
   .wui-input {
     min-width: 0;
@@ -612,32 +728,6 @@
         inset 0 1px 0 var(--material-highlight);
     }
   }
-  .system-selector-scroll {
-    container: system-picker / size;
-  }
-  .system-selector-filterbar {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  @container system-picker (min-width: 23rem) {
-    .system-selector-filterbar {
-      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-    }
-  }
-  /* Keep filters handy only when enough room remains for system choices. */
-  @container system-picker (min-height: 20rem) {
-    .system-selector-controls {
-      position: sticky;
-      top: 0;
-    }
-    .system-selector-option {
-      scroll-margin-top: 7rem;
-    }
-  }
-  @container system-picker (min-height: 20rem) and (min-width: 23rem) {
-    .system-selector-option {
-      scroll-margin-top: 3.5rem;
-    }
-  }
   .settings-navigation-grid {
     display: grid;
     grid-template-columns: repeat(
@@ -670,12 +760,17 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .wui-button,
+    .wui-circle-button,
     .site-button,
     .wui-toggle-thumb,
     .wui-card,
     .wui-input,
     .zaparoo-tour-step .shepherd-button {
       transition: none;
+    }
+    .wui-reader-button-shell[data-reader-state]::before {
+      animation: none;
+      opacity: 0.72;
     }
   }
 }

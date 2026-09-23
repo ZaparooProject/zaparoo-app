@@ -19,8 +19,8 @@ import type { HistoryResponse, HistoryResponseEntry } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { CopyButton } from "../CopyButton";
+import { HistoryListRow } from "../HistoryListRow";
 import { SlideModal } from "../SlideModal";
-import { HistoryListRow } from "./HistoryListRow";
 import { PlayedHistoryList } from "./PlayedHistoryList";
 
 type HistoryTab = "scans" | "played";

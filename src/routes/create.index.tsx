@@ -8,7 +8,7 @@ import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
 import {
-  isWriteModalOpen,
+  isReaderActivityOpen,
   useNfcWriter,
   WriteAction,
   WriteMethod,
@@ -20,7 +20,6 @@ import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import type { PlayingResponse, SearchResultGame } from "@/lib/models";
 import { MediaDetailsModal } from "@/components/MediaDetailsModal";
 import { Card } from "@/components/wui/Card";
-import { WriteModal } from "@/components/WriteModal";
 import { PageFrame } from "@/components/PageFrame";
 import { usePreferencesStore } from "@/lib/preferencesStore";
 
@@ -79,12 +78,12 @@ export function Create() {
     useState<SearchResultGame | null>(null);
   // Track user intent to open modal; actual visibility derived from NFC status
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
+  const writeOpen = isReaderActivityOpen(writeIntent, nfcWriter);
   const activeMediaZapScriptAvailable =
     connected &&
     !coreVersionPending &&
     isCoreFeatureAvailable("activeMediaZapScript", coreVersion);
-  const closeWriteModal = async () => {
+  const cancelReaderActivity = async () => {
     setWriteIntent(false);
     await nfcWriter.end();
   };
@@ -253,8 +252,11 @@ export function Create() {
         </div>
       </PageFrame>
       <MediaDetailsModal
-        isOpen={currentMediaDetails !== null && !writeOpen}
-        close={() => setCurrentMediaDetails(null)}
+        isOpen={currentMediaDetails !== null}
+        close={() => {
+          if (writeOpen) void cancelReaderActivity();
+          setCurrentMediaDetails(null);
+        }}
         media={currentMediaDetails}
         onWrite={(value) => {
           setWriteIntent(true);
@@ -266,13 +268,23 @@ export function Create() {
             });
           });
         }}
-      />
-      <WriteModal
-        isOpen={writeOpen}
-        close={closeWriteModal}
-        verifyError={nfcWriter.verifyError !== null}
-        retry={() => void nfcWriter.retry()}
-        retapRequired={nfcWriter.retapRequired}
+        readerActivity={{
+          state: nfcWriter.verifyError
+            ? "error"
+            : nfcWriter.retapRequired
+              ? "attention"
+              : writeOpen
+                ? "waiting"
+                : "idle",
+          activeLabel: nfcWriter.retapRequired
+            ? t("spinner.retapTag")
+            : t("spinner.holdTagReader"),
+          errorMessage: nfcWriter.verifyError
+            ? t("spinner.verifyFailedRetry")
+            : undefined,
+          onCancel: () => void cancelReaderActivity(),
+          onRetry: () => void nfcWriter.retry(),
+        }}
       />
     </>
   );

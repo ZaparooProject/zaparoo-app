@@ -2,7 +2,7 @@
  * Integration Test: writing to a blank (non-NDEF) tag on Android
  *
  * Renders the real Custom Text route with the real NFC writer hook, write
- * modal, and NFC session code. Only the Capacitor NFC plugin is mocked.
+ * activity control and NFC session code. Only the Capacitor NFC plugin is mocked.
  *
  * The plugin cannot write to a tag it has just formatted on the same tap, so
  * the app formats once and asks for the tag to be presented again.
@@ -13,7 +13,7 @@ import userEvent from "@testing-library/user-event";
 import toast, { Toaster } from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
-import { act, render, screen, waitFor, within } from "../../test-utils";
+import { act, render, screen, waitFor } from "../../test-utils";
 import {
   __simulateTagScanned,
   NfcTagTechType,
@@ -95,10 +95,11 @@ describe("Writing to a blank tag on Android", () => {
 
     await startWriteOnBlankTag(user);
 
-    const dialog = await screen.findByRole("dialog", {
-      name: "spinner.retapTag",
+    const readerControl = await screen.findByRole("button", {
+      name: "reader.cancelAction",
     });
-    expect(within(dialog).getByText("spinner.retapTag")).toBeInTheDocument();
+    expect(readerControl).toHaveAttribute("data-reader-state", "attention");
+    expect(screen.getByText("spinner.retapTag")).toBeInTheDocument();
     expect(Nfc.format).toHaveBeenCalledTimes(1);
     expect(Nfc.write).toHaveBeenCalledTimes(1);
 
@@ -108,7 +109,9 @@ describe("Writing to a blank tag on Android", () => {
 
     expect(await screen.findByText("spinner.writeSuccess")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "reader.cancelAction" }),
+      ).not.toBeInTheDocument();
     });
     expect(Nfc.format).toHaveBeenCalledTimes(1);
     expect(Nfc.write).toHaveBeenCalledTimes(2);
@@ -128,7 +131,9 @@ describe("Writing to a blank tag on Android", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByText("spinner.writeFailed")).toHaveLength(1);
     await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "reader.cancelAction" }),
+      ).not.toBeInTheDocument();
     });
     expect(screen.queryByText("spinner.retapTag")).not.toBeInTheDocument();
     expect(Nfc.format).toHaveBeenCalledTimes(1);
@@ -150,16 +155,17 @@ describe("Writing to a blank tag on Android", () => {
     renderCustomTextRoute();
 
     await startWriteOnBlankTag(user);
-    const dialog = await screen.findByRole("dialog", {
-      name: "spinner.retapTag",
+    const readerControl = await screen.findByRole("button", {
+      name: "reader.cancelAction",
     });
+    expect(readerControl).toHaveAttribute("data-reader-state", "attention");
 
-    await user.click(
-      within(dialog).getByRole("button", { name: "nav.cancel" }),
-    );
+    await user.click(readerControl);
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "reader.cancelAction" }),
+      ).not.toBeInTheDocument();
     });
     expect(Nfc.stopScanSession).toHaveBeenCalled();
 
@@ -176,8 +182,8 @@ describe("Writing to a blank tag on Android", () => {
       screen.getByRole("button", { name: "create.custom.write" }),
     );
     expect(
-      await screen.findByRole("dialog", { name: "spinner.holdTag" }),
-    ).toBeInTheDocument();
+      await screen.findByRole("button", { name: "reader.cancelAction" }),
+    ).toHaveAttribute("data-reader-state", "waiting");
     await waitFor(() => {
       expect(Nfc.startScanSession).toHaveBeenCalledTimes(2);
     });

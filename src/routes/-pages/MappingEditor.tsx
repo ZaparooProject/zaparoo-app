@@ -21,16 +21,19 @@ import {
   BarcodeScanCancelledError,
 } from "@/lib/errors";
 import { Button } from "@/components/wui/Button";
+import { EmptyState } from "@/components/wui/EmptyState";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DelayedLoading } from "@/components/DelayedLoading";
 import { PageFrame } from "@/components/PageFrame";
 import { SlideModal } from "@/components/SlideModal";
 import {
-  isWriteModalOpen,
+  isReaderActivityOpen,
   useNfcWriter,
   WriteAction,
   WriteMethod,
 } from "@/lib/writeNfcHook";
 import { usePreferencesStore } from "@/lib/preferencesStore";
-import { WriteModal } from "@/components/WriteModal";
+import { ReaderActivityControl } from "@/components/ReaderActivityControl";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
 import { appBackNavigationOptions } from "@/lib/tabSessionStore";
 
@@ -118,7 +121,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
   );
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
+  const writeOpen = isReaderActivityOpen(writeIntent, nfcWriter);
   const prevStatusRef = useRef(nfcWriter.status);
 
   const mappings = useQuery({
@@ -155,7 +158,11 @@ export function MappingEditor({ id }: MappingEditorProps) {
       setOverride(existing.override);
       setEnabled(existing.enabled);
       setHydrated(true);
-    } else if (mappings.isFetched && !mappings.isFetching) {
+    } else if (
+      !mappings.isError &&
+      mappings.isFetched &&
+      !mappings.isFetching
+    ) {
       toast.error(t("create.mappings.editor.notFound"));
       navigate({ to: "/create/mappings", replace: true });
     }
@@ -163,6 +170,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
     isEditing,
     hydrated,
     existing,
+    mappings.isError,
     mappings.isFetched,
     mappings.isFetching,
     navigate,
@@ -178,7 +186,7 @@ export function MappingEditor({ id }: MappingEditorProps) {
     }
   }, [nfcWriter.result, nfcWriter.status]);
 
-  const closeWriteModal = async () => {
+  const cancelReaderActivity = async () => {
     setWriteIntent(false);
     await nfcWriter.end();
   };
@@ -304,7 +312,28 @@ export function MappingEditor({ id }: MappingEditorProps) {
           </h1>
         }
       >
-        {isEditing && !hydrated ? null : (
+        {isEditing && mappings.isError ? (
+          <EmptyState
+            title={t("create.mappings.list.loadFailed")}
+            action={
+              <Button
+                label={t("create.mappings.list.retry")}
+                variant="outline"
+                onClick={() => void mappings.refetch()}
+              />
+            }
+          />
+        ) : isEditing && !hydrated ? (
+          <DelayedLoading>
+            <div
+              className="text-muted-foreground flex items-center justify-center gap-2 py-6"
+              role="status"
+            >
+              <LoadingSpinner size={16} className="text-primary" decorative />
+              <span>{t("loading")}</span>
+            </div>
+          </DelayedLoading>
+        ) : (
           <div className="flex flex-col gap-4">
             <TextInput
               label={t("create.mappings.editor.label")}
@@ -347,22 +376,51 @@ export function MappingEditor({ id }: MappingEditorProps) {
                     : undefined
                 }
               />
-              {type === "uid" && (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    className="w-full"
+              {type === "uid" &&
+                (writeOpen ? (
+                  <ReaderActivityControl
+                    state={
+                      nfcWriter.verifyError
+                        ? "error"
+                        : nfcWriter.retapRequired
+                          ? "attention"
+                          : "waiting"
+                    }
+                    idleLabel={t("scan.nfcMode")}
+                    activeLabel={
+                      nfcWriter.retapRequired
+                        ? t("spinner.retapTag")
+                        : t("spinner.holdTagReader")
+                    }
+                    errorMessage={
+                      nfcWriter.verifyError
+                        ? t("spinner.verifyFailedRetry")
+                        : undefined
+                    }
                     icon={<NfcIcon size="20" />}
-                    onClick={startNfcScan}
-                    label={t("scan.nfcMode")}
+                    buttonClassName="w-full"
+                    onStart={startNfcScan}
+                    onCancel={() => void cancelReaderActivity()}
+                    onRetry={() => void nfcWriter.retry()}
                   />
-                  <Button
-                    className="w-full"
-                    icon={<CameraIcon size="20" />}
-                    onClick={startBarcodeScan}
-                    label={t("scan.cameraMode")}
-                  />
-                </div>
-              )}
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      icon={<NfcIcon size="20" />}
+                      onClick={startNfcScan}
+                      label={t("scan.nfcMode")}
+                    />
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      icon={<CameraIcon size="20" />}
+                      onClick={startBarcodeScan}
+                      label={t("scan.cameraMode")}
+                    />
+                  </div>
+                ))}
             </div>
 
             <div className="flex flex-col">
@@ -410,14 +468,6 @@ export function MappingEditor({ id }: MappingEditorProps) {
           </div>
         )}
       </PageFrame>
-
-      <WriteModal
-        isOpen={writeOpen}
-        close={closeWriteModal}
-        verifyError={nfcWriter.verifyError !== null}
-        retry={() => void nfcWriter.retry()}
-        retapRequired={nfcWriter.retapRequired}
-      />
 
       <SlideModal
         isOpen={confirmOpen}

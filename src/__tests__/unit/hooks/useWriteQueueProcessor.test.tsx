@@ -133,7 +133,7 @@ describe("useWriteQueueProcessor", () => {
       expect(useStatusStore.getState().writeQueue).toBe("");
     });
 
-    it("should open write modal when processing", async () => {
+    it("should open reader activity when processing", async () => {
       // Arrange
       usePreferencesStore.setState({ nfcAvailable: true });
       renderHook(() => useWriteQueueProcessor());
@@ -151,7 +151,7 @@ describe("useWriteQueueProcessor", () => {
       expect(useStatusStore.getState().writeOpen).toBe(true);
     });
 
-    it("should close the write modal after the write completes", async () => {
+    it("should close the reader activity after the write completes", async () => {
       // Arrange - default global mock skips verification (connect rejects)
       usePreferencesStore.setState({ nfcAvailable: true });
       renderHook(() => useWriteQueueProcessor());
@@ -176,7 +176,7 @@ describe("useWriteQueueProcessor", () => {
       });
     });
 
-    it("should keep the write modal open when write verification fails", async () => {
+    it("should keep the reader activity open when write verification fails", async () => {
       // Arrange - the read-back reports a tag without any NDEF message
       usePreferencesStore.setState({ nfcAvailable: true });
       vi.mocked(Nfc.connect).mockResolvedValue(undefined);
@@ -568,7 +568,7 @@ describe("useWriteQueueProcessor", () => {
         await vi.advanceTimersByTimeAsync(500);
       });
 
-      // Assert - Should have retried and eventually opened write modal
+      // Assert - Should have retried and eventually opened reader activity
       expect(CoreAPI.hasWriteCapableReader).toHaveBeenCalled();
       expect(useStatusStore.getState().writeOpen).toBe(true);
     });
@@ -600,7 +600,7 @@ describe("useWriteQueueProcessor", () => {
       // Assert - Should have attempted multiple times and show error
       expect(CoreAPI.hasWriteCapableReader).toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalled();
-      // Write modal should NOT have opened since all attempts failed
+      // Reader activity should NOT have opened since all attempts failed
       expect(useStatusStore.getState().writeOpen).toBe(false);
     });
   });

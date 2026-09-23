@@ -1,18 +1,18 @@
 import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { GamepadDirectional } from "lucide-react";
+import { GamepadDirectional, NfcIcon as NfcSymbol } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { Nfc } from "@capawesome-team/capacitor-nfc";
 import { logger } from "@/lib/logger";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import {
-  isWriteModalOpen,
+  isReaderActivityOpen,
   useNfcWriter,
   WriteMethod,
 } from "@/lib/writeNfcHook.tsx";
 import { useProPurchase } from "@/components/ProPurchase.tsx";
-import { WriteModal } from "@/components/WriteModal.tsx";
+import { ReaderActivityControl } from "@/components/ReaderActivityControl";
 import { useAnnouncer } from "@/components/A11yAnnouncer";
 import { cancelSession } from "@/lib/nfc";
 import { CoreAPI } from "@/lib/coreApi";
@@ -75,14 +75,14 @@ export function Index() {
   // modal shows while a write is intended and auto-closes on any completion
   // (success, cancelled, or error) because status becomes non-null.
   const [writeIntent, setWriteIntent] = useState(false);
-  const writeOpen = isWriteModalOpen(writeIntent, nfcWriter);
-  const closeWriteModal = async () => {
+  const writeOpen = isReaderActivityOpen(writeIntent, nfcWriter);
+  const cancelReaderActivity = async () => {
     try {
       await nfcWriter.end();
     } catch (err) {
       logger.error("Failed to end NFC writer session", err, {
         category: "nfc",
-        action: "closeWriteModal",
+        action: "cancelReaderActivity",
         severity: "error",
       });
     } finally {
@@ -220,6 +220,30 @@ export function Index() {
     }
   };
 
+  const runPlaylistItem = (slot: MediaSlot, index: number) => {
+    const playlist = useStatusStore.getState().playlists[slot];
+    const playlistID = playlist?.id;
+
+    void CoreAPI.run({
+      text: `**playlist.goto:${index + 1}?slot=${slot}||**playlist.play?slot=${slot}`,
+    })
+      .then(() => {
+        if (!playlistID) return;
+        const current = useStatusStore.getState().playlists[slot];
+        if (current?.id === playlistID) {
+          setPlaylist(slot, { ...current, index, playing: true });
+        }
+      })
+      .catch((error) => {
+        logger.error("Failed to select playlist item", error, {
+          category: "api",
+          action: "selectPlaylistItem",
+          severity: "error",
+        });
+        showRateLimitedErrorToast(t("scan.playlistControlError"));
+      });
+  };
+
   const runPlaylistCommand = (slot: MediaSlot, command: PlaylistCommand) => {
     const playlist = useStatusStore.getState().playlists[slot];
     const playlistID = playlist?.id;
@@ -321,9 +345,7 @@ export function Index() {
             <h1 ref={headingRef} className="sr-only">
               Zaparoo
             </h1>
-            <div className="pl-1 md:pl-0">
-              <ZapLogo width={144} />
-            </div>
+            <ZapLogo width={144} />
           </>
         }
         headerRight={
@@ -368,6 +390,38 @@ export function Index() {
             onCameraScan={handleCameraScan}
             nfcEnabled={nfcEnabled}
             onOpenNfcSettings={() => void Nfc.openSettings()}
+            writeActivity={
+              writeOpen ? (
+                <ReaderActivityControl
+                  state={
+                    nfcWriter.verifyError
+                      ? "error"
+                      : nfcWriter.retapRequired
+                        ? "attention"
+                        : "waiting"
+                  }
+                  idleLabel={t("create.search.writeLabel")}
+                  activeLabel={
+                    nfcWriter.retapRequired
+                      ? t("spinner.retapTag")
+                      : t("spinner.holdTagReader")
+                  }
+                  errorMessage={
+                    nfcWriter.verifyError
+                      ? t("spinner.verifyFailedRetry")
+                      : undefined
+                  }
+                  icon={<NfcSymbol size={28} />}
+                  readerIconSize={28}
+                  size="lg"
+                  layout="stacked"
+                  buttonClassName="min-h-[8.5rem] w-full"
+                  onStart={() => undefined}
+                  onCancel={() => void cancelReaderActivity()}
+                  onRetry={() => void nfcWriter.retry()}
+                />
+              ) : undefined
+            }
           />
 
           <GatedFeature featureId="remoteInput">
@@ -400,6 +454,7 @@ export function Index() {
               )
             }
             onPlaylistNext={() => runPlaylistCommand("primary", "next")}
+            onPlaylistSelect={(index) => runPlaylistItem("primary", index)}
           />
 
           {backgroundMediaAvailable &&
@@ -422,6 +477,9 @@ export function Index() {
                   )
                 }
                 onPlaylistNext={() => runPlaylistCommand("background", "next")}
+                onPlaylistSelect={(index) =>
+                  runPlaylistItem("background", index)
+                }
               />
             )}
 
@@ -458,13 +516,6 @@ export function Index() {
         isOpen={historyOpen}
         onClose={() => setHistoryOpen(false)}
         historyData={history.data}
-      />
-      <WriteModal
-        isOpen={writeOpen}
-        close={closeWriteModal}
-        verifyError={nfcWriter.verifyError !== null}
-        retry={() => void nfcWriter.retry()}
-        retapRequired={nfcWriter.retapRequired}
       />
       <RemoteKeyboardModal
         isOpen={remoteKeyboardOpen}

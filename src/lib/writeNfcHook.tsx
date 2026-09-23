@@ -45,8 +45,8 @@ export interface WriteNfcHook {
   getVerifyError: () => NfcVerificationError | null;
 }
 
-/** The write modal stays open until a write settles, or while a verify failed. */
-export function isWriteModalOpen(
+/** The reader activity stays open until a write settles, or while a verify failed. */
+export function isReaderActivityOpen(
   writeIntent: boolean,
   writer: Pick<WriteNfcHook, "status" | "verifyError">,
 ): boolean {
@@ -185,7 +185,7 @@ export function useNfcWriter(
     action: WriteAction;
     text?: string;
   } | null>(null);
-  // Verification-failure toast content stashed until the write modal closes,
+  // Verification-failure toast content stashed until the reader activity closes,
   // so the toast is not fired while the scan UI still covers it.
   const deferredErrorToastRef = useRef<{
     title: string;
@@ -407,7 +407,7 @@ export function useNfcWriter(
             });
           }
           if (e instanceof NfcVerificationError) {
-            // The write modal surfaces this failure with a retry action; the
+            // The reader activity surfaces this failure with a retry action; the
             // toast is deferred until the modal closes so it stays visible.
             verifyErrorRef.current = e;
             setVerifyError(e);

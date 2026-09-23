@@ -9,7 +9,7 @@
  * - Now playing info display
  * - History modal interactions
  * - Stop confirm modal interactions
- * - Write modal interactions
+ * - Reader activity interactions
  * - Store state updates reflected in UI
  */
 
@@ -46,7 +46,7 @@ const mockScanOperationsState = {
 };
 
 // Captures the props Index passes to useScanOperations so tests can drive
-// the page's local write modal via its setWriteOpen callback
+// the page's local reader activity via its setWriteOpen callback
 const mockScanOperationsProps: {
   current: { setWriteOpen: (open: boolean) => void } | null;
 } = { current: null };
@@ -188,12 +188,12 @@ vi.mock("@/components/A11yAnnouncer", async (importOriginal) => {
   };
 });
 
-// Mock useSmartSwipe (used by WriteModal)
+// Mock useSmartSwipe (used by ReaderActivity)
 vi.mock("@/hooks/useSmartSwipe", () => ({
   useSmartSwipe: vi.fn(() => ({})),
 }));
 
-// Mock useBackButtonHandler (used by WriteModal)
+// Mock useBackButtonHandler (used by ReaderActivity)
 vi.mock("@/hooks/useBackButtonHandler", () => ({
   useBackButtonHandler: vi.fn(),
 }));
@@ -742,7 +742,7 @@ describe("Index Route Integration", () => {
       );
 
       expect(screen.getByText(/Super Mario World/)).toBeInTheDocument();
-      expect(screen.getByText(/Theme/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Theme/).length).toBeGreaterThan(0);
       expect(
         screen.getByRole("heading", { name: "scan.backgroundMediaHeading" }),
       ).toBeInTheDocument();
@@ -950,6 +950,29 @@ describe("Index Route Integration", () => {
       });
       expect(CoreAPI.run).toHaveBeenNthCalledWith(2, {
         text: "**playlist.next?slot=primary",
+      });
+    });
+
+    it("should go to and play a selected playlist item", async () => {
+      const user = userEvent.setup();
+      seedPrimaryPlaylist();
+
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      await user.click(screen.getByRole("button", { name: "F-Zero" }));
+
+      expect(CoreAPI.run).toHaveBeenCalledWith({
+        text: "**playlist.goto:2?slot=primary||**playlist.play?slot=primary",
+      });
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "F-Zero" })).toHaveAttribute(
+          "aria-current",
+          "true",
+        );
       });
     });
 
@@ -1365,32 +1388,30 @@ describe("Index Route Integration", () => {
     });
   });
 
-  describe("Write Modal", () => {
-    // The write modal on Index is local page state, opened through the
+  describe("reader activity", () => {
+    // The reader activity on Index is local page state, opened through the
     // setWriteOpen callback the page hands to useScanOperations
-    const openWriteModal = () => {
+    const openReaderActivity = () => {
       act(() => {
         mockScanOperationsProps.current?.setWriteOpen(true);
       });
     };
 
-    it("should render write modal when the scan flow opens it", () => {
+    it("should render reader activity when the scan flow opens it", () => {
       render(
         <TestWrapper>
           <Index />
         </TestWrapper>,
       );
 
-      openWriteModal();
+      openReaderActivity();
 
-      // WriteModal renders a dialog with aria-label when open
-      const writeDialog = screen.getByRole("dialog", {
-        name: /spinner.holdTag/i,
-      });
-      expect(writeDialog).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "reader.cancelAction" }),
+      ).toHaveAttribute("data-reader-state", "waiting");
     });
 
-    it("should close write modal and call nfcWriter.end when close is triggered", async () => {
+    it("should cancel reader activity and call nfcWriter.end", async () => {
       const user = userEvent.setup();
 
       render(
@@ -1399,28 +1420,28 @@ describe("Index Route Integration", () => {
         </TestWrapper>,
       );
 
-      openWriteModal();
+      openReaderActivity();
 
-      // Find and click the cancel button in the write modal
-      const cancelButton = screen.getByRole("button", { name: /nav.cancel/i });
-      await user.click(cancelButton);
+      await user.click(
+        screen.getByRole("button", { name: "reader.cancelAction" }),
+      );
 
       await waitFor(() => {
         expect(mockNfcWriterState.end).toHaveBeenCalled();
       });
       expect(
-        screen.queryByRole("dialog", { name: /spinner.holdTag/i }),
+        screen.queryByRole("button", { name: "reader.cancelAction" }),
       ).not.toBeInTheDocument();
     });
 
-    it("should auto-close write modal when nfcWriter status changes", () => {
+    it("should auto-close reader activity when nfcWriter status changes", () => {
       const { rerender } = render(
         <TestWrapper>
           <Index />
         </TestWrapper>,
       );
 
-      openWriteModal();
+      openReaderActivity();
 
       // Simulate nfcWriter status change
       mockNfcWriterState.status = "success";

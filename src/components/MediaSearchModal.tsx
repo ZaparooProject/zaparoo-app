@@ -86,7 +86,7 @@ export function MediaSearchModal(props: {
         fixedHeight="90vh"
       >
         <div className="flex min-h-0 flex-col">
-          <div className="flex flex-col gap-3 p-2 pt-3">
+          <div className="flex flex-col gap-3">
             <TextInput
               ref={inputRef}
               label={t("create.search.gameInput")}

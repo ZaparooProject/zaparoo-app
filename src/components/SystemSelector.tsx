@@ -181,7 +181,7 @@ export function SystemSelector({
     <button
       key={id}
       className={classNames(
-        "system-selector-option focus-visible:ring-ring flex min-h-12 w-full items-center justify-between gap-3 rounded px-2 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
+        "focus-visible:ring-ring flex min-h-12 w-full items-center justify-between gap-3 rounded px-2 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
         "hover:bg-foreground/10 focus-visible:bg-foreground/10",
         { "bg-foreground/10": isSelected },
       )}
@@ -250,9 +250,8 @@ export function SystemSelector({
       footer={footer}
       scrollRef={slideModalScrollRef}
       fixedHeight="90vh"
-      scrollClassName="system-selector-scroll"
     >
-      <div className="system-selector-controls bg-surface-raised z-10 pb-2">
+      <div className="pb-2">
         <SystemFilterControls
           categories={categories}
           category={selectedCategory}
@@ -266,7 +265,7 @@ export function SystemSelector({
             slideModalScrollRef.current?.scrollTo({ top: 0 });
           }}
           tabIdPrefix={systemTabIdPrefix}
-          variant="picker"
+          variant="modal"
         />
       </div>
       {isLoading ? (

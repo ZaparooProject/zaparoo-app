@@ -167,29 +167,57 @@ describe("MediaDetailsModal", () => {
     });
   });
 
-  it("should default to ZapScript when available", () => {
+  it("should put ZapScript first and select it by default", () => {
     renderModal();
 
+    const zapScript = screen.getByRole("radio", {
+      name: /create\.search\.zapscriptLabel/i,
+    });
+    const path = screen.getByRole("radio", {
+      name: /create\.search\.pathLabel/i,
+    });
+    expect(zapScript).toBeChecked();
     expect(
-      screen.getByRole("radio", {
-        name: /create\.search\.zapscriptLabel/i,
-      }),
-    ).toBeChecked();
+      zapScript.compareDocumentPosition(path) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
-  it("should remember the selected write mode for the session", async () => {
+  it("should put Path first and select it when filenames are preferred", () => {
+    usePreferencesStore.setState({ showFilenames: true });
+    renderModal();
+
+    const path = screen.getByRole("radio", {
+      name: /create\.search\.pathLabel/i,
+    });
+    const zapScript = screen.getByRole("radio", {
+      name: /create\.search\.zapscriptLabel/i,
+    });
+    expect(path).toBeChecked();
+    expect(
+      path.compareDocumentPosition(zapScript) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("should disable tag choices while Path is selected", async () => {
     const user = userEvent.setup();
-    const view = renderModal();
+    renderModal();
+
+    const tag = screen.getByRole("button", { name: "genre platformer" });
+    expect(tag).toBeEnabled();
 
     await user.click(
       screen.getByRole("radio", { name: /create\.search\.pathLabel/i }),
     );
-    view.unmount();
-    renderModal();
+    expect(tag).toBeDisabled();
 
-    expect(
-      screen.getByRole("radio", { name: /create\.search\.pathLabel/i }),
-    ).toBeChecked();
+    await user.click(
+      screen.getByRole("radio", {
+        name: /create\.search\.zapscriptLabel/i,
+      }),
+    );
+    expect(tag).toBeEnabled();
   });
 
   it("should select and remove Core ZapScript tags", async () => {

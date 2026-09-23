@@ -341,6 +341,53 @@ describe("Home Page Integration", () => {
         screen.getByRole("button", { name: "scan.playlistPlay" }),
       ).toBeInTheDocument();
     });
+
+    it("shows an interactive playlist queue below the transport", async () => {
+      const user = userEvent.setup();
+      const onPlaylistSelect = vi.fn();
+      render(
+        <NowPlayingCard
+          media={{
+            systemId: "Audio",
+            systemName: "Audio",
+            mediaName: "Second track",
+            mediaPath: "/music/second.mp3",
+          }}
+          playlist={{
+            id: "mix",
+            name: "My Mix",
+            slot: "primary",
+            repeat: "none",
+            items: [
+              { name: "First track", zapScript: "@Audio/First" },
+              { name: "Second track", zapScript: "@Audio/Second" },
+              { name: "", zapScript: "@Audio/Third" },
+            ],
+            index: 1,
+            total: 3,
+            playing: true,
+          }}
+          connected
+          onStop={() => {}}
+          onPlaylistPrevious={() => {}}
+          onPlaylistToggle={() => {}}
+          onPlaylistNext={() => {}}
+          onPlaylistSelect={onPlaylistSelect}
+        />,
+      );
+
+      const queue = screen.getByRole("region", { name: "My Mix" });
+      expect(within(queue).getAllByRole("listitem")).toHaveLength(3);
+      expect(
+        within(queue).getByRole("button", { name: "Second track" }),
+      ).toHaveAttribute("aria-current", "true");
+      expect(within(queue).getByText("@Audio/Third")).toBeInTheDocument();
+
+      await user.click(
+        within(queue).getByRole("button", { name: "First track" }),
+      );
+      expect(onPlaylistSelect).toHaveBeenCalledWith(0);
+    });
   });
 
   describe("Stop Confirm Modal", () => {

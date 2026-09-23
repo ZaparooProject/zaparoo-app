@@ -97,6 +97,11 @@ export function MediaWriteTargetSelector(props: {
   const visibleTags = (props.media.tags ?? []).filter(
     (tag) => !isFavoriteTag(tag) && !isScraperTag(tag),
   );
+  const tagsDisabled = props.target.writeMode !== "zapScript";
+  const writeModeOrder: MediaWriteMode[] =
+    props.target.preferredMode === "path"
+      ? ["path", "zapScript"]
+      : ["zapScript", "path"];
 
   return (
     <div className="flex flex-col gap-3">
@@ -121,9 +126,13 @@ export function MediaWriteTargetSelector(props: {
                   aria-label={`${tag.type} ${displayTag}`}
                   aria-pressed={selected}
                   className={classNames(
-                    "focus-visible:ring-ring rounded-full transition-opacity focus-visible:ring-2 focus-visible:outline-none",
-                    { "opacity-40": !selected },
+                    "focus-visible:ring-ring rounded-full transition-opacity focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed",
+                    {
+                      "wui-disabled-inset": tagsDisabled,
+                      "opacity-40": !tagsDisabled && !selected,
+                    },
                   )}
+                  disabled={tagsDisabled}
                   onClick={() => {
                     impact("light");
                     props.target.toggleTag(tag);
@@ -159,48 +168,52 @@ export function MediaWriteTargetSelector(props: {
           {t("create.search.selectWriteValue")}
         </legend>
 
-        {props.target.path && (
-          <WriteTargetOption
-            id={pathInputId}
-            name={radioGroupName}
-            mode="path"
-            icon={
-              <Folder
-                size={16}
-                className="text-muted-foreground flex-shrink-0"
-              />
-            }
-            label={t("create.search.pathLabel")}
-            value={props.target.path}
-            writeMode={props.target.writeMode}
-            selectedLabel={t("selected")}
-            onSelect={() => {
-              impact("light");
-              props.target.setWriteMode("path");
-            }}
-          />
-        )}
-
-        {props.target.customizedZapScript && (
-          <WriteTargetOption
-            id={zapScriptInputId}
-            name={radioGroupName}
-            mode="zapScript"
-            icon={
-              <FileCode
-                size={16}
-                className="text-muted-foreground flex-shrink-0"
-              />
-            }
-            label={t("create.search.zapscriptLabel")}
-            value={props.target.customizedZapScript}
-            writeMode={props.target.writeMode}
-            selectedLabel={t("selected")}
-            onSelect={() => {
-              impact("light");
-              props.target.setWriteMode("zapScript");
-            }}
-          />
+        {writeModeOrder.map((mode) =>
+          mode === "path"
+            ? props.target.path && (
+                <WriteTargetOption
+                  key={mode}
+                  id={pathInputId}
+                  name={radioGroupName}
+                  mode={mode}
+                  icon={
+                    <Folder
+                      size={16}
+                      className="text-muted-foreground flex-shrink-0"
+                    />
+                  }
+                  label={t("create.search.pathLabel")}
+                  value={props.target.path}
+                  writeMode={props.target.writeMode}
+                  selectedLabel={t("selected")}
+                  onSelect={() => {
+                    impact("light");
+                    props.target.setWriteMode(mode);
+                  }}
+                />
+              )
+            : props.target.customizedZapScript && (
+                <WriteTargetOption
+                  key={mode}
+                  id={zapScriptInputId}
+                  name={radioGroupName}
+                  mode={mode}
+                  icon={
+                    <FileCode
+                      size={16}
+                      className="text-muted-foreground flex-shrink-0"
+                    />
+                  }
+                  label={t("create.search.zapscriptLabel")}
+                  value={props.target.customizedZapScript}
+                  writeMode={props.target.writeMode}
+                  selectedLabel={t("selected")}
+                  onSelect={() => {
+                    impact("light");
+                    props.target.setWriteMode(mode);
+                  }}
+                />
+              ),
         )}
       </fieldset>
     </div>

@@ -244,16 +244,6 @@ vi.mock("@/components/RecentSearchesModal", () => ({
     ) : null,
 }));
 
-// Mock WriteModal
-vi.mock("@/components/WriteModal", () => ({
-  WriteModal: ({ isOpen, close }: { isOpen: boolean; close: () => void }) =>
-    isOpen ? (
-      <div data-testid="write-modal">
-        <button onClick={close}>Cancel</button>
-      </div>
-    ) : null,
-}));
-
 // Mock SlideModal
 vi.mock("@/components/SlideModal", () => ({
   SlideModal: ({

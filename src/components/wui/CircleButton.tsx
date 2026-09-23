@@ -1,10 +1,10 @@
 import classNames from "classnames";
-import { forwardRef, memo, type ReactElement } from "react";
+import { forwardRef, memo, type MouseEvent, type ReactElement } from "react";
 import { useTactilePress } from "@/hooks/useTactilePress";
 
 interface CircleButtonProps {
   icon: ReactElement;
-  onClick?: () => void;
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
   variant?: "primary" | "secondary" | "destructive" | "pro";
   disabled?: boolean;
   className?: string;
@@ -39,8 +39,8 @@ export const CircleButton = memo(
           data-pressed={pressed}
           disabled={props.disabled}
           aria-label={props["aria-label"]}
-          onClick={() => {
-            if (shouldFireClick()) props.onClick?.();
+          onClick={(event) => {
+            if (shouldFireClick()) props.onClick?.(event);
           }}
           {...handlers}
         >

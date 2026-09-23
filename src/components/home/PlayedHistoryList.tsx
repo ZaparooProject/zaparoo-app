@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { PlayIcon } from "lucide-react";
+import { HistoryListRow } from "@/components/HistoryListRow";
 import { LibraryArtworkFrame } from "@/components/library/LibraryArtworkFrame";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
@@ -10,7 +11,6 @@ import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import { historyEntryToBrowseEntry } from "@/lib/mediaHistory";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import type { MediaHistoryEntry } from "@/lib/models";
-import { HistoryListRow } from "./HistoryListRow";
 
 function PlayedHistoryRow({
   entry,

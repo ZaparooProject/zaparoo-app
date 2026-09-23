@@ -44,7 +44,6 @@ import { __resetNfcMock } from "../__mocks__/@capawesome-team/capacitor-nfc";
 import { __resetLiveUpdateMock } from "../__mocks__/@capawesome/capacitor-live-update";
 import { __resetSecureStorageMock } from "../__mocks__/@aparajita/capacitor-secure-storage";
 import { __resetDeviceCache } from "@/hooks/useNetworkScan";
-import { __resetMediaWriteModeForTests } from "@/hooks/useMediaWriteTarget";
 import { __resetDeviceRegistryForTests } from "@/lib/devices/deviceRegistry";
 import { resetPurchasePreviewState } from "@/lib/purchasePreviewStore";
 import { resetAppPreviewState } from "@/lib/appPreviewStore";
@@ -92,7 +91,6 @@ afterEach(async () => {
   vi.useRealTimers();
   // Reset CoreAPI state to prevent accumulation across tests
   CoreAPI.reset();
-  __resetMediaWriteModeForTests();
   // Reset Preferences storage between tests
   __resetPreferencesStorage();
   // Reset ZeroConf mock state between tests

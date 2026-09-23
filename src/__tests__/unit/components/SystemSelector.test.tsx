@@ -262,16 +262,14 @@ describe("SystemSelector", () => {
 
       // Assert
       expect(
-        screen.getByRole("option", {
-          name: "systemSelector.allCategoriesLabel",
+        screen.getByRole("tab", {
+          name: "systemSelector.allCategories",
         }),
       ).toBeInTheDocument();
-      expect(
-        screen.getByRole("option", { name: "Nintendo" }),
-      ).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: "Sega" })).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: "Sony" })).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: "Atari" })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Nintendo" })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Sega" })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Sony" })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Atari" })).toBeInTheDocument();
     });
 
     it("should filter systems by selected category", async () => {
@@ -289,10 +287,7 @@ describe("SystemSelector", () => {
       ).toBeInTheDocument();
 
       // Act - select Nintendo
-      await user.selectOptions(
-        screen.getByRole("combobox", { name: "systemSelector.categories" }),
-        "Nintendo",
-      );
+      await user.click(screen.getByRole("tab", { name: "Nintendo" }));
 
       // Assert - only Nintendo systems shown
       expect(
@@ -325,8 +320,8 @@ describe("SystemSelector", () => {
       render(<SystemSelector {...defaultProps} />);
 
       // Assert - "Arcade" and "PC" (non-priority) should appear in alphabetical order
-      const options = screen.getAllByRole("option");
-      const optionNames = options.map((tab) => tab.textContent ?? "");
+      const categoryTabs = screen.getAllByRole("tab");
+      const optionNames = categoryTabs.map((tab) => tab.textContent ?? "");
       const arcadeIndex = optionNames.findIndex((n) => n.includes("Arcade"));
       const pcIndex = optionNames.findIndex((n) => n.includes("PC"));
 
@@ -340,11 +335,11 @@ describe("SystemSelector", () => {
       render(<SystemSelector {...defaultProps} />);
 
       // Assert - check category order
-      const options = screen.getAllByRole("option");
-      const optionNames = options.map((tab) => tab.textContent);
+      const categoryTabs = screen.getAllByRole("tab");
+      const optionNames = categoryTabs.map((tab) => tab.textContent);
 
       // All categories precedes priority categories
-      expect(optionNames[0]).toBe("systemSelector.allCategoriesLabel");
+      expect(optionNames[0]).toBe("systemSelector.allCategories");
       expect(optionNames[1]).toBe("Nintendo");
       expect(optionNames[2]).toBe("Sony");
       expect(optionNames[3]).toBe("Sega");
@@ -621,10 +616,7 @@ describe("SystemSelector", () => {
         />,
       );
 
-      await user.selectOptions(
-        screen.getByRole("combobox", { name: "systemSelector.categories" }),
-        "Nintendo",
-      );
+      await user.click(screen.getByRole("tab", { name: "Nintendo" }));
       await user.type(
         screen.getByRole("searchbox", { name: "systemSelector.searchSystems" }),
         "Super",
@@ -882,10 +874,7 @@ describe("SystemSelector", () => {
       ).toBeInTheDocument();
 
       // Act - select Nintendo
-      await user.selectOptions(
-        screen.getByRole("combobox", { name: "systemSelector.categories" }),
-        "Nintendo",
-      );
+      await user.click(screen.getByRole("tab", { name: "Nintendo" }));
 
       // Assert - All Systems option hidden when category selected
       expect(

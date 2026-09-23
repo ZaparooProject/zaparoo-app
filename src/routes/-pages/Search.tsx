@@ -26,7 +26,6 @@ import {
   useTabSessionStore,
 } from "@/lib/tabSessionStore";
 import { TextInput } from "@/components/wui/TextInput";
-import { WriteModal } from "@/components/WriteModal";
 import { PageFrame } from "@/components/PageFrame";
 import {
   SystemSelector,
@@ -167,14 +166,14 @@ export function Search() {
   );
   const nfcWriter = useNfcWriter(WriteMethod.Auto, preferRemoteWriter);
   const [writeOpen, setWriteOpen] = useState(false);
-  const closeWriteModal = async () => {
+  const cancelReaderActivity = async () => {
     setWriteOpen(false);
     try {
       await nfcWriter.end();
     } catch (err) {
       logger.error("Failed to end NFC writer session", err, {
         category: "nfc",
-        action: "closeWriteModal",
+        action: "cancelReaderActivity",
         severity: "error",
       });
     }
@@ -346,6 +345,7 @@ export function Search() {
             onClick={() => setRecentSearchesOpen(true)}
             disabled={recentSearches.length === 0}
             active={recentSearchesOpen}
+            aria-expanded={recentSearchesOpen}
             icon={<HistoryIcon size="24" />}
             title={t("create.search.recentSearches")}
             aria-label={t("create.search.recentSearches")}
@@ -440,8 +440,11 @@ export function Search() {
       </PageFrame>
 
       <MediaDetailsModal
-        isOpen={selectedResult !== null && !writeOpen}
-        close={() => setSelectedResult(null)}
+        isOpen={selectedResult !== null}
+        close={() => {
+          if (writeOpen) void cancelReaderActivity();
+          setSelectedResult(null);
+        }}
         media={selectedResult}
         onWrite={async (textToWrite) => {
           try {
@@ -502,18 +505,28 @@ export function Search() {
           }
         }}
         previewDisabled={!connected}
+        readerActivity={{
+          state: nfcWriter.verifyError
+            ? "error"
+            : nfcWriter.retapRequired
+              ? "attention"
+              : writeOpen
+                ? "waiting"
+                : "idle",
+          activeLabel: nfcWriter.retapRequired
+            ? t("spinner.retapTag")
+            : t("spinner.holdTagReader"),
+          errorMessage: nfcWriter.verifyError
+            ? t("spinner.verifyFailedRetry")
+            : undefined,
+          onCancel: () => void cancelReaderActivity(),
+          onRetry: () => void nfcWriter.retry(),
+        }}
       />
       <BackToTop
         scrollContainerRef={scrollContainerRef}
         threshold={200}
         bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
-      />
-      <WriteModal
-        isOpen={writeOpen}
-        close={closeWriteModal}
-        verifyError={nfcWriter.verifyError !== null}
-        retry={() => void nfcWriter.retry()}
-        retapRequired={nfcWriter.retapRequired}
       />
       <SystemSelector
         isOpen={systemSelectorOpen}

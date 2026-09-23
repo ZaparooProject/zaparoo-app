@@ -267,6 +267,7 @@ export function Settings() {
               ) : (
                 <Button
                   label={t("scan.purchaseProAction")}
+                  intent="pro"
                   onClick={
                     purchasePreviewEnabled
                       ? () => undefined

@@ -41,7 +41,7 @@ describe("CommandsModal", () => {
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     // Modal title may appear multiple times due to test-utils wrapper
-    const titles = screen.getAllByText("create.custom.commands");
+    const titles = screen.getAllByText("create.custom.commandsTitle");
     expect(titles.length).toBeGreaterThan(0);
   });
 
@@ -50,13 +50,24 @@ describe("CommandsModal", () => {
       <CommandsModal isOpen={true} close={mockClose} onSelect={mockOnSelect} />,
     );
 
-    // Check for category headers
-    expect(screen.getByText("Launch")).toBeInTheDocument();
-    expect(screen.getByText("Input")).toBeInTheDocument();
-    expect(screen.getByText("Playlist")).toBeInTheDocument();
-    expect(screen.getByText("MiSTer")).toBeInTheDocument();
-    expect(screen.getByText("HTTP")).toBeInTheDocument();
-    expect(screen.getByText("Other")).toBeInTheDocument();
+    expect(
+      screen.getByText("create.custom.commandCategories.launch"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("create.custom.commandCategories.input"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("create.custom.commandCategories.playlist"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("create.custom.commandCategories.mister"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("create.custom.commandCategories.http"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("create.custom.commandCategories.other"),
+    ).toBeInTheDocument();
   });
 
   it("should render launch commands", () => {

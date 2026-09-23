@@ -3,7 +3,7 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PlusIcon, RefreshCwIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -16,6 +16,9 @@ import { useStatusStore } from "@/lib/store.ts";
 import { logger } from "@/lib/logger";
 import { Button } from "@/components/wui/Button";
 import { EmptyState } from "@/components/wui/EmptyState";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DelayedLoading } from "@/components/DelayedLoading";
+import { BackToTop } from "@/components/BackToTop";
 import { PageFrame } from "@/components/PageFrame";
 import { MappingRow } from "@/components/MappingRow";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
@@ -38,6 +41,7 @@ export function Mappings() {
     void router.navigate(appBackNavigationOptions("/create"));
   const [search, setSearch] = useState("");
   const [reloading, setReloading] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { available: readOnlyMappingsAvailable } = useCoreFeature(
     "readOnlyMappings",
     { requireKnownSupport: true },
@@ -102,7 +106,8 @@ export function Mappings() {
   };
 
   const isInitialLoading = mappings.isLoading && !mappings.data;
-  const isEmpty = !isInitialLoading && sortedMappings.length === 0;
+  const isEmpty =
+    !isInitialLoading && !mappings.isError && sortedMappings.length === 0;
 
   return (
     <PageFrame
@@ -127,9 +132,31 @@ export function Mappings() {
           disabled={!connected || reloading}
         />
       }
+      scrollRef={scrollContainerRef}
     >
       <div className="flex flex-col gap-3">
-        {isInitialLoading ? null : isEmpty ? (
+        {isInitialLoading ? (
+          <DelayedLoading>
+            <div
+              className="text-muted-foreground flex items-center justify-center gap-2 py-6"
+              role="status"
+            >
+              <LoadingSpinner size={16} className="text-primary" decorative />
+              <span>{t("loading")}</span>
+            </div>
+          </DelayedLoading>
+        ) : mappings.isError ? (
+          <EmptyState
+            title={t("create.mappings.list.loadFailed")}
+            action={
+              <Button
+                label={t("create.mappings.list.retry")}
+                variant="outline"
+                onClick={() => void mappings.refetch()}
+              />
+            }
+          />
+        ) : isEmpty ? (
           <EmptyState
             title={t("create.mappings.list.empty")}
             description={t("create.mappings.list.emptyDescription")}
@@ -186,6 +213,11 @@ export function Mappings() {
           </>
         )}
       </div>
+      <BackToTop
+        scrollContainerRef={scrollContainerRef}
+        threshold={200}
+        bottomOffset="calc(var(--bottom-nav-base-height) + 1rem)"
+      />
     </PageFrame>
   );
 }

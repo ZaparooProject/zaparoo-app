@@ -13,11 +13,10 @@ export function SystemFilterControls(props: {
   onQueryChange?: (query: string) => void;
   showSearch?: boolean;
   tabIdPrefix: string;
-  variant?: "modal" | "page" | "picker";
+  variant?: "modal" | "page";
 }) {
   const { t } = useTranslation();
   const pageLayout = props.variant === "page";
-  const pickerLayout = props.variant === "picker";
   const showSearch = props.showSearch !== false;
   const query = props.query ?? "";
   const [showLeftGradient, setShowLeftGradient] = useState(false);
@@ -35,21 +34,9 @@ export function SystemFilterControls(props: {
   });
 
   return (
-    <div
-      className={
-        pickerLayout ? "system-selector-filterbar grid gap-2" : "flex flex-col"
-      }
-    >
+    <div className="flex flex-col">
       {showSearch && (
-        <div
-          className={
-            pickerLayout
-              ? "min-w-0"
-              : pageLayout
-                ? "px-1 pb-2"
-                : "space-y-4 p-2 pt-3"
-          }
-        >
+        <div className={pageLayout ? "px-1 pb-2" : "space-y-4 pb-2"}>
           <div className="relative">
             <Search
               className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
@@ -61,12 +48,12 @@ export function SystemFilterControls(props: {
               placeholder={t("systemSelector.searchPlaceholder")}
               value={query}
               onChange={(event) => props.onQueryChange?.(event.target.value)}
-              className={`border-input bg-surface-inset text-foreground focus-visible:ring-ring w-full rounded-md border px-10 py-2 focus-visible:ring-2 focus-visible:outline-none ${pickerLayout ? `wui-input min-h-12 ${query ? "pr-12" : "pr-3"}` : ""}`}
+              className="border-input bg-surface-inset text-foreground focus-visible:ring-ring w-full rounded-md border px-10 py-2 focus-visible:ring-2 focus-visible:outline-none"
             />
             {query && (
               <button
                 onClick={() => props.onQueryChange?.("")}
-                className={`text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-1/2 flex -translate-y-1/2 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none ${pickerLayout ? "right-0 h-12 w-12" : "right-1 h-8 w-8"}`}
+                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
                 type="button"
                 aria-label={t("systemSelector.clearSearch")}
               >
@@ -77,68 +64,52 @@ export function SystemFilterControls(props: {
         </div>
       )}
 
-      {pickerLayout ? (
-        <select
-          aria-label={t("systemSelector.categories")}
-          value={props.category}
-          onChange={(event) => props.onCategoryChange(event.target.value)}
-          className="wui-input border-input bg-surface-inset text-foreground focus-visible:ring-ring min-h-12 w-full min-w-0 rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        >
-          <option value="all">{t("systemSelector.allCategoriesLabel")}</option>
-          {props.categories.map((category) => (
-            <option key={category} value={category}>
-              {category}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <div
-          className={
-            pageLayout ? (showSearch ? "px-1 py-2" : "px-1 pb-2") : "px-2 py-2"
-          }
-        >
-          <div className="relative overflow-hidden rounded-lg">
-            {hasOverflow && (
-              <div
-                aria-hidden="true"
-                className={`from-background pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-8 bg-gradient-to-r to-transparent transition-opacity duration-200 ${
-                  showLeftGradient ? "opacity-100" : "opacity-0"
-                }`}
-              />
-            )}
-
-            <TabBar
-              label={t("systemSelector.categories")}
-              layout="scroll"
-              role="tab"
-              options={[
-                {
-                  value: "all",
-                  label: t("systemSelector.allCategories"),
-                  id: getTabBarTabId("all", props.tabIdPrefix),
-                },
-                ...props.categories.map((category) => ({
-                  value: category,
-                  label: category,
-                  id: getTabBarTabId(category, props.tabIdPrefix),
-                })),
-              ]}
-              value={props.category}
-              onChange={props.onCategoryChange}
-              containerProps={tabsProps}
+      <div
+        className={
+          pageLayout ? (showSearch ? "px-1 py-2" : "px-1 pb-2") : "py-2"
+        }
+      >
+        <div className="relative overflow-hidden rounded-lg">
+          {hasOverflow && (
+            <div
+              aria-hidden="true"
+              className={`from-background pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-8 bg-gradient-to-r to-transparent transition-opacity duration-200 ${
+                showLeftGradient ? "opacity-100" : "opacity-0"
+              }`}
             />
+          )}
 
-            {hasOverflow && (
-              <div
-                aria-hidden="true"
-                className={`from-background pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-gradient-to-l to-transparent transition-opacity duration-200 ${
-                  showRightGradient ? "opacity-100" : "opacity-0"
-                }`}
-              />
-            )}
-          </div>
+          <TabBar
+            label={t("systemSelector.categories")}
+            layout="scroll"
+            role="tab"
+            options={[
+              {
+                value: "all",
+                label: t("systemSelector.allCategories"),
+                id: getTabBarTabId("all", props.tabIdPrefix),
+              },
+              ...props.categories.map((category) => ({
+                value: category,
+                label: category,
+                id: getTabBarTabId(category, props.tabIdPrefix),
+              })),
+            ]}
+            value={props.category}
+            onChange={props.onCategoryChange}
+            containerProps={tabsProps}
+          />
+
+          {hasOverflow && (
+            <div
+              aria-hidden="true"
+              className={`from-background pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-gradient-to-l to-transparent transition-opacity duration-200 ${
+                showRightGradient ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
