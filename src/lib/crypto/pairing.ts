@@ -30,12 +30,19 @@ export type PairingErrorKind =
 export class PairingError extends Error {
   readonly kind: PairingErrorKind;
   readonly httpStatus?: number;
+  readonly retryAfterMs?: number;
 
-  constructor(kind: PairingErrorKind, message: string, httpStatus?: number) {
+  constructor(
+    kind: PairingErrorKind,
+    message: string,
+    httpStatus?: number,
+    retryAfterMs?: number,
+  ) {
     super(message);
     this.name = "PairingError";
     this.kind = kind;
     this.httpStatus = httpStatus;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 
@@ -56,6 +63,11 @@ const EXPECTED_PAIRING_ERROR_KINDS: ReadonlySet<PairingErrorKind> = new Set([
 export function isExpectedPairingError(error: PairingError): boolean {
   return EXPECTED_PAIRING_ERROR_KINDS.has(error.kind);
 }
+
+// Core permits one pairing request per second per IP with a burst of one.
+// Extra margin avoids racing the token refill at exactly one second.
+export const PAIRING_REQUEST_INTERVAL_MS = 1100;
+const MAX_RETRY_AFTER_MS = 5 * 60 * 1000;
 
 const HTTP_ERROR_KINDS: Record<number, PairingErrorKind> = {
   400: "malformed",
@@ -117,6 +129,18 @@ async function readCoreError(resp: Response): Promise<string | undefined> {
   return undefined;
 }
 
+function retryAfterMs(resp: Response): number | undefined {
+  const value = resp.headers.get("Retry-After")?.trim();
+  if (!value) return undefined;
+
+  const seconds = Number(value);
+  const delay = Number.isFinite(seconds)
+    ? seconds * 1000
+    : Date.parse(value) - Date.now();
+  if (!Number.isFinite(delay) || delay < 0) return undefined;
+  return Math.min(Math.ceil(delay), MAX_RETRY_AFTER_MS);
+}
+
 async function pairingHttpError(
   step: "start" | "finish",
   resp: Response,
@@ -131,6 +155,9 @@ async function pairingHttpError(
     kind,
     `Pairing ${step} failed (${resp.status}${detail})`,
     resp.status,
+    kind === "rate_limited"
+      ? (retryAfterMs(resp) ?? PAIRING_REQUEST_INTERVAL_MS)
+      : undefined,
   );
 }
 
@@ -170,23 +197,36 @@ function parseFinishResult(json: unknown): {
   return json as { authToken: string; clientId: string; confirm: string };
 }
 
-// The server limits /api/pair/* at 1 req/sec per IP. /pair/start consumes the
-// token, so /pair/finish may immediately 429 — retry with a 1100ms gap.
-// Each attempt has its own AbortController so one slow attempt can't hang the
-// whole flow indefinitely.
+interface PairingRequestPacer {
+  intervalMs: number;
+  nextRequestAt: number;
+}
+
+async function waitForRequestSlot(pacer: PairingRequestPacer): Promise<void> {
+  const waitMs = Math.max(0, pacer.nextRequestAt - Date.now());
+  if (waitMs > 0) {
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+  }
+  pacer.nextRequestAt = Date.now() + pacer.intervalMs;
+}
+
+// Pairing endpoints share a one-request-per-second budget. Pace every HTTP
+// attempt before sending it, rather than deliberately causing a 429 and then
+// recovering. Each attempt gets its own timeout so one slow request cannot
+// hang the whole flow indefinitely.
 async function fetchWithRetry(
   url: string,
   init: Parameters<typeof fetch>[1],
+  pacer: PairingRequestPacer,
   maxAttempts = 4,
   timeoutMs = 10000,
 ): Promise<Response> {
   for (let attempt = 1; ; attempt++) {
-    if (attempt > 1) await new Promise((r) => setTimeout(r, 1100));
+    await waitForRequestSlot(pacer);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const resp = await fetch(url, { ...init, signal: controller.signal });
-      if (resp.status !== 429 || attempt >= maxAttempts) return resp;
+      return await fetch(url, { ...init, signal: controller.signal });
     } catch (err) {
       // Only retry on AbortError (per-attempt timeout) so genuine network
       // failures surface immediately.
@@ -211,24 +251,40 @@ function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
 
 const enc = new TextEncoder();
 
+interface PairingOptions {
+  requestIntervalMs?: number;
+}
+
 export async function performPairing(
   host: string,
   port: number,
   pin: string,
   clientName = "Zaparoo App",
+  options: PairingOptions = {},
 ): Promise<PairingResult> {
   const client = new PakeClient(pin);
+  const pacer: PairingRequestPacer = {
+    intervalMs:
+      options.requestIntervalMs === undefined
+        ? PAIRING_REQUEST_INTERVAL_MS
+        : Math.max(0, options.requestIntervalMs),
+    nextRequestAt: 0,
+  };
   // msgA must be captured before update() — the HMAC transcript uses the original wire bytes.
   const msgA = client.bytes();
 
   const startUrl = `http://${formatHost(host)}:${port}/api/pair/start`;
   let startResp: Response;
   try {
-    startResp = await fetchWithRetry(startUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pake: base64Encode(msgA), name: clientName }),
-    });
+    startResp = await fetchWithRetry(
+      startUrl,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pake: base64Encode(msgA), name: clientName }),
+      },
+      pacer,
+    );
   } catch (err) {
     throw new PairingError(
       "network",
@@ -279,14 +335,18 @@ export async function performPairing(
   const finishUrl = `http://${formatHost(host)}:${port}/api/pair/finish`;
   let finishResp: Response;
   try {
-    finishResp = await fetchWithRetry(finishUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        session: startResult.session,
-        confirm: base64Encode(clientHmac),
-      }),
-    });
+    finishResp = await fetchWithRetry(
+      finishUrl,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session: startResult.session,
+          confirm: base64Encode(clientHmac),
+        }),
+      },
+      pacer,
+    );
   } catch (err) {
     throw new PairingError(
       "network",

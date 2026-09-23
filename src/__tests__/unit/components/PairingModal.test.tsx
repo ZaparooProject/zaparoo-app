@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@/test-utils";
+import { act, fireEvent, render, screen, waitFor } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import { PairingModal } from "@/components/PairingModal";
 import { performPairing, PairingError } from "@/lib/crypto/pairing";
@@ -136,12 +136,10 @@ describe("PairingModal", () => {
       });
       expect(pairButton).toBeDisabled();
 
-      const pinInput = screen.getByLabelText("pairing.pinLabel");
-      await user.type(pinInput, "12345");
-      expect(pairButton).toBeDisabled();
+      await user.type(screen.getByLabelText("pairing.pinLabel"), "12345");
 
-      await user.type(pinInput, "6");
-      expect(pairButton).toBeEnabled();
+      expect(pairButton).toBeDisabled();
+      expect(mockedPerformPairing).not.toHaveBeenCalled();
     });
 
     it("should prefill clientName with device name from Device.getInfo", async () => {
@@ -350,6 +348,54 @@ describe("PairingModal", () => {
         await screen.findByText("pairing.error.wrong_pin"),
       ).toBeInTheDocument();
       expect(mockedPerformPairing).toHaveBeenCalledTimes(1);
+    });
+
+    it("should block repeat attempts until the rate-limit cooldown expires", async () => {
+      vi.useFakeTimers();
+      try {
+        mockedPerformPairing.mockImplementation(() => {
+          throw new PairingError("rate_limited", "too many requests", 429, 100);
+        });
+
+        render(
+          <PairingModal
+            isOpen={true}
+            close={vi.fn()}
+            address="192.168.1.10:7497"
+            recordId={RECORD_ID}
+          />,
+        );
+
+        fireEvent.input(screen.getByLabelText("pairing.pinLabel"), {
+          target: { value: "123456" },
+        });
+
+        expect(screen.getByText("pairing.error.rate_limited")).toHaveAttribute(
+          "role",
+          "status",
+        );
+        const pairButton = screen.getByRole("button", {
+          name: "pairing.startPairing",
+        });
+        expect(pairButton).toBeDisabled();
+
+        expect(mockedPerformPairing).toHaveBeenCalledTimes(1);
+
+        act(() => {
+          vi.advanceTimersByTime(99);
+        });
+        expect(pairButton).toBeDisabled();
+
+        act(() => {
+          vi.advanceTimersByTime(151);
+        });
+        expect(pairButton).toBeEnabled();
+        expect(
+          screen.queryByText("pairing.error.rate_limited"),
+        ).not.toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("should display unknown error key for non-PairingError exceptions", async () => {

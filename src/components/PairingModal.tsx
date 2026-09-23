@@ -11,8 +11,10 @@ import { parseDeviceAddress } from "@/lib/coreApi";
 import {
   isExpectedPairingError,
   PAIRING_CLIENT_NAME_MAX_BYTES,
+  PAIRING_REQUEST_INTERVAL_MS,
   performPairing,
   PairingError,
+  type PairingErrorKind,
   truncateClientName,
 } from "@/lib/crypto/pairing";
 import {
@@ -52,7 +54,9 @@ export function PairingModal({
   const [pin, setPin] = useState("");
   const [clientName, setClientName] = useState("");
   const [isPairing, setIsPairing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorKind, setErrorKind] = useState<PairingErrorKind | null>(null);
+  const [retryAt, setRetryAt] = useState<number | null>(null);
+  const [retrySeconds, setRetrySeconds] = useState(0);
   // Tracks an in-flight pair attempt so onComplete doesn't fire twice if the
   // user is still mid-submit when the 6th digit lands.
   const pairingInFlight = useRef(false);
@@ -62,7 +66,9 @@ export function PairingModal({
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Clear transient form state when the modal closes.
       setPin("");
       setClientName("");
-      setError(null);
+      setErrorKind(null);
+      setRetryAt(null);
+      setRetrySeconds(0);
       setIsPairing(false);
       pairingInFlight.current = false;
       return;
@@ -94,6 +100,24 @@ export function PairingModal({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (retryAt === null) return;
+
+    const updateCountdown = () => {
+      const seconds = Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+      setRetrySeconds(seconds);
+      if (seconds === 0) {
+        setRetryAt(null);
+        setErrorKind((current) =>
+          current === "rate_limited" ? null : current,
+        );
+      }
+    };
+
+    const timer = window.setInterval(updateCountdown, 250);
+    return () => window.clearInterval(timer);
+  }, [retryAt]);
+
   const resolveClientName = useCallback(() => {
     return truncateClientName(
       clientName.trim() || `Zaparoo App ${safePlatform()}`,
@@ -103,9 +127,9 @@ export function PairingModal({
   const handlePair = async (pinOverride?: string) => {
     const submittedPin = pinOverride ?? pin;
     if (!/^\d{6}$/.test(submittedPin) || !address || !recordId) return;
-    if (pairingInFlight.current) return;
+    if (pairingInFlight.current || retryAt !== null) return;
     pairingInFlight.current = true;
-    setError(null);
+    setErrorKind(null);
     setIsPairing(true);
     try {
       const name = resolveClientName();
@@ -139,7 +163,10 @@ export function PairingModal({
             kind: e.kind,
           });
         }
-        setError(t(`pairing.error.${e.kind}`));
+        const retryAfterMs = e.retryAfterMs ?? PAIRING_REQUEST_INTERVAL_MS;
+        setRetrySeconds(Math.max(1, Math.ceil(retryAfterMs / 1000)));
+        setRetryAt(Date.now() + retryAfterMs);
+        setErrorKind(e.kind);
       } else {
         logger.error("Pairing failed with unknown error", e, {
           category: "connection",
@@ -147,7 +174,9 @@ export function PairingModal({
           severity: "error",
           kind: "unknown",
         });
-        setError(t("pairing.error.unknown"));
+        setRetrySeconds(Math.ceil(PAIRING_REQUEST_INTERVAL_MS / 1000));
+        setRetryAt(Date.now() + PAIRING_REQUEST_INTERVAL_MS);
+        setErrorKind("unknown");
       }
     } finally {
       setIsPairing(false);
@@ -163,7 +192,13 @@ export function PairingModal({
       footer={
         <Button
           label={isPairing ? t("pairing.pairing") : t("pairing.startPairing")}
-          disabled={isPairing || pin.length !== 6 || !address || !recordId}
+          disabled={
+            isPairing ||
+            retryAt !== null ||
+            pin.length !== 6 ||
+            !address ||
+            !recordId
+          }
           onClick={() => void handlePair()}
           intent="primary"
           className="w-full"
@@ -204,9 +239,17 @@ export function PairingModal({
           }}
         />
 
-        {error && (
-          <p className="text-error text-sm" role="alert">
-            {error}
+        {errorKind && (
+          <p
+            className="text-error text-sm"
+            role={errorKind === "rate_limited" ? "status" : "alert"}
+          >
+            {t(
+              `pairing.error.${errorKind}`,
+              errorKind === "rate_limited"
+                ? { count: Math.max(1, retrySeconds) }
+                : undefined,
+            )}
           </p>
         )}
       </div>

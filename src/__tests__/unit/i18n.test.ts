@@ -24,4 +24,15 @@ describe("document language", () => {
     expect(i18n.t("library.favorites")).toBe("Favourites");
     expect(document.documentElement).toHaveAttribute("lang", "en-GB");
   });
+
+  it("should pluralize the pairing rate-limit countdown", async () => {
+    await i18n.changeLanguage("en-US");
+
+    expect(i18n.t("pairing.error.rate_limited", { count: 1 })).toContain(
+      "Wait 1 second",
+    );
+    expect(i18n.t("pairing.error.rate_limited", { count: 2 })).toContain(
+      "Wait 2 seconds",
+    );
+  });
 });
