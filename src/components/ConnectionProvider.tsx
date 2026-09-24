@@ -617,6 +617,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           queryKey: [LIBRARY_QUERY_KEYS.favorites],
         });
         queryClient.invalidateQueries({
+          queryKey: [LIBRARY_QUERY_KEYS.collections],
+        });
+        queryClient.invalidateQueries({
           queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
         });
         queryClient.invalidateQueries({
@@ -785,6 +788,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               });
               queryClient.invalidateQueries({
                 queryKey: [LIBRARY_QUERY_KEYS.favorites],
+              });
+              queryClient.invalidateQueries({
+                queryKey: [LIBRARY_QUERY_KEYS.collections],
               });
               queryClient.invalidateQueries({
                 queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
@@ -1154,6 +1160,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] });
     queryClient.invalidateQueries({
       queryKey: [LIBRARY_QUERY_KEYS.favorites],
+    });
+    queryClient.invalidateQueries({
+      queryKey: [LIBRARY_QUERY_KEYS.collections],
     });
     queryClient.invalidateQueries({
       queryKey: [LIBRARY_QUERY_KEYS.browseIndex],

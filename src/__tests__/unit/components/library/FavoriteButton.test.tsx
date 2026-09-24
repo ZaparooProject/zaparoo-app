@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { QueryClient } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@/test-utils";
+import { act, render, screen, waitFor } from "@/test-utils";
 import { FavoriteButton } from "@/components/library/FavoriteButton";
 import { CoreAPI } from "@/lib/coreApi";
 import { LIBRARY_QUERY_KEYS } from "@/lib/libraryMedia";
 import { logger } from "@/lib/logger";
-import type { MediaBrowseEntry } from "@/lib/models";
+import type { MediaBrowseEntry, MediaTagsUpdateResponse } from "@/lib/models";
 import { useStatusStore } from "@/lib/store";
 
 const { mockErrorToast } = vi.hoisted(() => ({
@@ -223,10 +223,14 @@ describe("FavoriteButton", () => {
     expect(button).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("should keep a stable visible label with a state-specific accessible name", async () => {
-    vi.spyOn(CoreAPI, "mediaTagsUpdate").mockResolvedValue({
-      tags: [{ type: "user", tag: "favorite" }],
-    });
+  it("should keep the favorite icon and caption stable during a pending update", async () => {
+    let finish!: (response: MediaTagsUpdateResponse) => void;
+    vi.spyOn(CoreAPI, "mediaTagsUpdate").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
     const user = userEvent.setup();
 
     render(
@@ -243,9 +247,19 @@ describe("FavoriteButton", () => {
     });
     expect(button).toHaveTextContent("library.favorite");
     expect(button).toHaveAttribute("aria-pressed", "false");
+    const icon = button.querySelector("svg");
 
     await user.click(button);
+    const pending = screen.getByRole("button", {
+      name: "library.updatingFavorite",
+    });
+    expect(pending).toHaveTextContent("library.favorite");
+    expect(pending.querySelector("svg")).toBe(icon);
+    expect(pending).toBeDisabled();
 
+    await act(async () =>
+      finish({ tags: [{ type: "user", tag: "favorite" }] }),
+    );
     const favoritedButton = await screen.findByRole("button", {
       name: "library.removeFavorite",
     });

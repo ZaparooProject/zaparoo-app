@@ -200,8 +200,7 @@ describe("Home Page Integration", () => {
 
       // Heading is always visible
       expect(screen.getByText("scan.nowPlayingHeading")).toBeInTheDocument();
-      // Empty values are explicit
-      expectVisibleEmptyValues("scan.nowPlayingHeading", 2);
+      expect(screen.getByText("scan.nothingPlaying")).toBeVisible();
     });
 
     it("should show media info when playing", () => {
@@ -459,8 +458,7 @@ describe("Home Page Integration", () => {
         />,
       );
 
-      // Initially shows explicit empty values
-      expectVisibleEmptyValues("scan.nowPlayingHeading", 2);
+      expect(screen.getByText("scan.nothingPlaying")).toBeVisible();
 
       // Update store
       act(() => {

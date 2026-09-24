@@ -80,6 +80,26 @@ describe("MediaDetailsModal", () => {
     expect(screen.getByText("@SNES/Super Mario World")).toBeInTheDocument();
   });
 
+  it("should keep preference tags out of title ZapScript tag choices", () => {
+    renderModal({
+      media: {
+        ...mediaWithZapScript,
+        tags: [
+          ...mediaWithZapScript.tags,
+          { type: "user", tag: "liked" },
+          { type: "user", tag: "disliked" },
+          { type: "user", tag: "playlater" },
+        ],
+      },
+    });
+    expect(
+      screen.getByRole("button", { name: "genre platformer" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("user liked")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("user disliked")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("user playlater")).not.toBeInTheDocument();
+  });
+
   it("should show labels for interactive media tags", () => {
     renderModal({
       media: {

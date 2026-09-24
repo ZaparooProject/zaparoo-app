@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FileIcon } from "lucide-react";
 import { isTransientApiConnectionError } from "@/lib/coreApi";
@@ -19,6 +19,7 @@ export function LibraryArtwork(props: {
   enabled?: boolean;
   className?: string;
   alt?: string;
+  placeholderIcon?: ReactNode;
   onTypeTag?: (typeTag: string) => void;
   onAvailabilityChange?: (available: boolean) => void;
 }) {
@@ -104,7 +105,7 @@ export function LibraryArtwork(props: {
       className={`${props.className ?? ""} text-foreground-hint flex items-center justify-center bg-white/5`}
       aria-hidden="true"
     >
-      <FileIcon size={24} />
+      {props.placeholderIcon ?? <FileIcon size={24} />}
     </span>
   );
 }

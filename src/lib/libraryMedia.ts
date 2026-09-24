@@ -17,11 +17,19 @@ export const LIBRARY_QUERY_KEYS = {
   browse: "mediaBrowse",
   browseIndex: "mediaBrowseIndex",
   favorites: "mediaFavorites",
+  collections: "mediaPreferenceCollections",
   meta: "mediaMeta",
   image: "mediaImage",
 } as const;
 
-export const FAVORITE_TAG_FILTER = "user:favorite";
+export const MEDIA_PREFERENCES = {
+  favorite: "user:favorite",
+  liked: "user:liked",
+  disliked: "user:disliked",
+  playlater: "user:playlater",
+} as const;
+export type MediaPreference = keyof typeof MEDIA_PREFERENCES;
+export const FAVORITE_TAG_FILTER = MEDIA_PREFERENCES.favorite;
 export const MAX_SINGLETON_FOLDER_RESOLUTIONS_PER_PAGE = 4;
 
 const SUPPORTED_IMAGE_TYPES = [
@@ -148,6 +156,26 @@ export async function fetchLibraryMediaMeta(
   }
 }
 
+export function isMediaPreferenceTag(tag: TagInfo): boolean {
+  return (
+    tag.type.toLowerCase() === "user" &&
+    Object.hasOwn(MEDIA_PREFERENCES, tag.tag.toLowerCase())
+  );
+}
+
+export function hasMediaPreference(
+  tags: readonly TagInfo[] | undefined,
+  preference: MediaPreference,
+): boolean {
+  return (
+    tags?.some(
+      (tag) =>
+        tag.type.toLowerCase() === "user" &&
+        tag.tag.toLowerCase() === preference,
+    ) ?? false
+  );
+}
+
 export function isFavoriteTag(tag: TagInfo): boolean {
   return (
     tag.type.toLowerCase() === "user" && tag.tag.toLowerCase() === "favorite"
@@ -162,21 +190,25 @@ export function hasFavoriteTag(tags: readonly TagInfo[] | undefined): boolean {
   return tags?.some(isFavoriteTag) ?? false;
 }
 
+export function preferenceUpdateParams(
+  entry: MediaBrowseEntry,
+  fallbackSystemId: string,
+  preference: MediaPreference,
+  enabled: boolean,
+): MediaTagsUpdateParams | null {
+  const ref = mediaRefForEntry(entry, fallbackSystemId);
+  if (!ref) return null;
+  return enabled
+    ? { ...ref, add: [MEDIA_PREFERENCES[preference]] }
+    : { ...ref, remove: [MEDIA_PREFERENCES[preference]] };
+}
+
 export function favoriteUpdateParams(
   entry: MediaBrowseEntry,
   fallbackSystemId: string,
   favorite: boolean,
 ): MediaTagsUpdateParams | null {
-  const update = favorite
-    ? { add: [FAVORITE_TAG_FILTER] }
-    : { remove: [FAVORITE_TAG_FILTER] };
-  if (entry.mediaId !== undefined) {
-    return { mediaId: entry.mediaId, ...update };
-  }
-  const system = entrySystemId(entry, fallbackSystemId);
-  const path = nonEmpty(entry.path);
-  if (!system || !path) return null;
-  return { system, path, ...update };
+  return preferenceUpdateParams(entry, fallbackSystemId, "favorite", favorite);
 }
 
 export function searchResultToBrowseEntry(
@@ -443,7 +475,7 @@ export function organizeLibraryDetailTags(tags: readonly TagInfo[]): {
   tags: TagInfo[];
 } {
   const visibleTags = mergeLibraryTags(tags).filter(
-    (tag) => !isFavoriteTag(tag) && !isScraperTag(tag),
+    (tag) => !isMediaPreferenceTag(tag) && !isScraperTag(tag),
   );
   const factTypeSet = new Set<string>(LIBRARY_DETAIL_FACT_TYPES);
   const facts = LIBRARY_DETAIL_FACT_TYPES.flatMap((type) => {

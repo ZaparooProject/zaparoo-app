@@ -9,6 +9,7 @@ export function LibraryHeaderActions(props: {
   searchDisabled?: boolean;
   optionsDisabled?: boolean;
   optionsActive?: boolean;
+  showOptions?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -20,13 +21,15 @@ export function LibraryHeaderActions(props: {
         aria-label={t("library.searchTitle")}
         disabled={props.searchDisabled}
       />
-      <HeaderButton
-        onClick={props.onOpenOptions}
-        icon={<SlidersHorizontal size={24} />}
-        aria-label={t("library.optionsTitle")}
-        disabled={props.optionsDisabled}
-        active={props.optionsActive}
-      />
+      {props.showOptions !== false && (
+        <HeaderButton
+          onClick={props.onOpenOptions}
+          icon={<SlidersHorizontal size={24} />}
+          aria-label={t("library.optionsTitle")}
+          disabled={props.optionsDisabled}
+          active={props.optionsActive}
+        />
+      )}
     </div>
   );
 }

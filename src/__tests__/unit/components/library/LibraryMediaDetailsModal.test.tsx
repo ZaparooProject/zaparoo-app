@@ -122,6 +122,37 @@ describe("LibraryMediaDetailsModal", () => {
     useStatusStore.getState().setWriteQueue("");
   });
 
+  it("keeps preference and write actions but omits Launch for Now Playing", async () => {
+    useStatusStore.setState({ coreVersion: "2.18.0" });
+    const { props } = renderModal({ context: "nowPlaying" });
+
+    const dialog = await screen.findByRole("dialog", { name: "Super Game" });
+    expect(await within(dialog).findByText("Platformer")).toBeVisible();
+    expect(
+      within(dialog).queryByRole("button", { name: "library.launch" }),
+    ).not.toBeInTheDocument();
+    const actions = within(dialog).getByRole("group", {
+      name: "library.mediaActions",
+    });
+    for (const name of [
+      "library.addFavorite",
+      "library.addLike",
+      "library.addDislike",
+      "library.addPlayLater",
+      "library.write",
+    ]) {
+      expect(within(actions).getByRole("button", { name })).toBeInTheDocument();
+    }
+    expect(
+      screen.getByRole("link", { name: "accessibility.skipToActions" }),
+    ).toBeInTheDocument();
+
+    await userEvent
+      .setup()
+      .click(within(dialog).getAllByRole("button", { name: "nav.close" })[0]!);
+    expect(props.close).toHaveBeenCalledOnce();
+  });
+
   it("should render persistent actions and curated game metadata", async () => {
     const user = userEvent.setup();
     renderModal();
@@ -243,6 +274,37 @@ describe("LibraryMediaDetailsModal", () => {
     expect(favoriteButton).toHaveAccessibleName("library.removeFavorite");
     expect(favoriteButton).toHaveTextContent("library.favorite");
     expect(screen.queryByLabelText("user favorite")).not.toBeInTheDocument();
+  });
+
+  it("should show all 2.18 preference actions without exposing preference tags as metadata", async () => {
+    useStatusStore.setState({ coreVersion: "2.18.0" });
+    vi.spyOn(CoreAPI, "mediaMeta").mockResolvedValue({
+      media: {
+        ...META_RESPONSE.media,
+        tags: [
+          { type: "user", tag: "liked" },
+          { type: "user", tag: "playlater" },
+          { type: "region", tag: "us" },
+        ],
+      },
+    });
+    renderModal();
+    const actions = await screen.findByRole("group", {
+      name: "library.mediaActions",
+    });
+    expect(
+      await within(actions).findByRole("button", {
+        name: "library.removeLike",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      within(actions).getByRole("button", { name: "library.addDislike" }),
+    ).toBeInTheDocument();
+    expect(
+      within(actions).getByRole("button", { name: "library.removePlayLater" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("user liked")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("user playlater")).not.toBeInTheDocument();
   });
 
   it("should lazy-load alternate image types", async () => {
@@ -408,6 +470,28 @@ describe("LibraryMediaDetailsModal", () => {
     expect(
       screen.getByRole("dialog", { name: "Super Game" }),
     ).toBeInTheDocument();
+  });
+
+  it("keeps the launch caption stable while its icon shows progress", async () => {
+    let finish!: () => void;
+    vi.spyOn(CoreAPI, "run").mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    renderModal();
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "library.launch" }));
+    const pending = screen.getByRole("button", { name: "library.launching" });
+    expect(pending).toHaveTextContent("library.launch");
+    expect(pending).toBeDisabled();
+    await waitFor(() => expect(finish).toBeTypeOf("function"));
+    await act(async () => finish());
+    expect(
+      screen.getByRole("button", { name: "library.launch" }),
+    ).toBeEnabled();
   });
 
   it("should not launch while Core is reconnecting", async () => {

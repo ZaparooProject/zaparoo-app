@@ -2025,6 +2025,9 @@ describe("notification processing", () => {
         queryKey: ["mediaBrowseIndex"],
       });
       expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["mediaPreferenceCollections"],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: ["mediaMeta"],
       });
       expect(removeSpy).toHaveBeenCalledWith({ queryKey: ["mediaImage"] });

@@ -15,6 +15,7 @@ import { useAnnouncer } from "@/components/A11yAnnouncer";
 import { cancelSession } from "@/lib/nfc";
 import { CoreAPI } from "@/lib/coreApi";
 import { useCoreFeature } from "@/hooks/useCoreFeature";
+import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
 import type { MediaSlot, PlayingResponse } from "@/lib/models";
 import { HistoryIcon, ZapLogo } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
@@ -22,7 +23,6 @@ import { ToggleChip } from "@/components/wui/ToggleChip";
 import { PageFrame } from "@/components/PageFrame";
 import { ConnectionStatus } from "@/components/home/ConnectionStatus";
 import { ScanControls } from "@/components/home/ScanControls";
-import { LastScannedInfo } from "@/components/home/LastScannedInfo";
 import { NowPlayingInfo } from "@/components/home/NowPlayingInfo";
 import { HistoryModal } from "@/components/home/HistoryModal";
 import { StopConfirmModal } from "@/components/home/StopConfirmModal";
@@ -78,6 +78,7 @@ export function Index() {
   const { purchaseModal, proPurchaseModalOpen, setProPurchaseModalOpen } =
     useProPurchase();
 
+  const deviceKey = useActiveDeviceKey();
   const connected = useStatusStore((state) => state.connected);
   const playing = useStatusStore((state) => state.playing);
   const backgroundPlaying = useStatusStore((state) => state.backgroundPlaying);
@@ -86,7 +87,6 @@ export function Index() {
     (state) => state.playlists.background,
   );
   const setPlaylist = useStatusStore((state) => state.setPlaylist);
-  const lastToken = useStatusStore((state) => state.lastToken);
   const setLastToken = useStatusStore((state) => state.setLastToken);
   const { hasData } = useConnection();
 
@@ -301,9 +301,8 @@ export function Index() {
         <div>
           <ConnectionStatus />
 
-          <LastScannedInfo lastToken={lastToken} scanStatus={scanStatus} />
-
           <NowPlayingInfo
+            deviceKey={deviceKey}
             mediaName={playing.mediaName}
             mediaPath={playing.mediaPath}
             systemName={playing.systemName}
@@ -325,6 +324,7 @@ export function Index() {
           {backgroundMediaAvailable &&
             (backgroundPlaying.mediaName !== "" || backgroundPlaylist) && (
               <NowPlayingInfo
+                deviceKey={deviceKey}
                 mediaName={backgroundPlaying.mediaName}
                 mediaPath={backgroundPlaying.mediaPath}
                 systemName={backgroundPlaying.systemName}

@@ -8,7 +8,7 @@ import type {
   MediaWriteMode,
   MediaWriteTargetState,
 } from "@/hooks/useMediaWriteTarget";
-import { isFavoriteTag, isScraperTag } from "@/lib/libraryMedia";
+import { isMediaPreferenceTag, isScraperTag } from "@/lib/libraryMedia";
 import type { MediaWriteSource } from "@/lib/mediaWriteTarget";
 import { titleTagKey } from "@/lib/titleZapScript";
 
@@ -94,7 +94,7 @@ export function MediaWriteTargetSelector(props: {
   const pathInputId = `${radioGroupName}-path`;
   const zapScriptInputId = `${radioGroupName}-zapscript`;
   const visibleTags = (props.media.tags ?? []).filter(
-    (tag) => !isFavoriteTag(tag) && !isScraperTag(tag),
+    (tag) => !isMediaPreferenceTag(tag) && !isScraperTag(tag),
   );
 
   return (

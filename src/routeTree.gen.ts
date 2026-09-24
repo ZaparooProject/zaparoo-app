@@ -18,7 +18,10 @@ import { Route as CreateSearchRouteImport } from "./routes/create.search";
 import { Route as CreateTextRouteImport } from "./routes/create.text";
 import { Route as LibraryIndexRouteImport } from "./routes/library.index";
 import { Route as LibrarySystemRouteImport } from "./routes/library.$system";
+import { Route as LibraryDislikedRouteImport } from "./routes/library.disliked";
 import { Route as LibraryFavoritesRouteImport } from "./routes/library.favorites";
+import { Route as LibraryLikedRouteImport } from "./routes/library.liked";
+import { Route as LibraryPlayLaterRouteImport } from "./routes/library.play-later";
 import { Route as LibrarySearchRouteImport } from "./routes/library.search";
 import { Route as SettingsIndexRouteImport } from "./routes/settings.index";
 import { Route as SettingsAboutRouteImport } from "./routes/settings.about";
@@ -82,9 +85,24 @@ const LibrarySystemRoute = LibrarySystemRouteImport.update({
   path: "/library/$system",
   getParentRoute: () => rootRouteImport,
 } as any);
+const LibraryDislikedRoute = LibraryDislikedRouteImport.update({
+  id: "/library/disliked",
+  path: "/library/disliked",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const LibraryFavoritesRoute = LibraryFavoritesRouteImport.update({
   id: "/library/favorites",
   path: "/library/favorites",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const LibraryLikedRoute = LibraryLikedRouteImport.update({
+  id: "/library/liked",
+  path: "/library/liked",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const LibraryPlayLaterRoute = LibraryPlayLaterRouteImport.update({
+  id: "/library/play-later",
+  path: "/library/play-later",
   getParentRoute: () => rootRouteImport,
 } as any);
 const LibrarySearchRoute = LibrarySearchRouteImport.update({
@@ -181,7 +199,10 @@ export interface FileRoutesByFullPath {
   "/create/search": typeof CreateSearchRoute;
   "/create/text": typeof CreateTextRoute;
   "/library/$system": typeof LibrarySystemRoute;
+  "/library/disliked": typeof LibraryDislikedRoute;
   "/library/favorites": typeof LibraryFavoritesRoute;
+  "/library/liked": typeof LibraryLikedRoute;
+  "/library/play-later": typeof LibraryPlayLaterRoute;
   "/library/search": typeof LibrarySearchRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
@@ -210,7 +231,10 @@ export interface FileRoutesByTo {
   "/create/search": typeof CreateSearchRoute;
   "/create/text": typeof CreateTextRoute;
   "/library/$system": typeof LibrarySystemRoute;
+  "/library/disliked": typeof LibraryDislikedRoute;
   "/library/favorites": typeof LibraryFavoritesRoute;
+  "/library/liked": typeof LibraryLikedRoute;
+  "/library/play-later": typeof LibraryPlayLaterRoute;
   "/library/search": typeof LibrarySearchRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
@@ -240,7 +264,10 @@ export interface FileRoutesById {
   "/create/search": typeof CreateSearchRoute;
   "/create/text": typeof CreateTextRoute;
   "/library/$system": typeof LibrarySystemRoute;
+  "/library/disliked": typeof LibraryDislikedRoute;
   "/library/favorites": typeof LibraryFavoritesRoute;
+  "/library/liked": typeof LibraryLikedRoute;
+  "/library/play-later": typeof LibraryPlayLaterRoute;
   "/library/search": typeof LibrarySearchRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
@@ -271,7 +298,10 @@ export interface FileRouteTypes {
     | "/create/search"
     | "/create/text"
     | "/library/$system"
+    | "/library/disliked"
     | "/library/favorites"
+    | "/library/liked"
+    | "/library/play-later"
     | "/library/search"
     | "/settings/about"
     | "/settings/accessibility"
@@ -300,7 +330,10 @@ export interface FileRouteTypes {
     | "/create/search"
     | "/create/text"
     | "/library/$system"
+    | "/library/disliked"
     | "/library/favorites"
+    | "/library/liked"
+    | "/library/play-later"
     | "/library/search"
     | "/settings/about"
     | "/settings/accessibility"
@@ -329,7 +362,10 @@ export interface FileRouteTypes {
     | "/create/search"
     | "/create/text"
     | "/library/$system"
+    | "/library/disliked"
     | "/library/favorites"
+    | "/library/liked"
+    | "/library/play-later"
     | "/library/search"
     | "/settings/about"
     | "/settings/accessibility"
@@ -359,7 +395,10 @@ export interface RootRouteChildren {
   CreateSearchRoute: typeof CreateSearchRoute;
   CreateTextRoute: typeof CreateTextRoute;
   LibrarySystemRoute: typeof LibrarySystemRoute;
+  LibraryDislikedRoute: typeof LibraryDislikedRoute;
   LibraryFavoritesRoute: typeof LibraryFavoritesRoute;
+  LibraryLikedRoute: typeof LibraryLikedRoute;
+  LibraryPlayLaterRoute: typeof LibraryPlayLaterRoute;
   LibrarySearchRoute: typeof LibrarySearchRoute;
   SettingsAboutRoute: typeof SettingsAboutRoute;
   SettingsAccessibilityRoute: typeof SettingsAccessibilityRoute;
@@ -446,11 +485,32 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof LibrarySystemRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/library/disliked": {
+      id: "/library/disliked";
+      path: "/library/disliked";
+      fullPath: "/library/disliked";
+      preLoaderRoute: typeof LibraryDislikedRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/library/favorites": {
       id: "/library/favorites";
       path: "/library/favorites";
       fullPath: "/library/favorites";
       preLoaderRoute: typeof LibraryFavoritesRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/library/liked": {
+      id: "/library/liked";
+      path: "/library/liked";
+      fullPath: "/library/liked";
+      preLoaderRoute: typeof LibraryLikedRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/library/play-later": {
+      id: "/library/play-later";
+      path: "/library/play-later";
+      fullPath: "/library/play-later";
+      preLoaderRoute: typeof LibraryPlayLaterRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/library/search": {
@@ -583,7 +643,10 @@ const rootRouteChildren: RootRouteChildren = {
   CreateSearchRoute: CreateSearchRoute,
   CreateTextRoute: CreateTextRoute,
   LibrarySystemRoute: LibrarySystemRoute,
+  LibraryDislikedRoute: LibraryDislikedRoute,
   LibraryFavoritesRoute: LibraryFavoritesRoute,
+  LibraryLikedRoute: LibraryLikedRoute,
+  LibraryPlayLaterRoute: LibraryPlayLaterRoute,
   LibrarySearchRoute: LibrarySearchRoute,
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsAccessibilityRoute: SettingsAccessibilityRoute,

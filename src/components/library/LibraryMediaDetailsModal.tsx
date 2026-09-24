@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -32,7 +33,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { CreateIcon } from "@/lib/images";
 import { LibraryArtwork } from "@/components/library/LibraryArtwork";
-import { FavoriteButton } from "@/components/library/FavoriteButton";
+import { MediaPreferenceActions } from "@/components/library/MediaPreferenceActions";
 import { MediaWriteTargetModal } from "@/components/MediaWriteTargetModal";
 import {
   getDefaultMediaWriteValue,
@@ -108,6 +109,7 @@ export function LibraryMediaDetailsModal(props: {
   entry: MediaBrowseEntry | null;
   systemId: string;
   deviceKey: string;
+  context?: "library" | "nowPlaying";
 }) {
   const { t } = useTranslation();
   const showFilenames = usePreferencesStore((state) => state.showFilenames);
@@ -434,15 +436,13 @@ export function LibraryMediaDetailsModal(props: {
       aria-label={t("library.mediaActions")}
       actions={
         <>
-          <FavoriteButton
+          <MediaPreferenceActions
+            key={mediaKey}
             entry={entry}
             fallbackSystemId={systemId}
             deviceKey={props.deviceKey}
             metadataTags={metadata?.tags}
-            displayLabel={t("library.favorite")}
-            layout="responsive"
-            variant="text"
-            className="w-full whitespace-nowrap"
+            context="modal"
           />
           <Button
             label={t("library.writeAction")}
@@ -458,26 +458,40 @@ export function LibraryMediaDetailsModal(props: {
             }
             layout="responsive"
             variant="text"
-            className="whitespace-nowrap"
+            className={classNames(
+              "whitespace-nowrap",
+              (preparingWrite || (launching && writeAvailable)) &&
+                "disabled:!text-white",
+            )}
             disabled={!writeAvailable || preparingWrite || launching}
             onClick={() => void write()}
           />
         </>
       }
       primaryAction={
-        <Button
-          label={launching ? t("library.launching") : t("library.launch")}
-          icon={
-            launching ? (
-              <LoadingSpinner size={20} decorative />
-            ) : (
-              <PlayIcon size={20} />
-            )
-          }
-          intent="primary"
-          disabled={!liveConnected || launching || preparingWrite}
-          onClick={() => void launch()}
-        />
+        props.context !== "nowPlaying" ? (
+          <Button
+            label={t("library.launch")}
+            aria-label={
+              launching ? t("library.launching") : t("library.launch")
+            }
+            icon={
+              launching ? (
+                <LoadingSpinner size={20} decorative />
+              ) : (
+                <PlayIcon size={20} />
+              )
+            }
+            intent="primary"
+            className={
+              launching || (preparingWrite && liveConnected)
+                ? "bg-button-pattern disabled:!border-[var(--color-border-filled)] disabled:!text-white"
+                : undefined
+            }
+            disabled={!liveConnected || launching || preparingWrite}
+            onClick={() => void launch()}
+          />
+        ) : undefined
       }
     />
   ) : undefined;

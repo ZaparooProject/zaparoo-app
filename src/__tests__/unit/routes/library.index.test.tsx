@@ -110,6 +110,22 @@ describe("Library index route", () => {
     ).toHaveLength(5);
   });
 
+  it("keeps Collections available while Systems load", async () => {
+    vi.spyOn(CoreAPI, "systems").mockImplementation(
+      () => new Promise(() => undefined),
+    );
+    render(<Library />);
+    await userEvent
+      .setup()
+      .click(screen.getByRole("tab", { name: "library.collections" }));
+    expect(
+      screen.getByRole("link", { name: "library.favorites" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("status", { name: "library.loadingSystems" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("should list indexed systems alphabetically", async () => {
     vi.spyOn(CoreAPI, "systems").mockResolvedValue({
       systems: [
@@ -124,20 +140,141 @@ describe("Library index route", () => {
       await screen.findByRole("heading", { name: "library.title" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "library.collections", level: 2 }),
-    ).toBeInTheDocument();
+      screen.getByRole("tab", { name: "library.systems" }),
+    ).toHaveAttribute("aria-selected", "true");
     expect(
-      screen.getByRole("heading", { name: "library.systems", level: 2 }),
-    ).toBeInTheDocument();
+      screen.getByRole("tab", { name: "library.collections" }),
+    ).toHaveAttribute("aria-selected", "false");
     await screen.findByRole("link", { name: "SNES" });
     const links = screen.getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual([
-      "library.favorites",
-      "NES",
-      "SNES",
-    ]);
-    expect(links[0]).toHaveAttribute("href", "/library/favorites");
-    expect(links[1]).toHaveAttribute("href", "/library/NES");
+    expect(links.map((link) => link.textContent)).toEqual(["NES", "SNES"]);
+    expect(links[0]).toHaveAttribute("href", "/library/NES");
+    expect(
+      screen.queryByRole("link", { name: "library.favorites" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should show new collections only for Core 2.18 and retain Favorites on older Core", async () => {
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({ systems: [] });
+    const { rerender } = render(<Library />);
+    await userEvent
+      .setup()
+      .click(screen.getByRole("tab", { name: "library.collections" }));
+    expect(
+      screen.getByRole("link", { name: "library.favorites" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "library.liked" }),
+    ).not.toBeInTheDocument();
+
+    useStatusStore.setState({ coreVersion: "2.18.0" });
+    rerender(<Library />);
+    expect(screen.getByRole("link", { name: "library.liked" })).toHaveAttribute(
+      "href",
+      "/library/liked",
+    );
+    expect(
+      screen.getByRole("link", { name: "library.disliked" }),
+    ).toHaveAttribute("href", "/library/disliked");
+    expect(
+      screen.getByRole("link", { name: "library.playLater" }),
+    ).toHaveAttribute("href", "/library/play-later");
+  });
+
+  it("keeps Systems and Collections as peer views and remembers the last view this session", async () => {
+    useStatusStore.setState({ coreVersion: "2.18.0" });
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({
+      systems: [{ id: "SNES", name: "Super Nintendo" }],
+    });
+    const user = userEvent.setup();
+    const { unmount } = render(<Library />);
+    expect(
+      await screen.findByRole("link", { name: "SNES" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "library.optionsTitle" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "library.collections" }));
+    expect(
+      screen.getByRole("tab", { name: "library.collections" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.getByRole("tabpanel", { name: "library.collections" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("link", { name: "SNES" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "library.optionsTitle" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual(
+      [
+        "library.favorites",
+        "library.liked",
+        "library.disliked",
+        "library.playLater",
+      ],
+    );
+
+    await user.type(
+      screen.getByRole("searchbox", { name: "library.searchCollections" }),
+      "later",
+    );
+    expect(
+      screen.getByRole("link", { name: "library.playLater" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "library.favorites" }),
+    ).not.toBeInTheDocument();
+    await user.clear(
+      screen.getByRole("searchbox", { name: "library.searchCollections" }),
+    );
+    await user.type(
+      screen.getByRole("searchbox", { name: "library.searchCollections" }),
+      "unknown",
+    );
+    expect(
+      screen.getByText("library.noMatchingCollections"),
+    ).toBeInTheDocument();
+
+    unmount();
+    const { unmount: unmountNext } = render(<Library />);
+    expect(
+      screen.getByRole("tab", { name: "library.collections" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.getByRole("link", { name: "library.favorites" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "library.systems" }));
+    expect(
+      await screen.findByRole("link", { name: "SNES" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "library.optionsTitle" }),
+    ).toBeInTheDocument();
+    unmountNext();
+    useLibrarySessionStore.getState().reset();
+    render(<Library />);
+    expect(
+      screen.getByRole("tab", { name: "library.systems" }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("shows Collections even when Systems has no results", async () => {
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({ systems: [] });
+    const user = userEvent.setup();
+    render(<Library />);
+    expect(await screen.findByText("library.noSystems")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "library.collections" }));
+    expect(
+      screen.getByRole("link", { name: "library.favorites" }),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("tabpanel", { name: "library.collections" }),
+      ).queryByText("library.noSystems"),
+    ).not.toBeInTheDocument();
   });
 
   it("should reset a system's saved position on forward navigation", async () => {
@@ -398,7 +535,7 @@ describe("Library index route", () => {
       screen.getByRole("link", { name: "Sega Genesis" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "NES" })).not.toBeInTheDocument();
-    expect(screen.getByRole("tabpanel")).toHaveAccessibleName("Sega");
+    expect(screen.getByRole("tabpanel", { name: "Sega" })).toBeInTheDocument();
   });
 
   it("should open full-page game search from the header", async () => {
@@ -575,11 +712,15 @@ describe("Library index route", () => {
     await user.click(
       screen.getByRole("button", { name: "library.showSystems" }),
     );
+    await user.click(screen.getByRole("tab", { name: "library.collections" }));
     view.unmount();
 
     await deviceRegistry.selectAddress("192.168.1.55");
     render(<Library />);
 
+    expect(
+      screen.getByRole("tab", { name: "library.systems" }),
+    ).toHaveAttribute("aria-selected", "true");
     expect(
       await screen.findByRole("tab", { name: "systemSelector.allCategories" }),
     ).toHaveAttribute("aria-selected", "true");
@@ -647,12 +788,7 @@ describe("Library index route", () => {
 
     expect(
       screen.getAllByRole("link").map((link) => link.getAttribute("href")),
-    ).toEqual([
-      "/library/favorites",
-      "/library/N64",
-      "/library/NES",
-      "/library/UNKNOWN",
-    ]);
+    ).toEqual(["/library/N64", "/library/NES", "/library/UNKNOWN"]);
   });
 
   it("should show disconnected state without fetching systems", () => {

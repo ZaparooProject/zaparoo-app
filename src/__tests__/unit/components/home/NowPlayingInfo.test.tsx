@@ -41,20 +41,16 @@ describe("NowPlayingInfo", () => {
       ).toBeInTheDocument();
     });
 
-    it("should display name label", () => {
-      // Arrange & Act
+    it("should show a concise empty state instead of name and system placeholders", () => {
       render(<NowPlayingInfo {...defaultProps} />);
 
-      // Assert
-      expect(screen.getByText(/scan\.nowPlayingName/)).toBeInTheDocument();
-    });
-
-    it("should display system label", () => {
-      // Arrange & Act
-      render(<NowPlayingInfo {...defaultProps} />);
-
-      // Assert
-      expect(screen.getByText(/scan\.nowPlayingSystem/)).toBeInTheDocument();
+      expect(screen.getByText("scan.nothingPlaying")).toBeInTheDocument();
+      expect(
+        screen.queryByText(/scan\.nowPlayingName/),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/scan\.nowPlayingSystem/),
+      ).not.toBeInTheDocument();
     });
 
     it("should use the preferred regional system name", () => {
@@ -63,6 +59,7 @@ describe("NowPlayingInfo", () => {
       render(
         <NowPlayingInfo
           {...defaultProps}
+          mediaName="Game"
           systemId="NES"
           systemName="Nintendo Entertainment System"
         />,
@@ -156,11 +153,13 @@ describe("NowPlayingInfo", () => {
         name: "scan.playlistControls",
       });
       const buttons = within(controls).getAllByRole("button");
-      expect(buttons).toHaveLength(4);
+      expect(buttons).toHaveLength(3);
       expect(buttons[0]).toHaveAccessibleName("scan.playlistPrevious");
-      expect(buttons[1]).toHaveAccessibleName("scan.stopBackgroundMediaButton");
-      expect(buttons[2]).toHaveAccessibleName("scan.playlistPause");
-      expect(buttons[3]).toHaveAccessibleName("scan.playlistNext");
+      expect(buttons[1]).toHaveAccessibleName("scan.playlistPause");
+      expect(buttons[2]).toHaveAccessibleName("scan.playlistNext");
+      expect(
+        screen.getByRole("button", { name: "scan.stopBackgroundMediaButton" }),
+      ).toBeEnabled();
     });
 
     it("should use current playlist item while active media changes", () => {
@@ -194,17 +193,14 @@ describe("NowPlayingInfo", () => {
   });
 
   describe("empty state", () => {
-    it("should show 'none' when no media is playing", () => {
-      // Arrange & Act
+    it("should show 'Nothing playing' when no media is playing", () => {
       render(<NowPlayingInfo {...defaultProps} mediaName="" systemName="" />);
 
-      // Assert - Name and system are empty
-      const region = screen.getByRole("region", {
-        name: "scan.nowPlayingHeading",
-      });
-      const emptyValues = within(region).getAllByText("none", { exact: true });
-      expect(emptyValues).toHaveLength(2);
-      emptyValues.forEach((value) => expect(value).toBeVisible());
+      expect(
+        within(
+          screen.getByRole("region", { name: "scan.nowPlayingHeading" }),
+        ).getByText("scan.nothingPlaying"),
+      ).toBeVisible();
     });
   });
 
