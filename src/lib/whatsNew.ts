@@ -21,6 +21,21 @@ export type WhatsNewAnnouncement = {
 
 export const WHATS_NEW_ANNOUNCEMENTS: WhatsNewAnnouncement[] = [
   {
+    // Live update on the 1.14.1 build 30 binary, displayed as 1.15.0.
+    id: "release-1.15.0",
+    version: "1.15.0",
+    releaseKeys: ["live:1.14.1-ota.2"],
+    title: "What's new in v1.15.0",
+    items: [
+      "Mark media as Liked, Disliked, or Play Later, and find them in new Library collections.",
+      "Favorite, like, dislike, or save what's playing for later, right from Now Playing.",
+      "Build decks of games and cards, then reorder them, play them as a playlist, write them to a tag, or share a link.",
+      "Manage a linked device's Zaparoo Online settings without signing in, including library sync, remote control, and unlinking.",
+      "Get clearer messages when pairing is rate limited.",
+      "Decks, likes, Play Later, and library sync need Zaparoo Core 2.18 or newer.",
+    ],
+  },
+  {
     // iOS and French Android users skipped 1.13.0, so its items are repeated.
     id: "release-1.14.1",
     version: "1.14.1",
