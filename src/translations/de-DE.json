@@ -1350,6 +1350,7 @@
       "backgroundMediaSlot": "Hintergrundmedium",
       "readOnlyMappings": "Dateizuordnungen",
       "remoteInput": "Ferneingabe",
+      "heldInput": "Gehaltene Fernbedienungstasten",
       "deviceLinking": "Zaparoo-Online-Geräteverknüpfung",
       "onlineRemoteControl": "Zaparoo-Online-Fernsteuerung",
       "onlineLibrarySync": "Zaparoo-Online-Bibliothekssynchronisierung",

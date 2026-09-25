@@ -125,4 +125,10 @@ describe("isCoreFeatureAvailable", () => {
     expect(isCoreFeatureAvailable("deviceLinking", "2.15.9")).toBe(false);
     expect(isCoreFeatureAvailable("deviceLinking", "2.16.0")).toBe(true);
   });
+
+  it("should gate held remote input behind Core 2.17.0", () => {
+    expect(FEATURE_GATES.heldInput?.since).toBe("2.17.0");
+    expect(isCoreFeatureAvailable("heldInput", "2.16.9")).toBe(false);
+    expect(isCoreFeatureAvailable("heldInput", "2.17.0")).toBe(true);
+  });
 });

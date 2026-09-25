@@ -92,6 +92,11 @@ export const FEATURE_GATES: Record<string, FeatureGate> = {
     marquee: true,
     labelKey: "features.remoteInput",
   },
+  heldInput: {
+    since: "2.17.0",
+    marquee: false,
+    labelKey: "features.heldInput",
+  },
   deviceLinking: {
     since: "2.16.0",
     marquee: false,

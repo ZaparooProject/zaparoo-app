@@ -1350,6 +1350,7 @@
       "backgroundMediaSlot": "Achtergrondmedia",
       "readOnlyMappings": "Bestandsmappings",
       "remoteInput": "Invoer op afstand",
+      "heldInput": "Ingedrukt gehouden afstandsbedieningsknoppen",
       "deviceLinking": "Apparaatkoppeling met Zaparoo Online",
       "onlineRemoteControl": "Zaparoo Online-bediening op afstand",
       "onlineLibrarySync": "Zaparoo Online-bibliotheeksynchronisatie",

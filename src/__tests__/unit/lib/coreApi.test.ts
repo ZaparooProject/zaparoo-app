@@ -592,6 +592,27 @@ describe("CoreAPI", () => {
     expect(sentData.params).toEqual({ keys: "abc{enter}" });
   });
 
+  it("should not report held input rejected by an unsupported platform", async () => {
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    const promise = CoreAPI.inputKeyboard({ keys: "{press:up}" });
+    const request = JSON.parse(mockSend.mock.calls[0][0]);
+
+    await CoreAPI.processReceived({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        error: {
+          code: 1,
+          message:
+            "persistent keyboard input requires a supported WebSocket session",
+        },
+      }),
+    } as MessageEvent);
+
+    await expect(promise).rejects.toThrow("supported WebSocket session");
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
   it("should send input.gamepad with buttons params", () => {
     CoreAPI.inputGamepad({ buttons: "^^vv<><>BA{start}" }).catch(() => {
       // Ignore timeout errors

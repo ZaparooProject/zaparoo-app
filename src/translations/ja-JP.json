@@ -1350,6 +1350,7 @@
       "backgroundMediaSlot": "バックグラウンドメディア",
       "readOnlyMappings": "ファイルマッピング",
       "remoteInput": "リモート入力",
+      "heldInput": "リモートボタンの長押し",
       "deviceLinking": "Zaparoo Onlineのデバイスリンク",
       "onlineRemoteControl": "Zaparoo Onlineのリモートコントロール",
       "onlineLibrarySync": "Zaparoo Onlineのライブラリ同期",

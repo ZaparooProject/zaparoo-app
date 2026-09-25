@@ -422,6 +422,14 @@ function logCoreApiFailure(
   logger.error(`${label}:`, error);
 }
 
+// Core 2.17+ rejects press and release tokens on platforms that can't hold
+// input. Callers fall back to taps, so the rejection is not a failure.
+export function isHeldInputUnsupportedError(error: unknown): boolean {
+  return getErrorMessage(error)
+    .toLowerCase()
+    .includes("input requires a supported websocket session");
+}
+
 export function isUnsupportedMediaApiError(error: unknown): boolean {
   const message = getErrorMessage(error).toLowerCase();
   return (
@@ -1392,11 +1400,15 @@ class CoreApi {
           resolve();
         })
         .catch((error) => {
-          logger.error("Input keyboard API call failed:", error, {
-            category: "api",
-            action: "inputKeyboard",
-            severity: "error",
-          });
+          if (isHeldInputUnsupportedError(error)) {
+            logger.debug("Input keyboard held input unsupported:", error);
+          } else {
+            logger.error("Input keyboard API call failed:", error, {
+              category: "api",
+              action: "inputKeyboard",
+              severity: "error",
+            });
+          }
           reject(error);
         });
     });

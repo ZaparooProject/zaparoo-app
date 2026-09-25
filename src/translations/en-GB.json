@@ -1350,6 +1350,7 @@
       "backgroundMediaSlot": "Background media",
       "readOnlyMappings": "File mappings",
       "remoteInput": "Remote input",
+      "heldInput": "Held remote buttons",
       "deviceLinking": "Zaparoo Online device linking",
       "onlineRemoteControl": "Zaparoo Online remote control",
       "onlineLibrarySync": "Zaparoo Online library sync",
