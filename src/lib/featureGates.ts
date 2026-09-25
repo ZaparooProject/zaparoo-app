@@ -97,6 +97,16 @@ export const FEATURE_GATES: Record<string, FeatureGate> = {
     marquee: false,
     labelKey: "features.deviceLinking",
   },
+  onlineRemoteControl: {
+    since: "2.17.0",
+    marquee: false,
+    labelKey: "features.onlineRemoteControl",
+  },
+  onlineLibrarySync: {
+    since: "2.18.0",
+    marquee: false,
+    labelKey: "features.onlineLibrarySync",
+  },
   profiles: {
     since: "2.16.0",
     marquee: false,

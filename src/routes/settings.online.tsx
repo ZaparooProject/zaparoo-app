@@ -134,6 +134,7 @@ export function OnlinePage() {
     null,
   );
   const [isCancelling, setIsCancelling] = useState(false);
+  const [authSheetOpen, setAuthSheetOpen] = useState(false);
 
   const oauthAvailable = isOAuthAvailable();
   const configuredPurchasePreview = usePurchasePreviewStore(
@@ -200,6 +201,7 @@ export function OnlinePage() {
       });
     }
 
+    setAuthSheetOpen(false);
     setLoggedInUser(user);
     return true;
   };
@@ -256,6 +258,7 @@ export function OnlinePage() {
             // Continue anyway - modal will show if needed
           }
 
+          setAuthSheetOpen(false);
           setLoggedInUser(result.user);
         } else {
           toast.error(t("online.signUpFail"));
@@ -561,6 +564,19 @@ export function OnlinePage() {
     }
   };
 
+  const openAuthSheet = (signUp: boolean) => {
+    setIsSignUpMode(signUp);
+    setAgeConfirmed(false);
+    setFormError(null);
+    setAuthSheetOpen(true);
+  };
+
+  const closeAuthSheet = () => {
+    if (isLoading || isMfaVerifying) return;
+    if (mfaPending) void handleCancelMfa();
+    setAuthSheetOpen(false);
+  };
+
   return (
     <PageFrame
       onSwipeBack={goBack}
@@ -698,240 +714,282 @@ export function OnlinePage() {
           <div className="flex flex-col gap-6 py-4">
             <WarpSubscription appUserID="purchase-preview" />
           </div>
-        ) : mfaPending ? (
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col items-center gap-2">
-              <h2
-                ref={mfaHeadingRef}
-                tabIndex={-1}
-                className="text-lg font-semibold"
-              >
-                {t("online.mfaTitle")}
-              </h2>
-              <p className="text-muted-foreground text-center text-sm">
-                {t("online.mfaDescription")}
-              </p>
-            </div>
-
-            <TextInput
-              label={t("online.mfaCode")}
-              placeholder="123456"
-              value={mfaCode}
-              setValue={(value) =>
-                setMfaCode(value.replace(/\D/g, "").slice(0, 6))
-              }
-              inputMode="numeric"
-              maxLength={6}
-              autoComplete="one-time-code"
-              onKeyUp={handleMfaKeyUp}
-              disabled={isMfaVerifying}
-              error={mfaError ?? undefined}
-            />
-
-            <Button
-              label={
-                isMfaVerifying
-                  ? t("online.mfaVerifying")
-                  : t("online.mfaVerify")
-              }
-              onClick={handleMfaVerify}
-              disabled={!isMfaCodeComplete || isMfaVerifying}
-              className="w-full"
-              intent="primary"
-            />
-
-            <button
-              type="button"
-              onClick={handleCancelMfa}
-              disabled={isMfaVerifying}
-              className="text-muted-foreground hover:text-foreground text-sm underline transition-colors disabled:opacity-50"
-            >
-              {t("online.mfaBack")}
-            </button>
-          </div>
         ) : (
-          // Not logged in state
-          <div className="flex flex-col gap-4">
-            <p className="text-muted-foreground text-center text-sm">
-              {t("online.description")}
-            </p>
-
-            {/* Email input */}
-            <TextInput
-              label={t("online.email")}
-              placeholder="me@example.com"
-              value={onlineEmail}
-              setValue={setOnlineEmail}
-              type="email"
-              autoComplete="email"
-              onKeyUp={handleKeyUp}
-            />
-
-            {/* Password input */}
-            <div className="flex flex-col gap-1">
-              <TextInput
-                label={t("online.password")}
-                placeholder=""
-                type="password"
-                value={onlinePassword}
-                setValue={setOnlinePassword}
-                autoComplete={
-                  isSignUpMode ? "new-password" : "current-password"
-                }
-                onKeyUp={handleKeyUp}
-              />
-
-              {/* Forgot password - right aligned, only in log in mode */}
-              {!isSignUpMode && (
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleForgotPassword}
-                    className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-                  >
-                    {t("online.forgotPassword")}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Age confirmation - only in sign up mode */}
-            {isSignUpMode && (
-              <div className="flex items-center gap-3">
-                <Checkbox
-                  id="age-confirm"
-                  checked={ageConfirmed}
-                  onCheckedChange={(checked) => {
-                    setAgeConfirmed(checked === true);
-                    if (checked === true) setFormError(null);
-                  }}
+          <div className="flex flex-col gap-6 py-4">
+            <section
+              className="flex flex-col gap-3"
+              aria-label={t("online.account")}
+            >
+              <p className="text-muted-foreground text-center text-sm">
+                {t("online.description")}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  label={t("online.login")}
+                  onClick={() => openAuthSheet(false)}
+                  className="flex-1"
+                  intent="primary"
                 />
-                <Label
-                  htmlFor="age-confirm"
-                  className="text-sm leading-tight text-white"
-                >
-                  {t("online.ageConfirmLabel")}
-                </Label>
+                <Button
+                  label={t("online.signUp")}
+                  icon={<UserPlusIcon size="20" />}
+                  variant="outline"
+                  onClick={() => openAuthSheet(true)}
+                  className="flex-1"
+                />
               </div>
-            )}
+            </section>
 
-            {/* Inline form error */}
-            {formError && <p className="text-sm text-red-400">{formError}</p>}
-
-            {/* Log in / Sign up Button */}
-            <Button
-              label={isSignUpMode ? t("online.signUp") : t("online.login")}
-              icon={isSignUpMode ? <UserPlusIcon size="20" /> : undefined}
-              onClick={handleEmailAuth}
-              disabled={
-                !onlineEmail ||
-                !onlinePassword ||
-                isLoading ||
-                (isSignUpMode && !ageConfirmed)
-              }
-              className="w-full"
-              intent="primary"
+            <OnlineDeviceSetup
+              connected={connected}
+              warpActive={null}
+              onSignIn={() => openAuthSheet(false)}
             />
-
-            {/* Toggle between Log in and Sign up */}
-            <p className="text-muted-foreground text-center text-sm">
-              {isSignUpMode
-                ? t("online.switchToLogInPrefix")
-                : t("online.switchToSignUpPrefix")}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUpMode(!isSignUpMode);
-                  setAgeConfirmed(false);
-                  setFormError(null);
-                }}
-                className="text-white underline transition-colors hover:text-white/80"
-              >
-                {isSignUpMode
-                  ? t("online.switchToLogInLink")
-                  : t("online.switchToSignUpLink")}
-              </button>
-            </p>
-
-            {/* OAuth section - only show on native or zaparoo.app */}
-            {oauthAvailable && (
-              <>
-                <div className="my-1 flex items-center gap-3">
-                  <div className="bg-border h-px flex-1" />
-                  <span className="text-muted-foreground text-sm">or</span>
-                  <div className="bg-border h-px flex-1" />
-                </div>
-
-                {/* On iOS, show Apple first. On Android/other, show Google first */}
-                {Capacitor.getPlatform() === "ios" ? (
-                  <>
-                    <Button
-                      label={t("online.loginApple")}
-                      variant="outline"
-                      icon={<AppleIcon size="20" />}
-                      onClick={handleAppleSignIn}
-                      disabled={isLoading}
-                      className="w-full"
-                    />
-                    <Button
-                      label={t("online.loginGoogle")}
-                      variant="outline"
-                      icon={<GoogleIcon size="20" />}
-                      onClick={handleGoogleSignIn}
-                      disabled={isLoading}
-                      className="w-full"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      label={t("online.loginGoogle")}
-                      variant="outline"
-                      icon={<GoogleIcon size="20" />}
-                      onClick={handleGoogleSignIn}
-                      disabled={isLoading}
-                      className="w-full"
-                    />
-                    <Button
-                      label={t("online.loginApple")}
-                      variant="outline"
-                      icon={<AppleIcon size="20" />}
-                      onClick={handleAppleSignIn}
-                      disabled={isLoading}
-                      className="w-full"
-                    />
-                  </>
-                )}
-              </>
-            )}
-
-            {/* TOS/Privacy agreement */}
-            <p className="text-muted-foreground text-center text-xs">
-              {isSignUpMode
-                ? t("online.agreementSignUp")
-                : t("online.agreementLogin")}{" "}
-              <a
-                href="https://zaparoo.com/terms"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                {t("online.termsOfService")}
-              </a>{" "}
-              {t("online.and")}{" "}
-              <a
-                href="https://zaparoo.com/privacy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                {t("online.privacyPolicy")}
-              </a>
-              .
-            </p>
           </div>
         )}
       </div>
+
+      {loggedInUser === null && (
+        <SlideModal
+          isOpen={authSheetOpen}
+          close={closeAuthSheet}
+          dismissible={!isLoading && !isMfaVerifying}
+          title={isSignUpMode ? t("online.signUp") : t("online.login")}
+        >
+          <div className="py-2">
+            {mfaPending ? (
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col items-center gap-2">
+                  <h2
+                    ref={mfaHeadingRef}
+                    tabIndex={-1}
+                    className="text-lg font-semibold"
+                  >
+                    {t("online.mfaTitle")}
+                  </h2>
+                  <p className="text-muted-foreground text-center text-sm">
+                    {t("online.mfaDescription")}
+                  </p>
+                </div>
+
+                <TextInput
+                  label={t("online.mfaCode")}
+                  placeholder="123456"
+                  value={mfaCode}
+                  setValue={(value) =>
+                    setMfaCode(value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  inputMode="numeric"
+                  maxLength={6}
+                  autoComplete="one-time-code"
+                  onKeyUp={handleMfaKeyUp}
+                  disabled={isMfaVerifying}
+                  error={mfaError ?? undefined}
+                />
+
+                <Button
+                  label={
+                    isMfaVerifying
+                      ? t("online.mfaVerifying")
+                      : t("online.mfaVerify")
+                  }
+                  onClick={handleMfaVerify}
+                  disabled={!isMfaCodeComplete || isMfaVerifying}
+                  className="w-full"
+                  intent="primary"
+                />
+
+                <button
+                  type="button"
+                  onClick={handleCancelMfa}
+                  disabled={isMfaVerifying}
+                  className="text-muted-foreground hover:text-foreground text-sm underline transition-colors disabled:opacity-50"
+                >
+                  {t("online.mfaBack")}
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {/* Email input */}
+                <TextInput
+                  label={t("online.email")}
+                  placeholder="me@example.com"
+                  value={onlineEmail}
+                  setValue={setOnlineEmail}
+                  type="email"
+                  autoComplete="email"
+                  onKeyUp={handleKeyUp}
+                />
+
+                {/* Password input */}
+                <div className="flex flex-col gap-1">
+                  <TextInput
+                    label={t("online.password")}
+                    placeholder=""
+                    type="password"
+                    value={onlinePassword}
+                    setValue={setOnlinePassword}
+                    autoComplete={
+                      isSignUpMode ? "new-password" : "current-password"
+                    }
+                    onKeyUp={handleKeyUp}
+                  />
+
+                  {/* Forgot password - right aligned, only in log in mode */}
+                  {!isSignUpMode && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+                      >
+                        {t("online.forgotPassword")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Age confirmation - only in sign up mode */}
+                {isSignUpMode && (
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="age-confirm"
+                      checked={ageConfirmed}
+                      onCheckedChange={(checked) => {
+                        setAgeConfirmed(checked === true);
+                        if (checked === true) setFormError(null);
+                      }}
+                    />
+                    <Label
+                      htmlFor="age-confirm"
+                      className="text-sm leading-tight text-white"
+                    >
+                      {t("online.ageConfirmLabel")}
+                    </Label>
+                  </div>
+                )}
+
+                {/* Inline form error */}
+                {formError && (
+                  <p className="text-sm text-red-400">{formError}</p>
+                )}
+
+                {/* Log in / Sign up Button */}
+                <Button
+                  label={isSignUpMode ? t("online.signUp") : t("online.login")}
+                  icon={isSignUpMode ? <UserPlusIcon size="20" /> : undefined}
+                  onClick={handleEmailAuth}
+                  disabled={
+                    !onlineEmail ||
+                    !onlinePassword ||
+                    isLoading ||
+                    (isSignUpMode && !ageConfirmed)
+                  }
+                  className="w-full"
+                  intent="primary"
+                />
+
+                {/* Toggle between Log in and Sign up */}
+                <p className="text-muted-foreground text-center text-sm">
+                  {isSignUpMode
+                    ? t("online.switchToLogInPrefix")
+                    : t("online.switchToSignUpPrefix")}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSignUpMode(!isSignUpMode);
+                      setAgeConfirmed(false);
+                      setFormError(null);
+                    }}
+                    className="text-white underline transition-colors hover:text-white/80"
+                  >
+                    {isSignUpMode
+                      ? t("online.switchToLogInLink")
+                      : t("online.switchToSignUpLink")}
+                  </button>
+                </p>
+
+                {/* OAuth section - only show on native or zaparoo.app */}
+                {oauthAvailable && (
+                  <>
+                    <div className="my-1 flex items-center gap-3">
+                      <div className="bg-border h-px flex-1" />
+                      <span className="text-muted-foreground text-sm">or</span>
+                      <div className="bg-border h-px flex-1" />
+                    </div>
+
+                    {/* On iOS, show Apple first. On Android/other, show Google first */}
+                    {Capacitor.getPlatform() === "ios" ? (
+                      <>
+                        <Button
+                          label={t("online.loginApple")}
+                          variant="outline"
+                          icon={<AppleIcon size="20" />}
+                          onClick={handleAppleSignIn}
+                          disabled={isLoading}
+                          className="w-full"
+                        />
+                        <Button
+                          label={t("online.loginGoogle")}
+                          variant="outline"
+                          icon={<GoogleIcon size="20" />}
+                          onClick={handleGoogleSignIn}
+                          disabled={isLoading}
+                          className="w-full"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          label={t("online.loginGoogle")}
+                          variant="outline"
+                          icon={<GoogleIcon size="20" />}
+                          onClick={handleGoogleSignIn}
+                          disabled={isLoading}
+                          className="w-full"
+                        />
+                        <Button
+                          label={t("online.loginApple")}
+                          variant="outline"
+                          icon={<AppleIcon size="20" />}
+                          onClick={handleAppleSignIn}
+                          disabled={isLoading}
+                          className="w-full"
+                        />
+                      </>
+                    )}
+                  </>
+                )}
+
+                {/* TOS/Privacy agreement */}
+                <p className="text-muted-foreground text-center text-xs">
+                  {isSignUpMode
+                    ? t("online.agreementSignUp")
+                    : t("online.agreementLogin")}{" "}
+                  <a
+                    href="https://zaparoo.com/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    {t("online.termsOfService")}
+                  </a>{" "}
+                  {t("online.and")}{" "}
+                  <a
+                    href="https://zaparoo.com/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    {t("online.privacyPolicy")}
+                  </a>
+                  .
+                </p>
+              </div>
+            )}
+          </div>
+        </SlideModal>
+      )}
 
       {/* Delete account confirmation modal */}
       <SlideModal

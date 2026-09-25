@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { DeviceLinkButton } from "@/components/DeviceLinkButton";
+import { SlideModal } from "@/components/SlideModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/wui/Button";
 import { SettingHelp } from "@/components/wui/SettingHelp";
 import { ToggleSwitch } from "@/components/wui/ToggleSwitch";
 import { useClientCapability } from "@/hooks/useClientCapability";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
 import type { DeviceLinkState } from "@/hooks/useDeviceLinking";
 import { CoreAPI, CoreApiError } from "@/lib/coreApi";
 import {
@@ -22,12 +24,15 @@ import {
   ClientCapability,
   type BackupStatusEntry,
   type ClientsCurrentResponse,
+  type RemoteControlState,
   type UpdateSettingsRequest,
 } from "@/lib/models";
 
 interface OnlineDeviceSetupProps {
   connected: boolean;
   warpActive: boolean | null;
+  /** Opens sign-in when an unlinked device needs an account to link. */
+  onSignIn?: () => void;
 }
 
 const FAST_AVAILABILITY_POLL_COUNT = 3;
@@ -35,8 +40,14 @@ const FAST_AVAILABILITY_POLL_COUNT = 3;
 // Core's rejections for a client that is neither localhost nor an admin.
 const ONLINE_SETTINGS_PERMISSION_MESSAGES = [
   "online settings require a local or admin client",
+  "unlink requires a local or admin client",
   "client role does not permit this method",
 ] as const;
+
+const REMOTE_STATES_WITH_DETAILS: ReadonlySet<RemoteControlState> = new Set([
+  "not_remote_device",
+  "credential_rejected",
+]);
 
 /**
  * Whether the active device is dialled over loopback, which Core treats as a
@@ -93,9 +104,18 @@ function formatBackupDate(
 export function OnlineDeviceSetup({
   connected,
   warpActive,
+  onSignIn,
 }: OnlineDeviceSetupProps) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const remoteControlFeature = useCoreFeature("onlineRemoteControl", {
+    requireKnownSupport: true,
+  });
+  const librarySyncFeature = useCoreFeature("onlineLibrarySync", {
+    requireKnownSupport: true,
+  });
+  const [unlinkOpen, setUnlinkOpen] = useState(false);
   const hasSettingsWriteCapability = useClientCapability(
     ClientCapability.SettingsWrite,
   );
@@ -114,8 +134,10 @@ export function OnlineDeviceSetup({
     connected && (linkState === "checking" || linkState === "linking");
 
   useEffect(() => {
+    // Only a link the user just made moves focus; the initial status check
+    // resolving to linked must leave focus on the page heading.
     const becameLinked =
-      linkState === "linked" && previousLinkStateRef.current !== "linked";
+      linkState === "linked" && previousLinkStateRef.current === "linking";
     previousLinkStateRef.current = linkState;
     if (becameLinked) {
       requestAnimationFrame(() => {
@@ -145,12 +167,24 @@ export function OnlineDeviceSetup({
     },
   });
 
+  const remoteActivityQuery = useQuery({
+    queryKey: ["remote", "activity"],
+    queryFn: ({ signal }) => CoreAPI.remoteActivity(signal),
+    enabled:
+      connected &&
+      linked &&
+      canWriteCoreSettings &&
+      remoteControlFeature.available,
+    refetchInterval: 15_000,
+  });
+
   const updateSettings = useMutation({
     mutationFn: (params: UpdateSettingsRequest) =>
       CoreAPI.settingsUpdate(params),
     onSuccess: () => {
       void settingsQuery.refetch();
       void backupStatusQuery.refetch();
+      if (remoteControlFeature.available) void remoteActivityQuery.refetch();
     },
     onError: (error) => {
       if (isOnlineSettingsPermissionError(error)) {
@@ -185,6 +219,64 @@ export function OnlineDeviceSetup({
     (remoteStatus?.availability === undefined ||
       remoteStatus.availability === "unknown");
 
+  const unlink = useMutation({
+    mutationFn: () => CoreAPI.settingsAuthUnlink(),
+    onSuccess: async () => {
+      setUnlinkOpen(false);
+      toast.success(t("online.deviceLink.unlinked"));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["deviceLinkStatus"] }),
+        queryClient.invalidateQueries({ queryKey: ["settings"] }),
+        queryClient.invalidateQueries({ queryKey: ["remote", "activity"] }),
+      ]);
+    },
+    onError: (error) => {
+      if (isOnlineSettingsPermissionError(error)) {
+        logger.warn("Core rejected unlinking for this client", error);
+        toast.error(t("online.features.adminRequired"));
+        return;
+      }
+      logger.error("Failed to unlink device from Zaparoo Online", error, {
+        category: "api",
+        action: "deviceLink.unlink",
+        severity: "error",
+      });
+      toast.error(t("online.deviceLink.unlinkFailed"));
+    },
+  });
+
+  const settings = settingsQuery.data;
+  const featureValues = [
+    ...(remoteControlFeature.available
+      ? [settings?.remoteControlEnabled ?? false]
+      : []),
+    settings?.playtimeSyncEnabled ?? false,
+    ...(librarySyncFeature.available
+      ? [settings?.librarySyncEnabled ?? false]
+      : []),
+    ...(cloudAvailable ? [settings?.backupRemoteEnabled ?? false] : []),
+  ];
+  const allFeaturesOn = featureValues.every(Boolean);
+  const someFeaturesOn = !allFeaturesOn && featureValues.some(Boolean);
+  // Matches the TUI: turning everything on only includes cloud backup once
+  // Warp is confirmed, since scheduled backups fail without it.
+  const setAllFeatures = (on: boolean) =>
+    updateSettings.mutate({
+      playtimeSyncEnabled: on,
+      ...(remoteControlFeature.available ? { remoteControlEnabled: on } : {}),
+      ...(librarySyncFeature.available ? { librarySyncEnabled: on } : {}),
+      ...(!on || cloudAvailable ? { backupRemoteEnabled: on } : {}),
+    });
+
+  const linkedSince = formatBackupDate(remoteStatus?.linkedAt, i18n.language);
+  const warpLabel =
+    warpActive === true || remoteStatus?.availability === "available"
+      ? t("online.deviceLink.warpActive")
+      : remoteStatus?.availability === "unavailable"
+        ? t("online.deviceLink.warpInactive")
+        : t("online.deviceLink.warpChecking");
+  const remoteState = remoteActivityQuery.data?.status.state ?? "unknown";
+
   const backupStatusRow = (
     <div className="flex min-h-[48px] items-center justify-between gap-4">
       <span>{t("online.features.backupStatus")}</span>
@@ -197,6 +289,29 @@ export function OnlineDeviceSetup({
       </span>
     </div>
   );
+
+  const remoteStatusRow = remoteControlFeature.available ? (
+    <div className="flex flex-col gap-1">
+      <div className="flex min-h-[48px] items-center justify-between gap-4">
+        <span>{t("online.features.remoteStatus")}</span>
+        <span className="text-muted-foreground text-right text-sm">
+          {remoteActivityQuery.isPending
+            ? t("online.features.checkingStatus")
+            : remoteActivityQuery.isError
+              ? t("online.features.statusUnavailable")
+              : t(`online.features.remoteStates.${remoteState}`, {
+                  defaultValue: t("online.features.remoteStates.unknown"),
+                })}
+        </span>
+      </div>
+      {!remoteActivityQuery.isPending &&
+        REMOTE_STATES_WITH_DETAILS.has(remoteState) && (
+          <p className="text-muted-foreground text-sm">
+            {t(`online.features.remoteStateDetails.${remoteState}`)}
+          </p>
+        )}
+    </div>
+  ) : null;
 
   return (
     <>
@@ -216,7 +331,49 @@ export function OnlineDeviceSetup({
             description={t("online.deviceLink.help")}
           />
         </div>
-        <DeviceLinkButton enabled={connected} onStateChange={setLinkState} />
+        <DeviceLinkButton
+          enabled={connected}
+          onStateChange={setLinkState}
+          onSignIn={onSignIn}
+        />
+        {linked && (
+          <div className="flex flex-col">
+            {remoteStatus?.deviceName && (
+              <div className="flex min-h-[48px] items-center justify-between gap-4">
+                <span>{t("online.deviceLink.linkedAs")}</span>
+                <span className="text-muted-foreground text-right text-sm break-all">
+                  {remoteStatus.deviceName}
+                </span>
+              </div>
+            )}
+            {linkedSince && (
+              <div className="flex min-h-[48px] items-center justify-between gap-4">
+                <span>{t("online.deviceLink.linkedSince")}</span>
+                <span className="text-muted-foreground text-right text-sm">
+                  {linkedSince}
+                </span>
+              </div>
+            )}
+            <div className="flex min-h-[48px] items-center justify-between gap-4">
+              <span>{t("online.deviceLink.warp")}</span>
+              <span className="text-muted-foreground text-right text-sm">
+                {backupStatusQuery.isPending
+                  ? t("online.deviceLink.warpChecking")
+                  : warpLabel}
+              </span>
+            </div>
+            {canWriteCoreSettings && (
+              <Button
+                label={t("online.deviceLink.unlink")}
+                variant="outline"
+                intent="destructive"
+                onClick={() => setUnlinkOpen(true)}
+                disabled={unlink.isPending}
+                className="border-error text-error mt-2 w-full"
+              />
+            )}
+          </div>
+        )}
         {!connected && (
           <div className="flex flex-col gap-3">
             <p className="text-muted-foreground text-sm">
@@ -279,6 +436,49 @@ export function OnlineDeviceSetup({
                   <ToggleSwitch
                     label={
                       <span className="flex items-center">
+                        {t("online.features.allFeatures")}
+                        <SettingHelp
+                          title={t("online.features.allFeatures")}
+                          description={t("online.features.allFeaturesHelp")}
+                        />
+                      </span>
+                    }
+                    value={allFeaturesOn}
+                    setValue={setAllFeatures}
+                    disabled={actionsDisabled}
+                    loading={settingsLoading}
+                    suffix={
+                      someFeaturesOn ? (
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          {t("online.features.someOn")}
+                        </span>
+                      ) : undefined
+                    }
+                  />
+
+                  {remoteControlFeature.available && (
+                    <ToggleSwitch
+                      label={
+                        <span className="flex items-center">
+                          {t("online.features.remoteControl")}
+                          <SettingHelp
+                            title={t("online.features.remoteControl")}
+                            description={t("online.features.remoteControlHelp")}
+                          />
+                        </span>
+                      }
+                      value={settings?.remoteControlEnabled ?? false}
+                      setValue={(value) =>
+                        updateSettings.mutate({ remoteControlEnabled: value })
+                      }
+                      disabled={actionsDisabled}
+                      loading={settingsLoading}
+                    />
+                  )}
+
+                  <ToggleSwitch
+                    label={
+                      <span className="flex items-center">
                         {t("online.features.playHistory")}
                         <SettingHelp
                           title={t("online.features.playHistory")}
@@ -298,6 +498,26 @@ export function OnlineDeviceSetup({
                       </span>
                     }
                   />
+
+                  {librarySyncFeature.available && (
+                    <ToggleSwitch
+                      label={
+                        <span className="flex items-center">
+                          {t("online.features.librarySync")}
+                          <SettingHelp
+                            title={t("online.features.librarySync")}
+                            description={t("online.features.librarySyncHelp")}
+                          />
+                        </span>
+                      }
+                      value={settings?.librarySyncEnabled ?? false}
+                      setValue={(value) =>
+                        updateSettings.mutate({ librarySyncEnabled: value })
+                      }
+                      disabled={actionsDisabled}
+                      loading={settingsLoading}
+                    />
+                  )}
 
                   <ToggleSwitch
                     label={
@@ -375,9 +595,20 @@ export function OnlineDeviceSetup({
               )}
 
               {backupStatusRow}
+              {remoteStatusRow}
             </div>
           ) : (
             <div className="flex flex-col gap-4">
+              {remoteControlFeature.available && (
+                <div className="flex flex-col gap-1">
+                  <p className="font-medium text-white">
+                    {t("online.features.remoteControl")}
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    {t("online.features.remoteControlSummary")}
+                  </p>
+                </div>
+              )}
               <div className="flex flex-col gap-1">
                 <p className="font-medium text-white">
                   {t("online.features.playHistory")}
@@ -386,6 +617,16 @@ export function OnlineDeviceSetup({
                   {t("online.features.playHistorySummary")}
                 </p>
               </div>
+              {librarySyncFeature.available && (
+                <div className="flex flex-col gap-1">
+                  <p className="font-medium text-white">
+                    {t("online.features.librarySync")}
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    {t("online.features.librarySyncSummary")}
+                  </p>
+                </div>
+              )}
               <div className="flex flex-col gap-1">
                 <p className="font-medium text-white">
                   {t("online.features.automaticBackup")}
@@ -402,6 +643,38 @@ export function OnlineDeviceSetup({
           )}
         </section>
       )}
+
+      <SlideModal
+        isOpen={unlinkOpen}
+        close={() => {
+          if (!unlink.isPending) setUnlinkOpen(false);
+        }}
+        dismissible={!unlink.isPending}
+        title={t("online.deviceLink.unlinkConfirmTitle")}
+        footer={
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              label={t("nav.cancel")}
+              onClick={() => setUnlinkOpen(false)}
+              className="flex-1"
+              disabled={unlink.isPending}
+            />
+            <Button
+              variant="outline"
+              intent="destructive"
+              label={t("online.deviceLink.unlink")}
+              onClick={() => unlink.mutate()}
+              className="border-error text-error flex-1"
+              disabled={unlink.isPending}
+            />
+          </div>
+        }
+      >
+        <p className="text-muted-foreground py-2 text-sm">
+          {t("online.deviceLink.unlinkConfirmMessage")}
+        </p>
+      </SlideModal>
     </>
   );
 }

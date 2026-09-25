@@ -32,6 +32,8 @@ export enum Method {
   SettingsReload = "settings.reload",
   SettingsAuthClaim = "settings.auth.claim",
   SettingsAuthStatus = "settings.auth.status",
+  SettingsAuthUnlink = "settings.auth.unlink",
+  RemoteActivity = "remote.activity",
   SettingsBackupStatus = "settings.backup.status",
   SettingsLogsDownload = "settings.logs.download",
   LaunchersRefresh = "launchers.refresh",
@@ -205,6 +207,29 @@ export interface SettingsAuthStatusRequest {
 
 export interface SettingsAuthStatusResponse {
   linked: boolean;
+}
+
+export interface SettingsAuthUnlinkResponse {
+  domains: string[];
+}
+
+export type RemoteControlState =
+  | "unknown"
+  | "disabled"
+  | "unlinked"
+  | "connecting"
+  | "waiting"
+  | "not_remote_device"
+  | "unavailable"
+  | "credential_rejected"
+  | "error";
+
+export interface RemoteActivityResponse {
+  status: {
+    state: RemoteControlState;
+    lastContactAt?: string;
+    lastErrorCode?: string;
+  };
 }
 
 export interface BackupCategoryStatus {
@@ -590,6 +615,8 @@ export interface SettingsResponse {
   readersScanIgnoreSystems: string[];
   backupRemoteEnabled?: boolean;
   playtimeSyncEnabled?: boolean;
+  librarySyncEnabled?: boolean;
+  remoteControlEnabled?: boolean;
   backupRemoteSchedule?: "daily" | "weekly" | "manual";
   backupRemoteBaseUrl?: string;
   launchGuardEnabled?: boolean;
@@ -611,6 +638,8 @@ export interface UpdateSettingsRequest {
   runZapScript?: boolean;
   backupRemoteEnabled?: boolean;
   playtimeSyncEnabled?: boolean;
+  librarySyncEnabled?: boolean;
+  remoteControlEnabled?: boolean;
   backupRemoteSchedule?: "daily" | "weekly" | "manual";
   launchGuardEnabled?: boolean;
   launchGuardTimeout?: number;

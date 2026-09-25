@@ -68,6 +68,8 @@ import {
   SettingsAuthClaimResponse,
   SettingsAuthStatusRequest,
   SettingsAuthStatusResponse,
+  SettingsAuthUnlinkResponse,
+  RemoteActivityResponse,
   SettingsResponse,
   SystemsParams,
   SystemsResponse,
@@ -2201,6 +2203,28 @@ class CoreApi {
       );
     }
     return result as SettingsAuthStatusResponse;
+  }
+
+  async settingsAuthUnlink(): Promise<SettingsAuthUnlinkResponse> {
+    const result = await this.callConnected(Method.SettingsAuthUnlink);
+    if (isCancelled(result)) {
+      throw new RequestCancelledError("Device unlink request was cancelled");
+    }
+    return result as SettingsAuthUnlinkResponse;
+  }
+
+  async remoteActivity(signal?: AbortSignal): Promise<RemoteActivityResponse> {
+    const result = await this.callConnected(
+      Method.RemoteActivity,
+      { limit: 1 },
+      signal,
+    );
+    if (isCancelled(result)) {
+      throw new RequestCancelledError(
+        "Remote control status request was cancelled",
+      );
+    }
+    return result as RemoteActivityResponse;
   }
 
   async settingsBackupStatus(
