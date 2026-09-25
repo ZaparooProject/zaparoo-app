@@ -60,6 +60,8 @@ The About screen derives its visible OTA version from the announcement mapped to
 
 For later OTAs on the same native build, increment the OTA sequence (`ota.2`, `ota.3`, and so on), add the matching announcement mapping, and update the release validation guard. Do not reuse a release key for different bundle contents.
 
+The displayed version can be any bump, not just a patch. 1.15.0 ships as a live update on the 1.14.1 build 30 binary: channel `production-30`, release key `live:1.14.1-ota.2`. `live:1.14.1-ota.1` stays mapped to the 1.14.1 announcement. The next store release must use a version above 1.15.0 so the displayed version never goes backwards.
+
 ### Pushing a Live Update
 
 ```bash

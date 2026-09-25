@@ -129,4 +129,16 @@ describe("release configuration", () => {
       ),
     ).toBe(true);
   });
+
+  it("should map the current live update and never reuse a release key", () => {
+    const releaseKeys = WHATS_NEW_ANNOUNCEMENTS.flatMap(
+      (announcement) => announcement.releaseKeys,
+    );
+    const currentLiveUpdate = WHATS_NEW_ANNOUNCEMENTS.find((announcement) =>
+      announcement.releaseKeys.includes("live:1.14.1-ota.2"),
+    );
+
+    expect(new Set(releaseKeys).size).toBe(releaseKeys.length);
+    expect(currentLiveUpdate?.version).toBe("1.15.0");
+  });
 });
