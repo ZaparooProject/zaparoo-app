@@ -6,6 +6,7 @@ export enum Method {
   History = "tokens.history",
   Media = "media",
   MediaSearch = "media.search",
+  MediaLookup = "media.lookup",
   MediaBrowse = "media.browse",
   MediaBrowseIndex = "media.browse.index",
   MediaMeta = "media.meta",
@@ -19,6 +20,12 @@ export enum Method {
   MediaControl = "media.control",
   MediaTags = "media.tags",
   MediaTagsUpdate = "media.tags.update",
+  Decks = "decks",
+  DecksGet = "decks.get",
+  DecksNew = "decks.new",
+  DecksUpdate = "decks.update",
+  DecksDelete = "decks.delete",
+  DecksOpen = "decks.open",
   Systems = "systems",
   Settings = "settings",
   SettingsUpdate = "settings.update",
@@ -71,6 +78,7 @@ export enum Notification {
   MediaStarted = "media.started",
   MediaStopped = "media.stopped",
   MediaIndexing = "media.indexing",
+  DecksChanged = "decks.changed",
   PlaytimeLimitWarning = "playtime.limit.warning",
   PlaytimeLimitReached = "playtime.limit.reached",
   InboxAdded = "inbox.added",
@@ -280,6 +288,74 @@ export interface MediaBrowseParams {
   sort?: MediaBrowseSort;
 }
 
+export interface DeckCardScript {
+  name: string;
+  zapscript: string;
+}
+
+export interface DeckItem {
+  id: number;
+  position: number;
+  kind: "script" | "card";
+  name: string;
+  zapscript?: string;
+  cardId?: string;
+  scripts?: DeckCardScript[];
+  metadata?: Record<string, unknown>;
+  media?: {
+    system: string;
+    path: string;
+    name: string;
+    tags?: string[];
+    available: boolean;
+  };
+}
+
+export interface Deck {
+  deckId: string;
+  name: string;
+  description: string;
+  owned: boolean;
+  locked: boolean;
+  itemCount: number;
+  items?: DeckItem[];
+  metadata?: Record<string, unknown>;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface DecksResponse {
+  decks: Deck[];
+}
+
+export type DeckItemInput =
+  | { kind: "media"; mediaId: number; name?: string }
+  | { kind: "media"; system: string; path: string; name?: string }
+  | { kind: "script"; name: string; zapscript: string }
+  | {
+      kind: "card";
+      cardId: string;
+      name?: string;
+      scripts?: DeckCardScript[];
+      metadata?: Record<string, unknown>;
+    }
+  | { id: number };
+
+export interface DeckNewParams {
+  name: string;
+  description?: string;
+  items?: Exclude<DeckItemInput, { id: number }>[];
+}
+
+export interface DeckUpdateParams {
+  deckId: string;
+  name?: string;
+  description?: string;
+  items?: DeckItemInput[];
+  addItems?: Exclude<DeckItemInput, { id: number }>[];
+  removeItemIds?: number[];
+}
+
 export interface MediaBrowseEntry {
   mediaId?: number;
   name: string;
@@ -394,6 +470,16 @@ export interface SearchResultGame {
   zapScript?: string;
   tags: TagInfo[];
   disambiguatingTags?: TagInfo[];
+}
+
+export interface MediaLookupParams {
+  system: string;
+  name: string;
+  fuzzySystem?: boolean;
+}
+
+export interface MediaLookupResponse {
+  match: (SearchResultGame & { confidence: number }) | null;
 }
 
 export interface Pagination {

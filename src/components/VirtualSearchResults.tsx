@@ -41,6 +41,7 @@ export interface VirtualSearchResultsProps {
   onSearchComplete?: () => void;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
   loadingDelayMs?: number;
+  compactEmptyState?: boolean;
 }
 
 export function VirtualSearchResults({
@@ -57,6 +58,7 @@ export function VirtualSearchResults({
   onSearchComplete,
   scrollContainerRef,
   loadingDelayMs = 0,
+  compactEmptyState = false,
 }: VirtualSearchResultsProps) {
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const { t } = useTranslation();
@@ -212,7 +214,8 @@ export function VirtualSearchResults({
   if (!hasSearched) {
     return (
       <EmptyState
-        className="mt-6"
+        size={compactEmptyState ? "compact" : "default"}
+        className={compactEmptyState ? undefined : "mt-6"}
         title={t("create.search.startSearching")}
         description={t("create.search.startSearchingHint")}
       />
@@ -276,7 +279,8 @@ export function VirtualSearchResults({
 
     return (
       <EmptyState
-        className="mt-6"
+        size={compactEmptyState ? "compact" : "default"}
+        className={compactEmptyState ? undefined : "mt-6"}
         title={mainMessage}
         description={suggestionMessage || undefined}
         action={

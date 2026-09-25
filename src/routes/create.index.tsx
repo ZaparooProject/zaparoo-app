@@ -3,8 +3,9 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import classNames from "classnames";
-import { ListPlusIcon, NfcIcon } from "lucide-react";
+import { BookMarkedIcon, ListPlusIcon, NfcIcon } from "lucide-react";
 import { usePageHeadingFocus } from "@/hooks/usePageHeadingFocus";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
 import { NextIcon, PlayIcon, SearchIcon, TextIcon } from "@/lib/images";
 import { useStatusStore } from "@/lib/store";
 import {
@@ -72,6 +73,7 @@ export function Create() {
     (state) => state.coreVersionPending,
   );
   const nfcAvailable = usePreferencesStore((state) => state.nfcAvailable);
+  const decksFeature = useCoreFeature("decks", { requireKnownSupport: true });
   const preferRemoteWriter = usePreferencesStore(
     (state) => state.preferRemoteWriter,
   );
@@ -178,6 +180,30 @@ export function Create() {
               </div>
             </div>
           </Card>
+
+          {decksFeature.available && (
+            <Link
+              to="/create/decks/new"
+              disabled={!connected}
+              aria-disabled={!connected}
+            >
+              <Card disabled={!connected} pressable>
+                <div className="flex flex-row items-center gap-3">
+                  <CreateActionIcon
+                    disabled={!connected}
+                    icon={<BookMarkedIcon size="20" />}
+                  />
+                  <div className="flex grow flex-col">
+                    <span className="font-semibold">{t("decks.new")}</span>
+                    <span className="text-sm">{t("decks.createSubtitle")}</span>
+                  </div>
+                  <span aria-hidden="true">
+                    <NextIcon size="20" />
+                  </span>
+                </div>
+              </Card>
+            </Link>
+          )}
 
           <Link
             to="/create/mappings"

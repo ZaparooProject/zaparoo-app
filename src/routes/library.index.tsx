@@ -250,7 +250,7 @@ export function Library() {
       />
     );
   } else if (!gamesIndex.exists) {
-    content = (
+    content = withLibrarySections(
       <EmptyState
         title={t("library.databaseRequired")}
         action={
@@ -262,7 +262,7 @@ export function Library() {
             {t("library.openMediaSettings")}
           </Link>
         }
-      />
+      />,
     );
   } else if (systemsQuery.isLoading) {
     content = withLibrarySections(

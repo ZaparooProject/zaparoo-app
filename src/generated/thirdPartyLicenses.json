@@ -1,5 +1,5 @@
 {
-  "noticesFile": "thirdPartyLicenseNotices.68a6a93f0b00.json",
+  "noticesFile": "thirdPartyLicenseNotices.772d9fda6ce5.json",
   "packages": [
     {
       "name": "@alloc/quick-lru",
@@ -189,6 +189,34 @@
       "license": "MIT",
       "repository": "https://github.com/capawesome-team/capacitor-plugins",
       "noticeId": "4921fd37a2312556"
+    },
+    {
+      "name": "@dnd-kit/accessibility",
+      "version": "3.1.1",
+      "license": "MIT",
+      "repository": "https://github.com/clauderic/dnd-kit",
+      "noticeId": "6fdf84a73d062925"
+    },
+    {
+      "name": "@dnd-kit/core",
+      "version": "6.3.1",
+      "license": "MIT",
+      "repository": "https://github.com/clauderic/dnd-kit",
+      "noticeId": "6fdf84a73d062925"
+    },
+    {
+      "name": "@dnd-kit/sortable",
+      "version": "10.0.0",
+      "license": "MIT",
+      "repository": "https://github.com/clauderic/dnd-kit",
+      "noticeId": "6fdf84a73d062925"
+    },
+    {
+      "name": "@dnd-kit/utilities",
+      "version": "3.2.2",
+      "license": "MIT",
+      "repository": "https://github.com/clauderic/dnd-kit",
+      "noticeId": "6fdf84a73d062925"
     },
     {
       "name": "@firebase/ai",
@@ -1024,6 +1052,48 @@
       "noticeId": "ff82c90f84945c60"
     },
     {
+      "name": "@types/debug",
+      "version": "4.1.13",
+      "license": "MIT",
+      "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "noticeId": "ff82c90f84945c60"
+    },
+    {
+      "name": "@types/estree",
+      "version": "1.0.8",
+      "license": "MIT",
+      "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "noticeId": "ff82c90f84945c60"
+    },
+    {
+      "name": "@types/estree-jsx",
+      "version": "1.0.5",
+      "license": "MIT",
+      "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "noticeId": "ff82c90f84945c60"
+    },
+    {
+      "name": "@types/hast",
+      "version": "3.0.5",
+      "license": "MIT",
+      "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "noticeId": "ff82c90f84945c60"
+    },
+    {
+      "name": "@types/mdast",
+      "version": "4.0.4",
+      "license": "MIT",
+      "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "noticeId": "ff82c90f84945c60"
+    },
+    {
+      "name": "@types/ms",
+      "version": "2.1.0",
+      "license": "MIT",
+      "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "noticeId": "ff82c90f84945c60"
+    },
+    {
       "name": "@types/node",
       "version": "25.6.0",
       "license": "MIT",
@@ -1045,11 +1115,32 @@
       "noticeId": "ff82c90f84945c60"
     },
     {
+      "name": "@types/unist",
+      "version": "3.0.3",
+      "license": "MIT",
+      "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "noticeId": "ff82c90f84945c60"
+    },
+    {
+      "name": "@types/unist",
+      "version": "2.0.11",
+      "license": "MIT",
+      "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "noticeId": "ff82c90f84945c60"
+    },
+    {
       "name": "@uidotdev/usehooks",
       "version": "2.4.1",
       "license": "MIT",
       "repository": "https://github.com/uidotdev/usehooks",
       "noticeId": "21121062d5330ed2"
+    },
+    {
+      "name": "@ungap/structured-clone",
+      "version": "1.4.0",
+      "license": "ISC",
+      "repository": "https://github.com/ungap/structured-clone",
+      "noticeId": "22fc2b0e60ba1aba"
     },
     {
       "name": "@xstate/fsm",
@@ -1129,6 +1220,13 @@
       "noticeId": "e1ccba0a4e7d3f35"
     },
     {
+      "name": "bail",
+      "version": "2.0.2",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/bail",
+      "noticeId": "c37a32dd1cd44e7b"
+    },
+    {
       "name": "base64-arraybuffer",
       "version": "1.0.2",
       "license": "MIT",
@@ -1192,6 +1290,41 @@
       "noticeId": "c828d24201155a79"
     },
     {
+      "name": "ccount",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/ccount",
+      "noticeId": "c37a32dd1cd44e7b"
+    },
+    {
+      "name": "character-entities",
+      "version": "2.0.2",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/character-entities",
+      "noticeId": "c37a32dd1cd44e7b"
+    },
+    {
+      "name": "character-entities-html4",
+      "version": "2.1.0",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/character-entities-html4",
+      "noticeId": "c37a32dd1cd44e7b"
+    },
+    {
+      "name": "character-entities-legacy",
+      "version": "3.0.0",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/character-entities-legacy",
+      "noticeId": "c37a32dd1cd44e7b"
+    },
+    {
+      "name": "character-reference-invalid",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/character-reference-invalid",
+      "noticeId": "c37a32dd1cd44e7b"
+    },
+    {
       "name": "class-variance-authority",
       "version": "0.7.1",
       "license": "Apache-2.0",
@@ -1241,6 +1374,13 @@
       "noticeId": "d69f53f4975f1ea1"
     },
     {
+      "name": "comma-separated-tokens",
+      "version": "2.0.3",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/comma-separated-tokens",
+      "noticeId": "d9c32f07344cb9c8"
+    },
+    {
       "name": "commander",
       "version": "2.20.3",
       "license": "MIT",
@@ -1274,6 +1414,13 @@
       "license": "MIT",
       "repository": "https://github.com/debug-js/debug",
       "noticeId": "d9e5aa2747f30eae"
+    },
+    {
+      "name": "decode-named-character-reference",
+      "version": "1.3.0",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/decode-named-character-reference",
+      "noticeId": "ea559213e0e927a2"
     },
     {
       "name": "deep-equal",
@@ -1311,6 +1458,13 @@
       "noticeId": "d69f53f4975f1ea1"
     },
     {
+      "name": "dequal",
+      "version": "2.0.3",
+      "license": "MIT",
+      "repository": "https://github.com/lukeed/dequal",
+      "noticeId": "d0a8e5996a99e9ea"
+    },
+    {
       "name": "detect-libc",
       "version": "2.1.2",
       "license": "Apache-2.0",
@@ -1323,6 +1477,13 @@
       "license": "MIT",
       "repository": "https://github.com/thekashey/detect-node",
       "noticeId": "5dd2a43c0ed685c4"
+    },
+    {
+      "name": "devlop",
+      "version": "1.1.0",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/devlop",
+      "noticeId": "189cbd7c4b2289a2"
     },
     {
       "name": "dns-equal",
@@ -1414,6 +1575,20 @@
       "license": "MIT",
       "repository": "https://github.com/lukeed/escalade",
       "noticeId": "3d5b63706380c8c7"
+    },
+    {
+      "name": "estree-util-is-identifier-name",
+      "version": "3.0.0",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/estree-util-is-identifier-name",
+      "noticeId": "0e99f2710dd25758"
+    },
+    {
+      "name": "extend",
+      "version": "3.0.2",
+      "license": "MIT",
+      "repository": "https://github.com/justmoon/node-extend",
+      "noticeId": "b079b743d39aa524"
     },
     {
       "name": "faye-websocket",
@@ -1542,11 +1717,32 @@
       "noticeId": "928a86b1d2984fd8"
     },
     {
+      "name": "hast-util-to-jsx-runtime",
+      "version": "2.3.6",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/hast-util-to-jsx-runtime",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "hast-util-whitespace",
+      "version": "3.0.0",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/hast-util-whitespace",
+      "noticeId": "d9c32f07344cb9c8"
+    },
+    {
       "name": "html-parse-stringify",
       "version": "3.0.1",
       "license": "MIT",
       "repository": "https://github.com/henrikjoreteg/html-parse-stringify",
       "noticeId": "ad22fffd2d01ee39"
+    },
+    {
+      "name": "html-url-attributes",
+      "version": "3.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/rehypejs/rehype-minify/tree/main/packages/html-url-attributes",
+      "noticeId": "2cf2d507c76caa8f"
     },
     {
       "name": "http-parser-js",
@@ -1584,11 +1780,32 @@
       "noticeId": "bf7918406704c1e4"
     },
     {
+      "name": "inline-style-parser",
+      "version": "0.2.7",
+      "license": "MIT",
+      "repository": "https://github.com/remarkablemark/inline-style-parser",
+      "noticeId": "9cac2500def4b470"
+    },
+    {
       "name": "input-otp",
       "version": "1.4.2",
       "license": "MIT",
       "repository": "https://github.com/guilhermerodz/input-otp",
       "noticeId": "a35ac7f2c01ce3ed"
+    },
+    {
+      "name": "is-alphabetical",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/is-alphabetical",
+      "noticeId": "d9c32f07344cb9c8"
+    },
+    {
+      "name": "is-alphanumerical",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/is-alphanumerical",
+      "noticeId": "d9c32f07344cb9c8"
     },
     {
       "name": "is-arguments",
@@ -1605,6 +1822,13 @@
       "noticeId": "07d333ca37861bd5"
     },
     {
+      "name": "is-decimal",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/is-decimal",
+      "noticeId": "d9c32f07344cb9c8"
+    },
+    {
       "name": "is-fullwidth-code-point",
       "version": "3.0.0",
       "license": "MIT",
@@ -1612,11 +1836,32 @@
       "noticeId": "c9808a775260db56"
     },
     {
+      "name": "is-hexadecimal",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/is-hexadecimal",
+      "noticeId": "d9c32f07344cb9c8"
+    },
+    {
+      "name": "is-plain-obj",
+      "version": "4.1.0",
+      "license": "MIT",
+      "repository": "https://github.com/sindresorhus/is-plain-obj",
+      "noticeId": "1529f88b36750950"
+    },
+    {
       "name": "is-regex",
       "version": "1.2.1",
       "license": "MIT",
       "repository": "https://github.com/inspect-js/is-regex",
       "noticeId": "a2b2d3479124a170"
+    },
+    {
+      "name": "is-unicode-supported",
+      "version": "1.3.0",
+      "license": "MIT",
+      "repository": "https://github.com/sindresorhus/is-unicode-supported",
+      "noticeId": "1529f88b36750950"
     },
     {
       "name": "isbot",
@@ -1668,6 +1913,13 @@
       "noticeId": "283ea6cc2997a1a7"
     },
     {
+      "name": "longest-streak",
+      "version": "3.1.0",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/longest-streak",
+      "noticeId": "4be46afa7981dcef"
+    },
+    {
       "name": "loose-envify",
       "version": "1.4.0",
       "license": "MIT",
@@ -1701,6 +1953,209 @@
       "license": "MIT",
       "repository": "https://github.com/es-shims/math-intrinsics",
       "noticeId": "42fbee6b9cc2d44b"
+    },
+    {
+      "name": "mdast-util-from-markdown",
+      "version": "2.0.3",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/mdast-util-from-markdown",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "mdast-util-mdx-expression",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/mdast-util-mdx-expression",
+      "noticeId": "0e99f2710dd25758"
+    },
+    {
+      "name": "mdast-util-mdx-jsx",
+      "version": "3.2.0",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/mdast-util-mdx-jsx",
+      "noticeId": "0e99f2710dd25758"
+    },
+    {
+      "name": "mdast-util-mdxjs-esm",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/mdast-util-mdxjs-esm",
+      "noticeId": "0e99f2710dd25758"
+    },
+    {
+      "name": "mdast-util-phrasing",
+      "version": "4.1.0",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/mdast-util-phrasing",
+      "noticeId": "e11634cfe7bf46d5"
+    },
+    {
+      "name": "mdast-util-to-hast",
+      "version": "13.2.1",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/mdast-util-to-hast",
+      "noticeId": "d9c32f07344cb9c8"
+    },
+    {
+      "name": "mdast-util-to-markdown",
+      "version": "2.1.2",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/mdast-util-to-markdown",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "mdast-util-to-string",
+      "version": "4.0.0",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/mdast-util-to-string",
+      "noticeId": "c37a32dd1cd44e7b"
+    },
+    {
+      "name": "micromark",
+      "version": "4.0.2",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-core-commonmark",
+      "version": "2.0.3",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-core-commonmark",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-factory-destination",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-factory-destination",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-factory-label",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-factory-label",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-factory-space",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-factory-space",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-factory-title",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-factory-title",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-factory-whitespace",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-factory-whitespace",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-character",
+      "version": "2.1.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-character",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-chunked",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-chunked",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-classify-character",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-classify-character",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-combine-extensions",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-combine-extensions",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-decode-numeric-character-reference",
+      "version": "2.0.2",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-decode-numeric-character-reference",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-decode-string",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-decode-string",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-encode",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-encode",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-html-tag-name",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-html-tag-name",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-normalize-identifier",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-normalize-identifier",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-resolve-all",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-resolve-all",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-sanitize-uri",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-sanitize-uri",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-subtokenize",
+      "version": "2.1.0",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-subtokenize",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-symbol",
+      "version": "2.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-symbol",
+      "noticeId": "ea559213e0e927a2"
+    },
+    {
+      "name": "micromark-util-types",
+      "version": "2.0.2",
+      "license": "MIT",
+      "repository": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-types",
+      "noticeId": "ea559213e0e927a2"
     },
     {
       "name": "mime-db",
@@ -1773,6 +2228,13 @@
       "noticeId": "5640e5cbe2e9f57f"
     },
     {
+      "name": "parse-entities",
+      "version": "4.0.2",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/parse-entities",
+      "noticeId": "c74f9c5a522f5929"
+    },
+    {
       "name": "picocolors",
       "version": "1.1.1",
       "license": "ISC",
@@ -1806,6 +2268,13 @@
       "license": "MIT",
       "repository": "https://github.com/facebook/prop-types",
       "noticeId": "2a4be07005467fe5"
+    },
+    {
+      "name": "property-information",
+      "version": "7.2.0",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/property-information",
+      "noticeId": "c74f9c5a522f5929"
     },
     {
       "name": "protobufjs",
@@ -1857,6 +2326,13 @@
       "noticeId": "a80c79b8f80e824c"
     },
     {
+      "name": "react-markdown",
+      "version": "10.1.0",
+      "license": "MIT",
+      "repository": "https://github.com/remarkjs/react-markdown",
+      "noticeId": "b7972f57b949d275"
+    },
+    {
       "name": "react-remove-scroll",
       "version": "2.7.2",
       "license": "MIT",
@@ -1904,6 +2380,20 @@
       "license": "MIT",
       "repository": "https://github.com/es-shims/RegExp.prototype.flags",
       "noticeId": "0c3fb74dd5470586"
+    },
+    {
+      "name": "remark-parse",
+      "version": "11.0.0",
+      "license": "MIT",
+      "repository": "https://github.com/remarkjs/remark/tree/main/packages/remark-parse",
+      "noticeId": "f78777570e325f82"
+    },
+    {
+      "name": "remark-rehype",
+      "version": "11.1.2",
+      "license": "MIT",
+      "repository": "https://github.com/remarkjs/remark-rehype",
+      "noticeId": "ea559213e0e927a2"
     },
     {
       "name": "request-ip",
@@ -2032,6 +2522,13 @@
       "noticeId": "e9441dd383ee65a8"
     },
     {
+      "name": "space-separated-tokens",
+      "version": "2.0.2",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/space-separated-tokens",
+      "noticeId": "d9c32f07344cb9c8"
+    },
+    {
       "name": "string-width",
       "version": "4.2.3",
       "license": "MIT",
@@ -2039,11 +2536,32 @@
       "noticeId": "c9808a775260db56"
     },
     {
+      "name": "stringify-entities",
+      "version": "4.0.4",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/stringify-entities",
+      "noticeId": "4be46afa7981dcef"
+    },
+    {
       "name": "strip-ansi",
       "version": "6.0.1",
       "license": "MIT",
       "repository": "https://github.com/chalk/strip-ansi",
       "noticeId": "c9808a775260db56"
+    },
+    {
+      "name": "style-to-js",
+      "version": "1.1.21",
+      "license": "MIT",
+      "repository": "https://github.com/remarkablemark/style-to-js",
+      "noticeId": "bdda7d25f6d10333"
+    },
+    {
+      "name": "style-to-object",
+      "version": "1.0.14",
+      "license": "MIT",
+      "repository": "https://github.com/remarkablemark/style-to-object",
+      "noticeId": "20b25fb4d9ba5aab"
     },
     {
       "name": "tailwind-merge",
@@ -2102,6 +2620,20 @@
       "noticeId": "4918b99deb04bad7"
     },
     {
+      "name": "trim-lines",
+      "version": "3.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/trim-lines",
+      "noticeId": "4be46afa7981dcef"
+    },
+    {
+      "name": "trough",
+      "version": "2.2.0",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/trough",
+      "noticeId": "e1da326aaf68bf80"
+    },
+    {
       "name": "tslib",
       "version": "2.6.2",
       "license": "0BSD",
@@ -2121,6 +2653,48 @@
       "license": "MIT",
       "repository": "https://github.com/nodejs/undici",
       "noticeId": "fe64958bfaef10b1"
+    },
+    {
+      "name": "unified",
+      "version": "11.0.5",
+      "license": "MIT",
+      "repository": "https://github.com/unifiedjs/unified",
+      "noticeId": "e453dafb35c9b3cb"
+    },
+    {
+      "name": "unist-util-is",
+      "version": "6.0.1",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/unist-util-is",
+      "noticeId": "a1563f431b1fa6bd"
+    },
+    {
+      "name": "unist-util-position",
+      "version": "5.0.0",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/unist-util-position",
+      "noticeId": "c37a32dd1cd44e7b"
+    },
+    {
+      "name": "unist-util-stringify-position",
+      "version": "4.0.0",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/unist-util-stringify-position",
+      "noticeId": "d9c32f07344cb9c8"
+    },
+    {
+      "name": "unist-util-visit",
+      "version": "5.1.0",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/unist-util-visit",
+      "noticeId": "c37a32dd1cd44e7b"
+    },
+    {
+      "name": "unist-util-visit-parents",
+      "version": "6.0.2",
+      "license": "MIT",
+      "repository": "https://github.com/syntax-tree/unist-util-visit-parents",
+      "noticeId": "d9c32f07344cb9c8"
     },
     {
       "name": "use-callback-ref",
@@ -2163,6 +2737,20 @@
       "license": "MIT",
       "repository": "https://github.com/emilkowalski/vaul",
       "noticeId": "8a73c08750c7daee"
+    },
+    {
+      "name": "vfile",
+      "version": "6.0.3",
+      "license": "MIT",
+      "repository": "https://github.com/vfile/vfile",
+      "noticeId": "e453dafb35c9b3cb"
+    },
+    {
+      "name": "vfile-message",
+      "version": "4.0.3",
+      "license": "MIT",
+      "repository": "https://github.com/vfile/vfile-message",
+      "noticeId": "ea559213e0e927a2"
     },
     {
       "name": "vite",
@@ -2240,6 +2828,13 @@
       "license": "MIT",
       "repository": "https://github.com/pmndrs/zustand",
       "noticeId": "384a8fa756d4ca7e"
+    },
+    {
+      "name": "zwitch",
+      "version": "2.0.4",
+      "license": "MIT",
+      "repository": "https://github.com/wooorm/zwitch",
+      "noticeId": "d9c32f07344cb9c8"
     }
   ]
 }

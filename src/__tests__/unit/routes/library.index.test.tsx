@@ -30,14 +30,19 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       to,
       params,
       onClick,
+      ...rest
     }: {
       children: React.ReactNode;
       to: string;
-      params?: { system?: string };
+      params?: { system?: string; deckId?: string };
       onClick?: () => void;
+      "aria-label"?: string;
     }) => (
       <a
-        href={to.replace("$system", params?.system ?? "")}
+        {...rest}
+        href={to
+          .replace("$system", params?.system ?? "")
+          .replace("$deckId", params?.deckId ?? "")}
         onClick={(event) => {
           event.preventDefault();
           onClick?.();
@@ -73,6 +78,7 @@ describe("Library index route", () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
     CoreAPI.reset();
+    vi.spyOn(CoreAPI, "decks").mockResolvedValue({ decks: [] });
     mockNavigate.mockClear();
     mockErrorToast.mockClear();
     usePreferencesStore.setState({
@@ -181,6 +187,44 @@ describe("Library index route", () => {
     ).toHaveAttribute("href", "/library/play-later");
   });
 
+  it("lists decks under built-in collections and searches both", async () => {
+    useStatusStore.setState({ coreVersion: "2.18.0" });
+    vi.spyOn(CoreAPI, "systems").mockResolvedValue({ systems: [] });
+    vi.spyOn(CoreAPI, "decks").mockResolvedValue({
+      decks: [
+        {
+          deckId: "0k3v9x2rq7bm",
+          name: "Weekend",
+          itemCount: 2,
+          description: "",
+          owned: true,
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+    });
+    render(<Library />);
+    await userEvent
+      .setup()
+      .click(screen.getByRole("tab", { name: "library.collections" }));
+    expect(
+      await screen.findByRole("link", { name: /Weekend/ }),
+    ).toHaveAttribute("href", "/library/decks/0k3v9x2rq7bm");
+    expect(screen.getByRole("link", { name: "decks.new" })).toHaveAttribute(
+      "href",
+      "/library/decks/new",
+    );
+    const search = screen.getByRole("searchbox", {
+      name: "decks.search",
+    });
+    await userEvent.setup().type(search, "Weekend");
+    expect(screen.getByRole("link", { name: /Weekend/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "library.favorites" }),
+    ).toBeInTheDocument();
+  });
+
   it("keeps Systems and Collections as peer views and remembers the last view this session", async () => {
     useStatusStore.setState({ coreVersion: "2.18.0" });
     vi.spyOn(CoreAPI, "systems").mockResolvedValue({
@@ -208,35 +252,33 @@ describe("Library index route", () => {
     expect(
       screen.queryByRole("button", { name: "library.optionsTitle" }),
     ).not.toBeInTheDocument();
-    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual(
-      [
-        "library.favorites",
-        "library.liked",
-        "library.disliked",
-        "library.playLater",
-      ],
-    );
+    expect(
+      within(screen.getByRole("navigation", { name: "library.collections" }))
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual([
+      "library.favorites",
+      "library.liked",
+      "library.playLater",
+      "library.disliked",
+    ]);
 
     await user.type(
-      screen.getByRole("searchbox", { name: "library.searchCollections" }),
+      screen.getByRole("searchbox", { name: "decks.search" }),
       "later",
     );
     expect(
       screen.getByRole("link", { name: "library.playLater" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "library.favorites" }),
-    ).not.toBeInTheDocument();
-    await user.clear(
-      screen.getByRole("searchbox", { name: "library.searchCollections" }),
-    );
+      screen.getByRole("link", { name: "library.favorites" }),
+    ).toBeInTheDocument();
+    await user.clear(screen.getByRole("searchbox", { name: "decks.search" }));
     await user.type(
-      screen.getByRole("searchbox", { name: "library.searchCollections" }),
+      screen.getByRole("searchbox", { name: "decks.search" }),
       "unknown",
     );
-    expect(
-      screen.getByText("library.noMatchingCollections"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("decks.noMatching")).toBeInTheDocument();
 
     unmount();
     const { unmount: unmountNext } = render(<Library />);
@@ -812,6 +854,34 @@ describe("Library index route", () => {
     expect(
       screen.getByRole("link", { name: "library.openMediaSettings" }),
     ).toHaveAttribute("href", "/settings");
+  });
+
+  it("browses decks even when no media index exists", async () => {
+    useStatusStore.setState({
+      coreVersion: "2.18.0",
+      gamesIndex: { exists: false, indexing: false },
+    });
+    vi.spyOn(CoreAPI, "decks").mockResolvedValue({
+      decks: [
+        {
+          deckId: "0k3v9x2rq7bm",
+          name: "Weekend",
+          itemCount: 0,
+          description: "",
+          owned: true,
+          locked: false,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+    });
+    render(<Library />);
+    await userEvent
+      .setup()
+      .click(screen.getByRole("tab", { name: "library.collections" }));
+    expect(
+      await screen.findByRole("link", { name: /Weekend/ }),
+    ).toBeInTheDocument();
   });
 
   it("should show update state for unsupported Core", () => {

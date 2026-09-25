@@ -101,6 +101,13 @@ describe("isCoreFeatureAvailable", () => {
     expect(isCoreFeatureAvailable("mediaFavorites", "2.17.9")).toBe(true);
   });
 
+  it("should gate decks on known Core 2.18 while leaving favorites available", () => {
+    expect(FEATURE_GATES.decks?.since).toBe("2.18.0");
+    expect(isCoreFeatureAvailable("decks", "2.17.9")).toBe(false);
+    expect(isCoreFeatureAvailable("decks", "2.18.0-beta.2")).toBe(true);
+    expect(isCoreFeatureAvailable("mediaFavorites", "2.17.9")).toBe(true);
+  });
+
   it("should gate active-media ZapScript behind Core 2.9.0", () => {
     expect(FEATURE_GATES.activeMediaZapScript?.since).toBe("2.9.0");
     expect(isCoreFeatureAvailable("activeMediaZapScript", "2.8.9")).toBe(false);

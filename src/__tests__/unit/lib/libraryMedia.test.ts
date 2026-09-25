@@ -391,6 +391,7 @@ describe("Library media helpers", () => {
       { type: "user", tag: "liked" },
       { type: "user", tag: "disliked" },
       { type: "user", tag: "playlater" },
+      { type: "user", tag: "deck:0k3v9x2rq7bm" },
       { type: "user", tag: "hidden" },
     ]);
 

@@ -1,15 +1,19 @@
+import classNames from "classnames";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 interface ModalActionRailProps {
   actions: ReactNode;
   primaryAction?: ReactNode;
+  /** "content" sizes each action to its caption so short rails fit narrow phones. */
+  itemWidth?: "uniform" | "content";
   "aria-label": string;
 }
 
 export function ModalActionRail({
   actions,
   primaryAction,
+  itemWidth = "uniform",
   "aria-label": ariaLabel,
 }: ModalActionRailProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -81,7 +85,12 @@ export function ModalActionRail({
         >
           <div
             ref={contentRef}
-            className="grid min-w-full auto-cols-[minmax(5.5rem,1fr)] grid-flow-col gap-1 sm:min-w-0 [&>*]:min-h-14 [&>*]:w-full [&>*]:min-w-0 sm:[&>*]:min-h-12"
+            className={classNames(
+              "grid min-w-full grid-flow-col gap-1 sm:min-w-0 [&>*]:min-h-14 [&>*]:w-full [&>*]:min-w-0 sm:[&>*]:min-h-12",
+              itemWidth === "content"
+                ? "auto-cols-[minmax(max-content,1fr)]"
+                : "auto-cols-[minmax(5.5rem,1fr)]",
+            )}
           >
             {actions}
           </div>

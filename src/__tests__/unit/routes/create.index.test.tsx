@@ -231,6 +231,19 @@ describe("Create Index Route", () => {
       expect(screen.getByText("create.customSub")).toBeInTheDocument();
     });
 
+    it("links new decks from Create only on Core 2.18", () => {
+      renderComponent();
+      expect(
+        screen.queryByRole("link", { name: /decks.new/ }),
+      ).not.toBeInTheDocument();
+      mockState.coreVersion = "2.18.0";
+      renderComponent();
+      expect(screen.getByRole("link", { name: /decks.new/ })).toHaveAttribute(
+        "href",
+        "/create/decks/new",
+      );
+    });
+
     it("should render NFC card", () => {
       renderComponent();
       expect(screen.getByText("create.nfcHeading")).toBeInTheDocument();

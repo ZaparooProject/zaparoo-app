@@ -18,6 +18,7 @@ export const LIBRARY_QUERY_KEYS = {
   browseIndex: "mediaBrowseIndex",
   favorites: "mediaFavorites",
   collections: "mediaPreferenceCollections",
+  decks: "decks",
   meta: "mediaMeta",
   image: "mediaImage",
 } as const;
@@ -160,6 +161,13 @@ export function isMediaPreferenceTag(tag: TagInfo): boolean {
   return (
     tag.type.toLowerCase() === "user" &&
     Object.hasOwn(MEDIA_PREFERENCES, tag.tag.toLowerCase())
+  );
+}
+
+export function isDeckTag(tag: TagInfo): boolean {
+  return (
+    tag.type.toLowerCase() === "user" &&
+    tag.tag.toLowerCase().startsWith("deck:")
   );
 }
 
@@ -475,7 +483,8 @@ export function organizeLibraryDetailTags(tags: readonly TagInfo[]): {
   tags: TagInfo[];
 } {
   const visibleTags = mergeLibraryTags(tags).filter(
-    (tag) => !isMediaPreferenceTag(tag) && !isScraperTag(tag),
+    (tag) =>
+      !isMediaPreferenceTag(tag) && !isDeckTag(tag) && !isScraperTag(tag),
   );
   const factTypeSet = new Set<string>(LIBRARY_DETAIL_FACT_TYPES);
   const facts = LIBRARY_DETAIL_FACT_TYPES.flatMap((type) => {

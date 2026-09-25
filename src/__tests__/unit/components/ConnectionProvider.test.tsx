@@ -2463,6 +2463,35 @@ describe("notification processing", () => {
     });
   });
 
+  describe("decks.changed", () => {
+    it("refreshes device deck data and discards preference collection cursors", async () => {
+      const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+      const reset = vi.spyOn(QueryClient.prototype, "resetQueries");
+      vi.mocked(CoreAPI.processReceived).mockResolvedValueOnce({
+        method: Notification.DecksChanged,
+        params: { deckId: "0k3v9x2rq7bm", action: "updated" },
+      });
+      render(
+        <ConnectionProvider>
+          <div>Test</div>
+        </ConnectionProvider>,
+      );
+      invalidate.mockClear();
+      reset.mockClear();
+      await capturedEventHandlers.onMessage!("test-device", {});
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: ["decks", RECORD_ID],
+      });
+      expect(reset).toHaveBeenCalledWith({ queryKey: ["mediaFavorites"] });
+      expect(reset).toHaveBeenCalledWith({
+        queryKey: ["mediaPreferenceCollections"],
+      });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["mediaMeta"] });
+      invalidate.mockRestore();
+      reset.mockRestore();
+    });
+  });
+
   describe("media.scraping", () => {
     it("should invalidate Library metadata when scraping finishes", async () => {
       const invalidateSpy = vi.spyOn(
