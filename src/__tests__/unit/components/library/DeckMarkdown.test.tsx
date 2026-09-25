@@ -34,4 +34,23 @@ describe("DeckMarkdown", () => {
       screen.getByRole("heading", { name: "Section", level: 3 }),
     ).toBeInTheDocument();
   });
+
+  it("links images instead of loading them", () => {
+    const { container } = render(
+      <DeckMarkdown>
+        {
+          "![Cover art](https://example.com/cover.png) ![](https://example.com/b.png) ![local](cover.png)"
+        }
+      </DeckMarkdown>,
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByRole("link", { name: "Cover art" })).toHaveAttribute(
+      "href",
+      "https://example.com/cover.png",
+    );
+    expect(
+      screen.getByRole("link", { name: "https://example.com/b.png" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("local")).not.toBeInTheDocument();
+  });
 });

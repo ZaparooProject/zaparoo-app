@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor } from "@/test-utils";
+import { act, render, screen, waitFor } from "@/test-utils";
 import { CoreAPI } from "@/lib/coreApi";
 import type { SearchResultsResponse } from "@/lib/models";
 import { useLibrarySessionStore } from "@/lib/librarySessionStore";
@@ -256,6 +256,38 @@ describe("Library Favorites route", () => {
     render(<LibraryTaggedCollection collection="liked" />);
     expect(screen.getByText("library.updateCore")).toBeInTheDocument();
     expect(searchSpy).not.toHaveBeenCalled();
+  });
+
+  it("should wait for Core's version instead of asking for an update", async () => {
+    useStatusStore.setState({ coreVersion: null, coreVersionPending: true });
+    vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValue(
+      favoritesResponse(["First"]),
+    );
+    render(<LibraryTaggedCollection collection="liked" />);
+    expect(screen.queryByText("library.updateCore")).not.toBeInTheDocument();
+
+    act(() =>
+      useStatusStore.setState({
+        coreVersion: "2.18.0",
+        coreVersionPending: false,
+      }),
+    );
+
+    expect(
+      await screen.findByRole("button", { name: /First/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("should open Favourites when Core's version is unknown, like the Library entry", async () => {
+    useStatusStore.setState({ coreVersion: null, coreVersionPending: false });
+    vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValue(
+      favoritesResponse(["First"]),
+    );
+    render(<LibraryTaggedCollection collection="favorites" />);
+    expect(
+      await screen.findByRole("button", { name: /First/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("library.updateCore")).not.toBeInTheDocument();
   });
 
   it("should show an empty state when there are no favorites", async () => {

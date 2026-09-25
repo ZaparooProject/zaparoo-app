@@ -115,7 +115,11 @@ export function MediaSearchModal(props: MediaSearchModalProps) {
   return (
     <>
       <SlideModal
-        isOpen={props.isOpen && selectedResult === null && !tagSelectorOpen}
+        isOpen={
+          props.isOpen &&
+          selectedResult === null &&
+          !(mediaTagsAvailable && tagSelectorOpen)
+        }
         close={props.close}
         title={t("create.search.title")}
         scrollRef={scrollContainerRef}

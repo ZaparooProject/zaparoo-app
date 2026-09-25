@@ -170,36 +170,39 @@ describe("DeckArtwork", () => {
     expect(requestLibraryImage).not.toHaveBeenCalled();
   });
 
-  it("resolves absolute file paths against indexed systems before requesting artwork", async () => {
-    await seedActiveDevice({ recordId: "artwork-device" });
-    vi.spyOn(CoreAPI, "systems").mockResolvedValue({
-      systems: [{ id: "SNES", name: "SNES" }],
-    });
-    vi.mocked(requestLibraryImage).mockResolvedValue({
-      url: "data:image/png;base64,YQ==",
-      typeTag: "boxart",
-    });
-    render(
-      <DeckArtwork
-        item={{
-          id: 2,
-          position: 2,
-          kind: "script",
-          name: "Game",
-          zapscript: "/games/SNES/Game.sfc",
-        }}
-      />,
-    );
-    expect(await screen.findByAltText("")).toBeInTheDocument();
-    expect(requestLibraryImage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        systemId: "SNES",
-        path: "/games/SNES/Game.sfc",
-      }),
-      "SNES",
-      expect.anything(),
-    );
-  });
+  it.each(["/games/SNES/Game.sfc", "C:\\games\\SNES\\Game.sfc"])(
+    "resolves absolute file path %s against indexed systems before requesting artwork",
+    async (path) => {
+      await seedActiveDevice({ recordId: "artwork-device" });
+      vi.spyOn(CoreAPI, "systems").mockResolvedValue({
+        systems: [{ id: "SNES", name: "SNES" }],
+      });
+      vi.mocked(requestLibraryImage).mockResolvedValue({
+        url: "data:image/png;base64,YQ==",
+        typeTag: "boxart",
+      });
+      render(
+        <DeckArtwork
+          item={{
+            id: 2,
+            position: 2,
+            kind: "script",
+            name: "Game",
+            zapscript: path,
+          }}
+        />,
+      );
+      expect(await screen.findByAltText("")).toBeInTheDocument();
+      expect(requestLibraryImage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          systemId: "SNES",
+          path,
+        }),
+        "SNES",
+        expect.anything(),
+      );
+    },
+  );
 
   it("waits until a row is visible before looking up its title", async () => {
     await seedActiveDevice({ recordId: "artwork-device" });

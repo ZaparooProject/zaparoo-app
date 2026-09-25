@@ -102,6 +102,9 @@ export function LibraryTaggedCollection({
   const scrollRef = useRef<HTMLDivElement>(null);
   const headingRef = usePageHeadingFocus<HTMLHeadingElement>(t(config.title));
   const connected = useStatusStore((state) => state.connected);
+  const coreVersionPending = useStatusStore(
+    (state) => state.coreVersionPending,
+  );
   const gamesIndex = useStatusStore((state) => state.gamesIndex);
   const deviceKey = useActiveDeviceKey();
   const activateLibraryDevice = useLibrarySessionStore(
@@ -118,8 +121,10 @@ export function LibraryTaggedCollection({
     null,
   );
   const libraryFeature = useCoreFeature("mediaLibrary");
+  // Same strictness as the Library entry points, so a collection reachable
+  // from Library never opens on "Update Core".
   const collectionFeature = useCoreFeature(config.feature, {
-    requireKnownSupport: true,
+    requireKnownSupport: config.feature !== "mediaFavorites",
   });
 
   useLayoutEffect(() => {
@@ -182,9 +187,20 @@ export function LibraryTaggedCollection({
   }, [goBack]);
   useBackButtonHandler(`library-${scope}`, handleBackButton);
 
+  const loadingContent = (
+    <DelayedLoading>
+      <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
+        <LoadingSpinner size={16} className="text-primary" />
+        <span>{t(config.loading)}</span>
+      </div>
+    </DelayedLoading>
+  );
+
   let content: ReactNode;
   if (!connected) {
     content = <EmptyState title={t("library.disconnected")} />;
+  } else if (coreVersionPending) {
+    content = loadingContent;
   } else if (!libraryFeature.available || !collectionFeature.available) {
     content = (
       <EmptyState
@@ -197,14 +213,7 @@ export function LibraryTaggedCollection({
   } else if (!gamesIndex.exists) {
     content = <EmptyState title={t("library.databaseRequired")} />;
   } else if (collectionQuery.isLoading) {
-    content = (
-      <DelayedLoading>
-        <div className="text-muted-foreground flex items-center justify-center gap-2 py-8">
-          <LoadingSpinner size={16} className="text-primary" />
-          <span>{t(config.loading)}</span>
-        </div>
-      </DelayedLoading>
-    );
+    content = loadingContent;
   } else if (collectionQuery.isError) {
     content = (
       <EmptyState

@@ -97,11 +97,7 @@ export function DeckArtwork({
   });
   const pathParts =
     target?.kind === "path"
-      ? target.path
-          .replaceAll("\\\\", "/")
-          .toLowerCase()
-          .split("/")
-          .slice(0, -1)
+      ? target.path.replaceAll("\\", "/").toLowerCase().split("/").slice(0, -1)
       : [];
   const pathSystems =
     systems.data?.systems.filter((system) =>

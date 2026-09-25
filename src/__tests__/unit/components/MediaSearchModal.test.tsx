@@ -291,6 +291,28 @@ describe("MediaSearchModal", () => {
     ).toBeInTheDocument();
   });
 
+  it("returns to search when tag support disappears while picking tags", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <MediaSearchModal isOpen close={mockClose} onSelect={mockOnSelect} />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "create.search.tagsInput" }),
+    );
+    expect(
+      screen.queryByRole("dialog", { name: "create.search.title" }),
+    ).not.toBeInTheDocument();
+
+    mockStoreState.coreVersionPending = true;
+    rerender(
+      <MediaSearchModal isOpen close={mockClose} onSelect={mockOnSelect} />,
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "create.search.title" }),
+    ).toBeInTheDocument();
+  });
+
   it("hides tag filters on Core versions without known support", async () => {
     mockStoreState.coreVersion = "2.6.9";
     render(

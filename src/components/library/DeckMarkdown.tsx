@@ -25,14 +25,14 @@ export function DeckMarkdown({ children }: { children: string }) {
             ) : (
               <span>{children}</span>
             ),
-          img: ({ src, alt }) => (
-            <img
-              src={src}
-              alt={alt ?? ""}
-              loading="lazy"
-              className="max-w-full"
-            />
-          ),
+          // Descriptions come from other users, so images are links rather
+          // than automatic requests to a host the viewer never chose.
+          img: ({ src, alt }) =>
+            typeof src === "string" && /^https?:\/\//i.test(src) ? (
+              <a href={src} target="_blank" rel="noopener noreferrer">
+                {alt || src}
+              </a>
+            ) : null,
         }}
       >
         {children}
