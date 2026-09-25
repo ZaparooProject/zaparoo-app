@@ -6,7 +6,6 @@ import {
   useState,
 } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Heart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useActiveDeviceKey } from "@/hooks/useActiveDeviceKey";
@@ -40,7 +39,8 @@ import { LibraryLaunchableModal } from "@/components/library/LibraryLaunchableMo
 import { getTabBarPanelId, getTabBarTabId } from "@/components/wui/tabBarIds";
 import { EmptyState } from "@/components/wui/EmptyState";
 import { Button } from "@/components/wui/Button";
-import { Card } from "@/components/wui/Card";
+import { TabBar } from "@/components/wui/TabBar";
+import { LibraryCollectionList } from "@/components/library/LibraryCollectionList";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NextIcon } from "@/lib/images";
 import { useHapticPress } from "@/hooks/useHapticPress";
@@ -57,6 +57,8 @@ export function Library() {
     t("library.title"),
   );
   const scrollRef = useRef<HTMLDivElement>(null);
+  const view = useLibrarySessionStore((state) => state.view);
+  const setView = useLibrarySessionStore((state) => state.setView);
   const selectedCategory = useLibrarySessionStore((state) => state.category);
   const setSelectedCategory = useLibrarySessionStore(
     (state) => state.setCategory,
@@ -94,6 +96,9 @@ export function Library() {
   }, [activateLibraryDevice, deviceKey]);
   const libraryFeature = useCoreFeature("mediaLibrary");
   const favoritesFeature = useCoreFeature("mediaFavorites");
+  const preferencesFeature = useCoreFeature("mediaPreferences", {
+    requireKnownSupport: true,
+  });
   const systemsQuery = useQuery({
     queryKey: ["systems", deviceKey, { all: false, launchables: true }],
     queryFn: () => CoreAPI.systems(undefined, { includeLaunchables: true }),
@@ -141,6 +146,12 @@ export function Library() {
     systemTabIdPrefix,
   );
   const selectedCategoryPanelId = getTabBarPanelId(selectedCategoryTabId);
+  const systemsViewTabId = getTabBarTabId("systems", "library-view-tab");
+  const collectionsViewTabId = getTabBarTabId(
+    "collections",
+    "library-view-tab",
+  );
+  const selectedView = favoritesFeature.available ? view : "systems";
 
   const openOptions = () => {
     setDraftManufacturer(manufacturerFilter);
@@ -161,52 +172,68 @@ export function Library() {
   };
 
   const withLibrarySections = (systemsContent: ReactNode) => (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       {favoritesFeature.available && (
-        <section
-          className="flex flex-col gap-2"
-          aria-labelledby="library-collections-heading"
-        >
-          <h2
-            id="library-collections-heading"
-            className="text-muted-foreground text-sm font-semibold"
-          >
-            {t("library.collections")}
-          </h2>
-          <nav aria-label={t("library.favoritesLabel")}>
-            <Link
-              to="/library/favorites"
-              onClick={() => forgetScroll("library:favorites:list")}
-              className="block rounded-xl focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none sm:w-[calc(50%_-_0.375rem)]"
-            >
-              <Card
-                className="flex min-h-16 items-center justify-between gap-3"
-                pressable
-              >
-                <span className="flex items-center gap-3 font-semibold">
-                  <Heart size={20} aria-hidden="true" />
-                  {t("library.favorites")}
-                </span>
-                <span aria-hidden="true">
-                  <NextIcon size="20" />
-                </span>
-              </Card>
-            </Link>
-          </nav>
-        </section>
+        <TabBar
+          label={t("library.browseBy")}
+          role="tab"
+          options={[
+            {
+              value: "systems",
+              label: t("library.systems"),
+              id: systemsViewTabId,
+            },
+            {
+              value: "collections",
+              label: t("library.collections"),
+              id: collectionsViewTabId,
+            },
+          ]}
+          value={selectedView}
+          onChange={(next) => {
+            setView(next);
+            scrollRef.current?.scrollTo?.({ top: 0 });
+          }}
+        />
       )}
       <section
-        className="flex flex-col gap-2"
-        aria-labelledby="library-systems-heading"
+        id={
+          favoritesFeature.available
+            ? getTabBarPanelId(systemsViewTabId)
+            : undefined
+        }
+        role={favoritesFeature.available ? "tabpanel" : undefined}
+        aria-labelledby={
+          favoritesFeature.available
+            ? systemsViewTabId
+            : "library-systems-heading"
+        }
+        hidden={selectedView !== "systems"}
       >
         <h2
           id="library-systems-heading"
-          className="text-muted-foreground text-sm font-semibold"
+          className={
+            favoritesFeature.available
+              ? "sr-only"
+              : "text-muted-foreground text-sm font-semibold"
+          }
         >
           {t("library.systems")}
         </h2>
-        <div>{systemsContent}</div>
+        {systemsContent}
       </section>
+      {favoritesFeature.available && (
+        <section
+          id={getTabBarPanelId(collectionsViewTabId)}
+          role="tabpanel"
+          aria-labelledby={collectionsViewTabId}
+          hidden={selectedView !== "collections"}
+        >
+          <LibraryCollectionList
+            preferencesAvailable={preferencesFeature.available}
+          />
+        </section>
+      )}
     </div>
   );
 
@@ -223,7 +250,7 @@ export function Library() {
       />
     );
   } else if (!gamesIndex.exists) {
-    content = (
+    content = withLibrarySections(
       <EmptyState
         title={t("library.databaseRequired")}
         action={
@@ -235,7 +262,7 @@ export function Library() {
             {t("library.openMediaSettings")}
           </Link>
         }
-      />
+      />,
     );
   } else if (systemsQuery.isLoading) {
     content = withLibrarySections(
@@ -387,6 +414,7 @@ export function Library() {
               void navigate({ to: "/library/search" });
             }}
             onOpenOptions={openOptions}
+            showOptions={selectedView === "systems"}
             searchDisabled={
               !connected || !gamesIndex.exists || !libraryFeature.available
             }

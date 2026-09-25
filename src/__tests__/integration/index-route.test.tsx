@@ -28,13 +28,6 @@ import {
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 import { KeepAwake } from "@capacitor-community/keep-awake";
 
-function expectVisibleEmptyValues(regionName: string, count: number) {
-  const region = screen.getByRole("region", { name: regionName });
-  const emptyValues = within(region).getAllByText("none", { exact: true });
-  expect(emptyValues).toHaveLength(count);
-  emptyValues.forEach((value) => expect(value).toBeVisible());
-}
-
 // Mock state that can be modified per-test
 const mockScanOperationsState = {
   scanSession: false,
@@ -180,16 +173,25 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
-    useQuery: vi.fn(() => mockHistoryQueryState),
+    useQuery: vi.fn((options: { queryKey: unknown[] }) =>
+      options.queryKey[0] === "mediaMeta"
+        ? (actual.useQuery as typeof import("@tanstack/react-query").useQuery)(
+            options as never,
+          )
+        : mockHistoryQueryState,
+    ),
   };
 });
 
 // Mock CoreAPI
 vi.mock("@/lib/coreApi", () => ({
+  isUnindexedMediaError: vi.fn(() => false),
   CoreAPI: {
     history: vi.fn(),
     run: vi.fn().mockResolvedValue(undefined),
     mediaControl: vi.fn().mockResolvedValue(undefined),
+    mediaMeta: vi.fn(),
+    mediaTagsUpdate: vi.fn(),
   },
 }));
 
@@ -589,69 +591,30 @@ describe("Index Route Integration", () => {
     });
   });
 
-  describe("Last Scanned Info", () => {
-    it("should show heading and empty values when no token scanned", () => {
-      render(
-        <TestWrapper>
-          <Index />
-        </TestWrapper>,
-      );
-
-      expect(screen.getByText("scan.lastScannedHeading")).toBeInTheDocument();
-      expectVisibleEmptyValues("scan.lastScannedHeading", 2);
+  it("keeps recent scans in history without showing a Last Scanned section", () => {
+    useStatusStore.setState({
+      lastToken: {
+        type: "ntag215",
+        uid: "abc123def456ab",
+        text: "Super Mario Bros",
+        data: "",
+        scanTime: new Date().toISOString(),
+      },
     });
 
-    it("should show token info when last token exists in store", () => {
-      useStatusStore.setState({
-        lastToken: {
-          type: "ntag215",
-          uid: "abc123def456ab",
-          text: "Super Mario Bros",
-          data: "",
-          scanTime: new Date().toISOString(),
-        },
-      });
+    render(
+      <TestWrapper>
+        <Index />
+      </TestWrapper>,
+    );
 
-      render(
-        <TestWrapper>
-          <Index />
-        </TestWrapper>,
-      );
-
-      expect(screen.getByText(/Super Mario Bros/)).toBeInTheDocument();
-      expect(screen.getByText(/abc123def456ab/)).toBeInTheDocument();
-    });
-
-    it("should update when lastToken store changes", () => {
-      const { rerender } = render(
-        <TestWrapper>
-          <Index />
-        </TestWrapper>,
-      );
-
-      // Initially shows explicit empty values
-      expectVisibleEmptyValues("scan.lastScannedHeading", 2);
-
-      // Update store
-      act(() => {
-        useStatusStore.getState().setLastToken({
-          type: "ntag215",
-          uid: "newtoken12345a",
-          text: "Zelda",
-          data: "",
-          scanTime: new Date().toISOString(),
-        });
-      });
-
-      // Re-render to pick up state change
-      rerender(
-        <TestWrapper>
-          <Index />
-        </TestWrapper>,
-      );
-
-      expect(screen.getByText(/Zelda/)).toBeInTheDocument();
-    });
+    expect(
+      screen.queryByText("scan.lastScannedHeading"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/abc123def456ab/)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "scan.historyTitle" }),
+    ).toBeInTheDocument();
   });
 
   describe("Now Playing Info", () => {
@@ -800,6 +763,87 @@ describe("Index Route Integration", () => {
       expect(
         screen.getByRole("button", { name: "scan.playlistNext" }),
       ).toBeInTheDocument();
+    });
+
+    it("should expose preference controls for both playing slots from indexed metadata", async () => {
+      useStatusStore.setState({
+        coreVersion: "2.18.0",
+        gamesIndex: { exists: true, indexing: false },
+        playing: {
+          systemId: "SNES",
+          systemName: "SNES",
+          mediaName: "Game",
+          mediaPath: "/roms/game.sfc",
+        },
+        backgroundPlaying: {
+          systemId: "Audio",
+          systemName: "Audio",
+          mediaName: "Song",
+          mediaPath: "/music/song.mp3",
+        },
+      });
+      vi.mocked(CoreAPI.mediaMeta).mockImplementation(async ({ path }) => ({
+        media: {
+          path: path!,
+          parentDir: "/",
+          isMissing: false,
+          tags: [
+            {
+              type: "user",
+              tag: path?.includes("song") ? "liked" : "favorite",
+            },
+          ],
+          properties: {},
+          title: {
+            slug: "item",
+            name: "Item",
+            slugLength: 4,
+            slugWordCount: 1,
+            system: { id: "SNES", name: "SNES" },
+            tags: [],
+            properties: {},
+          },
+        },
+      }));
+      vi.mocked(CoreAPI.mediaTagsUpdate).mockResolvedValue({
+        tags: [{ type: "user", tag: "playlater" }],
+      });
+      render(
+        <TestWrapper>
+          <Index />
+        </TestWrapper>,
+      );
+
+      const primary = within(
+        screen.getByRole("region", { name: "scan.nowPlayingHeading" }),
+      );
+      const background = within(
+        screen.getByRole("region", { name: "scan.backgroundMediaHeading" }),
+      );
+      expect(
+        await primary.findByRole("button", { name: "library.removeFavorite" }),
+      ).toBeEnabled();
+      expect(
+        await background.findByRole("button", { name: "library.removeLike" }),
+      ).toBeEnabled();
+      await userEvent
+        .setup()
+        .click(
+          background.getByRole("button", { name: "library.addPlayLater" }),
+        );
+      expect(CoreAPI.mediaTagsUpdate).toHaveBeenCalledWith({
+        system: "Audio",
+        path: "/music/song.mp3",
+        add: ["user:playlater"],
+      });
+      expect(
+        await background.findByRole("button", {
+          name: "library.removePlayLater",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        primary.getByRole("button", { name: "library.removeFavorite" }),
+      ).toHaveAttribute("aria-pressed", "true");
     });
 
     it("should hide background media below the Core feature gate", () => {
@@ -1409,7 +1453,7 @@ describe("Index Route Integration", () => {
       );
 
       // Initially no media playing
-      expectVisibleEmptyValues("scan.nowPlayingHeading", 2);
+      expect(screen.getByText("scan.nothingPlaying")).toBeVisible();
 
       // Update store
       act(() => {

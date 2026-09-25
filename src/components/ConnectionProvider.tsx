@@ -617,6 +617,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
           queryKey: [LIBRARY_QUERY_KEYS.favorites],
         });
         queryClient.invalidateQueries({
+          queryKey: [LIBRARY_QUERY_KEYS.collections],
+        });
+        queryClient.invalidateQueries({
           queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
         });
         queryClient.invalidateQueries({
@@ -745,6 +748,38 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
             break;
           }
 
+          case Notification.DecksChanged: {
+            const params = notification.params;
+            if (
+              !isNotificationParams(params) ||
+              typeof params.deckId !== "string"
+            ) {
+              break;
+            }
+            void queryClient.invalidateQueries({
+              queryKey: [LIBRARY_QUERY_KEYS.decks, activeRecordId ?? ""],
+            });
+            void queryClient.resetQueries({
+              queryKey: [LIBRARY_QUERY_KEYS.favorites],
+            });
+            void queryClient.resetQueries({
+              queryKey: [LIBRARY_QUERY_KEYS.collections],
+            });
+            void queryClient.invalidateQueries({
+              queryKey: [LIBRARY_QUERY_KEYS.meta],
+            });
+            void queryClient.invalidateQueries({
+              queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
+            });
+            void queryClient.resetQueries({
+              queryKey: [LIBRARY_QUERY_KEYS.browse],
+            });
+            void queryClient.resetQueries({
+              queryKey: ["infiniteMediaSearch"],
+            });
+            break;
+          }
+
           case Notification.MediaIndexing: {
             const params = notification.params;
             logger.log("mediaIndexing", params);
@@ -785,6 +820,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
               });
               queryClient.invalidateQueries({
                 queryKey: [LIBRARY_QUERY_KEYS.favorites],
+              });
+              queryClient.invalidateQueries({
+                queryKey: [LIBRARY_QUERY_KEYS.collections],
               });
               queryClient.invalidateQueries({
                 queryKey: [LIBRARY_QUERY_KEYS.browseIndex],
@@ -1146,6 +1184,7 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
         setCoreVersionPending(false);
       });
 
+    queryClient.invalidateQueries({ queryKey: [LIBRARY_QUERY_KEYS.decks] });
     // Refetch device-scoped library data after every connection. This handles
     // reconnects where Core's library changed while app was disconnected.
     queryClient.invalidateQueries({ queryKey: ["media"] });
@@ -1154,6 +1193,9 @@ export function ConnectionProvider({ children }: ConnectionProviderProps) {
     queryClient.invalidateQueries({ queryKey: ["infiniteMediaSearch"] });
     queryClient.invalidateQueries({
       queryKey: [LIBRARY_QUERY_KEYS.favorites],
+    });
+    queryClient.invalidateQueries({
+      queryKey: [LIBRARY_QUERY_KEYS.collections],
     });
     queryClient.invalidateQueries({
       queryKey: [LIBRARY_QUERY_KEYS.browseIndex],

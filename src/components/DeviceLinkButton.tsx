@@ -13,11 +13,13 @@ import { useStatusStore } from "@/lib/store";
 interface DeviceLinkButtonProps {
   enabled: boolean;
   onStateChange?: (state: DeviceLinkState) => void;
+  onSignIn?: () => void;
 }
 
 export function DeviceLinkButton({
   enabled,
   onStateChange,
+  onSignIn,
 }: DeviceLinkButtonProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -74,7 +76,9 @@ export function DeviceLinkButton({
     return (
       <Button
         label={t("online.deviceLink.signIn")}
-        onClick={() => router.navigate({ to: "/settings/online" })}
+        onClick={
+          onSignIn ?? (() => void router.navigate({ to: "/settings/online" }))
+        }
         intent="primary"
         className="w-full"
       />

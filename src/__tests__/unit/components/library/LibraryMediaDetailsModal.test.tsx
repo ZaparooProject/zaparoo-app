@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
+import toast from "react-hot-toast";
 import { render as renderWithWrapper } from "@testing-library/react";
 import {
   act,
@@ -122,6 +123,194 @@ describe("LibraryMediaDetailsModal", () => {
     useStatusStore.getState().setWriteQueue("");
   });
 
+  it("keeps preference and write actions but omits Launch for Now Playing", async () => {
+    useStatusStore.setState({ coreVersion: "2.18.0" });
+    const { props } = renderModal({ context: "nowPlaying" });
+
+    const dialog = await screen.findByRole("dialog", { name: "Super Game" });
+    expect(await within(dialog).findByText("Platformer")).toBeVisible();
+    expect(
+      within(dialog).queryByRole("button", { name: "library.launch" }),
+    ).not.toBeInTheDocument();
+    const actions = within(dialog).getByRole("group", {
+      name: "library.mediaActions",
+    });
+    for (const name of [
+      "library.addFavorite",
+      "library.addLike",
+      "library.addDislike",
+      "library.addPlayLater",
+      "library.write",
+    ]) {
+      expect(within(actions).getByRole("button", { name })).toBeInTheDocument();
+    }
+    expect(
+      screen.getByRole("link", { name: "accessibility.skipToActions" }),
+    ).toBeInTheDocument();
+
+    await userEvent
+      .setup()
+      .click(within(dialog).getAllByRole("button", { name: "nav.close" })[0]!);
+    expect(props.close).toHaveBeenCalledOnce();
+  });
+
+  it.each([false, true])(
+    "adds the selected result value from details with filename mode %s",
+    async (showFilenames) => {
+      usePreferencesStore.setState({ showFilenames });
+      useStatusStore.setState({ coreVersion: "2.18.0" });
+      vi.spyOn(CoreAPI, "decks").mockResolvedValue({
+        decks: [
+          {
+            deckId: "0k3v9x2rq7bm",
+            name: "Weekend",
+            description: "",
+            owned: true,
+            locked: false,
+            itemCount: 0,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          {
+            deckId: "0k3v9x2rq7bn",
+            name: "Locked",
+            description: "",
+            owned: true,
+            locked: true,
+            itemCount: 0,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
+      });
+      const success = vi.spyOn(toast, "success");
+      const update = vi.spyOn(CoreAPI, "deckUpdate").mockResolvedValue({
+        deckId: "0k3v9x2rq7bm",
+        name: "Weekend",
+        description: "",
+        owned: true,
+        locked: false,
+        itemCount: 1,
+        items: [],
+        createdAt: 1,
+        updatedAt: 2,
+      });
+      renderModal({
+        entry: {
+          ...ENTRY,
+          zapScript: "@SNES/Super Game (region:us)",
+          relativePath: "SNES/Super Game.sfc",
+        },
+      });
+      const dialog = await screen.findByRole("dialog", { name: "Super Game" });
+      expect(
+        within(dialog).getByRole("button", { name: "library.launch" }),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByRole("button", { name: "library.write" }),
+      ).toBeInTheDocument();
+      await userEvent
+        .setup()
+        .click(within(dialog).getByRole("button", { name: "decks.addAction" }));
+      const picker = await screen.findByRole("dialog", {
+        name: "decks.addAction",
+      });
+      expect(
+        await within(picker).findByRole("button", { name: /Weekend/ }),
+      ).toBeInTheDocument();
+      expect(
+        within(picker).queryByRole("button", { name: /Locked/ }),
+      ).not.toBeInTheDocument();
+      await userEvent
+        .setup()
+        .click(within(picker).getByRole("button", { name: /Weekend/ }));
+      await waitFor(() =>
+        expect(update).toHaveBeenCalledWith({
+          deckId: "0k3v9x2rq7bm",
+          addItems: [
+            {
+              kind: "script",
+              name: ENTRY.name,
+              zapscript: showFilenames
+                ? "SNES/Super Game.sfc"
+                : "@SNES/Super Game (region:us)",
+            },
+          ],
+        }),
+      );
+      await waitFor(() => expect(success).toHaveBeenCalledWith("decks.added"));
+    },
+  );
+
+  it("separates deck creation from searchable selection and preserves search on cancel", async () => {
+    useStatusStore.setState({ coreVersion: "2.18.0" });
+    vi.spyOn(CoreAPI, "decks").mockResolvedValue({ decks: [] });
+    const create = vi.spyOn(CoreAPI, "deckNew").mockResolvedValue({
+      deckId: "newdeck",
+      name: "Weekend",
+      description: "",
+      owned: true,
+      locked: false,
+      itemCount: 1,
+      items: [],
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const success = vi.spyOn(toast, "success");
+    renderModal({ entry: { ...ENTRY, zapScript: "@SNES/Super Game" } });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "decks.addAction" }),
+    );
+    let picker = screen.getByRole("dialog", { name: "decks.addAction" });
+    expect(
+      within(picker).queryByRole("textbox", { name: "decks.name" }),
+    ).not.toBeInTheDocument();
+    await user.type(
+      within(picker).getByRole("searchbox", { name: "decks.search" }),
+      "Weekend",
+    );
+    expect(
+      await within(picker).findByText("decks.noMatching"),
+    ).toBeInTheDocument();
+    await user.click(within(picker).getByRole("button", { name: "decks.new" }));
+    let form = screen.getByRole("dialog", { name: "decks.new" });
+    expect(
+      within(form).getByRole("button", { name: "decks.createAndAdd" }),
+    ).toBeDisabled();
+    await user.click(within(form).getByRole("button", { name: "nav.cancel" }));
+    picker = screen.getByRole("dialog", { name: "decks.addAction" });
+    expect(
+      within(picker).getByRole("searchbox", { name: "decks.search" }),
+    ).toHaveValue("Weekend");
+    await user.click(within(picker).getByRole("button", { name: "decks.new" }));
+    form = screen.getByRole("dialog", { name: "decks.new" });
+    await user.type(
+      within(form).getByRole("textbox", { name: "decks.name" }),
+      "Weekend",
+    );
+    await user.click(
+      within(form).getByRole("button", { name: "decks.createAndAdd" }),
+    );
+    await waitFor(() =>
+      expect(create).toHaveBeenCalledWith({
+        name: "Weekend",
+        items: [
+          { kind: "script", name: ENTRY.name, zapscript: "@SNES/Super Game" },
+        ],
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "decks.new" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Super Game" }),
+    ).toBeInTheDocument();
+    expect(success).toHaveBeenCalledWith("decks.added");
+  });
+
   it("should render persistent actions and curated game metadata", async () => {
     const user = userEvent.setup();
     renderModal();
@@ -210,14 +399,13 @@ describe("LibraryMediaDetailsModal", () => {
       />,
     );
 
-    const closingDialog = screen.getByRole("dialog", { hidden: true });
-    expect(closingDialog).toBe(dialog);
-    expect(closingDialog).toHaveStyle({
+    expect(screen.getAllByRole("dialog", { hidden: true })).toContain(dialog);
+    expect(dialog).toHaveStyle({
       transform: "translate3d(0, 100%, 0)",
       transition: "transform 0.2s ease-in-out",
     });
-    expect(closingDialog).toHaveTextContent("Super Game");
-    expect(closingDialog).toHaveTextContent("A platform adventure.");
+    expect(dialog).toHaveTextContent("Super Game");
+    expect(dialog).toHaveTextContent("A platform adventure.");
     expect(
       screen.getByRole("button", { name: "library.launch", hidden: true }),
     ).toBeInTheDocument();
@@ -243,6 +431,37 @@ describe("LibraryMediaDetailsModal", () => {
     expect(favoriteButton).toHaveAccessibleName("library.removeFavorite");
     expect(favoriteButton).toHaveTextContent("library.favorite");
     expect(screen.queryByLabelText("user favorite")).not.toBeInTheDocument();
+  });
+
+  it("should show all 2.18 preference actions without exposing preference tags as metadata", async () => {
+    useStatusStore.setState({ coreVersion: "2.18.0" });
+    vi.spyOn(CoreAPI, "mediaMeta").mockResolvedValue({
+      media: {
+        ...META_RESPONSE.media,
+        tags: [
+          { type: "user", tag: "liked" },
+          { type: "user", tag: "playlater" },
+          { type: "region", tag: "us" },
+        ],
+      },
+    });
+    renderModal();
+    const actions = await screen.findByRole("group", {
+      name: "library.mediaActions",
+    });
+    expect(
+      await within(actions).findByRole("button", {
+        name: "library.removeLike",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      within(actions).getByRole("button", { name: "library.addDislike" }),
+    ).toBeInTheDocument();
+    expect(
+      within(actions).getByRole("button", { name: "library.removePlayLater" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("user liked")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("user playlater")).not.toBeInTheDocument();
   });
 
   it("should lazy-load alternate image types", async () => {
@@ -408,6 +627,28 @@ describe("LibraryMediaDetailsModal", () => {
     expect(
       screen.getByRole("dialog", { name: "Super Game" }),
     ).toBeInTheDocument();
+  });
+
+  it("keeps the launch caption stable while its icon shows progress", async () => {
+    let finish!: () => void;
+    vi.spyOn(CoreAPI, "run").mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    renderModal();
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "library.launch" }));
+    const pending = screen.getByRole("button", { name: "library.launching" });
+    expect(pending).toHaveTextContent("library.launch");
+    expect(pending).toBeDisabled();
+    await waitFor(() => expect(finish).toBeTypeOf("function"));
+    await act(async () => finish());
+    expect(
+      screen.getByRole("button", { name: "library.launch" }),
+    ).toBeEnabled();
   });
 
   it("should not launch while Core is reconnecting", async () => {

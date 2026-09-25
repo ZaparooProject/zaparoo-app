@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen, waitFor } from "@/test-utils";
+import { act, render, screen, waitFor, within } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import type { User } from "@capacitor-firebase/authentication";
 import toast from "react-hot-toast";
@@ -201,15 +201,23 @@ vi.mock("@/components/OnlineDeviceSetup", () => ({
   OnlineDeviceSetup: ({
     connected,
     warpActive,
+    onSignIn,
   }: {
     connected: boolean;
     warpActive: boolean | null;
+    onSignIn?: () => void;
   }) => (
     <div
       data-testid="online-device-setup"
       data-connected={String(connected)}
       data-warp-active={String(warpActive)}
-    />
+    >
+      {onSignIn && (
+        <button type="button" onClick={onSignIn}>
+          online.deviceLink.signIn
+        </button>
+      )}
+    </div>
   ),
 }));
 
@@ -276,6 +284,12 @@ describe("Settings Online Route", () => {
     return render(<Online />);
   };
 
+  const openAuthSheet = async (user: ReturnType<typeof userEvent.setup>) => {
+    renderComponent();
+    await user.click(screen.getByRole("button", { name: "online.login" }));
+    return screen.getByRole("dialog", { name: "online.login" });
+  };
+
   describe("rendering - logged out state", () => {
     it("should render the page title", () => {
       renderComponent();
@@ -320,6 +334,75 @@ describe("Settings Online Route", () => {
       renderComponent();
       expect(screen.getByText("online.termsOfService")).toBeInTheDocument();
       expect(screen.getByText("online.privacyPolicy")).toBeInTheDocument();
+    });
+
+    it("should show device settings without signing in", () => {
+      mockState.connected = true;
+      renderComponent();
+
+      const device = screen.getByTestId("online-device-setup");
+      expect(device).toHaveAttribute("data-connected", "true");
+      // Core reports Warp for the linked account; the signed-out app can't.
+      expect(device).toHaveAttribute("data-warp-active", "null");
+      expect(
+        screen.getByRole("button", { name: "online.login" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "online.signUp" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("textbox", { name: "online.email" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should open sign-up from the page and sign-in from the device section", async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "online.signUp" }));
+      const signUp = screen.getByRole("dialog", { name: "online.signUp" });
+      expect(
+        within(signUp).getByText("online.ageConfirmLabel"),
+      ).toBeInTheDocument();
+      await user.click(
+        within(signUp).getAllByRole("button", { name: "nav.close" })[0]!,
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("dialog", { name: "online.signUp" }),
+        ).not.toBeInTheDocument(),
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "online.deviceLink.signIn" }),
+      );
+      expect(
+        screen.getByRole("dialog", { name: "online.login" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should close the sign-in sheet once signed in", async () => {
+      const user = userEvent.setup();
+      const sheet = await openAuthSheet(user);
+
+      await user.type(
+        within(sheet).getByPlaceholderText("me@example.com"),
+        "test@example.com",
+      );
+      await user.type(
+        within(sheet).getByLabelText("online.password"),
+        "password123",
+      );
+      await user.click(
+        within(sheet).getByRole("button", { name: "online.login" }),
+      );
+
+      await waitFor(() => expect(mockSetLoggedInUser).toHaveBeenCalled());
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("dialog", { name: "online.login" }),
+        ).not.toBeInTheDocument(),
+      );
     });
 
     it("should render the purchase preview without authentication", () => {
@@ -481,34 +564,38 @@ describe("Settings Online Route", () => {
   describe("mode toggle", () => {
     it("should switch to signup mode when clicking signup link", async () => {
       const user = userEvent.setup();
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      await user.click(screen.getByText("online.switchToSignUpLink"));
+      await user.click(within(sheet).getByText("online.switchToSignUpLink"));
 
       // Should now show signup button
       expect(
-        screen.getByRole("button", { name: "online.signUp" }),
+        within(sheet).getByRole("button", { name: "online.signUp" }),
       ).toBeInTheDocument();
       // Should show age confirmation checkbox
-      expect(screen.getByText("online.ageConfirmLabel")).toBeInTheDocument();
+      expect(
+        within(sheet).getByText("online.ageConfirmLabel"),
+      ).toBeInTheDocument();
       // Should show switch to login link
-      expect(screen.getByText("online.switchToLogInLink")).toBeInTheDocument();
+      expect(
+        within(sheet).getByText("online.switchToLogInLink"),
+      ).toBeInTheDocument();
     });
 
     it("should switch back to login mode", async () => {
       const user = userEvent.setup();
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       // Switch to signup
-      await user.click(screen.getByText("online.switchToSignUpLink"));
+      await user.click(within(sheet).getByText("online.switchToSignUpLink"));
       // Switch back to login
-      await user.click(screen.getByText("online.switchToLogInLink"));
+      await user.click(within(sheet).getByText("online.switchToLogInLink"));
 
       expect(
-        screen.getByRole("button", { name: "online.login" }),
+        within(sheet).getByRole("button", { name: "online.login" }),
       ).toBeInTheDocument();
       expect(
-        screen.queryByText("online.ageConfirmLabel"),
+        within(sheet).queryByText("online.ageConfirmLabel"),
       ).not.toBeInTheDocument();
     });
   });
@@ -815,17 +902,19 @@ describe("Settings Online Route", () => {
   describe("email/password authentication", () => {
     it("should login with email and password", async () => {
       const user = userEvent.setup();
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       // Enter credentials
-      const emailInput = screen.getByPlaceholderText("me@example.com");
-      const passwordInput = screen.getByLabelText("online.password");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
+      const passwordInput = within(sheet).getByLabelText("online.password");
 
       await user.type(emailInput, "test@example.com");
       await user.type(passwordInput, "password123");
 
       // Click login
-      await user.click(screen.getByRole("button", { name: "online.login" }));
+      await user.click(
+        within(sheet).getByRole("button", { name: "online.login" }),
+      );
 
       await waitFor(() => {
         expect(
@@ -844,15 +933,17 @@ describe("Settings Online Route", () => {
         new Error("auth/invalid-credential"),
       );
 
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      const emailInput = screen.getByPlaceholderText("me@example.com");
-      const passwordInput = screen.getByLabelText("online.password");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
+      const passwordInput = within(sheet).getByLabelText("online.password");
 
       await user.type(emailInput, "test@example.com");
       await user.type(passwordInput, "wrong");
 
-      await user.click(screen.getByRole("button", { name: "online.login" }));
+      await user.click(
+        within(sheet).getByRole("button", { name: "online.login" }),
+      );
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("online.loginWrong");
@@ -873,24 +964,26 @@ describe("Settings Online Route", () => {
       });
       mockUpdateRequirements.mockResolvedValueOnce({});
 
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       // Switch to signup mode
-      await user.click(screen.getByText("online.switchToSignUpLink"));
+      await user.click(within(sheet).getByText("online.switchToSignUpLink"));
 
       // Enter credentials
-      const emailInput = screen.getByPlaceholderText("me@example.com");
-      const passwordInput = screen.getByLabelText("online.password");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
+      const passwordInput = within(sheet).getByLabelText("online.password");
 
       await user.type(emailInput, "new@example.com");
       await user.type(passwordInput, "password123");
 
       // Confirm age
-      const ageCheckbox = screen.getByRole("checkbox");
+      const ageCheckbox = within(sheet).getByRole("checkbox");
       await user.click(ageCheckbox);
 
       // Click signup
-      await user.click(screen.getByRole("button", { name: "online.signUp" }));
+      await user.click(
+        within(sheet).getByRole("button", { name: "online.signUp" }),
+      );
 
       await waitFor(() => {
         expect(
@@ -917,20 +1010,20 @@ describe("Settings Online Route", () => {
 
     it("should disable signup button when age confirmation is not checked", async () => {
       const user = userEvent.setup();
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       // Switch to signup mode
-      await user.click(screen.getByText("online.switchToSignUpLink"));
+      await user.click(within(sheet).getByText("online.switchToSignUpLink"));
 
       // Enter credentials but don't check age
-      const emailInput = screen.getByPlaceholderText("me@example.com");
-      const passwordInput = screen.getByLabelText("online.password");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
+      const passwordInput = within(sheet).getByLabelText("online.password");
 
       await user.type(emailInput, "new@example.com");
       await user.type(passwordInput, "password123");
 
       // Signup button should be disabled without age confirmation
-      const signupButton = screen.getByRole("button", {
+      const signupButton = within(sheet).getByRole("button", {
         name: "online.signUp",
       });
       expect(signupButton).toBeDisabled();
@@ -948,18 +1041,20 @@ describe("Settings Online Route", () => {
         new Error("email-already-in-use"),
       );
 
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      await user.click(screen.getByText("online.switchToSignUpLink"));
+      await user.click(within(sheet).getByText("online.switchToSignUpLink"));
 
-      const emailInput = screen.getByPlaceholderText("me@example.com");
-      const passwordInput = screen.getByLabelText("online.password");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
+      const passwordInput = within(sheet).getByLabelText("online.password");
 
       await user.type(emailInput, "existing@example.com");
       await user.type(passwordInput, "password123");
 
-      await user.click(screen.getByRole("checkbox"));
-      await user.click(screen.getByRole("button", { name: "online.signUp" }));
+      await user.click(within(sheet).getByRole("checkbox"));
+      await user.click(
+        within(sheet).getByRole("button", { name: "online.signUp" }),
+      );
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("online.emailExists");
@@ -974,18 +1069,20 @@ describe("Settings Online Route", () => {
         new Error("weak-password"),
       );
 
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      await user.click(screen.getByText("online.switchToSignUpLink"));
+      await user.click(within(sheet).getByText("online.switchToSignUpLink"));
 
-      const emailInput = screen.getByPlaceholderText("me@example.com");
-      const passwordInput = screen.getByLabelText("online.password");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
+      const passwordInput = within(sheet).getByLabelText("online.password");
 
       await user.type(emailInput, "new@example.com");
       await user.type(passwordInput, "123");
 
-      await user.click(screen.getByRole("checkbox"));
-      await user.click(screen.getByRole("button", { name: "online.signUp" }));
+      await user.click(within(sheet).getByRole("checkbox"));
+      await user.click(
+        within(sheet).getByRole("button", { name: "online.signUp" }),
+      );
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("online.weakPassword");
@@ -995,10 +1092,10 @@ describe("Settings Online Route", () => {
 
     it("should submit on Enter key press", async () => {
       const user = userEvent.setup();
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      const emailInput = screen.getByPlaceholderText("me@example.com");
-      const passwordInput = screen.getByLabelText("online.password");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
+      const passwordInput = within(sheet).getByLabelText("online.password");
 
       await user.type(emailInput, "test@example.com");
       await user.type(passwordInput, "password123");
@@ -1015,19 +1112,25 @@ describe("Settings Online Route", () => {
   });
 
   describe("MFA authentication", () => {
+    let sheet: HTMLElement;
     const startMfaChallenge = async () => {
       const user = userEvent.setup();
       mockMfaAuthentication.signInWithEmailAndPassword.mockResolvedValueOnce({
         mfaRequired: true,
       });
-      renderComponent();
+      sheet = await openAuthSheet(user);
 
       await user.type(
-        screen.getByPlaceholderText("me@example.com"),
+        within(sheet).getByPlaceholderText("me@example.com"),
         "test@example.com",
       );
-      await user.type(screen.getByLabelText("online.password"), "password123");
-      await user.click(screen.getByRole("button", { name: "online.login" }));
+      await user.type(
+        within(sheet).getByLabelText("online.password"),
+        "password123",
+      );
+      await user.click(
+        within(sheet).getByRole("button", { name: "online.login" }),
+      );
 
       await screen.findByRole("heading", { name: "online.mfaTitle" });
       return user;
@@ -1123,7 +1226,7 @@ describe("Settings Online Route", () => {
         screen.getByRole("heading", { name: "online.mfaTitle" }),
       ).toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: "online.login" }),
+        within(sheet).queryByRole("button", { name: "online.login" }),
       ).not.toBeInTheDocument();
 
       await act(async () => {
@@ -1173,7 +1276,7 @@ describe("Settings Online Route", () => {
         expect(mockMfaAuthentication.cancelSignIn).toHaveBeenCalledTimes(1);
       });
       expect(
-        screen.getByRole("button", { name: "online.login" }),
+        within(sheet).getByRole("button", { name: "online.login" }),
       ).toBeInTheDocument();
     });
 
@@ -1194,7 +1297,7 @@ describe("Settings Online Route", () => {
         expect(toast.error).toHaveBeenCalledWith("online.mfaExpired");
       });
       expect(
-        screen.getByRole("button", { name: "online.login" }),
+        within(sheet).getByRole("button", { name: "online.login" }),
       ).toBeInTheDocument();
     });
   });
@@ -1202,12 +1305,12 @@ describe("Settings Online Route", () => {
   describe("forgot password - logged out", () => {
     it("should send password reset email when email is entered", async () => {
       const user = userEvent.setup();
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      const emailInput = screen.getByPlaceholderText("me@example.com");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
       await user.type(emailInput, "test@example.com");
 
-      await user.click(screen.getByText("online.forgotPassword"));
+      await user.click(within(sheet).getByText("online.forgotPassword"));
 
       await waitFor(() => {
         expect(mockFirebaseAuth.sendPasswordResetEmail).toHaveBeenCalledWith({
@@ -1222,12 +1325,14 @@ describe("Settings Online Route", () => {
 
     it("should show error when forgot password clicked without email", async () => {
       const user = userEvent.setup();
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      await user.click(screen.getByText("online.forgotPassword"));
+      await user.click(within(sheet).getByText("online.forgotPassword"));
 
       await waitFor(() => {
-        expect(screen.getByText("online.enterEmailFirst")).toBeInTheDocument();
+        expect(
+          within(sheet).getByText("online.enterEmailFirst"),
+        ).toBeInTheDocument();
       });
 
       expect(mockFirebaseAuth.sendPasswordResetEmail).not.toHaveBeenCalled();
@@ -1239,12 +1344,12 @@ describe("Settings Online Route", () => {
         new Error("User not found"),
       );
 
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      const emailInput = screen.getByPlaceholderText("me@example.com");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
       await user.type(emailInput, "notfound@example.com");
 
-      await user.click(screen.getByText("online.forgotPassword"));
+      await user.click(within(sheet).getByText("online.forgotPassword"));
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("online.resetEmailFailed");
@@ -1256,10 +1361,10 @@ describe("Settings Online Route", () => {
     it("should login with Google", async () => {
       const user = userEvent.setup();
       mockState.platform = "ios";
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       await user.click(
-        screen.getByRole("button", { name: "online.loginGoogle" }),
+        within(sheet).getByRole("button", { name: "online.loginGoogle" }),
       );
 
       await waitFor(() => {
@@ -1281,10 +1386,10 @@ describe("Settings Online Route", () => {
     it("should login with Apple", async () => {
       const user = userEvent.setup();
       mockState.platform = "ios";
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       await user.click(
-        screen.getByRole("button", { name: "online.loginApple" }),
+        within(sheet).getByRole("button", { name: "online.loginApple" }),
       );
 
       await waitFor(() => {
@@ -1309,14 +1414,14 @@ describe("Settings Online Route", () => {
       mockMfaAuthentication.signInWithGoogle.mockResolvedValueOnce({
         mfaRequired: true,
       });
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       await user.click(
-        screen.getByRole("button", { name: "online.loginGoogle" }),
+        within(sheet).getByRole("button", { name: "online.loginGoogle" }),
       );
 
       expect(
-        await screen.findByRole("heading", { name: "online.mfaTitle" }),
+        await within(sheet).findByRole("heading", { name: "online.mfaTitle" }),
       ).toBeInTheDocument();
       expect(mockUpdateRequirements).not.toHaveBeenCalled();
     });
@@ -1327,14 +1432,14 @@ describe("Settings Online Route", () => {
       mockMfaAuthentication.signInWithApple.mockResolvedValueOnce({
         mfaRequired: true,
       });
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       await user.click(
-        screen.getByRole("button", { name: "online.loginApple" }),
+        within(sheet).getByRole("button", { name: "online.loginApple" }),
       );
 
       expect(
-        await screen.findByRole("heading", { name: "online.mfaTitle" }),
+        await within(sheet).findByRole("heading", { name: "online.mfaTitle" }),
       ).toBeInTheDocument();
       expect(mockUpdateRequirements).not.toHaveBeenCalled();
     });
@@ -1345,10 +1450,10 @@ describe("Settings Online Route", () => {
       mockMfaAuthentication.signInWithGoogle.mockRejectedValueOnce(
         new Error("popup_closed_by_user"),
       );
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       await user.click(
-        screen.getByRole("button", { name: "online.loginGoogle" }),
+        within(sheet).getByRole("button", { name: "online.loginGoogle" }),
       );
 
       await waitFor(() => {
@@ -1364,15 +1469,15 @@ describe("Settings Online Route", () => {
       mockMfaAuthentication.signInWithGoogle.mockRejectedValueOnce(
         new Error("12501: "),
       );
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       await user.click(
-        screen.getByRole("button", { name: "online.loginGoogle" }),
+        within(sheet).getByRole("button", { name: "online.loginGoogle" }),
       );
 
       await waitFor(() => {
         expect(
-          screen.getByRole("button", { name: "online.loginGoogle" }),
+          within(sheet).getByRole("button", { name: "online.loginGoogle" }),
         ).toBeEnabled();
       });
       expect(mockMfaAuthentication.signInWithGoogle).toHaveBeenCalledOnce();
@@ -1389,15 +1494,15 @@ describe("Settings Online Route", () => {
           "The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1001.)",
         ),
       );
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       await user.click(
-        screen.getByRole("button", { name: "online.loginApple" }),
+        within(sheet).getByRole("button", { name: "online.loginApple" }),
       );
 
       await waitFor(() => {
         expect(
-          screen.getByRole("button", { name: "online.loginApple" }),
+          within(sheet).getByRole("button", { name: "online.loginApple" }),
         ).toBeEnabled();
       });
       expect(mockMfaAuthentication.signInWithApple).toHaveBeenCalledOnce();
@@ -1413,10 +1518,10 @@ describe("Settings Online Route", () => {
         "The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)",
       );
       mockMfaAuthentication.signInWithApple.mockRejectedValueOnce(failure);
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       await user.click(
-        screen.getByRole("button", { name: "online.loginApple" }),
+        within(sheet).getByRole("button", { name: "online.loginApple" }),
       );
 
       await waitFor(() => {
@@ -1435,10 +1540,10 @@ describe("Settings Online Route", () => {
       mockMfaAuthentication.signInWithGoogle.mockRejectedValueOnce(
         new Error("Network error"),
       );
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       await user.click(
-        screen.getByRole("button", { name: "online.loginGoogle" }),
+        within(sheet).getByRole("button", { name: "online.loginGoogle" }),
       );
 
       await waitFor(() => {
@@ -1446,26 +1551,26 @@ describe("Settings Online Route", () => {
       });
     });
 
-    it("should not show OAuth buttons on web when not on zaparoo.app", () => {
+    it("should not show OAuth buttons on web when not on zaparoo.app", async () => {
       mockState.platform = "web";
       // Default location is not zaparoo.app
 
-      renderComponent();
+      const sheet = await openAuthSheet(userEvent.setup());
 
       expect(
-        screen.queryByRole("button", { name: "online.loginGoogle" }),
+        within(sheet).queryByRole("button", { name: "online.loginGoogle" }),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: "online.loginApple" }),
+        within(sheet).queryByRole("button", { name: "online.loginApple" }),
       ).not.toBeInTheDocument();
     });
 
-    it("should show Google button first on Android", () => {
+    it("should show Google button first on Android", async () => {
       mockState.platform = "android";
 
-      renderComponent();
+      const sheet = await openAuthSheet(userEvent.setup());
 
-      const buttons = screen.getAllByRole("button");
+      const buttons = within(sheet).getAllByRole("button");
       const googleIndex = buttons.findIndex((b) =>
         b.textContent?.includes("online.loginGoogle"),
       );
@@ -1476,12 +1581,12 @@ describe("Settings Online Route", () => {
       expect(googleIndex).toBeLessThan(appleIndex);
     });
 
-    it("should show Apple button first on iOS", () => {
+    it("should show Apple button first on iOS", async () => {
       mockState.platform = "ios";
 
-      renderComponent();
+      const sheet = await openAuthSheet(userEvent.setup());
 
-      const buttons = screen.getAllByRole("button");
+      const buttons = within(sheet).getAllByRole("button");
       const googleIndex = buttons.findIndex((b) =>
         b.textContent?.includes("online.loginGoogle"),
       );
@@ -1752,15 +1857,17 @@ describe("Settings Online Route", () => {
       const user = userEvent.setup();
       mockUpdateRequirements.mockRejectedValueOnce(new Error("API error"));
 
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      const emailInput = screen.getByPlaceholderText("me@example.com");
-      const passwordInput = screen.getByLabelText("online.password");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
+      const passwordInput = within(sheet).getByLabelText("online.password");
 
       await user.type(emailInput, "test@example.com");
       await user.type(passwordInput, "password123");
 
-      await user.click(screen.getByRole("button", { name: "online.login" }));
+      await user.click(
+        within(sheet).getByRole("button", { name: "online.login" }),
+      );
 
       await waitFor(() => {
         expect(
@@ -1778,39 +1885,43 @@ describe("Settings Online Route", () => {
   describe("button disabled states", () => {
     it("should disable login button when email is empty", async () => {
       const user = userEvent.setup();
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      const passwordInput = screen.getByLabelText("online.password");
+      const passwordInput = within(sheet).getByLabelText("online.password");
       await user.type(passwordInput, "password123");
 
-      const loginButton = screen.getByRole("button", { name: "online.login" });
+      const loginButton = within(sheet).getByRole("button", {
+        name: "online.login",
+      });
       expect(loginButton).toBeDisabled();
     });
 
     it("should disable login button when password is empty", async () => {
       const user = userEvent.setup();
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      const emailInput = screen.getByPlaceholderText("me@example.com");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
       await user.type(emailInput, "test@example.com");
 
-      const loginButton = screen.getByRole("button", { name: "online.login" });
+      const loginButton = within(sheet).getByRole("button", {
+        name: "online.login",
+      });
       expect(loginButton).toBeDisabled();
     });
 
     it("should disable signup button when age not confirmed", async () => {
       const user = userEvent.setup();
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      await user.click(screen.getByText("online.switchToSignUpLink"));
+      await user.click(within(sheet).getByText("online.switchToSignUpLink"));
 
-      const emailInput = screen.getByPlaceholderText("me@example.com");
-      const passwordInput = screen.getByLabelText("online.password");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
+      const passwordInput = within(sheet).getByLabelText("online.password");
 
       await user.type(emailInput, "test@example.com");
       await user.type(passwordInput, "password123");
 
-      const signupButton = screen.getByRole("button", {
+      const signupButton = within(sheet).getByRole("button", {
         name: "online.signUp",
       });
       expect(signupButton).toBeDisabled();
@@ -1818,18 +1929,18 @@ describe("Settings Online Route", () => {
 
     it("should enable signup button when all fields are filled and age confirmed", async () => {
       const user = userEvent.setup();
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      await user.click(screen.getByText("online.switchToSignUpLink"));
+      await user.click(within(sheet).getByText("online.switchToSignUpLink"));
 
-      const emailInput = screen.getByPlaceholderText("me@example.com");
-      const passwordInput = screen.getByLabelText("online.password");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
+      const passwordInput = within(sheet).getByLabelText("online.password");
 
       await user.type(emailInput, "test@example.com");
       await user.type(passwordInput, "password123");
-      await user.click(screen.getByRole("checkbox"));
+      await user.click(within(sheet).getByRole("checkbox"));
 
-      const signupButton = screen.getByRole("button", {
+      const signupButton = within(sheet).getByRole("button", {
         name: "online.signUp",
       });
       expect(signupButton).not.toBeDisabled();
@@ -1839,24 +1950,24 @@ describe("Settings Online Route", () => {
   describe("form interaction behavior", () => {
     it("should enable signup button when age checkbox is checked", async () => {
       const user = userEvent.setup();
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
-      await user.click(screen.getByText("online.switchToSignUpLink"));
+      await user.click(within(sheet).getByText("online.switchToSignUpLink"));
 
-      const emailInput = screen.getByPlaceholderText("me@example.com");
-      const passwordInput = screen.getByLabelText("online.password");
+      const emailInput = within(sheet).getByPlaceholderText("me@example.com");
+      const passwordInput = within(sheet).getByLabelText("online.password");
 
       await user.type(emailInput, "test@example.com");
       await user.type(passwordInput, "password123");
 
       // Button should be disabled without age confirmation
-      const signupButton = screen.getByRole("button", {
+      const signupButton = within(sheet).getByRole("button", {
         name: "online.signUp",
       });
       expect(signupButton).toBeDisabled();
 
       // Now check the age checkbox
-      await user.click(screen.getByRole("checkbox"));
+      await user.click(within(sheet).getByRole("checkbox"));
 
       // Button should now be enabled
       expect(signupButton).not.toBeDisabled();
@@ -1864,19 +1975,21 @@ describe("Settings Online Route", () => {
 
     it("should clear form error when switching modes", async () => {
       const user = userEvent.setup();
-      renderComponent();
+      const sheet = await openAuthSheet(user);
 
       // Trigger forgot password error
-      await user.click(screen.getByText("online.forgotPassword"));
+      await user.click(within(sheet).getByText("online.forgotPassword"));
 
-      expect(screen.getByText("online.enterEmailFirst")).toBeInTheDocument();
+      expect(
+        within(sheet).getByText("online.enterEmailFirst"),
+      ).toBeInTheDocument();
 
       // Switch to signup mode
-      await user.click(screen.getByText("online.switchToSignUpLink"));
+      await user.click(within(sheet).getByText("online.switchToSignUpLink"));
 
       // Error should be cleared
       expect(
-        screen.queryByText("online.enterEmailFirst"),
+        within(sheet).queryByText("online.enterEmailFirst"),
       ).not.toBeInTheDocument();
     });
   });

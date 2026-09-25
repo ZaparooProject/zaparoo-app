@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, waitFor } from "@/test-utils";
+import { act, render, screen, waitFor } from "@/test-utils";
 import { LibraryArtwork } from "@/components/library/LibraryArtwork";
 import { requestLibraryImage } from "@/lib/libraryImages";
 import { CoreAPI } from "@/lib/coreApi";
@@ -69,6 +69,22 @@ describe("LibraryArtwork", () => {
 
     expect(container.querySelector("span > div")).toBeInTheDocument();
     expect(container.querySelector("svg")).not.toBeInTheDocument();
+  });
+
+  it("uses the supplied media-type placeholder when artwork is unavailable", () => {
+    render(
+      <LibraryArtwork
+        entry={{ name: "Game", path: "/game.sfc", type: "media" }}
+        systemId="SNES"
+        deviceKey=""
+        maxSize={192}
+        priority="detail"
+        placeholderIcon={<span>Game placeholder</span>}
+      />,
+    );
+
+    expect(screen.getByText("Game placeholder")).toBeVisible();
+    expect(requestLibraryImage).not.toHaveBeenCalled();
   });
 
   it("should report unavailable artwork when the image request fails", async () => {

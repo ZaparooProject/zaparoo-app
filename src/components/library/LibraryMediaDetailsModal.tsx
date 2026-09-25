@@ -1,7 +1,15 @@
+import classNames from "classnames";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ChevronLeftIcon, ChevronRightIcon, PlayIcon } from "lucide-react";
+import toast from "react-hot-toast";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ListPlusIcon,
+  PlayIcon,
+  PlusIcon,
+} from "lucide-react";
 import { CoreAPI, logRunFailure } from "@/lib/coreApi";
 import { logger } from "@/lib/logger";
 import {
@@ -23,16 +31,26 @@ import { usePreferencesStore } from "@/lib/preferencesStore";
 import { ConnectionState, useStatusStore } from "@/lib/store";
 import { useSystemNameResolver } from "@/hooks/useSystemName";
 import { useNfcWriteAvailable } from "@/hooks/useNfcWriteAvailable";
+import { useHapticPress } from "@/hooks/useHapticPress";
+import { useCoreFeature } from "@/hooks/useCoreFeature";
+import {
+  canEditDeck,
+  MAX_DECK_ITEMS,
+  mediaDeckItem,
+  refreshDecks,
+} from "@/lib/decks";
+import { TextInput } from "@/components/wui/TextInput";
 import { showRateLimitedErrorToast } from "@/lib/toastUtils";
 import { SlideModal } from "@/components/SlideModal";
 import { TagBadge } from "@/components/TagBadge";
 import { Button } from "@/components/wui/Button";
+import { EmptyState } from "@/components/wui/EmptyState";
 import { ModalActionRail } from "@/components/wui/ModalActionRail";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DelayedLoading } from "@/components/DelayedLoading";
 import { CreateIcon } from "@/lib/images";
 import { LibraryArtwork } from "@/components/library/LibraryArtwork";
-import { FavoriteButton } from "@/components/library/FavoriteButton";
+import { MediaPreferenceActions } from "@/components/library/MediaPreferenceActions";
 import { MediaWriteTargetModal } from "@/components/MediaWriteTargetModal";
 import {
   getDefaultMediaWriteValue,
@@ -108,8 +126,26 @@ export function LibraryMediaDetailsModal(props: {
   entry: MediaBrowseEntry | null;
   systemId: string;
   deviceKey: string;
+  context?: "library" | "nowPlaying";
 }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const decksFeature = useCoreFeature("decks", { requireKnownSupport: true });
+  const [deckPickerOpen, setDeckPickerOpen] = useState(false);
+  const [deckSaving, setDeckSaving] = useState(false);
+  const [newDeckName, setNewDeckName] = useState("");
+  const [creatingDeck, setCreatingDeck] = useState(false);
+  const [deckSearch, setDeckSearch] = useState("");
+  const handleDeckPress = useHapticPress();
+  useEffect(() => {
+    if (!props.isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- External dismissal must not reopen a stale deck picker with the next media selection.
+      setDeckPickerOpen(false);
+      setCreatingDeck(false);
+      setDeckSearch("");
+      setNewDeckName("");
+    }
+  }, [props.isOpen]);
   const showFilenames = usePreferencesStore((state) => state.showFilenames);
   const resolveSystemName = useSystemNameResolver();
   // `connected` stays true while reconnecting so cached data remains usable.
@@ -184,6 +220,48 @@ export function LibraryMediaDetailsModal(props: {
     retry: false,
   });
   const writeAvailable = useNfcWriteAvailable(props.deviceKey, props.isOpen);
+  const deckList = useQuery({
+    queryKey: [LIBRARY_QUERY_KEYS.decks, props.deviceKey],
+    queryFn: ({ signal }) => CoreAPI.decks(signal),
+    enabled:
+      deckPickerOpen &&
+      liveConnected &&
+      decksFeature.available &&
+      Boolean(props.deviceKey),
+  });
+  const addToDeck = async (deckId?: string) => {
+    if (
+      !entry ||
+      !systemId ||
+      (!entry.path && entry.mediaId === undefined) ||
+      !liveConnected ||
+      (!deckId && !newDeckName.trim()) ||
+      deckSaving
+    )
+      return;
+    setDeckSaving(true);
+    if (deckId) setDeckPickerOpen(false);
+    try {
+      const media = mediaDeckItem(entry, showFilenames);
+      const updated = deckId
+        ? await CoreAPI.deckUpdate({ deckId, addItems: [media] })
+        : await CoreAPI.deckNew({ name: newDeckName.trim(), items: [media] });
+      await refreshDecks(queryClient, props.deviceKey, updated);
+      setNewDeckName("");
+      setCreatingDeck(false);
+      setDeckPickerOpen(false);
+      toast.success(t("decks.added"));
+    } catch (error) {
+      logger.error("Failed to add media to deck", error, {
+        category: "api",
+        action: "deckAddMedia",
+      });
+      setDeckPickerOpen(true);
+      toast.error(t("decks.addError"));
+    } finally {
+      setDeckSaving(false);
+    }
+  };
   const metadata = metadataQuery.data?.media;
   const metadataWritePath =
     entry?.type !== "media" && metadata?.path !== entry?.path
@@ -289,6 +367,7 @@ export function LibraryMediaDetailsModal(props: {
   );
 
   const closeModal = () => {
+    setDeckPickerOpen(false);
     launchControllerRef.current?.abort();
     launchControllerRef.current = null;
     writeControllerRef.current?.abort();
@@ -434,16 +513,27 @@ export function LibraryMediaDetailsModal(props: {
       aria-label={t("library.mediaActions")}
       actions={
         <>
-          <FavoriteButton
+          <MediaPreferenceActions
+            key={mediaKey}
             entry={entry}
             fallbackSystemId={systemId}
             deviceKey={props.deviceKey}
             metadataTags={metadata?.tags}
-            displayLabel={t("library.favorite")}
-            layout="responsive"
-            variant="text"
-            className="w-full whitespace-nowrap"
+            context="modal"
           />
+          {decksFeature.available &&
+            entry.type === "media" &&
+            (entry.mediaId !== undefined || (systemId && entry.path)) && (
+              <Button
+                label={t("decks.addAction")}
+                icon={<ListPlusIcon size={20} />}
+                variant="text"
+                layout="responsive"
+                className="whitespace-nowrap"
+                disabled={!liveConnected || deckSaving}
+                onClick={() => setDeckPickerOpen(true)}
+              />
+            )}
           <Button
             label={t("library.writeAction")}
             aria-label={
@@ -458,33 +548,47 @@ export function LibraryMediaDetailsModal(props: {
             }
             layout="responsive"
             variant="text"
-            className="whitespace-nowrap"
+            className={classNames(
+              "whitespace-nowrap",
+              (preparingWrite || (launching && writeAvailable)) &&
+                "disabled:!text-white",
+            )}
             disabled={!writeAvailable || preparingWrite || launching}
             onClick={() => void write()}
           />
         </>
       }
       primaryAction={
-        <Button
-          label={launching ? t("library.launching") : t("library.launch")}
-          icon={
-            launching ? (
-              <LoadingSpinner size={20} decorative />
-            ) : (
-              <PlayIcon size={20} />
-            )
-          }
-          intent="primary"
-          disabled={!liveConnected || launching || preparingWrite}
-          onClick={() => void launch()}
-        />
+        props.context !== "nowPlaying" ? (
+          <Button
+            label={t("library.launch")}
+            aria-label={
+              launching ? t("library.launching") : t("library.launch")
+            }
+            icon={
+              launching ? (
+                <LoadingSpinner size={20} decorative />
+              ) : (
+                <PlayIcon size={20} />
+              )
+            }
+            intent="primary"
+            className={
+              launching || (preparingWrite && liveConnected)
+                ? "bg-button-pattern disabled:!border-[var(--color-border-filled)] disabled:!text-white"
+                : undefined
+            }
+            disabled={!liveConnected || launching || preparingWrite}
+            onClick={() => void launch()}
+          />
+        ) : undefined
       }
     />
   ) : undefined;
 
   const detailsModal = (
     <SlideModal
-      isOpen={props.isOpen && !writeOptionsOpen}
+      isOpen={props.isOpen && !writeOptionsOpen && !deckPickerOpen}
       close={closeModal}
       title={title}
       footer={footer}
@@ -621,10 +725,134 @@ export function LibraryMediaDetailsModal(props: {
   );
 
   const writeOptionsModalOpen = props.isOpen && writeOptionsOpen;
+  const editableDecks = (deckList.data?.decks ?? []).filter(canEditDeck);
+  const matchingDecks = editableDecks.filter((deck) =>
+    deck.name.toLowerCase().includes(deckSearch.trim().toLowerCase()),
+  );
 
   return (
     <>
       {detailsModal}
+      <SlideModal
+        isOpen={props.isOpen && deckPickerOpen && !creatingDeck}
+        close={() => setDeckPickerOpen(false)}
+        title={t("decks.addAction")}
+        footer={
+          <Button
+            label={t("decks.new")}
+            icon={<PlusIcon size={20} />}
+            variant="outline"
+            className="w-full"
+            disabled={deckSaving || !liveConnected}
+            onClick={() => setCreatingDeck(true)}
+          />
+        }
+      >
+        <div className="flex flex-col gap-3 py-2">
+          <TextInput
+            type="search"
+            aria-label={t("decks.search")}
+            placeholder={t("decks.search")}
+            value={deckSearch}
+            setValue={setDeckSearch}
+            clearable
+          />
+          {deckList.isLoading ? (
+            <p role="status" className="text-muted-foreground">
+              {t("decks.loading")}
+            </p>
+          ) : deckList.isError ? (
+            <EmptyState
+              size="compact"
+              title={t("decks.loadError")}
+              action={
+                <Button
+                  label={t("library.tryAgain")}
+                  variant="outline"
+                  onClick={() => void deckList.refetch()}
+                />
+              }
+            />
+          ) : matchingDecks.length > 0 ? (
+            <div
+              role="group"
+              aria-label={t("decks.title")}
+              className="flex flex-col"
+            >
+              {matchingDecks.map((deck) => (
+                <button
+                  key={deck.deckId}
+                  type="button"
+                  className="flex min-h-14 w-full items-center justify-between gap-3 border-b border-white/25 px-1 py-3 text-left last:border-b-0 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={
+                    deckSaving ||
+                    !liveConnected ||
+                    deck.itemCount >= MAX_DECK_ITEMS
+                  }
+                  onPointerUp={handleDeckPress}
+                  onClick={() => void addToDeck(deck.deckId)}
+                >
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="font-medium break-words">{deck.name}</span>
+                    <span className="text-muted-foreground text-sm">
+                      {t("library.itemCount", { count: deck.itemCount })}
+                    </span>
+                  </span>
+                  <ChevronRightIcon
+                    size={20}
+                    aria-hidden="true"
+                    className="shrink-0"
+                  />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              size="compact"
+              title={t(deckSearch.trim() ? "decks.noMatching" : "decks.empty")}
+            />
+          )}
+        </div>
+      </SlideModal>
+      <SlideModal
+        isOpen={props.isOpen && deckPickerOpen && creatingDeck}
+        close={() => setCreatingDeck(false)}
+        dismissible={!deckSaving}
+        title={t("decks.new")}
+        footer={
+          <div className="flex flex-col gap-2">
+            <Button
+              label={t("decks.createAndAdd")}
+              icon={<PlusIcon size={20} />}
+              intent="primary"
+              className="w-full"
+              disabled={!newDeckName.trim() || deckSaving || !liveConnected}
+              onClick={() => void addToDeck()}
+            />
+            <Button
+              label={t("nav.cancel")}
+              variant="outline"
+              className="w-full"
+              disabled={deckSaving}
+              onClick={() => setCreatingDeck(false)}
+            />
+          </div>
+        }
+      >
+        <div className="py-2">
+          <TextInput
+            label={t("decks.name")}
+            value={newDeckName}
+            setValue={setNewDeckName}
+            maxLength={100}
+            disabled={deckSaving}
+            required
+            onKeyUp={(event) => {
+              if (event.key === "Enter") void addToDeck();
+            }}
+          />
+        </div>
+      </SlideModal>
       {writeOptionsModalOpen && (
         <MediaWriteTargetModal
           isOpen={writeOptionsModalOpen}

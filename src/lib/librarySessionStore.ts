@@ -6,6 +6,8 @@ import {
 } from "@/lib/tabSessionStore";
 import type { SystemReleasePeriod, SystemSort } from "@/lib/systemFilters";
 
+export type LibraryView = "systems" | "collections";
+
 export interface LibraryFolderLevel {
   name: string;
   path: string;
@@ -40,6 +42,7 @@ export type LibraryBrowseWindowUpdater = (
 
 interface LibrarySessionState {
   deviceAddress: string | null;
+  view: LibraryView;
   category: string;
   manufacturer: string;
   releasePeriod: SystemReleasePeriod;
@@ -50,6 +53,7 @@ interface LibrarySessionState {
   embeddedSearchOpen: Record<string, boolean>;
   searches: Record<string, SessionSearchParams>;
   browseWindows: Record<string, LibraryBrowseWindow>;
+  setView: (view: LibraryView) => void;
   setCategory: (category: string) => void;
   setManufacturer: (manufacturer: string) => void;
   setReleasePeriod: (releasePeriod: SystemReleasePeriod) => void;
@@ -70,6 +74,7 @@ interface LibrarySessionState {
 
 const initialLibrarySessionState = {
   deviceAddress: null,
+  view: "systems" as LibraryView,
   category: "all",
   manufacturer: "",
   releasePeriod: "any" as SystemReleasePeriod,
@@ -84,6 +89,7 @@ const initialLibrarySessionState = {
 
 export const useLibrarySessionStore = create<LibrarySessionState>()((set) => ({
   ...initialLibrarySessionState,
+  setView: (view) => set({ view }),
   setCategory: (category) => set({ category }),
   setManufacturer: (manufacturer) => set({ manufacturer }),
   setReleasePeriod: (releasePeriod) => set({ releasePeriod }),

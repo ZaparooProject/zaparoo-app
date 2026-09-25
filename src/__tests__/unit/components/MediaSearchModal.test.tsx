@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, waitFor } from "../../../test-utils";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "../../../test-utils";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MediaSearchModal } from "@/components/MediaSearchModal";
@@ -6,6 +12,8 @@ import type { SearchResultGame } from "@/lib/models";
 
 const mockStoreState = {
   connected: true,
+  coreVersion: "2.18.0",
+  coreVersionPending: false,
   gamesIndex: { exists: true, indexing: false },
   safeInsets: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
 };
@@ -59,6 +67,9 @@ vi.mock("@/lib/coreApi", () => ({
         { id: "genesis", name: "Sega Genesis" },
       ],
     }),
+    mediaTags: vi.fn().mockResolvedValue({
+      tags: [{ tag: "Platformer", type: "genre" }],
+    }),
     mediaSearch: vi.fn().mockResolvedValue({
       results: [
         {
@@ -91,10 +102,12 @@ vi.mock("@/lib/logger", () => ({
 vi.mock("@/components/VirtualSearchResults", () => ({
   VirtualSearchResults: ({
     query,
+    tags,
     hasSearched,
     setSelectedResult,
   }: {
     query: string;
+    tags: string[];
     hasSearched: boolean;
     setSelectedResult: (result: SearchResultGame | null) => void;
   }) => {
@@ -110,10 +123,12 @@ vi.mock("@/components/VirtualSearchResults", () => ({
     return (
       <div data-testid="search-results">
         <p>Search results for: {query}</p>
+        <p>Filtered by: {tags.join(", ")}</p>
         <button
           data-testid="result-0"
           onClick={() =>
             setSelectedResult({
+              mediaId: 42,
               system: { id: "snes", name: "Super Nintendo" },
               name: "Super Mario World",
               path: "/games/mario.sfc",
@@ -136,6 +151,8 @@ describe("MediaSearchModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStoreState.connected = true;
+    mockStoreState.coreVersion = "2.18.0";
+    mockStoreState.coreVersionPending = false;
     mockStoreState.gamesIndex = { exists: true, indexing: false };
   });
 
@@ -245,6 +262,67 @@ describe("MediaSearchModal", () => {
     expect(screen.getByText("Search results for: mario")).toBeInTheDocument();
   });
 
+  it("filters search results with selected tags in the shared modal", async () => {
+    const user = userEvent.setup();
+    render(
+      <MediaSearchModal isOpen close={mockClose} onSelect={mockOnSelect} />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "create.search.tagsInput" }),
+    );
+    const picker = screen.getByRole("dialog", {
+      name: "create.search.selectTags",
+    });
+    await user.click(
+      within(picker).getByRole("button", { name: "tagSelector.expandAll" }),
+    );
+    await user.click(
+      await within(picker).findByRole("checkbox", { name: /Platformer/ }),
+    );
+    await user.click(
+      within(picker).getByRole("button", { name: "tagSelector.apply" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "create.search.searchButton" }),
+    );
+    expect(
+      await screen.findByText("Filtered by: genre:Platformer"),
+    ).toBeInTheDocument();
+  });
+
+  it("returns to search when tag support disappears while picking tags", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <MediaSearchModal isOpen close={mockClose} onSelect={mockOnSelect} />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "create.search.tagsInput" }),
+    );
+    expect(
+      screen.queryByRole("dialog", { name: "create.search.title" }),
+    ).not.toBeInTheDocument();
+
+    mockStoreState.coreVersionPending = true;
+    rerender(
+      <MediaSearchModal isOpen close={mockClose} onSelect={mockOnSelect} />,
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "create.search.title" }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides tag filters on Core versions without known support", async () => {
+    mockStoreState.coreVersion = "2.6.9";
+    render(
+      <MediaSearchModal isOpen close={mockClose} onSelect={mockOnSelect} />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "create.search.tagsInput" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("should allow search while indexing", async () => {
     const user = userEvent.setup();
     mockStoreState.gamesIndex = { exists: true, indexing: true };
@@ -292,6 +370,47 @@ describe("MediaSearchModal", () => {
       screen.getByRole("button", { name: /create\.search\.searchButton/i }),
     ).toBeDisabled();
     expect(await screen.findByRole("combobox")).toBeDisabled();
+  });
+
+  it("passes the indexed result directly to a quick-add consumer without showing a write target", async () => {
+    const user = userEvent.setup();
+    const onSelectMedia = vi.fn();
+    const onAddCustom = vi.fn();
+    render(
+      <MediaSearchModal
+        isOpen
+        close={mockClose}
+        onSelectMedia={onSelectMedia}
+        onAddCustom={onAddCustom}
+      />,
+    );
+
+    await user.type(
+      screen.getByRole("searchbox", { name: "create.search.gameInput" }),
+      "mario",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "create.search.searchButton" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Super Mario World" }),
+    );
+
+    expect(onSelectMedia).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mediaId: 42,
+        name: "Super Mario World",
+        path: "/games/mario.sfc",
+        system: { id: "snes", name: "Super Nintendo" },
+      }),
+    );
+    expect(
+      screen.queryByRole("radio", { name: "create.search.zapscriptLabel" }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "decks.addCustomScript" }),
+    );
+    expect(onAddCustom).toHaveBeenCalledOnce();
   });
 
   it("should default to ZapScript and insert it after confirmation", async () => {
@@ -376,7 +495,7 @@ describe("MediaSearchModal", () => {
     );
 
     const modals = screen.getAllByRole("dialog", { hidden: true });
-    expect(modals).toHaveLength(2);
+    expect(modals).toHaveLength(3);
     expect(
       modals.every((modal) => modal.getAttribute("aria-hidden") === "true"),
     ).toBe(true);

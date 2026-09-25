@@ -13,6 +13,10 @@ import {
   BackupStatusResponse,
   ClientsCurrentResponse,
   DeleteInboxRequest,
+  type Deck,
+  type DeckNewParams,
+  type DecksResponse,
+  type DeckUpdateParams,
   HistoryResponse,
   InboxResponse,
   InputGamepadRequest,
@@ -29,6 +33,8 @@ import {
   MediaCleanOrphansResponse,
   MediaImageParams,
   MediaImageResponse,
+  MediaLookupParams,
+  MediaLookupResponse,
   MediaMetaParams,
   MediaMetaResponse,
   MediaScrapeCancelResponse,
@@ -62,6 +68,8 @@ import {
   SettingsAuthClaimResponse,
   SettingsAuthStatusRequest,
   SettingsAuthStatusResponse,
+  SettingsAuthUnlinkResponse,
+  RemoteActivityResponse,
   SettingsResponse,
   SystemsParams,
   SystemsResponse,
@@ -1501,6 +1509,53 @@ class CoreApi {
     });
   }
 
+  async decks(signal?: AbortSignal): Promise<DecksResponse> {
+    const result = await this.callConnected(Method.Decks, undefined, signal);
+    if (isCancelled(result))
+      throw new RequestCancelledError("Deck list request was cancelled");
+    return result as DecksResponse;
+  }
+
+  async deckGet(deckId: string, signal?: AbortSignal): Promise<Deck> {
+    const result = await this.callConnected(
+      Method.DecksGet,
+      { deckId },
+      signal,
+    );
+    if (isCancelled(result))
+      throw new RequestCancelledError("Deck request was cancelled");
+    return result as Deck;
+  }
+
+  async deckNew(params: DeckNewParams): Promise<Deck> {
+    const result = await this.callConnected(Method.DecksNew, params);
+    if (isCancelled(result))
+      throw new RequestCancelledError("New deck request was cancelled");
+    return result as Deck;
+  }
+
+  async deckUpdate(params: DeckUpdateParams): Promise<Deck> {
+    const result = await this.callConnected(Method.DecksUpdate, params);
+    if (isCancelled(result))
+      throw new RequestCancelledError("Deck update request was cancelled");
+    return result as Deck;
+  }
+
+  async deckDelete(deckId: string): Promise<void> {
+    const result = await this.callConnected(Method.DecksDelete, { deckId });
+    if (isCancelled(result))
+      throw new RequestCancelledError("Deck deletion was cancelled");
+  }
+
+  async deckOpen(deckId: string, slot?: string): Promise<void> {
+    const result = await this.callConnected(Method.DecksOpen, {
+      deckId,
+      ...(slot ? { slot } : {}),
+    });
+    if (isCancelled(result))
+      throw new RequestCancelledError("Deck open was cancelled");
+  }
+
   mediaSearch(
     params: SearchParams,
     signal?: AbortSignal,
@@ -1534,6 +1589,23 @@ class CoreApi {
           reject(error);
         });
     });
+  }
+
+  async mediaLookup(
+    params: MediaLookupParams,
+    signal?: AbortSignal,
+  ): Promise<MediaLookupResponse> {
+    try {
+      const result = await this.call(Method.MediaLookup, params, signal);
+      if (isCancelled(result)) {
+        throw new RequestCancelledError("Media lookup request was cancelled");
+      }
+      return result as MediaLookupResponse;
+    } catch (error) {
+      if (isRequestCancelledError(error)) throw error;
+      logMediaApiFailure("Media lookup API call failed", "mediaLookup", error);
+      throw error;
+    }
   }
 
   async mediaBrowse(
@@ -2131,6 +2203,28 @@ class CoreApi {
       );
     }
     return result as SettingsAuthStatusResponse;
+  }
+
+  async settingsAuthUnlink(): Promise<SettingsAuthUnlinkResponse> {
+    const result = await this.callConnected(Method.SettingsAuthUnlink);
+    if (isCancelled(result)) {
+      throw new RequestCancelledError("Device unlink request was cancelled");
+    }
+    return result as SettingsAuthUnlinkResponse;
+  }
+
+  async remoteActivity(signal?: AbortSignal): Promise<RemoteActivityResponse> {
+    const result = await this.callConnected(
+      Method.RemoteActivity,
+      { limit: 1 },
+      signal,
+    );
+    if (isCancelled(result)) {
+      throw new RequestCancelledError(
+        "Remote control status request was cancelled",
+      );
+    }
+    return result as RemoteActivityResponse;
   }
 
   async settingsBackupStatus(

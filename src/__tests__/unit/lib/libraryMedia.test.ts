@@ -7,6 +7,9 @@ import {
   entrySystemId,
   favoriteUpdateParams,
   hasFavoriteTag,
+  hasMediaPreference,
+  isMediaPreferenceTag,
+  preferenceUpdateParams,
   isMediaCapableEntry,
   isPlainFolderEntry,
   libraryEntryDisplayName,
@@ -385,13 +388,21 @@ describe("Library media helpers", () => {
       { type: "region", tag: "us" },
       { type: "scraper.gamelist.xml", tag: "scraped" },
       { type: "user", tag: "favorite" },
+      { type: "user", tag: "liked" },
+      { type: "user", tag: "disliked" },
+      { type: "user", tag: "playlater" },
+      { type: "user", tag: "deck:0k3v9x2rq7bm" },
+      { type: "user", tag: "hidden" },
     ]);
 
     expect(result.facts).toEqual([
       { type: "year", values: ["1994"] },
       { type: "developer", values: ["Studio"] },
     ]);
-    expect(result.tags).toEqual([{ type: "region", tag: "us" }]);
+    expect(result.tags).toEqual([
+      { type: "region", tag: "us" },
+      { type: "user", tag: "hidden" },
+    ]);
   });
 
   it("should detect and build favorite updates without displaying user tags", () => {
@@ -401,6 +412,17 @@ describe("Library media helpers", () => {
     });
 
     expect(hasFavoriteTag(entry.tags)).toBe(true);
+    expect(hasMediaPreference(entry.tags, "liked")).toBe(false);
+    expect(isMediaPreferenceTag({ type: "user", tag: "playlater" })).toBe(true);
+    expect(isMediaPreferenceTag({ type: "user", tag: "hidden" })).toBe(false);
+    expect(preferenceUpdateParams(entry, "SNES", "disliked", true)).toEqual({
+      mediaId: 42,
+      add: ["user:disliked"],
+    });
+    expect(preferenceUpdateParams(entry, "SNES", "playlater", false)).toEqual({
+      mediaId: 42,
+      remove: ["user:playlater"],
+    });
     expect(favoriteUpdateParams(entry, "SNES", false)).toEqual({
       mediaId: 42,
       remove: ["user:favorite"],

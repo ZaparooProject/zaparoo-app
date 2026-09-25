@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor } from "@/test-utils";
+import { act, render, screen, waitFor } from "@/test-utils";
 import { CoreAPI } from "@/lib/coreApi";
 import type { SearchResultsResponse } from "@/lib/models";
 import { useLibrarySessionStore } from "@/lib/librarySessionStore";
 import { useStatusStore } from "@/lib/store";
 import { LibraryFavorites } from "@/routes/library.favorites";
+import { LibraryTaggedCollection } from "@/components/library/LibraryTaggedCollection";
 import { seedActiveDevice } from "@/test-utils/deviceRegistry";
 
 const { mockNavigate } = vi.hoisted(() => ({
@@ -193,6 +194,100 @@ describe("Library Favorites route", () => {
         expect.any(AbortSignal),
       ),
     );
+  });
+
+  it.each([
+    ["liked", "user:liked", "library.searchLiked"],
+    ["disliked", "user:disliked", "library.searchDisliked"],
+    ["play-later", "user:playlater", "library.searchPlayLater"],
+  ] as const)(
+    "should browse and search the %s collection with a fixed tag",
+    async (collection, tag, searchLabel) => {
+      useStatusStore.setState({ coreVersion: "2.18.0" });
+      const searchSpy = vi
+        .spyOn(CoreAPI, "mediaSearch")
+        .mockResolvedValue(favoritesResponse(["Game"]));
+      render(<LibraryTaggedCollection collection={collection} />);
+
+      expect(
+        await screen.findByRole("button", { name: /Game/ }),
+      ).toBeInTheDocument();
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ tags: [tag], maxResults: 100 }),
+        expect.any(AbortSignal),
+      );
+      await userEvent
+        .setup()
+        .click(screen.getByRole("button", { name: searchLabel }));
+      expect(
+        screen.getByRole("search", { name: searchLabel }),
+      ).toBeInTheDocument();
+      await userEvent
+        .setup()
+        .click(screen.getByRole("button", { name: "library.searchAction" }));
+      await waitFor(() =>
+        expect(searchSpy).toHaveBeenLastCalledWith(
+          expect.objectContaining({ tags: [tag] }),
+          expect.any(AbortSignal),
+        ),
+      );
+    },
+  );
+
+  it("should paginate liked media with the same fixed tag", async () => {
+    useStatusStore.setState({ coreVersion: "2.18.0" });
+    const searchSpy = vi
+      .spyOn(CoreAPI, "mediaSearch")
+      .mockResolvedValueOnce(favoritesResponse(["First"], "next-page"))
+      .mockResolvedValueOnce(favoritesResponse(["Second"]));
+    render(<LibraryTaggedCollection collection="liked" />);
+    await waitFor(() => expect(searchSpy).toHaveBeenCalledTimes(2));
+    expect(searchSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ cursor: "next-page", tags: ["user:liked"] }),
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("should not search a new collection on older Core", () => {
+    const searchSpy = vi
+      .spyOn(CoreAPI, "mediaSearch")
+      .mockResolvedValue(favoritesResponse([]));
+    render(<LibraryTaggedCollection collection="liked" />);
+    expect(screen.getByText("library.updateCore")).toBeInTheDocument();
+    expect(searchSpy).not.toHaveBeenCalled();
+  });
+
+  it("should wait for Core's version instead of asking for an update", async () => {
+    useStatusStore.setState({ coreVersion: null, coreVersionPending: true });
+    vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValue(
+      favoritesResponse(["First"]),
+    );
+    render(<LibraryTaggedCollection collection="liked" />);
+    expect(screen.queryByText("library.updateCore")).not.toBeInTheDocument();
+
+    act(() =>
+      useStatusStore.setState({
+        coreVersion: "2.18.0",
+        coreVersionPending: false,
+      }),
+    );
+
+    expect(
+      await screen.findByRole("button", { name: /First/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("should open Favourites when Core's version is unknown, like the Library entry", async () => {
+    useStatusStore.setState({ coreVersion: null, coreVersionPending: false });
+    vi.spyOn(CoreAPI, "mediaSearch").mockResolvedValue(
+      favoritesResponse(["First"]),
+    );
+    render(<LibraryTaggedCollection collection="favorites" />);
+    expect(
+      await screen.findByRole("button", { name: /First/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("library.updateCore")).not.toBeInTheDocument();
   });
 
   it("should show an empty state when there are no favorites", async () => {

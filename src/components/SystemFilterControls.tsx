@@ -66,7 +66,7 @@ export function SystemFilterControls(props: {
 
       <div
         className={
-          pageLayout ? (showSearch ? "px-1 py-2" : "px-1 pb-2") : "px-2 py-2"
+          pageLayout ? (showSearch ? "px-1 py-2" : "pb-2") : "px-2 py-2"
         }
       >
         <div className="relative overflow-hidden rounded-lg">

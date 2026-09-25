@@ -18,7 +18,10 @@ import { Route as CreateSearchRouteImport } from "./routes/create.search";
 import { Route as CreateTextRouteImport } from "./routes/create.text";
 import { Route as LibraryIndexRouteImport } from "./routes/library.index";
 import { Route as LibrarySystemRouteImport } from "./routes/library.$system";
+import { Route as LibraryDislikedRouteImport } from "./routes/library.disliked";
 import { Route as LibraryFavoritesRouteImport } from "./routes/library.favorites";
+import { Route as LibraryLikedRouteImport } from "./routes/library.liked";
+import { Route as LibraryPlayLaterRouteImport } from "./routes/library.play-later";
 import { Route as LibrarySearchRouteImport } from "./routes/library.search";
 import { Route as SettingsIndexRouteImport } from "./routes/settings.index";
 import { Route as SettingsAboutRouteImport } from "./routes/settings.about";
@@ -33,9 +36,13 @@ import { Route as SettingsMediaRouteImport } from "./routes/settings.media";
 import { Route as SettingsOnlineRouteImport } from "./routes/settings.online";
 import { Route as SettingsPlayControlsRouteImport } from "./routes/settings.play-controls";
 import { Route as SettingsReadersRouteImport } from "./routes/settings.readers";
+import { Route as CreateDecksNewRouteImport } from "./routes/create.decks.new";
 import { Route as CreateMappingsNewRouteImport } from "./routes/create.mappings_.new";
+import { Route as LibraryDecksDeckIdRouteImport } from "./routes/library.decks.$deckId";
+import { Route as LibraryDecksNewRouteImport } from "./routes/library.decks.new";
 import { Route as SettingsDevicesRecordIdRouteImport } from "./routes/settings.devices_.$recordId";
 import { Route as CreateMappingsEditIdRouteImport } from "./routes/create.mappings_.edit_.$id";
+import { Route as LibraryDecksDeckIdAddRouteImport } from "./routes/library.decks.$deckId_.add";
 
 const IndexRoute = IndexRouteImport.update({
   id: "/",
@@ -82,9 +89,24 @@ const LibrarySystemRoute = LibrarySystemRouteImport.update({
   path: "/library/$system",
   getParentRoute: () => rootRouteImport,
 } as any);
+const LibraryDislikedRoute = LibraryDislikedRouteImport.update({
+  id: "/library/disliked",
+  path: "/library/disliked",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const LibraryFavoritesRoute = LibraryFavoritesRouteImport.update({
   id: "/library/favorites",
   path: "/library/favorites",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const LibraryLikedRoute = LibraryLikedRouteImport.update({
+  id: "/library/liked",
+  path: "/library/liked",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const LibraryPlayLaterRoute = LibraryPlayLaterRouteImport.update({
+  id: "/library/play-later",
+  path: "/library/play-later",
   getParentRoute: () => rootRouteImport,
 } as any);
 const LibrarySearchRoute = LibrarySearchRouteImport.update({
@@ -157,9 +179,24 @@ const SettingsReadersRoute = SettingsReadersRouteImport.update({
   path: "/settings/readers",
   getParentRoute: () => rootRouteImport,
 } as any);
+const CreateDecksNewRoute = CreateDecksNewRouteImport.update({
+  id: "/create/decks/new",
+  path: "/create/decks/new",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const CreateMappingsNewRoute = CreateMappingsNewRouteImport.update({
   id: "/create/mappings_/new",
   path: "/create/mappings/new",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const LibraryDecksDeckIdRoute = LibraryDecksDeckIdRouteImport.update({
+  id: "/library/decks/$deckId",
+  path: "/library/decks/$deckId",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const LibraryDecksNewRoute = LibraryDecksNewRouteImport.update({
+  id: "/library/decks/new",
+  path: "/library/decks/new",
   getParentRoute: () => rootRouteImport,
 } as any);
 const SettingsDevicesRecordIdRoute = SettingsDevicesRecordIdRouteImport.update({
@@ -172,6 +209,11 @@ const CreateMappingsEditIdRoute = CreateMappingsEditIdRouteImport.update({
   path: "/create/mappings/edit/$id",
   getParentRoute: () => rootRouteImport,
 } as any);
+const LibraryDecksDeckIdAddRoute = LibraryDecksDeckIdAddRouteImport.update({
+  id: "/library/decks/$deckId_/add",
+  path: "/library/decks/$deckId/add",
+  getParentRoute: () => rootRouteImport,
+} as any);
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
@@ -181,7 +223,10 @@ export interface FileRoutesByFullPath {
   "/create/search": typeof CreateSearchRoute;
   "/create/text": typeof CreateTextRoute;
   "/library/$system": typeof LibrarySystemRoute;
+  "/library/disliked": typeof LibraryDislikedRoute;
   "/library/favorites": typeof LibraryFavoritesRoute;
+  "/library/liked": typeof LibraryLikedRoute;
+  "/library/play-later": typeof LibraryPlayLaterRoute;
   "/library/search": typeof LibrarySearchRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
@@ -198,9 +243,13 @@ export interface FileRoutesByFullPath {
   "/create/": typeof CreateIndexRoute;
   "/library/": typeof LibraryIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
+  "/create/decks/new": typeof CreateDecksNewRoute;
   "/create/mappings/new": typeof CreateMappingsNewRoute;
+  "/library/decks/$deckId": typeof LibraryDecksDeckIdRoute;
+  "/library/decks/new": typeof LibraryDecksNewRoute;
   "/settings/devices/$recordId": typeof SettingsDevicesRecordIdRoute;
   "/create/mappings/edit/$id": typeof CreateMappingsEditIdRoute;
+  "/library/decks/$deckId/add": typeof LibraryDecksDeckIdAddRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
@@ -210,7 +259,10 @@ export interface FileRoutesByTo {
   "/create/search": typeof CreateSearchRoute;
   "/create/text": typeof CreateTextRoute;
   "/library/$system": typeof LibrarySystemRoute;
+  "/library/disliked": typeof LibraryDislikedRoute;
   "/library/favorites": typeof LibraryFavoritesRoute;
+  "/library/liked": typeof LibraryLikedRoute;
+  "/library/play-later": typeof LibraryPlayLaterRoute;
   "/library/search": typeof LibrarySearchRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
@@ -227,9 +279,13 @@ export interface FileRoutesByTo {
   "/create": typeof CreateIndexRoute;
   "/library": typeof LibraryIndexRoute;
   "/settings": typeof SettingsIndexRoute;
+  "/create/decks/new": typeof CreateDecksNewRoute;
   "/create/mappings/new": typeof CreateMappingsNewRoute;
+  "/library/decks/$deckId": typeof LibraryDecksDeckIdRoute;
+  "/library/decks/new": typeof LibraryDecksNewRoute;
   "/settings/devices/$recordId": typeof SettingsDevicesRecordIdRoute;
   "/create/mappings/edit/$id": typeof CreateMappingsEditIdRoute;
+  "/library/decks/$deckId/add": typeof LibraryDecksDeckIdAddRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -240,7 +296,10 @@ export interface FileRoutesById {
   "/create/search": typeof CreateSearchRoute;
   "/create/text": typeof CreateTextRoute;
   "/library/$system": typeof LibrarySystemRoute;
+  "/library/disliked": typeof LibraryDislikedRoute;
   "/library/favorites": typeof LibraryFavoritesRoute;
+  "/library/liked": typeof LibraryLikedRoute;
+  "/library/play-later": typeof LibraryPlayLaterRoute;
   "/library/search": typeof LibrarySearchRoute;
   "/settings/about": typeof SettingsAboutRoute;
   "/settings/accessibility": typeof SettingsAccessibilityRoute;
@@ -257,9 +316,13 @@ export interface FileRoutesById {
   "/create/": typeof CreateIndexRoute;
   "/library/": typeof LibraryIndexRoute;
   "/settings/": typeof SettingsIndexRoute;
+  "/create/decks/new": typeof CreateDecksNewRoute;
   "/create/mappings_/new": typeof CreateMappingsNewRoute;
+  "/library/decks/$deckId": typeof LibraryDecksDeckIdRoute;
+  "/library/decks/new": typeof LibraryDecksNewRoute;
   "/settings/devices_/$recordId": typeof SettingsDevicesRecordIdRoute;
   "/create/mappings_/edit_/$id": typeof CreateMappingsEditIdRoute;
+  "/library/decks/$deckId_/add": typeof LibraryDecksDeckIdAddRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -271,7 +334,10 @@ export interface FileRouteTypes {
     | "/create/search"
     | "/create/text"
     | "/library/$system"
+    | "/library/disliked"
     | "/library/favorites"
+    | "/library/liked"
+    | "/library/play-later"
     | "/library/search"
     | "/settings/about"
     | "/settings/accessibility"
@@ -288,9 +354,13 @@ export interface FileRouteTypes {
     | "/create/"
     | "/library/"
     | "/settings/"
+    | "/create/decks/new"
     | "/create/mappings/new"
+    | "/library/decks/$deckId"
+    | "/library/decks/new"
     | "/settings/devices/$recordId"
-    | "/create/mappings/edit/$id";
+    | "/create/mappings/edit/$id"
+    | "/library/decks/$deckId/add";
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/"
@@ -300,7 +370,10 @@ export interface FileRouteTypes {
     | "/create/search"
     | "/create/text"
     | "/library/$system"
+    | "/library/disliked"
     | "/library/favorites"
+    | "/library/liked"
+    | "/library/play-later"
     | "/library/search"
     | "/settings/about"
     | "/settings/accessibility"
@@ -317,9 +390,13 @@ export interface FileRouteTypes {
     | "/create"
     | "/library"
     | "/settings"
+    | "/create/decks/new"
     | "/create/mappings/new"
+    | "/library/decks/$deckId"
+    | "/library/decks/new"
     | "/settings/devices/$recordId"
-    | "/create/mappings/edit/$id";
+    | "/create/mappings/edit/$id"
+    | "/library/decks/$deckId/add";
   id:
     | "__root__"
     | "/"
@@ -329,7 +406,10 @@ export interface FileRouteTypes {
     | "/create/search"
     | "/create/text"
     | "/library/$system"
+    | "/library/disliked"
     | "/library/favorites"
+    | "/library/liked"
+    | "/library/play-later"
     | "/library/search"
     | "/settings/about"
     | "/settings/accessibility"
@@ -346,9 +426,13 @@ export interface FileRouteTypes {
     | "/create/"
     | "/library/"
     | "/settings/"
+    | "/create/decks/new"
     | "/create/mappings_/new"
+    | "/library/decks/$deckId"
+    | "/library/decks/new"
     | "/settings/devices_/$recordId"
-    | "/create/mappings_/edit_/$id";
+    | "/create/mappings_/edit_/$id"
+    | "/library/decks/$deckId_/add";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -359,7 +443,10 @@ export interface RootRouteChildren {
   CreateSearchRoute: typeof CreateSearchRoute;
   CreateTextRoute: typeof CreateTextRoute;
   LibrarySystemRoute: typeof LibrarySystemRoute;
+  LibraryDislikedRoute: typeof LibraryDislikedRoute;
   LibraryFavoritesRoute: typeof LibraryFavoritesRoute;
+  LibraryLikedRoute: typeof LibraryLikedRoute;
+  LibraryPlayLaterRoute: typeof LibraryPlayLaterRoute;
   LibrarySearchRoute: typeof LibrarySearchRoute;
   SettingsAboutRoute: typeof SettingsAboutRoute;
   SettingsAccessibilityRoute: typeof SettingsAccessibilityRoute;
@@ -376,9 +463,13 @@ export interface RootRouteChildren {
   CreateIndexRoute: typeof CreateIndexRoute;
   LibraryIndexRoute: typeof LibraryIndexRoute;
   SettingsIndexRoute: typeof SettingsIndexRoute;
+  CreateDecksNewRoute: typeof CreateDecksNewRoute;
   CreateMappingsNewRoute: typeof CreateMappingsNewRoute;
+  LibraryDecksDeckIdRoute: typeof LibraryDecksDeckIdRoute;
+  LibraryDecksNewRoute: typeof LibraryDecksNewRoute;
   SettingsDevicesRecordIdRoute: typeof SettingsDevicesRecordIdRoute;
   CreateMappingsEditIdRoute: typeof CreateMappingsEditIdRoute;
+  LibraryDecksDeckIdAddRoute: typeof LibraryDecksDeckIdAddRoute;
 }
 
 declare module "@tanstack/react-router" {
@@ -446,11 +537,32 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof LibrarySystemRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/library/disliked": {
+      id: "/library/disliked";
+      path: "/library/disliked";
+      fullPath: "/library/disliked";
+      preLoaderRoute: typeof LibraryDislikedRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/library/favorites": {
       id: "/library/favorites";
       path: "/library/favorites";
       fullPath: "/library/favorites";
       preLoaderRoute: typeof LibraryFavoritesRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/library/liked": {
+      id: "/library/liked";
+      path: "/library/liked";
+      fullPath: "/library/liked";
+      preLoaderRoute: typeof LibraryLikedRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/library/play-later": {
+      id: "/library/play-later";
+      path: "/library/play-later";
+      fullPath: "/library/play-later";
+      preLoaderRoute: typeof LibraryPlayLaterRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/library/search": {
@@ -551,11 +663,32 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof SettingsReadersRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/create/decks/new": {
+      id: "/create/decks/new";
+      path: "/create/decks/new";
+      fullPath: "/create/decks/new";
+      preLoaderRoute: typeof CreateDecksNewRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/create/mappings_/new": {
       id: "/create/mappings_/new";
       path: "/create/mappings/new";
       fullPath: "/create/mappings/new";
       preLoaderRoute: typeof CreateMappingsNewRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/library/decks/$deckId": {
+      id: "/library/decks/$deckId";
+      path: "/library/decks/$deckId";
+      fullPath: "/library/decks/$deckId";
+      preLoaderRoute: typeof LibraryDecksDeckIdRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/library/decks/new": {
+      id: "/library/decks/new";
+      path: "/library/decks/new";
+      fullPath: "/library/decks/new";
+      preLoaderRoute: typeof LibraryDecksNewRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/settings/devices_/$recordId": {
@@ -572,6 +705,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof CreateMappingsEditIdRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/library/decks/$deckId_/add": {
+      id: "/library/decks/$deckId_/add";
+      path: "/library/decks/$deckId/add";
+      fullPath: "/library/decks/$deckId/add";
+      preLoaderRoute: typeof LibraryDecksDeckIdAddRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
@@ -583,7 +723,10 @@ const rootRouteChildren: RootRouteChildren = {
   CreateSearchRoute: CreateSearchRoute,
   CreateTextRoute: CreateTextRoute,
   LibrarySystemRoute: LibrarySystemRoute,
+  LibraryDislikedRoute: LibraryDislikedRoute,
   LibraryFavoritesRoute: LibraryFavoritesRoute,
+  LibraryLikedRoute: LibraryLikedRoute,
+  LibraryPlayLaterRoute: LibraryPlayLaterRoute,
   LibrarySearchRoute: LibrarySearchRoute,
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsAccessibilityRoute: SettingsAccessibilityRoute,
@@ -600,9 +743,13 @@ const rootRouteChildren: RootRouteChildren = {
   CreateIndexRoute: CreateIndexRoute,
   LibraryIndexRoute: LibraryIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
+  CreateDecksNewRoute: CreateDecksNewRoute,
   CreateMappingsNewRoute: CreateMappingsNewRoute,
+  LibraryDecksDeckIdRoute: LibraryDecksDeckIdRoute,
+  LibraryDecksNewRoute: LibraryDecksNewRoute,
   SettingsDevicesRecordIdRoute: SettingsDevicesRecordIdRoute,
   CreateMappingsEditIdRoute: CreateMappingsEditIdRoute,
+  LibraryDecksDeckIdAddRoute: LibraryDecksDeckIdAddRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
